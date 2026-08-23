@@ -351,7 +351,7 @@ export default function ShiftDetailPanel({
   async function handleRemove(id: string) {
     const yes = await confirm({
       title: "Remove shift assignment?",
-      message: "This removes the assigned worker from the shift and reopens the slot for staff assignment or instant Student pickup.",
+      message: "This removes the assigned worker from the shift and reopens the slot for staff assignment or a Student request.",
       confirmLabel: "Remove assignment",
       variant: "danger",
     });
@@ -680,7 +680,7 @@ export default function ShiftDetailPanel({
         <DialogHeader>
           <DialogTitle>Post Shift for Trade</DialogTitle>
           <DialogDescription>
-            Anyone on the crew can claim your shift. The first valid claim takes the assignment.
+            Eligible crew can claim your shift. You stay scheduled until staff approve a claim.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-2 py-1">

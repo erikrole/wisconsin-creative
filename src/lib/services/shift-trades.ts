@@ -1,4 +1,4 @@
-import { Prisma, ShiftTradeStatus, type ShiftArea } from "@prisma/client";
+import { Prisma, Role, ShiftTradeStatus, type ShiftArea, type ShiftWorkerType } from "@prisma/client";
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
 import { ACTIVE_ASSIGNMENT_STATUSES } from "@/lib/shift-constants";
@@ -14,6 +14,7 @@ import { withSerializationRetry } from "@/lib/serialization";
 import { assertNoWorkingCopy } from "@/lib/schedule-working-copy-guard";
 import { visibleActiveUserWhere } from "@/lib/user-visibility";
 import { enqueuePendingClaimReview } from "@/lib/claim-review-workflow";
+import { createAuditEntryTx } from "@/lib/audit";
 
 function assertShiftNotStarted(startsAt: Date) {
   if (startsAt <= new Date()) {
@@ -103,6 +104,31 @@ async function notify(
 
 /** Who is performing a trade mutation. Role gates staff-on-behalf actions. */
 export type TradeActor = { id: string; role?: string | null };
+export type TradeApprovalActor = { id: string; role: Role } | null;
+
+type TradeClaimProfile = {
+  active: boolean;
+  role: Role;
+  staffingType: ShiftWorkerType;
+  primaryArea: ShiftArea | null;
+  areaAssignments?: Array<{ area: ShiftArea }>;
+};
+
+function tradeClaimEligibilityReason(
+  profile: TradeClaimProfile,
+  shift: { area: ShiftArea; workerType: ShiftWorkerType },
+): string | null {
+  if (!profile.active) return "Inactive users cannot claim shifts";
+  if (shiftWorkerTypeForProfile(profile) !== shift.workerType) {
+    return "Your scheduling class does not match this shift slot";
+  }
+  const hasAreaMembership = profile.primaryArea === shift.area
+    || (profile.areaAssignments ?? []).some((assignment) => assignment.area === shift.area);
+  if (!hasAreaMembership) {
+    return `You are not assigned to this shift's area (${shift.area})`;
+  }
+  return null;
+}
 
 type TradePushJob = {
   userId: string;
@@ -254,7 +280,7 @@ export async function postTrade(
       // someone shows up for work they no longer have.
       const eventSummary = assignment.shift.shiftGroup?.event?.summary ?? "an event";
       const title = "Your shift is on the Trade Board";
-      const body = `Staff posted your ${assignment.shift.area} shift for ${eventSummary} to the Trade Board. You're still scheduled unless someone claims it.`;
+      const body = `Staff posted your ${assignment.shift.area} shift for ${eventSummary} to the Trade Board. You're still scheduled until staff approve a claim.`;
       const payload = scheduleNotificationPayload({
         tradeId: trade.id,
         assignmentId: assignment.id,
@@ -336,19 +362,13 @@ export async function claimTrade(tradeId: string, userId: string) {
         role: true,
         staffingType: true,
         active: true,
+        areaAssignments: { select: { area: true } },
         availabilityBlocks: { select: availabilityBlockSelect },
       },
     });
     if (!claimant) throw new HttpError(404, "User not found");
-    if (!claimant.active) {
-      throw new HttpError(400, "Inactive users cannot claim shifts");
-    }
-    if (shiftWorkerTypeForProfile(claimant) !== shift.workerType) {
-      throw new HttpError(400, "Your scheduling class does not match this shift slot");
-    }
-    if (claimant?.primaryArea && claimant.primaryArea !== shift.area) {
-      throw new HttpError(400, `Your primary area (${claimant.primaryArea}) does not match this shift's area (${shift.area})`);
-    }
+    const eligibilityReason = tradeClaimEligibilityReason(claimant, shift);
+    if (eligibilityReason) throw new HttpError(400, eligibilityReason);
     const availabilityContext = availabilityContextFromBlocks(claimant.availabilityBlocks ?? [], window);
     if (availabilityContext?.blocking) {
       throw new HttpError(409, availabilityContext.detail);
@@ -476,7 +496,7 @@ export async function claimTrade(tradeId: string, userId: string) {
 /**
  * Staff approves a claimed trade → executes swap.
  */
-export async function approveTrade(tradeId: string) {
+export async function approveTrade(tradeId: string, actor: TradeApprovalActor = null) {
   const emailJobs: ShiftTradeEmail[] = [];
   const pushJobs: TradePushJob[] = [];
   const badgeJobs: Array<Parameters<typeof badges.onTradeCompleted>[0]> = [];
@@ -511,11 +531,20 @@ export async function approveTrade(tradeId: string) {
     assertNoWorkingCopy(trade.shiftAssignment.shift.shiftGroup?.workingCopy);
     assertShiftNotStarted(effectiveAssignmentWindow(trade.shiftAssignment).startsAt);
 
-    await executeSwap(tx, trade.shiftAssignment.id, trade.claimedByUserId, trade.postedByUserId);
+    await executeSwap(tx, trade.shiftAssignment.id, trade.claimedByUserId, actor?.id ?? null);
 
     const updated = await tx.shiftTrade.update({
       where: { id: tradeId },
       data: { resolvedAt: new Date(), status: "COMPLETED" },
+    });
+    await createAuditEntryTx(tx, {
+      actorId: actor?.id ?? null,
+      actorRole: actor?.role ?? null,
+      entityType: "shift_trade",
+      entityId: tradeId,
+      action: actor ? "trade_approved" : "trade_auto_approved",
+      before: { status: trade.status, claimedByUserId: trade.claimedByUserId },
+      after: { status: updated.status, claimedByUserId: updated.claimedByUserId },
     });
     queueTradeCompletedIfTransitioned(badgeJobs, updated, trade.status);
 
@@ -790,6 +819,7 @@ export async function listTrades(filters: {
         staffingType: true,
         active: true,
         primaryArea: true,
+        areaAssignments: { select: { area: true } },
         availabilityBlocks: { select: availabilityBlockSelect },
       },
     })
@@ -807,6 +837,9 @@ export async function listTrades(filters: {
       const claimedByAvailabilityContext = trade.claimedByUserId
         ? availabilityContextFromBlocks(usersById.get(trade.claimedByUserId)?.availabilityBlocks ?? [], window)
         : null;
+      const viewerEligibilityReason = viewer
+        ? tradeClaimEligibilityReason(viewer, trade.shiftAssignment.shift)
+        : null;
       let viewerCanClaim = false;
       let viewerClaimReason: string | null = null;
       if (trade.status === "CLAIMED") {
@@ -823,12 +856,8 @@ export async function listTrades(filters: {
         viewerClaimReason = "Your scheduling profile is unavailable";
       } else if (trade.postedByUserId === filters.userId) {
         viewerClaimReason = "You posted this trade";
-      } else if (!viewer.active) {
-        viewerClaimReason = "Inactive users cannot claim shifts";
-      } else if (shiftWorkerTypeForProfile(viewer) !== trade.shiftAssignment.shift.workerType) {
-        viewerClaimReason = "Your scheduling class does not match this shift";
-      } else if (viewer.primaryArea && viewer.primaryArea !== trade.shiftAssignment.shift.area) {
-        viewerClaimReason = `Your primary area (${viewer.primaryArea}) does not match this shift's area (${trade.shiftAssignment.shift.area})`;
+      } else if (viewerEligibilityReason) {
+        viewerClaimReason = viewerEligibilityReason;
       } else if (viewerAvailabilityContext?.blocking) {
         viewerClaimReason = viewerAvailabilityContext.detail;
       } else {
@@ -914,7 +943,7 @@ export async function expireOpenTrades(): Promise<{ expired: number }> {
 
 /* ── Internal helpers ── */
 
-async function executeSwap(tx: Prisma.TransactionClient, assignmentId: string, targetUserId: string, actorId: string) {
+async function executeSwap(tx: Prisma.TransactionClient, assignmentId: string, targetUserId: string, actorId: string | null) {
   // Fetch assignment with shift times for conflict check
   const assignment = await tx.shiftAssignment.findUnique({
     where: { id: assignmentId },
@@ -942,40 +971,42 @@ async function executeSwap(tx: Prisma.TransactionClient, assignmentId: string, t
   // Validate target user has no conflicting shifts (exclude the assignment being swapped)
   await checkTimeConflict(tx, targetUserId, effectiveWindow.startsAt, effectiveWindow.endsAt, assignmentId);
 
-  // Check class schedule conflict for the incoming worker
-  let conflictNote: string | null = null;
-  try {
-    const claimer = await tx.user.findUnique({
-      where: { id: targetUserId },
-      select: {
-        availabilityBlocks: {
-          select: {
-            kind: true,
-            intent: true,
-            status: true,
-            dayOfWeek: true,
-            date: true,
-            dateEndsOn: true,
-            allDay: true,
-            startsAt: true,
-            endsAt: true,
-            label: true,
-            semesterLabel: true,
-            semesterStartsOn: true,
-            semesterEndsOn: true,
-          },
+  // Revalidate every mutable claimant gate at approval time. Lookup failures
+  // fail closed: eligibility cannot be treated as best-effort when this call is
+  // about to move the assignment.
+  const claimer = await tx.user.findUnique({
+    where: { id: targetUserId },
+    select: {
+      active: true,
+      role: true,
+      staffingType: true,
+      primaryArea: true,
+      areaAssignments: { select: { area: true } },
+      availabilityBlocks: {
+        select: {
+          kind: true,
+          intent: true,
+          status: true,
+          dayOfWeek: true,
+          date: true,
+          dateEndsOn: true,
+          allDay: true,
+          startsAt: true,
+          endsAt: true,
+          label: true,
+          semesterLabel: true,
+          semesterStartsOn: true,
+          semesterEndsOn: true,
         },
       },
-    });
-    if (claimer) {
-      const availability = evaluateAvailabilityPreferences(claimer.availabilityBlocks, effectiveWindow);
-      if (availability.blocking) throw new HttpError(409, availability.blocking.note);
-      conflictNote = availability.advisory?.note ?? null;
-    }
-  } catch (error) {
-    if (error instanceof HttpError) throw error;
-    // Non-fatal — proceed without conflict flag if lookup fails
-  }
+    },
+  });
+  if (!claimer) throw new HttpError(404, "Claiming user not found");
+  const eligibilityReason = tradeClaimEligibilityReason(claimer, assignment.shift);
+  if (eligibilityReason) throw new HttpError(409, eligibilityReason);
+  const availability = evaluateAvailabilityPreferences(claimer.availabilityBlocks, effectiveWindow);
+  if (availability.blocking) throw new HttpError(409, availability.blocking.note);
+  const conflictNote = availability.advisory?.note ?? null;
 
   // Mark old assignment as SWAPPED
   await tx.shiftAssignment.update({

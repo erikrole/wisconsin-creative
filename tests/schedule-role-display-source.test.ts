@@ -41,25 +41,26 @@ describe("schedule staff/student display source contracts", () => {
     expect(readiness).not.toContain('label: "Staff needed"');
     expect(filters).toContain("Needs crew");
     expect(filters).not.toContain("Needs staff");
-    expect(assignmentCell).toContain("const openSlotSummary = (() => {");
-    expect(assignmentCell).toContain("shiftWorkerSlotLabel(openShifts[0]!.workerType)");
-    expect(assignmentCell).toContain('aria-label={openSlotSummary ? `Assign ${openSlotSummary}` : "Assign open slot"}');
-    expect(assignmentCell).not.toContain("`Assign ${shiftWorkerLabel(firstOpenShift.workerType)}`");
+    expect(assignmentCell).toContain("openShifts.length");
+    expect(assignmentCell).toContain("shiftWorkerSlotLabel(shift.workerType)");
+    expect(assignmentCell).not.toContain("Assign open slot");
   });
 
-  it("surfaces assignment reroute outcomes in staff assignment toasts", () => {
+  it("keeps staff assignment inside the working-copy class gate", () => {
     const listView = source("src/app/(app)/schedule/_components/ListView.tsx");
     const workingEditor = source("src/app/(app)/schedule/_components/WorkingCrewEditor.tsx");
     const assignmentCell = source("src/app/(app)/schedule/assign/_components/AssignmentCell.tsx");
     const shiftDetail = source("src/components/ShiftDetailPanel.tsx");
     const route = source("src/app/api/shift-assignments/route.ts");
+    const service = source("src/lib/services/schedule-working-copy.ts");
 
-    expect(route).toContain("roleSlotOutcome");
+    expect(route).toContain("rejectRetiredLiveScheduleMutation");
     expect(listView).toContain("<WorkingCrewEditor");
     expect(listView).not.toContain("formatRoleSlotAssignmentOutcome");
     expect(workingEditor).toContain('type: "assign"');
-    expect(assignmentCell).toContain("formatRoleSlotAssignmentOutcome(json?.meta?.roleSlotOutcome");
-    expect(shiftDetail).toContain("formatRoleSlotAssignmentOutcome(json?.meta?.roleSlotOutcome");
+    expect(service).toContain("scheduleAssigneeWorkerType(assignee) !== slot.workerType");
+    expect(assignmentCell).not.toContain("formatRoleSlotAssignmentOutcome");
+    expect(shiftDetail).toContain("canEditPublishedSchedule = false");
   });
 
   it("shows editable call times only for Student schedule rows", () => {
@@ -85,11 +86,9 @@ describe("schedule staff/student display source contracts", () => {
     expect(listView).not.toContain('target={{ type: "slot", id: shift.id }}');
     expect(listView).not.toContain('target={{ type: "assignment", id: activeAssignment.id }}');
 
-    expect(assignmentCell).toContain('target={{ type: "assignment", id: assignment.id }}');
-    expect(assignmentCell).toContain('target={{ type: "slot", id: firstOpenShift.id }}');
+    expect(assignmentCell).toContain("formatCallTime(callWindow)");
     expect(assignmentCell).toContain('shift.workerType === "ST"');
-    expect(assignmentCell).toContain('firstOpenShift.workerType === "ST"');
-    expect(assignmentCell).not.toContain('target={{ type: "slot", id: shift.id }}');
+    expect(assignmentCell).not.toContain("CallWindowEditor");
 
     expect(slotCard).toContain('const isStudentSlot = workerType === "ST"');
     expect(slotCard).toContain("const showSlotWindow = isStudentSlot && !isAssigned");

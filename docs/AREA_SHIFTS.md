@@ -3,12 +3,12 @@
 ## Document Control
 - Area: Shift Calendar & Scheduling
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-22
+- Last Updated: 2026-08-23
 - Status: Active — implemented V1 with ongoing hardening
 
 ## Purpose
 
-Replace Asana-based shift scheduling with a native shift calendar in Gear Tracker. Auto-generate shifts from ICS-synced calendar events using sport-specific templates, support staff assignment plus instant student pickup for open Student slots, and provide a trade board for student shift swaps.
+Replace Asana-based shift scheduling with a native shift calendar in Gear Tracker. Auto-generate shifts from ICS-synced calendar events using sport-specific templates, support staff assignment plus approval-first student requests for open Student slots, and provide a trade board for staff-approved student shift swaps.
 
 ## Key Concepts
 
@@ -31,6 +31,8 @@ Replace Asana-based shift scheduling with a native shift calendar in Gear Tracke
 - [x] Open shift pickup: students claim published open Student shifts, creating a `REQUESTED` assignment that staff approve or decline
 - [x] Trade board: students post shifts for trade, area-filtered visibility
 - [x] Trade claims: a same-area student claim holds the post as `CLAIMED` for staff review; approval executes the swap
+- [x] Claim eligibility: active Student-class workers may claim work in either their primary area or an assigned secondary area; missing area membership fails closed
+- [x] Approval revalidation: both approval paths re-check active state, scheduling class, availability, conflicts, and current slot ownership immediately before changing the schedule; trade approval also re-checks area membership
 - [x] Claim review queues: staff see waiting trade claims and open-slot requests as one Trade Board review section on web and native, and students see what they are waiting on
 - [x] Claim review deadlines: an unreviewed claim escalates to staff and then approves itself on a per-claim durable workflow, reporting the outcome and standing down when a blocker appears
 - [x] Calendar view: month grid with coverage indicators (green/orange/red)
@@ -82,6 +84,7 @@ Replace Asana-based shift scheduling with a native shift calendar in Gear Tracke
 10. **Calendar View** (`CalendarView`) — month grid with coverage indicator dots (green/orange/red)
 11. **ShiftDetailPanel** — read-only schedule context plus archive and preview-first auto-fill; crew assignment management lives on Event detail.
 12. **Open Work / Trade Board** — sheet overlay with area/status filters for open shifts, posted trades, my trade posts, blocked context, and resolved trade history
+13. **Assignment review** (`/schedule/assign`) — month-level coverage, conflict, and open-slot review plus preview-first bulk assignment. Per-cell live mutations are retired; individual crew changes open the Event's private working schedule editor.
 
 ### Event Detail Page (`/events/[id]`)
 1. Event identity card — status plus Synced, Manual, or Edited source state, event timing, opponent, venue, and source context
@@ -107,6 +110,7 @@ Replace Asana-based shift scheduling with a native shift calendar in Gear Tracke
 
 ## Change Log
 
+- 2026-08-23: **Trade approval and assignment gates are closed across web and native contracts.** Trade Board claim/list/approval eligibility now use one server-owned active/Student/area rule that recognizes both primary and secondary area membership and fails closed when no membership exists. Both approval paths revalidate mutable worker state, assignment availability, conflicts, and current slot ownership immediately before the serialized schedule write; trade approval also re-checks area membership. Human and deadline-driven approvals now write distinct audit actions from inside the service transaction; open-shift approval notifications also run for the deadline-driven path. `/schedule/assign` is review and preview-first bulk assignment only, and its former per-cell live assignment/slot endpoints return `410 Gone` with an Event working-schedule handoff after authorization. Web and iOS consequence copy consistently says claims wait for staff approval. Verification: 73 schedule/shift/trade test files with 520 tests, TypeScript, ESLint, `build:app`, iOS project/drift checks, and the pinned iPhone 16 Pro iOS 26.5 build pass locally. Authenticated browser, in-app workflow timing, deployment, and TestFlight/production acceptance remain separate rollout gates.
 - 2026-08-22: **Student claims are approval-first again on both paths.** Picking up a published open Student slot now creates a `REQUESTED` assignment and claiming a Trade Board post now holds it as `CLAIMED`; staff approve or decline both, and the poster keeps their shift until a trade is approved. This reverses the 2026-07-02 instant-claim policy, which had been half-removed: the approve/decline services and routes survived with no UI caller, the native `APIClient` review methods were dead Swift, the Schedule "Trade approval" chip counted a status `claimTrade` could no longer produce, and Open Work returned a staff-only `pickupRequests` array that could never be non-empty. Those surfaces are now live rather than removed. Several students may request one slot and staff choose between them, with `approveRequest` declining the rest transactionally; a student cannot file two requests on one shift. The guards that used to ride inside `executeSwap` — poster no longer holds the shift, shift already refilled — now run at claim time too, so a student cannot wait on a review that could only ever decline. An unreviewed claim escalates to staff and then approves itself through `pendingClaimReviewWorkflow`, modelled on the timed-release workflow: it fails toward the swap both students already agreed to rather than letting a claim reach the shift unresolved, but it calls the existing approval services and stands down for a human when one reports a blocker. A pending request sends no gear-prep nudge and holds no slot, since `REQUESTED` remains outside `ACTIVE_ASSIGNMENT_STATUSES`. Native Trade Board also gained the area filter and paging that web already had. No schema migration, permission, publication-boundary, or notification-channel change; authenticated web and native runtime proof remains open. See [D-055](DECISIONS.md).
 
 - 2026-08-21: **Student availability now matches the real entry pattern.** Web and native iOS lead with recurring class schedules, keep one-off days separate, and support inclusive From/Through ranges with an explicit All day choice for travel, visitors, and similar time away. Native class-term bounds and web semester bounds remain optional, while the shared conflict helper preserves advisory cannot-work behavior and approved-time-off blocking semantics. The additive `dateEndsOn`/`allDay` fields remain rollout-safe for older rows and payloads; authenticated browser/runtime proof and migration application remain deployment gates.

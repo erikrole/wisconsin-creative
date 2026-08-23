@@ -159,7 +159,7 @@ describe("schedule date validation", () => {
     );
   });
 
-  it("rejects invalid add-shift override dates", async () => {
+  it("retires direct add-shift overrides before parsing mutation input", async () => {
     const res = await addShift(
       post("/api/shift-groups/group-1/shifts", {
         area: "VIDEO",
@@ -169,36 +169,8 @@ describe("schedule date validation", () => {
       { params: Promise.resolve({ id: "group-1" }) },
     );
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(410);
     expect(db.$transaction).not.toHaveBeenCalled();
-  });
-
-  it("rejects add-shift overrides where endsAt is not after startsAt", async () => {
-    const res = await addShift(
-      post("/api/shift-groups/group-1/shifts", {
-        area: "VIDEO",
-        workerType: "FT",
-        startsAt: "2026-06-01T12:00:00.000Z",
-        endsAt: "2026-06-01T12:00:00.000Z",
-      }),
-      { params: Promise.resolve({ id: "group-1" }) },
-    );
-
-    expect(res.status).toBe(400);
-    expect(db.$transaction).not.toHaveBeenCalled();
-  });
-
-  it("rejects add-shift startsAt overrides after the parent event end", async () => {
-    const res = await addShift(
-      post("/api/shift-groups/group-1/shifts", {
-        area: "VIDEO",
-        workerType: "FT",
-        startsAt: "2026-06-01T13:00:00.000Z",
-      }),
-      { params: Promise.resolve({ id: "group-1" }) },
-    );
-
-    expect(res.status).toBe(400);
     expect(mockShiftTx.shift.create).not.toHaveBeenCalled();
   });
 });

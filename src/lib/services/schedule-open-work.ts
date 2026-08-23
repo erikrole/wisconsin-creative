@@ -241,7 +241,7 @@ function serializeOpenShift(shift: OpenWorkShift, args: {
     canAct,
     reason: blockedReason
         ? blockedReason
-        : "Instant pickup",
+        : "Staff approval required",
     availabilityContext,
     score: recommendation?.score ?? null,
     bucket: recommendation?.bucket ?? null,

@@ -1,4 +1,4 @@
-import { Prisma, Role, ShiftAssignmentStatus, ShiftWorkerType } from "@prisma/client";
+import { Prisma, Role, ShiftAssignmentStatus, ShiftWorkerType, type CollaboratorPolicyStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
 import { normalizeAllDayToUtcMidnight } from "@/lib/app-time";
@@ -6,6 +6,9 @@ import { ACTIVE_ASSIGNMENT_STATUSES } from "@/lib/shift-constants";
 import { shiftWorkerTypeForProfile } from "@/lib/shift-display";
 import { evaluateAvailabilityPreferences } from "@/lib/student-availability";
 import { assertNoWorkingCopy } from "@/lib/schedule-working-copy-guard";
+import { scheduleAssigneeWorkerType } from "@/lib/schedule-assignee";
+import { createAuditEntryTx } from "@/lib/audit";
+import { dispatchScheduleAssignmentNotifications } from "@/lib/services/notifications";
 
 export type RoleSlotOutcome = {
   requestedShiftId: string;
@@ -16,6 +19,8 @@ export type RoleSlotOutcome = {
   createdMatchingSlot: boolean;
   reusedMatchingSlot: boolean;
 };
+
+export type ShiftApprovalActor = { id: string; role: Role } | null;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -93,9 +98,16 @@ async function resolveAssignableShiftForUser(
   userProfile: {
     role: Role;
     staffingType: ShiftWorkerType;
+    collaboratorPolicy?: {
+      status: CollaboratorPolicyStatus;
+      grants: Array<{ capabilityKey: string }>;
+    } | null;
   },
 ) {
-  const targetWorkerType = shiftWorkerTypeForProfile(userProfile) ?? "FT";
+  const targetWorkerType = scheduleAssigneeWorkerType(userProfile);
+  if (!targetWorkerType) {
+    throw new HttpError(400, "This user is not eligible for schedule assignment");
+  }
   if (targetWorkerType === shift.workerType) {
     return {
       shift,
@@ -271,6 +283,12 @@ export async function directAssignShiftWithOutcome(
         role: true,
         staffingType: true,
         active: true,
+        collaboratorPolicy: {
+          select: {
+            status: true,
+            grants: { select: { capabilityKey: true } },
+          },
+        },
         availabilityBlocks: {
           select: {
             kind: true,
@@ -353,7 +371,20 @@ export async function repairRoleSlotMismatch(assignmentId: string) {
     const assignment = await tx.shiftAssignment.findUnique({
       where: { id: assignmentId },
       include: {
-        user: { select: { id: true, role: true, staffingType: true, name: true } },
+        user: {
+          select: {
+            id: true,
+            role: true,
+            staffingType: true,
+            name: true,
+            collaboratorPolicy: {
+              select: {
+                status: true,
+                grants: { select: { capabilityKey: true } },
+              },
+            },
+          },
+        },
         shift: { select: assignableShiftSelect },
       },
     });
@@ -363,7 +394,10 @@ export async function repairRoleSlotMismatch(assignmentId: string) {
       throw new HttpError(400, "Only active assignments can be repaired");
     }
 
-    const targetWorkerType = shiftWorkerTypeForProfile(assignment.user) ?? "FT";
+    const targetWorkerType = scheduleAssigneeWorkerType(assignment.user);
+    if (!targetWorkerType) {
+      throw new HttpError(400, "This user is not eligible for schedule assignment");
+    }
     if (targetWorkerType === assignment.shift.workerType) {
       return {
         assignment,
@@ -426,8 +460,8 @@ export async function requestShift(shiftId: string, userId: string) {
 /**
  * Approve a shift request. Staff/admin action.
  */
-export async function approveRequest(assignmentId: string) {
-  return db.$transaction(async (tx) => {
+export async function approveRequest(assignmentId: string, actor: ShiftApprovalActor = null) {
+  const result = await db.$transaction(async (tx) => {
     const assignment = await tx.shiftAssignment.findUnique({
       where: { id: assignmentId },
       include: {
@@ -436,6 +470,13 @@ export async function approveRequest(assignmentId: string) {
           select: {
             role: true,
             staffingType: true,
+            active: true,
+            collaboratorPolicy: {
+              select: {
+                status: true,
+                grants: { select: { capabilityKey: true } },
+              },
+            },
             availabilityBlocks: {
               select: {
                 kind: true,
@@ -461,6 +502,12 @@ export async function approveRequest(assignmentId: string) {
     assertNoWorkingCopy(assignment.shift.shiftGroup?.workingCopy);
     if (assignment.status !== "REQUESTED") {
       throw new HttpError(400, "Only REQUESTED assignments can be approved");
+    }
+    if (!assignment.user.active) {
+      throw new HttpError(409, "This worker is no longer active");
+    }
+    if (scheduleAssigneeWorkerType(assignment.user) !== assignment.shift.workerType) {
+      throw new HttpError(409, "This worker no longer matches the slot's scheduling class");
     }
 
     // Re-check time conflicts — the user may have been assigned another shift
@@ -496,14 +543,27 @@ export async function approveRequest(assignmentId: string) {
       data: { status: "DECLINED" },
     });
 
-    return tx.shiftAssignment.update({
+    const updated = await tx.shiftAssignment.update({
       where: { id: assignmentId },
       data: { status: "APPROVED", hasConflict: Boolean(conflictNote), conflictNote },
       include: {
         user: { select: { id: true, name: true, role: true, staffingType: true, primaryArea: true } },
       },
     });
+    await createAuditEntryTx(tx, {
+      actorId: actor?.id ?? null,
+      actorRole: actor?.role ?? null,
+      entityType: "shift_assignment",
+      entityId: assignmentId,
+      action: actor ? "shift_request_approved" : "shift_request_auto_approved",
+      before: { status: assignment.status },
+      after: { status: updated.status, userId: updated.userId, shiftId: updated.shiftId },
+    });
+    return updated;
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+
+  await dispatchScheduleAssignmentNotifications(result.id, "approved");
+  return result;
 }
 
 /**
@@ -554,6 +614,12 @@ export async function initiateSwap(
         role: true,
         staffingType: true,
         active: true,
+        collaboratorPolicy: {
+          select: {
+            status: true,
+            grants: { select: { capabilityKey: true } },
+          },
+        },
         availabilityBlocks: {
           select: {
             kind: true,
@@ -575,6 +641,9 @@ export async function initiateSwap(
     });
     if (!target) throw new HttpError(404, "User not found");
     if (!target.active) throw new HttpError(400, "Cannot assign an inactive user");
+    if (scheduleAssigneeWorkerType(target) !== assignment.shift.workerType) {
+      throw new HttpError(409, "This worker does not match the slot's scheduling class");
+    }
 
     // Check target user doesn't have a conflicting shift
     const conflictWindow = effectiveShiftWindow(assignment.shift);

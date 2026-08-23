@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -18,50 +17,22 @@ import { FadeUp } from "@/components/ui/motion";
 import { useAssignmentGrid } from "@/hooks/use-assignment-grid";
 import { AssignmentGrid } from "./AssignmentGrid";
 import { BulkAssignmentDialog } from "./BulkAssignmentDialog";
-import type { PickerUser } from "@/components/shift-detail/UserAvatarPicker";
 import { SPORT_CODES } from "@/lib/sports";
 import { AREAS, AREA_LABELS, type Area } from "@/types/areas";
 import type { BulkAssignmentScope } from "@/lib/bulk-schedule-assignment-types";
 import { cn } from "@/lib/utils";
 import { ChevronLeft, ChevronRight, FilterIcon } from "lucide-react";
-import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import {
   filterEventsByAssignmentReview,
   summarizeAssignmentReview,
   type ReviewFilter,
 } from "@/lib/assignment-conflict-review";
 
-async function fetchUsers(): Promise<PickerUser[]> {
-  const res = await fetch("/api/users?limit=200&active=true");
-  if (handleAuthRedirect(res)) throw new DOMException("Auth redirect", "AbortError");
-  if (!res.ok) throw new Error(await parseErrorMessage(res, "Failed to load users"));
-  const j = await parseJsonSafely<{ data?: PickerUser[] }>(res);
-  if (!j?.data) throw new Error("Users response was malformed");
-  return j.data;
-}
-
 export function AssignPageClient() {
   const router = useRouter();
   const grid = useAssignmentGrid();
   const [reviewFilter, setReviewFilter] = useState<ReviewFilter>("all");
   const [bulkAssignmentOpen, setBulkAssignmentOpen] = useState(false);
-
-  const {
-    data: allUsers = [],
-    isLoading: usersLoading,
-    isError: usersLoadFailed,
-    error: usersError,
-    refetch: refetchUsers,
-  } = useQuery({
-    queryKey: ["users-picker"],
-    queryFn: fetchUsers,
-    staleTime: 5 * 60_000,
-  });
-  const usersLoadError: false | "network" | "server" = usersLoadFailed
-    ? usersError instanceof TypeError
-      ? "network"
-      : "server"
-    : false;
 
   const reviewSummary = useMemo(() => summarizeAssignmentReview(grid.events), [grid.events]);
   const reviewEvents = useMemo(
@@ -115,6 +86,10 @@ export function AssignPageClient() {
           Schedule
         </Button>
       </PageHeader>
+
+      <div className="mb-4 rounded-lg border border-border/60 bg-muted/25 px-3 py-2 text-sm text-muted-foreground">
+        Review coverage and conflicts here. Open an event to manage its crew in the private working schedule; changes release together after review.
+      </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-border/60 bg-card/80 p-2 shadow-sm">
         <div className="flex min-h-10 items-center overflow-hidden rounded-md border border-border bg-muted/30">
@@ -261,12 +236,6 @@ export function AssignPageClient() {
       <AssignmentGrid
         events={reviewEvents}
         columns={grid.columns}
-        allUsers={allUsers}
-        usersLoading={usersLoading}
-        usersLoadError={usersLoadError}
-        onRetryUsers={() => void refetchUsers()}
-        isStaff
-        onRefetch={grid.refetch}
         hasFilters={Boolean(grid.sportFilter || grid.areaFilter || reviewFilter !== "all")}
         onClearFilters={() => {
           grid.setSportFilter("");

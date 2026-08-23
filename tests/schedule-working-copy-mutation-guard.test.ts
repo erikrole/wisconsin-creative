@@ -10,7 +10,8 @@ import { describe, expect, it } from "vitest";
  * because the offending slots were not visible in it. Pin every guarded path so
  * that class of desync cannot silently return.
  */
-const guardedRoutes = [
+const retiredRoutes = [
+  "src/app/api/shift-assignments/route.ts",
   "src/app/api/shifts/[id]/route.ts",
   "src/app/api/shift-groups/[id]/shifts/route.ts",
   "src/app/api/shift-groups/[id]/shifts/[shiftId]/route.ts",
@@ -18,10 +19,9 @@ const guardedRoutes = [
 ];
 
 describe("working-copy mutation guard", () => {
-  it.each(guardedRoutes)("guards live schedule mutations in %s", (path) => {
+  it.each(retiredRoutes)("retires live schedule mutations in %s", (path) => {
     const source = readFileSync(path, "utf8");
-    expect(source).toContain("assertNoWorkingCopy");
-    expect(source).toContain("workingCopy");
+    expect(source).toContain("rejectRetiredLiveScheduleMutation");
   });
 
   it("guards every live assignment mutation in the assignment service", () => {
@@ -40,6 +40,12 @@ describe("working-copy mutation guard", () => {
     const guard = readFileSync("src/lib/schedule-working-copy-guard.ts", "utf8");
     expect(guard).toContain("new HttpError(409");
     expect(guard).toContain("Review or discard the private working schedule");
+  });
+
+  it("returns a deliberate 410 for retired live mutation routes", () => {
+    const guard = readFileSync("src/lib/schedule-working-copy-guard.ts", "utf8");
+    expect(guard).toContain("new HttpError(410");
+    expect(guard).toContain("Open the Event and use its private working schedule editor");
   });
 
   // The draft snapshot is taken when the working copy row is created, so a shift

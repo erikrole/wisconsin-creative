@@ -104,13 +104,16 @@ describe("schedule source-of-truth and browser smoke contracts", () => {
     expect(service).not.toContain('href: "/schedule/assign"');
   });
 
-  it("keeps manual assignment, scoring, and auto-fill preview-first without surfacing template review", () => {
+  it("keeps working-copy assignment scoring and review-first coverage without surfacing template review", () => {
     const assignmentCell = source("src/app/(app)/schedule/assign/_components/AssignmentCell.tsx");
     const picker = source("src/components/shift-detail/UserAvatarPicker.tsx");
     const eventCrew = source("src/app/(app)/events/[id]/_components/ShiftCoverageCard.tsx");
     const shiftPanel = source("src/components/ShiftDetailPanel.tsx");
+    const workingEditor = source("src/app/(app)/schedule/_components/WorkingCrewEditor.tsx");
 
-    expect(assignmentCell).toContain("/api/shifts/${shiftId}/candidate-scores");
+    expect(assignmentCell).not.toContain("candidate-scores");
+    expect(assignmentCell).not.toContain("fetch(");
+    expect(workingEditor).toContain("/working-copy/candidate-scores?");
     for (const label of ["Recommended", "Good fit", "Warning", "Overloaded"]) {
       expect(picker).toContain(label);
     }

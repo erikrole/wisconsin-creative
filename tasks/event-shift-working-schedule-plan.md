@@ -224,6 +224,31 @@ Make the main web Schedule the event triage, crew-setup, and day-to-day crew-man
 - [x] Verify focused source/working-copy tests, TypeScript, targeted lint, app build, docs/codemap checks, and authenticated desktop browser smoke without mutating schedule data.
 - [ ] Complete narrow-width visual browser smoke when the in-app browser exposes viewport resizing.
 
+### 27. Approval and assignment gate closure
+
+- [x] Make Trade Board area eligibility use the user's complete area membership, including secondary assignments, and fail closed when no matching area exists. Keep list claimability and the claim mutation on one helper and add primary, secondary, missing-area, and mismatch regressions.
+- [x] Revalidate active state, scheduling class, area membership, conflicts, approved time off, poster ownership, and slot occupancy at the final open-slot or trade approval boundary so both human and automatic review reject stale eligibility.
+- [x] Give human and automatic approvals one service-owned, transactionally consistent audit path. Preserve the route actor for staff decisions, use the supported system audit identity for deadline decisions, and deliver the normal worker approval notification after an automatic open-slot approval.
+- [x] Retire live per-cell assignment, removal, slot, and call-window mutations from `/schedule/assign`. Preserve its month-level conflict/open/clean review and working-copy bulk preview, and route individual crew changes to the canonical Event-detail working-copy editor.
+- [x] Replace remaining instant-pickup/swap product copy with approval-first consequences across web payloads and visible Trade Board/shift-detail surfaces without changing the native response envelope.
+- [x] Add focused API/service/web/native source-contract coverage, matched before/after visual proof for the web copy/assignment handoff, and authenticated browser/native runtime proof where the available session permits it.
+- [x] Sync `docs/AREA_SHIFTS.md`, `docs/AREA_MOBILE.md`, `docs/GAPS_AND_RISKS.md`, the current audits, and this review with shipped behavior and exact proof boundaries.
+
+#### Stop conditions
+
+- Stop if the current audit model has no supported system actor representation; do not invent a fake staff identity for deadline approvals.
+- Stop if preserving `/schedule/assign` review or bulk-assignment behavior would require a second working-copy mutation contract; individual changes must hand off to the existing editor.
+- Stop if a shared API response shape would require a breaking native decode; keep the server correction additive or shape-preserving.
+- Stop before any production schedule mutation, migration, deployment, upload, or release action without separate explicit approval.
+
+## Review: Slice 27 (2026-08-23)
+
+- Shipped: Trade Board list, claim, and approval now share complete primary/secondary area eligibility and fail closed without membership; human and automatic approvals revalidate worker, ownership, occupancy, time-off, and conflict state inside the final serializable transaction; approval audits and notifications are service-owned; collaborator assignment eligibility requires active Published Schedule access; and `/schedule/assign` is a review/bulk-preview surface whose retired live-cell mutation routes now return the Event working-copy handoff.
+- Product behavior: web and iOS trade language is approval-first. Claiming or proposing a trade no longer promises an immediate pickup or swap, while approved assignment changes retain their existing response envelopes.
+- Verified: 73 focused schedule/shift/trade test files with 520 passing tests, TypeScript, lint, `npm run build:app`, iOS project/drift checks, an iPhone 16 Pro Simulator Xcode build, `git diff --check`, authenticated Preview browser proof, and a matched 1440x900 before/after review showing 115 legacy table mutation buttons reduced to zero while Event handoff links remained available. `docs/AREA_MOBILE.md` and `docs/GAPS_AND_RISKS.md` were reviewed and required no truth change.
+- Proof artifacts: `tasks/event-shift-approval-gates-review/`, focused tests under `tests/schedule-*`, `tests/shift-*`, and `tests/ios-schedule-edit-times-post-trade-redesign.test.ts`, plus the updated Schedule/Trade service and route contracts.
+- Remaining boundary: `npm run verify:docs` still reports only pre-existing unrelated drift in `docs/CODEMAPS/architecture.md`; the expected backend codemap counts are synchronized. No production schedule mutation, migration, deployment, upload, or release was performed.
+
 ## Review: Slice 26 (2026-08-18)
 
 - Shipped: the shared helper now aborts superseded editor reads, cleans up in-flight picker/editor requests on unmount, filters already-assigned candidates, exposes retryable editor and user-picker failures, confirms pending-change reverts, preserves replacement context after a failed mutation, refreshes parent release metadata after successful reconciliation, and wraps compact call-time/dialog surfaces for narrow screens. Schedule and Event detail continue to call one versioned mutation path.

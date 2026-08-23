@@ -2,30 +2,21 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 describe("schedule assign source wiring", () => {
-  it("keeps assignable-user load failures from becoming false-empty picker results", () => {
+  it("keeps the month assignment board review-only and hands crew edits to Event detail", () => {
     const assignPage = readFileSync("src/app/(app)/schedule/assign/_components/AssignPageClient.tsx", "utf8");
     const assignmentGrid = readFileSync("src/app/(app)/schedule/assign/_components/AssignmentGrid.tsx", "utf8");
     const assignmentCell = readFileSync("src/app/(app)/schedule/assign/_components/AssignmentCell.tsx", "utf8");
-    const picker = readFileSync("src/components/shift-detail/UserAvatarPicker.tsx", "utf8");
 
-    expect(assignPage).toContain('throw new Error(await parseErrorMessage(res, "Failed to load users"))');
-    expect(assignPage).toContain('throw new Error("Users response was malformed")');
-    expect(assignPage).toContain("usersLoadError");
-    expect(assignPage).toContain("onRetryUsers={() => void refetchUsers()}");
-
-    expect(assignmentGrid).toContain("usersLoadError: false | \"network\" | \"server\"");
-    expect(assignmentGrid).toContain("onRetryUsers: () => void");
-    expect(assignmentCell).toContain("loadError={usersLoadError}");
-    expect(assignmentCell).toContain("onRetry={onRetryUsers}");
-    expect(assignmentCell).toContain("/api/shifts/${shiftId}/candidate-scores");
-    expect(assignmentCell).toContain("setConflictMap(Object.fromEntries(");
-
-    expect(picker).toContain("loadError?: false | \"network\" | \"server\"");
-    expect(picker).toContain("Could not load assignable users. Retry before assigning this slot.");
-    expect(picker).toContain("Retry users");
-    expect(picker).toContain("filteredUsers.length === 0");
-    expect(picker).toContain("SCORE_BUCKET_LABELS");
-    expect(picker).toContain("Scoring candidates...");
+    expect(assignPage).toContain("Review coverage and conflicts here.");
+    expect(assignPage).toContain("private working schedule");
+    expect(assignPage).not.toContain("/api/users?limit=200&active=true");
+    expect(assignmentGrid).toContain("href={`/events/${ev.id}`}");
+    expect(assignmentGrid).toContain("Manage crew");
+    expect(assignmentCell).toContain("assignment.conflictNote");
+    expect(assignmentCell).toContain("openShifts.length");
+    expect(assignmentCell).not.toContain("fetch(");
+    expect(assignmentCell).not.toContain("UserAvatarPicker");
+    expect(assignmentCell).not.toContain("CallWindowEditor");
   });
 
   it("gives assignment toolbar filters stable rendered metadata", () => {
@@ -78,15 +69,15 @@ describe("schedule assign source wiring", () => {
     const shiftRoute = readFileSync("src/app/api/shifts/[id]/route.ts", "utf8");
     const conflictRefresh = readFileSync("src/lib/services/shift-assignment-conflicts.ts", "utf8");
     const releaseWorkflow = readFileSync("src/workflows/pending-schedule-release.ts", "utf8");
+    const assignmentService = readFileSync("src/lib/services/shift-assignments.ts", "utf8");
 
-    expect(assignRoute).toContain("dispatchScheduleAssignmentNotifications(assignment.id, \"assigned\")");
-    expect(assignRoute).not.toContain("createShiftGearUpNotification(assignment.id)");
-    expect(approveRoute).toContain("dispatchScheduleAssignmentNotifications(assignment.id, \"approved\")");
-    expect(assignmentRoute).toContain("existing.shift?.shiftGroup?.publishedAt");
-    expect(assignmentRoute).toContain("data.acknowledgedAt = null");
-    expect(shiftRoute).toContain("updateShiftAssignmentConflictsTx(");
-    expect(shiftRoute).toContain("existing.shiftGroup.publishedAt !== null");
-    expect(shiftRoute).toContain("scheduleShiftTimeChangedNotifications(assignmentIds)");
+    expect(assignRoute).toContain("rejectRetiredLiveScheduleMutation()");
+    expect(assignmentRoute).toContain("rejectRetiredLiveScheduleMutation()");
+    expect(shiftRoute).toContain("rejectRetiredLiveScheduleMutation()");
+    expect(approveRoute).toContain("approveRequest(id, { id: user.id, role: user.role })");
+    expect(approveRoute).not.toContain("dispatchScheduleAssignmentNotifications");
+    expect(assignmentService).toContain('dispatchScheduleAssignmentNotifications(result.id, "approved")');
+    expect(assignmentService).toContain('action: actor ? "shift_request_approved" : "shift_request_auto_approved"');
     expect(conflictRefresh).toContain("acknowledged_by_id");
     expect(conflictRefresh).toContain("WHEN CAST(${resetAcknowledgements} AS BOOLEAN) THEN NULL");
     expect(releaseWorkflow).toContain("createPublishedShiftGroupNotifications(shiftGroupId)");

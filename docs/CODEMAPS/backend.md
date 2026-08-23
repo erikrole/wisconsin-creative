@@ -68,10 +68,10 @@
 | `src/lib/services/schedule-working-copy.ts` | 900 |
 | `src/lib/services/scoreboard.ts` | 274 |
 | `src/lib/services/shift-assignment-conflicts.ts` | 43 |
-| `src/lib/services/shift-assignments.ts` | 662 |
+| `src/lib/services/shift-assignments.ts` | 731 |
 | `src/lib/services/shift-generation.ts` | 628 |
 | `src/lib/services/shift-trade-emails.ts` | 56 |
-| `src/lib/services/shift-trades.ts` | 1033 |
+| `src/lib/services/shift-trades.ts` | 1064 |
 | `src/lib/services/signatures.ts` | 1909 |
 | `src/lib/services/software.ts` | 271 |
 | `src/lib/services/sport-configs.ts` | 257 |
@@ -187,7 +187,7 @@
 | `src/lib/schedule-queues.ts` | 185 |
 | `src/lib/schedule-release.ts` | 16 |
 | `src/lib/schedule-template-review-types.ts` | 105 |
-| `src/lib/schedule-working-copy-guard.ts` | 13 |
+| `src/lib/schedule-working-copy-guard.ts` | 20 |
 | `src/lib/schedule-working-copy.ts` | 424 |
 | `src/lib/scoreboard-digest.ts` | 145 |
 | `src/lib/search-pages.ts` | 76 |

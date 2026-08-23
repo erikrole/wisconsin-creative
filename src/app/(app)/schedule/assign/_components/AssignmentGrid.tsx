@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import type { GridEvent, GridColumn } from "@/hooks/use-assignment-grid";
-import type { PickerUser } from "@/components/shift-detail/UserAvatarPicker";
 import EmptyState from "@/components/EmptyState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,12 +14,6 @@ import { AREA_LABELS } from "@/types/areas";
 type Props = {
   events: GridEvent[];
   columns: GridColumn[];
-  allUsers: PickerUser[];
-  usersLoading: boolean;
-  usersLoadError: false | "network" | "server";
-  onRetryUsers: () => void;
-  isStaff: boolean;
-  onRefetch: () => void;
   hasFilters: boolean;
   onClearFilters: () => void;
   monthLabel: string;
@@ -30,12 +23,6 @@ type Props = {
 export function AssignmentGrid({
   events,
   columns,
-  allUsers,
-  usersLoading,
-  usersLoadError,
-  onRetryUsers,
-  isStaff,
-  onRefetch,
   hasFilters,
   onClearFilters,
   monthLabel,
@@ -147,6 +134,7 @@ export function AssignmentGrid({
                               {openSlots > 0 ? ` · ${openSlots} open` : ""}
                             </span>
                           )}
+                          <span className="font-medium text-primary">Manage crew</span>
                         </span>
                       </span>
                     </Link>
@@ -162,14 +150,6 @@ export function AssignmentGrid({
                     <AssignmentCell
                       key={col.key}
                       shifts={matchingShifts}
-                      shiftGroupId={ev.shiftGroupId}
-                      area={col.area}
-                      allUsers={allUsers}
-                      usersLoading={usersLoading}
-                      usersLoadError={usersLoadError}
-                      onRetryUsers={onRetryUsers}
-                      isStaff={isStaff}
-                      onRefetch={onRefetch}
                     />
                   );
                 })}

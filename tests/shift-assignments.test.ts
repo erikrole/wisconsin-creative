@@ -12,7 +12,14 @@ type ShiftAssignmentsTx = {
   >;
   user: Record<"findUnique", MockFn>;
   shiftTrade: Record<"updateMany", MockFn>;
+  auditLog: Record<"create", MockFn>;
 };
+
+const notificationMocks = vi.hoisted(() => ({
+  dispatchScheduleAssignmentNotifications: vi.fn(),
+}));
+
+vi.mock("@/lib/services/notifications", () => notificationMocks);
 
 // ─── Transaction tracking ──────────��────────────────────────────────────────
 const transactionCalls: Array<{ options: unknown }> = [];
@@ -42,6 +49,9 @@ vi.mock("@/lib/db", () => {
     },
     shiftTrade: {
       updateMany: vi.fn(),
+    },
+    auditLog: {
+      create: vi.fn(),
     },
   };
 
@@ -88,9 +98,20 @@ beforeEach(() => {
   mockTx.shiftAssignment.updateMany.mockReset();
   mockTx.shiftAssignment.findMany.mockResolvedValue([]);
   mockTx.user.findUnique.mockReset();
-  mockTx.user.findUnique.mockResolvedValue({ id: "user-1", role: "STUDENT", active: true });
+  mockTx.user.findUnique.mockResolvedValue({
+    id: "user-1",
+    role: "STUDENT",
+    staffingType: "ST",
+    active: true,
+    collaboratorPolicy: null,
+    availabilityBlocks: [],
+  });
   mockTx.shiftTrade.updateMany.mockReset();
   mockTx.shiftTrade.updateMany.mockResolvedValue({ count: 0 });
+  mockTx.auditLog.create.mockReset();
+  mockTx.auditLog.create.mockResolvedValue({});
+  notificationMocks.dispatchScheduleAssignmentNotifications.mockReset();
+  notificationMocks.dispatchScheduleAssignmentNotifications.mockResolvedValue(undefined);
 });
 
 // ════════════��═══════════════════════════════════���════════════════════════════
@@ -341,6 +362,53 @@ describe("directAssignShift", () => {
     );
   });
 
+  it("rejects collaborators without an active published-schedule grant", async () => {
+    const staffSlot = makeShift({ workerType: "FT" });
+    mockTx.shift.findUnique.mockResolvedValue(staffSlot);
+    mockTx.user.findUnique.mockResolvedValue({
+      id: "collaborator-1",
+      role: "COLLABORATOR",
+      staffingType: "FT",
+      active: true,
+      collaboratorPolicy: {
+        status: "ACTIVE",
+        grants: [{ capabilityKey: "ITEMS_VIEW" }],
+      },
+      availabilityBlocks: [],
+    });
+
+    await expect(directAssignShift(staffSlot.id, "collaborator-1", "admin-1"))
+      .rejects
+      .toThrow("not eligible for schedule assignment");
+    expect(mockTx.shiftAssignment.create).not.toHaveBeenCalled();
+  });
+
+  it("allows collaborators with active published-schedule access into Staff slots", async () => {
+    const staffSlot = makeShift({ workerType: "FT" });
+    mockTx.shift.findUnique.mockResolvedValue(staffSlot);
+    mockTx.user.findUnique.mockResolvedValue({
+      id: "collaborator-1",
+      role: "COLLABORATOR",
+      staffingType: "ST",
+      active: true,
+      collaboratorPolicy: {
+        status: "ACTIVE",
+        grants: [{ capabilityKey: "PUBLISHED_SCHEDULE_VIEW" }],
+      },
+      availabilityBlocks: [],
+    });
+    mockTx.shiftAssignment.findFirst.mockResolvedValue(null);
+    mockTx.shiftAssignment.updateMany.mockResolvedValue({ count: 0 });
+    mockTx.shiftAssignment.create.mockResolvedValue({ id: "sa-collaborator", status: "DIRECT_ASSIGNED" });
+
+    const result = await directAssignShift(staffSlot.id, "collaborator-1", "admin-1");
+
+    expect(result.id).toBe("sa-collaborator");
+    expect(mockTx.shiftAssignment.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ shiftId: staffSlot.id, userId: "collaborator-1" }),
+    }));
+  });
+
   it("uses personal call-time overrides when checking conflicts", async () => {
     const shiftWithDefaultWindow = makeShift({
       startsAt: new Date("2026-04-01T10:00:00Z"),
@@ -524,11 +592,20 @@ describe("requestShift", () => {
 // ��═══════════════════════════════��═════════════════════════════════════════��══
 describe("approveRequest", () => {
   const shift = makeShift();
+  const eligibleStudent = {
+    id: "student-1",
+    active: true,
+    role: "STUDENT",
+    staffingType: "ST",
+    collaboratorPolicy: null,
+    availabilityBlocks: [],
+  };
 
   it("approves a REQUESTED assignment", async () => {
     const assignment = {
       ...makeShiftAssignment({ status: "REQUESTED", userId: "student-1" }),
       shift,
+      user: eligibleStudent,
     };
     mockTx.shiftAssignment.findUnique.mockResolvedValue(assignment);
     mockTx.shiftAssignment.findFirst
@@ -558,6 +635,7 @@ describe("approveRequest", () => {
     const assignment = {
       ...makeShiftAssignment({ status: "REQUESTED" }),
       shift,
+      user: eligibleStudent,
     };
     mockTx.shiftAssignment.findUnique.mockResolvedValue(assignment);
     mockTx.shiftAssignment.findFirst
@@ -581,6 +659,7 @@ describe("approveRequest", () => {
     mockTx.shiftAssignment.findUnique.mockResolvedValue({
       ...makeShiftAssignment({ status: "DIRECT_ASSIGNED" }),
       shift,
+      user: eligibleStudent,
     });
 
     await expect(approveRequest("sa-1")).rejects.toThrow("Only REQUESTED");
@@ -590,6 +669,7 @@ describe("approveRequest", () => {
     const assignment = {
       ...makeShiftAssignment({ status: "REQUESTED", shiftId: "shift-1" }),
       shift,
+      user: eligibleStudent,
     };
     mockTx.shiftAssignment.findUnique.mockResolvedValue(assignment);
     mockTx.shiftAssignment.findFirst
@@ -612,10 +692,11 @@ describe("approveRequest", () => {
     );
   });
 
-  it("approves requests without badge side effects", async () => {
+  it("writes a system audit and sends the approved-worker notification for auto approval", async () => {
     const assignment = {
       ...makeShiftAssignment({ status: "REQUESTED", userId: "student-1" }),
       shift,
+      user: eligibleStudent,
     };
     mockTx.shiftAssignment.findUnique.mockResolvedValue(assignment);
     mockTx.shiftAssignment.findFirst
@@ -626,15 +707,60 @@ describe("approveRequest", () => {
 
     await approveRequest(assignment.id);
 
-    expect(mockTx.shiftAssignment.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: {
-          status: "APPROVED",
-          hasConflict: false,
-          conflictNote: undefined,
-        },
-      })
-    );
+    expect(mockTx.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        actorUserId: undefined,
+        entityType: "shift_assignment",
+        entityId: assignment.id,
+        action: "shift_request_auto_approved",
+      }),
+    }));
+    expect(notificationMocks.dispatchScheduleAssignmentNotifications)
+      .toHaveBeenCalledWith(assignment.id, "approved");
+  });
+
+  it("records the reviewing staff actor for human approval", async () => {
+    const assignment = {
+      ...makeShiftAssignment({ status: "REQUESTED", userId: "student-1" }),
+      shift,
+      user: eligibleStudent,
+    };
+    mockTx.shiftAssignment.findUnique.mockResolvedValue(assignment);
+    mockTx.shiftAssignment.findFirst.mockResolvedValue(null);
+    mockTx.shiftAssignment.updateMany.mockResolvedValue({ count: 0 });
+    mockTx.shiftAssignment.update.mockResolvedValue({ ...assignment, status: "APPROVED" });
+
+    await approveRequest(assignment.id, { id: "staff-1", role: "STAFF" });
+
+    expect(mockTx.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        actorUserId: "staff-1",
+        action: "shift_request_approved",
+      }),
+    }));
+  });
+
+  it("rejects approval when the requester became inactive", async () => {
+    mockTx.shiftAssignment.findUnique.mockResolvedValue({
+      ...makeShiftAssignment({ status: "REQUESTED" }),
+      shift,
+      user: { ...eligibleStudent, active: false },
+    });
+
+    await expect(approveRequest("sa-1")).rejects.toThrow("no longer active");
+    expect(mockTx.shiftAssignment.update).not.toHaveBeenCalled();
+    expect(mockTx.auditLog.create).not.toHaveBeenCalled();
+  });
+
+  it("rejects approval when the requester's scheduling class changed", async () => {
+    mockTx.shiftAssignment.findUnique.mockResolvedValue({
+      ...makeShiftAssignment({ status: "REQUESTED" }),
+      shift,
+      user: { ...eligibleStudent, staffingType: "FT" },
+    });
+
+    await expect(approveRequest("sa-1")).rejects.toThrow("no longer matches");
+    expect(mockTx.shiftAssignment.update).not.toHaveBeenCalled();
   });
 });
 

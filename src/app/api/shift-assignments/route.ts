@@ -1,38 +1,8 @@
 import { withAuth } from "@/lib/api";
-import { ok } from "@/lib/http";
 import { requirePermission } from "@/lib/rbac";
-import { assignShiftSchema } from "@/lib/validation";
-import { directAssignShiftWithOutcome } from "@/lib/services/shift-assignments";
-import { createAuditEntry } from "@/lib/audit";
-import { dispatchScheduleAssignmentNotifications } from "@/lib/services/notifications";
-import { assertCallTimePair, assertDateOrder, parseOptionalDate } from "@/lib/api-dates";
+import { rejectRetiredLiveScheduleMutation } from "@/lib/schedule-working-copy-guard";
 
-export const POST = withAuth(async (req, { user }) => {
+export const POST = withAuth(async (_req, { user }) => {
   requirePermission(user.role, "shift_assignment", "assign");
-
-  const body = assignShiftSchema.parse(await req.json());
-  const callStartsAt = parseOptionalDate(body.callStartsAt ?? undefined, "callStartsAt");
-  const callEndsAt = parseOptionalDate(body.callEndsAt ?? undefined, "callEndsAt");
-  assertCallTimePair(callStartsAt, callEndsAt);
-  assertDateOrder(callStartsAt, callEndsAt, "callEndsAt must be after callStartsAt", { allowEqual: false });
-
-  const { assignment, outcome } = await directAssignShiftWithOutcome(body.shiftId, body.userId, user.id, {
-    callStartsAt,
-    callEndsAt,
-    callNote: body.callNote ?? null,
-    notes: body.notes ?? null,
-  });
-
-  await createAuditEntry({
-    actorId: user.id,
-    actorRole: user.role,
-    entityType: "shift_assignment",
-    entityId: assignment.id,
-    action: "shift_assigned",
-    after: { requestedShiftId: body.shiftId, shiftId: assignment.shiftId, userId: body.userId, roleSlotOutcome: outcome },
-  });
-
-  dispatchScheduleAssignmentNotifications(assignment.id, "assigned").catch(() => {});
-
-  return ok({ data: assignment, meta: { roleSlotOutcome: outcome } }, 201);
+  rejectRetiredLiveScheduleMutation();
 });

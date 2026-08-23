@@ -1,0 +1,66 @@
+{
+  "title": "Shift assignment boundary review",
+  "eyebrow": "Web · Wisconsin Creative",
+  "lede": "The month grid is now a coverage and conflict review surface; consequential crew edits move through the Event's private working schedule and release together after review.",
+  "stats": [
+    {
+      "k": "Per-cell mutation controls",
+      "v": "115 → 0",
+      "n": "Measured in the same 11-event Preview data set at 1440×900",
+      "tone": "good"
+    },
+    {
+      "k": "Crew areas visible",
+      "v": "2 → 4",
+      "n": "Video and Photo before; Video, Photo, Social, and Comms after"
+    },
+    {
+      "k": "Event handoffs",
+      "v": "11 → 11",
+      "n": "Every row still links to its Event; the action is now labelled Manage crew"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Assignment review, without live per-cell edits",
+      "note": "Same Preview database, August 2026, All review filter, top-of-page scroll position, dark system theme, and 1440×900 viewport. The baseline uses the current tree with only the three changed assignment-grid components restored from HEAD.",
+      "pairs": [
+        {
+          "title": "Month assignment grid",
+          "sub": "Look for the working-schedule handoff, visible crew areas, and the removal of inline mutation controls.",
+          "before": "tasks/event-shift-approval-gates-review/before.jpg",
+          "beforeCap": "Before: assignment, removal, call-time, and slot controls competed with coverage review inside every cell.",
+          "after": "tasks/event-shift-approval-gates-review/after.jpg",
+          "afterCap": "After: the grid scans as coverage state; Manage crew opens the Event-owned private working schedule."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Review and mutation shared one surface",
+      "was": "The 11-event grid rendered 115 live mutation buttons for assignment, removal, call times, and slot add/delete, bypassing the Event working-copy release boundary.",
+      "now": "Cells are read-only coverage summaries. Individual changes enter through the Event's Manage crew link, while preview-first bulk assignment remains available."
+    },
+    {
+      "h": "The safety boundary was implicit",
+      "was": "Nothing on the page explained why bulk and individual changes had different release behavior.",
+      "now": "A persistent banner says the grid reviews coverage/conflicts and that Event crew changes release together after review."
+    },
+    {
+      "h": "Cell controls hid the month picture",
+      "was": "Only two crew-area columns fit in the initial desktop viewport because each cell reserved room for editing controls.",
+      "now": "All four configured crew-area columns fit at the same viewport and with the same event data."
+    }
+  ],
+  "verification": [
+    "<strong>73 schedule/shift/trade test files:</strong> 520 tests pass, including primary and secondary area eligibility, approval-time state drift, transactional human/system audit actions, notifications, and retired-route handoffs.",
+    "<strong>Web gates:</strong> TypeScript, ESLint, and <code>npm run build:app</code> pass.",
+    "<strong>Authenticated local render:</strong> current and isolated HEAD-baseline assignment grids loaded the same Preview data; DOM measurement confirmed 115 → 0 table buttons and 11 → 11 Event links.",
+    "<strong>Native gates:</strong> iOS project consistency, drift checks, relevant source-contract tests, and the pinned iPhone 16 Pro / iOS 26.5 Xcode build pass."
+  ],
+  "notes": [
+    "The source and authenticated web render are verified locally. Deadline-driven escalate-then-approve timing still needs an authenticated deployed workflow run.",
+    "No deployment, production mutation, App Store upload, or TestFlight acceptance was performed in this slice."
+  ]
+}

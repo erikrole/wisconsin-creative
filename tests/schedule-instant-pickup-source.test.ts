@@ -71,4 +71,19 @@ describe("Schedule claim-approval contract", () => {
     expect(assignApprove).toContain('requirePermission(user.role, "shift_assignment", "approve")');
     expect(assignDecline).toContain('requirePermission(user.role, "shift_assignment", "approve")');
   });
+
+  it("keeps approval audit and worker notification ownership in services", () => {
+    const tradeApprove = source("src/app/api/shift-trades/[id]/approve/route.ts");
+    const assignApprove = source("src/app/api/shift-assignments/[id]/approve/route.ts");
+    const trades = source("src/lib/services/shift-trades.ts");
+    const assignments = source("src/lib/services/shift-assignments.ts");
+
+    expect(tradeApprove).toContain("approveTrade(id, { id: user.id, role: user.role })");
+    expect(assignApprove).toContain("approveRequest(id, { id: user.id, role: user.role })");
+    expect(tradeApprove).not.toContain("createAuditEntry");
+    expect(assignApprove).not.toContain("createAuditEntry");
+    expect(trades).toContain('action: actor ? "trade_approved" : "trade_auto_approved"');
+    expect(assignments).toContain('action: actor ? "shift_request_approved" : "shift_request_auto_approved"');
+    expect(assignments).toContain('dispatchScheduleAssignmentNotifications(result.id, "approved")');
+  });
 });

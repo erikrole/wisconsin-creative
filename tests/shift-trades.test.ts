@@ -7,6 +7,7 @@ type ShiftTradesTx = {
   shiftTrade: Record<"findUnique" | "findFirst" | "create" | "update", MockFn>;
   shiftAssignment: Record<"findUnique" | "findFirst" | "create" | "update", MockFn>;
   user: Record<"findUnique", MockFn>;
+  auditLog: Record<"create", MockFn>;
 };
 type ShiftTradesDb = {
   _mockTx: ShiftTradesTx;
@@ -35,6 +36,9 @@ vi.mock("@/lib/db", () => {
     },
     user: {
       findUnique: vi.fn(),
+    },
+    auditLog: {
+      create: vi.fn(),
     },
   };
 
@@ -91,6 +95,16 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-03-01T12:00:00.000Z"));
   mockDb.user.findMany.mockResolvedValue([]);
+  mockTx.user.findUnique.mockResolvedValue(makeUser({
+    id: "claimer-1",
+    role: "STUDENT",
+    staffingType: "ST",
+    primaryArea: "Field",
+    areaAssignments: [],
+    active: true,
+    availabilityBlocks: [],
+  }));
+  mockTx.auditLog.create.mockResolvedValue({});
 });
 
 afterEach(() => {
@@ -397,8 +411,29 @@ describe("claimTrade", () => {
 
   it("throws 400 when area mismatch", async () => {
     mockTx.shiftTrade.findUnique.mockResolvedValue(openTrade());
-    mockTx.user.findUnique.mockResolvedValue(makeUser({ primaryArea: "Courts" }));
-    await expect(claimTrade("trade-1", "claimer-1")).rejects.toThrow("does not match");
+    mockTx.user.findUnique.mockResolvedValue(makeUser({ primaryArea: "Courts", areaAssignments: [] }));
+    await expect(claimTrade("trade-1", "claimer-1")).rejects.toThrow("not assigned to this shift's area");
+  });
+
+  it("allows a claimant whose secondary area matches the trade", async () => {
+    const trade = openTrade();
+    mockTx.shiftTrade.findUnique.mockResolvedValue(trade);
+    mockTx.user.findUnique.mockResolvedValue(makeUser({
+      primaryArea: "Courts",
+      areaAssignments: [{ area: "Field", isPrimary: false }],
+    }));
+    mockTx.shiftAssignment.findUnique.mockResolvedValue({ ...trade.shiftAssignment });
+    mockTx.shiftTrade.update.mockResolvedValue(claimedTrade(trade));
+
+    await expect(claimTrade(trade.id, "claimer-1")).resolves.toMatchObject({ status: "CLAIMED" });
+  });
+
+  it("fails closed when the claimant has no area membership", async () => {
+    mockTx.shiftTrade.findUnique.mockResolvedValue(openTrade());
+    mockTx.user.findUnique.mockResolvedValue(makeUser({ primaryArea: null, areaAssignments: [] }));
+
+    await expect(claimTrade("trade-1", "claimer-1")).rejects.toThrow("not assigned to this shift's area");
+    expect(mockTx.shiftTrade.update).not.toHaveBeenCalled();
   });
 
   it("throws 400 when the claimant is inactive", async () => {
@@ -645,6 +680,94 @@ describe("approveTrade", () => {
       tradeId: trade.id,
       sourceKey: trade.id,
     });
+    expect(mockTx.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        actorUserId: undefined,
+        action: "trade_auto_approved",
+      }),
+    }));
+  });
+
+  it("records the reviewing staff actor on human approval", async () => {
+    const shift = makeShift({ area: "Field" });
+    const trade = {
+      ...makeShiftTrade({ status: "CLAIMED", claimedByUserId: "claimer-1", postedByUserId: "poster-1" }),
+      shiftAssignment: {
+        ...makeShiftAssignment(),
+        shift: { ...shift, shiftGroup: { event: { summary: "Wisconsin vs Iowa" } } },
+      },
+    };
+    mockTx.shiftTrade.findUnique.mockResolvedValue(trade);
+    mockTx.shiftAssignment.findUnique.mockResolvedValue(trade.shiftAssignment);
+    mockTx.shiftAssignment.create.mockResolvedValue({});
+    mockTx.shiftTrade.update.mockResolvedValue({ ...trade, status: "COMPLETED" });
+
+    await approveTrade(trade.id, { id: "staff-1", role: "STAFF" });
+
+    expect(mockTx.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ actorUserId: "staff-1", action: "trade_approved" }),
+    }));
+    expect(mockTx.shiftAssignment.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ assignedBy: "staff-1" }),
+    }));
+  });
+
+  it("revalidates claimant active state, class, and area before approval", async () => {
+    const shift = makeShift({ area: "Field" });
+    const trade = {
+      ...makeShiftTrade({ status: "CLAIMED", claimedByUserId: "claimer-1", postedByUserId: "poster-1" }),
+      shiftAssignment: {
+        ...makeShiftAssignment(),
+        shift: { ...shift, shiftGroup: { event: { summary: "Wisconsin vs Iowa" } } },
+      },
+    };
+    mockTx.shiftTrade.findUnique.mockResolvedValue(trade);
+    mockTx.shiftAssignment.findUnique.mockResolvedValue(trade.shiftAssignment);
+
+    mockTx.user.findUnique.mockResolvedValueOnce(makeUser({
+      active: false,
+      primaryArea: "Field",
+      areaAssignments: [],
+    }));
+    await expect(approveTrade(trade.id)).rejects.toThrow("Inactive users cannot claim shifts");
+
+    mockTx.user.findUnique.mockResolvedValueOnce(makeUser({
+      active: true,
+      staffingType: "FT",
+      primaryArea: "Field",
+      areaAssignments: [],
+    }));
+    await expect(approveTrade(trade.id)).rejects.toThrow("scheduling class");
+
+    mockTx.user.findUnique.mockResolvedValueOnce(makeUser({
+      active: true,
+      staffingType: "ST",
+      primaryArea: "Courts",
+      areaAssignments: [],
+    }));
+    await expect(approveTrade(trade.id)).rejects.toThrow("not assigned to this shift's area");
+
+    expect(mockTx.shiftTrade.update).not.toHaveBeenCalled();
+    expect(mockTx.auditLog.create).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when claimant eligibility cannot be reloaded", async () => {
+    const shift = makeShift({ area: "Field" });
+    const trade = {
+      ...makeShiftTrade({ status: "CLAIMED", claimedByUserId: "claimer-1", postedByUserId: "poster-1" }),
+      shiftAssignment: {
+        ...makeShiftAssignment(),
+        shift: { ...shift, shiftGroup: { event: { summary: "Wisconsin vs Iowa" } } },
+      },
+    };
+    mockTx.shiftTrade.findUnique.mockResolvedValue(trade);
+    mockTx.shiftAssignment.findUnique.mockResolvedValue(trade.shiftAssignment);
+    mockTx.user.findUnique.mockRejectedValue(new Error("database unavailable"));
+
+    await expect(approveTrade(trade.id)).rejects.toThrow("database unavailable");
+    expect(mockTx.shiftAssignment.update).not.toHaveBeenCalled();
+    expect(mockTx.shiftAssignment.create).not.toHaveBeenCalled();
+    expect(mockTx.shiftTrade.update).not.toHaveBeenCalled();
   });
 
   it("throws 400 when trade is not CLAIMED", async () => {
@@ -981,6 +1104,7 @@ describe("listTrades", () => {
       staffingType: "ST",
       active: true,
       primaryArea: "PHOTO",
+      areaAssignments: [],
       availabilityBlocks: [],
     }]);
 
@@ -988,7 +1112,7 @@ describe("listTrades", () => {
 
     expect(blocked.data[0]).toEqual(expect.objectContaining({
       viewerCanClaim: false,
-      viewerClaimReason: "Your primary area (PHOTO) does not match this shift's area (VIDEO)",
+      viewerClaimReason: "You are not assigned to this shift's area (VIDEO)",
     }));
 
     mockDb.user.findMany.mockResolvedValue([{
@@ -997,11 +1121,28 @@ describe("listTrades", () => {
       staffingType: "ST",
       active: true,
       primaryArea: "VIDEO",
+      areaAssignments: [],
       availabilityBlocks: [],
     }]);
 
     const claimable = await listTrades({ userId: "viewer-1", limit: 100, offset: 0 });
     expect(claimable.data[0]).toEqual(expect.objectContaining({
+      viewerCanClaim: true,
+      viewerClaimReason: null,
+    }));
+
+    mockDb.user.findMany.mockResolvedValue([{
+      id: "viewer-1",
+      role: "STUDENT",
+      staffingType: "ST",
+      active: true,
+      primaryArea: "PHOTO",
+      areaAssignments: [{ area: "VIDEO" }],
+      availabilityBlocks: [],
+    }]);
+
+    const secondaryArea = await listTrades({ userId: "viewer-1", limit: 100, offset: 0 });
+    expect(secondaryArea.data[0]).toEqual(expect.objectContaining({
       viewerCanClaim: true,
       viewerClaimReason: null,
     }));
