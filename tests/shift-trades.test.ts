@@ -275,6 +275,19 @@ describe("claimTrade", () => {
     };
   }
 
+  /** What `shiftTrade.update` returns once a claim lands: CLAIMED, both
+   *  parties loaded, and deliberately no `resolvedAt` — staff resolve it. */
+  function claimedTrade(trade: ReturnType<typeof openTrade>) {
+    return {
+      ...trade,
+      claimedByUserId: "claimer-1",
+      claimedAt: new Date(),
+      status: "CLAIMED",
+      postedBy: { id: "poster-1", name: "Avery Poster" },
+      claimedBy: { id: "claimer-1", name: "Rowan Claimer" },
+    };
+  }
+
   // ── REGRESSION: claimTrade must use SERIALIZABLE to prevent double-claim ──
   it("uses SERIALIZABLE isolation to prevent double-claim", async () => {
     const trade = openTrade();
@@ -283,7 +296,7 @@ describe("claimTrade", () => {
     mockTx.shiftAssignment.findUnique.mockResolvedValue({ ...trade.shiftAssignment });
     mockTx.shiftAssignment.update.mockResolvedValue({});
     mockTx.shiftAssignment.create.mockResolvedValue({});
-    mockTx.shiftTrade.update.mockResolvedValue({ ...trade, claimedByUserId: "claimer-1", status: "COMPLETED" });
+    mockTx.shiftTrade.update.mockResolvedValue(claimedTrade(trade));
 
     await claimTrade(trade.id, "claimer-1");
 
@@ -299,7 +312,7 @@ describe("claimTrade", () => {
     mockTx.shiftAssignment.findUnique.mockResolvedValue({ ...trade.shiftAssignment });
     mockTx.shiftAssignment.update.mockResolvedValue({});
     mockTx.shiftAssignment.create.mockResolvedValue({});
-    mockTx.shiftTrade.update.mockResolvedValue({ ...trade, claimedByUserId: "claimer-1", status: "COMPLETED" });
+    mockTx.shiftTrade.update.mockResolvedValue(claimedTrade(trade));
 
     // The Neon adapter can surface a serialization abort as the raw 40001
     // driver code rather than Prisma's P2034.
@@ -309,17 +322,13 @@ describe("claimTrade", () => {
     await claimTrade(trade.id, "claimer-1");
 
     expect(transaction).toHaveBeenCalledTimes(2);
-    expect(sendPushToUser).toHaveBeenCalledTimes(1);
+    // Two pushes is correct: the poster hears their shift was claimed and the
+    // claimer hears they are waiting. The point is that the retry doubled
+    // neither — the buffers are cleared before the second attempt.
+    expect(sendPushToUser).toHaveBeenCalledTimes(2);
     expect(sendShiftTradeEmail).toHaveBeenCalledTimes(1);
-    // Two badge events is correct: a completed trade credits both the poster
-    // and the claimer. The point is that the retry did not double either.
-    expect(badges.onTradeCompleted).toHaveBeenCalledTimes(2);
-    expect(badges.onTradeCompleted).toHaveBeenCalledWith(
-      expect.objectContaining({ userId: "poster-1" }),
-    );
-    expect(badges.onTradeCompleted).toHaveBeenCalledWith(
-      expect.objectContaining({ userId: "claimer-1" }),
-    );
+    // A claim completes no trade, so it credits no badge on either side.
+    expect(badges.onTradeCompleted).not.toHaveBeenCalled();
   });
 
   it("keeps email delivery best-effort when push delivery rejects after commit", async () => {
@@ -329,10 +338,10 @@ describe("claimTrade", () => {
     mockTx.shiftAssignment.findUnique.mockResolvedValue({ ...trade.shiftAssignment });
     mockTx.shiftAssignment.update.mockResolvedValue({});
     mockTx.shiftAssignment.create.mockResolvedValue({});
-    mockTx.shiftTrade.update.mockResolvedValue({ ...trade, claimedByUserId: "claimer-1", status: "COMPLETED" });
+    mockTx.shiftTrade.update.mockResolvedValue(claimedTrade(trade));
     vi.mocked(sendPushToUser).mockRejectedValueOnce(new Error("APNs unavailable"));
 
-    await expect(claimTrade(trade.id, "claimer-1")).resolves.toMatchObject({ status: "COMPLETED" });
+    await expect(claimTrade(trade.id, "claimer-1")).resolves.toMatchObject({ status: "CLAIMED" });
 
     expect(sendShiftTradeEmail).toHaveBeenCalledTimes(1);
   });
@@ -377,7 +386,7 @@ describe("claimTrade", () => {
     mockTx.shiftAssignment.findUnique.mockResolvedValue({ ...trade.shiftAssignment });
     mockTx.shiftAssignment.update.mockResolvedValue({});
     mockTx.shiftAssignment.create.mockResolvedValue({});
-    mockTx.shiftTrade.update.mockResolvedValue({ ...trade, claimedByUserId: "claimer-1", status: "COMPLETED" });
+    mockTx.shiftTrade.update.mockResolvedValue(claimedTrade(trade));
 
     await claimTrade(trade.id, "claimer-1");
 
@@ -494,46 +503,94 @@ describe("claimTrade", () => {
     expect(mockTx.shiftTrade.update).not.toHaveBeenCalled();
   });
 
-  it("executes swap immediately when a trade is claimed", async () => {
+  it("holds a claim for staff review instead of swapping", async () => {
     const trade = openTrade();
     mockTx.shiftTrade.findUnique.mockResolvedValue(trade);
     mockTx.user.findUnique.mockResolvedValue(makeUser({ primaryArea: "Field" }));
     mockTx.shiftAssignment.findUnique.mockResolvedValue({ ...trade.shiftAssignment });
-    mockTx.shiftAssignment.update.mockResolvedValue({});
-    mockTx.shiftAssignment.create.mockResolvedValue({});
-    mockTx.shiftTrade.update.mockResolvedValue({ ...trade, claimedByUserId: "claimer-1", status: "COMPLETED" });
+    mockTx.shiftTrade.update.mockResolvedValue(claimedTrade(trade));
 
     await claimTrade(trade.id, "claimer-1");
 
-    expect(mockTx.shiftAssignment.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: { status: "SWAPPED" },
-      })
-    );
-    expect(mockTx.shiftAssignment.create).toHaveBeenCalled();
+    // The swap is the approval's job. Claiming must not touch assignments at
+    // all: the poster stays on the schedule until staff say otherwise.
+    expect(mockTx.shiftAssignment.update).not.toHaveBeenCalled();
+    expect(mockTx.shiftAssignment.create).not.toHaveBeenCalled();
     expect(mockTx.shiftTrade.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ status: "COMPLETED" }),
+        data: expect.objectContaining({
+          status: "CLAIMED",
+          claimedByUserId: "claimer-1",
+        }),
       })
     );
+    // A claim resolves nothing, so it must not stamp resolvedAt.
+    expect(mockTx.shiftTrade.update).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ resolvedAt: expect.anything() }),
+      })
+    );
+    // No trade completed, so no badge is earned yet.
+    expect(badges.onTradeCompleted).not.toHaveBeenCalled();
+  });
+
+  it("tells the poster they are still scheduled until the trade is approved", async () => {
+    const trade = openTrade();
+    mockTx.shiftTrade.findUnique.mockResolvedValue(trade);
+    mockTx.user.findUnique.mockResolvedValue(makeUser({ primaryArea: "Field" }));
+    mockTx.shiftAssignment.findUnique.mockResolvedValue({ ...trade.shiftAssignment });
+    mockTx.shiftTrade.update.mockResolvedValue(claimedTrade(trade));
+
+    await claimTrade(trade.id, "claimer-1");
+
+    // Telling the poster only "claimed" is how someone stops showing up for a
+    // shift they still hold, so the consequence has to be in the copy.
     expect(sendShiftTradeEmail).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: "poster-1",
-        title: "Your trade is done",
+        title: "Your trade was claimed",
         eventSummary: "Wisconsin vs Iowa",
         area: "Field",
+        body: expect.stringContaining("still scheduled"),
       })
     );
-    expect(badges.onTradeCompleted).toHaveBeenCalledWith({
-      userId: "poster-1",
-      tradeId: trade.id,
-      sourceKey: trade.id,
-    });
-    expect(badges.onTradeCompleted).toHaveBeenCalledWith({
-      userId: "claimer-1",
-      tradeId: trade.id,
-      sourceKey: trade.id,
-    });
+  });
+
+  it("notifies staff that a claim is waiting on them", async () => {
+    const trade = openTrade();
+    mockTx.shiftTrade.findUnique.mockResolvedValue(trade);
+    mockTx.user.findUnique.mockResolvedValue(makeUser({ primaryArea: "Field" }));
+    mockTx.shiftAssignment.findUnique.mockResolvedValue({ ...trade.shiftAssignment });
+    mockTx.shiftTrade.update.mockResolvedValue(claimedTrade(trade));
+    mockDb.user.findMany.mockResolvedValue([{ id: "staff-1" }, { id: "admin-1" }]);
+
+    await claimTrade(trade.id, "claimer-1");
+
+    // A review queue nobody is told about is a queue that sits.
+    expect(sendPushToUser).toHaveBeenCalledWith(
+      "staff-1",
+      expect.objectContaining({ title: "Trade claim needs review" })
+    );
+    expect(sendPushToUser).toHaveBeenCalledWith(
+      "admin-1",
+      expect.objectContaining({ title: "Trade claim needs review" })
+    );
+  });
+
+  it("looks up reviewers only after the claim commits", async () => {
+    const trade = openTrade();
+    mockTx.shiftTrade.findUnique.mockResolvedValue(trade);
+    mockTx.user.findUnique.mockResolvedValue(makeUser({ primaryArea: "Field" }));
+    mockTx.shiftAssignment.findUnique.mockResolvedValue({ ...trade.shiftAssignment });
+    mockTx.shiftTrade.update.mockResolvedValue(claimedTrade(trade));
+    mockDb.user.findMany.mockResolvedValue([{ id: "staff-1" }]);
+
+    await claimTrade(trade.id, "claimer-1");
+
+    // The reviewer fanout must stay out of the SERIALIZABLE claim transaction:
+    // widening its read set is what makes two students racing a trade collide.
+    expect(mockTx.user.findUnique).toHaveBeenCalled();
+    expect(mockDb.user.findMany).toHaveBeenCalled();
   });
 });
 

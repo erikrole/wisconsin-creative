@@ -1,6 +1,25 @@
 # Task Queue
 
-Last updated: 2026-08-18
+Last updated: 2026-08-22
+
+---
+## Completed: Approval-first student shift claims (2026-08-22)
+
+Decision: [D-055](../docs/DECISIONS.md). Supersedes `tasks/schedule-mvp-end-to-end-plan.md`.
+
+- [x] Hold a Trade Board claim as `CLAIMED` for staff review instead of swapping on the spot, keeping the poster assigned until approval.
+- [x] File an open-slot claim as a `REQUESTED` assignment that holds no slot, allowing several students to compete for one slot and blocking a duplicate self-request.
+- [x] Keep the poster-no-longer-holds-it and already-refilled guards at claim time after they stopped riding inside `executeSwap`.
+- [x] Escalate an unreviewed claim and then auto-approve it on a per-claim durable workflow, standing down for a human when the approval itself reports a blocker.
+- [x] Give web and native a Staff Review queue and a student-facing Waiting on Staff state, and retire the "legacy request" and "assigned immediately" copy those surfaces still carried.
+- [x] Add native Trade Board area filtering and paging (both deferred P2s in `tasks/audit-trade-board-ios.md`).
+- [x] Add Schedule swipe-to-post, closing the reachable half of `tasks/shift-trade-actions-plan.md` slice 4.
+- [ ] Authenticated web and native runtime proof of a claim held for review and an approval completing the swap.
+
+- **Shipped locally:** student claims are approval-first on both paths again, the review surface that had been left orphaned since 2026-07-02 is live rather than half-removed, and no claim can sit unreviewed into its own shift.
+- **Boundary:** no schema migration, permission, published/working-copy authority, notification-channel, transaction-isolation, or kiosk custody change. `REQUESTED` stays outside `ACTIVE_ASSIGNMENT_STATUSES`, so a pending request still holds no slot and raises no conflict.
+- **Not done, deliberately:** the event-detail `List` conversion in `shift-trade-actions-plan.md` slice 4 conflicts with the 2026-08-16 Event detail rebuild onto the shared `ScrollView { LazyVStack }` detail pattern. Recorded in that plan rather than silently dropped or silently forced.
+- **Verification:** full `npx vitest run tests/` at 3597/3597 across 533 files, `npx tsc --noEmit` clean, `npm run build:app`, `xcodebuild` for `Wisconsin` on iPhone 16 Pro by UDID, `npm run drift:ios`, `npm run audit:ios:gaps`, `npm run ios:project:check`, `npm run codemap`, `npm run verify:docs`, and `git diff --check`.
 
 ---
 ## Completed: License expiry local-calendar correction (2026-08-18)

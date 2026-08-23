@@ -172,6 +172,14 @@ const TRADE_OUTCOME_COPY = {
     server: "Could not decline the trade. The claim stayed in review.",
     network: "Could not reach the server. The trade was not declined.",
   },
+  approveRequest: {
+    server: "Could not approve the request. Nobody was added to the shift.",
+    network: "Could not reach the server. The request was not approved.",
+  },
+  declineRequest: {
+    server: "Could not decline the request. It stayed in review.",
+    network: "Could not reach the server. The request was not declined.",
+  },
   cancelTrade: {
     server: "Could not cancel the trade. The shift stays assigned to the poster.",
     network: "Could not reach the server. The trade was not cancelled.",
@@ -207,7 +215,7 @@ function formatShiftWindow(shift: Pick<TradeShift, "startsAt" | "endsAt">) {
 }
 
 function openShiftActionCopy(item: OpenWorkShift) {
-  if (item.action === "claim") return "You will be assigned immediately.";
+  if (item.action === "claim") return "Staff review this before you're on the schedule.";
   return item.reason;
 }
 
@@ -217,7 +225,7 @@ function tradeOutcomeCopy(trade: Trade, args: { currentUserId: string; isStaff: 
     return "Canceling removes the post; the shift stays assigned to you.";
   }
   if (trade.status === "OPEN") {
-    return "Claiming assigns this shift to you immediately.";
+    return "Claiming sends this to staff for approval; the shift stays with its owner until then.";
   }
   return statusMeta(trade.status).helper;
 }
@@ -462,7 +470,7 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
       const res = await fetch(`/api/shift-trades/${tradeId}/claim`, { method: "POST" });
       if (handleAuthRedirect(res)) return;
       if (res.ok) {
-        toast.success("Trade claimed");
+        toast.success("Claim sent for staff approval");
         await reloadWork();
       } else {
         const msg = await parseErrorMessage(res, TRADE_OUTCOME_COPY.claimTrade.server);
@@ -505,6 +513,58 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
     }
   }, [beginAction, confirm, endAction, reloadWork]);
 
+  const handleReviewTrade = useCallback(async (tradeId: string, decision: "approve" | "decline") => {
+    const actionId = `${decision}:${tradeId}`;
+    if (!beginAction(actionId)) return;
+    try {
+      const res = await fetch(`/api/shift-trades/${tradeId}/${decision}`, { method: "PATCH" });
+      if (handleAuthRedirect(res)) return;
+      if (res.ok) {
+        toast.success(decision === "approve" ? "Trade approved" : "Claim declined");
+        await reloadWork();
+      } else {
+        const copy = decision === "approve"
+          ? TRADE_OUTCOME_COPY.approveTrade
+          : TRADE_OUTCOME_COPY.declineTrade;
+        toast.error(await parseErrorMessage(res, copy.server));
+        if (isStaleWorkResponse(res.status)) await reloadWork();
+      }
+    } catch {
+      toast.error(decision === "approve"
+        ? TRADE_OUTCOME_COPY.approveTrade.network
+        : TRADE_OUTCOME_COPY.declineTrade.network);
+    } finally {
+      endAction(actionId);
+    }
+  }, [beginAction, endAction, reloadWork]);
+
+  const handleReviewRequest = useCallback(async (request: PickupRequest, decision: "approve" | "decline") => {
+    const actionId = `${decision}:${request.id}`;
+    if (!beginAction(actionId)) return;
+    try {
+      const res = await fetch(`/api/shift-assignments/${request.id}/${decision}`, { method: "PATCH" });
+      if (handleAuthRedirect(res)) return;
+      if (res.ok) {
+        toast.success(decision === "approve"
+          ? `${request.user.name} is on the schedule`
+          : `Request declined for ${request.user.name}`);
+        await reloadWork();
+      } else {
+        const copy = decision === "approve"
+          ? TRADE_OUTCOME_COPY.approveRequest
+          : TRADE_OUTCOME_COPY.declineRequest;
+        toast.error(await parseErrorMessage(res, copy.server));
+        if (isStaleWorkResponse(res.status)) await reloadWork();
+      }
+    } catch {
+      toast.error(decision === "approve"
+        ? TRADE_OUTCOME_COPY.approveRequest.network
+        : TRADE_OUTCOME_COPY.declineRequest.network);
+    } finally {
+      endAction(actionId);
+    }
+  }, [beginAction, endAction, reloadWork]);
+
   const handlePickup = useCallback(async (shift: OpenWorkShift) => {
     const actionId = `pickup:${shift.id}`;
     if (!beginAction(actionId)) return;
@@ -516,7 +576,7 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
       });
       if (handleAuthRedirect(res)) return;
       if (res.ok) {
-        toast.success("Shift claimed");
+        toast.success("Request sent for staff approval");
         await reloadWork();
       } else {
         const msg = await parseErrorMessage(res, TRADE_OUTCOME_COPY.claimShift.server);
@@ -554,11 +614,27 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
       }]
       : []),
   ];
-  const totalRows = filteredOpenShifts.length + filteredTrades.length;
+  const totalRows = filteredOpenShifts.length + filteredTrades.length + openWork.pickupRequests.length;
   const isLoadingWork = loading && openWorkLoading && totalRows === 0;
   const hasAnyLoadError = loadError || openWorkError;
   const hasLoadError = loadError && openWorkError;
   const countLabel = `${totalRows} ${totalRows === 1 ? "item" : "items"}`;
+  // Staff owe a decision on every claimed trade and every pending request.
+  const tradesAwaitingReview = isStaff
+    ? filteredTrades.filter((trade) => trade.status === "CLAIMED")
+    : [];
+  const requestsAwaitingReview = isStaff ? openWork.pickupRequests : [];
+  const reviewCount = tradesAwaitingReview.length + requestsAwaitingReview.length;
+
+  // A student sees what they are waiting on. The server already scopes
+  // pickupRequests to their own rows for non-staff.
+  const myPendingRequests = isStaff ? [] : openWork.pickupRequests;
+  const myPendingClaims = isStaff
+    ? []
+    : filteredTrades.filter(
+      (trade) => trade.status === "CLAIMED" && trade.claimedBy?.id === currentUserId,
+    );
+
   const claimableOpenShifts = filteredOpenShifts.filter((item) => item.action === "claim");
   const unavailableOpenShifts = filteredOpenShifts.filter((item) => item.action === "none");
   const blockedClaimableTrades = filteredTrades.filter((trade) =>
@@ -580,6 +656,8 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
     && !blockedClaimableTrades.some((item) => item.id === trade.id)
     && !myTradePosts.some((item) => item.id === trade.id)
     && !resolvedTrades.some((item) => item.id === trade.id)
+    && !tradesAwaitingReview.some((item) => item.id === trade.id)
+    && !myPendingClaims.some((item) => item.id === trade.id)
   );
 
   return (
@@ -702,9 +780,155 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
           />
         ) : totalRows > 0 ? (
           <div>
+            {reviewCount > 0 && (
+              <WorkSection
+                title="Staff Review"
+                description="Students are waiting on these. Nothing moves on the schedule until you decide."
+                count={reviewCount}
+              >
+                {requestsAwaitingReview.map((request) => {
+                  const shift = request.shift;
+                  const event = shift.shiftGroup.event;
+                  const titleParts = scheduleEventTitleParts({
+                    summary: event.summary,
+                    sportCode: event.sportCode,
+                    opponent: event.opponent ?? null,
+                    isHome: event.isHome ?? null,
+                  });
+                  const areaLabel = AREA_LABELS[shift.area] ?? shift.area;
+                  const isApproving = acting === `approve:${request.id}`;
+                  const isDeclining = acting === `decline:${request.id}`;
+
+                  return (
+                    <article key={`review-request-${request.id}`} className="px-4 py-3 transition-colors hover:bg-muted/25">
+                      <div className="flex items-start gap-3">
+                        <UserAvatar name={request.user.name} size="sm" className="mt-0.5 shrink-0" />
+                        <div className="min-w-0 flex-1 flex flex-col gap-2">
+                          <div className="flex min-w-0 items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <h3 className="truncate text-sm font-semibold leading-tight">{titleParts.title}</h3>
+                              <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                                {request.user.name} wants this slot
+                              </p>
+                            </div>
+                            <Badge variant="orange" size="sm">Needs review</Badge>
+                          </div>
+
+                          <div className="grid gap-1.5 text-xs text-muted-foreground sm:grid-cols-2">
+                            <span className="flex min-w-0 items-center gap-1.5">
+                              <CalendarClockIcon className="size-3.5 shrink-0" />
+                              <span className="truncate tabular-nums">{formatShiftWindow(shift)}</span>
+                            </span>
+                            <span className="flex min-w-0 items-center gap-1.5">
+                              <ClipboardListIcon className="size-3.5 shrink-0" />
+                              <span className="truncate">{areaLabel}</span>
+                            </span>
+                          </div>
+
+                          {request.conflictNote && (
+                            <p className="flex items-start gap-1.5 rounded-md bg-muted/50 px-2.5 py-2 text-xs leading-relaxed text-muted-foreground">
+                              <AlertTriangleIcon className="mt-0.5 size-3.5 shrink-0" />
+                              <span>{request.conflictNote}</span>
+                            </p>
+                          )}
+
+                          <div className="flex flex-wrap gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() => void handleReviewRequest(request, "approve")}
+                              disabled={Boolean(acting)}
+                            >
+                              {isApproving ? "Approving…" : "Approve"}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => void handleReviewRequest(request, "decline")}
+                              disabled={Boolean(acting)}
+                            >
+                              {isDeclining ? "Declining…" : "Decline"}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+
+                {tradesAwaitingReview.map((trade) => {
+                  const shift = trade.shiftAssignment.shift;
+                  const event = shift.shiftGroup.event;
+                  const titleParts = scheduleEventTitleParts({
+                    summary: event.summary,
+                    sportCode: event.sportCode,
+                    opponent: event.opponent ?? null,
+                    isHome: event.isHome ?? null,
+                  });
+                  const areaLabel = AREA_LABELS[shift.area] ?? shift.area;
+                  const isApproving = acting === `approve:${trade.id}`;
+                  const isDeclining = acting === `decline:${trade.id}`;
+
+                  return (
+                    <article key={`review-trade-${trade.id}`} className="px-4 py-3 transition-colors hover:bg-muted/25">
+                      <div className="flex items-start gap-3">
+                        <UserAvatar name={trade.claimedBy?.name ?? trade.postedBy.name} size="sm" className="mt-0.5 shrink-0" />
+                        <div className="min-w-0 flex-1 flex flex-col gap-2">
+                          <div className="flex min-w-0 items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <h3 className="truncate text-sm font-semibold leading-tight">{titleParts.title}</h3>
+                              <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                                {trade.claimedBy?.name ?? "Someone"} wants to take {trade.postedBy.name}&apos;s shift
+                              </p>
+                            </div>
+                            <Badge variant="orange" size="sm">Needs review</Badge>
+                          </div>
+
+                          <div className="grid gap-1.5 text-xs text-muted-foreground sm:grid-cols-2">
+                            <span className="flex min-w-0 items-center gap-1.5">
+                              <CalendarClockIcon className="size-3.5 shrink-0" />
+                              <span className="truncate tabular-nums">{formatShiftWindow(shift)}</span>
+                            </span>
+                            <span className="flex min-w-0 items-center gap-1.5">
+                              <ArrowLeftRightIcon className="size-3.5 shrink-0" />
+                              <span className="truncate">{areaLabel}</span>
+                            </span>
+                          </div>
+
+                          {trade.notes && (
+                            <p className="rounded-md bg-muted/50 px-2.5 py-2 text-xs leading-relaxed text-muted-foreground">
+                              {trade.notes}
+                            </p>
+                          )}
+                          <AvailabilityContextNote context={trade.claimedByAvailabilityContext} />
+
+                          <div className="flex flex-wrap gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() => void handleReviewTrade(trade.id, "approve")}
+                              disabled={Boolean(acting)}
+                            >
+                              {isApproving ? "Approving…" : "Approve trade"}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => void handleReviewTrade(trade.id, "decline")}
+                              disabled={Boolean(acting)}
+                            >
+                              {isDeclining ? "Declining…" : "Decline"}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+              </WorkSection>
+            )}
+
             <WorkSection
               title="Available Now"
-              description="These shifts can be picked up without staff approval."
+              description="Claim these to send them to staff for approval."
               count={claimableOpenShifts.length + claimableTrades.length}
             >
               {claimableOpenShifts.map((item) => {
@@ -985,6 +1209,101 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
               );
             })}
             </WorkSection>
+
+            {(myPendingRequests.length + myPendingClaims.length) > 0 && (
+              <WorkSection
+                title="Waiting on Staff"
+                description="You've claimed these. You are not on the schedule until staff approve them."
+                count={myPendingRequests.length + myPendingClaims.length}
+              >
+                {myPendingRequests.map((request) => {
+                  const shift = request.shift;
+                  const event = shift.shiftGroup.event;
+                  const titleParts = scheduleEventTitleParts({
+                    summary: event.summary,
+                    sportCode: event.sportCode,
+                    opponent: event.opponent ?? null,
+                    isHome: event.isHome ?? null,
+                  });
+                  const areaLabel = AREA_LABELS[shift.area] ?? shift.area;
+
+                  return (
+                    <article key={`mine-request-${request.id}`} className="px-4 py-3">
+                      <div className="flex items-start gap-3">
+                        <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                          <ClipboardListIcon className="size-4" />
+                        </div>
+                        <div className="min-w-0 flex-1 flex flex-col gap-2">
+                          <div className="flex min-w-0 items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <h3 className="truncate text-sm font-semibold leading-tight">{titleParts.title}</h3>
+                              {titleParts.detail && (
+                                <p className="mt-0.5 truncate text-xs text-muted-foreground">{titleParts.detail}</p>
+                              )}
+                            </div>
+                            <Badge variant="orange" size="sm">Waiting</Badge>
+                          </div>
+                          <div className="grid gap-1.5 text-xs text-muted-foreground sm:grid-cols-2">
+                            <span className="flex min-w-0 items-center gap-1.5">
+                              <CalendarClockIcon className="size-3.5 shrink-0" />
+                              <span className="truncate tabular-nums">{formatShiftWindow(shift)}</span>
+                            </span>
+                            <span className="flex min-w-0 items-center gap-1.5">
+                              <ClipboardListIcon className="size-3.5 shrink-0" />
+                              <span className="truncate">{areaLabel}</span>
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+
+                {myPendingClaims.map((trade) => {
+                  const shift = trade.shiftAssignment.shift;
+                  const event = shift.shiftGroup.event;
+                  const titleParts = scheduleEventTitleParts({
+                    summary: event.summary,
+                    sportCode: event.sportCode,
+                    opponent: event.opponent ?? null,
+                    isHome: event.isHome ?? null,
+                  });
+                  const areaLabel = AREA_LABELS[shift.area] ?? shift.area;
+
+                  return (
+                    <article key={`mine-claim-${trade.id}`} className="px-4 py-3">
+                      <div className="flex items-start gap-3">
+                        <UserAvatar name={trade.postedBy.name} size="sm" className="mt-0.5 shrink-0" />
+                        <div className="min-w-0 flex-1 flex flex-col gap-2">
+                          <div className="flex min-w-0 items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <h3 className="truncate text-sm font-semibold leading-tight">{titleParts.title}</h3>
+                              <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                                {trade.postedBy.name}&apos;s shift
+                              </p>
+                            </div>
+                            <Badge variant="orange" size="sm">Waiting</Badge>
+                          </div>
+                          <div className="grid gap-1.5 text-xs text-muted-foreground sm:grid-cols-2">
+                            <span className="flex min-w-0 items-center gap-1.5">
+                              <CalendarClockIcon className="size-3.5 shrink-0" />
+                              <span className="truncate tabular-nums">{formatShiftWindow(shift)}</span>
+                            </span>
+                            <span className="flex min-w-0 items-center gap-1.5">
+                              <ArrowLeftRightIcon className="size-3.5 shrink-0" />
+                              <span className="truncate">{areaLabel}</span>
+                            </span>
+                          </div>
+                          {trade.viewerClaimReason && (
+                            <p className="text-xs leading-relaxed text-muted-foreground">{trade.viewerClaimReason}</p>
+                          )}
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+              </WorkSection>
+            )}
 
             <WorkSection
               title="Waiting or Blocked"

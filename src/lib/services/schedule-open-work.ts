@@ -278,10 +278,14 @@ export async function getScheduleOpenWork(filters: OpenWorkFilters) {
   const [candidate, shifts, pickupRequests] = await Promise.all([
     loadCurrentCandidate(filters.userId, now, futureEnd),
     loadOpenShiftRows({ ...filters, now }),
-    filters.role === "ADMIN" || filters.role === "STAFF"
-      ? db.shiftAssignment.findMany({
+    // Staff see every request because reviewing them is the job. A student sees
+    // only their own — without it, claiming a shift looks like nothing happened.
+    db.shiftAssignment.findMany({
         where: {
           status: "REQUESTED",
+          ...(filters.role === "ADMIN" || filters.role === "STAFF"
+            ? {}
+            : { userId: filters.userId }),
           ...(filters.area ? { shift: { area: filters.area } } : {}),
           shift: {
             AND: [futureEffectiveShiftWhere(now)],
@@ -304,8 +308,7 @@ export async function getScheduleOpenWork(filters: OpenWorkFilters) {
         },
         orderBy: { createdAt: "asc" },
         take: filters.limit ?? 50,
-      })
-      : Promise.resolve([]),
+      }),
   ]);
 
   return {
@@ -333,10 +336,17 @@ export async function getScheduleOpenWork(filters: OpenWorkFilters) {
   };
 }
 
+/**
+ * File a student's request for a published open Student slot. The request holds
+ * no slot — `REQUESTED` is outside `ACTIVE_ASSIGNMENT_STATUSES` — so it raises no
+ * conflict, stays out of My Shifts and the personal ISC feed, and never blocks
+ * staff from assigning the slot directly. `approveRequest` turns it into real
+ * coverage.
+ */
 export async function pickupOpenShift(shiftId: string, userId: string) {
-  // Two students tapping the same open slot is the expected race, so a lost
-  // serialization conflict retries once. The retry re-reads the shift, so the
-  // second attempt correctly returns the 409 if the other student won.
+  // Requests no longer race each other for the slot, but they still race staff
+  // filling it directly, so a lost serialization conflict retries once and the
+  // second attempt returns the 409 against the assignment that landed first.
   return withSerializationRetry(() => db.$transaction(async (tx) => {
     const [shift, user] = await Promise.all([
       tx.shift.findUnique({
@@ -421,21 +431,29 @@ export async function pickupOpenShift(shiftId: string, userId: string) {
       throw new HttpError(409, availability.blocking.note);
     }
     const conflictNote = availability.advisory?.note ?? null;
-    await tx.shiftAssignment.updateMany({
-      where: { shiftId, status: "REQUESTED" },
-      data: { status: "DECLINED" },
+
+    // Competing requests are the point now: several students may want the same
+    // slot and staff pick one. `approveRequest` declines the rest when it lands,
+    // so nothing here may pre-empt that choice.
+    const alreadyRequested = await tx.shiftAssignment.findFirst({
+      where: { shiftId, userId, status: "REQUESTED" },
+      select: { id: true },
     });
+    if (alreadyRequested) {
+      throw new HttpError(409, "You already have a request waiting on this shift");
+    }
 
     return tx.shiftAssignment.create({
       data: {
         shiftId,
         userId,
-        status: "DIRECT_ASSIGNED",
+        status: "REQUESTED",
         assignedBy: userId,
         hasConflict: Boolean(conflictNote),
         conflictNote,
-        acknowledgedAt: new Date(),
-        acknowledgedById: userId,
+        // Deliberately no acknowledgement: there is nothing to acknowledge until
+        // staff approve. Stamping it here would show the student as confirmed
+        // for a slot they do not hold.
       },
       include: {
         user: { select: { id: true, name: true, role: true, staffingType: true, primaryArea: true, avatarUrl: true } },

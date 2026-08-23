@@ -43,8 +43,8 @@ _None._ Pull-to-refresh works. Auth handled. Claim + Cancel both have confirmati
 
 ## P2 — post-MVP
 
-- [ ] [Polish] **Deferred.** Pagination — today loads only the first 30 trades (`pageSize = 30`). Web has pagination; iOS doesn't currently surface it. For a small school with a handful of open trades at any time, 30 is plenty. Defer until needed.
-- [ ] [Polish] **Deferred.** Filter by area (VIDEO / PHOTO / etc.). Web has it; iOS could add. Cross-tab consistency (BookingsView has filter UI) suggests this is worth doing once the trade board's traffic exceeds the 30-row cap.
+- [x] [Polish] **Shipped 2026-08-22.** Pagination — a Load more control pages past the 30-row cap using the `offset` the route already accepted, de-duplicating by id so a row resolved between pages cannot appear twice. Taken off deferral because the staff review queue added a second class of row competing for the same 30.
+- [x] [Polish] **Shipped 2026-08-22.** Filter by area — a toolbar area menu matching the web board's six areas, applied to both the trade list and Open Work so the two halves of the board never disagree about scope.
 - [ ] [Polish] **Deferred.** Time-to-claim countdown for expiring trades — web doesn't have it either. Not blocking ship.
 - [ ] [Polish] **Deferred.** Per-trade share affordance (post to Slack / messages). Off-platform path; not a documented floor need.
 

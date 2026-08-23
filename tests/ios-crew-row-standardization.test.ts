@@ -22,7 +22,7 @@ describe("iOS crew row standardization", () => {
     // Same state wording as the web table.
     expect(crewRow).toContain('case .filled: return "Filled"');
     expect(crewRow).toContain('case .open: return "Open"');
-    expect(crewRow).toContain('"1 legacy request"');
+    expect(crewRow).toContain('"1 request waiting"');
 
     // Same tone mapping as web: filled green, open red, requested orange.
     expect(crewRow).toContain("case .filled: return .green");

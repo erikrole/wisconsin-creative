@@ -406,7 +406,7 @@ struct EventDetailView: View {
     private func message(for pending: EventConfirmation) -> String? {
         switch pending {
         case .claim:
-            return "You will be assigned immediately."
+            return "Staff review this before you're on the schedule."
         case .cancelTrade(let assignment):
             let owner = assignment.user.id == session.currentUser?.id
                 ? "You stay"
@@ -1664,7 +1664,7 @@ struct ShiftRow: View {
         } else {
             let names = shift.assignments.map { assignment -> String in
                 if assignment.status == "REQUESTED" {
-                    return "\(assignment.user.name), legacy request pending"
+                    return "\(assignment.user.name), request waiting for approval"
                 }
                 if assignment.isOnTradeBoard {
                     return "\(assignment.user.name), on the Trade Board"

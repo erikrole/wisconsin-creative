@@ -27,6 +27,7 @@
 | `src/lib/services/candidate-scoring.ts` | 438 |
 | `src/lib/services/category-mutations.ts` | 168 |
 | `src/lib/services/checkout-policies.ts` | 40 |
+| `src/lib/services/claim-review-notifications.ts` | 175 |
 | `src/lib/services/collaborator-policies.ts` | 400 |
 | `src/lib/services/collaborator-schedule.ts` | 213 |
 | `src/lib/services/companion-projection-publisher.ts` | 57 |
@@ -44,7 +45,7 @@
 | `src/lib/services/live-activities.ts` | 632 |
 | `src/lib/services/non-game-schedule-defaults.ts` | 49 |
 | `src/lib/services/notification-prefs.ts` | 103 |
-| `src/lib/services/notifications.ts` | 1547 |
+| `src/lib/services/notifications.ts` | 1624 |
 | `src/lib/services/onboarding-lifecycle.ts` | 766 |
 | `src/lib/services/pending-pickup-expiry.ts` | 281 |
 | `src/lib/services/reports.ts` | 1927 |
@@ -59,8 +60,8 @@
 | `src/lib/services/schedule-notification-copy.ts` | 102 |
 | `src/lib/services/schedule-notification-diff.ts` | 197 |
 | `src/lib/services/schedule-notification-flush.ts` | 150 |
-| `src/lib/services/schedule-notification-policy.ts` | 130 |
-| `src/lib/services/schedule-open-work.ts` | 451 |
+| `src/lib/services/schedule-notification-policy.ts` | 132 |
+| `src/lib/services/schedule-open-work.ts` | 469 |
 | `src/lib/services/schedule-publication.ts` | 1019 |
 | `src/lib/services/schedule-template-review.ts` | 554 |
 | `src/lib/services/schedule-working-copy.ts` | 900 |
@@ -69,7 +70,7 @@
 | `src/lib/services/shift-assignments.ts` | 662 |
 | `src/lib/services/shift-generation.ts` | 628 |
 | `src/lib/services/shift-trade-emails.ts` | 56 |
-| `src/lib/services/shift-trades.ts` | 935 |
+| `src/lib/services/shift-trades.ts` | 1033 |
 | `src/lib/services/signatures.ts` | 1909 |
 | `src/lib/services/software.ts` | 271 |
 | `src/lib/services/sport-configs.ts` | 257 |
@@ -115,6 +116,8 @@
 | `src/lib/category-options.ts` | 34 |
 | `src/lib/checkout-escalation-policy.ts` | 117 |
 | `src/lib/checkout-notification-workflow.ts` | 24 |
+| `src/lib/claim-review-deadlines.ts` | 52 |
+| `src/lib/claim-review-workflow.ts` | 41 |
 | `src/lib/collaborator-access.ts` | 164 |
 | `src/lib/collaborator-gear.ts` | 151 |
 | `src/lib/companion-projection-contract.ts` | 68 |

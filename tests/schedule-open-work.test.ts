@@ -265,58 +265,68 @@ describe("schedule open work", () => {
       staffingType: "ST",
     });
     mockDb._mockTx.shiftAssignment.findFirst.mockResolvedValue(null);
-    mockDb._mockTx.shiftAssignment.create.mockResolvedValue({ id: "assignment-1", status: "DIRECT_ASSIGNED" });
+    mockDb._mockTx.shiftAssignment.create.mockResolvedValue({ id: "assignment-1", status: "REQUESTED" });
 
     await pickupOpenShift("shift-1", "staff-access-student-worker");
 
+    // Scheduling class, not app role, decides eligibility — and the request
+    // still waits for review like any other student's.
     expect(mockDb._mockTx.shiftAssignment.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({
         shiftId: "shift-1",
         userId: "staff-access-student-worker",
-        status: "DIRECT_ASSIGNED",
+        status: "REQUESTED",
       }),
     }));
   });
 
-  it("claims an open shift as an acknowledged direct assignment", async () => {
+  it("files an open-slot claim as a pending request, holding no slot", async () => {
     mockDb._mockTx.shift.findUnique.mockResolvedValue(baseShift());
     mockDb._mockTx.user.findUnique.mockResolvedValue(activeStudent());
     mockDb._mockTx.shiftAssignment.findFirst.mockResolvedValue(null);
-    mockDb._mockTx.shiftAssignment.create.mockResolvedValue({ id: "assignment-1", status: "DIRECT_ASSIGNED" });
+    mockDb._mockTx.shiftAssignment.create.mockResolvedValue({ id: "assignment-1", status: "REQUESTED" });
 
     await pickupOpenShift("shift-1", "student-1");
 
-    expect(mockDb._mockTx.shiftAssignment.create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({
-        shiftId: "shift-1",
-        userId: "student-1",
-        status: "DIRECT_ASSIGNED",
-        assignedBy: "student-1",
-        acknowledgedById: "student-1",
-      }),
+    const created = mockDb._mockTx.shiftAssignment.create.mock.calls[0]![0];
+    expect(created.data).toEqual(expect.objectContaining({
+      shiftId: "shift-1",
+      userId: "student-1",
+      status: "REQUESTED",
+      assignedBy: "student-1",
     }));
+    // Acknowledging here would show the student as confirmed for a slot that
+    // staff have not given them.
+    expect(created.data.acknowledgedAt).toBeUndefined();
+    expect(created.data.acknowledgedById).toBeUndefined();
     expectSerializableIsolation(transactionCalls, 0);
   });
 
-  it("declines legacy pending requests before creating the direct assignment", async () => {
+  it("leaves competing requests alone so staff choose between them", async () => {
     mockDb._mockTx.shift.findUnique.mockResolvedValue(baseShift());
     mockDb._mockTx.user.findUnique.mockResolvedValue(activeStudent());
     mockDb._mockTx.shiftAssignment.findFirst.mockResolvedValue(null);
-    mockDb._mockTx.shiftAssignment.updateMany.mockResolvedValue({ count: 1 });
-    mockDb._mockTx.shiftAssignment.create.mockResolvedValue({ id: "assignment-1", status: "DIRECT_ASSIGNED" });
+    mockDb._mockTx.shiftAssignment.create.mockResolvedValue({ id: "assignment-1", status: "REQUESTED" });
 
     await pickupOpenShift("shift-1", "student-1");
 
-    expect(mockDb._mockTx.shiftAssignment.updateMany).toHaveBeenCalledWith({
-      where: { shiftId: "shift-1", status: "REQUESTED" },
-      data: { status: "DECLINED" },
-    });
-    expect(mockDb._mockTx.shiftAssignment.create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({
-        status: "DIRECT_ASSIGNED",
-        assignedBy: "student-1",
-      }),
-    }));
+    // Declining the other requests here would hand the slot to whoever tapped
+    // first, which is the instant-claim behaviour the gate replaced.
+    expect(mockDb._mockTx.shiftAssignment.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("rejects a second request from the same student on one shift", async () => {
+    mockDb._mockTx.shift.findUnique.mockResolvedValue(baseShift());
+    mockDb._mockTx.user.findUnique.mockResolvedValue(activeStudent());
+    // No active assignment, but this student already has one waiting.
+    mockDb._mockTx.shiftAssignment.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: "existing-request" });
+
+    await expect(pickupOpenShift("shift-1", "student-1")).rejects.toThrow(
+      "already have a request waiting"
+    );
+    expect(mockDb._mockTx.shiftAssignment.create).not.toHaveBeenCalled();
   });
 
   it("rejects draft shifts before worker pickup", async () => {

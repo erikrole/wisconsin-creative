@@ -282,7 +282,7 @@ describe("student field mobile contracts", () => {
     expect(eventDetail).not.toContain("Label(\"Prep gear\", systemImage: \"archivebox\")");
     expect(tradeBoard).toContain(".accessibilityLabel(\"Post trade\")");
     expect(tradeBoard).toContain(".navigationTitle(\"Trade Board\")");
-    expect(tradeBoard).toContain("APIClient.shared.scheduleOpenWork()");
+    expect(tradeBoard).toContain("APIClient.shared.scheduleOpenWork(area: areaFilter)");
     expect(tradeBoard).toContain("Available Now");
     expect(tradeBoard).toContain("My Posts");
     expect(tradeBoard).toContain("Waiting or Blocked");
@@ -290,7 +290,7 @@ describe("student field mobile contracts", () => {
     expect(tradeBoard).toContain("Text(\"Claim this shift\")");
     expect(tradeBoard).toContain("Text(\"Cancel post\")");
     expect(tradeBoard).toContain("Canceling removes the post; the shift stays assigned to you.");
-    expect(tradeBoard).toContain("You will be assigned immediately.");
+    expect(tradeBoard).toContain("Staff review this before you're on the schedule.");
     expect(postTrade).toContain("Text(\"Choose a Shift\")");
     expect(postTrade).toContain("Text(\"Post to Trade Board\")");
   });

@@ -13,7 +13,7 @@
 
 ## Source Checks
 
-- Accepted policy is instant pickup for every published open Student slot. New `REQUESTED` assignments were retired on 2026-07-02; the enum and approve/decline routes remain only to drain legacy rows safely.
+- ~~Accepted policy is instant pickup for every published open Student slot. New `REQUESTED` assignments were retired on 2026-07-02; the enum and approve/decline routes remain only to drain legacy rows safely.~~ **Superseded 2026-08-22 by [D-055](../docs/DECISIONS.md):** claims are approval-first again on both paths, and `REQUESTED` is a live status rather than a legacy one. The stop condition below no longer holds.
 - The released relational Schedule remains worker-facing truth. Open Work and Trade Board must never expose a private working copy.
 - Web and native Trade Board both combine `/api/schedule/open-work` with `/api/shift-trades`; either read can fail independently today.
 - Web already classifies availability-blocked trade claims as blocked. Native decodes neither `viewerAvailabilityContext` nor `claimedByAvailabilityContext`, so approved time off can be shown as claimable until the server rejects the tap.
@@ -23,7 +23,7 @@
 
 ## Stop Conditions
 
-- Stop if implementation would recreate approval-first pickup or expose working-copy state to workers.
+- ~~Stop if implementation would recreate approval-first pickup~~ (retired by D-055) or expose working-copy state to workers.
 - Stop if a change weakens `SERIALIZABLE`, permission, audit, availability, notification preference, or transaction-owned durable notification contracts.
 - Stop before a schema migration unless a live-data predicate proves a schema cleanup is safe and the migration can be generated through the approved workflow.
 - Stop before production mutation, deployment, commit, push, TestFlight upload, or destructive legacy-row cleanup without explicit authorization.
@@ -41,7 +41,7 @@
 ## Verification
 
 - [x] Focused Open Work, assignment, trade, notification, web source-contract, and native source-contract Vitest suites.
-- [ ] `npx tsc --noEmit --pretty false`, with any unchanged baseline failures recorded exactly. It passed before concurrent Settings escalation work introduced one unrelated type error at `src/app/api/settings/escalation/route.ts:153`.
+- [x] `npx tsc --noEmit --pretty false` — clean as of 2026-08-22; the concurrent Settings escalation type error that blocked it is resolved.
 - [x] Focused ESLint for touched TypeScript and TSX.
 - [x] `npm run drift:ios`
 - [x] `npm run audit:ios:gaps` (exit 0; unrelated dirty `ReportsView.swift` remains reported as unregistered).
@@ -50,7 +50,7 @@
 - [x] `npm run codemap` before `npm run verify:docs` when shared source or route ownership changes.
 - [x] `npm run verify:docs`
 - [x] `git diff --check`
-- [ ] `npm run build:app` passed before the final compatibility-handler extraction; the final rerun is blocked by the unrelated concurrent Settings type error above. Focused route inventory, Schedule tests, and ESLint pass after the extraction.
+- [x] `npm run build:app` — passes as of 2026-08-22.
 - [x] Authenticated local browser smoke for Schedule and Trade Board. Both reads returned 200 and the unfiltered board rendered six server-blocked shifts with explicit reasons; partial-read recovery remains source-contract proof because both local APIs were healthy.
 - [ ] Native runtime inspection of Trade Board on iPhone 16 Pro Simulator when an authenticated session is available; do not mutate production Schedule data solely for proof.
 
@@ -62,3 +62,16 @@
 - Blocked: authenticated native Trade Board inspection stops at Login; final repository TypeScript/build rerun is blocked by concurrent Settings escalation work outside this slice.
 - Proof artifacts: local authenticated `/schedule?queue=trade-approval` readback; iPhone 16 Pro Simulator launch screenshot at `/tmp/gear-tracker-schedule-mvp-latest.png` showing the authentication boundary.
 - Next slice or stop: stop implementation here. Remaining work is acceptance proof or separately owned dirty-work repair, not another Schedule behavior slice.
+
+
+## Closeout (2026-08-22)
+
+Superseded by [D-055](../docs/DECISIONS.md). This plan's central premise — instant
+pickup as accepted policy — was reversed, and the half-removed approval surface it
+described as "legacy only" is live again. The hardening it shipped (server-owned
+claimability, independent Trade Board read recovery, centralized post-commit trade
+delivery) all survives and is unaffected by the reversal.
+
+Both verification items that were blocked on an unrelated Settings type error now
+pass. The one item that remains genuinely open is native Trade Board runtime
+inspection, which is carried forward rather than closed here.

@@ -12,6 +12,8 @@ import { availabilityContextFromBlocks } from "@/lib/schedule-availability-conte
 import { shiftWorkerTypeForProfile } from "@/lib/shift-display";
 import { withSerializationRetry } from "@/lib/serialization";
 import { assertNoWorkingCopy } from "@/lib/schedule-working-copy-guard";
+import { visibleActiveUserWhere } from "@/lib/user-visibility";
+import { enqueuePendingClaimReview } from "@/lib/claim-review-workflow";
 
 function assertShiftNotStarted(startsAt: Date) {
   if (startsAt <= new Date()) {
@@ -109,6 +111,14 @@ type TradePushJob = {
   payload: Record<string, unknown>;
 };
 
+/** A claim waiting on staff. Fanned out to reviewers after the claim commits. */
+type TradeReviewJob = {
+  tradeId: string;
+  title: string;
+  body: string;
+  payload: Record<string, unknown>;
+};
+
 async function dispatchTradeSideEffects({
   pushJobs,
   emailJobs,
@@ -125,6 +135,39 @@ async function dispatchTradeSideEffects({
     }),
   ));
   await sendShiftTradeEmails(emailJobs);
+}
+
+/**
+ * Tell staff a claim is waiting on them. Runs after the claim commits: a
+ * reviewer fanout has no business inside the SERIALIZABLE claim transaction,
+ * where it would widen the read set that two students racing a trade contend
+ * over. Per-reviewer dedupe keys make a retried dispatch idempotent.
+ */
+async function notifyTradeReviewers(jobs: TradeReviewJob[]) {
+  if (jobs.length === 0) return;
+
+  const reviewers = await db.user.findMany({
+    where: visibleActiveUserWhere({ role: { in: ["ADMIN", "STAFF"] } }),
+    select: { id: true },
+  });
+  if (reviewers.length === 0) return;
+
+  const pushJobs: TradePushJob[] = [];
+  for (const job of jobs) {
+    for (const reviewer of reviewers) {
+      await notify(
+        reviewer.id,
+        "trade_review_required",
+        job.title,
+        job.body,
+        `trade_review_required_${job.tradeId}_${reviewer.id}`,
+        job.payload as Prisma.InputJsonValue,
+      );
+      pushJobs.push({ userId: reviewer.id, title: job.title, body: job.body, payload: job.payload });
+    }
+  }
+
+  await dispatchTradeSideEffects({ pushJobs, emailJobs: [] });
 }
 
 function isTradeManager(actor: TradeActor): boolean {
@@ -237,12 +280,14 @@ export async function postTrade(
 }
 
 /**
- * Claim an open trade and execute the swap immediately.
+ * Claim an open trade. The claim is a request: it holds the post and waits for
+ * a staff approve/decline. The poster keeps the assignment until `approveTrade`
+ * runs the swap, so a claim alone never leaves a shift uncovered.
  */
 export async function claimTrade(tradeId: string, userId: string) {
   const emailJobs: ShiftTradeEmail[] = [];
   const pushJobs: TradePushJob[] = [];
-  const badgeJobs: Array<Parameters<typeof badges.onTradeCompleted>[0]> = [];
+  const reviewJobs: TradeReviewJob[] = [];
 
   // Two students claiming the same trade is the expected race here, so a lost
   // serialization conflict retries once instead of surfacing as a failure. The
@@ -312,15 +357,38 @@ export async function claimTrade(tradeId: string, userId: string) {
     const eventSummary =
       trade.shiftAssignment.shift.shiftGroup?.event?.summary ?? "your shift";
 
-    await executeSwap(tx, trade.shiftAssignment.id, userId, trade.postedByUserId);
+    // These two guards used to ride along inside `executeSwap`, which claiming
+    // no longer runs. They have to stay at claim time regardless: without them a
+    // student can claim a post whose shift the poster already lost or someone
+    // else already filled, then wait on a review that can only ever decline.
+    const posted = await tx.shiftAssignment.findUnique({
+      where: { id: trade.shiftAssignmentId },
+      include: { shift: true },
+    });
+    if (!posted) throw new HttpError(404, "Assignment not found for this trade");
+    if (!(ACTIVE_ASSIGNMENT_STATUSES as readonly string[]).includes(posted.status)) {
+      throw new HttpError(409, "The posted shift is no longer held by the poster, so it can't be claimed");
+    }
+    const refilled = await tx.shiftAssignment.findFirst({
+      where: {
+        shiftId: posted.shiftId,
+        id: { not: posted.id },
+        status: { in: ACTIVE_ASSIGNMENT_STATUSES },
+      },
+      select: { id: true },
+    });
+    if (refilled) {
+      throw new HttpError(409, "This shift already has an active assignment");
+    }
 
-    const completed = await tx.shiftTrade.update({
+    // The swap itself waits for staff. Until they approve, the poster keeps the
+    // assignment: a claim is a request to be released, not the release.
+    const claimed = await tx.shiftTrade.update({
       where: { id: tradeId },
       data: {
         claimedByUserId: userId,
         claimedAt: new Date(),
-        resolvedAt: new Date(),
-        status: "COMPLETED",
+        status: "CLAIMED",
       },
       include: {
         shiftAssignment: {
@@ -335,51 +403,73 @@ export async function claimTrade(tradeId: string, userId: string) {
         claimedBy: { select: { id: true, name: true } },
       },
     });
-    queueTradeCompletedIfTransitioned(badgeJobs, completed, trade.status);
 
-    const title = "Your trade is done";
-    const body = `${completed.claimedBy?.name ?? "Someone"} took your ${shift.area} shift for ${eventSummary}.`;
+    const claimerName = claimed.claimedBy?.name ?? "Someone";
     const payload = scheduleNotificationPayload({
       tradeId,
-      assignmentId: completed.shiftAssignment.id,
-      shiftId: completed.shiftAssignment.shift.id,
-      eventId: completed.shiftAssignment.shift.shiftGroup.event.id,
+      assignmentId: claimed.shiftAssignment.id,
+      shiftId: claimed.shiftAssignment.shift.id,
+      eventId: claimed.shiftAssignment.shift.shiftGroup.event.id,
     });
 
-    // Notify poster: trade completed
+    // Poster: someone wants it, but they are still on the hook until staff act.
+    // Saying only "claimed" is how a person stops showing up for a shift they
+    // still hold.
+    const posterTitle = "Your trade was claimed";
+    const posterBody = `${claimerName} claimed your ${shift.area} shift for ${eventSummary}. You're still scheduled until staff approve the trade.`;
     await notify(
       trade.postedByUserId,
-      "trade_completed",
-      title,
-      body,
-      `trade_completed_${tradeId}`,
+      "trade_claimed",
+      posterTitle,
+      posterBody,
+      `trade_claimed_${tradeId}`,
       payload,
     );
-    pushJobs.push({
-      userId: trade.postedByUserId,
-      title,
-      body,
-      payload,
-    });
+    pushJobs.push({ userId: trade.postedByUserId, title: posterTitle, body: posterBody, payload });
     emailJobs.push({
       userId: trade.postedByUserId,
-      title,
-      body,
+      title: posterTitle,
+      body: posterBody,
       eventSummary,
       area: shift.area,
     });
 
-    return completed;
+    // Claimer: say plainly that they are not on the schedule yet.
+    const claimerTitle = "Claim sent for approval";
+    const claimerBody = `Your claim on the ${shift.area} shift for ${eventSummary} is waiting for staff approval. You're not on the schedule until it's approved.`;
+    await notify(
+      userId,
+      "trade_claim_pending",
+      claimerTitle,
+      claimerBody,
+      `trade_claim_pending_${tradeId}`,
+      payload,
+    );
+    pushJobs.push({ userId, title: claimerTitle, body: claimerBody, payload });
+
+    reviewJobs.push({
+      tradeId,
+      title: "Trade claim needs review",
+      body: `${claimerName} claimed ${claimed.postedBy?.name ?? "a teammate"}'s ${shift.area} shift for ${eventSummary}.`,
+      payload,
+    });
+
+    return claimed;
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }), {
     onRetry: () => {
       emailJobs.length = 0;
       pushJobs.length = 0;
-      badgeJobs.length = 0;
+      reviewJobs.length = 0;
     },
   });
 
-  await Promise.all(badgeJobs.map((event) => badges.onTradeCompleted(event)));
   await dispatchTradeSideEffects({ pushJobs, emailJobs });
+  await notifyTradeReviewers(reviewJobs);
+  await enqueuePendingClaimReview({
+    kind: "trade",
+    claimId: result.id,
+    shiftStartsAt: effectiveAssignmentWindow(result.shiftAssignment).startsAt,
+  });
   return result;
 }
 
@@ -719,7 +809,15 @@ export async function listTrades(filters: {
         : null;
       let viewerCanClaim = false;
       let viewerClaimReason: string | null = null;
-      if (trade.status !== "OPEN") {
+      if (trade.status === "CLAIMED") {
+        // "Not open" is true but useless here. Whoever is looking is either the
+        // person waiting on the decision or the person who has to make it.
+        viewerClaimReason = trade.claimedByUserId === filters.userId
+          ? "Waiting for staff to approve your claim"
+          : trade.postedByUserId === filters.userId
+            ? `${trade.claimedBy?.name ?? "Someone"} claimed this — waiting for staff approval`
+            : "Claimed and waiting for staff approval";
+      } else if (trade.status !== "OPEN") {
         viewerClaimReason = "This trade is not open";
       } else if (!filters.userId || !viewer) {
         viewerClaimReason = "Your scheduling profile is unavailable";

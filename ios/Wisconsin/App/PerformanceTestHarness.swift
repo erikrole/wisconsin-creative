@@ -55,6 +55,8 @@ struct PerformanceTestRootView: View {
             LicensesView()
         case .schedule:
             ScheduleHarnessView()
+        case .tradeBoardStaff, .tradeBoardStudent:
+            TradeBoardHarnessView()
         case .home, .homeAllClear:
             HomeHarnessView()
         case .scoreboard:
@@ -332,6 +334,8 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
             return ProfileFixtureAPI.userDetail
         case "/api/badges/user/\(ScoreboardFixtureAPI.userId)":
             return ProfileFixtureAPI.badgeProfile
+        case "/api/shift-trades": return TradeBoardFixtureAPI.trades
+        case "/api/schedule/open-work": return TradeBoardFixtureAPI.openWork
         case "/api/shift-groups": return ScheduleFixtureAPI.shiftGroups(for: request)
         case "/api/calendar-events": return ScheduleFixtureAPI.calendarEvents
         case "/api/my-shifts": return ScheduleFixtureAPI.myShifts
@@ -1417,3 +1421,229 @@ enum ScheduleFixtureAPI {
     }
 }
 #endif
+
+// MARK: - Trade Board
+
+/// The Trade Board against canned trades and Open Work.
+///
+/// The review queue is the point of the capture: before claims waited on staff
+/// there was nothing to review, so the section could not be photographed at all.
+/// Both scenarios render the same real sheet; only the fixture role differs.
+struct TradeBoardHarnessView: View {
+    @Environment(SessionStore.self) private var session
+
+    private var isStaff: Bool { AppRuntimeMode.performanceScenario == .tradeBoardStaff }
+
+    var body: some View {
+        TradeBoardSheet(
+            myShifts: [],
+            currentUserId: isStaff ? TradeBoardFixtures.staff.id : TradeBoardFixtures.student.id,
+            currentUserRole: isStaff ? "STAFF" : "STUDENT"
+        )
+        .onAppear {
+            session.currentUser = isStaff ? TradeBoardFixtures.staff : TradeBoardFixtures.student
+        }
+    }
+}
+
+enum TradeBoardFixtures {
+    static let staff = CurrentUser(
+        id: "fixture-staff",
+        name: "Jordan Lee",
+        email: "jordan.lee@wisc.edu",
+        role: "STAFF",
+        affiliation: nil,
+        collaboratorProfile: nil,
+        capabilities: [],
+        collaboratorPolicy: nil,
+        staffingType: "FT",
+        avatarUrl: nil,
+        forcePasswordChange: false
+    )
+
+    static let student = CurrentUser(
+        id: "fixture-student",
+        name: "Rowan Diaz",
+        email: "rowan.diaz@wisc.edu",
+        role: "STUDENT",
+        affiliation: nil,
+        collaboratorProfile: nil,
+        capabilities: [],
+        collaboratorPolicy: nil,
+        staffingType: "ST",
+        avatarUrl: nil,
+        forcePasswordChange: false
+    )
+}
+
+/// Trade and Open Work payloads built relative to launch, so the review rows
+/// always read as genuinely upcoming work rather than freezing at an authored
+/// date and rendering as history.
+enum TradeBoardFixtureAPI {
+    private static func at(_ dayOffset: Int, _ hour: Int) -> String {
+        let calendar = Calendar.current
+        let day = calendar.date(byAdding: .day, value: dayOffset, to: Date.now) ?? .now
+        let date = calendar.date(hour: hour, of: day) ?? day
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.string(from: date)
+    }
+
+    private static func shift(
+        id: String,
+        area: String,
+        summary: String,
+        opponent: String,
+        dayOffset: Int,
+        hour: Int
+    ) -> String {
+        """
+        {
+          "id": "\(id)", "area": "\(area)", "workerType": "ST",
+          "startsAt": "\(at(dayOffset, hour))", "endsAt": "\(at(dayOffset, hour + 4))",
+          "callStartsAt": null, "callEndsAt": null,
+          "shiftGroup": {
+            "id": "group-\(id)", "publishedAt": "\(at(-6, 9))",
+            "event": {
+              "id": "event-\(id)", "summary": "\(summary)",
+              "sportCode": "football", "opponent": "\(opponent)", "isHome": true,
+              "startsAt": "\(at(dayOffset, hour))", "endsAt": "\(at(dayOffset, hour + 4))"
+            }
+          }
+        }
+        """
+    }
+
+    private static func trade(
+        id: String,
+        status: String,
+        area: String,
+        summary: String,
+        opponent: String,
+        dayOffset: Int,
+        hour: Int,
+        posterName: String,
+        claimerName: String?,
+        notes: String?,
+        viewerCanClaim: Bool,
+        viewerClaimReason: String?
+    ) -> String {
+        let claimedBy = claimerName.map {
+            "{ \"id\": \"\(claimerName == "Rowan Diaz" ? "fixture-student" : "user-claimer")\", \"name\": \"\($0)\", \"primaryArea\": \"\(area)\" }"
+        } ?? "null"
+        let notesJSON = notes.map { "\"\($0)\"" } ?? "null"
+        let reasonJSON = viewerClaimReason.map { "\"\($0)\"" } ?? "null"
+        return """
+        {
+          "id": "\(id)", "status": "\(status)", "notes": \(notesJSON),
+          "postedBy": { "id": "user-poster-\(id)", "name": "\(posterName)", "primaryArea": "\(area)" },
+          "claimedBy": \(claimedBy),
+          "shiftAssignment": {
+            "id": "assignment-\(id)",
+            "shift": \(shift(id: "shift-\(id)", area: area, summary: summary, opponent: opponent, dayOffset: dayOffset, hour: hour)),
+            "user": { "id": "user-poster-\(id)", "name": "\(posterName)", "primaryArea": "\(area)" }
+          },
+          "postedAt": "\(at(-2, 10))", "claimedAt": \(status == "CLAIMED" ? "\"\(at(-1, 14))\"" : "null"),
+          "createdAt": "\(at(-2, 10))",
+          "viewerAvailabilityContext": null, "claimedByAvailabilityContext": null,
+          "viewerCanClaim": \(viewerCanClaim), "viewerClaimReason": \(reasonJSON)
+        }
+        """
+    }
+
+    static var trades: Data? {
+        let isStaff = AppRuntimeMode.performanceScenario == .tradeBoardStaff
+        var rows: [String] = []
+
+        // Two claims owed a decision. Staff see both; the student sees only the
+        // one they claimed themselves, in Waiting on Staff.
+        rows.append(trade(
+            id: "t1", status: "CLAIMED", area: "VIDEO",
+            summary: "Football vs Minnesota", opponent: "Minnesota",
+            dayOffset: 5, hour: 13,
+            posterName: "Avery Nakamura",
+            claimerName: isStaff ? "Sam Whitfield" : "Rowan Diaz",
+            notes: "Family in town that weekend.",
+            viewerCanClaim: false,
+            viewerClaimReason: isStaff
+                ? "Sam Whitfield claimed this — waiting for staff approval"
+                : "Waiting for staff to approve your claim"
+        ))
+        if isStaff {
+            rows.append(trade(
+                id: "t2", status: "CLAIMED", area: "PHOTO",
+                summary: "Volleyball vs Nebraska", opponent: "Nebraska",
+                dayOffset: 2, hour: 18,
+                posterName: "Priya Raman", claimerName: "Marcus Bell",
+                notes: nil, viewerCanClaim: false,
+                viewerClaimReason: "Marcus Bell claimed this — waiting for staff approval"
+            ))
+        } else {
+            // One post the student can still take, so Available Now is populated
+            // alongside what they are waiting on.
+            rows.append(trade(
+                id: "t3", status: "OPEN", area: "VIDEO",
+                summary: "Hockey vs Michigan", opponent: "Michigan",
+                dayOffset: 8, hour: 19,
+                posterName: "Priya Raman", claimerName: nil,
+                notes: "Swapping for a class conflict.",
+                viewerCanClaim: true, viewerClaimReason: nil
+            ))
+        }
+
+        return "{ \"data\": [\(rows.joined(separator: ","))], \"total\": \(rows.count) }"
+            .data(using: .utf8)
+    }
+
+    static var openWork: Data? {
+        let isStaff = AppRuntimeMode.performanceScenario == .tradeBoardStaff
+
+        let openShift = """
+        {
+          "id": "open-1", "kind": "open_shift", "action": "\(isStaff ? "none" : "claim")",
+          "canAct": \(!isStaff), "reason": "\(isStaff ? "Open pickup is available for Student slots only" : "")",
+          "score": 82, "bucket": "recommended",
+          "advisoryConflict": false, "advisoryConflictNote": null,
+          "availabilityContext": null, "warnings": [], "ownRequestId": null,
+          "requestCount": \(isStaff ? 2 : 0),
+          "shift": \(shift(id: "open-1", area: "GRAPHICS", summary: "Basketball vs Purdue", opponent: "Purdue", dayOffset: 4, hour: 17))
+        }
+        """
+
+        func request(id: String, name: String, userId: String, area: String, summary: String, opponent: String, day: Int, hour: Int, note: String?) -> String {
+            let noteJSON = note.map { "\"\($0)\"" } ?? "null"
+            return """
+            {
+              "id": "\(id)", "kind": "pickup_request", "status": "REQUESTED",
+              "hasConflict": \(note != nil), "conflictNote": \(noteJSON),
+              "createdAt": "\(at(-1, 9))",
+              "user": { "id": "\(userId)", "name": "\(name)", "primaryArea": "\(area)" },
+              "shift": \(shift(id: "shift-\(id)", area: area, summary: summary, opponent: opponent, dayOffset: day, hour: hour))
+            }
+            """
+        }
+
+        let requests: [String] = isStaff
+            ? [
+                request(id: "req-1", name: "Dana Okafor", userId: "user-dana", area: "GRAPHICS",
+                        summary: "Basketball vs Purdue", opponent: "Purdue", day: 4, hour: 17, note: nil),
+                request(id: "req-2", name: "Chris Bergeron", userId: "user-chris", area: "GRAPHICS",
+                        summary: "Basketball vs Purdue", opponent: "Purdue", day: 4, hour: 17,
+                        note: "Prefers not to work Thursday evenings"),
+            ]
+            : [
+                request(id: "req-3", name: "Rowan Diaz", userId: "fixture-student", area: "SOCIAL",
+                        summary: "Soccer vs Ohio State", opponent: "Ohio State", day: 6, hour: 15, note: nil),
+            ]
+
+        return """
+        { "data": { "openShifts": [\(openShift)], "pickupRequests": [\(requests.joined(separator: ","))] } }
+        """.data(using: .utf8)
+    }
+}
+
+private extension Calendar {
+    func date(hour: Int, of day: Date) -> Date? {
+        date(bySettingHour: hour, minute: 0, second: 0, of: startOfDay(for: day))
+    }
+}

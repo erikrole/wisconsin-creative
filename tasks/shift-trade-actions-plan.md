@@ -35,9 +35,20 @@ ergonomics.
 - [x] 3 — iOS: crew row context menu gains Post to Trade Board / Remove from
   Trade Board (role-gated), preselected PostTradeSheet variant, trade chip
   indicator on rows, Open Work sheet retitled Trade Board (+ contract tests)
-- [ ] 4 — iOS: My Shifts swipe action → Post trade; event-detail crew section
-  converts to List for swipe-to-delete (staff) and swipe-to-post (own row),
-  with confirms preserved
+- [~] 4 — iOS: swipe-to-post shipped 2026-08-22 on the Schedule list, where a
+  person actually sees their own shifts: a trailing swipe on a row whose event
+  carries your own future active shift opens the preselected `PostTradeSheet`.
+  Full swipe is disabled, matching the decision below.
+
+  **Not done, and deliberately:** converting the event-detail crew section to a
+  `List` for swipe actions. This slice was written 2026-07-02; the 2026-08-16
+  Event detail rebuild then made that screen `ScrollView { LazyVStack }` to match
+  `BookingDetailView`/`ItemDetailView`/`UserDetailView`, naming that house pattern
+  as the reason successive local spacing fixes had never made the screen cohere.
+  A `List` there would either nest a scroller inside the ScrollView or abandon the
+  pattern, and the same rebuild already gathered post/remove/delete into grouped
+  context-menu sections ordered by likelihood. Reopen only as a deliberate
+  revisit of the 2026-08-16 layout decision, not as leftover plan work.
 - [ ] Follow-up (queued separately): remove premier concept end-to-end
 
 ## Verification

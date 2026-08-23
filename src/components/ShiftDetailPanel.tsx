@@ -344,9 +344,9 @@ export default function ShiftDetailPanel({
   }
 
   const handleApprove = (id: string) =>
-    mutate(id, `/api/shift-assignments/${id}/approve`, { method: "PATCH" }, "Legacy request approved");
+    mutate(id, `/api/shift-assignments/${id}/approve`, { method: "PATCH" }, "Request approved");
   const handleDecline = (id: string) =>
-    mutate(id, `/api/shift-assignments/${id}/decline`, { method: "PATCH" }, "Legacy request declined");
+    mutate(id, `/api/shift-assignments/${id}/decline`, { method: "PATCH" }, "Request declined");
 
   async function handleRemove(id: string) {
     const yes = await confirm({
@@ -364,7 +364,7 @@ export default function ShiftDetailPanel({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ shiftId }),
-    }, "Shift claimed");
+    }, "Request sent for staff approval");
   }
 
   async function handleAutoFill() {

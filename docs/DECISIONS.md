@@ -1107,6 +1107,7 @@ These are non-negotiable integrity constraints. Every feature must preserve them
   `docs/RELEASE_VERIFICATION.md`.
 
 ## Change Log
+- 2026-08-22: Added D-055 restoring approval-first student claims on both the open-slot and Trade Board paths, and retiring the half-removed instant-claim policy it replaces. Claims escalate and then auto-approve on a per-claim durable workflow rather than expiring unresolved. No schema or permission change; authenticated runtime proof remains pending.
 - 2026-08-21: Added D-054 for the owner-only named App activity report. The narrow client-presence exception shows user/device/build/channel/launch context while preserving pseudonymous aggregate analytics, default-deny access, and the no-content/device-identifier boundary. Migration, environment, authenticated browser, and signed-client rollout proof remain pending.
 - 2026-08-21: Amended D-034 for the locally verified, rebalanced 50-definition automatic catalog expansion. New goals avoid redundant raw-total ladders and use sustained or compound checkout, return, trade, and schedule facts; schedule-derived recognition may use confirmed ended assignment result/site/sport/opponent/mapped venue/conflict facts; checkout and return context rules remain on immutable/opened/current-custodian boundaries; app-open rules remain server-time receipt-claimed and no history is backfilled. Production deployment/runtime proof remains pending.
 - 2026-08-20: Amended D-052 so `/licenses` is one Software destination with explicit Shared logins and Photo Mechanic licenses tabs. The default Shared logins view does not render or suggest Photo Mechanic pool controls; local transaction, response-minimization, POST reveal, and responsive-pool hardening remain rollout-proof gates.
@@ -1294,3 +1295,27 @@ These are non-negotiable integrity constraints. Every feature must preserve them
   - Reinstalling an app creates a new pseudonymous installation row; this is an installation-presence view, not a guaranteed device census or cross-install identity.
   - Production rollout requires migration `0129_app_activity_report`, owner/build environment configuration, authenticated owner/non-owner browser proof, and signed TestFlight/App Store client readback.
 - Reference: `tasks/private-usage-analytics-plan.md`, `docs/AREA_SETTINGS.md`, `docs/AREA_REPORTS.md`, `docs/AREA_MOBILE.md`, and `src/app/privacy/page.tsx`.
+
+## D-055: Student Shift Claims Are Approval-First on Both Paths
+- Date: 2026-08-22
+- Status: Accepted; implemented locally, authenticated runtime proof pending
+- Context:
+  - Claims were instant on both paths: picking up a published open Student slot created a `DIRECT_ASSIGNED` assignment, and claiming a Trade Board post executed the swap and completed the trade. Staff saw neither before it took effect.
+  - That was the deliberate 2026-07-02 premier-removal policy, but it was never carried through. `approveTrade`/`declineTrade` and their routes survived with no UI caller, `APIClient.approveShiftTrade`/`declineShiftTrade` became dead Swift, the Schedule "Trade approval" chip counted a `CLAIMED` status that `claimTrade` could no longer produce, and `getScheduleOpenWork` returned a staff-only `pickupRequests` array that could never be non-empty. The system read as approval-first while behaving instantly.
+  - This decision supersedes the instant-pickup policy recorded in `tasks/schedule-mvp-end-to-end-plan.md`.
+- Decision:
+  - A student claiming an open Student slot creates a `REQUESTED` assignment. Several students may hold requests on one slot; staff choose, and `approveRequest` declines the rest in the same transaction. A student cannot file two requests on one shift.
+  - A student claiming a Trade Board post moves it to `CLAIMED` and nothing else. The poster keeps the assignment until `approveTrade` runs the swap, so a claim alone never leaves a shift uncovered.
+  - Both queues resolve through the existing `shift_trade.approve` and `shift_assignment.approve` permissions (`ADMIN` + `STAFF`); no permission changed.
+  - An unreviewed claim escalates to staff, then approves itself at a deadline, carried by a per-claim durable workflow (`pendingClaimReviewWorkflow`) modelled on `pendingScheduleReleaseWorkflow`. Deadlines derive from the claim's *effective* window start: escalate at T-48h, resolve at T-24h, falling back to a proportional split for a claim filed inside those leads.
+- Guardrails:
+  - Auto-approval calls `approveTrade`/`approveRequest` and never bypasses their re-checks. A 4xx (conflict appeared, slot refilled, time off approved) leaves the claim for a human and tells staff why.
+  - `REQUESTED` stays outside `ACTIVE_ASSIGNMENT_STATUSES`, so a pending request holds no slot, raises no conflict, stays out of My Shifts and the personal ICS feed, and never blocks staff from assigning directly.
+  - A pending request sends no gear-prep nudge. Prep belongs to coverage the student actually holds.
+  - Reviewer fanout runs after the claim commits, never inside the `SERIALIZABLE` claim transaction, whose read set two students racing a trade already contend over.
+  - `expireOpenTrades` remains the post-shift backstop for stale `OPEN`/`CLAIMED` rows.
+- Consequences:
+  - Claims fail toward approval rather than expiry. Both students have already agreed to the swap, and an unresolved claim reaching the shift is the outcome where the poster believes they are off, the claimer believes they are on, and coverage depends on who guesses right.
+  - No schema migration: `ShiftTradeStatus.CLAIMED` and `ShiftAssignmentStatus.REQUESTED`/`APPROVED`/`DECLINED` all survived the 2026-07-02 cleanup.
+  - An auto-approval is a schedule change staff did not make, so it is always reported to them.
+- Reference: `docs/AREA_SHIFTS.md`, `src/lib/services/shift-trades.ts`, `src/lib/services/schedule-open-work.ts`, `src/workflows/pending-claim-review.ts`, and `tests/schedule-instant-pickup-source.test.ts`.

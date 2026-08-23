@@ -636,6 +636,7 @@ export async function createShiftGearUpNotification(
 
 type ShiftScheduleEvent =
   | "assigned"
+  | "requested"
   | "approved"
   | "removed"
   | "shift_time_changed"
@@ -662,6 +663,14 @@ function shiftScheduleNotificationCopy(args: {
   const timing = args.workerType === "ST" ? ` Call time: ${callWindow}.` : "";
 
   switch (args.event) {
+    case "requested":
+      // A request holds no slot. Saying anything warmer than "waiting" is how
+      // someone treats a pending claim as a shift they have.
+      return {
+        type: "shift_request_pending",
+        title: "Shift request sent",
+        body: `Your request for the ${args.area} ${role} slot for ${args.eventTitle} is waiting for staff approval. You're not on the schedule until it's approved.${timing}${note}`,
+      };
     case "approved":
       return {
         type: "shift_request_approved",
@@ -868,9 +877,77 @@ export async function dispatchScheduleAssignmentNotifications(
   event: ShiftScheduleEvent,
 ): Promise<void> {
   await Promise.allSettled([
-    createShiftGearUpNotification(assignmentId, { source: "assignment" }),
+    // A pending request holds no slot, so telling the student to prep gear for
+    // it would be telling them to prep for a shift they may not get. The nudge
+    // waits for the approval, which dispatches "approved" and fires it then.
+    ...(event === "requested"
+      ? []
+      : [createShiftGearUpNotification(assignmentId, { source: "assignment" })]),
     createShiftScheduleNotification(assignmentId, event),
   ]);
+}
+
+/**
+ * Tell staff a student is waiting on a decision for an open slot. Runs after
+ * the request commits; the per-reviewer dedupe key makes a retry idempotent.
+ */
+export async function notifyPickupRequestReviewers(assignmentId: string): Promise<void> {
+  const assignment = await db.shiftAssignment.findUnique({
+    where: { id: assignmentId },
+    select: {
+      id: true,
+      shiftId: true,
+      user: { select: { name: true } },
+      shift: {
+        select: {
+          area: true,
+          shiftGroup: {
+            select: { publishedAt: true, event: { select: { id: true, summary: true } } },
+          },
+        },
+      },
+    },
+  });
+  if (!assignment?.shift.shiftGroup.publishedAt) return;
+
+  const reviewers = await db.user.findMany({
+    where: visibleActiveUserWhere({ role: { in: ["ADMIN", "STAFF"] } }),
+    select: { id: true },
+  });
+  if (reviewers.length === 0) return;
+
+  const eventSummary = assignment.shift.shiftGroup.event.summary;
+  const title = "Shift request needs review";
+  const body = `${assignment.user.name} requested the ${assignment.shift.area} slot for ${eventSummary}.`;
+  const payload = scheduleNotificationPayload({
+    assignmentId: assignment.id,
+    shiftId: assignment.shiftId,
+    eventId: assignment.shift.shiftGroup.event.id,
+  });
+  const category = categoryForScheduleNotificationType("shift_request_review") ?? undefined;
+  const now = new Date();
+
+  try {
+    await db.notification.createMany({
+      data: reviewers.map((reviewer) => ({
+        userId: reviewer.id,
+        type: "shift_request_review",
+        title,
+        body,
+        payload: JSON.parse(JSON.stringify(payload)),
+        channel: "IN_APP" as const,
+        sentAt: now,
+        dedupeKey: `shift_request_review_${assignment.id}_${reviewer.id}`,
+      })),
+      skipDuplicates: true,
+    });
+
+    for (const reviewer of reviewers) {
+      deferPush(sendPushToUser(reviewer.id, { title, body, payload, category }));
+    }
+  } catch (err) {
+    console.error(`[NOTIFY] Failed to notify reviewers for shift request ${assignmentId}:`, err);
+  }
 }
 
 export async function createPublishedShiftGroupNotifications(shiftGroupId: string): Promise<void> {

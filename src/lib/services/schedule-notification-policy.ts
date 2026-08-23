@@ -2,6 +2,7 @@ import type { NotificationCategory } from "@/lib/services/notification-prefs";
 
 export type WorkerScheduleNotificationEvent =
   | "assigned"
+  | "requested"
   | "approved"
   | "removed"
   | "shift_time_changed"
@@ -35,6 +36,7 @@ export type StaffScheduleDigestCandidate = {
 
 const ACTIVE_WORKER_SCHEDULE_EVENTS = new Set<WorkerScheduleNotificationEvent>([
   "assigned",
+  "requested",
   "approved",
   "removed",
   "shift_time_changed",
@@ -45,6 +47,10 @@ export function categoryForScheduleNotificationType(type: string): NotificationC
   if (type === "shift_gear_up") return "gearPrep";
   if (type.startsWith("trade_")) return "trade";
   if (type.startsWith("shift_")) return "schedule";
+  // Claim review spans both queues, so it carries neither prefix. It still has
+  // to map: `sendPushToUser` skips the category gate when no category is given,
+  // so an unmapped type is delivered to people who muted the category.
+  if (type.startsWith("claim_review_")) return "schedule";
   return null;
 }
 

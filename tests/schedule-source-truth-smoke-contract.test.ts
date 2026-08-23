@@ -154,7 +154,7 @@ describe("schedule source-of-truth and browser smoke contracts", () => {
     expect(tradeBoard).toContain("OpenWorkShift");
     expect(tradeBoard).toContain("/api/schedule/open-work");
     expect(tradeBoard).toContain("Claim shift");
-    expect(tradeBoard).toContain("Shift claimed");
+    expect(tradeBoard).toContain("Request sent for staff approval");
 
     expect(listView).not.toContain("Reserve gear");
     expect(listView).not.toContain("/reservations/new?");

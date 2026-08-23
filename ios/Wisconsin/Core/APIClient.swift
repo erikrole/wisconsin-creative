@@ -1419,12 +1419,13 @@ final class APIClient {
 
     // MARK: - Shift Trades
 
-    func shiftTrades(status: String? = nil, limit: Int = 30, offset: Int = 0) async throws -> ShiftTradesResponse {
+    func shiftTrades(status: String? = nil, area: String? = nil, limit: Int = 30, offset: Int = 0) async throws -> ShiftTradesResponse {
         var items: [URLQueryItem] = [
             .init(name: "limit", value: "\(limit)"),
             .init(name: "offset", value: "\(offset)"),
         ]
         if let status { items.append(.init(name: "status", value: status)) }
+        if let area { items.append(.init(name: "area", value: area)) }
         return try await perform(request(path: "/api/shift-trades", queryItems: items))
     }
 

@@ -256,7 +256,7 @@ export function ScheduleReadiness({
       ? [{
           label: "Requests",
           value: pendingRequests,
-          detail: pendingRequests === 1 ? "Legacy assignment request" : "Legacy assignment requests",
+          detail: pendingRequests === 1 ? "Student waiting on approval" : "Students waiting on approval",
           icon: UsersIcon,
           tone: "attention" as const,
           onClick: () => onShowQueue("pending-requests"),

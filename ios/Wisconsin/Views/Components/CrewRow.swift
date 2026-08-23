@@ -34,7 +34,7 @@ enum CrewSlotState {
         switch self {
         case .filled: return "Filled"
         case .open: return "Open"
-        case .requested: return requestCount == 1 ? "1 legacy request" : "\(requestCount) legacy requests"
+        case .requested: return requestCount == 1 ? "1 request waiting" : "\(requestCount) requests waiting"
         }
     }
 }

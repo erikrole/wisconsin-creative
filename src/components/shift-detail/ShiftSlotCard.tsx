@@ -264,7 +264,7 @@ export function ShiftSlotCard({
             </>
           )}
 
-          {/* Legacy pending requests remain reviewable until production is empty. */}
+          {/* Students claim open slots into this queue; staff approve or decline. */}
           {pendingRequests.length > 0 && (
             <div className="mt-2 flex flex-col gap-1">
               {pendingRequests.map((req) => (
@@ -345,7 +345,7 @@ export function ShiftSlotCard({
                 </Button>
               )}
               {userHasRequested && (
-                <span className="text-xs text-muted-foreground pl-1">You have a legacy request on this shift</span>
+                <span className="text-xs text-muted-foreground pl-1">Your request is waiting for staff approval</span>
               )}
             </div>
           )}

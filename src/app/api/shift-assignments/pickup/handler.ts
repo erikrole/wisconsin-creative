@@ -1,9 +1,10 @@
 import type { AuthUser } from "@/lib/auth";
 import { createAuditEntry } from "@/lib/audit";
 import { ok } from "@/lib/http";
-import { dispatchScheduleAssignmentNotifications } from "@/lib/services/notifications";
+import { dispatchScheduleAssignmentNotifications, notifyPickupRequestReviewers } from "@/lib/services/notifications";
 import { enforceRateLimit, SCHEDULE_MUTATION_LIMIT } from "@/lib/rate-limit";
 import { requirePermission } from "@/lib/rbac";
+import { enqueuePendingClaimReview } from "@/lib/claim-review-workflow";
 import { pickupOpenShift } from "@/lib/services/schedule-open-work";
 import { requestShiftSchema } from "@/lib/validation";
 
@@ -22,7 +23,7 @@ export async function handleOpenShiftPickup(
     actorRole: user.role,
     entityType: "shift_assignment",
     entityId: assignment.id,
-    action: "shift_pickup_claimed",
+    action: "shift_pickup_requested",
     after: {
       shiftId: body.shiftId,
       status: assignment.status,
@@ -31,7 +32,17 @@ export async function handleOpenShiftPickup(
     },
   });
 
-  dispatchScheduleAssignmentNotifications(assignment.id, "assigned").catch(() => {});
+  // "requested", not "assigned": the student holds nothing until staff approve,
+  // and the copy has to say so.
+  dispatchScheduleAssignmentNotifications(assignment.id, "requested").catch(() => {});
+  notifyPickupRequestReviewers(assignment.id).catch(() => {});
+  enqueuePendingClaimReview({
+    kind: "request",
+    claimId: assignment.id,
+    shiftStartsAt: assignment.callStartsAt
+      ?? assignment.shift.callStartsAt
+      ?? assignment.shift.startsAt,
+  }).catch(() => {});
 
   return ok({ data: assignment }, 201);
 }

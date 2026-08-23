@@ -24,6 +24,13 @@ enum AppRuntimeMode {
         /// rows, headers, and control strip can be rendered and screenshotted
         /// without a signed-in session.
         case schedule
+        /// The Trade Board as staff see it: claims owed a decision. Exercises
+        /// the review queue, which only has rows to show once claims stop
+        /// resolving themselves.
+        case tradeBoardStaff
+        /// The Trade Board as a student sees it: what they can claim, and what
+        /// they have already claimed and are waiting on.
+        case tradeBoardStudent
         /// The Home dashboard, served a canned payload so the action queue,
         /// its truncation, and the staff follow-up section can be rendered
         /// without a signed-in session.
@@ -132,7 +139,8 @@ enum AppRuntimeMode {
 #if DEBUG
         switch performanceScenario {
         case .resourcesGuides, .resourcesUsers, .resourcesLicenses, .resourcesLicensesOpen,
-             .schedule, .home, .homeAllClear, .scoreboard, .profile,
+             .schedule, .tradeBoardStaff, .tradeBoardStudent,
+             .home, .homeAllClear, .scoreboard, .profile,
              .bookingDetail, .bookingExtend, .bookingEdit, .bookingCancel,
              .itemEdit, .createBookingScanner, .search, .searchPartial,
              .itemsList, .reports:

@@ -889,6 +889,7 @@ private struct InternalScheduleView: View {
     @State private var viewMode: ScheduleViewMode = .list
     @State private var calendarSelectedDate: Date = .now
     @State private var showTradeBoard = false
+    @State private var shiftToPost: TradePostCandidate?
     @State private var showAvailability = false
     @State private var showFilters = false
     @State private var showCalendarSetup = false
@@ -1229,7 +1230,23 @@ private struct InternalScheduleView: View {
                     }
                 )
             }
+            .sheet(item: $shiftToPost) { candidate in
+                PostTradeSheet(candidate: candidate) { posted in
+                    toast = Toast(message: "Posted \(posted.area) shift to the trade board", icon: "checkmark.circle.fill", role: .success)
+                    Task { await vm.load(forceRefresh: true) }
+                }
+            }
         }
+    }
+
+    /// Your own future, still-active shift on this event, if you have one. A
+    /// started or already-ended shift cannot be traded and the server says so
+    /// too, so the action simply is not offered.
+    private func postableCandidate(forEvent eventId: String) -> TradePostCandidate? {
+        guard let shift = vm.shiftsByEventId[eventId],
+              shift.statusValue == .active,
+              shift.startsAt > Date() else { return nil }
+        return TradePostCandidate(shift: shift)
     }
 
     private func togglePastEvents() {
@@ -1313,6 +1330,20 @@ private struct InternalScheduleView: View {
                             .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
                             .listRowSeparator(.hidden)
                             .listRowBackground(Color.clear)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                // Posting a shift is the one thing people do from
+                                // this list about their own work, and it was three
+                                // taps away through the Trade Board's picker.
+                                if let candidate = postableCandidate(forEvent: event.id) {
+                                    Button {
+                                        shiftToPost = candidate
+                                        Haptics.selection()
+                                    } label: {
+                                        Label("Post trade", systemImage: "arrow.left.arrow.right")
+                                    }
+                                    .tint(Color.brandPrimary)
+                                }
+                            }
                         }
                     } header: {
                         ScheduleDateHeader(date: group.date, eventCount: group.events.count)
