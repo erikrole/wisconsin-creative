@@ -12,9 +12,9 @@ Last updated: 2026-08-23
 - [x] Add focused route, schedule-propagation, and UI source-contract coverage.
 - [ ] Complete matched authenticated before/after browser captures and publish the UI review page.
 
-- **Shipped locally:** a manual event entered on the wrong day can be corrected from its existing edit dialog without rebuilding the event or leaving crew work behind on the old date.
+- **Shipped to production:** a manual event entered on the wrong day can be corrected from its existing edit dialog without rebuilding the event or leaving crew work behind on the old date. Commit `6d8960f2` is on `main`; Vercel deployment `dpl_9HSgPdM922goE1Pm7AbvqFi6mxD1` is Ready at `wisconsincreative.com`.
 - **Boundary:** no schema, calendar-sync, imported-event lock, booking/reservation window, permission, or custody behavior changed.
-- **Verification:** 41 focused route/service/UI-contract tests, `npx tsc --noEmit --pretty false`, targeted ESLint, full `npm run lint` (one pre-existing unused-variable warning in `scripts/backfill-signature-artifacts.ts`), `npm run build:app`, and `git diff --check` pass. Authenticated browser capture is blocked because both local browser sessions redirect to Login and `.env.development.local` has no database connection. Docs verification remains blocked by the pre-existing dirty architecture/backend codemaps; this slice did not overwrite or regenerate that user-owned drift.
+- **Verification:** 41 focused route/service/UI-contract tests plus the full 3,622-test suite, `npx tsc --noEmit --pretty false`, zero-warning `npm run lint`, `npm run verify:docs`, migration-prefix validation, `git diff --check`, and a production-scoped `npm run build` pass. Production reported all 135 migrations applied. The live public smoke suite passed every route and CSP check; an authenticated production admin session loaded Dashboard and opened the manual Packers vs. Cardinals event editor with start/end date controls and the crew/reservation boundary copy. No event data was saved or changed, and the browser logged no warnings or errors. Matched manual-event before/after captures remain open as the separate visual-review artifact gate.
 
 ---
 ## Completed: Approval-first student shift claims (2026-08-22)
