@@ -12,6 +12,7 @@ const dbMock = vi.hoisted(() => ({
   },
   shiftGroup: {
     findMany: vi.fn(),
+    findUnique: vi.fn(),
   },
 }));
 
@@ -106,6 +107,7 @@ beforeEach(() => {
   vi.mocked(db.calendarEvent.findMany).mockResolvedValue([]);
   vi.mocked(db.calendarEvent.count).mockResolvedValue(0);
   vi.mocked(db.shiftGroup.findMany).mockResolvedValue([]);
+  vi.mocked(db.shiftGroup.findUnique).mockResolvedValue(null);
   vi.mocked(db.calendarEvent.create).mockResolvedValue({
     id: "cmevent000000000000000001",
     sourceId: null,
@@ -147,6 +149,9 @@ beforeEach(() => {
     sourceId: null,
     summary: "Football vs Notre Dame",
     subtitle: null,
+    startsAt: new Date("2026-08-29T18:00:00.000Z"),
+    endsAt: new Date("2026-08-29T20:00:00.000Z"),
+    allDay: false,
     sportCode: "FB",
     isHome: true,
     locationId: null,
@@ -558,6 +563,78 @@ describe("POST /api/calendar-events", () => {
 });
 
 describe("PATCH /api/calendar-events/[id]", () => {
+  it("moves a manual event to a new date and audits the previous window", async () => {
+    const res = await PATCH(
+      patch({
+        startsAt: "2026-08-28T18:00:00.000Z",
+        endsAt: "2026-08-28T20:00:00.000Z",
+      }),
+      { params: Promise.resolve({ id: "cmevent000000000000000001" }) },
+    );
+
+    expect(res.status).toBe(200);
+    expect(db.calendarEvent.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          startsAt: new Date("2026-08-28T18:00:00.000Z"),
+          endsAt: new Date("2026-08-28T20:00:00.000Z"),
+        }),
+      }),
+    );
+    expect(db.shiftGroup.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { eventId: "cmevent000000000000000001" } }),
+    );
+    expect(createAuditEntryTx).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        before: expect.objectContaining({
+          startsAt: "2026-08-29T18:00:00.000Z",
+          endsAt: "2026-08-29T20:00:00.000Z",
+        }),
+        after: expect.objectContaining({
+          startsAt: "2026-08-28T18:00:00.000Z",
+          endsAt: "2026-08-28T20:00:00.000Z",
+        }),
+      }),
+    );
+  });
+
+  it("keeps imported event times owned by the calendar source", async () => {
+    vi.mocked(db.calendarEvent.findUnique).mockResolvedValueOnce({
+      id: "cmevent000000000000000001",
+      sourceId: "calendar-source-1",
+      summary: "Football vs Notre Dame",
+      subtitle: null,
+      startsAt: new Date("2026-08-29T18:00:00.000Z"),
+      endsAt: new Date("2026-08-29T20:00:00.000Z"),
+      allDay: false,
+      sportCode: "FB",
+      isHome: true,
+      site: "HOME",
+      locationId: null,
+      rawSummary: "Football vs Notre Dame",
+      rawLocationText: null,
+      opponent: "Notre Dame",
+      summaryLocked: false,
+      isHomeLocked: false,
+      locationLocked: false,
+      location: null,
+    } as unknown as Awaited<ReturnType<typeof db.calendarEvent.findUnique>>);
+
+    const res = await PATCH(
+      patch({
+        startsAt: "2026-08-28T18:00:00.000Z",
+        endsAt: "2026-08-28T20:00:00.000Z",
+      }),
+      { params: Promise.resolve({ id: "cmevent000000000000000001" }) },
+    );
+
+    const body = await res.json();
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("Imported event times are controlled by their calendar source");
+    expect(db.calendarEvent.update).not.toHaveBeenCalled();
+  });
+
   it("normalizes manually edited event titles and locks the result", async () => {
     const res = await PATCH(
       patch({ summary: "mbb PRACTICE" }),

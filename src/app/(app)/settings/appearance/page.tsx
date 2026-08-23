@@ -169,9 +169,8 @@ export default function AppearancePage() {
         </Card>
 
         <div className="flex justify-end">
-          <Button
+          <Button className="h-10"
             variant="ghost"
-            size="sm"
             onClick={resetAll}
             disabled={!mounted || (theme === "system" && Math.abs(scale - 1) < 0.001)}
           >

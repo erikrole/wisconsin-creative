@@ -31,7 +31,9 @@ export default function WelcomePage() {
         <CardHeader className="gap-3 p-7 sm:p-9">
           <Badge variant="gray" className="w-fit">Welcome to Wisconsin Creative</Badge>
           <div className="grid gap-2">
-            <CardTitle className="text-3xl">Let’s set up your account, {data.profile.name.split(" ")[0]}</CardTitle>
+            <CardTitle asChild className="text-3xl">
+              <h1>Let’s set up your account, {data.profile.name.split(" ")[0]}</h1>
+            </CardTitle>
             <CardDescription className="max-w-2xl text-base">
               {collaborator
                 ? "Add a profile photo so the Wisconsin Creative team can recognize you."

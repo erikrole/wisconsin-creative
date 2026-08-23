@@ -63,7 +63,7 @@ export function ImportUploadStep({
         </div>
 
         <div className="flex items-center mt-4">
-          <Button variant="ghost" size="sm" asChild>
+          <Button variant="ghost" className="h-10" asChild>
             <a href="/import-template.csv" download="import-template.csv">
               <Download className="mr-1.5 size-3.5" />
               Download template

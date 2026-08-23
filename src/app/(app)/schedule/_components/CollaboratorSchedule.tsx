@@ -119,7 +119,7 @@ export function CollaboratorSchedule({ canFollow }: { canFollow: boolean }) {
             <Card key={item.id} className="shadow-xs">
               <CardHeader className="gap-3 p-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0 space-y-1.5">
-                  <CardTitle className="text-base text-balance">{item.event.summary}</CardTitle>
+                  <CardTitle className="text-base! text-balance">{item.event.summary}</CardTitle>
                   {item.event.subtitle && <p className="text-sm text-muted-foreground text-pretty">{item.event.subtitle}</p>}
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
                     <span className="inline-flex items-center gap-1.5 tabular-nums"><CalendarDaysIcon className="size-4" />{formatWindow(item.event.startsAt, item.event.endsAt)}</span>

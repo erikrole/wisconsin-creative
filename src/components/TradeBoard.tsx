@@ -701,8 +701,7 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
             <Button
               type="button"
               variant="ghost"
-              size="sm"
-              className="h-7 rounded-full px-2.5 text-xs text-muted-foreground"
+              className="h-10 rounded-full px-2.5 text-xs text-muted-foreground"
               onClick={() => {
                 setAreaFilter("");
                 setStatusFilter("");
@@ -732,7 +731,7 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
                   <AlertTriangleIcon className="size-4 shrink-0" />
                   <span>Trade Board posts are unavailable. Visible posts may be stale.</span>
                 </span>
-                <Button variant="outline" size="sm" onClick={loadTrades} disabled={loading}>
+                <Button className="h-10" variant="outline" onClick={loadTrades} disabled={loading}>
                   {loading ? "Retrying..." : "Retry posts"}
                 </Button>
               </div>
@@ -743,7 +742,7 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
                   <AlertTriangleIcon className="size-4 shrink-0" />
                   <span>Open Student slots are unavailable. Visible slots may be stale.</span>
                 </span>
-                <Button variant="outline" size="sm" onClick={loadOpenWork} disabled={openWorkLoading}>
+                <Button className="h-10" variant="outline" onClick={loadOpenWork} disabled={openWorkLoading}>
                   {openWorkLoading ? "Retrying..." : "Retry open slots"}
                 </Button>
               </div>
@@ -756,7 +755,7 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
         ) : hasLoadError ? (
           <CardContent className="p-4 text-center">
             <p className="mb-3 text-sm text-muted-foreground">Open shifts did not load. Retry before acting on shift or trade coverage.</p>
-            <Button variant="outline" size="sm" onClick={reloadWork}>
+            <Button className="h-10" variant="outline" onClick={reloadWork}>
               Retry
             </Button>
           </CardContent>
@@ -833,15 +832,13 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
                           )}
 
                           <div className="flex flex-wrap gap-2">
-                            <Button
-                              size="sm"
+                            <Button className="h-10"
                               onClick={() => void handleReviewRequest(request, "approve")}
                               disabled={Boolean(acting)}
                             >
                               {isApproving ? "Approving…" : "Approve"}
                             </Button>
-                            <Button
-                              size="sm"
+                            <Button className="h-10"
                               variant="outline"
                               onClick={() => void handleReviewRequest(request, "decline")}
                               disabled={Boolean(acting)}
@@ -902,15 +899,13 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
                           <AvailabilityContextNote context={trade.claimedByAvailabilityContext} />
 
                           <div className="flex flex-wrap gap-2">
-                            <Button
-                              size="sm"
+                            <Button className="h-10"
                               onClick={() => void handleReviewTrade(trade.id, "approve")}
                               disabled={Boolean(acting)}
                             >
                               {isApproving ? "Approving…" : "Approve trade"}
                             </Button>
-                            <Button
-                              size="sm"
+                            <Button className="h-10"
                               variant="outline"
                               onClick={() => void handleReviewTrade(trade.id, "decline")}
                               disabled={Boolean(acting)}
@@ -997,8 +992,7 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
 
                       <div className="flex flex-wrap items-center gap-2 pt-1">
                         <Button
-                          size="sm"
-                          className="h-8 gap-1.5"
+                          className="h-10 gap-1.5"
                           onClick={() => void handlePickup(item)}
                           disabled={acting !== null || !item.canAct}
                         >
@@ -1087,8 +1081,7 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
                         <AvailabilityContextNote context={trade.viewerAvailabilityContext} />
                         <div className="flex flex-wrap items-center gap-2 pt-1">
                           <Button
-                            size="sm"
-                            className="h-8 gap-1.5"
+                            className="h-10 gap-1.5"
                             onClick={() => void handleClaim(trade.id)}
                             disabled={acting !== null}
                           >

@@ -1,12 +1,11 @@
 "use client";
 
 import { useRef, useState } from "react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { AlertCircle, EyeIcon, EyeOffIcon, WifiOff } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AuthScreen } from "@/components/auth/AuthScreen";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
@@ -100,17 +99,7 @@ export default function ForcePasswordChangeForm({ email }: { email: string }) {
   }
 
   return (
-    <main className="login-bg min-h-screen flex items-center justify-center p-4">
-      <div className="fixed inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")", backgroundRepeat: "repeat", backgroundSize: "256px" }} />
-      <Card className="relative w-full max-w-[420px] shadow-2xl border-0 animate-in fade-in-0 zoom-in-95 duration-500">
-        <CardHeader className="text-center pb-2 pt-8">
-          <div className="flex items-center justify-center mb-3">
-            <Image src="/Badgers.png" alt="Wisconsin" width={48} height={48} className="size-12 object-contain" priority />
-          </div>
-          <CardTitle className="text-2xl tracking-tight" style={{ fontFamily: "var(--font-heading)", fontWeight: 800 }}>Wisconsin Creative</CardTitle>
-          <CardDescription className="text-base">Set a new password</CardDescription>
-        </CardHeader>
-        <CardContent>
+    <AuthScreen subtitle="Set a new password">
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <Alert>
               <AlertCircle className="size-4" />
@@ -224,8 +213,6 @@ export default function ForcePasswordChangeForm({ email }: { email: string }) {
               ) : "Update password"}
             </Button>
           </form>
-        </CardContent>
-      </Card>
-    </main>
+    </AuthScreen>
   );
 }

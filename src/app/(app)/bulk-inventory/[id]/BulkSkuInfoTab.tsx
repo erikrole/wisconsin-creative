@@ -223,7 +223,7 @@ export function BulkSkuInfoTab({
             <div className="flex items-center justify-end gap-2">
               <span className="truncate font-mono text-sm">{sku.binQrCodeValue}</span>
               {canEdit && (
-                <Button type="button" variant="outline" size="sm" onClick={onManageQr}>
+                <Button className="h-10" type="button" variant="outline" onClick={onManageQr}>
                   <QrCode className="size-3.5" aria-hidden="true" />
                   Manage
                 </Button>

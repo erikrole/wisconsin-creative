@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { withAuth } from "@/lib/api";
 import { db } from "@/lib/db";
 import { HttpError, ok } from "@/lib/http";
@@ -10,6 +11,11 @@ import { isHomeFromVenueTone, siteFromVenueTone, VENUE_TONE_VALUES } from "@/lib
 import { z } from "zod";
 import { normalizeManualEventTitle } from "@/lib/title-normalization";
 import { enforceRateLimit, SCHEDULE_MUTATION_LIMIT } from "@/lib/rate-limit";
+import { normalizeAllDayToUtcMidnight } from "@/lib/app-time";
+import { shiftManualEventScheduleTx } from "@/lib/services/manual-event-time";
+import { withSerializationRetry } from "@/lib/serialization";
+import { after } from "next/server";
+import { notifyPublishedScheduleFollowers, notifyPublishedShiftGroupWorkers } from "@/lib/services/notifications";
 
 const patchSchema = z
   .object({
@@ -19,6 +25,8 @@ const patchSchema = z
     sportCode: nullableSportCodeSchema.optional(),
     opponent: z.string().max(120).nullable().optional(),
     locationId: z.string().cuid().nullable().optional(),
+    startsAt: z.string().datetime({ offset: true }).optional(),
+    endsAt: z.string().datetime({ offset: true }).optional(),
     revertTitle: z.literal(true).optional(),
     revertHomeAway: z.literal(true).optional(),
     revertLocation: z.literal(true).optional(),
@@ -39,6 +47,13 @@ const patchSchema = z
         message: "Restore calendar value cannot be combined with event classification edits",
       });
     }
+    if ((value.startsAt === undefined) !== (value.endsAt === undefined)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: value.startsAt === undefined ? ["startsAt"] : ["endsAt"],
+        message: "Start and end are required together",
+      });
+    }
   })
   .refine(
     (v) =>
@@ -48,6 +63,8 @@ const patchSchema = z
       v.sportCode !== undefined ||
       v.opponent !== undefined ||
       v.locationId !== undefined ||
+      v.startsAt !== undefined ||
+      v.endsAt !== undefined ||
       v.revertTitle !== undefined ||
       v.revertHomeAway !== undefined ||
       v.revertLocation !== undefined,
@@ -66,7 +83,7 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
   });
   const body = patchSchema.parse(rawBody);
 
-  const updated = await db.$transaction(async (tx) => {
+  const mutation = await withSerializationRetry(() => db.$transaction(async (tx) => {
     const existing = await tx.calendarEvent.findUnique({
       where: { id },
       select: {
@@ -74,6 +91,9 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
         sourceId: true,
         summary: true,
         subtitle: true,
+        startsAt: true,
+        endsAt: true,
+        allDay: true,
         sportCode: true,
         isHome: true,
         site: true,
@@ -92,6 +112,35 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
     const patch: Record<string, unknown> = {};
     const before: Record<string, unknown> = {};
     const after: Record<string, unknown> = {};
+    let scheduleShift = null;
+
+    if (body.startsAt !== undefined && body.endsAt !== undefined) {
+      if (existing.sourceId !== null) {
+        throw new HttpError(400, "Imported event times are controlled by their calendar source");
+      }
+      const rawStart = new Date(body.startsAt);
+      const rawEnd = new Date(body.endsAt);
+      const nextStartsAt = existing.allDay ? normalizeAllDayToUtcMidnight(rawStart) : rawStart;
+      const nextEndsAt = existing.allDay ? normalizeAllDayToUtcMidnight(rawEnd) : rawEnd;
+      if (nextEndsAt <= nextStartsAt) {
+        throw new HttpError(400, "End must be after start");
+      }
+
+      before.startsAt = existing.startsAt.toISOString();
+      before.endsAt = existing.endsAt.toISOString();
+      patch.startsAt = nextStartsAt;
+      patch.endsAt = nextEndsAt;
+      after.startsAt = nextStartsAt.toISOString();
+      after.endsAt = nextEndsAt.toISOString();
+      scheduleShift = await shiftManualEventScheduleTx(tx, {
+        eventId: id,
+        previousStartsAt: existing.startsAt,
+        previousEndsAt: existing.endsAt,
+        nextStartsAt,
+        nextEndsAt,
+        actor: user,
+      });
+    }
 
     if (body.subtitle !== undefined) {
       before.subtitle = existing.subtitle;
@@ -216,6 +265,9 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
         id: true,
         summary: true,
         subtitle: true,
+        startsAt: true,
+        endsAt: true,
+        allDay: true,
         sportCode: true,
         isHome: true,
         site: true,
@@ -238,10 +290,26 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
       after,
     });
 
-    return result;
-  });
+    return { event: result, scheduleShift };
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }));
 
-  return ok({ data: updated });
+  if (mutation.scheduleShift?.published) {
+    after(() => Promise.allSettled([
+      notifyPublishedShiftGroupWorkers(
+        mutation.scheduleShift!.shiftGroupId,
+        mutation.scheduleShift!.affectedUserIds,
+      ),
+      notifyPublishedScheduleFollowers(mutation.scheduleShift!.shiftGroupId),
+    ]).then((results) => {
+      for (const result of results) {
+        if (result.status === "rejected") {
+          console.error("Manual event time-change notification failed", result.reason);
+        }
+      }
+    }));
+  }
+
+  return ok({ data: mutation.event });
 });
 
 export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {

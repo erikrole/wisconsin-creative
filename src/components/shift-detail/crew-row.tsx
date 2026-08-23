@@ -193,7 +193,6 @@ export const AssignSlotButton = forwardRef<
       ref={ref}
       type="button"
       variant="ghost"
-      size="sm"
       className={cn(
         "group/assign -ml-1.5 h-10 w-fit justify-start gap-2 px-1.5 font-normal text-muted-foreground/70 hover:text-foreground",
         className,

@@ -100,8 +100,7 @@ export default function ActivityFeed({
         <EmptyDescription>Failed to load activity history.</EmptyDescription>
         <Button
           variant="outline"
-          size="sm"
-          className="mt-3"
+          className="h-10 mt-3"
           onClick={() => loadActivity()}
         >
           Retry

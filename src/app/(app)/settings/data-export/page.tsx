@@ -127,8 +127,7 @@ export default function DataExportPage() {
                 </div>
                 <Button
                   variant="outline"
-                  size="sm"
-                  className="shrink-0"
+                  className="h-10 shrink-0"
                   disabled={!!downloading}
                   onClick={() => handleDownload(cfg)}
                   aria-label={actionLabel}

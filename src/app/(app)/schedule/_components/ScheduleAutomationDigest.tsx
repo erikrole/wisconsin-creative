@@ -42,7 +42,7 @@ export function ScheduleAutomationCards({
     <div className={className}>
       <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1">
         <ListChecksIcon className="size-4 shrink-0 text-primary" />
-        <h2 className="text-sm font-semibold">Automation review</h2>
+        <h2 className="text-sm! font-semibold!">Automation review</h2>
         <span className="text-xs text-muted-foreground">
           Suggestions only. Nothing here changes staffing, publishing, trades, or notifications by itself.
         </span>

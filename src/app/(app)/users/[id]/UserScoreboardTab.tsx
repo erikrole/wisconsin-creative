@@ -329,8 +329,7 @@ function BreakdownCard({
               <div className="border-t border-border/40">
                 <Button
                   variant="ghost"
-                  size="sm"
-                  className="w-full rounded-none text-xs"
+                  className="h-10 w-full rounded-none text-xs"
                   onClick={() => setExpanded((current) => !current)}
                 >
                   {expanded ? "Show fewer" : `Show all ${rows.length}`}
@@ -426,7 +425,7 @@ function GamesCard({
           ))}
           {nextCursor ? (
             <div className="border-t border-border/40 p-3 text-center">
-              <Button variant="outline" size="sm" onClick={loadMore} disabled={loadingMore}>
+              <Button variant="outline" className="h-10" onClick={loadMore} disabled={loadingMore}>
                 {loadingMore ? "Loading…" : "Show more games"}
               </Button>
             </div>
@@ -444,7 +443,7 @@ function GamesCard({
               : "Completed events with a recorded result will appear here when this person has worked them."}
           </p>
           {hasFilters ? (
-            <Button variant="ghost" size="sm" onClick={clearFilters}>Clear filters</Button>
+            <Button variant="ghost" className="h-10" onClick={clearFilters}>Clear filters</Button>
           ) : null}
         </CardContent>
       )}
@@ -584,7 +583,7 @@ export default function UserScoreboardTab({ userId }: { userId: string }) {
         <AlertTitle>Scoreboard unavailable</AlertTitle>
         <AlertDescription className="mt-2 flex flex-col gap-3">
           <p>We couldn’t load this profile’s worked-game record.</p>
-          <Button variant="outline" size="sm" onClick={reload} className="w-fit">Retry</Button>
+          <Button variant="outline" onClick={reload} className="h-10 w-fit">Retry</Button>
         </AlertDescription>
       </Alert>
     );

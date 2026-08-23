@@ -664,11 +664,11 @@ export function CalendarTab({ asset, onSelectBooking }: { asset: AssetDetail; on
       <Card>
         <CardHeader className="flex-row items-center justify-between">
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={prevMonth}>&lsaquo;</Button>
+            <Button variant="outline" className="h-10" onClick={prevMonth}>&lsaquo;</Button>
             <CardTitle className="min-w-40 text-center">{monthLabel}</CardTitle>
-            <Button variant="outline" size="sm" onClick={nextMonth}>{"\u203a"}</Button>
+            <Button variant="outline" className="h-10" onClick={nextMonth}>{"\u203a"}</Button>
           </div>
-          <Button variant="ghost" size="sm" onClick={goToday}>Today</Button>
+          <Button variant="ghost" className="h-10" onClick={goToday}>Today</Button>
         </CardHeader>
         <CardContent className="flex flex-col gap-4 p-4">
           <div className="overflow-hidden rounded-md border border-border/40 md:block max-md:hidden">

@@ -60,7 +60,7 @@ export function DashboardSectionHeader({
         className,
       )}
     >
-      <CardTitle className="min-w-0 text-sm font-semibold">
+      <CardTitle className="min-w-0 text-sm! font-semibold!">
         {href ? (
           <Link
             href={href}

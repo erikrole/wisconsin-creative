@@ -603,7 +603,7 @@ export default function BatteryCockpitPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader title="Battery Ops">
-        <Button variant="outline" size="sm" onClick={() => void load({ refresh: true })} disabled={refreshing}>
+        <Button className="h-10" variant="outline" onClick={() => void load({ refresh: true })} disabled={refreshing}>
           <RefreshCw className={cn("size-3.5", refreshing && "animate-spin")} />
           {refreshing ? "Refreshing..." : "Refresh"}
         </Button>
@@ -765,8 +765,7 @@ export default function BatteryCockpitPage() {
                           {sku.labelNeededCount} need labels
                         </Badge>
                       )}
-                      <Button
-                        size="sm"
+                      <Button className="h-10"
                         variant="outline"
                         disabled={exportingSkuId === sku.id}
                         onClick={() => void exportBrotherLabels(sku)}
@@ -774,7 +773,7 @@ export default function BatteryCockpitPage() {
                         <Download className="size-3.5" />
                         {exportingSkuId === sku.id ? "Exporting..." : "Brother CSV"}
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => openAddUnits(sku)}>
+                      <Button className="h-10" variant="outline" onClick={() => openAddUnits(sku)}>
                         <Plus className="size-3.5" />
                         Add
                       </Button>
@@ -836,7 +835,7 @@ export default function BatteryCockpitPage() {
                         <Count label="Avail" value={sku.counts.available} dot={STATUS_META.AVAILABLE.dot} />
                         <Count label="Minimum" value={sku.threshold} dot="bg-[var(--orange)]" />
                       </div>
-                      <Button size="sm" variant="outline" className="mt-3 w-full" onClick={() => openQuantityAdjustment(sku)}>
+                      <Button variant="outline" className="h-10 mt-3 w-full" onClick={() => openQuantityAdjustment(sku)}>
                         <SlidersHorizontal className="size-3.5" />
                         Adjust
                       </Button>
@@ -1173,7 +1172,7 @@ function IntegrityWarningCard({
           </CardTitle>
           <div className="flex items-center gap-2">
             <Badge variant="orange">{metricLabel(warnings.length, "unit")}</Badge>
-            <Button size="sm" variant="outline" onClick={onRepair} disabled={repairBusy}>
+            <Button className="h-10" variant="outline" onClick={onRepair} disabled={repairBusy}>
               <Wrench className="size-3.5" />
               {repairBusy ? "Repairing..." : "Repair flags"}
             </Button>

@@ -544,8 +544,7 @@ export default function ChooseImageModal(props: Props) {
                         key={suggestion}
                         type="button"
                         variant="outline"
-                        size="sm"
-                        className="h-7 px-2 text-xs"
+                        className="h-10 px-2 text-xs"
                         onClick={() => {
                           setSearchText(suggestion);
                           void runSearch(suggestion);
@@ -732,7 +731,7 @@ export default function ChooseImageModal(props: Props) {
                   <div className="text-center">
                     <ImageIcon className="size-12 text-[var(--text-tertiary)] mb-2" />
                     <p className="text-sm text-muted-foreground mb-2">Drop an image here</p>
-                    <Button variant="outline" size="sm" asChild><span>Pick from computer</span></Button>
+                    <Button className="h-10" variant="outline" asChild><span>Pick from computer</span></Button>
                   </div>
                 )}
               </div>

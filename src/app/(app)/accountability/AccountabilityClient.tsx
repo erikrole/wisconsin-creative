@@ -599,8 +599,7 @@ export default function AccountabilityClient() {
                 </div>
                 <Button
                   variant="outline"
-                  size="sm"
-                  className="shrink-0"
+                  className="h-10 shrink-0"
                   onClick={() => restore(entry.bookingId, entry.bookingTitle)}
                   disabled={mutating}
                 >
@@ -614,7 +613,7 @@ export default function AccountabilityClient() {
 
       <Collapsible>
         <CollapsibleTrigger asChild>
-          <Button variant="ghost" size="sm" className="text-muted-foreground">
+          <Button variant="ghost" className="h-10 text-muted-foreground">
             How this ranking works
           </Button>
         </CollapsibleTrigger>

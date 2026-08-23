@@ -215,8 +215,7 @@ export function AssignmentCell({
         <Button
           type="button"
           variant="ghost"
-          size="sm"
-          className="h-8 shrink-0 gap-1 px-2 text-xs text-muted-foreground/70 opacity-70 transition-[background-color,color,opacity,scale] hover:text-foreground hover:opacity-100 active:scale-[0.96] group-hover/cell:opacity-100 focus-visible:opacity-100"
+          className="h-10 shrink-0 gap-1 px-2 text-xs text-muted-foreground/70 opacity-70 transition-[background-color,color,opacity,scale] hover:text-foreground hover:opacity-100 active:scale-[0.96] group-hover/cell:opacity-100 focus-visible:opacity-100"
           disabled={Boolean(acting)}
           aria-label={`Add ${area} staff or student slot`}
         >
@@ -395,8 +394,7 @@ export function AssignmentCell({
               <Button
                 type="button"
                 variant="ghost"
-                size="icon-xs"
-                className="size-7 shrink-0 text-muted-foreground opacity-0 transition-[color,opacity,scale] hover:text-destructive active:scale-[0.96] group-hover/open:opacity-100 focus-visible:opacity-100"
+                className="size-10 shrink-0 text-muted-foreground opacity-0 transition-[color,opacity,scale] hover:text-destructive active:scale-[0.96] group-hover/open:opacity-100 focus-visible:opacity-100"
                 disabled={Boolean(acting)}
                 aria-label={openCount > 1 ? "Remove one open slot" : "Remove open slot"}
                 onClick={() => handleDeleteShift(firstOpenShift.id)}

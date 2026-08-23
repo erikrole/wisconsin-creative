@@ -240,12 +240,17 @@ describe("schedule source-of-truth and browser smoke contracts", () => {
     expect(eventDetail).toContain("sportCodeDraft");
     expect(eventDetail).toContain("body.eventType = eventTypeDraft");
     expect(eventDetail).toContain('sportCodeDraft === "__none__"');
+    expect(eventDetail).toContain("Date and time");
+    expect(eventDetail).toContain("body.startsAt = startsAt");
+    expect(eventDetail).toContain("Existing gear reservation windows stay unchanged");
     expect(newEventSheet).toContain("eventType,");
     expect(newEventSheet).toContain("Sport is required for a game event");
     expect(newEventSheet).toContain("Opponent is required for a game event");
     expect(patchRoute).toContain("opponent: z.string().max(120).nullable().optional()");
     expect(patchRoute).toContain("isHomeFromVenueTone(body.eventType)");
     expect(patchRoute).toContain("patch.isHomeLocked = true");
+    expect(patchRoute).toContain("Imported event times are controlled by their calendar source");
+    expect(patchRoute).toContain("shiftManualEventScheduleTx");
     expect(syncService).toContain("data.sportCode = existing.sportCode");
     expect(syncService).toContain("data.opponent = existing.opponent");
   });

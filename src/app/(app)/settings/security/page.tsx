@@ -330,10 +330,9 @@ export default function SecuritySettingsPage() {
                           {passkey.lastUsedAt ? ` · Used ${new Date(passkey.lastUsedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}` : ""}
                         </p>
                       </div>
-                      <Button
+                      <Button className="h-10"
                         type="button"
                         variant="ghost"
-                        size="sm"
                         disabled={passkeySaving}
                         onClick={() => handleRevokePasskey(passkey)}
                       >
@@ -426,9 +425,8 @@ export default function SecuritySettingsPage() {
             <div className="flex items-center justify-between gap-4">
               <CardTitle className="text-base">Active sessions</CardTitle>
               {otherSessions.length > 0 && (
-                <Button
+                <Button className="h-10"
                   variant="outline"
-                  size="sm"
                   disabled={revoking}
                   onClick={handleRevokeAll}
                 >
@@ -492,9 +490,8 @@ export default function SecuritySettingsPage() {
                       </p>
                     </div>
                     {!s.isCurrent && (
-                      <Button
+                      <Button className="h-10"
                         variant="ghost"
-                        size="sm"
                         disabled={revoking}
                         onClick={() => handleRevokeOne(s.id)}
                       >

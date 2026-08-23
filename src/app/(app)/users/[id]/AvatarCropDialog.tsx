@@ -197,7 +197,7 @@ export function AvatarCropDialog({
                 <Input type="range" min="-100" max="100" value={offsetY} onChange={(event) => setOffsetY(Number(event.target.value))} disabled={!image || processing} className="h-10 cursor-pointer border-0 px-0 shadow-none" aria-label="Move photo up or down" />
               </label>
             </div>
-            <Button type="button" variant="ghost" size="sm" className="self-start" onClick={resetCrop} disabled={!image || processing}>
+            <Button type="button" variant="ghost" className="h-10 self-start" onClick={resetCrop} disabled={!image || processing}>
               <RotateCcw data-icon="inline-start" /> Reset crop
             </Button>
           </div>

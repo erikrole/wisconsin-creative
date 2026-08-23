@@ -100,9 +100,8 @@ export default function BulkSkuSettingsTab({
                   Permanently removes this item. Cannot be undone. Blocked if booking history exists.
                 </p>
               </div>
-              <Button
+              <Button className="h-10"
                 variant="destructive"
-                size="sm"
                 onClick={() => setConfirmDelete(true)}
                 disabled={busy}
               >
@@ -115,10 +114,10 @@ export default function BulkSkuSettingsTab({
                 Delete &ldquo;{sku.name}&rdquo;? This cannot be undone.
               </p>
               <div className="flex gap-2">
-                <Button variant="destructive" size="sm" onClick={handleDelete} disabled={busy}>
+                <Button className="h-10" variant="destructive" onClick={handleDelete} disabled={busy}>
                   {busy ? "Deleting…" : "Yes, delete permanently"}
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => setConfirmDelete(false)} disabled={busy}>
+                <Button className="h-10" variant="outline" onClick={() => setConfirmDelete(false)} disabled={busy}>
                   Cancel
                 </Button>
               </div>

@@ -553,7 +553,7 @@ export default function ShiftDetailPanel({
                 ? "Check your connection and try again."
                 : "Shift details could not load. Retry before changing assignments."}
             </p>
-            <Button variant="outline" size="sm" onClick={fetchGroup}>Retry</Button>
+            <Button className="h-10" variant="outline" onClick={fetchGroup}>Retry</Button>
           </div>
         ) : !group ? (
           <div className="p-4 text-muted-foreground">Shift group not found.</div>
@@ -587,8 +587,7 @@ export default function ShiftDetailPanel({
                 <div className="flex flex-wrap items-center justify-end gap-2">
                   <Button
                     variant="outline"
-                    size="sm"
-                    className="h-9"
+                    className="h-10"
                     onClick={handleAutoFill}
                     disabled={autoFilling || acting !== null}
                   >
@@ -648,9 +647,8 @@ export default function ShiftDetailPanel({
                     <p className="text-xs text-muted-foreground">
                       Archive past events when the schedule record is ready to close.
                     </p>
-                    <Button
+                    <Button className="h-10"
                       variant="outline"
-                      size="sm"
                       onClick={handleArchive}
                       disabled={archiving || acting !== null}
                     >

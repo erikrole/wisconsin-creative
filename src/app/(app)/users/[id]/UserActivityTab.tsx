@@ -122,7 +122,7 @@ export default function UserActivityTab({ userId }: { userId: string }) {
             <p className="mb-3">
               Something went wrong loading the activity history.
             </p>
-            <Button variant="outline" size="sm" onClick={reload}>
+            <Button variant="outline" className="h-10" onClick={reload}>
               Retry
             </Button>
           </AlertDescription>

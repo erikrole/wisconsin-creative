@@ -157,8 +157,7 @@ export function InlineDateField({
               </NativeSelect>
             </div>
             <Button
-              size="sm"
-              className="w-full"
+              className="h-10 w-full"
               onClick={handleApply}
               disabled={status === "saving"}
             >

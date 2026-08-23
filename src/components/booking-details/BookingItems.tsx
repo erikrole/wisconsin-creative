@@ -59,7 +59,7 @@ export default function BookingItems({
         )}
         {!showSearch && <div className="flex-1" />}
         {canEditEquipment && (
-          <Button variant="outline" size="sm" onClick={onEnterEquipEditMode}>
+          <Button className="h-10" variant="outline" onClick={onEnterEquipEditMode}>
             Edit
           </Button>
         )}
@@ -94,9 +94,8 @@ export default function BookingItems({
                       {isReturned ? (
                         <CheckCircle2 className="size-4 text-[var(--green-text)]" />
                       ) : (
-                        <Button
+                        <Button className="h-10"
                           variant="outline"
-                          size="xs"
                           disabled={checkinLoading}
                           onClick={(e) => { e.stopPropagation(); onCheckinItem(item.asset.id); }}
                         >

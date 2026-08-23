@@ -77,7 +77,7 @@ export default function PrivacyPage() {
           </Link>
           <div className="flex flex-col gap-3">
             <p className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Privacy Policy</p>
-            <h1 className="text-4xl font-semibold tracking-tight text-balance">Wisconsin Creative Privacy Policy</h1>
+            <h1 className="text-balance">Wisconsin Creative Privacy Policy</h1>
             <p className="text-base leading-7 text-muted-foreground">
               This policy describes how Wisconsin Creative handles information for the Wisconsin Creative iOS app and
               Gear Tracker service.
@@ -89,7 +89,7 @@ export default function PrivacyPage() {
         <div className="flex flex-col gap-8">
           {sections.map((section) => (
             <section key={section.title} className="flex flex-col gap-3">
-              <h2 className="text-xl font-semibold tracking-tight">{section.title}</h2>
+              <h2>{section.title}</h2>
               <ul className="list-disc flex flex-col gap-2 pl-5 text-sm leading-6 text-muted-foreground">
                 {section.body.map((item) => (
                   <li key={item}>{item}</li>
@@ -100,7 +100,7 @@ export default function PrivacyPage() {
         </div>
 
         <section className="flex flex-col gap-3 border-t border-border pt-8">
-          <h2 className="text-xl font-semibold tracking-tight">Contact</h2>
+          <h2>Contact</h2>
           <p className="text-sm leading-6 text-muted-foreground">
             For privacy or support questions, contact{" "}
             <a className="font-medium text-primary underline-offset-4 hover:underline" href="mailto:erole@athletics.wisc.edu">

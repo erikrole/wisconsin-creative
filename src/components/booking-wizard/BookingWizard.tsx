@@ -486,7 +486,7 @@ export function BookingWizard() {
         <Badge variant="purple" size="sm">
           Reservation
         </Badge>
-        <h1 className="max-w-3xl text-2xl font-semibold tracking-tight text-balance md:text-3xl">
+        <h1 className="max-w-3xl">
           {headerTitle}
         </h1>
       </header>
@@ -505,7 +505,7 @@ export function BookingWizard() {
             </div>
             <div className="flex items-center gap-1">
               {existingDrafts.slice(0, 2).map((d) => (
-                <Button key={d.id} variant="ghost" size="sm" asChild className="shrink-0">
+                <Button key={d.id} variant="ghost" asChild className="h-10 shrink-0">
                   <a href={`/reservations/new?draftId=${d.id}`}>
                     {d.title || "Resume"}
                   </a>
@@ -581,7 +581,7 @@ export function BookingWizard() {
         <Alert variant="destructive" className="mb-5">
           <AlertDescription className="flex items-center justify-between gap-3">
             <span>Failed to load form data. Dropdowns may be empty.</span>
-          <Button variant="outline" size="sm" onClick={() => refetchFormOpts()} className="shrink-0">
+          <Button variant="outline" onClick={() => refetchFormOpts()} className="h-10 shrink-0">
             Retry
           </Button>
           </AlertDescription>
@@ -654,10 +654,9 @@ export function BookingWizard() {
       <div className="mt-10 flex items-center justify-between border-t border-border/60 pt-5">
         <div>
           {step > 1 && (
-            <Button
+            <Button className="h-10"
               variant="outline"
               onClick={handleBack}
-              size="sm"
             >
               Back
             </Button>
@@ -665,7 +664,6 @@ export function BookingWizard() {
           {step === 1 && (
             <Button
               variant="ghost"
-              size="sm"
               disabled={savingDraft}
               loading={savingDraft}
               onClick={async () => {
@@ -674,7 +672,7 @@ export function BookingWizard() {
                 setSavingDraft(false);
                 router.back();
               }}
-              className="text-muted-foreground"
+              className="h-10 text-muted-foreground"
             >
               Save draft & exit
             </Button>

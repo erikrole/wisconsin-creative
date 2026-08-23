@@ -308,7 +308,7 @@ function DirectReportField({
             role="combobox"
             disabled={!canEdit}
             aria-label="Direct report"
-            className="w-full justify-between h-8 font-normal text-sm"
+            className="w-full justify-between h-10 font-normal text-sm"
           >
             {displayValue ? (
               <span className="flex items-center gap-1.5 truncate">
@@ -548,7 +548,7 @@ function BirthdayField({
         {canViewBirthYear && (
           <Input type="number" inputMode="numeric" min={1900} max={2100} value={year} onChange={(event) => setYear(event.target.value.slice(0, 4))} placeholder="Year" aria-label="Birth year" disabled={!canEdit || saving} className="h-8" />
         )}
-        <Button type="button" size="sm" onClick={saveBirthday} disabled={!canEdit || !dirty || saving}>
+        <Button type="button" className="h-10" onClick={saveBirthday} disabled={!canEdit || !dirty || saving}>
           {saving && <Spinner data-icon="inline-start" />}
           Save
         </Button>
@@ -978,7 +978,7 @@ export default function UserInfoTab({
               <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <span>Locations could not load, so profile location editing is unavailable. The saved profile location is still shown.</span>
                 {onRetryLocations && (
-                  <Button type="button" variant="outline" size="sm" onClick={onRetryLocations} className="h-8 shrink-0">
+                  <Button type="button" variant="outline" onClick={onRetryLocations} className="h-10 shrink-0">
                     Retry locations
                   </Button>
                 )}
@@ -990,7 +990,7 @@ export default function UserInfoTab({
               <Button
                 type="button"
                 variant="outline"
-                className="h-8 w-full justify-start px-3 text-sm font-normal text-muted-foreground"
+                className="h-10 w-full justify-start px-3 text-sm font-normal text-muted-foreground"
                 disabled
                 aria-label="Location unavailable"
               >
@@ -1401,17 +1401,16 @@ function CalendarSubscriptionCard({
                 className="h-8 text-xs font-mono"
                 onFocus={(e) => e.target.select()}
               />
-              <Button variant="outline" size="sm" onClick={copyUrl} title="Copy URL">
+              <Button variant="outline" className="h-10" onClick={copyUrl} title="Copy URL">
                 <Copy className="size-4" />
               </Button>
             </div>
             <div className="flex gap-2 flex-wrap">
-              <Button asChild size="sm">
+              <Button asChild className="h-10">
                 <a href={webcalUrl ?? "#"}>Subscribe in Calendar</a>
               </Button>
-              <Button
+              <Button className="h-10"
                 variant="outline"
-                size="sm"
                 onClick={generateToken}
                 disabled={generating}
                 title="Rotate token — invalidates the old URL"
@@ -1430,7 +1429,7 @@ function CalendarSubscriptionCard({
             <p className="text-sm text-muted-foreground">
               Generate a private URL to subscribe to your shifts in any calendar app.
             </p>
-            <Button size="sm" onClick={generateToken} disabled={generating}>
+            <Button className="h-10" onClick={generateToken} disabled={generating}>
               {generating && <RefreshCw className="size-4 animate-spin mr-2" />}
               Generate feed URL
             </Button>

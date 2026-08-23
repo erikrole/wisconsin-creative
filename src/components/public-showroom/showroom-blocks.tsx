@@ -52,7 +52,7 @@ export function ShowroomHero({ mockup }: { mockup: ShowroomMockup }) {
             <Image src="/Badgers.png" alt="Wisconsin Motion W" width={72} height={72} className="size-16 object-contain drop-shadow-[0_18px_35px_rgba(0,0,0,0.45)]" priority />
           </div>
           <p className="mb-5 text-sm font-semibold uppercase tracking-[0.22em] text-white/60">Wisconsin Creative Gear Tracker</p>
-          <h1 className="font-[var(--font-heading)] text-5xl font-black leading-[0.95] text-balance tracking-normal sm:text-7xl lg:text-8xl">
+          <h1 className="font-[var(--font-heading)] text-5xl! font-black! leading-[0.95] text-balance tracking-normal sm:text-7xl! lg:text-8xl!">
             Gear reservations and custody for Wisconsin Creative.
           </h1>
           <p className="mx-auto mt-7 max-w-3xl text-lg leading-8 text-pretty text-white/72 sm:text-xl">
@@ -92,7 +92,7 @@ export function PageIntro({
       <div className="mx-auto grid min-h-[74svh] w-full max-w-7xl items-end gap-10 px-4 py-16 sm:px-6 lg:grid-cols-[0.92fr_1.08fr] lg:px-8 lg:py-20">
         <div className="pb-4">
           <p className="text-sm font-semibold uppercase tracking-[0.22em] text-white/55">{eyebrow}</p>
-          <h1 className="mt-5 font-[var(--font-heading)] text-5xl font-black leading-none text-balance tracking-normal sm:text-7xl">
+          <h1 className="mt-5 font-[var(--font-heading)] text-5xl! font-black! leading-none text-balance tracking-normal sm:text-7xl!">
             {title}
           </h1>
           <p className="mt-6 max-w-2xl text-lg leading-8 text-pretty text-white/70">{description}</p>
@@ -118,7 +118,7 @@ export function ChapterBand({
     <section className={cn("px-4 py-20 sm:px-6 lg:px-8", dark ? "bg-[#080808] text-white" : "bg-[#f4f4f4] text-foreground")}>
       <div className="mx-auto max-w-5xl text-center">
         <p className={cn("text-sm font-semibold uppercase tracking-[0.2em]", dark ? "text-white/55" : "text-muted-foreground")}>{eyebrow}</p>
-        <h2 className="mt-5 font-[var(--font-heading)] text-4xl font-black leading-none text-balance tracking-normal sm:text-6xl">
+        <h2 className="mt-5 font-[var(--font-heading)] text-4xl! font-black! leading-none text-balance tracking-normal sm:text-6xl!">
           {title}
         </h2>
         <p className={cn("mx-auto mt-6 max-w-3xl text-lg leading-8 text-pretty", dark ? "text-white/68" : "text-muted-foreground")}>{description}</p>
@@ -159,7 +159,7 @@ export function StackGrid({ groups }: { groups: StackGroup[] }) {
             <article key={group.title} className="border-t border-border/70 pt-6">
               <div className="pb-6">
                 <Icon className="mb-5 size-5 text-foreground" aria-hidden="true" />
-                <h2 className="font-[var(--font-heading)] text-3xl font-black text-balance tracking-normal">{group.title}</h2>
+                <h2 className="font-[var(--font-heading)] text-3xl! font-black! text-balance tracking-normal">{group.title}</h2>
                 <p className="mt-3 max-w-xl text-sm leading-6 text-pretty text-muted-foreground">{group.description}</p>
               </div>
               <div className="grid border-t border-border/70 sm:grid-cols-2">
@@ -269,7 +269,7 @@ export function StakeholderCta({
     <section className="bg-[#050505] px-4 py-20 text-white sm:px-6 lg:px-8">
       <div className="mx-auto max-w-5xl text-center">
         <p className="text-sm font-semibold uppercase tracking-[0.22em] text-white/50">Public pages</p>
-        <h2 className="mt-5 font-[var(--font-heading)] text-4xl font-black leading-none text-balance tracking-normal sm:text-6xl">
+        <h2 className="mt-5 font-[var(--font-heading)] text-4xl! font-black! leading-none text-balance tracking-normal sm:text-6xl!">
           Share these pages without opening the app.
         </h2>
         <p className="mx-auto mt-6 max-w-3xl text-lg leading-8 text-pretty text-white/68">

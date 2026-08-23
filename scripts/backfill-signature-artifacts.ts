@@ -23,6 +23,7 @@ import {
   getSignatureRosterSourceConfig,
   normalizeSignatureName,
   signatureRosterEntrySchema,
+  signatureCollectionTitle,
   type SignatureImportedSportCode,
   type SignatureRosterEntry,
 } from "../src/lib/signatures/types";
@@ -492,6 +493,44 @@ function assertStandaloneStaffSourceCoverage(
   return { entry: matches[0], asset };
 }
 
+function assertTeamStaffCoverageInDatabase(
+  collection: NonNullable<Awaited<ReturnType<typeof fetchCollection>>>,
+  assets: PreparedArtifact[],
+  memberName: string,
+) {
+  const label = `${signatureCollectionTitle(collection.sportCode)} staff`;
+  if (assets.length !== 1) throw new Error(`${label} artifact imports require exactly one manifest entry.`);
+  const asset = assets[0];
+  if (!asset) throw new Error(`${label} artifact manifest entry is missing.`);
+  if (asset.jerseyNumber !== null) throw new Error(`${label} artifact manifests must use a null jersey number.`);
+  const normalizedName = normalizeSignatureName(memberName);
+  if (asset.normalizedName !== normalizedName) throw new Error(`Manifest signer ${asset.name} does not match --member-name ${memberName}.`);
+  const matches = collection.members.filter((member) => member.roleGroup !== SignatureMemberGroup.PLAYER && member.normalizedName === normalizedName);
+  if (matches.length !== 1) throw new Error(`Expected exactly one active ${label} member named ${memberName}; found ${matches.length}.`);
+  const member = matches[0];
+  if (!member) throw new Error(`${label} member ${memberName} is missing after matching.`);
+  if (!member.capture) throw new Error(`${label} capture row is missing for ${memberName}.`);
+  return { member, asset };
+}
+
+function assertTeamStaffSourceCoverage(
+  entries: SignatureRosterEntry[],
+  assets: PreparedArtifact[],
+  memberName: string,
+  sportCode: string,
+) {
+  const label = `${signatureCollectionTitle(sportCode)} staff`;
+  if (assets.length !== 1) throw new Error(`${label} artifact imports require exactly one manifest entry.`);
+  const asset = assets[0];
+  if (!asset) throw new Error(`${label} artifact manifest entry is missing.`);
+  if (asset.jerseyNumber !== null) throw new Error(`${label} artifact manifests must use a null jersey number.`);
+  const normalizedName = normalizeSignatureName(memberName);
+  if (asset.normalizedName !== normalizedName) throw new Error(`Manifest signer ${asset.name} does not match --member-name ${memberName}.`);
+  const matches = entries.filter((entry) => entry.roleGroup !== SignatureMemberGroup.PLAYER && entry.normalizedName === normalizedName);
+  if (matches.length !== 1) throw new Error(`Expected exactly one ${label} source member named ${memberName}; found ${matches.length}.`);
+  return { entry: matches[0], asset };
+}
+
 async function markRevisionFailed(db: PrismaClient, revisionId: string, error: unknown) {
   const message = error instanceof Error ? error.message.slice(0, 500) : "Signature import failed";
   await db.signatureArtifactRevision.updateMany({
@@ -530,7 +569,7 @@ async function importArtifact(
   const svgPath = artifactPath(collectionId, memberId, revisionId, "svg");
   let revisionNumber = 0;
   try {
-    const prepared = await db.$transaction(async (tx) => {
+    await db.$transaction(async (tx) => {
       const current = await tx.signatureCapture.findUnique({ where: { id: capture.id }, select: { collectionId: true, memberId: true, captureVersion: true, currentRevisionId: true } });
       if (!current || current.collectionId !== collectionId || current.memberId !== memberId || current.currentRevisionId) throw new Error(`Signature changed before importing ${asset.name}.`);
       const latest = await tx.signatureArtifactRevision.findFirst({ where: { captureId: capture.id }, orderBy: { revision: "desc" }, select: { revision: true } });
@@ -550,7 +589,6 @@ async function importArtifact(
           cropBounds: asset.cropBounds,
         },
       });
-      return { captureVersion: current.captureVersion };
     }, SERIALIZABLE);
 
     await uploadPrivate(pngPath, asset.pngBytes, "image/png");
@@ -609,8 +647,8 @@ async function main() {
     ? SignatureMemberGroup.SUPPORT_STAFF
     : SignatureMemberGroup.CREATIVE_STAFF;
   const standaloneStaffLabel = requestedSportCode === SIGNATURE_ADMINISTRATION_SPORT_CODE ? "Administration" : "Creative Staff";
+  const isTeamStaffImport = !isStandaloneStaffImport && Boolean(memberName);
   if (isStandaloneStaffImport && !memberName) throw new Error(`${standaloneStaffLabel} imports require --member-name <name>.`);
-  if (!isStandaloneStaffImport && memberName) throw new Error("--member-name is only supported with --sport CREATIVE or --sport ADMIN.");
 
   const db = new PrismaClient({ adapter: new PrismaNeon({ connectionString: process.env.DATABASE_URL }) });
   try {
@@ -672,6 +710,61 @@ async function main() {
         member: { id: member.id, name: member.name, roleGroup: member.roleGroup },
         artifact: result,
         message: `Production ${standaloneStaffLabel} artifact and private readback verification completed.`,
+      }, null, 2));
+      return;
+    }
+
+    if (isTeamStaffImport) {
+      const sportCode = requestedSportCode as SignatureImportedSportCode;
+      const snapshot = await fetchUWBadgersRoster(sportCode, season);
+      const sourceMatch = assertTeamStaffSourceCoverage(snapshot.entries, assets, memberName!, sportCode);
+      const existingCollection = await fetchCollection(db, sportCode, season);
+
+      if (!apply) {
+        const databaseMatch = existingCollection
+          ? assertTeamStaffCoverageInDatabase(existingCollection, assets, memberName!)
+          : null;
+        console.log(JSON.stringify({
+          mode: "dry-run",
+          sportCode,
+          season,
+          source: { url: snapshot.sourceUrl, hash: snapshot.sourceHash, parserVersion: snapshot.parserVersion, entryCount: snapshot.entries.length, member: sourceMatch.entry },
+          collection: existingCollection ? { id: existingCollection.id, version: existingCollection.collectionVersion, status: existingCollection.status } : null,
+          member: databaseMatch ? { id: databaseMatch.member.id, name: databaseMatch.member.name, roleGroup: databaseMatch.member.roleGroup, currentRevision: databaseMatch.member.capture?.currentRevision ? { id: databaseMatch.member.capture.currentRevision.id, revision: databaseMatch.member.capture.currentRevision.revision, state: databaseMatch.member.capture.currentRevision.state } : null } : null,
+          asset: { name: assets[0]?.name, pngHash: assets[0]?.pngHash, svgHash: assets[0]?.svgHash, width: assets[0]?.width, height: assets[0]?.height },
+          message: `No ${signatureCollectionTitle(sportCode)} staff roster or artifact writes were performed. Re-run with --apply --confirm to execute the guarded import.`,
+        }, null, 2));
+        return;
+      }
+
+      const actor = await findActor(db);
+      privateBlobAuth();
+      const roster = await applyRoster(db, actor, snapshot, sportCode, season);
+      const collection = await fetchCollection(db, sportCode, season);
+      if (!collection) throw new Error(`The Production ${sportCode} collection was not readable after roster apply.`);
+      const { member, asset } = assertTeamStaffCoverageInDatabase(collection, assets, memberName!);
+      const currentRevision = member.capture?.currentRevision ?? null;
+      if (currentRevision && (currentRevision.state !== SignatureArtifactState.READY || currentRevision.pngHash !== asset.pngHash || currentRevision.svgHash !== asset.svgHash)) {
+        throw new Error(`A different current signature already exists for ${member.name}; refusing to replace it.`);
+      }
+      const result = await importArtifact(db, actor, collection.id, member.id, asset);
+      const finalCollection = await fetchCollection(db, sportCode, season);
+      const finalMember = finalCollection?.members.find((candidate) => candidate.id === member.id);
+      const finalRevision = finalMember?.capture?.currentRevision;
+      if (!finalRevision || finalRevision.state !== SignatureArtifactState.READY || finalRevision.pngHash !== asset.pngHash || finalRevision.svgHash !== asset.svgHash) {
+        throw new Error(`${signatureCollectionTitle(sportCode)} staff artifact verification failed for ${member.name}.`);
+      }
+      console.log(JSON.stringify({
+        mode: "applied",
+        sportCode,
+        season,
+        actorRole: actor.role,
+        source: { url: snapshot.sourceUrl, hash: snapshot.sourceHash, parserVersion: snapshot.parserVersion, entryCount: snapshot.entries.length },
+        roster,
+        collection: { id: collection.id, version: finalCollection?.collectionVersion ?? collection.collectionVersion, status: finalCollection?.status ?? collection.status },
+        member: { id: member.id, name: member.name, roleGroup: member.roleGroup },
+        artifact: result,
+        message: `${signatureCollectionTitle(sportCode)} staff artifact and private readback verification completed.`,
       }, null, 2));
       return;
     }

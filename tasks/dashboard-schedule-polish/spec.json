@@ -1,0 +1,76 @@
+{
+  "title": "Dashboard and Schedule polish",
+  "eyebrow": "Web · / · /schedule",
+  "lede": "Both routes were already rated Strong, so the easy drift was gone. What was left were two cascade traps: eight heading declarations that silently did nothing, and a font token that resolved to empty — which meant every asset tag, reference number, and shift time in the app rendered proportional instead of monospace.",
+  "stats": [
+    { "k": "Monospace usages fixed", "v": "25", "n": "Across 12 files; all were falling back to sans", "tone": "good" },
+    { "k": "Inert headings restored", "v": "8", "n": "Section labels rendering up to 5px too large", "tone": "good" },
+    { "k": "Icon controls", "v": "11 + 1", "n": "11 dead size props removed, 1 real 28px target raised", "tone": "good" },
+    { "k": "Colors, nesting, labels", "v": "clean", "n": "No raw colors, no nested cards, no unlabelled icon buttons" }
+  ],
+  "sections": [
+    {
+      "heading": "The font token",
+      "note": "Captured at 900×700, device scale 2, from a harness rendering the monospace-intent content these two surfaces actually show. The baseline came from a git stash scoped to layout.tsx alone.",
+      "pairs": [
+        {
+          "title": "Identifiers and times",
+          "sub": "Flagged item tags, UW tags, booking references, unit counts, shift windows, server paths.",
+          "before": "before/mono.png",
+          "beforeCap": "All proportional. Digits do not align between rows, the separator in 14 / 36 crowds, and CAM-0148 reads as prose rather than an identifier. Every one of these asks for var(--font-mono) in source.",
+          "after": "after/mono.png",
+          "afterCap": "GeistMono, as the code always intended. Digits align down the column, the tag and reference read as identifiers, and the time range is scannable."
+        }
+      ]
+    },
+    {
+      "heading": "The headings",
+      "note": "Each declaration rendered at the base heading scale regardless of its classes. Left column is current, right is the same declaration with the important modifier.",
+      "pairs": [
+        {
+          "title": "Five section headings",
+          "sub": "Measured: digest 13→18px, list day group 13→16px, dashboard h2 20→18px, card title 13→15px.",
+          "before": "headings.png",
+          "beforeCap": "Left column is what shipped. The Schedule automation digest and the ListView day group were authored as small 13px labels and rendered as full headings; the dashboard section heading was authored larger than it rendered.",
+          "after": "headings.png",
+          "afterCap": "Right column is the authored intent. The two schedule labels recede to their intended weight, which is what the design language asks for in repeated rows; the dashboard heading regains the emphasis it was written with."
+        }
+      ]
+    }
+  ],
+  "changesHeading": "What changed, and why",
+  "changesNote": "Both surfaces were already conforming on structure, color, and targets. These are cascade defects that no structural audit would surface.",
+  "changes": [
+    {
+      "h": "Every var(--font-mono) in the app was rendering sans",
+      "was": "<code>--font-mono</code> is declared on <code>:root</code> and resolves <code>--font-geist-mono</code>, which <code>next/font</code> defines only where its variable class is applied. That class sat on <code>&lt;body&gt;</code>, one level below <code>:root</code>, so the token computed to empty. Measured: <code>--font-mono</code> at <code>:root</code> returned nothing and a probe element resolved to <code>ui-sans-serif</code>.",
+      "now": "Both font variable classes moved to <code>&lt;html&gt;</code>. The same probe now resolves <code>GeistMono</code>. This reaches 25 call sites across 12 files — dashboard flagged items and lost bulk units, schedule list times, item asset tags, booking references, and server paths."
+    },
+    {
+      "h": "Eight heading declarations did nothing",
+      "was": "The typography block in <code>globals.css</code> is unlayered, so it outranks every Tailwind utility. A <code>text-sm font-semibold</code> on an <code>h2</code> rendered at 18px/800, not 13px/600.",
+      "now": "All eight carry the important modifier. The two schedule cases matter most: the automation digest and the ListView day-group label were authored as quiet 13px labels and were rendering as prominent headings in a surface the design language explicitly wants dense."
+    },
+    {
+      "h": "Twelve icon controls, one real problem",
+      "was": "The audit flagged twelve icon buttons under 40px. Eleven already pinned <code>size-10</code> and merely carried a redundant <code>size=\"icon\"</code> prop that tailwind-merge discards.",
+      "now": "The eleven dead props are gone. The one real violation — the open-slot remove control in <code>AssignmentCell</code> at <code>size-7</code>, 28px — is now 40px."
+    }
+  ],
+  "verification": [
+    "<strong>TypeScript:</strong> clean. <strong>Lint:</strong> clean across <code>src/app</code>, <code>src/components</code>, and <code>tests</code>.",
+    "<strong>Full suite:</strong> 3619 passing, 0 failing, 537 files.",
+    "<strong>Build:</strong> <code>npm run build:app</code> compiles. <strong>Docs:</strong> codemaps current.",
+    "<strong>New contract test:</strong> <code>tests/typography-scope-source.test.ts</code>, 4 assertions pinning the font variables to <code>&lt;html&gt;</code>, the mono token, the important modifiers, and the absence of inert heading utilities on both surfaces.",
+    "<strong>Font fix measured, not inferred:</strong> computed <code>font-family</code> read from a probe element before and after — <code>ui-sans-serif</code> then <code>GeistMono</code> — and <code>--font-geist-mono</code> traced to confirm it was in scope on <code>&lt;body&gt;</code> but not <code>:root</code>.",
+    "<strong>Baseline method:</strong> <code>git stash push</code> scoped to <code>src/app/layout.tsx</code> alone, so nothing else differed between capture runs. Restore verified."
+  ],
+  "notesHeading": "What this does not prove",
+  "notes": [
+    "<strong>Neither route was captured directly.</strong> <code>/</code> and <code>/schedule</code> both require an authenticated session, the standing local limitation. The harness renders the same declarations and the same monospace content, but not the real pages with real data.",
+    "<strong>The font change is app-wide, not scoped to these two routes.</strong> It affects all 25 <code>var(--font-mono)</code> call sites. That is the correct fix — the token was simply broken — but only the dashboard and schedule patterns were visually reviewed.",
+    "<strong>Unverified interactions:</strong> no filter, view toggle, calendar navigation, or crew editing was driven. The heading and font changes are presentational and no logic was touched, but the surfaces were not exercised.",
+    "<strong>Still open, unchanged:</strong> the underlying fix is to move the typography block into <code>@layer base</code> so utilities work normally without the important modifier. It changes 141 headings at once and remains queued as its own slice.",
+    "<strong>Also open:</strong> there are no <code>font-heading</code> or <code>font-mono</code> Tailwind utilities, which is why 24 inline <code>fontFamily</code> styles remain on these two surfaces. Adding font entries to <code>@theme inline</code> would let those become classes."
+  ]
+}

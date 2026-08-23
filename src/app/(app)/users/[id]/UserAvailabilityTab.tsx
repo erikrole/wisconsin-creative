@@ -501,10 +501,10 @@ function AvailabilityForm({ userId, initial, initialKind = "WEEKLY", onSaved, on
         )}
 
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="ghost" size="sm" onClick={onCancel} disabled={saving}>
+          <Button type="button" variant="ghost" className="h-10" onClick={onCancel} disabled={saving}>
             Cancel
           </Button>
-          <Button type="submit" size="sm" disabled={saving}>
+          <Button type="submit" className="h-10" disabled={saving}>
             {saving ? "Saving..." : initial ? "Save changes" : "Add availability"}
           </Button>
         </div>
@@ -723,7 +723,7 @@ export default function UserAvailabilityTab({
           <AlertCircle className="size-4" />
           <AlertTitle>Failed to load availability</AlertTitle>
           <AlertDescription className="mt-2 flex items-center gap-3">
-            <Button variant="outline" size="sm" onClick={reload}>Retry</Button>
+            <Button variant="outline" className="h-10" onClick={reload}>Retry</Button>
           </AlertDescription>
         </Alert>
       </div>
@@ -742,11 +742,11 @@ export default function UserAvailabilityTab({
           </div>
           {canEdit && !showForm && !editing && (
             <div className="flex flex-wrap justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => openNewForm("WEEKLY")}>
+              <Button variant="outline" className="h-10" onClick={() => openNewForm("WEEKLY")}>
                 <PlusIcon className="size-3.5" />
                 Add class time
               </Button>
-              <Button variant="outline" size="sm" onClick={() => openNewForm("AD_HOC")}>
+              <Button variant="outline" className="h-10" onClick={() => openNewForm("AD_HOC")}>
                 <CalendarPlusIcon className="size-3.5" />
                 Add day away
               </Button>

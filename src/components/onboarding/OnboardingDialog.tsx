@@ -769,7 +769,7 @@ export default function OnboardingDialog({
                     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
                       <Label htmlFor="onboard-bulk-emails">Paste a roster or upload a CSV</Label>
                       <div className="flex flex-wrap items-center gap-2">
-                        <Button type="button" variant="outline" size="sm" asChild disabled={inviting}>
+                        <Button className="h-10" type="button" variant="outline" asChild disabled={inviting}>
                           <label htmlFor="onboard-bulk-file">
                             <FileUp data-icon="inline-start" />
                             Upload CSV

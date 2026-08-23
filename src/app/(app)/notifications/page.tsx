@@ -466,24 +466,24 @@ export default function NotificationsPage() {
         title="Notifications"
         description="Updates that need your attention across gear, bookings, shifts, and trades."
       >
-        <Button variant="outline" size="sm" asChild>
+        <Button className="h-10" variant="outline" asChild>
           <Link href="/settings/notifications">
             <Settings2Icon data-icon="inline-start" />
             Preferences
           </Link>
         </Button>
-        <Button variant="outline" size="sm" onClick={reload} disabled={loading || refreshing}>
+        <Button className="h-10" variant="outline" onClick={reload} disabled={loading || refreshing}>
           <RefreshCw data-icon="inline-start" className={refreshing ? "animate-spin" : undefined} />
           Refresh
         </Button>
         {canProcess && (
-          <Button variant="outline" size="sm" onClick={runProcessing} disabled={processing}>
+          <Button className="h-10" variant="outline" onClick={runProcessing} disabled={processing}>
             {processing && <Spinner data-icon="inline-start" />}
             {processing ? "Checking overdue" : "Check overdue"}
           </Button>
         )}
         {unreadCount > 0 && (
-          <Button size="sm" onClick={markAllRead} disabled={markingAll}>
+          <Button className="h-10" onClick={markAllRead} disabled={markingAll}>
             {markingAll && <Spinner data-icon="inline-start" />}
             {markingAll ? "Marking all read" : "Mark all read"}
           </Button>
@@ -592,8 +592,8 @@ export default function NotificationsPage() {
           </span>
           {totalPages > 1 && (
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(page - 1)}>Previous</Button>
-              <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}>Next</Button>
+              <Button className="h-10" variant="outline" disabled={page === 0} onClick={() => setPage(page - 1)}>Previous</Button>
+              <Button className="h-10" variant="outline" disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}>Next</Button>
             </div>
           )}
         </div>
@@ -664,8 +664,7 @@ function NotificationRow({
         {href && actionLabel && (
           <Button
             variant="outline"
-            size="sm"
-            className="text-xs max-sm:flex-1"
+            className="h-10 text-xs max-sm:flex-1"
             asChild
           >
             <Link href={href}>
@@ -677,8 +676,7 @@ function NotificationRow({
         {unread && (
           <Button
             variant="ghost"
-            size="sm"
-            className="text-xs text-muted-foreground max-sm:flex-1"
+            className="h-10 text-xs text-muted-foreground max-sm:flex-1"
             onClick={() => onMarkRead(notification.id)}
             disabled={marking}
           >

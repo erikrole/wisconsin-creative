@@ -276,9 +276,8 @@ export default function ProfileSettingsPage() {
             <div className="flex flex-col gap-2">
               <p className="text-sm font-medium">Profile photo</p>
               <div className="flex gap-2">
-                <Button
+                <Button className="h-10"
                   variant="outline"
-                  size="sm"
                   disabled={uploadingAvatar || saving}
                   onClick={() => fileInputRef.current?.click()}
                 >
@@ -286,9 +285,8 @@ export default function ProfileSettingsPage() {
                   Change photo
                 </Button>
                 {effectiveAvatarUrl && (
-                  <Button
+                  <Button className="h-10"
                     variant="ghost"
-                    size="sm"
                     disabled={uploadingAvatar || saving}
                     onClick={handleAvatarRemove}
                   >

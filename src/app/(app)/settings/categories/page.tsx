@@ -141,9 +141,8 @@ export default function CategoriesPage() {
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
-                  size="sm"
                   onClick={() => setSortAsc((v) => !v)}
-                  className="text-xs font-semibold text-muted-foreground uppercase tracking-wider h-auto px-0 gap-1.5 hover:bg-transparent hover:text-foreground"
+                  className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider h-auto px-0 gap-1.5 hover:bg-transparent hover:text-foreground"
                 >
                   Name
                   {sortAsc ? <ArrowDownAZ className="size-3.5" /> : <ArrowUpAZ className="size-3.5" />}
@@ -178,7 +177,7 @@ export default function CategoriesPage() {
               <p className="text-sm text-muted-foreground max-w-xs">
                 {errorMessage}
               </p>
-              <Button variant="outline" size="sm" onClick={reload}>
+              <Button className="h-10" variant="outline" onClick={reload}>
                 Retry
               </Button>
             </div>

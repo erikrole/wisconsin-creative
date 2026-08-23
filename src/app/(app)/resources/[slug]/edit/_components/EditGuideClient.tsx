@@ -428,7 +428,7 @@ export function EditGuideClient({ slug, userRole, userId }: Props) {
         {canDelete && (
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="destructive" size="sm" disabled={submitting}>
+              <Button className="h-10" variant="destructive" disabled={submitting}>
                 <Trash2Icon data-icon="inline-start" />
                 Delete
               </Button>

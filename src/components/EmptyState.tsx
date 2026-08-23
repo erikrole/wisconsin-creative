@@ -67,12 +67,12 @@ export default function EmptyState({
         {description && <EmptyDescription>{description}</EmptyDescription>}
       </EmptyHeader>
       {actionLabel && actionHref && (
-        <Button size="sm" asChild>
+        <Button className="h-10" asChild>
           <Link href={actionHref}>{actionLabel}</Link>
         </Button>
       )}
       {actionLabel && onAction && !actionHref && (
-        <Button size="sm" onClick={onAction}>{actionLabel}</Button>
+        <Button className="h-10" onClick={onAction}>{actionLabel}</Button>
       )}
     </Empty>
   );

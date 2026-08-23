@@ -339,7 +339,7 @@ export function GapWizardDialog({ open, onOpenChange, categories, departments, o
                   <AlertCircle className="size-4 shrink-0" />
                   <span className="truncate">{countError}</span>
                 </span>
-                <Button variant="outline" size="sm" onClick={loadCounts}>
+                <Button className="h-10" variant="outline" onClick={loadCounts}>
                   <RotateCcw className="size-3.5" />
                   Retry
                 </Button>
@@ -456,8 +456,7 @@ export function GapWizardDialog({ open, onOpenChange, categories, departments, o
                           key={suggestion.id}
                           type="button"
                           variant={selectedValue === suggestion.id ? "default" : "outline"}
-                          size="sm"
-                          className="h-8 gap-1.5 rounded-md active:scale-[0.96] transition-transform"
+                          className="h-10 gap-1.5 rounded-md active:scale-[0.96] transition-transform"
                           onClick={() => setSelectedValue(suggestion.id)}
                           title={suggestion.reason ? `Matched: ${suggestion.reason}` : undefined}
                         >

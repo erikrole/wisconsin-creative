@@ -304,7 +304,7 @@ function InternalDashboardPage() {
               Getting started
             </p>
             <h2
-              className="text-[20px] font-black leading-tight mb-4"
+              className="text-[20px]! font-black! leading-tight mb-4"
               style={{ fontFamily: "var(--font-heading)" }}
             >
               Welcome to Wisconsin Creative

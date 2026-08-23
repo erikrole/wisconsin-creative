@@ -1,6 +1,20 @@
 # Task Queue
 
-Last updated: 2026-08-22
+Last updated: 2026-08-23
+
+---
+## Completed: Manual event date/time correction (2026-08-23)
+
+- [x] Add start/end editing to Event detail for manually authored events while keeping imported event times source-owned.
+- [x] Preserve timed and inclusive all-day date semantics and reject incomplete or inverted windows.
+- [x] Move related crew shifts, slot and personal call overrides, working copies, published snapshots, conflicts, acknowledgements, and notifications with the event.
+- [x] Keep linked gear reservation windows independent and say so in the editor.
+- [x] Add focused route, schedule-propagation, and UI source-contract coverage.
+- [ ] Complete matched authenticated before/after browser captures and publish the UI review page.
+
+- **Shipped locally:** a manual event entered on the wrong day can be corrected from its existing edit dialog without rebuilding the event or leaving crew work behind on the old date.
+- **Boundary:** no schema, calendar-sync, imported-event lock, booking/reservation window, permission, or custody behavior changed.
+- **Verification:** 41 focused route/service/UI-contract tests, `npx tsc --noEmit --pretty false`, targeted ESLint, full `npm run lint` (one pre-existing unused-variable warning in `scripts/backfill-signature-artifacts.ts`), `npm run build:app`, and `git diff --check` pass. Authenticated browser capture is blocked because both local browser sessions redirect to Login and `.env.development.local` has no database connection. Docs verification remains blocked by the pre-existing dirty architecture/backend codemaps; this slice did not overwrite or regenerate that user-owned drift.
 
 ---
 ## Completed: Approval-first student shift claims (2026-08-22)

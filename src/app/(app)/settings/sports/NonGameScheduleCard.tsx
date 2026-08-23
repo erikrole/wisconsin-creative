@@ -101,7 +101,7 @@ export default function NonGameScheduleCard() {
             <p className="mt-1 text-xs text-muted-foreground">Used when an event has no opponent, including meetings, shoots, and special coverage.</p>
           </div>
           {draft ? (
-            <Button size="sm" disabled={saving} onClick={save}>
+            <Button className="h-10" disabled={saving} onClick={save}>
               <SaveIcon data-icon="inline-start" />
               {saving ? "Saving..." : "Save"}
             </Button>

@@ -354,8 +354,7 @@ export function AdminClaimSheet({ license, isAdmin, hasMyLicense, onOpenChange, 
                           <AlertDialogTrigger asChild>
                             <Button
                               variant="ghost"
-                              size="sm"
-                              className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
+                              className="h-10 text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
                               disabled={!!releasing}
                             >
                               {releasing === claim.id ? "…" : "Release"}
@@ -386,8 +385,7 @@ export function AdminClaimSheet({ license, isAdmin, hasMyLicense, onOpenChange, 
               <div className="flex flex-col gap-1.5">
                 <Button
                   variant="outline"
-                  size="sm"
-                  className="gap-1.5"
+                  className="h-10 gap-1.5"
                   onClick={handleClaimSlot}
                   disabled={claiming || hasMyLicense}
                 >
@@ -406,8 +404,7 @@ export function AdminClaimSheet({ license, isAdmin, hasMyLicense, onOpenChange, 
                 <AlertDialogTrigger asChild>
                   <Button
                     variant="outline"
-                    size="sm"
-                    className="text-destructive hover:text-destructive"
+                    className="h-10 text-destructive hover:text-destructive"
                     disabled={!!releasing}
                   >
                     {releasing === "all" ? "Releasing all…" : "Release all slots"}
@@ -452,7 +449,7 @@ export function AdminClaimSheet({ license, isAdmin, hasMyLicense, onOpenChange, 
                         ))}
                       </SelectContent>
                     </Select>
-                    <Button type="submit" size="sm" disabled={assigningUser || !selectedUserId}>
+                    <Button className="h-10" type="submit" disabled={assigningUser || !selectedUserId}>
                       {assigningUser ? "Assigning…" : "Assign"}
                     </Button>
                   </div>
@@ -471,7 +468,7 @@ export function AdminClaimSheet({ license, isAdmin, hasMyLicense, onOpenChange, 
                       onChange={(e) => setOccupantLabel(e.target.value)}
                       className="flex-1"
                     />
-                    <Button type="submit" size="sm" disabled={addingOccupant || !occupantLabel.trim()}>
+                    <Button className="h-10" type="submit" disabled={addingOccupant || !occupantLabel.trim()}>
                       {addingOccupant ? "…" : "Add"}
                     </Button>
                   </div>
@@ -520,8 +517,7 @@ export function AdminClaimSheet({ license, isAdmin, hasMyLicense, onOpenChange, 
                     onChange={(e) => setEditExpiry(e.target.value)}
                   />
                 </div>
-                <Button
-                  size="sm"
+                <Button className="h-10"
                   variant="outline"
                   onClick={handleSaveDetails}
                   disabled={savingDetails}
@@ -543,7 +539,7 @@ export function AdminClaimSheet({ license, isAdmin, hasMyLicense, onOpenChange, 
                   {license?.status === "AVAILABLE" && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="outline" size="sm" disabled={retiring}>
+                        <Button className="h-10" variant="outline" disabled={retiring}>
                           <Archive className="size-3.5 mr-1.5" />
                           {retiring ? "Retiring..." : "Retire"}
                         </Button>
@@ -570,8 +566,7 @@ export function AdminClaimSheet({ license, isAdmin, hasMyLicense, onOpenChange, 
                       <AlertDialogTrigger asChild>
                         <Button
                           variant="outline"
-                          size="sm"
-                          className="text-destructive hover:text-destructive"
+                          className="h-10 text-destructive hover:text-destructive"
                           disabled={deleting}
                         >
                           <Trash2 className="size-3.5 mr-1.5" />
@@ -629,8 +624,7 @@ export function AdminClaimSheet({ license, isAdmin, hasMyLicense, onOpenChange, 
                   <Button
                     type="button"
                     variant="outline"
-                    size="sm"
-                    className="h-7 gap-1.5 text-xs"
+                    className="h-10 gap-1.5 text-xs"
                     onClick={() => void loadHistory()}
                   >
                     <RefreshCw className="size-3" />

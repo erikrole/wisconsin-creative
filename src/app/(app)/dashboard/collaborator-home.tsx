@@ -128,7 +128,7 @@ export function CollaboratorHome({ name, capabilities }: { name: string; capabil
             {canViewGear && (
               <Card className="shadow-xs">
                 <CardHeader className="flex-row items-center justify-between p-4">
-                  <CardTitle className="flex items-center gap-2 text-base"><PackageIcon className="size-4" />My Gear</CardTitle>
+                  <CardTitle className="flex items-center gap-2 text-base!"><PackageIcon className="size-4" />My Gear</CardTitle>
                   <Button variant="outline" size="sm" className="h-10" asChild><Link href="/bookings">View all</Link></Button>
                 </CardHeader>
                 <CardContent className="p-0">
@@ -157,7 +157,7 @@ export function CollaboratorHome({ name, capabilities }: { name: string; capabil
             {canViewSchedule && (
               <Card className="shadow-xs">
                 <CardHeader className="flex-row items-center justify-between p-4">
-                  <CardTitle className="flex items-center gap-2 text-base"><BellIcon className="size-4" />Followed events</CardTitle>
+                  <CardTitle className="flex items-center gap-2 text-base!"><BellIcon className="size-4" />Followed events</CardTitle>
                   <Button variant="outline" size="sm" className="h-10" asChild><Link href="/schedule">Published Schedule</Link></Button>
                 </CardHeader>
                 <CardContent className="p-0">

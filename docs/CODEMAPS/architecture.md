@@ -12,9 +12,9 @@ Gear Tracker is a Next.js App Router application with a companion native iOS app
 | App pages | 86 |
 | App layouts | 7 |
 | API route handlers | 293 |
-| Service files | 72 |
-| Component files | 142 |
-| Test files | 532 |
+| Service files | 73 |
+| Component files | 144 |
+| Test files | 537 |
 
 ## Oversized Source Watchlist
 
@@ -26,21 +26,21 @@ Informational only. These are the largest TypeScript and TSX files under `src/`;
 | `src/lib/services/reports.ts` | 1927 |
 | `src/lib/services/signatures.ts` | 1909 |
 | `src/lib/services/notifications.ts` | 1624 |
-| `src/app/(app)/items/[id]/ItemInfoTab.tsx` | 1589 |
-| `src/components/TradeBoard.tsx` | 1566 |
-| `src/app/(app)/users/[id]/UserInfoTab.tsx` | 1443 |
+| `src/app/(app)/items/[id]/ItemInfoTab.tsx` | 1587 |
+| `src/components/TradeBoard.tsx` | 1559 |
+| `src/app/(app)/users/[id]/UserInfoTab.tsx` | 1442 |
 | `src/app/(app)/resources/page.tsx` | 1430 |
-| `src/components/ActivityTimeline.tsx` | 1369 |
-| `src/app/(app)/bulk-inventory/batteries/page.tsx` | 1342 |
+| `src/components/ActivityTimeline.tsx` | 1368 |
+| `src/app/(app)/bulk-inventory/batteries/page.tsx` | 1341 |
 | `src/app/api/assets/route.ts` | 1212 |
-| `src/app/(app)/users/[id]/page.tsx` | 1125 |
+| `src/app/(app)/users/[id]/page.tsx` | 1118 |
 | `src/lib/services/shift-trades.ts` | 1033 |
 | `src/lib/services/schedule-publication.ts` | 1019 |
-| `src/app/(app)/schedule/_components/WorkingCrewEditor.tsx` | 996 |
 | `src/components/onboarding/OnboardingDialog.tsx` | 996 |
 | `src/app/(app)/schedule/_components/ListView.tsx` | 992 |
-| `src/app/(app)/kits/[id]/page.tsx` | 979 |
-| `src/app/(app)/users/[id]/UserBadgesTab.tsx` | 956 |
+| `src/app/(app)/schedule/_components/WorkingCrewEditor.tsx` | 992 |
+| `src/app/(app)/kits/[id]/page.tsx` | 977 |
+| `src/app/(app)/users/[id]/UserBadgesTab.tsx` | 955 |
 | `src/app/(app)/items/[id]/ItemBookingsTab.tsx` | 946 |
 
 ## High-Level Data Flow

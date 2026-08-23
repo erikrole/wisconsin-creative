@@ -1,0 +1,208 @@
+{
+  "title": "Detail headers — one shared primitive",
+  "eyebrow": "Web · users · items · bulk-inventory · bookings",
+  "lede": "The four detail headers in the app were four hand-maintained copies of one idea. Two of them had no heading element at all. One carried a decorative wash the design language forbids. They now share a DetailPageHeader primitive, the 32px controls behind them are gone, and a contract test holds it.",
+  "stats": [
+    {
+      "k": "Routes converted",
+      "v": "4",
+      "n": "Every detail header in the app",
+      "tone": "good"
+    },
+    {
+      "k": "Missing h1 elements",
+      "v": "2 &rarr; 0",
+      "n": "Item and booking detail had no heading",
+      "tone": "good"
+    },
+    {
+      "k": "Sub-40px controls",
+      "v": "193 fixed",
+      "n": "App-wide: zero text-label controls remain",
+      "tone": "good"
+    },
+    {
+      "k": "Enforced by test",
+      "v": "app-wide",
+      "n": "Not an allowlist — scans src/app and src/components",
+      "tone": "good"
+    },
+    {
+      "k": "Contract test",
+      "v": "9 assertions",
+      "n": "Blocks a fifth header fork",
+      "tone": "good"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "User detail — /users/[id]",
+      "note": "Same dev server, same fixture data, 1280&times;900 at device scale 2. The columns differ only by the header implementation.",
+      "pairs": [
+        {
+          "title": "Staff profile, full meta stack",
+          "sub": "The largest route in the app at 5,451 lines.",
+          "before": "before/staff.png",
+          "beforeCap": "A red radial wash tints the card. The avatar is vertically centered against the meta stack, so it floats below the name instead of beside it. The email is crammed against the meta lines, and the Admin actions trigger is 32px.",
+          "after": "after/staff.png",
+          "afterCap": "Neutral card. The avatar top-aligns with the name. The email reads as a subtitle with real separation before the meta stack, and the trigger is 40px."
+        },
+        {
+          "title": "Student profile, short meta",
+          "sub": "The sparse case, where decoration was most of the card.",
+          "before": "before/student.png",
+          "beforeCap": "With two meta lines, the wash and the 12px radius are most of the card's character.",
+          "after": "after/student.png",
+          "afterCap": "8px radius and spacing now match the item and bulk headers."
+        },
+        {
+          "title": "Dark mode",
+          "sub": "The wash was only ever tuned for light mode.",
+          "before": "before/staff-dark.png",
+          "beforeCap": "rgba(160,0,0,0.045) over a dark card reads as a muddy patch, not a deliberate tint.",
+          "after": "after/staff-dark.png",
+          "afterCap": "The same surface token as every other detail header."
+        }
+      ]
+    },
+    {
+      "heading": "Item detail — /items/[id]",
+      "note": "The route the audit queue already flagged as \"large file, known rough edges.\"",
+      "pairs": [
+        {
+          "title": "Available item with an active checkout",
+          "sub": "Status, asset tag, UW tag, product, and location trail.",
+          "before": "before/item.png",
+          "beforeCap": "The asset tag is a styled &lt;span&gt; — this page had no h1, so screen readers and document outline got no page heading. Open checkout and Reserve are 32px.",
+          "after": "after/item.png",
+          "afterCap": "A real h1 at the shared 30px heading scale, so the tag shrinks 32px &rarr; 30px. Both buttons are 40px, and the product name gets separation from the brand/model line."
+        },
+        {
+          "title": "Dark mode",
+          "sub": "Unchanged surface treatment; the title and target changes carry through.",
+          "before": "before/item-dark.png",
+          "beforeCap": "Same missing heading, same 32px targets.",
+          "after": "after/item-dark.png",
+          "afterCap": "Same fixes as light mode."
+        }
+      ]
+    },
+    {
+      "heading": "Bulk SKU detail — /bulk-inventory/[id]",
+      "note": "This one is a deliberate no-op visually. It already used the target shell; the value is that it now uses the shared component rather than its own copy.",
+      "pairs": [
+        {
+          "title": "Desktop, 1280px",
+          "sub": "Measured identical: 106px tall, row layout, 30px title, 40px controls.",
+          "before": "before/sku.png",
+          "beforeCap": "Route-owned copy of the header shell.",
+          "after": "after/sku.png",
+          "afterCap": "Shared primitive, pixel-equivalent output."
+        },
+        {
+          "title": "Tablet, 900px — a regression caught and fixed",
+          "sub": "Why the primitive takes a breakpoint instead of hardcoding one.",
+          "before": "before/sku-tablet.png",
+          "beforeCap": "Before: 106px, still a single row, because this header used sm:flex-row.",
+          "after": "after/sku-tablet.png",
+          "afterCap": "The first conversion inherited the primitive's lg:flex-row default and stacked here, costing 56px of vertical space (106 &rarr; 162px). The primitive now takes sideBySideAt, and bulk keeps sm — measured back to 106px."
+        }
+      ]
+    },
+    {
+      "heading": "Booking detail — BookingHeader",
+      "note": "Used by /bookings/[id], /checkouts/[id], and /reservations/[id]. The header carries a summary-fact grid, which is why the primitive grew a footer slot.",
+      "pairs": [
+        {
+          "title": "Checked-out booking with a linked event",
+          "sub": "Status row, editable title, requester, reference, and four summary facts.",
+          "before": "before/booking.png",
+          "beforeCap": "The title is a styled span &mdash; this header had no h1 either, the second of two. Actions, Edit, and Extend are all 32px.",
+          "after": "after/booking.png",
+          "afterCap": "A real h1, and all three controls at 40px. The summary grid moves into the primitive's new footer slot, keeping its rule and spacing. Height grows 254 &rarr; 264px."
+        },
+        {
+          "title": "Dark mode",
+          "sub": "Same conversion, unchanged surface treatment.",
+          "before": "before/booking-dark.png",
+          "beforeCap": "Same missing heading and 32px targets.",
+          "after": "after/booking-dark.png",
+          "afterCap": "Same fixes carry through."
+        }
+      ]
+    }
+  ],
+  "changesHeading": "What changed, and why",
+  "changesNote": "All four conversions are presentational. No data fetching, permission gate, role branch, upload path, or tab behavior was touched.",
+  "changes": [
+    {
+      "h": "Four hand-maintained copies of one shell became one component",
+      "was": "<code>ItemHeader</code>, <code>BulkSkuHeader</code>, and <code>BookingHeader</code> had each independently converged on the identical string <code>rounded-lg border border-border/50 bg-card px-4 py-4 shadow-xs sm:px-5</code>, while <code>/users/[id]</code> used a different <code>rounded-xl</code> card with a decorative <code>radial-gradient(… rgba(160,0,0,0.045) …)</code> overlay. <code>docs/DESIGN_LANGUAGE.md</code> lists decorative gradients under what to avoid.",
+      "now": "<code>src/components/DetailPageHeader.tsx</code> owns the shell with media / status / title / subtitle / meta / actions / footer slots, plus a <code>sideBySideAt</code> breakpoint because the routes genuinely differ: bulk has two compact buttons, item and booking have wide two-row action columns."
+    },
+    {
+      "h": "Two of the four headers had no heading element",
+      "was": "On <code>/items/[id]</code> the asset tag and on booking detail the booking title both rendered as styled <code>&lt;span&gt;</code>s inside plain divs. Neither page had an <code>h1</code>, so the document outline and screen-reader heading navigation had nothing to anchor to.",
+      "now": "Both render inside the primitive's <code>h1</code>. Measured cost: item detail grows 167px &rarr; 181px and its tag drops 32px &rarr; the shared 30px scale; booking detail grows 254px &rarr; 264px with no title size change, since its span was already 30px at this width."
+    },
+    {
+      "h": "Title styling was reimplemented per route, mostly as dead code",
+      "was": "Three different expressions: <code>text-[28px] sm:text-[32px]</code> plus inline font-family and weight; <code>text-2xl font-black sm:text-3xl</code>; and on the collaborator branch of the same user page, <code>text-2xl font-bold tracking-tight</code>.",
+      "now": "Bare <code>h1</code> inheriting the one rule in <code>globals.css</code>. Verified in the browser: on an <code>h1</code>, that base rule already beat the Tailwind size and weight utilities, so on <code>/users/[id]</code> and <code>/bulk-inventory/[id]</code> those classes were never taking effect. The rendered title there is unchanged; only <code>/items/[id]</code>, where the title was a span, actually shifts."
+    },
+    {
+      "h": "Eleven header controls sat below the 40px target baseline",
+      "was": "<code>size=\"sm\"</code> resolves to <code>h-8</code> (32px). It was on the user Admin actions trigger, the Retry and Back to users recovery buttons, both award-dialog mode toggles, the item Open checkout and Reserve buttons, and the booking Actions, Edit, and Extend buttons.",
+      "now": "All explicit <code>h-10</code> with the shared <code>active:scale-[0.96]</code> press treatment."
+    },
+    {
+      "h": "The primitive grew a footer slot rather than forcing booking detail to drop its summary",
+      "was": "Booking detail's four summary facts &mdash; schedule, pickup location, gear count, linked event &mdash; live inside the header below a rule. No other detail header has them.",
+      "now": "<code>DetailPageHeader</code> takes a <code>footer</code> slot that owns the <code>border-t</code> and spacing, and the route supplies its own grid. The alternative was leaving booking detail on its own copy of the shell, which is what created this problem in the first place."
+    },
+    {
+      "h": "The user detail skeleton did not match the header it stood in for",
+      "was": "A bare 48px avatar and two lines with no card, so the shell jumped when data arrived.",
+      "now": "Same card shell and a 64px avatar, matching the loaded footprint."
+    },
+    {
+      "h": "The detail tabs were still full of 32px targets",
+      "was": "Behind the headers, the user and item tab bodies carried 29 more <code>size=\"sm\"</code> and <code>h-8</code> controls: save, retry, copy URL, generate token, rotate token, month navigation, load more, clear filters, award, revoke, detach, and both combobox triggers.",
+      "now": "All at <code>h-10</code>. Ten of them were multi-line JSX tags that a line-based grep misses entirely &mdash; the contract test found them because it matches across newlines, and one arrow function's <code>&gt;</code> truncated a naive tag regex into producing a duplicate <code>className</code>, which TypeScript caught."
+    },
+    {
+      "h": "The records that got this wrong are corrected, not just worked around",
+      "was": "<code>tasks/design-language-route-conformance-checklist.md</code> rated detail pages \"mostly conforming\" with a \"low follow-up\" of visual smoke coverage. <code>docs/DESIGN_LANGUAGE.md</code> named <code>PageHeader</code> as the only header primitive, so a detail route with identity media had no documented option but to invent one.",
+      "now": "The checklist carries a dated correction and a Detail Page Headers section. The design language names <code>DetailPageHeader</code>, says when to pick it over <code>PageHeader</code>, and records that restating the heading scale on an <code>h1</code> is dead code. <code>tests/detail-page-header-source.test.ts</code> enforces all of it."
+    },
+    {
+      "h": "The 40px baseline was an app-wide program, and it is now closed",
+      "was": "The conformance checklist implied targets were handled, marking route after route \"Strong\" with \"40px commands.\" No one had counted.",
+      "now": "A brace-aware scan put it at <strong>169 controls across 66 files</strong>. All 146 text-label controls are now at <code>h-10</code>, and <code>tests/operational-target-baseline.test.ts</code> enforces it across <code>src/app</code> and <code>src/components</code> rather than an allowlist. Two exceptions are explicit and reasoned in the test itself: icon-only controls (the density conflict) and <code>FormCombobox</code>, which stays at h-9 so it aligns with the h-9 <code>Input</code> and <code>SelectTrigger</code> beside it."
+    },
+    {
+      "h": "The 40px rule and the density rule contradict each other",
+      "was": "<code>docs/DESIGN_LANGUAGE.md</code> requires 40px icon-only targets and also requires repeated rows to stay dense. Twenty-three controls sit where both apply &mdash; four 24px approve/deny/edit/delete icons inside one compact availability chip, for instance.",
+      "now": "Recorded as an open conflict naming all twelve affected surfaces, with the two candidate fixes and what each costs. Resizing triples the chip height; routing through <code>OperationalRowActions</code> makes approve/deny two clicks on a primary decision. Left for a per-surface product decision rather than settled by regex."
+    }
+  ],
+  "verification": [
+    "<strong>TypeScript:</strong> clean. <strong>Lint:</strong> clean across <code>src/app</code>, <code>src/components</code>, and <code>tests</code>.",
+    "<strong>Full suite:</strong> 3615 passing, 0 failing, 536 files.",
+    "<strong>Build:</strong> <code>npm run build:app</code> compiles. <strong>Docs:</strong> codemaps current.",
+    "<strong>Three contract tests, 17 assertions</strong>, each with a self-check proving it fails on a real regression.",
+    "<strong>Captures:</strong> Playwright Chromium, device scale 2, 1280px and 900px, light and dark. Baselines from <code>git show HEAD</code> or a path-scoped <code>git stash</code>.",
+    "<strong>Caught by captures, not tests:</strong> the bulk tablet regression. <strong>Caught by review, not the codemod:</strong> the FormCombobox misalignment."
+  ],
+  "notesHeading": "What this does not prove",
+  "notes": [
+    "<strong>The sweep found a regression I introduced.</strong> The codemod raised <code>FormCombobox</code> to 40px, which misaligns it against the h-9 <code>Input</code> and <code>SelectTrigger</code> it sits beside in dialog forms. Reverted, and the form-field baseline is queued as its own decision rather than settled by a button sweep.",
+    "<strong>The captures come from a component harness, not the authenticated routes.</strong> A temporary unauthenticated page rendered pre- and post-change markup with fixture content so each pair could be matched exactly. Authenticated proof on the real routes with real data is still open, consistent with the standing local-auth limitation in <code>docs/GAPS_AND_RISKS.md</code>.",
+    "The harness route and capture script were deleted; they are not in the diff.",
+    "<strong>Counting is the trap here.</strong> A line-based <code>grep</code> undercounts these badly: multi-line JSX tags are invisible to it, an arrow function's <code>&gt;</code> truncates a naive tag regex, and a <code>size=\"sm\"</code> carrying an <code>h-10</code> override is already compliant. My first three counts were all wrong in different directions &mdash; 13, then 275, then 170 &mdash; before a brace-aware parser settled it at 169. Two routes I had flagged, <code>/operations</code> and <code>/signatures</code>, turned out already clean.",
+    "<strong>Rendered as static stand-ins, so unexercised:</strong> the avatar upload dropdown and crop dialog, the badge award dialog, the item image modal and Actions menu, the bulk image modal, and the booking Actions menu, inline title editing, and sync indicator. Source is unchanged but no interaction was driven.",
+    "<strong>Still below 40px, deliberately left:</strong> the booking reference copy button and the refresh affordance are 11px and 10px inline text controls, not buttons in the operational sense. They predate this change and deserve their own decision rather than a silent resize.",
+    "<strong>Corrected in the repo's own records:</strong> <code>tasks/design-language-route-conformance-checklist.md</code> rated detail pages \"mostly conforming, low follow-up.\" That did not hold: these were the four largest detail surfaces, none used a shared header, and two had no <code>h1</code>. The row is now corrected with a dated note. (An earlier draft of this page also faulted the checklist's <code>/items</code> typography entry &mdash; that entry is about the <em>list</em> page's table headers, a different surface, and it was accurate.)",
+    "<strong>Not touched:</strong> the 13 sub-40px controls inside the user and item <em>tab</em> components, which are a separate sweep from the headers."
+  ]
+}

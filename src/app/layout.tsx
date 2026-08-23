@@ -38,13 +38,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const nonce = (await headers()).get("x-nonce") ?? undefined;
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable}`} suppressHydrationWarning>
       <head>
         {/* eslint-disable-next-line @next/next/no-sync-scripts -- critical theme boot runs before paint; script body stays CSP-compatible in /public. */}
         <script nonce={nonce} src="/theme-init.js" suppressHydrationWarning />
         <script nonce={nonce} src="/sw-init.js" defer suppressHydrationWarning />
       </head>
-      <body className={`${GeistSans.variable} ${GeistMono.variable}`}>
+      <body>
         {children}
         <Analytics />
       </body>

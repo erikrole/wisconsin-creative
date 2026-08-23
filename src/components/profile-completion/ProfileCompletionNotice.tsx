@@ -41,7 +41,7 @@ export function ProfileCompletionNotice() {
           ))}
         </div>
         <div>
-          <Button type="button" size="sm" onClick={openProfileCompletion}>
+          <Button className="h-10" type="button" onClick={openProfileCompletion}>
             Complete profile
           </Button>
         </div>

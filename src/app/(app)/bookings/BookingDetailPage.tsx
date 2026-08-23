@@ -233,7 +233,7 @@ export default function BookingDetailPage({
             </p>
             <div className="flex items-center gap-3">
               {isNetwork && (
-                <Button variant="outline" size="sm" onClick={reload}>
+                <Button className="h-10" variant="outline" onClick={reload}>
                   Retry
                 </Button>
               )}
@@ -293,16 +293,14 @@ export default function BookingDetailPage({
             placeholder="Select new end date"
           />
           <div className="flex items-center gap-2 flex-wrap">
-            <Button
-              size="sm"
+            <Button className="h-10"
               onClick={handleExtend}
               disabled={!extendDate || !!actions.actionLoading}
             >
               {actions.actionLoading === "extend" ? "Saving..." : "Save"}
             </Button>
-            <Button
+            <Button className="h-10"
               variant="outline"
-              size="sm"
               onClick={() => { setShowExtend(false); setExtendDate(""); }}
             >
               Cancel
@@ -316,8 +314,7 @@ export default function BookingDetailPage({
               <Button
                 key={days}
                 variant="outline"
-                size="sm"
-                className="h-7 text-xs"
+                className="h-10 text-xs"
                 onClick={() => handleQuickExtend(days)}
               >
                 {label}

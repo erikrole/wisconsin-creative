@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import StatusIndicator from "@/components/ui/status-indicator";
 import { UserAvatar } from "@/components/UserAvatar";
+import { DetailPageHeader } from "@/components/DetailPageHeader";
 import { Spinner } from "@/components/ui/spinner";
 import {
   DropdownMenu,
@@ -176,82 +177,77 @@ export function BookingHeader({
   }
 
   return (
-    <header className="rounded-lg border border-border/50 bg-card px-4 py-4 shadow-xs sm:px-5">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        {/* ── Left: avatar + identity ── */}
-        <div className="flex min-w-0 gap-4">
-          <div className="shrink-0 self-start">
-            <UserAvatar
-              name={booking.requester?.name ?? "Unknown"}
-              avatarUrl={booking.requester?.avatarUrl}
-              size="xl"
-              className="shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
-            />
-          </div>
-
-          <div className="flex min-w-0 flex-1 flex-col">
-            {/* Status row */}
-            <div className="mb-2 flex flex-wrap items-center gap-1.5">
-              <Badge
-                variant={
-                  (booking.isOverdue
-                    ? "red"
-                    : statusBadgeVariant(displayStatus, kind)) as BadgeProps["variant"]
-                }
-              >
-                {booking.isOverdue ? "Overdue" : statusLabel(displayStatus, kind)}
-              </Badge>
-              {countdown && (
-                <Badge
-                  variant="outline"
-                  className={`gap-1 font-medium tabular-nums ${urgencyBadgeClassName(urgency)}`}
-                >
-                  <Clock className="size-3" />
-                  {countdown}
-                </Badge>
-              )}
-              {kioskHandoffLabel && (
-                <Badge variant="outline" className="gap-1 font-normal text-muted-foreground">
-                  {kioskHandoffLabel}
-                </Badge>
-              )}
-              {booking.scheduleStatus === "scheduled" && (
-                <Badge variant="green" className="gap-1">
-                  On schedule
-                </Badge>
-              )}
-              {booking.scheduleStatus === "needs_review" && (
-                <Badge
-                  variant="orange"
-                  className="gap-1"
-                  title={booking.scheduleStatusReason ?? undefined}
-                >
-                  Schedule review
-                </Badge>
-              )}
-            </div>
-
-            {/* Title */}
-            <div style={{ fontFamily: "var(--font-heading)" }}>
-              <InlineTitle
-                value={booking.title}
-                canEdit={canEdit}
-                onSave={onSaveTitle}
-                className="text-balance text-[26px] font-black leading-none tracking-tight sm:text-[30px]"
-                placeholder="Untitled booking"
-              />
-            </div>
-
-            <div className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-muted-foreground">
-              <span>Requester</span>
-              <span aria-hidden="true" className="text-muted-foreground/40">/</span>
-              <span className="font-medium text-foreground">
-                {booking.requester?.name ?? "Unknown"}
-              </span>
-            </div>
-
-            {/* Reference and type */}
-            <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground/70">
+    <DetailPageHeader
+      className="mb-0"
+      media={
+        <UserAvatar
+          name={booking.requester?.name ?? "Unknown"}
+          avatarUrl={booking.requester?.avatarUrl}
+          size="xl"
+          className="shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
+        />
+      }
+      status={
+        <>
+          <Badge
+            variant={
+              (booking.isOverdue
+                ? "red"
+                : statusBadgeVariant(displayStatus, kind)) as BadgeProps["variant"]
+            }
+          >
+            {booking.isOverdue ? "Overdue" : statusLabel(displayStatus, kind)}
+          </Badge>
+          {countdown && (
+            <Badge
+              variant="outline"
+              className={`gap-1 font-medium tabular-nums ${urgencyBadgeClassName(urgency)}`}
+            >
+              <Clock className="size-3" />
+              {countdown}
+            </Badge>
+          )}
+          {kioskHandoffLabel && (
+            <Badge variant="outline" className="gap-1 font-normal text-muted-foreground">
+              {kioskHandoffLabel}
+            </Badge>
+          )}
+          {booking.scheduleStatus === "scheduled" && (
+            <Badge variant="green" className="gap-1">
+              On schedule
+            </Badge>
+          )}
+          {booking.scheduleStatus === "needs_review" && (
+            <Badge
+              variant="orange"
+              className="gap-1"
+              title={booking.scheduleStatusReason ?? undefined}
+            >
+              Schedule review
+            </Badge>
+          )}
+        </>
+      }
+      title={
+        <InlineTitle
+          value={booking.title}
+          canEdit={canEdit}
+          onSave={onSaveTitle}
+          placeholder="Untitled booking"
+        />
+      }
+      subtitle={
+        <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+          <span>Requester</span>
+          <span aria-hidden="true" className="text-muted-foreground/40">/</span>
+          <span className="font-medium text-foreground">
+            {booking.requester?.name ?? "Unknown"}
+          </span>
+        </span>
+      }
+      meta={
+        /* Reference and type */
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground/70">
               {booking.refNumber && (
                 <button
                   type="button"
@@ -269,17 +265,15 @@ export function BookingHeader({
               )}
               {booking.bookingType && <span>{booking.bookingType}</span>}
             </div>
-          </div>
-        </div>
-
-        {/* ── Right: actions ── */}
+      }
+      actions={
         <div className="flex flex-col gap-2 lg:min-w-[260px] lg:items-end">
           {(hasPrimaryActions || hasSecondaryActions) && (
             <div className="flex flex-wrap items-center gap-1.5 lg:justify-end">
               {hasSecondaryActions && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-1.5">
+                    <Button variant="outline" className="h-10 gap-1.5">
                       Actions
                       <ChevronDown className="size-3.5" />
                     </Button>
@@ -346,12 +340,12 @@ export function BookingHeader({
                 </DropdownMenu>
               )}
               {canEdit && (
-                <Button variant="outline" size="sm" onClick={onEdit}>
+                <Button variant="outline" className="h-10" onClick={onEdit}>
                   Edit
                 </Button>
               )}
               {canExtend && (
-                <Button variant="outline" size="sm" onClick={onToggleExtend}>
+                <Button variant="outline" className="h-10" onClick={onToggleExtend}>
                   Extend
                 </Button>
               )}
@@ -390,27 +384,28 @@ export function BookingHeader({
             )}
           </div>
         </div>
-      </div>
-
-      <div
-        className={`mt-4 grid gap-x-5 gap-y-3 border-t border-border/50 pt-4 sm:grid-cols-2 ${context ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}
-        aria-label="Booking summary"
-      >
-        <SummaryFact icon={CalendarClock} label={schedule.label} value={schedule.value} />
-        <SummaryFact
-          icon={MapPin}
-          label="Pickup location"
-          value={booking.location?.name ?? "Not assigned"}
-        />
-        <SummaryFact
-          icon={PackageOpen}
-          label="Gear"
-          value={`${equipmentCount} ${equipmentCount === 1 ? "item" : "items"}`}
-        />
-        {context && (
-          <SummaryFact icon={CalendarDays} label={context.label} value={context.value} />
-        )}
-      </div>
-    </header>
+      }
+      footer={
+        <div
+          className={`grid gap-x-5 gap-y-3 sm:grid-cols-2 ${context ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}
+          aria-label="Booking summary"
+        >
+          <SummaryFact icon={CalendarClock} label={schedule.label} value={schedule.value} />
+          <SummaryFact
+            icon={MapPin}
+            label="Pickup location"
+            value={booking.location?.name ?? "Not assigned"}
+          />
+          <SummaryFact
+            icon={PackageOpen}
+            label="Gear"
+            value={`${equipmentCount} ${equipmentCount === 1 ? "item" : "items"}`}
+          />
+          {context && (
+            <SummaryFact icon={CalendarDays} label={context.label} value={context.value} />
+          )}
+        </div>
+      }
+    />
   );
 }

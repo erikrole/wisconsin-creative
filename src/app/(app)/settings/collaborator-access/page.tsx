@@ -299,7 +299,7 @@ function PolicyCard({ policy, onChanged }: { policy: Policy; onChanged: () => vo
             {history.map((revision) => (
               <div key={revision.id} className="flex items-center justify-between gap-3 border-t pt-2 first:border-0 first:pt-0">
                 <div><p className="text-sm font-medium">Version {revision.version} · {revision.status}</p><p className="text-xs text-muted-foreground">{revision.capabilities.length} capabilities · {revision.actor?.name ?? "Migration"} · {new Date(revision.createdAt).toLocaleString()}</p></div>
-                <Button size="sm" variant="ghost" disabled={revision.version === policy.version} onClick={() => restore(revision)}><RotateCcw />Restore</Button>
+                <Button className="h-10" variant="ghost" disabled={revision.version === policy.version} onClick={() => restore(revision)}><RotateCcw />Restore</Button>
               </div>
             ))}
           </div>

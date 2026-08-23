@@ -196,9 +196,8 @@ export function WizardStep1({
                     key={ev.id}
                     type="button"
                     variant="secondary"
-                    size="xs"
                     onClick={() => toggleEvent(ev)}
-                    className="rounded-full"
+                    className="h-10 rounded-full"
                     aria-label={`Remove ${ev.opponent ?? ev.summary}`}
                   >
                     <span className="font-medium">
@@ -239,13 +238,12 @@ export function WizardStep1({
                         : "Events failed to load."}
                     </span>
                     <span className="flex shrink-0 flex-wrap gap-2">
-                      <Button type="button" variant="outline" size="sm" onClick={onRetryEvents}>
+                      <Button className="h-10" type="button" variant="outline" onClick={onRetryEvents}>
                         Retry
                       </Button>
-                      <Button
+                      <Button className="h-10"
                         type="button"
                         variant="ghost"
-                        size="sm"
                         onClick={() => dispatch({ type: "SET_TIE_TO_EVENT", value: false })}
                       >
                         Ad hoc
@@ -258,10 +256,9 @@ export function WizardStep1({
                   <p className="leading-relaxed">
                     No upcoming events{form.sport ? ` for ${sportLabel(form.sport)}` : ""}.
                   </p>
-                  <Button
+                  <Button className="h-10"
                     type="button"
                     variant="outline"
-                    size="sm"
                     onClick={() => dispatch({ type: "SET_TIE_TO_EVENT", value: false })}
                   >
                     Ad hoc
@@ -498,7 +495,7 @@ export function WizardStep1({
                 <Alert variant="destructive">
                   <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <span>Kits failed to load.</span>
-                    <Button type="button" variant="outline" size="sm" onClick={onRetryKits} className="shrink-0">
+                    <Button type="button" variant="outline" onClick={onRetryKits} className="h-10 shrink-0">
                       Retry
                     </Button>
                   </AlertDescription>

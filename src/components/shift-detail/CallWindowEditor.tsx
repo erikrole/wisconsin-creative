@@ -230,8 +230,7 @@ export function CallWindowEditor({
             <Button
               type="button"
               variant="ghost"
-              size="sm"
-              className="gap-1.5"
+              className="h-10 gap-1.5"
               disabled={saving || !overrideActive}
               onClick={() => patchWindow(null, null)}
             >
@@ -239,10 +238,10 @@ export function CallWindowEditor({
               Clear
             </Button>
             <div className="flex gap-2">
-              <Button type="button" variant="outline" size="sm" disabled={saving} onClick={() => setOpen(false)}>
+              <Button className="h-10" type="button" variant="outline" disabled={saving} onClick={() => setOpen(false)}>
                 Cancel
               </Button>
-              <Button type="button" size="sm" disabled={saving} onClick={saveDraft}>
+              <Button className="h-10" type="button" disabled={saving} onClick={saveDraft}>
                 {saving ? "Saving..." : "Save"}
               </Button>
             </div>

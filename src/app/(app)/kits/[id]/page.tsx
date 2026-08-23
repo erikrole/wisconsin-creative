@@ -607,8 +607,7 @@ export default function KitDetailPage() {
                           {asset.brand} {asset.model}
                         </span>
                       </div>
-                      <Button
-                        size="sm"
+                      <Button className="h-10"
                         variant="outline"
                         disabled={addingIds.has(asset.id)}
                         onClick={() => handleAddMember(asset.id)}
@@ -779,8 +778,7 @@ export default function KitDetailPage() {
                               className="h-10 w-20"
                               aria-label={`Quantity for ${opt.name}`}
                             />
-                            <Button
-                              size="sm"
+                            <Button className="h-10"
                               variant="outline"
                               disabled={bulkAddingIds.has(opt.id)}
                               onClick={() => handleAddBulkMember(opt)}

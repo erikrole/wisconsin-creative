@@ -280,8 +280,7 @@ export function AccessoriesSection({
               {canEdit && (
                 <Button
                   variant="outline"
-                  size="sm"
-                  className="mt-3 h-10 gap-1.5 active:scale-[0.96] transition-transform"
+                  className="h-10 mt-3 gap-1.5 active:scale-[0.96] transition-transform"
                   onClick={() => openAttachmentDialog("move")}
                 >
                   <MoveRight className="size-3.5" aria-hidden="true" />
@@ -310,7 +309,7 @@ export function AccessoriesSection({
             <CardDescription>Items physically tied to this asset, such as SD cards, cages, and fixed rigging.</CardDescription>
           </div>
           {canEdit && attachments.length > 0 && (
-            <Button variant="outline" size="sm" className="h-10 shrink-0 active:scale-[0.96] transition-transform" onClick={() => openAttachmentDialog("attach")}>
+            <Button variant="outline" className="h-10 shrink-0 active:scale-[0.96] transition-transform" onClick={() => openAttachmentDialog("attach")}>
               <Link2 className="size-3.5" aria-hidden="true" />
               Add attachment
             </Button>
@@ -368,11 +367,10 @@ export function AccessoriesSection({
                           {canEdit && (
                             <Button
                               variant="ghost"
-                              size="sm"
                               disabled={detachingId === acc.id}
                               onClick={() => detachAccessory(acc.id, displayName)}
                               title="Detach item"
-                              className="shrink-0 text-muted-foreground hover:text-destructive active:scale-[0.96] transition-[color,transform]"
+                              className="h-10 shrink-0 text-muted-foreground hover:text-destructive active:scale-[0.96] transition-[color,transform]"
                             >
                               {detachingId === acc.id ? (
                                 <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />

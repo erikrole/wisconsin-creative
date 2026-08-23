@@ -360,7 +360,6 @@ export function WeekView({
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"
-            size="icon"
             className="size-10 text-muted-foreground"
             onClick={() => setWeekStart(shiftWeek(weekStart, -1))}
             aria-label="Previous week"
@@ -369,7 +368,6 @@ export function WeekView({
           </Button>
           <Button
             variant="ghost"
-            size="icon"
             className="size-10 text-muted-foreground"
             onClick={() => setWeekStart(shiftWeek(weekStart, 1))}
             aria-label="Next week"

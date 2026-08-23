@@ -179,11 +179,11 @@ export function BulkSkuProductsCard({
                     </div>
                     {canEdit && (
                       <div className="flex shrink-0 gap-2">
-                        <Button type="button" variant="ghost" size="sm" onClick={() => beginEdit(product)} disabled={saving}>
+                        <Button className="h-10" type="button" variant="ghost" onClick={() => beginEdit(product)} disabled={saving}>
                           <Pencil className="size-3.5" aria-hidden="true" />
                           Edit
                         </Button>
-                        <Button type="button" variant="ghost" size="sm" onClick={() => toggleProduct(product)} disabled={saving}>
+                        <Button className="h-10" type="button" variant="ghost" onClick={() => toggleProduct(product)} disabled={saving}>
                           {product.active ? <Archive className="size-3.5" aria-hidden="true" /> : <ArchiveRestore className="size-3.5" aria-hidden="true" />}
                           {product.active ? "Archive" : "Restore"}
                         </Button>

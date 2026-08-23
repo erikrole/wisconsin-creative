@@ -166,7 +166,6 @@ function CallWindowEditor({
         <Button
           type="button"
           variant="ghost"
-          size="sm"
           className={cn("h-10 justify-start px-2 text-xs tabular-nums", CREW_CALL_TRIGGER_CLASS)}
           disabled={disabled}
           aria-label={`Edit call time for ${AREA_LABELS[slot.area] ?? slot.area} ${slot.workerType === "FT" ? "Staff" : "Student"} slot`}
@@ -203,8 +202,7 @@ function CallWindowEditor({
           <Button
             type="button"
             variant="ghost"
-            size="sm"
-            className="text-xs"
+            className="h-10 text-xs"
             onClick={() => {
               onSave(null, null);
               setOpen(false);
@@ -212,7 +210,7 @@ function CallWindowEditor({
           >
             {resetLabel}
           </Button>
-          <Button type="button" size="sm" className="text-xs" onClick={save}>Save call time</Button>
+          <Button type="button" className="h-10 text-xs" onClick={save}>Save call time</Button>
         </div>
       </PopoverContent>
     </Popover>
@@ -750,7 +748,6 @@ export function WorkingCrewEditor({
                           <Button
                             type="button"
                             variant="ghost"
-                            size="icon-sm"
                             className={cn("size-10 text-muted-foreground", CREW_ROW_REVEAL)}
                             aria-label={`Actions for ${user?.name ?? "assigned worker"}`}
                             disabled={Boolean(actingKey)}
@@ -834,7 +831,6 @@ export function WorkingCrewEditor({
                             <Button
                               type="button"
                               variant="ghost"
-                              size="icon-sm"
                               className={cn("col-start-4 size-10 text-muted-foreground", CREW_ROW_REVEAL)}
                               disabled={Boolean(actingKey)}
                               aria-label={`Actions for open ${roleLabel} slot`}

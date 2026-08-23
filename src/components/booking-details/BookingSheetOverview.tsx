@@ -125,13 +125,12 @@ function NotesField({
           className="resize-none"
         />
         <div className="flex items-center gap-1">
-          <Button size="sm" onClick={() => void commit()} loading={saving}>
+          <Button className="h-10" onClick={() => void commit()} loading={saving}>
             <CheckIcon className="size-4" />
             Save notes
           </Button>
-          <Button
+          <Button className="h-10"
             variant="ghost"
-            size="sm"
             onClick={() => { setDraft(value); setEditing(false); }}
             disabled={saving}
           >

@@ -492,7 +492,7 @@ export default function BookingDetailsSheet({
                 <Alert variant="destructive">
                   <AlertDescription className="flex items-center justify-between">
                     <span>Equipment options could not load. Retry before saving equipment changes.</span>
-                    <Button variant="outline" size="sm" onClick={loadFormOptions}>Retry</Button>
+                    <Button className="h-10" variant="outline" onClick={loadFormOptions}>Retry</Button>
                   </AlertDescription>
                 </Alert>
               )}

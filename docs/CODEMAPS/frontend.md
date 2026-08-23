@@ -108,35 +108,35 @@
 
 | File | Lines |
 |---|---:|
-| `src/components/TradeBoard.tsx` | 1566 |
-| `src/components/ActivityTimeline.tsx` | 1369 |
+| `src/components/TradeBoard.tsx` | 1559 |
+| `src/components/ActivityTimeline.tsx` | 1368 |
 | `src/components/onboarding/OnboardingDialog.tsx` | 996 |
 | `src/components/EquipmentPicker.tsx` | 879 |
 | `src/components/AppShell.tsx` | 865 |
-| `src/components/ShiftDetailPanel.tsx` | 799 |
-| `src/components/ChooseImageModal.tsx` | 770 |
+| `src/components/ShiftDetailPanel.tsx` | 797 |
+| `src/components/ChooseImageModal.tsx` | 769 |
 | `src/components/profile-completion/ProfileCompletionWizard.tsx` | 759 |
-| `src/components/booking-wizard/BookingWizard.tsx` | 710 |
 | `src/components/ui/sidebar.tsx` | 710 |
+| `src/components/booking-wizard/BookingWizard.tsx` | 708 |
 | `src/components/BookingDetailsSheet.tsx` | 684 |
-| `src/components/booking-wizard/WizardStep1.tsx` | 570 |
+| `src/components/booking-wizard/WizardStep1.tsx` | 567 |
 | `src/components/BookingListPage.tsx` | 523 |
 | `src/components/ui/heatmap.tsx` | 434 |
-| `src/components/booking-details/BookingHeader.tsx` | 417 |
+| `src/components/booking-details/BookingHeader.tsx` | 412 |
 | `src/components/Sidebar.tsx` | 411 |
 | `src/components/ui/chart.tsx` | 389 |
-| `src/components/shift-detail/ShiftSlotCard.tsx` | 358 |
+| `src/components/shift-detail/ShiftSlotCard.tsx` | 356 |
 | `src/components/booking-details/BookingInfoCard.tsx` | 342 |
 | `src/components/booking-details/EditBookingEventsDialog.tsx` | 335 |
 | `src/components/FormCombobox.tsx` | 329 |
 | `src/components/resources/MarkdownReader.tsx` | 305 |
 | `src/components/public-showroom/showroom-blocks.tsx` | 290 |
 | `src/components/PageBreadcrumb.tsx` | 286 |
-| `src/components/booking-details/BookingSheetOverview.tsx` | 284 |
+| `src/components/booking-details/BookingSheetOverview.tsx` | 283 |
 | `src/components/booking-details/TransferOwnerDialog.tsx` | 269 |
 | `src/components/booking-wizard/WizardStep3.tsx` | 263 |
 | `src/components/ui/dropdown-menu.tsx` | 258 |
-| `src/components/shift-detail/CallWindowEditor.tsx` | 255 |
+| `src/components/shift-detail/CallWindowEditor.tsx` | 254 |
 | `src/components/shift-detail/UserAvatarPicker.tsx` | 254 |
 
 ## Hooks

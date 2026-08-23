@@ -114,8 +114,7 @@ export default function ShiftConfigTable({
                       <Button
                         type="button"
                         variant="ghost"
-                        size="sm"
-                        className="h-9 px-2 text-xs"
+                        className="h-10 px-2 text-xs"
                         disabled={Boolean(saving)}
                         onClick={() => onDiscard(primaryCode)}
                       >
@@ -124,8 +123,7 @@ export default function ShiftConfigTable({
                       </Button>
                       <Button
                         type="button"
-                        size="sm"
-                        className="h-9 px-3 text-xs"
+                        className="h-10 px-3 text-xs"
                         disabled={Boolean(saving)}
                         onClick={() => onSave(primaryCode)}
                       >

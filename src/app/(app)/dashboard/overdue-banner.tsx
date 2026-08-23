@@ -73,7 +73,6 @@ export function OverdueBanner({ overdueCount, overdueItems, now, onSelectBooking
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
-                  size="icon"
                   className="size-10 shrink-0 text-muted-foreground hover:bg-[var(--red-bg)] hover:text-[var(--red-text)]"
                   disabled={nudgedIds.has(item.bookingId) || nudgingId === item.bookingId}
                   onClick={() => handleNudge(item.bookingId)}

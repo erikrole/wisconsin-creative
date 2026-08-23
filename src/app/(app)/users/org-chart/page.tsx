@@ -212,7 +212,7 @@ export default function OrgChartPage() {
   return (
     <>
       <PageHeader title="Org chart" description="Reporting relationships for active staff and students.">
-        <Button asChild variant="outline" size="sm">
+        <Button className="h-10" asChild variant="outline">
           <Link href="/users">
             <ArrowLeft data-icon="inline-start" /> Back to users
           </Link>

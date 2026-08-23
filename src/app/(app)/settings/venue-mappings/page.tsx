@@ -216,7 +216,7 @@ export default function VenueMappingsPage() {
         <Card>
           <CardHeader className="flex-row items-center justify-between gap-3">
             <CardTitle>Mapping Audit</CardTitle>
-            <Button type="button" size="sm" variant="outline" onClick={reloadAudit}>
+            <Button className="h-10" type="button" variant="outline" onClick={reloadAudit}>
               Refresh audit
             </Button>
           </CardHeader>
@@ -230,7 +230,7 @@ export default function VenueMappingsPage() {
                 <AlertTriangle className="size-4" />
                 <AlertDescription className="flex flex-wrap items-center gap-2">
                   <span>Venue mapping diagnostics could not load.</span>
-                  <Button type="button" size="sm" variant="outline" onClick={reloadAudit}>
+                  <Button className="h-10" type="button" variant="outline" onClick={reloadAudit}>
                     Retry audit
                   </Button>
                 </AlertDescription>
@@ -269,9 +269,8 @@ export default function VenueMappingsPage() {
                               </p>
                             </div>
                           </div>
-                          <Button
+                          <Button className="h-10"
                             type="button"
-                            size="sm"
                             variant="outline"
                             onClick={() => openAddMapping({ pattern: location.name, locationId: location.id })}
                           >
@@ -296,7 +295,7 @@ export default function VenueMappingsPage() {
                               Points at inactive location {mapping.location?.name ?? mapping.locationId}.
                             </p>
                           </div>
-                          <Button asChild size="sm" variant="outline">
+                          <Button className="h-10" asChild variant="outline">
                             <Link href="/settings/locations">Review location</Link>
                           </Button>
                         </div>
@@ -336,7 +335,7 @@ export default function VenueMappingsPage() {
                               Points at {mapping.location?.name ?? mapping.locationId}, but that location is not marked Home Venue.
                             </p>
                           </div>
-                          <Button asChild size="sm" variant="outline">
+                          <Button className="h-10" asChild variant="outline">
                             <Link href="/settings/locations">Review home venue</Link>
                           </Button>
                         </div>
@@ -353,7 +352,7 @@ export default function VenueMappingsPage() {
           <CardHeader className="flex-row items-center justify-between gap-3">
             <CardTitle>Pattern Mappings</CardTitle>
             {!showAdd && (
-              <Button size="sm" onClick={() => openAddMapping()}>
+              <Button className="h-10" onClick={() => openAddMapping()}>
                 <Plus className="mr-1.5 size-4" />
                 Add mapping
               </Button>
@@ -402,13 +401,12 @@ export default function VenueMappingsPage() {
                     title="Higher priority mappings are checked first"
                   />
                   <div className="flex gap-2">
-                    <Button type="submit" size="sm" disabled={addingMapping || locationsUnavailable}>
+                    <Button className="h-10" type="submit" disabled={addingMapping || locationsUnavailable}>
                       {addingMapping ? "Adding..." : "Add"}
                     </Button>
-                    <Button
+                    <Button className="h-10"
                       type="button"
                       variant="outline"
-                      size="sm"
                       onClick={() => {
                         setShowAdd(false);
                         resetAddForm();
@@ -423,7 +421,7 @@ export default function VenueMappingsPage() {
                   <Alert variant="destructive" className="mt-3">
                     <AlertDescription className="flex flex-wrap items-center gap-2">
                       <span>Locations could not load, so new venue mappings cannot be assigned yet.</span>
-                      <Button type="button" size="sm" variant="outline" onClick={reloadLocations}>
+                      <Button className="h-10" type="button" variant="outline" onClick={reloadLocations}>
                         Retry locations
                       </Button>
                     </AlertDescription>

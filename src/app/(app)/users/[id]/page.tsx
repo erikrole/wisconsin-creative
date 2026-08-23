@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { useBreadcrumbLabel } from "@/components/BreadcrumbContext";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { UserAvatar } from "@/components/UserAvatar";
+import { DetailPageHeader } from "@/components/DetailPageHeader";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -551,10 +552,10 @@ export default function UserDetailPage() {
           <AlertDescription className="mt-2 flex flex-col gap-3">
             <p>User not found or something went wrong.</p>
             <div className="flex items-center gap-3">
-              <Button variant="outline" size="sm" onClick={loadUser}>
+              <Button variant="outline" className="h-10 active:scale-[0.96]" onClick={loadUser}>
                 Retry
               </Button>
-              <Button variant="ghost" size="sm" asChild>
+              <Button variant="ghost" className="h-10 active:scale-[0.96]" asChild>
                 <Link href="/users">Back to users</Link>
               </Button>
             </div>
@@ -567,12 +568,15 @@ export default function UserDetailPage() {
   if (!user) {
     return (
       <div className="flex flex-col gap-6">
-        {/* Header skeleton */}
-        <div className="flex items-center gap-3">
-          <Skeleton className="size-12 rounded-full" />
-          <div className="flex flex-col gap-2">
-            <Skeleton className="h-5 w-36" />
-            <Skeleton className="h-3.5 w-48" />
+        {/* Header skeleton — matches the DetailPageHeader card so the shell does not shift on load */}
+        <div className="rounded-lg border border-border/50 bg-card px-4 py-4 shadow-xs sm:px-5">
+          <div className="flex gap-4">
+            <Skeleton className="size-16 shrink-0 rounded-full" />
+            <div className="flex flex-1 flex-col gap-2">
+              <Skeleton className="h-7 w-48" />
+              <Skeleton className="h-4 w-56" />
+              <Skeleton className="h-3.5 w-40" />
+            </div>
           </div>
         </div>
         {/* Tabs skeleton */}
@@ -609,19 +613,24 @@ export default function UserDetailPage() {
   ) {
     return (
       <FadeUp>
-        <div className="mx-auto max-w-2xl rounded-xl border bg-card p-6">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+        <DetailPageHeader
+          className="mx-auto max-w-2xl"
+          media={
             <UserAvatar
               name={profile.name}
               avatarUrl={profile.avatarUrl}
               size="xl"
               className="ring-2 ring-border ring-offset-2 ring-offset-card"
             />
-            <div className="min-w-0 flex-1">
-              <h1 className="text-2xl font-bold tracking-tight">{profile.name}</h1>
-              {profile.title ? <p className="mt-1 text-sm text-muted-foreground">{profile.title}</p> : null}
-              {isSelf && profile.email ? <p className="mt-1 text-sm text-muted-foreground">{profile.email}</p> : null}
-              <div className="mt-3 flex flex-wrap gap-2">
+          }
+          title={profile.name}
+          subtitle={profile.title}
+          meta={
+            <>
+              {isSelf && profile.email ? (
+                <p className="text-sm text-muted-foreground">{profile.email}</p>
+              ) : null}
+              <div className="mt-1 flex flex-wrap gap-2">
                 <RoleBadge role={profile.role} />
                 {profile.collaboratorPolicy?.affiliation.displayName ? (
                   <Badge variant="outline">{profile.collaboratorPolicy.affiliation.displayName}</Badge>
@@ -629,14 +638,16 @@ export default function UserDetailPage() {
                 {profile.primaryArea ? <Badge variant="outline">{AREA_LABELS[profile.primaryArea] ?? profile.primaryArea}</Badge> : null}
                 {profile.location ? <Badge variant="outline">{profile.location}</Badge> : null}
               </div>
-            </div>
-            {isSelf ? (
-              <Button asChild variant="outline">
+            </>
+          }
+          actions={
+            isSelf ? (
+              <Button asChild variant="outline" className="h-10 active:scale-[0.96]">
                 <Link href="/settings/profile">Edit profile</Link>
               </Button>
-            ) : null}
-          </div>
-        </div>
+            ) : null
+          }
+        />
       </FadeUp>
     );
   }
@@ -652,152 +663,134 @@ export default function UserDetailPage() {
 
   return (
     <FadeUp>
-      {/* ── Profile hero ── */}
-      <div className="relative mb-5 rounded-xl border bg-card overflow-hidden">
-        {/* Atmospheric red wash — very subtle */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ background: "radial-gradient(ellipse at 0% 0%, rgba(160,0,0,0.045) 0%, transparent 55%)" }}
-        />
-
-        <div className="relative flex flex-col sm:flex-row sm:items-center gap-5 p-5 sm:p-6">
-          {/* Avatar */}
-          <div className="shrink-0">
-            {canManageProfilePhoto ? (
-              <>
-                <input
-                  id="profile-avatar-upload"
-                  name="profileAvatarUpload"
-                  ref={fileInputRef}
-                  type="file"
-                  aria-label={`Upload profile photo for ${profile.name}`}
-                  accept="image/jpeg,image/png,image/webp"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) setPendingAvatarFile(file);
-                    e.target.value = "";
-                  }}
-                />
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild disabled={uploadingAvatar}>
-                    <button
-                      type="button"
-                      aria-label={profile.avatarUrl ? `Change ${profile.name}'s profile photo` : `Upload ${profile.name}'s profile photo`}
-                      className="relative group rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    >
-                      <UserAvatar
-                        name={profile.name}
-                        avatarUrl={profile.avatarUrl}
-                        size="xl"
-                        className="cursor-pointer ring-2 ring-border ring-offset-2 ring-offset-card"
-                      />
-                      <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 transition-opacity flex items-center justify-center group-hover:opacity-100 group-focus-visible:opacity-100">
-                        {uploadingAvatar ? (
-                          <Spinner className="size-6 text-white" />
-                        ) : (
-                          <CameraIcon className="size-6 text-white" />
-                        )}
-                      </div>
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start">
-                    <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
-                      <CameraIcon className="mr-2 size-4" />
-                      {profile.avatarUrl ? "Change photo" : "Upload photo"}
+      {/* ── Profile header ── */}
+      <DetailPageHeader
+        media={
+          canManageProfilePhoto ? (
+            <>
+              <input
+                id="profile-avatar-upload"
+                name="profileAvatarUpload"
+                ref={fileInputRef}
+                type="file"
+                aria-label={`Upload profile photo for ${profile.name}`}
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) setPendingAvatarFile(file);
+                  e.target.value = "";
+                }}
+              />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild disabled={uploadingAvatar}>
+                  <button
+                    type="button"
+                    aria-label={profile.avatarUrl ? `Change ${profile.name}'s profile photo` : `Upload ${profile.name}'s profile photo`}
+                    className="relative group rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  >
+                    <UserAvatar
+                      name={profile.name}
+                      avatarUrl={profile.avatarUrl}
+                      size="xl"
+                      className="cursor-pointer ring-2 ring-border ring-offset-2 ring-offset-card"
+                    />
+                    <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 transition-opacity flex items-center justify-center group-hover:opacity-100 group-focus-visible:opacity-100">
+                      {uploadingAvatar ? (
+                        <Spinner className="size-6 text-white" />
+                      ) : (
+                        <CameraIcon className="size-6 text-white" />
+                      )}
+                    </div>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+                    <CameraIcon className="mr-2 size-4" />
+                    {profile.avatarUrl ? "Change photo" : "Upload photo"}
+                  </DropdownMenuItem>
+                  {profile.avatarUrl && (
+                    <DropdownMenuItem variant="destructive" onClick={removeAvatar}>
+                      <TrashIcon className="mr-2 size-4" />
+                      Remove photo
                     </DropdownMenuItem>
-                    {profile.avatarUrl && (
-                      <DropdownMenuItem variant="destructive" onClick={removeAvatar}>
-                        <TrashIcon className="mr-2 size-4" />
-                        Remove photo
-                      </DropdownMenuItem>
                     )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </>
-            ) : (
-              <UserAvatar
-                name={profile.name}
-                avatarUrl={profile.avatarUrl}
-                size="xl"
-                className="ring-2 ring-border ring-offset-2 ring-offset-card"
-              />
-            )}
-          </div>
-
-          {/* Name + meta */}
-          <div className="flex-1 min-w-0">
-            <h1
-              className="text-[28px] sm:text-[32px] leading-none tracking-tight mb-0"
-              style={{ fontFamily: "var(--font-heading)", fontWeight: 800 }}
-            >
-              {profile.name}
-            </h1>
-            <div className="mt-2.5 flex flex-col gap-1">
-              <p className="text-[12px] text-muted-foreground leading-none">
-                {profile.email}
+          ) : (
+            <UserAvatar
+              name={profile.name}
+              avatarUrl={profile.avatarUrl}
+              size="xl"
+              className="ring-2 ring-border ring-offset-2 ring-offset-card"
+            />
+          )
+        }
+        title={profile.name}
+        subtitle={profile.email}
+        meta={
+          <>
+            {profile.role !== "STUDENT" && profile.title && (
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Briefcase className="size-3 shrink-0" />
+                {profile.title}
               </p>
-              {profile.role !== "STUDENT" && profile.title && (
+            )}
+            {profile.role === "STUDENT" && (() => {
+              const y = deriveStudentYear(profile.gradYear, profile.studentYearOverride);
+              if (!y) return null;
+              const label = STUDENT_YEAR_OPTIONS.find((o) => o.value === y)?.label ?? y;
+              const anticipatedGraduation = formatAnticipatedGraduation(
+                profile.graduationTerm,
+                profile.gradYear,
+              );
+              return (
                 <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <Briefcase className="size-3 shrink-0" />
-                  {profile.title}
+                  <GraduationCap className="size-3 shrink-0" />
+                  {label}
+                  {anticipatedGraduation ? ` · ${anticipatedGraduation}` : ""}
                 </p>
-              )}
-              {profile.role === "STUDENT" && (() => {
-                const y = deriveStudentYear(profile.gradYear, profile.studentYearOverride);
-                if (!y) return null;
-                const label = STUDENT_YEAR_OPTIONS.find((o) => o.value === y)?.label ?? y;
-                const anticipatedGraduation = formatAnticipatedGraduation(
-                  profile.graduationTerm,
-                  profile.gradYear,
-                );
-                return (
-                  <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <GraduationCap className="size-3 shrink-0" />
-                    {label}
-                    {anticipatedGraduation ? ` · ${anticipatedGraduation}` : ""}
-                  </p>
-                );
-              })()}
-              {(profile.directReport || profile.directReportName) && (
-                <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <UserRound className="size-3 shrink-0" />
-                  Reports to{" "}
-                  {profile.directReport ? (
-                    <Link
-                      href={`/users/${profile.directReport.id}`}
-                      className="hover:underline"
-                    >
-                      {profile.directReport.name}
-                    </Link>
-                  ) : (
-                    <span>{profile.directReportName} <span className="text-[11px] text-muted-foreground">(external)</span></span>
-                  )}
-                </p>
-              )}
-              {profile.createdAt && (
-                <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <CalendarDays className="size-3 shrink-0" />
-                  Member since {formatDateFull(profile.createdAt)}
-                </p>
-              )}
-              {profile.gameRecord && profile.gameRecord.wins + profile.gameRecord.losses > 0 && (
-                <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <Trophy className="size-3 shrink-0" />
-                  {profile.gameRecord.wins}–{profile.gameRecord.losses} on official games
-                </p>
-              )}
-              {profile.gameRecord && profile.gameRecord.eventsWorked > 0 && (
-                <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <CalendarDays className="size-3 shrink-0" />
-                  {profile.gameRecord.eventsWorked} events worked in 2026–27
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Badges + admin controls */}
-          <div className="flex items-center gap-2 flex-wrap sm:self-start sm:mt-0.5">
+              );
+            })()}
+            {(profile.directReport || profile.directReportName) && (
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <UserRound className="size-3 shrink-0" />
+                Reports to{" "}
+                {profile.directReport ? (
+                  <Link
+                    href={`/users/${profile.directReport.id}`}
+                    className="hover:underline"
+                  >
+                    {profile.directReport.name}
+                  </Link>
+                ) : (
+                  <span>{profile.directReportName} <span className="text-[11px] text-muted-foreground">(external)</span></span>
+                )}
+              </p>
+            )}
+            {profile.createdAt && (
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <CalendarDays className="size-3 shrink-0" />
+                Member since {formatDateFull(profile.createdAt)}
+              </p>
+            )}
+            {profile.gameRecord && profile.gameRecord.wins + profile.gameRecord.losses > 0 && (
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Trophy className="size-3 shrink-0" />
+                {profile.gameRecord.wins}–{profile.gameRecord.losses} on official games
+              </p>
+            )}
+            {profile.gameRecord && profile.gameRecord.eventsWorked > 0 && (
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <CalendarDays className="size-3 shrink-0" />
+                {profile.gameRecord.eventsWorked} events worked in 2026–27
+              </p>
+            )}
+          </>
+        }
+        actions={
+          <>
             <RoleBadge role={profile.role} />
             {profile.active === false && (
               <Badge variant="outline" className="text-muted-foreground">Inactive</Badge>
@@ -805,7 +798,7 @@ export default function UserDetailPage() {
             {(isSelf || currentUserRole === "ADMIN") && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-1.5" disabled={togglingActive}>
+                  <Button variant="outline" className="h-10 gap-1.5 active:scale-[0.96]" disabled={togglingActive}>
                     {currentUserRole === "ADMIN" ? <Shield /> : <UserRound />}
                     {currentUserRole === "ADMIN" ? "Admin actions" : "Profile actions"}
                     <ChevronDown className="size-3.5 opacity-70" />
@@ -840,9 +833,9 @@ export default function UserDetailPage() {
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {isSelf && <ProfileCompletionNotice />}
 
@@ -923,7 +916,7 @@ export default function UserDetailPage() {
               <Button
                 type="button"
                 variant={awardMode === "existing" ? "secondary" : "ghost"}
-                size="sm"
+                className="h-10"
                 onClick={() => setAwardMode("existing")}
                 disabled={awardBusy || awardDefinitionsLoading}
               >
@@ -932,7 +925,7 @@ export default function UserDetailPage() {
               <Button
                 type="button"
                 variant={awardMode === "custom" ? "secondary" : "ghost"}
-                size="sm"
+                className="h-10"
                 onClick={() => setAwardMode("custom")}
                 disabled={awardBusy}
               >

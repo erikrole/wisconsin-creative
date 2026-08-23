@@ -8,6 +8,7 @@ import { OperationalRowActions } from "@/components/OperationalRowActions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { UserAvatar } from "@/components/UserAvatar";
+import { DetailPageHeader } from "@/components/DetailPageHeader";
 import {
   DropdownMenuItem,
   DropdownMenuSeparator,
@@ -199,10 +200,9 @@ export function ItemHeader({
 
   return (
     <>
-      <header className="mb-4 rounded-lg border border-border/50 bg-card px-4 py-4 shadow-xs sm:px-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex min-w-0 gap-4">
-            <div className="shrink-0 self-start">
+      <DetailPageHeader
+        media={
+          <>
             {imageSrc && !imageFailed ? (
               <button
                 className={`relative flex size-[88px] items-center justify-center overflow-hidden rounded-md border border-border bg-muted shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08)] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 sm:size-[96px] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)] ${canEdit ? "cursor-pointer active:scale-[0.96]" : "cursor-default"} group transition-[border-color,background-color,box-shadow,transform]`}
@@ -241,77 +241,71 @@ export function ItemHeader({
                 <ImageIcon className="size-5 text-muted-foreground/25" />
               </div>
             )}
-            </div>
-
-            <div className="flex min-w-0 flex-1 flex-col">
-              <div className="mb-2 flex flex-wrap items-center gap-2">
-                <StatusLine asset={asset} />
-              </div>
-
-              <div
-                className="flex items-baseline gap-2.5"
-                style={{ fontFamily: "var(--font-heading)" }}
+          </>
+        }
+        status={<StatusLine asset={asset} />}
+        title={
+          <span className="flex items-baseline gap-2.5">
+            <InlineTitle
+              value={asset.assetTag}
+              canEdit={false}
+              onSave={(v) => onSaveHeaderField("assetTag", v)}
+            />
+            {asset.metadata?.uwAssetTag && (
+              <span
+                className="text-[11px] font-normal tabular-nums tracking-normal text-muted-foreground"
+                style={{ fontFamily: "var(--font-mono)" }}
               >
-              <InlineTitle
-                value={asset.assetTag}
-                canEdit={false}
-                onSave={(v) => onSaveHeaderField("assetTag", v)}
-                className="text-balance text-[28px] font-black leading-none tracking-tight sm:text-[32px]"
-              />
-              {asset.metadata?.uwAssetTag && (
-                <span
-                  className="text-[11px] tabular-nums text-muted-foreground"
-                  style={{ fontFamily: "var(--font-mono)" }}
-                >
-                  UW·{asset.metadata.uwAssetTag}
+                UW·{asset.metadata.uwAssetTag}
+              </span>
+            )}
+          </span>
+        }
+        subtitle={
+          <InlineTitle
+            value={productLabel}
+            canEdit={false}
+            onSave={(v) => onSaveHeaderField("name", v)}
+            className="text-pretty font-medium leading-tight"
+            placeholder="Add item name"
+          />
+        }
+        meta={
+          <>
+            {showBrandModel && (
+              <p className="text-[12px] leading-none text-muted-foreground">
+                {brandModel}
+              </p>
+            )}
+
+            <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-muted-foreground">
+              {metaParts.map((part, index) => (
+                <span key={part} className="inline-flex items-center gap-2">
+                  {index > 0 && (
+                    <span aria-hidden="true" className="text-muted-foreground/30">
+                      /
+                    </span>
+                  )}
+                  <span>{part}</span>
                 </span>
-              )}
-              </div>
-
-              <div style={{ fontFamily: "var(--font-heading)" }}>
-              <InlineTitle
-                value={productLabel}
-                canEdit={false}
-                onSave={(v) => onSaveHeaderField("name", v)}
-                className="text-pretty text-[14px] font-medium leading-tight text-muted-foreground"
-                placeholder="Add item name"
-              />
-              </div>
-
-              {showBrandModel && (
-                <p className="mt-1 text-[12px] leading-none text-muted-foreground">
-                  {brandModel}
-                </p>
-              )}
-
-              <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-muted-foreground">
-                {metaParts.map((part, index) => (
-                  <span key={part} className="inline-flex items-center gap-2">
-                    {index > 0 && (
-                      <span aria-hidden="true" className="text-muted-foreground/30">
-                        /
-                      </span>
-                    )}
-                    <span>{part}</span>
-                  </span>
-                ))}
-              </div>
+              ))}
             </div>
-          </div>
-
+          </>
+        }
+        actions={
           <div className="flex flex-col gap-2 lg:min-w-[270px] lg:items-end">
             <div className="flex flex-wrap items-center gap-1.5 lg:justify-end">
               {activeBookingHref && activeBookingLabel && (
-                <Button size="sm" variant="default" asChild>
+                <Button variant="default" className="h-10" asChild>
                   <Link href={activeBookingHref}>{activeBookingLabel}</Link>
                 </Button>
               )}
               {canReserve ? (
-                <Button size="sm" variant={activeBookingHref ? "outline" : "default"} asChild>
+                <Button variant={activeBookingHref ? "outline" : "default"} className="h-10" asChild>
                   <Link href={`/reservations?newFor=${asset.id}`}>Reserve</Link>
                 </Button>
               ) : (
-                <Button size="sm" variant="outline" disabled title={reserveDisabledTitle}>
+                <Button variant="outline" className="h-10" disabled title={reserveDisabledTitle}>
                   Reserve
                 </Button>
               )}
@@ -355,8 +349,8 @@ export function ItemHeader({
               </Button>
             </div>
           </div>
-        </div>
-      </header>
+        }
+      />
 
       {/* ── Parent banner ─────────────────────────────────────── */}
       {asset.parentAsset && (

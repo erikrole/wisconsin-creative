@@ -647,6 +647,16 @@ describe("signature artifact contract", () => {
   });
 });
 
+describe("signature artifact importer contract", () => {
+  it("supports exact one-off team staff imports without switching to player coverage", () => {
+    const source = readFileSync("scripts/backfill-signature-artifacts.ts", "utf8");
+    expect(source).toContain("const isTeamStaffImport = !isStandaloneStaffImport && Boolean(memberName);");
+    expect(source).toContain("assertTeamStaffSourceCoverage");
+    expect(source).toContain("assertTeamStaffCoverage");
+    expect(source).not.toContain("--member-name is only supported with --sport CREATIVE or --sport ADMIN.");
+  });
+});
+
 describe("signature permissions", () => {
   it("keeps student and collaborator access closed while staff can capture", () => {
     expect(getAllowedRoles("signature", "capture")).toEqual(["ADMIN", "STAFF"]);

@@ -214,7 +214,7 @@ export default function NotificationsSettingsPage() {
                   <span className="font-medium">Paused</span>
                   <span className="text-muted-foreground"> until {pausedLabel}</span>
                 </div>
-                <Button size="sm" variant="outline" onClick={resumeNow} disabled={saving}>
+                <Button className="h-10" variant="outline" onClick={resumeNow} disabled={saving}>
                   {saving ? <Spinner /> : "Resume now"}
                 </Button>
               </div>
@@ -226,10 +226,9 @@ export default function NotificationsSettingsPage() {
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {PAUSE_OPTIONS.map((opt) => (
-                    <Button
+                    <Button className="h-10"
                       key={opt.id}
                       variant="outline"
-                      size="sm"
                       onClick={() => pauseFor(opt.ms)}
                       disabled={saving}
                     >
@@ -267,7 +266,7 @@ export default function NotificationsSettingsPage() {
             />
             {prefs.channels.push && !isPaused && (
               <div className="pt-1">
-                <Button size="sm" variant="outline" onClick={sendTestPush} disabled={testingPush}>
+                <Button className="h-10" variant="outline" onClick={sendTestPush} disabled={testingPush}>
                   {testingPush ? "Sending…" : "Send test notification"}
                 </Button>
               </div>

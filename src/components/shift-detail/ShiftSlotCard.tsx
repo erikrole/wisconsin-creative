@@ -225,8 +225,7 @@ export function ShiftSlotCard({
                 {canEdit && (
                   <Button
                     variant="ghost"
-                    size="sm"
-                    className={cn(CREW_ROW_REVEAL, "h-9 px-2 text-xs text-destructive")}
+                    className={cn(CREW_ROW_REVEAL, "h-10 px-2 text-xs text-destructive")}
                     onClick={() => onRemove(activeAssignment.id)}
                     disabled={acting !== null}
                   >
@@ -252,8 +251,7 @@ export function ShiftSlotCard({
                 <div className="mt-1.5 pl-9">
                   <Button
                     variant="outline"
-                    size="sm"
-                    className="h-9 px-3 text-xs"
+                    className="h-10 px-3 text-xs"
                     onClick={() => onPostTrade(activeAssignment.id)}
                     disabled={acting !== null}
                   >

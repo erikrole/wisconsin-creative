@@ -398,7 +398,7 @@ export default function KitsPage() {
         <Alert variant="destructive" className="mt-4">
           <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <span>Locations could not load. Kit filters and new-kit assignment are unavailable until locations are readable.</span>
-            <Button type="button" size="sm" variant="outline" onClick={reloadLocations}>
+            <Button className="h-10" type="button" variant="outline" onClick={reloadLocations}>
               Retry locations
             </Button>
           </AlertDescription>

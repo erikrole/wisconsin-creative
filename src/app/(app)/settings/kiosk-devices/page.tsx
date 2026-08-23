@@ -403,7 +403,7 @@ export default function KioskDevicesPage() {
               <div className="mb-4 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <span className="text-destructive">Locations could not load, so new kiosk devices cannot be assigned yet.</span>
-                  <Button type="button" size="sm" variant="outline" onClick={reloadFormOptions}>
+                  <Button className="h-10" type="button" variant="outline" onClick={reloadFormOptions}>
                     Retry locations
                   </Button>
                 </div>

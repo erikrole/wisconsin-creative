@@ -563,7 +563,7 @@ export default function SignatureCapturePage({ collectionId, memberId, userId }:
           ) : (
             <Button variant="ghost" size="sm" className="h-11" asChild><Link href={`/signatures/${collection.id}`}><ArrowLeft data-icon="inline-start" />Roster</Link></Button>
           )}
-          <div className="min-w-0 text-center"><p className="truncate text-lg font-semibold">{member.name}</p><p className="text-xs text-muted-foreground">{member.jerseyNumber !== null ? `#${member.jerseyNumber} · ` : ""}{member.title || member.roleGroup.replaceAll("_", " ")} · {collection.season}</p></div>
+          <div className="min-w-0 text-center"><h1 className="truncate text-lg! font-semibold!">{member.name}</h1><p className="text-xs text-muted-foreground">{member.jerseyNumber !== null ? `#${member.jerseyNumber} · ` : ""}{member.title || member.roleGroup.replaceAll("_", " ")} · {collection.season}</p></div>
           <div className="w-[104px] text-right text-xs text-muted-foreground" aria-live="polite">{profileStep ? "Profile details" : draftLabel}</div>
         </header>
         {profileStep ? (

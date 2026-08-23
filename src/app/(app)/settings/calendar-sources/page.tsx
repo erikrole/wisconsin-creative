@@ -275,7 +275,7 @@ export default function CalendarSourcesPage() {
     >
         <div className="flex gap-2">
           {!showAdd && (
-            <Button size="sm" onClick={() => setShowAdd(true)}>
+            <Button className="h-10" onClick={() => setShowAdd(true)}>
               Add source
             </Button>
           )}
@@ -317,7 +317,7 @@ export default function CalendarSourcesPage() {
                       required
                       className="flex-1"
                     />
-                    <Button type="button" variant="outline" size="sm" onClick={handleTest} disabled={testing || !newUrl.trim()}>
+                    <Button className="h-10" type="button" variant="outline" onClick={handleTest} disabled={testing || !newUrl.trim()}>
                       {testing ? "Testing…" : "Test"}
                     </Button>
                   </div>
@@ -349,10 +349,10 @@ export default function CalendarSourcesPage() {
                   )}
                 </div>
                 <div className="flex gap-2">
-                  <Button type="submit" size="sm" disabled={addBusy}>
+                  <Button className="h-10" type="submit" disabled={addBusy}>
                     {addBusy ? "Adding..." : "Add"}
                   </Button>
-                  <Button type="button" variant="outline" size="sm" onClick={() => { setShowAdd(false); setNewName(""); setNewUrl(""); setTestResult(null); }}>
+                  <Button className="h-10" type="button" variant="outline" onClick={() => { setShowAdd(false); setNewName(""); setNewUrl(""); setTestResult(null); }}>
                     Cancel
                   </Button>
                 </div>
@@ -379,7 +379,7 @@ export default function CalendarSourcesPage() {
           <Alert variant="destructive">
             <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <span>Calendar sources could not load. Existing feeds may still be syncing, but this page cannot show them yet.</span>
-              <Button type="button" size="sm" variant="outline" onClick={reload}>
+              <Button className="h-10" type="button" variant="outline" onClick={reload}>
                 Retry sources
               </Button>
             </AlertDescription>

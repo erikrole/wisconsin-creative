@@ -210,7 +210,6 @@ export function FilterChips({
                         </Button>
                         <Button
                           variant="ghost"
-                          size="icon-sm"
                           className="size-10 text-muted-foreground"
                           onClick={() => handleDeletePreset(preset.id)}
                           aria-label={`Delete saved filter "${preset.label}"`}
@@ -229,7 +228,6 @@ export function FilterChips({
       {hasActiveFilter && (
         <Button
           variant="ghost"
-          size="icon-sm"
           className="size-10 text-muted-foreground"
           onClick={clearFilters}
           aria-label="Clear dashboard filters"

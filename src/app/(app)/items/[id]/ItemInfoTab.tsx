@@ -1069,13 +1069,12 @@ export function QRModal({
           </div>
           {canEdit && !manualEntry && (
             <div className="mt-4 flex justify-center gap-2">
-              <Button variant="outline" size="sm" onClick={generateQR} disabled={saving}>
+              <Button variant="outline" className="h-10" onClick={generateQR} disabled={saving}>
                 <RefreshCcw className={cn("size-3.5", saving && "animate-spin")} aria-hidden="true" />
                 {saving ? "Generating..." : "Generate new QR"}
               </Button>
-              <Button
+              <Button className="h-10"
                 variant="outline"
-                size="sm"
                 onClick={() => setManualEntry(true)}
                 disabled={saving}
               >
@@ -1099,13 +1098,12 @@ export function QRModal({
                 }}
                 autoFocus
               />
-              <Button size="sm" className="h-9" onClick={saveManualQR} disabled={saving}>
+              <Button className="h-10" onClick={saveManualQR} disabled={saving}>
                 {saving ? "Saving..." : "Save"}
               </Button>
               <Button
                 variant="outline"
-                size="sm"
-                className="h-9"
+                className="h-10"
                 onClick={() => {
                   setManualEntry(false);
                   setQrDraft("");

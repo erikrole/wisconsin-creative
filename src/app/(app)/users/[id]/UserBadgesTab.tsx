@@ -726,18 +726,17 @@ function BadgeDetailDialog({
                     </div>
                     <div className="flex items-center gap-2">
                       {canAward && !badge.earned && badge.trigger === "manual" ? (
-                        <Button size="sm" variant="outline" onClick={() => onAwardRequest?.(badge)}>
+                        <Button className="h-10" variant="outline" onClick={() => onAwardRequest?.(badge)}>
                           <Award className="size-3.5" />
                           Award this badge
                         </Button>
                       ) : null}
                       {canRevoke && badge.earned && badge.source === "MANUAL" ? (
                         <Button
-                          size="sm"
                           variant="outline"
                           onClick={handleRevoke}
                           disabled={revokeBusy}
-                          className="text-destructive hover:border-destructive hover:bg-destructive hover:text-destructive-foreground"
+                          className="h-10 text-destructive hover:border-destructive hover:bg-destructive hover:text-destructive-foreground"
                         >
                           <Trash2 className="size-3.5" />
                           {revokeBusy ? "Revoking..." : "Revoke award"}

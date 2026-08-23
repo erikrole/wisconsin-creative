@@ -132,7 +132,7 @@ export default function AppActivityPage() {
             <p className="text-sm text-muted-foreground">
               Check the connection or confirm the report migration is deployed, then try again.
             </p>
-            <Button type="button" variant="outline" size="sm" onClick={reload}>
+            <Button className="h-10" type="button" variant="outline" onClick={reload}>
               Try again
             </Button>
           </CardContent>
@@ -159,7 +159,7 @@ export default function AppActivityPage() {
           </div>
           <div className="flex items-center gap-2">
             {refreshing && <span className="text-xs text-muted-foreground">Refreshing…</span>}
-            <Button type="button" variant="outline" size="sm" onClick={reload} disabled={refreshing}>
+            <Button className="h-10" type="button" variant="outline" onClick={reload} disabled={refreshing}>
               <RefreshCw className={refreshing ? "size-3.5 animate-spin" : "size-3.5"} />
               Refresh
             </Button>

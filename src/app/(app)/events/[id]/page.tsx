@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Calendar, Clock, MapPin, RefreshCw, WifiOff, AlertTriangle, Pencil, RotateCcw, Users, PackageCheck, Plane, History, Cloud, Sparkles } from "lucide-react";
+import { format } from "date-fns";
 import { classifyError, handleAuthRedirect, isAbortError, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { useFetch } from "@/hooks/use-fetch";
 import { toast } from "sonner";
@@ -22,6 +23,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Calendar as DatePickerCalendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/PageHeader";
 import { useBreadcrumbLabel } from "@/components/BreadcrumbContext";
@@ -57,6 +60,91 @@ function eventTypeFromEvent(event: CalendarEvent): EventTypeDraft {
 function eventTypeLabel(type: EventTypeDraft): string {
   if (type === "non-game") return "Non-game";
   return VENUE_TONES[type].label;
+}
+
+function eventDraftDate(value: string, allDay: boolean, isEnd: boolean) {
+  const date = new Date(value);
+  if (!allDay) return date;
+  return new Date(
+    date.getUTCFullYear(),
+    date.getUTCMonth(),
+    date.getUTCDate() - (isEnd ? 1 : 0),
+  );
+}
+
+function eventDraftTime(value: string) {
+  const date = new Date(value);
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
+function buildEventDraftDateTime(date: Date | undefined, time: string, allDay: boolean, isEnd: boolean) {
+  if (!date) return null;
+  if (allDay) {
+    return new Date(Date.UTC(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate() + (isEnd ? 1 : 0),
+    )).toISOString();
+  }
+  const [hours = "0", minutes = "0"] = time.split(":");
+  const value = new Date(date);
+  value.setHours(Number(hours), Number(minutes), 0, 0);
+  return value.toISOString();
+}
+
+function EventDateTimeField({
+  label,
+  fieldId,
+  date,
+  time,
+  allDay,
+  disabled,
+  onDateChange,
+  onTimeChange,
+}: {
+  label: string;
+  fieldId: string;
+  date: Date | undefined;
+  time: string;
+  allDay: boolean;
+  disabled: boolean;
+  onDateChange: (date: Date | undefined) => void;
+  onTimeChange: (time: string) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Label>{label}</Label>
+      <div className="flex gap-2">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className="min-w-0 flex-1 justify-start gap-2 font-normal"
+              disabled={disabled}
+              aria-label={`${label} date`}
+            >
+              <Calendar className="size-4 shrink-0 text-muted-foreground" />
+              <span className="truncate">{date ? format(date, "MMM d, yyyy") : "Pick a date"}</span>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <DatePickerCalendar mode="single" selected={date} onSelect={onDateChange} initialFocus />
+          </PopoverContent>
+        </Popover>
+        {!allDay && (
+          <Input
+            id={fieldId}
+            type="time"
+            value={time}
+            onChange={(event) => onTimeChange(event.target.value)}
+            className="w-[120px] shrink-0 tabular-nums"
+            disabled={disabled}
+            aria-label={`${label} time`}
+          />
+        )}
+      </div>
+    </div>
+  );
 }
 
 function sourceState(event: CalendarEvent) {
@@ -107,6 +195,11 @@ export default function EventDetailPage() {
   const [sportCodeDraft, setSportCodeDraft] = useState("__none__");
   const [opponentDraft, setOpponentDraft] = useState("");
   const [locationIdDraft, setLocationIdDraft] = useState<string>("__none__");
+  const [startDateDraft, setStartDateDraft] = useState<Date | undefined>();
+  const [startTimeDraft, setStartTimeDraft] = useState("09:00");
+  const [endDateDraft, setEndDateDraft] = useState<Date | undefined>();
+  const [endTimeDraft, setEndTimeDraft] = useState("17:00");
+  const [editError, setEditError] = useState("");
   const [saving, setSaving] = useState(false);
   const [locations, setLocations] = useState<LocationOption[]>([]);
   const [locationsLoading, setLocationsLoading] = useState(false);
@@ -171,6 +264,11 @@ export default function EventDetailPage() {
     setSportCodeDraft(event.sportCode ?? "__none__");
     setOpponentDraft(event.opponent ?? "");
     setLocationIdDraft(event.location?.id ?? "__none__");
+    setStartDateDraft(eventDraftDate(event.startsAt, event.allDay, false));
+    setStartTimeDraft(eventDraftTime(event.startsAt));
+    setEndDateDraft(eventDraftDate(event.endsAt, event.allDay, true));
+    setEndTimeDraft(eventDraftTime(event.endsAt));
+    setEditError("");
     setEditOpen(true);
 
     // Fetch locations on every open so the list stays fresh
@@ -219,8 +317,29 @@ export default function EventDetailPage() {
     if (savingRef.current) return;
     savingRef.current = true;
     setSaving(true);
+    setEditError("");
     try {
       const body: Record<string, unknown> = {};
+
+      if (!event.source) {
+        const startsAt = buildEventDraftDateTime(startDateDraft, startTimeDraft, event.allDay, false);
+        const endsAt = buildEventDraftDateTime(endDateDraft, endTimeDraft, event.allDay, true);
+        if (!startsAt || !endsAt) {
+          setEditError("Start and end dates are required");
+          return;
+        }
+        if (new Date(endsAt) <= new Date(startsAt)) {
+          setEditError("End must be after start");
+          return;
+        }
+        if (
+          new Date(startsAt).getTime() !== new Date(event.startsAt).getTime()
+          || new Date(endsAt).getTime() !== new Date(event.endsAt).getTime()
+        ) {
+          body.startsAt = startsAt;
+          body.endsAt = endsAt;
+        }
+      }
 
       if (titleDraft.trim() !== event.summary) {
         body.summary = titleDraft.trim();
@@ -422,11 +541,11 @@ export default function EventDetailPage() {
 
       {/* Edit Event Modal */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-h-[calc(100vh-2rem)] max-w-lg overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit event</DialogTitle>
             <DialogDescription className="sr-only">
-              Update event display fields without changing the source calendar import.
+              Update event details. Imported dates remain controlled by the source calendar.
             </DialogDescription>
           </DialogHeader>
 
@@ -457,6 +576,37 @@ export default function EventDetailPage() {
               />
             </div>
 
+            {!event.source && (
+              <div className="flex flex-col gap-3 rounded-lg border bg-muted/20 p-3">
+                <div>
+                  <p className="text-sm font-medium">Date and time</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Moving the event also moves its crew and call times. Existing gear reservation windows stay unchanged.
+                  </p>
+                </div>
+                <EventDateTimeField
+                  label="Starts"
+                  fieldId="edit-start-time"
+                  date={startDateDraft}
+                  time={startTimeDraft}
+                  allDay={event.allDay}
+                  disabled={saving}
+                  onDateChange={setStartDateDraft}
+                  onTimeChange={setStartTimeDraft}
+                />
+                <EventDateTimeField
+                  label={event.allDay ? "Ends (inclusive)" : "Ends"}
+                  fieldId="edit-end-time"
+                  date={endDateDraft}
+                  time={endTimeDraft}
+                  allDay={event.allDay}
+                  disabled={saving}
+                  onDateChange={setEndDateDraft}
+                  onTimeChange={setEndTimeDraft}
+                />
+              </div>
+            )}
+
             {/* Subtitle */}
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="edit-subtitle">Label <span className="text-muted-foreground font-normal">(optional)</span></Label>
@@ -469,6 +619,12 @@ export default function EventDetailPage() {
                 disabled={saving}
               />
             </div>
+
+            {editError && (
+              <Alert variant="destructive">
+                <AlertDescription>{editError}</AlertDescription>
+              </Alert>
+            )}
 
             {/* Event type */}
             <div className="flex flex-col gap-1.5">
@@ -590,6 +746,7 @@ export default function EventDetailPage() {
               disabled={
                 saving
                 || !titleDraft.trim()
+                || (!event.source && (!startDateDraft || !endDateDraft))
                 || (eventTypeDraft !== "non-game" && (sportCodeDraft === "__none__" || !opponentDraft.trim()))
               }
             >
@@ -724,7 +881,7 @@ export default function EventDetailPage() {
             <p className="text-sm text-muted-foreground">
               No crew is set up. Use the Schedule event menu to choose a crew template.
             </p>
-            <Button variant="outline" size="sm" asChild>
+            <Button variant="outline" className="h-10" asChild>
               <Link href="/schedule">Open Schedule</Link>
             </Button>
           </CardContent>

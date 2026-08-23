@@ -159,7 +159,7 @@ export function NewKitSheet({
               <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <span>Locations could not load, so new kits cannot be assigned yet.</span>
                 {onRetryLocations && (
-                  <Button type="button" size="sm" variant="outline" onClick={onRetryLocations}>
+                  <Button className="h-10" type="button" variant="outline" onClick={onRetryLocations}>
                     Retry locations
                   </Button>
                 )}

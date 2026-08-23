@@ -202,7 +202,6 @@ export function CalendarView({
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
-            size="icon"
             className="size-10 text-muted-foreground"
             onClick={prevMonth}
             aria-label="Previous month"
@@ -211,7 +210,6 @@ export function CalendarView({
           </Button>
           <Button
             variant="ghost"
-            size="icon"
             className="size-10 text-muted-foreground"
             onClick={nextMonth}
             aria-label="Next month"
@@ -219,7 +217,7 @@ export function CalendarView({
             <ChevronRight className="size-4" />
           </Button>
           <h2
-            className="text-xl font-bold tracking-tight uppercase"
+            className="text-xl! font-bold! tracking-tight uppercase"
             style={{ fontFamily: "var(--font-heading)" }}
           >
             {calMonth.toLocaleDateString("en-US", {

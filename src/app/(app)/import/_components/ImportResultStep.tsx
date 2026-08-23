@@ -59,7 +59,7 @@ export function ImportResultStep({
         <Card className="mb-4">
           <CardHeader>
             <CardTitle>Errors ({result.errors.length})</CardTitle>
-            <Button variant="outline" size="sm" onClick={onDownloadErrors}>
+            <Button variant="outline" className="h-10" onClick={onDownloadErrors}>
               Download error CSV
             </Button>
           </CardHeader>

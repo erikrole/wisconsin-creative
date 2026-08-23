@@ -360,7 +360,7 @@ export default function AuditLogPage() {
           <span className="text-sm text-primary font-medium">
             {newCount} new {newCount === 1 ? "entry" : "entries"} added
           </span>
-          <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setNewCount(0)}>
+          <Button variant="ghost" className="h-10 text-xs" onClick={() => setNewCount(0)}>
             Dismiss
           </Button>
         </div>
@@ -372,7 +372,7 @@ export default function AuditLogPage() {
           <AlertTitle>{refreshCopy.title}</AlertTitle>
           <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <span>{refreshCopy.description}</span>
-            <Button size="sm" variant="outline" onClick={pollForNew} className="shrink-0">
+            <Button variant="outline" onClick={pollForNew} className="h-10 shrink-0">
               Retry now
             </Button>
           </AlertDescription>
@@ -433,7 +433,7 @@ export default function AuditLogPage() {
             </Alert>
           )}
           <div className="flex justify-center">
-            <Button variant="outline" size="sm" onClick={loadMore} disabled={loadingMore}>
+            <Button className="h-10" variant="outline" onClick={loadMore} disabled={loadingMore}>
               {loadingMore ? "Loading…" : paginationError ? "Retry older entries" : "Load older entries"}
             </Button>
           </div>

@@ -35,7 +35,6 @@ export function ServerPathCopy({ path }: { path: string }) {
     <Button
       type="button"
       variant="outline"
-      size="sm"
       onClick={handleCopy}
       aria-label={`Copy server path ${path}`}
       aria-pressed={copied}

@@ -107,10 +107,10 @@ export function AssignPageClient() {
   return (
     <FadeUp>
       <PageHeader title="Assign shifts">
-        <Button size="sm" onClick={() => setBulkAssignmentOpen(true)} disabled={grid.loading}>
+        <Button className="h-10" onClick={() => setBulkAssignmentOpen(true)} disabled={grid.loading}>
           Bulk assign
         </Button>
-        <Button variant="outline" size="sm" onClick={() => router.push("/schedule")}>
+        <Button variant="outline" className="h-10" onClick={() => router.push("/schedule")}>
           <ChevronLeft className="size-4" />
           Schedule
         </Button>
@@ -120,7 +120,6 @@ export function AssignPageClient() {
         <div className="flex min-h-10 items-center overflow-hidden rounded-md border border-border bg-muted/30">
           <Button
             variant="outline"
-            size="icon"
             className="size-10"
             onClick={prevMonth}
             disabled={previousMonthDisabled}
@@ -135,7 +134,7 @@ export function AssignPageClient() {
           >
             {monthLabel}
           </Button>
-          <Button variant="outline" size="icon" className="size-10" onClick={nextMonth} aria-label="Next month">
+          <Button variant="outline" className="size-10" onClick={nextMonth} aria-label="Next month">
             <ChevronRight className="size-4" />
           </Button>
         </div>

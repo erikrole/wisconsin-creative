@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Events
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-19
+- Last Updated: 2026-08-23
 - Status: Active
 
 ## Direction
@@ -41,6 +41,7 @@ Make athletics schedule data the operational backbone for booking and checkout w
 20. **Morning-refresh automation digest** — `morning-refresh` now includes a read-only Schedule automation digest in its response after daily maintenance. The digest reports sync additions/updates, generated shift counts, archive counts, stale trade cleanup, pending pickup cleanup, publish readiness, auto-fill preview candidates, unresolved blockers, and source state. It is observability only; manual Settings sync and staff review actions remain the mutation paths.
 21. **Crew operations cleanup** — Schedule event-row menus own Home, Away, or empty crew setup and open the compact shared working-copy crew editor for day-to-day assignment, replacement, slot, call-window, and timed-release management. Event detail Crew calls the same editor with deeper event, gear, and history context; workers keep a read-only crew table. Template-review and attendance controls are not surfaced.
 22. **Event identity normalization** — Calendar sync, manual event creation, and event edit/revert paths share opponent and venue text cleanup. Opponents drop ranking/source boilerplate such as `No. 9` or `University of`, while venue matching normalizes source spellings such as `Wis.` to `WI` without overwriting `rawLocationText` evidence or confusing calendar venue with pickup location.
+23. **Manual event date/time correction** — Staff/admin can edit the start and end of a manually authored event from Event detail. The audited serializable mutation keeps timed and all-day date semantics intact, moves live crew windows, slot and personal call overrides, private working copies, published snapshots, acknowledgement/conflict state, and published-schedule notifications by the same offsets. Imported event times remain calendar-source-owned, and existing gear reservation windows remain independent.
 
 ## Next
 1. Schedule V2 enhancements: week view, gear readiness indicators, conflict detection — see `tasks/schedule-roadmap.md`.
@@ -57,6 +58,7 @@ Make athletics schedule data the operational backbone for booking and checkout w
 - [x] AC-4: Missing fields degrade gracefully without blocking checkout creation.
 - [x] AC-5: Schedule surfaces stale or unavailable calendar-source context without blocking manual events or event-linked booking work.
 - [x] AC-6: Changed ICS events write audit history consumed by staff Schedule activity cards without auditing unchanged feed rows.
+- [x] AC-7: A manual event can move to a corrected date/time without leaving its crew schedule on the previous day.
 
 ## Edge Cases
 - Event cancellations or updates in source feed.
@@ -81,6 +83,7 @@ Make athletics schedule data the operational backbone for booking and checkout w
 4. Fallback behavior for incomplete events is implemented — treat event context as non-blocking metadata on all booking flows.
 
 ## Change Log
+- 2026-08-23: **Manual events can be corrected after creation.** Event detail now exposes start/end date and time for manual events, including inclusive date handling for all-day spans. The PATCH route rejects imported-time overrides, validates the full window, and moves related crew shifts, slot/personal call overrides, working-copy payloads, published snapshots, conflict/acknowledgement state, and published schedule notifications atomically. Linked booking/reservation windows remain unchanged and are named as an explicit boundary in the editor.
 - 2026-08-19: **Schedule and Scoreboard now share event classification.** The canonical `CalendarEvent.site` value now feeds Schedule's Home/Away/Neutral treatment, profile Scoreboard site records, manual event create/edit/revert, and sync-safe locked classifications. The preview repair path reuses `classifySourceEvent` and repaired 256 post-July site values without changing worker assignments.
 - 2026-08-19: **Schedule now supplies the profile's all-event work total.** The Users profile counts completed Schedule `CalendarEvent` rows once per person through active shift assignments, so exhibitions, result-less events, and non-game work remain available for future Wrapped-style recap and event-count recognition without being mixed into official game records. Archived event history remains readable for that total.
 - 2026-08-19: **Non-official competitions remain schedule history, not official records.** Profile record queries exclude source titles marked Exhibition, Scrimmage, or Alumni Match while retaining the source result on `CalendarEvent` for schedule history and audit context.

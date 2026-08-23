@@ -43,7 +43,7 @@ This is a working checklist, not a redesign brief. Use it before future page-spe
 
 | Route | Status | Finding | Next Fix |
 |---|---|---|---|
-| `/` | Strong | Uses `PageHeader`, shared empty state, role-aware actions, queue columns, and `OperationalStatusRail` for prioritized booking work with expanded shared metrics. Secondary filters, footer links, section links, collaborator actions, and event controls meet the 40px target baseline; overdue nudge state changes use interruptible Motion. | No immediate code fix. Keep future queue cards out of nested-card layouts and preserve orange pending-pickup semantics. |
+| `/` | Strong | 2026-08-23 polish restored five inert heading declarations, removed dead icon `size` props, and fixed `--font-mono` so tags and counts render monospace. Uses `PageHeader`, shared empty state, role-aware actions, queue columns, and `OperationalStatusRail` for prioritized booking work with expanded shared metrics. Secondary filters, footer links, section links, collaborator actions, and event controls meet the 40px target baseline; overdue nudge state changes use interruptible Motion. | No immediate code fix. Keep future queue cards out of nested-card layouts and preserve orange pending-pickup semantics. |
 | `/schedule` | Mostly conforming, intentional exception | Uses `PageHeader`, shadcn `Sheet`, shared `EmptyState` in list/trade surfaces, shadcn `ToggleGroup` for view and venue command groups, Trade Board active chips, and `OperationalRowActions` for trade secondary/destructive commands. `ScheduleFilters` remains route-local because it controls schedule-specific modes rather than a generic list toolbar. | No immediate code fix. Keep future Schedule controls shadcn-backed and preserve the command-bar exception. |
 | `/items` | Strong | Uses `PageHeader`, `OperationalToolbar`, `OperationalActiveFilterChips`, 40px commands and filter/selection controls, sentence-case shadcn table headers with accessible animated sort state, shared empty states, stable pagination, tactile mobile rows, neutral image outlines, `Add item` creation language, and documented tag-first identity. | No immediate code fix. Keep item-family rows and serialized rows in one discovery surface, but do not add item-family-only custom controls unless they also meet the shared toolbar/row-action rules. |
 | `/bookings` | Strong | Uses `PageHeader`, shadcn tabs/toggles, shared `BookingListPage`, `OperationalToolbar`, shared active-filter chips, shared empty states, and `OperationalRowActions` in table rows, mobile rows, and cards. Scope/view controls and list commands meet the 40px baseline, sortable headers expose accessible animated state, and cards/mobile rows have precise press feedback. The list content is still framed in a route-level `Card`, which is acceptable because the card owns filters plus results, not a decorative page section. | No immediate code fix. Do not disturb unified checkout/reservation behavior. |
@@ -59,7 +59,7 @@ This is a working checklist, not a redesign brief. Use it before future page-spe
 | `/reports/*` | Mostly conforming | Reports use shared layout, toolbar helpers, active-filter chips on key pages, shared empty states, role gating, and an adapter over `OperationalMetricCard` for report metrics. | No immediate code fix. Keep future report metrics behind the report adapter instead of adding page-local cards. |
 | `/bulk-inventory/batteries` | Strong | Uses `PageHeader`, `OperationalStatusRail` for missing, low-stock, stale-flag, and custody signals, shared empty states, expanded shared metrics, and clear battery operations sections. | No immediate code fix. Keep unit status controls named and audited. |
 | `/bulk-inventory/[id]` | Strong | Item-family detail surfaces use shared inline empty states and the shared image modal handoff. | No immediate code fix. Keep item-family detail copy aligned with Units and Quantity user language. |
-| Detail pages | Mostly conforming | Item detail, booking detail, user detail, and kit detail mostly use shared empty states, shared row actions where actions exist, and explicit operational copy. Kit detail member-removal rows now use shared row actions and confirmed destructive copy. | Low follow-up: add detail pages to future visual smoke coverage after any page-specific edit. |
+| Detail pages | Strong for the header; watch the tab bodies | Item detail, booking detail, user detail, and bulk SKU detail now share `DetailPageHeader`. Kit detail uses `PageHeader` with a location/content summary. All use shared empty states, shared row actions where actions exist, and explicit operational copy. | Sweep the remaining sub-40px controls inside the user and item tab components, which the 2026-08-22 header pass did not touch. |
 
 ## Route Detail
 
@@ -237,7 +237,7 @@ Do not force every route into `OperationalToolbar`. Use it when the route has th
 
 ### `/bulk-inventory/batteries` And `/bulk-inventory/[id]`
 
-- **Header**: pass for Battery Ops. Detail route uses a route-owned item-family shell.
+- **Header**: pass for Battery Ops. The detail route now uses the shared `DetailPageHeader`.
 - **Toolbar and filters**: route-specific pass. Battery Ops is a cockpit, not a generic filterable table.
 - **Rows and actions**: pass. Unit actions are domain-specific and audited.
 - **Empty, loading, error**: pass. Recent slices moved checked-out units and unit detail empty rows to shared inline `EmptyState`.
@@ -247,9 +247,29 @@ Do not force every route into `OperationalToolbar`. Use it when the route has th
 - **Next fix**: none.
 - **Evidence**: `docs/AREA_BULK_INVENTORY.md`, `src/app/(app)/bulk-inventory/batteries/page.tsx`, `src/app/(app)/bulk-inventory/[id]/BulkSkuUnitsTab.tsx`.
 
+### Detail Page Headers
+
+Corrected 2026-08-22. The prior entry called detail pages "mostly conforming" with only a low visual-smoke follow-up. Source inspection did not support that: the four detail headers were four independent implementations, and two of them rendered no `h1` at all.
+
+- **Header**: pass. `/users/[id]`, `/items/[id]`, `/bulk-inventory/[id]`, and booking detail all use `src/components/DetailPageHeader.tsx`. Use it instead of `PageHeader` when a detail route carries identity media and a meta stack; use `PageHeader` when it does not, as `/kits/[id]` does.
+- **Rows and actions**: pass. Header controls are at the 40px baseline; eleven 32px `size="sm"` triggers were corrected in the same pass.
+- **Status and color**: pass. Status badges sit in the primitive's `status` slot above the title.
+- **Copy**: pass.
+- **Typography**: pass, and the reason matters. The base `h1` rule in `globals.css` beats Tailwind font-size and font-weight utilities on an `h1`, so per-route title classes on a heading element are dead code. Let the `h1` inherit; do not restate the scale.
+- **Known exception**: the booking reference-copy and refresh affordances remain 10-11px inline text controls rather than 40px buttons. They predate the header pass and need their own decision.
+- **Next fix**: the user and item tab components still contain sub-40px controls the header pass did not cover.
+- **Evidence**: `src/components/DetailPageHeader.tsx`, `tasks/users-header-review-2026-08-22/` (matched before/after captures and measurements).
+
 ## Current Next Fixes
 
 1. Audit remaining low-traffic detail routes after page-specific edits, not as a standalone redesign pass.
 2. If Kits filters expand, evaluate `OperationalToolbar`; do not migrate it preemptively while the current compact filter shell remains simpler.
 3. Keep future Labels, Search, Notifications, Licenses, Resources, and user-detail assignment additions on named 40px controls.
 4. Settings Audit is no longer a command-surface follow-up; keep future Audit filter additions inside the shared toolbar/chip pattern.
+5. **App-wide 40px baseline, measured 2026-08-22.** 169 controls miss it, not the handful this checklist implies: 146 text-label buttons across 58 files and 23 icon-only controls across 12. The detail headers, detail tabs, and the tier-2 routes (`/accountability`, `/events/[id]`, `/import`, `/schedule/assign`) are now clean; the remaining text-label set is a scoped program, not a blind sweep, because `size="sm"` may be deliberate inside dialogs, wizards, and bulk action bars. The icon-only set is blocked on the density conflict recorded in `docs/DESIGN_LANGUAGE.md`.
+6. Counting note: a line-based `grep` undercounts these badly. Multi-line JSX and arrow functions containing `>` both defeat naive tag regexes, and a `size="sm"` carrying an `h-10` override is already compliant. Use a brace-aware scan; `tests/detail-page-header-source.test.ts` matches across newlines for this reason.
+7. Decide whether the booking reference-copy and refresh affordances stay as inline text controls or become 40px buttons.
+8. **Move the `globals.css` typography block into `@layer base`.** It is currently unlayered, so every heading and card-title utility in the app is inert (141 declarations). Measured and documented in `docs/DESIGN_LANGUAGE.md`; the `/about` hero bug it caused is fixed narrowly with `!` modifiers. The full fix changes 141 headings at once and needs its own slice with authenticated visual proof.
+9. **Decide the form-field height baseline.** `Input` and `SelectTrigger` are h-9 (36px), below the 40px target rule. `FormCombobox` was deliberately left at h-9 during the 2026-08-22 sweep to stay aligned with them; raising it alone misaligns every form row. Raising all three together is the real fix and needs its own proof.
+10. `/support` and `/privacy` remain outside both shells: they use neither `AuthScreen` nor the app shell. Decide whether they should adopt the public showroom layout under `/about` or stay standalone.
+11. Bring the routes this checklist has never covered into scope: `/accountability`, `/schedule/assign`, `/events/[id]`, `/import`, `/blasts`, `/signatures/*`, and the unauthenticated surfaces (`/login`, `/forgot-password`, `/reset-password`, `/change-password`, `/support`, `/privacy`), none of which use the shared page shell.

@@ -38,7 +38,7 @@ export function InsertCalloutMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button type="button" variant="ghost" size="sm" className="h-7 gap-1 px-2" title="Insert callout">
+        <Button type="button" variant="ghost" className="h-10 gap-1 px-2" title="Insert callout">
           <AlertCircle className="size-4" />
           Callout
           <ChevronDown className="size-3 opacity-60" />
@@ -83,8 +83,7 @@ export function InsertVideoEmbedButton() {
       <Button
         type="button"
         variant="ghost"
-        size="sm"
-        className="h-7 gap-1 px-2"
+        className="h-10 gap-1 px-2"
         title="Insert video embed"
         onClick={() => setOpen(true)}
       >

@@ -239,7 +239,7 @@ export default function LabelsPage() {
         description="Build a focused queue of item, family, and QR labels before sending them to browser print."
         className="no-print"
       >
-        <Button variant="outline" size="sm" asChild>
+        <Button className="h-10" variant="outline" asChild>
           <Link href="/items" className="h-10">
             <PackageSearch className="mr-1.5 size-4" />
             Items

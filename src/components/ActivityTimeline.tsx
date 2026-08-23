@@ -1348,9 +1348,8 @@ export default function ActivityTimeline({
         <>
           <Separator className="opacity-30" />
           <div className="py-3 text-center">
-          <Button
+          <Button className="h-10"
             variant="outline"
-            size="sm"
             disabled={loading}
             onClick={onLoadMore}
           >

@@ -176,7 +176,7 @@ function RosterPicker({
         <AlertTitle>Failed to load roster</AlertTitle>
         <AlertDescription className="mt-2 flex flex-col gap-2 text-sm">
           <span>Sport roster members could not load, so travelers cannot be added yet.</span>
-          <Button variant="outline" size="sm" onClick={reloadRoster} className="w-fit">
+          <Button variant="outline" onClick={reloadRoster} className="h-10 w-fit">
             Retry roster
           </Button>
         </AlertDescription>
@@ -350,7 +350,7 @@ export function EventTravelCard({
             <AlertCircle className="size-4" />
             <AlertTitle>Failed to load</AlertTitle>
             <AlertDescription className="mt-1">
-              <Button variant="outline" size="sm" onClick={reload}>Retry</Button>
+              <Button variant="outline" className="h-10" onClick={reload}>Retry</Button>
             </AlertDescription>
           </Alert>
         ) : members.length === 0 ? (

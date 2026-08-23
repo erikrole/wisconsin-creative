@@ -1,0 +1,82 @@
+{
+  "title": "Heading utilities were inert",
+  "eyebrow": "Web · globals.css cascade · public showroom",
+  "lede": "Chasing dead heading classes turned up the reason they were dead: the typography block in globals.css sits outside any @layer, so unlayered CSS outranks every Tailwind utility. 141 heading declarations across the app silently do nothing — and the public marketing hero was rendering at a third of its authored size.",
+  "stats": [
+    { "k": "/about hero", "v": "30px → 96px", "n": "Authored text-8xl, was collapsing to the base scale", "tone": "good" },
+    { "k": "Inert declarations", "v": "141", "n": "6 h1, 27 h2, 46 h3, 59 CardTitle, 3 dialog titles", "tone": "warn" },
+    { "k": "Shipped scope", "v": "5 headings", "n": "Showroom only; the 141-site fix was deliberately not shipped" },
+    { "k": "App shells", "v": "unchanged", "n": "Login and support measured at 30px before and after" }
+  ],
+  "sections": [
+    {
+      "heading": "The public hero",
+      "note": "Captured from the real route at 1280×900, device scale 2. Nothing changed but the heading declarations in showroom-blocks.tsx.",
+      "pairs": [
+        {
+          "title": "/about",
+          "sub": "Authored text-5xl sm:text-7xl lg:text-8xl with font-black and leading-[0.95].",
+          "before": "before/about.png",
+          "beforeCap": "Rendering at 30px, weight 800 — the base h1 scale. The headline reads as a body heading, and leading-[0.95] and text-balance have nothing to act on.",
+          "after": "after/about.png",
+          "afterCap": "96px at weight 900, the size that was written. The tight leading and balanced wrap now do what they were for."
+        },
+        {
+          "title": "/about/features",
+          "sub": "Same block, one breakpoint down at this width.",
+          "before": "before/features.png",
+          "beforeCap": "Also 30px.",
+          "after": "after/features.png",
+          "afterCap": "72px — the authored sm:text-7xl."
+        },
+        {
+          "title": "/support — deliberately unchanged",
+          "sub": "Proof the fix is scoped and did not leak.",
+          "before": "before/support.png",
+          "beforeCap": "30px, weight 800.",
+          "after": "after/support.png",
+          "afterCap": "Still 30px, weight 800. Its inert text-4xl was removed rather than activated, so the rendering is identical and the code no longer claims a size it never got."
+        }
+      ]
+    }
+  ],
+  "changesHeading": "What changed, and why",
+  "changesNote": "The root cause was diagnosed, measured, and then deliberately left unfixed. Only the demonstrable bug was shipped.",
+  "changes": [
+    {
+      "h": "The cascade, measured rather than assumed",
+      "was": "I had already written into the design language that heading utilities are dead code. That claim predicted the /about hero would render at 30px, which would look broken — so it was worth testing rather than trusting.",
+      "now": "Confirmed in the browser: on an <code>h1</code>, <code>text-5xl</code>, <code>text-[32px]</code>, and a bare element all compute to <strong>30px</strong>. The typography block opens after the <code>@layer base</code> block closes, and unlayered CSS outranks every layered rule. The claim held, and the hero really was broken."
+    },
+    {
+      "h": "The public hero was fixed narrowly",
+      "was": "Five showroom headings carried authored sizes and weights that never applied.",
+      "now": "They use the Tailwind important modifier (<code>text-5xl!</code>, <code>font-black!</code>). Five call sites, zero effect anywhere else — verified by measuring <code>/login</code> and <code>/support</code> before and after."
+    },
+    {
+      "h": "The correct architectural fix was measured and not shipped",
+      "was": "Moving the typography block into <code>@layer base</code> makes utilities behave normally and is the right structure.",
+      "now": "Tried, measured, reverted. It changes <strong>141 headings at once</strong> — 59 CardTitles, 46 h3s, 27 h2s, 6 h1s, 3 dialog and sheet titles — most on authenticated surfaces that cannot be verified locally. Shipping that as a side effect of a heading cleanup would have been reckless. It is written up in <code>docs/DESIGN_LANGUAGE.md</code> with the measurement and the impact count, and queued in the conformance checklist as its own slice."
+    },
+    {
+      "h": "Inert declarations were removed rather than left to mislead",
+      "was": "<code>/support</code>, <code>/privacy</code>, and the 404 page carried <code>text-4xl</code>, <code>text-2xl</code>, and <code>font-semibold</code> on headings that ignored them.",
+      "now": "Removed. Seven declarations, all provably no-ops, so the rendering is byte-identical and the next reader is not misled into thinking the scale is set locally."
+    }
+  ],
+  "verification": [
+    "<strong>TypeScript:</strong> clean. <strong>Lint:</strong> clean across <code>src/app</code>, <code>src/components</code>, and <code>tests</code>.",
+    "<strong>Full suite:</strong> 3615 passing, 0 failing, 536 files.",
+    "<strong>Build:</strong> <code>npm run build:app</code> compiles.",
+    "<strong>Docs:</strong> <code>npm run verify:docs</code> reports codemaps current.",
+    "<strong>Scope proof:</strong> <code>/login</code> and <code>/support</code> h1 measured at 30px/800 both before and after, confirming the showroom fix did not leak into the app shells.",
+    "<strong>Cascade proof:</strong> three synthetic h1 elements injected into the live page returned identical computed sizes, isolating the behaviour from any one page's markup."
+  ],
+  "notesHeading": "What this does not prove",
+  "notes": [
+    "<strong>The 141-site fix is untested.</strong> It was applied, measured on three public routes, then reverted. No authenticated surface was checked while it was in place, which is exactly why it was not kept.",
+    "<strong>Only three public routes were captured.</strong> <code>/about/tech-stack</code>, <code>/about/security</code>, and <code>/about/field-work</code> share the same showroom blocks and were not individually captured.",
+    "<strong>Mobile widths were not captured.</strong> The showroom headings are responsive (<code>text-5xl</code> base, <code>sm:text-7xl</code>, <code>lg:text-8xl</code>); only the 1280px case was verified visually.",
+    "<strong>Related open item:</strong> <code>Input</code> and <code>SelectTrigger</code> are h-9 (36px), below the 40px target rule. <code>FormCombobox</code> was left at h-9 to stay aligned with them during the target sweep; raising all three together needs its own slice."
+  ]
+}

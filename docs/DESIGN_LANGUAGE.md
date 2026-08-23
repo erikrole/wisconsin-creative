@@ -11,7 +11,7 @@
 2. The drift is route-level: pages solve the same problems with slightly different headers, metric cards, partial-result warnings, filter shells, and state copy.
 3. Green misuse is the easiest trust bug to introduce. Green means available/free. Waiting, pending, maintenance, and pickup handoff states are orange.
 4. Small icon controls are operational risk, not polish debt. Every action target needs a real label, visible focus, and at least a 40px target on web.
-5. Future work should standardize shared surfaces before inventing page-local UI. Prefer `PageHeader`, `OperationalToolbar`, `OperationalStatusRail`, `OperationalMetricCard`, `OperationalPartialResultsAlert`, `Badge`, `Button`, `Input`, `Select`, `ToggleGroup`, `Switch`, `Dialog`, `AlertDialog`, `Sheet`, `Drawer`, `Table`, and `Card`.
+5. Future work should standardize shared surfaces before inventing page-local UI. Prefer `PageHeader`, `DetailPageHeader`, `OperationalToolbar`, `OperationalStatusRail`, `OperationalMetricCard`, `OperationalPartialResultsAlert`, `Badge`, `Button`, `Input`, `Select`, `ToggleGroup`, `Switch`, `Dialog`, `AlertDialog`, `Sheet`, `Drawer`, `Table`, and `Card`.
 
 ## Product Personality
 Gear Tracker should feel:
@@ -32,6 +32,16 @@ Avoid:
 ## Visual Language
 ### Layout
 - Use `PageHeader` for page title, optional description, and right-side actions.
+- Use `DetailPageHeader` for entity detail routes that carry identity media and a meta stack, which `PageHeader` has no slots for. It owns the card shell, the `h1`, and the media / status / title / subtitle / meta / actions / footer slots. Pick `sideBySideAt` to match the action column: `sm` for a couple of compact buttons, `lg` when a wide action column would crowd the title. A detail route without identity media stays on `PageHeader`.
+- Use `AuthScreen` for every unauthenticated screen. It owns the login scene, the noise layer, the brand lockup, the translucent `.login-card` material, and the entrance stagger. Pass a `subtitle` saying what the screen is for and an optional `footer` for content that belongs on the scene rather than in the card. Do not rebuild the scene or the card per route.
+- Do not restate the heading scale on an `h1`. Every detail title is a real `h1`, never a styled `span`.
+- **Heading utilities do not work. Know this before you write one.** The typography rules in `globals.css` (`h1`-`h6`, `[data-slot="card-title"]`, dialog/sheet titles) sit *outside* any `@layer`, and unlayered CSS outranks every layered rule, including all Tailwind utilities. Measured 2026-08-22: on an `h1`, `text-5xl`, `text-[32px]`, and a bare element all compute to the same 30px. Consequences:
+  - A size or weight utility on a heading or `CardTitle` is inert. There are 141 such declarations in the codebase that silently do nothing.
+  - This is not cosmetic. The `/about` hero is authored `text-5xl sm:text-7xl lg:text-8xl` and was rendering at 30px until the showroom headings were given `!` modifiers.
+  - To deviate from the scale deliberately, use the Tailwind important modifier (`text-lg!`), which is what the signature capture header and the public showroom now do.
+- **`--font-mono` was resolving to nothing.** Measured 2026-08-23: `--font-mono` is declared on `:root` but resolves `--font-geist-mono`, which `next/font` only defines where its variable class is applied. That class was on `<body>`, one level below `:root`, so the token computed to empty and all 25 `var(--font-mono)` usages fell back to the sans stack — asset tags, UW tags, booking references, shift times, and server paths all rendered proportional. Fixed by moving both font variable classes to `<html>`. If you add a font token, define it where `:root` can see it and verify the computed value in a browser, not just the declaration.
+- There are no `font-heading` or `font-mono` Tailwind utilities: the `@theme inline` block has no font entries, which is why headings use inline `style={{ fontFamily: "var(--font-heading)" }}`. Adding font entries to `@theme` would generate the utilities and let those inline styles become classes; not yet done.
+  - **Open architectural fix:** moving the typography block into `@layer base` makes utilities work normally and is the correct structure. It was measured and deliberately not shipped on 2026-08-22 because it changes 141 headings at once — 6 `h1`, 27 `h2`, 46 `h3`, 59 `CardTitle`, 3 dialog/sheet titles — most on authenticated surfaces that cannot be visually verified locally. It needs its own slice with real proof, not a side effect of another change.
 - Use page sections as full-width groups or direct content, not cards inside cards.
 - Use `OperationalToolbar` for search, filters, quick toggles, and clear actions on operational list pages. The toolbar should read as quiet page chrome; individual controls carry the primary affordance.
 - Keep settings sub-pages under the Settings layout header and grouped Settings navigation; use `SettingsPageShell` for the compact section intro and main content, and do not render page-level `h1` inside sub-pages.
@@ -64,6 +74,7 @@ Avoid:
 ### Icons And Motion
 - Use lucide icons inside buttons when an icon exists.
 - Icon-only buttons need accessible names and at least 40px targets.
+- **Open conflict, do not resolve with a regex.** The 40px rule and the "keep repeated list rows dense" rule contradict each other on 23 icon-only controls in 12 surfaces, where clustered 24-32px icons sit inside compact chips and cells: `UserAvailabilityTab` availability chips, `ItemInfoTab` copy/open affordances, `WorkingCrewEditor`, `SelectedEquipmentShelf`, `AssignmentCell`, `report-ui`, `SerializedItemForm`, `settings/data-export`, and the booking wizard. Resizing them to 40px roughly triples the affected chip heights; routing them through `OperationalRowActions` makes approve/deny a two-click action on a primary decision. Each surface needs its own decision. Audited 2026-08-22.
 - Motion should be short and functional: focus, hover, active press, refresh spin, loading skeleton. No decorative motion.
 
 ## Component Language

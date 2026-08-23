@@ -124,9 +124,8 @@ export function ReportExportButton({
   }
 
   return (
-    <Button
+    <Button className="h-10"
       variant="outline"
-      size="sm"
       disabled={disabled || exporting}
       onClick={handleClick}
       aria-label={ariaLabel ?? label}
@@ -411,8 +410,7 @@ export function ReportBreakdownTable({
         <div className="border-t px-4 py-2 print:hidden">
           <Button
             variant="ghost"
-            size="sm"
-            className="h-8 px-2 text-xs"
+            className="h-10 px-2 text-xs"
             onClick={() => setExpanded((current) => !current)}
           >
             {expanded ? "Show top rows" : `Show all ${sorted.length}`}
@@ -540,7 +538,7 @@ export function ReportErrorState({
             ? "You appear to be offline. Check your connection and try again."
             : "Unable to load this report. Please try again."}
         </span>
-        <Button variant="outline" size="sm" onClick={onRetry} className="w-fit">
+        <Button variant="outline" onClick={onRetry} className="h-10 w-fit">
           Retry
         </Button>
       </AlertDescription>
@@ -586,10 +584,10 @@ export function ReportPaginationFooter({
         Page {page + 1} of {totalPages}
       </span>
       <div className="flex gap-2">
-        <Button variant="outline" size="sm" disabled={page === 0} onClick={onPrevious}>
+        <Button className="h-10" variant="outline" disabled={page === 0} onClick={onPrevious}>
           Previous
         </Button>
-        <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={onNext}>
+        <Button className="h-10" variant="outline" disabled={page >= totalPages - 1} onClick={onNext}>
           Next
         </Button>
       </div>

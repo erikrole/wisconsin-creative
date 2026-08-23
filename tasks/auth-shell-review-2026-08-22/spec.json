@@ -1,0 +1,83 @@
+{
+  "title": "Unauthenticated screens — one shared shell",
+  "eyebrow": "Web · /login · /forgot-password · /reset-password · /change-password",
+  "lede": "The login scene is a fully designed system in globals.css. Sign-in used all of it; the other three unauthenticated screens used only the background and rebuilt a plainer card. Anyone who clicked \"Forgot password?\" watched the branding change mid-flow.",
+  "stats": [
+    { "k": "Screens unified", "v": "4", "n": "Every unauthenticated surface", "tone": "good" },
+    { "k": "Missing h1", "v": "3 → 0", "n": "Forgot, reset, and forced change had no heading", "tone": "good" },
+    { "k": "Noise texture copies", "v": "4 → 1", "n": "A 380-character data URI, pasted verbatim", "tone": "good" },
+    { "k": "Brand lockup", "v": "48px → 64px", "n": "Moved out of the card onto the scene", "tone": "good" }
+  ],
+  "sections": [
+    {
+      "heading": "Side by side",
+      "note": "Captured from the real routes on a local dev server at 1280×900, device scale 2, after entrance animations settled. The baseline came from git stash of only these four files, so the rest of the working tree was identical between runs.",
+      "pairs": [
+        {
+          "title": "Forgot password",
+          "sub": "The screen a locked-out user reaches from the sign-in page.",
+          "before": "before/forgot.png",
+          "beforeCap": "A plain opaque card. The logo is 48px and sits inside it, the wordmark is a CardTitle so the page has no h1, and there is no backdrop material — measured backdrop-filter: none.",
+          "after": "after/forgot.png",
+          "afterCap": "The same shell sign-in uses: 64px logo and white wordmark on the scene, a real h1, and the translucent card measured at blur(24px) saturate(1.5)."
+        },
+        {
+          "title": "Reset password",
+          "sub": "Reached from the emailed link. Same divergence, same fix.",
+          "before": "before/reset.png",
+          "beforeCap": "Identical plain treatment: 48px logo inside an opaque card, no heading element.",
+          "after": "after/reset.png",
+          "afterCap": "Now indistinguishable from sign-in and forgot-password apart from the subtitle line."
+        },
+        {
+          "title": "Sign in — the reference",
+          "sub": "Already correct. Included to show the target the other three now match.",
+          "before": "before/login.png",
+          "beforeCap": "Unchanged by this work; it already used the full login scene.",
+          "after": "after/login.png",
+          "afterCap": "Visually identical, but the shell now comes from the shared component rather than being defined inline."
+        }
+      ]
+    }
+  ],
+  "changesHeading": "What changed, and why",
+  "changesNote": "Presentational only. No auth logic, form submission, validation, token handling, passkey flow, or redirect behavior was touched.",
+  "changes": [
+    {
+      "h": "Three screens ignored the design system that already existed",
+      "was": "globals.css defines a complete login scene: <code>.login-card</code> is a translucent material with a blurred backdrop and a bright top edge, <code>.login-materialize</code> settles it in, <code>.login-rise</code> staggers content, and <code>.login-lockup-title</code> puts the wordmark on the scene. Sign-in used all of it. Forgot password, reset password, and forced password change used only <code>.login-bg</code> and built a plain <code>shadow-2xl</code> card instead.",
+      "now": "<code>src/components/auth/AuthScreen.tsx</code> owns the scene, the noise layer, the lockup, and the card. All four screens render through it and supply a subtitle plus their form."
+    },
+    {
+      "h": "Three of four had no heading element",
+      "was": "Forgot, reset, and forced change titled the page with <code>CardTitle</code>, which renders a div. Measured in the browser: <code>main h1</code> returned nothing on all three.",
+      "now": "The shell renders a real <code>h1</code>. This is the same defect found in item detail and booking detail earlier today — four of the app's surfaces had no page heading."
+    },
+    {
+      "h": "A 380-character data URI was pasted into four files",
+      "was": "The film-grain texture over the gradient is an inline SVG <code>feTurbulence</code> data URI. It appeared verbatim in all four screens; changing the grain meant editing four files and hoping none drifted.",
+      "now": "One named constant in the shell. A grep for <code>feTurbulence</code> across <code>src/</code> now returns exactly one file."
+    },
+    {
+      "h": "The footer is a slot, not a special case",
+      "was": "Sign-in carries an \"Access is by invitation only\" line below the card, on the scene rather than inside it. No other screen has one.",
+      "now": "<code>AuthScreen</code> takes an optional <code>footer</code>, so sign-in keeps it without the shell hardcoding a sign-in-specific element."
+    }
+  ],
+  "verification": [
+    "<strong>TypeScript:</strong> <code>npx tsc --noEmit --pretty false</code> clean.",
+    "<strong>Lint:</strong> <code>npx eslint</code> clean on all five files.",
+    "<strong>Full suite:</strong> <code>npx vitest run tests/</code> — 3628 passing, 0 failing, 535 files.",
+    "<strong>New contract test:</strong> <code>tests/auth-screen-source.test.ts</code>, 5 assertions covering the shared shell, the single noise copy, the login material, the h1, and the CSS the shell depends on.",
+    "<strong>Captures are from the real routes</strong>, not a harness — these screens are unauthenticated, so the dev server renders them directly. Measured per screen: logo size, whether the logo is inside the card, h1 presence and computed size, and the card's computed backdrop-filter.",
+    "<strong>Baseline method:</strong> <code>git stash push</code> scoped to only these four paths, so unrelated working-tree changes were byte-identical across both capture runs. Restore verified before continuing."
+  ],
+  "notesHeading": "What this does not prove",
+  "notes": [
+    "<strong>Forced password change was not captured.</strong> <code>/change-password</code> requires an authenticated session, which is the standing local limitation. It was converted with the same shell and passes the source contract, but has no visual pair here.",
+    "<strong>Unexercised:</strong> no form was submitted. The passkey flow, email discovery, token validation, and error and success states were not driven — only the resting render of each screen.",
+    "<strong>A first capture attempt returned nulls</strong> for forgot-password and was discarded as a dev-server compile artifact rather than reported as a finding. The numbers here are from a re-capture after the route had compiled.",
+    "<strong>Not converted:</strong> <code>src/app/login/loading.tsx</code> deliberately keeps a minimal variant — logo, wordmark, spinner, no card. Routing it through the shell would render an empty card. It already shares the lockup treatment.",
+    "<strong>Still outside any shell:</strong> <code>/support</code> and <code>/privacy</code> are standalone public pages using neither the auth scene nor the app shell. They were out of scope here."
+  ]
+}

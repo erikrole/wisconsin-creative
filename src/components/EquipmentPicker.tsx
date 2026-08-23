@@ -642,7 +642,7 @@ export default function EquipmentPicker({
               <EmptyDescription>Check the connection and try again.</EmptyDescription>
             </EmptyHeader>
             <EmptyContent>
-              <Button type="button" variant="outline" size="sm" onClick={retrySearch}>
+              <Button className="h-10" type="button" variant="outline" onClick={retrySearch}>
                 Retry
               </Button>
             </EmptyContent>
@@ -658,12 +658,12 @@ export default function EquipmentPicker({
             {(sectionSearch || onlyAvailable) && (
               <EmptyContent className="flex-row flex-wrap justify-center">
                 {sectionSearch && (
-                  <Button type="button" variant="outline" size="sm" onClick={() => setSectionSearch("")}>
+                  <Button className="h-10" type="button" variant="outline" onClick={() => setSectionSearch("")}>
                     Clear search
                   </Button>
                 )}
                 {onlyAvailable && (
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setOnlyAvailable(false)}>
+                  <Button className="h-10" type="button" variant="ghost" onClick={() => setOnlyAvailable(false)}>
                     Show unavailable
                   </Button>
                 )}

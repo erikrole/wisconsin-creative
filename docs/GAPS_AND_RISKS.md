@@ -70,6 +70,7 @@ No open pending decisions are currently tracked here. Accepted decisions and the
 | Software vault rollout skew | The schema, vault key, audience policy, app code, or authenticated UI reaches an environment out of order, or a key is rotated without re-encrypting stored ciphertext | Apply migrations `0125` and `0126` before use, configure one stable 32-byte key per environment, review collaborator policy grants, enter credentials only after readback, audit reveal actions, and rehearse coordinated re-encryption before rotation | Engineering |
 
 ## Change Log
+- 2026-08-23: Reconciled manual-event date/time correction. The event and any existing live/private/published crew windows now move atomically with conflict, acknowledgement, audit, and notification follow-through; imported event times and linked gear reservation windows retain their existing source-of-truth boundaries. No new schema, custody, permission, or rollout gap was introduced.
 
 - 2026-08-21: Follow-up to the macOS companion restart report: startup now preserves the last trusted local projection when the data-protection Keychain is not ready, then retries on session activation/menu presentation before confirming a logout. Source contracts, Swift parsing, and 62 passing native XCTest cases are complete; signed/notarized release `macos-v1.0.2` is installed and running, while cold-restart acceptance remains open until the user signs in once and restarts macOS.
 

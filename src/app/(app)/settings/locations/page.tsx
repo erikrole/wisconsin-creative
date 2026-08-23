@@ -247,7 +247,7 @@ export default function LocationsSettingsPage() {
     <SettingsPageShell title="Locations" description={description} mainClassName="flex flex-col gap-4">
         <div className="flex justify-end">
           {!showAdd && (
-            <Button size="sm" onClick={() => setShowAdd(true)}>
+            <Button className="h-10" onClick={() => setShowAdd(true)}>
               <Plus className="size-4 mr-1.5" />
               Add location
             </Button>
@@ -302,13 +302,12 @@ export default function LocationsSettingsPage() {
                   </Label>
                 </div>
                 <div className="flex gap-2">
-                  <Button type="submit" size="sm" disabled={adding || !newName.trim()}>
+                  <Button className="h-10" type="submit" disabled={adding || !newName.trim()}>
                     {adding ? <><Spinner data-icon="inline-start" />Adding...</> : "Add location"}
                   </Button>
-                  <Button
+                  <Button className="h-10"
                     type="button"
                     variant="outline"
-                    size="sm"
                     onClick={() => { setShowAdd(false); setNewName(""); setNewAddress(""); setNewHome(false); setAddError(""); }}
                     disabled={adding}
                   >

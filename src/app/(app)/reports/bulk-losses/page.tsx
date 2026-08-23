@@ -318,7 +318,7 @@ export default function BulkLossesReportPage() {
           <div className="text-sm text-muted-foreground">
             {data.batteryAudit.totals.skuCount} battery families using Units tracked
           </div>
-          <Button asChild variant="outline" size="sm">
+          <Button className="h-10" asChild variant="outline">
             <Link href="/bulk-inventory/batteries">Open Battery Ops</Link>
           </Button>
         </div>
