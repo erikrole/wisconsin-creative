@@ -42,9 +42,51 @@ function passkeyCredentialForVerification(credential: {
   };
 }
 
-function normalizePasskeyName(name: string | undefined): string {
+/**
+ * A blank name used to save every credential as "This device", which reads the
+ * same for every row once someone enrolls more than one. Fall back to the
+ * enrolling client instead so the list is scannable without a rename flow.
+ */
+export function describeEnrollingClient(userAgent: string | null | undefined): string {
+  const ua = userAgent?.trim();
+  if (!ua) return "This device";
+  if (/WisconsinApp/i.test(ua)) return /iPad/i.test(ua) ? "iPad" : "iPhone";
+
+  const platform = /iPhone/i.test(ua)
+    ? "iPhone"
+    : /iPad/i.test(ua)
+      ? "iPad"
+      : /Android/i.test(ua)
+        ? "Android"
+        : /Windows NT/i.test(ua)
+          ? "Windows"
+          : /Mac OS X/i.test(ua)
+            ? "macOS"
+            : /CrOS/i.test(ua)
+              ? "ChromeOS"
+              : /Linux/i.test(ua)
+                ? "Linux"
+                : null;
+
+  const browser = /Edg\//i.test(ua)
+    ? "Edge"
+    : /OPR\/|Opera/i.test(ua)
+      ? "Opera"
+      : /Firefox\//i.test(ua)
+        ? "Firefox"
+        : /Chrome\//i.test(ua)
+          ? "Chrome"
+          : /Safari\//i.test(ua)
+            ? "Safari"
+            : null;
+
+  if (browser && platform) return `${browser} on ${platform}`;
+  return browser ?? platform ?? "This device";
+}
+
+function normalizePasskeyName(name: string | undefined, userAgent?: string | null): string {
   const trimmed = name?.trim();
-  return trimmed || "This device";
+  return trimmed || describeEnrollingClient(userAgent);
 }
 
 async function saveCeremony(input: {
@@ -153,6 +195,7 @@ export async function verifyPasskeyRegistration(
   userId: string,
   response: PasskeyRegistrationResponse,
   name?: string,
+  userAgent?: string | null,
 ) {
   const ceremony = await loadCeremony(PasskeyCeremonyType.REGISTRATION, userId);
 
@@ -194,7 +237,7 @@ export async function verifyPasskeyRegistration(
         transports: transportValues(response.response.transports),
         deviceType: credentialDeviceType,
         backedUp: credentialBackedUp,
-        name: normalizePasskeyName(name),
+        name: normalizePasskeyName(name, userAgent),
       },
     });
   }, { isolationLevel: "Serializable" }).catch(async (error: unknown) => {

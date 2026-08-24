@@ -395,6 +395,10 @@ export const resetPasswordSchema = z.object({
   password: z.string().min(8).max(128)
 });
 
+export const resetPasswordAccountSchema = z.object({
+  token: z.string().min(1)
+});
+
 export const roleSchema = z.nativeEnum(Role);
 
 export const slackHandleSchema = z.string()

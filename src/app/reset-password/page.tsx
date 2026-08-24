@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { AlertCircle, CheckCircle2, EyeIcon, EyeOffIcon, WifiOff } from "lucide-react";
@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useFormSubmit } from "@/hooks/use-form-submit";
+import { AccountUsernameField, passwordRulesAttribute } from "@/components/auth/AccountUsernameField";
+import { parseJsonSafely } from "@/lib/errors";
 
 function validatePassword(password: string): string {
   if (!password) return "Password is required";
@@ -31,6 +33,37 @@ function ResetPasswordForm() {
   const [success, setSuccess] = useState(false);
   const [isNetworkError, setIsNetworkError] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  // Which account this link belongs to. The page has no session, so without
+  // this it cannot name the account and a password manager has no record to
+  // file the new password against.
+  const [accountEmail, setAccountEmail] = useState("");
+  const [linkExpired, setLinkExpired] = useState(false);
+
+  useEffect(() => {
+    if (!token) return;
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const res = await fetch("/api/auth/reset-password/account", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token }),
+          signal: controller.signal,
+        });
+        if (res.status === 400) {
+          setLinkExpired(true);
+          return;
+        }
+        if (!res.ok) return;
+        const body = await parseJsonSafely<{ email?: string }>(res);
+        if (body?.email) setAccountEmail(body.email);
+      } catch {
+        // A failed lookup only costs the account name; the reset itself still
+        // works, so leave the form usable rather than blocking on it.
+      }
+    })();
+    return () => controller.abort();
+  }, [token]);
 
   const { submit, submitting, formError, clearErrors } = useFormSubmit({
     url: "/api/auth/reset-password",
@@ -75,7 +108,7 @@ function ResetPasswordForm() {
     await submit({ password });
   }
 
-  if (!token) {
+  if (!token || linkExpired) {
     return (
       <div className="flex flex-col gap-4 text-center animate-in fade-in-0 duration-200">
         <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-destructive/10">
@@ -115,6 +148,13 @@ function ResetPasswordForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <AccountUsernameField email={accountEmail} id="reset-username" />
+      {accountEmail && (
+        <div className="rounded-md bg-muted/40 px-3 py-2 text-sm">
+          <span className="text-muted-foreground">Resetting the password for </span>
+          <span className="font-medium break-all">{accountEmail}</span>
+        </div>
+      )}
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="password">New password</Label>
         <div className="relative">
@@ -128,6 +168,7 @@ function ResetPasswordForm() {
             onBlur={() => handleBlur("password")}
             placeholder="At least 8 characters"
             autoComplete="new-password"
+            {...passwordRulesAttribute}
             required
             minLength={8}
             autoFocus
@@ -166,6 +207,7 @@ function ResetPasswordForm() {
           onBlur={() => handleBlur("confirmPassword")}
           placeholder="Re-enter your password"
           autoComplete="new-password"
+          {...passwordRulesAttribute}
           required
           minLength={8}
           disabled={submitting}

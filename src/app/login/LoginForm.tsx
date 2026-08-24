@@ -3,7 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { browserSupportsWebAuthn, startAuthentication } from "@simplewebauthn/browser";
+import {
+  browserSupportsWebAuthn,
+  browserSupportsWebAuthnAutofill,
+  startAuthentication,
+  WebAuthnAbortService,
+} from "@simplewebauthn/browser";
 import type { PublicKeyCredentialRequestOptionsJSON } from "@simplewebauthn/server";
 import { AlertCircle, EyeIcon, EyeOffIcon, KeyRound, WifiOff } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
@@ -16,6 +21,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useFormSubmit } from "@/hooks/use-form-submit";
 import { classifyError, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { AUTH_EMAIL_DOMAIN_NOTE, shouldSuggestWiscEmail } from "@/lib/auth-email-guidance";
+import { isPasskeyCancellation, passkeyErrorMessage } from "@/lib/passkey-client";
+import { AccountUsernameField, passwordRulesAttribute } from "@/components/auth/AccountUsernameField";
 
 type LoginResponse = {
   user?: {
@@ -72,6 +79,15 @@ export default function LoginForm() {
   const [identityError, setIdentityError] = useState("");
   const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [passkeyError, setPasskeyError] = useState<string | null>(null);
+  const [passkeySupported, setPasskeySupported] = useState(true);
+  const [autofillEpoch, setAutofillEpoch] = useState(0);
+  // Only the newest ceremony may touch state or navigate. Conditional UI runs
+  // for as long as the email step is on screen, so a stale resolution or the
+  // abort that replaces it must not surface as a failure.
+  const ceremonyRef = useRef(0);
+  // Set once a ceremony has navigated away, so nothing re-arms behind the route
+  // change while this component is still mounted.
+  const passkeyNavigatedRef = useRef(false);
   const [isNetworkError, setIsNetworkError] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
@@ -236,15 +252,21 @@ export default function LoginForm() {
     return handlePasswordSubmit();
   }
 
-  async function handlePasskeySignIn() {
-    if (passkeyLoading || authBusy) return;
-    setPasskeyError(null);
-    if (!browserSupportsWebAuthn()) {
-      setPasskeyError("This browser does not support passkeys. Use your password instead.");
-      return;
+  /**
+   * One sign-in ceremony, run either from the button or from browser autofill.
+   * The autofill run is silent until the person actually picks a passkey: it is
+   * armed on every visit to the email step, so an aborted or unsupported run is
+   * routine and must never look like a failed sign-in.
+   */
+  async function runPasskeySignIn(mode: "button" | "autofill", generation: number): Promise<boolean> {
+    const isCurrent = () => ceremonyRef.current === generation;
+    let assertionReceived = false;
+
+    if (mode === "button") {
+      setPasskeyError(null);
+      setPasskeyLoading(true);
     }
 
-    setPasskeyLoading(true);
     try {
       const optionsResponse = await fetch("/api/auth/passkey/login/options", {
         method: "POST",
@@ -256,8 +278,18 @@ export default function LoginForm() {
       }
       const optionsBody = await parseJsonSafely<PasskeyLoginResponse>(optionsResponse);
       if (!optionsBody?.options) throw new Error("Could not start passkey sign-in.");
+      if (!isCurrent()) return assertionReceived;
 
-      const assertion = await startAuthentication({ optionsJSON: optionsBody.options });
+      const assertion = await startAuthentication({
+        optionsJSON: optionsBody.options,
+        useBrowserAutofill: mode === "autofill",
+      });
+      assertionReceived = true;
+      if (!isCurrent()) return assertionReceived;
+      // A passkey was chosen from the autofill menu, so the form now belongs to
+      // the ceremony and should show it is finishing.
+      setPasskeyLoading(true);
+
       const verifyResponse = await fetch("/api/auth/passkey/login/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -267,15 +299,65 @@ export default function LoginForm() {
         throw new Error(await parseErrorMessage(verifyResponse, "Passkey sign-in failed. Use your password instead."));
       }
       const result = await parseJsonSafely<LoginResponse>(verifyResponse);
+      if (!isCurrent()) return assertionReceived;
+      passkeyNavigatedRef.current = true;
       router.replace(result?.user?.forcePasswordChange ? "/change-password" : "/");
     } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") return;
-      const message = error instanceof Error ? error.message : "Passkey sign-in failed. Use your password instead.";
-      setPasskeyError(message.includes("NotAllowedError") ? "Passkey sign-in was canceled or timed out." : message);
+      if (!isCurrent()) return assertionReceived;
+      if (isPasskeyCancellation(error)) return assertionReceived;
+      if (mode === "autofill" && !assertionReceived) return assertionReceived;
+      setPasskeyError(passkeyErrorMessage(error, "login"));
     } finally {
-      setPasskeyLoading(false);
+      if (isCurrent()) setPasskeyLoading(false);
     }
+
+    return assertionReceived;
   }
+
+  function handlePasskeySignIn() {
+    if (authBusy) return;
+    const generation = ++ceremonyRef.current;
+    void runPasskeySignIn("button", generation).then(() => {
+      // The button ceremony replaced the armed autofill request; put it back
+      // unless it signed in and left.
+      if (ceremonyRef.current === generation && !passkeyNavigatedRef.current) {
+        setAutofillEpoch((epoch) => epoch + 1);
+      }
+    });
+  }
+
+  useEffect(() => {
+    setPasskeySupported(browserSupportsWebAuthn());
+  }, []);
+
+  // Arm browser autofill while the email step is on screen so a saved passkey
+  // is offered from the email field itself. Re-arms after a button ceremony
+  // ends without navigating, and when "remember me" changes, because the
+  // ceremony binds the session length server-side.
+  useEffect(() => {
+    if (!isIdentity || !passkeySupported || passkeyNavigatedRef.current) return;
+
+    const generation = ++ceremonyRef.current;
+    let disposed = false;
+
+    void (async () => {
+      if (!(await browserSupportsWebAuthnAutofill())) return;
+      if (disposed || ceremonyRef.current !== generation) return;
+      const used = await runPasskeySignIn("autofill", generation);
+      if (disposed || ceremonyRef.current !== generation) return;
+      // Re-arm only after a passkey was actually chosen and failed, so a second
+      // attempt is still offered. Re-arming on an immediate failure — no
+      // autofill support, no eligible input — would loop.
+      if (used && !passkeyNavigatedRef.current) setAutofillEpoch((epoch) => epoch + 1);
+    })();
+
+    return () => {
+      disposed = true;
+      ceremonyRef.current += 1;
+      WebAuthnAbortService.cancelCeremony();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isIdentity, passkeySupported, rememberMe, autofillEpoch]);
 
   const primaryButtonLabel = isIdentity
     ? identityLoading
@@ -312,7 +394,9 @@ export default function LoginForm() {
                     onChange={(e) => { setEmail(e.target.value); clearFieldError("email"); }}
                     onBlur={() => handleBlur("email")}
                     placeholder="you@example.com"
-                    autoComplete="email"
+                    // The trailing "webauthn" token is what lets the browser
+                    // offer a saved passkey in this field's autofill menu.
+                    autoComplete="email webauthn"
                     required
                     autoFocus
                     disabled={authBusy}
@@ -335,6 +419,7 @@ export default function LoginForm() {
 
               {!isIdentity && (
                 <div className="flex items-center justify-between rounded-md bg-muted/40 px-3 py-2 text-sm">
+                  <AccountUsernameField email={email} id="login-username" />
                   <span className="min-w-0 truncate">{email}</span>
                   <Button className="h-10" type="button" variant="ghost" onClick={changeEmail} disabled={authBusy}>Change</Button>
                 </div>
@@ -387,6 +472,7 @@ export default function LoginForm() {
                       onBlur={() => handleBlur("password")}
                       placeholder={isOnboarding ? "At least 8 characters" : "Enter your password"}
                       autoComplete={isOnboarding ? "new-password" : "current-password"}
+                      {...(isOnboarding ? passwordRulesAttribute : {})}
                       required
                       minLength={8}
                       disabled={authBusy}
@@ -425,6 +511,7 @@ export default function LoginForm() {
                     onBlur={() => handleBlur("confirmPassword")}
                     placeholder="Re-enter your password"
                     autoComplete="new-password"
+                    {...passwordRulesAttribute}
                     required
                     minLength={8}
                     disabled={authBusy}
@@ -436,7 +523,7 @@ export default function LoginForm() {
                 </div>
               )}
 
-              {isPassword && (
+              {!isOnboarding && (
                 <div className="login-rise flex items-center gap-2" style={{ "--rise-index": 4 } as React.CSSProperties}>
                   <Checkbox
                     id="rememberMe"
@@ -465,7 +552,7 @@ export default function LoginForm() {
                 {primaryButtonLabel}
               </Button>
 
-              {isIdentity && (
+              {isIdentity && passkeySupported && (
                 <>
                   <div className="flex items-center gap-3 text-xs text-muted-foreground" aria-hidden="true">
                     <div className="h-px flex-1 bg-border" />

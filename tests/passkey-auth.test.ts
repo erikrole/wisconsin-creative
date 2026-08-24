@@ -87,16 +87,72 @@ const user = {
   forcePasswordChange: false,
 };
 
-function request(path: string, body: Record<string, unknown>, method = "POST") {
+function request(
+  path: string,
+  body: Record<string, unknown>,
+  method = "POST",
+  extraHeaders: Record<string, string> = {},
+) {
   return new Request(`https://app.example.com${path}`, {
     method,
     headers: {
       "content-type": "application/json",
       origin: "https://app.example.com",
       "x-forwarded-for": "127.0.0.1",
+      ...extraHeaders,
     },
     body: JSON.stringify(body),
   });
+}
+
+const REGISTRATION_RESPONSE = {
+  id: "credential-public-id",
+  rawId: "credential-public-id",
+  type: "public-key",
+  response: {
+    clientDataJSON: "client-data",
+    attestationObject: "attestation-object",
+    transports: ["internal"],
+  },
+};
+
+function mockVerifiedRegistration() {
+  dbMock.passkeyChallenge.findUnique.mockResolvedValue({
+    id: "challenge-1",
+    challenge: "registration-challenge",
+    type: "REGISTRATION",
+    userId: "user-1",
+    rememberMe: false,
+    expiresAt: new Date(Date.now() + 60_000),
+  });
+  dbMock.passkeyChallenge.deleteMany.mockResolvedValue({ count: 1 });
+  vi.mocked(verifyRegistrationResponse).mockResolvedValue({
+    verified: true,
+    registrationInfo: {
+      fmt: "none",
+      aaguid: "00000000-0000-0000-0000-000000000000",
+      credential: {
+        id: "credential-public-id",
+        publicKey: new Uint8Array([1, 2, 3]),
+        counter: 0,
+        transports: ["internal"],
+      },
+      credentialType: "public-key",
+      attestationObject: new Uint8Array(),
+      userVerified: true,
+      credentialDeviceType: "multiDevice",
+      credentialBackedUp: true,
+      origin: "https://app.example.com",
+      rpID: "app.example.com",
+    },
+  });
+  dbMock.passkeyCredential.create.mockImplementation(
+    async ({ data }: { data: Record<string, unknown> }) => ({
+      id: "credential-1",
+      createdAt: new Date("2026-08-23T00:00:00.000Z"),
+      ...data,
+    }),
+  );
 }
 
 beforeEach(() => {
@@ -255,6 +311,43 @@ describe("passkey authentication", () => {
     expect(dbMock.passkeyChallenge.deleteMany).toHaveBeenLastCalledWith({ where: { id: "challenge-1" } });
     expect(cookieApi.delete).toHaveBeenCalledWith("passkey_ceremony");
     expect(createAuditEntry).not.toHaveBeenCalled();
+  });
+
+  it("names an unnamed credential after the client that enrolled it", async () => {
+    mockVerifiedRegistration();
+
+    const response = await registrationVerify(
+      request("/api/auth/passkey/registration/verify", { response: REGISTRATION_RESPONSE }, "POST", {
+        "user-agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      }),
+      { params: Promise.resolve({}) },
+    );
+
+    expect(response.status).toBe(201);
+    expect(dbMock.passkeyCredential.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ name: "Chrome on macOS", userId: "user-1" }),
+    });
+    await expect(response.json()).resolves.toMatchObject({ data: { name: "Chrome on macOS" } });
+  });
+
+  it("keeps a name the person typed", async () => {
+    mockVerifiedRegistration();
+
+    const response = await registrationVerify(
+      request(
+        "/api/auth/passkey/registration/verify",
+        { response: REGISTRATION_RESPONSE, name: "  Front desk iPad  " },
+        "POST",
+        { "user-agent": "WisconsinApp/1.0 iOS" },
+      ),
+      { params: Promise.resolve({}) },
+    );
+
+    expect(response.status).toBe(201);
+    expect(dbMock.passkeyCredential.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ name: "Front desk iPad" }),
+    });
   });
 
   it("permission-gates and password-protects owned passkey revocation", async () => {

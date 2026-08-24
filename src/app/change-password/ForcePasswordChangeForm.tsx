@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { useFormSubmit } from "@/hooks/use-form-submit";
+import { AccountUsernameField, passwordRulesAttribute } from "@/components/auth/AccountUsernameField";
 
 type PasswordPayload = {
   currentPassword: string;
@@ -101,6 +102,7 @@ export default function ForcePasswordChangeForm({ email }: { email: string }) {
   return (
     <AuthScreen subtitle="Set a new password">
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <AccountUsernameField email={email} id="change-password-username" />
             <Alert>
               <AlertCircle className="size-4" />
               <AlertDescription>
@@ -144,6 +146,7 @@ export default function ForcePasswordChangeForm({ email }: { email: string }) {
                   onBlur={() => handleBlur("newPassword")}
                   placeholder="At least 8 characters"
                   autoComplete="new-password"
+                  {...passwordRulesAttribute}
                   required
                   minLength={8}
                   disabled={submitting}
@@ -181,6 +184,7 @@ export default function ForcePasswordChangeForm({ email }: { email: string }) {
                 onBlur={() => handleBlur("confirmPassword")}
                 placeholder="Re-enter your password"
                 autoComplete="new-password"
+                {...passwordRulesAttribute}
                 required
                 minLength={8}
                 disabled={submitting}

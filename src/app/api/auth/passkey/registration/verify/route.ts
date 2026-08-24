@@ -16,6 +16,7 @@ export const POST = withAuth(async (req, { user }) => {
     user.id,
     body.response as unknown as RegistrationResponseJSON,
     body.name,
+    req.headers.get("user-agent"),
   );
 
   await createAuditEntry({
