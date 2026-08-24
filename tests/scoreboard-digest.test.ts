@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   currentStreak,
   groupByMonth,
+  mergeScoreboardEvents,
   recentForm,
   scoreboardHighlights,
   totalsSentence,
@@ -40,7 +41,10 @@ function scoreboard(overrides: Partial<UserScoreboard> = {}): UserScoreboard {
     bySport: [bucket("FB", "Football", 6, 2, 75), bucket("VB", "Volleyball", 3, 3, 50)],
     byOpponent: [bucket(null, "Unknown opponent", 3, 3, 50), bucket("Purdue", "Purdue", 4, 0, 100)],
     bySite: [],
-    byVenue: [bucket("Camp Randall Stadium", "Camp Randall Stadium", 6, 0, 100), bucket("Kohl Center", "Kohl Center", 2, 0, 100)],
+    byVenue: [
+      bucket("Camp Randall Stadium", "Camp Randall Stadium", 6, 1, 85.7),
+      bucket("Kohl Center", "Kohl Center", 1, 0, 100),
+    ],
     events: [],
     nextCursor: null,
     ...overrides,
@@ -83,14 +87,27 @@ describe("scoreboard digest", () => {
     expect(recentForm(games, 2).map((entry) => entry.id)).toEqual(["g0", "g1"]);
   });
 
-  it("picks highlights by rate then volume and skips unknown buckets", () => {
+  it("merges paged events without repeating a row that moved between offsets", () => {
+    const first = [
+      game("a", "2026-12-05T18:00:00.000Z", "WIN"),
+      game("b", "2026-11-28T19:00:00.000Z", "LOSS"),
+    ];
+    const second = [
+      game("b", "2026-11-28T19:00:00.000Z", "LOSS"),
+      game("c", "2026-11-07T20:00:00.000Z", "WIN"),
+    ];
+
+    expect(mergeScoreboardEvents(first, second).map((entry) => entry.id)).toEqual(["a", "b", "c"]);
+  });
+
+  it("picks sustained venue success instead of a perfect one-game sample and skips unknown buckets", () => {
     const highlights = scoreboardHighlights(scoreboard());
 
     expect(highlights.map((highlight) => highlight.id)).toEqual(["sport", "venue", "opponent"]);
     expect(highlights[0]?.detail).toBe("8 games");
-    // Kohl Center is perfect but thinner, so volume breaks the tie.
+    // A lone 1–0 at the Kohl Center does not outrank a sustained 6–1 at Camp Randall.
     expect(highlights[1]?.value).toBe("Camp Randall Stadium");
-    expect(highlights[1]?.detail).toBe("6–0 · 100%");
+    expect(highlights[1]?.detail).toBe("6–1 · 85.7%");
     // "Top matchup: Unknown opponent" says nothing.
     expect(highlights[2]?.value).toBe("Purdue");
   });

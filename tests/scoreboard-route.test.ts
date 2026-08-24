@@ -2,11 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   currentUser: { id: "viewer-1", role: "ADMIN" },
-  target: { id: "target-1", role: "STUDENT", hiddenFromRoster: false },
+  target: { id: "target-1", active: true, hiddenFromRoster: false },
   findUnique: vi.fn(),
-  canReadUserProfile: vi.fn(),
-  requireCollaboratorCapability: vi.fn(),
-  requireRole: vi.fn(),
+  canReadSharedScoreboard: vi.fn(),
+  requirePermission: vi.fn(),
   normalizeSportCode: vi.fn(),
   parsePagination: vi.fn(),
   getScoreboardScope: vi.fn(),
@@ -27,9 +26,8 @@ vi.mock("@/lib/api", () => ({
 }));
 
 vi.mock("@/lib/db", () => ({ db: { user: { findUnique: mocks.findUnique } } }));
-vi.mock("@/lib/user-visibility", () => ({ canReadUserProfile: mocks.canReadUserProfile }));
-vi.mock("@/lib/collaborator-access", () => ({ requireCollaboratorCapability: mocks.requireCollaboratorCapability }));
-vi.mock("@/lib/rbac", () => ({ requireRole: mocks.requireRole }));
+vi.mock("@/lib/user-visibility", () => ({ canReadSharedScoreboard: mocks.canReadSharedScoreboard }));
+vi.mock("@/lib/rbac", () => ({ requirePermission: mocks.requirePermission }));
 vi.mock("@/lib/sports", () => ({ normalizeSportCode: mocks.normalizeSportCode }));
 vi.mock("@/lib/http", () => ({
   HttpError: class HttpError extends Error {
@@ -58,10 +56,10 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.currentUser.id = "viewer-1";
   mocks.currentUser.role = "ADMIN";
-  mocks.target.role = "STUDENT";
+  mocks.target.active = true;
   mocks.target.hiddenFromRoster = false;
   mocks.findUnique.mockResolvedValue(mocks.target);
-  mocks.canReadUserProfile.mockReturnValue(true);
+  mocks.canReadSharedScoreboard.mockReturnValue(true);
   mocks.normalizeSportCode.mockImplementation((value: string) => `normalized-${value}`);
   mocks.parsePagination.mockReturnValue({ limit: 25, offset: 4 });
   mocks.getScoreboardScope.mockReturnValue({ key: "2026-27" });
@@ -82,7 +80,7 @@ describe("GET /api/users/[id]/scoreboard", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(mocks.requireRole).toHaveBeenCalledWith("ADMIN", ["ADMIN", "STAFF", "STUDENT", "COLLABORATOR"]);
+    expect(mocks.requirePermission).toHaveBeenCalledWith("ADMIN", "scoreboard", "view");
     expect(mocks.getScoreboardForUser).toHaveBeenCalledWith(
       "target-1",
       { sportCode: "normalized-SB", result: "WIN" },
@@ -91,18 +89,52 @@ describe("GET /api/users/[id]/scoreboard", () => {
     await expect(response.json()).resolves.toEqual({ data: { summary: { wins: 1, losses: 0 } } });
   });
 
-  it("keeps the unsupported-season and collaborator privacy gates server-side", async () => {
+  it("lets the server choose the current scope when season is omitted", async () => {
+    const response = await run(request("?limit=25&offset=4"), context);
+
+    expect(response.status).toBe(200);
+    expect(mocks.getScoreboardScope).toHaveBeenCalledWith(undefined);
+    expect(mocks.getScoreboardForUser).toHaveBeenCalledWith(
+      "target-1",
+      { sportCode: undefined, result: undefined },
+      { limit: 25, offset: 4 },
+    );
+  });
+
+  it("keeps the unsupported-season gate server-side", async () => {
     mocks.getScoreboardScope.mockReturnValueOnce(null);
     const badSeason = await run(request("?season=2099-00"), context);
 
     expect(badSeason.status).toBe(400);
     expect(mocks.getScoreboardForUser).not.toHaveBeenCalled();
+  });
 
-    mocks.currentUser.role = "COLLABORATOR";
-    const collaboratorResponse = await run(request(), context);
+  it.each([
+    { viewerRole: "ADMIN", self: false },
+    { viewerRole: "STAFF", self: false },
+    { viewerRole: "STUDENT", self: true },
+    { viewerRole: "STUDENT", self: false },
+    { viewerRole: "COLLABORATOR", self: true },
+    { viewerRole: "COLLABORATOR", self: false },
+  ])(
+    "shares active visible Scoreboards with $viewerRole (self: $self)",
+    async ({ viewerRole, self }) => {
+      mocks.currentUser.role = viewerRole;
+      mocks.currentUser.id = self ? "target-1" : "viewer-1";
 
-    expect(collaboratorResponse.status).toBe(403);
-    expect(mocks.requireCollaboratorCapability).toHaveBeenCalledWith(mocks.currentUser, "PEOPLE_DIRECTORY_VIEW");
+      const response = await run(request(), context);
+
+      expect(response.status).toBe(200);
+      expect(mocks.getScoreboardForUser).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it("hides a target outside the shared Scoreboard subject boundary", async () => {
+    mocks.canReadSharedScoreboard.mockReturnValueOnce(false);
+
+    const response = await run(request(), context);
+
+    expect(response.status).toBe(404);
     expect(mocks.getScoreboardForUser).not.toHaveBeenCalled();
   });
 });

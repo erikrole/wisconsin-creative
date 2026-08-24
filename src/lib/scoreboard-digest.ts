@@ -50,6 +50,20 @@ export function recentForm(games: ScoreboardEvent[], limit = 5): ScoreboardEvent
 }
 
 /**
+ * Offset pagination can repeat a game when a newly resolved result moves the
+ * following rows between requests. Keep the first occurrence and preserve the
+ * server's newest-first order so React keys and visible counts stay stable.
+ */
+export function mergeScoreboardEvents(...pages: ScoreboardEvent[][]): ScoreboardEvent[] {
+  const seen = new Set<string>();
+  return pages.flatMap((page) => page.filter((game) => {
+    if (seen.has(game.id)) return false;
+    seen.add(game.id);
+    return true;
+  }));
+}
+
+/**
  * The current run, or null when the last two games disagree. A run of one is
  * not a streak and does not get announced as one.
  */
@@ -80,14 +94,20 @@ export function scoreboardHighlights(scoreboard: UserScoreboard): ScoreboardHigh
     highlights.push({ id: "sport", label: "Most worked", value: sport.label, detail: gamesLabel(sport.games) });
   }
 
-  // Best by rate, then by volume, so a lone 1–0 does not outrank a 6–1.
+  // Rank sustained success by win margin, then rate and volume. A perfect
+  // one-game sample should not outrank a venue where the person is 6–1.
   const bestVenue = scoreboard.byVenue
     .filter((bucket) => bucket.key !== null)
     .reduce<ScoreboardBucket | null>((best, bucket) => {
       if (!best) return bucket;
+      const margin = bucket.wins - bucket.losses;
+      const bestMargin = best.wins - best.losses;
+      if (margin > bestMargin) return bucket;
+      if (margin < bestMargin) return best;
       const rate = bucket.winRate ?? -1;
       const bestRate = best.winRate ?? -1;
       if (rate > bestRate) return bucket;
+      if (rate < bestRate) return best;
       if (rate === bestRate && bucket.games > best.games) return bucket;
       return best;
     }, null);

@@ -1,15 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, CalendarDays, ChevronDown, ChevronUp, Flag, Home, Route, Trophy } from "lucide-react";
 import { useFetch } from "@/hooks/use-fetch";
-import { handleAuthRedirect, parseJsonSafely } from "@/lib/errors";
+import {
+  classifyError,
+  handleAuthRedirect,
+  isAbortError,
+  parseJsonSafely,
+  type FetchErrorKind,
+} from "@/lib/errors";
 import { formatDateShort } from "@/lib/format";
 import {
   currentStreak,
   gamesLabel,
   groupByMonth,
+  mergeScoreboardEvents,
   rateLabel,
   recentForm,
   recordLabel,
@@ -28,7 +35,7 @@ import type { ScoreboardBucket, ScoreboardEvent, UserScoreboard } from "@/lib/se
 
 type ResultFilter = "all" | "WIN" | "LOSS";
 type SportOption = { key: string; label: string };
-type ExtraEvents = { requestUrl: string; events: ScoreboardEvent[]; nextCursor: string | null };
+type ExtraEvents = { requestUrl: string; events: ScoreboardEvent[]; nextCursor: string | null | undefined };
 
 /// Which dimension the breakdown card shows. The route sends all four at once;
 /// rendering all four as separate tables put 30-odd rows of the same object
@@ -292,7 +299,7 @@ function BreakdownCard({
           className="w-full"
         >
           {DIMENSIONS.map((option) => (
-            <ToggleGroupItem key={option.value} value={option.value} className="flex-1 text-xs">
+            <ToggleGroupItem key={option.value} value={option.value} className="h-10 flex-1 text-xs">
               {option.label}
             </ToggleGroupItem>
           ))}
@@ -344,14 +351,10 @@ function BreakdownCard({
   );
 }
 
-function EventRow({ event }: { event: ScoreboardEvent }) {
+function EventRow({ event, linkEvents }: { event: ScoreboardEvent; linkEvents: boolean }) {
   const areas = event.shiftAreas.map(areaLabel).join(", ");
-
-  return (
-    <Link
-      href={`/events/${event.id}`}
-      className="flex min-h-16 items-start gap-3 px-4 py-3 transition-colors hover:bg-muted/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:px-5"
-    >
+  const content = (
+    <>
       <div className="flex w-11 shrink-0 flex-col items-center gap-1 pt-0.5 text-center">
         <Badge variant={resultVariant(event.result)} size="sm" className="size-7 justify-center rounded-full p-0">
           {event.result === "WIN" ? "W" : "L"}
@@ -368,6 +371,20 @@ function EventRow({ event }: { event: ScoreboardEvent }) {
         </p>
         {areas ? <p className="mt-0.5 truncate text-[11px] text-muted-foreground/80">{areas}</p> : null}
       </div>
+    </>
+  );
+  const className = "flex min-h-16 items-start gap-3 px-4 py-3 sm:px-5";
+
+  if (!linkEvents) {
+    return <div className={className}>{content}</div>;
+  }
+
+  return (
+    <Link
+      href={`/events/${event.id}`}
+      className={`${className} transition-colors hover:bg-muted/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring`}
+    >
+      {content}
     </Link>
   );
 }
@@ -379,8 +396,10 @@ function GamesCard({
   refreshing,
   nextCursor,
   loadingMore,
+  loadMoreError,
   loadMore,
   clearFilters,
+  linkEvents,
 }: {
   events: ScoreboardEvent[];
   total: number;
@@ -388,8 +407,10 @@ function GamesCard({
   refreshing: boolean;
   nextCursor: string | null | undefined;
   loadingMore: boolean;
+  loadMoreError: FetchErrorKind | null;
   loadMore: () => void;
   clearFilters: () => void;
+  linkEvents: boolean;
 }) {
   const months = groupByMonth(events);
 
@@ -419,15 +440,37 @@ function GamesCard({
                 {month.label}
               </p>
               <div className="divide-y divide-border/40">
-                {month.games.map((event) => <EventRow key={event.id} event={event} />)}
+                {month.games.map((event) => <EventRow key={event.id} event={event} linkEvents={linkEvents} />)}
               </div>
             </div>
           ))}
           {nextCursor ? (
-            <div className="border-t border-border/40 p-3 text-center">
-              <Button variant="outline" className="h-10" onClick={loadMore} disabled={loadingMore}>
-                {loadingMore ? "Loading…" : "Show more games"}
-              </Button>
+            <div className="border-t border-border/40 p-3">
+              {loadMoreError ? (
+                <div
+                  role="alert"
+                  className="flex flex-col items-center justify-between gap-2 rounded-md bg-muted/45 px-3 py-2 text-center sm:flex-row sm:text-left"
+                >
+                  <p className="text-xs text-muted-foreground">
+                    {loadMoreError === "network"
+                      ? "Couldn’t reach the server. The games already shown are still here."
+                      : "Couldn’t load more games. The games already shown are still here."}
+                  </p>
+                  <Button variant="outline" className="h-10" onClick={loadMore}>Try again</Button>
+                </div>
+              ) : (
+                <div className="text-center">
+                  <Button
+                    variant="outline"
+                    className="h-10"
+                    onClick={loadMore}
+                    disabled={refreshing}
+                    loading={loadingMore}
+                  >
+                    Show more games
+                  </Button>
+                </div>
+              )}
             </div>
           ) : null}
         </CardContent>
@@ -488,12 +531,21 @@ function ScoreboardSkeleton() {
   );
 }
 
-export default function UserScoreboardTab({ userId }: { userId: string }) {
+export default function UserScoreboardTab({
+  userId,
+  returnTo,
+  linkEvents = true,
+}: {
+  userId: string;
+  returnTo?: string;
+  linkEvents?: boolean;
+}) {
   const [resultFilter, setResultFilter] = useState<ResultFilter>("all");
   const [sportFilter, setSportFilter] = useState("all");
   const [dimension, setDimension] = useState<Dimension>("sport");
   const [loadingMore, setLoadingMore] = useState(false);
-  const [extraEvents, setExtraEvents] = useState<ExtraEvents>({ requestUrl: "", events: [], nextCursor: null });
+  const [loadMoreError, setLoadMoreError] = useState<FetchErrorKind | null>(null);
+  const [extraEvents, setExtraEvents] = useState<ExtraEvents>({ requestUrl: "", events: [], nextCursor: undefined });
   // The route applies `sportCode` and `result` to its own breakdowns, so the
   // sports in a filtered response are only the ones that survived the filter.
   // Reading the dropdown out of that response collapsed it to the sport already
@@ -505,24 +557,36 @@ export default function UserScoreboardTab({ userId }: { userId: string }) {
   // response only knows its own subtotal, and the season card has to be able to
   // say what fraction of the season is on screen.
   const [seasonResolvedGames, setSeasonResolvedGames] = useState<number | null>(null);
+  const scoreboardReturnTo = returnTo ?? `/users/${userId}?tab=scoreboard`;
 
   const requestUrl = useMemo(() => {
-    const params = new URLSearchParams({ season: "2026-27", limit: String(INITIAL_LIMIT) });
+    const params = new URLSearchParams({ limit: String(INITIAL_LIMIT) });
     if (resultFilter !== "all") params.set("result", resultFilter);
     if (sportFilter !== "all") params.set("sportCode", sportFilter);
     return `/api/users/${userId}/scoreboard?${params.toString()}`;
   }, [resultFilter, sportFilter, userId]);
+  const loadingMoreRef = useRef(false);
+  const loadMoreAbortRef = useRef<AbortController | null>(null);
+  const requestUrlRef = useRef(requestUrl);
 
   const { data, loading, refreshing, error, reload } = useFetch<UserScoreboard>({
     url: requestUrl,
-    returnTo: `/users/${userId}?tab=scoreboard`,
+    returnTo: scoreboardReturnTo,
     keepPreviousData: true,
     refetchOnFocus: false,
     transform: (json) => (json.data as UserScoreboard),
   });
 
   useEffect(() => {
-    setExtraEvents({ requestUrl, events: [], nextCursor: null });
+    requestUrlRef.current = requestUrl;
+    loadMoreAbortRef.current?.abort();
+    loadMoreAbortRef.current = null;
+    loadingMoreRef.current = false;
+    setLoadingMore(false);
+    setLoadMoreError(null);
+    setExtraEvents({ requestUrl, events: [], nextCursor: undefined });
+
+    return () => loadMoreAbortRef.current?.abort();
   }, [requestUrl]);
 
   const isUnfiltered = resultFilter === "all" && sportFilter === "all";
@@ -542,32 +606,48 @@ export default function UserScoreboardTab({ userId }: { userId: string }) {
 
   const isCurrentPage = extraEvents.requestUrl === requestUrl;
   const events = useMemo(
-    () => [...(data?.events ?? []), ...(isCurrentPage ? extraEvents.events : [])],
+    () => mergeScoreboardEvents(data?.events ?? [], isCurrentPage ? extraEvents.events : []),
     [data?.events, extraEvents.events, isCurrentPage],
   );
-  const nextCursor = isCurrentPage ? extraEvents.nextCursor || data?.nextCursor : data?.nextCursor;
+  const nextCursor = isCurrentPage && extraEvents.nextCursor !== undefined
+    ? extraEvents.nextCursor
+    : data?.nextCursor;
 
   const loadMore = useCallback(async () => {
-    if (!nextCursor || loadingMore) return;
+    if (!nextCursor || refreshing || loadingMoreRef.current) return;
+    const controller = new AbortController();
+    loadMoreAbortRef.current = controller;
+    loadingMoreRef.current = true;
     setLoadingMore(true);
+    setLoadMoreError(null);
     try {
-      const res = await fetch(`${requestUrl}&offset=${encodeURIComponent(nextCursor)}`);
-      if (handleAuthRedirect(res, `/users/${userId}?tab=scoreboard`)) return;
+      const res = await fetch(`${requestUrl}&offset=${encodeURIComponent(nextCursor)}`, {
+        signal: controller.signal,
+      });
+      if (handleAuthRedirect(res, scoreboardReturnTo)) return;
       if (!res.ok) throw new Error("server");
       const json = await parseJsonSafely<{ data?: UserScoreboard }>(res);
       const page = json?.data;
       if (!page) throw new Error("server");
-      setExtraEvents((current) => ({
-        requestUrl,
-        events: current.requestUrl === requestUrl ? [...current.events, ...page.events] : page.events,
-        nextCursor: page.nextCursor,
-      }));
-    } catch {
-      // The page remains usable; the shared error surface is reserved for the initial load.
+      if (controller.signal.aborted || requestUrlRef.current !== requestUrl) return;
+      setExtraEvents((current) => current.requestUrl === requestUrl
+        ? {
+            requestUrl,
+            events: mergeScoreboardEvents(current.events, page.events),
+            nextCursor: page.nextCursor,
+          }
+        : current);
+    } catch (caught) {
+      if (isAbortError(caught) || requestUrlRef.current !== requestUrl) return;
+      setLoadMoreError(classifyError(caught));
     } finally {
-      setLoadingMore(false);
+      if (loadMoreAbortRef.current === controller) {
+        loadMoreAbortRef.current = null;
+        loadingMoreRef.current = false;
+        setLoadingMore(false);
+      }
     }
-  }, [loadingMore, nextCursor, requestUrl, userId]);
+  }, [nextCursor, refreshing, requestUrl, scoreboardReturnTo]);
 
   const clearFilters = useCallback(() => {
     setResultFilter("all");
@@ -625,15 +705,15 @@ export default function UserScoreboardTab({ userId }: { userId: string }) {
           value={resultFilter}
           onValueChange={(value) => value && setResultFilter(value as ResultFilter)}
           aria-label="Filter scoreboard results"
-          className="h-8"
+          className="min-h-10"
         >
-          <ToggleGroupItem value="all" className="h-7 text-xs">All</ToggleGroupItem>
-          <ToggleGroupItem value="WIN" className="h-7 text-xs">Wins</ToggleGroupItem>
-          <ToggleGroupItem value="LOSS" className="h-7 text-xs">Losses</ToggleGroupItem>
+          <ToggleGroupItem value="all" className="h-10 text-xs">All</ToggleGroupItem>
+          <ToggleGroupItem value="WIN" className="h-10 text-xs">Wins</ToggleGroupItem>
+          <ToggleGroupItem value="LOSS" className="h-10 text-xs">Losses</ToggleGroupItem>
         </ToggleGroup>
         {sportChoices.length > 0 ? (
           <Select value={sportFilter} onValueChange={setSportFilter}>
-            <SelectTrigger className="h-8 w-[190px] text-xs" aria-label="Filter scoreboard sport">
+            <SelectTrigger className="h-10 w-[190px] text-xs" aria-label="Filter scoreboard sport">
               <SelectValue placeholder="All sports" />
             </SelectTrigger>
             <SelectContent>
@@ -660,8 +740,10 @@ export default function UserScoreboardTab({ userId }: { userId: string }) {
           refreshing={refreshing}
           nextCursor={nextCursor}
           loadingMore={loadingMore}
+          loadMoreError={loadMoreError}
           loadMore={loadMore}
           clearFilters={clearFilters}
+          linkEvents={linkEvents}
         />
       </div>
     </div>
