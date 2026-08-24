@@ -126,8 +126,13 @@ struct AccountSecuritySettingsView: View {
                                     .accessibilityHidden(true)
 
                                 VStack(alignment: .leading, spacing: 3) {
-                                    Text(passkey.name ?? "Passkey")
-                                        .font(.subheadline.weight(.medium))
+                                    HStack(spacing: 6) {
+                                        Text(passkey.name ?? "Passkey")
+                                            .font(.subheadline.weight(.medium))
+                                        if let storage = passkeyStorageLabel(passkey) {
+                                            StatusPill(label: storage, tone: passkey.backedUp ? .green : .gray)
+                                        }
+                                    }
                                     Text(passkeyDetail(passkey))
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
@@ -152,10 +157,27 @@ struct AccountSecuritySettingsView: View {
             } header: {
                 Text("Passkeys")
             } footer: {
-                Text("Passkeys use the same Gear Tracker account and session as password sign-in. Your current password is required to add or remove one.")
+                Text("Passkeys use the same Gear Tracker account and session as password sign-in. Your current password is required to add or remove one. Leave the name blank to name it after this device.")
             }
 
             Section {
+                // The account these boxes belong to. Without a username field
+                // beside them, iOS has nothing to file an updated password
+                // under when it offers to save one.
+                HStack(spacing: 12) {
+                    Text("Account")
+                    Spacer(minLength: 8)
+                    TextField("Account", text: .constant(session.currentUser?.email ?? ""))
+                        .textContentType(.username)
+                        .disabled(true)
+                        .multilineTextAlignment(.trailing)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Account \(session.currentUser?.email ?? "")")
+
                 passwordField(
                     title: "Current password",
                     text: $currentPassword,
@@ -372,8 +394,16 @@ struct AccountSecuritySettingsView: View {
 
     private func passkeyDetail(_ passkey: PasskeyCredentialSummary) -> String {
         let added = "Added \(passkey.createdAt.formatted(date: .abbreviated, time: .omitted))"
-        guard let lastUsedAt = passkey.lastUsedAt else { return added }
+        guard let lastUsedAt = passkey.lastUsedAt else { return "\(added) · Not used yet" }
         return "\(added) · Used \(lastUsedAt.formatted(date: .abbreviated, time: .omitted))"
+    }
+
+    /// A synced passkey survives losing this iPhone; a device-bound one does
+    /// not, which changes whether removing it is recoverable.
+    private func passkeyStorageLabel(_ passkey: PasskeyCredentialSummary) -> String? {
+        if passkey.backedUp || passkey.deviceType == "multiDevice" { return "Synced" }
+        if passkey.deviceType == "singleDevice" { return "This device only" }
+        return nil
     }
 
     private func loadPasskeys() async {
@@ -424,6 +454,8 @@ struct AccountSecuritySettingsView: View {
             passkeyServiceAvailable = false
             passkeyError = nil
             Haptics.warning()
+        } catch PasskeyServiceError.cancelled {
+            // Dismissing the system sheet is a choice, not a failure.
         } catch {
             passkeyError = error.localizedDescription
             Haptics.warning()

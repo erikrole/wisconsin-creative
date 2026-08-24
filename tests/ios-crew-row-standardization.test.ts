@@ -67,7 +67,12 @@ describe("iOS crew row standardization", () => {
     );
 
     // A call time is data, not an accent colour.
-    expect(publishedRow).toContain('Text("Call \\(publishedCallWindow(member))")');
+    expect(publishedRow).toContain('Text("Call \\(callWindow)")');
     expect(publishedRow).not.toContain("Color.statusText(.blue)");
+    // An all-day event sends no call window, and the row drops the line rather
+    // than rendering the event's own UTC-midnight boundary as a clock time.
+    expect(publishedRow).toContain("let callWindow = publishedCallWindow(member)");
+    expect(schedule).toContain("private func publishedCallWindow(_ member: PublishedCrewMember) -> String?");
+    expect(schedule).toContain("guard let callStartsAt = member.callStartsAt, let callEndsAt = member.callEndsAt");
   });
 });

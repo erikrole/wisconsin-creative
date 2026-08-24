@@ -33,9 +33,10 @@ extension StatusPill {
     /// Convenience for role pills — matches web RoleBadge: capitalized name,
     /// emphasized typography, role→tone via `StatusTone.forRole`.
     static func role(_ role: String) -> some View {
+        let displayed = StatusTone.publicDirectoryRole(role)
         StatusPill(
-            label: role.prefix(1).uppercased() + role.dropFirst().lowercased(),
-            tone: .forRole(role),
+            label: displayed.prefix(1).uppercased() + displayed.dropFirst().lowercased(),
+            tone: .forRole(displayed),
             emphasized: true
         )
     }

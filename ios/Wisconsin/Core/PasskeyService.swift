@@ -26,6 +26,13 @@ enum PasskeyServiceError: LocalizedError {
     }
 }
 
+/// How a passkey request reaches the person: a modal sheet they asked for, or a
+/// passive QuickType suggestion over the keyboard.
+enum PasskeyPresentation {
+    case modal
+    case autoFill
+}
+
 /// Owns the short-lived AuthenticationServices controller and converts Apple's
 /// native credentials into the JSON shape consumed by the shared WebAuthn API.
 /// The server remains responsible for challenge, origin, RP ID, user
@@ -52,7 +59,20 @@ final class PasskeyService: NSObject, ASAuthorizationControllerDelegate, ASAutho
             name: options.user.name,
             userID: userID
         )
-        let authorization = try await perform(request)
+        // The server verifies with `requireUserVerification`, so ask for it
+        // rather than relying on the platform default.
+        request.userVerificationPreference = .required
+        // Without the server's exclude list a second enrollment on a device
+        // that already holds a passkey silently creates a duplicate row.
+        let excluded = (options.excludeCredentials ?? []).compactMap { descriptor in
+            Base64URL.decode(descriptor.id).map(
+                ASAuthorizationPlatformPublicKeyCredentialDescriptor.init(credentialID:)
+            )
+        }
+        if !excluded.isEmpty {
+            request.excludedCredentials = excluded
+        }
+        let authorization = try await perform(request, presentation: .modal)
         guard let credential = authorization.credential as? ASAuthorizationPlatformPublicKeyCredentialRegistration else {
             throw PasskeyServiceError.unsupportedCredential
         }
@@ -71,7 +91,10 @@ final class PasskeyService: NSObject, ASAuthorizationControllerDelegate, ASAutho
         )
     }
 
-    func authenticate(options: PasskeyAuthenticationOptions) async throws -> PasskeyAssertionPayload {
+    func authenticate(
+        options: PasskeyAuthenticationOptions,
+        presentation: PasskeyPresentation = .modal
+    ) async throws -> PasskeyAssertionPayload {
         guard let challenge = Base64URL.decode(options.challenge) else {
             throw PasskeyServiceError.invalidServerOptions
         }
@@ -82,7 +105,7 @@ final class PasskeyService: NSObject, ASAuthorizationControllerDelegate, ASAutho
         let request = provider.createCredentialAssertionRequest(challenge: challenge)
         request.userVerificationPreference = .required
 
-        let authorization = try await perform(request)
+        let authorization = try await perform(request, presentation: presentation)
         guard let credential = authorization.credential as? ASAuthorizationPlatformPublicKeyCredentialAssertion else {
             throw PasskeyServiceError.unsupportedCredential
         }
@@ -106,10 +129,21 @@ final class PasskeyService: NSObject, ASAuthorizationControllerDelegate, ASAutho
         )
     }
 
-    private func perform(_ request: ASAuthorizationRequest) async throws -> ASAuthorization {
-        guard continuation == nil else {
-            throw PasskeyServiceError.unavailable
-        }
+    /// Ends a request that is still waiting on the person — an armed AutoFill
+    /// suggestion they never used, or a sheet being replaced by a new request.
+    func cancelPendingRequest() {
+        guard continuation != nil else { return }
+        authorizationController?.cancel()
+        finish(.failure(PasskeyServiceError.cancelled))
+    }
+
+    private func perform(
+        _ request: ASAuthorizationRequest,
+        presentation: PasskeyPresentation
+    ) async throws -> ASAuthorization {
+        // An armed AutoFill request outlives the keyboard, so a deliberate tap
+        // on "Use a passkey" replaces it instead of failing as unavailable.
+        cancelPendingRequest()
         guard let window = Self.activeWindow else {
             throw PasskeyServiceError.unavailable
         }
@@ -120,9 +154,18 @@ final class PasskeyService: NSObject, ASAuthorizationControllerDelegate, ASAutho
         controller.delegate = self
         controller.presentationContextProvider = self
 
-        return try await withCheckedThrowingContinuation { continuation in
-            self.continuation = continuation
-            controller.performRequests()
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                self.continuation = continuation
+                switch presentation {
+                case .modal:
+                    controller.performRequests()
+                case .autoFill:
+                    controller.performAutoFillAssistedRequests()
+                }
+            }
+        } onCancel: {
+            Task { @MainActor [weak self] in self?.cancelPendingRequest() }
         }
     }
 
@@ -130,6 +173,9 @@ final class PasskeyService: NSObject, ASAuthorizationControllerDelegate, ASAutho
         controller: ASAuthorizationController,
         didCompleteWithAuthorization authorization: ASAuthorization
     ) {
+        // A replaced controller can still report back; it must not resume the
+        // request that took its place.
+        guard controller === authorizationController else { return }
         finish(.success(authorization))
     }
 
@@ -137,6 +183,7 @@ final class PasskeyService: NSObject, ASAuthorizationControllerDelegate, ASAutho
         controller: ASAuthorizationController,
         didCompleteWithError error: Error
     ) {
+        guard controller === authorizationController else { return }
         if let authorizationError = error as? ASAuthorizationError,
            authorizationError.code == .canceled {
             finish(.failure(PasskeyServiceError.cancelled))

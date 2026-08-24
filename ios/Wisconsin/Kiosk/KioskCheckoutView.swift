@@ -6,12 +6,24 @@ private enum KioskCheckoutFocusedField: Hashable {
 }
 
 private enum KioskCheckoutDefaults {
+    /// Buffer after a linked event ends before gear is due back. Event end is
+    /// when the game/session finishes, not when people are done packing up —
+    /// 90 minutes gives tear-down and travel back to the gear room without
+    /// making the default look identical to the schedule end people ignore.
+    static let linkedEventReturnBuffer: TimeInterval = 90 * 60
+
     static func defaultDueBackDate(now: Date = Date(), calendar: Calendar = .current) -> Date {
         guard let tomorrow = calendar.date(byAdding: .day, value: 1, to: now) else {
             return now.addingTimeInterval(24 * 60 * 60)
         }
         return calendar.date(bySettingHour: 9, minute: 0, second: 0, of: tomorrow)
             ?? now.addingTimeInterval(24 * 60 * 60)
+    }
+
+    static func dueBackDate(afterEventEndsAt eventEnd: Date, now: Date = Date()) -> Date? {
+        let proposed = eventEnd.addingTimeInterval(linkedEventReturnBuffer)
+        guard proposed > now.addingTimeInterval(60) else { return nil }
+        return proposed
     }
 }
 
@@ -783,8 +795,8 @@ struct KioskCheckoutView: View {
     private func applySelectedEventDueTime() {
         guard isLinkedToEvent else { return }
         guard let selectedEvent, let eventEnd = selectedEvent.endsAt else { return }
-        if eventEnd > Date().addingTimeInterval(60) {
-            dueBackAt = eventEnd
+        if let dueBack = KioskCheckoutDefaults.dueBackDate(afterEventEndsAt: eventEnd) {
+            dueBackAt = dueBack
         }
     }
 
@@ -806,7 +818,10 @@ struct KioskCheckoutView: View {
         if let event = intent.selectedEvent {
             isLinkedToEvent = true
             selectedEventId = event.id
-            if let end = event.endsAt, end > Date().addingTimeInterval(60) { dueBackAt = end }
+            if let end = event.endsAt,
+               let dueBack = KioskCheckoutDefaults.dueBackDate(afterEventEndsAt: end) {
+                dueBackAt = dueBack
+            }
         }
         let consumed = KioskFlowIntentReducer.consumePendingScans(in: intent)
         intent = consumed.intent
@@ -1592,10 +1607,18 @@ private struct KioskCheckoutReturnDatePicker: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
 
-                if let eventEnd, abs(eventEnd.timeIntervalSince(dueBackAt)) < 60 {
-                    Label("Matches the linked event's end time", systemImage: "calendar.badge.checkmark")
+                if let eventEnd {
+                    let defaultDueBack = eventEnd.addingTimeInterval(
+                        KioskCheckoutDefaults.linkedEventReturnBuffer
+                    )
+                    if abs(defaultDueBack.timeIntervalSince(dueBackAt)) < 60 {
+                        Label(
+                            "90 minutes after the linked event ends",
+                            systemImage: "calendar.badge.checkmark"
+                        )
                         .font(KioskType.chip)
                         .foregroundStyle(KioskStatus.scheduled)
+                    }
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

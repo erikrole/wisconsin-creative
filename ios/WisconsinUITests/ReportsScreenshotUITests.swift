@@ -282,3 +282,56 @@ final class ProfileScreenshotUITests: XCTestCase {
         add(screenshot)
     }
 }
+
+/// Captures Login's password step and Account & Security against the fixture
+/// harness. Both screens grew an account field so a password manager has a
+/// username to file the credential under, and both are places where a wrong
+/// text treatment would only be visible in a screenshot.
+@MainActor
+final class PasswordManagerScreenshotUITests: XCTestCase {
+    override func setUpWithError() throws {
+        continueAfterFailure = false
+    }
+
+    func testLoginPasswordStepCaptures() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "login"
+        app.launch()
+
+        let email = app.textFields["Email address"]
+        XCTAssertTrue(email.waitForExistence(timeout: 20), "Login never rendered its email field")
+        email.tap()
+        email.typeText("jordan.lee@wisc.edu")
+
+        app.buttons["Continue"].tap()
+
+        // The fixture answers account discovery with the password flow, so the
+        // password step is what should land.
+        let signingInAs = app.staticTexts["Signing in as"]
+        XCTAssertTrue(signingInAs.waitForExistence(timeout: 15), "Login never reached its password step")
+
+        attach(app, name: "login-password-step")
+    }
+
+    func testAccountSecurityCaptures() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "accountSecurity"
+        app.launch()
+
+        let title = app.navigationBars["Account & Security"]
+        XCTAssertTrue(title.waitForExistence(timeout: 20), "Account & Security never rendered")
+        XCTAssertTrue(app.staticTexts["iPhone"].waitForExistence(timeout: 15), "Fixture passkeys never loaded")
+
+        attach(app, name: "account-security-top")
+
+        app.swipeUp(velocity: .slow)
+        attach(app, name: "account-security-password")
+    }
+
+    private func attach(_ app: XCUIApplication, name: String) {
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = name
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+    }
+}

@@ -1126,22 +1126,44 @@ final class APIClient {
         return resp.data
     }
 
+    /// Shared, read-only team totals. The server owns the window, stacked
+    /// filter intersection, and counting rules; iOS only supplies exact facet
+    /// selections and ranks the returned people for display.
+    func teamScoreboard(
+        sportCode: String? = nil,
+        venue: String? = nil,
+        opponent: String? = nil,
+        site: String? = nil
+    ) async throws -> TeamScoreboard {
+        var items: [URLQueryItem] = []
+        if let sportCode, !sportCode.isEmpty { items.append(.init(name: "sportCode", value: sportCode)) }
+        if let venue, !venue.isEmpty { items.append(.init(name: "venue", value: venue)) }
+        if let opponent, !opponent.isEmpty { items.append(.init(name: "opponent", value: opponent)) }
+        if let site, !site.isEmpty { items.append(.init(name: "site", value: site)) }
+        let response: DataWrapper<TeamScoreboard> = try await perform(
+            request(path: "/api/scoreboard", queryItems: items)
+        )
+        return response.data
+    }
+
     /// Read-only profile record. The route owns season scope, event counting,
     /// result classification, and visibility; the app only supplies display
     /// filters and pagination.
     func scoreboard(
         userId: String,
-        season: String = "2026-27",
+        season: String? = nil,
         sportCode: String? = nil,
         result: String? = nil,
         limit: Int = 25,
         offset: Int = 0
     ) async throws -> UserScoreboard {
         var items: [URLQueryItem] = [
-            .init(name: "season", value: season),
             .init(name: "limit", value: "\(limit)"),
             .init(name: "offset", value: "\(offset)"),
         ]
+        if let season, !season.isEmpty {
+            items.append(.init(name: "season", value: season))
+        }
         if let sportCode, !sportCode.isEmpty {
             items.append(.init(name: "sportCode", value: sportCode))
         }

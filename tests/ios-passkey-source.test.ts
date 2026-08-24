@@ -21,11 +21,17 @@ describe("iOS passkey source contract", () => {
     expect(service).toContain("rawAuthenticatorData");
     expect(service).toContain("signature");
     expect(service).toContain("associationUnavailable");
+    expect(service).toContain("request.excludedCredentials = excluded");
+    expect(service).toContain("performAutoFillAssistedRequests()");
+    expect(service).toContain("withTaskCancellationHandler");
+    expect(service).toContain("func cancelPendingRequest()");
+    expect(service).toContain("guard controller === authorizationController else { return }");
     expect(service).toContain("Passkey setup requires a real iPhone.");
     expect(service).toContain("Passkey request was canceled.");
     expect(models).toContain("type = \"public-key\"");
     expect(models).toContain("clientExtensionResults: [String: String] = [:]");
     expect(models).toContain("struct PasskeyRegistrationConfirmation");
+    expect(models).toContain("let excludeCredentials: [PasskeyCredentialDescriptor]?");
   });
 
   it("keeps native login, enrollment, and management on the existing API contract", () => {
@@ -41,7 +47,13 @@ describe("iOS passkey source contract", () => {
     expect(api).toContain("DataWrapper<PasskeyRegistrationConfirmation>");
     expect(api).toContain("/api/me/passkeys");
     expect(session).toContain("PasskeyService.shared.authenticate");
+    expect(session).toContain("func armPasskeyAutoFill() async");
+    expect(session).toContain("presentation: .autoFill");
+    // A dismissed system sheet is a choice; it must not read as a failed login.
+    expect(session).toContain("catch PasskeyServiceError.cancelled");
     expect(login).toContain("Use a passkey");
+    expect(login).toContain("PasskeyAutoFillKey(step: loginStep, attempt: passkeyAutoFillAttempt)");
+    expect(login).toContain("await session.armPasskeyAutoFill()");
     expect(login).toMatch(/if loginStep == \.identity \{[\s\S]*?submitPasskey\(\)/);
     expect(security).toContain('Text("Passkeys")');
     expect(security).toContain("PasskeyService.shared.register");
@@ -54,6 +66,8 @@ describe("iOS passkey source contract", () => {
     expect(security).toContain('passkeySuccessMessage = "Passkey added."');
     expect(security).toContain("Passkey added, but the list could not refresh.");
     expect(security).toContain('passkeyCurrentPassword = ""');
+    expect(security).toContain("catch PasskeyServiceError.cancelled");
+    expect(security).toContain("private func passkeyStorageLabel");
   });
 
   it("publishes the webcredentials association for the shipped bundle", () => {

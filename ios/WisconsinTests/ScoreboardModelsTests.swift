@@ -123,6 +123,116 @@ final class ScoreboardModelsTests: XCTestCase {
         XCTAssertEqual(scoreboard.summary.winRateLabel, "—")
     }
 
+    func testTeamScoreboardDecodesUniqueTotalsAndMinimalLeaderboardIdentity() throws {
+        let json = """
+        {
+          "generatedAt": "2026-12-01T18:00:00.000Z",
+          "scope": {
+            "key": "2026-27", "label": "2026–27 season",
+            "startsAt": "2026-07-01T00:00:00.000Z", "endsAt": "2027-07-01T00:00:00.000Z",
+            "timeZone": "America/Chicago"
+          },
+          "methodology": {
+            "eventsCovered": "Unique completed events.",
+            "eventCredits": "One credit per person per event.",
+            "record": "Unique resolved games.",
+            "gameCredits": "One credit per person per game.",
+            "minimumGamesForWinRate": 3
+          },
+          "filters": {
+            "sportCode": "FB", "venue": "Camp Randall Stadium",
+            "opponent": "Iowa", "site": "HOME"
+          },
+          "facets": {
+            "sports": [{"key":"FB","label":"Football"}],
+            "venues": [{"key":"Camp Randall Stadium","label":"Camp Randall Stadium"}],
+            "opponents": [{"key":"Iowa","label":"Iowa"}],
+            "sites": [{"key":"HOME","label":"Home"}]
+          },
+          "summary": {
+            "contributors": 2, "eventsCovered": 4, "eventCredits": 7,
+            "wins": 2, "losses": 1, "games": 3, "winRate": 66.7, "gameCredits": 5
+          },
+          "bySport": [{
+            "key": "FB", "label": "Football", "contributors": 2,
+            "eventsCovered": 3, "eventCredits": 5, "wins": 2, "losses": 1,
+            "games": 3, "winRate": 66.7, "gameCredits": 5
+          }],
+          "byVenue": [{
+            "key": "Camp Randall Stadium", "label": "Camp Randall Stadium", "contributors": 2,
+            "eventsCovered": 3, "eventCredits": 5, "wins": 2, "losses": 1,
+            "games": 3, "winRate": 66.7, "gameCredits": 5
+          }],
+          "byOpponent": [{
+            "key": "Iowa", "label": "Iowa", "contributors": 2,
+            "eventsCovered": 3, "eventCredits": 5, "wins": 2, "losses": 1,
+            "games": 3, "winRate": 66.7, "gameCredits": 5
+          }],
+          "bySite": [{
+            "key": "HOME", "label": "Home", "contributors": 2,
+            "eventsCovered": 3, "eventCredits": 5, "wins": 2, "losses": 1,
+            "games": 3, "winRate": 66.7, "gameCredits": 5
+          }],
+          "leaderboard": [{
+            "userId": "user-1", "name": "Bucky Badger", "avatarUrl": null,
+            "summary": {"eventsWorked": 3, "wins": 2, "losses": 1, "games": 3, "winRate": 66.7},
+            "bySport": [{
+              "key": "FB", "label": "Football", "eventsWorked": 3,
+              "wins": 2, "losses": 1, "games": 3, "winRate": 66.7
+            }]
+          }]
+        }
+        """.data(using: .utf8)!
+
+        let scoreboard = try JSONDecoder().decode(TeamScoreboard.self, from: json)
+
+        XCTAssertEqual(scoreboard.summary.eventsCovered, 4)
+        XCTAssertEqual(scoreboard.summary.eventCredits, 7)
+        XCTAssertEqual(scoreboard.summary.recordLabel, "2–1")
+        XCTAssertEqual(scoreboard.summary.winRateLabel, "66.7%")
+        XCTAssertEqual(scoreboard.methodology.minimumGamesForWinRate, 3)
+        XCTAssertEqual(scoreboard.filters.sportCode, "FB")
+        XCTAssertEqual(scoreboard.filters.venue, "Camp Randall Stadium")
+        XCTAssertEqual(scoreboard.facets.sports.first?.label, "Football")
+        XCTAssertEqual(scoreboard.facets.venues.first?.key, "Camp Randall Stadium")
+        XCTAssertEqual(scoreboard.bySport.first?.eventsCovered, 3)
+        XCTAssertEqual(scoreboard.byVenue.first?.recordLabel, "2–1")
+        XCTAssertEqual(scoreboard.byOpponent.first?.label, "Iowa")
+        XCTAssertEqual(scoreboard.bySite.first?.label, "Home")
+        XCTAssertEqual(scoreboard.leaderboard.first?.id, "user-1")
+        XCTAssertEqual(scoreboard.leaderboard.first?.name, "Bucky Badger")
+        XCTAssertEqual(scoreboard.leaderboard.first?.bySport.first?.recordLabel, "2–1")
+    }
+
+    func testTeamScoreboardToleratesRollingOptionalCollections() throws {
+        let json = """
+        {
+          "scope": {
+            "key": "2026-27", "label": "2026–27 season",
+            "startsAt": "2026-07-01T00:00:00.000Z", "endsAt": "2027-07-01T00:00:00.000Z",
+            "timeZone": "America/Chicago"
+          },
+          "summary": {
+            "contributors": 0, "eventsCovered": 0, "eventCredits": 0,
+            "wins": 0, "losses": 0, "games": 0, "winRate": null, "gameCredits": 0
+          }
+        }
+        """.data(using: .utf8)!
+
+        let scoreboard = try JSONDecoder().decode(TeamScoreboard.self, from: json)
+
+        XCTAssertNil(scoreboard.generatedAt)
+        XCTAssertEqual(scoreboard.filters, .empty)
+        XCTAssertEqual(scoreboard.facets, .empty)
+        XCTAssertTrue(scoreboard.bySport.isEmpty)
+        XCTAssertTrue(scoreboard.byVenue.isEmpty)
+        XCTAssertTrue(scoreboard.byOpponent.isEmpty)
+        XCTAssertTrue(scoreboard.bySite.isEmpty)
+        XCTAssertTrue(scoreboard.leaderboard.isEmpty)
+        XCTAssertEqual(scoreboard.methodology.minimumGamesForWinRate, 3)
+        XCTAssertEqual(scoreboard.summary.winRateLabel, "—")
+    }
+
     // MARK: - Season shape
 
     func testMonthsGroupGamesInRouteOrder() {
@@ -165,7 +275,7 @@ final class ScoreboardModelsTests: XCTestCase {
         XCTAssertEqual(ScoreboardDigest.form(games, limit: 2).map(\.id), ["g1", "g2"])
     }
 
-    func testHighlightsPickVolumeThenRateAndSkipUnknownBuckets() throws {
+    func testHighlightsPreferSustainedSuccessAndSkipUnknownBuckets() throws {
         let scoreboard = try JSONDecoder().decode(UserScoreboard.self, from: Data(highlightJSON.utf8))
 
         let highlights = scoreboard.highlights
@@ -173,10 +283,10 @@ final class ScoreboardModelsTests: XCTestCase {
         XCTAssertEqual(highlights.map(\.id), ["sport", "venue", "opponent"])
         XCTAssertEqual(highlights[0].value, "Football")
         XCTAssertEqual(highlights[0].detail, "8 games")
-        // Kohl Center is perfect but thinner; Camp Randall matches its rate over
-        // more games, so volume breaks the tie.
+        // A lone 1–0 at the Kohl Center does not outrank a sustained 6–1 at
+        // Camp Randall.
         XCTAssertEqual(highlights[1].value, "Camp Randall Stadium")
-        XCTAssertEqual(highlights[1].detail, "6–0 · 100%")
+        XCTAssertEqual(highlights[1].detail, "6–1 · 85.7%")
         // The unknown-opponent bucket is a real row on the table and never a
         // highlight -- "Top matchup: Unknown opponent" says nothing.
         XCTAssertEqual(highlights[2].value, "Purdue")
@@ -212,8 +322,8 @@ final class ScoreboardModelsTests: XCTestCase {
         {"key":"Purdue","label":"Purdue","wins":4,"losses":0,"games":4,"winRate":100}
       ],
       "byVenue": [
-        {"key":"Camp Randall Stadium","label":"Camp Randall Stadium","wins":6,"losses":0,"games":6,"winRate":100},
-        {"key":"Kohl Center","label":"Kohl Center","wins":2,"losses":0,"games":2,"winRate":100}
+        {"key":"Camp Randall Stadium","label":"Camp Randall Stadium","wins":6,"losses":1,"games":7,"winRate":85.7},
+        {"key":"Kohl Center","label":"Kohl Center","wins":1,"losses":0,"games":1,"winRate":100}
       ],
       "events": [],
       "nextCursor": null

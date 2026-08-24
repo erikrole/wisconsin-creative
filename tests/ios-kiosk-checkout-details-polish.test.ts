@@ -100,6 +100,13 @@ describe("iOS kiosk checkout details polish", () => {
     expect(checkout).not.toContain(".datePickerStyle(.graphical)");
     expect(checkout).not.toContain(".datePickerStyle(.wheel)");
 
+    // Linked-event defaults land 90 minutes after the schedule end so tear-down
+    // time is not identical to the time people glance past and ignore.
+    expect(checkout).toContain("static let linkedEventReturnBuffer: TimeInterval = 90 * 60");
+    expect(checkout).toContain("dueBackDate(afterEventEndsAt:");
+    expect(checkout).toContain('"90 minutes after the linked event ends"');
+    expect(checkout).not.toContain('"Matches the linked event\'s end time"');
+
     // Checkout is a stepped flow: details, then scanning. The details step is a
     // screen, not a sheet floating over a scan screen you cannot use yet.
     expect(checkout).toContain("@State private var checkoutContextReady = false");

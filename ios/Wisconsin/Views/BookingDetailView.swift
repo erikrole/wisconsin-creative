@@ -188,7 +188,6 @@ struct BookingDetailView: View {
             await loadConflicts(for: loaded)
             await loadReturnInsight(for: loaded)
             await reconcileLiveActivity(afterLoading: loaded)
-            openPendingExtendIfAllowed(for: loaded)
         } catch {
             self.error = error.localizedDescription
             isLoading = false
@@ -237,13 +236,6 @@ struct BookingDetailView: View {
                 requesterId: session.currentUser?.id
             )
         }
-    }
-
-    private func openPendingExtendIfAllowed(for booking: Booking) {
-        guard appState.pendingExtendBookingId == booking.id else { return }
-        appState.pendingExtendBookingId = nil
-        guard canExtendBooking else { return }
-        showExtend = true
     }
 
     private func install(_ updatedBooking: Booking) {

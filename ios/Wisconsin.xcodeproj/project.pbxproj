@@ -113,6 +113,7 @@
 		9F8F4FCCB5B170E4C08FEBA1 /* KioskIdleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 649B6E0F68D9B5DB4D054656 /* KioskIdleView.swift */; };
 		A2F31705FBCCCE502A3B6C1A /* SearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74EFD042F26EA7BE52FA67E3 /* SearchService.swift */; };
 		A4D4C64C1C5E6904BFF894E3 /* KioskSleepModeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE625FDFD675BDE49443B571 /* KioskSleepModeView.swift */; };
+		A54251B23959BB25AA633FB8 /* TeamScoreboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C02E3259C05C85AFCA83327 /* TeamScoreboardView.swift */; };
 		A55A0918118E5570B32BF2E9 /* ProfileCompletionWelcomeComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = A417355DFB5B21031685616A /* ProfileCompletionWelcomeComponents.swift */; };
 		A6176C75B21A5C4695A8E11F /* AddShiftSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96636E404DEEEDA5C6046ADB /* AddShiftSheet.swift */; };
 		A63240779436086293BA2A9E /* KioskIdleRoster.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F4FFF38CD734CA5656C8878 /* KioskIdleRoster.swift */; };
@@ -303,6 +304,7 @@
 		93A02FB7D1B8ADC547189F1A /* ScanPrePromptView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanPrePromptView.swift; sourceTree = "<group>"; };
 		96636E404DEEEDA5C6046ADB /* AddShiftSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddShiftSheet.swift; sourceTree = "<group>"; };
 		966B6B986CA5E9C123B8EC01 /* KioskCheckoutDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskCheckoutDetailSheet.swift; sourceTree = "<group>"; };
+		9C02E3259C05C85AFCA83327 /* TeamScoreboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamScoreboardView.swift; sourceTree = "<group>"; };
 		9CDE77AE37C01B8DA663C7CE /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		9DAF420E532759A9116D675B /* DraftModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftModels.swift; sourceTree = "<group>"; };
 		9E58906A0DD7BCF5024161BE /* NotificationsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsSheet.swift; sourceTree = "<group>"; };
@@ -688,6 +690,7 @@
 				BC3FF25073EAA237E97D6BED /* ScoreboardView.swift */,
 				B798A9A6A730D69BA6E9597B /* SettingsView.swift */,
 				B76322B9A6F0D5B70487D0F2 /* SidebarWebDestinationView.swift */,
+				9C02E3259C05C85AFCA83327 /* TeamScoreboardView.swift */,
 				6B64F325136AF7626ECECE8C /* UserDetailView.swift */,
 				8F94CA79BF538DBB6FF7F225 /* UsersView.swift */,
 				4E310D05AC0591B9C424B405 /* Components */,
@@ -1120,6 +1123,7 @@
 				157E1E0021A0F88C78E3590E /* SidebarWebDestinationView.swift in Sources */,
 				5BFCE075814954BB59669481 /* Skeleton.swift in Sources */,
 				1E84624B222CD81665D2EC79 /* StatusPill.swift in Sources */,
+				A54251B23959BB25AA633FB8 /* TeamScoreboardView.swift in Sources */,
 				BA09B1B0BD9687C63E73E59D /* ThumbnailLoader.swift in Sources */,
 				1C2E6D4D0BA7A114FB6E9DB7 /* Toast.swift in Sources */,
 				A9264F994D67157C3DD7FCD3 /* TradeBoardSheet.swift in Sources */,

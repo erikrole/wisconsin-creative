@@ -42,6 +42,7 @@ describe("iOS Browse tab", () => {
     expect(browse).not.toContain('Text("Browse")');
     expect(browse).toContain("NavigationLink(value: destination)");
     expect(browse).toContain("SettingsMenuRow(");
+    expect(browse).toContain("TeamScoreboardView(wrapsInNavigationStack: false)");
     expect(browse).toContain("ItemsView(wrapsInNavigationStack: false)");
     expect(browse).toContain("GuidesView(wrapsInNavigationStack: false)");
     expect(browse).toContain("LicensesView(wrapsInNavigationStack: false)");
@@ -81,5 +82,16 @@ describe("iOS Browse tab", () => {
 
     expect(browse).toContain("case .users:");
     expect(browse).toContain("UsersView(wrapsInNavigationStack: false)");
+  });
+
+  it("keeps Scoreboard in Browse even when a collaborator has no optional capabilities", () => {
+    const appTab = appTabViewShell();
+    const browse = source("ios/Wisconsin/Views/BrowseView.swift");
+
+    expect(appTab).toContain("Browse always exists because the shared Scoreboard is available");
+    expect(browse).toContain("return [.scoreboard] + [");
+    expect(browse).toContain("case scoreboard");
+    expect(browse).toContain('case .scoreboard: "Scoreboard"');
+    expect(browse).toContain("Team totals, sport breakdowns, and per-person leaderboards.");
   });
 });

@@ -93,11 +93,19 @@ struct PasswordSetupView: View {
                     .font(.title2.weight(.bold))
                     .foregroundStyle(.primary)
 
-                Text(email)
+                // Renders exactly like the label it replaces, but as a real
+                // account field: iOS needs one next to a new-password field to
+                // file the saved credential under the right address.
+                TextField("Account", text: .constant(email))
+                    .textFieldStyle(.plain)
+                    .textContentType(.username)
+                    .multilineTextAlignment(.center)
+                    .disabled(true)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
+                    .accessibilityLabel("Signed in as \(email)")
 
                 Text("Create a new password to continue on this device.")
                     .font(.footnote)

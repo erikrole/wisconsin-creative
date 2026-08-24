@@ -315,8 +315,8 @@ struct KioskOperatorHubView: View {
 
     /// Starts checkout with the event already linked. `applyRetainedIntent` in
     /// `KioskCheckoutView` reads `selectedEvent` off the intent, ticks the
-    /// event row, and prefills due-back from the event end — so this lands on
-    /// the details step with both required answers already filled.
+    /// event row, and prefills due-back to 90 minutes after the event end —
+    /// so this lands on the details step with both required answers already filled.
     private func startCheckout(for event: KioskCheckoutEvent) {
         store.deferSleepMode()
         store.resetInactivity()

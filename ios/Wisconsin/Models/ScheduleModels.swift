@@ -665,8 +665,9 @@ struct PublishedCrewMember: Codable, Identifiable {
     let role: String
     let startsAt: Date
     let endsAt: Date
-    let callStartsAt: Date
-    let callEndsAt: Date
+    /// Absent for an all-day event, which has no call time.
+    let callStartsAt: Date?
+    let callEndsAt: Date?
 }
 
 struct PublishedCrewPerson: Codable, Identifiable {

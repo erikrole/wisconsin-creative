@@ -6,6 +6,10 @@ struct CheckoutReturnActivityAttributes: ActivityAttributes {
         var endsAt: Date
         var now: Date
         var nextNeedAt: Date?
+        /// Deliberately never rendered. Extend is an action taken on booking
+        /// detail, not offered from a glance surface. The field stays on the
+        /// wire because installed builds decode it as required, so the server
+        /// dropping the key would break their updates.
         var allowsExtend: Bool
         var urgency: Urgency
 
@@ -60,5 +64,21 @@ extension CheckoutReturnActivityAttributes.ContentState {
         if remaining <= 10 * 60 { return .critical }
         if remaining <= 30 * 60 { return .warning }
         return urgency
+    }
+
+    /// Anchor for the glance surfaces' 60-second refresh lattice.
+    ///
+    /// A schedule anchored on render time ticks at whatever phase the activity
+    /// happened to start or update on, so the minute label, the status symbol,
+    /// and the 30- and 10-minute accent steps all trail their real boundary by
+    /// up to 59 seconds -- the card can still read "1 min" once the return time
+    /// has passed. Anchoring on `endsAt` puts every tick exactly where the
+    /// displayed minute count changes. The returned date is the most recent
+    /// lattice point at or before `date`, so the first entry the system asks
+    /// for is never in the future.
+    func minuteBoundaryAnchor(at date: Date) -> Date {
+        var phase = endsAt.timeIntervalSince(date).truncatingRemainder(dividingBy: 60)
+        if phase <= 0 { phase += 60 }
+        return date.addingTimeInterval(phase - 60)
     }
 }

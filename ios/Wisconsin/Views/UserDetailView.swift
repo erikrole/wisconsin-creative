@@ -179,7 +179,7 @@ struct UserDetailView: View {
         ) {
             parts.append(standing)
         }
-        parts.append(detail.role.capitalized)
+        parts.append(StatusTone.publicDirectoryRole(detail.role).capitalized)
         if !detail.active { parts.append("Inactive") }
         if let joined = joinedLabel(detail.createdAt) { parts.append(joined) }
         return parts.joined(separator: ", ")

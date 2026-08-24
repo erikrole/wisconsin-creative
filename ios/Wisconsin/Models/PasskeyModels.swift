@@ -11,10 +11,18 @@ struct PasskeyUserEntity: Decodable {
     let displayName: String
 }
 
+/// One already-enrolled credential the authenticator should refuse to duplicate.
+struct PasskeyCredentialDescriptor: Decodable {
+    let id: String
+    let type: String?
+    let transports: [String]?
+}
+
 struct PasskeyRegistrationOptions: Decodable {
     let challenge: String
     let rp: PasskeyRelyingParty
     let user: PasskeyUserEntity
+    let excludeCredentials: [PasskeyCredentialDescriptor]?
 }
 
 struct PasskeyAuthenticationOptions: Decodable {

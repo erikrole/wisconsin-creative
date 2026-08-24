@@ -27,11 +27,14 @@ describe("iOS tab bar stability", () => {
     expect(appTab).toContain("content.tabViewStyle(.sidebarAdaptable)");
     expect(appTab).toContain("private var showsSidebarDestinations: Bool");
     expect(appTab).toContain("horizontalSizeClass == .regular");
+    expect(appTab).toContain('TabSection("Team")');
+    expect(appTab).toContain('Tab("Scoreboard", systemImage: "trophy", value: 8)');
+    expect(appTab).toContain("TeamScoreboardView()");
     expect(appTab).toContain('TabSection("Resources")');
     expect(appTab).toContain('Tab("Guides", systemImage: "book.closed", value: 6)');
     expect(appTab).toContain('Tab("Users", systemImage: "person.2", value: 5)');
     expect(appTab).toContain('Tab("Licenses", systemImage: "key", value: 7)');
-    expect(appTab.match(/\.tabPlacement\(\.sidebarOnly\)/g)).toHaveLength(3);
+    expect(appTab.match(/\.tabPlacement\(\.sidebarOnly\)/g)).toHaveLength(4);
     expect(appTab).not.toContain('TabSection("Admin")');
     expect(appTab).not.toContain('Tab("Items", systemImage: "archivebox", value: 2)');
     expect(appTab).not.toContain(".tabItem");

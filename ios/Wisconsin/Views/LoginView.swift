@@ -10,6 +10,7 @@ struct LoginView: View {
     @State private var identityError: String?
     @State private var activeAuthMethod: AuthMethod?
     @State private var authDestination: AuthDestination?
+    @State private var passkeyAutoFillAttempt = 0
     @FocusState private var focused: Field?
     @AccessibilityFocusState private var accessibilityFocused: Field?
 
@@ -18,6 +19,13 @@ struct LoginView: View {
     private enum LoginStep {
         case identity
         case password
+    }
+
+    /// Re-arms AutoFill when the step changes and after a deliberate passkey
+    /// sheet replaces the armed request.
+    private struct PasskeyAutoFillKey: Equatable {
+        let step: LoginStep
+        let attempt: Int
     }
 
     private enum AuthMethod {
@@ -138,6 +146,9 @@ struct LoginView: View {
         Task {
             await session.loginWithPasskey()
             activeAuthMethod = nil
+            // The sheet withdrew the armed AutoFill request; put it back so the
+            // keyboard suggestion still works after a dismissed sheet.
+            passkeyAutoFillAttempt += 1
         }
     }
 
@@ -178,6 +189,12 @@ struct LoginView: View {
         }
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .preferredColorScheme(.dark)
+        .task(id: PasskeyAutoFillKey(step: loginStep, attempt: passkeyAutoFillAttempt)) {
+            // Offers a saved passkey in the QuickType bar over the email field,
+            // so signing in does not require finding the passkey button first.
+            guard loginStep == .identity else { return }
+            await session.armPasskeyAutoFill()
+        }
         .onChange(of: session.error) { _, error in
             if let error {
                 AccessibilityNotification.Announcement(error).post()
@@ -357,10 +374,18 @@ struct LoginView: View {
                     Text("Signing in as")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Text(trimmedEmail)
+                    // The email field belongs to the previous step and is gone
+                    // by now. Keeping the address here as a real account field
+                    // is what lets AutoFill file the password under it.
+                    TextField("Account", text: .constant(trimmedEmail))
+                        .textFieldStyle(.plain)
+                        .textContentType(.username)
+                        .disabled(true)
                         .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
                         .lineLimit(1)
-                        .truncationMode(.middle)
+                        .minimumScaleFactor(0.8)
+                        .accessibilityLabel("Signing in as \(trimmedEmail)")
                 }
 
                 Spacer(minLength: 8)

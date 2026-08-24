@@ -78,7 +78,10 @@ struct NativeRegistrationView: View {
                 TextField("Email", text: $email)
                     .textInputAutocapitalization(.never)
                     .keyboardType(.emailAddress)
-                    .textContentType(.emailAddress)
+                    // `.username`, not `.emailAddress`: this is the account the
+                    // password below belongs to, and it is what iOS files the
+                    // saved credential under.
+                    .textContentType(.username)
                     .autocorrectionDisabled()
                     .focused($focusedField, equals: .email)
                     .submitLabel(.next)

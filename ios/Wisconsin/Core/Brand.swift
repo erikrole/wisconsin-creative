@@ -83,10 +83,14 @@ extension Font {
 enum StatusTone: String, CaseIterable {
     case green, blue, red, purple, orange, gray
 
+    /// Directory chips show Staff for Admins so operator rank is not advertised.
+    static func publicDirectoryRole(_ role: String) -> String {
+        role == "ADMIN" ? "STAFF" : role
+    }
+
     /// Maps a role string to the same tone the web's `RoleBadge` uses.
     static func forRole(_ role: String) -> StatusTone {
-        switch role {
-        case "ADMIN": return .purple
+        switch publicDirectoryRole(role) {
         case "STAFF": return .blue
         case "STUDENT": return .gray
         default: return .gray

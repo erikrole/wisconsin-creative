@@ -375,7 +375,7 @@ private struct UserListRow: View {
     }
 
     private var rowAccessibilityLabel: String {
-        var parts: [String] = [user.name, user.role.capitalized]
+        var parts: [String] = [user.name, StatusTone.publicDirectoryRole(user.role).capitalized]
         if user.active == false { parts.append("Inactive") }
         if let secondary = secondaryLine { parts.append(secondary) }
         return parts.joined(separator: ", ")

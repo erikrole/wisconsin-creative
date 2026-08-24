@@ -159,6 +159,53 @@ final class SessionStore {
                 self.didSeedFromSnapshot = false
                 self.publishCurrentUserIfChanged(user)
                 self.isOffline = false
+            } catch PasskeyServiceError.cancelled {
+                // Dismissing the system sheet is a choice, not a failure.
+            } catch {
+                guard self.authRequests.owns(requestToken) else { return }
+                self.error = error.localizedDescription
+            }
+            if self.authRequests.owns(requestToken) { self.isLoading = false }
+        }
+        await mutation.value
+    }
+
+    /// Arms Apple's AutoFill passkey suggestion above the keyboard while the
+    /// sign-in screen is open. Deliberately passive: nothing shows as loading
+    /// and no failure surfaces until a passkey is actually chosen, because most
+    /// visits to this screen never touch the suggestion. Cancelling the calling
+    /// task withdraws the armed request.
+    func armPasskeyAutoFill() async {
+        guard currentUser == nil else { return }
+        do {
+            let options = try await APIClient.shared.passkeyAuthenticationOptions()
+            try Task.checkCancellation()
+            let assertion = try await PasskeyService.shared.authenticate(
+                options: options,
+                presentation: .autoFill
+            )
+            guard !Task.isCancelled else { return }
+            await completePasskeySignIn(assertion)
+        } catch {
+            // A withdrawn suggestion, a device without passkeys, and offline
+            // arming are all routine on this path.
+        }
+    }
+
+    /// Exchanges an assertion that AutoFill already produced for the shared
+    /// session, on the same queue and generation guard as every other sign-in.
+    private func completePasskeySignIn(_ assertion: PasskeyAssertionPayload) async {
+        let mutation = authMutations.enqueue { [weak self] in
+            guard let self else { return }
+            let requestToken = self.authRequests.begin()
+            self.isLoading = true
+            self.error = nil
+            do {
+                let user = try await APIClient.shared.verifyPasskeyAuthentication(assertion)
+                guard self.authRequests.owns(requestToken) else { return }
+                self.didSeedFromSnapshot = false
+                self.publishCurrentUserIfChanged(user)
+                self.isOffline = false
             } catch {
                 guard self.authRequests.owns(requestToken) else { return }
                 self.error = error.localizedDescription

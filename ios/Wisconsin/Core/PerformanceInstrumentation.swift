@@ -51,6 +51,10 @@ enum AppRuntimeMode {
         /// payload -- they are here so the two screens every user meets first
         /// can be captured without typing a credential into the app.
         case login
+        /// Account & Security against a canned passkey list: one synced
+        /// credential, one bound to this device, and one never used -- the
+        /// three shapes the rows have to tell apart.
+        case accountSecurity
         case passwordSetup = "password-setup"
         /// Booking detail against a canned booking, plus its three sheets.
         /// Extend, Edit, and Cancel are local state opened by a tap, so each
@@ -143,7 +147,7 @@ enum AppRuntimeMode {
              .home, .homeAllClear, .scoreboard, .profile,
              .bookingDetail, .bookingExtend, .bookingEdit, .bookingCancel,
              .itemEdit, .createBookingScanner, .search, .searchPartial,
-             .itemsList, .reports:
+             .itemsList, .reports, .accountSecurity, .login:
             return true
         default:
             return false

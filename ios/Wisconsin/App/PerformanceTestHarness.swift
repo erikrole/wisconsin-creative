@@ -79,6 +79,22 @@ struct PerformanceTestRootView: View {
             ItemsListHarnessView()
         case .reports:
             ReportsHarnessView()
+        case .accountSecurity:
+            AccountSecurityHarnessView()
+        }
+    }
+}
+
+/// The real Account & Security screen against a canned passkey list, so the
+/// credential rows can be reviewed without a signed-in session. Passkey
+/// enrollment itself needs real hardware; the rows do not.
+struct AccountSecurityHarnessView: View {
+    @Environment(SessionStore.self) private var session
+
+    var body: some View {
+        NavigationStack {
+            AccountSecuritySettingsView(manageAccountURL: AppEnvironment.baseURL)
+                .onAppear { session.currentUser = ScheduleFixtures.staffUser }
         }
     }
 }
@@ -324,6 +340,9 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
                 ? FixtureAPI.noLicense
                 : FixtureAPI.myLicense
         case "/api/me": return ScheduleFixtureAPI.me
+        // Lets the login capture reach the password step without a real host.
+        case "/api/auth/discover": return AuthFixtureAPI.discoverPassword
+        case "/api/me/passkeys": return PasskeyFixtureAPI.passkeys
         case "/api/dashboard":
             return AppRuntimeMode.performanceScenario == .homeAllClear
                 ? HomeFixtureAPI.allClearDashboard
@@ -351,6 +370,35 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
             return AppRuntimeMode.performanceScenario == .searchPartial ? nil : SearchFixtureAPI.checkouts
         default: return nil
         }
+    }
+}
+
+/// The account-discovery answer that sends Login to its password step.
+enum AuthFixtureAPI {
+    static var discoverPassword: Data {
+        #"{"flow":"password"}"#.data(using: .utf8)!
+    }
+}
+
+/// Passkey metadata covering the three states the list has to distinguish: a
+/// synced credential, one that dies with this device, and one enrolled but
+/// never used. Dates are relative to launch so "Used" never freezes at an
+/// authored day.
+enum PasskeyFixtureAPI {
+    private static func isoString(daysAgo: Int) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.string(from: Calendar.current.date(byAdding: .day, value: -daysAgo, to: Date()) ?? Date())
+    }
+
+    static var passkeys: Data {
+        """
+        {"data":[
+          {"id":"passkey-1","name":"iPhone","createdAt":"\(isoString(daysAgo: 41))","lastUsedAt":"\(isoString(daysAgo: 1))","deviceType":"multiDevice","backedUp":true},
+          {"id":"passkey-2","name":"Chrome on macOS","createdAt":"\(isoString(daysAgo: 12))","lastUsedAt":"\(isoString(daysAgo: 5))","deviceType":"singleDevice","backedUp":false},
+          {"id":"passkey-3","name":"Front desk iPad","createdAt":"\(isoString(daysAgo: 2))","lastUsedAt":null,"deviceType":"multiDevice","backedUp":true}
+        ]}
+        """.data(using: .utf8)!
     }
 }
 

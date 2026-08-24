@@ -613,7 +613,7 @@ private struct PublishedEventDetailView: View {
     private var crewByArea: [(area: String, crew: [PublishedCrewMember])] {
         Dictionary(grouping: event.crew, by: \.area)
             .sorted { publishedAreaOrder($0.key) < publishedAreaOrder($1.key) }
-            .map { (area: $0.key, crew: $0.value.sorted { $0.callStartsAt < $1.callStartsAt }) }
+            .map { (area: $0.key, crew: $0.value.sorted { ($0.callStartsAt ?? $0.startsAt) < ($1.callStartsAt ?? $1.startsAt) }) }
     }
 
     var body: some View {
@@ -765,8 +765,8 @@ private struct PublishedCrewRow: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
-                if publishedCrewRole(member.role) == "Student" {
-                    Text("Call \(publishedCallWindow(member))")
+                if publishedCrewRole(member.role) == "Student", let callWindow = publishedCallWindow(member) {
+                    Text("Call \(callWindow)")
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(.secondary)
                 }
@@ -775,9 +775,7 @@ private struct PublishedCrewRow: View {
         }
         .padding(.vertical, 9)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(publishedCrewRole(member.role) == "Student"
-            ? "\(member.person.name), Student, \(member.area.shiftAreaLabel), call \(publishedCallWindow(member))"
-            : "\(member.person.name), Staff, \(member.area.shiftAreaLabel)")
+        .accessibilityLabel(publishedCrewAccessibilityLabel(member))
     }
 }
 
@@ -858,10 +856,24 @@ private func publishedCrewRole(_ role: String) -> String {
     return role.replacingOccurrences(of: "_", with: " ").capitalized
 }
 
-private func publishedCallWindow(_ member: PublishedCrewMember) -> String {
-    let start = member.callStartsAt.formatted(date: .omitted, time: .shortened)
-    let end = member.callEndsAt.formatted(date: .omitted, time: .shortened)
+/// Nil for an all-day event: the server sends no call window because there is
+/// no call time to state, and the row drops the line rather than inventing one.
+private func publishedCallWindow(_ member: PublishedCrewMember) -> String? {
+    guard let callStartsAt = member.callStartsAt, let callEndsAt = member.callEndsAt else { return nil }
+    let start = callStartsAt.formatted(date: .omitted, time: .shortened)
+    let end = callEndsAt.formatted(date: .omitted, time: .shortened)
     return "\(start) – \(end)"
+}
+
+private func publishedCrewAccessibilityLabel(_ member: PublishedCrewMember) -> String {
+    let role = publishedCrewRole(member.role)
+    guard role == "Student" else {
+        return "\(member.person.name), Staff, \(member.area.shiftAreaLabel)"
+    }
+    guard let callWindow = publishedCallWindow(member) else {
+        return "\(member.person.name), Student, \(member.area.shiftAreaLabel)"
+    }
+    return "\(member.person.name), Student, \(member.area.shiftAreaLabel), call \(callWindow)"
 }
 
 private func publishedAreaOrder(_ area: String) -> Int {

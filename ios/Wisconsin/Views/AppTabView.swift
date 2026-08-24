@@ -23,7 +23,7 @@ struct AppTabView: View {
     }
 
     private var showsSidebarDestinations: Bool {
-        horizontalSizeClass == .regular && !isCollaborator
+        horizontalSizeClass == .regular
     }
 
     private var isCollaborator: Bool {
@@ -63,11 +63,11 @@ struct AppTabView: View {
                     .accessibilityLabel(appState.overdueCount > 0 ? "\(gearTabLabel), \(appState.overdueCount) overdue" : gearTabLabel)
             }
 
-            if hasCapability("GEAR_CATALOG_VIEW") || hasCapability("PEOPLE_DIRECTORY_VIEW") {
-                Tab("Browse", systemImage: "square.grid.2x2", value: 2) {
-                    BrowseView()
-                }
-
+            // Browse always exists because the shared Scoreboard is available
+            // to every signed-in role, even when collaborator policy grants no
+            // directory or catalog capabilities.
+            Tab("Browse", systemImage: "square.grid.2x2", value: 2) {
+                BrowseView()
             }
 
             if hasCapability("GEAR_CATALOG_VIEW") {
@@ -78,26 +78,40 @@ struct AppTabView: View {
             }
 
             if showsSidebarDestinations {
-                TabSection("Resources") {
-                    Tab("Guides", systemImage: "book.closed", value: 6) {
-                        GuidesView()
+                TabSection("Team") {
+                    Tab("Scoreboard", systemImage: "trophy", value: 8) {
+                        TeamScoreboardView()
                     }
                     .tabPlacement(.sidebarOnly)
-                    .customizationID("resources.guides")
-
-                    Tab("Licenses", systemImage: "key", value: 7) {
-                        LicensesView()
-                    }
-                    .tabPlacement(.sidebarOnly)
-                    .customizationID("resources.licenses")
-
-                    Tab("Users", systemImage: "person.2", value: 5) {
-                        UsersView()
-                    }
-                    .tabPlacement(.sidebarOnly)
-                    .customizationID("resources.users")
+                    .customizationID("team.scoreboard")
                 }
-                .customizationID("resources")
+                .customizationID("team")
+
+                // Scoreboard is the universal exception. Existing Resources
+                // stay internal and are not exposed to collaborators by the
+                // new regular-width sidebar.
+                if !isCollaborator {
+                    TabSection("Resources") {
+                        Tab("Guides", systemImage: "book.closed", value: 6) {
+                            GuidesView()
+                        }
+                        .tabPlacement(.sidebarOnly)
+                        .customizationID("resources.guides")
+
+                        Tab("Licenses", systemImage: "key", value: 7) {
+                            LicensesView()
+                        }
+                        .tabPlacement(.sidebarOnly)
+                        .customizationID("resources.licenses")
+
+                        Tab("Users", systemImage: "person.2", value: 5) {
+                            UsersView()
+                        }
+                        .tabPlacement(.sidebarOnly)
+                        .customizationID("resources.users")
+                    }
+                    .customizationID("resources")
+                }
             }
         }
         .tabViewCustomization($tabCustomization)
@@ -300,6 +314,7 @@ private enum AppSurface {
         case 5: "users"
         case 6: "resources"
         case 7: "licenses"
+        case 8: "scoreboard"
         default: "other"
         }
     }

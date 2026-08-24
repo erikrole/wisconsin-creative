@@ -27,7 +27,6 @@ final class AppState {
     var unreadNotifCount = 0
     var openTradeCount = 0
     var pendingPushBookingId: String?
-    var pendingExtendBookingId: String?
     var pendingPushEventId: String?
     /// Set when a blast push is tapped. Routes to Home and forces a banner refresh;
     /// the blast itself is fetched from /api/me/blasts, never trusted from the payload.
@@ -74,7 +73,6 @@ final class AppState {
         openTradeCount = 0
 
         pendingPushBookingId = nil
-        pendingExtendBookingId = nil
         pendingPushEventId = nil
         pendingPushBlastId = nil
         pendingAppIntentDestination = nil

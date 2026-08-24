@@ -18,15 +18,15 @@ struct AssetRouteId: Hashable {
 @Observable
 final class ItemsViewModel {
     enum SortOption: String, CaseIterable, Identifiable {
-        case assetTag = "assetTag"
         case popular = "popular"
+        case assetTag = "assetTag"
 
         var id: String { rawValue }
 
         var label: String {
             switch self {
-            case .assetTag: "Asset tag"
             case .popular: "Most popular"
+            case .assetTag: "Asset tag"
             }
         }
     }
@@ -38,7 +38,7 @@ final class ItemsViewModel {
     var searchText = ""
     var selectedStatuses: Set<AssetComputedStatus> = []
     var favoritesOnly = false
-    var sortOption: SortOption = .assetTag
+    var sortOption: SortOption = .popular
     var hasMore = true
 
     /// How many toolbar controls are away from their resting state. Drives the
@@ -46,12 +46,12 @@ final class ItemsViewModel {
     var activeControlCount: Int {
         (favoritesOnly ? 1 : 0)
             + (selectedStatuses.isEmpty ? 0 : 1)
-            + (sortOption == .assetTag ? 0 : 1)
+            + (sortOption == .popular ? 0 : 1)
     }
 
     /// Names what the list is actually showing, in the order the toolbar reads.
-    /// Sort only appears once it is off the default, because "Asset tag" is what
-    /// an unqualified list of gear already looks like.
+    /// Sort only appears once it is off the default, because Most popular is
+    /// what an unqualified list of gear already looks like.
     var activeControlSummary: String {
         var parts: [String] = []
         if favoritesOnly { parts.append("Favorites") }
@@ -61,7 +61,7 @@ final class ItemsViewModel {
                 ? ordered.map(\.label).joined(separator: ", ")
                 : "\(ordered.count) statuses")
         }
-        if sortOption != .assetTag { parts.append(sortOption.label) }
+        if sortOption != .popular { parts.append(sortOption.label) }
         return parts.joined(separator: " · ")
     }
 
@@ -148,7 +148,7 @@ final class ItemsViewModel {
     func resetFilters() {
         selectedStatuses = []
         favoritesOnly = false
-        sortOption = .assetTag
+        sortOption = .popular
     }
 
     func resetDefaults() {
@@ -158,7 +158,7 @@ final class ItemsViewModel {
         searchText = ""
         selectedStatuses = []
         favoritesOnly = false
-        sortOption = .assetTag
+        sortOption = .popular
         rows = []
         offset = 0
         hasMore = true
@@ -929,5 +929,5 @@ struct ItemSortMenu: View {
         .accessibilityLabel("Sort items by \(selected.label)")
     }
 
-    private var isDefault: Bool { selected == .assetTag }
+    private var isDefault: Bool { selected == .popular }
 }

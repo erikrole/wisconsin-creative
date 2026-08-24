@@ -102,6 +102,17 @@ describe("iOS user directory polish", () => {
     expect(usersView).not.toContain("private static func labelFor");
   });
 
+  it("presents Admins as Staff on people-directory chips", () => {
+    const brand = source("ios/Wisconsin/Core/Brand.swift");
+    const pill = source("ios/Wisconsin/Views/Components/StatusPill.swift");
+    const usersView = source("ios/Wisconsin/Views/UsersView.swift");
+
+    expect(brand).toContain("static func publicDirectoryRole");
+    expect(brand).toContain('role == "ADMIN" ? "STAFF"');
+    expect(pill).toContain("StatusTone.publicDirectoryRole(role)");
+    expect(usersView).toContain("StatusTone.publicDirectoryRole(user.role)");
+  });
+
   it("refuses to attribute one person's shifts to another", () => {
     const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
     const route = source("src/app/api/my-shifts/route.ts");
@@ -284,6 +295,7 @@ describe("iOS API contracts — asset lookup item families", () => {
     expect(apiClient).toContain("if includeAccessories { items.append(.init(name: \"include_accessories\", value: \"true\")) }");
     expect(itemsView).toContain("var rows: [ItemListRow] = []");
     expect(itemsView).toContain("case popular = \"popular\"");
+    expect(itemsView).toContain("var sortOption: SortOption = .popular");
     expect(itemsView).toContain("sort: sortOption.rawValue");
     expect(itemsView).not.toContain("includeAccessories: true");
     expect(itemsView).toContain("let resultRows = result.orderedRows");

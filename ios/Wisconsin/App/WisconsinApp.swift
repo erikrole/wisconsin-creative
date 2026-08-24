@@ -55,15 +55,14 @@ struct WisconsinApp: App {
                     }
                 }
                 .onOpenURL { url in
+                    // A booking link routes to booking detail and nothing else.
+                    // Extend is a deliberate action taken on that page, never
+                    // something a tapped link opens on the user's behalf, so no
+                    // query parameter here may reach a mutation sheet.
                     if url.scheme == "wisconsin", url.host == "booking" {
                         let bookingId = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
                         guard !bookingId.isEmpty else { return }
                         appState.pendingPushBookingId = bookingId
-                        if URLComponents(url: url, resolvingAgainstBaseURL: false)?
-                            .queryItems?
-                            .contains(where: { $0.name == "action" && $0.value == "extend" }) == true {
-                            appState.pendingExtendBookingId = bookingId
-                        }
                     }
                 }
                 .tint(.brandPrimary)

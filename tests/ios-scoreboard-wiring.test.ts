@@ -6,11 +6,46 @@ function source(path: string): string {
 }
 
 describe("native Scoreboard wiring", () => {
+  it("loads the universal aggregate route without a People capability gate", () => {
+    const client = source("ios/Wisconsin/Core/APIClient.swift");
+    const appTabs = source("ios/Wisconsin/Views/AppTabView.swift");
+    const browse = source("ios/Wisconsin/Views/BrowseView.swift");
+    const teamView = source("ios/Wisconsin/Views/TeamScoreboardView.swift");
+
+    expect(client).toContain('request(path: "/api/scoreboard", queryItems: items)');
+    expect(client).toContain('.init(name: "sportCode", value: sportCode)');
+    expect(client).toContain('.init(name: "venue", value: venue)');
+    expect(client).toContain('.init(name: "opponent", value: opponent)');
+    expect(client).toContain('.init(name: "site", value: site)');
+    expect(appTabs).toContain('TabSection("Team")');
+    expect(appTabs).toContain('Tab("Scoreboard", systemImage: "trophy", value: 8)');
+    expect(appTabs).toContain("TeamScoreboardView()");
+    expect(appTabs).toContain("horizontalSizeClass == .regular");
+    expect(appTabs).toContain("if !isCollaborator {");
+    expect(browse).toContain("return [.scoreboard]");
+    expect(browse).toContain("TeamScoreboardView(wrapsInNavigationStack: false)");
+    expect(teamView).toContain("ScoreboardView(userId: row.person.userId)");
+    expect(teamView).toContain("Picker(\"Venue\", selection: $filters.venue)");
+    expect(teamView).toContain("Picker(\"Opponent\", selection: $filters.opponent)");
+    expect(teamView).toContain("Picker(\"Site\", selection: $filters.site)");
+    expect(teamView).toContain("Selections stack. Every total, breakdown, and leaderboard row uses the same combination.");
+    expect(teamView).toContain('Text("Snapshot")');
+    expect(teamView).toContain("All events, one shared Scoreboard");
+    expect(teamView).toContain('LabeledContent("Most events")');
+    expect(teamView).toContain("breakdownSection(\"At venues\"");
+    expect(teamView).toContain("breakdownSection(\"Against teams\"");
+    expect(teamView).toContain(".task(id: filters)");
+    expect(teamView).not.toMatch(/UserDetailView\(/);
+    expect(teamView).not.toContain("AppUser");
+  });
+
   it("uses the authenticated profile Scoreboard route with server-owned filters", () => {
     const client = source("ios/Wisconsin/Core/APIClient.swift");
 
     expect(client).toContain('path: "/api/users/\\(userId)/scoreboard"');
-    expect(client).toContain('.init(name: "season", value: season)');
+    expect(client).toContain("season: String? = nil");
+    expect(client).toContain("if let season, !season.isEmpty");
+    expect(client).not.toContain('season: String = "2026-27"');
     expect(client).toContain('.init(name: "sportCode", value: sportCode)');
     expect(client).toContain('.init(name: "result", value: result)');
     expect(client).toContain('.init(name: "offset", value: "\\(offset)")');
@@ -87,7 +122,8 @@ describe("native Scoreboard wiring", () => {
   });
 
   it("does not add custody actions to the Scoreboard screen", () => {
-    const view = source("ios/Wisconsin/Views/ScoreboardView.swift");
+    const view = source("ios/Wisconsin/Views/ScoreboardView.swift")
+      + source("ios/Wisconsin/Views/TeamScoreboardView.swift");
 
     expect(view).not.toContain("createReservation");
     expect(view).not.toContain("checkout");

@@ -135,7 +135,6 @@ describe("iOS system hardening contracts", () => {
     }
     for (const pending of [
       "pendingPushBookingId",
-      "pendingExtendBookingId",
       "pendingPushEventId",
       "pendingPushBlastId",
       "pendingAppIntentDestination",

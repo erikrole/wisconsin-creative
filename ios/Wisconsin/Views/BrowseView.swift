@@ -14,10 +14,10 @@ struct BrowseView: View {
         guard session.currentUser?.role == "COLLABORATOR" else {
             // Reports are staff analytics; the endpoints 403 anyone else, so the
             // row is hidden rather than offered and refused.
-            return [.items, .guides, .licenses, .users] + (isStaffOrAdmin ? [.reports] : [])
+            return [.scoreboard, .items, .guides, .licenses, .users] + (isStaffOrAdmin ? [.reports] : [])
         }
         let capabilities = Set(session.currentUser?.capabilities ?? [])
-        return [
+        return [.scoreboard] + [
             capabilities.contains("GEAR_CATALOG_VIEW") ? .items : nil,
             capabilities.contains("PEOPLE_DIRECTORY_VIEW") ? .users : nil,
         ].compactMap { $0 }
@@ -56,6 +56,8 @@ struct BrowseView: View {
     @ViewBuilder
     private func destinationView(for destination: BrowseDestination) -> some View {
         switch destination {
+        case .scoreboard:
+            TeamScoreboardView(wrapsInNavigationStack: false)
         case .items:
             ItemsView(wrapsInNavigationStack: false)
         case .guides:
@@ -71,6 +73,7 @@ struct BrowseView: View {
 }
 
 private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
+    case scoreboard
     case items
     case guides
     case licenses
@@ -81,6 +84,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
 
     var title: String {
         switch self {
+        case .scoreboard: "Scoreboard"
         case .items: "Items"
         case .guides: "Guides"
         case .licenses: "Licenses"
@@ -91,6 +95,8 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
 
     var subtitle: String {
         switch self {
+        case .scoreboard:
+            "Team totals, sport breakdowns, and per-person leaderboards."
         case .items:
             "Find gear, item families, status, and availability."
         case .guides:
@@ -106,6 +112,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
 
     var systemImage: String {
         switch self {
+        case .scoreboard: "trophy"
         case .items: "archivebox"
         case .guides: "book.closed"
         case .licenses: "key"
@@ -116,6 +123,7 @@ private enum BrowseDestination: String, CaseIterable, Hashable, Identifiable {
 
     var tint: Color {
         switch self {
+        case .scoreboard: Color.statusText(.orange)
         case .items: Color.statusText(.blue)
         case .guides: Color.statusText(.purple)
         case .licenses: Color.statusText(.orange)
