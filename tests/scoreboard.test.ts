@@ -46,10 +46,28 @@ describe("scoreboardEventWhere", () => {
       { rawSummary: { contains: "alumni match", mode: "insensitive" } },
     ]);
     expect(where.sportCode).toBe("SB");
-    expect(where.shiftGroup?.shifts?.some?.assignments?.some).toEqual({
-      userId: "user-1",
-      status: { in: ["DIRECT_ASSIGNED", "APPROVED"] },
-    });
+    expect(where.OR).toEqual([
+      {
+        shiftGroup: {
+          shifts: {
+            some: {
+              assignments: {
+                some: { userId: "user-1", status: { in: ["DIRECT_ASSIGNED", "APPROVED"] } },
+              },
+            },
+          },
+        },
+      },
+      { credits: { some: { userId: "user-1" } } },
+    ]);
+  });
+
+  it("counts an admin-recorded credit the same way it counts an assignment", () => {
+    const where = scoreboardEventWhere("user-1");
+    const [assigned, credited] = where.OR ?? [];
+
+    expect(assigned).toHaveProperty("shiftGroup");
+    expect(credited).toEqual({ credits: { some: { userId: "user-1" } } });
   });
 });
 
@@ -92,7 +110,14 @@ describe("getScoreboardForUser", () => {
         opponent: "Minnesota",
         site: "HOME",
         rawLocationText: "Madison, Wis., UW Field House",
-        shiftGroup: { shifts: [{ area: "VIDEO" }, { area: "VIDEO" }, { area: "PHOTO" }] },
+        shiftGroup: {
+          shifts: [
+            { area: "LIVE_PRODUCTION" },
+            { area: "PHOTO" },
+            { area: "VIDEO" },
+            { area: "PHOTO" },
+          ],
+        },
       },
       {
         id: "event-2",
@@ -124,7 +149,7 @@ describe("getScoreboardForUser", () => {
       id: "event-1",
       result: "WIN",
       sportLabel: "Softball",
-      shiftAreas: ["VIDEO", "PHOTO"],
+      shiftAreas: ["VIDEO", "PHOTO", "LIVE_PRODUCTION"],
       venue: "UW Field House",
     });
     expect(eventSelect).not.toHaveProperty("location");

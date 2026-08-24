@@ -35,6 +35,9 @@ const { mockTx } = vi.hoisted(() => ({
       count: vi.fn(),
       findMany: vi.fn(),
     },
+    eventCredit: {
+      findMany: vi.fn(),
+    },
   },
 }));
 
@@ -66,7 +69,136 @@ beforeEach(() => {
   mockTx.booking.count.mockResolvedValue(0);
   mockTx.badgeDefinition.findMany.mockResolvedValue([]);
   mockTx.shiftAssignment.findMany.mockResolvedValue([]);
+  mockTx.eventCredit.findMany.mockResolvedValue([]);
   mockTx.shiftTrade.findMany.mockResolvedValue([]);
+});
+
+describe("badge evaluator credit-triggered silence", () => {
+  function assignment(eventId: string) {
+    return {
+      hasConflict: false,
+      callStartsAt: null,
+      callEndsAt: null,
+      shift: {
+        startsAt: new Date("2026-08-10T18:00:00.000Z"),
+        endsAt: new Date("2026-08-10T22:00:00.000Z"),
+        callStartsAt: null,
+        callEndsAt: null,
+        area: "VIDEO",
+        shiftGroup: { event: { id: eventId, isHome: true, sportCode: "MBB" } },
+      },
+    };
+  }
+
+  function credit(eventId: string) {
+    return {
+      event: {
+        id: eventId,
+        startsAt: new Date("2026-09-10T18:00:00.000Z"),
+        endsAt: new Date("2026-09-10T22:00:00.000Z"),
+        allDay: false,
+        isHome: true,
+        sportCode: "MBB",
+        result: null,
+        site: "HOME",
+        locationId: null,
+        opponent: null,
+      },
+    };
+  }
+
+  beforeEach(() => {
+    // Report every requested row as freshly inserted, so the notification step
+    // is reached rather than short-circuiting on "nothing was written".
+    mockTx.studentBadge.createManyAndReturn.mockImplementation(async ({ data }: {
+      data: Array<{ definitionId: string }>;
+    }) => data.map((row) => ({ id: `award-${row.definitionId}`, definitionId: row.definitionId })));
+  });
+
+  function notifiedBadgeNames() {
+    return mockTx.notification.createMany.mock.calls.flatMap(
+      (call: unknown[]) => (call[0] as { data: Array<{ body: string }> }).data.map((row) => row.body),
+    );
+  }
+
+  it("stays silent for a badge only a credit pushed the person over", async () => {
+    mockTx.shiftAssignment.findMany.mockResolvedValue([assignment("event-1"), assignment("event-2"), assignment("event-3")]);
+    mockTx.eventCredit.findMany.mockResolvedValue(
+      Array.from({ length: 7 }, (_unused, index) => credit(`credit-event-${index}`)),
+    );
+    mockTx.badgeDefinition.findMany.mockImplementation(async ({ where }: { where: { category?: string } }) => (
+      where.category === "SHIFT"
+        ? [
+            { id: "shift-3", name: "Shift 3", threshold: 3 },
+            { id: "shift-10", name: "Shift 10", threshold: 10 },
+          ]
+        : []
+    ));
+
+    await onShiftsWorked({ userId: "user-1" });
+
+    // Both are earned: three assignments plus seven credits is ten worked events.
+    const awarded = mockTx.studentBadge.createManyAndReturn.mock.calls
+      .flatMap((call: unknown[]) => (call[0] as { data: Array<{ definitionId: string }> }).data.map((row) => row.definitionId));
+    expect(awarded.sort()).toEqual(["shift-10", "shift-3"]);
+
+    // Only the one the schedule alone already earned is announced.
+    const notified = notifiedBadgeNames();
+    expect(notified).toHaveLength(1);
+    expect(notified[0]).toContain("Shift 3");
+  });
+
+  it("notifies normally when the person has no credits at all", async () => {
+    mockTx.shiftAssignment.findMany.mockResolvedValue([assignment("event-1"), assignment("event-2"), assignment("event-3")]);
+    mockTx.eventCredit.findMany.mockResolvedValue([]);
+    mockTx.badgeDefinition.findMany.mockImplementation(async ({ where }: { where: { category?: string } }) => (
+      where.category === "SHIFT" ? [{ id: "shift-3", name: "Shift 3", threshold: 3 }] : []
+    ));
+
+    await onShiftsWorked({ userId: "user-1" });
+
+    expect(notifiedBadgeNames()).toEqual([expect.stringContaining("Shift 3")]);
+  });
+
+  it("stays silent for a measured rule a credit alone satisfied", async () => {
+    // Two away events, both recorded as credits: the away ladder is met, but
+    // nothing on the schedule says so.
+    mockTx.shiftAssignment.findMany.mockResolvedValue([]);
+    mockTx.eventCredit.findMany.mockResolvedValue([
+      { ...credit("away-1"), event: { ...credit("away-1").event, site: "AWAY", isHome: false } },
+      { ...credit("away-2"), event: { ...credit("away-2").event, site: "AWAY", isHome: false } },
+    ]);
+    mockTx.badgeDefinition.findMany.mockImplementation(async ({ where }: { where: { category?: string } }) => (
+      where.category === "MILESTONE"
+        ? [{ id: "away-2", name: "Road Warrior", ruleKey: "shift_away_completed", threshold: 2 }]
+        : []
+    ));
+
+    await onShiftsWorked({ userId: "user-1" });
+
+    const awarded = mockTx.studentBadge.createManyAndReturn.mock.calls
+      .flatMap((call: unknown[]) => (call[0] as { data: Array<{ definitionId: string }> }).data.map((row) => row.definitionId));
+    expect(awarded).toEqual(["away-2"]);
+    expect(notifiedBadgeNames()).toEqual([]);
+  });
+
+  it("keeps the silence durable rather than deferring it to the next pass", async () => {
+    // The award row exists after the silent grant, so the nightly re-run
+    // inserts nothing and therefore cannot notify late.
+    mockTx.shiftAssignment.findMany.mockResolvedValue([]);
+    mockTx.eventCredit.findMany.mockResolvedValue([credit("credit-event-1")]);
+    mockTx.badgeDefinition.findMany.mockImplementation(async ({ where }: { where: { category?: string } }) => (
+      where.category === "SHIFT" ? [{ id: "first-shift", name: "First Shift", threshold: 1 }] : []
+    ));
+
+    await onShiftsWorked({ userId: "user-1" });
+    expect(notifiedBadgeNames()).toEqual([]);
+
+    // Second pass: the row already exists, so nothing is returned as inserted.
+    mockTx.studentBadge.createManyAndReturn.mockResolvedValue([]);
+    await onShiftsWorked({ userId: "user-1" });
+    expect(notifiedBadgeNames()).toEqual([]);
+  });
 });
 
 describe("badge evaluator shift work", () => {

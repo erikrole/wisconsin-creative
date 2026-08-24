@@ -16,6 +16,7 @@ import {
   shiftAutomaticRuleCounts,
   tradeAutomaticRuleCounts,
 } from "./automatic-rules";
+import { loadWorkedShiftEvidence } from "./worked-evidence";
 
 type CustomBadgeDefinitionInput = {
   name: string;
@@ -320,37 +321,7 @@ async function getProgressByBadgeKey(userId: string, definitions: BadgeDefinitio
     // leaves the timestamps needed to date a repaired award.
     Promise.resolve(0),
     needsShifts
-      ? db.shiftAssignment.findMany({
-          where: {
-            userId,
-            status: { in: ["DIRECT_ASSIGNED", "APPROVED"] },
-            shift: { shiftGroup: { event: { endsAt: { lt: new Date() }, status: "CONFIRMED" } } },
-          },
-          select: {
-            hasConflict: true,
-            callStartsAt: true,
-            callEndsAt: true,
-            shift: {
-              select: {
-                startsAt: true,
-                endsAt: true,
-                callStartsAt: true,
-                callEndsAt: true,
-                area: true,
-                shiftGroup: { select: { event: {
-                  select: {
-                    isHome: true,
-                    sportCode: true,
-                    result: true,
-                    site: true,
-                    locationId: true,
-                    opponent: true,
-                  },
-                } } },
-              },
-            },
-          },
-        })
+      ? loadWorkedShiftEvidence(db, userId)
       : Promise.resolve([]),
   ]);
 

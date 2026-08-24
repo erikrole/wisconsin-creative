@@ -296,10 +296,12 @@ describe("shift breadth catalog", () => {
 describe("shift breadth evidence selects", () => {
   const evaluator = source("src/lib/badges/evaluator.ts");
   const queries = source("src/lib/badges/queries.ts");
+  const workedEvidence = source("src/lib/badges/worked-evidence.ts");
 
-  it("selects the same new columns for awards and for profile progress", () => {
-    // Two hand-written selects feed one derivation. If they drift, a badge
-    // awards but shows no progress, or shows progress it can never complete.
+  it("selects every derived column once, in the shared reader", () => {
+    // One select feeds one derivation. Two hand-written copies used to feed it,
+    // and if they drifted a badge awarded but showed no progress, or showed
+    // progress it could never complete.
     for (const field of [
       "hasConflict: true",
       "callEndsAt: true",
@@ -311,8 +313,15 @@ describe("shift breadth evidence selects", () => {
       "locationId: true",
       "opponent: true",
     ]) {
-      expect(evaluator).toContain(field);
-      expect(queries).toContain(field);
+      expect(workedEvidence).toContain(field);
+    }
+  });
+
+  it("reads awards and profile progress through that one reader", () => {
+    for (const consumer of [evaluator, queries]) {
+      expect(consumer).toContain("loadWorkedShiftEvidence");
+      // No local re-query: drift is impossible if there is nothing to drift from.
+      expect(consumer).not.toContain("shiftAssignment.findMany");
     }
   });
 });

@@ -144,6 +144,12 @@ export type ShiftBadgeEvidence = {
   callStartsAt: Date | null;
   callEndsAt: Date | null;
   hasConflict?: boolean;
+  /**
+   * Whether the row's clock times describe a real work window. False for
+   * evidence derived from an all-day event, whose midnight boundaries are a
+   * date rather than hours worked. Defaults to true.
+   */
+  hoursKnown?: boolean;
   shift: {
     startsAt: Date;
     endsAt: Date;
@@ -152,6 +158,8 @@ export type ShiftBadgeEvidence = {
     area: string;
     shiftGroup: {
       event: {
+        /** Identity, carried so evidence can be deduplicated by event. No rule reads it. */
+        id?: string;
         isHome: boolean | null;
         sportCode: string | null;
         result?: string | null;
@@ -474,11 +482,12 @@ export function shiftAutomaticRuleCounts(assignments: ShiftBadgeEvidence[], time
     const opponent = event.opponent?.trim().toLowerCase();
     if (opponent) opponentCounts.set(opponent, (opponentCounts.get(opponent) ?? 0) + 1);
 
+    const hoursKnown = assignment.hoursKnown !== false;
     const effectiveStart = assignment.callStartsAt
       ?? assignment.shift.callStartsAt
       ?? assignment.shift.startsAt;
     const start = localParts(effectiveStart, timeZone);
-    if (start.hour >= 0 && start.hour < 7) increment(counts, "shift_before_7");
+    if (hoursKnown && start.hour >= 0 && start.hour < 7) increment(counts, "shift_before_7");
 
     const sportCode = assignment.shift.shiftGroup.event.sportCode?.trim();
     const normalizedSport = sportCode?.toLowerCase() ?? "";
@@ -498,12 +507,12 @@ export function shiftAutomaticRuleCounts(assignments: ShiftBadgeEvidence[], time
     const effectiveEnd = assignment.callEndsAt
       ?? assignment.shift.callEndsAt
       ?? assignment.shift.endsAt;
-    if (effectiveEnd) {
+    if (hoursKnown && effectiveEnd) {
       const end = localParts(effectiveEnd, timeZone);
       if (end.hour >= 22 || end.date > start.date) increment(counts, "shift_after_22");
       if (end.hour >= 22 || end.date > start.date) lateFinishes += 1;
     }
-    if (start.hour >= 0 && start.hour < 7) earlyStarts += 1;
+    if (hoursKnown && start.hour >= 0 && start.hour < 7) earlyStarts += 1;
   }
 
   counts.set("shift_sports", sportCodes.size);

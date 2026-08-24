@@ -16,6 +16,7 @@ import {
   shiftAutomaticRuleCounts,
   tradeAutomaticRuleCounts,
 } from "./automatic-rules";
+import { loadWorkedShiftEvidence } from "./worked-evidence";
 import {
   ON_TIME_GRACE_MS,
   type AppOpenedBadgeEvent,
@@ -65,6 +66,13 @@ async function runBadgeTransaction<T>(fn: (tx: TxClient) => Promise<T>): Promise
 async function grantBadges(tx: TxClient, args: {
   userId: string;
   definitions: Array<{ id: string; name: string }>;
+  /**
+   * Whether earning this badge is worth telling the person about. False only
+   * for a badge an admin-recorded Scoreboard credit pushed them over: the
+   * credit is deliberately silent (D-057), and a "badge earned" ping is the one
+   * way it could announce itself. The award itself is written either way.
+   */
+  notify?: boolean;
 }) {
   if (args.definitions.length === 0) return;
 
@@ -78,6 +86,7 @@ async function grantBadges(tx: TxClient, args: {
   });
 
   if (created.length === 0) return;
+  if (args.notify === false) return;
 
   // Only read prefs once something was actually earned.
   const target = await tx.user.findUnique({
@@ -116,6 +125,13 @@ async function awardThresholdBadges(tx: TxClient, args: {
   trigger: string;
   count: number;
   ruleKey?: string;
+  /**
+   * The count reached without admin-recorded credits. Badges at or below it were
+   * earned on the schedule's own record and notify; anything above it exists
+   * only because of a credit and is granted silently. Defaults to `count`, so a
+   * caller with no credits behaves exactly as before.
+   */
+  notifiableCount?: number;
 }) {
   const definitions = await tx.badgeDefinition.findMany({
     where: {
@@ -125,10 +141,19 @@ async function awardThresholdBadges(tx: TxClient, args: {
       threshold: { not: null, lte: args.count },
       ...(args.ruleKey ? { ruleKey: args.ruleKey } : {}),
     },
-    select: { id: true, name: true },
+    select: { id: true, name: true, threshold: true },
   });
 
-  await grantBadges(tx, { userId: args.userId, definitions });
+  const notifiable = args.notifiableCount ?? args.count;
+  await grantBadges(tx, {
+    userId: args.userId,
+    definitions: definitions.filter((definition) => (definition.threshold ?? 0) <= notifiable),
+  });
+  await grantBadges(tx, {
+    userId: args.userId,
+    definitions: definitions.filter((definition) => (definition.threshold ?? 0) > notifiable),
+    notify: false,
+  });
 }
 
 async function awardRuleBadges(tx: TxClient, args: {
@@ -152,6 +177,8 @@ async function awardMeasuredRuleBadges(tx: TxClient, args: {
   userId: string;
   trigger: string;
   counts: Map<string, number>;
+  /** Per-rule counts without admin-recorded credits. See `notifiableCount`. */
+  notifiableCounts?: Map<string, number>;
 }) {
   const ruleKeys = [...args.counts.keys()];
   if (ruleKeys.length === 0) return;
@@ -172,7 +199,23 @@ async function awardMeasuredRuleBadges(tx: TxClient, args: {
     && (args.counts.get(definition.ruleKey) ?? 0) >= definition.threshold
   ));
 
-  await grantBadges(tx, { userId: args.userId, definitions: earnedDefinitions });
+  const earnedWithoutCredits = args.notifiableCounts
+    ? new Set(earnedDefinitions.filter((definition) => (
+      definition.ruleKey !== null
+      && definition.threshold !== null
+      && (args.notifiableCounts!.get(definition.ruleKey) ?? 0) >= definition.threshold
+    )))
+    : new Set(earnedDefinitions);
+
+  await grantBadges(tx, {
+    userId: args.userId,
+    definitions: earnedDefinitions.filter((definition) => earnedWithoutCredits.has(definition)),
+  });
+  await grantBadges(tx, {
+    userId: args.userId,
+    definitions: earnedDefinitions.filter((definition) => !earnedWithoutCredits.has(definition)),
+    notify: false,
+  });
 }
 
 async function claimEventReceipt(tx: TxClient, args: {
@@ -560,8 +603,8 @@ export async function onAppOpened(event: AppOpenedBadgeEvent): Promise<void> {
 }
 
 /**
- * Recognition for shift work, counted from assignments to events that have
- * already happened.
+ * Recognition for shift work, counted from assignments -- and admin-recorded
+ * Scoreboard credits (D-057) -- on events that have already happened.
  *
  * These badges were retired in 2026-05 because attendance is not tracked, and
  * that reasoning conflated two things: nobody records whether a person showed
@@ -573,6 +616,17 @@ export async function onAppOpened(event: AppOpenedBadgeEvent): Promise<void> {
  * this safe to re-run nightly: `awardThresholdBadges` writes with
  * `skipDuplicates`, so a second pass over the same shifts changes nothing.
  *
+ * A credit counts as one worked event and never stacks with an assignment on
+ * the same event; `loadWorkedShiftEvidence` owns that deduplication so the
+ * progress bar on a profile and the award written here cannot disagree.
+ *
+ * A badge the person had already earned on their own assignments notifies as
+ * usual. One that only a credit pushed them over is granted silently, because a
+ * credit is not supposed to announce itself and "badge earned" is the only
+ * message it could otherwise produce. Silence is durable rather than deferred:
+ * the award row exists after the silent grant, so no later pass re-inserts it
+ * and none can notify late.
+ *
  * Archived events still count. `morning-refresh` stamps `archivedAt` on events
  * older than four months purely as list hygiene -- "nothing is deleted" -- so
  * excluding them would make a person's worked-shift total fall over time and
@@ -580,55 +634,26 @@ export async function onAppOpened(event: AppOpenedBadgeEvent): Promise<void> {
  */
 export async function onShiftsWorked(event: ShiftsWorkedBadgeEvent): Promise<void> {
   await runBadgeTransaction(async (tx) => {
-    const workedAssignments = await tx.shiftAssignment.findMany({
-      where: {
-        userId: event.userId,
-        status: { in: ["DIRECT_ASSIGNED", "APPROVED"] },
-        shift: {
-          shiftGroup: {
-            event: {
-              endsAt: { lt: new Date() },
-              status: "CONFIRMED",
-            },
-          },
-        },
-      },
-      select: {
-        hasConflict: true,
-        callStartsAt: true,
-        callEndsAt: true,
-        shift: {
-          select: {
-            startsAt: true,
-            endsAt: true,
-            callStartsAt: true,
-            callEndsAt: true,
-            area: true,
-            shiftGroup: { select: { event: {
-              select: {
-                isHome: true,
-                sportCode: true,
-                result: true,
-                site: true,
-                locationId: true,
-                opponent: true,
-              },
-            } } },
-          },
-        },
-      },
-    });
+    const worked = await loadWorkedShiftEvidence(tx, event.userId);
+    const scheduled = worked.filter((evidence) => evidence.source === "ASSIGNMENT");
+    // Recomputing the schedule-only totals is only worth it when a credit is
+    // actually in play; without one the two answers are the same object.
+    const hasCredits = scheduled.length !== worked.length;
 
     await awardThresholdBadges(tx, {
       userId: event.userId,
       category: BadgeCategory.SHIFT,
       trigger: "shift:completed",
-      count: workedAssignments.length,
+      count: worked.length,
+      notifiableCount: hasCredits ? scheduled.length : undefined,
     });
     await awardMeasuredRuleBadges(tx, {
       userId: event.userId,
       trigger: "shift:completed",
-      counts: shiftAutomaticRuleCounts(workedAssignments, env.appTimezone),
+      counts: shiftAutomaticRuleCounts(worked, env.appTimezone),
+      notifiableCounts: hasCredits
+        ? shiftAutomaticRuleCounts(scheduled, env.appTimezone)
+        : undefined,
     });
   });
 }

@@ -39,10 +39,12 @@ describe("workedEventWhere", () => {
     expect(where.archivedAt).toBeUndefined();
     expect(where.result).toBeUndefined();
     expect(where.NOT).toBeUndefined();
-    expect(where.shiftGroup?.shifts?.some?.assignments?.some).toEqual({
+    expect(where.OR?.[0]?.shiftGroup?.shifts?.some?.assignments?.some).toEqual({
       userId: "user-1",
       status: { in: ["DIRECT_ASSIGNED", "APPROVED"] },
     });
+    // An admin-recorded Scoreboard credit counts as worked without a shift.
+    expect(where.OR?.[1]).toEqual({ credits: { some: { userId: "user-1" } } });
   });
 });
 
@@ -55,7 +57,8 @@ describe("getWorkedEventCountForUser", () => {
     const args = mockedDb.calendarEvent.count.mock.calls[0]![0];
     expect(args.where.startsAt).toEqual({ gte: GAME_RECORD_START_DATE, lt: GAME_RECORD_END_DATE });
     expect(args.where.endsAt).toEqual({ lt: expect.any(Date) });
-    expect(args.where.shiftGroup.shifts.some.assignments.some.userId).toBe("user-1");
+    expect(args.where.OR[0].shiftGroup.shifts.some.assignments.some.userId).toBe("user-1");
+    expect(args.where.OR[1]).toEqual({ credits: { some: { userId: "user-1" } } });
   });
 });
 
@@ -85,12 +88,13 @@ describe("gameRecordEventWhere", () => {
     ]);
   });
 
-  it("credits the user through an active shift assignment only", () => {
+  it("credits the user through an active shift assignment or an admin credit", () => {
     const where = gameRecordEventWhere("user-1");
-    const assignment = where.shiftGroup?.shifts?.some?.assignments?.some;
+    const assignment = where.OR?.[0]?.shiftGroup?.shifts?.some?.assignments?.some;
     expect(assignment?.userId).toBe("user-1");
     // Declined and swapped-away assignments are not assignments.
     expect(assignment?.status).toEqual({ in: ["DIRECT_ASSIGNED", "APPROVED"] });
+    expect(where.OR?.[1]).toEqual({ credits: { some: { userId: "user-1" } } });
   });
 });
 
@@ -140,7 +144,7 @@ describe("getGameRecordForUser", () => {
     mockedDb.calendarEvent.groupBy.mockResolvedValue([]);
     await getGameRecordForUser("user-2");
     const args = mockedDb.calendarEvent.groupBy.mock.calls[0]![0];
-    expect(args.where.shiftGroup.shifts.some.assignments.some.userId).toBe("user-2");
+    expect(args.where.OR[0].shiftGroup.shifts.some.assignments.some.userId).toBe("user-2");
   });
 });
 

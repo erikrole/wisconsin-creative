@@ -26,6 +26,9 @@ vi.mock("@/lib/db", () => ({
       count: vi.fn(),
       findMany: vi.fn(),
     },
+    eventCredit: {
+      findMany: vi.fn(),
+    },
     studentBadge: {
       createMany: vi.fn(),
       groupBy: vi.fn(),
@@ -94,6 +97,7 @@ beforeEach(() => {
   vi.mocked(db.badgeEventReceipt.findMany).mockResolvedValue([]);
   vi.mocked(db.shiftAssignment.count).mockResolvedValue(0);
   vi.mocked(db.shiftAssignment.findMany).mockResolvedValue([]);
+  vi.mocked(db.eventCredit.findMany).mockResolvedValue([]);
   vi.mocked(db.studentBadge.createMany).mockResolvedValue({ count: 0 });
   // Rarity is served from real holder counts now, so the profile query reads
   // award totals and the eligible population alongside the definitions.
@@ -429,7 +433,7 @@ describe("GET /api/badges/user/[userId]", () => {
         endsAt: new Date("2026-08-10T18:00:00.000Z"),
         callStartsAt: null,
         callEndsAt: null,
-        shiftGroup: { event: { isHome: true } },
+        shiftGroup: { event: { id: "event-1", isHome: true } },
       },
     }] as never);
     vi.mocked(db.studentBadge.createMany).mockResolvedValue({ count: 1 });

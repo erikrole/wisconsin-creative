@@ -61,7 +61,7 @@ describe("badge catalog rebalance", () => {
     expect(revive).not.toContain("streak_shifts_5'");
 
     // Deriving from the database is what makes the nightly re-run a no-op.
-    expect(evaluator).toContain("tx.shiftAssignment.findMany");
+    expect(evaluator).toContain("loadWorkedShiftEvidence(tx");
     // Archived events still count, or a worked-shift total would fall over time
     // and strand someone below a threshold they had already passed.
     const shiftFn = evaluator.slice(evaluator.indexOf("export async function onShiftsWorked"));

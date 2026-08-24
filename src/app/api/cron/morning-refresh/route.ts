@@ -12,6 +12,7 @@ import { getScheduleAutomationDigest } from "@/lib/services/schedule-automation"
 import { refreshCompanionProjection } from "@/lib/services/companion-projection";
 import { cleanupPendingSignatureArtifacts } from "@/lib/services/signatures";
 import { badges, badgesEnabled } from "@/lib/badges";
+import { usersWithRecentlyWorkedEvents } from "@/lib/badges/worked-evidence";
 
 function maintenanceValue<T>(
   result: PromiseSettledResult<T>,
@@ -132,30 +133,19 @@ export const GET = withCron(async () => {
 
   // ── 2b. Recognise shift work that just finished ──────────────────────
   // Nothing calls the server when a game ends, so this is the one badge family
-  // without a request to hang itself on. It is bounded to people whose shift
-  // ended in the last couple of days -- the nightly cadence plus slack -- and
+  // without a request to hang itself on. It is bounded to people whose shift or
+  // admin-recorded Scoreboard credit ended in the last couple of days -- the nightly cadence plus slack -- and
   // each evaluation recounts that person's full history, so a first qualifying
   // shift awards every threshold they had already passed.
   let shiftBadgeUsers = 0;
   if (badgesEnabled()) {
     try {
-      const recentlyEnded = await db.shiftAssignment.findMany({
-        where: {
-          status: { in: ["DIRECT_ASSIGNED", "APPROVED"] },
-          shift: {
-            shiftGroup: {
-              event: {
-                status: "CONFIRMED",
-                endsAt: { lt: now, gte: new Date(now.getTime() - SHIFT_BADGE_LOOKBACK_MS) },
-              },
-            },
-          },
-        },
-        select: { userId: true },
-        distinct: ["userId"],
-      });
+      const recentlyEnded = await usersWithRecentlyWorkedEvents(
+        new Date(now.getTime() - SHIFT_BADGE_LOOKBACK_MS),
+        now,
+      );
 
-      for (const { userId } of recentlyEnded) {
+      for (const userId of recentlyEnded) {
         await badges.onShiftsWorked({ userId });
       }
       shiftBadgeUsers = recentlyEnded.length;

@@ -203,7 +203,7 @@ describe("50-badge catalog expansion", () => {
     expect(evaluator).toContain('ruleKey: "local_leap_day"');
   });
 
-  it("uses the same checkout, return, and schedule evidence for awards and progress", () => {
+  it("uses the same checkout and return evidence for awards and progress", () => {
     for (const field of [
       "eventId: true",
       "sourceReservationId: true",
@@ -212,15 +212,21 @@ describe("50-badge catalog expansion", () => {
       "postedByUserId: true",
       "checkinReports: { select: { id: true, type: true } }",
       "dueDateChanges: { select: { id: true }, take: 1 }",
-      "hasConflict: true",
-      "result: true",
-      "site: true",
-      "locationId: true",
-      "opponent: true",
     ]) {
       expect(evaluator).toContain(field);
       expect(queries).toContain(field);
     }
+  });
+
+  it("uses one shared reader for schedule evidence on both paths", () => {
+    // Schedule evidence now includes admin-recorded Scoreboard credits, so its
+    // select lives once rather than being mirrored in two files.
+    const workedEvidence = source("src/lib/badges/worked-evidence.ts");
+    for (const field of ["hasConflict: true", "result: true", "site: true", "locationId: true", "opponent: true"]) {
+      expect(workedEvidence).toContain(field);
+    }
+    expect(evaluator).toContain("loadWorkedShiftEvidence");
+    expect(queries).toContain("loadWorkedShiftEvidence");
   });
 
   it("keeps problem outcomes and time surprises hidden on web and iOS", () => {

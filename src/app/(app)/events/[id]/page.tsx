@@ -33,6 +33,7 @@ import { formatRelativeTime } from "@/lib/format";
 import { EventSkeleton } from "./_components/EventSkeleton";
 import { ShiftCoverageCard } from "./_components/ShiftCoverageCard";
 import { EventTravelCard } from "./_components/EventTravelCard";
+import { EventCreditsCard } from "./_components/EventCreditsCard";
 import { effectiveCallWindow, summarizeEffectiveCallWindows } from "@/lib/shift-call-windows";
 
 type LocationOption = { id: string; name: string };
@@ -887,6 +888,10 @@ export default function EventDetailPage() {
           </CardContent>
         </Card>
       ) : null}
+
+      {isStaffOrAdmin && (
+        <EventCreditsCard eventId={id} isAdmin={currentUserRole === "ADMIN"} />
+      )}
 
       {event.isHome === false && event.sportCode && (
         <EventTravelCard eventId={id} sportCode={event.sportCode} isStaff={isStaffOrAdmin} />

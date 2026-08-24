@@ -2,7 +2,9 @@ import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { sportLabel } from "@/lib/sports";
 import { ACTIVE_ASSIGNMENT_STATUSES } from "@/lib/shift-constants";
+import { participatedEventWhere } from "@/lib/services/event-credit";
 import { scheduleVenueDisplayName } from "@/lib/schedule-event-identity";
+import { AREAS } from "@/types/areas";
 import {
   GAME_RECORD_END_DATE,
   GAME_RECORD_START_DATE,
@@ -15,7 +17,7 @@ import type { CalendarEventResult, CalendarEventSite, Prisma } from "@prisma/cli
 export const SCOREBOARD_SEASON_KEY = "2026-27";
 export const SCOREBOARD_SCOPE = {
   key: SCOREBOARD_SEASON_KEY,
-  label: "2026–27 season",
+  label: "Current season",
   startsAt: GAME_RECORD_START_DATE,
   endsAt: GAME_RECORD_END_DATE,
   timeZone: env.appTimezone,
@@ -86,10 +88,19 @@ const SITE_LABELS: Record<Exclude<CalendarEventSite, never>, string> = {
 };
 
 const SITE_ORDER: Array<CalendarEventSite | null> = ["HOME", "AWAY", "NEUTRAL", null];
+const SHIFT_AREA_ORDER = new Map<string, number>(AREAS.map((area, index) => [area, index]));
 
 function trimmedOrNull(value: string | null): string | null {
   const trimmed = value?.trim() ?? "";
   return trimmed || null;
+}
+
+function orderedUniqueShiftAreas(areas: string[]): string[] {
+  return [...new Set(areas)].sort((a, b) => {
+    const orderDelta = (SHIFT_AREA_ORDER.get(a) ?? Number.MAX_SAFE_INTEGER)
+      - (SHIFT_AREA_ORDER.get(b) ?? Number.MAX_SAFE_INTEGER);
+    return orderDelta || a.localeCompare(b);
+  });
 }
 
 function siteLabel(site: CalendarEventSite | null): string {
@@ -155,15 +166,9 @@ export function scoreboardEventWhere(
     status: { not: "CANCELLED" },
     isHidden: false,
     archivedAt: null,
-    shiftGroup: {
-      shifts: {
-        some: {
-          assignments: {
-            some: { userId, status: { in: ACTIVE_ASSIGNMENT_STATUSES } },
-          },
-        },
-      },
-    },
+    // An active assignment or an admin-recorded Scoreboard credit; a person
+    // holding both on one event is still one event.
+    ...participatedEventWhere(userId),
   };
 
   if (filters.sportCode) where.sportCode = filters.sportCode;
@@ -251,7 +256,7 @@ export async function getScoreboardForUser(
     opponent: trimmedOrNull(event.opponent),
     site: event.site,
     venue: scheduleVenueDisplayName(event.rawLocationText),
-    shiftAreas: [...new Set(event.shiftGroup?.shifts.map((shift) => shift.area) ?? [])],
+    shiftAreas: orderedUniqueShiftAreas(event.shiftGroup?.shifts.map((shift) => shift.area) ?? []),
   }));
 
   return {
