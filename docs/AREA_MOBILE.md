@@ -181,6 +181,17 @@ Navigation shell versioned roadmap: `tasks/sidebar-roadmap.md` (revised 2026-03-
 
 - 2026-08-14: **The App Store target no longer uses WeatherKit.** Build 26 removes the WeatherKit framework, entitlement, App ID capability, fixed-venue forecast service, event-detail forecast request, and weather presentation. The exported App Store IPA and embedded Store profile both omit WeatherKit, and App Store Connect processed the build as `VALID`. The app does not request or collect device location. Schedule identity, venue, assignment, crew, booking, and reservation behavior are unchanged.
 
+- 2026-08-24: **Native password screens name the account they belong
+  to.** Login's password step, Set your password, and Account & Security each
+  render the address as a real `.username` field beside the password boxes, so
+  iOS AutoFill has something to file a saved or updated password against;
+  registration's account field moved from `.emailAddress` to `.username` for the
+  same reason. Login's password step is unchanged in layout — the account line
+  re-renders in place and nothing below it moves. Account & Security shows the
+  address as a standard "Account" row. Captured through two new screenshot UI
+  tests against the fixture harness; real Save Password association still needs
+  the physical iPhone.
+
 - 2026-08-23: **Native passkeys meet people where they already are.** Login
   arms Apple's AutoFill-assisted request while the email step is on screen, so a
   saved passkey appears in the QuickType bar without finding the passkey button

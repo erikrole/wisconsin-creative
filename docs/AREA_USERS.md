@@ -187,6 +187,15 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
   enumeration-safe `/api/auth/forgot-password` response. The server's reset
   email and password-reset endpoint are unchanged.
 
+- 2026-08-24: **A password reset now says whose password it is
+  resetting.** The reset page reads the account behind its link through a new
+  rate-limited lookup that never consumes the token, names that address on the
+  page, and hands it to the password manager as the username for the new
+  password. A dead link is recognised on arrival instead of after typing a
+  password twice. Sign-in, account creation, and forced password change carry
+  the same account pairing. The invite/access boundary, token consumption,
+  session revocation, and reset auditing are unchanged.
+
 - 2026-08-23: **Passkey sign-in is offered, not hunted for.** The web login arms
   browser AutoFill on the email step so a saved passkey appears in that field's
   own suggestions, the native app arms Apple's equivalent QuickType request, and

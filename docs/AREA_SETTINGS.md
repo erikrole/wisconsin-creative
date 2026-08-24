@@ -33,6 +33,8 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 - `POST /api/auth/passkey/registration/options` and `POST /api/auth/passkey/registration/verify` (authenticated, current-password reauthentication, one-time server ceremonies).
 - `POST /api/auth/passkey/login/options` and `POST /api/auth/passkey/login/verify` (public discoverable login, required user verification, existing cookie-backed session issuance).
 - `GET /api/me/passkeys` and `DELETE /api/me/passkeys/:id` (credential metadata and current-password-protected per-credential revocation).
+- `GET /.well-known/change-password` redirects (303) to this page against the requesting origin, so a password manager's "Change password" action lands on the form that changes it.
+- Every password form on this page carries the signed-in address as a hidden `autocomplete="username"` field, so a manager files or updates the credential against the right account instead of saving it unattached.
 - Available to every authenticated user (STUDENT included).
 
 ### Overview (`/settings`)
@@ -216,6 +218,16 @@ Navigation breadcrumb versioned roadmap: `tasks/breadcrumbs-roadmap.md`
 All versions shipped. Duplicate breadcrumb removed; parent-level sibling quick-jump dropdown on "Settings" crumb navigates between sub-pages. Role-gated Settings sibling menus now wait for the current role before becoming dropdowns, so the loading frame does not expose an empty menu. The global breadcrumb UI now uses a lighter trail treatment with the current Settings sub-page marked by a subtle underline instead of a filled chip.
 
 ## Change Log
+
+- 2026-08-24: **Password managers can find, fill, and update the right
+  credential.** Every screen that shows a password box on its own — the second
+  step of sign-in, account creation, a forced change, Settings change-password,
+  and passkey reauthentication — now carries the account address as a hidden
+  username field, so a manager stops saving passwords against no account.
+  `/.well-known/change-password` sends "Change password" straight to Settings
+  Security, and new-password fields declare the server's 8-character rule so a
+  generated password is accepted the first time. No authorization, validation,
+  or session behaviour changed.
 
 - 2026-08-23: **Passkeys are easier to use and safer to manage.** Sign-in
   arms browser AutoFill so a saved passkey is offered from the email field
