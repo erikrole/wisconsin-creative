@@ -1,6 +1,6 @@
 # Tasks Index
 
-Last updated: 2026-08-20
+Last updated: 2026-08-23
 
 ## Start Here
 
@@ -57,9 +57,11 @@ Audit files intentionally remain at root for now because the repo audit skills r
 - `repo-public-surface-plan-2026-08-15.md` - public README, GitHub About metadata, and conservative web-release posture.
 - `signature-capture-micro-app-plan.md` - Signatures execution ledger for supported team, Creative Staff, Administration, and one-off rosters; pen-only capture, private artifacts, hardening, and rollout proof.
 - `software-vault-plan-2026-08-19.md` - encrypted shared software access above the existing Photo Mechanic license pool, with migration, key, and authenticated runtime rollout gates.
+- `software-photo-mechanic-first-plan-2026-08-23.md` - make Photo Mechanic the default Software landing and extract the license pool from the page shell.
 
 ## Archive Buckets
 
+- `tasks/archive/completed-2026-08-23/` - completed Accountability, profile/team Scoreboard hardening and explorer work, plus Gotham operational-identity typography plans.
 - `tasks/archive/completed-2026-08-12/` - completed launch and Login visual-polish plan.
 - `tasks/archive/completed-2026-08-19/` - completed Scoreboard and profile season-event-total plan.
 - `tasks/archive/completed-2026-06/` - completed plans and queue cleanup summaries from the June cleanup run.
@@ -77,6 +79,12 @@ Audit files intentionally remain at root for now because the repo audit skills r
 
 ## Recently Archived
 
+- `archive/completed-2026-08-23/accountability-table-readability-plan.md` - reduced the full Accountability leaderboard to five desktop scan targets, made return rate visually prominent on a continuous red-to-green scale, moved cramped widths to structured cards, and grouped incident receipts behind explicit 40px controls without changing ranking or access.
+- `archive/completed-2026-08-23/scoreboard-explorer-plan-2026-08-23.md` - expanded the shared Scoreboard into a generic Sport/Venue/Opponent/Site explorer with exact stacked intersections, stable facets, web/native Snapshots, matched authenticated proof, and a deterministic foundation for a future end-of-year story; production rollout remains under GAP-71.
+- `archive/completed-2026-08-23/accountability-leaderboard-plan.md` - promoted Accountability to the primary internal sidebar, preserved Admin-only cleanup controls, and replaced fixed podium copy with one deterministic shared draw from a 50-line reviewed jeer deck that stays fixed until the leaderboard changes.
+- `archive/completed-2026-08-23/team-scoreboard-plan-2026-08-23.md` - made Scoreboard a universal authenticated web/native destination with bounded aggregate totals, deterministic per-person leaderboards, minimal shared identity, safe direct detail, and matched local runtime proof; production rollout acceptance remains tracked by GAP-71.
+- `archive/completed-2026-08-23/profile-scoreboard-hardening-plan.md` - hardened the shared Scoreboard contract around server-owned season scope, pre-lookup privacy, recoverable/deduplicated paging, deterministic highlights, 40px web controls, and matched web/native proof.
+- `archive/completed-2026-08-23/brand-identity-typography-plan.md` - restored Gotham to primary operational identity in shared row/report, equipment selection/review, item booking history, organization, overdue, and app-activity surfaces while keeping interface and supporting copy on Geist.
 - `archive/completed-2026-08-19/profile-scoreboard-plan-2026-08-19.md` - added the read-only profile Scoreboard and a reusable 2026–27 event-level work total that includes exhibitions and non-game Schedule events while preserving the official game record and assignment-based badge semantics.
 - `archive/completed-2026-08-18/license-expiry-date-only-plan.md` - corrected Photo Mechanic annual expiry display and local-calendar status handling while preserving the date-only storage, claim-eligibility, and notification boundaries; authenticated browser proof remains deferred by the shared local Next runtime blocker.
 - `archive/completed-2026-08-18/schedule-activity-counts-plan.md` - restored audit-backed Schedule activity counts for imported calendar and staff working-copy changes while preserving the worker-facing release boundary.

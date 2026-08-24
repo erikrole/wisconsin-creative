@@ -1,0 +1,95 @@
+{
+  "title": "Accountability, promoted",
+  "eyebrow": "Web · Wisconsin Creative",
+  "lede": "The overdue leaderboard is now a first-class internal destination: faster to find, clearer to scan, and just playful enough that nobody wants to stay on it.",
+  "stats": [
+    {
+      "k": "Sidebar position",
+      "v": "751 → 342px",
+      "n": "409px earlier in the same 1440×1000 capture",
+      "tone": "good"
+    },
+    {
+      "k": "Ranking footprint",
+      "v": "−34%",
+      "n": "419px generic chart → 275px top-three spotlight",
+      "tone": "good"
+    },
+    {
+      "k": "Evidence starts",
+      "v": "144px sooner",
+      "n": "Full leaderboard begins at y=752 instead of y=896",
+      "tone": "good"
+    },
+    {
+      "k": "Internal roles",
+      "v": "1 → 3",
+      "n": "Admin-only → Admin, Staff, Student; Collaborator stays denied"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Desktop: from report to wrong leaderboard",
+      "note": "Same preview database, signed-in Admin session, 2026–27 filter, Volume ranking, and 1440×1000 viewport. Before runs directly from HEAD on port 3001; after runs the working tree on port 3000.",
+      "pairs": [
+        {
+          "title": "The first screenful",
+          "sub": "Primary navigation, ranking, metrics, and the start of the evidence table.",
+          "before": "before-desktop-viewport.png",
+          "beforeCap": "Accountability is buried at the bottom of Operations and a generic bar chart repeats the table below it.",
+          "after": "after-desktop-viewport.png",
+          "afterCap": "Accountability sits with daily work, and named top-three cards make the consequence legible at a glance."
+        }
+      ]
+    },
+    {
+      "heading": "Tablet: the same hierarchy survives compression",
+      "note": "Matched 1024×900 viewport with the same data, session, filters, and scroll position. Both renders have zero horizontal overflow.",
+      "pairs": [
+        {
+          "title": "Full-width app shell",
+          "sub": "The breakpoint where the open sidebar leaves 768px for the page.",
+          "before": "before-tablet-viewport.png",
+          "beforeCap": "Metrics lead, then the chart consumes the remaining first screenful.",
+          "after": "after-tablet-viewport.png",
+          "afterCap": "The top three stay readable in one row and the metrics follow without clipping."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Accountability was easy to miss",
+      "was": "The link lived at the bottom of the Admin-only Operations group and search hid it from every other role.",
+      "now": "It follows Bookings in primary navigation and appears in search for Admin, Staff, and Student. Collaborator remains default-deny under D-041."
+    },
+    {
+      "h": "The chart repeated the table",
+      "was": "Nine anonymous-feeling bars used 419px without saying who was actually on the wrong side of the pattern.",
+      "now": "A 275px spotlight shows the top three with avatars, the active ranking value, current-overdue status, and one gentle jeer apiece."
+    },
+    {
+      "h": "Ranking changes felt mechanical",
+      "was": "Changing Volume, Time, or Recent swapped the report beneath static chrome.",
+      "now": "The podium exits and settles with a short one-shot transition, exposes an aria-live relationship, and honors reduced-motion preference."
+    },
+    {
+      "h": "Read access was coupled to cleanup access",
+      "was": "The entire route was Admin-only because export, exclusion notes, and cleanup controls shared the same surface.",
+      "now": "The server returns explicit capabilities. Staff and Student receive the named read-only evidence; Admin alone receives CSV and exclusion metadata/actions."
+    }
+  ],
+  "verification": [
+    "<strong>Focused contracts:</strong> 57 Accountability, route, service, RBAC, search, sidebar, and UI tests pass.",
+    "<strong>Static/build:</strong> TypeScript, focused ESLint, docs/codemap verification, whitespace check, and the 238-page <code>build:app</code> pass.",
+    "<strong>Authenticated Admin preview:</strong> Creative Admin login, page, and Accountability API return 200; the API returns nine rows plus Admin export/cleanup capabilities.",
+    "<strong>Browser render:</strong> 1440×1000 and 1024×900 show no horizontal overflow, no error overlay, and no console warnings/errors. Volume → Time reorders the podium after a visible one-shot transition.",
+    "<strong>Dev-only failure:</strong> one transient <code>/accountability</code> 404 occurred while two Next dev servers compiled the matched baseline in parallel; the browser never showed an error, the immediate retry returned 200, and the final route/API reads remained 200.",
+    "<strong>Student browser proof:</strong> not run because only the requested Admin smoke identity is available. Student access, redaction, CSV denial, and Collaborator denial are pinned by route and RBAC tests."
+  ],
+  "notes": [
+    "Public or unauthenticated accountability publishing remains deferred; this is an authenticated internal surface.",
+    "The live /reports/overdue queue is unchanged. Accountability remains the historical pattern view, not the custody work queue.",
+    "CSV export, excluded-record count and notes, exclusion/restore controls, and their mutations remain Admin-only."
+  ]
+}

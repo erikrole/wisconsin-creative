@@ -1,0 +1,96 @@
+{
+  "title": "Scoreboard Explorer",
+  "eyebrow": "Web + native iOS · Wisconsin Creative",
+  "lede": "The always-on Scoreboard now turns Schedule history into reusable, trustworthy combinations—the stat engine for a future end-of-year story without naming the current year in the product.",
+  "stats": [
+    {
+      "k": "Filter dimensions",
+      "v": "1 &rarr; 4",
+      "n": "Sport, Schedule venue, opponent, and site"
+    },
+    {
+      "k": "Verified stack",
+      "v": "3 deep",
+      "n": "Volleyball + UW Field House + Butler",
+      "tone": "good"
+    },
+    {
+      "k": "Database shape",
+      "v": "2 reads",
+      "n": "Unchanged bounded event reads; no per-person N+1",
+      "tone": "good"
+    },
+    {
+      "k": "Shared access",
+      "v": "4 / 4 roles",
+      "n": "Admin, Staff, Student, and Collaborator"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "From one filter to a stat explorer",
+      "note": "Matched 1440 × 1000 authenticated captures use the same Admin, Preview data, dark theme, and page shell. The baseline is the previously accepted team Scoreboard captured earlier on August 23; the new capture changes only this feature slice.",
+      "pairs": [
+        {
+          "title": "All-events Scoreboard",
+          "sub": "The full current window remains the default, but its reusable dimensions and story layer are now explicit.",
+          "before": "tasks/archive/proofs/team-scoreboard-2026-08-23/after-desktop-viewport.png",
+          "beforeCap": "Before: one Sport select, a year-named badge, and totals that led directly into the leaderboard.",
+          "after": "tasks/archive/proofs/scoreboard-explorer-2026-08-23/after-unfiltered-desktop-viewport.png",
+          "afterCap": "After: four stable dimensions, generic Current season copy, and a deterministic Snapshot naming the current story and most-events contributor."
+        }
+      ]
+    },
+    {
+      "heading": "Every combination becomes its own story",
+      "note": "These are two states of the same new build and viewport. Selecting a row or menu value changes one exact dimension; clearing it preserves the rest of the stack.",
+      "pairs": [
+        {
+          "title": "Three filters, one intersection",
+          "sub": "The totals, Snapshot, leaderboard, and every breakdown agree on Volleyball at UW Field House against Butler.",
+          "beforeTag": "All events",
+          "afterTag": "3 filters",
+          "before": "tasks/archive/proofs/scoreboard-explorer-2026-08-23/after-unfiltered-desktop-viewport.png",
+          "beforeCap": "All events: 15 covered, 3–2 official record, 45 work credits, and 16 contributors.",
+          "after": "tasks/archive/proofs/scoreboard-explorer-2026-08-23/after-desktop-viewport.png",
+          "afterCap": "Stacked view: one covered event, 0–0 official record, three work credits, three contributors, and a matching three-person leaderboard."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "A sport filter could not answer venue or matchup questions",
+      "was": "The aggregate view could narrow only by sport, so records at a venue, against a team, or by Home/Away/Neutral site required a different surface or mental arithmetic.",
+      "now": "Sport, Schedule venue, opponent, and site are first-class exact dimensions. One value per dimension stacks with AND semantics on both web and native."
+    },
+    {
+      "h": "Independent numbers could drift into different scopes",
+      "was": "Adding dimensions client-side would risk filtering the team record without filtering work totals or person rankings the same way.",
+      "now": "The server filters the two bounded event sets once, then derives totals, four breakdowns, and every person summary from that shared intersection."
+    },
+    {
+      "h": "Narrowing could collapse the next menu",
+      "was": "If filter choices came from the current result, selecting one dimension could make valid choices in another disappear and strand the user.",
+      "now": "Facets always come from the complete bounded window. Empty intersections are recoverable, and removing one filter leaves every other selection intact."
+    },
+    {
+      "h": "The numbers had no narrative layer",
+      "was": "A reader could inspect totals, but the interface did not name the particular combination or surface its leading contributor as a reusable fact.",
+      "now": "Snapshot turns every current intersection into a compact, deterministic story—the first presentation layer for future recap cards, superlatives, and streaks."
+    }
+  ],
+  "verification": [
+    "<strong>Focused contracts:</strong> 110 tests across 15 web, API, RBAC, navigation, and native-source Vitest files pass.",
+    "<strong>Static and build gates:</strong> TypeScript, full ESLint, <code>npm run build:app</code>, XcodeGen project sync, and the pinned iPhone 16 Pro iOS 26.5 build pass.",
+    "<strong>Native models:</strong> focused <code>ScoreboardModelsTests</code> complete successfully against additive and older response fixtures.",
+    "<strong>Authenticated browser:</strong> real Preview data rendered four stable facets; Volleyball + UW Field House + Butler returned one event and three matching contributors; an impossible Football combination rendered the recoverable empty state; browser console errors were empty.",
+    "<strong>Docs and repository hygiene:</strong> codemaps, docs verification, and <code>git diff --check</code> pass."
+  ],
+  "notes": [
+    "Production was not changed. The installed signed-in native build reaches the canonical host, which still returns 404 for the undeployed aggregate route; live native totals and filter interaction remain a post-deploy GAP-71 gate.",
+    "Venue is the cleaned Schedule venue derived from raw calendar location text, never an equipment pickup location. Site is the canonical Home/Away/Neutral event classification.",
+    "The future end-of-year experience is product direction, not shipped scope here. Any superlative, streak, or surprising combination must remain reproducible from the same event authority, counting rules, and privacy allowlist.",
+    "No schema, migration, commit, push, deployment, or public Scoreboard publishing was performed."
+  ]
+}

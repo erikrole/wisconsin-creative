@@ -1,0 +1,79 @@
+{
+  "title": "Shared Team Scoreboard",
+  "eyebrow": "Web + native iOS · Wisconsin Creative",
+  "lede": "Every signed-in role gets one read-only team view for season coverage, the official record, sport totals, and per-person Scoreboards—without opening private profiles.",
+  "stats": [
+    {
+      "k": "Authenticated access",
+      "v": "4 / 4 roles",
+      "n": "Admin, Staff, Student, and Collaborator"
+    },
+    {
+      "k": "Aggregate query shape",
+      "v": "2 reads",
+      "n": "Worked events and official record events; no per-person N+1",
+      "tone": "good"
+    },
+    {
+      "k": "Sidebar addition",
+      "v": "42 px",
+      "n": "Measured from the matched 1440 × 1000 captures"
+    },
+    {
+      "k": "Preview snapshot",
+      "v": "15 events",
+      "n": "16 visible contributors in the authenticated 2026–27 capture"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "A first-class place to find it",
+      "note": "Same 1440 × 1000 authenticated shell, user, theme, and sidebar crop. The baseline was captured earlier on August 23 before the Scoreboard entry was added; cropping isolates the navigation rail so the only structural difference is the new destination.",
+      "pairs": [
+        {
+          "title": "Primary desktop navigation",
+          "sub": "The Scoreboard now sits directly below Schedule and remains outside role-gated Operations.",
+          "before": "before-sidebar.png",
+          "beforeCap": "Before: individual Scoreboards had no shared top-level destination.",
+          "after": "after-sidebar.png",
+          "afterCap": "After: a 42-pixel Scoreboard row is visible to every signed-in role."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "The team view did not exist",
+      "was": "A person’s record lived inside a profile, so there was no place to compare coverage or see an aggregate season.",
+      "now": "The new /scoreboard page leads with unique events, the team record, work credits, contributors, sport totals, and a sortable leaderboard."
+    },
+    {
+      "h": "Totals could be easy to misread",
+      "was": "Adding individual event or game counts together would overstate how many events the team covered.",
+      "now": "Unique team events and games stay separate from person-event and person-game credits, with the counting method stated on both clients."
+    },
+    {
+      "h": "A tiny perfect sample could look like the leader",
+      "was": "A one-game 100% record could outrank sustained work if rate alone drove the board.",
+      "now": "Win-rate ranking requires three resolved games; Events and Wins remain available as explicit alternatives."
+    },
+    {
+      "h": "Universal Scoreboard access could have widened People access",
+      "was": "Routing through User Detail would have coupled shared metrics to private profile, contact, schedule, booking, and activity data.",
+      "now": "Leaderboard links go directly to a dedicated shared Scoreboard route carrying only id, name, avatar, and metrics. Existing collaborator capability gates remain intact for every other destination."
+    }
+  ],
+  "verification": [
+    "<strong>Focused web/native contracts:</strong> 106 tests across 15 Vitest files pass.",
+    "<strong>Static web gates:</strong> TypeScript, full ESLint, and <code>npm run build:app</code> pass; the build includes <code>/scoreboard</code>, <code>/scoreboard/[id]</code>, and <code>/api/scoreboard</code>.",
+    "<strong>Native gates:</strong> iPhone 16 Pro iOS 26.5 build passes, the XcodeGen project is in sync, and all 12 focused <code>ScoreboardModelsTests</code> pass.",
+    "<strong>Authenticated browser:</strong> real preview totals rendered; Win rate put the eligible 2–1 record first; Volleyball narrowed the unique-event total to 5; person navigation exposed no profile/contact links; console errors and warnings were empty.",
+    "<strong>Signed-in simulator:</strong> the installed build preserved the user session, showed Scoreboard first in Browse, and rendered its production-unavailable retry state without exposing another destination."
+  ],
+  "notes": [
+    "Production was not changed. The native app correctly receives a 404 for the new aggregate endpoint until the web/API slice is deployed; native live-total acceptance remains a post-deploy gate.",
+    "The signed-in runtime was the required iPhone 16 Pro. The regular-width Team sidebar is source-, test-, and build-verified, but a signed-in iPad render remains a separate visual acceptance gate.",
+    "The shared leaderboard includes active, non-hidden people only. Hidden and inactive roster records retain their existing operational privacy boundary.",
+    "No commit, push, migration, or deployment was performed."
+  ]
+}

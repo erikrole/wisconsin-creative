@@ -11,7 +11,7 @@
 
 | Model | Fields | Model-level indexes/constraints |
 |---|---:|---:|
-| `User` | 110 | 5 |
+| `User` | 112 | 5 |
 | `Session` | 6 | 2 |
 | `PasswordResetToken` | 6 | 2 |
 | `PasskeyCredential` | 12 | 2 |
@@ -49,7 +49,8 @@
 | `KitMembership` | 6 | 2 |
 | `KitBulkMembership` | 7 | 3 |
 | `CalendarSource` | 11 | 2 |
-| `CalendarEvent` | 34 | 6 |
+| `CalendarEvent` | 35 | 6 |
+| `EventCredit` | 10 | 4 |
 | `ScheduleEventFollow` | 9 | 3 |
 | `BookingEvent` | 7 | 4 |
 | `LocationMapping` | 6 | 1 |

@@ -1,0 +1,72 @@
+{
+  "title": "Gotham Operational Identity — implementation review",
+  "eyebrow": "Web · Shared design language · Typography",
+  "lede": "Primary operational nouns regain Gotham while controls, dates, statuses, descriptions, product metadata, and prose remain on Geist.",
+  "stats": [
+    {
+      "k": "Consumer reach",
+      "v": "8 source files",
+      "n": "18 primary-identity hooks plus one family-only shared treatment"
+    },
+    {
+      "k": "Matched geometry",
+      "v": "620 × 404",
+      "n": "Before and after captures have identical dimensions and row structure",
+      "tone": "good"
+    },
+    {
+      "k": "Loaded faces",
+      "v": "3 / 3",
+      "n": "Geist plus Gotham Medium and Bold verified in the browser",
+      "tone": "good"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Matched identity hierarchy",
+      "note": "Same fixture data, viewport, dimensions, weights, sizes, colors, spacing, and component geometry. The only visual variable is the primary-identity font family.",
+      "pairs": [
+        {
+          "title": "Bookings, selected equipment, and people",
+          "sub": "A source-equivalent review fixture isolates the shared typography decision across three representative operational surfaces.",
+          "before": "/Users/role/Code/wisconsin-creative/tasks/brand-identity-typography-review-2026-08-23/before.png",
+          "beforeCap": "Source-control baseline: row titles, asset tags, SKU names, and person names inherit Geist with their supporting metadata.",
+          "after": "/Users/role/Code/wisconsin-creative/tasks/brand-identity-typography-review-2026-08-23/after.png",
+          "afterCap": "Current source: primary labels use Gotham; dates, locations, status, rank, elapsed time, and supporting product/context text stay Geist."
+        }
+      ]
+    }
+  ],
+  "changesHeading": "What changed, and why",
+  "changesNote": "This is an identity correction, not a global font swap. The body remains Geist and the new treatment sets no size, weight, tracking, color, or layout property.",
+  "changes": [
+    {
+      "h": "Primary row identity had no semantic font role",
+      "was": "Rows outside semantic headings and card titles inherited the body face, so booking names, selected equipment, report links, and some person-name rows quietly drifted to Geist.",
+      "now": "A family-only <code>.brand-identity</code> treatment gives those nouns the same Gotham role already used by page, detail, card, item-table, booking-list, and user-list identity."
+    },
+    {
+      "h": "Shared seams now carry the decision",
+      "was": "Parallel surfaces restated only weight and size, leaving font choice accidental and route-specific.",
+      "now": "The shared Item title and report entity link carry Gotham, with direct hooks for item booking history, equipment selection/review, organization rows, overdue rankings, and app-activity people rows."
+    },
+    {
+      "h": "Supporting information stays quiet",
+      "was": "A broad container-level font change would also brand dates, statuses, descriptions, and controls, making dense operational screens noisier.",
+      "now": "Only the identifying noun changes family. The source contract guards the body face and representative metadata lines."
+    }
+  ],
+  "verification": [
+    "<strong>16 focused typography/detail-header tests</strong> pass, including four new brand-identity source contracts.",
+    "<strong>TypeScript and lint:</strong> <code>npx tsc --noEmit --pretty false</code>, focused ESLint, and full <code>npm run lint</code> pass.",
+    "<strong>Production-shaped build:</strong> <code>npm run build:app</code> compiles and generates all 236 static pages.",
+    "<strong>Docs and source hygiene:</strong> codemaps regenerated, <code>npm run verify:docs</code> and <code>git diff --check</code> pass.",
+    "<strong>Browser measurement:</strong> Geist, Gotham Medium, and Gotham Bold all load; the matched booking title glyph width changes from 189.1px to 200.0px while capture geometry remains unchanged.",
+    "<strong>Authenticated baseline:</strong> production <code>/users/org-chart</code> currently computes person names as Geist, confirming the deployed drift this local source corrects."
+  ],
+  "notes": [
+    "The paired images are local source-equivalent typography proof, not a deployed after-capture. The authenticated production app remains unchanged until the normal release flow runs.",
+    "An authenticated current-source route could not be rendered without a local session; the review therefore isolates the exact family delta with repository font files and separately verifies the real production baseline.",
+    "Schedule assignee labels and battery-family supporting labels remain Geist until those surfaces make a separate primary-versus-supporting hierarchy decision."
+  ]
+}

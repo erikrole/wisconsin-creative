@@ -1,0 +1,74 @@
+{
+  "title": "Profile Scoreboard Hardening",
+  "eyebrow": "Web + native iOS · Wisconsin Creative",
+  "lede": "The Scoreboard now keeps privacy checks, season ownership, pagination, rankings, and touch targets consistent across the API, web profile, and native profile.",
+  "stats": [
+    {
+      "k": "Filter targets",
+      "v": "28–32 → 40px",
+      "n": "Measured in the matched desktop captures; all controls also measured 40px at 390×844",
+      "tone": "good"
+    },
+    {
+      "k": "Focused contract",
+      "v": "36 / 36",
+      "n": "Route, service, digest, web source, and native wiring tests",
+      "tone": "good"
+    },
+    {
+      "k": "Native model",
+      "v": "10 / 10",
+      "n": "ScoreboardModelsTests on iPhone 16 Pro, iOS 26.5",
+      "tone": "good"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Matched visual change",
+      "note": "Same local Preview account, user, season data, theme, viewport, and crop. Only the Scoreboard implementation differs.",
+      "pairs": [
+        {
+          "title": "Filters and breakdown control",
+          "sub": "Profile Scoreboard for Nolan Kromke, 2026–27.",
+          "before": "tasks/archive/proofs/profile-scoreboard-hardening-2026-08-23/web-before-controls.jpg",
+          "beforeCap": "Result filters measured 28px, the sport filter 32px, and the breakdown control 30.7px.",
+          "after": "tasks/archive/proofs/profile-scoreboard-hardening-2026-08-23/web-after-controls.jpg",
+          "afterCap": "All four interaction types now share a 40px minimum target without changing the surrounding data hierarchy."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Pagination could revive a finished cursor",
+      "was": "A null final-page cursor fell back to the original response cursor, while overlapping or stale requests could append repeated rows.",
+      "now": "Cursor ownership distinguishes not-yet-loaded from end-of-list, aborts stale requests, blocks overlap, deduplicates pages, and exposes retry without discarding rendered rows."
+    },
+    {
+      "h": "Clients duplicated the current season",
+      "was": "Web and iOS sent a hard-coded 2026–27 season, creating a rollover drift point.",
+      "now": "Both clients omit season unless one is explicitly requested, leaving the authenticated API as the default-season owner."
+    },
+    {
+      "h": "Cross-user denial followed target lookup",
+      "was": "A collaborator denial path could query a requested target before rejecting access.",
+      "now": "The route rejects unauthorized cross-user requests before target lookup, while keeping self, staff, admin, visibility, and not-found behavior covered by the role matrix."
+    },
+    {
+      "h": "Highlights could reward tiny samples",
+      "was": "Best venue favored raw win rate, so a 1–0 venue could outrank a sustained 6–1 record; area ordering depended on encounter order.",
+      "now": "Web and iOS rank venue strength by win margin, then rate and volume; worked areas follow the canonical product order."
+    }
+  ],
+  "verification": [
+    "<strong>Focused tests:</strong> 5 files, 36 tests passed.",
+    "<strong>Web gates:</strong> TypeScript, full ESLint, docs/codemap verification, migration-prefix validation, and <code>npm run build:app</code> passed.",
+    "<strong>Native gates:</strong> 10 focused XCTest cases, iOS project parity, drift audit, audit-gap inventory, and a full iPhone 16 Pro simulator build passed.",
+    "<strong>Authenticated web:</strong> All/Losses state verified for Nolan; default request omitted season; desktop and 390×844 layouts had zero console errors.",
+    "<strong>Authenticated native:</strong> All/Wins state verified for Maddy on iPhone 16 Pro, iOS 26.5."
+  ],
+  "notes": [
+    "The live Nolan fixture has only one resolved result page, so the load-more failure state was verified through regression/source tests rather than forced against live data.",
+    "No production deployment, schema migration, or API response-shape change is part of this slice."
+  ]
+}

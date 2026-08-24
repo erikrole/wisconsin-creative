@@ -4,13 +4,13 @@
 
 - Area: Shared software access
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-20
+- Last Updated: 2026-08-23
 - Status: Active in production — baseline vault is live; first-class tab separation and local hardening are verified locally; role-scoped and secret-lifecycle acceptance remains
 - Route: `/licenses` (presented as **Software**)
 
 ## Direction
 
-Software is the team's small, internal access cabinet for shared department logins such as Envato Elements, APM Music, and Motion Array, plus a separate Photo Mechanic activation-license workflow. Both live at `/licenses` for route compatibility, but they are distinct URL-addressable views: **Shared logins** is the default, and **Photo Mechanic licenses** is selected with `?tab=photo-mechanic`. The two-slot custody model never becomes a shared-login credential record.
+Software is the team's small, internal access cabinet for shared department logins such as Envato Elements, APM Music, and Motion Array, plus a separate Photo Mechanic activation-license workflow. Both live at `/licenses` for route compatibility, but they are distinct URL-addressable views: **Photo Mechanic** is the default landing, and **Shared logins** is selected with `?tab=shared-logins`. Existing `?tab=photo-mechanic` links still open Photo Mechanic. The two-slot custody model never becomes a shared-login credential record.
 
 The empty state names useful software examples but never seeds or invents credentials. An ADMIN or STAFF user enters the real department credentials through the management dialog.
 
@@ -42,7 +42,7 @@ All mutations use the existing authenticated audit path. Secret endpoints return
 
 ## UI Contract
 
-- The `/licenses` page presents URL-backed **Shared logins** and **Photo Mechanic licenses** tabs. The default Shared logins view never renders Photo Mechanic pool controls or suggests Photo Mechanic as a shared account.
+- The `/licenses` page presents URL-backed **Photo Mechanic** and **Shared logins** tabs. Photo Mechanic is the default. The Shared logins view never renders Photo Mechanic pool controls or suggests Photo Mechanic as a shared account.
 - Each active card leads with software name/category, optional official website, account email, and a masked password row.
 - Copy Email is available from the list. Show Password and Copy Password explicitly request the secret; copy does not require rendering the password.
 - Staff/admin management controls use a dialog for add/edit and an AlertDialog for archive. Editing leaves the password blank unless it is intentionally replaced.
@@ -66,6 +66,8 @@ All mutations use the existing authenticated audit path. Secret endpoints return
 - Key rotation is an operational re-encryption procedure, not a self-service UI. Password history remains deferred; per-record audience sharing is live.
 
 ## Change Log
+
+- 2026-08-23: Made Photo Mechanic the default `/licenses` landing. Shared logins moved to `?tab=shared-logins`; `?tab=photo-mechanic` remains compatible. Quiet Shared logins chrome so it no longer restates the tab title or treats Photo Mechanic as a footnote.
 
 - 2026-08-20: Reconciled Software into two first-class URL-backed workflows on `/licenses`: Shared logins (default) and Photo Mechanic licenses (`?tab=photo-mechanic`). Contextualized Photo Mechanic actions, removed the product suggestion from shared-login copy, added mobile license cards, moved shared-login mutations and reveal auditing into serializable transactions, changed secret reveal to POST, minimized student license DTOs, and hardened CSV export/release behavior. Local gates pass; this follow-up is not represented as deployed without authenticated runtime proof.
 

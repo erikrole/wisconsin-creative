@@ -2,7 +2,7 @@
 
 ## Document Control
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-07-28
+- Last Updated: 2026-08-23
 - Status: Active
 - Purpose: Define the UI and UX rules that keep Gear Tracker cohesive, fast, dense, calm, and operationally clear.
 
@@ -40,7 +40,7 @@ Avoid:
   - This is not cosmetic. The `/about` hero is authored `text-5xl sm:text-7xl lg:text-8xl` and was rendering at 30px until the showroom headings were given `!` modifiers.
   - To deviate from the scale deliberately, use the Tailwind important modifier (`text-lg!`), which is what the signature capture header and the public showroom now do.
 - **`--font-mono` was resolving to nothing.** Measured 2026-08-23: `--font-mono` is declared on `:root` but resolves `--font-geist-mono`, which `next/font` only defines where its variable class is applied. That class was on `<body>`, one level below `:root`, so the token computed to empty and all 25 `var(--font-mono)` usages fell back to the sans stack — asset tags, UW tags, booking references, shift times, and server paths all rendered proportional. Fixed by moving both font variable classes to `<html>`. If you add a font token, define it where `:root` can see it and verify the computed value in a browser, not just the declaration.
-- There are no `font-heading` or `font-mono` Tailwind utilities: the `@theme inline` block has no font entries, which is why headings use inline `style={{ fontFamily: "var(--font-heading)" }}`. Adding font entries to `@theme` would generate the utilities and let those inline styles become classes; not yet done.
+- There are no `font-heading` or `font-mono` Tailwind utilities: the `@theme inline` block has no font entries. Use the family-only `.brand-identity` class for primary operational identity outside semantic heading/title slots. It deliberately does not set size, weight, tracking, or color. Adding font entries to `@theme` would generate utilities; not yet done.
   - **Open architectural fix:** moving the typography block into `@layer base` makes utilities work normally and is the correct structure. It was measured and deliberately not shipped on 2026-08-22 because it changes 141 headings at once — 6 `h1`, 27 `h2`, 46 `h3`, 59 `CardTitle`, 3 dialog/sheet titles — most on authenticated surfaces that cannot be visually verified locally. It needs its own slice with real proof, not a side effect of another change.
 - Use page sections as full-width groups or direct content, not cards inside cards.
 - Use `OperationalToolbar` for search, filters, quick toggles, and clear actions on operational list pages. The toolbar should read as quiet page chrome; individual controls carry the primary affordance.
@@ -52,6 +52,9 @@ Avoid:
 - Use cards for repeated items, modals, queue cards, and framed tools. Do not wrap whole pages in decorative cards.
 
 ### Typography
+- Gotham is the identity face: page and entity titles, serialized asset tags, bulk SKU names, booking/event titles, and person names when they are the primary label of a row, card, selection, or report link.
+- Geist is the interface face: controls, field labels, statuses, dates, counts, descriptions, supporting product/model text, email/role metadata, and prose.
+- Use semantic headings and shadcn title slots first. Add `.brand-identity` only when primary identity lives in a non-heading row or compact selection surface; do not apply it to an entire table, form, toolbar, or container.
 - Labels first, numbers second. Metric cards use small uppercase labels and tabular numbers.
 - Use hero-scale type only for real top-level page headers.
 - Use sentence-case table headers and action labels.

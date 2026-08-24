@@ -25,7 +25,7 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 ### Security (`/settings/security`) -- Personal
 - Change password: verify current password, set new one (min 8 chars), optional "sign out of all other devices" checkbox. Client-side confirm-password match before submit.
 - Active sessions list: shows each non-expired session with creation date, expiry date, and "This device" badge for the current session. Per-session "Sign out" button (cannot revoke the current session). "Sign out all other devices" bulk action.
-- Passkeys: active invite-granted users can add one or more discoverable passkeys after current-password reauthentication, name them, see last-used metadata, and revoke an individual credential. Password sign-in and recovery remain available during rollout.
+- Passkeys: active invite-granted users can add one or more discoverable passkeys after current-password reauthentication, name them, see last-used metadata, and revoke an individual credential. An unnamed passkey is named after the enrolling client (for example "Chrome on macOS" or "iPhone"), each row states whether the credential is synced or bound to one device, and removal takes its own confirmation dialog with its own current-password field. Password sign-in and recovery remain available during rollout.
 - `POST /api/me/change-password` (5/min rate limit -- brute-force protection; verifies bcrypt, sets new hash, optionally deletes other sessions).
 - `GET /api/me/sessions` (30/min; lists non-expired sessions with `isCurrent` flag -- tokenHash never exposed to client).
 - `DELETE /api/me/sessions/:id` (10/min; rejects current session with 400, confirms ownership before delete).
@@ -216,6 +216,18 @@ Navigation breadcrumb versioned roadmap: `tasks/breadcrumbs-roadmap.md`
 All versions shipped. Duplicate breadcrumb removed; parent-level sibling quick-jump dropdown on "Settings" crumb navigates between sub-pages. Role-gated Settings sibling menus now wait for the current role before becoming dropdowns, so the loading frame does not expose an empty menu. The global breadcrumb UI now uses a lighter trail treatment with the current Settings sub-page marked by a subtle underline instead of a filled chip.
 
 ## Change Log
+
+- 2026-08-23: **Passkeys are easier to use and safer to manage.** Sign-in
+  arms browser AutoFill so a saved passkey is offered from the email field
+  itself, and "Remember me" now applies to a passkey sign-in instead of only a
+  password one. An unnamed credential is named after the enrolling client rather
+  than "This device", the list says whether a passkey is synced or device-bound,
+  and removal moved out of a browser `confirm()` into a dialog with its own
+  reauthentication field — the delete button previously did nothing unless the
+  enrollment form's password box happened to be filled. Ceremony failures now
+  read as product language per spec error, and a dismissed sheet is silent.
+  Authorization, one-time ceremonies, required user verification, and
+  current-password reauthentication are unchanged.
 
 - 2026-08-21: Added the owner-only **App activity** Settings page. It joins visible users to HMAC-keyed current client installations and shows app-open adoption, last launch/seen, device model, iOS version, build, release channel, and configurable stale/latest build state. Local schema, route, source-contract, and TypeScript gates pass; migration application, owner configuration, authenticated browser proof, and signed-client channel acceptance remain open.
 

@@ -1,0 +1,100 @@
+{
+  "title": "Accountability, easier to read",
+  "eyebrow": "Web · Wisconsin Creative",
+  "lede": "The wrong leaderboard keeps its friendly poke, but the full ranking now reads like a first-class product surface: fewer competing concepts, an unmistakable return record, and receipts that open as complete incidents.",
+  "stats": [
+    {
+      "k": "Desktop summary",
+      "v": "8 → 5",
+      "n": "Competing columns reduced to five labeled scan targets",
+      "tone": "good"
+    },
+    {
+      "k": "Tablet overflow",
+      "v": "94px → 0",
+      "n": "Cramped table replaced by structured cards at 1024×900",
+      "tone": "good"
+    },
+    {
+      "k": "History control",
+      "v": "40px",
+      "n": "Dedicated disclosure replaces the whole-row pseudo-button",
+      "tone": "good"
+    },
+    {
+      "k": "Return-rate scale",
+      "v": "50% → 100%",
+      "n": "Full red → continuous perceptual mix → full green"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Desktop: a ranking you can parse in one pass",
+      "note": "Matched Creative Admin session, 2026–27 data, Volume ranking, 1440×1000 viewport, dark theme, and card top at y=150. Only the leaderboard presentation differs.",
+      "pairs": [
+        {
+          "title": "Full leaderboard summary",
+          "sub": "The same nine people and 21 late events, before and after the hierarchy cleanup.",
+          "before": "before-table.png",
+          "beforeCap": "Eight columns compete with a five-item person subline; overdue, total, worst, and on-time figures carry nearly equal visual weight.",
+          "after": "after-table.png",
+          "afterCap": "Five scan targets group the diagnostics, make return rate prominent, and leave one clear control for the receipts."
+        }
+      ]
+    },
+    {
+      "heading": "Tablet: cards before compression becomes ambiguity",
+      "note": "Matched Creative Admin session, data, filters, 1024×900 viewport, dark theme, and leaderboard card top at y=551.",
+      "pairs": [
+        {
+          "title": "The open-sidebar breakpoint",
+          "sub": "The viewport leaves 702px for the report surface.",
+          "before": "before-tablet.png",
+          "beforeCap": "The eight-column table exceeds its 702px scroller by 94px and wraps rows to 96px without making the labels easier to connect.",
+          "after": "after-tablet.png",
+          "afterCap": "Each person becomes a labeled three-signal card with a full-width history control and zero document overflow."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Return record was easy to miss",
+      "was": "A small percentage shared the same weight as several adjacent time statistics, and sparse history appeared as an unexplained dash.",
+      "now": "The percentage is larger, carries its completed-return sample, and adds a rate-length bar whose fill is full red at 50% and below, continuously interpolates, and reaches full green at 100%. Sparse history says Not rated."
+    },
+    {
+      "h": "The row mixed summaries with diagnostics",
+      "was": "Active overdue, total late, worst late, typical late, checkout count, on-time rate, and last incident were distributed across eight columns plus one crowded subline.",
+      "now": "Late events owns the active-overdue state; late-time pattern owns total, typical, and worst; return record owns percentage and completed returns."
+    },
+    {
+      "h": "Every row acted like a button around real links",
+      "was": "The table row and mobile card were keyboard/click targets while also containing profile, checkout, and ADMIN action controls.",
+      "now": "Profile links and actions remain independent siblings, and one labeled 40px button owns expansion with aria-expanded and aria-controls."
+    },
+    {
+      "h": "Receipts were split across table columns",
+      "was": "Booking title, due context, late duration, return state, and cleanup action were separated by the parent table grid.",
+      "now": "One incident-history region groups each booking and all of its evidence into a complete readable record."
+    },
+    {
+      "h": "The fun stays purposeful",
+      "was": "Dense evidence risked competing with the playful wrong-leaderboard framing.",
+      "now": "The stable shared jeers remain in the top-three spotlight; the full ranking stays calm, with the escape-route copy pointing people back to the return record."
+    }
+  ],
+  "verification": [
+    "<strong>Focused contracts:</strong> 65 Accountability, jeer, route, service, RBAC, search, sidebar, and UI tests pass.",
+    "<strong>Static/build:</strong> TypeScript, focused ESLint, codemap/docs verification, whitespace check, and the 238-page <code>build:app</code> pass. The build ran from an isolated temporary copy so it could not disturb the shared dev server's <code>.next</code> directory.",
+    "<strong>Authenticated browser:</strong> The same nine-person board renders at 1440×1000 and 1024×900 with zero document overflow and no console warnings or errors.",
+    "<strong>Measured interaction:</strong> The desktop history button is 110×40px, exposes aria-expanded/aria-controls, and opens one 294px incident region containing four checkout links and four ADMIN action controls for the first person.",
+    "<strong>Color read-back:</strong> Live bars resolve to red/green mixes of 74/26 at 63%, 62/38 at 69%, 50/50 at 75%, and 36/64 at 82%; the source clamps 50% to all red and 100% to all green."
+  ],
+  "notes": [
+    "Ranking order, filters, report API, CSV, custody evidence, permissions, and deterministic shared jeer selection are unchanged.",
+    "The top-three spotlight remains the playful layer; the full leaderboard favors accountability clarity over adding nine more jokes.",
+    "Authenticated visual proof and console read-back completed before the shared local dev process later exited; the managed sandbox denied the final port-bind attempt, so this static review is the durable handoff artifact.",
+    "No production deployment is part of this local UI slice."
+  ]
+}

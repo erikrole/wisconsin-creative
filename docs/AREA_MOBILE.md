@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Mobile Operations
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-21
+- Last Updated: 2026-08-23
 - Status: Active
 - Version: V1
 
@@ -28,10 +28,10 @@ Cheqroom mobile patterns show useful primitives but too much menu depth and too 
    - Dashboard
    - Bookings / My Gear
    - Schedule
-   - Browse, with Items, Guides, Licenses, Users, and Reports (STAFF/ADMIN)
+   - Browse, with Scoreboard for every role, Items, Guides, Licenses, Users, and Reports (STAFF/ADMIN)
    - Search, with scan as an in-surface action
 2. Native iOS uses the system tab bar. Browse is the compact hub tab for secondary browseable destinations (the Apple Music Library pattern); do not add a hamburger drawer or a sixth compact tab that forces Search out of the trailing search position.
-3. Student view should hide admin-only create/manage affordances outside allowed ownership scope. Browse hides the Reports row for anyone outside STAFF/ADMIN rather than offering a row the report endpoints will refuse, and it stays out of the COLLABORATOR capability list entirely.
+3. Student view should hide admin-only create/manage affordances outside allowed ownership scope. Browse hides the Reports row for anyone outside STAFF/ADMIN rather than offering a row the report endpoints will refuse, and it stays out of the COLLABORATOR capability list entirely. Scoreboard is the deliberate universal read-only exception and appears first in Browse for every authenticated role.
 4. Badge counts can appear on Reservations and Check-outs for overdue or due-today urgency.
 
 ## Production Host Contract
@@ -91,6 +91,8 @@ Cheqroom mobile patterns show useful primitives but too much menu depth and too 
 - [x] AC-4: Search is always one tap from primary mobile navigation, with scan available from Search.
 - [x] AC-5: Role-based action visibility on mobile matches `AREA_USERS.md` and server authorization.
 - [x] AC-6: Dashboard remains chart-light and action-first in V1.
+- [x] AC-7: Every authenticated role can reach the shared team Scoreboard from Browse; regular-width navigation also exposes it directly without opening a private user profile.
+- [x] AC-8: Native team Scoreboard stacks Sport, Venue, Opponent, and Site with system controls, refetches one server-owned intersection, and tolerates the additive explorer response during server-first rollout.
 
 ## Dependencies
 - `AREA_DASHBOARD.md`
@@ -133,6 +135,20 @@ Navigation shell versioned roadmap: `tasks/sidebar-roadmap.md` (revised 2026-03-
 
 ## Change Log
 
+- 2026-08-23: **Extend is not offered from the Live Activity, and the dead path that once could has been removed.** Tapping the card opens booking detail, where Extend is chosen deliberately; the glance surface never carries an Extend affordance in any form -- no `action=extend` deep-link parameter, no App Intent button, no label. The 2026-07-10 redesign already stopped emitting `wisconsin://booking/<id>?action=extend`, but the receiving chain stayed: `WisconsinApp` still parsed that parameter into `AppState.pendingExtendBookingId`, and `BookingDetailView` still auto-presented the Extend sheet on load when it was set. Nothing in the app, the server, or any push payload had produced that URL since, so the chain was unreachable code that would have re-opened a mutation sheet from a tapped link the moment anything emitted one. All three sites are gone. `ContentState.allowsExtend` stays on the wire and stays unrendered: installed builds decode it as required, so the server dropping the key would break their Live Activity updates. Booking-detail Extend, its freshness snapshot, its upcoming-need gate, and push routing through `pendingPushBookingId` are unchanged. Files: `ios/Wisconsin/App/WisconsinApp.swift`, `ios/Wisconsin/Core/AppState.swift`, `ios/Wisconsin/Views/BookingDetailView.swift`, `ios/Wisconsin/LiveActivities/CheckoutReturnActivityAttributes.swift`.
+
+- 2026-08-23: **The checkout-return Live Activity now keeps time honestly, reaches the wrist, and speaks to VoiceOver.** Every glance surface refreshed on a lattice anchored to render time, so a card started at :37 past the minute crossed every threshold 37 seconds late: the lock screen still read "1 min" under a countdown symbol once the return time had passed, and the 30-minute white-to-amber and 10-minute amber-to-red accent steps landed just as late. `minuteBoundaryAnchor(at:)` anchors the same 60-second schedule on `endsAt`, putting each tick exactly where the displayed minute changes; minute precision and the deliberate absence of a seconds-level `timerInterval:` countdown are unchanged. Past the content's stale date the card no longer asserts an urgency nothing has confirmed: the local countdown stays, but the accent drops to muted grey, the header reads "Not updating", and the card says to open Wisconsin to confirm -- a returned card is terminal and never goes unconfirmed. A paired Apple Watch now gets a real `.small` Smart Stack layout instead of a scaled-down lock-screen card that lost the countdown. Always-on display drops to dimmed accent variants rather than burning full-intensity red through the dimmed panel. Compact and minimal Dynamic Island presentations carry no words of their own, so VoiceOver announced a bare symbol or an unqualified number; both now name the booking and its remaining time. One `ReturnPresentation` resolver replaced three duplicated accent switches, so no surface can disagree about the same return's urgency; it keeps the identity header icon (`shippingbox.fill`) separate from the standalone Dynamic Island glyph, since only the glyph has to carry urgency without words. The APNs content-state contract, push-to-start, next-need insight, deep link, and returned-confirmation lifecycle are unchanged, and no server or schema change was needed. The `WisconsinLiveActivities` extension target builds for both simulator architectures; the `Wisconsin` app target build is blocked by pre-existing uncommitted work in `StatusPill.swift`. Files: `ios/WisconsinLiveActivities/CheckoutReturnLiveActivityWidget.swift`, `ios/Wisconsin/LiveActivities/CheckoutReturnActivityAttributes.swift`, `tests/ios-checkout-return-live-activity-source.test.ts`.
+
+- 2026-08-23: **iOS Items default sort is Most popular.** Native Items now opens in the same popularity order as web `/items`, treats Most popular as the resting sort control, and still offers Asset tag. `/api/assets` omitted `sort` matches that default; picker-search remains asset-tag ordered.
+
+- 2026-08-23: **Admin people-directory chips now read as Staff.** Native Users rows, user profiles, and VoiceOver labels keep `ADMIN` for authorization but present the Staff pill so operator rank is not advertised next to Erik, Jerry, and any other Admin. Role filters are unchanged. Files: `ios/Wisconsin/Core/Brand.swift`, `ios/Wisconsin/Views/Components/StatusPill.swift`, `ios/Wisconsin/Views/UsersView.swift`, `ios/Wisconsin/Views/UserDetailView.swift`.
+
+- 2026-08-23: **Native Scoreboard now explores the same stat combinations as web.** Four system pickers stack exact Sport, Schedule Venue, Opponent, and Site filters; changing any value refetches the aggregate route, dims retained data during refresh, rejects stale responses, preserves the last valid selection after failure, and offers one-step clearing. Totals, leaderboard rows, and four tappable breakdown sections use the filtered server summaries directly. A Snapshot section turns the current combination into a compact story and names the most-events contributor without adding client-owned record math. Additive Codable defaults preserve compatibility with the current production payload. The pinned iPhone 16 Pro iOS 26.5 build and focused model/source tests pass; the signed-in installed app still receives the expected production 404 until the new server route is deployed, so live native filter acceptance remains under GAP-71.
+
+- 2026-08-23: **Team Scoreboard is a native destination for every signed-in role.** Browse now leads with Scoreboard on compact iPhone for Admin, Staff, Student, and Collaborator accounts, while the regular-width sidebar exposes the same destination directly in a Team section. The native screen shows server-owned team totals, sport filters, Events/Wins/Win rate rankings, explicit counting methodology, loading/empty/error/refresh states, and direct per-person Scoreboards without routing through `UserDetailView`. The iPhone 16 Pro simulator build, focused XCTest/source contracts, signed-in Browse render, and production-host missing-route recovery all pass. The production host currently returns not found for the new aggregate endpoint because this slice was not deployed; live native totals and a signed-in iPad sidebar render remain rollout proof gates.
+
+- 2026-08-23: **Native Scoreboard scope and highlights now follow the shared server contract.** `APIClient.scoreboard` no longer pins `2026–27`; it sends a season only for an explicit override and otherwise lets `/api/users/[id]/scoreboard` own the active scope. Native Best venue now uses the same sustained-record ranking as web, comparing win margin, then rate, then volume so a 6–1 venue outranks a 1–0 sample. Codable response shape, read-only behavior, official-record semantics, and collaborator privacy are unchanged. Ten focused XCTest cases pass on the required iPhone 16 Pro simulator, and signed-in runtime proof verified Maddy Pehler's `1–1` summary across six worked events plus the Wins filter narrowing to the single Louisville result.
+
 - 2026-08-21: **Native app-open telemetry now carries useful client identity for the owner report.** Signed-in iOS app-open events send the marketing version, `CFBundleVersion` build, OS version, coarse `hw.machine` model, a separate per-installation key, and a best-effort `development` / `testflight` / `app_store` channel. The server HMACs the installation key before storing it in `UserAppInstallation`; receipt absence remains `unknown`, and telemetry failure remains isolated from app workflows. This is source/schema verified locally; signed TestFlight/App Store readback and rollout proof remain open.
 
 - 2026-08-21: **Native My Availability now handles class schedules and real-world days away.** The existing interactive weekly canvas remains the fast path for recurring class windows; the editor now adds optional class-term bounds, one-off From/Through date ranges, and an All day choice for trips, visitors, and similar full-day conflicts. Saved rows show the covered date range and all-day state, and the additive fields remain optional when decoding older API payloads.
@@ -162,6 +178,19 @@ Navigation shell versioned roadmap: `tasks/sidebar-roadmap.md` (revised 2026-03-
 - 2026-08-15: **Web app icons now use the finalized Block W artwork.** The favicon, PNG manifest icons, Apple touch icon, and versioned service-worker app shell now use the white Block W from `ios/IconSources/IconComposerCandidates/vintage-helmet/BlockW.icon` on Wisconsin red instead of the placeholder `G` mark. The existing iOS Icon Composer documents remain unchanged.
 
 - 2026-08-14: **The App Store target no longer uses WeatherKit.** Build 26 removes the WeatherKit framework, entitlement, App ID capability, fixed-venue forecast service, event-detail forecast request, and weather presentation. The exported App Store IPA and embedded Store profile both omit WeatherKit, and App Store Connect processed the build as `VALID`. The app does not request or collect device location. Schedule identity, venue, assignment, crew, booking, and reservation behavior are unchanged.
+
+- 2026-08-23: **Native passkeys meet people where they already are.** Login
+  arms Apple's AutoFill-assisted request while the email step is on screen, so a
+  saved passkey appears in the QuickType bar without finding the passkey button
+  first; tapping "Use a passkey" cleanly replaces the armed request instead of
+  failing as unavailable, and leaving the screen withdraws it. Enrollment now
+  sends the server's exclude list, so a second attempt on a device that already
+  holds a passkey is refused instead of silently creating a duplicate, and asks
+  for the required user verification the server already enforces. A dismissed
+  system sheet no longer reads as a failed sign-in, and Account & Security shows
+  whether each passkey is synced or bound to that device. Wisconsin simulator
+  build and source-contract tests pass; real-device enrollment proof stays open
+  under GAP-62.
 
 - 2026-08-12: **Native launch and sign-in now share one continuous identity.** The system launch frame uses the approved Motion W and Wisconsin Creative lockup on the same dark base as SwiftUI, with Retina assets keeping the mark sharp. Strict restores reveal labeled session-checking feedback only when needed. Login now asks for email first and reveals Password locally without an account lookup; Change returns safely, passkey stays independent of the displayed email, Forgot password sits directly under Password and prefills the normalized email, and loading and failures stay labeled and accessible. Session authority, optimistic returning-user routing, password, passkey, recovery, forced-password, and kiosk launch behavior are unchanged. Exact iPhone 16 Pro visual/runtime proof captured the system frame, SwiftUI handoff, labeled restore state, and both Login steps through a source-equivalent harness; the repository build remains blocked by the pre-existing `ReportsView.swift` Swift 6 Sendable failure.
 

@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Brand identity typography capture fixture</title>
+  <style>
+    @font-face {
+      font-family: "Geist Review";
+      src: url("/node_modules/geist/dist/fonts/geist-sans/Geist-Variable.woff2") format("woff2");
+      font-style: normal;
+      font-weight: 100 900;
+    }
+    @font-face {
+      font-family: "Gotham Review";
+      src: url("/public/Gotham-Medium.woff2") format("woff2");
+      font-style: normal;
+      font-weight: 500;
+    }
+    @font-face {
+      font-family: "Gotham Review";
+      src: url("/public/Gotham-Bold.woff2") format("woff2");
+      font-style: normal;
+      font-weight: 700;
+    }
+    :root {
+      color-scheme: light;
+      --background: #f7f7f6;
+      --card: #ffffff;
+      --foreground: #202124;
+      --muted: #686d76;
+      --line: #dedfdc;
+      --soft: #f2f2f0;
+      --red: #c5050c;
+      --purple: #6542a5;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-width: 1320px;
+      background: var(--background);
+      color: var(--foreground);
+      font-family: "Geist Review", system-ui, sans-serif;
+      font-size: 14px;
+      line-height: 1.4;
+      -webkit-font-smoothing: antialiased;
+    }
+    main {
+      display: grid;
+      grid-template-columns: 620px 620px;
+      gap: 32px;
+      padding: 40px;
+    }
+    body.single main { grid-template-columns: 620px; }
+    body.single .capture { display: none; }
+    body.single.before-mode .before,
+    body.single.after-mode .after { display: block; }
+    .capture {
+      width: 620px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--card);
+      box-shadow: 0 1px 2px rgb(0 0 0 / 0.05), 0 10px 30px rgb(0 0 0 / 0.04);
+    }
+    .after .identity { font-family: "Gotham Review", sans-serif; }
+    .section-head {
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid var(--line);
+    }
+    .section-head h2 {
+      margin: 0;
+      font-family: "Gotham Review", sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+    .section-head p { margin: 3px 0 0; color: var(--muted); font-size: 12px; }
+    .block + .block { border-top: 1px solid var(--line); }
+    .block-label {
+      margin: 0;
+      padding: 12px 20px 7px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 650;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .row {
+      display: flex;
+      min-height: 62px;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 20px 13px;
+    }
+    .avatar, .thumb {
+      display: grid;
+      width: 38px;
+      height: 38px;
+      flex: 0 0 auto;
+      place-items: center;
+      border-radius: 50%;
+      background: #e8e9e7;
+      color: #4d5158;
+      font-weight: 650;
+    }
+    .thumb { border-radius: 7px; background: #e7e7e3; }
+    .stack { min-width: 0; flex: 1; }
+    .identity {
+      overflow: hidden;
+      font-size: 14px;
+      font-weight: 500;
+      line-height: 1.35;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .identity.strong { font-weight: 700; }
+    .meta { margin-top: 2px; color: var(--muted); font-size: 12px; }
+    .badge {
+      flex: 0 0 auto;
+      border-radius: 999px;
+      background: #f0edf8;
+      color: var(--purple);
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 650;
+    }
+    .equipment {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 11px 20px 16px;
+    }
+    .chip {
+      display: flex;
+      min-height: 40px;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--soft);
+      padding: 4px 11px 4px 4px;
+    }
+    .chip .thumb { width: 30px; height: 30px; border-radius: 50%; font-size: 11px; }
+    .report-row {
+      display: grid;
+      grid-template-columns: 34px minmax(0, 1fr) 110px;
+      align-items: center;
+      gap: 10px;
+      padding: 13px 20px;
+      border-top: 1px solid var(--line);
+    }
+    .rank { color: var(--muted); }
+    .overdue { color: var(--red); text-align: right; font-weight: 650; }
+  </style>
+</head>
+<body>
+  <main>
+    <article class="capture before" data-capture="before">
+      <header class="section-head">
+        <h2>Operational identity</h2>
+        <p>Source-control baseline: row identity inherits Geist.</p>
+      </header>
+      <section class="block">
+        <p class="block-label">Item booking history</p>
+        <div class="row">
+          <div class="avatar">JT</div>
+          <div class="stack">
+            <div class="identity strong">Football vs Oregon — Photo</div>
+            <div class="meta">Jordan Taylor / Aug 30 / Camp Randall</div>
+          </div>
+          <span class="badge">Reservation</span>
+        </div>
+      </section>
+      <section class="block">
+        <p class="block-label">Selected equipment</p>
+        <div class="equipment">
+          <div class="chip"><span class="thumb">FX6</span><span class="identity">CAM-214</span></div>
+          <div class="chip"><span class="thumb">24</span><span class="identity">Sony FE 24–70mm</span></div>
+        </div>
+      </section>
+      <section class="block">
+        <p class="block-label">Overdue by person</p>
+        <div class="report-row"><span class="rank">1</span><span class="identity strong">Jordan Taylor</span><span class="overdue">2d 4h</span></div>
+        <div class="report-row"><span class="rank">2</span><span class="identity strong">Sam Rivera</span><span class="overdue">18h</span></div>
+      </section>
+    </article>
+
+    <article class="capture after" data-capture="after">
+      <header class="section-head">
+        <h2>Operational identity</h2>
+        <p>Current source: only primary identity moves to Gotham.</p>
+      </header>
+      <section class="block">
+        <p class="block-label">Item booking history</p>
+        <div class="row">
+          <div class="avatar">JT</div>
+          <div class="stack">
+            <div class="identity strong">Football vs Oregon — Photo</div>
+            <div class="meta">Jordan Taylor / Aug 30 / Camp Randall</div>
+          </div>
+          <span class="badge">Reservation</span>
+        </div>
+      </section>
+      <section class="block">
+        <p class="block-label">Selected equipment</p>
+        <div class="equipment">
+          <div class="chip"><span class="thumb">FX6</span><span class="identity">CAM-214</span></div>
+          <div class="chip"><span class="thumb">24</span><span class="identity">Sony FE 24–70mm</span></div>
+        </div>
+      </section>
+      <section class="block">
+        <p class="block-label">Overdue by person</p>
+        <div class="report-row"><span class="rank">1</span><span class="identity strong">Jordan Taylor</span><span class="overdue">2d 4h</span></div>
+        <div class="report-row"><span class="rank">2</span><span class="identity strong">Sam Rivera</span><span class="overdue">18h</span></div>
+      </section>
+    </article>
+  </main>
+  <script>
+    const mode = new URLSearchParams(window.location.search).get("mode");
+    if (mode === "before" || mode === "after") {
+      document.body.classList.add("single", `${mode}-mode`);
+    }
+  </script>
+</body>
+</html>

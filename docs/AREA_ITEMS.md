@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Items
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-07-31
+- Last Updated: 2026-08-23
 - Status: Active
 - Version: V1
 
@@ -34,7 +34,7 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 ## V1 Workflow
 
 ### Items List
-1. User lands on all items list (default table mode).
+1. User lands on all items list (default table mode), sorted by Most popular.
 2. User filters by status/category/location/item kind and searches by tagName, productName, brand, model, serial, or tracking code.
 3. Searches return one row per item family/SKU; exact unit QR scans resolve to unit context under the parent family rather than producing separate catalog rows.
 4. User opens row details or row actions.
@@ -46,7 +46,7 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 3. Search stays in the native search bar.
 4. Favorites, Status, and Sort live in native toolbar buttons and menus so the list avoids custom pill chrome while keeping the current filter state discoverable.
 5. Row actions remain swipe and context-menu based: Favorite, Reserve, and Copy Asset Tag.
-6. The mobile Items list supports the web-backed `Asset tag` and `Most popular` sorts through a compact native menu.
+6. The mobile Items list defaults to the web-backed `Most popular` sort and also offers `Asset tag` through a compact native menu.
 7. The mobile Items list renders serialized assets and item families in the server-provided mixed order; unit-tracked and quantity-tracked families keep the same naming as web rows.
 8. The mobile Items list intentionally avoids desktop-only bulk actions and advanced filter density.
 
@@ -98,7 +98,7 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
    - Item kind
    - Kit status
    Category options are exact-ID filters and use full hierarchy paths, including parent nodes and deeply nested subcategories.
-3. Sort defaults to tagName ascending and also supports Most popular for recent operational usage.
+3. Sort defaults to Most popular by recent checkout, reservation, and scan usage. Asset tag, category, department, and location remain available.
 4. View toggle supports table mode as required baseline.
 5. Mobile keeps search and filter access pinned at top for long lists per `AREA_MOBILE.md`.
 
@@ -117,7 +117,7 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 1. Row click opens item details.
 2. Status indicator reflects derived availability.
 3. Kebab menu includes state-appropriate actions by role.
-4. Multi-select is allowed for future bulk actions; bulk mutations are out of scope for V1.
+4. Multi-select is allowed, including item-family rows. Select all matching honors the active item kind and returns family row ids as `bulk-{id}`. Bulk mutations still apply only to serialized items and skip families.
 5. Mobile list interactions should avoid deep category drilling as the primary path, favoring search and direct item rows.
 6. Attachments are hidden by default and only shown through the Hidden attachments only filter or direct scan/search.
 
@@ -434,6 +434,10 @@ Item families can optionally enable `trackByNumber` on the backing `BulkSku` imp
 5. Preserve audit coverage for every mutation.
 
 ## Change Log
+
+- 2026-08-23: **Items list now opens on Most popular, and select-all matching follows the visible kind.** `/items` defaults to the existing popularity sort from recent checkout, reservation, and scan usage. Clearing a column sort snaps back to Most popular instead of falling through to Asset tag. The clean `/items` URL means Most popular; choosing Asset tag writes `sort=assetTag`. Select all matching now sends `item_type` and includes item-family ids.
+
+- 2026-08-23: **Omitted `/api/assets` sort and native Items now match web Most popular.** Callers that leave `sort` off `/api/assets` receive the same popularity ranking as `/items`. Native Items opens on Most popular, treats that sort as the resting toolbar state, and still offers Asset tag. Dedicated picker-search stays asset-tag ordered so category lists remain scannable.
 
 - 2026-08-09: **Native item clears are explicit and authoritative.** Item Detail now distinguishes an unchanged name, serial number, or notes field from a user clearing it. Name and serial clears encode JSON `null`, notes clears encode the server's accepted empty string, and the sheet installs the returned changed fields immediately after success instead of reporting success before a fallible reload.
 

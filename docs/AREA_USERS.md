@@ -3,9 +3,9 @@
 ## Document Control
 - Area: Users
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-21
+- Last Updated: 2026-08-23
 - Status: Active
-- Version: V1.3
+- Version: V1.4
 
 ## Direction
 Use a simple tiered permission model with inheritance so behavior is predictable in UI and backend authorization.
@@ -40,6 +40,12 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 - `STUDENT`: view all users; edit only the approved fields on their own profile; no edit rights for other users.
 - `COLLABORATOR`: view active, non-hidden teammates only when the assigned affiliation policy grants `PEOPLE_DIRECTORY_VIEW`. The directory is name-searchable and exposes only roster identity and work context. Collaborators cannot see private profile, contact, presence, assignment, activity, booking, shift, badge, or audit data and cannot edit another user.
 - Every authenticated role may update its own approved profile-completion fields through the explicit `user.edit_self` permission. This does not grant broader user-edit access.
+
+### Scoreboard
+- `ADMIN`, `STAFF`, `STUDENT`, and `COLLABORATOR` may view the shared team Scoreboard and an active, non-hidden person’s Scoreboard through the explicit `scoreboard.view` permission.
+- The team Scoreboard is a generic current-season explorer. Sport, Schedule venue, opponent, and Home/Away/Neutral site each accept one exact value and combine with AND semantics; totals, dimensional breakdowns, the Snapshot, and every person ranking are recomputed from that same intersection. Filter choices remain stable across narrowing.
+- Shared Scoreboard identity is limited to user id, name, and avatar. Scoreboard access does not grant the People directory or expose role, affiliation, contact, profile, presence, assignment, availability, call-time, booking, activity, badge, audit, or custody data.
+- Hidden and inactive people stay out of aggregate discovery. Existing self and internal operator access to their direct Scoreboard retains the established visibility boundary.
 
 ### Items
 - `ADMIN`: create, view, edit all items.
@@ -109,6 +115,8 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 - [x] AC-4: Staff can modify all users, items, reservations, and check-outs.
 - [x] AC-5: Staff can manage role changes and force location exceptions.
 - [x] AC-6: Unauthorized actions are blocked and audited.
+- [x] AC-7: Every authenticated role can read active, visible Scoreboard identity and metrics without gaining private profile access.
+- [x] AC-8: Team Scoreboard filters stack across sport, Schedule venue, opponent, and site while keeping all totals, breakdowns, Snapshots, and person rankings on one server-owned intersection.
 
 ## Developer Brief (No Code)
 1. Define a centralized permission policy map keyed by role and resource.
@@ -119,6 +127,16 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 6. Ensure audit logs include actor role, target owner, and exception metadata.
 
 ## Change Log
+
+- 2026-08-23: **Admin directory chips now read as Staff.** People/Users rows, profile headers, and the org chart keep `Role.ADMIN` for authorization but present a Staff badge so operator rank is not advertised on the roster. Role filters, the Admins metric, and the profile role editor still use the real Admin value. Files: `src/app/(app)/users/RoleBadge.tsx`, `src/app/(app)/users/org-chart/page.tsx`.
+
+- 2026-08-23: **The Users roster now shows collaborator affiliation instead of the generic Collaborator role chip.** Desktop and mobile People/Users rows use the assigned policy badge (`Learfield`, `BTN`) in the Role column, falling back to Collaborator only when no affiliation is present. Admin, Staff, and Student badges are unchanged. Profile headers still show the Collaborator role plus a separate affiliation chip. Files: `src/app/(app)/users/RoleBadge.tsx`, `src/app/(app)/users/UserRow.tsx`.
+
+- 2026-08-23: **The team Scoreboard is now a reusable stats explorer.** The aggregate route and both clients accept stackable Sport, Venue, Opponent, and Site filters without naming the current year in product copy. Stable facets come from the full server-owned window; all totals, four dimensional breakdowns, and per-person summaries come from the selected intersection. Web and native add a small deterministic Snapshot with the current combination and most-events contributor as the first storytelling layer toward a future end-of-year recap. The two bounded database reads, official-record exclusions, shared-identity allowlist, and all-role authenticated boundary are unchanged. Authenticated local web proof covered a three-filter combination and filtered-empty recovery; native build/model proof passes, while live native totals remain behind the undeployed production route tracked by GAP-71.
+
+- 2026-08-23: **The Scoreboard is shared with everyone signed in.** D-056 supersedes the earlier collaborator cross-user Scoreboard denial without widening the Users profile contract. Admin, Staff, Student, and Collaborator roles now share the aggregate `/scoreboard` destination and may open the dedicated Scoreboard for active, non-hidden people. The aggregate and detail paths select only id, name, avatar, and Schedule-derived Scoreboard metrics; they do not load private profile, contact, schedule, booking, activity, badge, audit, or custody data. Hidden and inactive identities stay out of aggregate discovery, protected event links are omitted, and unauthenticated access remains denied. Local all-role route/source tests, authenticated browser proof, and the required web/native builds pass; student/collaborator production proof remains open.
+
+- 2026-08-23: **The profile Scoreboard now keeps one server-owned season and a resilient game list.** Web and native callers omit `season` unless they intentionally request an override, so the route is the single owner of the active scope instead of each client pinning `2026–27`. Web pagination now preserves a terminal cursor, blocks duplicate reads, aborts pages that belong to an old filter, drops repeated event ids, and keeps already-rendered games visible behind a specific retry message when a later page fails. Result, sport, and breakdown controls now meet the 40px web target floor. The read route denies collaborator cross-user access before looking up the target, shift-area buckets use canonical product order, and Best venue favors sustained record margin before rate so a 6–1 venue outranks a 1–0 sample. Response shape, official-record rules, events-worked semantics, and collaborator visibility policy are unchanged. Focused tests cover the role/privacy matrix, default-season behavior, paging ownership, deduplication, deterministic areas, and venue ranking; authenticated local Preview verified Nolan Kromke's `0–1` record and seven worked events with live filtering and no console errors.
 
 - 2026-08-21: **The web profile Scoreboard now shows a season, not just a query result.** It matched the native screen's original shape -- a record, three different kinds of number in one row, four breakdown tables rendered in full, and a flat list of games -- while the native surface moved on. The season card now carries a win/loss proportion meter in the chart palette (`--chart-2` wins, `--chart-5` losses), the last five results newest-first with the current run named, and one sentence reconciling events worked against resolved games; under a filter that sentence states which set is which, using a season total held from an unfiltered read. Highlights (most worked, best venue, top matchup) hide once a filter narrows the view. The four tables became one card with a Sport/Opponent/Site/Venue switcher, five rows deep with Show all, each row carrying a bar whose length is its share of the season and whose split is how that share went, and a screen-reader-only game count since the bar is decorative. Games group by month with a round result badge, day, and a site glyph, and the header counts what is shown against the total. The shared presentation logic lives in `src/lib/scoreboard-digest.ts` so the web and the native screen derive recency, streaks, month grouping, and highlights the same way. Route, season scope, visibility rules, and record semantics are unchanged. Files: `src/app/(app)/users/[id]/UserScoreboardTab.tsx`, `src/lib/scoreboard-digest.ts`, `tests/scoreboard-digest.test.ts`.
 
@@ -165,6 +183,15 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
   session through `/api/auth/register`; recovery uses the existing
   enumeration-safe `/api/auth/forgot-password` response. The server's reset
   email and password-reset endpoint are unchanged.
+
+- 2026-08-23: **Passkey sign-in is offered, not hunted for.** The web login arms
+  browser AutoFill on the email step so a saved passkey appears in that field's
+  own suggestions, the native app arms Apple's equivalent QuickType request, and
+  "Remember me" now covers a passkey sign-in as well as a password one. The
+  passkey button hides on browsers that cannot do WebAuthn instead of failing
+  after the tap, and a dismissed prompt is silent rather than an error. The
+  invite/access boundary, active-account checks, one-time ceremonies, required
+  user verification, and shared session issuance are unchanged.
 
 - 2026-08-04: **Auth email-domain guidance preserves collaborator identity.**
   Login, registration, and password recovery recommend `@wisc.edu` as soon as

@@ -36,6 +36,7 @@
 - [x] Slice 5: Update Users, Settings, decisions, gaps, and native follow-up documentation.
 - [x] Slice 6: Add native iOS passkey login, enrollment, and credential management against the web API contract.
 - [x] Slice 7: Harden explicit self-service authorization, duplicate conflicts, and native post-mutation recovery.
+- [x] Slice 8: Make the shipped passkey experience discoverable and self-explaining on web and native iOS.
 
 ## Verification
 
@@ -57,6 +58,29 @@
 - [x] Current TypeScript, focused ESLint, migration-free `build:app`, iOS project/drift/gap checks, and Wisconsin simulator build.
 - [ ] Current docs verification is blocked by parallel badge/sidebar codemap drift across four generated codemaps; do not regenerate until those owners finish.
 - [ ] Authenticated browser smoke, device-side AASA refresh, and real-device passkey enrollment/sign-in.
+
+## Slice 8 Verification (2026-08-23)
+
+- [x] Focused tests: 24 passed across `tests/passkey-auth.test.ts`, `tests/passkey-experience.test.ts`, and `tests/ios-passkey-source.test.ts`; the wider auth/source suite (`ios-login-presentation`, `auth-screen-source`, `email-first-onboarding-source`, `api-route-wrapper-contract`, `auth-email-guidance`) also passes.
+- [x] `npx tsc --noEmit --pretty false`.
+- [x] Focused ESLint on every changed TypeScript/TSX file.
+- [x] `git diff --check`.
+- [x] Wisconsin simulator build on iPhone 16 Pro (`2865136C-3A9F-4CDC-B019-269F1A2E2AC2`).
+- [x] Local browser proof at `/login`: the email field carries `autocomplete="email webauthn"` and is the one eligible AutoFill input, the conditional ceremony POSTs `/api/auth/passkey/login/options` on arrival, "Remember me" renders on the email step, and the ceremony's failure against the database-less dev server stays silent with both buttons enabled.
+- [ ] `npm run build:app` — blocked: the build guard refuses to run while the user's `next dev` server holds port 3000.
+- [ ] Authenticated Settings Security browser proof — blocked: `.env.development.local` carries no `DATABASE_URL`, so every database-backed route on the local dev server fails or hangs.
+- [ ] Real-device AutoFill and enrollment proof on the physical iPhone 16 Pro (still GAP-62).
+
+## Slice 8 Changes
+
+- Web sign-in arms WebAuthn conditional UI (`useBrowserAutofill`) while the email step is on screen, with a generation guard so a stale or aborted ceremony can neither surface an error nor navigate.
+- `rememberMe` now reaches the passkey ceremony: the checkbox renders on the email step, and toggling it re-arms the ceremony because the server binds session length to the challenge.
+- Blank passkey names resolve to the enrolling client (`describeEnrollingClient`) instead of a repeated "This device".
+- Passkey removal on web moved from `window.confirm` plus the enrollment form's password field into its own dialog with its own reauthentication field; the old wiring left the delete button inert whenever that shared field was empty.
+- Shared `src/lib/passkey-client.ts` maps WebAuthn spec errors to product language and classifies cancellation for both web surfaces.
+- Native iOS arms `performAutoFillAssistedRequests()` on the email step, sends `excludedCredentials`, requests required user verification at enrollment, replaces an armed request instead of failing as unavailable, ignores callbacks from a replaced controller, withdraws the request on task cancellation, and treats a dismissed sheet as silence.
+- Both platforms label a credential as synced or device-bound.
+- The public login-options rate limit moved from 30 to 120 per 15 minutes per IP because conditional UI starts a ceremony on every visit and a campus IP is shared; the assertion budget on `/verify` stays at 30.
 
 ## Review
 

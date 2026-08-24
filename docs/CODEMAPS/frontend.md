@@ -48,6 +48,8 @@
 | `/resources` | `src/app/(app)/resources/page.tsx` |
 | `/schedule/assign` | `src/app/(app)/schedule/assign/page.tsx` |
 | `/schedule` | `src/app/(app)/schedule/page.tsx` |
+| `/scoreboard/[id]` | `src/app/(app)/scoreboard/[id]/page.tsx` |
+| `/scoreboard` | `src/app/(app)/scoreboard/page.tsx` |
 | `/search` | `src/app/(app)/search/page.tsx` |
 | `/settings/allowed-emails` | `src/app/(app)/settings/allowed-emails/page.tsx` |
 | `/settings/app-activity` | `src/app/(app)/settings/app-activity/page.tsx` |
@@ -112,7 +114,7 @@
 | `src/components/ActivityTimeline.tsx` | 1368 |
 | `src/components/onboarding/OnboardingDialog.tsx` | 996 |
 | `src/components/EquipmentPicker.tsx` | 879 |
-| `src/components/AppShell.tsx` | 865 |
+| `src/components/AppShell.tsx` | 867 |
 | `src/components/ShiftDetailPanel.tsx` | 797 |
 | `src/components/ChooseImageModal.tsx` | 769 |
 | `src/components/profile-completion/ProfileCompletionWizard.tsx` | 759 |
@@ -122,8 +124,8 @@
 | `src/components/booking-wizard/WizardStep1.tsx` | 567 |
 | `src/components/BookingListPage.tsx` | 523 |
 | `src/components/ui/heatmap.tsx` | 434 |
+| `src/components/Sidebar.tsx` | 413 |
 | `src/components/booking-details/BookingHeader.tsx` | 412 |
-| `src/components/Sidebar.tsx` | 411 |
 | `src/components/ui/chart.tsx` | 389 |
 | `src/components/shift-detail/ShiftSlotCard.tsx` | 356 |
 | `src/components/booking-details/BookingInfoCard.tsx` | 342 |

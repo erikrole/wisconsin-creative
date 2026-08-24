@@ -3,7 +3,7 @@
 ## Document Control
 - Owner: Erik Role (Wisconsin Athletics Creative)
 - Product: Gear Tracker
-- Last Updated: 2026-08-21
+- Last Updated: 2026-08-23
 - Status: Living decision log
 - Purpose: track durable decisions, rationale, and downstream constraints
 
@@ -61,6 +61,9 @@
 - D-052: Shared software credentials use a dedicated encrypted vault boundary
 - D-053: Accessibility text sizes are supported, not designed for
 - D-054: App activity is an owner-only named client-presence report
+- D-055: Student shift claims are approval-first on both paths
+- D-056: Scoreboard metrics are shared authenticated team data
+- D-057: Scoreboard credit is recorded separately from shift scheduling
 
 ---
 
@@ -1107,6 +1110,11 @@ These are non-negotiable integrity constraints. Every feature must preserve them
   `docs/RELEASE_VERIFICATION.md`.
 
 ## Change Log
+- 2026-08-23: Extended D-057 so shift badges count credits too, and stay silent about it. Badge evidence now comes from one shared reader used by both the awarding evaluator and the profile progress bar, credits contribute only facts the event itself carries (no invented area, call window, or all-day hours), and a credit on a finished event re-evaluates badges immediately. A badge the person's own assignments already earned notifies as usual; one that only a credit pushed them over is granted without its notification, so a credit produces no message on any surface.
+- 2026-08-23: Added D-057 for admin-recorded Scoreboard credit. An admin can credit any person -- internal or collaborator -- for a past or future event without creating a shift, an assignment, or a notification. Scoreboard totals, profile records, and worked-event counts read credits alongside active assignments and still count each person once per event; Schedule, published crews, My Shifts, trades, and ICS never read them. Migration `0131` is written; remote deploy and authenticated production proof remain pending.
+- 2026-08-23: Amended D-056 so the shared Scoreboard is an always-on stats explorer and the deterministic aggregation foundation for a future end-of-year story. Sport, Schedule venue, opponent, and Home/Away/Neutral site are exact-match dimensions that stack with AND semantics; every total, breakdown, Snapshot, and person ranking describes the same intersection while the full bounded scope supplies stable filter options. Visible clients call the scope “Current season” instead of naming the year; the server remains the sole owner of the underlying window.
+- 2026-08-23: Added D-056 making the read-only Scoreboard a shared authenticated surface for Admin, Staff, Student, and Collaborator roles. The exception is limited to active visible identity plus Schedule-derived Scoreboard metrics; private profiles, contact data, schedules, bookings, activity, and unauthenticated publishing remain outside it. Local web/native implementation and authenticated local web proof are complete; production server/client rollout proof remains pending.
+- 2026-08-23: Amended D-052 so Photo Mechanic is the default `/licenses` landing and Shared logins is `?tab=shared-logins`. Existing `?tab=photo-mechanic` links still open Photo Mechanic. The two models remain independent; vault encryption and Photo Mechanic claim/expiry semantics are unchanged.
 - 2026-08-22: Added D-055 restoring approval-first student claims on both the open-slot and Trade Board paths, and retiring the half-removed instant-claim policy it replaces. Claims escalate and then auto-approve on a per-claim durable workflow rather than expiring unresolved. No schema or permission change; authenticated runtime proof remains pending.
 - 2026-08-21: Added D-054 for the owner-only named App activity report. The narrow client-presence exception shows user/device/build/channel/launch context while preserving pseudonymous aggregate analytics, default-deny access, and the no-content/device-identifier boundary. Migration, environment, authenticated browser, and signed-client rollout proof remain pending.
 - 2026-08-21: Amended D-034 for the locally verified, rebalanced 50-definition automatic catalog expansion. New goals avoid redundant raw-total ladders and use sustained or compound checkout, return, trade, and schedule facts; schedule-derived recognition may use confirmed ended assignment result/site/sport/opponent/mapped venue/conflict facts; checkout and return context rules remain on immutable/opened/current-custodian boundaries; app-open rules remain server-time receipt-claimed and no history is backfilled. Production deployment/runtime proof remains pending.
@@ -1243,7 +1251,7 @@ These are non-negotiable integrity constraints. Every feature must preserve them
   - Allow authenticated ADMIN, STAFF, and STUDENT users to discover active records and request password reveal/copy when their role is included in the record audience. ADMIN and STAFF retain management visibility; STUDENT requires the `STUDENT` audience. External `COLLABORATOR` users require both the default-deny `SOFTWARE_VAULT_VIEW` capability and the `COLLABORATOR` audience. Limit create, edit, restore, and archive to ADMIN and STAFF.
   - Return account email in the authorized list response only after server-side audience filtering, but never return password or ciphertext there. Password access is a separate rate-limited authenticated request with `private, no-store` response headers and the same audience boundary.
   - Audit create, update, archive/restore, and password reveal actions without writing secret values to before/after snapshots, errors, exports, or source fixtures. Archive is reversible; permanent deletion is not part of V1.
-  - Keep one `/licenses` destination for route compatibility, but present explicit URL-addressable **Shared logins** and **Photo Mechanic licenses** tabs. Shared logins is the default; Photo Mechanic pool controls and actions render only in its own tab, and the two models remain independent.
+  - Keep one `/licenses` destination for route compatibility, but present explicit URL-addressable **Photo Mechanic** and **Shared logins** tabs. Photo Mechanic is the default landing; Shared logins is `?tab=shared-logins`. Existing `?tab=photo-mechanic` links still open Photo Mechanic. Photo Mechanic pool controls and actions render only in its own tab, and the two models remain independent.
 - Consequences:
   - Shared credentials and Photo Mechanic activations have one discoverable Software destination without collapsing their distinct mental models or changing Photo Mechanic claim/expiry semantics.
   - Key replacement requires an operational re-encryption procedure before rotation; there is no self-service key-rotation UI in V1.
@@ -1319,3 +1327,61 @@ These are non-negotiable integrity constraints. Every feature must preserve them
   - No schema migration: `ShiftTradeStatus.CLAIMED` and `ShiftAssignmentStatus.REQUESTED`/`APPROVED`/`DECLINED` all survived the 2026-07-02 cleanup.
   - An auto-approval is a schedule change staff did not make, so it is always reported to them.
 - Reference: `docs/AREA_SHIFTS.md`, `src/lib/services/shift-trades.ts`, `src/lib/services/schedule-open-work.ts`, `src/workflows/pending-claim-review.ts`, and `tests/schedule-instant-pickup-source.test.ts`.
+
+## D-056: Scoreboard Metrics Are Shared Authenticated Team Data
+
+- Date: 2026-08-23
+- Status: Accepted; implemented locally, production rollout proof pending
+- Context:
+  - Team totals and per-person leaderboards are useful only when the whole signed-in team can discover and compare them. Making the destination role- or collaborator-capability-specific would turn recognition into private profile data and contradict the requested product behavior.
+  - Existing user profiles contain contact, identity, scheduling, custody, and activity fields that must not be widened merely to expose a Scoreboard.
+- Decision:
+  - Every authenticated Admin, Staff, Student, and Collaborator may view `/scoreboard`, `GET /api/scoreboard`, and the Scoreboard for an active, non-hidden person. `scoreboard.view` is an explicit all-role permission and does not depend on `PEOPLE_DIRECTORY_VIEW` or another collaborator policy grant.
+  - Team aggregates use the server-owned Scoreboard season and distinguish unique team events and games from person-event and person-game credits. Multiple shifts for one person on one event count once, and the aggregate is built with bounded batched event reads rather than per-person queries.
+  - The aggregate route accepts at most one exact Sport, Schedule venue, opponent, and site value. Different dimensions stack with AND semantics. The service applies that one intersection to unique totals, all dimensional breakdowns, and every person summary; stable facets continue to come from the full bounded window so narrowing one dimension never removes the available choices in another.
+  - Venue means the cleaned display component of `CalendarEvent.rawLocationText`, never an equipment pickup location. Site means the canonical `CalendarEvent.site` Home/Away/Neutral classification. The clients use generic “Current season” copy while the server retains ownership of the active scope key and date bounds.
+  - The shared identity contract is limited to user id, display name, avatar, and Scoreboard metrics. Cross-user detail resolves only that minimal identity and the dedicated Scoreboard response; it does not load or expose the private user-profile payload, and protected event links are omitted from the shared detail surface.
+  - The shared roster includes active, non-hidden people. Existing self and internal-operator handling of inactive or hidden records remains outside aggregate discovery and retains its current visibility rules.
+  - This is an authenticated app surface, not public internet publishing. Unauthenticated reads remain denied.
+- Consequences:
+  - Scoreboard is first-class in the web left navigation and in native Browse plus regular-width sidebar navigation for every role.
+  - The always-on explorer can produce a deterministic Snapshot for any filter intersection and establishes the reusable stat vocabulary for a later end-of-year narrative experience. That future presentation may add superlatives, streaks, and surprising combinations, but it must derive them from the same event authority and counting rules rather than inventing client-only facts.
+  - Collaborators can recognize team work without receiving People-directory, contact, scheduling, booking, badge, audit, or custody access.
+  - Server/web deployment must precede a native release that depends on the aggregate endpoint; student and collaborator production smoke remain release gates.
+- Guardrails:
+  - Never satisfy a Scoreboard read by widening `/api/users/[id]`, `UserDetailView`, or another private profile contract.
+  - Never add email, phone, role, affiliation, profile fields, availability, call times, booking history, activity, audit data, or unrestricted event links to a shared Scoreboard payload.
+  - Do not let a future recap or generated insight silently change the server-owned scope, official-record exclusions, event/person deduplication, venue/site meaning, or privacy boundary. Narrative copy must be reproducible from returned or server-derived facts.
+  - Do not make the Scoreboard unauthenticated without a separate publishing, indexing, institutional-policy, and privacy decision.
+- Reference: `docs/AREA_USERS.md`, `docs/AREA_COLLABORATORS.md`, `docs/AREA_EVENTS.md`, `docs/AREA_MOBILE.md`, `src/lib/services/team-scoreboard.ts`, `tasks/archive/completed-2026-08-23/team-scoreboard-plan-2026-08-23.md`, and `tasks/archive/completed-2026-08-23/scoreboard-explorer-plan-2026-08-23.md`.
+
+## D-057: Scoreboard Credit Is Recorded Separately From Shift Scheduling
+
+- Date: 2026-08-23
+- Status: Accepted; implemented locally, migration deploy and production proof pending
+- Context:
+  - People work events they were never staffed on: a late fill-in, someone who covered without a slot, or a collaborator whose contribution is tracked but who is never scheduled through our crew system.
+  - Backfilling those contributions as shift assignments would be wrong in every direction. It would message the person, publish them into a crew, put a past or future event on their My Shifts, expose them to trade and acknowledgement flows, and let staffing coverage math count a slot that never existed.
+  - Collaborators in particular need tracking without scheduling: their assignments live outside our system, so a shift row would describe work we do not direct.
+- Decision:
+  - `EventCredit` is a distinct, admin-owned record: one person, one event, optional note, recorded actor, unique per pair. It carries no area, no slot, no call window, and no status.
+  - Every place that already counts an active shift assignment for stats counts a credit identically: the team Scoreboard, the per-person Scoreboard, profile game records, worked-event totals, and shift badge recognition. A person holding both a credit and an assignment on one event still counts once, exactly as two shifts on one event count once.
+  - Badge evidence is read through one shared reader used by both the awarding evaluator and the profile progress bar, so a badge can never award from a count the profile cannot show. A credit contributes the event's own sport, site, result, opponent, and mapped venue; it claims no area and no call window, because it records that the work happened, not how it was staffed. An all-day event's midnight boundaries are a date rather than hours, so a credit on one is excluded from the early-start and late-finish rules instead of tripping them.
+  - A credit on a finished event re-evaluates that person's badges immediately; a credit on a future event is picked up by the nightly sweep once the event ends. Badges are never revoked, so removing a credit lowers live Scoreboard totals but leaves an already-earned badge in place.
+  - Nothing else reads the table. Schedule, working copies, published snapshots, crew coverage, My Shifts, trades, acknowledgements, notifications, and ICS are unchanged and unaware.
+  - Writes are ADMIN-only, rate-limited, transactional, and audited on the event. Staff may read the credit list for an event they are running. Adding or removing a credit sends no notification of any kind, by design and not by omission.
+  - Credits apply to past and future events alike, and to any role including `COLLABORATOR`.
+- Consequences:
+  - Season stats can be corrected after the fact without rewriting schedule history or paging anyone.
+  - The audit trail is the only record of a credit, so audit coverage is the accountability mechanism for a control that silently moves recognition numbers.
+  - Silence covers the badge recount as well. A badge the person had already earned on their own assignments notifies as usual; one that only a credit pushed them over is granted silently, so no surface announces the credit. The suppression is durable, not deferred: the award row exists after the silent grant, so no later pass re-inserts it and none can notify late.
+  - Because the shared Scoreboard response boundary is unchanged, no client -- web, native, or collaborator -- learns how a person earned an event; a credited person appears exactly like an assigned one.
+- Guardrails:
+  - Never notify, publish, or schedule from a credit, and never surface one as a shift.
+  - Never let a credit create staffing coverage: an unfilled slot stays unfilled.
+  - Never let a credit double-count a person who also holds an assignment on the same event.
+  - Never let a credit invent an area, a call window, or an hour-of-day fact it does not have; breadth and time-of-day rules must stay unearned rather than approximated.
+  - Never let the awarding path and the progress path read worked evidence from two different queries again.
+  - Never notify for a badge that only a credit earned, and never suppress a notification for one the schedule's own record already earned.
+  - Do not widen writes beyond ADMIN, and do not add a credit path that skips the audit entry.
+- Reference: `docs/AREA_EVENTS.md`, `docs/AREA_COLLABORATORS.md`, `src/lib/services/event-credit.ts`, `src/lib/badges/worked-evidence.ts`, `prisma/migrations/0131_event_credits/migration.sql`.

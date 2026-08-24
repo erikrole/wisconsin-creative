@@ -3,6 +3,51 @@
 Last updated: 2026-08-23
 
 ---
+## Completed: API and native Items default sort is Most popular (2026-08-23)
+
+- [x] Default omitted `/api/assets?sort` to the existing popularity ranking.
+- [x] Open native Items on Most popular and treat that as the resting sort control.
+- [x] Keep picker-search on asset-tag order.
+
+- **Shipped locally:** unlabeled `/api/assets` lists and native Items now match web Most popular. Choosing Asset tag still requests `sort=assetTag`. Equipment picker-search stays tag-ordered.
+- **Boundary:** no schema, popularity-scoring, pagination-cap, or picker-search change. Family bulk mutations are still skipped.
+- **Verification:** focused Items/API/iOS source contracts (67 tests), TypeScript, ESLint on touched files, `git diff --check`, and `drift:ios`. `xcodebuild` for iPhone 16 Pro / iOS 26.5 compiled `ItemsView.swift` and failed in unrelated `StatusPill.swift` (`some View` helper missing `return`). Authenticated Items runtime was not re-run.
+
+---
+## Completed: Photo Mechanic-first Software page (2026-08-23)
+
+- [x] Make Photo Mechanic the default `/licenses` landing; Shared logins is `?tab=shared-logins`.
+- [x] Extract `PhotoMechanicLicenses.tsx` and lead with the holder's code or a claim prompt.
+- [x] Quiet Shared logins chrome so it no longer restates the tab or treats Photo Mechanic as a footnote.
+- [ ] Authenticated local browser proof of `/licenses` after the shared Next process is available.
+
+- **Shipped locally:** Software now opens on Photo Mechanic. The holder's code is the first action; Shared logins stays a second tab. Claim, masking, two-slot, and vault encryption contracts are unchanged.
+- **Boundary:** no API, schema, permission, or iOS change. Collaborators still cannot see Photo Mechanic.
+- **Verification:** focused Software/licenses UI contracts (54 tests across 7 files), `tsc`, eslint on touched files, `git diff --check`, `npm run verify:docs`, and `npm run build:app`. `/licenses` is in the production compile table at 29 kB.
+
+---
+## Completed: Items list sort snap and select-all matching (2026-08-23)
+
+- [x] Snap empty column sort back to Most popular so the toolbar, URL, query, and row order stay aligned.
+- [x] Send `item_type` on Select all matching and return item-family ids as `bulk-{id}`.
+- [x] Allow item-family row selection; keep bulk mutations serialized-only with a skip message.
+
+- **Shipped locally:** clearing a column sort no longer pretends to be Most popular while listing by Asset tag, and Select all matching follows the visible item kind including families.
+- **Boundary:** API default sort remains Asset tag for iOS Items and pickers. Family bulk mutations are still skipped.
+- **Verification:** focused Items source contract plus `/api/assets?ids_only` item-kind tests.
+
+---
+## Completed: Items list default sort is Most popular (2026-08-23)
+
+- [x] Default `/items` to the existing Most popular sort when no `sort` query is present.
+- [x] Keep `/items` URLs clean for the default, and write `sort=assetTag` when Asset tag is chosen.
+- [x] Leave native Items on its current Asset tag default.
+
+- **Shipped locally:** opening the Items page now shows gear in Most popular order instead of Asset tag order.
+- **Boundary:** no API, schema, popularity-scoring, pagination, or iOS default-sort change.
+- **Verification:** focused Items source contract plus TypeScript/docs checks in this slice.
+
+---
 ## Completed: Manual event date/time correction (2026-08-23)
 
 - [x] Add start/end editing to Event detail for manually authored events while keeping imported event times source-owned.

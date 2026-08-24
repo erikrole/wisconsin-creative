@@ -9,6 +9,7 @@ tsconfig.tsbuildinfo
 tmp/
 .tmp/
 ios/~ai-*.tmp
+ios/build/
 .reports/
 .asc/
 .DS_Store

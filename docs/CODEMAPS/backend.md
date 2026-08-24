@@ -5,7 +5,7 @@
 
 | File | Lines |
 |---|---:|
-| `src/lib/services/accountability.ts` | 487 |
+| `src/lib/services/accountability.ts` | 491 |
 | `src/lib/services/app-activity-report.ts` | 137 |
 | `src/lib/services/auto-assign.ts` | 92 |
 | `src/lib/services/auto-fill-preview.ts` | 259 |
@@ -33,9 +33,10 @@
 | `src/lib/services/companion-projection-publisher.ts` | 57 |
 | `src/lib/services/companion-projection.ts` | 196 |
 | `src/lib/services/dashboard-counts.ts` | 119 |
+| `src/lib/services/event-credit.ts` | 124 |
 | `src/lib/services/event-defaults.ts` | 69 |
 | `src/lib/services/firmware-watch.ts` | 299 |
-| `src/lib/services/game-record.ts` | 171 |
+| `src/lib/services/game-record.ts` | 158 |
 | `src/lib/services/hidden-users-cleanup.ts` | 122 |
 | `src/lib/services/kiosk-checkout-complete.ts` | 90 |
 | `src/lib/services/kiosk-location.ts` | 72 |
@@ -55,9 +56,9 @@
 | `src/lib/services/scans.ts` | 671 |
 | `src/lib/services/schedule-automation.ts` | 336 |
 | `src/lib/services/schedule-call-time-sync.ts` | 469 |
-| `src/lib/services/schedule-change-history.ts` | 421 |
+| `src/lib/services/schedule-change-history.ts` | 425 |
 | `src/lib/services/schedule-exports.ts` | 502 |
-| `src/lib/services/schedule-health.ts` | 388 |
+| `src/lib/services/schedule-health.ts` | 382 |
 | `src/lib/services/schedule-notification-copy.ts` | 102 |
 | `src/lib/services/schedule-notification-diff.ts` | 197 |
 | `src/lib/services/schedule-notification-flush.ts` | 150 |
@@ -66,7 +67,7 @@
 | `src/lib/services/schedule-publication.ts` | 1019 |
 | `src/lib/services/schedule-template-review.ts` | 554 |
 | `src/lib/services/schedule-working-copy.ts` | 900 |
-| `src/lib/services/scoreboard.ts` | 274 |
+| `src/lib/services/scoreboard.ts` | 279 |
 | `src/lib/services/shift-assignment-conflicts.ts` | 43 |
 | `src/lib/services/shift-assignments.ts` | 731 |
 | `src/lib/services/shift-generation.ts` | 628 |
@@ -76,6 +77,7 @@
 | `src/lib/services/software.ts` | 271 |
 | `src/lib/services/sport-configs.ts` | 257 |
 | `src/lib/services/status.ts` | 444 |
+| `src/lib/services/team-scoreboard.ts` | 558 |
 | `src/lib/services/usage-analytics-report.ts` | 33 |
 | `src/lib/services/user-deactivation.ts` | 386 |
 
@@ -83,11 +85,12 @@
 
 | File | Lines |
 |---|---:|
+| `src/lib/accountability-jeers.ts` | 121 |
 | `src/lib/admin-fix-today.ts` | 408 |
 | `src/lib/api-dates.ts` | 32 |
 | `src/lib/api-handler.ts` | 59 |
 | `src/lib/api.ts` | 134 |
-| `src/lib/app-time.ts` | 156 |
+| `src/lib/app-time.ts` | 191 |
 | `src/lib/asset-attachments.ts` | 166 |
 | `src/lib/asset-image.ts` | 26 |
 | `src/lib/asset-qr-code.ts` | 9 |
@@ -128,7 +131,7 @@
 | `src/lib/csv.ts` | 17 |
 | `src/lib/db.ts` | 18 |
 | `src/lib/editor-snippets.ts` | 28 |
-| `src/lib/email.ts` | 125 |
+| `src/lib/email.ts` | 129 |
 | `src/lib/env.ts` | 108 |
 | `src/lib/equipment-guidance.ts` | 133 |
 | `src/lib/equipment-section-filters.ts` | 87 |
@@ -158,8 +161,9 @@
 | `src/lib/observability.ts` | 19 |
 | `src/lib/operational-health.ts` | 50 |
 | `src/lib/ops-checks.ts` | 176 |
-| `src/lib/passkey.ts` | 328 |
-| `src/lib/permissions.ts` | 204 |
+| `src/lib/passkey-client.ts` | 73 |
+| `src/lib/passkey.ts` | 371 |
+| `src/lib/permissions.ts` | 217 |
 | `src/lib/profile-completion-events.ts` | 6 |
 | `src/lib/profile-completion.ts` | 157 |
 | `src/lib/profile-phone.ts` | 44 |
@@ -189,8 +193,8 @@
 | `src/lib/schedule-template-review-types.ts` | 105 |
 | `src/lib/schedule-working-copy-guard.ts` | 20 |
 | `src/lib/schedule-working-copy.ts` | 424 |
-| `src/lib/scoreboard-digest.ts` | 145 |
-| `src/lib/search-pages.ts` | 76 |
+| `src/lib/scoreboard-digest.ts` | 165 |
+| `src/lib/search-pages.ts` | 78 |
 | `src/lib/search-result-title.ts` | 13 |
 | `src/lib/serialization.ts` | 47 |
 | `src/lib/shell-navigation.ts` | 11 |
@@ -212,7 +216,7 @@
 | `src/lib/url-sync.ts` | 16 |
 | `src/lib/usage-analytics.ts` | 67 |
 | `src/lib/user-list-cache.ts` | 73 |
-| `src/lib/user-visibility.ts` | 71 |
+| `src/lib/user-visibility.ts` | 85 |
 | `src/lib/utils.ts` | 7 |
 | `src/lib/validation.ts` | 798 |
 | `src/lib/venue-mapping-audit.ts` | 56 |
@@ -340,6 +344,8 @@
 ### `/api/calendar-events`
 
 - `/api/calendar-events/[id]/command-center`
+- `/api/calendar-events/[id]/credits/[creditId]`
+- `/api/calendar-events/[id]/credits`
 - `/api/calendar-events/[id]`
 - `/api/calendar-events/[id]/travel/[memberId]`
 - `/api/calendar-events/[id]/travel`
@@ -572,6 +578,10 @@
 - `/api/schedule/published/[id]/follow`
 - `/api/schedule/published/[id]`
 - `/api/schedule/published`
+
+### `/api/scoreboard`
+
+- `/api/scoreboard`
 
 ### `/api/seed`
 

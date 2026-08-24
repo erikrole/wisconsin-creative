@@ -127,7 +127,7 @@ Values: `UPLOADING`, `FINALIZING`, `COMMITTED`, `FAILED`
 
 ## Model `User`
 
-Fields: 110
+Fields: 112
 
 - `id                           String                           @id @default(cuid())`
 - `name                         String`
@@ -221,6 +221,8 @@ Fields: 110
 - `signatureMembers             SignatureMember[]                @relation("SignatureMemberUser")`
 - `signatureCaptures            SignatureCapture[]               @relation("SignatureCaptureActor")`
 - `signatureSaveOperations      SignatureSaveOperation[]         @relation("SignatureSaveActor")`
+- `eventCredits                 EventCredit[]                    @relation("EventCreditUser")`
+- `eventCreditsGranted          EventCredit[]                    @relation("EventCreditCreator")`
 - `title               String?`
 - `athleticsEmail      String?         @unique @map("athletics_email")`
 - `startDate           DateTime?       @map("start_date") @db.Date`
@@ -1218,7 +1220,7 @@ Indexes and constraints:
 
 ## Model `CalendarEvent`
 
-Fields: 34
+Fields: 35
 
 - `id              String                @id @default(cuid())`
 - `sourceId        String?               @map("source_id")`
@@ -1254,6 +1256,7 @@ Fields: 34
 - `travelMembers   EventTravelMember[]`
 - `follows         ScheduleEventFollow[]`
 - `blasts          Blast[]`
+- `credits         EventCredit[]`
 
 Indexes and constraints:
 
@@ -1267,6 +1270,28 @@ Indexes and constraints:
 ## Enum `ScheduleFollowSource`
 
 Values: `MANUAL`, `BOOKING`
+
+## Model `EventCredit`
+
+Fields: 10
+
+- `id          String        @id @default(cuid())`
+- `eventId     String        @map("event_id")`
+- `userId      String        @map("user_id")`
+- `note        String?`
+- `createdById String?       @map("created_by_id")`
+- `createdAt   DateTime      @default(now()) @map("created_at")`
+- `updatedAt   DateTime      @updatedAt @map("updated_at")`
+- `event       CalendarEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)`
+- `user        User          @relation("EventCreditUser", fields: [userId], references: [id], onDelete: Cascade)`
+- `createdBy   User?         @relation("EventCreditCreator", fields: [createdById], references: [id], onDelete: SetNull)`
+
+Indexes and constraints:
+
+- `@@unique([eventId, userId])`
+- `@@index([userId])`
+- `@@index([eventId])`
+- `@@map("event_credits")`
 
 ## Model `ScheduleEventFollow`
 

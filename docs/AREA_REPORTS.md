@@ -3,12 +3,12 @@
 ## Document Control
 - Area: Reports & Analytics
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-21
+- Last Updated: 2026-08-23
 - Status: Active
 - Version: V1
 
 ## Direction
-Provide staff and admin with analytics dashboards to track checkout/reservation activity, utilization patterns, scan success rates, badge awards, and audit events. Reports are read-only views gated to ADMIN/STAFF. The separate Accountability surface is an ADMIN-only intervention and data-quality workflow.
+Provide staff and admin with analytics dashboards to track checkout/reservation activity, utilization patterns, scan success rates, badge awards, and audit events. Reports are read-only views gated to ADMIN/STAFF. The separate Accountability surface is an internal team-visible late-return leaderboard with ADMIN-only intervention and data-quality controls.
 
 ## Core Rules
 1. All reports are ADMIN/STAFF only (enforced on routes and endpoints), except the Audit report, which is ADMIN only (`report.audit`) to match the admin-only `/api/audit` browse feed.
@@ -17,7 +17,7 @@ Provide staff and admin with analytics dashboards to track checkout/reservation 
 4. Data is cached via React Query with focus refresh.
 5. Empty states and error states use EmptyState + retry. Report bodies dim and set `aria-busy` while a background refresh is in flight, so stale numbers never read as current. When independent query groups fail, usable sections remain visible with additive `partialFailures` and a warning that zeros or empty sections are not final.
 6. Report-local CSV exports download only the currently visible report rows and must say that in the action/copy, except Utilization, Checkouts, Overdue, Audit, Scans, and Missing Units where the CSV action exports the full filtered, report-evidence, or row-level inventory result from a bounded server-backed endpoint.
-7. `/reports/overdue` remains the live open-custody queue and therefore has no period selector. `/accountability` owns historical late-return patterns and never replaces or mutates custody evidence; Overdue links admins across to it without merging the two surfaces.
+7. `/reports/overdue` remains the live open-custody queue and therefore has no period selector. `/accountability` owns historical late-return patterns, appears in primary navigation for ADMIN/STAFF/STUDENT, and never replaces or mutates custody evidence. Collaborators remain default-deny under D-041. Overdue links admins across to Accountability without merging the two surfaces.
 8. Prior-period deltas appear only where a comparable preceding window exists. All-time selections show no delta, an empty prior window shows the raw difference instead of an infinite percentage, and metrics that are themselves rates report percentage points.
 9. Report surfaces print without app chrome: sidebar, section nav, refresh/export controls, pagination, and expand toggles are omitted, while active filter chips are retained so a printout states its own scope.
 10. `/reports/usage` is not role-granted. It is visible only when the signed-in email appears in the default-deny `USAGE_ANALYTICS_OWNER_EMAILS` environment allowlist. ADMIN alone is insufficient.
@@ -134,17 +134,17 @@ Provide staff and admin with analytics dashboards to track checkout/reservation 
 - **Data model:** `UserAppInstallation` stores one current row per user/HMAC installation/platform tuple. The raw installation key is never stored; no UDID, serial number, IDFA, receipt contents, URL, search text, record ID, or content is accepted.
 
 ### `/accountability`
-- **Access:** ADMIN only through `accountability.view`; its sidebar and global-search entries are hidden from every other role.
-- **Type:** Intervention-oriented late-return ranking with expandable checkout evidence and reversible data-quality exclusions.
-- **Ranking:** Selectable through `sort`. `events` (default) ranks by late-event count, then total late hours, then most recent incident; `time` ranks by total late hours first; `recent` ranks by most recent incident first. Rank 1 means the pattern most in need of review, not a gamified award.
+- **Access:** ADMIN, STAFF, and STUDENT through `accountability.view`, with a primary-sidebar and global-search entry. COLLABORATOR remains default-deny and cannot open the route or API.
+- **Type:** Team-visible late-return leaderboard with expandable checkout evidence. ADMIN retains the intervention and reversible data-quality workflow.
+- **Ranking:** Selectable through `sort`. `events` (default) ranks by late-event count, then total late hours, then most recent incident; `time` ranks by total late hours first; `recent` ranks by most recent incident first. The page frames rank 1 as the "wrong leaderboard" with a gentle jeer, not recognition or an award.
 - **Time:** Defaults to the current July 1-June 30 academic year, with four prior years and all-time available.
 - **Filters:** Academic year, location, active/resolved/overdue-extension incident state, and active/inactive user state. Non-default filters surface as removable toolbar chips.
-- **Metrics:** People needing attention, late events, total late time, currently overdue checkouts, and excluded records.
-- **Presentation:** Shares the report kit (`ReportToolbar`, `MetricCard`, `ReportChartCard`, `ReportSectionCard`, mobile cards). A top-ten horizontal bar chart tracks the active ranking dimension, and the ranked table and mobile cards expose per-person total, worst, typical, and on-time figures with keyboard-expandable checkout evidence.
+- **Metrics:** People on the board, late events, total late time, and currently overdue checkouts. ADMIN also sees excluded-record count.
+- **Presentation:** Shares the report kit (`ReportToolbar`, `MetricCard`, `ReportDataRegion`, `ReportSectionCard`, mobile cards). A responsive top-three spotlight uses avatars, concise wrong-leaderboard copy, and one-shot reduced-motion-safe transitions when ranking changes. Its three unique jeers are dealt from a source-owned 50-line deck using the stable ordered leaderboard fingerprint, so every internal viewer sees the same set, reloads keep it fixed, and meaningful membership, order, or incident changes rotate it. The full desktop leaderboard reduces each person to five scan targets: identity, late-event count plus active-overdue state, total/typical/worst late-time pattern, a prominent return-record percentage, and an explicit 40px history disclosure. Return-rate bars clamp to full red at 50% and below, interpolate continuously through the middle rates, and reach full green at 100%. Below `xl`, the same hierarchy becomes cards instead of a squeezed table. Expanded checkout evidence stays grouped as complete incident records with booking identity, due context, late duration, return state, and ADMIN action together.
 - **Semantics:** `OPEN` rows use current time; `COMPLETED` rows use `completedAt`. Both compare against `endsAt + checkout_policies.gracePeriodHours`. An extension made after the prior due time plus grace is a separate late episode, even when the new due time prevents a later late return. On-time rate appears only after three completed checkouts.
-- **Data:** `GET /api/accountability`; `POST /api/accountability/exclusions`; `DELETE /api/accountability/exclusions/{bookingId}`.
-- **Export:** `GET /api/accountability?format=csv` exports the filtered person-level ranking in the on-screen sort order through the shared report-export rate limit. Columns cover rank, identity, late events, active overdue, total/median/worst late hours, total and completed checkouts, on-time rate, and last incident.
-- **Cleanup:** Exclusions require a reason, retain the booking and all custody evidence, write audit evidence in the same SERIALIZABLE transaction, and can be restored.
+- **Data:** `GET /api/accountability` returns the shared ranking, the shared `spotlightJeers` draw, and server-owned capability flags. STAFF/STUDENT responses receive the same jeer set as ADMIN for identical leaderboard state while continuing to omit exclusion rows, notes, and excluded-record metrics. `POST /api/accountability/exclusions` and `DELETE /api/accountability/exclusions/{bookingId}` remain ADMIN-only.
+- **Export:** ADMIN-only `GET /api/accountability?format=csv` exports the filtered person-level ranking in the on-screen sort order through the shared report-export rate limit. Non-admin export attempts fail before report work. Columns cover rank, identity, late events, active overdue, total/median/worst late hours, total and completed checkouts, on-time rate, and last incident.
+- **Cleanup:** ADMIN exclusions require a reason, retain the booking and all custody evidence, write audit evidence in the same SERIALIZABLE transaction, and can be restored.
 
 ## Native iOS surface
 
@@ -190,7 +190,7 @@ Provide staff and admin with analytics dashboards to track checkout/reservation 
 - ADMIN/STAFF only; the Audit report is ADMIN only
 - CSV export branches are rate limited per user (`report:export`, 10/min shared across all report exports)
 - Audit log endpoint logs report access (low priority)
-- Accountability reads and exclusion mutations require ADMIN-only `accountability.view` or `accountability.manage_exclusions`; mutations retain CSRF, rate-limit, SERIALIZABLE, and audit protections.
+- Accountability reads require `accountability.view` for ADMIN/STAFF/STUDENT. COLLABORATOR remains default-deny. CSV, exclusion metadata, and exclusion mutations require ADMIN-only `accountability.manage_exclusions`; mutations retain CSRF, rate-limit, SERIALIZABLE, and audit protections.
 - App activity reads require the separate `USAGE_ANALYTICS_OWNER_EMAILS` allowlist; named roster data never becomes available through the aggregate `/reports/usage` endpoint.
 
 ## Acceptance Criteria
@@ -202,7 +202,7 @@ Provide staff and admin with analytics dashboards to track checkout/reservation 
 - [x] AC-6: Audit report with event log viewer (ADMIN only)
 - [x] AC-7: Badge report with leaderboard, distribution, and recent awards
 - [x] AC-8: Missing Units report includes unit-tracked battery missing-unit, missing-rate, custody-history, and repeat-pattern reporting
-- [x] AC-9: Admin accountability ranks current and historical late returns and supports audited, reversible data-quality exclusions without deleting custody history.
+- [x] AC-9: Internal Accountability ranks current and historical late returns, while ADMIN supports audited, reversible data-quality exclusions without deleting custody history.
 - [x] AC-10: Utilization measures custody over a selected window (utilization rate, custody days, most-used gear, idle and never-checked-out inventory) rather than reporting an inventory snapshot alone.
 - [x] AC-11: Period-scoped reports show a prior-period comparison wherever one can be computed honestly, and suppress it where one cannot.
 - [x] AC-12: A chosen period carries across report tabs for the session while URL params keep precedence and existing per-report param names are unchanged.
@@ -212,8 +212,14 @@ Provide staff and admin with analytics dashboards to track checkout/reservation 
 - [x] AC-16: Report surfaces print without app chrome and carry a title, run timestamp, and their active filter chips.
 - [x] AC-17: Utilization and checkout reports preserve successful query groups, identify unavailable groups through additive response metadata, and warn web and native users before fallback zeros or empty sections are treated as final.
 - [ ] AC-18: Owner App activity passes migrated, configured, authenticated owner/non-owner acceptance and signed-client TestFlight/App Store channel/build comparison.
+- [x] AC-19: Accountability is discoverable in primary navigation for ADMIN/STAFF/STUDENT, keeps COLLABORATOR default-deny, and redacts ADMIN-only export and exclusion capabilities from non-admin responses.
+- [x] AC-20: Accountability serves one shared three-line draw from 50 unique reviewed jeers for identical ordered leaderboard state; the draw remains stable across roles, reloads, and clock-only late-hour changes, then rotates when membership, ranking order, or incident state changes.
+- [x] AC-21: Accountability keeps its friendly wrong-leaderboard spotlight while the full ranking uses a five-concept desktop summary, prominent continuously colored return record, responsive card fallback, explicit 40px history controls, and grouped incident evidence without changing rank or custody semantics.
 
 ## Change Log
+- 2026-08-23: Rebuilt the full Accountability leaderboard around five scan targets instead of eight competing columns, made return-record percentages prominent with a continuous red-at-50% to green-at-100% bar, moved cramped widths to structured cards, replaced whole-row pseudo-buttons with explicit 40px history controls, and grouped each expanded incident into one readable record. Ranking, filters, shared jeers, custody evidence, and ADMIN cleanup behavior are unchanged.
+- 2026-08-23: Replaced fixed podium jeers with a source-owned 50-line deck generated and reviewed through GPT-5.6 Luna Max. The Accountability API now derives one deterministic three-line draw from stable ordered leaderboard state and serves it identically to ADMIN, STAFF, and STUDENT. Reloads and clock-only late-hour updates do not churn the copy; membership, order, and incident changes rotate it without a runtime model call or per-user storage.
+- 2026-08-23: Promoted Accountability into primary ADMIN/STAFF/STUDENT navigation and global search while keeping COLLABORATOR default-deny under D-041. The API now returns server-owned capability flags and omits export/exclusion metadata for Staff and Student. The former horizontal chart is replaced by a responsive top-three wrong-leaderboard spotlight with avatars, gentle jeers, reduced-motion-safe sort transitions, and the same expandable custody evidence. ADMIN export and audited reversible exclusions are unchanged.
 - 2026-08-21: Added the owner-only `/settings/app-activity` client-presence dashboard alongside the aggregate `/reports/usage` report. It shows named roster adoption, last launch/seen, device and OS identity, build/channel, and configurable stale/latest iOS state while keeping raw product-event analytics pseudonymous and bounded. Local source/schema/tests pass; migration, owner environment configuration, authenticated browser proof, and signed-client acceptance remain rollout gates.
 - 2026-08-12: Added private first-party Usage counting. Strict authenticated ingestion stores rotating pseudonymous identifiers and allowlisted enum fields only; web records normalized surface use and iOS records app opens plus tab destinations. The private report is default-deny through `USAGE_ANALYTICS_OWNER_EMAILS`, so ADMIN status alone grants nothing. No third-party analytics, replay, URLs, search text, record IDs, or scanned values are collected.
 - 2026-08-10: Utilization and checkout aggregation now preserves successful query groups without silently presenting failed groups as authoritative zeros. Additive `partialFailures` is logged and rendered on web and native; native sources load independently, period changes use newest-request ownership, and partial results never become fresh cache truth. Focused service, route, source-contract, TypeScript, lint, and inventory gates pass. Native simulator compilation and authenticated visual proof remain separate gates.

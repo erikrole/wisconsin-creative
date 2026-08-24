@@ -1,0 +1,79 @@
+{
+  "title": "Accountability jeers that stick",
+  "eyebrow": "Web · Wisconsin Creative",
+  "lede": "The wrong leaderboard now deals one shared three-line set from a 50-jeer deck. Everyone sees the same joke, reloads keep it put, and a meaningful leaderboard change earns fresh material.",
+  "stats": [
+    {
+      "k": "Reviewed deck",
+      "v": "50 lines",
+      "n": "Exactly 50 unique, source-owned jeers generated with GPT-5.6 Luna Max",
+      "tone": "good"
+    },
+    {
+      "k": "Visible draw",
+      "v": "3 unique",
+      "n": "No duplicate line can appear within one spotlight set",
+      "tone": "good"
+    },
+    {
+      "k": "Audience",
+      "v": "One shared set",
+      "n": "ADMIN, STAFF, and STUDENT receive identical copy for identical board state"
+    },
+    {
+      "k": "Rotation trigger",
+      "v": "Board change",
+      "n": "Reloads stay fixed; membership, order, or incident changes reshuffle"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Same board, fresher voice",
+      "note": "Matched signed-in Admin session, 2026–27 filter, Volume ranking, 1440×1000 viewport, data, and layout. Only the spotlight copy source changes.",
+      "pairs": [
+        {
+          "title": "The top-three spotlight",
+          "sub": "Fixed rank copy becomes a stable shared deal from the reviewed deck.",
+          "before": "before-desktop.png",
+          "beforeCap": "The same three rank-specific lines appear on every visit.",
+          "after": "after-desktop.png",
+          "afterCap": "Three distinct lines are selected from the shared 50-line deck and stay attached to this board state."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Fixed copy became a shared deck",
+      "was": "Each podium rank had one hard-coded sentence, so repeat visits quickly felt familiar.",
+      "now": "The API returns three unique lines from a reviewed 50-line source deck alongside the leaderboard."
+    },
+    {
+      "h": "Random does not mean inconsistent",
+      "was": "Per-viewer or per-render randomness would let people see different jokes and would churn on refresh.",
+      "now": "A deterministic seeded shuffle uses the ordered leaderboard fingerprint, producing the same deal for every internal role and render environment."
+    },
+    {
+      "h": "The joke waits for new material",
+      "was": "A background refresh or continuously increasing late-hours value could have changed copy without a real leaderboard event.",
+      "now": "The fingerprint ignores clock-only hour drift and changes for membership, ranking order, active state, late-event count, active-overdue count, or last incident."
+    },
+    {
+      "h": "No runtime AI dependency",
+      "was": "Generating copy on demand would add latency, cost, and unpredictable output to a simple report read.",
+      "now": "Luna Max generated the reviewed source deck once; serving and rotating it is local, bounded, and deterministic."
+    }
+  ],
+  "verification": [
+    "<strong>Focused contracts:</strong> 64 Accountability, deck, route, service, RBAC, search, sidebar, and UI tests pass.",
+    "<strong>Static/build:</strong> TypeScript, focused ESLint, docs/codemap verification, whitespace check, and the 238-page <code>build:app</code> pass.",
+    "<strong>Shared API contract:</strong> ADMIN, STAFF, and STUDENT receive the same three unique jeers for identical leaderboard input; unchanged cloned input returns the same draw.",
+    "<strong>Authenticated browser:</strong> Volume reloads retained the exact same three lines. Time changed leaderboard order and produced a distinct three-line set; returning to Volume restored the original set.",
+    "<strong>Responsive render:</strong> 1440×1000 and 1024×900 show all three lines with zero horizontal overflow and no console warnings or errors."
+  ],
+  "notes": [
+    "The selector guarantees no duplicate within a served set. Future distinct leaderboard states can eventually revisit a line because the product does not keep a durable history of every prior draw.",
+    "Clock-only total-late-hours movement is excluded from the seed, but a Time-sort order change still rotates the set because ordered rank is part of the fingerprint.",
+    "There is no runtime model call, browser storage, per-user seed, database write, or deployment in this slice."
+  ]
+}

@@ -4,15 +4,17 @@
 
 - Area: Collaborators
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-07-31
-- Status: People directory implemented locally; migration and production smoke pending
-- Version: V1.3
+- Last Updated: 2026-08-23
+- Status: People directory and universal Scoreboard implemented locally; production smoke pending
+- Version: V1.4
 
 ## Direction
 
 External users use `Role.COLLABORATOR` and an assigned database-backed affiliation policy. Affiliation names and badges are identity only. Every permission comes from the assigned policy's validated server-owned grants, and the central role map continues to default-deny Collaborator.
 
 BTN and Learfield are active affiliations. Legacy affiliation and profile fields remain for response compatibility, but they do not authorize access. A collaborator without an assigned active policy fails closed at login and on session refresh.
+
+D-056 defines one universal authenticated exception outside the editable collaborator capability catalog: Scoreboard identity and Schedule-derived metrics are shared with every signed-in role. This exception does not grant People-directory or private-profile access.
 
 ## Policy Model
 
@@ -41,11 +43,13 @@ The editable catalog is limited to:
 
 Dependencies normalize automatically: reservation creation adds catalog and My Gear; own edit/cancel/extend add My Gear; follow adds published Schedule; kiosk eligibility adds My Gear. Removing a prerequisite removes its dependents.
 
-Basic Home, Profile, Security, and Notifications remain account surfaces. Their content adapts to effective capabilities.
+Basic Home, Profile, Security, Notifications, and the read-only Scoreboard remain account surfaces. Their content adapts to effective capabilities except Scoreboard, whose narrow shared contract is universal for authenticated roles under D-056.
 
 ## Permanent Boundaries
 
 `PEOPLE_DIRECTORY_VIEW` grants a minimized directory of active, non-hidden teammates. It exposes only roster identity and work context: name, role, title, primary area, location, avatar, and student standing. Search is name-only. It does not expose email, phone, Wiscard data, birthday, apparel sizes, Slack identity, presence or last-active data, assignments, direct-report structure, activity, bookings, shifts, badges, audit history, or edit actions.
+
+The separate shared Scoreboard exposes only active, non-hidden person id, name, avatar, and Scoreboard totals, facets, breakdowns, and resolved-game rows. Sport, Schedule venue, opponent, and site filters narrow only those shared metrics. It is available without `PEOPLE_DIRECTORY_VIEW`, never uses the private user-profile response, omits protected event links, and does not add role, affiliation, contact, profile, presence, scheduling, booking, badge, audit, or custody data.
 
 The editor cannot grant private profile fields, internal notes, serial numbers, borrower identity, maintenance or audit history, internal metadata, unrestricted cross-user access, internal Schedule APIs, staffing controls, or custody mutations. Pickup and return stay kiosk-owned under D-040.
 
@@ -66,6 +70,7 @@ Collaborator gear responses remain sanitized and own-booking scoped. Published S
 ## Web, iOS, and Kiosk
 
 - Web navigation, mobile bottom navigation, Home content, and route guards derive from effective capabilities.
+- Scoreboard is the universal exception: web navigation and native Browse plus regular-width sidebar navigation expose it to every authenticated collaborator regardless of policy grants.
 - Shared collaborator surfaces use affiliation-neutral product copy. BTN and Learfield identity appears only through assigned policy metadata and badges.
 - Native iOS decodes optional policy metadata and capabilities, refreshes them after a forbidden response, and hides unavailable tabs and booking or follow actions. Browse exposes People only when the directory capability is present.
 - Older internal accounts and deployed clients continue decoding because the new fields are additive and optional.
@@ -77,6 +82,7 @@ Collaborator gear responses remain sanitized and own-booking scoped. Published S
 2. Deploy the dual-read server and web before native clients.
 3. Smoke-test BTN parity and the admin editor with a temporary account.
 4. Smoke-test the People directory with temporary BTN and Learfield accounts before inviting additional collaborators.
+5. Deploy the aggregate Scoreboard route before a native client that depends on it, then smoke-test aggregate and active-person detail reads with temporary BTN and Learfield accounts while confirming private-profile denial.
 
 ## Acceptance Criteria
 
@@ -87,10 +93,20 @@ Collaborator gear responses remain sanitized and own-booking scoped. Published S
 - [x] Invitations, registration, People management, auth payloads, web, iOS, and kiosk use the assigned policy.
 - [x] Permanent privacy, ownership, IDOR, Schedule snapshot, and custody boundaries remain server-enforced.
 - [x] Both Wisconsin targets compile with rollout-tolerant policy metadata.
+- [x] Scoreboard is visible to every authenticated collaborator without a policy grant and remains limited to shared identity and metrics.
+- [x] Stackable Scoreboard dimensions and Snapshots remain inside that same shared response boundary and do not reveal assignments or private profile context.
 - [ ] Authenticated production browser and temporary-account smoke are complete.
 - [ ] Migration `0103` and authenticated BTN/Learfield People-directory smoke are complete.
 
 ## Change Log
+
+- 2026-08-23: **Collaborators can be tracked on events without being scheduled.** An admin can credit a collaborator for a past or future event from Event detail. The credit counts toward Scoreboard and record totals and nothing else: no notification, no shift, no published crew entry, no schedule visibility for that collaborator, and no change to the shared Scoreboard response boundary. Collaborator policy grants are unaffected — crediting is an admin action about our stats, not a capability the collaborator receives. See D-057.
+
+- 2026-08-23: **The People/Users roster now names collaborators by affiliation.** Role chips on the directory use the assigned policy badge (`Learfield`, `BTN`) instead of the generic Collaborator label, matching onboarding-status and kiosk identity. Filters, role policy, and profile role+affiliation pairing are unchanged.
+
+- 2026-08-23: **Scoreboard exploration does not widen collaborator access.** Collaborators receive the same stable Sport, Schedule Venue, Opponent, and Site facets and filtered shared totals as internal roles, including the deterministic Snapshot and per-person leaderboard. The route still selects only active visible identity and Schedule-derived metrics, requires authentication, and grants no People-directory, assignment, contact, event-detail, booking, badge, audit, or custody access.
+
+- 2026-08-23: **Scoreboard is shared independently of collaborator capabilities.** D-056 adds the same aggregate team totals, sport breakdowns, and active-person Scoreboard detail available to internal roles, while retaining default-deny collaborator policy everywhere else. The response boundary is id, name, avatar, and Schedule-derived Scoreboard metrics only; People-directory, contact, profile, scheduling, booking, badge, audit, event-detail, and custody access do not come with it. Web and native source/build gates pass locally; production temporary-account smoke remains open.
 
 - 2026-08-03: **Collaborator reservation entry restored.** Collaborators with
   the server-derived `RESERVATION_CREATE` capability now see the `New
