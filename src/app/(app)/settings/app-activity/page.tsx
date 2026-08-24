@@ -278,7 +278,7 @@ function UserActivityRow({ user, now }: { user: AppActivityUser; now: Date }) {
       <TableCell className="min-w-52">
         <div className="flex flex-col gap-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-medium text-foreground">{user.name}</span>
+            <span className="brand-identity font-medium text-foreground">{user.name}</span>
             {!user.active && <Badge variant="gray" size="sm">Inactive</Badge>}
           </div>
           <span className="text-xs text-muted-foreground">{user.email} · {user.role.toLowerCase()}</span>

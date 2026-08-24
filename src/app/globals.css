@@ -523,6 +523,10 @@ body {
    Gotham: Brand font for headings and emphasis moments.
    Geist Sans: UI text, body copy, labels.
    Disciplined scale with intentional letter-spacing per level. */
+.brand-identity {
+  font-family: var(--font-heading);
+}
+
 h1 {
   font-family: var(--font-heading);
   font-weight: 800;

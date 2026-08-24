@@ -36,12 +36,22 @@ describe("global page search results", () => {
     }));
   });
 
-  it("keeps accountability discovery admin-only", () => {
-    expect(getVisiblePageSearchResults("ADMIN", "late returns", 10)).toContainEqual(
-      expect.objectContaining({ title: "Accountability", href: "/accountability" }),
-    );
-    expect(getVisiblePageSearchResults("STAFF", "late returns", 10)).not.toContainEqual(
+  it("makes accountability discoverable to internal roles but not collaborators", () => {
+    for (const role of ["ADMIN", "STAFF", "STUDENT"]) {
+      expect(getVisiblePageSearchResults(role, "late returns", 10)).toContainEqual(
+        expect.objectContaining({ title: "Accountability", href: "/accountability" }),
+      );
+    }
+    expect(getVisiblePageSearchResults("COLLABORATOR", "late returns", 10)).not.toContainEqual(
       expect.objectContaining({ href: "/accountability" }),
     );
+  });
+
+  it("makes Scoreboard discoverable to every authenticated role", () => {
+    for (const role of ["ADMIN", "STAFF", "STUDENT", "COLLABORATOR"]) {
+      expect(getVisiblePageSearchResults(role, "leaderboard", 10)).toContainEqual(
+        expect.objectContaining({ title: "Scoreboard", href: "/scoreboard" }),
+      );
+    }
   });
 });

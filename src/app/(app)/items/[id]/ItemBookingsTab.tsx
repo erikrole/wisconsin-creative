@@ -68,7 +68,7 @@ export function UpcomingReservationsList({
             onClick={() => onSelectBooking(r.bookingId)}
           >
             <div className="flex flex-col gap-0.5 min-w-0">
-              <span className="text-sm font-medium truncate">{r.title}</span>
+              <span className="brand-identity truncate text-sm font-medium">{r.title}</span>
               <span className="flex items-center gap-1 text-xs text-muted-foreground">
                 {r.requesterName} {"\u00b7"}{" "}
                 {pastStart ? (
@@ -117,7 +117,7 @@ export function ActiveBookingCard({
           onClick={() => onSelectBooking(booking.id)}
         >
           <div className="flex flex-col gap-0.5">
-            <span className="text-base font-semibold">{booking.title}</span>
+            <span className="brand-identity text-base font-semibold">{booking.title}</span>
             <span className="text-sm">
               {activityLabel} by {booking.requesterName}
             </span>
@@ -202,7 +202,7 @@ export function PastBookingsPreview({
                     className="shrink-0"
                   />
                   <div className="min-w-0">
-                    <div className="truncate text-sm font-medium">{booking.title}</div>
+                    <div className="brand-identity truncate text-sm font-medium">{booking.title}</div>
                     <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted-foreground">
                       <span>{booking.requester.name}</span>
                       <span aria-hidden="true">/</span>
@@ -479,7 +479,7 @@ export function BookingKindTab({
                     onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelectBooking(b.id); } }}
                   >
                     <TableCell>
-                      <div className="font-medium text-primary">{b.title}</div>
+                      <div className="brand-identity font-medium text-primary">{b.title}</div>
                       <div className="flex items-center gap-1.5 mt-0.5">
                         <span className={`inline-block size-2 rounded-full ${bookingStatusDotClassName(st.variant)}`} />
                         <span className="text-xs text-muted-foreground">{st.label}</span>
@@ -579,7 +579,7 @@ export function CalendarTab({ asset, onSelectBooking }: { asset: AssetDetail; on
             className="shrink-0"
           />
           <div className="min-w-0">
-            <div className="truncate text-sm font-medium">{booking.title}</div>
+            <div className="brand-identity truncate text-sm font-medium">{booking.title}</div>
             <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted-foreground">
               <span>{booking.requester.name}</span>
               <span aria-hidden="true">/</span>
@@ -713,7 +713,7 @@ export function CalendarTab({ asset, onSelectBooking }: { asset: AssetDetail; on
                           key={`${marker.booking.id}-${weekIndex}`}
                           type="button"
                           className={cn(
-                            "pointer-events-auto my-px min-w-0 truncate px-2.5 text-left text-[11px] font-medium leading-5 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)] transition-[background-color,color,box-shadow] focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-1 dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]",
+                            "brand-identity pointer-events-auto my-px min-w-0 truncate px-2.5 text-left text-[11px] font-medium leading-5 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)] transition-[background-color,color,box-shadow] focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-1 dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]",
                             marker.booking.kind === "CHECKOUT"
                               ? "bg-[var(--blue)]/14 text-[var(--blue-text)] hover:bg-[var(--blue)]/24"
                               : "bg-[var(--purple)]/14 text-[var(--purple-text)] hover:bg-[var(--purple)]/24",
@@ -881,7 +881,7 @@ export function BookingsTab({
                     onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelectBooking(b.id); } }}
                   >
                     <TableCell>
-                      <div className="font-medium text-primary">{b.title}</div>
+                      <div className="brand-identity font-medium text-primary">{b.title}</div>
                       <div className="flex items-center gap-1.5 mt-0.5">
                         <span className={`inline-block size-2 rounded-full ${bookingStatusDotClassName(st.variant)}`} />
                         <span className="text-xs text-muted-foreground">{st.label}</span>

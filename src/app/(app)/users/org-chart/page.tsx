@@ -13,6 +13,7 @@ import { UserAvatar } from "@/components/UserAvatar";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import type { Role } from "../types";
 import { AREA_LABELS } from "../types";
+import RoleBadge from "../RoleBadge";
 
 type OrgUser = {
   id: string;
@@ -129,21 +130,10 @@ function NodeRow({ tree, depth }: { tree: Tree; depth: number }) {
           />
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-              <span className="font-medium truncate group-hover:underline">
+              <span className="brand-identity truncate font-medium group-hover:underline">
                 {user.name}
               </span>
-              <Badge
-                variant={
-                  user.role === "ADMIN"
-                    ? "purple"
-                    : user.role === "STAFF"
-                    ? "blue"
-                    : "gray"
-                }
-                size="sm"
-              >
-                {user.role}
-              </Badge>
+              <RoleBadge role={user.role} />
               {user.primaryArea && (
                 <Badge variant="gray" size="sm">
                   {AREA_LABELS[user.primaryArea] ?? user.primaryArea}

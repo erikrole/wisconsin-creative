@@ -110,7 +110,7 @@ function LeaderboardMobileCard({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground text-sm">#{rank}</span>
-          <span className="font-semibold">{entry.name}</span>
+          <span className="brand-identity font-semibold">{entry.name}</span>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="red">{entry.overdueCount}</Badge>
@@ -417,7 +417,7 @@ function OverdueTableRows({
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle(); } }}
       >
         <TableCell className="text-muted-foreground">{rank}</TableCell>
-        <TableCell className="font-semibold">{entry.name}</TableCell>
+        <TableCell className="brand-identity font-semibold">{entry.name}</TableCell>
         <TableCell className="text-right">
           <Badge variant="red">{entry.overdueCount}</Badge>
         </TableCell>

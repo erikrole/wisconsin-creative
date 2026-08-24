@@ -68,3 +68,17 @@ export function canReadUserProfile(
   if (!target.hiddenFromRoster) return true;
   return actor.id === target.id || canViewHiddenUsers(actor);
 }
+
+/**
+ * Scoreboard metrics are shared authenticated team data. Cross-user reads stay
+ * limited to active, visible people; self reads and the existing internal
+ * operational boundary retain access to inactive records.
+ */
+export function canReadSharedScoreboard(
+  actor: Pick<AuthUser, "id" | "email" | "role">,
+  target: { id: string; active: boolean; hiddenFromRoster?: boolean | null },
+): boolean {
+  if (!canReadUserProfile(actor, target)) return false;
+  if (actor.id === target.id || target.active) return true;
+  return actor.role === Role.ADMIN || actor.role === Role.STAFF;
+}

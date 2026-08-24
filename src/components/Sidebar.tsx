@@ -36,6 +36,7 @@ import {
   ShieldAlertIcon,
   MegaphoneIcon,
   PenToolIcon,
+  TrophyIcon,
 } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
@@ -79,8 +80,10 @@ const navGroups: NavGroup[] = [
     items: [
       { label: "Dashboard", href: "/", icon: LayoutGridIcon },
       { label: "Schedule", href: "/schedule", icon: CalendarIcon },
+      { label: "Scoreboard", href: "/scoreboard", icon: TrophyIcon },
       { label: "Items", href: "/items", icon: LayersIcon },
       { label: "Bookings", href: "/bookings", icon: BookOpenIcon },
+      { label: "Accountability", href: "/accountability", icon: ShieldAlertIcon },
       { label: "Resources", href: "/resources", icon: ScrollTextIcon },
       { label: "Software", href: "/licenses", icon: KeyIcon },
       { label: "Users", href: "/users", icon: UsersIcon },
@@ -97,7 +100,6 @@ const navGroups: NavGroup[] = [
       { label: "Blasts", href: "/blasts", icon: MegaphoneIcon },
       { label: "Kits", href: "/kits", icon: BoxIcon },
       { label: "Reports", href: "/reports", icon: BarChart3Icon },
-      { label: "Accountability", href: "/accountability", icon: ShieldAlertIcon, requiredRole: "ADMIN" },
     ],
   },
 ];
@@ -167,7 +169,7 @@ export default function AppSidebar({
         .filter((item) => !item.requiredRole || item.requiredRole === user?.role)
         .filter((item) => {
           if (!isCollaborator) return true;
-          if (!["/", "/schedule", "/items", "/bookings", "/users", "/notifications", "/licenses"].includes(item.href)) return false;
+          if (!["/", "/schedule", "/scoreboard", "/items", "/bookings", "/users", "/notifications", "/licenses"].includes(item.href)) return false;
           const requiredCapability = COLLABORATOR_NAV_CAPABILITY[item.href];
           return !requiredCapability || collaboratorCapabilities.has(requiredCapability);
         })

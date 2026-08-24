@@ -26,6 +26,37 @@ describe("web sidebar source contract", () => {
     expect(settingsIndex).toBeLessThan(operationsGroupIndex);
   });
 
+  it("promotes Accountability into primary internal navigation", () => {
+    const sidebar = source("src/components/Sidebar.tsx");
+    const accountabilityEntry =
+      '{ label: "Accountability", href: "/accountability", icon: ShieldAlertIcon }';
+    const accountabilityIndex = sidebar.indexOf(accountabilityEntry);
+    const operationsGroupIndex = sidebar.indexOf('label: "Operations"');
+
+    expect(accountabilityIndex).toBeGreaterThan(-1);
+    expect(accountabilityIndex).toBeLessThan(operationsGroupIndex);
+    expect(sidebar).not.toContain(
+      '{ label: "Accountability", href: "/accountability", icon: ShieldAlertIcon, requiredRole:',
+    );
+  });
+
+  it("puts Scoreboard in primary navigation for every authenticated role", () => {
+    const sidebar = source("src/components/Sidebar.tsx");
+    const appShell = source("src/components/AppShell.tsx");
+    const scoreboardEntry = '{ label: "Scoreboard", href: "/scoreboard", icon: TrophyIcon }';
+    const scoreboardIndex = sidebar.indexOf(scoreboardEntry);
+    const operationsGroupIndex = sidebar.indexOf('label: "Operations"');
+
+    expect(scoreboardIndex).toBeGreaterThan(-1);
+    expect(scoreboardIndex).toBeLessThan(operationsGroupIndex);
+    expect(sidebar).toContain('"/scoreboard"');
+    expect(sidebar).not.toContain(
+      '{ label: "Scoreboard", href: "/scoreboard", icon: TrophyIcon, requiredRole:',
+    );
+    expect(appShell).toContain('pathname === "/scoreboard"');
+    expect(appShell).toContain('pathname.startsWith("/scoreboard/")');
+  });
+
   it("uses user-scoped due-today counts and overdue-first badge priority", () => {
     const appShell = source("src/components/AppShell.tsx");
     const sidebar = source("src/components/Sidebar.tsx");

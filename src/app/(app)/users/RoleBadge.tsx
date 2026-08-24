@@ -8,13 +8,32 @@ const ROLE_VARIANT: Record<Role, BadgeProps["variant"]> = {
   COLLABORATOR: "blue",
 };
 
-export default function RoleBadge({ role }: { role: Role }) {
+/** Directory chips show Staff for Admins so operator rank is not advertised. */
+export function publicDirectoryRole(role: Role): Role {
+  return role === "ADMIN" ? "STAFF" : role;
+}
+
+export default function RoleBadge({
+  role,
+  affiliationLabel,
+}: {
+  role: Role;
+  affiliationLabel?: string | null;
+}) {
+  const displayed = publicDirectoryRole(role);
+  const affiliation = affiliationLabel?.trim() || null;
+  const label =
+    displayed === "COLLABORATOR"
+      ? affiliation || "Collaborator"
+      : displayed.charAt(0) + displayed.slice(1).toLowerCase();
+
   return (
     <Badge
-      variant={ROLE_VARIANT[role]}
+      variant={ROLE_VARIANT[displayed]}
       style={{ fontFamily: "var(--font-heading)", fontWeight: 600, letterSpacing: "0.03em" }}
+      aria-label={displayed === "COLLABORATOR" && affiliation ? `Collaborator, ${affiliation}` : undefined}
     >
-      {role === "COLLABORATOR" ? "Collaborator" : role.charAt(0) + role.slice(1).toLowerCase()}
+      {label}
     </Badge>
   );
 }

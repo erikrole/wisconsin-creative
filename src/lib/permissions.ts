@@ -85,8 +85,21 @@ export const PERMISSIONS: Record<string, Record<string, Role[]>> = {
     audit: ["ADMIN"],
   },
   accountability: {
-    view: ["ADMIN"],
+    // The named leaderboard is an internal team read. External collaborators
+    // remain default-deny under D-041 and never inherit cross-user history.
+    view: ["ADMIN", "STAFF", "STUDENT"],
     manage_exclusions: ["ADMIN"],
+  },
+  scoreboard: {
+    // D-056: Scoreboard identity and metrics are shared authenticated team data.
+    view: ["ADMIN", "STAFF", "STUDENT", "COLLABORATOR"],
+  },
+  event_credit: {
+    // Scoreboard-only participation. Staff can see who was credited on an event
+    // they are running; recording or removing a credit rewrites season stats
+    // without any schedule or notification trail, so it stays ADMIN-only.
+    view: ["ADMIN", "STAFF"],
+    manage: ["ADMIN"],
   },
   notification: {
     view: ["ADMIN", "STAFF", "STUDENT"],

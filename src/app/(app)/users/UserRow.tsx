@@ -50,6 +50,12 @@ function areaLabel(area: string | null): string | null {
   return lower.charAt(0).toUpperCase() + lower.slice(1);
 }
 
+function rosterAffiliationLabel(user: UserRowType): string | null {
+  if (user.role !== "COLLABORATOR") return null;
+  const affiliation = user.collaboratorPolicy?.affiliation;
+  return affiliation?.badgeLabel?.trim() || affiliation?.displayName?.trim() || null;
+}
+
 function TitleAreaValue({ user }: { user: UserRowType }) {
   const title = titleLabel(user);
   const area = areaLabel(user.primaryArea);
@@ -203,7 +209,7 @@ export const UserTableRow = memo(function UserTableRow({ user }: { user: UserRow
         </div>
       </TableCell>
       <TableCell className="w-28">
-        <RoleBadge role={user.role} />
+        <RoleBadge role={user.role} affiliationLabel={rosterAffiliationLabel(user)} />
       </TableCell>
       <TableCell className="hidden min-w-[18rem] md:table-cell">
         <TitleAreaValue user={user} />
@@ -256,7 +262,7 @@ export const UserMobileCard = memo(function UserMobileCard({ user }: { user: Use
                   Inactive
                 </Badge>
               )}
-              <RoleBadge role={user.role} />
+              <RoleBadge role={user.role} affiliationLabel={rosterAffiliationLabel(user)} />
             </div>
           </div>
           {metaParts.length > 0 && (

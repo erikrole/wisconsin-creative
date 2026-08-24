@@ -12,12 +12,13 @@ export type PageSearchResult = {
 const CORE_SEARCH_PAGES: PageSearchResult[] = [
   { type: "page", id: "dashboard", title: "Dashboard", subtitle: "Daily gear, checkout, reservation, and draft work", href: "/", keywords: ["home", "today", "overdue", "drafts", "my gear"] },
   { type: "page", id: "schedule", title: "Schedule", subtitle: "Events, shifts, crew coverage, and event command center", href: "/schedule", keywords: ["events", "calendar", "assignments", "coverage", "shifts"] },
+  { type: "page", id: "scoreboard", title: "Scoreboard", subtitle: "Team season totals and per-person leaderboards", href: "/scoreboard", keywords: ["record", "wins", "losses", "leaderboard", "events worked", "recognition"] },
   { type: "page", id: "items", title: "Items", subtitle: "Inventory list, filters, favorites, and item details", href: "/items", keywords: ["gear", "inventory", "assets", "equipment", "favorites"] },
   { type: "page", id: "bookings", title: "Bookings", subtitle: "Combined active checkouts and reservations", href: "/bookings", keywords: ["all bookings", "active", "past", "history"] },
   { type: "page", id: "checkouts", title: "Checkouts", subtitle: "Gear pickup, custody, due-back, and return work", href: "/bookings?tab=checkouts", keywords: ["checked out", "pickup", "pending pickup", "returns", "custody"] },
   { type: "page", id: "reservations", title: "Reservations", subtitle: "Future gear holds and planning work", href: "/bookings?tab=reservations", keywords: ["reserve", "reserved", "confirmed", "planned"] },
   { type: "page", id: "resources", title: "Resources", subtitle: "Guides, docs, links, and workflow references", href: "/resources", keywords: ["guides", "docs", "documentation", "contacts"] },
-  { type: "page", id: "licenses", title: "Software", subtitle: "Shared software access and Photo Mechanic licenses", href: "/licenses", keywords: ["software", "passwords", "accounts", "seats", "codes", "claims"] },
+  { type: "page", id: "licenses", title: "Software", subtitle: "Photo Mechanic licenses and shared department logins", href: "/licenses", keywords: ["software", "passwords", "accounts", "seats", "codes", "claims"] },
   { type: "page", id: "notifications", title: "Notifications", subtitle: "Unread alerts, reminders, and operational messages", href: "/notifications", keywords: ["alerts", "inbox", "messages", "reminders"] },
 ];
 
@@ -30,8 +31,8 @@ const STAFF_SEARCH_PAGES: PageSearchResult[] = [
   { type: "page", id: "settings", title: "Settings", subtitle: "Personal preferences and operational configuration", href: "/settings", keywords: ["configuration", "admin", "preferences"] },
 ];
 
-const ADMIN_SEARCH_PAGES: PageSearchResult[] = [
-  { type: "page", id: "accountability", title: "Accountability", subtitle: "Late-return patterns, evidence, and data-quality exclusions", href: "/accountability", keywords: ["overdue", "leaderboard", "late returns", "accountability", "exclusions"] },
+const INTERNAL_SEARCH_PAGES: PageSearchResult[] = [
+  { type: "page", id: "accountability", title: "Accountability", subtitle: "The overdue leaderboard nobody wants to join", href: "/accountability", keywords: ["overdue", "leaderboard", "late returns", "accountability", "on time"] },
 ];
 
 export function getVisiblePageSearchResults(
@@ -43,10 +44,11 @@ export function getVisiblePageSearchResults(
   const q = query.trim().toLowerCase();
   if (!q) return [];
   const canUseStaffPages = role === "ADMIN" || role === "STAFF";
+  const isInternalRole = role === "ADMIN" || role === "STAFF" || role === "STUDENT";
   const pages = [
     ...CORE_SEARCH_PAGES,
+    ...(isInternalRole ? INTERNAL_SEARCH_PAGES : []),
     ...(canUseStaffPages ? STAFF_SEARCH_PAGES : []),
-    ...(role === "ADMIN" ? ADMIN_SEARCH_PAGES : []),
     ...SETTINGS_SECTIONS
       .filter((section) => role ? isSectionVisible(section, role, ownerAccess) : false)
       .map((section) => ({

@@ -144,7 +144,7 @@ export function WizardStep3({
                       <span className="text-xs font-medium text-muted-foreground tabular-nums">
                         {eventDateLabel(ev)}
                       </span>
-                      <span>{eventSummaryLabel(ev)}</span>
+                      <span className="brand-identity">{eventSummaryLabel(ev)}</span>
                       {ev.opponent && (
                         <Badge variant={venueBadgeVariant(ev.isHome)} size="sm">
                           {VENUE_TONES[venueToneFromIsHome(ev.isHome)].label}
@@ -226,7 +226,7 @@ export function WizardStep3({
                     className="rounded-md shrink-0"
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold">{asset.assetTag}</p>
+                    <p className="brand-identity text-sm font-semibold">{asset.assetTag}</p>
                     <p className="text-xs text-muted-foreground truncate">
                       {asset.brand} {asset.model}
                     </p>
@@ -246,7 +246,7 @@ export function WizardStep3({
                     className="rounded-md shrink-0"
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold">{bi.name}</p>
+                    <p className="brand-identity text-sm font-semibold">{bi.name}</p>
                   </div>
                   <span className="text-xs font-bold text-muted-foreground tabular-nums">
                     &times; {bi.quantity}

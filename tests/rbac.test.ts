@@ -58,6 +58,27 @@ describe("requirePermission", () => {
   it("passes for STUDENT on asset.favorite", () => {
     expect(() => requirePermission(Role.STUDENT, "asset", "favorite")).not.toThrow();
   });
+
+  it("shares accountability.view with internal roles but keeps cleanup admin-only", () => {
+    for (const role of [Role.ADMIN, Role.STAFF, Role.STUDENT]) {
+      expect(() => requirePermission(role, "accountability", "view")).not.toThrow();
+    }
+    expect(() => requirePermission(Role.COLLABORATOR, "accountability", "view")).toThrow(
+      "Forbidden",
+    );
+    expect(() =>
+      requirePermission(Role.STUDENT, "accountability", "manage_exclusions"),
+    ).toThrow("Forbidden");
+    expect(() =>
+      requirePermission(Role.ADMIN, "accountability", "manage_exclusions"),
+    ).not.toThrow();
+  });
+
+  it("shares scoreboard.view with every authenticated role", () => {
+    for (const role of [Role.ADMIN, Role.STAFF, Role.STUDENT, Role.COLLABORATOR]) {
+      expect(() => requirePermission(role, "scoreboard", "view")).not.toThrow();
+    }
+  });
 });
 
 describe("getAllowedRoles", () => {
@@ -81,7 +102,7 @@ describe("PERMISSIONS map completeness", () => {
     "bulk_sku", "calendar_source", "location", "location_mapping",
     "report", "notification", "diagnostics", "shift", "shift_assignment",
     "sport_config", "student_sport", "student_area", "shift_trade",
-    "allowed_email", "kit", "kiosk_device", "resource", "license",
+    "allowed_email", "kit", "kiosk_device", "resource", "license", "scoreboard",
   ];
 
   it("has all expected resources", () => {

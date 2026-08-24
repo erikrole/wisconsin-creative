@@ -157,6 +157,8 @@ function collaboratorCanVisit(pathname: string, user: CurrentUser): boolean {
   const alwaysAllowed = pathname === "/"
     || pathname === "/welcome"
     || pathname === "/profile"
+    || pathname === "/scoreboard"
+    || pathname.startsWith("/scoreboard/")
     || pathname === "/settings/profile"
     || pathname === "/settings/security"
     || pathname === "/settings/notifications"

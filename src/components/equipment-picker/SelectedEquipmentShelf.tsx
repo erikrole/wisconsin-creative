@@ -82,7 +82,7 @@ export function SelectedEquipmentShelf({
               className="flex min-h-10 max-w-full items-center gap-2 rounded-full border border-border/60 bg-muted/25 py-1 pl-1 pr-1 shadow-xs"
             >
               <AssetImage src={asset.imageUrl} alt={asset.assetTag} size={28} />
-              <span className="max-w-[11rem] truncate text-sm font-medium">{asset.assetTag}</span>
+              <span className="brand-identity max-w-[11rem] truncate text-sm font-medium">{asset.assetTag}</span>
               {stateLabel && (
                 <Badge
                   variant={hasUpcoming ? "blue" : "orange"}
@@ -135,7 +135,7 @@ export function SelectedEquipmentShelf({
               className="flex min-h-10 max-w-full items-center gap-2 rounded-full border border-border/60 bg-muted/25 py-1 pl-1 pr-1 shadow-xs"
             >
               <AssetImage src={sku.imageUrl} alt={sku.name} size={28} />
-              <span className="max-w-[11rem] truncate text-sm font-medium">{sku.name}</span>
+              <span className="brand-identity max-w-[11rem] truncate text-sm font-medium">{sku.name}</span>
               <span className="shrink-0 text-xs font-medium text-muted-foreground tabular-nums">
                 x{item.quantity}
               </span>

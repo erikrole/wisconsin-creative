@@ -10,9 +10,15 @@ describe("Users sweeping ownership contracts", () => {
   it("shows canonical roles and accessible sort state in the roster", () => {
     const page = source("src/app/(app)/users/page.tsx");
     const row = source("src/app/(app)/users/UserRow.tsx");
+    const badge = source("src/app/(app)/users/RoleBadge.tsx");
 
-    expect(row).toContain("<RoleBadge role={user.role} />");
+    expect(row).toContain("<RoleBadge role={user.role} affiliationLabel={rosterAffiliationLabel(user)} />");
+    expect(row).toContain("affiliation?.badgeLabel");
     expect(row).not.toContain("listRoleLabel");
+    expect(badge).toContain("affiliationLabel");
+    expect(badge).toContain('affiliation || "Collaborator"');
+    expect(badge).toContain('role === "ADMIN" ? "STAFF"');
+    expect(badge).toContain("publicDirectoryRole");
     expect(page).toContain('aria-sort={isAsc ? "ascending" : isDesc ? "descending" : "none"}');
     expect(page).toContain('<AnimatePresence initial={false} mode="popLayout">');
     expect(page).toContain('<ArrowUp className="size-4 text-foreground"');
@@ -89,6 +95,7 @@ describe("Users sweeping ownership contracts", () => {
 
     expect(orgChart).toContain("Corrupt legacy cycles have no natural root");
     expect(orgChart).toContain("if (!included.has(user.id))");
+    expect(orgChart).toContain("<RoleBadge role={user.role} />");
   });
 
   it("makes avatar replacement and removal database-first", () => {
