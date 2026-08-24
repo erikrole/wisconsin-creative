@@ -15,7 +15,7 @@ Plan: `tasks/scoreboard-tie-result-plan-2026-08-24.md`.
 
 **Local result:** the missing Marquette `[T]` event is now represented as `TIE`; ties count as resolved games and half a win for rate. The Oakland `[W]` event was already present in Nolan Kromke's signed-in personal Scoreboard, so the evidence does not support it being absent from that personal list.
 
-**Boundary:** no production database, deployment, commit, or push was performed in this task.
+**Boundary:** no production database or deployment was performed in this task. Batched commits `c493e0b7` and `aa1ad1a8` were pushed to `origin/main`; production migration/read-back and authenticated production/native proof remain open.
 
 ---
 ## Completed: API and native Items default sort is Most popular (2026-08-23)

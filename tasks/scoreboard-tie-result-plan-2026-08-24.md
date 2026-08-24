@@ -50,7 +50,7 @@
 
 ## Review
 
-- Shipped: Local source, migrations, W/L/T aggregates, web/native presentation, W–L–T meter order, tests, and docs are implemented; no commit or push performed.
+- Shipped: Local source, migrations, W/L/T aggregates, web/native presentation, W–L–T meter order, tests, and docs are implemented; batched commits `c493e0b7` and `aa1ad1a8` were pushed to `origin/main`.
 - Verified: Preview diagnosis identified the `[T]` Marquette event as `result = null`; the Oakland `[W]` event already appears in the affected personal list. Native matched proof shows the tie moving from between wins/losses to the right edge. Full web gates and the current iPhone 16 Pro screenshot test pass.
 - Deferred: Apply migrations, run production sync/readback, and repeat authenticated web/native live proof after deployment.
 - Blocked: None for the local implementation. Production acceptance is intentionally open because deployment was not requested.
