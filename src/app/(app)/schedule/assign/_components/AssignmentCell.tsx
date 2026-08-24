@@ -8,9 +8,11 @@ import { shiftWorkerSlotLabel } from "@/lib/shift-display";
 
 type Props = {
   shifts: GridShift[];
+  /** All-day events have no call time, so their rows state none. */
+  allDay?: boolean;
 };
 
-export function AssignmentCell({ shifts }: Props) {
+export function AssignmentCell({ shifts, allDay = false }: Props) {
   const assignedShifts = shifts
     .map((shift) => ({
       shift,
@@ -23,7 +25,7 @@ export function AssignmentCell({ shifts }: Props) {
     <td className="border-l border-border/40 px-2 py-2 align-middle transition-colors hover:bg-muted/15">
       <div className="flex min-h-10 flex-col items-center justify-center gap-1.5">
         {assignedShifts.map(({ shift, assignment }) => {
-          const callWindow = effectiveCallWindow(shift, assignment);
+          const callWindow = allDay ? null : effectiveCallWindow(shift, assignment);
           return (
             <div key={assignment.id} className="flex min-w-0 flex-col items-center gap-1">
               <Tooltip>
@@ -40,10 +42,11 @@ export function AssignmentCell({ shifts }: Props) {
                   </span>
                 </TooltipTrigger>
                 <TooltipContent>
-                  {shiftWorkerSlotLabel(shift.workerType)} · Call {formatCallTime(callWindow)}
+                  {shiftWorkerSlotLabel(shift.workerType)}
+                  {callWindow ? ` · Call ${formatCallTime(callWindow)}` : ""}
                 </TooltipContent>
               </Tooltip>
-              {shift.workerType === "ST" ? (
+              {shift.workerType === "ST" && callWindow ? (
                 <span className="text-[10px] tabular-nums text-muted-foreground">
                   Call {formatCallTime(callWindow)}
                 </span>

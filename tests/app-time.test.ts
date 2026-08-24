@@ -3,6 +3,10 @@ import {
   startOfTodayInAppTz,
   startOfDayInAppTz,
   normalizeAllDayToUtcMidnight,
+  formatAppDate,
+  formatAllDayDate,
+  appTzDateKey,
+  appTzDayRange,
 } from "@/lib/app-time";
 
 describe("startOfTodayInAppTz", () => {
@@ -57,5 +61,57 @@ describe("normalizeAllDayToUtcMidnight", () => {
     expect(
       normalizeAllDayToUtcMidnight(new Date("2026-01-15T06:00:00Z"), "America/Chicago").toISOString(),
     ).toBe("2026-01-15T00:00:00.000Z");
+  });
+});
+
+describe("formatAppDate / formatAllDayDate", () => {
+  it("reads a timed instant in Central, not UTC", () => {
+    // 7pm CDT on Aug 23 is already Aug 24 in UTC.
+    const evening = new Date("2026-08-24T00:00:00Z");
+    expect(formatAppDate(evening, "America/Chicago")).toBe("Sun, Aug 23");
+  });
+
+  it("reads an all-day boundary in UTC, where it was encoded", () => {
+    // All-day events are stored at UTC midnight of their calendar date.
+    // Reading this one in Central would report Aug 22.
+    const allDay = new Date("2026-08-23T00:00:00Z");
+    expect(formatAllDayDate(allDay)).toBe("Sun, Aug 23");
+  });
+});
+
+describe("appTzDateKey", () => {
+  it("files an evening instant under the Central day, not the UTC one", () => {
+    // 7pm CDT Aug 23 = 00:00Z Aug 24.
+    expect(appTzDateKey(new Date("2026-08-24T00:00:00Z"), "America/Chicago")).toBe("2026-08-23");
+  });
+
+  it("agrees with UTC once the Central day has caught up", () => {
+    expect(appTzDateKey(new Date("2026-08-23T18:00:00Z"), "America/Chicago")).toBe("2026-08-23");
+  });
+
+  it("handles standard time", () => {
+    // 6pm CST Jan 15 = 00:00Z Jan 16.
+    expect(appTzDateKey(new Date("2026-01-16T00:00:00Z"), "America/Chicago")).toBe("2026-01-15");
+  });
+});
+
+describe("appTzDayRange", () => {
+  it("spans Central midnight to Central midnight in summer (CDT)", () => {
+    const range = appTzDayRange("2026-08-23", "America/Chicago");
+    expect(range.gte.toISOString()).toBe("2026-08-23T05:00:00.000Z");
+    expect(range.lt.toISOString()).toBe("2026-08-24T05:00:00.000Z");
+  });
+
+  it("spans Central midnight to Central midnight in winter (CST)", () => {
+    const range = appTzDayRange("2026-01-15", "America/Chicago");
+    expect(range.gte.toISOString()).toBe("2026-01-15T06:00:00.000Z");
+    expect(range.lt.toISOString()).toBe("2026-01-16T06:00:00.000Z");
+  });
+
+  it("covers a 23-hour spring-forward day without gaps", () => {
+    // US DST begins Mar 8 2026.
+    const range = appTzDayRange("2026-03-08", "America/Chicago");
+    expect(range.gte.toISOString()).toBe("2026-03-08T06:00:00.000Z");
+    expect(range.lt.toISOString()).toBe("2026-03-09T05:00:00.000Z");
   });
 });

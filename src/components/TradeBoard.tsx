@@ -28,6 +28,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { scheduleEventTitleParts } from "@/app/(app)/schedule/_components/types";
 import { AREA_LABELS } from "@/types/areas";
+import { formatCalendarEventAllDayLabel } from "@/lib/calendar-event-dates";
 import { formatDateShort, formatTimeShort } from "@/lib/format";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { cn } from "@/lib/utils";
@@ -37,6 +38,7 @@ type TradeEvent = {
   summary: string;
   startsAt: string;
   endsAt: string;
+  allDay?: boolean | null;
   sportCode: string | null;
   opponent?: string | null;
   isHome?: boolean | null;
@@ -202,7 +204,13 @@ function isTradeStatus(value: string): value is typeof TRADE_STATUSES[number] {
   return (TRADE_STATUSES as readonly string[]).includes(value);
 }
 
-function formatShiftWindow(shift: Pick<TradeShift, "startsAt" | "endsAt">) {
+function formatShiftWindow(shift: Pick<TradeShift, "startsAt" | "endsAt" | "shiftGroup">) {
+  // An all-day event's shift inherits the event's own UTC-midnight boundary,
+  // so reading a clock off it prints 7:00 PM the evening before. Such a shift
+  // has no call time to state -- it is the whole day.
+  if (shift.shiftGroup?.event.allDay) {
+    return formatCalendarEventAllDayLabel(shift.shiftGroup.event) || "All day";
+  }
   const starts = new Date(shift.startsAt);
   const ends = new Date(shift.endsAt);
   const sameDay = starts.toDateString() === ends.toDateString();

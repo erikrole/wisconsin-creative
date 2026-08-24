@@ -785,6 +785,7 @@ export async function listTrades(filters: {
                       summary: true,
                       startsAt: true,
                       endsAt: true,
+                      allDay: true,
                       sportCode: true,
                       opponent: true,
                       isHome: true,

@@ -133,12 +133,19 @@ export const POST = withKiosk(async (req, { kiosk }) => {
           throw new HttpError(400, "Selected event is no longer available");
         }
 
-        const defaultEndsAt = event?.endsAt && event.endsAt > now
-          ? event.endsAt
-          : new Date(now.getTime() + policies.defaultLoanDays * 24 * 60 * 60 * 1000);
+        // Linked-event checkouts without an explicit return time get event end
+        // + 90 minutes — tear-down/travel buffer, matching the kiosk UI default.
+        const linkedEventReturnBufferMs = 90 * 60 * 1000;
+        const defaultEndsAt = event?.endsAt
+          ? new Date(event.endsAt.getTime() + linkedEventReturnBufferMs)
+          : null;
+        const resolvedDefaultEndsAt =
+          defaultEndsAt && defaultEndsAt > now
+            ? defaultEndsAt
+            : new Date(now.getTime() + policies.defaultLoanDays * 24 * 60 * 60 * 1000);
         const { start: startsAt, end: endsAt } = parseDateRange(
           now.toISOString(),
-          body.endsAt ?? defaultEndsAt.toISOString(),
+          body.endsAt ?? resolvedDefaultEndsAt.toISOString(),
         );
 
         const rawTitle = event?.summary ?? customPurpose;

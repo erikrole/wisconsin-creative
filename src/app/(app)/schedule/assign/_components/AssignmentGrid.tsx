@@ -150,6 +150,7 @@ export function AssignmentGrid({
                     <AssignmentCell
                       key={col.key}
                       shifts={matchingShifts}
+                      allDay={ev.allDay}
                     />
                   );
                 })}

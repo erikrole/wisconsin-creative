@@ -1,4 +1,5 @@
 import { BookingStatus, ShiftAssignmentStatus, ShiftTradeStatus, type Prisma } from "@prisma/client";
+import { formatAllDayDate, formatAppDateTime } from "@/lib/app-time";
 import { db } from "@/lib/db";
 import { summarizeScheduleDataQuality } from "@/lib/schedule-data-quality";
 import { buildScheduleEventWhere } from "@/lib/schedule-event-where";
@@ -45,20 +46,11 @@ function uniqueEventIdsFor(assignments: Array<{ shift: { shiftGroup: { eventId: 
 
 function formatNextCallLabel(startsAt: Date | null, allDay: boolean) {
   if (!startsAt) return "No upcoming calls";
-  if (allDay) {
-    return startsAt.toLocaleDateString("en-US", {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-    }) + " · All day";
-  }
-  return startsAt.toLocaleString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  // All-day boundaries are encoded dates at UTC midnight, so they read back in
+  // UTC; a timed call is an instant and reads in the app timezone. Neither can
+  // use a bare `toLocale*`, which renders UTC on a server that has no timezone.
+  if (allDay) return `${formatAllDayDate(startsAt)} · All day`;
+  return formatAppDateTime(startsAt);
 }
 
 function getNextCall(
@@ -81,7 +73,9 @@ function getNextCall(
   const candidates = events
     .filter((event) => event.endsAt.getTime() >= now.getTime())
     .map((event) => {
-      const callStartsAt = event.shiftGroup?.shifts
+      // An all-day event has no call time, so a stray call window stored on one
+      // of its slots must not become the "next call" instant.
+      const callStartsAt = event.allDay ? undefined : event.shiftGroup?.shifts
         .flatMap((shift) => {
           const assignmentCalls = shift.assignments
             .filter((assignment) => ACTIVE_ASSIGNMENT_STATUS_SET.has(assignment.status))

@@ -627,7 +627,9 @@ export const GET = withAuth(async (req, { user }) => {
       opponent: e.opponent ? normalizeTeamAbbreviations(e.opponent) : null,
       isHome: e.isHome ?? null,
       coverage,
-      callTime: e.isHome === true && earliestShift ? earliestShift.toISOString() : null,
+      // An all-day event has no call time; its shifts inherit the event's own
+      // UTC-midnight boundary, which would surface as "Call 7:00 PM".
+      callTime: e.isHome === true && !e.allDay && earliestShift ? earliestShift.toISOString() : null,
       totalShiftSlots,
       filledShiftSlots,
       assignedUsers,
@@ -684,10 +686,12 @@ export const GET = withAuth(async (req, { user }) => {
       workerLabel: shiftWorkerLabel(a.shift.workerType),
       startsAt: a.shift.startsAt.toISOString(),
       endsAt: a.shift.endsAt.toISOString(),
-      callStartsAt: a.shift.workerType === "ST"
+      // An all-day event has no call time; its shift window is the event's own
+      // encoded UTC-midnight boundary, which reads as 7:00 PM the day before.
+      callStartsAt: a.shift.workerType === "ST" && !ev.allDay
         ? (a.callStartsAt ?? a.shift.callStartsAt ?? a.shift.startsAt).toISOString()
         : null,
-      callEndsAt: a.shift.workerType === "ST"
+      callEndsAt: a.shift.workerType === "ST" && !ev.allDay
         ? (a.callEndsAt ?? a.shift.callEndsAt ?? a.shift.endsAt).toISOString()
         : null,
       callNote: a.callNote,
@@ -743,10 +747,11 @@ export const GET = withAuth(async (req, { user }) => {
         workerLabel: shiftWorkerLabel(a.shift.workerType),
         startsAt: a.shift.startsAt.toISOString(),
         endsAt: a.shift.endsAt.toISOString(),
-        callStartsAt: a.shift.workerType === "ST"
+        // All-day events carry no call time -- see the myShifts note above.
+        callStartsAt: a.shift.workerType === "ST" && !ev.allDay
           ? (a.callStartsAt ?? a.shift.callStartsAt ?? a.shift.startsAt).toISOString()
           : null,
-        callEndsAt: a.shift.workerType === "ST"
+        callEndsAt: a.shift.workerType === "ST" && !ev.allDay
           ? (a.callEndsAt ?? a.shift.callEndsAt ?? a.shift.endsAt).toISOString()
           : null,
         callNote: a.callNote,

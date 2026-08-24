@@ -18,8 +18,9 @@ type PublishedCrewMember = {
   person: { id: string; name: string; avatarUrl: string | null };
   area: string;
   role: string;
-  callStartsAt: string;
-  callEndsAt: string;
+  // Null for an all-day event, which has no call time.
+  callStartsAt: string | null;
+  callEndsAt: string | null;
 };
 
 type PublishedEvent = {
@@ -160,7 +161,7 @@ export function CollaboratorSchedule({ canFollow }: { canFollow: boolean }) {
                         <UserAvatar name={member.person.name} avatarUrl={member.person.avatarUrl} size="sm" />
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-medium">{member.person.name}</p>
-                          {member.role === "Student" ? (
+                          {member.role === "Student" && member.callStartsAt && member.callEndsAt ? (
                             <p className="text-xs text-muted-foreground tabular-nums">Call {formatWindow(member.callStartsAt, member.callEndsAt)}</p>
                           ) : null}
                         </div>

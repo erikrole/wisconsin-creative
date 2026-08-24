@@ -89,6 +89,7 @@ export const GET = withAuth(async (req, { user }) => {
                   summary: true,
                   startsAt: true,
                   endsAt: true,
+                  allDay: true,
                   sportCode: true,
                   isHome: true,
                   opponent: true,
@@ -175,10 +176,13 @@ export const GET = withAuth(async (req, { user }) => {
       workerLabel: shiftWorkerLabel(a.shift.workerType),
       startsAt: a.shift.startsAt.toISOString(),
       endsAt: a.shift.endsAt.toISOString(),
-      callStartsAt: a.shift.workerType === "ST"
+      // An all-day event has no call time. Its shift window is the event's own
+      // encoded UTC-midnight boundary, so falling back to it here would hand
+      // clients a meaningless instant that renders as 7:00 PM the day before.
+      callStartsAt: a.shift.workerType === "ST" && !event.allDay
         ? (a.callStartsAt ?? a.shift.callStartsAt ?? a.shift.startsAt).toISOString()
         : null,
-      callEndsAt: a.shift.workerType === "ST"
+      callEndsAt: a.shift.workerType === "ST" && !event.allDay
         ? (a.callEndsAt ?? a.shift.callEndsAt ?? a.shift.endsAt).toISOString()
         : null,
       callNote: a.callNote,
@@ -195,6 +199,7 @@ export const GET = withAuth(async (req, { user }) => {
         summary: event.summary,
         startsAt: event.startsAt.toISOString(),
         endsAt: event.endsAt.toISOString(),
+        allDay: event.allDay,
         sportCode: event.sportCode,
         isHome: event.isHome,
         opponent: event.opponent,

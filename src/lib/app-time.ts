@@ -153,3 +153,65 @@ export function formatAppWindow(
   if (startsAt.getTime() === endsAt.getTime()) return formatAppDateTime(startsAt, timeZone);
   return `${formatAppDateTime(startsAt, timeZone)} - ${formatAppTime(endsAt, timeZone)}`;
 }
+
+/**
+ * A calendar date the way a worker reads it, in the app's timezone.
+ *
+ * The timed sibling of `formatAllDayDate`. Server code has no timezone of its
+ * own, so a bare `toLocaleDateString` renders UTC and pushes an evening event
+ * onto the following day.
+ */
+export function formatAppDate(
+  value: Date | string,
+  timeZone: string = env.appTimezone,
+): string {
+  return toDate(value).toLocaleDateString("en-US", {
+    timeZone,
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+/**
+ * The calendar date of an all-day boundary.
+ *
+ * All-day events are stored as encoded dates at UTC midnight (see
+ * `normalizeAllDayToUtcMidnight`), so they must be read back in UTC. Rendering
+ * one in Central instead subtracts the offset and shows the previous day.
+ */
+export function formatAllDayDate(value: Date | string): string {
+  return toDate(value).toLocaleDateString("en-US", {
+    timeZone: "UTC",
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+/**
+ * The `YYYY-MM-DD` calendar day of an instant in the app timezone.
+ *
+ * Report day buckets and heatmap cells key off this. `toISOString().slice(0,10)`
+ * keys off the UTC day instead, which files every evening event under the
+ * following date.
+ */
+export function appTzDateKey(instant: Date, timeZone: string = env.appTimezone): string {
+  const { year, month, day } = appTzYmd(instant, timeZone);
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+/**
+ * The `[start, end)` UTC window covering one app-timezone calendar day,
+ * given its `YYYY-MM-DD` key. DST-correct via `startOfDayInAppTz`.
+ */
+export function appTzDayRange(
+  dayKey: string,
+  timeZone: string = env.appTimezone,
+): { gte: Date; lt: Date } {
+  const [year, month, day] = dayKey.split("-").map(Number);
+  const noonUtc = new Date(Date.UTC(year!, (month ?? 1) - 1, day ?? 1, 12));
+  const gte = startOfDayInAppTz(noonUtc, 0, timeZone);
+  const lt = startOfDayInAppTz(noonUtc, 1, timeZone);
+  return { gte, lt };
+}

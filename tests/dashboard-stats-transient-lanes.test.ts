@@ -128,7 +128,13 @@ describe("dashboard My Shifts date contract", () => {
 
     expect(myShiftType).toContain("allDay: boolean;");
     expect(myShiftsPayload).toContain("allDay: ev.allDay");
-    expect(column).toContain(": s.event.allDay;");
+    // The event's own flag decides the all-day treatment, so a stray call
+    // window on an all-day event cannot restore a clock time to the row.
+    expect(column).toContain("const isAllDayDisplay = s.event.allDay || isFullDayDefault;");
     expect(column).toContain("formatDayLabel(displayDate, now, isAllDayDisplay)");
+    // ...and the same flag suppresses the call window itself.
+    expect(column).toContain('s.workerType === "ST" && !s.event.allDay');
+    // The payload never sends a call window for an all-day event to begin with.
+    expect(myShiftsPayload).toContain('a.shift.workerType === "ST" && !ev.allDay');
   });
 });

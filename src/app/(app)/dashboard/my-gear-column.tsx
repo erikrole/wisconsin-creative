@@ -154,11 +154,13 @@ export function MyGearColumn({
                 : s.event.summary;
               // Only Student assignments have a report time. Staff rows use
               // the event date and leave the call-time position empty.
-              const studentCallWindow = s.workerType === "ST" && s.callStartsAt && s.callEndsAt
+              // An all-day event never has a call time, whatever window a slot
+              // may still carry, so the event's own flag decides first.
+              const studentCallWindow = s.workerType === "ST" && !s.event.allDay && s.callStartsAt && s.callEndsAt
                 ? { startsAt: s.callStartsAt, endsAt: s.callEndsAt }
                 : null;
               const isFullDayDefault = studentCallWindow ? isFullDayBoundaryWindow(studentCallWindow) : false;
-              const isAllDayDisplay = studentCallWindow ? isFullDayDefault : s.event.allDay;
+              const isAllDayDisplay = s.event.allDay || isFullDayDefault;
               const displayDate = studentCallWindow?.startsAt ?? s.event.startsAt;
               return (
                 <div key={s.id} className="group flex min-h-16 w-full items-center justify-between gap-3 px-4 py-2.5 transition-colors hover:bg-muted/45 [&+&]:border-t [&+&]:border-border/40">

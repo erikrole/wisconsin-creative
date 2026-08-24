@@ -1,6 +1,8 @@
 import { BookingStatus, Prisma } from "@prisma/client";
+import { appTzDateKey, appTzDayRange } from "@/lib/app-time";
 import { isBatterySku } from "@/lib/bulk-batteries";
 import { db } from "@/lib/db";
+import { env } from "@/lib/env";
 import { summarizeItemFamilyState } from "@/lib/item-family-state";
 import { countAssetsByEffectiveStatus, deriveAssetStatusesFromLoaded } from "@/lib/services/status";
 
@@ -482,9 +484,10 @@ export function parseCheckoutFocusDate(value: string | null | undefined) {
 }
 
 function checkoutFocusDateRange(focusDate: string) {
-  const start = new Date(`${focusDate}T00:00:00.000Z`);
-  const end = new Date(start.getTime() + 86_400_000);
-  return { gte: start, lt: end };
+  // The clicked heatmap cell is an app-timezone calendar day, so its row list
+  // must span Central midnight to Central midnight. A UTC window instead starts
+  // the day at 7pm the evening before.
+  return appTzDayRange(focusDate);
 }
 
 export async function getCheckoutReport(days: number, focusDate?: string | null) {
@@ -530,7 +533,7 @@ export async function getCheckoutReport(days: number, focusDate?: string | null)
     // Single 365-day daily aggregation (period series is sliced in JS).
     // Using date_trunc keeps the work in Postgres regardless of row count.
     db.$queryRaw<{ date: string; count: bigint }[]>`
-      SELECT to_char(date_trunc('day', "created_at" AT TIME ZONE 'UTC'), 'YYYY-MM-DD') AS date,
+      SELECT to_char(date_trunc('day', "created_at" AT TIME ZONE 'UTC' AT TIME ZONE ${env.appTimezone}::text), 'YYYY-MM-DD') AS date,
              COUNT(*)::bigint AS count
       FROM bookings
       WHERE kind = 'CHECKOUT'
@@ -563,11 +566,13 @@ export async function getCheckoutReport(days: number, focusDate?: string | null)
   const dayMap = new Map<string, number>();
   for (const row of heatmapRaw) dayMap.set(row.date, Number(row.count));
 
-  const sinceKey = since.toISOString().slice(0, 10);
+  // Day keys are app-timezone calendar days on both sides -- the SQL buckets
+  // and this cursor must agree, or the trend line reads one day off the cells.
+  const sinceKey = appTzDateKey(since);
   const dailyTrend: { date: string; count: number }[] = [];
   const cursor = new Date(since);
   while (cursor <= now) {
-    const key = cursor.toISOString().slice(0, 10);
+    const key = appTzDateKey(cursor);
     if (key >= sinceKey) {
       dailyTrend.push({ date: key, count: dayMap.get(key) ?? 0 });
     }
@@ -581,7 +586,7 @@ export async function getCheckoutReport(days: number, focusDate?: string | null)
   // The 365-day aggregate already covers the window before this one, so the
   // comparison costs no extra query for any supported period.
   const previousSince = checkoutReportSince(days * 2);
-  const previousSinceKey = previousSince.toISOString().slice(0, 10);
+  const previousSinceKey = appTzDateKey(previousSince);
   let previousTotalCheckouts = 0;
   for (const [date, count] of dayMap) {
     if (date >= previousSinceKey && date < sinceKey) previousTotalCheckouts += count;
@@ -850,7 +855,7 @@ export async function getScanHistoryReport(
     db.scanEvent.count({ where }),
     db.scanEvent.count({ where: { ...where, success: true } }),
     db.$queryRaw<{ date: string; success: bigint; fail: bigint }[]>`
-      SELECT to_char(date_trunc('day', "created_at" AT TIME ZONE 'UTC'), 'YYYY-MM-DD') AS date,
+      SELECT to_char(date_trunc('day', "created_at" AT TIME ZONE 'UTC' AT TIME ZONE ${env.appTimezone}::text), 'YYYY-MM-DD') AS date,
              COUNT(*) FILTER (WHERE success = true)::bigint AS success,
              COUNT(*) FILTER (WHERE success = false)::bigint AS fail
       FROM scan_events

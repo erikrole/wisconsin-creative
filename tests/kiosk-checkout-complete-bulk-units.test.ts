@@ -441,6 +441,33 @@ describe("kiosk checkout complete bulk units", () => {
     expect(createdEndsAt.getTime()).toBeLessThanOrEqual(Date.now() + 5 * 24 * 60 * 60 * 1000);
   });
 
+  it("defaults linked-event return time to 90 minutes after the event ends", async () => {
+    const eventEndsAt = new Date(Date.now() + 3 * 60 * 60 * 1000);
+    mocks.calendarEventFindFirst.mockResolvedValue({
+      id: "event-1",
+      summary: "Men's Soccer vs Iowa",
+      sportCode: "MSO",
+      endsAt: eventEndsAt,
+    });
+
+    const res = await runCompleteKioskCheckout(completeRequest(
+      [{ assetId: "asset-1" }],
+      { eventId: "event-1", endsAt: undefined, customPurpose: undefined },
+    ));
+
+    expect(res.status).toBe(200);
+    const expectedEndsAt = new Date(eventEndsAt.getTime() + 90 * 60 * 1000);
+    expect(mocks.bookingCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        endsAt: expectedEndsAt,
+      }),
+    });
+    expect(mocks.checkAvailability).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ endsAt: expectedEndsAt }),
+    );
+  });
+
   it("BUG: rejects at the configured active-checkout cap inside the Serializable transaction", async () => {
     mocks.systemConfigFindUnique.mockResolvedValue({
       value: { defaultLoanDays: 3, gracePeriodHours: 0, maxItemsPerUser: 2 },

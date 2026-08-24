@@ -1,4 +1,5 @@
 import { BookingKind, type Prisma } from "@prisma/client";
+import { env } from "@/lib/env";
 import { db } from "@/lib/db";
 import type {
   ScheduleChangeEventSummary,
@@ -81,7 +82,10 @@ function formatDateLike(value: unknown) {
   if (!raw) return null;
   const date = new Date(raw);
   if (Number.isNaN(date.getTime())) return null;
+  // Rendered on the server, which has no timezone of its own -- a bare
+  // `toLocaleString` here reports every schedule change five or six hours off.
   return date.toLocaleString("en-US", {
+    timeZone: env.appTimezone,
     month: "short",
     day: "numeric",
     hour: "numeric",

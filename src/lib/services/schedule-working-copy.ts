@@ -460,6 +460,9 @@ export async function mutateWorkingSchedule(
       if (command.workerType === "FT" && (command.callStartsAt || command.callEndsAt)) {
         throw new HttpError(400, "Call times apply only to Student slots.");
       }
+      if (group.event.allDay && (command.callStartsAt || command.callEndsAt)) {
+        throw new HttpError(400, "All-day events do not have call times.");
+      }
       if (Boolean(command.callStartsAt) !== Boolean(command.callEndsAt)) {
         throw new HttpError(400, "Call start and release time must both be set or both be cleared.");
       }
@@ -476,6 +479,11 @@ export async function mutateWorkingSchedule(
       if (!slot) throw new HttpError(404, "Working slot not found");
       if (slot.workerType !== "ST") {
         throw new HttpError(400, "Call times apply only to Student slots.");
+      }
+      // Same rule as `setCallWindowForAll`: the event, not the slot, decides
+      // whether a call time can exist at all.
+      if (group.event.allDay && (command.callStartsAt || command.callEndsAt)) {
+        throw new HttpError(400, "All-day events do not have call times.");
       }
       if (Boolean(command.callStartsAt) !== Boolean(command.callEndsAt)) {
         throw new HttpError(400, "Call start and release time must both be set or both be cleared.");

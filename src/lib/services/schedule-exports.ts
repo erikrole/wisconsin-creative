@@ -83,12 +83,17 @@ function effectiveEndsAt(shift: ExportShift, assignment?: ExportAssignment | nul
   return assignment?.callEndsAt ?? shift.callEndsAt ?? shift.endsAt;
 }
 
-function callStartsAt(shift: ExportShift, assignment?: ExportAssignment | null) {
-  return shift.workerType === "ST" ? effectiveStartsAt(shift, assignment) : null;
+// An all-day event has no call time. Its shifts inherit the event's own
+// UTC-midnight boundary, so without the flag the export states a call at
+// midnight that nobody was ever told to report for.
+function callStartsAt(shift: ExportShift, assignment: ExportAssignment | null | undefined, allDay: boolean) {
+  if (allDay || shift.workerType !== "ST") return null;
+  return effectiveStartsAt(shift, assignment);
 }
 
-function callEndsAt(shift: ExportShift, assignment?: ExportAssignment | null) {
-  return shift.workerType === "ST" ? effectiveEndsAt(shift, assignment) : null;
+function callEndsAt(shift: ExportShift, assignment: ExportAssignment | null | undefined, allDay: boolean) {
+  if (allDay || shift.workerType !== "ST") return null;
+  return effectiveEndsAt(shift, assignment);
 }
 
 function durationHours(startsAt: Date, endsAt: Date) {
@@ -140,6 +145,7 @@ async function loadScheduleExportGroups(input: ScheduleExportInput) {
           summary: true,
           startsAt: true,
           endsAt: true,
+          allDay: true,
           sportCode: true,
           opponent: true,
           isHome: true,
@@ -201,8 +207,8 @@ function rosterRows(groups: ExportGroup[]) {
         shiftWorkerSlotLabel(shift.workerType),
         assignment?.user.name ?? "",
         assignment?.status ?? "OPEN",
-        exportDate(callStartsAt(shift, assignment)),
-        exportDate(callEndsAt(shift, assignment)),
+        exportDate(callStartsAt(shift, assignment, group.event.allDay)),
+        exportDate(callEndsAt(shift, assignment, group.event.allDay)),
         publication.status,
         exportDate(publication.publishedAt ? new Date(publication.publishedAt) : null),
         assignment?.acknowledgedAt ? "yes" : "no",
@@ -269,8 +275,8 @@ function openSlotRows(groups: ExportGroup[]) {
         shift.id,
         shift.area,
         shiftWorkerLabel(shift.workerType),
-        exportDate(callStartsAt(shift)),
-        exportDate(callEndsAt(shift)),
+        exportDate(callStartsAt(shift, null, group.event.allDay)),
+        exportDate(callEndsAt(shift, null, group.event.allDay)),
         shift.assignments.filter((assignment) => assignment.status === ShiftAssignmentStatus.REQUESTED).length,
       ]),
   );
@@ -290,8 +296,8 @@ function conflictRows(groups: ExportGroup[]) {
           shiftWorkerLabelForProfile(assignment.user) ?? "",
           assignment.user.name,
           assignment.status,
-          exportDate(callStartsAt(shift, assignment)),
-          exportDate(callEndsAt(shift, assignment)),
+          exportDate(callStartsAt(shift, assignment, group.event.allDay)),
+          exportDate(callEndsAt(shift, assignment, group.event.allDay)),
           assignment.conflictNote ?? "",
         ]),
     ),

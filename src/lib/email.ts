@@ -98,6 +98,10 @@ export function buildNotificationEmail({
 }): string {
   const dueStr = dueAt
     ? new Date(dueAt).toLocaleString("en-US", {
+        // Emails are built on the server, which runs in UTC. Without the
+        // institution timezone a 7pm Central due time mails out as midnight
+        // the next day.
+        timeZone: env.appTimezone,
         month: "short",
         day: "numeric",
         year: "numeric",

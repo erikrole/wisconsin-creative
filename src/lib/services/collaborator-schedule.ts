@@ -103,8 +103,15 @@ async function hydratePublishedGroups(groups: PublishedGroup[]) {
             role: shift.workerType,
             startsAt: shift.startsAt,
             endsAt: shift.endsAt,
-            callStartsAt: assignment.callStartsAt ?? shift.callStartsAt ?? shift.startsAt,
-            callEndsAt: assignment.callEndsAt ?? shift.callEndsAt ?? shift.endsAt,
+            // An all-day event has no call time. Without this the fallback
+            // reaches the event's own UTC-midnight boundary and published crew
+            // reads "Call 7:00 PM - 7:00 PM" on both web and iOS.
+            callStartsAt: group.event.allDay
+              ? null
+              : assignment.callStartsAt ?? shift.callStartsAt ?? shift.startsAt,
+            callEndsAt: group.event.allDay
+              ? null
+              : assignment.callEndsAt ?? shift.callEndsAt ?? shift.endsAt,
           }];
         }),
       ),
