@@ -4,11 +4,9 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, ChevronUp, MoreHorizontal, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
-import { Bar, BarChart, Cell, XAxis, YAxis } from "recharts";
 import MetricCard from "../reports/MetricCard";
 import {
-  REPORT_OVERDUE_CHART_COLORS,
-  ReportChartCard,
+  ReportDataRegion,
   ReportEmptyState,
   ReportErrorState,
   ReportExportButton,
@@ -22,9 +20,10 @@ import {
   ReportToolbar,
   ReportToolbarGroup,
 } from "../reports/report-ui";
+import { AccountabilitySpotlight } from "./AccountabilitySpotlight";
+import { UserAvatar } from "@/components/UserAvatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import {
   Collapsible,
   CollapsibleContent,
@@ -86,6 +85,7 @@ type Incident = {
 type Person = {
   userId: string;
   name: string;
+  avatarUrl: string | null;
   active: boolean;
   primaryArea: string | null;
   checkoutCount: number;
@@ -116,11 +116,16 @@ type AccountabilityReport = {
     lateEvents: number;
     activeOverdue: number;
     totalLateHours: number;
-    excludedRecords: number;
+    excludedRecords?: number;
   };
+  capabilities: {
+    canExport: boolean;
+    canManageExclusions: boolean;
+  };
+  spotlightJeers: string[];
   locations: Array<{ id: string; name: string }>;
   leaderboard: Person[];
-  excluded: Array<{
+  excluded?: Array<{
     bookingId: string;
     bookingTitle: string;
     requester: string;
@@ -177,7 +182,7 @@ function OnTimeRate({ person }: { person: Person }) {
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          <span className="cursor-default text-muted-foreground">—</span>
+          <span className="cursor-default text-xs text-muted-foreground">Not rated</span>
         </TooltipTrigger>
         <TooltipContent>
           Needs more completed checkouts before an on-time rate is meaningful
@@ -188,12 +193,12 @@ function OnTimeRate({ person }: { person: Person }) {
   return (
     <span
       className={cn(
-        "tabular-nums",
+        "text-lg font-semibold tabular-nums",
         person.onTimeRate < 60
-          ? "font-semibold text-[var(--red-text)]"
+          ? "text-[var(--red-text)]"
           : person.onTimeRate < 85
             ? "text-[var(--orange-text)]"
-            : "text-muted-foreground",
+            : "text-[var(--green-text)]",
       )}
     >
       {person.onTimeRate}%
@@ -240,7 +245,7 @@ export default function AccountabilityClient() {
     return `/api/accountability?${params}`;
   }, [incidentState, locationId, sort, userState, year]);
 
-  const { data, loading, error, lastRefreshed, reload } = useFetch<AccountabilityReport>({
+  const { data, loading, refreshing, error, lastRefreshed, reload } = useFetch<AccountabilityReport>({
     url: queryUrl,
     transform: (json) => json as unknown as AccountabilityReport,
     keepPreviousData: true,
@@ -325,11 +330,8 @@ export default function AccountabilityClient() {
   const leaderboard = data.leaderboard;
   const scopeLabel = data.academicYear?.label ?? "All time";
   const rankByTime = sort === "time";
-  const chartByEvents = sort === "events";
-  const chartRows = leaderboard.slice(0, 10).map((person) => ({
-    name: person.name,
-    value: chartByEvents ? person.lateEventCount : person.totalLateHours,
-  }));
+  const canManageExclusions = data.capabilities.canManageExclusions;
+  const excluded = data.excluded ?? [];
 
   const activeFilters = [
     ...(locationId !== "all"
@@ -360,16 +362,18 @@ export default function AccountabilityClient() {
       <ReportToolbar
         activeFilters={activeFilters}
         lastRefreshed={lastRefreshed}
-        loading={loading}
+        loading={loading || refreshing}
         now={clock}
         onRefresh={reload}
         exportAction={
-          <ReportExportButton
-            ariaLabel="Export the ranked accountability rows as CSV"
-            label="Export ranking"
-            disabled={leaderboard.length === 0}
-            onClick={exportCsv}
-          />
+          data.capabilities.canExport ? (
+            <ReportExportButton
+              ariaLabel="Export the ranked accountability rows as CSV"
+              label="Export ranking"
+              disabled={leaderboard.length === 0}
+              onClick={exportCsv}
+            />
+          ) : null
         }
       >
         <ReportToolbarGroup label="Rank by">
@@ -433,10 +437,19 @@ export default function AccountabilityClient() {
         </Select>
       </ReportToolbar>
 
+      <ReportDataRegion refreshing={refreshing}>
+        <AccountabilitySpotlight
+          people={leaderboard}
+          sort={sort}
+          scopeLabel={scopeLabel}
+          now={clock}
+          jeers={data.spotlightJeers}
+        />
+
       <ReportMetricGrid>
         <MetricCard
           value={data.metrics.peopleNeedingAttention}
-          label="People needing attention"
+          label="People on the board"
           tooltip={`People with at least one late event in ${scopeLabel.toLowerCase()}`}
         />
         <MetricCard
@@ -456,53 +469,18 @@ export default function AccountabilityClient() {
           tooltip="Checkouts still out past their due time right now"
           href="/checkouts?filter=overdue"
         />
-        <MetricCard
-          value={data.metrics.excludedRecords}
-          label="Excluded records"
-          tooltip="Data-quality exceptions held out of this ranking"
-        />
+        {canManageExclusions && data.metrics.excludedRecords !== undefined ? (
+          <MetricCard
+            value={data.metrics.excludedRecords}
+            label="Excluded records"
+            tooltip="Data-quality exceptions held out of this ranking"
+          />
+        ) : null}
       </ReportMetricGrid>
 
-      {chartRows.length > 0 && (
-        <ReportChartCard
-          title={chartByEvents ? "Late events by person" : "Late time by person"}
-          description={`Top ${chartRows.length} in ${scopeLabel.toLowerCase()}`}
-          className="mb-4"
-        >
-          <ChartContainer
-            config={{
-              value: {
-                label: chartByEvents ? "Late events" : "Late hours",
-                color: "var(--chart-5)",
-              },
-            }}
-            className="w-full"
-            style={{ height: Math.max(150, chartRows.length * 36) }}
-          >
-            <BarChart data={chartRows} layout="vertical" margin={{ left: 0, right: 12 }}>
-              <YAxis
-                dataKey="name"
-                type="category"
-                width={120}
-                tickLine={false}
-                axisLine={false}
-                className="text-xs"
-              />
-              <XAxis type="number" hide />
-              <ChartTooltip content={<ChartTooltipContent />} />
-              <Bar dataKey="value" name={chartByEvents ? "Late events" : "Late hours"} radius={[0, 4, 4, 0]}>
-                {chartRows.map((_, index) => (
-                  <Cell key={index} fill={REPORT_OVERDUE_CHART_COLORS[index]} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ChartContainer>
-        </ReportChartCard>
-      )}
-
       <ReportSectionCard
-        title="Needs attention"
-        description={`${data.methodology.ranking}. Rank 1 is the pattern most worth reviewing, not an award.`}
+        title="Full leaderboard"
+        description={`Open history for the receipts. The return record is the escape route. ${data.methodology.ranking}.`}
         className="mb-4"
         contentClassName="p-0"
       >
@@ -510,28 +488,29 @@ export default function AccountabilityClient() {
           <div className="p-4">
             <ReportEmptyState
               icon="check"
-              title="No late-return patterns in this view"
-              description="Try another academic year or broaden the filters."
+              title="No one made the board. Nice work."
+              description="Try another academic year or broaden the filters if you are looking for history."
             />
           </div>
         ) : (
           <>
-            <div className="hidden md:block">
-              <Table>
+            <div className="hidden xl:block">
+              <Table className="table-fixed">
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-12">#</TableHead>
-                    <TableHead>Person</TableHead>
-                    <TableHead className={cn("text-right", !rankByTime && "text-foreground")}>
+                    <TableHead className="w-[34%]">Person</TableHead>
+                    <TableHead
+                      className={cn("w-[16%] text-right", !rankByTime && "text-foreground")}
+                    >
                       Late events
                     </TableHead>
-                    <TableHead className="text-right">Overdue now</TableHead>
-                    <TableHead className={cn("text-right", rankByTime && "text-foreground")}>
-                      Total late
+                    <TableHead
+                      className={cn("w-[24%] text-right", rankByTime && "text-foreground")}
+                    >
+                      Late-time pattern
                     </TableHead>
-                    <TableHead className="text-right">Worst</TableHead>
-                    <TableHead className="text-right">On time</TableHead>
-                    <TableHead className="w-10" />
+                    <TableHead className="w-[14%] text-right">Return record</TableHead>
+                    <TableHead className="w-[12%] text-right">History</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -544,14 +523,14 @@ export default function AccountabilityClient() {
                       now={clock}
                       expanded={expanded.has(person.userId)}
                       onToggle={() => toggle(person.userId)}
-                      onExclude={setExcludeTarget}
+                      onExclude={canManageExclusions ? setExcludeTarget : undefined}
                     />
                   ))}
                 </TableBody>
               </Table>
             </div>
 
-            <div className="md:hidden">
+            <div className="xl:hidden">
               {leaderboard.map((person, index) => (
                 <PersonMobileCard
                   key={person.userId}
@@ -561,7 +540,7 @@ export default function AccountabilityClient() {
                   now={clock}
                   expanded={expanded.has(person.userId)}
                   onToggle={() => toggle(person.userId)}
-                  onExclude={setExcludeTarget}
+                  onExclude={canManageExclusions ? setExcludeTarget : undefined}
                 />
               ))}
             </div>
@@ -569,52 +548,54 @@ export default function AccountabilityClient() {
         )}
       </ReportSectionCard>
 
-      <ReportSectionCard
-        title="Excluded records"
-        description="Reversible data-quality exceptions for this filtered period."
-        className="mb-4"
-      >
-        {data.excluded.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No records are excluded in this view.</p>
-        ) : (
-          <div className="divide-y">
-            {data.excluded.map((entry) => (
-              <div
-                key={entry.bookingId}
-                className="flex flex-col gap-3 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="min-w-0">
-                  <ReportTableLink href={`/checkouts/${entry.bookingId}`}>
-                    {entry.bookingTitle}
-                  </ReportTableLink>
-                  <ReportMetaLine
-                    className="text-sm"
-                    items={[
-                      entry.requester,
-                      entry.reason.replaceAll("_", " ").toLowerCase(),
-                      `excluded by ${entry.excludedBy}`,
-                    ]}
-                  />
-                  {entry.note && <p className="mt-1 text-sm">{entry.note}</p>}
-                </div>
-                <Button
-                  variant="outline"
-                  className="h-10 shrink-0"
-                  onClick={() => restore(entry.bookingId, entry.bookingTitle)}
-                  disabled={mutating}
+      {canManageExclusions ? (
+        <ReportSectionCard
+          title="Excluded records"
+          description="Reversible data-quality exceptions for this filtered period."
+          className="mb-4"
+        >
+          {excluded.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No records are excluded in this view.</p>
+          ) : (
+            <div className="divide-y">
+              {excluded.map((entry) => (
+                <div
+                  key={entry.bookingId}
+                  className="flex flex-col gap-3 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
                 >
-                  <RotateCcw data-icon="inline-start" /> Restore
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
-      </ReportSectionCard>
+                  <div className="min-w-0">
+                    <ReportTableLink href={`/checkouts/${entry.bookingId}`}>
+                      {entry.bookingTitle}
+                    </ReportTableLink>
+                    <ReportMetaLine
+                      className="text-sm"
+                      items={[
+                        entry.requester,
+                        entry.reason.replaceAll("_", " ").toLowerCase(),
+                        `excluded by ${entry.excludedBy}`,
+                      ]}
+                    />
+                    {entry.note && <p className="mt-1 text-sm">{entry.note}</p>}
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="h-10 shrink-0"
+                    onClick={() => restore(entry.bookingId, entry.bookingTitle)}
+                    disabled={mutating}
+                  >
+                    <RotateCcw data-icon="inline-start" /> Restore
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </ReportSectionCard>
+      ) : null}
 
       <Collapsible>
         <CollapsibleTrigger asChild>
           <Button variant="ghost" className="h-10 text-muted-foreground">
-            How this ranking works
+            Fine print: how the ranking works
           </Button>
         </CollapsibleTrigger>
         <CollapsibleContent>
@@ -626,68 +607,73 @@ export default function AccountabilityClient() {
             <p className="mt-2">
               Extending an already-late checkout records a separate late event against the prior due
               time. On-time rate appears after {data.methodology.minimumCheckoutsForRate} completed
-              checkouts. Exclusions affect this page only and never remove custody history.
+              checkouts. Admin-reviewed data-quality exclusions affect this page only and never
+              remove custody history.
             </p>
           </div>
         </CollapsibleContent>
       </Collapsible>
 
-      <Dialog
-        open={excludeTarget !== null}
-        onOpenChange={(open) => {
-          if (!open && !mutating) setExcludeTarget(null);
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <div>
-              <DialogTitle>Exclude checkout from accountability</DialogTitle>
-              <DialogDescription>
-                This keeps the checkout and all custody evidence intact.
-              </DialogDescription>
-            </div>
-          </DialogHeader>
-          <DialogBody className="space-y-4 py-5">
-            <div className="space-y-1.5">
-              <Label>Reason</Label>
-              <Select value={reason} onValueChange={setReason}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {REASONS.map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="accountability-note">
-                Explanation {reason === "OTHER" ? "(required)" : "(optional)"}
-              </Label>
-              <Textarea
-                id="accountability-note"
-                value={note}
-                onChange={(event) => setNote(event.target.value)}
-                maxLength={500}
-              />
-            </div>
-          </DialogBody>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setExcludeTarget(null)} disabled={mutating}>
-              Cancel
-            </Button>
-            <Button
-              onClick={submitExclusion}
-              disabled={mutating || (reason === "OTHER" && !note.trim())}
-            >
-              {mutating ? "Excluding..." : "Exclude record"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {canManageExclusions ? (
+        <Dialog
+          open={excludeTarget !== null}
+          onOpenChange={(open) => {
+            if (!open && !mutating) setExcludeTarget(null);
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <div>
+                <DialogTitle>Exclude checkout from accountability</DialogTitle>
+                <DialogDescription>
+                  This keeps the checkout and all custody evidence intact.
+                </DialogDescription>
+              </div>
+            </DialogHeader>
+            <DialogBody className="space-y-4 py-5">
+              <div className="space-y-1.5">
+                <Label>Reason</Label>
+                <Select value={reason} onValueChange={setReason}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {REASONS.map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="accountability-note">
+                  Explanation {reason === "OTHER" ? "(required)" : "(optional)"}
+                </Label>
+                <Textarea
+                  id="accountability-note"
+                  value={note}
+                  onChange={(event) => setNote(event.target.value)}
+                  maxLength={500}
+                />
+              </div>
+            </DialogBody>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setExcludeTarget(null)} disabled={mutating}>
+                Cancel
+              </Button>
+              <Button
+                onClick={submitExclusion}
+                loading={mutating}
+                disabled={reason === "OTHER" && !note.trim()}
+              >
+                Exclude record
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      ) : null}
+      </ReportDataRegion>
     </FadeUp>
   );
 }
@@ -698,12 +684,116 @@ function PersonSubline({ person, now }: { person: Person; now: Date }) {
       className="text-xs"
       items={[
         areaLabel(person.primaryArea),
-        `${person.checkoutCount} checkouts`,
-        `typical ${formatHours(person.medianLateHours)} late`,
-        `last ${formatRelativeTime(person.lastIncidentAt, now)}`,
+        `Last incident ${formatRelativeTime(person.lastIncidentAt, now)}`,
         !person.active && "Inactive",
       ]}
     />
+  );
+}
+
+function pluralize(value: number, singular: string, plural = `${singular}s`) {
+  return `${value} ${value === 1 ? singular : plural}`;
+}
+
+function returnRateBarColor(rate: number) {
+  const clampedRate = Math.min(100, Math.max(50, rate));
+  const greenShare = Math.round(((clampedRate - 50) / 50) * 100);
+  return `color-mix(in oklab, var(--red) ${100 - greenShare}%, var(--green) ${greenShare}%)`;
+}
+
+function LateEventsSummary({
+  person,
+  rankByTime,
+  className,
+}: {
+  person: Person;
+  rankByTime: boolean;
+  className?: string;
+}) {
+  return (
+    <div className={cn("flex flex-col items-end gap-1", className)}>
+      <Badge variant={rankByTime ? "secondary" : "red"}>{person.lateEventCount}</Badge>
+      <span
+        className={cn(
+          "text-xs",
+          person.activeOverdueCount > 0
+            ? "font-medium text-[var(--red-text)]"
+            : "text-muted-foreground",
+        )}
+      >
+        {person.activeOverdueCount > 0
+          ? `${pluralize(person.activeOverdueCount, "checkout")} overdue now`
+          : "All returned"}
+      </span>
+    </div>
+  );
+}
+
+function LateTimeSummary({
+  person,
+  rankByTime,
+  className,
+}: {
+  person: Person;
+  rankByTime: boolean;
+  className?: string;
+}) {
+  return (
+    <div className={cn("text-right", className)}>
+      <div
+        className={cn(
+          "font-medium tabular-nums",
+          rankByTime && "font-semibold text-[var(--red-text)]",
+        )}
+      >
+        {formatHours(person.totalLateHours)} total
+      </div>
+      <ReportMetaLine
+        className="mt-1 justify-end text-xs"
+        items={[
+          `Typical ${formatHours(person.medianLateHours)}`,
+          `Worst ${formatHours(person.worstLateHours)}`,
+        ]}
+      />
+    </div>
+  );
+}
+
+function ReturnRecord({
+  person,
+  align = "end",
+  className,
+}: {
+  person: Person;
+  align?: "start" | "end";
+  className?: string;
+}) {
+  return (
+    <div className={cn(align === "end" ? "text-right" : "text-left", className)}>
+      <div>
+        <OnTimeRate person={person} />
+      </div>
+      {person.onTimeRate !== null ? (
+        <div
+          className={cn(
+            "mt-2 h-1.5 w-full max-w-24 overflow-hidden rounded-full bg-muted",
+            align === "end" ? "ml-auto" : "mr-auto",
+          )}
+          aria-hidden="true"
+        >
+          <div
+            className="h-full rounded-full"
+            style={{
+              width: `${person.onTimeRate}%`,
+              backgroundColor: returnRateBarColor(person.onTimeRate),
+            }}
+          />
+        </div>
+      ) : null}
+      <div className="mt-1 text-xs text-muted-foreground tabular-nums">
+        {pluralize(person.completedCount, "return")}
+      </div>
+    </div>
   );
 }
 
@@ -720,7 +810,7 @@ function IncidentActions({
         <Button
           variant="ghost"
           size="icon"
-          onClick={(event) => event.stopPropagation()}
+          className="size-10"
           aria-label={`Actions for ${incident.title}`}
         >
           <MoreHorizontal className="size-4" />
@@ -732,6 +822,61 @@ function IncidentActions({
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+function IncidentHistory({
+  person,
+  historyId,
+  onExclude,
+}: {
+  person: Person;
+  historyId: string;
+  onExclude?: (incident: Incident) => void;
+}) {
+  return (
+    <div
+      id={historyId}
+      role="region"
+      aria-label={`Incident history for ${person.name}`}
+      className="overflow-hidden rounded-md border bg-background"
+    >
+      <div className="flex items-center justify-between gap-3 border-b bg-muted/30 px-4 py-2">
+        <span className="text-xs font-medium text-foreground">Incident history</span>
+        <span className="text-xs text-muted-foreground tabular-nums">
+          {pluralize(person.incidents.length, "receipt")}
+        </span>
+      </div>
+      <div className="divide-y">
+        {person.incidents.map((incident) => (
+          <div
+            key={incident.incidentId}
+            className="grid gap-3 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+          >
+            <div className="min-w-0">
+              <ReportTableLink href={`/checkouts/${incident.bookingId}`}>
+                {incident.title}
+              </ReportTableLink>
+              <ReportMetaLine
+                className="mt-1 text-xs"
+                items={[
+                  incident.location.name,
+                  `Due ${formatDate(incident.dueAt)}`,
+                  incident.itemSummary || null,
+                ]}
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+              <span className="text-sm font-semibold text-[var(--red-text)] tabular-nums">
+                {formatHours(incident.lateHours)} late
+              </span>
+              <IncidentStateBadge incident={incident} />
+              {onExclude ? <IncidentActions incident={incident} onExclude={onExclude} /> : null}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -750,92 +895,69 @@ function PersonRows({
   now: Date;
   expanded: boolean;
   onToggle: () => void;
-  onExclude: (incident: Incident) => void;
+  onExclude?: (incident: Incident) => void;
 }) {
   const ChevronIcon = expanded ? ChevronUp : ChevronDown;
+  const historyId = `accountability-history-${person.userId}`;
 
   return (
     <>
-      <TableRow
-        className="cursor-pointer focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-[-2px]"
-        onClick={onToggle}
-        tabIndex={0}
-        aria-expanded={expanded}
-        aria-label={`${expanded ? "Collapse" : "Expand"} ${person.name}`}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            onToggle();
-          }
-        }}
-      >
-        <TableCell className="text-muted-foreground tabular-nums">{rank}</TableCell>
-        <TableCell>
-          <Link
-            href={`/users/${person.userId}`}
-            onClick={(event) => event.stopPropagation()}
-            className="font-semibold hover:underline"
+      <TableRow>
+        <TableCell className="py-3">
+          <div className="flex items-center gap-3">
+            <span className="w-5 shrink-0 text-center text-sm text-muted-foreground tabular-nums">
+              {rank}
+            </span>
+            <UserAvatar
+              name={person.name}
+              avatarUrl={person.avatarUrl}
+              size="sm"
+              className="shrink-0"
+            />
+            <div className="min-w-0">
+              <Link
+                href={`/users/${person.userId}`}
+                className="brand-identity font-semibold hover:underline"
+              >
+                {person.name}
+              </Link>
+              <PersonSubline person={person} now={now} />
+            </div>
+          </div>
+        </TableCell>
+        <TableCell className="py-3">
+          <LateEventsSummary person={person} rankByTime={rankByTime} />
+        </TableCell>
+        <TableCell className="py-3">
+          <LateTimeSummary person={person} rankByTime={rankByTime} />
+        </TableCell>
+        <TableCell className="py-3">
+          <ReturnRecord person={person} />
+        </TableCell>
+        <TableCell className="py-2 pr-2">
+          <Button
+            variant="ghost"
+            className="ml-auto h-10 w-full justify-end px-2 text-muted-foreground"
+            onClick={onToggle}
+            aria-expanded={expanded}
+            aria-controls={historyId}
+            aria-label={`${expanded ? "Hide" : "Show"} ${pluralize(person.incidents.length, "receipt")} for ${person.name}`}
           >
-            {person.name}
-          </Link>
-          <PersonSubline person={person} now={now} />
-        </TableCell>
-        <TableCell className="text-right">
-          <Badge variant={rankByTime ? "secondary" : "red"}>{person.lateEventCount}</Badge>
-        </TableCell>
-        <TableCell className="text-right tabular-nums">
-          {person.activeOverdueCount > 0 ? (
-            <span className="font-semibold text-[var(--red-text)]">{person.activeOverdueCount}</span>
-          ) : (
-            <span className="text-muted-foreground">—</span>
-          )}
-        </TableCell>
-        <TableCell
-          className={cn(
-            "text-right tabular-nums",
-            rankByTime ? "font-semibold text-[var(--red-text)]" : "font-medium",
-          )}
-        >
-          {formatHours(person.totalLateHours)}
-        </TableCell>
-        <TableCell className="text-right tabular-nums text-muted-foreground">
-          {formatHours(person.worstLateHours)}
-        </TableCell>
-        <TableCell className="text-right">
-          <OnTimeRate person={person} />
-        </TableCell>
-        <TableCell className="text-center text-muted-foreground">
-          <ChevronIcon className="mx-auto size-4" aria-hidden="true" />
+            <span className="tabular-nums">{person.incidents.length}</span>
+            <span className="hidden xl:inline">receipts</span>
+            <ChevronIcon className="size-4" aria-hidden="true" />
+          </Button>
         </TableCell>
       </TableRow>
-      {expanded &&
-        person.incidents.map((incident) => (
-          <TableRow key={incident.incidentId} className="bg-muted/30">
-            <TableCell />
-            <TableCell colSpan={3} className="pl-6">
-              <ReportTableLink href={`/checkouts/${incident.bookingId}`}>
-                {incident.title}
-              </ReportTableLink>
-              <ReportMetaLine
-                className="text-sm"
-                items={[
-                  incident.location.name,
-                  `Due ${formatDate(incident.dueAt)}`,
-                  incident.itemSummary || null,
-                ]}
-              />
-            </TableCell>
-            <TableCell className="text-right text-sm font-medium text-[var(--red-text)] tabular-nums">
-              {formatHours(incident.lateHours)}
-            </TableCell>
-            <TableCell colSpan={2} className="text-right">
-              <IncidentStateBadge incident={incident} />
-            </TableCell>
-            <TableCell>
-              <IncidentActions incident={incident} onExclude={onExclude} />
-            </TableCell>
-          </TableRow>
-        ))}
+      {expanded ? (
+        <TableRow className="bg-muted/20 hover:bg-muted/20">
+          <TableCell colSpan={5} className="p-0">
+            <div className="px-4 py-3">
+              <IncidentHistory person={person} historyId={historyId} onExclude={onExclude} />
+            </div>
+          </TableCell>
+        </TableRow>
+      ) : null}
     </>
   );
 }
@@ -855,83 +977,88 @@ function PersonMobileCard({
   now: Date;
   expanded: boolean;
   onToggle: () => void;
-  onExclude: (incident: Incident) => void;
+  onExclude?: (incident: Incident) => void;
 }) {
   const ChevronIcon = expanded ? ChevronUp : ChevronDown;
+  const historyId = `accountability-history-mobile-${person.userId}`;
 
   return (
-    <ReportMobileCard
-      className="cursor-pointer transition-colors hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-[-2px]"
-      onClick={onToggle}
-      role="button"
-      tabIndex={0}
-      aria-expanded={expanded}
-      aria-label={`${expanded ? "Collapse" : "Expand"} ${person.name}`}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          onToggle();
-        }
-      }}
-    >
+    <ReportMobileCard className="gap-3 py-4">
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground tabular-nums">{rank}</span>
-            <span className="truncate font-semibold">{person.name}</span>
-          </div>
-          <PersonSubline person={person} now={now} />
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <Badge variant={rankByTime ? "secondary" : "red"}>{person.lateEventCount}</Badge>
-          <ChevronIcon className="size-4 text-muted-foreground" aria-hidden="true" />
-        </div>
-      </div>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-        <span className={cn("tabular-nums", rankByTime && "font-semibold text-[var(--red-text)]")}>
-          {formatHours(person.totalLateHours)} total
-        </span>
-        <span className="text-muted-foreground tabular-nums">
-          worst {formatHours(person.worstLateHours)}
-        </span>
-        {person.activeOverdueCount > 0 && (
-          <span className="font-semibold text-[var(--red-text)] tabular-nums">
-            {person.activeOverdueCount} overdue now
-          </span>
-        )}
-        <span className="text-muted-foreground">
-          on time <OnTimeRate person={person} />
-        </span>
-      </div>
-      {expanded && (
-        <div className="divide-y border-t pt-1">
-          {person.incidents.map((incident) => (
-            <div key={incident.incidentId} className="flex items-start justify-between gap-3 py-2">
-              <div className="min-w-0">
-                <ReportTableLink
-                  href={`/checkouts/${incident.bookingId}`}
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  {incident.title}
-                </ReportTableLink>
-                <ReportMetaLine
-                  className="text-xs"
-                  items={[incident.location.name, `Due ${formatDate(incident.dueAt)}`]}
-                />
-                <div className="mt-1">
-                  <IncidentStateBadge incident={incident} />
-                </div>
-              </div>
-              <div className="flex shrink-0 items-center gap-1">
-                <span className="text-sm font-medium text-[var(--red-text)] tabular-nums">
-                  {formatHours(incident.lateHours)}
-                </span>
-                <IncidentActions incident={incident} onExclude={onExclude} />
-              </div>
+        <div className="flex min-w-0 items-center gap-3">
+          <UserAvatar
+            name={person.name}
+            avatarUrl={person.avatarUrl}
+            size="sm"
+            className="shrink-0"
+          />
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground tabular-nums">#{rank}</span>
+              <Link
+                href={`/users/${person.userId}`}
+                className="brand-identity truncate font-semibold hover:underline"
+              >
+                {person.name}
+              </Link>
             </div>
-          ))}
+            <PersonSubline person={person} now={now} />
+          </div>
         </div>
-      )}
+        <Badge className="shrink-0" variant={rankByTime ? "secondary" : "red"}>
+          {person.lateEventCount} late
+        </Badge>
+      </div>
+      <div className="grid grid-cols-3 overflow-hidden rounded-md border bg-muted/20">
+        <div className="min-w-0 px-3 py-2.5">
+          <div className="text-xs text-muted-foreground">Late events</div>
+          <div className="mt-1 font-semibold tabular-nums">{person.lateEventCount}</div>
+          <div
+            className={cn(
+              "mt-1 text-xs",
+              person.activeOverdueCount > 0
+                ? "font-medium text-[var(--red-text)]"
+                : "text-muted-foreground",
+            )}
+          >
+            {person.activeOverdueCount > 0
+              ? `${person.activeOverdueCount} overdue now`
+              : "All returned"}
+          </div>
+        </div>
+        <div className="min-w-0 border-l px-3 py-2.5">
+          <div className="text-xs text-muted-foreground">Late time</div>
+          <div
+            className={cn(
+              "mt-1 font-semibold tabular-nums",
+              rankByTime && "text-[var(--red-text)]",
+            )}
+          >
+            {formatHours(person.totalLateHours)}
+          </div>
+          <div className="mt-1 text-xs text-muted-foreground tabular-nums">
+            Typical {formatHours(person.medianLateHours)} / worst {formatHours(person.worstLateHours)}
+          </div>
+        </div>
+        <div className="min-w-0 border-l px-3 py-2.5">
+          <div className="text-xs text-muted-foreground">On time</div>
+          <ReturnRecord person={person} align="start" className="mt-1" />
+        </div>
+      </div>
+      <Button
+        variant="ghost"
+        className="h-10 w-full justify-between bg-muted/30 px-3 text-muted-foreground"
+        onClick={onToggle}
+        aria-expanded={expanded}
+        aria-controls={historyId}
+        aria-label={`${expanded ? "Hide" : "Show"} ${pluralize(person.incidents.length, "receipt")} for ${person.name}`}
+      >
+        <span>{expanded ? "Hide" : "Show"} {pluralize(person.incidents.length, "receipt")}</span>
+        <ChevronIcon className="size-4" aria-hidden="true" />
+      </Button>
+      {expanded ? (
+        <IncidentHistory person={person} historyId={historyId} onExclude={onExclude} />
+      ) : null}
     </ReportMobileCard>
   );
 }

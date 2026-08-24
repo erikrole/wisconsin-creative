@@ -116,6 +116,7 @@ const accountabilityBookingInclude = {
     select: {
       id: true,
       name: true,
+      avatarUrl: true,
       active: true,
       primaryArea: true,
     },
@@ -219,6 +220,7 @@ export async function getAccountabilityReport(
   type PersonAccumulator = {
     userId: string;
     name: string;
+    avatarUrl: string | null;
     active: boolean;
     primaryArea: string | null;
     checkoutCount: number;
@@ -251,6 +253,7 @@ export async function getAccountabilityReport(
     const person = byPerson.get(booking.requester.id) ?? {
       userId: booking.requester.id,
       name: booking.requester.name,
+      avatarUrl: booking.requester.avatarUrl,
       active: booking.requester.active,
       primaryArea: booking.requester.primaryArea,
       checkoutCount: 0,
@@ -329,6 +332,7 @@ export async function getAccountabilityReport(
       return {
         userId: person.userId,
         name: person.name,
+        avatarUrl: person.avatarUrl,
         active: person.active,
         primaryArea: person.primaryArea,
         checkoutCount: person.checkoutCount,

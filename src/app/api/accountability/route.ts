@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api";
+import { selectAccountabilityJeers } from "@/lib/accountability-jeers";
 import { csvField } from "@/lib/csv";
 import { HttpError, ok } from "@/lib/http";
+import { getAllowedRoles } from "@/lib/permissions";
 import { requirePermission } from "@/lib/rbac";
 import { enforceRateLimit, REPORT_EXPORT_LIMIT } from "@/lib/rate-limit";
 import {
@@ -79,9 +81,18 @@ function toCsv(report: Awaited<ReturnType<typeof getAccountabilityReport>>) {
 export const GET = withAuth(async (req, { user }) => {
   requirePermission(user.role, "accountability", "view");
   const searchParams = new URL(req.url).searchParams;
+  const canManageExclusions = getAllowedRoles("accountability", "manage_exclusions").includes(
+    user.role,
+  );
+  const wantsCsv = searchParams.get("format") === "csv";
+
+  if (wantsCsv) {
+    requirePermission(user.role, "accountability", "manage_exclusions");
+  }
+
   const report = await getAccountabilityReport(parseFilters(searchParams));
 
-  if (searchParams.get("format") === "csv") {
+  if (wantsCsv) {
     await enforceRateLimit(`report:export:${user.id}`, REPORT_EXPORT_LIMIT);
     return new NextResponse(`${toCsv(report)}\n`, {
       headers: {
@@ -91,5 +102,24 @@ export const GET = withAuth(async (req, { user }) => {
       },
     });
   }
-  return ok(report);
+
+  const { excluded, metrics, ...sharedReport } = report;
+  const sharedMetrics = {
+    peopleNeedingAttention: metrics.peopleNeedingAttention,
+    lateEvents: metrics.lateEvents,
+    activeOverdue: metrics.activeOverdue,
+    totalLateHours: metrics.totalLateHours,
+  };
+  const spotlightJeers = selectAccountabilityJeers(report.leaderboard);
+
+  return ok({
+    ...sharedReport,
+    spotlightJeers,
+    metrics: canManageExclusions ? metrics : sharedMetrics,
+    capabilities: {
+      canExport: canManageExclusions,
+      canManageExclusions,
+    },
+    ...(canManageExclusions ? { excluded } : {}),
+  });
 });

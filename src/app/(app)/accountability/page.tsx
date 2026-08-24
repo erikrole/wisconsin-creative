@@ -18,7 +18,7 @@ export default async function AccountabilityPage() {
     <>
       <PageHeader
         title="Accountability"
-        description="Late-return patterns for admin review. Rank is based on incidents, not personal judgment."
+        description="The leaderboard nobody wants to join. Return gear on time and disappear from it."
         className="mb-5"
       />
       <AccountabilityClient />

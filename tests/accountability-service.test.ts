@@ -127,7 +127,13 @@ describe("accountability service", () => {
         status: "COMPLETED",
         endsAt: new Date("2026-08-10T10:00:00.000Z"),
         completedAt: new Date("2026-08-10T13:30:00.000Z"),
-        requester: { id: "user-1", name: "Alex Student", active: true, primaryArea: "VIDEO" },
+        requester: {
+          id: "user-1",
+          name: "Alex Student",
+          avatarUrl: "/avatars/alex.jpg",
+          active: true,
+          primaryArea: "VIDEO",
+        },
         location: { id: "main", name: "Main Cage" },
         accountabilityExclusion: null,
         dueDateChanges: [],
@@ -181,6 +187,7 @@ describe("accountability service", () => {
     expect(report.leaderboard).toHaveLength(1);
     expect(report.leaderboard[0]).toMatchObject({
       name: "Alex Student",
+      avatarUrl: "/avatars/alex.jpg",
       lateEventCount: 2,
       activeOverdueCount: 1,
       totalLateHours: 7,
