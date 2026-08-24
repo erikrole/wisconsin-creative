@@ -301,6 +301,7 @@
 
 - `WIN`
 - `LOSS`
+- `TIE`
 
 ### `CalendarEventSite`
 

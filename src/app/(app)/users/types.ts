@@ -69,13 +69,14 @@ export type UserDetail = UserRow & {
   sportAssignments: SportAssignment[];
   areaAssignments: AreaAssignment[];
   icsToken?: string | null;
-  /** Win-loss tally across games this user held a shift assignment on. */
+  /** W-L-T tally across games this user held a shift assignment on. */
   gameRecord?: {
     eventsWorked: number;
     wins: number;
     losses: number;
-    bySport: Array<{ sportCode: string | null; wins: number; losses: number }>;
-    bySite: Array<{ site: "HOME" | "AWAY" | "NEUTRAL" | null; wins: number; losses: number }>;
+    ties: number;
+    bySport: Array<{ sportCode: string | null; wins: number; losses: number; ties: number }>;
+    bySite: Array<{ site: "HOME" | "AWAY" | "NEUTRAL" | null; wins: number; losses: number; ties: number }>;
   } | null;
   // Profile fields migrated from the team Sheet.
   title: string | null;

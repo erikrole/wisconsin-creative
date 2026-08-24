@@ -775,10 +775,10 @@ export default function UserDetailPage() {
                 Member since {formatDateFull(profile.createdAt)}
               </p>
             )}
-            {profile.gameRecord && profile.gameRecord.wins + profile.gameRecord.losses > 0 && (
+            {profile.gameRecord && profile.gameRecord.wins + profile.gameRecord.losses + profile.gameRecord.ties > 0 && (
               <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Trophy className="size-3 shrink-0" />
-                {profile.gameRecord.wins}–{profile.gameRecord.losses} on official games
+                {profile.gameRecord.wins}–{profile.gameRecord.losses}{profile.gameRecord.ties > 0 ? `–${profile.gameRecord.ties}` : ""} on official games
               </p>
             )}
             {profile.gameRecord && profile.gameRecord.eventsWorked > 0 && (

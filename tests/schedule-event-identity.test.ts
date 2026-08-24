@@ -41,9 +41,10 @@ describe("schedule event identity normalization", () => {
 });
 
 describe("parseEventResult", () => {
-  it("reads the source W and L markers", () => {
+  it("reads the source W, L, and T markers", () => {
     expect(parseEventResult("[W] Wisconsin Athletics MBB vs Purdue")).toBe("WIN");
     expect(parseEventResult("[L] MBB at Purdue")).toBe("LOSS");
+    expect(parseEventResult("[T] Women's Soccer vs Marquette")).toBe("TIE");
   });
 
   it("accepts a lowercase marker and leading whitespace", () => {
@@ -64,7 +65,6 @@ describe("parseEventResult", () => {
 
   it("ignores non-result bracket markers and mid-title markers", () => {
     expect(parseEventResult("[A] MBB vs Purdue")).toBeNull();
-    expect(parseEventResult("[T] MBB vs Purdue")).toBeNull();
     expect(parseEventResult("MBB vs Purdue [W]")).toBeNull();
   });
 
@@ -138,6 +138,14 @@ describe("classifySourceEvent", () => {
   it("reads an away game from the 'at' preposition", () => {
     const c = classifySourceEvent({ rawSummary: "[L] MBB at Purdue", rawLocationText: AWAY_VENUE });
     expect(c).toMatchObject({ result: "LOSS", sportCode: "MBB", isHome: false, site: "AWAY" });
+  });
+
+  it("preserves a source tie alongside the game identity", () => {
+    const c = classifySourceEvent({
+      rawSummary: "[T] Wisconsin Athletics Women's Soccer vs Marquette",
+      rawLocationText: "Madison, WI, McClimon Track/Soccer Complex",
+    });
+    expect(c).toMatchObject({ result: "TIE", sportCode: "WSOC", opponent: "Marquette", site: "HOME" });
   });
 
   it("calls a 'vs' game at someone else's venue a neutral site", () => {

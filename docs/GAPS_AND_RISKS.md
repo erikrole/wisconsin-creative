@@ -3,7 +3,7 @@
 ## Document Control
 
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-23
+- Last Updated: 2026-08-24
 - Status: Active registry
 - Purpose: Track only open gaps, pending decisions, active risks, and intentionally deferred scope.
 - Historical record: [GAPS_AND_RISKS_HISTORY.md](archive/GAPS_AND_RISKS_HISTORY.md)
@@ -73,6 +73,7 @@ No open pending decisions are currently tracked here. Accepted decisions and the
 | Software vault rollout skew | The schema, vault key, audience policy, app code, or authenticated UI reaches an environment out of order, or a key is rotated without re-encrypting stored ciphertext | Apply migrations `0125` and `0126` before use, configure one stable 32-byte key per environment, review collaborator policy grants, enter credentials only after readback, audit reveal actions, and rehearse coordinated re-encryption before rotation | Engineering |
 
 ## Change Log
+- 2026-08-24: Extended GAP-71 after diagnosing the missing Aug 23 soccer tie in Preview. The source `[T]` row existed with raw evidence but no stored result; local W/L/T parsing, persistence, aggregate/profile/native contracts, and split migrations `0132`/`0133` are now source/build tested. Applying the migrations, reading the repaired event back, deploying the route, and authenticated production/native proof remain open.
 - 2026-08-23: Expanded GAP-71 after the local Scoreboard explorer slice. Stable four-dimension filtering, shared intersection math, web/native Snapshot presentation, authenticated local web combinations, and the required native build/model gates are complete. Production deployment, Student/Collaborator smoke, live native totals and filters, and regular-width iPad render remain the same rollout boundary.
 - 2026-08-23: Added GAP-71 and the Scoreboard rollout-skew defense for the locally complete shared authenticated Scoreboard. Local all-role contracts, authenticated web data, native build/tests, and missing-route recovery are verified; production server deployment, Student/Collaborator smoke, live native totals, and a signed-in regular-width iPad render remain open. Public internet publishing stays explicitly deferred under D-056.
 - 2026-08-23: Reconciled manual-event date/time correction. The event and any existing live/private/published crew windows now move atomically with conflict, acknowledgement, audit, and notification follow-through; imported event times and linked gear reservation windows retain their existing source-of-truth boundaries. No new schema, custody, permission, or rollout gap was introduced.

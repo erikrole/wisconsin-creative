@@ -3,7 +3,7 @@
 ## Document Control
 - Owner: Erik Role (Wisconsin Athletics Creative)
 - Product: Gear Tracker
-- Last Updated: 2026-08-23
+- Last Updated: 2026-08-24
 - Status: Living decision log
 - Purpose: track durable decisions, rationale, and downstream constraints
 
@@ -1110,6 +1110,7 @@ These are non-negotiable integrity constraints. Every feature must preserve them
   `docs/RELEASE_VERIFICATION.md`.
 
 ## Change Log
+- 2026-08-24: Amended D-056 so Scoreboard result authority is W/L/T rather than W/L-only. The calendar `[T]` marker is retained in raw source evidence, stored as `TIE`, included in official records and filters, and counted as half a win for rate. The enum and idempotent source-backed backfill are split across migrations `0132` and `0133` so the new value is committed before the backfill uses it; deployment and production proof remain pending.
 - 2026-08-23: Extended D-057 so shift badges count credits too, and stay silent about it. Badge evidence now comes from one shared reader used by both the awarding evaluator and the profile progress bar, credits contribute only facts the event itself carries (no invented area, call window, or all-day hours), and a credit on a finished event re-evaluates badges immediately. A badge the person's own assignments already earned notifies as usual; one that only a credit pushed them over is granted without its notification, so a credit produces no message on any surface.
 - 2026-08-23: Added D-057 for admin-recorded Scoreboard credit. An admin can credit any person -- internal or collaborator -- for a past or future event without creating a shift, an assignment, or a notification. Scoreboard totals, profile records, and worked-event counts read credits alongside active assignments and still count each person once per event; Schedule, published crews, My Shifts, trades, and ICS never read them. Migration `0131` is written; remote deploy and authenticated production proof remain pending.
 - 2026-08-23: Amended D-056 so the shared Scoreboard is an always-on stats explorer and the deterministic aggregation foundation for a future end-of-year story. Sport, Schedule venue, opponent, and Home/Away/Neutral site are exact-match dimensions that stack with AND semantics; every total, breakdown, Snapshot, and person ranking describes the same intersection while the full bounded scope supplies stable filter options. Visible clients call the scope “Current season” instead of naming the year; the server remains the sole owner of the underlying window.
@@ -1338,6 +1339,7 @@ These are non-negotiable integrity constraints. Every feature must preserve them
 - Decision:
   - Every authenticated Admin, Staff, Student, and Collaborator may view `/scoreboard`, `GET /api/scoreboard`, and the Scoreboard for an active, non-hidden person. `scoreboard.view` is an explicit all-role permission and does not depend on `PEOPLE_DIRECTORY_VIEW` or another collaborator policy grant.
   - Team aggregates use the server-owned Scoreboard season and distinguish unique team events and games from person-event and person-game credits. Multiple shifts for one person on one event count once, and the aggregate is built with bounded batched event reads rather than per-person queries.
+  - Official resolved game outcomes are source-owned `WIN`, `LOSS`, or `TIE` values. Ties count as resolved games, render as the third record value only when present, and contribute half a win to the server-owned win-rate calculation; clients may default an absent additive `ties` field to zero during rollout.
   - The aggregate route accepts at most one exact Sport, Schedule venue, opponent, and site value. Different dimensions stack with AND semantics. The service applies that one intersection to unique totals, all dimensional breakdowns, and every person summary; stable facets continue to come from the full bounded window so narrowing one dimension never removes the available choices in another.
   - Venue means the cleaned display component of `CalendarEvent.rawLocationText`, never an equipment pickup location. Site means the canonical `CalendarEvent.site` Home/Away/Neutral classification. The clients use generic “Current season” copy while the server retains ownership of the active scope key and date bounds.
   - The shared identity contract is limited to user id, display name, avatar, and Scoreboard metrics. Cross-user detail resolves only that minimal identity and the dedicated Scoreboard response; it does not load or expose the private user-profile payload, and protected event links are omitted from the shared detail surface.

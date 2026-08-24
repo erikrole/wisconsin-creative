@@ -14,7 +14,7 @@ import {
 const scoreboardQuerySchema = z.object({
   season: z.string().trim().max(20).optional(),
   sportCode: z.string().trim().max(20).optional(),
-  result: z.enum(["WIN", "LOSS"]).optional(),
+  result: z.enum(["WIN", "LOSS", "TIE"]).optional(),
 });
 
 export const GET = withAuth<{ id: string }>(async (req, { user, params }) => {

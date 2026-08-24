@@ -44,6 +44,7 @@ private struct TeamScoreboardTotals {
     let eventCredits: Int
     let wins: Int
     let losses: Int
+    let ties: Int
     let games: Int
     let winRate: Double?
     let gameCredits: Int
@@ -54,6 +55,7 @@ private struct TeamScoreboardTotals {
         eventCredits = summary.eventCredits
         wins = summary.wins
         losses = summary.losses
+        ties = summary.ties
         games = summary.games
         winRate = summary.winRate
         gameCredits = summary.gameCredits
@@ -65,12 +67,13 @@ private struct TeamScoreboardTotals {
         eventCredits = breakdown.eventCredits
         wins = breakdown.wins
         losses = breakdown.losses
+        ties = breakdown.ties
         games = breakdown.games
         winRate = breakdown.winRate
         gameCredits = breakdown.gameCredits
     }
 
-    var recordLabel: String { ScoreboardFormat.record(wins: wins, losses: losses) }
+    var recordLabel: String { ScoreboardFormat.record(wins: wins, losses: losses, ties: ties) }
     var winRateLabel: String { ScoreboardFormat.winRate(winRate) }
 }
 
@@ -78,6 +81,7 @@ private struct TeamScoreboardLeaderboardMetrics {
     let eventsWorked: Int
     let wins: Int
     let losses: Int
+    let ties: Int
     let games: Int
     let winRate: Double?
 
@@ -85,11 +89,12 @@ private struct TeamScoreboardLeaderboardMetrics {
         eventsWorked = summary.eventsWorked
         wins = summary.wins
         losses = summary.losses
+        ties = summary.ties
         games = summary.games
         winRate = summary.winRate
     }
 
-    var recordLabel: String { ScoreboardFormat.record(wins: wins, losses: losses) }
+    var recordLabel: String { ScoreboardFormat.record(wins: wins, losses: losses, ties: ties) }
     var winRateLabel: String { ScoreboardFormat.winRate(winRate) }
 }
 

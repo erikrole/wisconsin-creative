@@ -1,6 +1,21 @@
 # Task Queue
 
-Last updated: 2026-08-23
+Last updated: 2026-08-24
+
+---
+## In progress: Scoreboard soccer tie result (2026-08-24)
+
+Plan: `tasks/scoreboard-tie-result-plan-2026-08-24.md`.
+
+- [x] Confirm the Aug 23 Oakland win and Marquette tie in the source-backed Preview rows and reproduce the missing `[T]` record in authenticated Scoreboard.
+- [x] Add W/L/T parsing, persistence, aggregates, profile filters, web/native rendering, W–L–T meter order, and backward-compatible native decoding.
+- [x] Add split enum/backfill migrations `0132` and `0133`, keeping the source marker in `rawSummary`.
+- [x] Pass focused/full Scoreboard/calendar/source-contract tests, TypeScript, migration-prefix validation, lint, web build, and matched iPhone 16 Pro visual proof.
+- [ ] Apply migrations, deploy server/web, read back the repaired row, and complete authenticated production/native visual proof.
+
+**Local result:** the missing Marquette `[T]` event is now represented as `TIE`; ties count as resolved games and half a win for rate. The Oakland `[W]` event was already present in Nolan Kromke's signed-in personal Scoreboard, so the evidence does not support it being absent from that personal list.
+
+**Boundary:** no production database, deployment, commit, or push was performed in this task.
 
 ---
 ## Completed: API and native Items default sort is Most popular (2026-08-23)

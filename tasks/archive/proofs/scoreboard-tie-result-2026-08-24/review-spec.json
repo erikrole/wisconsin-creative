@@ -1,0 +1,75 @@
+{
+  "title": "Scoreboard remembers the tie",
+  "eyebrow": "Native iOS · Wisconsin Creative",
+  "lede": "The same completed-game fixture now carries a soccer tie through the record, meter, filter, and recent form without turning it into a loss.",
+  "stats": [
+    {
+      "k": "Outcome contract",
+      "v": "W–L–T",
+      "n": "Ties are resolved games and appear as a third record value only when present.",
+      "tone": "good"
+    },
+    {
+      "k": "Rate treatment",
+      "v": "½ win",
+      "n": "The server-owned win rate counts a tie as half a win.",
+      "tone": "good"
+    },
+    {
+      "k": "Matched pair",
+      "v": "1 screen",
+      "n": "Same fixture, simulator, device, and screenshot UI test; only tie handling changes.",
+      "tone": "good"
+    },
+    {
+      "k": "Target",
+      "v": "iPhone 16 Pro",
+      "n": "iOS 26.5 Simulator destination.",
+      "tone": "good"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "The season card tells the truth",
+      "note": "Matched DEBUG fixture capture from the clean HEAD baseline and the current implementation. Both use the existing ScoreboardScreenshotUITests harness on iPhone 16 Pro / iOS 26.5; the fixture includes one soccer TIE in both captures.",
+      "pairs": [
+        {
+          "title": "Record, meter, filter, and form",
+          "sub": "A red literal TIE becomes a first-class orange result without changing the surrounding season story.",
+          "before": "tasks/archive/proofs/scoreboard-tie-result-2026-08-24/before-top.png",
+          "beforeCap": "The baseline renders the tie as a red literal TIE, keeps the record at W–L, and has no tie filter or meter segment.",
+          "after": "tasks/archive/proofs/scoreboard-tie-result-2026-08-24/after-top.png",
+          "afterCap": "The current screen renders T, shows W–L–T and the orange tie segment/key, adds Ties, and preserves the 53.7% half-win rate."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "A tie is no longer a hidden null",
+      "was": "The source [T] marker was not parsed, so the completed women's soccer event had no official result and disappeared from resolved Scoreboard games.",
+      "now": "[T] parses to TIE, is backfilled only for source-backed rows with null results, and remains auditable in rawSummary."
+    },
+    {
+      "h": "Every scoreboard surface shares the result",
+      "was": "W/L-only aggregates, filters, records, and native models could not represent the source outcome consistently.",
+      "now": "Profile/team aggregates, W/L/T filters, web/native bars and badges, streaks, and Codable payloads all carry the same additive tie contract."
+    },
+    {
+      "h": "Older native payloads remain safe",
+      "was": "Making ties required immediately would make older server responses fail native decoding during a server-first rollout.",
+      "now": "Native summary and breakdown decoders default an absent ties field to zero until the server rollout is complete."
+    }
+  ],
+  "verification": [
+    "<strong>Behavior:</strong> full Vitest suite passes: 550 files / 3,756 tests; focused Scoreboard/calendar/native contracts pass: 9 files / 194 tests.",
+    "<strong>Web:</strong> <code>npx tsc --noEmit --pretty false</code>, zero-warning <code>npm run lint</code>, <code>npm run build:app</code>, migration-prefix validation, codemap generation/check, and <code>git diff --check</code> pass.",
+    "<strong>Native:</strong> Xcode project check, iPhone 16 Pro / iOS 26.5 app build, and focused <code>WisconsinTests/ScoreboardModelsTests</code> pass.",
+    "<strong>Visual:</strong> matched before/after captures come from the existing fixture UI test; the baseline is clean HEAD plus the identical tie fixture, and both images were inspected before inclusion."
+  ],
+  "notes": [
+    "The live Preview diagnosis found the Aug 23 Men's Soccer vs Oakland [W] row already present in Nolan Kromke's personal Scoreboard; the missing resolved game is Women's Soccer vs Marquette [T].",
+    "No production database write, migration deploy, Vercel deployment, commit, or push was performed. Apply migrations 0132/0133, read the repaired row back, deploy the server/web route, and repeat authenticated production/native proof before closing GAP-71.",
+    "The review is native-fixture proof of the UI contract. It does not claim that the production scoreboard is fixed until the migration and server rollout gates are completed."
+  ]
+}

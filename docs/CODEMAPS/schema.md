@@ -1191,7 +1191,7 @@ Values: `CONFIRMED`, `TENTATIVE`, `CANCELLED`
 
 ## Enum `CalendarEventResult`
 
-Values: `WIN`, `LOSS`
+Values: `WIN`, `LOSS`, `TIE`
 
 ## Enum `CalendarEventSite`
 

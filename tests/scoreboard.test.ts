@@ -91,6 +91,14 @@ describe("getScoreboardForUser", () => {
         _count: { _all: 1 },
       },
       {
+        result: "TIE",
+        sportCode: "SB",
+        site: "HOME",
+        opponent: "Minnesota",
+        rawLocationText: "Madison, Wis., UW Field House",
+        _count: { _all: 1 },
+      },
+      {
         result: "WIN",
         sportCode: null,
         site: null,
@@ -135,9 +143,9 @@ describe("getScoreboardForUser", () => {
     const scoreboard = await getScoreboardForUser("user-1", {}, { offset: 0, limit: 1 });
     const eventSelect = mockedDb.calendarEvent.findMany.mock.calls[0]?.[0]?.select;
 
-    expect(scoreboard.summary).toEqual({ eventsWorked: 7, wins: 3, losses: 1, games: 4, winRate: 75 });
-    expect(scoreboard.bySport[0]).toMatchObject({ label: "Softball", wins: 2, losses: 1, games: 3, winRate: 66.7 });
-    expect(scoreboard.byOpponent[0]).toMatchObject({ label: "Minnesota", wins: 2, losses: 1, games: 3 });
+    expect(scoreboard.summary).toEqual({ eventsWorked: 7, wins: 3, losses: 1, ties: 1, games: 5, winRate: 70 });
+    expect(scoreboard.bySport[0]).toMatchObject({ label: "Softball", wins: 2, losses: 1, ties: 1, games: 4, winRate: 62.5 });
+    expect(scoreboard.byOpponent[0]).toMatchObject({ label: "Minnesota", wins: 2, losses: 1, ties: 1, games: 4 });
     expect(scoreboard.bySite.map((bucket) => bucket.label)).toEqual(["Home", "Away", "Unknown site"]);
     expect(scoreboard.byVenue.map((bucket) => bucket.label)).toEqual([
       "UW Field House",
@@ -160,7 +168,7 @@ describe("getScoreboardForUser", () => {
     mockedDb.calendarEvent.groupBy.mockResolvedValue([]);
 
     await expect(getScoreboardForUser("user-1")).resolves.toMatchObject({
-      summary: { eventsWorked: 0, wins: 0, losses: 0, games: 0, winRate: null },
+      summary: { eventsWorked: 0, wins: 0, losses: 0, ties: 0, games: 0, winRate: null },
       bySport: [],
       byOpponent: [],
       bySite: [],

@@ -9,11 +9,13 @@ struct ScoreboardScope: Codable, Equatable {
     let timeZone: String
 }
 
-/// One owner for how a win-loss record reads. The season summary and every
+/// One owner for how a win-loss-tie record reads. The season summary and every
 /// breakdown row spell the same record the same way because they all come
 /// through here.
 enum ScoreboardFormat {
-    static func record(wins: Int, losses: Int) -> String { "\(wins)–\(losses)" }
+    static func record(wins: Int, losses: Int, ties: Int = 0) -> String {
+        ties > 0 ? "\(wins)–\(losses)–\(ties)" : "\(wins)–\(losses)"
+    }
 
     /// The server has already rounded to one decimal. Whole numbers drop it, so
     /// a clean sweep reads "100%" instead of "100.0%".
@@ -30,10 +32,21 @@ struct ScoreboardSummary: Codable, Equatable {
     let eventsWorked: Int
     let wins: Int
     let losses: Int
+    let ties: Int
     let games: Int
     let winRate: Double?
 
-    var recordLabel: String { ScoreboardFormat.record(wins: wins, losses: losses) }
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        eventsWorked = try container.decode(Int.self, forKey: .eventsWorked)
+        wins = try container.decode(Int.self, forKey: .wins)
+        losses = try container.decode(Int.self, forKey: .losses)
+        ties = try container.decodeIfPresent(Int.self, forKey: .ties) ?? 0
+        games = try container.decode(Int.self, forKey: .games)
+        winRate = try container.decodeIfPresent(Double.self, forKey: .winRate)
+    }
+
+    var recordLabel: String { ScoreboardFormat.record(wins: wins, losses: losses, ties: ties) }
     var winRateLabel: String { ScoreboardFormat.winRate(winRate) }
 }
 
@@ -42,11 +55,23 @@ struct ScoreboardBucket: Codable, Equatable, Identifiable {
     let label: String
     let wins: Int
     let losses: Int
+    let ties: Int
     let games: Int
     let winRate: Double?
 
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        key = try container.decodeIfPresent(String.self, forKey: .key)
+        label = try container.decode(String.self, forKey: .label)
+        wins = try container.decode(Int.self, forKey: .wins)
+        losses = try container.decode(Int.self, forKey: .losses)
+        ties = try container.decodeIfPresent(Int.self, forKey: .ties) ?? 0
+        games = try container.decode(Int.self, forKey: .games)
+        winRate = try container.decodeIfPresent(Double.self, forKey: .winRate)
+    }
+
     var id: String { "\(key ?? "unknown")-\(label)" }
-    var recordLabel: String { ScoreboardFormat.record(wins: wins, losses: losses) }
+    var recordLabel: String { ScoreboardFormat.record(wins: wins, losses: losses, ties: ties) }
     var gamesLabel: String { ScoreboardFormat.games(games) }
     var winRateLabel: String { ScoreboardFormat.winRate(winRate) }
 }
@@ -90,11 +115,13 @@ struct ScoreboardEvent: Codable, Equatable, Identifiable {
     }
 
     var isWin: Bool { result == "WIN" }
+    var isTie: Bool { result == "TIE" }
 
     var resultLabel: String {
         switch result {
         case "WIN": "W"
         case "LOSS": "L"
+        case "TIE": "T"
         default: result
         }
     }
@@ -104,6 +131,7 @@ struct ScoreboardEvent: Codable, Equatable, Identifiable {
         switch result {
         case "WIN": "Win"
         case "LOSS": "Loss"
+        case "TIE": "Tie"
         default: result
         }
     }
@@ -226,11 +254,25 @@ struct TeamScoreboardSummary: Codable, Equatable {
     let eventCredits: Int
     let wins: Int
     let losses: Int
+    let ties: Int
     let games: Int
     let winRate: Double?
     let gameCredits: Int
 
-    var recordLabel: String { ScoreboardFormat.record(wins: wins, losses: losses) }
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        contributors = try container.decode(Int.self, forKey: .contributors)
+        eventsCovered = try container.decode(Int.self, forKey: .eventsCovered)
+        eventCredits = try container.decode(Int.self, forKey: .eventCredits)
+        wins = try container.decode(Int.self, forKey: .wins)
+        losses = try container.decode(Int.self, forKey: .losses)
+        ties = try container.decodeIfPresent(Int.self, forKey: .ties) ?? 0
+        games = try container.decode(Int.self, forKey: .games)
+        winRate = try container.decodeIfPresent(Double.self, forKey: .winRate)
+        gameCredits = try container.decode(Int.self, forKey: .gameCredits)
+    }
+
+    var recordLabel: String { ScoreboardFormat.record(wins: wins, losses: losses, ties: ties) }
     var winRateLabel: String { ScoreboardFormat.winRate(winRate) }
 }
 
@@ -238,10 +280,21 @@ struct TeamScoreboardPersonSummary: Codable, Equatable {
     let eventsWorked: Int
     let wins: Int
     let losses: Int
+    let ties: Int
     let games: Int
     let winRate: Double?
 
-    var recordLabel: String { ScoreboardFormat.record(wins: wins, losses: losses) }
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        eventsWorked = try container.decode(Int.self, forKey: .eventsWorked)
+        wins = try container.decode(Int.self, forKey: .wins)
+        losses = try container.decode(Int.self, forKey: .losses)
+        ties = try container.decodeIfPresent(Int.self, forKey: .ties) ?? 0
+        games = try container.decode(Int.self, forKey: .games)
+        winRate = try container.decodeIfPresent(Double.self, forKey: .winRate)
+    }
+
+    var recordLabel: String { ScoreboardFormat.record(wins: wins, losses: losses, ties: ties) }
     var winRateLabel: String { ScoreboardFormat.winRate(winRate) }
 }
 
@@ -251,11 +304,24 @@ struct TeamScoreboardPersonSport: Codable, Equatable, Identifiable {
     let eventsWorked: Int
     let wins: Int
     let losses: Int
+    let ties: Int
     let games: Int
     let winRate: Double?
 
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        key = try container.decodeIfPresent(String.self, forKey: .key)
+        label = try container.decode(String.self, forKey: .label)
+        eventsWorked = try container.decode(Int.self, forKey: .eventsWorked)
+        wins = try container.decode(Int.self, forKey: .wins)
+        losses = try container.decode(Int.self, forKey: .losses)
+        ties = try container.decodeIfPresent(Int.self, forKey: .ties) ?? 0
+        games = try container.decode(Int.self, forKey: .games)
+        winRate = try container.decodeIfPresent(Double.self, forKey: .winRate)
+    }
+
     var id: String { key ?? "__unknown__" }
-    var recordLabel: String { ScoreboardFormat.record(wins: wins, losses: losses) }
+    var recordLabel: String { ScoreboardFormat.record(wins: wins, losses: losses, ties: ties) }
     var winRateLabel: String { ScoreboardFormat.winRate(winRate) }
 }
 
@@ -289,12 +355,28 @@ struct TeamScoreboardBreakdown: Codable, Equatable, Identifiable {
     let eventCredits: Int
     let wins: Int
     let losses: Int
+    let ties: Int
     let games: Int
     let winRate: Double?
     let gameCredits: Int
 
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        key = try container.decodeIfPresent(String.self, forKey: .key)
+        label = try container.decode(String.self, forKey: .label)
+        contributors = try container.decode(Int.self, forKey: .contributors)
+        eventsCovered = try container.decode(Int.self, forKey: .eventsCovered)
+        eventCredits = try container.decode(Int.self, forKey: .eventCredits)
+        wins = try container.decode(Int.self, forKey: .wins)
+        losses = try container.decode(Int.self, forKey: .losses)
+        ties = try container.decodeIfPresent(Int.self, forKey: .ties) ?? 0
+        games = try container.decode(Int.self, forKey: .games)
+        winRate = try container.decodeIfPresent(Double.self, forKey: .winRate)
+        gameCredits = try container.decode(Int.self, forKey: .gameCredits)
+    }
+
     var id: String { key ?? "__unknown__" }
-    var recordLabel: String { ScoreboardFormat.record(wins: wins, losses: losses) }
+    var recordLabel: String { ScoreboardFormat.record(wins: wins, losses: losses, ties: ties) }
     var winRateLabel: String { ScoreboardFormat.winRate(winRate) }
 }
 
@@ -397,10 +479,18 @@ struct ScoreboardMonth: Identifiable, Equatable {
 /// A run of the same result at the top of the game list.
 struct ScoreboardStreak: Equatable {
     let count: Int
+    let result: String
     let isWin: Bool
 
-    var label: String { "\(count) straight \(isWin ? "wins" : "losses")" }
-    var tone: StatusTone { isWin ? .green : .red }
+    var label: String {
+        let noun = result == "WIN" ? "wins" : result == "LOSS" ? "losses" : "ties"
+        return "\(count) straight \(noun)"
+    }
+    var tone: StatusTone {
+        if result == "WIN" { return .green }
+        if result == "LOSS" { return .red }
+        return .orange
+    }
 }
 
 /// One orienting fact about a season, in the shape the highlight row draws.
@@ -443,8 +533,10 @@ enum ScoreboardDigest {
     /// is not a streak and does not get announced as one.
     static func streak(_ games: [ScoreboardEvent]) -> ScoreboardStreak? {
         guard let first = games.first else { return nil }
-        let run = games.prefix { $0.isWin == first.isWin }.count
-        return run >= 2 ? ScoreboardStreak(count: run, isWin: first.isWin) : nil
+        let run = games.prefix { $0.result == first.result }.count
+        return run >= 2
+            ? ScoreboardStreak(count: run, result: first.result, isWin: first.isWin)
+            : nil
     }
 }
 

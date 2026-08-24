@@ -33,7 +33,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { ScoreboardBucket, ScoreboardEvent, UserScoreboard } from "@/lib/services/scoreboard";
 
-type ResultFilter = "all" | "WIN" | "LOSS";
+type ResultFilter = "all" | "WIN" | "LOSS" | "TIE";
 type SportOption = { key: string; label: string };
 type ExtraEvents = { requestUrl: string; events: ScoreboardEvent[]; nextCursor: string | null | undefined };
 
@@ -52,9 +52,10 @@ const DIMENSIONS: Array<{ value: Dimension; label: string }> = [
   { value: "venue", label: "Venue" },
 ];
 
-/** Wins are the chart palette's "available" role, losses its "problem" role. */
+/** Wins/losses/ties use the chart palette's available/problem/neutral roles. */
 const WIN_FILL = "var(--chart-2)";
 const LOSS_FILL = "var(--chart-5)";
+const TIE_FILL = "var(--chart-4)";
 
 function dimensionRows(scoreboard: UserScoreboard, dimension: Dimension): ScoreboardBucket[] {
   if (dimension === "sport") return scoreboard.bySport;
@@ -102,19 +103,30 @@ function toSportOptions(buckets: ScoreboardBucket[]): SportOption[] {
     .map((bucket) => ({ key: bucket.key, label: bucket.label }));
 }
 
-function resultVariant(result: ScoreboardEvent["result"]): "green" | "red" {
-  return result === "WIN" ? "green" : "red";
+function resultVariant(result: ScoreboardEvent["result"]): "green" | "red" | "orange" {
+  if (result === "WIN") return "green";
+  if (result === "LOSS") return "red";
+  return "orange";
+}
+
+function resultShortLabel(result: ScoreboardEvent["result"]): string {
+  if (result === "WIN") return "W";
+  if (result === "LOSS") return "L";
+  return "T";
+}
+
+function resultSpokenLabel(result: ScoreboardEvent["result"]): string {
+  if (result === "WIN") return "Win";
+  if (result === "LOSS") return "Loss";
+  return "Tie";
 }
 
 /**
- * The record as a proportion. A number pair tells you the score; the bar tells
- * you the season at a glance, which is the whole job of a scoreboard. A minority
- * segment keeps a floor wide enough to see.
+ * The record as a proportion. The W-L-T bar mirrors the record label so the tie
+ * segment stays in the same place as the tie count.
  */
-function RecordMeter({ wins, losses }: { wins: number; losses: number }) {
-  const games = wins + losses;
-  const split = wins > 0 && losses > 0;
-  const winShare = games > 0 ? Math.min(Math.max((wins / games) * 100, split ? 10 : 0), split ? 90 : 100) : 0;
+function RecordMeter({ wins, losses, ties }: { wins: number; losses: number; ties: number }) {
+  const games = wins + losses + ties;
 
   return (
     <div>
@@ -123,16 +135,13 @@ function RecordMeter({ wins, losses }: { wins: number; losses: number }) {
           <div className="h-full w-full rounded-full bg-muted" />
         ) : (
           <>
-            {wins > 0 ? (
-              <div className="h-full rounded-full" style={{ width: `${winShare}%`, background: WIN_FILL }} />
-            ) : null}
-            {losses > 0 ? (
-              <div className="h-full flex-1 rounded-full" style={{ background: LOSS_FILL }} />
-            ) : null}
+            {wins > 0 ? <div className="h-full min-w-0 flex-1 rounded-full" style={{ flexGrow: wins, background: WIN_FILL }} /> : null}
+            {losses > 0 ? <div className="h-full min-w-0 flex-1 rounded-full" style={{ flexGrow: losses, background: LOSS_FILL }} /> : null}
+            {ties > 0 ? <div className="h-full min-w-0 flex-1 rounded-full" style={{ flexGrow: ties, background: TIE_FILL }} /> : null}
           </>
         )}
       </div>
-      <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+      <div className="mt-2 grid grid-cols-3 gap-2 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1.5 tabular-nums">
           <span className="size-[7px] rounded-full" style={{ background: WIN_FILL }} aria-hidden="true" />
           {wins} {wins === 1 ? "win" : "wins"}
@@ -141,9 +150,13 @@ function RecordMeter({ wins, losses }: { wins: number; losses: number }) {
           <span className="size-[7px] rounded-full" style={{ background: LOSS_FILL }} aria-hidden="true" />
           {losses} {losses === 1 ? "loss" : "losses"}
         </span>
+        <span className="inline-flex items-center justify-center gap-1.5 tabular-nums">
+          <span className="size-[7px] rounded-full" style={{ background: TIE_FILL }} aria-hidden="true" />
+          {ties} {ties === 1 ? "tie" : "ties"}
+        </span>
       </div>
       <span className="sr-only">
-        {games === 0 ? "No resolved games yet" : `${wins} of ${games} games won`}
+        {games === 0 ? "No resolved games yet" : `${wins} wins, ${losses} losses, and ${ties} ties across ${games} games`}
       </span>
     </div>
   );
@@ -162,7 +175,7 @@ function FormStrip({ games }: { games: ScoreboardEvent[] }) {
         {streak ? (
           <p
             className="mt-0.5 text-xs font-medium"
-            style={{ color: streak.isWin ? "var(--green-text)" : "var(--red-text)" }}
+            style={{ color: streak.result === "WIN" ? "var(--green-text)" : streak.result === "LOSS" ? "var(--red-text)" : "var(--orange-text)" }}
           >
             {streak.label}
           </p>
@@ -171,12 +184,12 @@ function FormStrip({ games }: { games: ScoreboardEvent[] }) {
       <div className="flex items-center gap-1.5" aria-hidden="true">
         {games.map((game) => (
           <Badge key={game.id} variant={resultVariant(game.result)} size="sm" className="w-6 justify-center rounded-md">
-            {game.result === "WIN" ? "W" : "L"}
+            {resultShortLabel(game.result)}
           </Badge>
         ))}
       </div>
       <span className="sr-only">
-        Last {games.length} games, newest first: {games.map((game) => (game.result === "WIN" ? "Win" : "Loss")).join(", ")}
+        Last {games.length} games, newest first: {games.map((game) => resultSpokenLabel(game.result)).join(", ")}
         {streak ? `. ${streak.label}.` : ""}
       </span>
     </div>
@@ -222,7 +235,7 @@ function SeasonCard({
         </div>
       </div>
 
-      <RecordMeter wins={scoreboard.summary.wins} losses={scoreboard.summary.losses} />
+      <RecordMeter wins={scoreboard.summary.wins} losses={scoreboard.summary.losses} ties={scoreboard.summary.ties} />
 
       {showsForm && form.length > 0 ? <FormStrip games={form} /> : null}
 
@@ -256,13 +269,13 @@ function Highlights({ scoreboard }: { scoreboard: UserScoreboard }) {
  */
 function BucketBar({ row, maxGames }: { row: ScoreboardBucket; maxGames: number }) {
   const share = maxGames > 0 ? (row.games / maxGames) * 100 : 0;
-  const winShare = row.games > 0 ? (row.wins / row.games) * 100 : 0;
 
   return (
     <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-muted" aria-hidden="true">
       <div className="flex h-full" style={{ width: `${Math.max(share, row.games > 0 ? 3 : 0)}%` }}>
-        {row.wins > 0 ? <div className="h-full" style={{ width: `${winShare}%`, background: WIN_FILL }} /> : null}
-        {row.losses > 0 ? <div className="h-full flex-1" style={{ background: LOSS_FILL }} /> : null}
+        {row.wins > 0 ? <div className="h-full min-w-0 flex-1" style={{ flexGrow: row.wins, background: WIN_FILL }} /> : null}
+        {row.losses > 0 ? <div className="h-full min-w-0 flex-1" style={{ flexGrow: row.losses, background: LOSS_FILL }} /> : null}
+        {row.ties > 0 ? <div className="h-full min-w-0 flex-1" style={{ flexGrow: row.ties, background: TIE_FILL }} /> : null}
       </div>
     </div>
   );
@@ -357,7 +370,7 @@ function EventRow({ event, linkEvents }: { event: ScoreboardEvent; linkEvents: b
     <>
       <div className="flex w-11 shrink-0 flex-col items-center gap-1 pt-0.5 text-center">
         <Badge variant={resultVariant(event.result)} size="sm" className="size-7 justify-center rounded-full p-0">
-          {event.result === "WIN" ? "W" : "L"}
+          {resultShortLabel(event.result)}
         </Badge>
         <span className="text-[11px] tabular-nums text-muted-foreground">
           {formatDateShort(event.startsAt, event.allDay)}
@@ -503,6 +516,7 @@ function ScoreboardSkeleton() {
         <Skeleton className="mt-3 h-9 w-32" />
         <Skeleton className="mt-4 h-2.5 w-full rounded-full" />
         <div className="mt-3 flex justify-between">
+          <Skeleton className="h-3 w-16" />
           <Skeleton className="h-3 w-16" />
           <Skeleton className="h-3 w-16" />
         </div>
@@ -710,6 +724,7 @@ export default function UserScoreboardTab({
           <ToggleGroupItem value="all" className="h-10 text-xs">All</ToggleGroupItem>
           <ToggleGroupItem value="WIN" className="h-10 text-xs">Wins</ToggleGroupItem>
           <ToggleGroupItem value="LOSS" className="h-10 text-xs">Losses</ToggleGroupItem>
+          <ToggleGroupItem value="TIE" className="h-10 text-xs">Ties</ToggleGroupItem>
         </ToggleGroup>
         {sportChoices.length > 0 ? (
           <Select value={sportFilter} onValueChange={setSportFilter}>

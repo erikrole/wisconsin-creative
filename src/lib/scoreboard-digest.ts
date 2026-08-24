@@ -2,12 +2,17 @@ import { calendarDate } from "@/lib/format";
 import type { ScoreboardBucket, ScoreboardEvent, UserScoreboard } from "@/lib/services/scoreboard";
 
 export type ScoreboardMonth = { key: string; label: string; games: ScoreboardEvent[] };
-export type ScoreboardStreak = { count: number; isWin: boolean; label: string };
+export type ScoreboardStreak = {
+  count: number;
+  result: ScoreboardEvent["result"];
+  isWin: boolean;
+  label: string;
+};
 export type ScoreboardHighlight = { id: string; label: string; value: string; detail: string };
 
-/** "4–2". One owner so a bucket row and the season summary never spell the same record two ways. */
-export function recordLabel(bucket: Pick<ScoreboardBucket, "wins" | "losses">): string {
-  return `${bucket.wins}–${bucket.losses}`;
+/** "4–2", or "4–2–1" when ties exist. One owner keeps every record consistent. */
+export function recordLabel(bucket: Pick<ScoreboardBucket, "wins" | "losses" | "ties">): string {
+  return bucket.ties > 0 ? `${bucket.wins}–${bucket.losses}–${bucket.ties}` : `${bucket.wins}–${bucket.losses}`;
 }
 
 /** The route has already rounded to one decimal; a missing rate is a dash, not a zero. */
@@ -70,14 +75,15 @@ export function mergeScoreboardEvents(...pages: ScoreboardEvent[][]): Scoreboard
 export function currentStreak(games: ScoreboardEvent[]): ScoreboardStreak | null {
   const first = games[0];
   if (!first) return null;
-  const isWin = first.result === "WIN";
+  const result = first.result;
   let count = 0;
   for (const game of games) {
-    if ((game.result === "WIN") !== isWin) break;
+    if (game.result !== result) break;
     count += 1;
   }
   if (count < 2) return null;
-  return { count, isWin, label: `${count} straight ${isWin ? "wins" : "losses"}` };
+  const noun = result === "WIN" ? "wins" : result === "LOSS" ? "losses" : "ties";
+  return { count, result, isWin: result === "WIN", label: `${count} straight ${noun}` };
 }
 
 /**

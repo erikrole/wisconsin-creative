@@ -932,7 +932,7 @@ enum HomeFixtureAPI {
 /// A worked season for the Scoreboard capture. The route narrows its own
 /// breakdowns and game list by the sport and result filters while events worked
 /// stays a season-wide count, so this fixture answers the query rather than
-/// returning one canned payload -- a fixture that ignored the query would hide
+    /// returning one canned payload -- a fixture that ignored the query would hide
 /// the exact filtering behaviour a capture exists to show.
 enum ScoreboardFixtureAPI {
     static let userId = "fixture-staff"
@@ -955,11 +955,14 @@ enum ScoreboardFixtureAPI {
 
     /// A full season, newest first, in the order the route returns. Sized and
     /// shaped for what the screen has to survive: four months so the game list
-    /// groups, more opponents and venues than a table shows at once, 26 games so
+    /// groups, more opponents and venues than a table shows at once, 27 games so
     /// the first page does not reach the end, and Men's Basketball winless on
     /// purpose -- a sport that vanishes from a wins-only read is what proves a
     /// filter menu is reading its options from the wrong place.
     private static let games: [Game] = [
+        Game(id: "score-0", startsAt: "2026-12-10T01:00:00.000Z", result: "TIE", sportCode: "SOC",
+             sportLabel: "Soccer", opponent: "Marquette", site: "HOME",
+             venue: "McClimon Complex", areas: ["VIDEO"]),
         Game(id: "score-1", startsAt: "2026-12-05T18:00:00.000Z", result: "WIN", sportCode: "FB",
              sportLabel: "Football", opponent: "Iowa", site: "HOME",
              venue: "Camp Randall Stadium", areas: ["VIDEO", "PHOTO"]),
@@ -1055,7 +1058,8 @@ enum ScoreboardFixtureAPI {
             (sportCode == nil || game.sportCode == sportCode) && (result == nil || game.result == result)
         }
         let wins = matched.filter { $0.result == "WIN" }.count
-        let losses = matched.count - wins
+        let losses = matched.filter { $0.result == "LOSS" }.count
+        let ties = matched.filter { $0.result == "TIE" }.count
         let page = Array(matched.dropFirst(offset).prefix(limit))
         let hasMore = matched.count > offset + limit
 
@@ -1072,8 +1076,9 @@ enum ScoreboardFixtureAPI {
             "eventsWorked": \(eventsWorked),
             "wins": \(wins),
             "losses": \(losses),
+            "ties": \(ties),
             "games": \(matched.count),
-            "winRate": \(rate(wins: wins, losses: losses))
+            "winRate": \(rate(wins: wins, losses: losses, ties: ties))
           },
           "bySport": [\(buckets(matched) { ($0.sportCode, $0.sportLabel) })],
           "byOpponent": [\(buckets(matched) { ($0.opponent, $0.opponent) })],
@@ -1093,10 +1098,10 @@ enum ScoreboardFixtureAPI {
         }
     }
 
-    private static func rate(wins: Int, losses: Int) -> String {
-        let games = wins + losses
+    private static func rate(wins: Int, losses: Int, ties: Int) -> String {
+        let games = wins + losses + ties
         guard games > 0 else { return "null" }
-        return "\((Double(wins) / Double(games) * 1000).rounded() / 10)"
+        return "\(((Double(wins) + Double(ties) / 2) / Double(games) * 1000).rounded() / 10)"
     }
 
     /// Same shape the route builds: most games first, then label, except sites,
@@ -1109,6 +1114,7 @@ enum ScoreboardFixtureAPI {
         var labels: [String: String] = [:]
         var wins: [String: Int] = [:]
         var losses: [String: Int] = [:]
+        var ties: [String: Int] = [:]
         var keys: [String] = []
         for game in games {
             let bucket = dimension(game)
@@ -1118,25 +1124,28 @@ enum ScoreboardFixtureAPI {
             }
             if game.result == "WIN" {
                 wins[bucket.key, default: 0] += 1
-            } else {
+            } else if game.result == "LOSS" {
                 losses[bucket.key, default: 0] += 1
+            } else {
+                ties[bucket.key, default: 0] += 1
             }
         }
         let sorted = keys.sorted { first, second in
             if !order.isEmpty {
                 return (order.firstIndex(of: first) ?? order.count) < (order.firstIndex(of: second) ?? order.count)
             }
-            let firstGames = (wins[first] ?? 0) + (losses[first] ?? 0)
-            let secondGames = (wins[second] ?? 0) + (losses[second] ?? 0)
+            let firstGames = (wins[first] ?? 0) + (losses[first] ?? 0) + (ties[first] ?? 0)
+            let secondGames = (wins[second] ?? 0) + (losses[second] ?? 0) + (ties[second] ?? 0)
             if firstGames != secondGames { return firstGames > secondGames }
             return (labels[first] ?? first) < (labels[second] ?? second)
         }
         return sorted.map { key in
             let won = wins[key] ?? 0
             let lost = losses[key] ?? 0
+            let tied = ties[key] ?? 0
             return """
             {"key":"\(key)","label":"\(labels[key] ?? key)","wins":\(won),"losses":\(lost),\
-            "games":\(won + lost),"winRate":\(rate(wins: won, losses: lost))}
+            "ties":\(tied),"games":\(won + lost + tied),"winRate":\(rate(wins: won, losses: lost, ties: tied))}
             """
         }.joined(separator: ",")
     }

@@ -32,7 +32,7 @@ const bob: TeamScoreboardPersonIdentity = {
 function event(
   id: string,
   sportCode: string | null,
-  result: "WIN" | "LOSS" | null,
+  result: "WIN" | "LOSS" | "TIE" | null,
   shifts: TeamScoreboardPersonIdentity[][],
   dimensions: {
     opponent?: string | null;
@@ -101,6 +101,22 @@ describe("getTeamScoreboard", () => {
     });
   });
 
+  it("counts ties as resolved games and half a win for rate", async () => {
+    mockedFindMany
+      .mockResolvedValueOnce([
+        event("soccer-tie", "WSOC", "TIE", [[alice]], { opponent: "Marquette", site: "HOME" }),
+      ])
+      .mockResolvedValueOnce([
+        event("soccer-tie", "WSOC", "TIE", [[alice]], { opponent: "Marquette", site: "HOME" }),
+      ]);
+
+    const scoreboard = await getTeamScoreboard({ now: new Date("2026-12-01T18:00:00.000Z") });
+
+    expect(scoreboard.summary).toMatchObject({ wins: 0, losses: 0, ties: 1, games: 1, winRate: 50 });
+    expect(scoreboard.bySport[0]).toMatchObject({ key: "WSOC", ties: 1, games: 1, winRate: 50 });
+    expect(scoreboard.leaderboard[0]?.summary).toMatchObject({ ties: 1, games: 1, winRate: 50 });
+  });
+
 
   it("aggregates unique coverage and per-person credits without N+1 reads", async () => {
     mockedFindMany
@@ -126,6 +142,7 @@ describe("getTeamScoreboard", () => {
       eventCredits: 3,
       wins: 2,
       losses: 1,
+      ties: 0,
       games: 3,
       winRate: 66.7,
       gameCredits: 4,
@@ -265,6 +282,7 @@ describe("getTeamScoreboard", () => {
       eventCredits: 2,
       wins: 1,
       losses: 0,
+      ties: 0,
       games: 1,
       winRate: 100,
       gameCredits: 2,
@@ -305,6 +323,7 @@ describe("getTeamScoreboard", () => {
         eventCredits: 0,
         wins: 0,
         losses: 0,
+        ties: 0,
         games: 0,
         winRate: null,
         gameCredits: 0,

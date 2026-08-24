@@ -1132,6 +1132,7 @@ enum CalendarEventStatus {
 enum CalendarEventResult {
   WIN
   LOSS
+  TIE
 }
 
 /// Where a game was played. Distinct from `isHome`, which cannot separate a

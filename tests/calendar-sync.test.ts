@@ -676,16 +676,18 @@ describe("splitEventsForSync", () => {
     expect(result.unchanged).toHaveLength(1);
   });
 
-  it("writes WIN/LOSS from the source marker on new events", () => {
+  it("writes WIN/LOSS/TIE from the source marker on new events", () => {
     const parsed = [
       makeParsedEvent({ uid: "won", summary: "[W] Wisconsin Athletics MBB vs Purdue" }),
       makeParsedEvent({ uid: "lost", summary: "[L] MBB at Purdue" }),
+      makeParsedEvent({ uid: "tied", summary: "[T] Women's Soccer vs Marquette" }),
       makeParsedEvent({ uid: "unplayed", summary: "MBB vs Purdue" }),
     ];
     const result = splitEventsForSync(parsed, [], []);
     const byId = new Map(result.toCreate.map((e) => [e.externalId, e]));
     expect(byId.get("won")!.result).toBe("WIN");
     expect(byId.get("lost")!.result).toBe("LOSS");
+    expect(byId.get("tied")!.result).toBe("TIE");
     expect(byId.get("unplayed")!.result).toBeNull();
   });
 

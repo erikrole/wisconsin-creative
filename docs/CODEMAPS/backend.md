@@ -36,7 +36,7 @@
 | `src/lib/services/event-credit.ts` | 124 |
 | `src/lib/services/event-defaults.ts` | 69 |
 | `src/lib/services/firmware-watch.ts` | 299 |
-| `src/lib/services/game-record.ts` | 158 |
+| `src/lib/services/game-record.ts` | 161 |
 | `src/lib/services/hidden-users-cleanup.ts` | 122 |
 | `src/lib/services/kiosk-checkout-complete.ts` | 90 |
 | `src/lib/services/kiosk-location.ts` | 72 |
@@ -67,7 +67,7 @@
 | `src/lib/services/schedule-publication.ts` | 1019 |
 | `src/lib/services/schedule-template-review.ts` | 554 |
 | `src/lib/services/schedule-working-copy.ts` | 908 |
-| `src/lib/services/scoreboard.ts` | 279 |
+| `src/lib/services/scoreboard.ts` | 287 |
 | `src/lib/services/shift-assignment-conflicts.ts` | 43 |
 | `src/lib/services/shift-assignments.ts` | 731 |
 | `src/lib/services/shift-generation.ts` | 628 |
@@ -77,7 +77,7 @@
 | `src/lib/services/software.ts` | 271 |
 | `src/lib/services/sport-configs.ts` | 257 |
 | `src/lib/services/status.ts` | 444 |
-| `src/lib/services/team-scoreboard.ts` | 558 |
+| `src/lib/services/team-scoreboard.ts` | 572 |
 | `src/lib/services/usage-analytics-report.ts` | 33 |
 | `src/lib/services/user-deactivation.ts` | 386 |
 
@@ -183,7 +183,7 @@
 | `src/lib/schedule-change-history-types.ts` | 55 |
 | `src/lib/schedule-data-quality.ts` | 128 |
 | `src/lib/schedule-defaults.ts` | 33 |
-| `src/lib/schedule-event-identity.ts` | 305 |
+| `src/lib/schedule-event-identity.ts` | 308 |
 | `src/lib/schedule-event-where.ts` | 46 |
 | `src/lib/schedule-health-types.ts` | 83 |
 | `src/lib/schedule-notification-debounce.ts` | 48 |
@@ -193,7 +193,7 @@
 | `src/lib/schedule-template-review-types.ts` | 105 |
 | `src/lib/schedule-working-copy-guard.ts` | 20 |
 | `src/lib/schedule-working-copy.ts` | 424 |
-| `src/lib/scoreboard-digest.ts` | 165 |
+| `src/lib/scoreboard-digest.ts` | 171 |
 | `src/lib/search-pages.ts` | 78 |
 | `src/lib/search-result-title.ts` | 13 |
 | `src/lib/serialization.ts` | 47 |

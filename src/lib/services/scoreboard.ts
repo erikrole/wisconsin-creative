@@ -23,7 +23,7 @@ export const SCOREBOARD_SCOPE = {
   timeZone: env.appTimezone,
 } as const;
 
-export type ScoreboardResult = Extract<CalendarEventResult, "WIN" | "LOSS">;
+export type ScoreboardResult = Extract<CalendarEventResult, "WIN" | "LOSS" | "TIE">;
 export type ScoreboardSite = CalendarEventSite | null;
 
 export type ScoreboardFilters = {
@@ -36,6 +36,7 @@ export type ScoreboardBucket = {
   label: string;
   wins: number;
   losses: number;
+  ties: number;
   games: number;
   winRate: number | null;
 };
@@ -65,6 +66,7 @@ export type UserScoreboard = {
     eventsWorked: number;
     wins: number;
     losses: number;
+    ties: number;
     games: number;
     winRate: number | null;
   };
@@ -107,10 +109,12 @@ function siteLabel(site: CalendarEventSite | null): string {
   return site ? SITE_LABELS[site] : "Unknown site";
 }
 
-function winRate(wins: number, losses: number): number | null {
-  const games = wins + losses;
+function winRate(wins: number, losses: number, ties: number): number | null {
+  const games = wins + losses + ties;
   if (games === 0) return null;
-  return Math.round((wins / games) * 1000) / 10;
+  // A tie counts as half a win, matching the conventional winning percentage
+  // while keeping the displayed record itself as W-L-T when ties exist.
+  return Math.round(((wins + ties / 2) / games) * 1000) / 10;
 }
 
 function bucketLabel(dimension: "sport" | "opponent" | "site" | "venue", key: string | null): string {
@@ -121,19 +125,20 @@ function bucketLabel(dimension: "sport" | "opponent" | "site" | "venue", key: st
 }
 
 function addBucket(
-  buckets: Map<string | null, { key: string | null; wins: number; losses: number }>,
+  buckets: Map<string | null, { key: string | null; wins: number; losses: number; ties: number }>,
   key: string | null,
   result: CalendarEventResult | null,
   count: number,
 ): void {
-  const bucket = buckets.get(key) ?? { key, wins: 0, losses: 0 };
+  const bucket = buckets.get(key) ?? { key, wins: 0, losses: 0, ties: 0 };
   if (result === "WIN") bucket.wins += count;
   if (result === "LOSS") bucket.losses += count;
+  if (result === "TIE") bucket.ties += count;
   buckets.set(key, bucket);
 }
 
 function finishBuckets(
-  buckets: Map<string | null, { key: string | null; wins: number; losses: number }>,
+  buckets: Map<string | null, { key: string | null; wins: number; losses: number; ties: number }>,
   dimension: "sport" | "opponent" | "site" | "venue",
 ): ScoreboardBucket[] {
   return [...buckets.values()]
@@ -142,8 +147,9 @@ function finishBuckets(
       label: bucketLabel(dimension, bucket.key),
       wins: bucket.wins,
       losses: bucket.losses,
-      games: bucket.wins + bucket.losses,
-      winRate: winRate(bucket.wins, bucket.losses),
+      ties: bucket.ties,
+      games: bucket.wins + bucket.losses + bucket.ties,
+      winRate: winRate(bucket.wins, bucket.losses, bucket.ties),
     }))
     .sort((a, b) => {
       if (dimension === "site") {
@@ -227,17 +233,19 @@ export async function getScoreboardForUser(
     getWorkedEventCountForUser(userId, eventBounds),
   ]);
 
-  const bySport = new Map<string | null, { key: string | null; wins: number; losses: number }>();
-  const byOpponent = new Map<string | null, { key: string | null; wins: number; losses: number }>();
-  const bySite = new Map<string | null, { key: string | null; wins: number; losses: number }>();
-  const byVenue = new Map<string | null, { key: string | null; wins: number; losses: number }>();
+  const bySport = new Map<string | null, { key: string | null; wins: number; losses: number; ties: number }>();
+  const byOpponent = new Map<string | null, { key: string | null; wins: number; losses: number; ties: number }>();
+  const bySite = new Map<string | null, { key: string | null; wins: number; losses: number; ties: number }>();
+  const byVenue = new Map<string | null, { key: string | null; wins: number; losses: number; ties: number }>();
   let wins = 0;
   let losses = 0;
+  let ties = 0;
 
   for (const row of grouped) {
     const count = row._count._all;
     if (row.result === "WIN") wins += count;
     if (row.result === "LOSS") losses += count;
+    if (row.result === "TIE") ties += count;
 
     addBucket(bySport, row.sportCode, row.result, count);
     addBucket(byOpponent, trimmedOrNull(row.opponent), row.result, count);
@@ -267,7 +275,7 @@ export async function getScoreboardForUser(
       endsAt: SCOREBOARD_SCOPE.endsAt.toISOString(),
       timeZone: SCOREBOARD_SCOPE.timeZone,
     },
-    summary: { eventsWorked, wins, losses, games: wins + losses, winRate: winRate(wins, losses) },
+    summary: { eventsWorked, wins, losses, ties, games: wins + losses + ties, winRate: winRate(wins, losses, ties) },
     bySport: finishBuckets(bySport, "sport"),
     byOpponent: finishBuckets(byOpponent, "opponent"),
     bySite: finishBuckets(bySite, "site"),

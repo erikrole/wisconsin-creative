@@ -1,0 +1,40 @@
+{
+  "title": "Scoreboard reads W-L-T left to right",
+  "subtitle": "Tie segment moved to the right side of the record meter",
+  "platform": "native iOS",
+  "stats": [
+    { "k": "Order", "v": "W–L–T", "n": "Tie segment is last" },
+    { "k": "Scope", "v": "Record meters", "n": "Native and web" },
+    { "k": "Device", "v": "iPhone 16 Pro", "n": "iOS 26.5 Simulator" },
+    { "k": "Fixture", "v": "14–12–1", "n": "One soccer tie" }
+  ],
+  "sections": [
+    {
+      "heading": "The tie now follows losses",
+      "note": "The only changed element is the result-meter order. The same deterministic Scoreboard fixture, season totals, filters, form strip, and breakdown rows appear in both captures.",
+      "pairs": [
+        {
+          "title": "Season record meter",
+          "before": "tasks/archive/proofs/scoreboard-wlt-meter-order-2026-08-24/before-top.png",
+          "after": "tasks/archive/proofs/scoreboard-wlt-meter-order-2026-08-24/after-top.png",
+          "beforeTag": "Before · W–T–L",
+          "afterTag": "After · W–L–T",
+          "beforeCap": "Green wins, orange tie, then red losses.",
+          "afterCap": "Green wins, red losses, then orange tie on the right."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    { "h": "One visual order across surfaces", "was": "The native record meter placed the tie between wins and losses; the web meters did the same.", "now": "Native and web meters render wins, losses, then ties, matching the W–L–T record label." },
+    { "h": "Semantics stay stable", "was": "The tie count, orange color, and half-win rate were already correct.", "now": "Only segment order changed; the record labels, tie color, filters, and calculations remain unchanged." }
+  ],
+  "verification": [
+    "Focused Vitest source contracts: 17 tests passed.",
+    "WisconsinPerformance ScoreboardScreenshotUITests/testScoreboardStateCaptures: passed on iPhone 16 Pro / iOS 26.5.",
+    "The matched before capture is the prior tie implementation; the after capture is the current source."
+  ],
+  "notes": [
+    "This is local visual proof only; no production deployment or database write is implied."
+  ]
+}

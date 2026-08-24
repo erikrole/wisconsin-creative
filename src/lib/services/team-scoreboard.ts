@@ -28,6 +28,7 @@ export type TeamScoreboardSummary = {
   eventCredits: number;
   wins: number;
   losses: number;
+  ties: number;
   games: number;
   winRate: number | null;
   gameCredits: number;
@@ -37,6 +38,7 @@ export type TeamScoreboardPersonSummary = {
   eventsWorked: number;
   wins: number;
   losses: number;
+  ties: number;
   games: number;
   winRate: number | null;
 };
@@ -160,6 +162,7 @@ type MutablePersonSport = {
   eventIds: Set<string>;
   wins: number;
   losses: number;
+  ties: number;
 };
 
 type MutablePerson = {
@@ -167,6 +170,7 @@ type MutablePerson = {
   eventIds: Set<string>;
   wins: number;
   losses: number;
+  ties: number;
   bySport: Map<string | null, MutablePersonSport>;
 };
 
@@ -177,6 +181,7 @@ type MutableTeamBreakdown = {
   eventCredits: number;
   wins: number;
   losses: number;
+  ties: number;
   gameCredits: number;
 };
 
@@ -194,9 +199,9 @@ const SITE_LABELS: Record<CalendarEventSite, string> = {
 
 const SITE_ORDER: Array<CalendarEventSite | null> = ["HOME", "AWAY", "NEUTRAL", null];
 
-function rate(wins: number, losses: number): number | null {
-  const games = wins + losses;
-  return games > 0 ? Math.round((wins / games) * 1000) / 10 : null;
+function rate(wins: number, losses: number, ties: number): number | null {
+  const games = wins + losses + ties;
+  return games > 0 ? Math.round(((wins + ties / 2) / games) * 1000) / 10 : null;
 }
 
 function labelForSport(key: string | null): string {
@@ -259,6 +264,7 @@ function personState(
     eventIds: new Set(),
     wins: 0,
     losses: 0,
+    ties: 0,
     bySport: new Map(),
   };
   people.set(identity.id, created);
@@ -268,7 +274,7 @@ function personState(
 function personSportState(person: MutablePerson, key: string | null): MutablePersonSport {
   const current = person.bySport.get(key);
   if (current) return current;
-  const created: MutablePersonSport = { key, eventIds: new Set(), wins: 0, losses: 0 };
+  const created: MutablePersonSport = { key, eventIds: new Set(), wins: 0, losses: 0, ties: 0 };
   person.bySport.set(key, created);
   return created;
 }
@@ -286,6 +292,7 @@ function teamBreakdownState(
     eventCredits: 0,
     wins: 0,
     losses: 0,
+    ties: 0,
     gameCredits: 0,
   };
   breakdowns.set(key, created);
@@ -302,34 +309,37 @@ function breakdownStatesForEvent(
 }
 
 function addResult(
-  target: { wins: number; losses: number },
+  target: { wins: number; losses: number; ties: number },
   result: CalendarEventResult | null,
 ): void {
   if (result === "WIN") target.wins += 1;
   if (result === "LOSS") target.losses += 1;
+  if (result === "TIE") target.ties += 1;
 }
 
 function personSummary(person: MutablePerson): TeamScoreboardPersonSummary {
-  const games = person.wins + person.losses;
+  const games = person.wins + person.losses + person.ties;
   return {
     eventsWorked: person.eventIds.size,
     wins: person.wins,
     losses: person.losses,
+    ties: person.ties,
     games,
-    winRate: rate(person.wins, person.losses),
+    winRate: rate(person.wins, person.losses, person.ties),
   };
 }
 
 function personSportSummary(sport: MutablePersonSport): TeamScoreboardPersonSport {
-  const games = sport.wins + sport.losses;
+  const games = sport.wins + sport.losses + sport.ties;
   return {
     key: sport.key,
     label: labelForSport(sport.key),
     eventsWorked: sport.eventIds.size,
     wins: sport.wins,
     losses: sport.losses,
+    ties: sport.ties,
     games,
-    winRate: rate(sport.wins, sport.losses),
+    winRate: rate(sport.wins, sport.losses, sport.ties),
   };
 }
 
@@ -346,7 +356,7 @@ function finishBreakdowns(
 ): TeamScoreboardBreakdown[] {
   return [...breakdowns.values()]
     .map((breakdown) => {
-      const games = breakdown.wins + breakdown.losses;
+      const games = breakdown.wins + breakdown.losses + breakdown.ties;
       return {
         key: breakdown.key,
         label: dimensionLabel(dimension, breakdown.key),
@@ -355,8 +365,9 @@ function finishBreakdowns(
         eventCredits: breakdown.eventCredits,
         wins: breakdown.wins,
         losses: breakdown.losses,
+        ties: breakdown.ties,
         games,
-        winRate: rate(breakdown.wins, breakdown.losses),
+        winRate: rate(breakdown.wins, breakdown.losses, breakdown.ties),
         gameCredits: breakdown.gameCredits,
       };
     })
@@ -445,6 +456,7 @@ export async function getTeamScoreboard(
   let eventCredits = 0;
   let wins = 0;
   let losses = 0;
+  let ties = 0;
   let gameCredits = 0;
 
   for (const event of filteredWorkedEvents) {
@@ -466,7 +478,7 @@ export async function getTeamScoreboard(
   }
 
   for (const event of filteredRecordEvents) {
-    if (event.result !== "WIN" && event.result !== "LOSS") continue;
+    if (event.result !== "WIN" && event.result !== "LOSS" && event.result !== "TIE") continue;
     const eventPeople = peopleForEvent(event);
     const eventBreakdowns = breakdownStatesForEvent(breakdowns, event);
     for (const breakdown of eventBreakdowns) {
@@ -474,7 +486,8 @@ export async function getTeamScoreboard(
       breakdown.gameCredits += eventPeople.length;
     }
     if (event.result === "WIN") wins += 1;
-    else losses += 1;
+    else if (event.result === "LOSS") losses += 1;
+    else ties += 1;
     gameCredits += eventPeople.length;
 
     for (const identity of eventPeople) {
@@ -509,7 +522,7 @@ export async function getTeamScoreboard(
   const byOpponent = finishBreakdowns(breakdowns.opponent, "opponent");
   const bySite = finishBreakdowns(breakdowns.site, "site");
 
-  const games = wins + losses;
+  const games = wins + losses + ties;
   return {
     generatedAt: now.toISOString(),
     scope: {
@@ -522,7 +535,7 @@ export async function getTeamScoreboard(
     methodology: {
       eventsCovered: "Unique completed, confirmed Schedule events worked by at least one visible active person, by assignment or admin-recorded credit.",
       eventCredits: "One credit per person per completed event, even when that person worked multiple shifts.",
-      record: "Unique resolved games after the official exhibition, scrimmage, and alumni-match exclusions.",
+      record: "Unique resolved games (wins, losses, or ties) after the official exhibition, scrimmage, and alumni-match exclusions.",
       gameCredits: "One record credit per person per resolved game, even when that person worked multiple shifts.",
       minimumGamesForWinRate: TEAM_SCOREBOARD_MINIMUM_RATE_GAMES,
     },
@@ -544,8 +557,9 @@ export async function getTeamScoreboard(
       eventCredits,
       wins,
       losses,
+      ties,
       games,
-      winRate: rate(wins, losses),
+      winRate: rate(wins, losses, ties),
       gameCredits,
     },
     bySport,

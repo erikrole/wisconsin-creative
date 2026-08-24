@@ -43,4 +43,18 @@ describe("profile Scoreboard sport filter", () => {
     expect(tab).toContain('value="WIN" className="h-10 text-xs"');
     expect(tab).toContain('className="h-10 w-[190px] text-xs"');
   });
+
+  it("keeps web record bars in W-L-T order", () => {
+    const recordMeter = tab.slice(tab.indexOf("function RecordMeter"), tab.indexOf("/** Recent form"));
+    const bucketBar = tab.slice(tab.indexOf("function BucketBar"), tab.indexOf("function BreakdownCard"));
+
+    for (const bar of [recordMeter, bucketBar]) {
+      const wins = bar.indexOf("WIN_FILL");
+      const losses = bar.indexOf("LOSS_FILL");
+      const ties = bar.indexOf("TIE_FILL");
+      expect(wins).toBeGreaterThanOrEqual(0);
+      expect(wins).toBeLessThan(losses);
+      expect(losses).toBeLessThan(ties);
+    }
+  });
 });

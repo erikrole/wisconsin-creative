@@ -99,17 +99,18 @@ describe("gameRecordEventWhere", () => {
 });
 
 describe("getGameRecordForUser", () => {
-  it("tallies wins and losses from the grouped counts", async () => {
+  it("tallies wins, losses, and ties from the grouped counts", async () => {
     mockedDb.calendarEvent.groupBy.mockResolvedValue([
       { result: "WIN", sportCode: "MBB", site: "HOME", _count: { _all: 12 } },
       { result: "LOSS", sportCode: "MBB", site: "AWAY", _count: { _all: 4 } },
+      { result: "TIE", sportCode: "MBB", site: "HOME", _count: { _all: 2 } },
     ]);
-    await expect(getGameRecordForUser("user-1")).resolves.toMatchObject({ wins: 12, losses: 4 });
+    await expect(getGameRecordForUser("user-1")).resolves.toMatchObject({ wins: 12, losses: 4, ties: 2 });
   });
 
   it("returns a zero record when the user has no resolved games", async () => {
     mockedDb.calendarEvent.groupBy.mockResolvedValue([]);
-    await expect(getGameRecordForUser("user-1")).resolves.toEqual({ eventsWorked: 0, wins: 0, losses: 0, bySport: [], bySite: [] });
+    await expect(getGameRecordForUser("user-1")).resolves.toEqual({ eventsWorked: 0, wins: 0, losses: 0, ties: 0, bySport: [], bySite: [] });
   });
 
   it("fills the missing side when every game went one way", async () => {
@@ -158,8 +159,8 @@ describe("getGameRecordForUser — counting dimensions", () => {
     const record = await getGameRecordForUser("user-1");
     expect(record).toMatchObject({ wins: 7, losses: 3 });
     expect(record.bySport).toEqual([
-      { sportCode: "MBB", wins: 5, losses: 3 },
-      { sportCode: "VB", wins: 2, losses: 0 },
+      { sportCode: "MBB", wins: 5, losses: 3, ties: 0 },
+      { sportCode: "VB", wins: 2, losses: 0, ties: 0 },
     ]);
   });
 
@@ -171,9 +172,9 @@ describe("getGameRecordForUser — counting dimensions", () => {
     ]);
     const record = await getGameRecordForUser("user-1");
     expect(record.bySite).toEqual([
-      { site: "HOME", wins: 2, losses: 0 },
-      { site: "NEUTRAL", wins: 4, losses: 0 },
-      { site: null, wins: 0, losses: 1 },
+      { site: "HOME", wins: 2, losses: 0, ties: 0 },
+      { site: "NEUTRAL", wins: 4, losses: 0, ties: 0 },
+      { site: null, wins: 0, losses: 1, ties: 0 },
     ]);
   });
 
@@ -194,7 +195,7 @@ describe("getGameRecordForUser — counting dimensions", () => {
     ]);
     const record = await getGameRecordForUser("user-1");
     expect(record.wins).toBe(2);
-    expect(record.bySport).toEqual([{ sportCode: null, wins: 2, losses: 0 }]);
+    expect(record.bySport).toEqual([{ sportCode: null, wins: 2, losses: 0, ties: 0 }]);
   });
 
   it("counts one game once across both breakdowns", async () => {
@@ -203,9 +204,9 @@ describe("getGameRecordForUser — counting dimensions", () => {
       { result: "LOSS", sportCode: "VB", site: "NEUTRAL", _count: { _all: 4 } },
     ]);
     const record = await getGameRecordForUser("user-1");
-    const played = record.wins + record.losses;
-    const sumOf = (rows: Array<{ wins: number; losses: number }>) =>
-      rows.reduce((n, r) => n + r.wins + r.losses, 0);
+    const played = record.wins + record.losses + record.ties;
+    const sumOf = (rows: Array<{ wins: number; losses: number; ties: number }>) =>
+      rows.reduce((n, r) => n + r.wins + r.losses + r.ties, 0);
     expect(sumOf(record.bySport)).toBe(played);
     expect(sumOf(record.bySite)).toBe(played);
   });

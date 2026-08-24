@@ -3,13 +3,14 @@ import { startOfDayInAppTz } from "@/lib/app-time";
 import { participatedEventWhere } from "@/lib/services/event-credit";
 import type { CalendarEventSite, Prisma } from "@prisma/client";
 
-/** Wins and losses over some slice of games. */
+/** Wins, losses, and ties over some slice of games. */
 export type WinLoss = {
   wins: number;
   losses: number;
+  ties: number;
 };
 
-/** Win-loss totals plus the dimensions worth counting them by. */
+/** W-L-T totals plus the dimensions worth counting them by. */
 export type GameRecord = WinLoss & {
   /** Count of completed 2026–27 Schedule events with an active assignment. */
   eventsWorked: number;
@@ -17,7 +18,7 @@ export type GameRecord = WinLoss & {
   bySite: Array<WinLoss & { site: CalendarEventSite | null }>;
 };
 
-export const EMPTY_GAME_RECORD: GameRecord = { eventsWorked: 0, wins: 0, losses: 0, bySport: [], bySite: [] };
+export const EMPTY_GAME_RECORD: GameRecord = { eventsWorked: 0, wins: 0, losses: 0, ties: 0, bySport: [], bySite: [] };
 
 /**
  * Profile records start with the 2026-27 operating season. Resolve the fixed
@@ -43,7 +44,7 @@ const SITE_ORDER: Array<CalendarEventSite | null> = ["HOME", "AWAY", "NEUTRAL", 
 /**
  * Source titles that describe non-official competition. The raw result stays
  * on CalendarEvent as schedule history, but these rows are not part of an
- * official staff win-loss record.
+ * official staff win-loss-tie record.
  */
 export const OFFICIAL_RECORD_EVENT_EXCLUSION: Prisma.CalendarEventWhereInput = {
   NOT: [
@@ -82,7 +83,8 @@ export async function getWorkedEventCountForUser(
 
 /**
  * Games that count toward a record: a real, visible event on or after the
- * profile-record start date that carries a source-derived outcome. Mirrors
+ * profile-record start date that carries a source-derived outcome (win, loss,
+ * or tie). Mirrors
  * `buildScheduleEventWhere`'s definition of a countable event so a profile
  * record never disagrees with the schedule's event visibility rules.
  * Exhibition, scrimmage, and alumni-match rows remain schedule history but
@@ -104,10 +106,11 @@ export function gameRecordEventWhere(userId: string): Prisma.CalendarEventWhereI
 function addTo<T extends WinLoss>(bucket: T, result: string | null, count: number): void {
   if (result === "WIN") bucket.wins += count;
   else if (result === "LOSS") bucket.losses += count;
+  else if (result === "TIE") bucket.ties += count;
 }
 
 /**
- * Tally wins and losses across every game the user held a shift assignment on,
+ * Tally wins, losses, and ties across every game the user held a shift assignment on,
  * broken down by sport and by where the game was played.
  *
  * Grouped by event rather than by assignment: a user working two shifts on one
@@ -127,7 +130,7 @@ export async function getGameRecordForUser(userId: string): Promise<GameRecord> 
     getWorkedEventCountForUser(userId),
   ]);
 
-  const record: GameRecord = { eventsWorked, wins: 0, losses: 0, bySport: [], bySite: [] };
+  const record: GameRecord = { eventsWorked, wins: 0, losses: 0, ties: 0, bySport: [], bySite: [] };
   const sports = new Map<string | null, WinLoss & { sportCode: string | null }>();
   const sites = new Map<CalendarEventSite | null, WinLoss & { site: CalendarEventSite | null }>();
 
@@ -135,17 +138,17 @@ export async function getGameRecordForUser(userId: string): Promise<GameRecord> 
     const count = row._count._all;
     addTo(record, row.result, count);
 
-    const sport = sports.get(row.sportCode) ?? { sportCode: row.sportCode, wins: 0, losses: 0 };
+    const sport = sports.get(row.sportCode) ?? { sportCode: row.sportCode, wins: 0, losses: 0, ties: 0 };
     addTo(sport, row.result, count);
     sports.set(row.sportCode, sport);
 
-    const site = sites.get(row.site) ?? { site: row.site, wins: 0, losses: 0 };
+    const site = sites.get(row.site) ?? { site: row.site, wins: 0, losses: 0, ties: 0 };
     addTo(site, row.result, count);
     sites.set(row.site, site);
   }
 
   record.bySport = [...sports.values()].sort((a, b) => {
-    const played = b.wins + b.losses - (a.wins + a.losses);
+    const played = b.wins + b.losses + b.ties - (a.wins + a.losses + a.ties);
     if (played !== 0) return played;
     return (a.sportCode ?? "￿").localeCompare(b.sportCode ?? "￿");
   });

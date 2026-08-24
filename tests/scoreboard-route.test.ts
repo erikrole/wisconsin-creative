@@ -89,6 +89,17 @@ describe("GET /api/users/[id]/scoreboard", () => {
     await expect(response.json()).resolves.toEqual({ data: { summary: { wins: 1, losses: 0 } } });
   });
 
+  it("accepts a tie filter from the shared route", async () => {
+    const response = await run(request("?result=TIE"), context);
+
+    expect(response.status).toBe(200);
+    expect(mocks.getScoreboardForUser).toHaveBeenCalledWith(
+      "target-1",
+      { sportCode: undefined, result: "TIE" },
+      { limit: 25, offset: 4 },
+    );
+  });
+
   it("lets the server choose the current scope when season is omitted", async () => {
     const response = await run(request("?limit=25&offset=4"), context);
 

@@ -58,6 +58,22 @@ final class ScoreboardModelsTests: XCTestCase {
         XCTAssertTrue(event.allDay)
     }
 
+    func testTieResultsDecodeWithNeutralPresentation() throws {
+        let event = game(id: "event-tie", starts: "2026-09-13T00:00:00.000Z", result: "TIE")
+        XCTAssertEqual(event.resultLabel, "T")
+        XCTAssertEqual(event.resultName, "Tie")
+        XCTAssertFalse(event.isWin)
+        XCTAssertTrue(event.isTie)
+
+        let summaryJSON = """
+        {"eventsWorked":2,"wins":1,"losses":0,"ties":1,"games":2,"winRate":75}
+        """.data(using: .utf8)!
+        let summary = try JSONDecoder().decode(ScoreboardSummary.self, from: summaryJSON)
+        XCTAssertEqual(summary.ties, 1)
+        XCTAssertEqual(summary.games, 2)
+        XCTAssertEqual(summary.recordLabel, "1–0–1")
+    }
+
     /// The cursor is an offset. A cursor that is not one has to end the list
     /// rather than read as zero and serve page one again.
     func testNonNumericCursorEndsPagination() throws {
@@ -86,6 +102,7 @@ final class ScoreboardModelsTests: XCTestCase {
     /// can never spell the same record two ways.
     func testRecordAndRateFormattingIsShared() {
         XCTAssertEqual(ScoreboardFormat.record(wins: 4, losses: 2), "4–2")
+        XCTAssertEqual(ScoreboardFormat.record(wins: 4, losses: 2, ties: 1), "4–2–1")
         XCTAssertEqual(ScoreboardFormat.winRate(nil), "—")
         XCTAssertEqual(ScoreboardFormat.winRate(66.7), "66.7%")
         XCTAssertEqual(ScoreboardFormat.winRate(100), "100%")

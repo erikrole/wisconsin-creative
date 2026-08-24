@@ -32,22 +32,25 @@ export function cleanSourceSummary(raw: string): string {
   return normalized || raw.trim();
 }
 
-/** Source-provided W-L marker on a raw ICS summary, e.g. "[W] MBB vs Purdue". */
-const RESULT_MARKER_PATTERN = /^\s*\[(W|L)\](\s|$)/i;
+/** Source-provided W-L-T marker on a raw ICS summary, e.g. "[W] MBB vs Purdue". */
+const RESULT_MARKER_PATTERN = /^\s*\[(W|L|T)\](\s|$)/i;
 
 /**
- * Read the W-L outcome from a raw (uncleaned) ICS summary.
+ * Read the W-L-T outcome from a raw (uncleaned) ICS summary.
  * Mirrors the backfill in migration 0106 so freshly synced rows and
  * historically backfilled rows agree on what counts as evidence.
  * `cleanSourceSummary` strips this marker from the display title, so the raw
  * summary is the only place it survives. A missing marker means unknown,
  * never a loss.
  */
-export function parseEventResult(rawSummary: string | null | undefined): "WIN" | "LOSS" | null {
+export function parseEventResult(rawSummary: string | null | undefined): "WIN" | "LOSS" | "TIE" | null {
   if (!rawSummary) return null;
   const match = rawSummary.match(RESULT_MARKER_PATTERN);
   if (!match) return null;
-  return match[1]!.toUpperCase() === "W" ? "WIN" : "LOSS"; // capture group present when match succeeds
+  const marker = match[1]!.toUpperCase(); // capture group present when match succeeds
+  if (marker === "W") return "WIN";
+  if (marker === "L") return "LOSS";
+  return "TIE";
 }
 
 export function normalizeOpponentName(raw: string | null | undefined): string | null {
@@ -274,7 +277,7 @@ export function classifySourceEvent(input: {
   opponent: string | null;
   isHome: boolean | null;
   site: "HOME" | "AWAY" | "NEUTRAL" | null;
-  result: "WIN" | "LOSS" | null;
+  result: "WIN" | "LOSS" | "TIE" | null;
 } {
   const summary = cleanSourceSummary(input.rawSummary);
   const result = parseEventResult(input.rawSummary);

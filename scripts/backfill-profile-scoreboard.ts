@@ -7,7 +7,7 @@
 // The schedule assignments are the worker source of truth. This script does
 // not create assignments from guesses; it restores CalendarEvent.site from the
 // stored schedule evidence and CalendarEvent.result when the synced raw
-// summary contains an explicit [W]/[L] marker.
+// summary contains an explicit [W]/[L]/[T] marker.
 //
 // Usage:
 //   node --env-file=.env.preview.local --import ./scripts/lib/register-ts.mjs \
@@ -25,7 +25,7 @@ import { sortVenueMappings, venueMappingMatches } from "@/lib/venue-mapping-cont
 const APPLY = process.argv.includes("--apply");
 const WRITE_CHUNK_SIZE = 50;
 type Site = "HOME" | "AWAY" | "NEUTRAL";
-type Result = "WIN" | "LOSS";
+type Result = "WIN" | "LOSS" | "TIE";
 
 type FieldChange = { field: "site" | "result"; before: unknown; after: unknown };
 
@@ -156,7 +156,7 @@ async function main() {
         counts.workerLinks += item.workers.length;
         return counts;
       },
-      { site: 0, result: 0, WIN: 0, LOSS: 0, workerLinks: 0 },
+      { site: 0, result: 0, WIN: 0, LOSS: 0, TIE: 0, workerLinks: 0 },
     );
 
     console.log(`Backfill cutoff: events on or after ${GAME_RECORD_START_DATE.toISOString().slice(0, 10)}`);
@@ -167,6 +167,7 @@ async function main() {
     console.log(`Active worker links already present: ${tally.workerLinks}`);
     console.log(`  WIN  ${tally.WIN}`);
     console.log(`  LOSS ${tally.LOSS}`);
+    console.log(`  TIE  ${tally.TIE}`);
 
     const sampleLimit = 30;
     for (const item of plan.slice(0, sampleLimit)) {

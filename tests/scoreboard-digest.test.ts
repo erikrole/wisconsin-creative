@@ -9,7 +9,7 @@ import {
 } from "@/lib/scoreboard-digest";
 import type { ScoreboardBucket, ScoreboardEvent, UserScoreboard } from "@/lib/services/scoreboard";
 
-function game(id: string, startsAt: string, result: "WIN" | "LOSS"): ScoreboardEvent {
+function game(id: string, startsAt: string, result: "WIN" | "LOSS" | "TIE"): ScoreboardEvent {
   return {
     id,
     startsAt,
@@ -25,7 +25,7 @@ function game(id: string, startsAt: string, result: "WIN" | "LOSS"): ScoreboardE
 }
 
 function bucket(key: string | null, label: string, wins: number, losses: number, winRate: number | null): ScoreboardBucket {
-  return { key, label, wins, losses, games: wins + losses, winRate };
+  return { key, label, wins, losses, ties: 0, games: wins + losses, winRate };
 }
 
 function scoreboard(overrides: Partial<UserScoreboard> = {}): UserScoreboard {
@@ -37,7 +37,7 @@ function scoreboard(overrides: Partial<UserScoreboard> = {}): UserScoreboard {
       endsAt: "2027-07-01T00:00:00.000Z",
       timeZone: "America/Chicago",
     },
-    summary: { eventsWorked: 38, wins: 14, losses: 12, games: 26, winRate: 53.8 },
+    summary: { eventsWorked: 38, wins: 14, losses: 12, ties: 0, games: 26, winRate: 53.8 },
     bySport: [bucket("FB", "Football", 6, 2, 75), bucket("VB", "Volleyball", 3, 3, 50)],
     byOpponent: [bucket(null, "Unknown opponent", 3, 3, 50), bucket("Purdue", "Purdue", 4, 0, 100)],
     bySite: [],
@@ -72,7 +72,7 @@ describe("scoreboard digest", () => {
       game("c", "2026-11-07T20:00:00.000Z", "LOSS"),
     ];
 
-    expect(currentStreak(games)).toEqual({ count: 2, isWin: true, label: "2 straight wins" });
+    expect(currentStreak(games)).toEqual({ count: 2, result: "WIN", isWin: true, label: "2 straight wins" });
     // A single game is not a streak and must not be announced as one.
     expect(currentStreak([games[0]!, games[2]!])).toBeNull();
     expect(currentStreak([])).toBeNull();
@@ -85,6 +85,16 @@ describe("scoreboard digest", () => {
 
     expect(recentForm(games).map((entry) => entry.id)).toEqual(["g0", "g1", "g2", "g3", "g4"]);
     expect(recentForm(games, 2).map((entry) => entry.id)).toEqual(["g0", "g1"]);
+  });
+
+  it("treats a tie as its own result for form and streaks", () => {
+    const games = [
+      game("a", "2026-12-05T18:00:00.000Z", "TIE"),
+      game("b", "2026-11-28T19:00:00.000Z", "TIE"),
+      game("c", "2026-11-07T20:00:00.000Z", "WIN"),
+    ];
+
+    expect(currentStreak(games)).toEqual({ count: 2, result: "TIE", isWin: false, label: "2 straight ties" });
   });
 
   it("merges paged events without repeating a row that moved between offsets", () => {
@@ -114,7 +124,7 @@ describe("scoreboard digest", () => {
 
   it("has no highlights without resolved games", () => {
     const empty = scoreboard({
-      summary: { eventsWorked: 4, wins: 0, losses: 0, games: 0, winRate: null },
+      summary: { eventsWorked: 4, wins: 0, losses: 0, ties: 0, games: 0, winRate: null },
     });
 
     expect(scoreboardHighlights(empty)).toEqual([]);

@@ -4,12 +4,14 @@ enum ScoreboardResultFilter: String, CaseIterable, Hashable {
     case all
     case wins = "WIN"
     case losses = "LOSS"
+    case ties = "TIE"
 
     var title: String {
         switch self {
         case .all: "All"
         case .wins: "Wins"
         case .losses: "Losses"
+        case .ties: "Ties"
         }
     }
 
@@ -395,7 +397,7 @@ private struct ScoreboardSeasonCard: View {
                 "\(scoreboard.scope.label), \(summary.recordLabel) record, \(summary.winRateLabel) win rate"
             )
 
-            ScoreboardRecordMeter(wins: summary.wins, losses: summary.losses)
+            ScoreboardRecordMeter(wins: summary.wins, losses: summary.losses, ties: summary.ties)
 
             if showsForm, !form.isEmpty {
                 Divider()
@@ -411,18 +413,20 @@ private struct ScoreboardSeasonCard: View {
     }
 }
 
-/// The record as a proportion. A number pair tells you the score; the bar tells
-/// you the season at a glance, which is the whole job of a scoreboard.
+/// The record as a proportion. The W–L–T bar mirrors the record label so the
+/// tie segment stays in the same place as the tie count.
 private struct ScoreboardRecordMeter: View {
     let wins: Int
     let losses: Int
+    let ties: Int
 
-    private var games: Int { wins + losses }
+    private var games: Int { wins + losses + ties }
+    private var segmentCount: Int { [wins, losses, ties].filter { $0 > 0 }.count }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
             GeometryReader { geo in
-                HStack(spacing: wins > 0 && losses > 0 ? 3 : 0) {
+                HStack(spacing: segmentCount > 1 ? 3 : 0) {
                     if wins > 0 {
                         Capsule()
                             .fill(Color.chartFill(.available).gradient)
@@ -432,6 +436,11 @@ private struct ScoreboardRecordMeter: View {
                         Capsule()
                             .fill(Color.chartFill(.problem).gradient)
                             .frame(width: width(for: losses, in: geo.size.width))
+                    }
+                    if ties > 0 {
+                        Capsule()
+                            .fill(Color.chartFill(.waiting).gradient)
+                            .frame(width: width(for: ties, in: geo.size.width))
                     }
                     if games == 0 {
                         Capsule().fill(Color.primary.opacity(0.07))
@@ -444,24 +453,23 @@ private struct ScoreboardRecordMeter: View {
                 ScoreboardMeterKey(count: wins, noun: "win", role: .available)
                 Spacer(minLength: 8)
                 ScoreboardMeterKey(count: losses, noun: "loss", plural: "losses", role: .problem)
+                Spacer(minLength: 8)
+                ScoreboardMeterKey(count: ties, noun: "tie", role: .waiting)
             }
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(games == 0
             ? "No resolved games yet"
-            : "\(wins) of \(games) games won")
+            : "\(wins) wins, \(losses) losses, and \(ties) ties across \(games) games")
     }
 
-    /// A one-game share of a long season is a sliver at true proportion, so the
-    /// minority segment keeps a floor wide enough to see and to name.
+    /// Segment widths preserve the true result proportions while accounting for
+    /// the small gutters between visible segments.
     private func width(for count: Int, in total: CGFloat) -> CGFloat {
         guard games > 0, total > 0 else { return 0 }
-        let gutter: CGFloat = (wins > 0 && losses > 0) ? 3 : 0
+        let gutter: CGFloat = segmentCount > 1 ? CGFloat(segmentCount - 1) * 3 : 0
         let usable = max(total - gutter, 0)
-        guard wins > 0, losses > 0 else { return usable }
-        let floor: CGFloat = min(22, usable * 0.12)
-        let raw = usable * CGFloat(count) / CGFloat(games)
-        return min(max(raw, floor), usable - floor)
+        return usable * CGFloat(count) / CGFloat(games)
     }
 }
 
@@ -511,10 +519,10 @@ private struct ScoreboardFormStrip: View {
                 ForEach(games) { game in
                     Text(game.resultLabel)
                         .font(.caption2.weight(.bold))
-                        .foregroundStyle(Color.statusText(game.isWin ? .green : .red))
+                        .foregroundStyle(Color.statusText(game.isWin ? .green : game.isTie ? .orange : .red))
                         .frame(width: 22, height: 22)
                         .background(
-                            Color.statusBackground(game.isWin ? .green : .red),
+                            Color.statusBackground(game.isWin ? .green : game.isTie ? .orange : .red),
                             in: RoundedRectangle(cornerRadius: 7, style: .continuous)
                         )
                 }
@@ -737,7 +745,7 @@ private struct ScoreboardBreakdownRow: View {
                     .truncationMode(.tail)
                 // Length is how much of the season this row is; the split
                 // inside it is how that went. One mark, both questions.
-                ScoreboardBucketBar(wins: row.wins, losses: row.losses, maxGames: maxGames)
+                ScoreboardBucketBar(wins: row.wins, losses: row.losses, ties: row.ties, maxGames: maxGames)
             }
             VStack(alignment: .trailing, spacing: 2) {
                 Text(row.recordLabel)
@@ -760,9 +768,10 @@ private struct ScoreboardBreakdownRow: View {
 private struct ScoreboardBucketBar: View {
     let wins: Int
     let losses: Int
+    let ties: Int
     let maxGames: Int
 
-    private var games: Int { wins + losses }
+    private var games: Int { wins + losses + ties }
 
     var body: some View {
         GeometryReader { geo in
@@ -779,6 +788,10 @@ private struct ScoreboardBucketBar: View {
                     if losses > 0 {
                         Rectangle().fill(Color.chartFill(.problem))
                             .frame(width: filled * CGFloat(losses) / CGFloat(max(games, 1)))
+                    }
+                    if ties > 0 {
+                        Rectangle().fill(Color.chartFill(.waiting))
+                            .frame(width: filled * CGFloat(ties) / CGFloat(max(games, 1)))
                     }
                 }
                 .clipShape(Capsule())
@@ -914,7 +927,11 @@ private struct ScoreboardGameRow: View {
     /// Where the matchup copy starts, so row dividers line up under it.
     static let copyInset: CGFloat = Brand.Space.md + resultColumnWidth + columnSpacing
 
-    private var tone: StatusTone { game.isWin ? .green : .red }
+    private var tone: StatusTone {
+        if game.isWin { return .green }
+        if game.isTie { return .orange }
+        return .red
+    }
 
     var body: some View {
         HStack(alignment: .top, spacing: Self.columnSpacing) {

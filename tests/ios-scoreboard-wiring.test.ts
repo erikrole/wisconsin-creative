@@ -96,8 +96,9 @@ describe("native Scoreboard wiring", () => {
     expect(models).toContain("static func months(");
     expect(models).toContain("static func streak(");
     expect(models).toContain("var highlights: [ScoreboardHighlight]");
-    // A run of one is not a streak.
-    expect(models).toContain("return run >= 2 ?");
+    // A run of one is not a streak, and a tie run must not merge with losses.
+    expect(models).toContain("let run = games.prefix { $0.result == first.result }.count");
+    expect(models).toContain("ScoreboardStreak(count: run, result: first.result");
   });
 
   it("says what a filtered view covers next to the numbers it qualifies", () => {
@@ -119,6 +120,23 @@ describe("native Scoreboard wiring", () => {
     expect(view).toContain("Color.chartFill(.available)");
     expect(view).toContain("Color.chartFill(.problem)");
     expect(view).not.toContain("Rectangle().fill(Color.statusText");
+  });
+
+  it("keeps record-meter segments in W-L-T order", () => {
+    const view = source("ios/Wisconsin/Views/ScoreboardView.swift");
+    const wins = view.indexOf("Color.chartFill(.available).gradient");
+    const losses = view.indexOf("Color.chartFill(.problem).gradient");
+    const ties = view.indexOf("Color.chartFill(.waiting).gradient");
+
+    expect(wins).toBeGreaterThanOrEqual(0);
+    expect(wins).toBeLessThan(losses);
+    expect(losses).toBeLessThan(ties);
+    expect(view.indexOf('ScoreboardMeterKey(count: wins')).toBeLessThan(
+      view.indexOf('ScoreboardMeterKey(count: losses'),
+    );
+    expect(view.indexOf('ScoreboardMeterKey(count: losses')).toBeLessThan(
+      view.indexOf('ScoreboardMeterKey(count: ties'),
+    );
   });
 
   it("does not add custody actions to the Scoreboard screen", () => {

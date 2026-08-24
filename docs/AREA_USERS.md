@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Users
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-23
+- Last Updated: 2026-08-24
 - Status: Active
 - Version: V1.4
 
@@ -44,6 +44,7 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 ### Scoreboard
 - `ADMIN`, `STAFF`, `STUDENT`, and `COLLABORATOR` may view the shared team Scoreboard and an active, non-hidden person’s Scoreboard through the explicit `scoreboard.view` permission.
 - The team Scoreboard is a generic current-season explorer. Sport, Schedule venue, opponent, and Home/Away/Neutral site each accept one exact value and combine with AND semantics; totals, dimensional breakdowns, the Snapshot, and every person ranking are recomputed from that same intersection. Filter choices remain stable across narrowing.
+- Imported W/L/T source markers are preserved as resolved game results. Ties count as games, render as `T`/orange, and appear in `W–L–T` records and W–L–T meter segments only when present; win rate treats a tie as half a win while the server remains the authority for the calculation.
 - Shared Scoreboard identity is limited to user id, name, and avatar. Scoreboard access does not grant the People directory or expose role, affiliation, contact, profile, presence, assignment, availability, call-time, booking, activity, badge, audit, or custody data.
 - Hidden and inactive people stay out of aggregate discovery. Existing self and internal operator access to their direct Scoreboard retains the established visibility boundary.
 
@@ -127,6 +128,8 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 6. Ensure audit logs include actor role, target owner, and exception metadata.
 
 ## Change Log
+
+- 2026-08-24: **Scoreboard now preserves source tie results.** Calendar `[T]` markers parse and persist as `TIE`, the profile route includes ties in summaries, breakdowns, filters, and event rows, and native models render additive tie fields with a zero default for older payloads. A tie is a resolved official game, contributes half a win to the server-owned rate, and keeps the source marker in `rawSummary` for auditability. Web and native record meters use W–L–T order, with ties on the right. Migrations `0132` and `0133` are prepared locally; production application and authenticated read-back remain under GAP-71.
 
 - 2026-08-23: **Admin directory chips now read as Staff.** People/Users rows, profile headers, and the org chart keep `Role.ADMIN` for authorization but present a Staff badge so operator rank is not advertised on the roster. Role filters, the Admins metric, and the profile role editor still use the real Admin value. Files: `src/app/(app)/users/RoleBadge.tsx`, `src/app/(app)/users/org-chart/page.tsx`.
 

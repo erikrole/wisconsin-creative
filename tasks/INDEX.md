@@ -1,6 +1,6 @@
 # Tasks Index
 
-Last updated: 2026-08-23
+Last updated: 2026-08-24
 
 ## Start Here
 
@@ -58,6 +58,7 @@ Audit files intentionally remain at root for now because the repo audit skills r
 - `signature-capture-micro-app-plan.md` - Signatures execution ledger for supported team, Creative Staff, Administration, and one-off rosters; pen-only capture, private artifacts, hardening, and rollout proof.
 - `software-vault-plan-2026-08-19.md` - encrypted shared software access above the existing Photo Mechanic license pool, with migration, key, and authenticated runtime rollout gates.
 - `software-photo-mechanic-first-plan-2026-08-23.md` - make Photo Mechanic the default Software landing and extract the license pool from the page shell.
+- `scoreboard-tie-result-plan-2026-08-24.md` - restore source-backed soccer tie results across Calendar sync, web/native Scoreboard contracts, and the migration/deployment proof boundary.
 
 ## Archive Buckets
 
