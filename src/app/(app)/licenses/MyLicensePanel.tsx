@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Copy, Check, Clock3, KeyRound, LogOut, AlertTriangle } from "lucide-react";
+import { Copy, Check, Clock3, LogOut } from "lucide-react";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatRelativeTime } from "@/lib/format";
@@ -36,66 +37,53 @@ export function MyLicensePanel({ license, isStaff, onReleased }: Props) {
   const daysLeft = license.expiresAt ? licenseDaysUntilExpiry(license.expiresAt) : null;
   const isExpired = license.expiresAt ? isLicenseExpired(license.expiresAt) : false;
   const isExpiringSoon = daysLeft != null && daysLeft >= 0 && daysLeft <= 30;
-
-  const headerLabel = isStaff ? "Custody" : "Your license";
   const releaseLabel = isStaff ? "Release" : "Return";
-  const timeLabel = isStaff ? "Held since" : "Claimed";
+  const timeLabel = isStaff ? "Held" : "Claimed";
+  const status = isExpired
+    ? { label: "Expired", variant: "red" as const }
+    : isExpiringSoon
+      ? { label: daysLeft === 0 ? "Expires today" : `${daysLeft}d left`, variant: "orange" as const }
+      : { label: "Active", variant: "blue" as const };
 
   return (
     <>
-      <Card className="mb-6 border-[var(--blue)]/35 bg-[var(--blue-bg)] shadow-none">
-        <CardContent className="flex flex-col gap-3 pt-4 pb-4">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <div className="flex shrink-0 items-center gap-2 text-[var(--blue-text)]">
-              <KeyRound className="size-4" />
-              <span className="text-xs font-medium uppercase tracking-wide">{headerLabel}</span>
+      <Card elevation="flat" className="overflow-hidden border-[var(--blue)]/35 bg-[var(--blue-bg)]">
+        <CardContent className="flex flex-col gap-4 border-l-[3px] border-l-[var(--blue)] p-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0 space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-xs font-medium uppercase tracking-[0.14em] text-[var(--blue-text)]">
+                Your Photo Mechanic license
+              </p>
+              <Badge variant={status.variant}>{status.label}</Badge>
             </div>
-            <code className="font-mono text-sm font-semibold tracking-widest flex-1">
+            <code className="block break-all font-mono text-xl font-semibold tracking-[0.18em] text-foreground">
               {license.code}
             </code>
-            {license.claimedAt && (
-              <span className="text-xs text-muted-foreground shrink-0">
-                {timeLabel} {formatRelativeTime(license.claimedAt, new Date())}
-              </span>
-            )}
-            <div className="flex items-center gap-2 shrink-0">
-              <Button variant="ghost" size="sm" className="h-10" onClick={() => setShowHistory(true)}>
-                <Clock3 data-icon="inline-start" />
-                History
-              </Button>
-              <Button variant="outline" size="sm" className="h-10" onClick={handleCopy}>
-                {copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}
-                {copied ? "Copied" : "Copy"}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowRelease(true)}
-                className="h-10 text-destructive hover:text-destructive"
-              >
-                <LogOut data-icon="inline-start" />
-                {releaseLabel}
-              </Button>
-            </div>
+            <p className="text-xs text-muted-foreground">
+              {license.claimedAt ? `${timeLabel} ${formatRelativeTime(license.claimedAt, new Date())}` : null}
+              {license.claimedAt && license.expiresAt && !isExpired && !isExpiringSoon ? " · Two-machine activation" : null}
+            </p>
           </div>
-
-          {(isExpired || isExpiringSoon) && (
-            <div
-              className={
-                "flex items-center gap-1.5 text-xs " +
-                (isExpired
-                  ? "text-destructive"
-                  : "text-[var(--orange-text)]")
-              }
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" size="sm" className="h-10" onClick={handleCopy}>
+              {copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}
+              {copied ? "Copied" : "Copy"}
+            </Button>
+            <Button type="button" variant="outline" size="sm" className="h-10" onClick={() => setShowHistory(true)}>
+              <Clock3 data-icon="inline-start" />
+              History
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowRelease(true)}
+              className="h-10 text-destructive hover:text-destructive"
             >
-              <AlertTriangle className="size-3.5" />
-              {isExpired
-                ? "This license has expired — renew to keep using it."
-                : daysLeft === 0
-                  ? "License expires today."
-                  : `License expires in ${daysLeft} day${daysLeft === 1 ? "" : "s"}.`}
-            </div>
-          )}
+              <LogOut data-icon="inline-start" />
+              {releaseLabel}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 

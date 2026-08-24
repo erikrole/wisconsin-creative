@@ -13,9 +13,16 @@ describe("first-class Software page", () => {
     expect(page).toContain('useUrlState<SoftwareSection>');
     expect(page).toContain('value="shared-logins"');
     expect(page).toContain('value="photo-mechanic"');
-    expect(page).toContain("Photo Mechanic activation licenses, kept in separate workflows");
-    expect(page).toContain("These codes are separate from shared account logins");
-    expect(page).toContain('enabled: photoMechanicEnabled');
+    expect(page.indexOf('value="photo-mechanic"')).toBeLessThan(page.indexOf('value="shared-logins"'));
+    expect(page).toContain('value === "shared-logins" ? "shared-logins" : "photo-mechanic"');
+    expect(page).toContain('value === "photo-mechanic" ? null : value');
+    expect(page).toContain("PhotoMechanicLicenses");
+    expect(page).toContain("Two-device Photo Mechanic activation. Claim one slot and copy your code.");
+
+    const licenses = source("src/app/(app)/licenses/PhotoMechanicLicenses.tsx");
+    expect(licenses).toContain('url: "/api/licenses"');
+    expect(licenses).toContain('url: "/api/licenses/my"');
+    expect(licenses).toContain("Claim any Open or 1/2 code below.");
   });
 
   it("keeps collaborator access on shared logins and explains role-load failures", () => {

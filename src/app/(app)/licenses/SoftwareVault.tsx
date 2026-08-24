@@ -9,7 +9,6 @@ import {
   Eye,
   EyeOff,
   ExternalLink,
-  KeyRound,
   LockKeyhole,
   Pencil,
   Plus,
@@ -636,14 +635,10 @@ export function SoftwareVault({ isAdmin }: { isAdmin: boolean }) {
     <section aria-labelledby="shared-logins-title" className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="mb-1 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Department accounts</p>
-          <h2 id="shared-logins-title" className="flex flex-wrap items-center gap-2 text-xl font-semibold tracking-tight">
-            <KeyRound className="size-5 text-[var(--wi-red)]" />
-            Shared logins
-            {!loading && !error && <Badge variant="outline" size="sm">{activeRecords.length} active</Badge>}
-          </h2>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Copy the department email or password for tools the team shares. Photo Mechanic activation codes live in their own tab.
+          <h2 id="shared-logins-title" className="sr-only">Shared logins</h2>
+          <p className="max-w-2xl text-sm text-muted-foreground">
+            {!loading && !error ? `${activeRecords.length} active. ` : null}
+            Copy a department email or password. Reveals are logged.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">

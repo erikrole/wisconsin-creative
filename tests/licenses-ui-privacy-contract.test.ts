@@ -16,11 +16,11 @@ describe("licenses UI and privacy contracts", () => {
   });
 
   it("keeps renewal controls behind the staff role gate", () => {
-    const page = source("src/app/(app)/licenses/page.tsx");
+    const licenses = source("src/app/(app)/licenses/PhotoMechanicLicenses.tsx");
 
-    expect(page).toContain("onRenew={isAdmin ? () => setShowRenew(true) : undefined}");
-    expect(page).toContain("{isAdmin && allCodes.length > 0 && (");
-    expect(page).toContain("Renew licenses");
+    expect(licenses).toContain("onRenew={isAdmin ? () => setShowRenew(true) : undefined}");
+    expect(licenses).toContain("{isAdmin && allCodes.length > 0 && (");
+    expect(licenses).toContain("Renew licenses");
   });
 
   it("shows explicit claim and inspect actions with active-use color semantics", () => {
@@ -59,14 +59,14 @@ describe("licenses UI and privacy contracts", () => {
   });
 
   it("uses the local calendar date for date-only expiry values across the license page", () => {
-    const page = source("src/app/(app)/licenses/page.tsx");
+    const licenses = source("src/app/(app)/licenses/PhotoMechanicLicenses.tsx");
     const table = source("src/app/(app)/licenses/LicenseTable.tsx");
     const banner = source("src/app/(app)/licenses/MyLicensePanel.tsx");
     const renew = source("src/app/(app)/licenses/BulkRenewDialog.tsx");
     const sheet = source("src/app/(app)/licenses/AdminClaimSheet.tsx");
 
-    expect(page).toContain("licenseDaysUntilExpiry");
-    expect(page).toContain("localDateKey");
+    expect(licenses).toContain("licenseDaysUntilExpiry");
+    expect(licenses).toContain("localDateKey");
     expect(table).toContain("formatLicenseExpiryDate");
     expect(table).toContain("licenseDaysUntilExpiry");
     expect(banner).toContain("isLicenseExpired");
