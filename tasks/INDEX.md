@@ -29,7 +29,7 @@ As of this cleanup pass, root `tasks/` contains:
 
 - 195 root files.
 - 55 root `*-plan.md` files.
-- 85 root audit files.
+- 86 root audit files.
 - 19 roadmap/reference files.
 - 5 follow-up files.
 

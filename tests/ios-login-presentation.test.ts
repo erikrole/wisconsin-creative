@@ -48,7 +48,8 @@ describe("iOS Login presentation", () => {
     const passwordStep = section("private var passwordStep: some View", "private func fieldFill");
 
     expect(passwordStep).toContain('Text("Signing in as")');
-    expect(passwordStep).toContain("Text(trimmedEmail)");
+    expect(passwordStep).toContain('TextField("Account", text: .constant(trimmedEmail))');
+    expect(passwordStep).toContain(".textContentType(.username)");
     expect(passwordStep).toContain('Button("Change")');
     expect(passwordStep).toContain('Button("Forgot password?")');
     expect(passwordStep.indexOf('Button("Forgot password?")')).toBeGreaterThan(

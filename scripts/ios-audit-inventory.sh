@@ -79,6 +79,7 @@ AppTabView.swift                       | profile                     | audit
 ProfileView.swift                      | profile                     | audit
 ProfileNextUp.swift                    | profile                     | audit
 ScoreboardView.swift                   | profile                     | audit
+TeamScoreboardView.swift               | team-scoreboard              | audit
 SettingsView.swift                     | profile                     | audit
 LicensesView.swift                     | licenses                    | audit
 GuidesView.swift                       | resources                   | audit

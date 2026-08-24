@@ -349,14 +349,14 @@ describe("API hardening wave 13", () => {
     expect(db.calendarSource.findMany).toHaveBeenCalledWith(expect.objectContaining({ take: 100 }));
   });
 
-  it("runs manual shift creation inside a Serializable transaction", async () => {
+  it("rejects retired live shift creation in favor of working-copy editing", async () => {
     const res = await addShift(
       post("/api/shift-groups/group-1/shifts", { area: "VIDEO", workerType: "ST" }),
       { params: Promise.resolve({ id: "group-1" }) },
     );
 
-    expect(res.status).toBe(201);
-    expect(globalThis.__wave13TransactionOptions).toEqual({ isolationLevel: "Serializable" });
+    expect(res.status).toBe(410);
+    expect(globalThis.__wave13TransactionOptions).toBeUndefined();
   });
 
   it("bounds license claim history service queries", async () => {

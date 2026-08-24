@@ -110,7 +110,7 @@
 
 | File | Lines |
 |---|---:|
-| `src/components/TradeBoard.tsx` | 1559 |
+| `src/components/TradeBoard.tsx` | 1567 |
 | `src/components/ActivityTimeline.tsx` | 1368 |
 | `src/components/onboarding/OnboardingDialog.tsx` | 996 |
 | `src/components/EquipmentPicker.tsx` | 879 |

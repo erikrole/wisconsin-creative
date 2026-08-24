@@ -113,22 +113,24 @@ describe("BTN collaborator authorization", () => {
     expect(() => requireCollaboratorCapability(brandComm, "MY_GEAR_VIEW")).toThrow("Forbidden");
   });
 
-  it("keeps COLLABORATOR default-denied in every role permission entry except narrow self-service", () => {
+  it("keeps COLLABORATOR default-denied outside self-service and Scoreboard", () => {
     // user.edit_self gates session-owned profile completion and personal
-    // passkey enrollment/revocation. Those routes cannot target another user;
-    // collaborator profile fields remain restricted to optional SNOOZE and
-    // PHONES updates. Broader external access still goes exclusively through
+    // passkey enrollment/revocation. scoreboard.view is the narrow D-056
+    // exception for shared authenticated team metrics. Neither exception
+    // grants broader external access, which still goes through
     // capabilitiesForActor.
-    const selfServiceExceptions: Partial<Record<string, string[]>> = {
+    const explicitCollaboratorExceptions: Partial<Record<string, string[]>> = {
       user: ["edit_self"],
+      scoreboard: ["view"],
     };
     for (const [resource, actions] of Object.entries(PERMISSIONS)) {
       for (const [action, roles] of Object.entries(actions)) {
-        if (selfServiceExceptions[resource]?.includes(action)) continue;
+        if (explicitCollaboratorExceptions[resource]?.includes(action)) continue;
         expect(roles, `${resource}.${action}`).not.toContain(Role.COLLABORATOR);
       }
     }
     expect(PERMISSIONS.user?.edit_self).toContain(Role.COLLABORATOR);
+    expect(PERMISSIONS.scoreboard?.view).toContain(Role.COLLABORATOR);
   });
 
   it("allows only owned reservation mutations and owned booking reads", () => {

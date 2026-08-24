@@ -5,6 +5,13 @@ function source(path: string) {
   return readFileSync(path, "utf8");
 }
 
+function sourceForMigratedPage(page: string) {
+  const files = page === "src/app/(app)/licenses/page.tsx"
+    ? [page, "src/app/(app)/licenses/PhotoMechanicLicenses.tsx"]
+    : [page];
+  return files.map(source).join("\n");
+}
+
 describe("operational status rail source contract", () => {
   it("composes the rail from installed shadcn primitives", () => {
     const rail = source("src/components/OperationalStatusRail.tsx");
@@ -72,7 +79,7 @@ describe("operational status rail source contract", () => {
     ];
 
     for (const page of migratedPages) {
-      expect(source(page), page).toContain("<OperationalStatusRail");
+      expect(sourceForMigratedPage(page), page).toContain("<OperationalStatusRail");
     }
 
     expect(existsSync("src/app/(app)/dashboard/stat-card.tsx")).toBe(false);

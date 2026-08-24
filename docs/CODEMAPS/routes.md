@@ -105,6 +105,7 @@
 ## API Routes
 
 - `/.well-known/apple-app-site-association` -> `src/app/.well-known/apple-app-site-association/route.ts`
+- `/.well-known/change-password` -> `src/app/.well-known/change-password/route.ts`
 - `/api/accountability/exclusions/[bookingId]` -> `src/app/api/accountability/exclusions/[bookingId]/route.ts`
 - `/api/accountability/exclusions` -> `src/app/api/accountability/exclusions/route.ts`
 - `/api/accountability` -> `src/app/api/accountability/route.ts`
@@ -141,6 +142,7 @@
 - `/api/auth/passkey/registration/options` -> `src/app/api/auth/passkey/registration/options/route.ts`
 - `/api/auth/passkey/registration/verify` -> `src/app/api/auth/passkey/registration/verify/route.ts`
 - `/api/auth/register` -> `src/app/api/auth/register/route.ts`
+- `/api/auth/reset-password/account` -> `src/app/api/auth/reset-password/account/route.ts`
 - `/api/auth/reset-password` -> `src/app/api/auth/reset-password/route.ts`
 - `/api/availability/check` -> `src/app/api/availability/check/route.ts`
 - `/api/badges/award/[id]` -> `src/app/api/badges/award/[id]/route.ts`

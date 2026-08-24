@@ -29,7 +29,7 @@
 | `src/lib/services/checkout-policies.ts` | 40 |
 | `src/lib/services/claim-review-notifications.ts` | 179 |
 | `src/lib/services/collaborator-policies.ts` | 400 |
-| `src/lib/services/collaborator-schedule.ts` | 213 |
+| `src/lib/services/collaborator-schedule.ts` | 220 |
 | `src/lib/services/companion-projection-publisher.ts` | 57 |
 | `src/lib/services/companion-projection.ts` | 196 |
 | `src/lib/services/dashboard-counts.ts` | 119 |
@@ -50,14 +50,14 @@
 | `src/lib/services/notifications.ts` | 1624 |
 | `src/lib/services/onboarding-lifecycle.ts` | 766 |
 | `src/lib/services/pending-pickup-expiry.ts` | 281 |
-| `src/lib/services/reports.ts` | 1927 |
+| `src/lib/services/reports.ts` | 1932 |
 | `src/lib/services/reservation-rules.ts` | 46 |
 | `src/lib/services/reservation-schedule.ts` | 667 |
 | `src/lib/services/scans.ts` | 671 |
 | `src/lib/services/schedule-automation.ts` | 336 |
 | `src/lib/services/schedule-call-time-sync.ts` | 469 |
 | `src/lib/services/schedule-change-history.ts` | 425 |
-| `src/lib/services/schedule-exports.ts` | 502 |
+| `src/lib/services/schedule-exports.ts` | 508 |
 | `src/lib/services/schedule-health.ts` | 382 |
 | `src/lib/services/schedule-notification-copy.ts` | 102 |
 | `src/lib/services/schedule-notification-diff.ts` | 197 |
@@ -66,13 +66,13 @@
 | `src/lib/services/schedule-open-work.ts` | 469 |
 | `src/lib/services/schedule-publication.ts` | 1019 |
 | `src/lib/services/schedule-template-review.ts` | 554 |
-| `src/lib/services/schedule-working-copy.ts` | 900 |
+| `src/lib/services/schedule-working-copy.ts` | 908 |
 | `src/lib/services/scoreboard.ts` | 279 |
 | `src/lib/services/shift-assignment-conflicts.ts` | 43 |
 | `src/lib/services/shift-assignments.ts` | 731 |
 | `src/lib/services/shift-generation.ts` | 628 |
 | `src/lib/services/shift-trade-emails.ts` | 56 |
-| `src/lib/services/shift-trades.ts` | 1064 |
+| `src/lib/services/shift-trades.ts` | 1065 |
 | `src/lib/services/signatures.ts` | 1909 |
 | `src/lib/services/software.ts` | 271 |
 | `src/lib/services/sport-configs.ts` | 257 |
@@ -90,7 +90,7 @@
 | `src/lib/api-dates.ts` | 32 |
 | `src/lib/api-handler.ts` | 59 |
 | `src/lib/api.ts` | 134 |
-| `src/lib/app-time.ts` | 191 |
+| `src/lib/app-time.ts` | 218 |
 | `src/lib/asset-attachments.ts` | 166 |
 | `src/lib/asset-image.ts` | 26 |
 | `src/lib/asset-qr-code.ts` | 9 |
@@ -218,7 +218,7 @@
 | `src/lib/user-list-cache.ts` | 73 |
 | `src/lib/user-visibility.ts` | 85 |
 | `src/lib/utils.ts` | 7 |
-| `src/lib/validation.ts` | 798 |
+| `src/lib/validation.ts` | 802 |
 | `src/lib/venue-mapping-audit.ts` | 56 |
 | `src/lib/venue-mapping-contract.ts` | 46 |
 | `src/lib/venue-tone.ts` | 114 |
@@ -228,6 +228,10 @@
 ### `/.well-known/apple-app-site-association`
 
 - `/.well-known/apple-app-site-association`
+
+### `/.well-known/change-password`
+
+- `/.well-known/change-password`
 
 ### `/api/accountability`
 
@@ -282,6 +286,7 @@
 - `/api/auth/passkey/registration/options`
 - `/api/auth/passkey/registration/verify`
 - `/api/auth/register`
+- `/api/auth/reset-password/account`
 - `/api/auth/reset-password`
 
 ### `/api/availability`
