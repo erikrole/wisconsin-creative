@@ -177,7 +177,7 @@ describe("/api/assets item-family rows", () => {
       numberedBatterySku({ id: "sku-anton", name: "Anton Bauer Digital 150 Gold-Mount Battery" }),
     ]);
 
-    const pageOne = await getAssets(request("/api/assets?limit=5&offset=0"), {
+    const pageOne = await getAssets(request("/api/assets?sort=assetTag&limit=5&offset=0"), {
       params: Promise.resolve({}),
     });
     const pageOneBody = await pageOne.json();
@@ -193,7 +193,7 @@ describe("/api/assets item-family rows", () => {
     ]);
     expect(pageOneBody.bulkItems).toEqual([]);
 
-    const pageTwo = await getAssets(request("/api/assets?limit=5&offset=5"), {
+    const pageTwo = await getAssets(request("/api/assets?sort=assetTag&limit=5&offset=5"), {
       params: Promise.resolve({}),
     });
     const pageTwoBody = await pageTwo.json();
@@ -265,7 +265,7 @@ describe("/api/assets item-family rows", () => {
     }));
   });
 
-  it("paginates default asset-tag sorting by operational tag family", async () => {
+  it("paginates asset-tag sorting by operational tag family", async () => {
     mocks.assetFindMany.mockResolvedValue([
       assetRow("fx6-1", "FX6 1"),
       assetRow("fb-70-200-2", "FB 70-200 2"),
@@ -281,7 +281,7 @@ describe("/api/assets item-family rows", () => {
     ]);
     mocks.assetCount.mockResolvedValue(11);
 
-    const res = await getAssets(request("/api/assets?limit=10&offset=0"), {
+    const res = await getAssets(request("/api/assets?sort=assetTag&limit=10&offset=0"), {
       params: Promise.resolve({}),
     });
     const body = await res.json();
@@ -339,6 +339,19 @@ describe("/api/assets item-family rows", () => {
     mocks.scanEventFindMany
       .mockResolvedValueOnce([{ assetId: "tripod-1", createdAt: daysAgo(4) }])
       .mockResolvedValueOnce([{ bulkSkuId: "sku-card", createdAt: daysAgo(4) }]);
+
+    const omitted = await getAssets(request("/api/assets?limit=5"), {
+      params: Promise.resolve({}),
+    });
+    const omittedBody = await omitted.json();
+    expect(omitted.status).toBe(200);
+    expect(omittedBody.itemOrder).toEqual([
+      "bulk-sku-battery",
+      "camera-1",
+      "lens-1",
+      "bulk-sku-card",
+      "tripod-1",
+    ]);
 
     const res = await getAssets(request("/api/assets?sort=popular&limit=5"), {
       params: Promise.resolve({}),
@@ -572,5 +585,51 @@ describe("/api/assets item-family rows", () => {
       { unitNumber: 44, status: "CHECKED_OUT" },
       { unitNumber: 45, status: "AVAILABLE" },
     ]));
+  });
+
+  it("returns mixed serialized and item-family ids for select-all matching", async () => {
+    mocks.assetFindMany.mockResolvedValue([{ id: "asset-1" }]);
+    mocks.bulkSkuFindMany.mockResolvedValue([{ id: "sku-battery" }]);
+
+    const res = await getAssets(request("/api/assets?ids_only=true"), {
+      params: Promise.resolve({}),
+    });
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.ids).toEqual(["asset-1", "bulk-sku-battery"]);
+    expect(body.truncated).toBe(false);
+    expect(mocks.assetFindMany).toHaveBeenCalledWith(expect.objectContaining({
+      select: { id: true },
+    }));
+    expect(mocks.bulkSkuFindMany).toHaveBeenCalledWith(expect.objectContaining({
+      select: { id: true },
+    }));
+  });
+
+  it("returns only item-family ids when select-all matching is scoped to units", async () => {
+    mocks.bulkSkuFindMany.mockResolvedValue([{ id: "sku-battery" }]);
+
+    const res = await getAssets(request("/api/assets?ids_only=true&item_type=unit-tracked"), {
+      params: Promise.resolve({}),
+    });
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.ids).toEqual(["bulk-sku-battery"]);
+    expect(mocks.assetFindMany).not.toHaveBeenCalled();
+  });
+
+  it("omits item-family ids when select-all matching is scoped to serialized items", async () => {
+    mocks.assetFindMany.mockResolvedValue([{ id: "asset-1" }]);
+
+    const res = await getAssets(request("/api/assets?ids_only=true&item_type=serialized"), {
+      params: Promise.resolve({}),
+    });
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.ids).toEqual(["asset-1"]);
+    expect(mocks.bulkSkuFindMany).not.toHaveBeenCalled();
   });
 });

@@ -32,7 +32,11 @@ export function useBulkActions(getSelectedIds: () => string[], onComplete: () =>
     setError("");
     try {
       if (assetIds.length === 0) {
-        toast.error("No serialized items selected");
+        toast.error(
+          ids.some((id) => isBulkRowId(id))
+            ? "Bulk actions apply to standard items. Item families were skipped."
+            : "No serialized items selected",
+        );
         setBusy(false);
         return;
       }

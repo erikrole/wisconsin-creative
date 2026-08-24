@@ -32,7 +32,7 @@ import { type Asset, getColumns } from "./columns";
 import { DataTable, type Density } from "./data-table";
 import { NewItemSheet } from "./new-item-sheet";
 import { GapWizardDialog } from "./gap-wizard-dialog";
-import { useUrlFilters } from "./hooks/use-url-filters";
+import { normalizeItemsSorting, useUrlFilters } from "./hooks/use-url-filters";
 import { useItemsQuery, type BulkItem } from "./hooks/use-items-query";
 import {
   getBulkActionReferenceAvailability,
@@ -62,7 +62,7 @@ import { FadeUp } from "@/components/ui/motion";
 import { OperationalMetricCard, OperationalPartialResultsAlert } from "@/components/OperationalFeedback";
 import { OperationalStatusRail, type OperationalStatusRailItem } from "@/components/OperationalStatusRail";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
-import { buildBulkRowId, getItemHref, isBulkRowId, parseBulkRowId } from "./lib/item-href";
+import { buildBulkRowId, getItemHref, parseBulkRowId } from "./lib/item-href";
 import { compareItemAssetTags } from "@/lib/item-asset-tag-sort";
 
 export default function ItemsPage() {
@@ -145,7 +145,7 @@ export default function ItemsPage() {
     filters.sortKey,
   ]);
 
-  const selectedIds = Object.keys(rowSelection).filter((k) => rowSelection[k] && !isBulkRowId(k));
+  const selectedIds = Object.keys(rowSelection).filter((k) => rowSelection[k]);
   const selectedCount = selectedIds.length;
 
   useKeyboardShortcuts({
@@ -181,6 +181,7 @@ export default function ItemsPage() {
       filters.departmentKey.split(",").filter(Boolean).forEach((v) => params.append("department_id", v));
       if (filters.showAccessories) params.set("show_accessories", "true");
       if (filters.favoritesOnly) params.set("favorites_only", "true");
+      if (filters.itemType !== "all") params.set("item_type", filters.itemType);
       const res = await fetch(`/api/assets?${params}`);
       if (handleAuthRedirect(res)) return;
       if (!res.ok) {
@@ -241,9 +242,9 @@ export default function ItemsPage() {
 
     const serializedItems = filters.itemType === "all" || filters.itemType === "serialized" ? query.items : [];
 
-    // When sorted by name (default), interleave everything together alphabetically.
-    // For other sort fields, bulks append at bottom since server sort doesn't apply to them.
-    const sortingById = filters.sorting[0]?.id ?? "assetTag";
+    // Most popular uses the server-provided mixed row order. Asset-tag sort
+    // interleaves serialized and family rows by tag. Empty sort snaps to Most popular.
+    const sortingById = normalizeItemsSorting(filters.sorting)[0]!.id;
     if (sortingById === "popular" && query.itemOrder.length > 0) {
       const rowById = new Map([...serializedItems, ...bulkAssets].map((item) => [item.id, item]));
       return query.itemOrder.flatMap((id) => {
@@ -252,7 +253,7 @@ export default function ItemsPage() {
       });
     }
 
-    if (sortingById === "assetTag" || filters.sorting.length === 0) {
+    if (sortingById === "assetTag") {
       return [...serializedItems, ...bulkAssets].sort((a, b) => compareItemAssetTags(a.assetTag, b.assetTag));
     }
 
@@ -792,7 +793,7 @@ export default function ItemsPage() {
               itemType={filters.itemType}
               onItemTypeChange={(v) => { filters.setItemType(v); query.setPage(0); }}
               sorting={filters.sorting}
-              onSortingChange={(v) => { filters.setSorting(v); query.setPage(0); }}
+              onSortingChange={(v) => { filters.setSorting(normalizeItemsSorting(v)); query.setPage(0); }}
               hasActiveFilters={filters.hasActiveFilters}
               onClearAllFilters={() => { filters.clearAllFilters(); query.setPage(0); }}
               locations={options.locations}
@@ -891,7 +892,7 @@ export default function ItemsPage() {
             columnVisibility={columnVisibility}
             onColumnVisibilityChange={setColumnVisibility}
             sorting={filters.sorting}
-            onSortingChange={(next) => { filters.setSorting(next); query.setPage(0); }}
+            onSortingChange={(next) => { filters.setSorting(normalizeItemsSorting(next)); query.setPage(0); }}
             refreshing={query.refreshing}
             density={density}
             canEdit={options.canEdit}

@@ -397,12 +397,13 @@ export const GET = withAuth(async (req, { user }) => {
   const missingField = searchParams.get("missing"); // "category" | "department"
   const { limit, offset } = parsePagination(searchParams);
 
-  // Server-side sorting: ?sort=brand&order=desc or ?sort=-brand
+  // Server-side sorting: ?sort=brand&order=desc or ?sort=-brand.
+  // Omitted sort matches the Items list: Most popular, with asset-tag tie-breaks.
   const sortParam = searchParams.get("sort") ?? "";
   const orderParam = searchParams.get("order") ?? "";
   const sortKey = orderParam === "desc" && sortParam && !sortParam.startsWith("-")
     ? `-${sortParam}`
-    : sortParam || "assetTag";
+    : sortParam || "popular";
   const orderBy = SORT_MAP[sortKey] ?? SORT_MAP["assetTag"];
   const shouldUsePopularitySort = sortKey === "popular" || sortKey === "-popular";
 
@@ -486,23 +487,6 @@ export const GET = withAuth(async (req, { user }) => {
         { status: { not: AssetStatus.RETIRED } },
       ],
     };
-  }
-
-  // ids-only mode: return matching asset IDs (capped) for "select all matching" flows.
-  // Skips bulk items, favorites, breakdown — just the ids.
-  if (searchParams.get("ids_only") === "true") {
-    const cap = 5000;
-    const rows = await db.asset.findMany({
-      where,
-      orderBy,
-      take: cap + 1,
-      select: { id: true },
-    });
-    const truncated = rows.length > cap;
-    return ok({
-      ids: rows.slice(0, cap).map((r) => r.id),
-      truncated,
-    });
   }
 
   if (missingField === "category" || missingField === "department") {
@@ -739,6 +723,37 @@ export const GET = withAuth(async (req, { user }) => {
         } : {}),
       }
     : null;
+
+  if (searchParams.get("ids_only") === "true") {
+    const cap = 5000;
+    const ids: string[] = [];
+
+    if (includeSerializedRows) {
+      const rows = await db.asset.findMany({
+        where,
+        orderBy,
+        take: cap + 1,
+        select: { id: true },
+      });
+      ids.push(...rows.map((row) => row.id));
+    }
+
+    if (bulkWhere && ids.length <= cap) {
+      const bulkRows = await db.bulkSku.findMany({
+        where: bulkWhere,
+        take: cap + 1 - ids.length,
+        select: { id: true },
+        orderBy: { name: "asc" },
+      });
+      ids.push(...bulkRows.map((row) => `bulk-${row.id}`));
+    }
+
+    const truncated = ids.length > cap;
+    return ok({
+      ids: ids.slice(0, cap),
+      truncated,
+    });
+  }
 
   let rawData: AssetListRow[] = [];
   let bulkItems: BulkListItem[] = [];

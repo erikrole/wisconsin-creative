@@ -209,7 +209,7 @@ export function DataTable({
       columnVisibility,
     },
     getRowId: (row) => row.id,
-    enableRowSelection: (row) => !isBulkRowId(row.original.id),
+    enableRowSelection: true,
   });
 
   return (

@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/select";
 import { OperationalActiveFilterChips, type OperationalActiveFilter, OperationalToolbar } from "@/components/OperationalToolbar";
 import { FacetedFilter } from "../faceted-filter";
-import type { ItemTypeFilter } from "../hooks/use-url-filters";
+import { DEFAULT_ITEMS_SORT_ID, type ItemTypeFilter } from "../hooks/use-url-filters";
 
 const STATUS_OPTIONS = [
   { value: "AVAILABLE", label: "Available" },
@@ -36,8 +36,8 @@ const ITEM_TYPE_LABELS: Record<ItemTypeFilter, string> = {
 };
 
 const SORT_OPTIONS = [
-  { value: "assetTag", label: "Asset tag" },
   { value: "popular", label: "Most popular" },
+  { value: "assetTag", label: "Asset tag" },
   { value: "category", label: "Category" },
   { value: "department", label: "Department" },
   { value: "location", label: "Location" },
@@ -105,7 +105,7 @@ export function ItemsToolbar({
 }) {
   const [filtersOpen, setFiltersOpen] = useState(hasActiveFilters);
   const previousActiveFilterCountRef = useRef(0);
-  const currentSort = sorting[0]?.id ?? "assetTag";
+  const currentSort = sorting[0]?.id ?? DEFAULT_ITEMS_SORT_ID;
   const activeFilterCount =
     statusFilter.size +
     locationFilter.size +
@@ -223,9 +223,9 @@ export function ItemsToolbar({
           </div>
           <div className="hidden h-6 w-px bg-border/70 lg:block" aria-hidden="true" />
           <Select
-            value={SORT_OPTIONS.some((option) => option.value === currentSort) ? currentSort : "assetTag"}
+            value={SORT_OPTIONS.some((option) => option.value === currentSort) ? currentSort : DEFAULT_ITEMS_SORT_ID}
             onValueChange={(value) => {
-              onSortingChange(value === "assetTag" ? [] : [{ id: value, desc: false }]);
+              onSortingChange([{ id: value, desc: false }]);
             }}
           >
             <SelectTrigger className="h-10 w-[152px] bg-background" aria-label="Sort items">

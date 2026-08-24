@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import type { SortingState } from "@tanstack/react-table";
 import type { Asset } from "../columns";
 import { handleAuthRedirect, parseJsonSafely } from "@/lib/errors";
-import type { ItemTypeFilter } from "./use-url-filters";
+import { normalizeItemsSorting, type ItemTypeFilter } from "./use-url-filters";
 
 type QueryDeps = {
   search: string;
@@ -92,10 +92,9 @@ function buildUrl(page: number, limit: number, deps: QueryDeps): string {
   deps.departmentKey.split(",").filter(Boolean).forEach((v) => params.append("department_id", v));
   if (deps.showAccessories) params.set("show_accessories", "true");
   if (deps.favoritesOnly) params.set("favorites_only", "true");
-  if (deps.sorting.length > 0) {
-    params.set("sort", deps.sorting[0]!.id);
-    if (deps.sorting[0]!.desc) params.set("order", "desc");
-  }
+  const sorting = normalizeItemsSorting(deps.sorting);
+  params.set("sort", sorting[0]!.id);
+  if (sorting[0]!.desc) params.set("order", "desc");
   return `/api/assets?${params}`;
 }
 

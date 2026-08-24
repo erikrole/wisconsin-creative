@@ -39,11 +39,26 @@ function readItemType(params: URLSearchParams): ItemTypeFilter {
   return "all";
 }
 
+export const DEFAULT_ITEMS_SORT_ID = "popular";
+
+function defaultItemsSorting(): SortingState {
+  return [{ id: DEFAULT_ITEMS_SORT_ID, desc: false }];
+}
+
+export function normalizeItemsSorting(sorting: SortingState): SortingState {
+  return sorting.length === 0 ? defaultItemsSorting() : sorting;
+}
+
+function isDefaultItemsSorting(sorting: SortingState): boolean {
+  const current = sorting[0];
+  return sorting.length === 1 && current?.id === DEFAULT_ITEMS_SORT_ID && current.desc === false;
+}
+
 function readSorting(params: URLSearchParams): SortingState {
   const sort = params.get("sort");
   const order = params.get("order");
   if (sort) return [{ id: sort, desc: order === "desc" }];
-  return [];
+  return defaultItemsSorting();
 }
 
 function setsEqual(a: Set<string>, b: Set<string>) {
@@ -148,7 +163,7 @@ export function useUrlFilters() {
     if (itemType !== "all") params.set("type", itemType);
     if (showAccessories) params.set("accessories", "1");
     if (favoritesOnly) params.set("favorites", "1");
-    if (sorting.length > 0) {
+    if (sorting.length > 0 && !isDefaultItemsSorting(sorting)) {
       params.set("sort", sorting[0]!.id);
       if (sorting[0]!.desc) params.set("order", "desc");
     }

@@ -53,6 +53,44 @@ describe("Items design-language contracts", () => {
     expect(table).not.toContain('onClick={canSort ? header.column.getToggleSortingHandler() : undefined}');
   });
 
+  it("defaults the items list to most popular sort", () => {
+    const filters = source("src/app/(app)/items/hooks/use-url-filters.ts");
+    const toolbar = source("src/app/(app)/items/components/items-toolbar.tsx");
+    const query = source("src/app/(app)/items/hooks/use-items-query.ts");
+
+    expect(filters).toContain('export const DEFAULT_ITEMS_SORT_ID = "popular"');
+    expect(filters).toContain("return defaultItemsSorting()");
+    expect(filters).toContain("if (sorting.length > 0 && !isDefaultItemsSorting(sorting))");
+    expect(toolbar.indexOf('{ value: "popular", label: "Most popular" }')).toBeLessThan(
+      toolbar.indexOf('{ value: "assetTag", label: "Asset tag" }'),
+    );
+    expect(toolbar).toContain("sorting[0]?.id ?? DEFAULT_ITEMS_SORT_ID");
+    expect(toolbar).toContain("onSortingChange([{ id: value, desc: false }])");
+    expect(toolbar).not.toContain('onSortingChange(value === "assetTag" ? []');
+    expect(query).toContain("normalizeItemsSorting(deps.sorting)");
+    expect(query).toContain('params.set("sort", sorting[0]!.id)');
+
+    const route = source("src/app/api/assets/route.ts");
+    const itemsView = source("ios/Wisconsin/Views/ItemsView.swift");
+    expect(route).toContain('sortParam || "popular"');
+    expect(itemsView).toContain("var sortOption: SortOption = .popular");
+    expect(itemsView).toContain("private var isDefault: Bool { selected == .popular }");
+  });
+
+  it("snaps empty sort to most popular and sends item kind on select-all matching", () => {
+    const filters = source("src/app/(app)/items/hooks/use-url-filters.ts");
+    const page = source("src/app/(app)/items/page.tsx");
+    const table = source("src/app/(app)/items/data-table.tsx");
+
+    expect(filters).toContain("export function normalizeItemsSorting");
+    expect(filters).toContain("return sorting.length === 0 ? defaultItemsSorting() : sorting");
+    expect(page).toContain("normalizeItemsSorting(next)");
+    expect(page).toContain('params.set("item_type", filters.itemType)');
+    expect(page).toContain("Object.keys(rowSelection).filter((k) => rowSelection[k])");
+    expect(table).toContain("enableRowSelection: true");
+    expect(table).not.toContain("enableRowSelection: (row) => !isBulkRowId(row.original.id)");
+  });
+
   it("gives mobile rows and favorite state precise tactile and contextual feedback", () => {
     const table = source("src/app/(app)/items/data-table.tsx");
     const columns = source("src/app/(app)/items/columns.tsx");
