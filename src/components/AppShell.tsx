@@ -766,7 +766,10 @@ export default function AppShell({
       )}
 
       <div className="flex flex-1 flex-col min-w-0 max-md:pl-[env(safe-area-inset-left,0px)] max-md:pr-[env(safe-area-inset-right,0px)] print:ml-0">
-        <header className="h-12 bg-card border-b border-black/[0.06] flex items-center px-6 gap-3 sticky top-0 z-10 max-md:px-3 max-md:gap-2 print:hidden">
+        <header
+          data-app-shell-header
+          className="h-12 bg-card border-b border-black/[0.06] flex items-center px-6 gap-3 sticky top-0 z-40 max-md:px-3 max-md:gap-2 print:hidden"
+        >
           <SidebarTrigger className="shrink-0 text-foreground hover:bg-card hover:text-foreground" />
           {/* Search trigger (desktop + mobile) */}
           {!isCollaborator && <button
@@ -810,7 +813,15 @@ export default function AppShell({
         </header>
         <BreadcrumbProvider>
           <main id="main-content" className="py-7 px-8 flex-1 max-md:p-4 max-md:pb-[calc(96px+env(safe-area-inset-bottom,0px))] print:pb-0">
-            <PageBreadcrumb />
+            <div
+              data-app-shell-breadcrumb-frame={pathname === "/schedule" ? "" : undefined}
+              className={cn(
+                pathname === "/schedule"
+                  && "sticky top-12 z-[35] -mx-8 bg-background/95 px-8 backdrop-blur supports-[backdrop-filter]:bg-background/90 max-md:-mx-4 max-md:px-4",
+              )}
+            >
+              <PageBreadcrumb />
+            </div>
             {children}
           </main>
         </BreadcrumbProvider>

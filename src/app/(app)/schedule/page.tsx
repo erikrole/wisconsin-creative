@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
 import { MoreHorizontalIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -187,19 +188,16 @@ function InternalSchedulePage() {
       endDate = new Date(data.weekStart);
       endDate.setDate(data.weekStart.getDate() + 6);
       endDate.setHours(23, 59, 59, 999);
-    } else if (data.filters.includePast) {
+    } else {
+      // The list is a timeline that runs from the archive floor forwards, so an
+      // export of it covers the same span rather than the next seven days.
       startDate = new Date(now);
       startDate.setFullYear(now.getFullYear() - 1);
       startDate.setHours(0, 0, 0, 0);
       endDate = new Date(now);
+      endDate.setFullYear(now.getFullYear() + 1);
       endDate.setHours(23, 59, 59, 999);
       params.set("includePast", "true");
-    } else {
-      startDate = new Date(now);
-      startDate.setHours(0, 0, 0, 0);
-      endDate = new Date(startDate);
-      endDate.setDate(startDate.getDate() + 7);
-      endDate.setHours(23, 59, 59, 999);
     }
 
     params.set("startDate", startDate.toISOString());
@@ -210,70 +208,148 @@ function InternalSchedulePage() {
       params.set("includePast", "true");
     }
     return `/api/schedule/export?${params.toString()}`;
-  }, [data.calMonth, data.filters.includeArchived, data.filters.includePast, data.filters.sportFilter, data.filters.viewMode, data.weekStart]);
+  }, [data.calMonth, data.filters.includeArchived, data.filters.sportFilter, data.filters.viewMode, data.weekStart]);
 
   useEffect(() => {
     if (queue === "trade-approval") setTradeSheetOpen(true);
   }, [queue, setTradeSheetOpen]);
 
+  /**
+   * Publish the sticky frame's height so the list can position against it.
+   *
+   * Measured rather than hard-coded because the bar wraps to two rows on narrow
+   * screens and grows when filter chips appear; a fixed number would leave day
+   * headers overlapping it or floating below it.
+   */
+  const stickyRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const [pinned, setPinned] = useState(false);
+
+  const appShellStickyTop = useCallback(() => {
+    const header = document.querySelector<HTMLElement>("[data-app-shell-header]");
+    const breadcrumb = document.querySelector<HTMLElement>("[data-app-shell-breadcrumb-frame]");
+    return Math.round(header?.getBoundingClientRect().height ?? 0)
+      + Math.round(breadcrumb?.getBoundingClientRect().height ?? 0);
+  }, []);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setPinned(!entry?.isIntersecting),
+      { threshold: 0, rootMargin: `-${appShellStickyTop()}px 0px 0px 0px` },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [appShellStickyTop]);
+
+  useLayoutEffect(() => {
+    const el = stickyRef.current;
+    if (!el) return;
+    const appShellHeader = document.querySelector<HTMLElement>("[data-app-shell-header]");
+    const appShellBreadcrumb = document.querySelector<HTMLElement>("[data-app-shell-breadcrumb-frame]");
+    const publish = () => {
+      const top = Math.round(appShellHeader?.getBoundingClientRect().height ?? 0)
+        + Math.round(appShellBreadcrumb?.getBoundingClientRect().height ?? 0);
+      const bottom = top + Math.round(el.getBoundingClientRect().height);
+      document.documentElement.style.setProperty("--schedule-sticky-top", `${top}px`);
+      document.documentElement.style.setProperty("--schedule-sticky-bottom", `${bottom}px`);
+    };
+    publish();
+    const observer = new ResizeObserver(publish);
+    observer.observe(el);
+    if (appShellHeader) observer.observe(appShellHeader);
+    if (appShellBreadcrumb) observer.observe(appShellBreadcrumb);
+    return () => {
+      observer.disconnect();
+      document.documentElement.style.removeProperty("--schedule-sticky-top");
+      document.documentElement.style.removeProperty("--schedule-sticky-bottom");
+    };
+  }, [pinned]);
+
   return (
     <FadeUp>
-      <PageHeader title="Schedule">
-        {isStaff ? (
-          <>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-10" aria-label="More schedule actions">
-                  <MoreHorizontalIcon data-icon="inline-start" />
-                  More
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem onSelect={() => setNewEventOpen(true)}>
-                  New event
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => data.setTradeSheetOpen(true)}>
-                  Trade Board
-                  {data.openTradeCount > 0 && (
-                    <Badge variant="orange" size="sm" className="ml-auto">
-                      {data.openTradeCount}
-                    </Badge>
-                  )}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel>Export CSV</DropdownMenuLabel>
-                <DropdownMenuGroup>
-                  {SCHEDULE_EXPORTS.map((item) => (
-                    <DropdownMenuItem key={item.type} asChild>
-                      <a href={buildExportHref(item.type)}>{item.label}</a>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </>
-        ) : (
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-10"
-            onClick={() => data.setTradeSheetOpen(true)}
-          >
-            Trade Board
-            {data.openTradeCount > 0 && (
-              <Badge variant="orange" size="sm" className="ml-1.5">
-                {data.openTradeCount}
-              </Badge>
-            )}
-          </Button>
+      {/*
+        The title and filters stay put while the timeline runs beneath them, so
+        scrolling back through the season always has a frame of reference. Its
+        measured bottom edge feeds `--schedule-sticky-bottom`, which the day
+        headers stick below and the today anchor scrolls to -- otherwise both
+        would land underneath this bar or the app-shell header above it.
+      */}
+      {/*
+        Sentinel: once this scrolls out of view the bar is pinned, which CSS
+        alone cannot detect. Pinned it needs its own top padding -- flush
+        against the viewport edge the title reads as clipped -- and a shadow to
+        lift it off the timeline running underneath.
+      */}
+      <div ref={sentinelRef} aria-hidden className="h-px" />
+      <div
+        ref={stickyRef}
+        className={cn(
+          "sticky z-30 -mx-8 border-b bg-background px-8 max-md:-mx-4 max-md:px-4",
+          pinned
+            ? "border-border/60 pt-4 shadow-[0_6px_16px_-12px_rgba(0,0,0,0.6)] max-md:pt-3"
+            : "border-transparent pt-1",
         )}
-      </PageHeader>
+        style={{ top: "var(--schedule-sticky-top, 0px)" }}
+      >
+        <PageHeader title="Schedule">
+          {isStaff ? (
+            <>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-10" aria-label="More schedule actions">
+                    <MoreHorizontalIcon data-icon="inline-start" />
+                    More
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem onSelect={() => setNewEventOpen(true)}>
+                    New event
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => data.setTradeSheetOpen(true)}>
+                    Trade Board
+                    {data.openTradeCount > 0 && (
+                      <Badge variant="orange" size="sm" className="ml-auto">
+                        {data.openTradeCount}
+                      </Badge>
+                    )}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel>Export CSV</DropdownMenuLabel>
+                  <DropdownMenuGroup>
+                    {SCHEDULE_EXPORTS.map((item) => (
+                      <DropdownMenuItem key={item.type} asChild>
+                        <a href={buildExportHref(item.type)}>{item.label}</a>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-10"
+              onClick={() => data.setTradeSheetOpen(true)}
+            >
+              Trade Board
+              {data.openTradeCount > 0 && (
+                <Badge variant="orange" size="sm" className="ml-1.5">
+                  {data.openTradeCount}
+                </Badge>
+              )}
+            </Button>
+          )}
+        </PageHeader>
 
-      {/* View toggle + filters */}
-      <ScheduleFilters
-        filters={data.filters}
-        entries={data.entries}
-      />
+        {/* View toggle + filters */}
+        <ScheduleFilters
+          filters={data.filters}
+          entries={data.entries}
+        />
+      </div>
 
       <ScheduleReadiness
         entries={data.entries}
@@ -327,7 +403,11 @@ function InternalSchedulePage() {
           myShiftsOnly={data.filters.myShiftsOnly}
           setMyShiftsOnly={data.filters.setMyShiftsOnly}
           clearFilters={data.filters.clearAll}
-          includePast={data.filters.includePast}
+          timelineTruncated={data.timelineTruncated}
+          isTimeline={data.isTimeline}
+          hasContentFilters={data.hasContentFilters}
+          includeArchived={data.filters.includeArchived}
+          setIncludeArchived={data.filters.setIncludeArchived}
           hasFilters={data.filters.hasFilters}
           activeQueueMeta={data.filters.queueMeta}
           clearQueue={() => data.filters.setQueue(null)}

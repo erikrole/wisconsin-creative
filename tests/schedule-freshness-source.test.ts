@@ -10,8 +10,11 @@ describe("Schedule freshness source contract", () => {
     const hook = read("src/hooks/use-schedule-data.ts");
 
     expect(hook).toContain('const SCHEDULE_READ_FETCH_INIT: RequestInit = { cache: "no-store" };');
-    expect(hook).toContain("fetch(eventsUrl, { ...SCHEDULE_READ_FETCH_INIT, signal })");
-    expect(hook).toContain("fetch(groupsUrl, { ...SCHEDULE_READ_FETCH_INIT, signal })");
+    // Event and shift-group reads page through one loader, so the no-store
+    // init is asserted there rather than at two hand-written call sites.
+    expect(hook).toContain("fetch(pagedUrl(url, offset), { ...SCHEDULE_READ_FETCH_INIT, signal })");
+    expect(hook).toContain("fetchAllPages<CalendarEvent>(eventsUrl, signal)");
+    expect(hook).toContain("fetchAllPages<ShiftGroup>(groupsUrl, signal)");
     expect(hook).toContain('fetch("/api/shift-trades?status=OPEN&limit=1", SCHEDULE_READ_FETCH_INIT)');
     expect(hook).toContain('fetch("/api/calendar-sources", { ...SCHEDULE_READ_FETCH_INIT, signal })');
     expect(hook).toContain("fetch(url, { ...SCHEDULE_READ_FETCH_INIT, signal })");

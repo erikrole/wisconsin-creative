@@ -66,7 +66,6 @@ export function ScheduleFilters({ filters, entries }: ScheduleFiltersProps) {
   const menuFilterCount = [
     filters.areaFilter,
     filters.coverageFilter,
-    isListView && filters.includePast ? "past" : "",
     isListView && filters.includeArchived ? "archived" : "",
   ].filter(Boolean).length;
   const activeFilters: OperationalActiveFilter[] = [
@@ -103,13 +102,6 @@ export function ScheduleFilters({ filters, entries }: ScheduleFiltersProps) {
           key: "coverage",
           label: filters.coverageFilter === "unfilled" ? "Coverage: Needs crew" : "Coverage: Fully covered",
           onRemove: () => filters.setCoverageFilter(""),
-        }]
-      : []),
-    ...(isListView && filters.includePast
-      ? [{
-          key: "past",
-          label: "Showing past events",
-          onRemove: () => filters.setIncludePast(false),
         }]
       : []),
     ...(isListView && filters.includeArchived
@@ -263,16 +255,6 @@ export function ScheduleFilters({ filters, entries }: ScheduleFiltersProps) {
             <div className="flex flex-col gap-3">
               {isListView && (
                 <div className="flex flex-col gap-2 border-b border-border/50 pb-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <Label htmlFor="past-events-toggle" className="text-[13px] font-medium cursor-pointer">
-                      Past events
-                    </Label>
-                    <Switch
-                      id="past-events-toggle"
-                      checked={filters.includePast}
-                      onCheckedChange={filters.setIncludePast}
-                    />
-                  </div>
                   <div className="flex items-center justify-between gap-2">
                     <Label htmlFor="archived-events-toggle" className="text-[13px] font-medium cursor-pointer">
                       Archived events
