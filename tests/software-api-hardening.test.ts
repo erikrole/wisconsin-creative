@@ -407,7 +407,7 @@ describe("software credential read boundaries", () => {
 });
 
 describe("student Photo Mechanic response minimization", () => {
-  it("returns an explicit self-service DTO without management or irrelevant claim fields", async () => {
+  it("returns safe holder identity without management or irrelevant claim fields", async () => {
     vi.mocked(requireAuth).mockResolvedValue(studentUser);
     const accountEmail = "photo-mechanic-admin@example.com";
     licenseFindManyMock.mockResolvedValue([{
@@ -468,7 +468,7 @@ describe("student Photo Mechanic response minimization", () => {
     expect(license.code).toBe("PM-SECRET-CODE");
     expect(JSON.stringify(license)).not.toContain(accountEmail);
     expect(JSON.stringify(license)).not.toContain("Private occupant label");
-    expect(JSON.stringify(license)).not.toContain("Other Student");
+    expect(JSON.stringify(license)).toContain("Other Student");
     expect(Object.keys(license.claims[0]).sort()).toEqual([
       "claimedAt",
       "id",
@@ -479,7 +479,7 @@ describe("student Photo Mechanic response minimization", () => {
     expect(license.claims[0]).toEqual(expect.objectContaining({
       id: "claim-other",
       userId: null,
-      user: null,
+      user: { name: "Other Student", avatarUrl: "https://example.com/private.jpg" },
       occupantLabel: null,
     }));
     expect(license.claims[1]).toEqual(expect.objectContaining({

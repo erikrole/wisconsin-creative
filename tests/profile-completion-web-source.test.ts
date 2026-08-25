@@ -6,17 +6,32 @@ describe("profile completion web wiring", () => {
   const notice = readFileSync("src/components/profile-completion/ProfileCompletionNotice.tsx", "utf8");
   const shell = readFileSync("src/components/AppShell.tsx", "utf8");
   const profilePage = readFileSync("src/app/(app)/users/[id]/page.tsx", "utf8");
+  const banner = readFileSync("src/app/(app)/dashboard/profile-completion-banner.tsx", "utf8");
 
   it("mounts one responsive returning-user wizard in authenticated web chrome", () => {
-    expect(shell).toContain('pathname !== "/welcome" && <ProfileCompletionWizard />');
+    expect(shell).toContain('pathname !== "/welcome" && <ProfileCompletionWizard autoOpen={pathname !== "/"} />');
     expect(wizard).not.toContain('matchMedia("(min-width: 768px)")');
     expect(wizard).toContain('if (!data) return null;');
     expect(wizard).toContain("max-h-[calc(100dvh-1rem)]");
     expect(wizard).toContain("data?.completion.shouldPrompt");
+    expect(wizard).toContain("autoOpen = true");
     expect(wizard).toContain("Remind me tomorrow");
     expect(wizard).toContain('step: "SNOOZE"');
     expect(wizard).not.toContain("Drawer");
     expect(wizard).not.toContain("Sheet");
+  });
+
+  it("uses a quiet Home banner as the returning-user entry point", () => {
+    const dashboardPage = readFileSync("src/app/(app)/page.tsx", "utf8");
+
+    expect(dashboardPage).toContain("<ProfileCompletionBanner />");
+    expect(banner).toContain("useProfileCompletion");
+    expect(banner).toContain("openProfileCompletion");
+    expect(banner).toContain("data.completion.shouldPrompt");
+    expect(banner).toContain('aria-labelledby="profile-completion-banner-title"');
+    expect(banner).toContain("Finish setup");
+    expect(banner).toContain("min-h-10");
+    expect(banner).toContain("Missing:");
   });
 
   it("keeps the requested role-aware field semantics", () => {

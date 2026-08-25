@@ -6,13 +6,23 @@ function source(path: string) {
 }
 
 describe("licenses UI and privacy contracts", () => {
-  it("redacts other holders' profile fields from student license responses", () => {
+  it("shows safe holder identity while keeping other account ids and labels private", () => {
     const route = source("src/app/api/licenses/route.ts");
 
     expect(route).toContain("claim.userId === user.id");
     expect(route).toContain("userId: isOwnClaim ? claim.userId : null");
-    expect(route).toContain("user: isOwnClaim ? claim.user : null");
+    expect(route).toContain("name: claim.user.name");
+    expect(route).toContain("avatarUrl: claim.user.avatarUrl");
     expect(route).toContain("occupantLabel: null");
+  });
+
+  it("keeps the management action column staff/admin-only while student rows remain claimable", () => {
+    const table = source("src/app/(app)/licenses/LicenseTable.tsx");
+
+    expect(table).toContain("{isAdmin && <TableHead className=\"w-28 text-right\">Action</TableHead>}");
+    expect(table).toContain("{isAdmin && (\n                    <TableCell className=\"text-right\">");
+    expect(table).toContain("const showName = isAdmin || isOwn || claim.user !== null;");
+    expect(table).toContain("if (!isClickable) return;");
   });
 
   it("keeps renewal controls behind the staff role gate", () => {

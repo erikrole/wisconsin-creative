@@ -131,6 +131,9 @@ export const GET = withAuth(async (req, { user }) => {
   const scope = new URL(req.url).searchParams.get("scope");
   const isIosHomeScope = scope === "ios-home";
   const isCollaborator = user.role === "COLLABORATOR";
+  // The regular web dashboard is team-visible for internal roles. The
+  // explicit iOS Home scope remains personal, and collaborators stay within
+  // their capability-driven surface.
   const isPersonalOnly = isIosHomeScope || isCollaborator;
   // A collaborator whose affiliation was never granted MY_GEAR_VIEW (a
   // Schedule-only partner) has no gear surface at all. Home must not hand back

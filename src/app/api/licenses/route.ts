@@ -19,8 +19,9 @@ export const GET = withAuth(async (_req, { user }) => {
 
   // Strip the code string from rows the requester does not hold.
   // Admins/staff see the management model. Students receive an explicit
-  // self-service DTO: only the license id needed to claim, pool metadata, and
-  // redacted active-slot data. Defense in depth — clients also mask visually.
+  // self-service DTO: pool metadata, safe active-holder identity, and no
+  // account email, occupant label, or management fields. Defense in depth —
+  // clients also mask the key visually.
   if (!isAdmin) {
     const sanitized = codes.map((code) => {
       const isHolder = code.claims.some((claim) => claim.userId === user.id);
@@ -35,7 +36,15 @@ export const GET = withAuth(async (_req, { user }) => {
           return {
             id: claim.id,
             userId: isOwnClaim ? claim.userId : null,
-            user: isOwnClaim ? claim.user : null,
+            // A student can see who is using a slot, but does not need the
+            // other account's stable id to understand the pool.
+            user: claim.user
+              ? {
+                  ...(isOwnClaim ? { id: claim.user.id } : {}),
+                  name: claim.user.name,
+                  avatarUrl: claim.user.avatarUrl,
+                }
+              : null,
             occupantLabel: null,
             claimedAt: claim.claimedAt,
           };

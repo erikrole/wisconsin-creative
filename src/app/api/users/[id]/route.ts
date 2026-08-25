@@ -198,10 +198,6 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
   if (!canReadUserProfile(user, target)) throw new HttpError(404, "User not found");
 
   const targetIsCollaborator = target.role === "COLLABORATOR";
-  if (user.role === "STUDENT" && user.id !== id && !targetIsCollaborator) {
-    throw new HttpError(403, "Forbidden");
-  }
-
   const isSelfOrAdmin = user.id === id || user.role === "ADMIN";
   if (targetIsCollaborator && !isSelfOrAdmin) {
     return ok({

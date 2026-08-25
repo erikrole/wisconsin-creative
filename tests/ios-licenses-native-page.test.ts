@@ -36,8 +36,9 @@ describe("iOS native Licenses page", () => {
     expect(route).toContain("const isHolder = code.claims.some((claim) => claim.userId === user.id)");
     expect(route).toContain('code: isHolder ? code.code : ""');
     expect(route).toContain("claim.userId === user.id");
-    // Another student's claim never carries a user object to the client.
-    expect(route).toContain("user: isOwnClaim ? claim.user : null");
+    // Students can see the safe holder name/avatar, but not the other account id.
+    expect(route).toContain("name: claim.user.name");
+    expect(route).toContain("avatarUrl: claim.user.avatarUrl");
   });
 
   it("wires Licenses to native Settings and regular-width sidebar destinations", () => {

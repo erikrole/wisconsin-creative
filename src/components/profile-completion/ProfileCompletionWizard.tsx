@@ -113,7 +113,17 @@ function isKnownOption(value: string | null, options: string[]) {
   return Boolean(value && options.includes(value));
 }
 
-export function ProfileCompletionWizard({ onComplete, onSnooze }: { onComplete?: () => void; onSnooze?: () => void } = {}) {
+type ProfileCompletionWizardProps = {
+  onComplete?: () => void;
+  onSnooze?: () => void;
+  autoOpen?: boolean;
+};
+
+export function ProfileCompletionWizard({
+  onComplete,
+  onSnooze,
+  autoOpen = true,
+}: ProfileCompletionWizardProps = {}) {
   const queryClient = useQueryClient();
   const { data } = useProfileCompletion();
   const reduceMotion = Boolean(useReducedMotion());
@@ -181,11 +191,11 @@ export function ProfileCompletionWizard({ onComplete, onSnooze }: { onComplete?:
   }, [data]);
 
   useEffect(() => {
-    if (!data?.completion.shouldPrompt || autoOpenedRef.current) return;
+    if (!autoOpen || !data?.completion.shouldPrompt || autoOpenedRef.current) return;
     autoOpenedRef.current = true;
     setStep(data.completion.firstIncompleteStep ?? (data.profile.role === "STUDENT" || data.profile.role === "COLLABORATOR" ? "PHONES" : "EMAIL"));
     setOpen(true);
-  }, [data]);
+  }, [autoOpen, data]);
 
   useEffect(() => {
     const openWizard = () => {

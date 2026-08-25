@@ -65,9 +65,24 @@ describe("student field mobile contracts", () => {
     // The tab badge reads the lightweight endpoint, so it takes the same scope
     // or it accuses a student of gear that was never theirs.
     expect(apiClient).toMatch(/dashboardStats\(\)[\s\S]*?scope", value: "ios-home"/);
-    expect(statsRoute).toContain('searchParams.get("scope") === "ios-home" || isCollaborator');
+    expect(statsRoute).toContain('searchParams.get("scope") === "ios-home"');
+    expect(statsRoute).not.toContain('user.role === "STUDENT"');
     expect(statsRoute).toContain("overdueCount: canViewMyGear ? (isPersonalOnly ? c.myOverdue : c.totalOverdue) : 0");
     expect(statsRoute).not.toMatch(/: isCollaborator \? c\./);
+  });
+
+  it("keeps the regular web Student dashboard team-visible while iOS Home stays personal", () => {
+    const route = source("src/app/api/dashboard/route.ts");
+    const statsRoute = source("src/app/api/dashboard/stats/route.ts");
+    const page = source("src/app/(app)/page.tsx");
+
+    expect(route).toContain("const isPersonalOnly = isIosHomeScope || isCollaborator;");
+    expect(statsRoute).toContain('const isPersonalOnly = new URL(req.url).searchParams.get("scope") === "ios-home"');
+    expect(statsRoute).toContain("|| isCollaborator;");
+    expect(statsRoute).not.toContain('user.role === "STUDENT"');
+    expect(page).toContain('className="grid grid-cols-1 items-start gap-4 md:grid-cols-2 md:gap-6"');
+    expect(page).toContain("<TeamActivityColumn");
+    expect(page).not.toContain("{!isStudent && (");
   });
 
   it("keeps iOS booking edits on the optimistic-lock contract", () => {

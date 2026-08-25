@@ -41,9 +41,10 @@ export const GET = withAuth(async (req, { user }) => {
   const isCollaborator = user.role === "COLLABORATOR";
   const canViewMyGear = !isCollaborator || hasCollaboratorCapability(user, "MY_GEAR_VIEW");
   // Same scope switch `/api/dashboard` reads. The iOS tab badge and the Home
-  // stat rows are the same number to a student, so they must be scoped
-  // identically or the badge accuses them of somebody else's overdue gear.
-  const isPersonalOnly = new URL(req.url).searchParams.get("scope") === "ios-home" || isCollaborator;
+  // stat rows are the same number for the explicit personal scope, while the
+  // regular web dashboard remains team-visible for internal roles.
+  const isPersonalOnly = new URL(req.url).searchParams.get("scope") === "ios-home"
+    || isCollaborator;
 
   const [countsResult, myShiftsCountResult, myShiftsTodayCountResult] = await Promise.allSettled([
     readDashboardCounts({

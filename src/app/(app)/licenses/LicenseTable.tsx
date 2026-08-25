@@ -67,7 +67,7 @@ function HolderCell({
     <div className="flex min-w-0 flex-col gap-1">
       {claims.map((claim) => {
         const isOwn = myClaimId === claim.id;
-        const showName = isAdmin || isOwn;
+        const showName = isAdmin || isOwn || claim.user !== null;
         const name = claim.user?.name ?? claim.occupantLabel ?? "Unknown";
         const avatarUrl = claim.user?.avatarUrl ?? null;
 
@@ -119,7 +119,7 @@ function licenseToneClasses(code: LicenseCode, isOwn: boolean) {
   );
 }
 
-function MobileLicenseLoading({ showExpiry }: { showExpiry: boolean }) {
+function MobileLicenseLoading({ showExpiry, showActions }: { showExpiry: boolean; showActions: boolean }) {
   return (
     <div className="grid gap-2 md:hidden" aria-hidden="true">
       {Array.from({ length: 5 }, (_, i) => (
@@ -152,9 +152,11 @@ function MobileLicenseLoading({ showExpiry }: { showExpiry: boolean }) {
                 <Skeleton className="h-4 w-28" />
               </div>
             </div>
-            <div className="mt-4 flex border-t pt-3">
-              <Skeleton className="ml-auto h-10 w-24 rounded-md" />
-            </div>
+            {showActions && (
+              <div className="mt-4 flex border-t pt-3">
+                <Skeleton className="ml-auto h-10 w-24 rounded-md" />
+              </div>
+            )}
           </CardContent>
         </Card>
       ))}
@@ -186,7 +188,7 @@ export function LicenseTable({
   if (loading && codes.length === 0) {
     return (
       <>
-        <MobileLicenseLoading showExpiry={showExpiry} />
+        <MobileLicenseLoading showExpiry={showExpiry} showActions={isAdmin} />
         <div className="hidden overflow-x-auto rounded-md border md:block">
           <Table>
             <TableHeader>
@@ -195,7 +197,7 @@ export function LicenseTable({
                 <TableHead className="w-24">Status</TableHead>
                 <TableHead>Holders</TableHead>
                 {showExpiry && <TableHead className="w-32">Expires</TableHead>}
-                <TableHead className="w-28 text-right">Action</TableHead>
+                {isAdmin && <TableHead className="w-28 text-right">Action</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -205,7 +207,7 @@ export function LicenseTable({
                   <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-28" /></TableCell>
                   {showExpiry && <TableCell><Skeleton className="h-4 w-16" /></TableCell>}
-                  <TableCell><Skeleton className="ml-auto h-10 w-24 rounded-md" /></TableCell>
+                  {isAdmin && <TableCell><Skeleton className="ml-auto h-10 w-24 rounded-md" /></TableCell>}
                 </TableRow>
               ))}
             </TableBody>
@@ -307,20 +309,22 @@ export function LicenseTable({
                 </div>
               </div>
 
-              <div className="mt-4 flex border-t pt-3">
-                <span className="ml-auto inline-flex min-h-10 items-center gap-1.5 rounded-md px-3 text-sm font-medium">
-                  {isClickable ? (
-                    <>
-                      {isAdmin ? <Eye className="size-4" aria-hidden="true" /> : <KeyRound className="size-4" aria-hidden="true" />}
-                      {actionLabel}
-                    </>
-                  ) : (
-                    <span className="text-xs font-normal text-muted-foreground">
-                      {isOwn ? "In use" : "Unavailable"}
-                    </span>
-                  )}
-                </span>
-              </div>
+              {isAdmin && (
+                <div className="mt-4 flex border-t pt-3">
+                  <span className="ml-auto inline-flex min-h-10 items-center gap-1.5 rounded-md px-3 text-sm font-medium">
+                    {isClickable ? (
+                      <>
+                        <Eye className="size-4" aria-hidden="true" />
+                        {actionLabel}
+                      </>
+                    ) : (
+                      <span className="text-xs font-normal text-muted-foreground">
+                        {isOwn ? "In use" : "Unavailable"}
+                      </span>
+                    )}
+                  </span>
+                </div>
+              )}
             </CardContent>
           );
 
@@ -360,7 +364,7 @@ export function LicenseTable({
               <TableHead className="w-24">Status</TableHead>
               <TableHead>Holders</TableHead>
               {showExpiry && <TableHead className="w-32">Expires</TableHead>}
-              <TableHead className="w-28 text-right">Action</TableHead>
+              {isAdmin && <TableHead className="w-28 text-right">Action</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -424,33 +428,35 @@ export function LicenseTable({
                       )}
                     </TableCell>
                   )}
-                  <TableCell className="text-right">
-                    {adminCanInspect ? (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-10"
-                        onClick={(event) => { event.stopPropagation(); onClickClaimed(code); }}
-                      >
-                        <Eye data-icon="inline-start" />
-                        Inspect
-                      </Button>
-                    ) : studentCanClaim ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-10"
-                        onClick={(event) => { event.stopPropagation(); onClickAvailable(code); }}
-                      >
-                        <KeyRound data-icon="inline-start" />
-                        Claim
-                      </Button>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">{isOwn ? "In use" : "Unavailable"}</span>
-                    )}
-                  </TableCell>
+                  {isAdmin && (
+                    <TableCell className="text-right">
+                      {adminCanInspect ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-10"
+                          onClick={(event) => { event.stopPropagation(); onClickClaimed(code); }}
+                        >
+                          <Eye data-icon="inline-start" />
+                          Inspect
+                        </Button>
+                      ) : studentCanClaim ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-10"
+                          onClick={(event) => { event.stopPropagation(); onClickAvailable(code); }}
+                        >
+                          <KeyRound data-icon="inline-start" />
+                          Claim
+                        </Button>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">{isOwn ? "In use" : "Unavailable"}</span>
+                      )}
+                    </TableCell>
+                  )}
                 </TableRow>
               );
             })}

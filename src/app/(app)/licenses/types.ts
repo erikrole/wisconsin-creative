@@ -1,7 +1,7 @@
 export type LicenseCodeStatus = "AVAILABLE" | "PARTIAL" | "CLAIMED" | "RETIRED";
 
 export type ClaimHolder = {
-  id: string;
+  id?: string;
   name: string;
   avatarUrl: string | null;
 };

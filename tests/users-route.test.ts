@@ -153,6 +153,31 @@ beforeEach(() => {
 });
 
 describe("GET /api/users", () => {
+  it("allows students to browse the visible user directory", async () => {
+    const student = { ...adminUser, id: "student-viewer", role: "STUDENT" as const };
+    vi.mocked(requireAuth).mockResolvedValue(student);
+    vi.mocked(db.user.findMany).mockResolvedValue(userRows([
+      makeUser({ id: targetId }),
+      makeUser({ id: "other-user", name: "Other User" }),
+    ]));
+    vi.mocked(db.user.count).mockResolvedValue(2);
+    vi.mocked(db.user.groupBy).mockResolvedValue(roleGroups([{ role: "STUDENT", _count: { _all: 2 } }]));
+
+    const res = await GET(
+      new Request("https://app.example.com/api/users"),
+      { params: Promise.resolve({}) },
+    );
+    const body = await res.json();
+    const where = vi.mocked(db.user.findMany).mock.calls.at(-1)?.[0]?.where as { AND?: unknown[] };
+
+    expect(res.status).toBe(200);
+    expect(body.data).toHaveLength(2);
+    expect(where).toMatchObject({
+      AND: expect.arrayContaining([{ hiddenFromRoster: false }, { active: true }]),
+    });
+    expect(where?.AND).not.toContainEqual({ id: "student-viewer" });
+  });
+
   it("returns sportAssignments when present in the users list response", async () => {
     vi.mocked(db.user.findMany).mockResolvedValue(userRows([
       makeUser({
@@ -230,6 +255,27 @@ describe("GET /api/users", () => {
 });
 
 describe("GET /api/users/[id]", () => {
+  it("lets students read another visible user's profile", async () => {
+    vi.mocked(requireAuth).mockResolvedValue({
+      ...adminUser,
+      id: "student-viewer",
+      role: "STUDENT",
+    });
+    vi.mocked(db.user.findUnique).mockResolvedValueOnce(userRow(makeUser({
+      id: targetId,
+      hiddenFromRoster: false,
+    })));
+
+    const res = await GET_DETAIL(
+      detailRequest(),
+      routeParams(),
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.data.id).toBe(targetId);
+  });
+
   it("omits the birth year when staff view another user's profile", async () => {
     vi.mocked(requireAuth).mockResolvedValue({ ...adminUser, id: managerId, role: "STAFF" });
     vi.mocked(db.user.findUnique).mockResolvedValueOnce(userRow(makeUser()));

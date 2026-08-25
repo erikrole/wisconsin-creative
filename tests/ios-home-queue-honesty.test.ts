@@ -44,7 +44,7 @@ describe("iOS Home action queue honesty", () => {
     // future scope refactor cannot quietly put team totals over a personal queue.
     const route = source("src/app/api/dashboard/route.ts");
     expect(route).toContain('const isIosHomeScope = scope === "ios-home"');
-    expect(route).toContain("const isPersonalOnly = isIosHomeScope || isCollaborator");
+    expect(route).toContain("const isPersonalOnly = isIosHomeScope || isCollaborator;");
     expect(route).toContain("isPersonalOnly ? counts.myOverdue : counts.totalOverdue");
     expect(route).toContain("isPersonalOnly ? counts.myDueToday : counts.dueToday");
   });
