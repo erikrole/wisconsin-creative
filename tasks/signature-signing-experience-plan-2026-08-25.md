@@ -47,7 +47,8 @@ Slices 1-2 are this pass. Slices 3-6 remain queued and are ordered by value agai
 - [x] `npm run lint`
 - [x] `npm run build:app` (exit 0, compiled in 20.1s; the `/_document` rejection during page-data collection is the known unrelated transient already recorded in `signature-capture-micro-app-plan.md`).
 - [x] `git diff --check`
-- [ ] Authenticated browser proof of the settings panel: the Preview dev server starts and serves the app, but the tab is unauthenticated and no session was established in this pass.
+- [x] Production deployment of the capture-state fix: `dpl_FU8zF5NgFgyUtQ8C5BjgwnBG5rfS` from commit `25aae229` is READY and aliased to `https://wisconsincreative.com`; unauthenticated smoke on `/signatures` and the reported capture route both return the expected `307` to `/login`.
+- [ ] Authenticated browser proof of the settings panel: the Preview dev server starts and serves the app, but the tab is unauthenticated and no session was established in this pass. Slices 1-2 reached production at 08:03 through the repository's automatic commit/push pipeline before this gate was met.
 - [ ] Matched UI review capture for the settings-panel change; blocked behind the authenticated session above.
 - [ ] Physical iPad / Apple Pencil acceptance remains open under GAP-65 and is not claimed by this plan.
 
