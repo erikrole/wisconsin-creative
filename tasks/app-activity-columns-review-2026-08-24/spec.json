@@ -65,7 +65,7 @@
   ],
   "notesHeading": "Things to know",
   "notes": [
-    "No production deployment was made for this UI slice; the live production page remains unchanged until the implementation is explicitly shipped.",
+    "The UI slice shipped in production deployment dpl_9cFHwpSQA9QjsQTV3GF3uKf65QtE from commit c48dd43d; the matched local authenticated capture remains the visual proof artifact for the unchanged owner-gated dataset.",
     "The telemetry identifies a web client, not the browser engine. The label stays Browser client rather than inferring Chrome or Safari."
   ]
 }

@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Checkouts
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-20
+- Last Updated: 2026-08-25
 - Status: Active — V1 Shipped
 - Version: V1
 
@@ -314,6 +314,8 @@ The checkout detail page (`/checkouts/[id]`) uses the shared `BookingDetailPage`
 5. Add regression coverage for race conditions, partial returns, non-kiosk custody attempts, and permission bypass attempts.
 
 ## Change Log
+
+- 2026-08-24: **Linked-event capacity expanded.** Checkout records can carry up to 5 scheduled event links through the shared reservation-to-checkout handoff and active-booking relinking, matching the shared API, draft, web, and native picker contracts. Direct kiosk checkout entry remains the single event-or-purpose custody path; the `BookingEvent` junction, chronologically-first `Booking.eventId` primary, gear window, custody state, and return evidence are unchanged. The server/web slice is deployed in `dpl_9cFHwpSQA9QjsQTV3GF3uKf65QtE`; authenticated five-link interaction remains a separate acceptance gate.
 
 - 2026-08-20: **Linked-event editing now stays in the present and future.** The shared booking detail dialog no longer loads unrelated scheduled events that already ended, while existing historical links remain available so operators can review or remove them. The event-link API, booking lifecycle, authorization, allocations, and kiosk custody boundaries are unchanged.
 

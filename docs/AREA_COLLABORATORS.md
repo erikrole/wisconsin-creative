@@ -4,8 +4,8 @@
 
 - Area: Collaborators
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-23
-- Status: People directory and universal Scoreboard implemented locally; production smoke pending
+- Last Updated: 2026-08-25
+- Status: People directory and universal Scoreboard deployed; authenticated temporary-account smoke pending
 - Version: V1.4
 
 ## Direction
@@ -78,8 +78,8 @@ Collaborator gear responses remain sanitized and own-booking scoped. Published S
 
 ## Rollout
 
-1. Migrations `0095` through `0098` are applied. Apply `0103` to grant the People directory to BTN and Learfield after the server and clients are deployed.
-2. Deploy the dual-read server and web before native clients.
+1. Migrations `0095` through `0103` are applied. The dual-read web server is deployed in `dpl_9cFHwpSQA9QjsQTV3GF3uKf65QtE`; native client rollout remains separate.
+2. Keep the dual-read server and web ahead of native clients.
 3. Smoke-test BTN parity and the admin editor with a temporary account.
 4. Smoke-test the People directory with temporary BTN and Learfield accounts before inviting additional collaborators.
 5. Deploy the aggregate Scoreboard route before a native client that depends on it, then smoke-test aggregate and active-person detail reads with temporary BTN and Learfield accounts while confirming private-profile denial.
@@ -96,11 +96,16 @@ Collaborator gear responses remain sanitized and own-booking scoped. Published S
 - [x] Scoreboard is visible to every authenticated collaborator without a policy grant and remains limited to shared identity and metrics.
 - [x] Stackable Scoreboard dimensions and Snapshots remain inside that same shared response boundary and do not reveal assignments or private profile context.
 - [ ] Authenticated production browser and temporary-account smoke are complete.
-- [ ] Migration `0103` and authenticated BTN/Learfield People-directory smoke are complete.
+- [x] Migration `0103` is applied.
+- [ ] Authenticated BTN/Learfield People-directory smoke is complete.
 
 ## Change Log
 
-- 2026-08-23: **Collaborators can be tracked on events without being scheduled.** An admin can credit a collaborator for a past or future event from Event detail. The credit counts toward Scoreboard and record totals and nothing else: no notification, no shift, no published crew entry, no schedule visibility for that collaborator, and no change to the shared Scoreboard response boundary. Collaborator policy grants are unaffected — crediting is an admin action about our stats, not a capability the collaborator receives. See D-057.
+- 2026-08-25: **Collaborator read-path recovery is deployed.** Signed Admin role preview, collaborator read surfaces, universal Scoreboard source, and migration `0103` are present in production deployment `dpl_9cFHwpSQA9QjsQTV3GF3uKf65QtE` from commit `c48dd43d`. Temporary BTN/Learfield account smoke and the full role-preview browser matrix remain separate acceptance gates.
+
+- 2026-08-24: **Admin role preview is restored for collaborator inspection.** The signed, read-only preview uses deterministic Big Ten Network or Learfield identity, upcoming published Schedule reads, and sanitized booking/My Gear reads without changing the Admin session. Reservation, follow, checkout, notification, export, download, and kiosk effects remain blocked. This is local source/build recovery only; production deployment and authenticated collaborator proof remain open.
+
+- 2026-08-23: **Collaborators can be tracked on events without being scheduled.** An admin can add a collaborator as a worker on a past or future event from Event detail. The row counts toward Scoreboard, record totals, and shift badges and nothing else: no notification, no shift, no published crew entry, no schedule visibility for that collaborator, and no change to the shared Scoreboard response boundary. Collaborator policy grants are unaffected — adding a worker is an admin action about our stats, not a capability the collaborator receives. See D-057.
 
 - 2026-08-23: **The People/Users roster now names collaborators by affiliation.** Role chips on the directory use the assigned policy badge (`Learfield`, `BTN`) instead of the generic Collaborator label, matching onboarding-status and kiosk identity. Filters, role policy, and profile role+affiliation pairing are unchanged.
 

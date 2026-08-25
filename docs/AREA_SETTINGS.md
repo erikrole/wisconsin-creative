@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Settings
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-21
+- Last Updated: 2026-08-25
 - Status: Active
 - Version: V1
 
@@ -141,6 +141,7 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 ### App activity (`/settings/app-activity`) — System, configured product owner only
 - Read-only dashboard of every active or inactive user that is visible in the roster, with whether the app has reported an app-open event and the last launch time.
 - Each user lists the pseudonymous client installations that have reported: coarse device model, iOS version, marketing version, build number, best-effort `TestFlight` / `App Store` channel, first/last seen, and last launch.
+- The report table keeps iOS hardware, iOS software/build, latest browser, and last-seen context in dedicated columns. Multiple web installations are summarized as the latest browser client plus an installation count; browser engine identity is not inferred from the available telemetry.
 - iOS clients are marked `Latest`, `Stale`, `Newer`, or `Compare unavailable` against `IOS_LATEST_APP_VERSION` and `IOS_LATEST_APP_BUILD` when those server settings are configured. The report never presents an unconfigured comparison as current.
 - `GET /api/settings/app-activity` is owner-allowlisted and returns no hidden-roster users. The durable installation key is server-HMACed; the app does not store or send a UDID, serial number, IDFA, raw receipt, or raw installation key in the database.
 - Loading, refresh, error, and no-client states preserve the existing roster/report context. This page does not expose mutation controls.
@@ -242,6 +243,7 @@ All versions shipped. Duplicate breadcrumb removed; parent-level sibling quick-j
   current-password reauthentication are unchanged.
 
 - 2026-08-21: Added the owner-only **App activity** Settings page. It joins visible users to HMAC-keyed current client installations and shows app-open adoption, last launch/seen, device model, iOS version, build, release channel, and configurable stale/latest build state. Local schema, route, source-contract, and TypeScript gates pass; migration application, owner configuration, authenticated browser proof, and signed-client channel acceptance remain open.
+- 2026-08-24: **App activity columns are now support-readable.** The owner report separates iOS hardware, iOS software/build/channel, latest browser activity, and last-seen context; repeated web installation rows collapse into one latest-browser summary with a count, while the route, owner gate, and telemetry contract remain unchanged. The web slice is deployed in `dpl_9cFHwpSQA9QjsQTV3GF3uKf65QtE`; owner-authenticated production proof remains open.
 
 - 2026-08-18: **Allowed Emails gained safer batch recovery.** Operators can upload the existing `email, role` CSV shape, and an unconfirmed response now stays visible as a retryable failed-row result instead of collapsing into generic form error copy. Existing persistence, duplicate-skip, and role-boundary contracts are unchanged; broader roster-field CSV support and durable failed status remain open.
 

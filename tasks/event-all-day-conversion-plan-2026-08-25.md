@@ -44,7 +44,7 @@
 - [x] `npx tsc --noEmit --pretty false`
 - [x] Focused/full ESLint and `npm run build:app`
 - [x] `npm run codemap` followed by `npm run verify:docs` when source/docs maps are affected.
-- [x] `npm run db:migrate:check` (schema remained unchanged).
+- [x] `npm run db:migrate:check` (the applied migration chain remained aligned; no new migration was needed for the application surface).
 - [x] `git diff --check`
 - [x] Authenticated local Admin browser proof of the Event detail conversion control.
 - [x] Live event read-back: exact id/title, source ownership, Central date/time, `allDay`, crew window, publication version, and audit/notification rows.
@@ -53,7 +53,7 @@
 
 - Shipped: Manual event all-day ↔ timed conversion in the API and Event detail editor; the live Veterans Plaza Ceremony record is now timed for 4:30–5:30 PM Central today.
 - Verified: `allDay=false`, UTC window `2026-08-25T21:30:00.000Z`–`2026-08-25T22:30:00.000Z`, manual `sourceId=null`, published group version 2, one direct assignee (Cole Ahlgren), two audit entries, and one durable `Schedule updated` notification for that assignee.
-- Deferred: Production deployment of the new editor/API source change; no commit, push, or deployment was requested, and the working tree contains unrelated parallel changes. Production data and notification read-back are complete.
+- Deployed: Source/API changes shipped in `dpl_9cFHwpSQA9QjsQTV3GF3uKf65QtE` from commit `c48dd43d`; production public smoke, authenticated Event detail proof, and the live data/notification read-back are complete.
 - Blocked: None for the requested data update.
 - Proof artifacts: `tasks/event-all-day-conversion-review-2026-08-25/index.html`, focused tests, TypeScript/lint/build/docs gates, authenticated local browser proof, and production read-back.
-- Next slice or stop: Stop here unless the user wants the source change committed/deployed; if deployed, repeat authenticated production UI proof because the current production editor still shows the pre-conversion UI.
+- Next slice or stop: Stop here; the production editor now shows the timing-mode control and the live Veterans Plaza Ceremony window.

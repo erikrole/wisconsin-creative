@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Photo Mechanic license pool
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-23
+- Last Updated: 2026-08-25
 - Status: Active — 2-slot model, expiry tracking, unknown occupants, CSV export, and native iOS self-service shipped
 - Version: V2
 
@@ -22,7 +22,7 @@ The `/licenses` route is presented as **Software** in the sidebar. Photo Mechani
    - `RETIRED` — admin-archived, hidden from students by default
 4. **Unknown occupants** can be marked by an admin with a free-text label (`occupantLabel`). Used when a license is in use by someone without an account here.
 5. **Expiry is informational.** Warnings appear in the UI and via push notification 14 days before expiry; active claims are NOT auto-released.
-6. **License codes only revealed to admins or the holder.** Other students see masked codes (`••••-••••-••••-••••`); the API also strips the code string server-side.
+6. **License codes only revealed to admins or the holder.** Other students see masked codes (`••••-••••-••••-••••`); the API also strips the code string server-side. Students may see the name and avatar of an active linked holder, but never that account's stable id, email, or management-only occupant label.
 7. **Audit log** captures every claim, release, occupy, retire, delete, update.
 8. **Staff and admins hold licenses with indefinite custody.** Only students are subject to the 2-day rotation nag. The "one active claim per user" rule still applies to everyone.
 
@@ -69,7 +69,7 @@ The `/licenses` route is presented as **Software** in the sidebar. Photo Mechani
   - `PhotoMechanicLicenses.tsx` — default Software panel: holder/claim hero first, then capacity rail, pool toolbar (staff add/renew/export), and pool table
   - `MyLicensePanel.tsx` — student banner showing their active code with copy + return
   - `MyLicenseHistoryDialog.tsx` — user-visible recent claim/return history from the active-license banner
-  - `LicenseTable.tsx` — main table with masked codes, explicit claim/inspect actions, neutral occupied identities for students, and expiry tooltips
+  - `LicenseTable.tsx` — main table with masked codes, safe linked-holder identities for students, staff/admin-only management actions, and expiry tooltips
   - `ConfirmClaimDialog.tsx` — student claim confirmation, copies code on success
   - `ReleaseDialog.tsx` — student return confirmation
   - `AdminClaimSheet.tsx` — admin detail sheet (slots, self-claim of an open slot, occupant, editable label/account/expiry, danger zone, history)
@@ -85,7 +85,8 @@ The Photo Mechanic tab also renders a responsive mobile card/list view so capaci
 - CLAIMED row: tinted blue for active use, with an explicit staff inspection action
 - RETIRED row: 50% opacity, hidden by default, shown from the admin toolbar and inspectable for history/details
 - Expiry: ≤30 days = yellow `Xd left`, expired = red `Expired`, normal = grayed date string
-- Holder cell: avatar + name for staff or the current holder; students see neutral `Occupied` identity for other claims; `unknown` badges remain staff-only
+- Holder cell: avatar + name for staff or any linked active holder; students see safe linked-holder identity for other claims and neutral `Unknown` for unlinked occupants; `unknown` badges remain staff-only
+- Student action surface: students claim an available row by selecting the row itself; the desktop/mobile management Action column is omitted for students, while the existing claim/copy/return flow remains available.
 
 ## Notifications
 
@@ -123,6 +124,8 @@ Implementation: `processLicenseNags` and `processExpiryWarnings` in `src/lib/ser
 - [x] Users can view their own recent claim/return history without exposing released codes
 - [x] Students cannot hold more than one slot across all codes
 - [x] Codes are masked to non-holders/non-admins
+- [x] Students can identify active linked holders without receiving private account fields
+- [x] Student pool rows omit the management Action column while preserving row claim/copy/return behavior
 - [x] Destructive actions (delete, retire) require confirmation
 - [x] CSV export available to admins
 - [x] Native iOS self-service available for view, claim, copy, and return
@@ -132,6 +135,8 @@ Implementation: `processLicenseNags` and `processExpiryWarnings` in `src/lib/ser
 - No full admin per-user license usage report beyond the user's own recent history and per-code admin history
 
 ## Change Log
+- 2026-08-24: **Student holder identity is safe and useful.** Photo Mechanic responses now include an active linked holder's name and avatar for Students while omitting the other account id, email, and unknown-occupant label. Student desktop and mobile pool views hide the management Action column; selecting an available row still opens the existing claim/copy flow, and a holder still sees the active key for copy/return. The web slice is deployed in `dpl_9cFHwpSQA9QjsQTV3GF3uKf65QtE`; authenticated Student production acceptance remains open.
+
 - 2026-08-23: Redesigned the Photo Mechanic landing so the holder's activation code (or the claim prompt) is the first thing on the page. Staff add actions moved into the pool toolbar and no longer sit above the hero. `/licenses` still opens Photo Mechanic by default; Shared logins is `?tab=shared-logins`. Claim, masking, two-slot, and expiry contracts are unchanged.
 - 2026-08-19: Added the shared Software Vault above the Photo Mechanic pool. The sidebar and route copy now say Software, while the existing two-slot license workflow remains compatible at `/licenses`. See `docs/AREA_SOFTWARE.md` for the encrypted credential contract and rollout gates.
 - 2026-08-18: Fixed native iOS license expiry rendering a day early. Expiry values are annual calendar dates encoded at UTC midnight (`src/lib/license-dates.ts`), but iOS formatted the encoded instant in the device timezone, so anywhere west of UTC a 31 Dec license read "Expires Dec 30", and both the "Expired" copy and the amber/red urgency tone flipped a full day before the license lapsed. `LicenseExpiry.calendarDay(from:)` / `.daysUntil(_:)` now read the UTC date parts and compare whole calendar days, mirroring `licenseExpiryAsLocalDate` and `licenseDaysUntilExpiry` on the web. Claim timestamps are real instants and still render in local time. Pinned by `ios/WisconsinTests/LicenseExpiryTests.swift`.

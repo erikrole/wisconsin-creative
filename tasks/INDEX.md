@@ -1,6 +1,6 @@
 # Tasks Index
 
-Last updated: 2026-08-24
+Last updated: 2026-08-25
 
 ## Start Here
 
@@ -59,6 +59,10 @@ Audit files intentionally remain at root for now because the repo audit skills r
 - `software-vault-plan-2026-08-19.md` - encrypted shared software access above the existing Photo Mechanic license pool, with migration, key, and authenticated runtime rollout gates.
 - `software-photo-mechanic-first-plan-2026-08-23.md` - make Photo Mechanic the default Software landing and extract the license pool from the page shell.
 - `scoreboard-tie-result-plan-2026-08-24.md` - restore source-backed soccer tie results across Calendar sync, web/native Scoreboard contracts, and the migration/deployment proof boundary.
+- `admin-role-preview-recovery-plan-2026-08-24.md` - recover the signed, read-only Admin role preview; production deployment is complete in `dpl_9cFHwpSQA9QjsQTV3GF3uKf65QtE`, while the authenticated role matrix remains open.
+- `student-privacy-dashboard-licenses-plan-2026-08-24.md` - restore broad Student team dashboard and visible user/profile reads, expose safe Photo Mechanic holder identity with masked keys, and retain write/private boundaries; production deployment is complete, while authenticated Student acceptance remains tracked in the ledger.
+- `multi-event-five-cap-plan-2026-08-24.md` - expand linked booking/reservation events from three to five across web, API, draft, and native contracts; production deployment is complete, while authenticated five-link interaction remains open.
+- `event-all-day-conversion-plan-2026-08-25.md` - let manual Event detail switch between all-day and timed windows and update Veterans Plaza Ceremony today; production data, notification, and editor proof are complete.
 
 ## Archive Buckets
 

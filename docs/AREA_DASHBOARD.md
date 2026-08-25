@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Dashboard
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-20
+- Last Updated: 2026-08-25
 - Status: Active — V3 shipped, reliability + UX polish complete
 - Version: V3
 
@@ -13,7 +13,7 @@ Make dashboard an action console for daily operations, not a reporting screen.
 Design language reference: `docs/DESIGN_LANGUAGE.md`.
 
 ## Confirmed Product Decisions
-1. Same dashboard layout for all users.
+1. Same action-oriented dashboard shell for all users, with role-specific data scope.
 2. Primary focus is Check-outs and Reservations.
 3. Overdue is visually red and prioritized.
 4. Overdue banner includes inline highest-priority checkout items.
@@ -21,9 +21,10 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 6. Saved filters are deferred — not in V1.
 7. No keyboard shortcut layer in V1.
 8. Add a draft system for in-progress booking flows.
-9. No standalone Upcoming Events section in dashboard V1.
+9. Upcoming Events remains a Team Activity card, not a separate top-level dashboard section.
 10. Calendar sync remains backend support for event-linked reservations/checkouts.
 11. Past-due reservations are surfaced separately as stale planning work, not merged into checkout overdue custody metrics.
+12. Internal Students, Staff, and Admins can view team dashboard rows, totals, and Upcoming Events; the explicit `scope=ios-home` native payload remains personal, and collaborators remain capability-driven.
 
 ## Information Architecture (Top to Bottom)
 1. Overdue Banner (global)
@@ -126,7 +127,7 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
   - Follow shared mobile interaction contract in `AREA_MOBILE.md`.
 
 ## Permissions and Visibility
-1. All users can view dashboard rows for reservations and check-outs.
+1. Internal users (Students, Staff, and Admins) can view team dashboard rows for reservations, check-outs, and Upcoming Events. Collaborators remain capability-driven.
 2. All users can book gear.
 3. All users can edit their own reservations.
 4. Students can edit only their own reservations and check-outs.
@@ -183,6 +184,10 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 7. Add regression tests for permissions, window filtering (7 days), and overdue consistency.
 
 ## Change Log
+
+- 2026-08-24: **Profile setup now starts from a quiet Home banner.** Internal users with incomplete profiles see a compact blue Home banner with a missing-detail count and direct Finish setup handoff; the existing wizard remains available through that CTA and continues to own one-day snooze behavior. Dashboard action queues and operational data are unchanged.
+
+- 2026-08-24: **Student Home team visibility restored.** Normal web Students receive team checkout/reservation rows, counts, pending pickup, overdue, and generic Upcoming Events alongside their own work. The explicit `scope=ios-home` native payload remains personal, and Students still retain own-work and role-gated mutation boundaries. The web slice is deployed in `dpl_9cFHwpSQA9QjsQTV3GF3uKf65QtE`; authenticated Student production acceptance remains open.
 
 - 2026-08-20: **Wisconsin Creative macOS companion 1.0.0 shipped.** The hardened menu-bar companion is now distributed as a Developer ID signed, hardened-runtime, notarized and stapled GitHub release (`macos-v1.0.0`) with the production APNs entitlement authorized by its embedded Developer ID profile. Gatekeeper accepts the installed bundle and the Release process is running; native XCTest, full interaction/accessibility smoke, and real APNs delivery remain separate proof gates.
 

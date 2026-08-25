@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Mobile Operations
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-24
+- Last Updated: 2026-08-25
 - Status: Active
 - Version: V1
 
@@ -135,7 +135,9 @@ Navigation shell versioned roadmap: `tasks/sidebar-roadmap.md` (revised 2026-03-
 
 ## Change Log
 
-- 2026-08-24: **Native Scoreboard understands ties without breaking older responses.** Profile and team models decode additive `ties` fields with a zero default, show `T` in the result filter, record, form strip, game row, and breakdown bars, and use the same W–L–T/half-win-rate contract as web. Record meters place the tie segment on the right after wins and losses. The iPhone 16 Pro build and focused source/model tests remain required rollout gates; live native proof still waits on server deployment and migration read-back under GAP-71.
+- 2026-08-24: **Native reservation event capacity expanded.** The iOS reservation composer now allows up to 5 linked calendar events, matching the shared web, draft, and API contract. Event ordering, primary-event compatibility, reservation lifecycle, and kiosk custody remain unchanged. The compatible server/API is deployed in `dpl_9cFHwpSQA9QjsQTV3GF3uKf65QtE`; authenticated five-link interaction and a native release remain separate acceptance gates.
+
+- 2026-08-24: **Native Scoreboard understands ties without breaking older responses.** Profile and team models decode additive `ties` fields with a zero default, show `T` in the result filter, record, form strip, game row, and breakdown bars, and use the same W–L–T/half-win-rate contract as web. Record meters place the tie segment on the right after wins and losses. The iPhone 16 Pro build and focused source/model tests remain required rollout gates; the compatible server/migration deployment is complete, while live native proof remains under GAP-71.
 
 - 2026-08-23: **Extend is not offered from the Live Activity, and the dead path that once could has been removed.** Tapping the card opens booking detail, where Extend is chosen deliberately; the glance surface never carries an Extend affordance in any form -- no `action=extend` deep-link parameter, no App Intent button, no label. The 2026-07-10 redesign already stopped emitting `wisconsin://booking/<id>?action=extend`, but the receiving chain stayed: `WisconsinApp` still parsed that parameter into `AppState.pendingExtendBookingId`, and `BookingDetailView` still auto-presented the Extend sheet on load when it was set. Nothing in the app, the server, or any push payload had produced that URL since, so the chain was unreachable code that would have re-opened a mutation sheet from a tapped link the moment anything emitted one. All three sites are gone. `ContentState.allowsExtend` stays on the wire and stays unrendered: installed builds decode it as required, so the server dropping the key would break their Live Activity updates. Booking-detail Extend, its freshness snapshot, its upcoming-need gate, and push routing through `pendingPushBookingId` are unchanged. Files: `ios/Wisconsin/App/WisconsinApp.swift`, `ios/Wisconsin/Core/AppState.swift`, `ios/Wisconsin/Views/BookingDetailView.swift`, `ios/Wisconsin/LiveActivities/CheckoutReturnActivityAttributes.swift`.
 

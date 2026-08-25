@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Users
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-24
+- Last Updated: 2026-08-25
 - Status: Active
 - Version: V1.4
 
@@ -25,7 +25,8 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
    - Can force location exceptions.
 3. `STUDENT`
    - Can add and edit their own reservations and check-outs.
-   - Can view all users, items, reservations, and check-outs.
+   - Can view all visible users and profiles, plus the shared Scoreboard identity/metrics contract.
+   - Cannot edit another user's profile or discover hidden-roster users.
 
 ## Ownership Rule
 - `Owner` means the user who created the reservation/checkout or the user explicitly assigned as booking owner.
@@ -37,7 +38,7 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 ### Users
 - `ADMIN`: view and edit all users; manage role changes; invite new staff and students through the allowlist.
 - `STAFF`: view and edit all users; manage role changes; invite new students through the allowlist.
-- `STUDENT`: view all users; edit only the approved fields on their own profile; no edit rights for other users.
+- `STUDENT`: view all visible users and profiles plus the shared Scoreboard identity/metrics contract; edit only the approved fields on their own profile; no cross-user edit rights.
 - `COLLABORATOR`: view active, non-hidden teammates only when the assigned affiliation policy grants `PEOPLE_DIRECTORY_VIEW`. The directory is name-searchable and exposes only roster identity and work context. Collaborators cannot see private profile, contact, presence, assignment, activity, booking, shift, badge, or audit data and cannot edit another user.
 - Every authenticated role may update its own approved profile-completion fields through the explicit `user.edit_self` permission. This does not grant broader user-edit access.
 
@@ -81,7 +82,7 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 
 ## Dashboard Action Visibility Mapping
 1. Dashboard actions are role-filtered per row.
-2. `STUDENT` can view rows broadly but never sees edit actions for non-owned reservations/check-outs.
+2. `STUDENT` can view team dashboard rows but never sees edit actions for non-owned reservations/check-outs.
 3. `STAFF` and `ADMIN` can act on any reservation/check-out row.
 4. Hidden actions must not be reachable by direct URL or API calls.
 5. Same role and ownership visibility rules apply to mobile action sheets and quick actions.
@@ -111,7 +112,7 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 
 ## Acceptance Criteria
 - [x] AC-1: Role inheritance is deterministic: `ADMIN > STAFF > STUDENT`.
-- [x] AC-2: Students can view all users/items/reservations/check-outs.
+- [x] AC-2: Students can view all visible users/profiles and shared Scoreboard identity/metrics; cross-user mutations remain blocked.
 - [x] AC-3: Students can modify only owned reservations/check-outs.
 - [x] AC-4: Staff can modify all users, items, reservations, and check-outs.
 - [x] AC-5: Staff can manage role changes and force location exceptions.
@@ -128,6 +129,10 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 6. Ensure audit logs include actor role, target owner, and exception metadata.
 
 ## Change Log
+
+- 2026-08-24: **Admin role preview is restored in the current web source as a signed, read-only inspection mode.** Admins can preview Staff, Student, Big Ten Network, or Learfield collaborator shells without changing the Admin identity. The server rejects mutations, product events, exports/downloads, and kiosk use, while the shell keeps a persistent read-only banner. The slice is deployed in `dpl_9cFHwpSQA9QjsQTV3GF3uKf65QtE`; authenticated production role-preview proof remains open.
+
+- 2026-08-24: **Student profile visibility restored.** Users list/search and visible profile routes are available to Students, while hidden-roster protection and collaborator field minimization remain server-owned. Cross-user profile mutations remain blocked. The web/API slice is deployed in `dpl_9cFHwpSQA9QjsQTV3GF3uKf65QtE`; authenticated Student production acceptance remains open.
 
 - 2026-08-24: **Scoreboard now preserves source tie results.** Calendar `[T]` markers parse and persist as `TIE`, the profile route includes ties in summaries, breakdowns, filters, and event rows, and native models render additive tie fields with a zero default for older payloads. A tie is a resolved official game, contributes half a win to the server-owned rate, and keeps the source marker in `rawSummary` for auditability. Web and native record meters use W–L–T order, with ties on the right. Migrations `0132` and `0133` are prepared locally; production application and authenticated read-back remain under GAP-71.
 
@@ -195,6 +200,12 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
   password twice. Sign-in, account creation, and forced password change carry
   the same account pairing. The invite/access boundary, token consumption,
   session revocation, and reset auditing are unchanged.
+
+- 2026-08-24: **Returning profile setup is less interruptive.** The authenticated
+  web shell no longer auto-opens the completion wizard on Home; internal
+  dashboard users see a compact banner with contextual missing fields and a
+  direct Finish setup action. The canonical profile-completion query, role-aware
+  fields, and one-day snooze behavior are unchanged.
 
 - 2026-08-23: **Passkey sign-in is offered, not hunted for.** The web login arms
   browser AutoFill on the email step so a saved passkey appears in that field's

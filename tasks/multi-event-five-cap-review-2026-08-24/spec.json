@@ -1,0 +1,58 @@
+{
+  "title": "Five linked events on reservations and checkouts",
+  "eyebrow": "iOS · Wisconsin Creative",
+  "lede": "Reservation and checkout event linking now stays usable through five scheduled events without changing primary-event or custody behavior.",
+  "stats": [
+    {
+      "k": "Selection ceiling",
+      "v": "3 → 5",
+      "n": "Same iPhone 16 Pro / iOS 26.5 picker and fixture data",
+      "tone": "good"
+    },
+    {
+      "k": "Sixth event",
+      "v": "Blocked",
+      "n": "API, draft, web, and native boundaries reject or disable above five"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Native picker at capacity",
+      "note": "Matched before/after captures use the same fixture, device, OS, and interaction script.",
+      "pairs": [
+        {
+          "title": "Five-event selection state",
+          "sub": "The first five scheduled events are selected in both captures.",
+          "before": "before/booking-event-cap.png",
+          "beforeCap": "Baseline: the fourth and later options are dimmed after three selections.",
+          "after": "after/booking-event-cap.png",
+          "afterCap": "Current: the fourth and fifth options remain selectable and selected."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "The third-event ceiling moved to five",
+      "was": "The native picker and surrounding booking flows stopped accepting links after three events.",
+      "now": "Reservation creation, checkout handoff/relinking, drafts, web pickers, and native selection now share the five-event boundary."
+    },
+    {
+      "h": "Primary-event and custody behavior stayed stable",
+      "was": "Existing primary-event compatibility and kiosk custody boundaries were at risk of becoming implicit side effects of the cap change.",
+      "now": "The junction model, primary event, gear lifecycle, and direct kiosk event-or-purpose custody path are unchanged."
+    }
+  ],
+  "verification": [
+    "<strong>121 focused Vitest tests</strong> pass across six booking, route, draft, and iOS contract suites.",
+    "<strong>25 adjacent picker/UX/source-contract tests</strong> pass.",
+    "<strong>Web:</strong> TypeScript, lint, and <code>npm run build:app</code> pass.",
+    "<strong>Native:</strong> iPhone 16 Pro / iOS 26.5 build and matched before/after UI captures pass.",
+    "<strong>Web visual capture:</strong> deferred because no authenticated local runtime was available; the web boundary is covered by source, focused tests, and build checks.",
+    "<strong>Docs verification:</strong> <code>npm run verify:docs</code> passes after codemap regeneration."
+  ],
+  "notes": [
+    "Direct kiosk checkout entry remains its existing single event-or-purpose custody path; shared reservation-to-checkout handoff and active-booking relinking support five linked events.",
+    "The source slice shipped in production deployment dpl_9cFHwpSQA9QjsQTV3GF3uKf65QtE from commit c48dd43d; direct kiosk custody remains unchanged."
+  ]
+}
