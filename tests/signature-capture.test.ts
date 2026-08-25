@@ -6,7 +6,7 @@ import { getAllowedRoles } from "@/lib/permissions";
 import { appendDistinctSignaturePoints, isIpadDevice, shouldRetainSignatureSaveRequestId, signatureCanvasViewport, signaturePointFromClient } from "@/lib/signatures/capture";
 import { buildSignatureDraft, isFreshSignatureDraft, signatureDraftKey, signatureDraftMatchesMember } from "@/lib/signatures/drafts";
 import { renderSignatureArtifacts, SIGNATURE_PNG_MIN_WIDTH } from "@/lib/signatures/artifacts";
-import { buildSignatureCurve, signaturePathData } from "@/lib/signatures/geometry";
+import { buildSignatureCurve, buildSignatureSvg, resolveSignatureStrokeWidth, signaturePathData, SIGNATURE_STROKE_SCALE_MIN } from "@/lib/signatures/geometry";
 import { acceptsSignaturePointer, appendCoalescedPointerEvents } from "@/lib/signatures/pointer";
 import { captureSaveRequestSchema, DEFAULT_SIGNATURE_PEN_SETTINGS, isRequiredSignatureGroup, SIGNATURE_IMPORTED_SPORT_CODES, SIGNATURE_SPORT_REGISTRY, signatureAdHocMemberSchema, signatureAthleteProfileSchema, signatureCollectionTitle, signatureCollectionVersionSchema, signatureRosterEntrySchema } from "@/lib/signatures/types";
 import { compareSignatureRosterMembers } from "@/lib/signatures/roster";
@@ -628,6 +628,35 @@ describe("signature artifact contract", () => {
     ], DEFAULT_SIGNATURE_PEN_SETTINGS);
 
     expect(artifact.svg.match(/<path d=/g)).toHaveLength(2);
+  });
+
+  it("exports one line weight whether the signer signs small or large", () => {
+    const shape = [{ x: 0, y: 0 }, { x: 0.5, y: 0.34 }, { x: 1, y: 0.1 }];
+    const scaled = (size: number) => [{
+      points: shape.map((point) => ({ x: 100 + point.x * size, y: 100 + point.y * size })),
+    }];
+    const exportedWeight = (source: ReturnType<typeof buildSignatureSvg>) =>
+      source.strokeWidth * Math.min(1_600 / source.width, 900 / source.height);
+
+    const small = buildSignatureSvg(scaled(300), DEFAULT_SIGNATURE_PEN_SETTINGS);
+    const large = buildSignatureSvg(scaled(900), DEFAULT_SIGNATURE_PEN_SETTINGS);
+
+    // The rendered width tracks the crop so the delivered artifacts match.
+    expect(large.strokeWidth).toBeGreaterThan(small.strokeWidth);
+    expect(exportedWeight(large)).toBeCloseTo(exportedWeight(small), 1);
+    // A fixed canvas width would have exported the small signature far heavier.
+    const fixedWidth = DEFAULT_SIGNATURE_PEN_SETTINGS.strokeWidth;
+    expect(fixedWidth * Math.min(1_600 / small.width, 900 / small.height))
+      .toBeGreaterThan(fixedWidth * Math.min(1_600 / large.width, 900 / large.height) * 2);
+  });
+
+  it("clamps normalization so a degenerate crop stays visible", () => {
+    const dot = buildSignatureSvg([{ points: [{ x: 40, y: 50 }] }], DEFAULT_SIGNATURE_PEN_SETTINGS);
+    expect(dot.strokeWidth).toBe(
+      Number((DEFAULT_SIGNATURE_PEN_SETTINGS.strokeWidth * SIGNATURE_STROKE_SCALE_MIN).toFixed(3)),
+    );
+    expect(resolveSignatureStrokeWidth({ width: 640, height: 256 }, DEFAULT_SIGNATURE_PEN_SETTINGS))
+      .toBe(DEFAULT_SIGNATURE_PEN_SETTINGS.strokeWidth);
   });
 
   it("uses midpoint quadratic curves for multi-point strokes", () => {
