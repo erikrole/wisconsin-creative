@@ -153,6 +153,19 @@ describe("signature input and draft contracts", () => {
     expect(source).toContain(">Retry</Button>");
     expect(source).toContain("invalidateSignatureCollectionCaches");
   });
+
+  it("BUG: reads the nested capture bootstrap before checking collection state", () => {
+    const source = readFileSync(
+      "src/app/(app)/signatures/[id]/capture/[memberId]/SignatureCapturePage.tsx",
+      "utf8",
+    );
+
+    expect(source).toContain("type CaptureBootstrap = { collection: Collection; member: Member };");
+    expect(source).toContain("useFetch<CaptureBootstrap>");
+    expect(source).toContain("const collection = bootstrap?.collection ?? null;");
+    expect(source).toContain("const member = bootstrap?.member ?? null;");
+    expect(source).not.toContain("const member = collection?.member ?? null;");
+  });
 });
 
 describe("UWBadgers signature roster adapter", () => {

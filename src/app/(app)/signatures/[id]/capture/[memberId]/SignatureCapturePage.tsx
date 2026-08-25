@@ -28,7 +28,8 @@ import { signatureSaveRequestIdSchema } from "@/lib/signatures/types";
 type PenSettings = { strokeColor: string; strokeWidth: number; cropPadding: number; maxWidth: number; maxHeight: number };
 type AthleteProfile = SignatureAthleteProfileValues;
 type Member = { id: string; name: string; jerseyNumber: number | null; title: string | null; roleGroup: string; active: boolean; captureVersion: number; settingsVersion: number; captureSettings?: PenSettings; artifact: { id: string } | null; athleteProfile: AthleteProfile | null; athleteProfileComplete: boolean };
-type Collection = { id: string; season: string; status: "OPEN" | "ARCHIVED"; collectionVersion: number; member: Member };
+type Collection = { id: string; season: string; status: "OPEN" | "ARCHIVED"; collectionVersion: number };
+type CaptureBootstrap = { collection: Collection; member: Member };
 type DraftStatus = "loading" | "empty" | "saving" | "saved" | "unavailable";
 
 function pointForEvent(event: PointerEvent, canvas: HTMLCanvasElement, logicalSize: SignatureCanvasSize) {
@@ -89,11 +90,12 @@ export default function SignatureCapturePage({ collectionId, memberId, userId }:
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isIpad, setIsIpad] = useState<boolean | null>(null);
-  const { data: collection, loading, error, reload, refreshing } = useFetch<Collection>({
+  const { data: bootstrap, loading, error, reload, refreshing } = useFetch<CaptureBootstrap>({
     url: `/api/signatures/collections/${collectionId}/members/${memberId}`,
     enabled: isIpad === true,
   });
-  const member = collection?.member ?? null;
+  const collection = bootstrap?.collection ?? null;
+  const member = bootstrap?.member ?? null;
   const settings = member?.captureSettings;
   const draftKey = useMemo(
     () => collection && member
