@@ -1477,8 +1477,6 @@ enum ScheduleFixtureAPI {
         return Data("{ \"data\": \(shifts) }".utf8)
     }
 }
-#endif
-
 // MARK: - Trade Board
 
 /// The Trade Board against canned trades and Open Work.
@@ -1704,3 +1702,4 @@ private extension Calendar {
         date(bySettingHour: hour, minute: 0, second: 0, of: startOfDay(for: day))
     }
 }
+#endif

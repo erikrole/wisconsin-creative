@@ -84,10 +84,16 @@ describe("native app and web trust contracts", () => {
   // Re-pinned on every bump on purpose: the pair has to move together, and a
   // stale number must not survive. The separate kiosk target keeps its own
   // build number and is deliberately not counted here.
-  it("versions the app and Live Activity extension together as build 27", () => {
+  it("versions the app and Live Activity extension together as version 1.1 build 28", () => {
     const project = source("ios/project.yml");
-    expect(project.match(/CURRENT_PROJECT_VERSION: "27"/g)).toHaveLength(2);
-    expect(project).not.toContain('CURRENT_PROJECT_VERSION: "26"');
+    const mainTarget = between(project, "  Wisconsin:\n", "  WisconsinKiosk:\n");
+    const liveActivitiesTarget = between(project, "  WisconsinLiveActivities:\n", "schemes:\n");
+    expect(project.match(/MARKETING_VERSION: "1.1"/g)).toHaveLength(2);
+    expect(project.match(/CURRENT_PROJECT_VERSION: "28"/g)).toHaveLength(2);
+    expect(mainTarget).not.toContain('MARKETING_VERSION: "1.0"');
+    expect(mainTarget).not.toContain('CURRENT_PROJECT_VERSION: "27"');
+    expect(liveActivitiesTarget).not.toContain('MARKETING_VERSION: "1.0"');
+    expect(liveActivitiesTarget).not.toContain('CURRENT_PROJECT_VERSION: "27"');
   });
 
   it("keeps WeatherKit out of the App Store target", () => {
