@@ -6,7 +6,7 @@ import { getAllowedRoles } from "@/lib/permissions";
 import { appendDistinctSignaturePoints, isIpadDevice, shouldRetainSignatureSaveRequestId, signatureCanvasViewport, signaturePointFromClient } from "@/lib/signatures/capture";
 import { buildSignatureDraft, isFreshSignatureDraft, signatureDraftKey, signatureDraftMatchesMember } from "@/lib/signatures/drafts";
 import { renderSignatureArtifacts, SIGNATURE_PNG_MIN_WIDTH } from "@/lib/signatures/artifacts";
-import { buildSignatureCurve, buildSignatureSvg, resolveSignatureStrokeWidth, signaturePathData, SIGNATURE_STROKE_SCALE_MIN } from "@/lib/signatures/geometry";
+import { buildSignatureCurve, buildSignatureSvg, resolveSignatureExportSize, resolveSignatureStrokeWidth, signaturePathData, SIGNATURE_STROKE_SCALE_MIN } from "@/lib/signatures/geometry";
 import { acceptsSignaturePointer, appendCoalescedPointerEvents } from "@/lib/signatures/pointer";
 import { captureSaveRequestSchema, DEFAULT_SIGNATURE_PEN_SETTINGS, isRequiredSignatureGroup, SIGNATURE_IMPORTED_SPORT_CODES, SIGNATURE_SPORT_REGISTRY, signatureAdHocMemberSchema, signatureAthleteProfileSchema, signatureCollectionTitle, signatureCollectionVersionSchema, signatureRosterEntrySchema } from "@/lib/signatures/types";
 import { compareSignatureRosterMembers } from "@/lib/signatures/roster";
@@ -657,6 +657,14 @@ describe("signature artifact contract", () => {
     );
     expect(resolveSignatureStrokeWidth({ width: 640, height: 256 }, DEFAULT_SIGNATURE_PEN_SETTINGS))
       .toBe(DEFAULT_SIGNATURE_PEN_SETTINGS.strokeWidth);
+  });
+
+  it("predicts the delivered export size that sharp actually renders", async () => {
+    const artifact = await renderSignatureArtifacts(strokes, DEFAULT_SIGNATURE_PEN_SETTINGS);
+    const predicted = resolveSignatureExportSize(artifact.cropBounds, DEFAULT_SIGNATURE_PEN_SETTINGS);
+
+    expect(predicted.width).toBe(artifact.width);
+    expect(predicted.height).toBe(artifact.height);
   });
 
   it("uses midpoint quadratic curves for multi-point strokes", () => {

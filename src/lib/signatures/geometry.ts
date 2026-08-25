@@ -322,3 +322,23 @@ export const SIGNATURE_PEN_SAMPLE_STROKES: SignatureStroke[] = [
     ],
   },
 ];
+
+export const SIGNATURE_EXPORT_MIN_WIDTH = 1_000;
+
+export type SignatureExportSize = { width: number; height: number; scale: number };
+
+/**
+ * Mirrors the raster fit the artifact pipeline applies, including the minimum
+ * exported width, so an admin can be shown the real delivered size before any
+ * signature exists. `tests/signature-capture.test.ts` pins this against the
+ * bytes sharp actually produces.
+ */
+export function resolveSignatureExportSize(
+  source: Pick<SignatureCropBounds, "width" | "height">,
+  limits: SignatureExportLimits,
+): SignatureExportSize {
+  const scale = signatureExportScale(source.width, source.height, limits);
+  const height = Math.round(source.height * scale);
+  const width = Math.round(source.width * scale);
+  return { width: Math.max(width, SIGNATURE_EXPORT_MIN_WIDTH), height, scale };
+}
