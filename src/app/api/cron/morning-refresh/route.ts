@@ -134,7 +134,7 @@ export const GET = withCron(async () => {
   // ── 2b. Recognise shift work that just finished ──────────────────────
   // Nothing calls the server when a game ends, so this is the one badge family
   // without a request to hang itself on. It is bounded to people whose shift or
-  // admin-recorded Scoreboard credit ended in the last couple of days -- the nightly cadence plus slack -- and
+  // admin-added worker row ended in the last couple of days -- the nightly cadence plus slack -- and
   // each evaluation recounts that person's full history, so a first qualifying
   // shift awards every threshold they had already passed.
   let shiftBadgeUsers = 0;

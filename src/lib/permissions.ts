@@ -11,6 +11,9 @@ import { Role } from "@prisma/client";
  * This map covers coarse role gating at the API route level.
  */
 export const PERMISSIONS: Record<string, Record<string, Role[]>> = {
+  role_preview: {
+    manage: ["ADMIN"],
+  },
   user: {
     view: ["ADMIN", "STAFF", "STUDENT"],
     edit_self: ["ADMIN", "STAFF", "STUDENT", "COLLABORATOR"],
@@ -94,9 +97,9 @@ export const PERMISSIONS: Record<string, Record<string, Role[]>> = {
     // D-056: Scoreboard identity and metrics are shared authenticated team data.
     view: ["ADMIN", "STAFF", "STUDENT", "COLLABORATOR"],
   },
-  event_credit: {
-    // Scoreboard-only participation. Staff can see who was credited on an event
-    // they are running; recording or removing a credit rewrites season stats
+  event_worker: {
+    // Workers recorded outside the schedule. Staff can see who was added to an
+    // event they are running; adding or removing one rewrites season stats
     // without any schedule or notification trail, so it stays ADMIN-only.
     view: ["ADMIN", "STAFF"],
     manage: ["ADMIN"],

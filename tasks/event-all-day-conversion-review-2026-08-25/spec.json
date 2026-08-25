@@ -1,0 +1,51 @@
+{
+  "title": "All-day event timing conversion",
+  "eyebrow": "Web · Wisconsin Creative · Schedule",
+  "lede": "Staff and admins can now change an event's timing mode in the same editor that already owns its date and time corrections.",
+  "stats": [
+    {
+      "k": "New editor control",
+      "v": "1",
+      "n": "All-day event toggle, shown in the existing Date and time group"
+    },
+    {
+      "k": "Matched capture",
+      "v": "1428×1154",
+      "n": "Same authenticated Admin session, event, viewport, and timed values"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Timed event editor",
+      "note": "Source-control baseline and working-tree implementation were captured against the same timed Veterans Plaza Ceremony record after the requested 4:30–5:30 PM conversion.",
+      "pairs": [
+        {
+          "title": "Date and time",
+          "sub": "The new mode control sits above the existing date/time fields without changing the timed-event workflow.",
+          "before": "tasks/event-all-day-conversion-review-2026-08-25/before.png",
+          "beforeCap": "Before: timed dates and times, but no way to switch the event to all-day.",
+          "after": "tasks/event-all-day-conversion-review-2026-08-25/after.png",
+          "afterCap": "After: the unchecked All-day event control and mode-specific helper copy are available in the same editor."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Timing mode was implicit",
+      "was": "The editor preserved the loaded allDay value and only sent startsAt/endsAt, so an all-day event could not become a timed event.",
+      "now": "The editor owns an explicit mode draft, sends a complete normalized window plus allDay when the mode changes, and keeps the crew/notification path atomic."
+    }
+  ],
+  "verification": [
+    "<strong>45 adjacent route/source-contract tests</strong> pass, including all-day conversion, reverse conversion, imported-event protection, and notification scheduling.",
+    "<strong>TypeScript, full ESLint, migration-prefix validation, and git diff checks</strong> pass.",
+    "<strong>npm run build:app</strong> and <strong>npm run verify:docs</strong> pass.",
+    "<strong>Authenticated local Admin browser proof</strong> opened Veterans Plaza Ceremony and rendered the new control with no observed console/runtime blocker.",
+    "<strong>Baseline note:</strong> the clean source-control server logged a pre-existing <code>/api/calendar-events/[id]/credits</code> 500 because its HEAD Prisma client lacks <code>eventCredit</code>; the editor capture still rendered, and the working-tree implementation had no matching browser error."
+  ],
+  "notes": [
+    "Production deployment and production event read-back remain separate gates from this local source/build/browser proof.",
+    "Gear reservation windows remain independent of event timing changes, and imported calendar events remain source-owned."
+  ]
+}

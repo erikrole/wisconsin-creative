@@ -38,7 +38,7 @@ function event(
     opponent?: string | null;
     site?: "HOME" | "AWAY" | "NEUTRAL" | null;
     rawLocationText?: string | null;
-    credits?: TeamScoreboardPersonIdentity[];
+    workers?: TeamScoreboardPersonIdentity[];
   } = {},
 ) {
   return {
@@ -53,7 +53,7 @@ function event(
         assignments: people.map((user) => ({ user })),
       })),
     },
-    credits: (dimensions.credits ?? []).map((user) => ({ user })),
+    workers: (dimensions.workers ?? []).map((user) => ({ user })),
   };
 }
 
@@ -62,17 +62,17 @@ beforeEach(() => {
 });
 
 describe("getTeamScoreboard", () => {
-  it("counts an admin-recorded credit like an assignment and never twice", async () => {
+  it("counts an admin-added worker like an assignment and never twice", async () => {
     mockedFindMany
       .mockResolvedValueOnce([
-        // Bob was never staffed on this event; an admin credited him after the
-        // fact. Alice holds both a shift and a redundant credit.
-        event("worked-fb", "FB", null, [[alice]], { credits: [alice, bob] }),
-        // Nobody was assigned at all -- the credit alone makes it covered.
-        event("worked-sb", "SB", null, [], { credits: [bob] }),
+        // Bob was never staffed on this event; an admin added him after the
+        // fact. Alice holds both a shift and a redundant added-worker row.
+        event("worked-fb", "FB", null, [[alice]], { workers: [alice, bob] }),
+        // Nobody was assigned at all -- the added worker alone makes it covered.
+        event("worked-sb", "SB", null, [], { workers: [bob] }),
       ])
       .mockResolvedValueOnce([
-        event("game-fb-win", "FB", "WIN", [[alice]], { credits: [alice, bob] }),
+        event("game-fb-win", "FB", "WIN", [[alice]], { workers: [alice, bob] }),
       ]);
 
     const scoreboard = await getTeamScoreboard({ now: new Date("2026-12-01T18:00:00.000Z") });
@@ -207,7 +207,7 @@ describe("getTeamScoreboard", () => {
         status: { in: ["DIRECT_ASSIGNED", "APPROVED"] },
         user: { active: true, hiddenFromRoster: false },
       });
-      expect(query.where.OR[1].credits.some).toEqual({
+      expect(query.where.OR[1].workers.some).toEqual({
         user: { active: true, hiddenFromRoster: false },
       });
       expect(query.select.shiftGroup.select.shifts.select.assignments.select.user.select).toEqual({

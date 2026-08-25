@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { startOfDayInAppTz } from "@/lib/app-time";
-import { participatedEventWhere } from "@/lib/services/event-credit";
+import { participatedEventWhere } from "@/lib/services/event-worker";
 import type { CalendarEventSite, Prisma } from "@prisma/client";
 
 /** Wins, losses, and ties over some slice of games. */
@@ -58,8 +58,8 @@ export const OFFICIAL_RECORD_EVENT_EXCLUSION: Prisma.CalendarEventWhereInput = {
  * Completed Schedule events credited to a person for recap and recognition
  * totals. This intentionally does not require an outcome or opponent, and it
  * keeps archived history while excluding hidden/test rows and cancelled or
- * future assignments. Admin-recorded Scoreboard credits count here exactly like
- * an active assignment.
+ * future assignments. Workers an admin added outside the schedule count here
+ * exactly like an active assignment.
  */
 export function workedEventWhere(
   userId: string,
@@ -88,8 +88,8 @@ export async function getWorkedEventCountForUser(
  * `buildScheduleEventWhere`'s definition of a countable event so a profile
  * record never disagrees with the schedule's event visibility rules.
  * Exhibition, scrimmage, and alumni-match rows remain schedule history but
- * are not official record games. Admin-recorded Scoreboard credits count here
- * exactly like an active assignment.
+ * are not official record games. Workers an admin added outside the schedule
+ * count here exactly like an active assignment.
  */
 export function gameRecordEventWhere(userId: string): Prisma.CalendarEventWhereInput {
   return {
@@ -114,8 +114,8 @@ function addTo<T extends WinLoss>(bucket: T, result: string | null, count: numbe
  * broken down by sport and by where the game was played.
  *
  * Grouped by event rather than by assignment: a user working two shifts on one
- * game is one game, not two, and a credit on a game they were also assigned to
- * adds nothing. Declined and swapped-away assignments are not
+ * game is one game, not two, and being added to a game they were also assigned
+ * to adds nothing. Declined and swapped-away assignments are not
  * assignments, so they are excluded via `ACTIVE_ASSIGNMENT_STATUSES`. Site
  * comes from `site`, not `isHome`, so a neutral game is counted as neutral
  * rather than lumped in with games we could not classify.

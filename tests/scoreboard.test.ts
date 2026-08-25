@@ -58,16 +58,16 @@ describe("scoreboardEventWhere", () => {
           },
         },
       },
-      { credits: { some: { userId: "user-1" } } },
+      { workers: { some: { userId: "user-1" } } },
     ]);
   });
 
-  it("counts an admin-recorded credit the same way it counts an assignment", () => {
+  it("counts an admin-added worker the same way it counts an assignment", () => {
     const where = scoreboardEventWhere("user-1");
-    const [assigned, credited] = where.OR ?? [];
+    const [assigned, added] = where.OR ?? [];
 
     expect(assigned).toHaveProperty("shiftGroup");
-    expect(credited).toEqual({ credits: { some: { userId: "user-1" } } });
+    expect(added).toEqual({ workers: { some: { userId: "user-1" } } });
   });
 });
 

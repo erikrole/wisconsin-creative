@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { sportLabel } from "@/lib/sports";
 import { ACTIVE_ASSIGNMENT_STATUSES } from "@/lib/shift-constants";
-import { participatedEventWhere } from "@/lib/services/event-credit";
+import { participatedEventWhere } from "@/lib/services/event-worker";
 import { scheduleVenueDisplayName } from "@/lib/schedule-event-identity";
 import { AREAS } from "@/types/areas";
 import {
@@ -172,8 +172,8 @@ export function scoreboardEventWhere(
     status: { not: "CANCELLED" },
     isHidden: false,
     archivedAt: null,
-    // An active assignment or an admin-recorded Scoreboard credit; a person
-    // holding both on one event is still one event.
+    // An active assignment or a worker an admin added outside the schedule; a
+    // person holding both on one event is still one event.
     ...participatedEventWhere(userId),
   };
 

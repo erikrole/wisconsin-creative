@@ -35,7 +35,7 @@ const { mockTx } = vi.hoisted(() => ({
       count: vi.fn(),
       findMany: vi.fn(),
     },
-    eventCredit: {
+    eventWorker: {
       findMany: vi.fn(),
     },
   },
@@ -69,11 +69,11 @@ beforeEach(() => {
   mockTx.booking.count.mockResolvedValue(0);
   mockTx.badgeDefinition.findMany.mockResolvedValue([]);
   mockTx.shiftAssignment.findMany.mockResolvedValue([]);
-  mockTx.eventCredit.findMany.mockResolvedValue([]);
+  mockTx.eventWorker.findMany.mockResolvedValue([]);
   mockTx.shiftTrade.findMany.mockResolvedValue([]);
 });
 
-describe("badge evaluator credit-triggered silence", () => {
+describe("badge evaluator added-worker silence", () => {
   function assignment(eventId: string) {
     return {
       hasConflict: false,
@@ -90,7 +90,7 @@ describe("badge evaluator credit-triggered silence", () => {
     };
   }
 
-  function credit(eventId: string) {
+  function addedWorker(eventId: string) {
     return {
       event: {
         id: eventId,
@@ -121,10 +121,10 @@ describe("badge evaluator credit-triggered silence", () => {
     );
   }
 
-  it("stays silent for a badge only a credit pushed the person over", async () => {
+  it("stays silent for a badge only an added worker pushed the person over", async () => {
     mockTx.shiftAssignment.findMany.mockResolvedValue([assignment("event-1"), assignment("event-2"), assignment("event-3")]);
-    mockTx.eventCredit.findMany.mockResolvedValue(
-      Array.from({ length: 7 }, (_unused, index) => credit(`credit-event-${index}`)),
+    mockTx.eventWorker.findMany.mockResolvedValue(
+      Array.from({ length: 7 }, (_unused, index) => addedWorker(`added-event-${index}`)),
     );
     mockTx.badgeDefinition.findMany.mockImplementation(async ({ where }: { where: { category?: string } }) => (
       where.category === "SHIFT"
@@ -148,9 +148,9 @@ describe("badge evaluator credit-triggered silence", () => {
     expect(notified[0]).toContain("Shift 3");
   });
 
-  it("notifies normally when the person has no credits at all", async () => {
+  it("notifies normally when the person has no added workers at all", async () => {
     mockTx.shiftAssignment.findMany.mockResolvedValue([assignment("event-1"), assignment("event-2"), assignment("event-3")]);
-    mockTx.eventCredit.findMany.mockResolvedValue([]);
+    mockTx.eventWorker.findMany.mockResolvedValue([]);
     mockTx.badgeDefinition.findMany.mockImplementation(async ({ where }: { where: { category?: string } }) => (
       where.category === "SHIFT" ? [{ id: "shift-3", name: "Shift 3", threshold: 3 }] : []
     ));
@@ -160,13 +160,13 @@ describe("badge evaluator credit-triggered silence", () => {
     expect(notifiedBadgeNames()).toEqual([expect.stringContaining("Shift 3")]);
   });
 
-  it("stays silent for a measured rule a credit alone satisfied", async () => {
-    // Two away events, both recorded as credits: the away ladder is met, but
+  it("stays silent for a measured rule an added worker alone satisfied", async () => {
+    // Two away events, both recorded as added workers: the away ladder is met, but
     // nothing on the schedule says so.
     mockTx.shiftAssignment.findMany.mockResolvedValue([]);
-    mockTx.eventCredit.findMany.mockResolvedValue([
-      { ...credit("away-1"), event: { ...credit("away-1").event, site: "AWAY", isHome: false } },
-      { ...credit("away-2"), event: { ...credit("away-2").event, site: "AWAY", isHome: false } },
+    mockTx.eventWorker.findMany.mockResolvedValue([
+      { ...addedWorker("away-1"), event: { ...addedWorker("away-1").event, site: "AWAY", isHome: false } },
+      { ...addedWorker("away-2"), event: { ...addedWorker("away-2").event, site: "AWAY", isHome: false } },
     ]);
     mockTx.badgeDefinition.findMany.mockImplementation(async ({ where }: { where: { category?: string } }) => (
       where.category === "MILESTONE"
@@ -186,7 +186,7 @@ describe("badge evaluator credit-triggered silence", () => {
     // The award row exists after the silent grant, so the nightly re-run
     // inserts nothing and therefore cannot notify late.
     mockTx.shiftAssignment.findMany.mockResolvedValue([]);
-    mockTx.eventCredit.findMany.mockResolvedValue([credit("credit-event-1")]);
+    mockTx.eventWorker.findMany.mockResolvedValue([addedWorker("added-event-1")]);
     mockTx.badgeDefinition.findMany.mockImplementation(async ({ where }: { where: { category?: string } }) => (
       where.category === "SHIFT" ? [{ id: "first-shift", name: "First Shift", threshold: 1 }] : []
     ));

@@ -43,8 +43,8 @@ describe("workedEventWhere", () => {
       userId: "user-1",
       status: { in: ["DIRECT_ASSIGNED", "APPROVED"] },
     });
-    // An admin-recorded Scoreboard credit counts as worked without a shift.
-    expect(where.OR?.[1]).toEqual({ credits: { some: { userId: "user-1" } } });
+    // An admin-added worker counts as worked without a shift.
+    expect(where.OR?.[1]).toEqual({ workers: { some: { userId: "user-1" } } });
   });
 });
 
@@ -58,7 +58,7 @@ describe("getWorkedEventCountForUser", () => {
     expect(args.where.startsAt).toEqual({ gte: GAME_RECORD_START_DATE, lt: GAME_RECORD_END_DATE });
     expect(args.where.endsAt).toEqual({ lt: expect.any(Date) });
     expect(args.where.OR[0].shiftGroup.shifts.some.assignments.some.userId).toBe("user-1");
-    expect(args.where.OR[1]).toEqual({ credits: { some: { userId: "user-1" } } });
+    expect(args.where.OR[1]).toEqual({ workers: { some: { userId: "user-1" } } });
   });
 });
 
@@ -88,13 +88,13 @@ describe("gameRecordEventWhere", () => {
     ]);
   });
 
-  it("credits the user through an active shift assignment or an admin credit", () => {
+  it("counts the user through an active shift assignment or an admin-added worker", () => {
     const where = gameRecordEventWhere("user-1");
     const assignment = where.OR?.[0]?.shiftGroup?.shifts?.some?.assignments?.some;
     expect(assignment?.userId).toBe("user-1");
     // Declined and swapped-away assignments are not assignments.
     expect(assignment?.status).toEqual({ in: ["DIRECT_ASSIGNED", "APPROVED"] });
-    expect(where.OR?.[1]).toEqual({ credits: { some: { userId: "user-1" } } });
+    expect(where.OR?.[1]).toEqual({ workers: { some: { userId: "user-1" } } });
   });
 });
 

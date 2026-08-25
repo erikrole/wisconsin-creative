@@ -68,8 +68,8 @@ async function grantBadges(tx: TxClient, args: {
   definitions: Array<{ id: string; name: string }>;
   /**
    * Whether earning this badge is worth telling the person about. False only
-   * for a badge an admin-recorded Scoreboard credit pushed them over: the
-   * credit is deliberately silent (D-057), and a "badge earned" ping is the one
+   * for a badge that only a worker an admin added pushed them over: adding a
+   * worker is deliberately silent (D-057), and a "badge earned" ping is the one
    * way it could announce itself. The award itself is written either way.
    */
   notify?: boolean;
@@ -126,10 +126,10 @@ async function awardThresholdBadges(tx: TxClient, args: {
   count: number;
   ruleKey?: string;
   /**
-   * The count reached without admin-recorded credits. Badges at or below it were
+   * The count reached without admin-added workers. Badges at or below it were
    * earned on the schedule's own record and notify; anything above it exists
-   * only because of a credit and is granted silently. Defaults to `count`, so a
-   * caller with no credits behaves exactly as before.
+   * only because of an added-worker row and is granted silently. Defaults to
+   * `count`, so a caller with no added workers behaves exactly as before.
    */
   notifiableCount?: number;
 }) {
@@ -177,7 +177,7 @@ async function awardMeasuredRuleBadges(tx: TxClient, args: {
   userId: string;
   trigger: string;
   counts: Map<string, number>;
-  /** Per-rule counts without admin-recorded credits. See `notifiableCount`. */
+  /** Per-rule counts without admin-added workers. See `notifiableCount`. */
   notifiableCounts?: Map<string, number>;
 }) {
   const ruleKeys = [...args.counts.keys()];
@@ -199,7 +199,7 @@ async function awardMeasuredRuleBadges(tx: TxClient, args: {
     && (args.counts.get(definition.ruleKey) ?? 0) >= definition.threshold
   ));
 
-  const earnedWithoutCredits = args.notifiableCounts
+  const earnedWithoutAddedWorkers = args.notifiableCounts
     ? new Set(earnedDefinitions.filter((definition) => (
       definition.ruleKey !== null
       && definition.threshold !== null
@@ -209,11 +209,11 @@ async function awardMeasuredRuleBadges(tx: TxClient, args: {
 
   await grantBadges(tx, {
     userId: args.userId,
-    definitions: earnedDefinitions.filter((definition) => earnedWithoutCredits.has(definition)),
+    definitions: earnedDefinitions.filter((definition) => earnedWithoutAddedWorkers.has(definition)),
   });
   await grantBadges(tx, {
     userId: args.userId,
-    definitions: earnedDefinitions.filter((definition) => !earnedWithoutCredits.has(definition)),
+    definitions: earnedDefinitions.filter((definition) => !earnedWithoutAddedWorkers.has(definition)),
     notify: false,
   });
 }
@@ -603,8 +603,9 @@ export async function onAppOpened(event: AppOpenedBadgeEvent): Promise<void> {
 }
 
 /**
- * Recognition for shift work, counted from assignments -- and admin-recorded
- * Scoreboard credits (D-057) -- on events that have already happened.
+ * Recognition for shift work, counted from assignments -- and from workers an
+ * admin added outside the schedule (D-057) -- on events that have already
+ * happened.
  *
  * These badges were retired in 2026-05 because attendance is not tracked, and
  * that reasoning conflated two things: nobody records whether a person showed
@@ -616,14 +617,15 @@ export async function onAppOpened(event: AppOpenedBadgeEvent): Promise<void> {
  * this safe to re-run nightly: `awardThresholdBadges` writes with
  * `skipDuplicates`, so a second pass over the same shifts changes nothing.
  *
- * A credit counts as one worked event and never stacks with an assignment on
- * the same event; `loadWorkedShiftEvidence` owns that deduplication so the
- * progress bar on a profile and the award written here cannot disagree.
+ * An added worker counts as one worked event and never stacks with an
+ * assignment on the same event; `loadWorkedShiftEvidence` owns that
+ * deduplication so the progress bar on a profile and the award written here
+ * cannot disagree.
  *
  * A badge the person had already earned on their own assignments notifies as
- * usual. One that only a credit pushed them over is granted silently, because a
- * credit is not supposed to announce itself and "badge earned" is the only
- * message it could otherwise produce. Silence is durable rather than deferred:
+ * usual. One that only an added-worker row pushed them over is granted
+ * silently, because adding a worker is not supposed to announce itself and
+ * "badge earned" is the only message it could otherwise produce. Silence is durable rather than deferred:
  * the award row exists after the silent grant, so no later pass re-inserts it
  * and none can notify late.
  *
@@ -636,22 +638,22 @@ export async function onShiftsWorked(event: ShiftsWorkedBadgeEvent): Promise<voi
   await runBadgeTransaction(async (tx) => {
     const worked = await loadWorkedShiftEvidence(tx, event.userId);
     const scheduled = worked.filter((evidence) => evidence.source === "ASSIGNMENT");
-    // Recomputing the schedule-only totals is only worth it when a credit is
-    // actually in play; without one the two answers are the same object.
-    const hasCredits = scheduled.length !== worked.length;
+    // Recomputing the schedule-only totals is only worth it when an added
+    // worker is actually in play; without one the two answers are identical.
+    const hasAddedWorkers = scheduled.length !== worked.length;
 
     await awardThresholdBadges(tx, {
       userId: event.userId,
       category: BadgeCategory.SHIFT,
       trigger: "shift:completed",
       count: worked.length,
-      notifiableCount: hasCredits ? scheduled.length : undefined,
+      notifiableCount: hasAddedWorkers ? scheduled.length : undefined,
     });
     await awardMeasuredRuleBadges(tx, {
       userId: event.userId,
       trigger: "shift:completed",
       counts: shiftAutomaticRuleCounts(worked, env.appTimezone),
-      notifiableCounts: hasCredits
+      notifiableCounts: hasAddedWorkers
         ? shiftAutomaticRuleCounts(scheduled, env.appTimezone)
         : undefined,
     });

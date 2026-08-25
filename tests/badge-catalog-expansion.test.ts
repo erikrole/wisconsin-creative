@@ -219,7 +219,7 @@ describe("50-badge catalog expansion", () => {
   });
 
   it("uses one shared reader for schedule evidence on both paths", () => {
-    // Schedule evidence now includes admin-recorded Scoreboard credits, so its
+    // Schedule evidence now includes admin-added workers, so its
     // select lives once rather than being mirrored in two files.
     const workedEvidence = source("src/lib/badges/worked-evidence.ts");
     for (const field of ["hasConflict: true", "result: true", "site: true", "locationId: true", "opponent: true"]) {

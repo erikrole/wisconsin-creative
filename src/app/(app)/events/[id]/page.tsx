@@ -21,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Calendar as DatePickerCalendar } from "@/components/ui/calendar";
@@ -33,7 +34,7 @@ import { formatRelativeTime } from "@/lib/format";
 import { EventSkeleton } from "./_components/EventSkeleton";
 import { ShiftCoverageCard } from "./_components/ShiftCoverageCard";
 import { EventTravelCard } from "./_components/EventTravelCard";
-import { EventCreditsCard } from "./_components/EventCreditsCard";
+import { EventWorkersCard } from "./_components/EventWorkersCard";
 import { effectiveCallWindow, summarizeEffectiveCallWindows } from "@/lib/shift-call-windows";
 
 type LocationOption = { id: string; name: string };
@@ -196,6 +197,7 @@ export default function EventDetailPage() {
   const [sportCodeDraft, setSportCodeDraft] = useState("__none__");
   const [opponentDraft, setOpponentDraft] = useState("");
   const [locationIdDraft, setLocationIdDraft] = useState<string>("__none__");
+  const [allDayDraft, setAllDayDraft] = useState(false);
   const [startDateDraft, setStartDateDraft] = useState<Date | undefined>();
   const [startTimeDraft, setStartTimeDraft] = useState("09:00");
   const [endDateDraft, setEndDateDraft] = useState<Date | undefined>();
@@ -265,10 +267,11 @@ export default function EventDetailPage() {
     setSportCodeDraft(event.sportCode ?? "__none__");
     setOpponentDraft(event.opponent ?? "");
     setLocationIdDraft(event.location?.id ?? "__none__");
+    setAllDayDraft(event.allDay);
     setStartDateDraft(eventDraftDate(event.startsAt, event.allDay, false));
-    setStartTimeDraft(eventDraftTime(event.startsAt));
+    setStartTimeDraft(event.allDay ? "09:00" : eventDraftTime(event.startsAt));
     setEndDateDraft(eventDraftDate(event.endsAt, event.allDay, true));
-    setEndTimeDraft(eventDraftTime(event.endsAt));
+    setEndTimeDraft(event.allDay ? "17:00" : eventDraftTime(event.endsAt));
     setEditError("");
     setEditOpen(true);
 
@@ -323,8 +326,8 @@ export default function EventDetailPage() {
       const body: Record<string, unknown> = {};
 
       if (!event.source) {
-        const startsAt = buildEventDraftDateTime(startDateDraft, startTimeDraft, event.allDay, false);
-        const endsAt = buildEventDraftDateTime(endDateDraft, endTimeDraft, event.allDay, true);
+        const startsAt = buildEventDraftDateTime(startDateDraft, startTimeDraft, allDayDraft, false);
+        const endsAt = buildEventDraftDateTime(endDateDraft, endTimeDraft, allDayDraft, true);
         if (!startsAt || !endsAt) {
           setEditError("Start and end dates are required");
           return;
@@ -333,12 +336,15 @@ export default function EventDetailPage() {
           setEditError("End must be after start");
           return;
         }
-        if (
-          new Date(startsAt).getTime() !== new Date(event.startsAt).getTime()
-          || new Date(endsAt).getTime() !== new Date(event.endsAt).getTime()
-        ) {
+        const timingChanged = allDayDraft !== event.allDay
+          || new Date(startsAt).getTime() !== new Date(event.startsAt).getTime()
+          || new Date(endsAt).getTime() !== new Date(event.endsAt).getTime();
+        if (timingChanged) {
           body.startsAt = startsAt;
           body.endsAt = endsAt;
+        }
+        if (allDayDraft !== event.allDay) {
+          body.allDay = allDayDraft;
         }
       }
 
@@ -585,22 +591,36 @@ export default function EventDetailPage() {
                     Moving the event also moves its crew and call times. Existing gear reservation windows stay unchanged.
                   </p>
                 </div>
+                <div className="flex items-start gap-2">
+                  <Checkbox
+                    id="edit-all-day"
+                    checked={allDayDraft}
+                    onCheckedChange={(checked) => setAllDayDraft(checked === true)}
+                    disabled={saving}
+                  />
+                  <div className="flex flex-col gap-0.5">
+                    <Label htmlFor="edit-all-day" className="cursor-pointer">All-day event</Label>
+                    <p className="text-xs text-muted-foreground">
+                      {allDayDraft ? "Uses inclusive dates with no call time." : "Uses the selected local start and end times."}
+                    </p>
+                  </div>
+                </div>
                 <EventDateTimeField
                   label="Starts"
                   fieldId="edit-start-time"
                   date={startDateDraft}
                   time={startTimeDraft}
-                  allDay={event.allDay}
+                  allDay={allDayDraft}
                   disabled={saving}
                   onDateChange={setStartDateDraft}
                   onTimeChange={setStartTimeDraft}
                 />
                 <EventDateTimeField
-                  label={event.allDay ? "Ends (inclusive)" : "Ends"}
+                  label={allDayDraft ? "Ends (inclusive)" : "Ends"}
                   fieldId="edit-end-time"
                   date={endDateDraft}
                   time={endTimeDraft}
-                  allDay={event.allDay}
+                  allDay={allDayDraft}
                   disabled={saving}
                   onDateChange={setEndDateDraft}
                   onTimeChange={setEndTimeDraft}
@@ -890,7 +910,7 @@ export default function EventDetailPage() {
       ) : null}
 
       {isStaffOrAdmin && (
-        <EventCreditsCard eventId={id} isAdmin={currentUserRole === "ADMIN"} />
+        <EventWorkersCard eventId={id} isAdmin={currentUserRole === "ADMIN"} />
       )}
 
       {event.isHome === false && event.sportCode && (

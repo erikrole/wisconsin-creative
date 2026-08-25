@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { handleAuthRedirect, isAbortError, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { formatRelativeTime } from "@/lib/format";
 
-type CreditUser = {
+type WorkerUser = {
   id: string;
   name: string;
   avatarUrl: string | null;
@@ -21,12 +21,12 @@ type CreditUser = {
   active: boolean;
 };
 
-type EventCredit = {
+type EventWorker = {
   id: string;
   note: string | null;
   createdAt: string;
-  user: CreditUser;
-  createdBy: { id: string; name: string } | null;
+  user: WorkerUser;
+  addedBy: { id: string; name: string } | null;
   alsoAssigned: boolean;
 };
 
@@ -39,14 +39,20 @@ function roleLabel(role: string): string {
 }
 
 /**
- * Scoreboard credit for people who worked an event without a scheduled shift —
- * a late addition, a fill-in, or a collaborator who is tracked but never
- * staffed. Admin-only, silent, and separate from the crew table on purpose:
- * writing here moves season stats and touches nothing else.
+ * People who worked an event without a scheduled shift — a late addition, a
+ * fill-in, or a collaborator who is tracked but never staffed. Admin-only,
+ * silent, and separate from the crew table on purpose: adding someone here
+ * moves season stats and touches nothing else.
  */
-export function EventCreditsCard({ eventId, isAdmin }: { eventId: string; isAdmin: boolean }) {
-  const [credits, setCredits] = useState<EventCredit[]>([]);
+export function EventWorkersCard({ eventId, isAdmin }: { eventId: string; isAdmin: boolean }) {
+  const [workers, setWorkers] = useState<EventWorker[]>([]);
   const [loading, setLoading] = useState(true);
+  /**
+   * A failed read must not render as an empty list. "No one has been added" is
+   * a claim about the event; silently making it when the request failed would
+   * hide a broken deploy behind a reassuring empty state.
+   */
+  const [loadFailed, setLoadFailed] = useState(false);
   const [users, setUsers] = useState<PickerUser[]>([]);
   const [selectedUserId, setSelectedUserId] = useState("");
   const [note, setNote] = useState("");
@@ -56,18 +62,21 @@ export function EventCreditsCard({ eventId, isAdmin }: { eventId: string; isAdmi
 
   const load = useCallback(async (signal?: AbortSignal) => {
     try {
-      const response = await fetch(`/api/calendar-events/${eventId}/credits`, { signal });
+      const response = await fetch(`/api/calendar-events/${eventId}/workers`, { signal });
       if (signal?.aborted) return;
       if (handleAuthRedirect(response)) return;
       if (!response.ok) {
-        toast.error(await parseErrorMessage(response, "Failed to load event credits"));
+        setLoadFailed(true);
+        toast.error(await parseErrorMessage(response, "Failed to load workers"));
         return;
       }
-      const json = await parseJsonSafely<{ data?: EventCredit[] }>(response);
-      setCredits(json?.data ?? []);
+      const json = await parseJsonSafely<{ data?: EventWorker[] }>(response);
+      setWorkers(json?.data ?? []);
+      setLoadFailed(false);
     } catch (error) {
       if (isAbortError(error)) return;
-      toast.error("Failed to load event credits");
+      setLoadFailed(true);
+      toast.error("Failed to load workers");
     } finally {
       if (!signal?.aborted) setLoading(false);
     }
@@ -96,63 +105,63 @@ export function EventCreditsCard({ eventId, isAdmin }: { eventId: string; isAdmi
     return () => controller.abort();
   }, [isAdmin]);
 
-  const creditedIds = useMemo(() => new Set(credits.map((credit) => credit.user.id)), [credits]);
+  const addedIds = useMemo(() => new Set(workers.map((worker) => worker.user.id)), [workers]);
 
   const options = useMemo<ComboboxOption[]>(() => users
-    .filter((user) => !creditedIds.has(user.id))
+    .filter((user) => !addedIds.has(user.id))
     .map((user) => ({
       value: user.id,
       label: user.name,
       keywords: [user.name, roleLabel(user.role)],
-    })), [users, creditedIds]);
+    })), [users, addedIds]);
 
-  async function addCredit() {
+  async function addWorker() {
     if (!selectedUserId || savingRef.current) return;
     savingRef.current = true;
     setSaving(true);
     try {
-      const response = await fetch(`/api/calendar-events/${eventId}/credits`, {
+      const response = await fetch(`/api/calendar-events/${eventId}/workers`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: selectedUserId, note: note.trim() || undefined }),
       });
       if (handleAuthRedirect(response)) return;
       if (!response.ok) {
-        toast.error(await parseErrorMessage(response, "Failed to add credit"));
+        toast.error(await parseErrorMessage(response, "Failed to add worker"));
         return;
       }
-      const json = await parseJsonSafely<{ data?: EventCredit[] }>(response);
-      setCredits(json?.data ?? []);
+      const json = await parseJsonSafely<{ data?: EventWorker[] }>(response);
+      setWorkers(json?.data ?? []);
       setSelectedUserId("");
       setNote("");
-      toast.success("Credit added. No one was notified.");
+      toast.success("Worker added. No one was notified.");
     } catch (error) {
       if (isAbortError(error)) return;
-      toast.error("Network error - credit not added");
+      toast.error("Network error - worker not added");
     } finally {
       savingRef.current = false;
       setSaving(false);
     }
   }
 
-  async function removeCredit(credit: EventCredit) {
+  async function removeWorker(worker: EventWorker) {
     if (removing) return;
-    setRemoving(credit.id);
+    setRemoving(worker.id);
     try {
-      const response = await fetch(`/api/calendar-events/${eventId}/credits/${credit.id}`, {
+      const response = await fetch(`/api/calendar-events/${eventId}/workers/${worker.id}`, {
         method: "DELETE",
       });
       if (handleAuthRedirect(response)) return;
       if (!response.ok) {
-        toast.error(await parseErrorMessage(response, "Failed to remove credit"));
+        toast.error(await parseErrorMessage(response, "Failed to remove worker"));
         return;
       }
-      const json = await parseJsonSafely<{ data?: EventCredit[] }>(response);
-      setCredits(json?.data ?? []);
-      toast.success(`Removed ${credit.user.name}'s credit`);
+      const json = await parseJsonSafely<{ data?: EventWorker[] }>(response);
+      setWorkers(json?.data ?? []);
+      toast.success(`Removed ${worker.user.name}`);
     } catch (error) {
       if (isAbortError(error)) return;
-      toast.error("Network error - credit not removed");
+      toast.error("Network error - worker not removed");
     } finally {
       setRemoving(null);
     }
@@ -164,11 +173,11 @@ export function EventCreditsCard({ eventId, isAdmin }: { eventId: string; isAdmi
         <div className="flex min-w-0 flex-col gap-1">
           <CardTitle className="flex items-center gap-2">
             <AwardIcon className="size-4 shrink-0 text-muted-foreground" />
-            Scoreboard credit
+            Added workers
           </CardTitle>
           <p className="text-xs text-muted-foreground">
-            Counts toward Scoreboard and profile stats only. No shift, no notification, and it never
-            appears on their schedule.
+            People who worked this event but were not on the crew. Counts toward Scoreboard, profile
+            stats, and badges only — no shift, no notification, and it never appears on their schedule.
           </p>
         </div>
         <Badge variant="outline" size="sm" className="shrink-0 gap-1">
@@ -179,38 +188,54 @@ export function EventCreditsCard({ eventId, isAdmin }: { eventId: string; isAdmi
 
       <CardContent className="flex flex-col gap-4">
         {loading ? (
-          <p className="text-sm text-muted-foreground">Loading credits…</p>
-        ) : credits.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Loading workers…</p>
+        ) : loadFailed ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="text-sm text-[var(--red-text)]">
+              Could not load who has been added to this event.
+            </p>
+            <Button
+              variant="outline"
+              className="h-10 text-xs"
+              onClick={() => {
+                setLoading(true);
+                void load();
+              }}
+            >
+              Retry
+            </Button>
+          </div>
+        ) : workers.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            No one is credited outside the scheduled crew.
+            No one has been added outside the scheduled crew.
           </p>
         ) : (
           <ul className="flex flex-col divide-y">
-            {credits.map((credit) => (
-              <li key={credit.id} className="flex flex-wrap items-center gap-3 py-2 first:pt-0">
-                <UserAvatar name={credit.user.name} avatarUrl={credit.user.avatarUrl} size="sm" />
+            {workers.map((worker) => (
+              <li key={worker.id} className="flex flex-wrap items-center gap-3 py-2 first:pt-0">
+                <UserAvatar name={worker.user.name} avatarUrl={worker.user.avatarUrl} size="sm" />
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <span className="flex flex-wrap items-center gap-2">
-                    <span className="truncate text-sm">{credit.user.name}</span>
-                    <Badge variant="outline" size="sm">{roleLabel(credit.user.role)}</Badge>
-                    {credit.alsoAssigned && (
+                    <span className="truncate text-sm">{worker.user.name}</span>
+                    <Badge variant="outline" size="sm">{roleLabel(worker.user.role)}</Badge>
+                    {worker.alsoAssigned && (
                       <Badge variant="gray" size="sm">Also on crew</Badge>
                     )}
-                    {!credit.user.active && <Badge variant="gray" size="sm">Inactive</Badge>}
+                    {!worker.user.active && <Badge variant="gray" size="sm">Inactive</Badge>}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {credit.note ? `${credit.note} · ` : ""}
-                    Added{credit.createdBy ? ` by ${credit.createdBy.name}` : ""}{" "}
-                    {formatRelativeTime(credit.createdAt, new Date())}
+                    {worker.note ? `${worker.note} · ` : ""}
+                    Added{worker.addedBy ? ` by ${worker.addedBy.name}` : ""}{" "}
+                    {formatRelativeTime(worker.createdAt, new Date())}
                   </span>
                 </div>
                 {isAdmin && (
                   <Button
                     variant="ghost"
                     size="icon"
-                    aria-label={`Remove ${credit.user.name}'s credit`}
-                    disabled={removing === credit.id}
-                    onClick={() => void removeCredit(credit)}
+                    aria-label={`Remove ${worker.user.name}`}
+                    disabled={removing === worker.id}
+                    onClick={() => void removeWorker(worker)}
                   >
                     <Trash2Icon className="size-4" />
                   </Button>
@@ -223,33 +248,33 @@ export function EventCreditsCard({ eventId, isAdmin }: { eventId: string; isAdmi
         {isAdmin && (
           <div className="flex flex-wrap items-end gap-2 border-t pt-4">
             <div className="flex min-w-[220px] flex-1 flex-col gap-1.5">
-              <Label htmlFor="event-credit-person">Person</Label>
+              <Label htmlFor="event-worker-person">Person</Label>
               <Combobox
-                id="event-credit-person"
+                id="event-worker-person"
                 options={options}
                 value={selectedUserId}
                 onValueChange={setSelectedUserId}
                 placeholder="Select a person"
                 searchPlaceholder="Search people…"
-                emptyMessage="No one left to credit."
+                emptyMessage="No one left to add."
               />
             </div>
             <div className="flex min-w-[220px] flex-1 flex-col gap-1.5">
-              <Label htmlFor="event-credit-note">Note (optional)</Label>
+              <Label htmlFor="event-worker-note">Note (optional)</Label>
               <Input
-                id="event-credit-note"
+                id="event-worker-note"
                 value={note}
                 maxLength={NOTE_MAX}
-                placeholder="Why this credit exists"
+                placeholder="Why they are on this list"
                 onChange={(e) => setNote(e.target.value)}
               />
             </div>
             <Button
               className="min-h-10"
               disabled={!selectedUserId || saving}
-              onClick={() => void addCredit()}
+              onClick={() => void addWorker()}
             >
-              {saving ? "Adding…" : "Add credit"}
+              {saving ? "Adding…" : "Add worker"}
             </Button>
           </div>
         )}

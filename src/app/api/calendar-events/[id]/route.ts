@@ -27,6 +27,7 @@ const patchSchema = z
     locationId: z.string().cuid().nullable().optional(),
     startsAt: z.string().datetime({ offset: true }).optional(),
     endsAt: z.string().datetime({ offset: true }).optional(),
+    allDay: z.boolean().optional(),
     revertTitle: z.literal(true).optional(),
     revertHomeAway: z.literal(true).optional(),
     revertLocation: z.literal(true).optional(),
@@ -54,6 +55,13 @@ const patchSchema = z
         message: "Start and end are required together",
       });
     }
+    if (value.allDay !== undefined && (value.startsAt === undefined || value.endsAt === undefined)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["allDay"],
+        message: "Start and end are required when changing event timing mode",
+      });
+    }
   })
   .refine(
     (v) =>
@@ -65,6 +73,7 @@ const patchSchema = z
       v.locationId !== undefined ||
       v.startsAt !== undefined ||
       v.endsAt !== undefined ||
+      v.allDay !== undefined ||
       v.revertTitle !== undefined ||
       v.revertHomeAway !== undefined ||
       v.revertLocation !== undefined,
@@ -114,14 +123,18 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
     const after: Record<string, unknown> = {};
     let scheduleShift = null;
 
-    if (body.startsAt !== undefined && body.endsAt !== undefined) {
+    if (body.allDay !== undefined || body.startsAt !== undefined || body.endsAt !== undefined) {
       if (existing.sourceId !== null) {
         throw new HttpError(400, "Imported event times are controlled by their calendar source");
       }
+      if (body.startsAt === undefined || body.endsAt === undefined) {
+        throw new HttpError(400, "Start and end are required when changing event timing mode");
+      }
       const rawStart = new Date(body.startsAt);
       const rawEnd = new Date(body.endsAt);
-      const nextStartsAt = existing.allDay ? normalizeAllDayToUtcMidnight(rawStart) : rawStart;
-      const nextEndsAt = existing.allDay ? normalizeAllDayToUtcMidnight(rawEnd) : rawEnd;
+      const nextAllDay = body.allDay ?? existing.allDay;
+      const nextStartsAt = nextAllDay ? normalizeAllDayToUtcMidnight(rawStart) : rawStart;
+      const nextEndsAt = nextAllDay ? normalizeAllDayToUtcMidnight(rawEnd) : rawEnd;
       if (nextEndsAt <= nextStartsAt) {
         throw new HttpError(400, "End must be after start");
       }
@@ -132,6 +145,11 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
       patch.endsAt = nextEndsAt;
       after.startsAt = nextStartsAt.toISOString();
       after.endsAt = nextEndsAt.toISOString();
+      if (nextAllDay !== existing.allDay) {
+        before.allDay = existing.allDay;
+        patch.allDay = nextAllDay;
+        after.allDay = nextAllDay;
+      }
       scheduleShift = await shiftManualEventScheduleTx(tx, {
         eventId: id,
         previousStartsAt: existing.startsAt,

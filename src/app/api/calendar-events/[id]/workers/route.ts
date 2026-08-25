@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { withAuth } from "@/lib/api";
 import { db } from "@/lib/db";
@@ -6,16 +7,16 @@ import { requirePermission } from "@/lib/rbac";
 import { createAuditEntryTx } from "@/lib/audit";
 import { enforceRateLimit, SCHEDULE_MUTATION_LIMIT } from "@/lib/rate-limit";
 import { badges } from "@/lib/badges";
-import { EVENT_CREDIT_NOTE_MAX, listEventCredits } from "@/lib/services/event-credit";
+import { EVENT_WORKER_NOTE_MAX, listEventWorkers } from "@/lib/services/event-worker";
 
 const createSchema = z.object({
   userId: z.string().trim().min(1).max(64),
-  note: z.string().trim().max(EVENT_CREDIT_NOTE_MAX).optional(),
+  note: z.string().trim().max(EVENT_WORKER_NOTE_MAX).optional(),
 }).strict();
 
-/** Who is credited for this event. Read is staff-and-admin; writing is admin-only. */
+/** Workers added to this event. Read is staff-and-admin; writing is admin-only. */
 export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
-  requirePermission(user.role, "event_credit", "view");
+  requirePermission(user.role, "event_worker", "view");
 
   const event = await db.calendarEvent.findUnique({
     where: { id: params.id },
@@ -23,28 +24,28 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
   });
   if (!event) throw new HttpError(404, "Event not found");
 
-  return ok({ data: await listEventCredits(params.id) });
+  return ok({ data: await listEventWorkers(params.id) });
 });
 
 /**
- * Credit a person for this event. Deliberately silent: no notification, no
- * shift, no assignment, no schedule entry. The person's Scoreboard totals move;
+ * Add a worker to this event. Deliberately silent: no notification, no shift,
+ * no assignment, no schedule entry. The person's Scoreboard totals move;
  * nothing else about their week does.
  *
- * The badge recount that follows is silent too: a badge the credit pushed the
+ * The badge recount that follows is silent too: a badge this row pushed the
  * person over is granted without its "badge earned" notification, which is the
- * only message a credit could otherwise produce.
+ * only message adding a worker could otherwise produce.
  */
 export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
-  requirePermission(user.role, "event_credit", "manage");
-  await enforceRateLimit(`event-credit:write:${user.id}`, SCHEDULE_MUTATION_LIMIT);
+  requirePermission(user.role, "event_worker", "manage");
+  await enforceRateLimit(`event-worker:write:${user.id}`, SCHEDULE_MUTATION_LIMIT);
 
   const rawBody = await req.json().catch(() => {
     throw new HttpError(400, "Invalid JSON body");
   });
   const body = createSchema.parse(rawBody);
 
-  let creditedUserId: string | null = null;
+  let addedUserId: string | null = null;
 
   await db.$transaction(async (tx) => {
     const event = await tx.calendarEvent.findUnique({
@@ -59,20 +60,22 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
     });
     if (!target) throw new HttpError(404, "User not found");
 
-    const existing = await tx.eventCredit.findUnique({
-      where: { eventId_userId: { eventId: event.id, userId: target.id } },
-      select: { id: true },
-    });
-    if (existing) throw new HttpError(409, `${target.name} is already credited for this event`);
-
-    const credit = await tx.eventCredit.create({
+    // Let the @@unique([eventId, userId]) constraint decide, rather than
+    // pre-reading for a duplicate and racing two admins adding the same person
+    // -- the same call the travel roster makes on the same shape.
+    const worker = await tx.eventWorker.create({
       data: {
         eventId: event.id,
         userId: target.id,
         note: body.note || null,
-        createdById: user.id,
+        addedById: user.id,
       },
       select: { id: true },
+    }).catch((error: unknown) => {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        throw new HttpError(409, `${target.name} is already on this event`);
+      }
+      throw error;
     });
 
     await createAuditEntryTx(tx, {
@@ -80,9 +83,9 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
       actorRole: user.role,
       entityType: "calendar_event",
       entityId: event.id,
-      action: "event_credit_added",
+      action: "event_worker_added",
       after: {
-        creditId: credit.id,
+        workerId: worker.id,
         userId: target.id,
         userName: target.name,
         userRole: target.role,
@@ -92,15 +95,15 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
       },
     });
 
-    // Only a finished event is worked evidence; a credit on a future one is
-    // picked up by the nightly sweep after the event actually ends.
-    if (event.endsAt < new Date()) creditedUserId = target.id;
+    // Only a finished event is worked evidence; a worker added to a future one
+    // is picked up by the nightly sweep after the event actually ends.
+    if (event.endsAt < new Date()) addedUserId = target.id;
   });
 
   // Outside the audit transaction: badge evaluation opens its own serializable
-  // transaction, and a recognition failure must not roll back the credit. The
-  // evaluator suppresses notifications for anything only this credit earned.
-  if (creditedUserId) await badges.onShiftsWorked({ userId: creditedUserId });
+  // transaction, and a recognition failure must not roll back the row. The
+  // evaluator suppresses notifications for anything only this row earned.
+  if (addedUserId) await badges.onShiftsWorked({ userId: addedUserId });
 
-  return ok({ data: await listEventCredits(params.id) });
+  return ok({ data: await listEventWorkers(params.id) });
 });

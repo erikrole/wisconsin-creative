@@ -2,13 +2,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   assignmentFindMany: vi.fn(),
-  creditFindMany: vi.fn(),
+  workerFindMany: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
   db: {
     shiftAssignment: { findMany: mocks.assignmentFindMany },
-    eventCredit: { findMany: mocks.creditFindMany },
+    eventWorker: { findMany: mocks.workerFindMany },
   },
 }));
 
@@ -50,7 +50,7 @@ function assignmentRow(eventId: string, overrides: Partial<{ area: string; sport
   };
 }
 
-function creditRow(eventId: string, overrides: Partial<{ allDay: boolean; startsAt: string; endsAt: string; sportCode: string }> = {}) {
+function workerRow(eventId: string, overrides: Partial<{ allDay: boolean; startsAt: string; endsAt: string; sportCode: string }> = {}) {
   return {
     event: {
       id: eventId,
@@ -70,13 +70,13 @@ function creditRow(eventId: string, overrides: Partial<{ allDay: boolean; starts
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.assignmentFindMany.mockResolvedValue([]);
-  mocks.creditFindMany.mockResolvedValue([]);
+  mocks.workerFindMany.mockResolvedValue([]);
 });
 
 describe("loadWorkedShiftEvidence", () => {
-  it("counts a credit as worked evidence when no assignment covers the event", async () => {
+  it("counts an added worker as worked evidence when no assignment covers the event", async () => {
     mocks.assignmentFindMany.mockResolvedValue([assignmentRow("event-1")]);
-    mocks.creditFindMany.mockResolvedValue([creditRow("event-2")]);
+    mocks.workerFindMany.mockResolvedValue([workerRow("event-2")]);
 
     const evidence = await loadWorkedShiftEvidence(db, "user-1", NOW, TZ);
 
@@ -84,9 +84,9 @@ describe("loadWorkedShiftEvidence", () => {
     expect(evidence[1]?.shift.shiftGroup.event.sportCode).toBe("MBB");
   });
 
-  it("never stacks a credit on top of an assignment for the same event", async () => {
+  it("never stacks an added worker on top of an assignment for the same event", async () => {
     mocks.assignmentFindMany.mockResolvedValue([assignmentRow("event-1")]);
-    mocks.creditFindMany.mockResolvedValue([creditRow("event-1"), creditRow("event-2")]);
+    mocks.workerFindMany.mockResolvedValue([workerRow("event-1"), workerRow("event-2")]);
 
     const evidence = await loadWorkedShiftEvidence(db, "user-1", NOW, TZ);
 
@@ -102,15 +102,15 @@ describe("loadWorkedShiftEvidence", () => {
       endsAt: { lt: NOW },
       status: "CONFIRMED",
     });
-    const creditWhere = mocks.creditFindMany.mock.calls[0]![0].where;
-    expect(creditWhere).toEqual({
+    const workerWhere = mocks.workerFindMany.mock.calls[0]![0].where;
+    expect(workerWhere).toEqual({
       userId: "user-1",
       event: { endsAt: { lt: NOW }, status: "CONFIRMED" },
     });
   });
 
-  it("claims no area for a credit, so area breadth is not inflated", async () => {
-    mocks.creditFindMany.mockResolvedValue([creditRow("event-2")]);
+  it("claims no area for an added worker, so area breadth is not inflated", async () => {
+    mocks.workerFindMany.mockResolvedValue([workerRow("event-2")]);
 
     const evidence = await loadWorkedShiftEvidence(db, "user-1", NOW, TZ);
     const counts = shiftAutomaticRuleCounts(evidence, TZ);
@@ -120,8 +120,8 @@ describe("loadWorkedShiftEvidence", () => {
     expect(counts.get("shift_sport_area_pairs")).toBe(0);
   });
 
-  it("credits the away, loss, opponent, and venue rules from the event itself", async () => {
-    mocks.creditFindMany.mockResolvedValue([creditRow("event-2")]);
+  it("takes the away, loss, opponent, and venue rules from the event itself", async () => {
+    mocks.workerFindMany.mockResolvedValue([workerRow("event-2")]);
 
     const counts = shiftAutomaticRuleCounts(await loadWorkedShiftEvidence(db, "user-1", NOW, TZ), TZ);
 
@@ -131,11 +131,11 @@ describe("loadWorkedShiftEvidence", () => {
     expect(counts.get("shift_venues")).toBe(1);
   });
 
-  it("keeps an all-day credit out of the early-start and late-finish rules", async () => {
+  it("keeps an all-day added worker out of the early-start and late-finish rules", async () => {
     // Stored as a date at UTC midnight: reading its hours as a work window
     // would claim a midnight start and a next-day finish nobody worked.
-    mocks.creditFindMany.mockResolvedValue([
-      creditRow("event-3", {
+    mocks.workerFindMany.mockResolvedValue([
+      workerRow("event-3", {
         allDay: true,
         startsAt: "2026-10-20T00:00:00.000Z",
         endsAt: "2026-10-21T00:00:00.000Z",
@@ -150,9 +150,9 @@ describe("loadWorkedShiftEvidence", () => {
     expect(counts.get("shift_after_22")).toBe(0);
   });
 
-  it("anchors an all-day credit to its own calendar date, not the UTC boundary", async () => {
-    mocks.creditFindMany.mockResolvedValue([
-      creditRow("event-3", {
+  it("anchors an all-day added worker to its own calendar date, not the UTC boundary", async () => {
+    mocks.workerFindMany.mockResolvedValue([
+      workerRow("event-3", {
         allDay: true,
         startsAt: "2026-10-20T00:00:00.000Z",
         endsAt: "2026-10-21T00:00:00.000Z",
@@ -167,9 +167,9 @@ describe("loadWorkedShiftEvidence", () => {
     expect(localDate).toBe("2026-10-20");
   });
 
-  it("still trips the hour rules for a timed credit", async () => {
-    mocks.creditFindMany.mockResolvedValue([
-      creditRow("event-4", {
+  it("still trips the hour rules for a timed added worker", async () => {
+    mocks.workerFindMany.mockResolvedValue([
+      workerRow("event-4", {
         // 5:00am–6:30am Central.
         startsAt: "2026-10-22T10:00:00.000Z",
         endsAt: "2026-10-22T11:30:00.000Z",
@@ -183,15 +183,15 @@ describe("loadWorkedShiftEvidence", () => {
 });
 
 describe("usersWithRecentlyWorkedEvents", () => {
-  it("sweeps credited people alongside assigned people, without duplicates", async () => {
+  it("sweeps added workers alongside assigned people, without duplicates", async () => {
     mocks.assignmentFindMany.mockResolvedValue([{ userId: "user-1" }, { userId: "user-2" }]);
-    mocks.creditFindMany.mockResolvedValue([{ userId: "user-2" }, { userId: "user-3" }]);
+    mocks.workerFindMany.mockResolvedValue([{ userId: "user-2" }, { userId: "user-3" }]);
 
     const since = new Date("2026-10-30T12:00:00.000Z");
     const users = await usersWithRecentlyWorkedEvents(since, NOW);
 
     expect(users.sort()).toEqual(["user-1", "user-2", "user-3"]);
-    expect(mocks.creditFindMany.mock.calls[0]![0].where.event).toEqual({
+    expect(mocks.workerFindMany.mock.calls[0]![0].where.event).toEqual({
       endsAt: { lt: NOW, gte: since },
       status: "CONFIRMED",
     });

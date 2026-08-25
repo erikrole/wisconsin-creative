@@ -26,7 +26,7 @@ vi.mock("@/lib/db", () => ({
       count: vi.fn(),
       findMany: vi.fn(),
     },
-    eventCredit: {
+    eventWorker: {
       findMany: vi.fn(),
     },
     studentBadge: {
@@ -97,7 +97,7 @@ beforeEach(() => {
   vi.mocked(db.badgeEventReceipt.findMany).mockResolvedValue([]);
   vi.mocked(db.shiftAssignment.count).mockResolvedValue(0);
   vi.mocked(db.shiftAssignment.findMany).mockResolvedValue([]);
-  vi.mocked(db.eventCredit.findMany).mockResolvedValue([]);
+  vi.mocked(db.eventWorker.findMany).mockResolvedValue([]);
   vi.mocked(db.studentBadge.createMany).mockResolvedValue({ count: 0 });
   // Rarity is served from real holder counts now, so the profile query reads
   // award totals and the eligible population alongside the definitions.

@@ -4,7 +4,7 @@ import { scheduleVenueDisplayName } from "@/lib/schedule-event-identity";
 import { sportLabel } from "@/lib/sports";
 import { ACTIVE_ASSIGNMENT_STATUSES } from "@/lib/shift-constants";
 import { OFFICIAL_RECORD_EVENT_EXCLUSION } from "@/lib/services/game-record";
-import { participatedByAnyoneWhere } from "@/lib/services/event-credit";
+import { participatedByAnyoneWhere } from "@/lib/services/event-worker";
 import { SCOREBOARD_SCOPE } from "@/lib/services/scoreboard";
 
 export const TEAM_SCOREBOARD_MINIMUM_RATE_GAMES = 3;
@@ -141,7 +141,7 @@ const TEAM_EVENT_SELECT = {
       },
     },
   },
-  credits: {
+  workers: {
     where: { user: VISIBLE_PERSON_WHERE },
     select: {
       user: {
@@ -236,9 +236,9 @@ function matchesFilters(event: TeamEventRow, filters: TeamScoreboardFilters): bo
 }
 
 /**
- * Everyone credited for the event, whether they held an assignment or an
- * admin-recorded Scoreboard credit. The map keys by person, so multiple shifts
- * -- or a shift plus a credit -- still earn exactly one credit.
+ * Everyone on record for the event, whether they held an assignment or were
+ * added by an admin. The map keys by person, so multiple shifts -- or a shift
+ * plus an added-worker row -- still earn exactly one credit.
  */
 function peopleForEvent(event: TeamEventRow): TeamScoreboardPersonIdentity[] {
   const people = new Map<string, TeamScoreboardPersonIdentity>();
@@ -247,8 +247,8 @@ function peopleForEvent(event: TeamEventRow): TeamScoreboardPersonIdentity[] {
       people.set(assignment.user.id, assignment.user);
     }
   }
-  for (const credit of event.credits ?? []) {
-    people.set(credit.user.id, credit.user);
+  for (const worker of event.workers ?? []) {
+    people.set(worker.user.id, worker.user);
   }
   return [...people.values()];
 }
@@ -533,7 +533,7 @@ export async function getTeamScoreboard(
       timeZone: SCOREBOARD_SCOPE.timeZone,
     },
     methodology: {
-      eventsCovered: "Unique completed, confirmed Schedule events worked by at least one visible active person, by assignment or admin-recorded credit.",
+      eventsCovered: "Unique completed, confirmed Schedule events worked by at least one visible active person, by assignment or admin-added worker.",
       eventCredits: "One credit per person per completed event, even when that person worked multiple shifts.",
       record: "Unique resolved games (wins, losses, or ties) after the official exhibition, scrimmage, and alumni-match exclusions.",
       gameCredits: "One record credit per person per resolved game, even when that person worked multiple shifts.",
