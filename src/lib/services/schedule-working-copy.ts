@@ -260,7 +260,13 @@ async function editorResponse(group: EditorGroup, tx: Prisma.TransactionClient =
     hasWorkingCopy: Boolean(group.workingCopy),
     updatedAt: group.workingCopy?.updatedAt.toISOString() ?? null,
     updatedById: group.workingCopy?.updatedById ?? null,
-    autoReleaseAt: group.workingCopy?.autoReleaseAt?.toISOString() ?? null,
+    // A finished event never releases -- the flush skips it rather than paging
+    // the crew about a game they already worked -- so no countdown is reported
+    // for one. Reporting it here would have every surface promise a
+    // notification that is not coming.
+    autoReleaseAt: group.event.endsAt.getTime() <= Date.now()
+      ? null
+      : group.workingCopy?.autoReleaseAt?.toISOString() ?? null,
     autoReleaseRunId: group.workingCopy?.autoReleaseRunId ?? null,
     autoReleaseError: group.workingCopy?.autoReleaseError ?? null,
     changes,

@@ -14,6 +14,7 @@ export type ScheduleFlushOutcome =
   | { status: "nothing_to_tell"; shiftGroupId: string }
   | { status: "deferred"; shiftGroupId: string; notifyAfter: Date }
   | { status: "missing"; shiftGroupId: string }
+  | { status: "event_ended"; shiftGroupId: string }
   | { status: "failed"; shiftGroupId: string; error: string };
 
 const flushGroupSelect = {
@@ -22,7 +23,7 @@ const flushGroupSelect = {
   publishedVersion: true,
   lastPublishedSnapshot: true,
   notifyAfter: true,
-  event: { select: { id: true, summary: true } },
+  event: { select: { id: true, summary: true, endsAt: true } },
   shifts: {
     select: {
       id: true,
@@ -73,6 +74,30 @@ export async function flushScheduleNotifications(
   }
 
   const current = buildSchedulePublicationSnapshot(group);
+
+  /**
+   * An event that has already finished has nothing left to tell anyone.
+   *
+   * Crew records get corrected after the fact -- a late fill-in, a bad slot
+   * cleaned up -- and each edit restarts the quiet period. Without this, that
+   * housekeeping pages the crew about a game they worked last week. The pending
+   * release is cleared and the high-water mark advanced so the edit is recorded
+   * as seen rather than left to resurface, but nothing is delivered and no
+   * publication version is claimed for a release that never happened.
+   */
+  if (group.event.endsAt.getTime() <= now.getTime()) {
+    await db.shiftGroup.update({
+      where: { id: shiftGroupId },
+      data: {
+        lastPublishedSnapshot: current as unknown as Prisma.InputJsonValue,
+        notifyAfter: null,
+        notifyAttemptedAt: now,
+        notifyError: null,
+      },
+    });
+    return { status: "event_ended", shiftGroupId };
+  }
+
   const previous = normalizeStoredSnapshot(group.lastPublishedSnapshot);
   const diff = diffScheduleForNotification(previous, current);
 

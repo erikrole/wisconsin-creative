@@ -47,11 +47,57 @@ function group(overrides: Record<string, unknown> = {}) {
     publishedVersion: 4,
     lastPublishedSnapshot: null,
     notifyAfter: null,
-    event: { id: "event-1", summary: "Wisconsin vs Ohio State" },
+    // Comfortably in the future: a finished event is never notified about.
+    event: {
+      id: "event-1",
+      summary: "Wisconsin vs Ohio State",
+      endsAt: new Date("2099-01-01T00:00:00.000Z"),
+    },
     shifts: [shift(["user-1"])],
     ...overrides,
   };
 }
+
+describe("finished events", () => {
+  it("clears a pending release instead of paging the crew about last week", async () => {
+    // Crew records get corrected after the fact, and every edit restarts the
+    // quiet period. Two past events were sitting with a release scheduled.
+    findUnique.mockResolvedValue(group({
+      event: {
+        id: "event-1",
+        summary: "Volleyball vs Kentucky",
+        endsAt: new Date("2026-08-22T04:00:00.000Z"),
+      },
+      lastPublishedSnapshot: markFor([]),
+      notifyAfter: new Date("2026-08-24T20:35:00.000Z"),
+    }));
+
+    const outcome = await flushScheduleNotifications("group-1", {
+      now: new Date("2026-08-24T20:36:00.000Z"),
+    });
+
+    expect(outcome.status).toBe("event_ended");
+    expect(notifyScheduleChanges).not.toHaveBeenCalled();
+    // The pending release is cleared so it cannot resurface...
+    const write = update.mock.calls[0]?.[0];
+    expect(write?.data?.notifyAfter).toBeNull();
+    // ...but no publication version is claimed for a release that never ran.
+    expect(write?.data?.publishedVersion).toBeUndefined();
+  });
+
+  it("still notifies for an event that has not happened yet", async () => {
+    findUnique.mockResolvedValue(group({
+      lastPublishedSnapshot: markFor([]),
+    }));
+
+    const outcome = await flushScheduleNotifications("group-1", {
+      now: new Date("2026-10-02T00:00:00.000Z"),
+    });
+
+    expect(outcome.status).toBe("delivered");
+    expect(notifyScheduleChanges).toHaveBeenCalled();
+  });
+});
 
 /** The snapshot a previous flush would have stored for the same crew. */
 function markFor(userIds: string[]) {
