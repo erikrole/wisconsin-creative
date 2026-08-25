@@ -50,7 +50,7 @@
 | `KitBulkMembership` | 7 | 3 |
 | `CalendarSource` | 11 | 2 |
 | `CalendarEvent` | 35 | 6 |
-| `EventCredit` | 10 | 4 |
+| `EventWorker` | 10 | 4 |
 | `ScheduleEventFollow` | 9 | 3 |
 | `BookingEvent` | 7 | 4 |
 | `LocationMapping` | 6 | 1 |

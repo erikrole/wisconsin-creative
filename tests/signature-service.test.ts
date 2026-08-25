@@ -87,6 +87,7 @@ vi.mock("@/lib/signatures/storage", () => ({
 }));
 
 import { applySignatureRosterSnapshot, cleanupPendingSignatureArtifacts, createAdHocSignatureMember, createSignatureRosterPreview, deleteSignatureCollection, ensureSignatureCreativeStaffCollection, getReadySignatureArtifact, getSignatureCollection, getSignatureCollectionZip, getSignatureMemberCaptureBootstrap, listSignatureCollections, removeSignatureCapture, resetSignatureCollection, saveSignatureCapture, signatureArtifactFilename, syncSignatureCreativeStaff, updateSignatureAthleteProfile, updateSignatureMemberRequired } from "@/lib/services/signatures";
+import { createAuditEntryTx } from "@/lib/audit";
 import { renderSignatureArtifacts } from "@/lib/signatures/artifacts";
 import { deletePrivateSignatureArtifacts, getPrivateSignatureArtifact, uploadPrivateSignatureArtifact } from "@/lib/signatures/storage";
 
@@ -913,6 +914,222 @@ describe("roster apply concurrency", () => {
       maxWait: 10_000,
       timeout: 30_000,
     });
+  });
+});
+
+describe("roster identity merge", () => {
+  it("moves a signed historical capture when the normalized player name matches despite a jersey change", async () => {
+    const entry = {
+      sourceExternalId: "14146",
+      sourceProfileUrl: "https://uwbadgers.com/sports/football/roster/aaron-witt/14146",
+      name: "Aaron Witt",
+      normalizedName: "aaron witt",
+      jerseyNumber: 92,
+      roleGroup: "PLAYER",
+      title: "Linebacker • Senior",
+      hometown: null,
+    } as const;
+    const targetCapture = {
+      id: "current-capture",
+      memberId: "current-member",
+      captureVersion: 0,
+      currentRevisionId: null,
+      capturedAt: null,
+      capturedById: null,
+      currentRevision: null,
+      saveOperations: [],
+      _count: { revisions: 0 },
+    };
+    const historicalCapture = {
+      id: "historical-capture",
+      memberId: "historical-member",
+      captureVersion: 2,
+      currentRevisionId: "historical-revision",
+      capturedAt: new Date("2026-08-20T12:00:00Z"),
+      capturedById: "staff-1",
+      currentRevision: { id: "historical-revision", state: SignatureArtifactState.READY },
+      saveOperations: [],
+      _count: { revisions: 2 },
+    };
+    const target = {
+      id: "current-member",
+      sourceExternalId: "14146",
+      sourceProfileUrl: entry.sourceProfileUrl,
+      name: "Aaron Witt",
+      normalizedName: entry.normalizedName,
+      jerseyNumber: entry.jerseyNumber,
+      roleGroup: "PLAYER",
+      title: entry.title,
+      active: true,
+      required: true,
+      birthday: null,
+      hometown: null,
+      instagramHandle: null,
+      tiktokHandle: null,
+      xHandle: null,
+      capture: targetCapture,
+    };
+    const historical = {
+      id: "historical-member",
+      sourceExternalId: "15412",
+      sourceProfileUrl: "https://uwbadgers.com/sports/football/roster/aaron-witt/15412",
+      name: "Aaron Witt",
+      normalizedName: entry.normalizedName,
+      jerseyNumber: 59,
+      roleGroup: "PLAYER",
+      title: "Linebacker • Junior",
+      active: false,
+      required: true,
+      birthday: null,
+      hometown: null,
+      instagramHandle: null,
+      tiktokHandle: null,
+      xHandle: null,
+      capture: historicalCapture,
+    };
+    tx.signatureRosterSnapshot.findUnique.mockResolvedValue({
+      id: "snapshot-1",
+      collectionId: "collection-1",
+      status: SignatureSnapshotStatus.PREVIEW,
+      entries: [entry],
+      collection: { status: SignatureCollectionStatus.OPEN, collectionVersion: 4, settingsVersion: 1 },
+    });
+    tx.signatureMember.findMany
+      .mockResolvedValueOnce([target, historical])
+      .mockResolvedValueOnce([{ id: "current-member" }, { id: "historical-member" }]);
+    tx.signatureCapture.findMany.mockResolvedValue([historicalCapture, targetCapture]);
+    tx.signatureArtifactRevision.updateMany.mockResolvedValue({ count: 2 });
+    tx.signatureSaveOperation.updateMany.mockResolvedValue({ count: 0 });
+    tx.signatureCollection.update.mockResolvedValue({ id: "collection-1", collectionVersion: 5 });
+
+    await expect(applySignatureRosterSnapshot({
+      actor,
+      snapshotId: "snapshot-1",
+      expectedCollectionVersion: 4,
+    })).resolves.toMatchObject({
+      collectionId: "collection-1",
+      collectionVersion: 5,
+      memberCount: 2,
+      mergedCount: 1,
+      merges: [{
+        sourceExternalId: "15412",
+        targetSourceExternalId: "14146",
+        artifactTransferred: true,
+        transferredRevisionCount: 2,
+      }],
+    });
+
+    expect(tx.signatureCapture.update).toHaveBeenNthCalledWith(1, {
+      where: { id: "historical-capture" },
+      data: { currentRevisionId: null },
+    });
+    expect(tx.signatureArtifactRevision.updateMany).toHaveBeenCalledWith({
+      where: { captureId: "historical-capture" },
+      data: { captureId: "current-capture" },
+    });
+    expect(tx.signatureCapture.update).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      where: { id: "current-capture" },
+      data: expect.objectContaining({ currentRevisionId: "historical-revision" }),
+    }));
+    expect(createAuditEntryTx).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      action: "MERGE_ROSTER_MEMBER",
+      entityId: "current-member",
+      before: expect.objectContaining({ matchedBy: ["normalizedName", "roleGroup"] }),
+    }));
+  });
+
+  it("leaves duplicate normalized-name candidates for review", async () => {
+    const entry = {
+      sourceExternalId: "new-player",
+      sourceProfileUrl: "https://uwbadgers.com/sports/football/roster/jordan-smith/new-player",
+      name: "Jordan Smith",
+      normalizedName: "jordan smith",
+      jerseyNumber: 10,
+      roleGroup: "PLAYER",
+      title: "Safety • Junior",
+    } as const;
+    const historical = (id: string, sourceExternalId: string, jerseyNumber: number) => ({
+      id,
+      sourceExternalId,
+      normalizedName: entry.normalizedName,
+      jerseyNumber,
+      roleGroup: "PLAYER",
+      active: false,
+    });
+    tx.signatureRosterSnapshot.findUnique.mockResolvedValue({
+      id: "snapshot-1",
+      collectionId: "collection-1",
+      status: SignatureSnapshotStatus.PREVIEW,
+      entries: [entry],
+      collection: { status: SignatureCollectionStatus.OPEN, collectionVersion: 4, settingsVersion: 1 },
+    });
+    tx.signatureMember.findMany
+      .mockResolvedValueOnce([
+        historical("historical-1", "old-1", 10),
+        historical("historical-2", "old-2", 21),
+      ])
+      .mockResolvedValueOnce([{ id: "new-member" }, { id: "historical-1" }, { id: "historical-2" }]);
+    tx.signatureMember.create.mockResolvedValue({ id: "new-member", required: true });
+    tx.signatureCollection.update.mockResolvedValue({ id: "collection-1", collectionVersion: 5 });
+
+    await expect(applySignatureRosterSnapshot({
+      actor,
+      snapshotId: "snapshot-1",
+      expectedCollectionVersion: 4,
+    })).resolves.toMatchObject({ mergedCount: 0, memberCount: 3 });
+
+    expect(tx.signatureCapture.findMany).not.toHaveBeenCalled();
+    expect(tx.signatureArtifactRevision.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("does not resurrect a historical signature that was explicitly erased", async () => {
+    const entry = {
+      sourceExternalId: "new-player",
+      sourceProfileUrl: "https://uwbadgers.com/sports/football/roster/erased-player/new-player",
+      name: "Erased Player",
+      normalizedName: "erased player",
+      jerseyNumber: 44,
+      roleGroup: "PLAYER",
+      title: "Cornerback • Sophomore",
+    } as const;
+    tx.signatureRosterSnapshot.findUnique.mockResolvedValue({
+      id: "snapshot-1",
+      collectionId: "collection-1",
+      status: SignatureSnapshotStatus.PREVIEW,
+      entries: [entry],
+      collection: { status: SignatureCollectionStatus.OPEN, collectionVersion: 4, settingsVersion: 1 },
+    });
+    tx.signatureMember.findMany
+      .mockResolvedValueOnce([{
+        id: "historical-member",
+        sourceExternalId: "old-player",
+        normalizedName: entry.normalizedName,
+        jerseyNumber: 44,
+        roleGroup: "PLAYER",
+        active: false,
+        capture: {
+          id: "historical-capture",
+          captureVersion: 3,
+          currentRevisionId: null,
+          currentRevision: null,
+          capturedAt: null,
+          capturedById: null,
+          saveOperations: [],
+          _count: { revisions: 1 },
+        },
+      }])
+      .mockResolvedValueOnce([{ id: "new-member" }, { id: "historical-member" }]);
+    tx.signatureMember.create.mockResolvedValue({ id: "new-member", required: true });
+    tx.signatureCollection.update.mockResolvedValue({ id: "collection-1", collectionVersion: 5 });
+
+    await expect(applySignatureRosterSnapshot({
+      actor,
+      snapshotId: "snapshot-1",
+      expectedCollectionVersion: 4,
+    })).resolves.toMatchObject({ mergedCount: 0, memberCount: 2 });
+
+    expect(tx.signatureCapture.findMany).not.toHaveBeenCalled();
+    expect(tx.signatureArtifactRevision.updateMany).not.toHaveBeenCalled();
   });
 });
 

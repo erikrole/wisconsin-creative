@@ -11,10 +11,10 @@ Gear Tracker is a Next.js App Router application with a companion native iOS app
 |---|---:|
 | App pages | 88 |
 | App layouts | 7 |
-| API route handlers | 298 |
+| API route handlers | 299 |
 | Service files | 75 |
-| Component files | 145 |
-| Test files | 549 |
+| Component files | 146 |
+| Test files | 554 |
 
 ## Oversized Source Watchlist
 
@@ -22,12 +22,13 @@ Informational only. These are the largest TypeScript and TSX files under `src/`;
 
 | File | Lines |
 |---|---:|
-| `src/lib/services/bookings-lifecycle.ts` | 2159 |
+| `src/lib/services/signatures.ts` | 2212 |
+| `src/lib/services/bookings-lifecycle.ts` | 2160 |
 | `src/lib/services/reports.ts` | 1932 |
-| `src/lib/services/signatures.ts` | 1909 |
 | `src/lib/services/notifications.ts` | 1624 |
 | `src/app/(app)/items/[id]/ItemInfoTab.tsx` | 1587 |
 | `src/components/TradeBoard.tsx` | 1567 |
+| `src/app/(app)/schedule/_components/ListView.tsx` | 1455 |
 | `src/app/(app)/users/[id]/UserInfoTab.tsx` | 1442 |
 | `src/app/(app)/resources/page.tsx` | 1430 |
 | `src/components/ActivityTimeline.tsx` | 1368 |
@@ -38,7 +39,6 @@ Informational only. These are the largest TypeScript and TSX files under `src/`;
 | `src/lib/services/shift-trades.ts` | 1065 |
 | `src/lib/services/schedule-publication.ts` | 1019 |
 | `src/components/onboarding/OnboardingDialog.tsx` | 996 |
-| `src/app/(app)/schedule/_components/ListView.tsx` | 992 |
 | `src/app/(app)/schedule/_components/WorkingCrewEditor.tsx` | 992 |
 | `src/app/(app)/kits/[id]/page.tsx` | 977 |
 | `src/app/(app)/users/[id]/UserBadgesTab.tsx` | 955 |

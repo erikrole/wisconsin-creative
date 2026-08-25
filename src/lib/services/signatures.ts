@@ -63,6 +63,141 @@ const creativeStaffTitleFilters = CREATIVE_STAFF_TITLE_MARKERS.map((marker) => (
   title: { contains: marker, mode: "insensitive" as const },
 }));
 
+const signatureRosterApplyCaptureSelect = {
+  id: true,
+  memberId: true,
+  captureVersion: true,
+  currentRevisionId: true,
+  capturedAt: true,
+  capturedById: true,
+  currentRevision: { select: { id: true, state: true } },
+  saveOperations: {
+    where: { status: { in: [SignatureSaveStatus.UPLOADING, SignatureSaveStatus.FINALIZING] } },
+    select: { id: true },
+  },
+  _count: { select: { revisions: true } },
+} satisfies Prisma.SignatureCaptureSelect;
+
+const signatureRosterApplyMemberSelect = {
+  id: true,
+  sourceExternalId: true,
+  sourceProfileUrl: true,
+  name: true,
+  normalizedName: true,
+  jerseyNumber: true,
+  roleGroup: true,
+  title: true,
+  active: true,
+  required: true,
+  birthday: true,
+  hometown: true,
+  instagramHandle: true,
+  tiktokHandle: true,
+  xHandle: true,
+  capture: { select: signatureRosterApplyCaptureSelect },
+} satisfies Prisma.SignatureMemberSelect;
+
+type SignatureRosterApplyMember = Prisma.SignatureMemberGetPayload<{ select: typeof signatureRosterApplyMemberSelect }>;
+type SignatureRosterApplyCapture = Prisma.SignatureCaptureGetPayload<{ select: typeof signatureRosterApplyCaptureSelect }>;
+type SignatureRosterProfile = {
+  birthday: Date | null;
+  hometown: string | null;
+  instagramHandle: string | null;
+  tiktokHandle: string | null;
+  xHandle: string | null;
+};
+
+type SignatureRosterMergePlan = {
+  source: SignatureRosterApplyMember;
+  targetMemberId: string;
+  targetSourceExternalId: string;
+  targetIsNew: boolean;
+  targetProfile: SignatureRosterProfile;
+};
+
+type SignatureRosterMergeResult = {
+  sourceMemberId: string;
+  sourceExternalId: string;
+  targetMemberId: string;
+  targetSourceExternalId: string;
+  artifactTransferred: boolean;
+  transferredRevisionCount: number;
+};
+
+function signatureRosterPlayerIdentityKey(member: Pick<SignatureRosterApplyMember, "normalizedName" | "roleGroup"> | SignatureRosterEntry) {
+  if (member.roleGroup !== SignatureMemberGroup.PLAYER || !member.normalizedName) return null;
+  return `${member.roleGroup}:${member.normalizedName}`;
+}
+
+function findHighConfidenceHistoricalRosterMember(
+  existing: SignatureRosterApplyMember[],
+  entry: SignatureRosterEntry,
+  targetMemberId: string | undefined,
+  sourceIds: Set<string>,
+  incomingIdentityCounts: Map<string, number>,
+  reservedSourceMemberIds: Set<string>,
+) {
+  const identityKey = signatureRosterPlayerIdentityKey(entry);
+  if (!identityKey || incomingIdentityCounts.get(identityKey) !== 1) return null;
+  const matches = existing.filter((member) => member.id !== targetMemberId && signatureRosterPlayerIdentityKey(member) === identityKey);
+  if (matches.length !== 1) return null;
+  const candidate = matches[0];
+  if (!candidate) return null;
+  if (candidate.active || sourceIds.has(candidate.sourceExternalId) || reservedSourceMemberIds.has(candidate.id)) return null;
+  return candidate;
+}
+
+function isBlankSignatureRosterCapture(capture: SignatureRosterApplyCapture | null) {
+  return !capture
+    || (
+      capture.captureVersion === 0
+      && !capture.currentRevisionId
+      && capture._count?.revisions === 0
+      && !capture.capturedAt
+      && !capture.capturedById
+      && capture.saveOperations.length === 0
+    );
+}
+
+function canDonateSignatureRosterCapture(capture: SignatureRosterApplyCapture | null) {
+  if (!capture || capture.saveOperations.length > 0) return false;
+  if (!capture.currentRevisionId && capture._count?.revisions === 0) return true;
+  return Boolean(
+    capture.currentRevisionId
+    && capture.currentRevision?.id === capture.currentRevisionId
+    && capture.currentRevision.state === SignatureArtifactState.READY,
+  );
+}
+
+function signatureRosterMergeProfileData(
+  source: SignatureRosterApplyMember,
+  target: SignatureRosterProfile,
+  targetIsNew: boolean,
+) {
+  const data: Partial<SignatureRosterProfile> = {};
+  const sourceBirthday = source.birthday ?? null;
+  const targetBirthday = target.birthday ?? null;
+  const nextBirthday = targetIsNew ? sourceBirthday ?? targetBirthday : targetBirthday ?? sourceBirthday;
+  if (nextBirthday !== targetBirthday) data.birthday = nextBirthday;
+  const sourceHometown = source.hometown ?? null;
+  const targetHometown = target.hometown ?? null;
+  const nextHometown = targetIsNew ? sourceHometown ?? targetHometown : targetHometown ?? sourceHometown;
+  if (nextHometown !== targetHometown) data.hometown = nextHometown;
+  const sourceInstagramHandle = source.instagramHandle ?? null;
+  const targetInstagramHandle = target.instagramHandle ?? null;
+  const nextInstagramHandle = targetIsNew ? sourceInstagramHandle ?? targetInstagramHandle : targetInstagramHandle ?? sourceInstagramHandle;
+  if (nextInstagramHandle !== targetInstagramHandle) data.instagramHandle = nextInstagramHandle;
+  const sourceTiktokHandle = source.tiktokHandle ?? null;
+  const targetTiktokHandle = target.tiktokHandle ?? null;
+  const nextTiktokHandle = targetIsNew ? sourceTiktokHandle ?? targetTiktokHandle : targetTiktokHandle ?? sourceTiktokHandle;
+  if (nextTiktokHandle !== targetTiktokHandle) data.tiktokHandle = nextTiktokHandle;
+  const sourceXHandle = source.xHandle ?? null;
+  const targetXHandle = target.xHandle ?? null;
+  const nextXHandle = targetIsNew ? sourceXHandle ?? targetXHandle : targetXHandle ?? sourceXHandle;
+  if (nextXHandle !== targetXHandle) data.xHandle = nextXHandle;
+  return data;
+}
+
 const artifactRevisionSelect = {
   id: true,
   revision: true,
@@ -788,13 +923,54 @@ export async function applySignatureRosterSnapshot(input: {
     }
     const existing = await tx.signatureMember.findMany({
       where: { collectionId: snapshot.collectionId },
-      select: { id: true, sourceExternalId: true, required: true, roleGroup: true, hometown: true },
+      select: signatureRosterApplyMemberSelect,
     });
     const existingBySource = new Map(existing.map((member) => [member.sourceExternalId, member]));
+    const sourceIds = new Set(entries.map((entry) => entry.sourceExternalId));
+    const incomingIdentityCounts = new Map<string, number>();
+    for (const entry of entries) {
+      const identityKey = signatureRosterPlayerIdentityKey(entry);
+      if (identityKey) incomingIdentityCounts.set(identityKey, (incomingIdentityCounts.get(identityKey) ?? 0) + 1);
+    }
+    const reservedSourceMemberIds = new Set<string>();
+    const mergePlans: SignatureRosterMergePlan[] = [];
 
     for (const entry of entries) {
       const existingMember = existingBySource.get(entry.sourceExternalId);
+      const historicalMember = findHighConfidenceHistoricalRosterMember(
+        existing,
+        entry,
+        existingMember?.id,
+        sourceIds,
+        incomingIdentityCounts,
+        reservedSourceMemberIds,
+      );
+      const targetProfile: SignatureRosterProfile = {
+        birthday: existingMember?.birthday ?? null,
+        hometown: entry.roleGroup === SignatureMemberGroup.PLAYER
+          ? existingMember?.hometown ?? entry.hometown ?? null
+          : null,
+        instagramHandle: existingMember?.instagramHandle ?? null,
+        tiktokHandle: existingMember?.tiktokHandle ?? null,
+        xHandle: existingMember?.xHandle ?? null,
+      };
+      const canMergeHistoricalMember = Boolean(
+        historicalMember
+        && existingMember?.active !== false
+        && isBlankSignatureRosterCapture(existingMember?.capture ?? null)
+        && canDonateSignatureRosterCapture(historicalMember.capture ?? null)
+      );
       if (existingMember) {
+        if (canMergeHistoricalMember) {
+          mergePlans.push({
+            source: historicalMember!,
+            targetMemberId: existingMember.id,
+            targetSourceExternalId: entry.sourceExternalId,
+            targetIsNew: false,
+            targetProfile,
+          });
+          reservedSourceMemberIds.add(historicalMember!.id);
+        }
         await tx.signatureMember.update({
           where: { id: existingMember.id },
           data: {
@@ -836,16 +1012,44 @@ export async function applySignatureRosterSnapshot(input: {
             required: defaultImportedMemberRequired(snapshot.collection.sportCode, entry.roleGroup),
           },
         });
-        existingBySource.set(entry.sourceExternalId, { id: member.id, sourceExternalId: member.sourceExternalId, required: member.required, roleGroup: member.roleGroup, hometown: entry.roleGroup === SignatureMemberGroup.PLAYER ? entry.hometown ?? null : null });
+        const createdMember: SignatureRosterApplyMember = {
+          id: member.id,
+          sourceExternalId: entry.sourceExternalId,
+          sourceProfileUrl: entry.sourceProfileUrl,
+          name: entry.name,
+          normalizedName: entry.normalizedName,
+          jerseyNumber: entry.jerseyNumber,
+          roleGroup: entry.roleGroup as SignatureMemberGroup,
+          title: entry.title,
+          active: true,
+          required: member.required ?? defaultImportedMemberRequired(snapshot.collection.sportCode, entry.roleGroup),
+          birthday: null,
+          hometown: entry.roleGroup === SignatureMemberGroup.PLAYER ? entry.hometown ?? null : null,
+          instagramHandle: null,
+          tiktokHandle: null,
+          xHandle: null,
+          capture: null,
+        };
+        existingBySource.set(entry.sourceExternalId, createdMember);
+        if (canMergeHistoricalMember) {
+          mergePlans.push({
+            source: historicalMember!,
+            targetMemberId: member.id,
+            targetSourceExternalId: entry.sourceExternalId,
+            targetIsNew: true,
+            targetProfile,
+          });
+          reservedSourceMemberIds.add(historicalMember!.id);
+        }
       }
     }
 
-    const sourceIds = entries.map((entry) => entry.sourceExternalId);
-    if (sourceIds.length > 0) {
+    const sourceIdList = [...sourceIds];
+    if (sourceIdList.length > 0) {
       await tx.signatureMember.updateMany({
         where: {
           collectionId: snapshot.collectionId,
-          sourceExternalId: { notIn: sourceIds },
+          sourceExternalId: { notIn: sourceIdList },
         },
         data: { active: false },
       });
@@ -864,6 +1068,95 @@ export async function applySignatureRosterSnapshot(input: {
       skipDuplicates: true,
     });
 
+    const mergeResults: SignatureRosterMergeResult[] = [];
+    if (mergePlans.length > 0) {
+      const mergeMemberIds = [...new Set(mergePlans.flatMap((plan) => [plan.source.id, plan.targetMemberId]))];
+      const mergeCaptures = await tx.signatureCapture.findMany({
+        where: {
+          collectionId: snapshot.collectionId,
+          memberId: { in: mergeMemberIds },
+        },
+        select: signatureRosterApplyCaptureSelect,
+      });
+      const captureByMemberId = new Map(mergeCaptures.map((capture) => [capture.memberId, capture]));
+
+      for (const plan of mergePlans) {
+        const sourceCapture = captureByMemberId.get(plan.source.id) ?? plan.source.capture ?? null;
+        const targetCapture = captureByMemberId.get(plan.targetMemberId) ?? null;
+        let artifactTransferred = false;
+        let transferredRevisionCount = 0;
+
+        if (
+          targetCapture
+          && sourceCapture
+          && isBlankSignatureRosterCapture(targetCapture)
+          && canDonateSignatureRosterCapture(sourceCapture)
+          && sourceCapture.currentRevisionId
+        ) {
+          await tx.signatureCapture.update({
+            where: { id: sourceCapture.id },
+            data: { currentRevisionId: null },
+          });
+          const movedRevisions = await tx.signatureArtifactRevision.updateMany({
+            where: { captureId: sourceCapture.id },
+            data: { captureId: targetCapture.id },
+          });
+          await tx.signatureSaveOperation.updateMany({
+            where: { captureId: sourceCapture.id },
+            data: { captureId: targetCapture.id, memberId: plan.targetMemberId },
+          });
+          await tx.signatureCapture.update({
+            where: { id: targetCapture.id },
+            data: {
+              currentRevisionId: sourceCapture.currentRevisionId,
+              captureVersion: Math.max(targetCapture.captureVersion, sourceCapture.captureVersion),
+              capturedAt: sourceCapture.capturedAt,
+              capturedById: sourceCapture.capturedById,
+            },
+          });
+          artifactTransferred = true;
+          transferredRevisionCount = movedRevisions.count;
+        }
+
+        const profileData = signatureRosterMergeProfileData(plan.source, plan.targetProfile, plan.targetIsNew);
+        if (Object.keys(profileData).length > 0) {
+          await tx.signatureMember.update({ where: { id: plan.targetMemberId }, data: profileData });
+        }
+        if (artifactTransferred || Object.keys(profileData).length > 0) {
+          await createAuditEntryTx(tx, {
+            actorId: input.actor.id,
+            actorRole: input.actor.role,
+            entityType: "SignatureMember",
+            entityId: plan.targetMemberId,
+            action: "MERGE_ROSTER_MEMBER",
+            before: {
+              sourceMemberId: plan.source.id,
+              sourceExternalId: plan.source.sourceExternalId,
+              targetMemberId: plan.targetMemberId,
+              targetSourceExternalId: plan.targetSourceExternalId,
+              matchedBy: ["normalizedName", "roleGroup"],
+            },
+            after: {
+              sourceMemberRetainedInactive: true,
+              artifactTransferred,
+              transferredRevisionCount,
+              preservedProfileFields: Object.keys(profileData),
+            },
+          });
+        }
+        if (artifactTransferred || Object.keys(profileData).length > 0) {
+          mergeResults.push({
+            sourceMemberId: plan.source.id,
+            sourceExternalId: plan.source.sourceExternalId,
+            targetMemberId: plan.targetMemberId,
+            targetSourceExternalId: plan.targetSourceExternalId,
+            artifactTransferred,
+            transferredRevisionCount,
+          });
+        }
+      }
+    }
+
     await tx.signatureRosterSnapshot.update({
       where: { id: snapshot.id },
       data: { status: SignatureSnapshotStatus.APPLIED, appliedAt: new Date(), appliedById: input.actor.id },
@@ -880,9 +1173,19 @@ export async function applySignatureRosterSnapshot(input: {
       entityId: snapshot.id,
       action: "APPLY",
       before: { collectionVersion: input.expectedCollectionVersion, sourceHash: snapshot.sourceHash },
-      after: { collectionVersion: collection.collectionVersion, candidateCount: snapshot.candidateCount },
+      after: {
+        collectionVersion: collection.collectionVersion,
+        candidateCount: snapshot.candidateCount,
+        mergedCount: mergeResults.length,
+      },
     });
-    return { collectionId: collection.id, collectionVersion: collection.collectionVersion, memberCount: members.length };
+    return {
+      collectionId: collection.id,
+      collectionVersion: collection.collectionVersion,
+      memberCount: members.length,
+      mergedCount: mergeResults.length,
+      merges: mergeResults,
+    };
   }, {
     isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
     maxWait: SIGNATURE_ROSTER_APPLY_MAX_WAIT_MS,

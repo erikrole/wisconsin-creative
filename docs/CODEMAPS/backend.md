@@ -17,7 +17,7 @@
 | `src/lib/services/booking-rules.ts` | 108 |
 | `src/lib/services/bookings-checkin.ts` | 846 |
 | `src/lib/services/bookings-helpers.ts` | 281 |
-| `src/lib/services/bookings-lifecycle.ts` | 2159 |
+| `src/lib/services/bookings-lifecycle.ts` | 2160 |
 | `src/lib/services/bookings-queries.ts` | 301 |
 | `src/lib/services/bookings.ts` | 4 |
 | `src/lib/services/bulk-schedule-assignment.ts` | 745 |
@@ -33,8 +33,8 @@
 | `src/lib/services/companion-projection-publisher.ts` | 57 |
 | `src/lib/services/companion-projection.ts` | 196 |
 | `src/lib/services/dashboard-counts.ts` | 119 |
-| `src/lib/services/event-credit.ts` | 124 |
 | `src/lib/services/event-defaults.ts` | 69 |
+| `src/lib/services/event-worker.ts` | 125 |
 | `src/lib/services/firmware-watch.ts` | 299 |
 | `src/lib/services/game-record.ts` | 161 |
 | `src/lib/services/hidden-users-cleanup.ts` | 122 |
@@ -61,19 +61,19 @@
 | `src/lib/services/schedule-health.ts` | 382 |
 | `src/lib/services/schedule-notification-copy.ts` | 102 |
 | `src/lib/services/schedule-notification-diff.ts` | 197 |
-| `src/lib/services/schedule-notification-flush.ts` | 150 |
+| `src/lib/services/schedule-notification-flush.ts` | 175 |
 | `src/lib/services/schedule-notification-policy.ts` | 136 |
 | `src/lib/services/schedule-open-work.ts` | 469 |
 | `src/lib/services/schedule-publication.ts` | 1019 |
 | `src/lib/services/schedule-template-review.ts` | 554 |
-| `src/lib/services/schedule-working-copy.ts` | 908 |
+| `src/lib/services/schedule-working-copy.ts` | 914 |
 | `src/lib/services/scoreboard.ts` | 287 |
 | `src/lib/services/shift-assignment-conflicts.ts` | 43 |
 | `src/lib/services/shift-assignments.ts` | 731 |
 | `src/lib/services/shift-generation.ts` | 628 |
 | `src/lib/services/shift-trade-emails.ts` | 56 |
 | `src/lib/services/shift-trades.ts` | 1065 |
-| `src/lib/services/signatures.ts` | 1909 |
+| `src/lib/services/signatures.ts` | 2212 |
 | `src/lib/services/software.ts` | 271 |
 | `src/lib/services/sport-configs.ts` | 257 |
 | `src/lib/services/status.ts` | 444 |
@@ -88,8 +88,8 @@
 | `src/lib/accountability-jeers.ts` | 121 |
 | `src/lib/admin-fix-today.ts` | 408 |
 | `src/lib/api-dates.ts` | 32 |
-| `src/lib/api-handler.ts` | 59 |
-| `src/lib/api.ts` | 134 |
+| `src/lib/api-handler.ts` | 63 |
+| `src/lib/api.ts` | 141 |
 | `src/lib/app-time.ts` | 218 |
 | `src/lib/asset-attachments.ts` | 166 |
 | `src/lib/asset-image.ts` | 26 |
@@ -97,7 +97,7 @@
 | `src/lib/assignment-conflict-review.ts` | 97 |
 | `src/lib/audit.ts` | 168 |
 | `src/lib/auth-email-guidance.ts` | 7 |
-| `src/lib/auth.ts` | 338 |
+| `src/lib/auth.ts` | 361 |
 | `src/lib/auto-fill-preview-types.ts` | 58 |
 | `src/lib/avatar.ts` | 44 |
 | `src/lib/battery-compatibility.ts` | 166 |
@@ -163,7 +163,7 @@
 | `src/lib/ops-checks.ts` | 176 |
 | `src/lib/passkey-client.ts` | 73 |
 | `src/lib/passkey.ts` | 371 |
-| `src/lib/permissions.ts` | 217 |
+| `src/lib/permissions.ts` | 220 |
 | `src/lib/profile-completion-events.ts` | 6 |
 | `src/lib/profile-completion.ts` | 157 |
 | `src/lib/profile-phone.ts` | 44 |
@@ -173,8 +173,9 @@
 | `src/lib/rate-limit.ts` | 217 |
 | `src/lib/rbac.ts` | 59 |
 | `src/lib/remark-callouts.ts` | 73 |
-| `src/lib/request-limits.ts` | 15 |
+| `src/lib/request-limits.ts` | 16 |
 | `src/lib/resource-search.ts` | 124 |
+| `src/lib/role-preview.ts` | 226 |
 | `src/lib/sanitize.ts` | 40 |
 | `src/lib/schedule-assignee.ts` | 27 |
 | `src/lib/schedule-auto-release.ts` | 42 |
@@ -218,7 +219,7 @@
 | `src/lib/user-list-cache.ts` | 73 |
 | `src/lib/user-visibility.ts` | 85 |
 | `src/lib/utils.ts` | 7 |
-| `src/lib/validation.ts` | 802 |
+| `src/lib/validation.ts` | 803 |
 | `src/lib/venue-mapping-audit.ts` | 56 |
 | `src/lib/venue-mapping-contract.ts` | 46 |
 | `src/lib/venue-tone.ts` | 114 |
@@ -242,6 +243,7 @@
 ### `/api/admin`
 
 - `/api/admin/fix-today`
+- `/api/admin/role-preview`
 
 ### `/api/allowed-emails`
 
@@ -349,12 +351,12 @@
 ### `/api/calendar-events`
 
 - `/api/calendar-events/[id]/command-center`
-- `/api/calendar-events/[id]/credits/[creditId]`
-- `/api/calendar-events/[id]/credits`
 - `/api/calendar-events/[id]`
 - `/api/calendar-events/[id]/travel/[memberId]`
 - `/api/calendar-events/[id]/travel`
 - `/api/calendar-events/[id]/visibility`
+- `/api/calendar-events/[id]/workers/[workerId]`
+- `/api/calendar-events/[id]/workers`
 - `/api/calendar-events`
 
 ### `/api/calendar-sources`
