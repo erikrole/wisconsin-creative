@@ -212,14 +212,15 @@ export default function AppActivityPage() {
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              <Table>
+              <Table className="min-w-[960px]">
                 <TableHeader>
                   <TableRow>
-                    <TableHead>User</TableHead>
-                    <TableHead>App use</TableHead>
-                    <TableHead>Clients and device</TableHead>
-                    <TableHead>Build / channel</TableHead>
-                    <TableHead>Last seen</TableHead>
+                    <TableHead className="min-w-48">User</TableHead>
+                    <TableHead className="min-w-24">App use</TableHead>
+                    <TableHead className="min-w-40">iOS hardware</TableHead>
+                    <TableHead className="min-w-56">iOS software</TableHead>
+                    <TableHead className="min-w-40">Latest browser</TableHead>
+                    <TableHead className="min-w-32">Last seen</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -271,20 +272,31 @@ function SummaryCard({
 function UserActivityRow({ user, now }: { user: AppActivityUser; now: Date }) {
   const clients = user.clients;
   const latest = latestClient(clients);
-  const iosClients = clients.filter((client) => client.platform === "ios");
+  const iosClients = clients
+    .filter((client) => client.platform === "ios")
+    .sort((a, b) => new Date(b.lastSeenAt).getTime() - new Date(a.lastSeenAt).getTime());
+  const browserClients = clients.filter((client) => client.platform === "web");
+  const latestBrowser = latestClient(browserClients);
+  const hardwareModels = Array.from(
+    new Set(
+      iosClients
+        .map((client) => client.deviceModel)
+        .filter((model): model is string => Boolean(model)),
+    ),
+  );
 
   return (
     <TableRow>
-      <TableCell className="min-w-52">
+      <TableCell className="min-w-48 whitespace-normal">
         <div className="flex flex-col gap-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="brand-identity font-medium text-foreground">{user.name}</span>
             {!user.active && <Badge variant="gray" size="sm">Inactive</Badge>}
           </div>
-          <span className="text-xs text-muted-foreground">{user.email} · {user.role.toLowerCase()}</span>
+          <span className="break-words text-xs text-muted-foreground">{user.email} · {user.role.toLowerCase()}</span>
         </div>
       </TableCell>
-      <TableCell>
+      <TableCell className="min-w-24">
         <div className="flex flex-col items-start gap-1">
           <Badge variant={user.used ? "green" : "gray"} size="sm">
             {user.used ? "Used" : "Never opened"}
@@ -296,47 +308,68 @@ function UserActivityRow({ user, now }: { user: AppActivityUser; now: Date }) {
           ) : null}
         </div>
       </TableCell>
-      <TableCell className="min-w-64">
-        {clients.length === 0 ? (
-          <span className="text-sm text-muted-foreground">No client reported</span>
+      <TableCell className="min-w-40">
+        {iosClients.length === 0 ? (
+          <span className="text-sm text-muted-foreground">No iOS client</span>
         ) : (
           <div className="flex flex-col gap-2">
-            {clients.map((client) => (
-              <div key={`${client.platform}:${client.firstSeenAt}`} className="flex min-w-56 items-start gap-2">
-                <Badge variant={client.platform === "ios" ? "blue" : "gray"} size="sm">{platformLabel(client.platform)}</Badge>
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-medium">{client.deviceModel ?? "Browser"}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {client.osVersion ? `iOS ${client.osVersion}` : "Browser client"}
-                  </div>
+            {hardwareModels.length > 0 ? hardwareModels.map((model) => (
+              <div key={model} className="flex items-center gap-2">
+                <Badge variant="blue" size="sm">iOS</Badge>
+                <span className="truncate text-sm font-medium" title={model}>{model}</span>
+              </div>
+            )) : <span className="text-sm text-muted-foreground">Model unavailable</span>}
+            <span className="text-xs text-muted-foreground">
+              {iosClients.length} {iosClients.length === 1 ? "client" : "clients"}
+            </span>
+          </div>
+        )}
+      </TableCell>
+      <TableCell className="min-w-56">
+        {iosClients.length === 0 ? (
+          <span className="text-sm text-muted-foreground">No iOS client</span>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {iosClients.map((client) => (
+              <div key={`${client.platform}:software:${client.firstSeenAt}`} className="flex flex-col gap-1">
+                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                  <span className="text-sm font-medium">{client.appVersion ? `v${client.appVersion}` : "Version unknown"}</span>
+                  <span className="text-xs text-muted-foreground">build {client.appBuild ?? "—"}</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-xs text-muted-foreground">{client.osVersion ? `iOS ${client.osVersion}` : "iOS version unknown"}</span>
+                  <Badge variant={buildStatusVariant(client.buildStatus)} size="sm">{buildStatusLabel(client.buildStatus)}</Badge>
+                  <Badge variant={channelVariant(client.releaseChannel)} size="sm">{channelLabel(client.releaseChannel)}</Badge>
                 </div>
               </div>
             ))}
           </div>
         )}
       </TableCell>
-      <TableCell className="min-w-52">
-        {iosClients.length === 0 ? (
-          <span className="text-sm text-muted-foreground">—</span>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {iosClients.map((client) => (
-              <div key={`${client.platform}:build:${client.firstSeenAt}`} className="flex flex-wrap items-center gap-1.5">
-                <span className="text-sm font-medium">{client.appVersion ? `v${client.appVersion}` : "Version unknown"}</span>
-                <span className="text-xs text-muted-foreground">build {client.appBuild ?? "—"}</span>
-                <Badge variant={buildStatusVariant(client.buildStatus)} size="sm">{buildStatusLabel(client.buildStatus)}</Badge>
-                <Badge variant={channelVariant(client.releaseChannel)} size="sm">{channelLabel(client.releaseChannel)}</Badge>
-              </div>
-            ))}
+      <TableCell className="min-w-40">
+        {latestBrowser ? (
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <Badge variant="gray" size="sm">Web</Badge>
+              <span className="text-sm font-medium">Browser client</span>
+            </div>
+            <span className="text-xs text-muted-foreground" title={formatDateTime(latestBrowser.lastSeenAt)}>
+              {formatRelativeTime(latestBrowser.lastSeenAt, now)}
+              {browserClients.length > 1 ? ` · ${browserClients.length} installations` : ""}
+            </span>
           </div>
+        ) : (
+          <span className="text-sm text-muted-foreground">No browser client</span>
         )}
       </TableCell>
-      <TableCell>
+      <TableCell className="min-w-32">
         {latest ? (
           <div className="flex flex-col gap-1">
             <span className="text-sm">{formatRelativeTime(latest.lastSeenAt, now)}</span>
             <span className="text-xs text-muted-foreground" title={formatDateTime(latest.lastSeenAt)}>
-              {latest.osVersion ? `iOS ${latest.osVersion}` : platformLabel(latest.platform)}
+              {latest.osVersion
+                ? `iOS ${latest.osVersion}`
+                : `${platformLabel(latest.platform)}${latest.deviceModel ? ` · ${latest.deviceModel}` : ""}`}
             </span>
           </div>
         ) : (

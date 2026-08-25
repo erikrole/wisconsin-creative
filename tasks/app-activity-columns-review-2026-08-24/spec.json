@@ -1,0 +1,71 @@
+{
+  "title": "App Activity Table Columns",
+  "eyebrow": "Settings · Owner-only · Web",
+  "lede": "The report now answers iOS support questions directly while keeping repeated browser installations from stretching a single user row across the screen.",
+  "stats": [
+    {
+      "k": "Dedicated columns",
+      "v": "5 → 6",
+      "n": "iOS hardware, iOS software, latest browser, and last seen are explicit"
+    },
+    {
+      "k": "Erik web row",
+      "v": "12 → 1",
+      "n": "12 installations summarized as latest browser plus a count",
+      "tone": "good"
+    },
+    {
+      "k": "Matched viewport",
+      "v": "1280 × 720",
+      "n": "Same authenticated preview session and roster dataset"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Matched authenticated capture",
+      "note": "Same preview database, signed-in owner, browser origin, viewport, and roster data. The before capture renders the source-control page; the after capture renders the updated page.",
+      "pairs": [
+        {
+          "title": "Table top",
+          "sub": "Look at the headers and Erik Role's row: the repeated web clients disappear, while both iOS clients remain legible.",
+          "before": "tasks/app-activity-columns-review-2026-08-24/before.png",
+          "beforeCap": "The old Clients and device column repeats every web installation, and iOS build information is separated into a second ambiguous column.",
+          "after": "tasks/app-activity-columns-review-2026-08-24/after.png",
+          "afterCap": "Dedicated iOS hardware, iOS software, Latest browser, and Last seen columns keep the support signals readable in one row."
+        }
+      ]
+    }
+  ],
+  "changesHeading": "What changed, and why",
+  "changesNote": "This is a presentation-only slice. The API payload, owner allowlist, privacy boundary, and build-comparison semantics stay unchanged.",
+  "changes": [
+    {
+      "h": "Web activity was repeated per installation",
+      "was": "A user with many web installation keys produced a very tall row full of repeated Browser client entries, making the row's useful signals hard to scan.",
+      "now": "The Latest browser column shows the most recently seen web client and the total installation count."
+    },
+    {
+      "h": "iOS context was split across ambiguous columns",
+      "was": "Clients and device mixed web and iOS hardware, while Build / channel omitted the iOS OS version and required scanning across repeated blocks.",
+      "now": "iOS hardware lists distinct reported models; iOS software keeps OS version, marketing version, build, freshness status, and release channel together for each iOS client."
+    },
+    {
+      "h": "Desktop density hid the final context column",
+      "was": "The table's content width pushed Last seen just beyond the normal desktop surface after adding the new support signal columns.",
+      "now": "Tighter minimums and wrapped user metadata keep all six headers visible at desktop width; the shared table container still scrolls intentionally at narrow widths."
+    }
+  ],
+  "verification": [
+    "<strong>Focused source contracts:</strong> App Activity UI and brand-identity tests pass.",
+    "<strong>TypeScript:</strong> <code>npx tsc --noEmit --pretty false</code> passes.",
+    "<strong>Lint:</strong> <code>npm run lint</code> passes.",
+    "<strong>Production-shaped build:</strong> <code>npm run build:app</code> passes.",
+    "<strong>Authenticated browser:</strong> owner-gated local preview renders the six headers, two iOS clients, and summarized browser activity.",
+    "<strong>Narrow viewport:</strong> the table reports <code>overflow-x: auto</code> with 999px content inside a 563px viewport, preserving access without clipping."
+  ],
+  "notesHeading": "Things to know",
+  "notes": [
+    "No production deployment was made for this UI slice; the live production page remains unchanged until the implementation is explicitly shipped.",
+    "The telemetry identifies a web client, not the browser engine. The label stays Browser client rather than inferring Chrome or Safari."
+  ]
+}
