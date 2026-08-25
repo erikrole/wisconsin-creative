@@ -31,8 +31,8 @@
 
 ## Slices
 
-- [ ] Slice 1: Normalize exported stroke weight against the export scale so one setting yields one line weight across a roster, and prove determinism plus unchanged cleanup behavior.
-- [ ] Slice 2: Render a live pen sample in the admin capture-settings panel from the same shared builder, so line thickness and ink are configured against real output rather than a bare number.
+- [x] Slice 1: Normalize exported stroke weight against the export scale so one setting yields one line weight across a roster, and prove determinism plus unchanged cleanup behavior.
+- [x] Slice 2: Render a live pen sample in the admin capture-settings panel from the same shared builder, so line thickness and ink are configured against real output rather than a bare number.
 - [ ] Slice 3: Add a practice pad and pen check to the capture surface — same renderer and settings, no draft persistence, Save disabled — so an athlete and the Pencil are both warm before the real signature.
 - [ ] Slice 4: Show the actual cropped artifact on a transparency ground before commit, and bound the drawing client-side against the configured maximum dimensions instead of failing at save.
 - [ ] Slice 5: Add Save-and-next progression across unsigned signers plus an explicit signer confirmation, so a 164-row roster is not scrolled between athletes and a wrong-signer save is harder to make.
@@ -42,14 +42,19 @@ Slices 1-2 are this pass. Slices 3-6 remain queued and are ordered by value agai
 
 ## Verification
 
-- [ ] Focused signature artifact, geometry, and service tests.
-- [ ] `npx tsc --noEmit --pretty false`
-- [ ] `npm run lint`
-- [ ] `npm run build:app`
-- [ ] `git diff --check`
-- [ ] Matched UI review capture for the settings-panel change.
+- [x] Focused signature tests: 106 passed across six files, including three new contracts — equal exported weight for a small and a large signature, the clamp for a degenerate crop, and the export-size helper pinned against the bytes sharp renders.
+- [x] `npx tsc --noEmit --pretty false` (clean; the repository's pre-existing stale `.next/types` TS6053 entries are unrelated and appear without any local change).
+- [x] `npm run lint`
+- [x] `npm run build:app` (exit 0, compiled in 20.1s; the `/_document` rejection during page-data collection is the known unrelated transient already recorded in `signature-capture-micro-app-plan.md`).
+- [x] `git diff --check`
+- [ ] Authenticated browser proof of the settings panel: the Preview dev server starts and serves the app, but the tab is unauthenticated and no session was established in this pass.
+- [ ] Matched UI review capture for the settings-panel change; blocked behind the authenticated session above.
 - [ ] Physical iPad / Apple Pencil acceptance remains open under GAP-65 and is not claimed by this plan.
 
 ## Review
 
-- Pending.
+- Shipped locally (slices 1-2): exported line weight is normalized against the export scale, so one configured thickness delivers one uniform line across a roster instead of an apparent weight that varied roughly 3x with signature size. The shared SVG builder moved from server-only `artifacts.ts` into client-safe `geometry.ts` and is re-exported, so the new admin pen preview renders through the exact builder that produces the delivered artifact rather than a reimplementation.
+- Unchanged on purpose: pen-class input gating, the iPad gate, draft and save-operation lifecycle, capture-version conflicts, private storage, and the cleanup thresholds in `removeAccidentalSignatureStrokes`, which still measure against the configured width.
+- Existing artifacts are safe: PNG download regeneration rasterizes the stored SVG, so committed revisions keep the width baked in at capture time and cannot be re-rendered by this change.
+- Known consequence: a collection that already holds stroke-generated captures will render new captures under the new rule while older ones keep their original weight. The applied `FB` and `VB` rosters are Illustrator imports whose weights already vary by source, and GAP-65 still lists a real Pencil save as open, so the exposure is small — but a partially stroke-captured roster should be reset and recaptured rather than mixed.
+- Next slice or stop: Slice 3 (practice pad and pen check) is the next bounded step and pairs naturally with the open GAP-65 physical iPad acceptance. Stop here if the authenticated settings-panel capture should come first.
