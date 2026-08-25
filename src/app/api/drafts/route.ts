@@ -11,6 +11,7 @@ import {
   MAX_BULK_QUANTITY_PER_LINE,
   MAX_BULK_SKU_LINES_PER_REQUEST,
   MAX_EQUIPMENT_SELECTIONS_PER_REQUEST,
+  MAX_LINKED_EVENTS_PER_BOOKING,
 } from "@/lib/request-limits";
 
 const saveDraftSchema = z.object({
@@ -22,7 +23,7 @@ const saveDraftSchema = z.object({
   startsAt: z.string().datetime({ offset: true }).optional(),
   endsAt: z.string().datetime({ offset: true }).optional(),
   eventId: z.string().cuid().nullable().optional(),
-  eventIds: z.array(z.string().cuid()).max(3).optional(),
+  eventIds: z.array(z.string().cuid()).max(MAX_LINKED_EVENTS_PER_BOOKING).optional(),
   sportCode: optionalSportCodeSchema,
   notes: z.string().max(10000).optional(),
   serializedAssetIds: z

@@ -1,5 +1,9 @@
 import SwiftUI
 
+enum BookingEventLimits {
+    static let maxLinkedEvents = 5
+}
+
 /// Returns the next clean hour boundary after `now`, plus `addingHours`.
 /// `addingHours: 0` → the upcoming `:00`; `addingHours: 1` → one hour after that.
 private func nextCleanHour(addingHours: Int = 0) -> Date {
@@ -755,7 +759,7 @@ final class CreateBookingViewModel {
         } else if selectedEventIds.contains(event.id) {
             selectedEventIds.removeAll { $0 == event.id }
         } else {
-            guard selectedEventIds.count < 3 else {
+            guard selectedEventIds.count < BookingEventLimits.maxLinkedEvents else {
                 Haptics.warning()
                 return
             }

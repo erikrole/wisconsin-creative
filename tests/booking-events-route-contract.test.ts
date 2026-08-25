@@ -22,6 +22,7 @@ vi.mock("@sentry/nextjs", () => ({
 import { requireAuth } from "@/lib/auth";
 import { getBookingDetail, updateBookingEvents } from "@/lib/services/bookings";
 import { requireBookingAction } from "@/lib/services/booking-rules";
+import { MAX_LINKED_EVENTS_PER_BOOKING } from "@/lib/request-limits";
 import { POST } from "@/app/api/bookings/[id]/events/route";
 
 const studentUser = {
@@ -146,16 +147,39 @@ describe("booking event-link route contract", () => {
     expect(updateBookingEvents).not.toHaveBeenCalled();
   });
 
-  it("rejects more than 3 eventIds at the route boundary", async () => {
+  it("allows five eventIds at the route boundary", async () => {
+    const maximumEventIds = [
+      "cm000000000000000000000101",
+      "cm000000000000000000000102",
+      "cm000000000000000000000103",
+      "cm000000000000000000000104",
+      "cm000000000000000000000105",
+    ];
+    const res = await POST(
+      request(
+        { eventIds: maximumEventIds },
+        { "if-unmodified-since": "Thu, 09 Jul 2026 16:00:00 GMT" },
+      ),
+      { params: Promise.resolve({ id: baseDetail.id }) },
+    );
+
+    expect(res.status).toBe(200);
+    expect(updateBookingEvents).toHaveBeenCalledWith(
+      baseDetail.id,
+      studentUser.id,
+      maximumEventIds,
+      new Date("2026-07-09T16:00:00.000Z"),
+    );
+  });
+
+  it("rejects more than five eventIds at the route boundary", async () => {
     const res = await POST(
       request(
         {
-          eventIds: [
-            "cm000000000000000000000101",
-            "cm000000000000000000000102",
-            "cm000000000000000000000103",
-            "cm000000000000000000000104",
-          ],
+          eventIds: Array.from(
+            { length: MAX_LINKED_EVENTS_PER_BOOKING + 1 },
+            (_, index) => `cm00000000000000000000010${index + 1}`,
+          ),
         },
         { "if-unmodified-since": "Thu, 09 Jul 2026 16:00:00 GMT" },
       ),

@@ -97,7 +97,7 @@ private enum EventScopeFilter: String, CaseIterable, Identifiable {
 }
 
 /// Full upcoming-events list behind the "All events" row: searchable, same
-/// toggle semantics and 3-event cap as the inline card.
+/// toggle semantics and five-event cap as the inline card.
 struct AllEventsPickerView: View {
     let events: [ScheduleEvent]
     let selectedEvents: [ScheduleEvent]
@@ -144,7 +144,7 @@ struct AllEventsPickerView: View {
                 EventPickRow(
                     event: event,
                     isSelected: selectedEvents.contains(where: { $0.id == event.id }),
-                    isDisabled: selectedEvents.count >= 3 && !selectedEvents.contains(where: { $0.id == event.id })
+                    isDisabled: selectedEvents.count >= BookingEventLimits.maxLinkedEvents && !selectedEvents.contains(where: { $0.id == event.id })
                 ) {
                     onToggle(event)
                 }

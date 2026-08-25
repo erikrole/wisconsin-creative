@@ -9,8 +9,8 @@ import {
 } from "../booking-list/types";
 import type { FormAction } from "./types";
 import { handleAuthRedirect, isAbortError, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
+import { MAX_LINKED_EVENTS_PER_BOOKING } from "@/lib/request-limits";
 
-const MAX_SELECTED_EVENTS = 3;
 const BOOKING_EVENT_LOOKAHEAD_DAYS = 30;
 
 /** Derive auto-fill fields from the chronologically-first event in the list. */
@@ -118,8 +118,8 @@ export function useEventContext({
       if (isSelected) {
         next = selectedEvents.filter((e) => e.id !== ev.id);
       } else {
-        if (selectedEvents.length >= MAX_SELECTED_EVENTS) {
-          toast.error(`You can link at most ${MAX_SELECTED_EVENTS} events to a booking`);
+        if (selectedEvents.length >= MAX_LINKED_EVENTS_PER_BOOKING) {
+          toast.error(`You can link at most ${MAX_LINKED_EVENTS_PER_BOOKING} events to a booking`);
           return { ok: false, reason: "cap" };
         }
         next = [...selectedEvents, ev].sort(

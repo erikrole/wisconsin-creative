@@ -40,6 +40,7 @@ import { collaboratorPolicyActorSelect } from "@/lib/services/collaborator-polic
 import {
   MAX_CHECKOUT_BULK_LINE_CHANGES_PER_REQUEST,
   MAX_EQUIPMENT_SELECTIONS_PER_REQUEST,
+  MAX_LINKED_EVENTS_PER_BOOKING,
 } from "@/lib/request-limits";
 import { assertCheckoutDistinctBulkSkuLimit } from "@/lib/services/kiosk-checkout-complete";
 import {
@@ -77,7 +78,7 @@ type CreateBookingInput = {
   eventId?: string;
   /** Optional multi-event linking. If provided, events are sorted chronologically
    * and the first one becomes the primary (`Booking.eventId`). Mutually exclusive
-   * with `eventId` — callers pick one. Cap 3 events. */
+   * with `eventId` — callers pick one. Cap five events. */
   eventIds?: string[];
   sportCode?: string;
   shiftAssignmentId?: string;
@@ -141,8 +142,8 @@ function assertValidCreateEventLinks(input: CreateBookingInput) {
   if (input.eventId && input.eventIds && input.eventIds.length > 0) {
     throw new HttpError(400, "Provide either eventId or eventIds, not both");
   }
-  if (input.eventIds && input.eventIds.length > 3) {
-    throw new HttpError(400, "A booking may link at most 3 events");
+  if (input.eventIds && input.eventIds.length > MAX_LINKED_EVENTS_PER_BOOKING) {
+    throw new HttpError(400, `A booking may link at most ${MAX_LINKED_EVENTS_PER_BOOKING} events`);
   }
   if (input.eventIds && hasDuplicateIds(input.eventIds)) {
     throw new HttpError(400, "eventIds must be unique");
@@ -150,8 +151,8 @@ function assertValidCreateEventLinks(input: CreateBookingInput) {
 }
 
 function assertValidEventLinks(eventIds: string[]) {
-  if (eventIds.length > 3) {
-    throw new HttpError(400, "A booking may link at most 3 events");
+  if (eventIds.length > MAX_LINKED_EVENTS_PER_BOOKING) {
+    throw new HttpError(400, `A booking may link at most ${MAX_LINKED_EVENTS_PER_BOOKING} events`);
   }
   if (hasDuplicateIds(eventIds)) {
     throw new HttpError(400, "eventIds must be unique");

@@ -5,6 +5,7 @@ import {
   MAX_BULK_SKU_LINES_PER_REQUEST,
   MAX_CHECKOUT_DISTINCT_BULK_SKUS_PER_REQUEST,
   MAX_EQUIPMENT_SELECTIONS_PER_REQUEST,
+  MAX_LINKED_EVENTS_PER_BOOKING,
 } from "@/lib/request-limits";
 
 type MockFn = ReturnType<typeof vi.fn>;
@@ -585,6 +586,38 @@ describe("createBooking", () => {
         { bookingId: "b-new", eventId: "event-late", ordinal: 1 },
       ],
     });
+  });
+
+  it("allows five linked events and rejects a sixth at the service boundary", async () => {
+    const eventIds = Array.from(
+      { length: MAX_LINKED_EVENTS_PER_BOOKING },
+      (_, index) => `event-${index + 1}`,
+    );
+    mockTx.calendarEvent.findMany.mockResolvedValue(
+      [...eventIds].reverse().map((id) => ({
+        id,
+        startsAt: new Date(Date.UTC(2026, 3, 1 + eventIds.indexOf(id), 20)),
+      })),
+    );
+
+    await createBooking(baseInput({ eventIds }));
+
+    expect(mockTx.booking.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ eventId: eventIds[0] }),
+      }),
+    );
+    expect(mockTx.bookingEvent.createMany).toHaveBeenCalledWith({
+      data: eventIds.map((eventId, ordinal) => ({
+        bookingId: "b-new",
+        eventId,
+        ordinal,
+      })),
+    });
+
+    await expect(createBooking(baseInput({
+      eventIds: [...eventIds, "event-6"],
+    }))).rejects.toThrow(`A booking may link at most ${MAX_LINKED_EVENTS_PER_BOOKING} events`);
   });
 
   it("adds an internal event reservation requester to the schedule and links the booking", async () => {

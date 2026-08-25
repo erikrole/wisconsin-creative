@@ -9,6 +9,7 @@ import {
   MAX_BULK_SKU_LINES_PER_REQUEST,
   MAX_BULK_UNIT_NUMBER,
   MAX_EQUIPMENT_SELECTIONS_PER_REQUEST,
+  MAX_LINKED_EVENTS_PER_BOOKING,
   MAX_NUMBERED_UNITS_PER_CREATE,
   MAX_SPORT_CONFIG_GROUP_CODES_PER_REQUEST,
   MAX_SPORT_ROSTER_USERS_PER_REQUEST,
@@ -109,7 +110,7 @@ const bulkItemsSchema = z.array(bulkItemSchema)
   });
 });
 
-const eventIdsListSchema = z.array(z.string().cuid()).max(3).superRefine((ids, ctx) => {
+const eventIdsListSchema = z.array(z.string().cuid()).max(MAX_LINKED_EVENTS_PER_BOOKING).superRefine((ids, ctx) => {
   const seen = new Set<string>();
   ids.forEach((id, index) => {
     if (seen.has(id)) {

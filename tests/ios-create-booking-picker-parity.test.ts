@@ -189,7 +189,9 @@ describe("iOS create booking picker parity", () => {
     expect(createSheet).toContain("var prefillEvent: ScheduleEvent?");
     expect(createSheet).toContain("func loadEvents() async");
     expect(createSheet).toContain("events = try await APIClient.shared.calendarEvents(includePast: false, limit: 60)");
-    expect(createSheet).toContain("guard selectedEventIds.count < 3");
+    expect(createSheet).toContain("static let maxLinkedEvents = 5");
+    expect(createSheet).toContain("guard selectedEventIds.count < BookingEventLimits.maxLinkedEvents");
+    expect(createSheet).toContain("selectedEvents.count >= BookingEventLimits.maxLinkedEvents");
     expect(createSheet).toContain("sortSelectedEventIds()");
     expect(createSheet).toContain("applySelectedEventsToDetails()");
     expect(createSheet).toContain("eventIds: selectedEventIds");

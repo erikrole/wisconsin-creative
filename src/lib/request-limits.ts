@@ -3,6 +3,7 @@
  * These are per-request safety limits, not catalog or lifetime inventory limits.
  */
 export const MAX_EQUIPMENT_SELECTIONS_PER_REQUEST = 500;
+export const MAX_LINKED_EVENTS_PER_BOOKING = 5;
 export const MAX_BULK_SKU_LINES_PER_REQUEST = 50;
 export const MAX_BULK_QUANTITY_PER_LINE = 1_000_000;
 export const MAX_BULK_UNIT_NUMBER = 2_147_483_647;

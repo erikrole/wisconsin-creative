@@ -21,6 +21,7 @@ import { BOOKING_CHANGE_SYNC_EVENT } from "@/hooks/use-booking-change-sync";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
 import { formatDateTime } from "@/lib/format";
+import { MAX_LINKED_EVENTS_PER_BOOKING } from "@/lib/request-limits";
 import type { BookingDetail } from "./types";
 
 type CalendarEventOption = {
@@ -170,8 +171,8 @@ export function EditBookingEventsDialog({
   function toggleEvent(eventId: string) {
     setSelectedIds((current) => {
       if (current.includes(eventId)) return current.filter((id) => id !== eventId);
-      if (current.length >= 3) {
-        toast.error("A booking may link at most 3 events.");
+      if (current.length >= MAX_LINKED_EVENTS_PER_BOOKING) {
+        toast.error(`A booking may link at most ${MAX_LINKED_EVENTS_PER_BOOKING} events.`);
         return current;
       }
       return [...current, eventId];
@@ -237,7 +238,7 @@ export function EditBookingEventsDialog({
             <div className="flex flex-col gap-1">
               <DialogTitle>Linked events</DialogTitle>
               <DialogDescription>
-                Link this booking to up to 3 scheduled events. The gear window and custody state stay unchanged.
+                Link this booking to up to {MAX_LINKED_EVENTS_PER_BOOKING} scheduled events. The gear window and custody state stay unchanged.
               </DialogDescription>
             </div>
           </div>
@@ -288,7 +289,7 @@ export function EditBookingEventsDialog({
               <div className="divide-y">
                 {filteredEvents.map((event) => {
                   const checked = selectedIds.includes(event.id);
-                  const disabled = saving || (!checked && selectedIds.length >= 3);
+                  const disabled = saving || (!checked && selectedIds.length >= MAX_LINKED_EVENTS_PER_BOOKING);
                   return (
                     <button
                       key={event.id}

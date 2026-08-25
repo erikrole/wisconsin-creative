@@ -35,6 +35,7 @@ import {
   MAX_BULK_QUANTITY_PER_LINE,
   MAX_BULK_SKU_LINES_PER_REQUEST,
   MAX_EQUIPMENT_SELECTIONS_PER_REQUEST,
+  MAX_LINKED_EVENTS_PER_BOOKING,
 } from "@/lib/request-limits";
 import { GET as GET_DRAFTS, POST } from "@/app/api/drafts/route";
 import { DELETE, GET as GET_DRAFT } from "@/app/api/drafts/[id]/route";
@@ -139,6 +140,46 @@ describe("POST /api/drafts", () => {
         { bookingId: "cm000000000000000000000010", eventId: lateEventId, ordinal: 1 },
       ],
     });
+  });
+
+  it("allows five linked draft events and rejects a sixth before saving", async () => {
+    const eventIds = Array.from(
+      { length: MAX_LINKED_EVENTS_PER_BOOKING },
+      (_, index) => cuid(index + 101),
+    );
+    mockTx.calendarEvent.findMany.mockResolvedValue(
+      eventIds.map((id, index) => ({
+        id,
+        startsAt: new Date(Date.UTC(2026, 4, 30 + index, 20)),
+      })),
+    );
+    mockTx.booking.create.mockResolvedValue({ id: "cm000000000000000000000010" });
+
+    const accepted = await POST(
+      makePostRequest({ kind: "RESERVATION", title: "Five-event draft", eventIds }),
+      noParams,
+    );
+
+    expect(accepted.status).toBe(201);
+    expect(mockTx.bookingEvent.createMany).toHaveBeenCalledWith({
+      data: eventIds.map((eventId, ordinal) => ({
+        bookingId: "cm000000000000000000000010",
+        eventId,
+        ordinal,
+      })),
+    });
+
+    const rejected = await POST(
+      makePostRequest({
+        kind: "RESERVATION",
+        title: "Six-event draft",
+        eventIds: [...eventIds, cuid(200)],
+      }),
+      noParams,
+    );
+
+    expect(rejected.status).toBe(400);
+    expect(mockTx.booking.create).toHaveBeenCalledTimes(1);
   });
 
   it("rejects payloads that mix legacy eventId with eventIds", async () => {

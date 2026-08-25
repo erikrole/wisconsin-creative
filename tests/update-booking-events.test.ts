@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BookingKind, BookingStatus, CollaboratorProfile, Prisma, Role, ShiftAssignmentSource } from "@prisma/client";
 import { expectSerializableIsolation } from "./_helpers/assert-transaction";
+import { MAX_LINKED_EVENTS_PER_BOOKING } from "@/lib/request-limits";
 
 type MockFn = ReturnType<typeof vi.fn>;
 type UpdateEventsTx = {
@@ -138,6 +139,29 @@ describe("updateBookingEvents", () => {
         }),
       }),
     );
+  });
+
+  it("allows five linked events when relinking an active booking", async () => {
+    const eventIds = Array.from(
+      { length: MAX_LINKED_EVENTS_PER_BOOKING },
+      (_, index) => `event-${index + 1}`,
+    );
+    mockTx.calendarEvent.findMany.mockResolvedValue(
+      [...eventIds].reverse().map((id) => ({
+        id,
+        startsAt: new Date(Date.UTC(2026, 6, 10 + eventIds.indexOf(id), 20)),
+      })),
+    );
+
+    await updateBookingEvents("reservation-1", "student-1", eventIds);
+
+    expect(mockTx.bookingEvent.createMany).toHaveBeenCalledWith({
+      data: eventIds.map((eventId, ordinal) => ({
+        bookingId: "reservation-1",
+        eventId,
+        ordinal,
+      })),
+    });
   });
 
   it("adds the requester when an existing reservation gains its first event link", async () => {
@@ -284,10 +308,15 @@ describe("updateBookingEvents", () => {
     expect(transactionCalls).toHaveLength(0);
   });
 
-  it("rejects more than 3 eventIds before opening a transaction", async () => {
+  it("rejects more than five eventIds before opening a transaction", async () => {
+    const eventIds = Array.from(
+      { length: MAX_LINKED_EVENTS_PER_BOOKING + 1 },
+      (_, index) => `event-${index + 1}`,
+    );
+
     await expect(
-      updateBookingEvents("reservation-1", "student-1", ["event-1", "event-2", "event-3", "event-4"]),
-    ).rejects.toThrow("A booking may link at most 3 events");
+      updateBookingEvents("reservation-1", "student-1", eventIds),
+    ).rejects.toThrow(`A booking may link at most ${MAX_LINKED_EVENTS_PER_BOOKING} events`);
 
     expect(transactionCalls).toHaveLength(0);
   });

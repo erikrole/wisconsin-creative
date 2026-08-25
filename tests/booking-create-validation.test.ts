@@ -10,6 +10,7 @@ import {
   MAX_BULK_QUANTITY_PER_LINE,
   MAX_BULK_SKU_LINES_PER_REQUEST,
   MAX_EQUIPMENT_SELECTIONS_PER_REQUEST,
+  MAX_LINKED_EVENTS_PER_BOOKING,
   MAX_NUMBERED_UNITS_PER_CREATE,
 } from "@/lib/request-limits";
 
@@ -58,6 +59,35 @@ describe("booking create validation", () => {
       serializedAssetIds: [ids.asset],
       eventIds: [ids.event, ids.event],
     })).toThrow("eventIds must be unique");
+  });
+
+  it("allows five linked events for reservations and checkouts", () => {
+    const eventIds = Array.from(
+      { length: MAX_LINKED_EVENTS_PER_BOOKING },
+      (_, index) => cuid(index + 10),
+    );
+    const tooManyEventIds = [...eventIds, cuid(100)];
+
+    expect(() => createReservationSchema.parse({
+      ...basePayload,
+      serializedAssetIds: [ids.asset],
+      eventIds,
+    })).not.toThrow();
+    expect(() => createCheckoutSchema.parse({
+      ...basePayload,
+      serializedAssetIds: [ids.asset],
+      eventIds,
+    })).not.toThrow();
+    expect(() => createReservationSchema.parse({
+      ...basePayload,
+      serializedAssetIds: [ids.asset],
+      eventIds: tooManyEventIds,
+    })).toThrow(`Array must contain at most ${MAX_LINKED_EVENTS_PER_BOOKING} element(s)`);
+    expect(() => createCheckoutSchema.parse({
+      ...basePayload,
+      serializedAssetIds: [ids.asset],
+      eventIds: tooManyEventIds,
+    })).toThrow(`Array must contain at most ${MAX_LINKED_EVENTS_PER_BOOKING} element(s)`);
   });
 
   it("rejects duplicate bulk items before booking creation", () => {

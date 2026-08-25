@@ -23,6 +23,7 @@ import { SPORT_CODES, sportLabel } from "@/lib/sports";
 import { formatChipTime, formatDateTime } from "@/lib/format";
 import { formatCalendarEventDateRange } from "@/lib/calendar-event-dates";
 import { cn } from "@/lib/utils";
+import { MAX_LINKED_EVENTS_PER_BOOKING } from "@/lib/request-limits";
 import { VENUE_TONES, venueBadgeVariant, venueToneFromIsHome } from "@/lib/venue-tone";
 import {
   toLocalDateTimeValue,
@@ -129,10 +130,10 @@ export function WizardStep1({
   toggleEvent,
 }: Props) {
   const selectedEventIds = new Set(form.selectedEvents.map((e) => e.id));
-  const atCap = form.selectedEvents.length >= 3;
+  const atCap = form.selectedEvents.length >= MAX_LINKED_EVENTS_PER_BOOKING;
   const contextBadgeLabel = form.tieToEvent
     ? form.selectedEvents.length > 0
-      ? `${form.selectedEvents.length}/3 linked`
+      ? `${form.selectedEvents.length}/${MAX_LINKED_EVENTS_PER_BOOKING} linked`
       : "Event linked"
     : "Ad hoc";
   const contextBadgeVariant: "green" | "blue" | "secondary" = form.tieToEvent
