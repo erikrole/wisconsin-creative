@@ -154,6 +154,7 @@ beforeEach(() => {
     svgHash: "svg-hash",
     width: 100,
     height: 80,
+    strokeWidth: 4,
     cropBounds: { x: 0, y: 0, width: 100, height: 80 },
   });
 });

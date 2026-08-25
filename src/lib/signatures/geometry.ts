@@ -1,4 +1,5 @@
 import {
+  penSettingsSchema,
   SIGNATURE_MAX_COORDINATE,
   SIGNATURE_MAX_POINTS_PER_STROKE,
   SIGNATURE_MAX_STROKES,
@@ -209,3 +210,115 @@ export function signaturePathData(
   }
   return commands.join(" ");
 }
+
+export const SIGNATURE_REFERENCE_CROP_WIDTH = 640;
+export const SIGNATURE_REFERENCE_CROP_HEIGHT = 256;
+export const SIGNATURE_STROKE_SCALE_MIN = 0.5;
+export const SIGNATURE_STROKE_SCALE_MAX = 2;
+
+type SignatureExportLimits = Pick<SignaturePenSettings, "maxWidth" | "maxHeight">;
+
+function signatureExportScale(width: number, height: number, limits: SignatureExportLimits): number {
+  return Math.min(limits.maxWidth / width, limits.maxHeight / height);
+}
+
+/**
+ * The exported artifact is the tight crop scaled into the configured export
+ * box, so one absolute canvas width lands at a different apparent weight for
+ * every signer: a small signature is magnified more than a large one. Scaling
+ * the rendered width by the same factor the export applies keeps one uniform
+ * line across a roster. The multiplier is clamped so a degenerate crop degrades
+ * toward the configured width instead of a hairline or a blob.
+ */
+export function resolveSignatureStrokeWidth(
+  crop: Pick<SignatureCropBounds, "width" | "height">,
+  settings: SignaturePenSettings,
+): number {
+  const referenceScale = signatureExportScale(
+    SIGNATURE_REFERENCE_CROP_WIDTH,
+    SIGNATURE_REFERENCE_CROP_HEIGHT,
+    settings,
+  );
+  const cropScale = signatureExportScale(crop.width, crop.height, settings);
+  const multiplier = Math.min(
+    SIGNATURE_STROKE_SCALE_MAX,
+    Math.max(SIGNATURE_STROKE_SCALE_MIN, referenceScale / cropScale),
+  );
+  return Number((settings.strokeWidth * multiplier).toFixed(3));
+}
+
+function escapeSignatureAttribute(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+}
+
+export type SignatureSvgSource = {
+  svg: string;
+  width: number;
+  height: number;
+  strokeWidth: number;
+  cropBounds: SignatureCropBounds;
+};
+
+/**
+ * Shared sanitized path-only SVG for both the server artifact pipeline and the
+ * admin settings sample, so a configured pen is previewed through the same
+ * renderer that produces the delivered file.
+ */
+export function buildSignatureSvg(
+  strokes: SignatureStroke[],
+  settingsInput: SignaturePenSettings,
+): SignatureSvgSource {
+  const settings = penSettingsSchema.parse(settingsInput);
+  const normalized = removeAccidentalSignatureStrokes(normalizeSignatureStrokes(strokes), settings);
+  // Crop padding depends on the rendered width and the rendered width depends
+  // on the crop, so measure against the configured width first and settle the
+  // bounds against the width actually drawn.
+  const measuredCrop = computeSignatureCropBounds(normalized, settings);
+  const strokeWidth = resolveSignatureStrokeWidth(measuredCrop, settings);
+  const cropBounds = computeSignatureCropBounds(normalized, { ...settings, strokeWidth });
+  const paths = normalized
+    .map((stroke) => `<path d="${signaturePathData(stroke, cropBounds)}"/>`)
+    .join("");
+
+  const svg = [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${cropBounds.width}" height="${cropBounds.height}" viewBox="0 0 ${cropBounds.width} ${cropBounds.height}">`,
+    `<g fill="none" stroke="${escapeSignatureAttribute(settings.strokeColor)}" stroke-width="${formatSignatureNumber(strokeWidth)}" stroke-linecap="round" stroke-linejoin="round">`,
+    paths,
+    "</g>",
+    "</svg>",
+  ].join("");
+
+  return { svg, width: cropBounds.width, height: cropBounds.height, strokeWidth, cropBounds };
+}
+
+/**
+ * A representative signature used only to preview pen settings. It is sized
+ * near the reference crop so the sample reads as a typical capture rather than
+ * an extreme one.
+ */
+export const SIGNATURE_PEN_SAMPLE_STROKES: SignatureStroke[] = [
+  {
+    points: [
+      { x: 60, y: 150 }, { x: 70, y: 110 }, { x: 90, y: 80 }, { x: 115, y: 62 }, { x: 140, y: 60 },
+      { x: 155, y: 75 }, { x: 150, y: 100 }, { x: 130, y: 120 }, { x: 108, y: 132 }, { x: 95, y: 145 },
+      { x: 100, y: 158 }, { x: 120, y: 164 }, { x: 150, y: 160 }, { x: 175, y: 148 }, { x: 195, y: 132 },
+      { x: 210, y: 120 }, { x: 222, y: 135 }, { x: 234, y: 150 }, { x: 246, y: 132 }, { x: 258, y: 116 },
+      { x: 268, y: 132 }, { x: 280, y: 148 }, { x: 292, y: 130 }, { x: 305, y: 112 },
+    ],
+  },
+  {
+    points: [
+      { x: 330, y: 150 }, { x: 340, y: 115 }, { x: 352, y: 85 }, { x: 368, y: 68 }, { x: 386, y: 66 },
+      { x: 398, y: 80 }, { x: 394, y: 104 }, { x: 378, y: 124 }, { x: 360, y: 138 }, { x: 350, y: 150 },
+      { x: 356, y: 162 }, { x: 376, y: 166 }, { x: 404, y: 158 }, { x: 430, y: 142 }, { x: 452, y: 124 },
+      { x: 466, y: 112 }, { x: 478, y: 128 }, { x: 490, y: 144 }, { x: 502, y: 126 }, { x: 514, y: 110 },
+      { x: 526, y: 126 }, { x: 538, y: 142 }, { x: 552, y: 124 }, { x: 566, y: 106 },
+    ],
+  },
+  {
+    points: [
+      { x: 120, y: 182 }, { x: 200, y: 176 }, { x: 300, y: 172 }, { x: 400, y: 174 },
+      { x: 500, y: 180 }, { x: 570, y: 188 },
+    ],
+  },
+];

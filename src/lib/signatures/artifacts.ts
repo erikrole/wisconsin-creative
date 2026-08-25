@@ -1,7 +1,10 @@
 import { createHash } from "node:crypto";
 import sharp from "sharp";
-import { computeSignatureCropBounds, normalizeSignatureStrokes, removeAccidentalSignatureStrokes, signaturePathData } from "./geometry";
-import { penSettingsSchema, type SignaturePenSettings, type SignatureStroke } from "./types";
+import { buildSignatureSvg } from "./geometry";
+import type { SignatureCropBounds } from "./geometry";
+import type { SignaturePenSettings, SignatureStroke } from "./types";
+
+export { buildSignatureSvg };
 
 export type SignatureArtifactBundle = {
   svg: string;
@@ -10,7 +13,8 @@ export type SignatureArtifactBundle = {
   svgHash: string;
   width: number;
   height: number;
-  cropBounds: ReturnType<typeof computeSignatureCropBounds>;
+  strokeWidth: number;
+  cropBounds: SignatureCropBounds;
 };
 
 export const SIGNATURE_PNG_MIN_WIDTH = 1_000;
@@ -20,32 +24,6 @@ type RenderedSignaturePng = {
   width: number;
   height: number;
 };
-
-function escapeAttribute(value: string): string {
-  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
-}
-
-export function buildSignatureSvg(
-  strokes: SignatureStroke[],
-  settingsInput: SignaturePenSettings,
-): { svg: string; width: number; height: number; cropBounds: ReturnType<typeof computeSignatureCropBounds> } {
-  const settings = penSettingsSchema.parse(settingsInput);
-  const normalized = removeAccidentalSignatureStrokes(normalizeSignatureStrokes(strokes), settings);
-  const cropBounds = computeSignatureCropBounds(normalized, settings);
-  const paths = normalized
-    .map((stroke) => `<path d="${signaturePathData(stroke, cropBounds)}"/>`)
-    .join("");
-
-  const svg = [
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${cropBounds.width}" height="${cropBounds.height}" viewBox="0 0 ${cropBounds.width} ${cropBounds.height}">`,
-    `<g fill="none" stroke="${escapeAttribute(settings.strokeColor)}" stroke-width="${settings.strokeWidth}" stroke-linecap="round" stroke-linejoin="round">`,
-    paths,
-    "</g>",
-    "</svg>",
-  ].join("");
-
-  return { svg, width: cropBounds.width, height: cropBounds.height, cropBounds };
-}
 
 export async function renderSignaturePngFromSvg(
   svg: string,
