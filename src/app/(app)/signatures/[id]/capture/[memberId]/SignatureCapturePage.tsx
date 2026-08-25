@@ -544,7 +544,39 @@ export default function SignatureCapturePage({ collectionId, memberId, userId }:
       </Card>
     </div>
   );
-  if (!collection || !member || !member.active || !settings || collection.status !== "OPEN") return <div className="flex min-h-[100dvh] items-center justify-center p-6"><Card className="max-w-md p-6 text-sm text-muted-foreground">This signer is unavailable or the collection is archived. <Link href={`/signatures/${collectionId}`} className="font-medium text-foreground underline">Return to roster</Link></Card></div>;
+  if (!collection || !member || !member.active || !settings || collection.status !== "OPEN") {
+    // These four states are reached with a loaded payload, so the surface can
+    // name the one that actually blocked capture instead of listing guesses.
+    const unavailable = !collection || !member
+      ? {
+          title: "This signer is unavailable",
+          description: "The capture surface could not resolve this signer. Open them again from the roster.",
+        }
+      : collection.status !== "OPEN"
+        ? {
+            title: `The ${collection.season} collection is archived`,
+            description: "Archived collections are read-only. An admin has to restore this collection before any new signature can be captured.",
+          }
+        : !member.active
+          ? {
+              title: `${member.name} is not active on this roster`,
+              description: "Inactive signers cannot be captured. Any signature already saved for them is retained and still downloadable from the roster.",
+            }
+          : {
+              title: "Capture settings are unavailable",
+              description: "This collection did not return usable pen settings, so capture cannot start. Check the collection's capture settings.",
+            };
+
+    return (
+      <div className="flex min-h-[100dvh] items-center justify-center p-6">
+        <Card className="max-w-md p-6">
+          <p className="font-semibold">{unavailable.title}</p>
+          <p className="mt-2 text-sm text-muted-foreground">{unavailable.description}</p>
+          <Button variant="outline" className="mt-5 h-11" asChild><Link href={`/signatures/${collectionId}`}><ArrowLeft data-icon="inline-start" />Return to roster</Link></Button>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <main
