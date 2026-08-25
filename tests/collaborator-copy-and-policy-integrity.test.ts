@@ -11,7 +11,7 @@ describe("collaborator affiliation-neutral copy and policy integrity", () => {
     const schedule = source("src/app/(app)/schedule/_components/CollaboratorSchedule.tsx");
     const users = source("src/app/(app)/users/page.tsx");
 
-    expect(schedule).toContain('description="Current events and crew assignments."');
+    expect(schedule).toContain('description="Upcoming events and crew assignments."');
     expect(schedule).not.toContain("Big Ten Network events");
     expect(users).toContain('label="Collaborators"');
     expect(users).not.toContain('label="BTN collaborators"');

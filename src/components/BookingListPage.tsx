@@ -168,9 +168,11 @@ export default function BookingListPage({
   // ── Current user (React Query, shared cache) ──
   const { data: meData } = useCurrentUser();
   const currentUserId = meData?.id ?? "";
-  const currentUserRole = meData?.role ?? "";
-  const currentUserCapabilities = meData?.capabilities ?? [];
-  const canCreateReservation = meData != null && (
+  // Treat the role-preview shell as a distinct read-only actor so client-side
+  // row menus do not offer actions that the server will reject.
+  const currentUserRole = meData?.preview?.readOnly ? "ROLE_PREVIEW" : meData?.role ?? "";
+  const currentUserCapabilities = meData?.preview?.readOnly ? [] : meData?.capabilities ?? [];
+  const canCreateReservation = meData != null && !meData.preview?.readOnly && (
     meData.role !== "COLLABORATOR" || currentUserCapabilities.includes("RESERVATION_CREATE")
   );
   const canShowNewButton = config.kind !== "RESERVATION" || canCreateReservation;

@@ -61,6 +61,7 @@ export const GET = withAuth(async (req, { user }) => {
   const locationId = searchParams.get("location_id");
   const sportCode = optionalSportCodeSchema.parse(searchParams.get("sport_code") ?? undefined);
   const requesterId = searchParams.get("requester_id");
+  const collaboratorPreview = user.role === "COLLABORATOR" && user.preview?.role === "COLLABORATOR";
 
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -85,7 +86,7 @@ export const GET = withAuth(async (req, { user }) => {
     ...(sportCode ? { sportCode } : {}),
     // Students may only see their own bookings — ignore any requester_id
     // override they pass and pin to their own user id.
-    ...(user.role === "STUDENT" || user.role === "COLLABORATOR"
+    ...(user.role === "STUDENT" || (user.role === "COLLABORATOR" && !collaboratorPreview)
       ? { requesterUserId: user.id }
       : requesterId
         ? { requesterUserId: requesterId }
@@ -111,7 +112,7 @@ export const GET = withAuth(async (req, { user }) => {
   ]);
 
   const responseData = data.map((booking) => {
-    const allowedActions = getAllowedBookingActions(user, booking);
+    const allowedActions = user.preview?.readOnly ? [] : getAllowedBookingActions(user, booking);
     const displayBooking = {
       ...booking,
       // Correct legacy display values without rewriting stored/audit data.

@@ -1,5 +1,6 @@
 import type { NextResponse } from "next/server";
 import { fail, HttpError } from "@/lib/http";
+import { isRolePreviewBlockedRequest, readRolePreviewFromRequest } from "@/lib/role-preview";
 
 type HandlerCtx<P extends Record<string, string> = Record<string, string>> = {
   params: P;
@@ -49,6 +50,9 @@ export function withHandler<P extends Record<string, string> = Record<string, st
 ) {
   return async (req: Request, context: { params: Promise<P> }): Promise<NextResponse> => {
     try {
+      if (await readRolePreviewFromRequest(req) && isRolePreviewBlockedRequest(req)) {
+        throw new HttpError(403, "Preview mode is read-only");
+      }
       const params = (context?.params ? await context.params : {}) as P;
       return await handler(tagRequestJsonParseErrors(req), { params });
     } catch (error) {

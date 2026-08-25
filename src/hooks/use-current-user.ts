@@ -21,6 +21,12 @@ export type CurrentUser = {
   capabilities?: string[];
   avatarUrl?: string | null;
   forcePasswordChange?: boolean;
+  preview?: {
+    actualRole: "ADMIN";
+    role: "STAFF" | "STUDENT" | "COLLABORATOR";
+    readOnly: true;
+    expiresAt: number;
+  };
   canViewUsageAnalytics?: boolean;
 };
 

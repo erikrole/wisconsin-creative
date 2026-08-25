@@ -105,7 +105,7 @@ export function CollaboratorSchedule({ canFollow }: { canFollow: boolean }) {
     <div className="space-y-4">
       <PageHeader
         title="Schedule"
-        description="Current events and crew assignments."
+        description="Upcoming events and crew assignments."
       />
 
       {loading ? (

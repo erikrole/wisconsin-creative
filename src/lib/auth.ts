@@ -15,6 +15,13 @@ import {
   type CollaboratorPolicyMetadata,
 } from "@/lib/collaborator-access";
 import { collaboratorPolicyActorSelect } from "@/lib/services/collaborator-policies";
+import {
+  clearRolePreviewCookie,
+  readRolePreviewCookie,
+  rolePreviewCollaboratorPolicyMetadata,
+  rolePreviewInfo,
+  type RolePreviewInfo,
+} from "@/lib/role-preview";
 
 export { randomHex };
 
@@ -30,6 +37,7 @@ export type AuthUser = {
   staffingType?: ShiftWorkerType;
   avatarUrl: string | null;
   forcePasswordChange?: boolean;
+  preview?: RolePreviewInfo;
 };
 
 const SESSION_12H_MS = 1000 * 60 * 60 * 12;
@@ -71,6 +79,8 @@ export async function createSession(userId: string, rememberMe = false) {
   const expiresAt = new Date(Date.now() + (rememberMe ? SESSION_30D_MS : SESSION_12H_MS));
 
   const cookieStore = await cookies();
+  // A new login must never inherit a preview selected for a prior session.
+  await clearRolePreviewCookie();
 
   // Rotate: if the caller already holds a session cookie (re-login while a
   // session is live), revoke that row so the prior token isn't left valid
@@ -133,6 +143,7 @@ export async function destroySession() {
   }
 
   cookieStore.delete(env.sessionCookieName);
+  await clearRolePreviewCookie();
 }
 
 export async function requireAuth(): Promise<AuthUser> {
@@ -165,21 +176,33 @@ export async function requireAuth(): Promise<AuthUser> {
 
   requireActiveCollaboratorPolicy(session.user);
 
-  await refreshUserLastActive(session.user.id, session.user.lastActiveAt);
+  const preview = session.user.role === Role.ADMIN ? await readRolePreviewCookie() : null;
+  if (!preview) {
+    await refreshUserLastActive(session.user.id, session.user.lastActiveAt);
+  }
 
-  const collaboratorPolicy = collaboratorPolicyMetadataForActor(session.user);
+  const actualCollaboratorPolicy = collaboratorPolicyMetadataForActor(session.user);
+  const collaboratorPolicy = preview?.role === Role.COLLABORATOR
+    ? rolePreviewCollaboratorPolicyMetadata(preview.collaboratorAffiliation)
+    : session.user.role === Role.COLLABORATOR
+      ? actualCollaboratorPolicy
+      : null;
   return {
     id: session.user.id,
     email: session.user.email,
     name: session.user.name,
-    role: session.user.role,
-    affiliation: collaboratorPolicy?.affiliationKey ?? session.user.affiliation,
-    collaboratorProfile: compatibilityCollaboratorProfile(collaboratorPolicy, session.user.collaboratorProfile),
+    role: preview?.role ?? session.user.role,
+    affiliation: preview ? collaboratorPolicy?.affiliationKey ?? null : collaboratorPolicy?.affiliationKey ?? session.user.affiliation,
+    collaboratorProfile: compatibilityCollaboratorProfile(
+      collaboratorPolicy,
+      preview ? null : session.user.collaboratorProfile,
+    ),
     collaboratorPolicy,
-    capabilities: capabilitiesForActor(session.user),
+    capabilities: preview?.capabilities ?? capabilitiesForActor(session.user),
     staffingType: session.user.staffingType,
     avatarUrl: session.user.avatarUrl ?? null,
     forcePasswordChange: session.user.forcePasswordChange,
+    preview: preview ? rolePreviewInfo(preview) : undefined,
   };
 }
 

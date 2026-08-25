@@ -98,7 +98,7 @@ describe("getAllowedRoles", () => {
 
 describe("PERMISSIONS map completeness", () => {
   const expectedResources = [
-    "user", "asset", "category", "booking", "checkout",
+    "role_preview", "user", "asset", "category", "booking", "checkout",
     "bulk_sku", "calendar_source", "location", "location_mapping",
     "report", "notification", "diagnostics", "shift", "shift_assignment",
     "sport_config", "student_sport", "student_area", "shift_trade",

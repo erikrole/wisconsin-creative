@@ -39,6 +39,16 @@ function makeRequest(method: string, headers: Record<string, string> = {}) {
   });
 }
 
+function makeRequestAt(pathname: string, method: string, headers: Record<string, string> = {}) {
+  return new Request(`https://app.example.com${pathname}`, {
+    method,
+    headers: {
+      host: "app.example.com",
+      ...headers,
+    },
+  });
+}
+
 function makeMalformedJsonRequest() {
   return new Request("https://app.example.com/api/test", {
     method: "POST",
@@ -435,6 +445,77 @@ describe("withAuth", () => {
 
     expect(res.status).toBe(200);
     expect(handler).toHaveBeenCalled();
+  });
+
+  it("blocks every preview mutation before the route handler runs", async () => {
+    vi.mocked(requireAuth).mockResolvedValue({
+      ...mockUser,
+      role: "STAFF" as const,
+      preview: { actualRole: "ADMIN", role: "STAFF", readOnly: true, expiresAt: Date.now() + 60_000 },
+    });
+    const handler = vi.fn();
+    const wrapped = withAuth(handler);
+
+    const res = await wrapped(
+      makeRequestAt("/api/bookings/booking-1", "POST", { origin: "https://app.example.com" }),
+      { params: Promise.resolve({}) },
+    );
+
+    expect(res.status).toBe(403);
+    await expect(res.json()).resolves.toEqual({ error: "Preview mode is read-only" });
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it("blocks preview exports and protected downloads while allowing read routes", async () => {
+    vi.mocked(requireAuth).mockResolvedValue({
+      ...mockUser,
+      role: "STUDENT" as const,
+      preview: { actualRole: "ADMIN", role: "STUDENT", readOnly: true, expiresAt: Date.now() + 60_000 },
+    });
+    const handler = vi.fn().mockResolvedValue(NextResponse.json({ ok: true }));
+    const wrapped = withAuth(handler);
+
+    const exportResponse = await wrapped(
+      makeRequestAt("/api/reports/export?format=csv", "GET"),
+      { params: Promise.resolve({}) },
+    );
+    expect(exportResponse.status).toBe(403);
+    expect(handler).not.toHaveBeenCalled();
+
+    const readResponse = await wrapped(
+      makeRequestAt("/api/dashboard/stats", "GET"),
+      { params: Promise.resolve({}) },
+    );
+    expect(readResponse.status).toBe(200);
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+
+  it("allows preview start/stop control requests and logout", async () => {
+    vi.mocked(requireAuth).mockResolvedValue({
+      ...mockUser,
+      role: "STAFF" as const,
+      preview: { actualRole: "ADMIN", role: "STAFF", readOnly: true, expiresAt: Date.now() + 60_000 },
+    });
+    const handler = vi.fn().mockResolvedValue(NextResponse.json({ ok: true }));
+    const wrapped = withAuth(handler);
+
+    const startResponse = await wrapped(
+      makeRequestAt("/api/admin/role-preview", "POST", { origin: "https://app.example.com" }),
+      { params: Promise.resolve({}) },
+    );
+    const stopResponse = await wrapped(
+      makeRequestAt("/api/admin/role-preview", "DELETE", { origin: "https://app.example.com" }),
+      { params: Promise.resolve({}) },
+    );
+    const logoutResponse = await wrapped(
+      makeRequestAt("/api/auth/logout", "POST", { origin: "https://app.example.com" }),
+      { params: Promise.resolve({}) },
+    );
+
+    expect(startResponse.status).toBe(200);
+    expect(stopResponse.status).toBe(200);
+    expect(logoutResponse.status).toBe(200);
+    expect(handler).toHaveBeenCalledTimes(3);
   });
 });
 

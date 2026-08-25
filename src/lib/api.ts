@@ -4,6 +4,7 @@ import { env } from "@/lib/env";
 import { HttpError } from "@/lib/http";
 import { failRequest, tagRequestJsonParseErrors } from "@/lib/api-handler";
 import { deferCompanionProjectionRefresh } from "@/lib/services/companion-projection-publisher";
+import { isRolePreviewBlockedRequest, readRolePreviewCookie } from "@/lib/role-preview";
 
 export { withHandler } from "@/lib/api-handler";
 
@@ -92,6 +93,9 @@ export function withAuth<P extends Record<string, string> = Record<string, strin
       if (user.forcePasswordChange && !isForcePasswordAllowed(req)) {
         throw new HttpError(403, "Password change required before continuing");
       }
+      if (user.preview && isRolePreviewBlockedRequest(req)) {
+        throw new HttpError(403, "Preview mode is read-only");
+      }
       const params = (context?.params ? await context.params : {}) as P;
       const response = await handler(tagRequestJsonParseErrors(req), { user, params });
       deferCompanionProjectionRefresh(req, response);
@@ -120,6 +124,9 @@ export function withKiosk<P extends Record<string, string> = Record<string, stri
       // CSRF: require Origin on mutating requests (matches withAuth).
       if (req.method !== "GET" && req.method !== "HEAD") {
         assertKioskSameOrigin(req);
+      }
+      if (await readRolePreviewCookie()) {
+        throw new HttpError(403, "Kiosk access is unavailable in role preview");
       }
       const kiosk = await requireKiosk();
       const params = (context?.params ? await context.params : {}) as P;

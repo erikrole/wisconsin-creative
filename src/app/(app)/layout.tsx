@@ -33,7 +33,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <QueryProvider userId={user.id}>
         <ConfirmProvider>
           <TooltipProvider>
-            <ProductUsageTracker />
+            {!user.preview && <ProductUsageTracker />}
             <OfflineBanner />
             <AppShell
               initialUser={{ ...user, canViewUsageAnalytics: canViewUsageAnalytics(user) }}

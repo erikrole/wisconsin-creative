@@ -64,7 +64,7 @@ const collaborator = {
   role: Role.COLLABORATOR,
   affiliation: "BIG_TEN_NETWORK" as const,
   collaboratorProfile: "BTN_STANDARD" as const,
-  capabilities: ["MY_GEAR_VIEW" as const],
+  capabilities: [],
   avatarUrl: null,
 };
 
@@ -169,6 +169,7 @@ describe("collaborator default-deny route matrix", () => {
   });
 
   it("returns 404 for another user's booking instead of exposing its existence", async () => {
+    vi.mocked(requireAuth).mockResolvedValue({ ...collaborator, capabilities: ["MY_GEAR_VIEW"] });
     vi.mocked(getBookingDetail).mockResolvedValue({
       id: "booking-2",
       requesterUserId: "other-user",

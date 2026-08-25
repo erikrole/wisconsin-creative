@@ -143,4 +143,29 @@ describe("web sidebar source contract", () => {
     expect(appShell).toContain('<Link prefetch={false} href="/notifications"');
     expect(sectionNav).toMatch(/<Link\s+prefetch=\{false\}\s+href=\{href\}/);
   });
+
+  it("surfaces admin role preview as persistent read-only shell chrome", () => {
+    const appShell = source("src/components/AppShell.tsx");
+    const preview = source("src/components/RolePreviewControl.tsx");
+    const appLayout = source("src/app/(app)/layout.tsx");
+
+    expect(appShell).toContain("RolePreviewBanner");
+    expect(appShell).toContain("RolePreviewControl");
+    expect(preview).toContain('data-role-preview="active"');
+    expect(preview).toContain("Read-only");
+    expect(preview).toContain("Exit preview");
+    expect(preview).toContain("STAFF");
+    expect(preview).toContain("STUDENT");
+    expect(preview).toContain("COLLABORATOR");
+    expect(preview).toContain("Big Ten Network");
+    expect(preview).toContain("Learfield");
+    expect(appLayout).toContain("!user.preview && <ProductUsageTracker />");
+  });
+
+  it("uses collaborator affiliation identity instead of a generic external label", () => {
+    const sidebar = source("src/components/Sidebar.tsx");
+
+    expect(sidebar).toContain("user.collaboratorPolicy?.displayName");
+    expect(sidebar).toContain('"External collaborator"');
+  });
 });

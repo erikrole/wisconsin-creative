@@ -41,6 +41,7 @@ import {
   BadgeEarnedCelebration,
   type EarnedBadgeReward,
 } from "@/components/badges/BadgeEarnedCelebration";
+import { RolePreviewBanner, RolePreviewControl } from "@/components/RolePreviewControl";
 
 type EntitySearchResult = {
   type: "item" | "checkout" | "reservation" | "user";
@@ -184,6 +185,7 @@ export default function AppShell({
   const queryClient = useQueryClient();
   const { data: user, isLoading } = useCurrentUser(initialUser);
   const isCollaborator = user?.role === "COLLABORATOR";
+  const isRolePreview = Boolean(user?.preview?.readOnly);
   const visibleBottomNavItems = isCollaborator
     ? collaboratorBottomNavItems.filter((item) => {
         const route = COLLABORATOR_ROUTE_CAPABILITY.find((entry) => entry.matches(item.href));
@@ -207,7 +209,7 @@ export default function AppShell({
   }, [isCollaborator, pathname, router, user]);
 
   useEffect(() => {
-    if (!user || user.role === "COLLABORATOR") return;
+    if (!user || user.role === "COLLABORATOR" || isRolePreview) return;
 
     const cursorKey = `gear-tracker:badge-reward-cursor:${user.id}`;
     let stopped = false;
@@ -295,7 +297,7 @@ export default function AppShell({
       window.clearInterval(interval);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [pathname, user]);
+  }, [isRolePreview, pathname, user]);
 
   // Badge counts — refresh on navigation so counts stay fresh after user actions
   useEffect(() => {
@@ -584,7 +586,7 @@ export default function AppShell({
       <a href="#main-content" className="absolute -top-[100px] left-4 z-[var(--z-sidebar)] px-4 py-2 bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] rounded-[var(--radius)] font-[var(--weight-semibold)] text-[var(--text-base)] no-underline transition-[top] duration-200 focus:top-4">Skip to content</a>
 
       {/* Command palette */}
-      {pathname !== "/welcome" && <ProfileCompletionWizard />}
+      {pathname !== "/welcome" && <ProfileCompletionWizard autoOpen={pathname !== "/"} />}
 
       {earnedBadgeQueue[0] && (
         <BadgeEarnedCelebration
@@ -766,10 +768,12 @@ export default function AppShell({
       )}
 
       <div className="flex flex-1 flex-col min-w-0 max-md:pl-[env(safe-area-inset-left,0px)] max-md:pr-[env(safe-area-inset-right,0px)] print:ml-0">
-        <header
-          data-app-shell-header
-          className="h-12 bg-card border-b border-black/[0.06] flex items-center px-6 gap-3 sticky top-0 z-40 max-md:px-3 max-md:gap-2 print:hidden"
-        >
+        <div className="sticky top-0 z-40 print:hidden">
+          <RolePreviewBanner user={user} />
+          <header
+            data-app-shell-header
+            className="h-12 bg-card border-b border-black/[0.06] flex items-center px-6 gap-3 max-md:px-3 max-md:gap-2"
+          >
           <SidebarTrigger className="shrink-0 text-foreground hover:bg-card hover:text-foreground" />
           {/* Search trigger (desktop + mobile) */}
           {!isCollaborator && <button
@@ -796,6 +800,7 @@ export default function AppShell({
             <TooltipContent>Search (⌘K)</TooltipContent>
           </Tooltip>}
           <div className="flex items-center gap-1 ml-auto">
+            <RolePreviewControl user={user} />
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative p-2 no-underline text-muted-foreground rounded-lg transition-colors hover:bg-black/5 hover:text-foreground max-md:p-2.5 max-md:min-w-[44px] max-md:min-h-[44px] max-md:flex max-md:items-center max-md:justify-center [&_a]:no-underline" asChild>
@@ -810,14 +815,18 @@ export default function AppShell({
               <TooltipContent>Notifications</TooltipContent>
             </Tooltip>
           </div>
-        </header>
+          </header>
+        </div>
         <BreadcrumbProvider>
           <main id="main-content" className="py-7 px-8 flex-1 max-md:p-4 max-md:pb-[calc(96px+env(safe-area-inset-bottom,0px))] print:pb-0">
             <div
               data-app-shell-breadcrumb-frame={pathname === "/schedule" ? "" : undefined}
               className={cn(
                 pathname === "/schedule"
-                  && "sticky top-12 z-[35] -mx-8 bg-background/95 px-8 backdrop-blur supports-[backdrop-filter]:bg-background/90 max-md:-mx-4 max-md:px-4",
+                  && cn(
+                    "sticky z-[35] -mx-8 bg-background/95 px-8 backdrop-blur supports-[backdrop-filter]:bg-background/90 max-md:-mx-4 max-md:px-4",
+                    isRolePreview ? "top-[5.5rem]" : "top-12",
+                  ),
               )}
             >
               <PageBreadcrumb />

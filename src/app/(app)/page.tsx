@@ -25,6 +25,7 @@ import { DashboardSkeleton } from "./dashboard/dashboard-skeleton";
 import { FilterChips } from "./dashboard/filter-chips";
 import { OverdueBanner } from "./dashboard/overdue-banner";
 import { FlaggedItemsBanner } from "./dashboard/flagged-items-banner";
+import { ProfileCompletionBanner } from "./dashboard/profile-completion-banner";
 import { LostBulkUnitsCard } from "./dashboard/lost-bulk-units-card";
 import { MyGearColumn } from "./dashboard/my-gear-column";
 import { TeamActivityColumn } from "./dashboard/team-activity-column";
@@ -37,7 +38,7 @@ import { DashboardStateSurface } from "./dashboard/dashboard-motion";
 export default function DashboardPage() {
   const { data: user, isLoading } = useCurrentUser();
   if (isLoading) return <DashboardSkeleton />;
-  if (user?.role === "COLLABORATOR") return <CollaboratorHome name={user.name} capabilities={user.capabilities ?? []} />;
+  if (user?.role === "COLLABORATOR") return <CollaboratorHome name={user.name} capabilities={user.capabilities ?? []} readOnly={Boolean(user.preview?.readOnly)} />;
   return <InternalDashboardPage />;
 }
 
@@ -215,6 +216,7 @@ function InternalDashboardPage() {
 
   return (
     <PageTransition>
+      <ProfileCompletionBanner />
       {/* ══════ Page Header + Quick Actions ══════ */}
       <PageHeader
         title="Dashboard"
@@ -375,7 +377,7 @@ function InternalDashboardPage() {
             key="dashboard-columns"
             variant="shift"
             layout
-            className={isStudent ? "grid max-w-[640px] grid-cols-1 gap-6" : "grid grid-cols-1 items-start gap-4 md:grid-cols-2 md:gap-6"}
+            className="grid grid-cols-1 items-start gap-4 md:grid-cols-2 md:gap-6"
           >
             <MyGearColumn
               data={data}
@@ -388,16 +390,14 @@ function InternalDashboardPage() {
               onDeleteDraft={handleDeleteDraft}
               onCreateBooking={handleCreateBooking}
             />
-            {!isStudent && (
-              <TeamActivityColumn
-                data={data}
-                filtered={filters.filtered}
-                activeSport={filters.activeSport}
-                hasActiveFilter={filters.hasActiveFilter}
-                now={now}
-                onSelectBooking={setSelectedBookingId}
-              />
-            )}
+            <TeamActivityColumn
+              data={data}
+              filtered={filters.filtered}
+              activeSport={filters.activeSport}
+              hasActiveFilter={filters.hasActiveFilter}
+              now={now}
+              onSelectBooking={setSelectedBookingId}
+            />
           </DashboardStateSurface>
         ) : (
           <DashboardStateSurface key="dashboard-columns-loading" variant="shift" layout>

@@ -1,12 +1,17 @@
 import { BookingKind, Prisma } from "@prisma/client";
 import { withAuth } from "@/lib/api";
 import { HttpError, ok } from "@/lib/http";
-import { requirePermission } from "@/lib/rbac";
+import { requirePermission, requirePermissionOrCollaboratorCapability } from "@/lib/rbac";
 import { listBookings } from "@/lib/services/bookings";
 import { loadCheckoutPolicies } from "@/lib/services/checkout-policies";
+import { sanitizeCollaboratorBooking } from "@/lib/collaborator-gear";
 
 export const GET = withAuth(async (req, { user }) => {
-  requirePermission(user.role, "checkout", "view");
+  if (user.role === "COLLABORATOR") {
+    requirePermissionOrCollaboratorCapability(user, "checkout", "view", "MY_GEAR_VIEW");
+  } else {
+    requirePermission(user.role, "checkout", "view");
+  }
   const { searchParams } = new URL(req.url);
   const filterParam = searchParams.get("filter");
 
@@ -28,9 +33,17 @@ export const GET = withAuth(async (req, { user }) => {
         ? { status: "OPEN" as never, endsAt: { gte: todayStart, lt: todayEnd } }
         : undefined;
 
-  const restrictTo = user.role === "STUDENT" ? user.id : undefined;
+  const collaboratorPreview = user.role === "COLLABORATOR" && user.preview?.role === "COLLABORATOR";
+  const restrictTo = user.role === "STUDENT" || (user.role === "COLLABORATOR" && !collaboratorPreview)
+    ? user.id
+    : undefined;
   const result = await listBookings(BookingKind.CHECKOUT, searchParams, extraWhere, restrictTo);
-  return ok(result);
+  return ok({
+    ...result,
+    data: user.role === "COLLABORATOR"
+      ? result.data.map(sanitizeCollaboratorBooking)
+      : result.data,
+  });
 });
 
 export const POST = withAuth(async (_req, { user }) => {

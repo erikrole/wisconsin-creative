@@ -112,7 +112,7 @@ type AppSidebarProps = {
     role?: string;
     avatarUrl?: string | null;
     capabilities?: string[];
-    collaboratorPolicy?: { badgeLabel: string } | null;
+    collaboratorPolicy?: { displayName: string; badgeLabel?: string } | null;
   } | null;
   onSignOut?: () => void;
   isLoggingOut?: boolean;
@@ -250,11 +250,11 @@ export default function AppSidebar({
                       {user.name}
                     </p>
                     <p
-                    className="text-[11px] text-white/60 truncate leading-tight mt-[2px] uppercase tracking-[0.1em]"
+                      className={`text-[11px] text-white/60 truncate leading-tight mt-[2px] tracking-[0.1em] ${user.role === "COLLABORATOR" ? "" : "uppercase"}`}
                       style={{ fontFamily: "var(--font-mono)" }}
                     >
                       {user.role === "COLLABORATOR"
-                        ? `${user.collaboratorPolicy?.badgeLabel ?? "External"} Collaborator`
+                        ? user.collaboratorPolicy?.displayName ?? "External collaborator"
                         : user.role ?? "Student"}
                     </p>
                   </div>

@@ -14,6 +14,7 @@ import { useBookingChangeSync } from "@/hooks/use-booking-change-sync";
 import { FadeUp } from "@/components/ui/motion";
 import { PageHeader } from "@/components/PageHeader";
 import type { TabKey as BookingSheetSection } from "@/components/booking-details/types";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
 /** Shared fetch wrapper with 401 redirect */
 async function fetchAction(url: string, method = "POST"): Promise<Response> {
@@ -54,7 +55,8 @@ export default function BookingsPage() {
   const [viewMode, setViewModeRaw] = useState<"cards" | "table">("cards");
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const actionBusyRef = useRef(false);
-  const bookingSync = useBookingChangeSync();
+  const { data: currentUser } = useCurrentUser();
+  const bookingSync = useBookingChangeSync(Boolean(currentUser) && !currentUser?.preview?.readOnly);
 
   // Consume highlight once from URL so only the correct tab receives it (avoids all-tabs-mount race)
   const [pendingHighlight, setPendingHighlight] = useState<{ id: string; tab: "all" | "checkouts" | "reservations"; sheetTab: BookingSheetSection | null } | null>(() => {

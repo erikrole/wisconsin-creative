@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence } from "motion/react";
-import { BellIcon, CalendarDaysIcon, PackageIcon, PlusIcon } from "lucide-react";
+import { CalendarDaysIcon, PackageIcon, PlusIcon } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
 import { OperationalLoadingState } from "@/components/OperationalLoadingState";
 import { PageHeader } from "@/components/PageHeader";
@@ -23,9 +23,8 @@ type Booking = {
   location: { name: string };
 };
 
-type FollowedEvent = {
+type ScheduledEvent = {
   id: string;
-  isFollowing: boolean;
   event: { summary: string; startsAt: string; venue: { name: string } | null };
 };
 
@@ -49,15 +48,15 @@ function bookingState(booking: Booking) {
   return { label: "Return", variant: "blue" as const, detail: `Due ${dateTime(booking.endsAt)}` };
 }
 
-export function CollaboratorHome({ name, capabilities }: { name: string; capabilities: string[] }) {
+export function CollaboratorHome({ name, capabilities, readOnly = false }: { name: string; capabilities: string[]; readOnly?: boolean }) {
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [events, setEvents] = useState<FollowedEvent[]>([]);
+  const [events, setEvents] = useState<ScheduledEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const canViewGear = capabilities.includes("MY_GEAR_VIEW");
   const canBrowseGear = capabilities.includes("GEAR_CATALOG_VIEW");
   const canViewSchedule = capabilities.includes("PUBLISHED_SCHEDULE_VIEW");
-  const canCreateReservation = capabilities.includes("RESERVATION_CREATE");
+  const canCreateReservation = !readOnly && capabilities.includes("RESERVATION_CREATE");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -74,10 +73,10 @@ export function CollaboratorHome({ name, capabilities }: { name: string; capabil
       }
       const [bookingJson, scheduleJson] = await Promise.all([
         bookingsResponse ? parseJsonSafely<{ data?: Booking[] }>(bookingsResponse) : Promise.resolve(null),
-        scheduleResponse ? parseJsonSafely<{ data?: FollowedEvent[] }>(scheduleResponse) : Promise.resolve(null),
+        scheduleResponse ? parseJsonSafely<{ data?: ScheduledEvent[] }>(scheduleResponse) : Promise.resolve(null),
       ]);
       setBookings(bookingJson?.data ?? []);
-      setEvents((scheduleJson?.data ?? []).filter((event) => event.isFollowing));
+      setEvents(scheduleJson?.data ?? []);
     } catch {
       setError(true);
     } finally {
@@ -91,12 +90,6 @@ export function CollaboratorHome({ name, capabilities }: { name: string; capabil
     <div className="space-y-4">
       <PageHeader
         title={`Welcome, ${name.split(" ")[0]}`}
-        description={
-          canViewGear && canViewSchedule ? "Your gear handoffs and followed event updates."
-          : canViewSchedule ? "Updates for the events you follow."
-          : canViewGear ? "Your gear handoffs."
-          : "Notifications from the crew."
-        }
       >
         {canCreateReservation && (
           <Button className="h-10" asChild>
@@ -157,12 +150,12 @@ export function CollaboratorHome({ name, capabilities }: { name: string; capabil
             {canViewSchedule && (
               <Card className="shadow-xs">
                 <CardHeader className="flex-row items-center justify-between p-4">
-                  <CardTitle className="flex items-center gap-2 text-base!"><BellIcon className="size-4" />Followed events</CardTitle>
-                  <Button variant="outline" size="sm" className="h-10" asChild><Link href="/schedule">Published Schedule</Link></Button>
+                  <CardTitle className="flex items-center gap-2 text-base!"><CalendarDaysIcon className="size-4" />Upcoming schedule</CardTitle>
+                  <Button variant="outline" size="sm" className="h-10" asChild><Link href="/schedule">View schedule</Link></Button>
                 </CardHeader>
                 <CardContent className="p-0">
                   {events.length === 0 ? (
-                    <EmptyState inline icon="calendar" title="No followed events" description="Follow a published event to keep its crew updates here." actionLabel="Open Schedule" actionHref="/schedule" />
+                    <EmptyState inline icon="calendar" title="No upcoming events" description="Published events will appear here when they are available." actionLabel="Open Schedule" actionHref="/schedule" />
                   ) : (
                     <div className="divide-y">
                       {events.slice(0, 6).map((item) => (

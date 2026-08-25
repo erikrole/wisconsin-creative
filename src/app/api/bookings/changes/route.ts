@@ -2,7 +2,7 @@ import { withAuth } from "@/lib/api";
 import { db } from "@/lib/db";
 import { HttpError, ok } from "@/lib/http";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { requirePermission } from "@/lib/rbac";
+import { requirePermission, requirePermissionOrCollaboratorCapability } from "@/lib/rbac";
 
 const BOOKING_CHANGE_LIMIT = { max: 180, windowMs: 60_000 };
 const MAX_CHANGE_ROWS = 100;
@@ -67,14 +67,21 @@ function parseDate(value: string): Date {
 }
 
 export const GET = withAuth(async (req, { user }) => {
-  requirePermission(user.role, "booking", "view");
+  if (user.role === "COLLABORATOR") {
+    requirePermissionOrCollaboratorCapability(user, "booking", "view", "MY_GEAR_VIEW");
+  } else {
+    requirePermission(user.role, "booking", "view");
+  }
 
   const { allowed } = await checkRateLimit(`bookings:changes:${user.id}`, BOOKING_CHANGE_LIMIT);
   if (!allowed) throw new HttpError(429, "Too many requests. Please wait a moment.");
 
   const { searchParams } = new URL(req.url);
   const since = decodeCursor(searchParams.get("since"));
-  const visibleBookingWhere = user.role === "STUDENT" ? { requesterUserId: user.id } : {};
+  const collaboratorPreview = user.role === "COLLABORATOR" && user.preview?.role === "COLLABORATOR";
+  const visibleBookingWhere = user.role === "STUDENT" || (user.role === "COLLABORATOR" && !collaboratorPreview)
+    ? { requesterUserId: user.id }
+    : {};
 
   if (!since) {
     const [latestBooking, latestAudit] = await Promise.all([

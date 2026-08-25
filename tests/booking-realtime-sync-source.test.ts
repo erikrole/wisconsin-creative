@@ -62,7 +62,8 @@ describe("booking real-time sync source contract", () => {
     expect(dashboard).toContain("const bookingSync = useBookingChangeSync();");
     expect(dashboard).toContain('import StatusIndicator from "@/components/ui/status-indicator"');
     expect(bookings).toContain('import { useBookingChangeSync } from "@/hooks/use-booking-change-sync"');
-    expect(bookings).toContain("const bookingSync = useBookingChangeSync();");
+    expect(bookings).toContain("const bookingSync = useBookingChangeSync(Boolean(currentUser) && !currentUser?.preview?.readOnly);");
+    expect(bookings).toContain("!currentUser?.preview?.readOnly");
     expect(bookings).toContain('import StatusIndicator from "@/components/ui/status-indicator"');
     expect(list).toContain('import { useBookingChangeSync } from "@/hooks/use-booking-change-sync"');
     expect(list).toContain("useBookingChangeSync(enableBookingChangeSync);");

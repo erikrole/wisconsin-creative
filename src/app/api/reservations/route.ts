@@ -54,7 +54,10 @@ export const GET = withAuth(async (req, { user }) => {
         ? { status: BookingStatus.BOOKED, endsAt: { gte: todayStart, lt: todayEnd } }
         : undefined;
 
-  const restrictTo = user.role === "STUDENT" || user.role === "COLLABORATOR" ? user.id : undefined;
+  const collaboratorPreview = user.role === "COLLABORATOR" && user.preview?.role === "COLLABORATOR";
+  const restrictTo = user.role === "STUDENT" || (user.role === "COLLABORATOR" && !collaboratorPreview)
+    ? user.id
+    : undefined;
   const result = await listBookings(BookingKind.RESERVATION, searchParams, extraWhere, restrictTo);
   return ok({
     ...result,

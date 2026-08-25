@@ -61,6 +61,7 @@ function isIdempotentStalePatch(body: BookingPatchBody, detail: Awaited<ReturnTy
 }
 
 export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
+  const collaboratorPreview = user.role === "COLLABORATOR" && user.preview?.role === "COLLABORATOR";
   if (user.role === "COLLABORATOR") {
     requireCollaboratorCapability(user, "MY_GEAR_VIEW");
   }
@@ -71,14 +72,14 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
   // can view any booking. Without this check, a student iterating booking
   // IDs could read every requester's PII (IDOR).
   if (
-    (user.role === "STUDENT" || user.role === "COLLABORATOR") &&
+    (user.role === "STUDENT" || (user.role === "COLLABORATOR" && !collaboratorPreview)) &&
     detail.requesterUserId !== user.id &&
     detail.createdBy !== user.id
   ) {
     throw new HttpError(404, "Booking not found");
   }
 
-  const allowedActions = getAllowedBookingActions(user, detail);
+  const allowedActions = user.preview?.readOnly ? [] : getAllowedBookingActions(user, detail);
 
   return ok({
     data: user.role === "COLLABORATOR"

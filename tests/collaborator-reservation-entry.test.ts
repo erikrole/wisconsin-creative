@@ -16,7 +16,7 @@ describe("collaborator reservation entry contract", () => {
     expect(headerEnd).toBeGreaterThan(headerStart);
 
     const header = dashboard.slice(headerStart, headerEnd);
-    expect(dashboard).toContain("const canCreateReservation = capabilities.includes(\"RESERVATION_CREATE\");");
+    expect(dashboard).toContain("const canCreateReservation = !readOnly && capabilities.includes(\"RESERVATION_CREATE\");");
     expect(header).toContain("{canCreateReservation &&");
     expect(header).toContain('href="/reservations/new"');
     expect(header).toContain("New reservation");
