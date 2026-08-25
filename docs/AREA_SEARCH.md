@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Search
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-06-27
+- Last Updated: 2026-08-25
 - Status: Active
 - Version: V1
 
@@ -32,6 +32,12 @@ Make search a fast operational jump layer. It should find records when the user 
 - The page preserves query state in the URL.
 - It uses the same partial-failure behavior as the quick palette.
 
+### WebMCP Read Surface
+- Authenticated app pages progressively register WebMCP tools through `document.modelContext` when the browser supports the experimental API.
+- `gear-tracker.get-current-page`, `gear-tracker.open-page`, `gear-tracker.get-dashboard-snapshot`, and role/capability-filtered item and booking searches reuse the existing authenticated routes and navigation policy.
+- WebMCP results are compact read models. They omit serial numbers, notes, QR values, vault data, and mutation actions; kiosk custody and booking mutations remain outside the agent surface.
+- The current implementation also recognizes the deprecated `navigator.modelContext` preview alias and fails closed when WebMCP is unavailable.
+
 ## Rules
 1. Search must never expose navigation targets the current role cannot use.
 2. Active booking search should prefer current operational states, not completed/cancelled history.
@@ -40,6 +46,7 @@ Make search a fast operational jump layer. It should find records when the user 
 5. The full search page and quick palette should not disagree on destination search.
 
 ## Change Log
+- 2026-08-25: **Authenticated WebMCP progressive enhancement.** The app now registers bounded, role-aware read tools for current-page context, internal navigation, dashboard snapshot, item search, and active booking search when the browser exposes WebMCP. The `tools=(self)` Permissions Policy is explicit; unsupported browsers continue to use the normal website without a fallback dependency. Mutation/custody tools remain intentionally out of scope.
 - 2026-07-10: Native Search and Scan interaction hardening removed fixed presentation/autofocus delays, routes scan results from actual cover dismissal, keeps recovery actions independently reachable to VoiceOver, turns image zoom into a semantic Button, adds coherent result-row labels, and substitutes static/opacity feedback when Reduce Motion is enabled.
 - 2026-07-10: **Web global search typing stability.** `/search` now uses the shared `DebouncedSearchInput` (local keystroke echo, one committed query per pause, instant clear/Enter/Escape) with the committed value synced straight to the `q` URL param, and previous results stay visible (dimmed, with an "Updating" spinner) while the four-source fan-out is in flight instead of wiping to skeletons on every pause. Skeletons only show when there are no prior results. Regression guard: `tests/search-input-focus-stability.test.ts`.
 - 2026-07-03: Native iOS QR scanner fallback polish hides the unavailable-state controls behind the manual-entry sheet, so the typed-code form no longer sits over a glowing fallback button in Simulator or unsupported-camera states.

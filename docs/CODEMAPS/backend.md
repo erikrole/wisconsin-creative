@@ -137,7 +137,7 @@
 | `src/lib/equipment-section-filters.ts` | 87 |
 | `src/lib/equipment-sections.ts` | 200 |
 | `src/lib/errors.ts` | 80 |
-| `src/lib/fetch-with-timeout.ts` | 23 |
+| `src/lib/fetch-with-timeout.ts` | 25 |
 | `src/lib/firmware-watch-targets.ts` | 124 |
 | `src/lib/format.ts` | 302 |
 | `src/lib/guide-categories.ts` | 140 |
@@ -223,6 +223,7 @@
 | `src/lib/venue-mapping-audit.ts` | 56 |
 | `src/lib/venue-mapping-contract.ts` | 46 |
 | `src/lib/venue-tone.ts` | 114 |
+| `src/lib/webmcp-tools.ts` | 504 |
 
 ## API Route Groups
 

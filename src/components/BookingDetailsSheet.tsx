@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
+import { BOOKING_MUTATION_TIMEOUT_MS, fetchWithTimeout } from "@/lib/fetch-with-timeout";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import EmptyState from "@/components/EmptyState";
@@ -292,11 +292,14 @@ export default function BookingDetailsSheet({
     setEquipSaving(true);
     setConflictError(null);
 
+    let committed = false;
+    let updated: BookingDetail | null = null;
     try {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (booking.updatedAt) headers["If-Unmodified-Since"] = new Date(booking.updatedAt).toUTCString();
       const res = await fetchWithTimeout(`/api/bookings/${booking.id}`, {
         method: "PATCH",
+        timeoutMs: BOOKING_MUTATION_TIMEOUT_MS,
         headers,
         body: JSON.stringify({
           serializedAssetIds: editSerializedIds,
@@ -307,11 +310,8 @@ export default function BookingDetailsSheet({
       if (handleAuthRedirect(res)) return;
       if (res.ok) {
         const json = await parseJsonSafely<ApiEnvelope<BookingDetail>>(res);
-        if (json?.data) setBooking(json.data);
-        toast.success("Equipment updated");
-        setEquipEditMode(false);
-        if (!json?.data) await fetchBooking({ silent: true });
-        onUpdated?.();
+        committed = true;
+        updated = json?.data ?? null;
       } else {
         const json = await parseJsonSafely<ApiEnvelope<ConflictData>>(res);
         if (res.status === 409 && json?.data) setConflictError(json.data);
@@ -323,15 +323,24 @@ export default function BookingDetailsSheet({
       equipSaveBusyRef.current = false;
       setEquipSaving(false);
     }
+
+    if (!committed) return;
+    if (updated) setBooking(updated);
+    toast.success("Equipment updated");
+    setEquipEditMode(false);
+    if (!updated) await fetchBooking({ silent: true });
+    onUpdated?.();
   }
 
   async function handleSaveField(field: EditableBookingField, value: string) {
     if (!booking) return;
+    let updated: BookingDetail | null = null;
     try {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (booking.updatedAt) headers["If-Unmodified-Since"] = new Date(booking.updatedAt).toUTCString();
       const res = await fetchWithTimeout(`/api/bookings/${booking.id}`, {
         method: "PATCH",
+        timeoutMs: BOOKING_MUTATION_TIMEOUT_MS,
         headers,
         body: JSON.stringify({ [field]: value }),
       });
@@ -339,16 +348,12 @@ export default function BookingDetailsSheet({
       if (handleAuthRedirect(res)) return;
       if (res.ok) {
         const json = await parseJsonSafely<ApiEnvelope<BookingDetail>>(res);
-        if (json?.data) setBooking(json.data);
-        toast.success(field === "title" ? "Title updated" : field === "notes" ? "Notes updated" : "Schedule updated");
-        if (!json?.data) await fetchBooking({ silent: true });
-        onUpdated?.();
-        return;
+        updated = json?.data ?? null;
+      } else {
+        const json = await parseJsonSafely<ApiEnvelope<ConflictData>>(res);
+        if (res.status === 409 && json?.data) setConflictError(json.data);
+        throw new Error(json?.error || "Could not save this change. Review conflicts and try again.");
       }
-
-      const json = await parseJsonSafely<ApiEnvelope<ConflictData>>(res);
-      if (res.status === 409 && json?.data) setConflictError(json.data);
-      throw new Error(json?.error || "Could not save this change. Review conflicts and try again.");
     } catch (error) {
       const message = error instanceof Error && error.message
         ? error.message
@@ -356,6 +361,11 @@ export default function BookingDetailsSheet({
       toast.error(message);
       throw error;
     }
+
+    if (updated) setBooking(updated);
+    toast.success(field === "title" ? "Title updated" : field === "notes" ? "Notes updated" : "Schedule updated");
+    if (!updated) await fetchBooking({ silent: true });
+    onUpdated?.();
   }
 
   async function handleCancel() {
@@ -372,13 +382,15 @@ export default function BookingDetailsSheet({
 
     cancelBusyRef.current = true;
     setCancelling(true);
+    let committed = false;
     try {
-      const res = await fetchWithTimeout(`/api/bookings/${booking.id}/cancel`, { method: "POST" });
+      const res = await fetchWithTimeout(`/api/bookings/${booking.id}/cancel`, {
+        method: "POST",
+        timeoutMs: BOOKING_MUTATION_TIMEOUT_MS,
+      });
       if (handleAuthRedirect(res)) return;
       if (res.ok) {
-        toast.success(copy.success);
-        await fetchBooking({ silent: true });
-        onUpdated?.();
+        committed = true;
       } else {
         const msg = await parseErrorMessage(res, `Could not cancel the ${typeLabel}. Refresh and try again.`);
         toast.error(msg);
@@ -389,6 +401,11 @@ export default function BookingDetailsSheet({
       cancelBusyRef.current = false;
       setCancelling(false);
     }
+
+    if (!committed) return;
+    toast.success(copy.success);
+    await fetchBooking({ silent: true });
+    onUpdated?.();
   }
 
   /* ───── Render ───── */

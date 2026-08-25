@@ -56,6 +56,7 @@ const nextConfig: NextConfig = {
       "midi=()",
       "screen-wake-lock=()",
       "web-share=(self)",
+      "tools=(self)",
     ].join(", ");
 
     return [

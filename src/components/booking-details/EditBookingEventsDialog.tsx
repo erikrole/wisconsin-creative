@@ -19,7 +19,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { BOOKING_CHANGE_SYNC_EVENT } from "@/hooks/use-booking-change-sync";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
-import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
+import { BOOKING_MUTATION_TIMEOUT_MS, fetchWithTimeout } from "@/lib/fetch-with-timeout";
 import { formatDateTime } from "@/lib/format";
 import { MAX_LINKED_EVENTS_PER_BOOKING } from "@/lib/request-limits";
 import type { BookingDetail } from "./types";
@@ -184,9 +184,11 @@ export function EditBookingEventsDialog({
     busyRef.current = true;
     setSaving(true);
 
+    let updated: BookingDetail;
     try {
       const res = await fetchWithTimeout(`/api/bookings/${booking.id}/events`, {
         method: "POST",
+        timeoutMs: BOOKING_MUTATION_TIMEOUT_MS,
         headers: {
           "Content-Type": "application/json",
           "If-Unmodified-Since": new Date(booking.updatedAt).toUTCString(),
@@ -210,18 +212,21 @@ export function EditBookingEventsDialog({
         return;
       }
 
-      toast.success(selectedIds.length > 0 ? "Linked events updated" : "Linked events cleared");
-      window.dispatchEvent(new CustomEvent(BOOKING_CHANGE_SYNC_EVENT, {
-        detail: { changedBookingIds: [booking.id] },
-      }));
-      onUpdated(json.data);
-      onOpenChange(false);
+      updated = json.data;
     } catch {
       toast.error("Could not reach the server. Linked events were not updated.");
+      return;
     } finally {
       busyRef.current = false;
       setSaving(false);
     }
+
+    toast.success(selectedIds.length > 0 ? "Linked events updated" : "Linked events cleared");
+    window.dispatchEvent(new CustomEvent(BOOKING_CHANGE_SYNC_EVENT, {
+      detail: { changedBookingIds: [booking.id] },
+    }));
+    onUpdated(updated);
+    onOpenChange(false);
   }
 
   return (

@@ -2,6 +2,8 @@
  * Fetch wrapper that aborts after a timeout.
  * Prevents UI from hanging indefinitely when Vercel serverless times out.
  */
+export const BOOKING_MUTATION_TIMEOUT_MS = 30_000;
+
 export function fetchWithTimeout(
   input: RequestInfo | URL,
   init?: RequestInit & { timeoutMs?: number },

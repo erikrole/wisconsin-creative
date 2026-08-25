@@ -4,7 +4,7 @@ import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { toast } from "sonner";
-import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
+import { BOOKING_MUTATION_TIMEOUT_MS, fetchWithTimeout } from "@/lib/fetch-with-timeout";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { getBookingCancelCopy } from "@/hooks/booking-action-copy";
 import type { BookingDetail } from "@/components/booking-details/types";
@@ -21,6 +21,7 @@ async function callAction(
   try {
     const res = await fetchWithTimeout(url, {
       method,
+      timeoutMs: BOOKING_MUTATION_TIMEOUT_MS,
       ...(body || extraHeaders
         ? {
             headers: { ...(body ? { "Content-Type": "application/json" } : {}), ...extraHeaders },
@@ -178,6 +179,7 @@ export function useBookingActions(
       if (updatedAt) headers["If-Unmodified-Since"] = new Date(updatedAt).toUTCString();
       const res = await fetchWithTimeout(`/api/bookings/${bookingId}`, {
         method: "PATCH",
+        timeoutMs: BOOKING_MUTATION_TIMEOUT_MS,
         headers,
         body: JSON.stringify({ [field]: value }),
       });

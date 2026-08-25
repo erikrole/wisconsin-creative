@@ -120,7 +120,7 @@
 | `src/components/profile-completion/ProfileCompletionWizard.tsx` | 769 |
 | `src/components/ui/sidebar.tsx` | 710 |
 | `src/components/booking-wizard/BookingWizard.tsx` | 708 |
-| `src/components/BookingDetailsSheet.tsx` | 684 |
+| `src/components/BookingDetailsSheet.tsx` | 701 |
 | `src/components/booking-wizard/WizardStep1.tsx` | 568 |
 | `src/components/BookingListPage.tsx` | 525 |
 | `src/components/ui/heatmap.tsx` | 434 |
@@ -129,13 +129,13 @@
 | `src/components/ui/chart.tsx` | 389 |
 | `src/components/shift-detail/ShiftSlotCard.tsx` | 356 |
 | `src/components/booking-details/BookingInfoCard.tsx` | 342 |
-| `src/components/booking-details/EditBookingEventsDialog.tsx` | 336 |
+| `src/components/booking-details/EditBookingEventsDialog.tsx` | 341 |
 | `src/components/FormCombobox.tsx` | 329 |
 | `src/components/resources/MarkdownReader.tsx` | 305 |
 | `src/components/public-showroom/showroom-blocks.tsx` | 290 |
 | `src/components/PageBreadcrumb.tsx` | 286 |
 | `src/components/booking-details/BookingSheetOverview.tsx` | 283 |
-| `src/components/booking-details/TransferOwnerDialog.tsx` | 269 |
+| `src/components/booking-details/TransferOwnerDialog.tsx` | 270 |
 | `src/components/booking-wizard/WizardStep3.tsx` | 263 |
 | `src/components/ui/dropdown-menu.tsx` | 258 |
 | `src/components/shift-detail/CallWindowEditor.tsx` | 254 |
@@ -162,5 +162,5 @@
 | `src/hooks/use-profile-completion.ts` | 65 |
 | `src/hooks/use-schedule-data.ts` | 705 |
 | `src/hooks/use-url-state.ts` | 166 |
-| `src/hooks/useBookingActions.ts` | 215 |
+| `src/hooks/useBookingActions.ts` | 217 |
 | `src/hooks/useBookingDetail.ts` | 70 |

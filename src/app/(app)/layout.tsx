@@ -11,6 +11,7 @@ import { requireAuth } from "@/lib/auth";
 import { HttpError } from "@/lib/http";
 import { ProductUsageTracker } from "@/components/ProductUsageTracker";
 import { canViewUsageAnalytics } from "@/lib/usage-analytics";
+import WebMCPProvider from "@/components/WebMCPProvider";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   let user;
@@ -38,7 +39,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <AppShell
               initialUser={{ ...user, canViewUsageAnalytics: canViewUsageAnalytics(user) }}
               defaultSidebarOpen={defaultSidebarOpen}
-            >{children}</AppShell>
+            >
+              <WebMCPProvider initialUser={{ ...user, canViewUsageAnalytics: canViewUsageAnalytics(user) }} />
+              {children}
+            </AppShell>
           </TooltipProvider>
           <Toaster position="top-right" duration={4000} />
         </ConfirmProvider>

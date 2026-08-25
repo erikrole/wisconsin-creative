@@ -20,7 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { BOOKING_CHANGE_SYNC_EVENT } from "@/hooks/use-booking-change-sync";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
-import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
+import { BOOKING_MUTATION_TIMEOUT_MS, fetchWithTimeout } from "@/lib/fetch-with-timeout";
 import type { BookingDetail } from "./types";
 
 type PickerUser = {
@@ -118,6 +118,7 @@ export function TransferOwnerDialog({
     try {
       const res = await fetchWithTimeout(`/api/bookings/${booking.id}/transfer-owner`, {
         method: "POST",
+        timeoutMs: BOOKING_MUTATION_TIMEOUT_MS,
         headers: {
           "Content-Type": "application/json",
           "If-Unmodified-Since": new Date(booking.updatedAt).toUTCString(),

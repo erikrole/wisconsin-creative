@@ -13,8 +13,8 @@ Gear Tracker is a Next.js App Router application with a companion native iOS app
 | App layouts | 7 |
 | API route handlers | 299 |
 | Service files | 75 |
-| Component files | 147 |
-| Test files | 554 |
+| Component files | 148 |
+| Test files | 555 |
 
 ## Oversized Source Watchlist
 

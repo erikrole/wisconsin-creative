@@ -64,6 +64,7 @@ Audit files intentionally remain at root for now because the repo audit skills r
 - `multi-event-five-cap-plan-2026-08-24.md` - expand linked booking/reservation events from three to five across web, API, draft, and native contracts; production deployment is complete, while authenticated five-link interaction remains open.
 - `signature-signing-experience-plan-2026-08-25.md` - make the iPad signing surface consistent and rehearsable: exported line weight is normalized so one setting delivers one uniform line across a roster, and the admin settings panel previews the real pen; the practice pad, pre-commit artifact view, Save-and-next progression, and per-revision pen settings remain queued.
 - `event-all-day-conversion-plan-2026-08-25.md` - let manual Event detail switch between all-day and timed windows and update Veterans Plaza Ceremony today; production data, notification, and editor proof are complete.
+- `booking-mutation-toast-fix-plan-2026-08-25.md` - prevent committed booking detail mutations from being misreported as request failures when local success callbacks fail.
 
 ## Archive Buckets
 
