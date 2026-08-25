@@ -35,6 +35,7 @@ import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, Dia
 import EmptyState from "@/components/EmptyState";
 import { OperationalRowActions } from "@/components/OperationalRowActions";
 import { SignatureAthleteProfileForm, type SignatureAthleteProfileValues } from "@/components/signatures/SignatureAthleteProfileForm";
+import { SignaturePenPreview } from "@/components/signatures/SignaturePenPreview";
 import { useFetch } from "@/hooks/use-fetch";
 import { handleAuthRedirect, parseErrorMessage } from "@/lib/errors";
 import { isCurrentDeviceIpad } from "@/lib/signatures/capture";
@@ -532,6 +533,7 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
                     <Button className="h-10" onClick={saveSettings} disabled={savingSettings || !settings}>Save settings</Button>
                   </>
                 )}
+                {effectiveSettings && <SignaturePenPreview settings={effectiveSettings} />}
                 <Separator />
                 <div className="flex flex-col gap-3 rounded-md border border-destructive/30 bg-destructive/[0.03] p-3 sm:flex-row sm:items-center sm:justify-between">
                   <div><p className="text-sm font-semibold text-destructive">Danger zone</p><p className="mt-1 text-xs text-muted-foreground">Remove every saved signature and queue its files for cleanup.</p></div>
