@@ -92,6 +92,8 @@ struct ShiftTrade: Codable, Identifiable, Hashable {
     let postedAt: Date?
     let claimedAt: Date?
     let createdAt: Date
+    let reviewEscalatesAt: Date?
+    let reviewAutoApprovesAt: Date?
     let viewerAvailabilityContext: ShiftAvailabilityContext?
     let claimedByAvailabilityContext: ShiftAvailabilityContext?
     let viewerCanClaim: Bool?
@@ -160,6 +162,8 @@ struct OpenWorkPickupRequest: Codable, Identifiable, Hashable {
     let hasConflict: Bool
     let conflictNote: String?
     let createdAt: Date
+    let reviewEscalatesAt: Date?
+    let reviewAutoApprovesAt: Date?
     let user: ShiftTradeUser
     let shift: ShiftTradeShift
 }

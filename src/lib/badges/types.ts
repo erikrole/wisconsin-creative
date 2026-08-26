@@ -41,10 +41,18 @@ export type ShiftsWorkedBadgeEvent = {
   userId: string;
 };
 
+/**
+ * Backfill recognition keeps the award but suppresses every notification it
+ * could create. Ordinary nightly schedule recognition leaves this enabled.
+ */
+export type ShiftsWorkedBadgeOptions = {
+  notify?: boolean;
+};
+
 export type BadgeService = {
   onCheckoutOpened(event: CheckoutOpenedBadgeEvent): Promise<void>;
   onCheckoutReturned(event: CheckoutReturnedBadgeEvent): Promise<void>;
   onAppOpened(event: AppOpenedBadgeEvent): Promise<void>;
   onTradeCompleted(event: TradeCompletedBadgeEvent): Promise<void>;
-  onShiftsWorked(event: ShiftsWorkedBadgeEvent): Promise<void>;
+  onShiftsWorked(event: ShiftsWorkedBadgeEvent, options?: ShiftsWorkedBadgeOptions): Promise<void>;
 };

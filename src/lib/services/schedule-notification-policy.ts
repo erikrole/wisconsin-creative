@@ -4,6 +4,7 @@ export type WorkerScheduleNotificationEvent =
   | "assigned"
   | "requested"
   | "approved"
+  | "declined"
   | "removed"
   | "shift_time_changed"
   | "personal_call_time_changed";
@@ -38,6 +39,7 @@ const ACTIVE_WORKER_SCHEDULE_EVENTS = new Set<WorkerScheduleNotificationEvent>([
   "assigned",
   "requested",
   "approved",
+  "declined",
   "removed",
   "shift_time_changed",
   "personal_call_time_changed",

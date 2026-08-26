@@ -37,6 +37,7 @@ vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
 
 import { requireAuth } from "@/lib/auth";
 import { getBookingDetail } from "@/lib/services/bookings";
+import { getAllowedBookingActions } from "@/lib/services/booking-rules";
 import { GET as getUsers } from "@/app/api/users/route";
 import { GET as getLicenses } from "@/app/api/licenses/route";
 import { GET as getResources } from "@/app/api/resources/route";
@@ -175,11 +176,30 @@ describe("collaborator default-deny route matrix", () => {
       requesterUserId: "other-user",
       createdBy: "other-user",
     } as unknown as Awaited<ReturnType<typeof getBookingDetail>>);
+    vi.mocked(getAllowedBookingActions).mockReturnValue([]);
 
     const response = await getBooking(request("/api/bookings/booking-2"), {
       params: Promise.resolve({ id: "booking-2" }),
     });
 
     expect(response.status).toBe(404);
+  });
+
+  it("lets a student open another user's booking detail without granting actions", async () => {
+    vi.mocked(requireAuth).mockResolvedValue({ ...collaborator, id: "student-1", role: Role.STUDENT, capabilities: [] });
+    vi.mocked(getBookingDetail).mockResolvedValue({
+      id: "booking-2",
+      requesterUserId: "other-user",
+      createdBy: "other-user",
+    } as unknown as Awaited<ReturnType<typeof getBookingDetail>>);
+
+    const response = await getBooking(request("/api/bookings/booking-2"), {
+      params: Promise.resolve({ id: "booking-2" }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.id).toBe("booking-2");
+    expect(body.data.allowedActions).toEqual([]);
   });
 });

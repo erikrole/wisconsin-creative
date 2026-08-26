@@ -301,7 +301,7 @@ enum KioskCaptureSeed {
 // registration, per the note in `AGENTS.md` about explicit Xcode projects.
 
 enum KioskFixtureScenario: String {
-    /// Dashboard + roster: the profile grid and the Due Today custody list.
+    /// Dashboard + roster: the profile grid and the complete checkout list.
     case idle
     /// One person's hub: what they hold, and the actions on it.
     case operatorHub = "operator-hub"
@@ -554,7 +554,11 @@ enum KioskFixtures {
           {"id":"co-3","title":"Recruiting Visit Shoot","requesterName":"Priya Ramachandran",
            "requesterId":"u-16","requesterAvatarUrl":null,"requesterInitials":"PR",
            "items":[{"name":"DJI RS 4"},{"name":"Aputure 600d"},{"name":"V-Mount Battery #4"},{"name":"C-Stand"}],
-           "itemCount":4,"endsAt":"\(iso(hours(3)))","isOverdue":false}
+           "itemCount":4,"endsAt":"\(iso(hours(3)))","isOverdue":false},
+          {"id":"co-4","title":"Softball Road Kit","requesterName":"Morgan Lee",
+           "requesterId":"u-18","requesterAvatarUrl":null,"requesterInitials":"ML",
+           "items":[{"name":"Sony A7S III"}],
+           "itemCount":1,"endsAt":"\(iso(at(1, 9, 0)))","isOverdue":false}
         ]
         """
         let activeItems = """
@@ -582,7 +586,7 @@ enum KioskFixtures {
             """
         }
         return """
-        {"stats":{"itemsOut":9,"checkouts":3,"overdue":1},
+        {"stats":{"itemsOut":9,"checkouts":4,"overdue":1},
          "capabilities":{"eventWorkerDetails":true,"eventCallTimes":true},
          "standby":{"sleepMode":\(forcesSleep),"reason":"\(forcesSleep ? "night_hours" : "active_window")",
                     "nightHours":\(forcesSleep),

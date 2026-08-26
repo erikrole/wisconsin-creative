@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AwardIcon, BellOffIcon, Trash2Icon } from "lucide-react";
+import { AwardIcon, Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Badge } from "@/components/ui/badge";
@@ -134,7 +134,7 @@ export function EventWorkersCard({ eventId, isAdmin }: { eventId: string; isAdmi
       setWorkers(json?.data ?? []);
       setSelectedUserId("");
       setNote("");
-      toast.success("Worker added. No one was notified.");
+      toast.success("Worker added.");
     } catch (error) {
       if (isAbortError(error)) return;
       toast.error("Network error - worker not added");
@@ -177,13 +177,9 @@ export function EventWorkersCard({ eventId, isAdmin }: { eventId: string; isAdmi
           </CardTitle>
           <p className="text-xs text-muted-foreground">
             People who worked this event but were not on the crew. Counts toward Scoreboard, profile
-            stats, and badges only — no shift, no notification, and it never appears on their schedule.
+            stats, and badges only — it never appears on their schedule.
           </p>
         </div>
-        <Badge variant="outline" size="sm" className="shrink-0 gap-1">
-          <BellOffIcon className="size-3" />
-          Silent
-        </Badge>
       </CardHeader>
 
       <CardContent className="flex flex-col gap-4">

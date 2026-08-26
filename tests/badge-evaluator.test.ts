@@ -148,6 +148,31 @@ describe("badge evaluator added-worker silence", () => {
     expect(notified[0]).toContain("Shift 3");
   });
 
+  it("keeps every badge award silent for an explicit backfill pass", async () => {
+    mockTx.shiftAssignment.findMany.mockResolvedValue([assignment("event-1"), assignment("event-2"), assignment("event-3")]);
+    mockTx.eventWorker.findMany.mockResolvedValue(
+      Array.from({ length: 7 }, (_unused, index) => addedWorker(`added-event-${index}`)),
+    );
+    mockTx.badgeDefinition.findMany.mockImplementation(async ({ where }: { where: { category?: string } }) => (
+      where.category === "SHIFT"
+        ? [
+            { id: "shift-3", name: "Shift 3", threshold: 3 },
+            { id: "shift-10", name: "Shift 10", threshold: 10 },
+          ]
+        : where.category === "MILESTONE"
+          ? [{ id: "area-1", name: "Utility Crew", ruleKey: "shift_areas", threshold: 1 }]
+        : []
+    ));
+
+    await onShiftsWorked({ userId: "user-1" }, { notify: false });
+
+    const awarded = mockTx.studentBadge.createManyAndReturn.mock.calls
+      .flatMap((call: unknown[]) => (call[0] as { data: Array<{ definitionId: string }> }).data.map((row) => row.definitionId));
+    expect(awarded.sort()).toEqual(["area-1", "shift-10", "shift-3"]);
+    expect(mockTx.notification.createMany).not.toHaveBeenCalled();
+    expect(mockTx.user.findUnique).not.toHaveBeenCalled();
+  });
+
   it("notifies normally when the person has no added workers at all", async () => {
     mockTx.shiftAssignment.findMany.mockResolvedValue([assignment("event-1"), assignment("event-2"), assignment("event-3")]);
     mockTx.eventWorker.findMany.mockResolvedValue([]);

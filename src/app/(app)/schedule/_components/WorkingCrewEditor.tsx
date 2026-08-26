@@ -37,6 +37,7 @@ import { UserAvatarPicker, type PickerUser } from "@/components/shift-detail/Use
 import { handleAuthRedirect, isAbortError, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { formatTimeShort } from "@/lib/format";
 import { formatScheduleReleaseCountdown } from "@/lib/schedule-release";
+import { QUARTER_HOUR_MINUTES, roundUpToQuarterHour } from "@/lib/quarter-hour";
 import type { WorkingScheduleCommand, WorkingSchedulePayload } from "@/lib/schedule-working-copy";
 import type { CandidateRecommendation } from "@/lib/candidate-scoring-types";
 import { cn } from "@/lib/utils";
@@ -146,8 +147,8 @@ function CallWindowEditor({
   }, [defaultEndsAt, defaultStartsAt]);
 
   function save() {
-    const nextStartsAt = new Date(startsAt);
-    const nextEndsAt = new Date(endsAt);
+    const nextStartsAt = roundUpToQuarterHour(new Date(startsAt));
+    const nextEndsAt = roundUpToQuarterHour(new Date(endsAt));
     if (!startsAt || !endsAt || Number.isNaN(nextStartsAt.getTime()) || Number.isNaN(nextEndsAt.getTime())) {
       toast.error("Enter both a call time and release time.");
       return;
@@ -184,6 +185,7 @@ function CallWindowEditor({
             <Input
               id={`${inputId}-call-start`}
               type="datetime-local"
+              step={QUARTER_HOUR_MINUTES * 60}
               value={startsAt}
               onChange={(event) => setStartsAt(event.target.value)}
             />
@@ -193,6 +195,7 @@ function CallWindowEditor({
             <Input
               id={`${inputId}-call-end`}
               type="datetime-local"
+              step={QUARTER_HOUR_MINUTES * 60}
               value={endsAt}
               onChange={(event) => setEndsAt(event.target.value)}
             />
@@ -236,8 +239,8 @@ function SetAllCallTimesEditor({
   }, [data.defaultWindow.endsAt, data.defaultWindow.startsAt]);
 
   function save() {
-    const nextStartsAt = new Date(startsAt);
-    const nextEndsAt = new Date(endsAt);
+    const nextStartsAt = roundUpToQuarterHour(new Date(startsAt));
+    const nextEndsAt = roundUpToQuarterHour(new Date(endsAt));
     if (!startsAt || !endsAt || Number.isNaN(nextStartsAt.getTime()) || Number.isNaN(nextEndsAt.getTime())) {
       toast.error("Enter both a call time and release time.");
       return;
@@ -278,6 +281,7 @@ function SetAllCallTimesEditor({
               <Input
                 id="all-call-time-start"
                 type="datetime-local"
+                step={QUARTER_HOUR_MINUTES * 60}
                 value={startsAt}
                 onChange={(event) => setStartsAt(event.target.value)}
               />
@@ -287,6 +291,7 @@ function SetAllCallTimesEditor({
               <Input
                 id="all-call-time-end"
                 type="datetime-local"
+                step={QUARTER_HOUR_MINUTES * 60}
                 value={endsAt}
                 onChange={(event) => setEndsAt(event.target.value)}
               />

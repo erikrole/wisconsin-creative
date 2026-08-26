@@ -143,10 +143,7 @@ struct KioskCheckoutDetailSheet: View {
             // A sheet presents above the shell, so the shell's copy of this
             // popup would sit behind it. Each presentation context needs its
             // own mount.
-            KioskKeyboardHint(
-                isFieldFocused: titleFocused,
-                isScannerConnected: store.scanner.hardwareConnected
-            )
+            KioskKeyboardHint(isFieldFocused: titleFocused)
         }
         .overlay(alignment: .bottom) {
             if !allowsEditing, let onScan {
@@ -358,14 +355,21 @@ struct KioskCheckoutDetailSheet: View {
                 Spacer()
             }
 
-            DatePicker(
-                "Due back",
-                selection: $editEndsAt,
-                in: Date().addingTimeInterval(5 * 60)...,
-                displayedComponents: [.date, .hourAndMinute]
-            )
-            .labelsHidden()
-            .datePickerStyle(.compact)
+            HStack(spacing: 12) {
+                DatePicker(
+                    "Due date",
+                    selection: clampedEditEndsAt,
+                    in: minimumEditEndsAt...,
+                    displayedComponents: .date
+                )
+                .labelsHidden()
+                .datePickerStyle(.compact)
+
+                KioskQuarterHourTimePicker(
+                    selection: clampedEditEndsAt,
+                    minimumDate: minimumEditEndsAt
+                )
+            }
             .tint(Color.kioskRed)
             .frame(height: 46)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -497,6 +501,17 @@ struct KioskCheckoutDetailSheet: View {
         formatter.unitsStyle = .abbreviated
         return formatter
     }()
+
+    private var minimumEditEndsAt: Date {
+        KioskQuarterHour.roundedUp(Date().addingTimeInterval(5 * 60))
+    }
+
+    private var clampedEditEndsAt: Binding<Date> {
+        Binding(
+            get: { max(editEndsAt, minimumEditEndsAt) },
+            set: { editEndsAt = KioskQuarterHour.clamped($0, minimum: minimumEditEndsAt) }
+        )
+    }
 
     @ViewBuilder
     private func itemRow(_ item: KioskCheckoutDetail.ReturnItem) -> some View {

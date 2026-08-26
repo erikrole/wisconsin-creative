@@ -25,6 +25,7 @@ import {
 import { SPORT_CODES } from "@/lib/sports";
 import { handleAuthRedirect, isAbortError, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { formatCalendarEventDateRange } from "@/lib/calendar-event-dates";
+import { QUARTER_HOUR_MINUTES, roundUpToQuarterHour } from "@/lib/quarter-hour";
 
 type Location = { id: string; name: string };
 type CreatedEvent = { id: string; summary: string };
@@ -77,6 +78,7 @@ function DateTimeField({
             id={`${fieldId}-time`}
             name={`${fieldId}Time`}
             type="time"
+            step={QUARTER_HOUR_MINUTES * 60}
             value={time}
             onChange={(e) => onTimeChange(e.target.value)}
             className="w-[120px] shrink-0"
@@ -99,7 +101,7 @@ function buildDateTime(date: Date | undefined, time: string, allDay: boolean): s
   const [h = "0", m = "0"] = time.split(":");
   const d = new Date(date);
   d.setHours(parseInt(h), parseInt(m), 0, 0);
-  return d.toISOString();
+  return roundUpToQuarterHour(d).toISOString();
 }
 
 function buildAllDayEndDate(date: Date | undefined): string | null {

@@ -272,18 +272,25 @@ struct KioskCheckoutAvailabilityResult: Decodable, Equatable {
 
     struct TurnaroundRisk: Decodable, Equatable {
         let assetId: String
+        let code: String?
         let severity: String
         let message: String
         let bookingTitle: String?
         let startsAt: Date?
+        let gapMinutes: Int?
+        let nextLocationName: String?
+        let reportType: String?
     }
 
     struct BulkTurnaroundRisk: Decodable, Equatable {
         let bulkSkuId: String
+        let code: String?
         let severity: String
         let message: String
         let bookingTitle: String?
         let startsAt: Date
+        let gapMinutes: Int?
+        let plannedQuantity: Int?
     }
 
     enum CodingKeys: String, CodingKey {

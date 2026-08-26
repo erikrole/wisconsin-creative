@@ -55,7 +55,7 @@ export const GET = withAuth(async (req, { user }) => {
         : undefined;
 
   const collaboratorPreview = user.role === "COLLABORATOR" && user.preview?.role === "COLLABORATOR";
-  const restrictTo = user.role === "STUDENT" || (user.role === "COLLABORATOR" && !collaboratorPreview)
+  const restrictTo = user.role === "COLLABORATOR" && !collaboratorPreview
     ? user.id
     : undefined;
   const result = await listBookings(BookingKind.RESERVATION, searchParams, extraWhere, restrictTo);

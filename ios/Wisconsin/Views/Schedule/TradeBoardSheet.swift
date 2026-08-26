@@ -236,6 +236,19 @@ final class TradeBoardViewModel {
         }
         await load()
     }
+
+    func withdrawClaim(id: String) async throws {
+        let updated = try await APIClient.shared.withdrawShiftTradeClaim(id: id)
+        if let idx = trades.firstIndex(where: { $0.id == id }) {
+            trades[idx] = updated
+        }
+        await load()
+    }
+
+    func withdrawRequest(id: String) async throws {
+        try await APIClient.shared.withdrawShiftRequest(id: id)
+        await load()
+    }
 }
 
 struct TradeBoardSheet: View {
@@ -252,6 +265,8 @@ struct TradeBoardSheet: View {
     @State private var showPostSheet = false
     @State private var tradeToConfirm: ShiftTrade?
     @State private var tradeToCancel: ShiftTrade?
+    @State private var tradeClaimToWithdraw: ShiftTrade?
+    @State private var requestToWithdraw: OpenWorkPickupRequest?
     @State private var openShiftToPickup: OpenWorkShift?
     @State private var mineOnly = false
     @State private var showBlocked = false
@@ -371,6 +386,24 @@ struct TradeBoardSheet: View {
             } message: {
                 Text("Canceling removes the post; the shift stays assigned to you.")
             }
+            .confirmationDialog(withdrawClaimDialogTitle, isPresented: Binding(
+                get: { tradeClaimToWithdraw != nil },
+                set: { if !$0 { tradeClaimToWithdraw = nil } }
+            ), titleVisibility: .visible) {
+                Button("Withdraw Claim", role: .destructive) { withdrawConfirmedClaim() }
+                Button("Keep Claim", role: .cancel) { tradeClaimToWithdraw = nil }
+            } message: {
+                Text("This removes your pending claim and returns the post to the Trade Board.")
+            }
+            .confirmationDialog(withdrawRequestDialogTitle, isPresented: Binding(
+                get: { requestToWithdraw != nil },
+                set: { if !$0 { requestToWithdraw = nil } }
+            ), titleVisibility: .visible) {
+                Button("Withdraw Request", role: .destructive) { withdrawConfirmedRequest() }
+                Button("Keep Request", role: .cancel) { requestToWithdraw = nil }
+            } message: {
+                Text("This removes your pending request. You will no longer be considered for this shift.")
+            }
             .sensoryFeedback(.error, trigger: actionErrorHaptic)
         }
     }
@@ -388,6 +421,16 @@ struct TradeBoardSheet: View {
     private var pickupDialogTitle: String {
         guard let item = openShiftToPickup else { return "Claim shift?" }
         return "Claim \(item.shift.area.shiftAreaLabel) shift?"
+    }
+
+    private var withdrawClaimDialogTitle: String {
+        guard let trade = tradeClaimToWithdraw else { return "Withdraw claim?" }
+        return "Withdraw \(trade.shiftAssignment.shift.area.shiftAreaLabel) claim?"
+    }
+
+    private var withdrawRequestDialogTitle: String {
+        guard let request = requestToWithdraw else { return "Withdraw request?" }
+        return "Withdraw \(request.shift.area.shiftAreaLabel) request?"
     }
 
     private var tradeList: some View {
@@ -510,16 +553,22 @@ struct TradeBoardSheet: View {
             if vm.myPendingCount > 0 {
                 Section {
                     ForEach(vm.myPendingRequests) { request in
-                        PickupRequestRow(request: request, isReview: false, isActioning: false)
+                        PickupRequestRow(
+                            request: request,
+                            isReview: false,
+                            isActioning: pendingActionId == "withdraw-request:\(request.id)",
+                            withdrawAction: { requestToWithdraw = request }
+                        )
                             .tradeBoardCardRow()
                     }
                     ForEach(vm.myPendingClaims) { trade in
                         TradeRow(
                             trade: trade,
                             context: .waitingOnStaff,
-                            isActioning: false,
+                            isActioning: pendingActionId == "withdraw-claim:\(trade.id)",
                             action: nil,
-                            cancelAction: nil
+                            cancelAction: nil,
+                            withdrawAction: { tradeClaimToWithdraw = trade }
                         )
                         .tradeBoardCardRow()
                     }
@@ -718,6 +767,42 @@ struct TradeBoardSheet: View {
                 Haptics.warning()
             }
             tradeToCancel = nil
+        }
+    }
+
+    private func withdrawConfirmedClaim() {
+        guard let trade = tradeClaimToWithdraw else { return }
+        let actionId = "withdraw-claim:\(trade.id)"
+        pendingActionId = actionId
+        Task {
+            defer { pendingActionId = nil }
+            do {
+                try await vm.withdrawClaim(id: trade.id)
+                Haptics.success()
+            } catch {
+                actionError = error.localizedDescription
+                actionErrorHaptic &+= 1
+                Haptics.warning()
+            }
+            tradeClaimToWithdraw = nil
+        }
+    }
+
+    private func withdrawConfirmedRequest() {
+        guard let request = requestToWithdraw else { return }
+        let actionId = "withdraw-request:\(request.id)"
+        pendingActionId = actionId
+        Task {
+            defer { pendingActionId = nil }
+            do {
+                try await vm.withdrawRequest(id: request.id)
+                Haptics.success()
+            } catch {
+                actionError = error.localizedDescription
+                actionErrorHaptic &+= 1
+                Haptics.warning()
+            }
+            requestToWithdraw = nil
         }
     }
 
@@ -953,6 +1038,7 @@ private struct TradeRow: View {
     let isActioning: Bool
     var action: (() -> Void)?
     var cancelAction: (() -> Void)?
+    var withdrawAction: (() -> Void)?
     var approveAction: (() -> Void)?
     var declineAction: (() -> Void)?
 
@@ -977,6 +1063,12 @@ private struct TradeRow: View {
         if context == .review { return trade.claimedByAvailabilityContext }
         if context == .posted, trade.status == .claimed { return trade.claimedByAvailabilityContext }
         return nil
+    }
+
+    private var reviewDeadlineLine: String? {
+        guard context == .review || context == .waitingOnStaff,
+              let deadline = trade.reviewAutoApprovesAt else { return nil }
+        return "Auto-approval check by \(deadline.formatted(date: .abbreviated, time: .shortened))."
     }
 
     var body: some View {
@@ -1020,6 +1112,12 @@ private struct TradeRow: View {
 
                 if context == .waitingOnStaff {
                     Text(context.consequence(for: trade))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                if let reviewDeadlineLine {
+                    Text(reviewDeadlineLine)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -1082,6 +1180,18 @@ private struct TradeRow: View {
                         .frame(minHeight: 44)
                         .disabled(isActioning)
                     }
+
+                    if let withdrawAction {
+                        Button(role: .destructive, action: withdrawAction) {
+                            Text("Withdraw claim")
+                                .font(.subheadline.weight(.medium))
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .frame(minHeight: 44)
+                        .disabled(isActioning)
+                    }
                 }
             }
         }
@@ -1099,8 +1209,13 @@ private struct PickupRequestRow: View {
     let isActioning: Bool
     var approveAction: (() -> Void)?
     var declineAction: (() -> Void)?
+    var withdrawAction: (() -> Void)?
 
     private var shift: ShiftTradeShift { request.shift }
+    private var reviewDeadlineLine: String? {
+        guard let deadline = request.reviewAutoApprovesAt else { return nil }
+        return "Auto-approval check by \(deadline.formatted(date: .abbreviated, time: .shortened))."
+    }
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -1136,6 +1251,27 @@ private struct PickupRequestRow: View {
                     Text("Waiting for staff to approve your request.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+
+                    if let reviewDeadlineLine {
+                        Text(reviewDeadlineLine)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    if let withdrawAction {
+                        Button(role: .destructive, action: withdrawAction) {
+                            HStack(spacing: 7) {
+                                if isActioning { ProgressView().controlSize(.small) }
+                                Text("Withdraw request")
+                                    .font(.subheadline.weight(.medium))
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .frame(minHeight: 44)
+                        .disabled(isActioning)
+                    }
                 }
 
                 if isReview {

@@ -49,6 +49,8 @@ struct PerformanceTestRootView: View {
             PerformanceGuideView()
         case .resourcesGuides:
             GuidesView()
+        case .previewChrome:
+            PreviewChromeHarnessView()
         case .resourcesUsers:
             UsersView()
         case .resourcesLicenses, .resourcesLicensesOpen:
@@ -67,6 +69,8 @@ struct PerformanceTestRootView: View {
             LoginView()
         case .passwordSetup:
             PasswordSetupView(email: "avery.nakamura@wisc.edu")
+        case .studentBookings:
+            StudentBookingsHarnessView()
         case .bookingDetail, .bookingExtend, .bookingEdit, .bookingCancel:
             BookingDetailHarnessView()
         case .itemEdit:
@@ -82,6 +86,22 @@ struct PerformanceTestRootView: View {
         case .accountSecurity:
             AccountSecurityHarnessView()
         }
+    }
+}
+
+/// Renders the real compact app shell with the same Student preview metadata
+/// the server returns. Browse → Guides gives the capture a useful content
+/// surface while keeping the before/after pair focused on the preview marker.
+struct PreviewChromeHarnessView: View {
+    @Environment(SessionStore.self) private var session
+    @Environment(AppState.self) private var appState
+
+    var body: some View {
+        AppTabView()
+            .onAppear {
+                session.currentUser = PreviewChromeFixtures.previewUser
+                appState.selectedTab = 2
+            }
     }
 }
 
@@ -182,6 +202,18 @@ struct BookingDetailHarnessView: View {
             BookingDetailView(bookingId: BookingFixtureAPI.bookingId)
         }
         .onAppear { session.currentUser = ScheduleFixtures.staffUser }
+    }
+}
+
+/// Renders the real Bookings tab as a Student. The fixture honors the
+/// requester's query parameter so the committed Mine default and the shared
+/// All default produce a meaningful before/after capture.
+struct StudentBookingsHarnessView: View {
+    @Environment(SessionStore.self) private var session
+
+    var body: some View {
+        BookingsView()
+            .onAppear { session.currentUser = TradeBoardFixtures.student }
     }
 }
 
@@ -339,7 +371,10 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
             return AppRuntimeMode.performanceScenario == .resourcesLicensesOpen
                 ? FixtureAPI.noLicense
                 : FixtureAPI.myLicense
-        case "/api/me": return ScheduleFixtureAPI.me
+        case "/api/me":
+            return AppRuntimeMode.performanceScenario == .previewChrome
+                ? PreviewChromeFixtures.me
+                : ScheduleFixtureAPI.me
         // Lets the login capture reach the password step without a real host.
         case "/api/auth/discover": return AuthFixtureAPI.discoverPassword
         case "/api/me/passkeys": return PasskeyFixtureAPI.passkeys
@@ -358,6 +393,7 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
         case "/api/shift-groups": return ScheduleFixtureAPI.shiftGroups(for: request)
         case "/api/calendar-events": return ScheduleFixtureAPI.calendarEvents
         case "/api/my-shifts": return ScheduleFixtureAPI.myShifts
+        case "/api/bookings": return BookingFixtureAPI.list(for: request)
         case "/api/bookings/\(BookingFixtureAPI.bookingId)": return BookingFixtureAPI.booking
         case "/api/assets/\(AssetFixtureAPI.assetId)": return AssetFixtureAPI.asset
         case "/api/assets": return SearchFixtureAPI.assets
@@ -548,10 +584,23 @@ enum AssetFixtureAPI {
 enum BookingFixtureAPI {
     static let bookingId = "bk-fixture-1"
 
+    private static let studentListReferenceDate: Date = {
+        let now = Date.now
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.year, .month, .day, .hour], from: now)
+        return calendar.date(from: components) ?? now
+    }()
+
     private static func iso(_ minutes: Int) -> String {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime]
         return formatter.string(from: Date.now.addingTimeInterval(TimeInterval(minutes * 60)))
+    }
+
+    private static func studentISO(_ minutes: Int) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.string(from: studentListReferenceDate.addingTimeInterval(TimeInterval(minutes * 60)))
     }
 
     static var booking: Data {
@@ -586,6 +635,52 @@ enum BookingFixtureAPI {
           "pickupKioskDevice":null
         }}
         """.utf8)
+    }
+
+    private static func listBooking(
+        id: String,
+        kind: String,
+        title: String,
+        status: String,
+        requesterId: String,
+        requesterName: String,
+        startsIn: Int,
+        endsIn: Int,
+        sportCode: String? = nil
+    ) -> String {
+        let sportJSON = sportCode.map { "\"\($0)\"" } ?? "null"
+        return """
+        {"id":"\(id)","kind":"\(kind)","title":"\(title)","status":"\(status)",
+         "startsAt":"\(studentISO(startsIn))","endsAt":"\(studentISO(endsIn))","notes":null,"refNumber":null,
+         "requester":{"id":"\(requesterId)","name":"\(requesterName)","email":null,"avatarUrl":null},
+         "location":{"id":"loc-1","name":"Camp Randall Creative Desk"},
+         "serializedItems":[],"bulkItems":[],
+         "event":{"id":"event-\(id)","summary":"\(title)","sportCode":\(sportJSON),"opponent":null,"isHome":null},
+         "allowedActions":[],"updatedAt":"\(studentISO(-15))","pickupKioskDevice":null}
+        """
+    }
+
+    static func list(for request: URLRequest) -> Data {
+        let ownOnly = request.url?.query?.contains("requester_id=fixture-student") == true
+        let rows = [
+            listBooking(
+                id: "bk-student-own", kind: "CHECKOUT", title: "Student camera kit", status: "OPEN",
+                requesterId: "fixture-student", requesterName: "Rowan Diaz", startsIn: -120, endsIn: 240,
+                sportCode: "VB"
+            ),
+            listBooking(
+                id: "bk-team-reservation", kind: "RESERVATION", title: "Volleyball photo package", status: "BOOKED",
+                requesterId: "u-avery", requesterName: "Avery Nakamura", startsIn: 120, endsIn: 420,
+                sportCode: "VB"
+            ),
+            listBooking(
+                id: "bk-team-pickup", kind: "CHECKOUT", title: "Field audio pickup", status: "PENDING_PICKUP",
+                requesterId: "u-jordan", requesterName: "Jordan Lee", startsIn: -30, endsIn: 300,
+                sportCode: "SOC"
+            ),
+        ]
+        let visibleRows = ownOnly ? [rows[0]] : rows
+        return Data("{\"data\":[\(visibleRows.joined(separator: ","))],\"total\":\(visibleRows.count),\"limit\":30,\"offset\":0}".utf8)
     }
 }
 
@@ -1239,6 +1334,38 @@ enum ProfileFixtureAPI {
          "source":null,"note":null,"awardedByName":null,"progressCurrent":\(earned ? 1 : 0),"progressTarget":1,
          "servedRarity":null}
         """
+    }
+}
+
+private enum PreviewChromeFixtures {
+    private static let previewExpiresAt = Date.now.timeIntervalSince1970 * 1_000 + 7_200_000
+
+    static let previewUser = CurrentUser(
+        id: "fixture-admin",
+        name: "Erik Role",
+        email: "erik.role@wisc.edu",
+        role: "STUDENT",
+        affiliation: nil,
+        collaboratorProfile: nil,
+        capabilities: [],
+        collaboratorPolicy: nil,
+        staffingType: "ST",
+        avatarUrl: nil,
+        forcePasswordChange: false,
+        preview: RolePreviewInfo(role: "STUDENT", expiresAt: previewExpiresAt)
+    )
+
+    static var me: Data {
+        Data("""
+        { "user": { "id": "fixture-admin", "name": "Erik Role",
+                    "email": "erik.role@wisc.edu", "role": "STUDENT",
+                    "affiliation": null, "collaboratorProfile": null,
+                    "capabilities": [], "collaboratorPolicy": null,
+                    "staffingType": "ST", "avatarUrl": null,
+                    "forcePasswordChange": false,
+                    "preview": { "actualRole": "ADMIN", "role": "STUDENT",
+                                 "readOnly": true, "expiresAt": \(previewExpiresAt) } } }
+        """.utf8)
     }
 }
 

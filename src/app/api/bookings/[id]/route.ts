@@ -68,11 +68,12 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
   const { id } = params;
   const detail = await getBookingDetail(id);
 
-  // Students may only view bookings they requested or created. ADMIN/STAFF
-  // can view any booking. Without this check, a student iterating booking
-  // IDs could read every requester's PII (IDOR).
+  // Internal Students have team-visible booking reads. Action permissions
+  // below and every mutation route still enforce ownership or staff/admin
+  // authority; this read does not grant edit, transfer, or custody rights.
   if (
-    (user.role === "STUDENT" || (user.role === "COLLABORATOR" && !collaboratorPreview)) &&
+    user.role === "COLLABORATOR" &&
+    !collaboratorPreview &&
     detail.requesterUserId !== user.id &&
     detail.createdBy !== user.id
   ) {

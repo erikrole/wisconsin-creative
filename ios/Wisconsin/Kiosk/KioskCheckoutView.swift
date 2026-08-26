@@ -23,7 +23,7 @@ private enum KioskCheckoutDefaults {
     static func dueBackDate(afterEventEndsAt eventEnd: Date, now: Date = Date()) -> Date? {
         let proposed = eventEnd.addingTimeInterval(linkedEventReturnBuffer)
         guard proposed > now.addingTimeInterval(60) else { return nil }
-        return proposed
+        return KioskQuarterHour.roundedUp(proposed)
     }
 }
 
@@ -423,6 +423,12 @@ struct KioskCheckoutView: View {
         if availabilityResult.hasBlockingIssue {
             return "Complete Checkout unavailable, resolve item conflicts first"
         }
+        if isCheckingAvailability {
+            return "Complete Checkout unavailable, checking item availability"
+        }
+        if availabilityError != nil || !hasVerifiedAvailability {
+            return "Complete Checkout unavailable, retry the availability check"
+        }
         return "Checkout \(count) item\(count == 1 ? "" : "s")"
     }
 
@@ -645,15 +651,19 @@ struct KioskCheckoutView: View {
                         )
                         updated.append(cartItem)
                         store.setCart(updated, for: userId)
-                        await refreshAvailability(for: updated)
-                        if result.locationMismatch == true {
+                        let preflight = await refreshAvailability(for: updated)
+                        lastAccepted = KioskAcceptedScan(
+                            title: cartItem.itemListPrimaryTitle,
+                            subtitle: cartItem.itemListSecondaryTitle,
+                            progress: "\(updated.count) item\(updated.count == 1 ? "" : "s") scanned"
+                        )
+                        if let scanIssue = preflight.flatMap({ scanAvailabilityFeedback(for: cartItem, result: $0) }) {
+                            showFeedback(scanIssue)
+                        } else if result.locationMismatch == true {
                             showFeedback(.warning(result.locationMessage ?? "\(item.name) added, location checked"))
+                        } else if preflight == nil {
+                            showFeedback(.warning("\(cartItem.itemListPrimaryTitle) added, but availability could not be verified. Check before checkout."))
                         } else {
-                            lastAccepted = KioskAcceptedScan(
-                                title: cartItem.itemListPrimaryTitle,
-                                subtitle: cartItem.itemListSecondaryTitle,
-                                progress: "\(updated.count) item\(updated.count == 1 ? "" : "s") scanned"
-                            )
                             showFeedback(.success(result.locationMessage ?? item.name))
                         }
                     } else {
@@ -805,7 +815,8 @@ struct KioskCheckoutView: View {
         isLinkedToEvent = draft.isLinkedToEvent
         selectedEventId = draft.selectedEventId
         customPurpose = draft.customPurpose
-        dueBackAt = max(draft.dueBackAt, Date().addingTimeInterval(5 * 60))
+        let minimum = KioskQuarterHour.roundedUp(Date().addingTimeInterval(5 * 60))
+        dueBackAt = draft.dueBackAt >= minimum ? draft.dueBackAt : minimum
         // Resume where the draft actually left off. Forcing `true` here sent a
         // half-filled draft straight to the scan step.
         checkoutContextReady = draft.contextReady
@@ -900,7 +911,6 @@ struct KioskCheckoutView: View {
         } catch {
             guard availabilityRequests.owns(requestToken) else { return nil }
             availabilityError = (error as? APIError)?.errorDescription ?? "Conflict check unavailable"
-            availabilityResult = KioskCheckoutAvailabilityResult()
             hasVerifiedAvailability = false
             return nil
         }
@@ -919,11 +929,106 @@ struct KioskCheckoutView: View {
         if availabilityResult.shortages.contains(where: { bulkSkuIds.contains($0.bulkSkuId) }) {
             return KioskCartAvailabilityIssue(tone: .error, message: "Short")
         }
-        if availabilityResult.turnaroundRisks.contains(where: { ids.contains($0.assetId) }) ||
-            availabilityResult.bulkTurnaroundRisks.contains(where: { bulkSkuIds.contains($0.bulkSkuId) }) {
-            return KioskCartAvailabilityIssue(tone: .warning, message: "Tight turn")
+        let serializedRisks = availabilityResult.turnaroundRisks.filter { ids.contains($0.assetId) }
+        let bulkRisks = availabilityResult.bulkTurnaroundRisks.filter { bulkSkuIds.contains($0.bulkSkuId) }
+        if serializedRisks.contains(where: { $0.code == "RECENT_CHECKIN_REPORT" && $0.reportType == "LOST" }) {
+            return KioskCartAvailabilityIssue(tone: .warning, message: "Lost report")
+        }
+        if serializedRisks.contains(where: { $0.code == "RECENT_CHECKIN_REPORT" }) {
+            return KioskCartAvailabilityIssue(tone: .warning, message: "Condition")
+        }
+        if serializedRisks.contains(where: { $0.code == "LOCATION_TRANSFER" }) {
+            return KioskCartAvailabilityIssue(tone: .warning, message: "Transfer")
+        }
+        if !serializedRisks.isEmpty || !bulkRisks.isEmpty {
+            let hasCritical = serializedRisks.contains { $0.severity.caseInsensitiveCompare("critical") == .orderedSame }
+                || bulkRisks.contains { $0.severity.caseInsensitiveCompare("critical") == .orderedSame }
+            return KioskCartAvailabilityIssue(tone: .warning, message: hasCritical ? "Very tight timing" : "Tight timing")
         }
         return nil
+    }
+
+    private func scanAvailabilityFeedback(
+        for item: KioskCartItem,
+        result: KioskCheckoutAvailabilityResult
+    ) -> ScanFeedback? {
+        let title = item.itemListPrimaryTitle
+
+        if let unavailable = result.unavailableAssets.first(where: { $0.assetId == item.id }) {
+            let status = unavailable.status.replacingOccurrences(of: "_", with: " ").lowercased()
+            return .error("\(title) is \(status). Remove it before checkout.")
+        }
+
+        if let conflict = result.conflicts.first(where: { $0.assetId == item.id }) {
+            let booking = conflict.conflictingBookingTitle ?? "another booking"
+            let startsAt = conflict.startsAt.formatted(date: .abbreviated, time: .shortened)
+            let endsAt = conflict.endsAt.formatted(date: .abbreviated, time: .shortened)
+            return .error("\(title) conflicts with \(booking) (\(startsAt)–\(endsAt)). Remove it or change the return time before checkout.")
+        }
+
+        if let bulkSkuId = item.bulkSkuId,
+           let shortage = result.shortages.first(where: { $0.bulkSkuId == bulkSkuId }) {
+            return .error("\(title) needs \(shortage.requested), but only \(shortage.available) are available. Remove it before checkout.")
+        }
+
+        if let risk = result.turnaroundRisks.first(where: { $0.assetId == item.id }) {
+            switch risk.code {
+            case "RECENT_CHECKIN_REPORT" where risk.reportType == "LOST":
+                return .warning("\(title): Recent lost report — verify item status before checkout.")
+            case "RECENT_CHECKIN_REPORT":
+                return .warning("\(title): Recent damage report — inspect it before checkout.")
+            case "LOCATION_TRANSFER":
+                return .warning("\(title): \(KioskAvailabilityCopy.riskMessage(risk))")
+            default:
+                return .warning("\(title): \(KioskAvailabilityCopy.riskMessage(risk)). Confirm the return time.")
+            }
+        }
+
+        if let bulkSkuId = item.bulkSkuId,
+           let risk = result.bulkTurnaroundRisks.first(where: { $0.bulkSkuId == bulkSkuId }) {
+            return .warning("\(title): \(KioskAvailabilityCopy.bulkRiskMessage(risk)). Confirm the return time.")
+        }
+
+        return nil
+    }
+}
+
+private enum KioskAvailabilityCopy {
+    private static let serializedTurnaroundBuffer: TimeInterval = 60 * 60
+
+    static func riskMessage(_ risk: KioskCheckoutAvailabilityResult.TurnaroundRisk) -> String {
+        switch risk.code {
+        case "SHORT_TURNAROUND":
+            guard let startsAt = risk.startsAt else { return risk.message }
+            let returnBy = startsAt.addingTimeInterval(-serializedTurnaroundBuffer)
+            let gap = risk.gapMinutes.map { " (\(durationLabel($0)) gap)" } ?? ""
+            return "Needed next at \(startsAt.formatted(date: .abbreviated, time: .shortened)) · return by \(returnBy.formatted(date: .abbreviated, time: .shortened))\(gap)"
+        case "LOCATION_TRANSFER":
+            guard let startsAt = risk.startsAt else { return risk.message }
+            return "\(risk.message) (next use \(startsAt.formatted(date: .abbreviated, time: .shortened)))"
+        case "RECENT_CHECKIN_REPORT" where risk.reportType == "LOST":
+            return "Recent lost report — verify item status before checkout"
+        case "RECENT_CHECKIN_REPORT":
+            return "Recent damage report — inspect it before checkout"
+        default:
+            return risk.message
+        }
+    }
+
+    static func bulkRiskMessage(_ risk: KioskCheckoutAvailabilityResult.BulkTurnaroundRisk) -> String {
+        let quantity = risk.plannedQuantity.map(String.init) ?? "the requested quantity"
+        let returnBy = risk.startsAt.addingTimeInterval(-serializedTurnaroundBuffer)
+        let gap = risk.gapMinutes.map { " (\(durationLabel($0)) gap)" } ?? ""
+        return "Next booking needs \(quantity) at \(risk.startsAt.formatted(date: .abbreviated, time: .shortened)) · return by \(returnBy.formatted(date: .abbreviated, time: .shortened))\(gap)"
+    }
+
+    private static func durationLabel(_ minutes: Int) -> String {
+        guard minutes > 0 else { return "now" }
+        let hours = minutes / 60
+        let remainingMinutes = minutes % 60
+        if hours == 0 { return "\(remainingMinutes)m" }
+        if remainingMinutes == 0 { return "\(hours)h" }
+        return "\(hours)h \(remainingMinutes)m"
     }
 }
 
@@ -1558,12 +1663,15 @@ private struct KioskCheckoutReturnWindow: View {
 ///
 /// So both fields are always visible, always native, and always require a
 /// deliberate choice. Each opens its own system popover, so neither can
-/// overlap the other.
+/// overlap the other. Time uses the native compact picker in 15-minute steps:
+/// less scrolling and no false minute-level precision in a custody record.
 private struct KioskCheckoutReturnDatePicker: View {
     @Binding var dueBackAt: Date
     var eventEnd: Date?
 
-    private var minimumDueBack: Date { Date().addingTimeInterval(5 * 60) }
+    private var minimumDueBack: Date {
+        KioskQuarterHour.roundedUp(Date().addingTimeInterval(5 * 60))
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -1577,11 +1685,9 @@ private struct KioskCheckoutReturnDatePicker: View {
                     )
                 }
                 field("Return time") {
-                    DatePicker(
-                        "Return time",
+                    KioskQuarterHourTimePicker(
                         selection: clampedDueBack,
-                        in: minimumDueBack...,
-                        displayedComponents: .hourAndMinute
+                        minimumDate: minimumDueBack
                     )
                 }
                 Spacer(minLength: 0)
@@ -1608,10 +1714,8 @@ private struct KioskCheckoutReturnDatePicker: View {
                     .minimumScaleFactor(0.6)
 
                 if let eventEnd {
-                    let defaultDueBack = eventEnd.addingTimeInterval(
-                        KioskCheckoutDefaults.linkedEventReturnBuffer
-                    )
-                    if abs(defaultDueBack.timeIntervalSince(dueBackAt)) < 60 {
+                    if let defaultDueBack = KioskCheckoutDefaults.dueBackDate(afterEventEndsAt: eventEnd),
+                       abs(defaultDueBack.timeIntervalSince(dueBackAt)) < 60 {
                         Label(
                             "90 minutes after the linked event ends",
                             systemImage: "calendar.badge.checkmark"
@@ -1664,7 +1768,7 @@ private struct KioskCheckoutReturnDatePicker: View {
     private var clampedDueBack: Binding<Date> {
         Binding(
             get: { max(dueBackAt, minimumDueBack) },
-            set: { dueBackAt = max($0, minimumDueBack) }
+            set: { dueBackAt = KioskQuarterHour.clamped($0, minimum: minimumDueBack) }
         )
     }
 }
@@ -1858,24 +1962,47 @@ private struct KioskCheckoutAvailabilityBanner: View {
     }
 
     private var color: Color {
+        if errorMessage != nil { return Color.statusText(.orange) }
         if result.hasBlockingIssue { return Color.statusText(.red) }
-        if result.hasWarning || errorMessage != nil { return Color.statusText(.orange) }
+        if result.hasWarning { return Color.statusText(.orange) }
         return Color.statusText(.blue)
     }
 
     private var iconName: String {
         if isChecking { return "arrow.triangle.2.circlepath" }
+        if errorMessage != nil { return "wifi.exclamationmark" }
         if result.hasBlockingIssue { return "exclamationmark.triangle.fill" }
-        if result.hasWarning || errorMessage != nil { return "clock.badge.exclamationmark" }
+        if result.hasWarning { return "clock.badge.exclamationmark" }
         return "checkmark.shield.fill"
     }
 
     private var title: String {
-        if isChecking { return "Checking conflicts" }
+        if isChecking { return "Checking availability" }
+        if errorMessage != nil { return "Availability unavailable" }
         if result.hasBlockingIssue { return "Conflict found" }
+        if hasLostReport { return "Lost report" }
+        if hasConditionReport { return "Condition check" }
+        if hasTransferRisk { return "Transfer timing" }
+        if result.hasWarning && hasCriticalWarning { return "Very tight turnaround" }
         if result.hasWarning { return "Tight turnaround" }
-        if errorMessage != nil { return "Conflict check unavailable" }
         return "Conflict check clear"
+    }
+
+    private var hasLostReport: Bool {
+        result.turnaroundRisks.contains { $0.code == "RECENT_CHECKIN_REPORT" && $0.reportType == "LOST" }
+    }
+
+    private var hasConditionReport: Bool {
+        result.turnaroundRisks.contains { $0.code == "RECENT_CHECKIN_REPORT" }
+    }
+
+    private var hasTransferRisk: Bool {
+        result.turnaroundRisks.contains { $0.code == "LOCATION_TRANSFER" }
+    }
+
+    private var hasCriticalWarning: Bool {
+        result.turnaroundRisks.contains { $0.severity.caseInsensitiveCompare("critical") == .orderedSame }
+            || result.bulkTurnaroundRisks.contains { $0.severity.caseInsensitiveCompare("critical") == .orderedSame }
     }
 
     private var detail: String {
@@ -1884,11 +2011,20 @@ private struct KioskCheckoutAvailabilityBanner: View {
             let count = result.conflicts.count + result.shortages.count + result.unavailableAssets.count
             return "\(count) issue\(count == 1 ? "" : "s") must be resolved before checkout."
         }
+        if let risk = result.turnaroundRisks.first(where: { $0.code == "RECENT_CHECKIN_REPORT" && $0.reportType == "LOST" }) {
+            return KioskAvailabilityCopy.riskMessage(risk)
+        }
+        if let risk = result.turnaroundRisks.first(where: { $0.code == "RECENT_CHECKIN_REPORT" }) {
+            return KioskAvailabilityCopy.riskMessage(risk)
+        }
+        if let risk = result.turnaroundRisks.first(where: { $0.code == "LOCATION_TRANSFER" }) {
+            return KioskAvailabilityCopy.riskMessage(risk)
+        }
         if let risk = result.turnaroundRisks.first {
-            return risk.message
+            return KioskAvailabilityCopy.riskMessage(risk)
         }
         if let risk = result.bulkTurnaroundRisks.first {
-            return risk.message
+            return KioskAvailabilityCopy.bulkRiskMessage(risk)
         }
         return "Scanning can continue."
     }

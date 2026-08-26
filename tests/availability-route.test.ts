@@ -145,6 +145,32 @@ describe("availability preflight client contract", () => {
       .toContain("kind: bookingKind");
   });
 
+  it("keeps the top-level availability response visible to web previews", () => {
+    expect(source("src/components/equipment-picker/use-conflict-check.ts"))
+      .toContain("const data = json;");
+    expect(source("src/components/equipment-picker/use-conflict-check.ts"))
+      .not.toContain("const data = json?.data;");
+    expect(source("src/app/(app)/bookings/BookingEquipmentTab.tsx"))
+      .toContain("const data = json;");
+  });
+
+  it("checks visible picker rows before they are selected", () => {
+    const picker = source("src/components/EquipmentPicker.tsx");
+
+    expect(picker).toContain("sectionResults.map((asset) => asset.id)");
+    expect(picker).toContain("assetIds: conflictPreviewAssetIds");
+    expect(picker).toContain("for (const sku of sectionBulk)");
+    expect(picker).toContain("bulkItems: bulkPreviewItems");
+  });
+
+  it("keeps selected-item timing copy aligned with the picker rows", () => {
+    const shelf = source("src/components/equipment-picker/SelectedEquipmentShelf.tsx");
+
+    expect(shelf).toContain('"Needed next"');
+    expect(shelf).toContain("upcomingCommitmentLabel(upcoming, currentEndsAt)");
+    expect(shelf).toContain("availabilityRiskBadgeLabel(risk!)");
+  });
+
   it("picker holder lookup covers every blocking booking status", () => {
     expect(source("src/app/api/assets/picker-search/route.ts"))
       .toContain('status: { in: ["BOOKED", "PENDING_PICKUP", "OPEN"] }');

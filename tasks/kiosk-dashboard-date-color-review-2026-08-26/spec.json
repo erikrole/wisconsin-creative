@@ -1,0 +1,62 @@
+{
+  "title": "Kiosk Dashboard Date and Selection Contrast",
+  "eyebrow": "iOS · Wisconsin Creative · Kiosk",
+  "lede": "The dashboard now uses the shortest useful date language and a neutral selected state, so time urgency and interaction state do not compete for the same red accent.",
+  "stats": [
+    {
+      "k": "Today / tomorrow",
+      "v": "shorter",
+      "n": "Today and Tomorrow replace sentence-style due labels"
+    },
+    {
+      "k": "Later dates",
+      "v": "Mon, Aug 15",
+      "n": "Weekday, month, and day stay visible before the due time"
+    },
+    {
+      "k": "Selected tile",
+      "v": "neutral",
+      "n": "White contrast carries selection; red stays semantic"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Side by side",
+      "note": "Same iPad Air 11-inch simulator, same kiosk fixture, same default Checkouts state. The clock/freshness stamp naturally advanced between captures; the changed labels and tile state are the intended differences.",
+      "pairs": [
+        {
+          "title": "Due copy and selected tile",
+          "sub": "Compare the first due pill and the selected Checkouts tile.",
+          "before": "tasks/kiosk-dashboard-date-color-review-2026-08-26/before/dashboard.png",
+          "beforeCap": "The due label said `Due today`, future dates dropped the month/day, and selection turned the whole tile red.",
+          "after": "tasks/kiosk-dashboard-date-color-review-2026-08-26/after/dashboard.png",
+          "afterCap": "The label says `Today`; future rows retain `Mon, Aug 31`; the selected tile uses a bright neutral outline/underline, leaving red available for overdue meaning.",
+          "wide": true
+        }
+      ]
+    }
+  ],
+  "changesHeading": "What changed, and why",
+  "changes": [
+    {
+      "h": "Short dates carry the useful calendar context",
+      "was": "Today and tomorrow were written as `Due today` / `Due tomorrow`, while later dates used only a weekday in the compact dashboard pill.",
+      "now": "The dashboard says `Today` or `Tomorrow`, and all other dates retain a short `Mon, Aug 15`-style date before the time. Near-deadline and overdue wording is unchanged."
+    },
+    {
+      "h": "Selection no longer borrows urgency red",
+      "was": "Selected stat tiles used brand red for the number, icon, border, and underline, competing with Return actions and overdue state.",
+      "now": "Selection is a neutral lifted surface with a white outline, underline, and icon. Overdue counts remain red when their meaning is actually urgent."
+    }
+  ],
+  "verification": [
+    "<strong>19 focused Vitest source-contract tests</strong> pass across the idle dashboard, sleep-mode removal, and iOS quality contracts.",
+    "<strong>WisconsinKiosk Xcode build and run</strong> succeeds on the iPad Air 11-inch (M4) simulator, iOS 26.5.",
+    "<strong>Runtime snapshots</strong> confirm `Today · 12:00 PM`, `Mon, Aug 31 · 12:00 PM`, and neutral selection in both Checkouts and Items Out states."
+  ],
+  "notesHeading": "Remaining proof boundaries",
+  "notes": [
+    "The fixture currently shows the today and future-date branches. The short `Due in …` and `Overdue · …` branches remain source-tested and build-verified, but still deserve a live fixture/device replay during kiosk QA.",
+    "No API, schema, custody, or detail-surface behavior changed."
+  ]
+}

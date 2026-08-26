@@ -19,6 +19,63 @@ extension Date {
         )
     }
 
+    /// Compact due wording for the idle dashboard. Near deadlines need a
+    /// relative signal before the calendar date; ordinary future custody keeps
+    /// a short day label, and overdue custody shows how long it has been late.
+    /// Full calendar timestamps remain available through `kioskDueStamp` on
+    /// detail and edit surfaces.
+    func kioskDashboardDueStamp(
+        isOverdue: Bool,
+        now: Date = Date(),
+        calendar: Calendar = .current
+    ) -> String {
+        let time = formatted(.dateTime.hour().minute())
+
+        if isOverdue {
+            return "Overdue · \(kioskCompactDuration(now.timeIntervalSince(self)))"
+        }
+
+        let secondsUntilDue = timeIntervalSince(now)
+        if secondsUntilDue >= 0, secondsUntilDue <= 2 * 60 * 60 {
+            if secondsUntilDue < 60 {
+                return "Due now · \(time)"
+            }
+            return "Due in \(kioskCompactDuration(secondsUntilDue)) · \(time)"
+        }
+
+        let dueDay = calendar.startOfDay(for: self)
+        let today = calendar.startOfDay(for: now)
+        let dayOffset = calendar.dateComponents([.day], from: today, to: dueDay).day ?? 0
+
+        if dayOffset == 0 {
+            return "Today · \(time)"
+        }
+        if dayOffset == 1 {
+            return "Tomorrow · \(time)"
+        }
+
+        let date = calendar.component(.year, from: self) == calendar.component(.year, from: now)
+            ? formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
+            : formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day().year())
+        return "\(date) · \(time)"
+    }
+
+    private func kioskCompactDuration(_ seconds: TimeInterval) -> String {
+        let minutes = max(1, Int(ceil(seconds / 60)))
+        if minutes < 60 {
+            return "\(minutes)m"
+        }
+
+        let hours = minutes / 60
+        let remainder = minutes % 60
+        if hours < 24 {
+            return remainder == 0 ? "\(hours)h" : "\(hours)h \(remainder)m"
+        }
+
+        let days = max(1, Int(ceil(Double(minutes) / (24 * 60))))
+        return "\(days)d"
+    }
+
     func kioskClockParts() -> (time: String, seconds: String, meridiem: String) {
         let components = Calendar.current.dateComponents([.hour, .minute, .second], from: self)
         let rawHour = components.hour ?? 0

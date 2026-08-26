@@ -67,7 +67,11 @@ struct BookingBulkThumbnail: View {
 struct SelectedEquipmentRow: View {
     let asset: Asset
     let isConflicted: Bool
+    var conflictMessage: String?
     var isAtPickupLocation = true
+    var upcomingCommitmentLabel: String?
+    var turnaroundMessage: String?
+    var turnaroundIsCritical = false
     let onRemove: () -> Void
 
     var body: some View {
@@ -86,15 +90,31 @@ struct SelectedEquipmentRow: View {
                         .lineLimit(1)
                 }
                 if isConflicted {
-                    Label("Scheduling conflict", systemImage: "exclamationmark.triangle.fill")
+                    Label(conflictMessage ?? "Scheduling conflict", systemImage: "exclamationmark.triangle.fill")
                         .font(.caption2)
-                        .foregroundStyle(Color.statusText(.orange))
-                        .accessibilityLabel("Scheduling conflict")
+                        .foregroundStyle(Color.statusText(.red))
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityLabel(conflictMessage ?? "Scheduling conflict")
                 }
                 if !isAtPickupLocation {
                     Label("At \(asset.location.name)", systemImage: "mappin.and.ellipse")
                         .font(.caption2)
                         .foregroundStyle(Color.statusText(.orange))
+                }
+                if let upcomingCommitmentLabel {
+                    Label(upcomingCommitmentLabel, systemImage: "clock.arrow.circlepath")
+                        .font(.caption2)
+                        .foregroundStyle(Color.statusText(.blue))
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if let turnaroundMessage {
+                    Label(turnaroundMessage, systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption2)
+                        .foregroundStyle(Color.statusText(turnaroundIsCritical ? .red : .orange))
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             Spacer()
@@ -114,8 +134,10 @@ struct SelectedEquipmentRow: View {
     private var accessibilityLabel: String {
         var parts: [String] = ["Selected", asset.itemListPrimaryTitle]
         if let subtitle = asset.itemListSecondaryTitle { parts.append(subtitle) }
-        if isConflicted { parts.append("Scheduling conflict") }
+        if isConflicted { parts.append(conflictMessage ?? "Scheduling conflict") }
         if !isAtPickupLocation { parts.append("At another pickup location") }
+        if let upcomingCommitmentLabel { parts.append(upcomingCommitmentLabel) }
+        if let turnaroundMessage { parts.append(turnaroundMessage) }
         parts.append("Remove button")
         return parts.joined(separator: ", ")
     }
@@ -126,6 +148,8 @@ struct BulkQuantityRow: View {
     let quantity: Int
     var locationName: String? = nil
     var isAtPickupLocation = true
+    var turnaroundMessage: String?
+    var turnaroundIsCritical = false
     let onDecrement: () -> Void
     let onIncrement: () -> Void
 
@@ -154,6 +178,13 @@ struct BulkQuantityRow: View {
                     Label("At \(locationName)", systemImage: "mappin.and.ellipse")
                         .font(.caption2)
                         .foregroundStyle(Color.statusText(.orange))
+                }
+                if let turnaroundMessage {
+                    Label(turnaroundMessage, systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption2)
+                        .foregroundStyle(Color.statusText(turnaroundIsCritical ? .red : .orange))
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
 
@@ -190,16 +221,25 @@ struct BulkQuantityRow: View {
             }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(sku.name), \(subtitle), \(quantity) selected")
+        .accessibilityLabel(accessibilityLabel)
     }
 
+    private var accessibilityLabel: String {
+        var parts = [sku.name, subtitle, "\(quantity) selected"]
+        if let turnaroundMessage { parts.append(turnaroundMessage) }
+        return parts.joined(separator: ", ")
+    }
 }
 
 struct AssetPickerRow: View {
     let asset: Asset
     let isSelected: Bool
     var isConflicted: Bool = false
+    var conflictMessage: String?
     var isAtPickupLocation = true
+    var upcomingCommitmentLabel: String?
+    var turnaroundMessage: String?
+    var turnaroundIsCritical = false
     let onTap: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -224,15 +264,31 @@ struct AssetPickerRow: View {
                             .foregroundStyle(.secondary)
                     }
                     if isConflicted {
-                        Label("Scheduling conflict", systemImage: "exclamationmark.triangle.fill")
+                        Label(conflictMessage ?? "Scheduling conflict", systemImage: "exclamationmark.triangle.fill")
                             .font(.caption2)
-                            .foregroundStyle(Color.statusText(.orange))
-                            .accessibilityLabel("Scheduling conflict")
+                            .foregroundStyle(Color.statusText(.red))
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .accessibilityLabel(conflictMessage ?? "Scheduling conflict")
                     }
                     if !isAtPickupLocation {
                         Text("Choose \(asset.location.name) pickup to add")
                             .font(.caption2.weight(.medium))
                             .foregroundStyle(Color.statusText(.orange))
+                    }
+                    if let upcomingCommitmentLabel {
+                        Label(upcomingCommitmentLabel, systemImage: "clock.arrow.circlepath")
+                            .font(.caption2)
+                            .foregroundStyle(Color.statusText(.blue))
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    if let turnaroundMessage {
+                        Label(turnaroundMessage, systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption2)
+                            .foregroundStyle(Color.statusText(turnaroundIsCritical ? .red : .orange))
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
 
@@ -242,18 +298,15 @@ struct AssetPickerRow: View {
                 // tapping an added row removes it.
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "plus.circle")
                     .font(.title3)
-                    .foregroundStyle(
-                        isConflicted ? Color.statusText(.orange)
-                            : (isSelected ? Color.statusText(.purple) : Color(.systemGray2))
-                    )
+                    .foregroundStyle(indicatorColor)
                     .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: isSelected)
                     .accessibilityHidden(true)
             }
             .contentShape(Rectangle())
-            .opacity(!isAtPickupLocation && !isSelected ? 0.48 : 1)
+            .opacity(((!isAtPickupLocation || isConflicted) && !isSelected) ? 0.48 : 1)
         }
         .buttonStyle(ScalePressStyle())
-        .disabled(!isAtPickupLocation && !isSelected)
+        .disabled((isConflicted && !isSelected) || (!isAtPickupLocation && !isSelected))
         .accessibilityElement(children: .combine)
         .accessibilityLabel(rowAccessibilityLabel)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
@@ -263,10 +316,20 @@ struct AssetPickerRow: View {
         var parts: [String] = [asset.itemListPrimaryTitle]
         if let subtitle = asset.itemListSecondaryTitle { parts.append(subtitle) }
         parts.append(asset.location.name)
-        if isConflicted { parts.append("Scheduling conflict") }
+        if isConflicted { parts.append(conflictMessage ?? "Scheduling conflict") }
         if !isAtPickupLocation { parts.append("At another pickup location") }
+        if let upcomingCommitmentLabel { parts.append(upcomingCommitmentLabel) }
+        if let turnaroundMessage { parts.append(turnaroundMessage) }
         parts.append(isSelected ? "Selected" : "Not selected")
         return parts.joined(separator: ", ")
+    }
+
+    private var indicatorColor: Color {
+        if isConflicted { return Color.statusText(.orange) }
+        if turnaroundIsCritical { return Color.statusText(.red) }
+        if turnaroundMessage != nil { return Color.statusText(.orange) }
+        if upcomingCommitmentLabel != nil { return Color.statusText(.blue) }
+        return isSelected ? Color.statusText(.purple) : Color(.systemGray2)
     }
 
 }

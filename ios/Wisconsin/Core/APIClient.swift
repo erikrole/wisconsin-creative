@@ -40,6 +40,17 @@ struct BulkReservationRequest: Codable, Equatable {
     let quantity: Int
 }
 
+/// A preflight check is useful only when the caller can distinguish "clear"
+/// from "could not check." Keep the old empty-result API below for rollout
+/// compatibility, while new flows preserve the last known availability state
+/// and surface the failure instead of presenting an empty result as clear.
+struct AvailabilityCheckOutcome {
+    let result: AvailabilityCheckResult?
+    let errorMessage: String?
+
+    var succeeded: Bool { result != nil && errorMessage == nil }
+}
+
 struct CheckoutReturnInsight {
     let nextNeedAt: Date?
     let hasUpcomingNeed: Bool
@@ -686,59 +697,103 @@ final class APIClient {
         return resp.data.id
     }
 
-    /// Returns scheduling conflicts keyed by asset ID for the given window, or an
-    /// empty map on network/decode failure — callers treat this as a non-blocking
-    /// hint (server enforcement at create/checkout is authoritative).
+    /// Returns the top-level availability result for the given window.
     ///
     /// `locationId` is required by the server schema; omitting it (or sending the
-    /// wrong key) returns a 400 the caller never sees, so the map silently stays
-    /// empty. Pass `excludeBookingId` so an existing booking does not conflict
-    /// with itself.
-    func checkAvailability(
+    /// wrong key) returns a 400 the caller never sees, so the result silently
+    /// stays empty. Pass `excludeBookingId` so an existing booking does not
+    /// conflict with itself.
+    func checkAvailabilityOutcome(
         locationId: String,
         serializedAssetIds: [String],
         startsAt: Date,
         endsAt: Date,
-        excludeBookingId: String? = nil
-    ) async -> [String: AssetConflict] {
-        guard !serializedAssetIds.isEmpty, !locationId.isEmpty else { return [:] }
+        excludeBookingId: String? = nil,
+        bookingKind: BookingKind = .reservation,
+        bulkItems: [BulkReservationRequest] = []
+    ) async -> AvailabilityCheckOutcome {
+        guard (!serializedAssetIds.isEmpty || !bulkItems.isEmpty), !locationId.isEmpty else {
+            return AvailabilityCheckOutcome(result: AvailabilityCheckResult(), errorMessage: nil)
+        }
         struct Body: Encodable {
             let locationId: String
             let serializedAssetIds: [String]
+            let bulkItems: [BulkReservationRequest]
             let startsAt: String
             let endsAt: String
             let excludeBookingId: String?
+            let kind: String
         }
-        // The server returns the availability result at the TOP level
-        // (`{ conflicts, shortages, ... }`), not wrapped in `{ data: ... }`.
-        // Decoding a `data` envelope here silently empties the conflict map
-        // (this call swallows decode failures by design).
-        struct CheckResponse: Decodable { let conflicts: [AssetConflict]? }
-
         var req = request(path: "/api/availability/check", method: "POST")
         let iso = ISO8601DateFormatter()
         iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         guard let body = try? JSONEncoder().encode(Body(
             locationId: locationId,
             serializedAssetIds: serializedAssetIds,
+            bulkItems: bulkItems,
             startsAt: iso.string(from: startsAt),
             endsAt: iso.string(from: endsAt),
-            excludeBookingId: excludeBookingId
-        )) else { return [:] }
-        req.httpBody = body
-        guard let (data, response, requestBoundary) = try? await authenticatedData(for: req),
-              let http = response as? HTTPURLResponse else { return [:] }
-        // Hint-style call, but a swallowed 401 hides an expired session until the
-        // next mutation (IOS_PATTERNS R3 / the kioskHeartbeat P0). Broadcast it.
-        if http.statusCode == 401 {
-            broadcastSessionExpiry(for: requestBoundary)
-            return [:]
+            excludeBookingId: excludeBookingId,
+            kind: bookingKind.rawValue
+        )) else {
+            return AvailabilityCheckOutcome(result: nil, errorMessage: "Availability check could not be prepared. Try again.")
         }
-        guard (200...299).contains(http.statusCode),
-              let resp = try? decoder.decode(CheckResponse.self, from: data) else { return [:] }
-        var map: [String: AssetConflict] = [:]
-        for conflict in resp.conflicts ?? [] { map[conflict.assetId] = conflict }
-        return map
+        req.httpBody = body
+        do {
+            let (data, response, requestBoundary) = try await authenticatedData(for: req)
+            guard let http = response as? HTTPURLResponse else {
+                return AvailabilityCheckOutcome(result: nil, errorMessage: "Availability check returned an invalid response. Try again.")
+            }
+            // Hint-style calls still need to surface 401 so the session boundary
+            // can route the user back to sign-in rather than looking clear.
+            if http.statusCode == 401 {
+                broadcastSessionExpiry(for: requestBoundary)
+                return AvailabilityCheckOutcome(
+                    result: nil,
+                    errorMessage: APIError.unauthorized.errorDescription
+                )
+            }
+            guard (200...299).contains(http.statusCode) else {
+                let message = (try? JSONDecoder().decode(ServerErrorBody.self, from: data))?.error
+                    ?? "Availability could not be checked. Try again."
+                return AvailabilityCheckOutcome(result: nil, errorMessage: message)
+            }
+            guard let result = try? decoder.decode(AvailabilityCheckResult.self, from: data) else {
+                return AvailabilityCheckOutcome(result: nil, errorMessage: "Availability response could not be read. Try again.")
+            }
+            return AvailabilityCheckOutcome(result: result, errorMessage: nil)
+        } catch let error as APIError {
+            return AvailabilityCheckOutcome(result: nil, errorMessage: error.errorDescription ?? "Availability could not be checked. Try again.")
+        } catch {
+            return AvailabilityCheckOutcome(
+                result: nil,
+                errorMessage: APIError.networkError(error).errorDescription ?? "Availability could not be checked. Try again."
+            )
+        }
+    }
+
+    /// Compatibility wrapper for callers that intentionally only need the
+    /// decoded result. Reservation creation and kiosk UI use the outcome API so
+    /// a failed preflight cannot masquerade as a clear result.
+    func checkAvailability(
+        locationId: String,
+        serializedAssetIds: [String],
+        startsAt: Date,
+        endsAt: Date,
+        excludeBookingId: String? = nil,
+        bookingKind: BookingKind = .reservation,
+        bulkItems: [BulkReservationRequest] = []
+    ) async -> AvailabilityCheckResult {
+        let outcome = await checkAvailabilityOutcome(
+            locationId: locationId,
+            serializedAssetIds: serializedAssetIds,
+            startsAt: startsAt,
+            endsAt: endsAt,
+            excludeBookingId: excludeBookingId,
+            bookingKind: bookingKind,
+            bulkItems: bulkItems
+        )
+        return outcome.result ?? AvailabilityCheckResult()
     }
 
     func checkoutReturnInsight(for booking: Booking) async -> CheckoutReturnInsight {
@@ -1504,6 +1559,17 @@ final class APIClient {
         let req = request(path: "/api/shift-trades/\(id)/cancel", method: "PATCH")
         let resp: DataWrapper<ShiftTrade> = try await perform(req)
         return resp.data
+    }
+
+    func withdrawShiftTradeClaim(id: String) async throws -> ShiftTrade {
+        let req = request(path: "/api/shift-trades/\(id)/withdraw", method: "PATCH")
+        let resp: DataWrapper<ShiftTrade> = try await perform(req)
+        return resp.data
+    }
+
+    func withdrawShiftRequest(id: String) async throws {
+        let req = request(path: "/api/shift-assignments/\(id)/withdraw", method: "PATCH")
+        let _: DataWrapper<ShiftAssignmentActionResponse> = try await perform(req)
     }
 
     func pickupOpenShift(id: String) async throws {

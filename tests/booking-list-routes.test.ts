@@ -64,7 +64,7 @@ import { loadReservationRules } from "@/lib/services/reservation-rules";
 import { createReservationLifecycleNotification } from "@/lib/services/notifications";
 import { deferCompanionProjectionRefreshForCommittedMutation } from "@/lib/services/companion-projection-publisher";
 import { HttpError } from "@/lib/http";
-import { POST as postCheckouts } from "@/app/api/checkouts/route";
+import { GET as getCheckouts, POST as postCheckouts } from "@/app/api/checkouts/route";
 import { GET as getReservations, POST as postReservations } from "@/app/api/reservations/route";
 
 const adminUser = {
@@ -189,15 +189,15 @@ describe("booking list routes", () => {
     expect(overdueReport).not.toContain("status=overdue");
   });
 
-  it("keeps student reservation list scope pinned to the student while applying special filters", async () => {
+  it("lets students read all checkout and reservation rows while preserving requester filters", async () => {
     vi.mocked(requireAuth).mockResolvedValue(studentUser);
 
-    const res = await getReservations(
+    const reservationRes = await getReservations(
       get("/api/reservations?filter=overdue&requester_id=admin-1"),
       { params: Promise.resolve({}) },
     );
 
-    expect(res.status).toBe(200);
+    expect(reservationRes.status).toBe(200);
     expect(listBookings).toHaveBeenCalledWith(
       BookingKind.RESERVATION,
       expect.any(URLSearchParams),
@@ -205,7 +205,20 @@ describe("booking list routes", () => {
         status: BookingStatus.BOOKED,
         endsAt: expect.objectContaining({ lt: expect.any(Date) }),
       }),
-      "student-1",
+      undefined,
+    );
+
+    const checkoutRes = await getCheckouts(
+      get("/api/checkouts?requester_id=admin-1"),
+      { params: Promise.resolve({}) },
+    );
+
+    expect(checkoutRes.status).toBe(200);
+    expect(listBookings).toHaveBeenCalledWith(
+      BookingKind.CHECKOUT,
+      expect.any(URLSearchParams),
+      undefined,
+      undefined,
     );
   });
 

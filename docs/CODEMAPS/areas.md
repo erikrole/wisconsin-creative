@@ -73,7 +73,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/settings/kiosk-devices`
 - APIs: `/api/kiosk-devices/[id]/regenerate-code`, `/api/kiosk-devices/[id]`, `/api/kiosk-devices`, `/api/kiosk/activate`, `/api/kiosk/checkin/[id]/complete`, `/api/kiosk/checkin/[id]/scan`, `/api/kiosk/checkout/[id]`, `/api/kiosk/checkout/availability`, `/api/kiosk/checkout/complete`, `/api/kiosk/checkout/scan`
 - Services: `src/lib/services/kiosk-checkout-complete.ts`, `src/lib/services/kiosk-location.ts`, `src/lib/services/kiosk-scan.ts`
-- Tests: `tests/bulk-unit-kiosk-scans.test.ts`, `tests/ios-kiosk-all-day-contract.test.ts`, `tests/ios-kiosk-checkout-details-polish.test.ts`, `tests/ios-kiosk-idle-cancellation.test.ts`, `tests/ios-kiosk-idle-sleep-mode.test.ts`, `tests/ios-kiosk-intent-routing-contract.test.ts`, `tests/ios-kiosk-liquid-glass.test.ts`, `tests/ios-kiosk-numbered-battery-rendering.test.ts`
+- Tests: `tests/bulk-unit-kiosk-scans.test.ts`, `tests/ios-kiosk-all-day-contract.test.ts`, `tests/ios-kiosk-checkout-details-polish.test.ts`, `tests/ios-kiosk-idle-cancellation.test.ts`, `tests/ios-kiosk-idle-checkout-list.test.ts`, `tests/ios-kiosk-idle-sleep-mode.test.ts`, `tests/ios-kiosk-intent-routing-contract.test.ts`, `tests/ios-kiosk-liquid-glass.test.ts`
 
 ## kits
 

@@ -4,6 +4,12 @@ enum BookingEventLimits {
     static let maxLinkedEvents = 5
 }
 
+private enum ReservationAvailabilityThresholds {
+    static let serializedTurnaroundBuffer: TimeInterval = 60 * 60
+    static let warningWindow: TimeInterval = 12 * 60 * 60
+    static let criticalWindow: TimeInterval = 2 * 60 * 60
+}
+
 /// Returns the next clean hour boundary after `now`, plus `addingHours`.
 /// `addingHours: 0` → the upcoming `:00`; `addingHours: 1` → one hour after that.
 private func nextCleanHour(addingHours: Int = 0) -> Date {
@@ -146,32 +152,249 @@ final class CreateBookingViewModel {
     private var searchTask: Task<Void, Never>?
     private var selectedAssetOrder: [String] = []
 
-    // Conflict checking — non-blocking pre-flight hint against the date window.
+    // Conflict checking — the picker preview is advisory while loading, but a
+    // known buffered conflict blocks review until it is removed or the window
+    // changes. The server remains authoritative for races at save time.
     var conflictedAssetIds: Set<String> = []
+    var conflictDetailsByAssetId: [String: AssetConflict] = [:]
+    var upcomingCommitmentsByAssetId: [String: AvailabilityCommitment] = [:]
+    var turnaroundRisksByAssetId: [String: [AvailabilityTurnaroundRisk]] = [:]
+    var bulkTurnaroundRisksBySkuId: [String: [AvailabilityBulkTurnaroundRisk]] = [:]
+    var isCheckingAvailability = false
+    var availabilityCheckError: String?
     var submissionConflict: String?
     private var conflictCheckTask: Task<Void, Never>?
     private var conflictRequests = LatestRequestGeneration()
 
+    /// Preview every asset currently visible in the browse/search result, plus
+    /// selected or deep-linked assets that are outside that result. The server
+    /// still rechecks the final selection authoritatively at create time.
+    private var conflictPreviewAssetIds: [String] {
+        var ids = selectedAssetIds
+        for asset in availableAssets {
+            ids.insert(asset.id)
+        }
+        return Array(ids).sorted().prefix(500).map { $0 }
+    }
+
+    /// Mirror the web picker’s pre-selection preview for counted supplies:
+    /// visible SKUs are checked at quantity one, while selected quantities stay
+    /// authoritative. Hidden default-browse supplies are not queried until the
+    /// user exposes that category or searches for one.
+    private var conflictPreviewBulkItems: [BulkReservationRequest] {
+        var quantities = selectedBulkQuantities.filter { $0.value > 0 }
+        let query = assetSearch.trimmingCharacters(in: .whitespacesAndNewlines)
+        let visibleSkus = availableBulkSkus.filter { sku in
+            guard !isHiddenAttachmentCategory(bulkCategoryTitle(sku)) else { return false }
+            if !query.isEmpty { return true }
+            guard let filter = browseCategoryFilter else { return false }
+            return reservationCategory(for: sku) == filter
+        }
+        for sku in visibleSkus where quantities[sku.id] == nil {
+            quantities[sku.id] = 1
+        }
+        return quantities
+            .sorted { $0.key < $1.key }
+            .prefix(500)
+            .map { BulkReservationRequest(bulkSkuId: $0.key, quantity: $0.value) }
+    }
+
     func scheduleConflictCheck() {
         conflictCheckTask?.cancel()
-        guard !selectedAssetIds.isEmpty, !selectedLocationId.isEmpty, endsAt > startsAt else {
+        isCheckingAvailability = false
+        let ids = conflictPreviewAssetIds
+        let bulkItems = conflictPreviewBulkItems
+        guard (!ids.isEmpty || !bulkItems.isEmpty), !selectedLocationId.isEmpty, endsAt > startsAt else {
             conflictRequests.invalidate()
-            conflictedAssetIds = []
+            clearAvailabilityHints()
             return
         }
         let requestToken = conflictRequests.begin()
-        let ids = Array(selectedAssetIds)
         let location = selectedLocationId
         let start = startsAt, end = endsAt
+        isCheckingAvailability = true
+        availabilityCheckError = nil
         conflictCheckTask = Task {
             try? await Task.sleep(for: .milliseconds(500))
             guard !Task.isCancelled, conflictRequests.owns(requestToken) else { return }
-            let result = await APIClient.shared.checkAvailability(
-                locationId: location, serializedAssetIds: ids, startsAt: start, endsAt: end
+            let outcome = await APIClient.shared.checkAvailabilityOutcome(
+                locationId: location,
+                serializedAssetIds: ids,
+                startsAt: start,
+                endsAt: end,
+                bookingKind: .reservation,
+                bulkItems: bulkItems
             )
             guard !Task.isCancelled, conflictRequests.owns(requestToken) else { return }
-            conflictedAssetIds = Set(result.keys)
+            guard let result = outcome.result else {
+                // Keep the previous maps visible. An unavailable refresh is
+                // not evidence that the item became clear.
+                availabilityCheckError = outcome.errorMessage ?? "Availability could not be checked. Try again."
+                isCheckingAvailability = false
+                return
+            }
+            conflictDetailsByAssetId = result.conflictsByAssetId
+            conflictedAssetIds = Set(result.conflictsByAssetId.keys)
+            upcomingCommitmentsByAssetId = result.upcomingCommitmentsByAssetId
+            turnaroundRisksByAssetId = result.turnaroundRisksByAssetId
+            bulkTurnaroundRisksBySkuId = result.bulkTurnaroundRisksBySkuId
+            availabilityCheckError = nil
+            isCheckingAvailability = false
         }
+    }
+
+    private func clearAvailabilityHints() {
+        conflictedAssetIds = []
+        conflictDetailsByAssetId = [:]
+        upcomingCommitmentsByAssetId = [:]
+        turnaroundRisksByAssetId = [:]
+        bulkTurnaroundRisksBySkuId = [:]
+        availabilityCheckError = nil
+    }
+
+    var selectedConflictedAssetIds: Set<String> {
+        selectedAssetIds.intersection(conflictedAssetIds)
+    }
+
+    var selectedConflictCount: Int {
+        selectedConflictedAssetIds.count
+    }
+
+    func conflictMessage(for assetId: String) -> String? {
+        guard let conflict = conflictDetailsByAssetId[assetId] else { return nil }
+        let booking = conflict.conflictingBookingTitle ?? "another booking"
+        guard let conflictStart = conflict.startsAt, let conflictEnd = conflict.endsAt else {
+            return "Conflict with \(booking). Remove this item or change the dates."
+        }
+
+        let conflictWindow = "\(conflictStart.formatted(date: .abbreviated, time: .shortened))–\(conflictEnd.formatted(date: .abbreviated, time: .shortened))"
+        if conflictStart >= endsAt {
+            let returnBy = conflictStart.addingTimeInterval(-ReservationAvailabilityThresholds.serializedTurnaroundBuffer)
+            return "Conflict with \(booking) (\(conflictWindow)); return by \(returnBy.formatted(date: .abbreviated, time: .shortened))."
+        }
+        if conflictEnd <= startsAt {
+            let availableAfter = conflictEnd.addingTimeInterval(ReservationAvailabilityThresholds.serializedTurnaroundBuffer)
+            return "Conflict with \(booking) (\(conflictWindow)); available after \(availableAfter.formatted(date: .abbreviated, time: .shortened))."
+        }
+        return "Conflict with \(booking) (\(conflictWindow)); remove this item or change the dates."
+    }
+
+    var selectedTimingAdvisoryCount: Int {
+        let serializedCount = selectedAssetIds.filter { assetId in
+            !conflictedAssetIds.contains(assetId)
+                && (
+                    upcomingCommitmentsByAssetId[assetId] != nil
+                    || !(turnaroundRisksByAssetId[assetId] ?? []).isEmpty
+                )
+        }.count
+        let bulkCount = selectedBulkQuantities.filter { skuId, quantity in
+            quantity > 0 && !(bulkTurnaroundRisksBySkuId[skuId] ?? []).isEmpty
+        }.count
+        return serializedCount + bulkCount
+    }
+
+    var hasSelectedTimingAdvisories: Bool {
+        selectedTimingAdvisoryCount > 0
+    }
+
+    /// Copies the web picker language: show the next use plainly, and add the
+    /// return-by time plus the actual gap when the window is close.
+    func upcomingCommitmentLabel(for assetId: String) -> String? {
+        guard !conflictedAssetIds.contains(assetId),
+              let commitment = upcomingCommitmentsByAssetId[assetId] else {
+            return nil
+        }
+        guard let startsAt = commitment.startsAt else {
+            return "Needed next"
+        }
+
+        let nextLabel = startsAt.formatted(date: .abbreviated, time: .shortened)
+        let gapMinutes = max(0, Int((startsAt.timeIntervalSince(endsAt) / 60).rounded()))
+        guard gapMinutes * 60 <= Int(ReservationAvailabilityThresholds.warningWindow) else {
+            return "Needed next at \(nextLabel)"
+        }
+
+        let returnBy = startsAt.addingTimeInterval(-ReservationAvailabilityThresholds.serializedTurnaroundBuffer)
+        let returnByLabel = returnBy.formatted(date: .abbreviated, time: .shortened)
+        if gapMinutes * 60 <= Int(ReservationAvailabilityThresholds.criticalWindow) {
+            return "Needed next at \(nextLabel) · return by \(returnByLabel) (\(availabilityDurationLabel(gapMinutes)) gap)"
+        }
+        return "Needed next at \(nextLabel) · return by \(returnByLabel)"
+    }
+
+    /// Location-transfer and recent-check-in notices supplement the primary
+    /// next-use line. Short-turnaround copy is folded into that line to avoid
+    /// repeating “Needed next” twice on a row.
+    func turnaroundMessage(for assetId: String) -> String? {
+        guard !conflictedAssetIds.contains(assetId) else { return nil }
+        let risks = turnaroundRisksByAssetId[assetId] ?? []
+        guard !risks.isEmpty else { return nil }
+        let risk = risks.first(where: { $0.code != "SHORT_TURNAROUND" }) ?? risks[0]
+        if risk.code == "SHORT_TURNAROUND", upcomingCommitmentLabel(for: assetId) != nil {
+            return nil
+        }
+        return availabilityRiskMessage(for: risk)
+    }
+
+    func turnaroundIsCritical(for assetId: String) -> Bool {
+        guard !conflictedAssetIds.contains(assetId) else { return false }
+        return (turnaroundRisksByAssetId[assetId] ?? []).contains {
+            $0.severity?.lowercased() == "critical"
+        }
+    }
+
+    func bulkTurnaroundMessage(for skuId: String) -> String? {
+        guard let risk = bulkTurnaroundRisksBySkuId[skuId]?.first else { return nil }
+        if let startsAt = risk.startsAt {
+            let returnBy = startsAt.addingTimeInterval(-ReservationAvailabilityThresholds.serializedTurnaroundBuffer)
+            let quantity = risk.plannedQuantity.map { String($0) } ?? "the next quantity"
+            let gap = risk.gapMinutes.map { $0 <= Int(ReservationAvailabilityThresholds.criticalWindow / 60) ? " (\(availabilityDurationLabel($0)) gap)" : "" } ?? ""
+            return "Next booking needs \(quantity) at \(startsAt.formatted(date: .abbreviated, time: .shortened)) · return by \(returnBy.formatted(date: .abbreviated, time: .shortened))\(gap)"
+        }
+        return risk.message ?? "Tight timing — confirm the return time."
+    }
+
+    func bulkTurnaroundIsCritical(for skuId: String) -> Bool {
+        (bulkTurnaroundRisksBySkuId[skuId] ?? []).contains {
+            $0.severity?.lowercased() == "critical"
+        }
+    }
+
+    private func turnaroundFallbackMessage(for code: String?) -> String {
+        switch code {
+        case "LOCATION_TRANSFER":
+            return "Needed next at another location; confirm transfer time"
+        case "RECENT_CHECKIN_REPORT":
+            return "Recent condition report — inspect before reserving"
+        default:
+            return "Tight timing — confirm return before the next booking"
+        }
+    }
+
+    private func availabilityRiskMessage(for risk: AvailabilityTurnaroundRisk) -> String {
+        switch risk.code {
+        case "LOCATION_TRANSFER":
+            return risk.message ?? turnaroundFallbackMessage(for: risk.code)
+        case "RECENT_CHECKIN_REPORT":
+            if risk.reportType == "LOST" { return "Recent lost report — verify item status before reserving" }
+            if risk.reportType == "DAMAGED" { return "Recent damage report — inspect before reserving" }
+            return risk.message ?? turnaroundFallbackMessage(for: risk.code)
+        case "SHORT_TURNAROUND":
+            guard let startsAt = risk.startsAt else { return risk.message ?? turnaroundFallbackMessage(for: risk.code) }
+            let returnBy = startsAt.addingTimeInterval(-ReservationAvailabilityThresholds.serializedTurnaroundBuffer)
+            let gap = risk.gapMinutes.map { $0 <= Int(ReservationAvailabilityThresholds.criticalWindow / 60) ? " (\(availabilityDurationLabel($0)) gap)" : "" } ?? ""
+            return "Needed next at \(startsAt.formatted(date: .abbreviated, time: .shortened)) · return by \(returnBy.formatted(date: .abbreviated, time: .shortened))\(gap)"
+        default:
+            return risk.message ?? turnaroundFallbackMessage(for: risk.code)
+        }
+    }
+
+    private func availabilityDurationLabel(_ minutes: Int) -> String {
+        if minutes <= 0 { return "now" }
+        if minutes < 60 { return "\(minutes)m" }
+        let hours = minutes / 60
+        let remainingMinutes = minutes % 60
+        return remainingMinutes == 0 ? "\(hours)h" : "\(hours)h \(remainingMinutes)m"
     }
 
     var selectedUser: FormUser? { options?.users.first(where: { $0.id == selectedUserId }) }
@@ -335,7 +558,12 @@ final class CreateBookingViewModel {
         return serialized + bulk
     }
     var canReviewEquipment: Bool {
-        selectedEquipmentCount > 0 && selectedLocationMismatchCount == 0 && !isSubmitting
+        selectedEquipmentCount > 0
+            && selectedLocationMismatchCount == 0
+            && selectedConflictCount == 0
+            && !isCheckingAvailability
+            && availabilityCheckError == nil
+            && !isSubmitting
     }
     var batteryRecommendations: [BatteryRecommendation] {
         powerRecommendations(includeSatisfied: false)
@@ -794,6 +1022,7 @@ final class CreateBookingViewModel {
         submissionConflict = nil
         userEditedLocation = true
         selectedLocationId = value
+        scheduleConflictCheck()
     }
 
     private func sortSelectedEventIds() {
@@ -914,6 +1143,7 @@ final class CreateBookingViewModel {
             }
             assetTotal = resp.total
             assetOffset = resp.data.count
+            scheduleConflictCheck()
         } catch {
             guard capturedSearch == assetSearch else { return }
             self.error = error.localizedDescription
@@ -923,7 +1153,7 @@ final class CreateBookingViewModel {
     /// Adds an asset from a picker result (idempotent). Removal goes through
     /// `toggleAsset`/`removeSelectedAsset` so tap-to-add never un-picks.
     func addAsset(_ asset: Asset) {
-        guard isAtPickupLocation(asset) else { return }
+        guard isAtPickupLocation(asset), !conflictedAssetIds.contains(asset.id) else { return }
         submissionConflict = nil
         selectedAssetIds.insert(asset.id)
         recordAssetSelection(asset.id)
@@ -938,6 +1168,7 @@ final class CreateBookingViewModel {
             selectedAssetOrder.removeAll { $0 == asset.id }
             selectedAssetSnapshots.removeValue(forKey: asset.id)
         } else {
+            guard !conflictedAssetIds.contains(asset.id) else { return }
             selectedAssetIds.insert(asset.id)
             recordAssetSelection(asset.id)
             selectedAssetSnapshots[asset.id] = asset
@@ -965,6 +1196,7 @@ final class CreateBookingViewModel {
         } else {
             selectedBulkQuantities[sku.id] = clamped
         }
+        scheduleConflictCheck()
     }
 
     func incrementBulk(_ sku: FormBulkSku) {
@@ -977,6 +1209,7 @@ final class CreateBookingViewModel {
 
     func removeSelectedBulk(_ sku: FormBulkSku) {
         selectedBulkQuantities.removeValue(forKey: sku.id)
+        scheduleConflictCheck()
     }
 
     /// Adds a scanned serialized asset and reports the outcome so the scanner
@@ -990,6 +1223,9 @@ final class CreateBookingViewModel {
             }
             guard isAtPickupLocation(asset) else {
                 return ("\(asset.displayName) is at \(asset.location.name). Change the pickup location to add it.", false)
+            }
+            if conflictedAssetIds.contains(asset.id) {
+                return (conflictMessage(for: asset.id) ?? "\(asset.displayName) conflicts with another booking. Remove it or change the dates.", false)
             }
             if selectedAssetIds.contains(asset.id) {
                 return ("\(asset.displayName) is already in this reservation.", true)

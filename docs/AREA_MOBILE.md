@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Mobile Operations
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-25
+- Last Updated: 2026-08-26
 - Status: Active
 - Version: V1
 
@@ -22,6 +22,7 @@ Cheqroom mobile patterns show useful primitives but too much menu depth and too 
 4. Overdue is always visually red and sorted to the top.
 5. Event sync supports booking context and prefill, but V1 mobile does not require an Upcoming Events dashboard section.
 6. Tap targets stay at 44px or larger.
+7. Native reservation equipment rows consume the server's top-level availability result before selection. Known serialized conflicts are disabled and block review; next-use, close-turnaround, transfer, and condition notices remain actionable advisories. A failed refresh preserves the last known result and blocks review until availability can be checked again.
 
 ## Mobile Navigation Contract (V1)
 1. Primary destinations:
@@ -134,6 +135,16 @@ Navigation shell versioned roadmap: `tasks/sidebar-roadmap.md` (revised 2026-03-
 - **V3 (later)**: Bottom nav badge counts via live `/api/nav-counts` polling, game-day/shift context cards
 
 ## Change Log
+
+- 2026-08-26: **Native Student Bookings now opens on the shared team list.** Internal Students see all visible checkout and reservation rows on the Bookings tab, matching the web and staff/admin read surface; the existing Mine toggle remains available. Server-owned row actions still expose only the student's own mutations, kiosk custody stays separate, collaborators remain private by default, and native Home remains personal through `scope=ios-home`.
+
+- 2026-08-26: **Native kiosk idle now keeps all active checkouts visible in its resting left rail.** Checkouts moves to the first summary tile and the complete checkout payload replaces the previous today-or-overdue subset. The client orders custody overdue-first and then by earliest due time even if payload order drifts; Items Out and Overdue remain temporary filters that return to the full checkout list when cleared. Kiosk detail, Return, API, and custody behavior are unchanged; managed-iPad visual acceptance remains separate.
+
+- 2026-08-26: **Native reservation equipment now explains timing before review.** The reservation composer previews visible serialized assets and counted supplies, decodes optional needed-next and turnaround advisories, and shows return-by/gap context in result rows, the cart drawer, and accessibility labels. Hard availability and server-authoritative reservation checks are unchanged; iPhone 16 Pro runtime proof remains separate.
+
+- 2026-08-26: **Native iOS Guides now uses a title-first list row.** The row keeps the guide title with compact type/status cues, removes the landing summary and update-date metadata, and keeps the VoiceOver label aligned with the visible content. The existing read-only API/model/search/reader contract is unchanged; the iPhone 16 Pro iOS 26.5 simulator build passed, while native runtime visual acceptance remains a separate gate.
+
+- 2026-08-26: **Native Student preview chrome is now a quiet mode marker rather than an urgent warning.** The top preview banner is replaced by a one-point orange screen-edge accent; preview remains read-only and is turned off from Settings → Presentation. Network and error banners retain their existing warning/error emphasis.
 
 - 2026-08-25: **Native iOS now has the same personal Student presentation preview as web.** An underlying Admin can start the Student shell from Settings and exit from the persistent `Previewing as Student · Read-only` banner. The app reuses the shared signed `/api/admin/role-preview` cookie, refreshes `/api/me` before changing the shell, remounts role-adaptive navigation, suppresses preview-time push/Live Activity registration, badge app-open writes, and product telemetry, and relies on the server to reject every other mutation. This is Admin-only QA/presentation state, not Student access or person-level impersonation; authenticated start/exit and meeting-ready native presentation proof remain open.
 

@@ -4,6 +4,7 @@ import type { PickerAsset, PickerBulkSku } from "@/components/EquipmentPicker";
 import type { TabKey as BookingSheetSection } from "@/components/booking-details/types";
 import type { BookingKind } from "@/lib/booking-actions";
 import { bookingStatusVisual, type BookingStatusVisual } from "@/lib/booking-status-display";
+import { roundUpToQuarterHour } from "@/lib/quarter-hour";
 
 /* ───── Types ───── */
 
@@ -138,9 +139,7 @@ export function formatDate(iso: string) {
 }
 
 export function roundTo15Min(date: Date): Date {
-  const ms = date.getTime();
-  const fifteen = 15 * 60 * 1000;
-  return new Date(Math.ceil(ms / fifteen) * fifteen);
+  return roundUpToQuarterHour(date);
 }
 
 export function toLocalDateTimeValue(date: Date) {

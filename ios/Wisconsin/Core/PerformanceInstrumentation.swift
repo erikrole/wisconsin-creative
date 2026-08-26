@@ -14,6 +14,9 @@ enum AppRuntimeMode {
         /// real views, view models, and decode paths can be rendered and
         /// screenshotted without a signed-in session.
         case resourcesGuides
+        /// The signed Student preview shell, used to compare the persistent
+        /// preview marker without real credentials or production data.
+        case previewChrome = "preview-chrome"
         case resourcesUsers
         case resourcesLicenses
         /// Licenses with nothing claimed by the viewer and a code inside the
@@ -56,6 +59,10 @@ enum AppRuntimeMode {
         /// three shapes the rows have to tell apart.
         case accountSecurity
         case passwordSetup = "password-setup"
+        /// The real Bookings tab as an internal Student, with the fixture
+        /// changing from one own row to the shared team list when the request
+        /// drops its requester filter.
+        case studentBookings = "student-bookings"
         /// Booking detail against a canned booking, plus its three sheets.
         /// Extend, Edit, and Cancel are local state opened by a tap, so each
         /// gets its own scenario rather than a tap script.
@@ -142,9 +149,10 @@ enum AppRuntimeMode {
     static var usesFixtureAPI: Bool {
 #if DEBUG
         switch performanceScenario {
-        case .resourcesGuides, .resourcesUsers, .resourcesLicenses, .resourcesLicensesOpen,
+        case .resourcesGuides, .previewChrome, .resourcesUsers, .resourcesLicenses, .resourcesLicensesOpen,
              .schedule, .tradeBoardStaff, .tradeBoardStudent,
              .home, .homeAllClear, .scoreboard, .profile,
+             .studentBookings,
              .bookingDetail, .bookingExtend, .bookingEdit, .bookingCancel,
              .itemEdit, .createBookingScanner, .search, .searchPartial,
              .itemsList, .reports, .accountSecurity, .login:

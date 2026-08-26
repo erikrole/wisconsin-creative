@@ -1,0 +1,53 @@
+{
+  "title": "Quiet Student Preview Marker",
+  "eyebrow": "iOS · Wisconsin Creative · Student preview",
+  "lede": "The Admin presenting in Student view needs a persistent cue that stays visible without competing with the content. The preview now reads as a quiet mode marker, while the real exit action remains in Settings.",
+  "stats": [
+    {
+      "k": "Warning surface",
+      "v": "44 pt → 0 pt",
+      "n": "The full-width orange preview pill no longer consumes the top of the screen",
+      "tone": "good"
+    },
+    {
+      "k": "Mode marker",
+      "v": "1 pt",
+      "n": "A non-interactive orange edge stroke remains persistent around the screen"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Side by side",
+      "note": "Same iPhone 16 Pro simulator, same DEBUG fixture, same Guides surface. The clock advanced naturally between captures; the only intentional change is the preview chrome.",
+      "pairs": [
+        {
+          "title": "Student preview on Guides",
+          "sub": "The content stays in place while the mode cue becomes quieter.",
+          "before": "tasks/ios-role-preview-chrome-review-2026-08-26/before/guides.png",
+          "beforeCap": "The preview was presented as a full-width warning pill with a prominent Exit action, using roughly 44 points of vertical space and obscuring the Guides header.",
+          "after": "tasks/ios-role-preview-chrome-review-2026-08-26/after/guides.png",
+          "afterCap": "The warning pill is gone. A thin orange frame preserves the persistent Student-preview cue, and the Guides header is unobstructed.",
+          "wide": true
+        }
+      ]
+    }
+  ],
+  "changesHeading": "What changed, and why",
+  "changes": [
+    {
+      "h": "Preview status is now ambient context",
+      "was": "The orange preview banner looked and behaved like an urgent warning, including an in-banner exit action.",
+      "now": "The preview uses a one-point orange screen-edge accent with no hit target. This leaves network and error banners unchanged and keeps the exit control discoverable in Settings → Presentation."
+    }
+  ],
+  "verification": [
+    "<strong>Focused native source-contract tests</strong> pass, including the quiet marker and Settings-only exit contract.",
+    "<strong>Wisconsin Debug build</strong> succeeds for the configured iPhone 16 Pro simulator on iOS 26.5.",
+    "<strong>Matched fixture UI captures</strong> pass under the WisconsinPerformance scheme and were inspected at full resolution."
+  ],
+  "notesHeading": "Acceptance boundary",
+  "notes": [
+    "The active preview still ends from Settings → Presentation → Exit Student preview; the edge marker is deliberately non-interactive.",
+    "This review proves the native fixture surface and build. It does not claim a fresh authenticated physical-iPhone acceptance run or a deployment."
+  ]
+}

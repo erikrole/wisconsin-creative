@@ -43,7 +43,8 @@ export function WizardStep2({
   const turnaroundCount = getTurnaroundWarningTotal(selectionState);
   const hasWarnings = availabilityReview !== null;
   const hasUnavailable = selectionState.unresolvedAssetCount > 0;
-  const showSelectionStatus = hasWarnings || hasUnavailable;
+  const hasConflicts = selectionState.conflictCount > 0;
+  const showSelectionStatus = hasWarnings || hasUnavailable || selectionState.checkingAvailability || !!selectionState.availabilityError;
 
   return (
     <div className="flex flex-col gap-4">
@@ -59,21 +60,21 @@ export function WizardStep2({
       {showSelectionStatus && (
         <div className="rounded-md border border-border/60 bg-background px-3 py-2.5 shadow-xs">
           <div className="flex flex-wrap items-center gap-2">
-            {availabilityReview && (
+            {availabilityReview && !hasConflicts && (
               <Badge variant="orange" size="sm" className="gap-1.5 tabular-nums">
                 <AlertCircleIcon data-icon="inline-start" />
                 {availabilityReview.total} warning{availabilityReview.total !== 1 ? "s" : ""}
               </Badge>
             )}
-            {selectionState.conflictCount > 0 && (
-              <Badge variant="orange" size="sm" className="gap-1.5 tabular-nums">
+            {hasConflicts && (
+              <Badge variant="red" size="sm" className="gap-1.5 tabular-nums">
                 <AlertCircleIcon data-icon="inline-start" />
                 {selectionState.conflictCount} conflict{selectionState.conflictCount !== 1 ? "s" : ""}
               </Badge>
             )}
             {selectionState.upcomingCommitmentCount > 0 && (
               <Badge variant="blue" size="sm" className="gap-1.5 tabular-nums">
-                {selectionState.upcomingCommitmentCount} next use
+                {selectionState.upcomingCommitmentCount} needed next
               </Badge>
             )}
             {turnaroundCount > 0 && (
@@ -94,10 +95,14 @@ export function WizardStep2({
               </span>
             )}
           </div>
-          {(hasWarnings || hasUnavailable) && (
+            {(hasWarnings || hasUnavailable || selectionState.availabilityError) && (
             <p className="mt-2 text-xs text-muted-foreground">
-              {hasUnavailable
+              {hasConflicts
+                ? "Remove conflicted items or change the booking dates before review."
+                : hasUnavailable
                 ? "Remove unavailable items or pick replacements before review."
+                : selectionState.availabilityError
+                ? selectionState.availabilityError
                 : "Review timing before submitting."}
             </p>
           )}

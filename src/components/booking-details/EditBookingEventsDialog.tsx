@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { BOOKING_CHANGE_SYNC_EVENT } from "@/hooks/use-booking-change-sync";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { BOOKING_MUTATION_TIMEOUT_MS, fetchWithTimeout } from "@/lib/fetch-with-timeout";
+import { BOOKING_SNAPSHOT_HEADER } from "@/lib/booking-concurrency";
 import { formatDateTime } from "@/lib/format";
 import { MAX_LINKED_EVENTS_PER_BOOKING } from "@/lib/request-limits";
 import type { BookingDetail } from "./types";
@@ -191,7 +192,7 @@ export function EditBookingEventsDialog({
         timeoutMs: BOOKING_MUTATION_TIMEOUT_MS,
         headers: {
           "Content-Type": "application/json",
-          "If-Unmodified-Since": new Date(booking.updatedAt).toUTCString(),
+          [BOOKING_SNAPSHOT_HEADER]: new Date(booking.updatedAt).toISOString(),
         },
         body: JSON.stringify({ eventIds: selectedIds }),
       });

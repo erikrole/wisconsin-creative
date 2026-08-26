@@ -112,7 +112,7 @@ describe("student field mobile contracts", () => {
     expect(searchView).toContain("isSearchPresented = true");
     expect(homeView).toContain(".buttonStyle(.plain)");
     expect(homeView).not.toContain("Circle().strokeBorder(Color(.separator)");
-    expect(bookingsView).toContain('scope = currentUserRole == "STUDENT" || currentUserRole == "COLLABORATOR" ? .mine : .all');
+    expect(bookingsView).toContain('scope = currentUserRole == "COLLABORATOR" ? .mine : .all');
     expect(bookingsView).toContain('BookingListSection(title: "Active"');
     expect(bookingsView).not.toContain('BookingListSection(title: "Checkouts"');
     expect(bookingsView).not.toContain('BookingListSection(title: "Reservations"');
@@ -440,7 +440,7 @@ describe("student field mobile contracts", () => {
     // Review (the cart bar owns the Review action), and the Confirm step
     // owns the single primary action.
     expect(createSheet).toContain("attemptReview()");
-    expect(createSheet).toContain('(vm.conflictedAssetIds.isEmpty ? "Review" : "Review Conflicts")');
+    expect(createSheet).toContain('(vm.selectedConflictCount == 0 ? "Review" : "Resolve Conflicts")');
     expect(createSheet).toContain(".disabled(!vm.canReviewEquipment)");
     expect(createSheet).toContain("Text(vm.title.isEmpty ? \"Review your reservation\" : vm.title)");
     expect(createSheet).not.toContain("Batteries & Counted Items");

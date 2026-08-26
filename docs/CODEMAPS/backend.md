@@ -10,7 +10,7 @@
 | `src/lib/services/auto-assign.ts` | 92 |
 | `src/lib/services/auto-fill-preview.ts` | 259 |
 | `src/lib/services/availability-conflict-recompute.ts` | 130 |
-| `src/lib/services/availability.ts` | 557 |
+| `src/lib/services/availability.ts` | 597 |
 | `src/lib/services/blast-targeting.ts` | 165 |
 | `src/lib/services/blasts.ts` | 329 |
 | `src/lib/services/booking-ref.ts` | 26 |
@@ -47,7 +47,7 @@
 | `src/lib/services/manual-event-time.ts` | 303 |
 | `src/lib/services/non-game-schedule-defaults.ts` | 49 |
 | `src/lib/services/notification-prefs.ts` | 103 |
-| `src/lib/services/notifications.ts` | 1624 |
+| `src/lib/services/notifications.ts` | 1631 |
 | `src/lib/services/onboarding-lifecycle.ts` | 766 |
 | `src/lib/services/pending-pickup-expiry.ts` | 281 |
 | `src/lib/services/reports.ts` | 1932 |
@@ -62,17 +62,17 @@
 | `src/lib/services/schedule-notification-copy.ts` | 102 |
 | `src/lib/services/schedule-notification-diff.ts` | 197 |
 | `src/lib/services/schedule-notification-flush.ts` | 175 |
-| `src/lib/services/schedule-notification-policy.ts` | 136 |
-| `src/lib/services/schedule-open-work.ts` | 469 |
+| `src/lib/services/schedule-notification-policy.ts` | 138 |
+| `src/lib/services/schedule-open-work.ts` | 524 |
 | `src/lib/services/schedule-publication.ts` | 1019 |
 | `src/lib/services/schedule-template-review.ts` | 554 |
 | `src/lib/services/schedule-working-copy.ts` | 914 |
 | `src/lib/services/scoreboard.ts` | 287 |
 | `src/lib/services/shift-assignment-conflicts.ts` | 43 |
-| `src/lib/services/shift-assignments.ts` | 731 |
+| `src/lib/services/shift-assignments.ts` | 734 |
 | `src/lib/services/shift-generation.ts` | 628 |
 | `src/lib/services/shift-trade-emails.ts` | 56 |
-| `src/lib/services/shift-trades.ts` | 1065 |
+| `src/lib/services/shift-trades.ts` | 1255 |
 | `src/lib/services/signatures.ts` | 2212 |
 | `src/lib/services/software.ts` | 271 |
 | `src/lib/services/sport-configs.ts` | 257 |
@@ -99,14 +99,15 @@
 | `src/lib/auth-email-guidance.ts` | 7 |
 | `src/lib/auth.ts` | 361 |
 | `src/lib/auto-fill-preview-types.ts` | 58 |
+| `src/lib/availability-copy.ts` | 190 |
 | `src/lib/avatar.ts` | 44 |
 | `src/lib/battery-compatibility.ts` | 166 |
 | `src/lib/bhphoto-image.ts` | 67 |
 | `src/lib/blob.ts` | 160 |
 | `src/lib/booking-action-policy.ts` | 189 |
 | `src/lib/booking-actions.ts` | 14 |
-| `src/lib/booking-availability-window.ts` | 19 |
-| `src/lib/booking-concurrency.ts` | 37 |
+| `src/lib/booking-availability-window.ts` | 31 |
+| `src/lib/booking-concurrency.ts` | 39 |
 | `src/lib/booking-status-display.ts` | 142 |
 | `src/lib/booking-statuses.ts` | 9 |
 | `src/lib/breadcrumbs.ts` | 146 |
@@ -169,6 +170,7 @@
 | `src/lib/profile-phone.ts` | 44 |
 | `src/lib/profile-sizing.ts` | 24 |
 | `src/lib/public-showroom.ts` | 444 |
+| `src/lib/quarter-hour.ts` | 27 |
 | `src/lib/query-client.ts` | 58 |
 | `src/lib/rate-limit.ts` | 217 |
 | `src/lib/rbac.ts` | 59 |
@@ -613,6 +615,7 @@
 - `/api/shift-assignments/[id]/repair-role-slot`
 - `/api/shift-assignments/[id]`
 - `/api/shift-assignments/[id]/swap`
+- `/api/shift-assignments/[id]/withdraw`
 - `/api/shift-assignments/pickup`
 - `/api/shift-assignments/request`
 - `/api/shift-assignments`
@@ -638,6 +641,7 @@
 - `/api/shift-trades/[id]/cancel`
 - `/api/shift-trades/[id]/claim`
 - `/api/shift-trades/[id]/decline`
+- `/api/shift-trades/[id]/withdraw`
 - `/api/shift-trades`
 
 ### `/api/shifts`

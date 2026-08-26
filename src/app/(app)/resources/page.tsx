@@ -224,18 +224,6 @@ function contactSearchText(user: ContactUser) {
     .toLowerCase();
 }
 
-function formatShortDate(value: Date | string) {
-  return new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
-function formatFullDate(value: Date | string) {
-  return new Date(value).toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
 function formatArea(area: ShiftArea | null) {
   if (!area) return null;
   const labels: Record<ShiftArea, string> = {
@@ -300,15 +288,6 @@ function getFilterLabel(filter: FilterKey) {
   return SCOPE_OPTIONS.find((option) => option.value === filter)?.label ?? "Filtered";
 }
 
-function audienceLabel(guide: GuideListItem) {
-  if (guide.targetRoles.length === 0 && guide.targetAreas.length === 0) return "Everyone";
-  const parts = [
-    ...guide.targetRoles.map(formatRole),
-    ...guide.targetAreas.map((area) => formatArea(area) ?? area),
-  ];
-  return parts.join(", ");
-}
-
 function ResourcesSkeleton() {
   return (
     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -324,28 +303,25 @@ function ResourceTypeIcon({ type, className }: { type: ResourceType; className?:
   return <Icon className={cn("size-4", className)} aria-hidden="true" />;
 }
 
-function GuideCard({ guide, compact = false }: { guide: GuideListItem; compact?: boolean }) {
+function GuideCard({ guide }: { guide: GuideListItem }) {
   const type = resourceTypeOf(guide);
 
   return (
     <Link
       href={`/resources/${guide.slug}`}
-      className="group block h-full rounded-lg focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+      className="group block h-full rounded-lg no-underline hover:no-underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
     >
       <Card
         elevation="flat"
-        className={cn(
-          "h-full min-h-36 transition-[border-color,box-shadow,scale] group-hover:border-foreground/30 group-hover:shadow-sm group-active:scale-[0.96]",
-          compact && "min-h-32",
-        )}
+        className="h-full min-h-32 border-border/80 transition-[background-color,scale] duration-200 group-active:scale-[0.96]"
       >
-        <CardHeader className="gap-3 p-4">
+        <CardHeader className="flex-1 justify-center gap-3 p-4">
           <div className="flex items-start gap-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-md border border-border/60 bg-muted/70 text-muted-foreground">
               <ResourceTypeIcon type={type} />
             </div>
             <div className="min-w-0 flex-1">
-              <CardTitle className="line-clamp-2 text-sm leading-snug text-foreground">
+              <CardTitle className="line-clamp-2 text-[15px] leading-snug tracking-[-0.01em] text-foreground">
                 {guide.title}
               </CardTitle>
               <div className="mt-2 flex flex-wrap items-center gap-1.5">
@@ -359,26 +335,12 @@ function GuideCard({ guide, compact = false }: { guide: GuideListItem; compact?:
                 )}
               </div>
             </div>
+            <ChevronRightIcon
+              className="mt-0.5 size-4 shrink-0 text-muted-foreground/55 transition-[color,transform] group-hover:translate-x-0.5 group-hover:text-foreground group-focus-visible:text-foreground"
+              aria-hidden="true"
+            />
           </div>
         </CardHeader>
-
-        <CardContent className="flex flex-1 flex-col gap-3 px-4 pb-4 pt-0">
-          {!compact && (
-            <p className="line-clamp-2 text-sm leading-relaxed text-muted-foreground text-pretty">
-              {guide.summary || "No preview text yet."}
-            </p>
-          )}
-          <div className="mt-auto flex flex-wrap items-center gap-2">
-            <span className="text-xs text-muted-foreground">{audienceLabel(guide)}</span>
-          </div>
-        </CardContent>
-
-        <CardFooter className="justify-between gap-3 px-4 pb-4 pt-0 text-xs text-muted-foreground">
-          <span className="truncate">By {guide.author.name}</span>
-          <span className="shrink-0 tabular-nums" title={`Updated ${formatFullDate(guide.updatedAt)}`}>
-            {formatShortDate(guide.updatedAt)}
-          </span>
-        </CardFooter>
       </Card>
     </Link>
   );
@@ -390,9 +352,9 @@ function GuideListRow({ guide }: { guide: GuideListItem }) {
   return (
     <Link
       href={`/resources/${guide.slug}`}
-      className="group grid min-h-24 gap-3 rounded-lg border bg-card p-4 text-card-foreground transition-[border-color,box-shadow,scale] hover:border-foreground/30 hover:shadow-sm focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 active:scale-[0.96] md:grid-cols-[minmax(0,1fr)_auto]"
+      className="group grid min-h-20 items-center gap-3 rounded-lg border border-border/80 bg-card p-4 text-card-foreground no-underline hover:no-underline transition-[scale] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 active:scale-[0.96] md:grid-cols-[minmax(0,1fr)_auto]"
     >
-      <div className="flex min-w-0 gap-3">
+      <div className="flex min-w-0 items-center gap-3">
         <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
           <ResourceTypeIcon type={type} />
         </div>
@@ -405,16 +367,16 @@ function GuideListRow({ guide }: { guide: GuideListItem }) {
               </Badge>
             )}
           </div>
-          <p className="mt-1 line-clamp-2 text-sm text-muted-foreground text-pretty">
-            {guide.summary || "No preview text yet."}
-          </p>
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-2 md:justify-end">
         <Badge variant="secondary" size="sm">
           {RESOURCE_TYPE_LABELS[type]}
         </Badge>
-        <span className="text-xs text-muted-foreground tabular-nums">{formatShortDate(guide.updatedAt)}</span>
+        <ChevronRightIcon
+          className="size-4 text-muted-foreground/55 transition-[color,transform] group-hover:translate-x-0.5 group-hover:text-foreground group-focus-visible:text-foreground"
+          aria-hidden="true"
+        />
       </div>
     </Link>
   );
@@ -445,11 +407,9 @@ function SectionHeader({
 function GuideResults({
   guides,
   layout,
-  compact = false,
 }: {
   guides: GuideListItem[];
   layout: LayoutKey;
-  compact?: boolean;
 }) {
   if (layout === "list") {
     return (
@@ -464,7 +424,7 @@ function GuideResults({
   return (
     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
       {guides.map((guide) => (
-        <GuideCard key={guide.id} guide={guide} compact={compact} />
+        <GuideCard key={guide.id} guide={guide} />
       ))}
     </div>
   );
@@ -961,9 +921,9 @@ function ReferenceCard({
     <button
       type="button"
       onClick={onClick}
-      className="group flex items-center gap-3 rounded-lg border bg-card p-4 text-left transition-[background-color,border-color,scale] hover:border-foreground/30 hover:bg-muted/40 active:scale-[0.96] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+      className="group flex items-center gap-3 rounded-lg border border-border/80 bg-card p-4 text-left transition-[background-color,scale] hover:bg-muted/40 active:scale-[0.96] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
     >
-      <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+      <div className="flex size-10 shrink-0 items-center justify-center rounded-md border border-border/60 bg-muted/70 text-muted-foreground">
         <Icon className="size-4" aria-hidden="true" />
       </div>
       <div className="min-w-0 flex-1">
@@ -1336,7 +1296,7 @@ function ContactCard({ user }: { user: ContactUser }) {
   const slackHandle = displaySlackHandle(user.slackHandle);
 
   return (
-    <Card elevation="flat" className="min-h-32 transition-[border-color,box-shadow] hover:border-foreground/30 hover:shadow-sm">
+    <Card elevation="flat" className="min-h-32 border-border/80">
       <CardHeader className="p-4 pb-0">
         <div className="flex items-start gap-3">
           <UserAvatar

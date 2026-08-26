@@ -783,6 +783,8 @@ describe("declineRequest", () => {
         data: { status: "DECLINED" },
       })
     );
+    expect(notificationMocks.dispatchScheduleAssignmentNotifications)
+      .toHaveBeenCalledWith(assignment.id, "declined");
   });
 
   it("uses SERIALIZABLE isolation", async () => {

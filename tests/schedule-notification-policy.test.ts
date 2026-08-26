@@ -22,6 +22,10 @@ describe("schedule notification policy", () => {
       event: "removed",
       publishedAt: new Date("2026-06-18T10:00:00.000Z"),
     })).toBe(true);
+    expect(shouldNotifyWorkerForScheduleEvent({
+      event: "declined",
+      publishedAt: new Date("2026-06-18T10:00:00.000Z"),
+    })).toBe(true);
   });
 
   it("allows manual gear-prep nudges while suppressing automatic draft gear-up sends", () => {

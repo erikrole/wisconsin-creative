@@ -10,7 +10,15 @@ import type {
   PickerBulkSku,
   TurnaroundRiskInfo,
 } from "@/components/EquipmentPicker";
-import type { UpcomingCommitmentInfo } from "@/components/equipment-picker/use-conflict-check";
+import type { ConflictInfo, UpcomingCommitmentInfo } from "@/components/equipment-picker/use-conflict-check";
+import {
+  availabilityConflictMessage,
+  availabilityRiskBadgeLabel,
+  availabilityRiskMessage,
+  availabilityRiskTitle,
+  upcomingCommitmentLabel,
+  upcomingCommitmentTitle,
+} from "@/lib/availability-copy";
 
 type SelectedEquipmentShelfProps = {
   totalSelected: number;
@@ -19,17 +27,19 @@ type SelectedEquipmentShelfProps = {
   unresolvedSelectedAssetIds: string[];
   selectedBulkItems: BulkSelection[];
   bulkById: Map<string, PickerBulkSku>;
-  conflicts: Map<string, unknown>;
+  conflicts: Map<string, ConflictInfo>;
   upcomingCommitments: Map<string, UpcomingCommitmentInfo>;
   turnaroundRisks: Map<string, TurnaroundRiskInfo[]>;
   bulkTurnaroundRisks: Map<string, BulkTurnaroundRiskInfo[]>;
+  currentStartsAt?: string;
+  currentEndsAt?: string;
   onClearAll: () => void;
   onRemoveAsset: (id: string) => void;
   onRemoveBulk: (bulkSkuId: string) => void;
 };
 
-function riskTitle(risks: Array<{ message: string }> | undefined) {
-  return risks?.map((risk) => risk.message).join(" · ") || "Turnaround risk";
+function riskTitle(risks: Array<{ message: string; severity: "warning" | "critical" }> | undefined) {
+  return availabilityRiskTitle(risks);
 }
 
 export function SelectedEquipmentShelf({
@@ -43,6 +53,8 @@ export function SelectedEquipmentShelf({
   upcomingCommitments,
   turnaroundRisks,
   bulkTurnaroundRisks,
+  currentStartsAt,
+  currentEndsAt,
   onClearAll,
   onRemoveAsset,
   onRemoveBulk,
@@ -67,27 +79,53 @@ export function SelectedEquipmentShelf({
       <div className="flex flex-wrap gap-2 px-3 pb-3">
         {resolvedSelectedAssets.map((asset) => {
           const hasConflict = conflicts.has(asset.id);
-          const hasUpcoming = upcomingCommitments.has(asset.id) && !hasConflict;
-          const hasTurnaround = turnaroundRisks.has(asset.id) && !hasConflict;
+          const upcoming = upcomingCommitments.get(asset.id);
+          const risk = turnaroundRisks.get(asset.id)?.find((item) => item.severity === "critical")
+            ?? turnaroundRisks.get(asset.id)?.[0];
+          const hasUpcoming = Boolean(upcoming) && !hasConflict;
+          const hasTurnaround = Boolean(risk) && !hasConflict;
           const stateLabel = hasConflict
             ? "Conflict"
             : hasUpcoming
-              ? "Next use"
+              ? "Needed next"
               : hasTurnaround
-                ? "Turnaround"
+                ? availabilityRiskBadgeLabel(risk!)
                 : null;
+          const stateTitle = hasConflict
+            ? availabilityConflictMessage(conflicts.get(asset.id)!, { currentStartsAt, currentEndsAt })
+            : upcoming
+            ? `${upcomingCommitmentTitle(upcoming)} · ${upcomingCommitmentLabel(upcoming, currentEndsAt)}`
+            : riskTitle(risk ? [risk] : undefined);
           return (
             <div
               key={asset.id}
-              className="flex min-h-10 max-w-full items-center gap-2 rounded-full border border-border/60 bg-muted/25 py-1 pl-1 pr-1 shadow-xs"
+              className="flex min-h-10 max-w-full flex-wrap items-center gap-2 rounded-full border border-border/60 bg-muted/25 py-1 pl-1 pr-1 shadow-xs"
             >
               <AssetImage src={asset.imageUrl} alt={asset.assetTag} size={28} />
-              <span className="brand-identity max-w-[11rem] truncate text-sm font-medium">{asset.assetTag}</span>
+              <div className="min-w-0 flex-1">
+                <span className="brand-identity max-w-[11rem] truncate text-sm font-medium">{asset.assetTag}</span>
+                {hasConflict && (
+                  <span className="block max-w-[22rem] truncate text-[10px] text-[var(--red-text)]" title={stateTitle}>
+                    {stateTitle}
+                  </span>
+                )}
+                {!hasConflict && upcoming && (
+                  <span className="block max-w-[22rem] truncate text-[10px] text-[var(--blue-text)]" title={stateTitle}>
+                    {upcomingCommitmentLabel(upcoming, currentEndsAt)}
+                  </span>
+                )}
+                {!hasConflict && risk && !upcoming && (
+                  <span className="block max-w-[22rem] truncate text-[10px] text-[var(--orange-text)]" title={stateTitle}>
+                    {availabilityRiskMessage(risk)}
+                  </span>
+                )}
+              </div>
               {stateLabel && (
                 <Badge
-                  variant={hasUpcoming ? "blue" : "orange"}
+                  variant={hasConflict || risk?.severity === "critical" ? "red" : hasUpcoming ? "blue" : "orange"}
                   size="sm"
                   className="hidden shrink-0 sm:inline-flex"
+                  title={stateTitle}
                 >
                   {stateLabel}
                 </Badge>
@@ -128,7 +166,8 @@ export function SelectedEquipmentShelf({
           const sku = bulkById.get(item.bulkSkuId);
           if (!sku) return null;
           const risks = bulkTurnaroundRisks.get(item.bulkSkuId);
-          const hasTurnaround = (risks?.length ?? 0) > 0;
+          const risk = risks?.find((item) => item.severity === "critical") ?? risks?.[0];
+          const hasTurnaround = Boolean(risk);
           return (
             <div
               key={item.bulkSkuId}
@@ -140,8 +179,13 @@ export function SelectedEquipmentShelf({
                 x{item.quantity}
               </span>
               {hasTurnaround && (
-                <Badge variant="orange" size="sm" className="hidden shrink-0 sm:inline-flex" title={riskTitle(risks)}>
-                  Turnaround
+                <Badge
+                  variant={risk?.severity === "critical" ? "red" : "orange"}
+                  size="sm"
+                  className="hidden shrink-0 sm:inline-flex"
+                  title={riskTitle(risks)}
+                >
+                  {availabilityRiskBadgeLabel(risk!)}
                 </Badge>
               )}
               <Button

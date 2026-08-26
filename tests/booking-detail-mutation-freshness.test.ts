@@ -1,11 +1,31 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import {
+  BOOKING_SNAPSHOT_HEADER,
+  parseBookingSnapshotHeader,
+} from "@/lib/booking-concurrency";
 
 function source(relativePath: string) {
   return readFileSync(`${process.cwd()}/${relativePath}`, "utf8");
 }
 
 describe("booking detail mutation freshness contracts", () => {
+  it("uses an application-owned snapshot header while accepting legacy native clients", () => {
+    const current = "2026-08-26T03:33:13.575Z";
+    const customRequest = new Request("https://app.example.com/api/bookings/booking-1", {
+      headers: {
+        [BOOKING_SNAPSHOT_HEADER]: current,
+        "If-Unmodified-Since": "Wed, 26 Aug 2026 03:00:00 GMT",
+      },
+    });
+    const legacyRequest = new Request("https://app.example.com/api/bookings/booking-1", {
+      headers: { "If-Unmodified-Since": "Wed, 26 Aug 2026 03:33:13 GMT" },
+    });
+
+    expect(parseBookingSnapshotHeader(customRequest).toISOString()).toBe(current);
+    expect(parseBookingSnapshotHeader(legacyRequest).toISOString()).toBe("2026-08-26T03:33:13.000Z");
+  });
+
   it("keeps the authoritative booking timestamp after an inline save", () => {
     const actions = source("src/hooks/useBookingActions.ts");
     const page = source("src/app/(app)/bookings/BookingDetailPage.tsx");
@@ -44,5 +64,20 @@ describe("booking detail mutation freshness contracts", () => {
     expect(sheet).toMatch(
       /let updated: BookingDetail \| null = null;[\s\S]*catch \(error\) \{[\s\S]*throw error;[\s\S]*\}\s*if \(updated\) setBooking\(updated\);/,
     );
+  });
+
+  it("keeps Vercel from evaluating web booking snapshots as HTTP preconditions", () => {
+    const webClients = [
+      source("src/hooks/useBookingActions.ts"),
+      source("src/components/BookingDetailsSheet.tsx"),
+      source("src/components/booking-details/EditBookingEventsDialog.tsx"),
+      source("src/components/booking-details/TransferOwnerDialog.tsx"),
+      source("src/components/BookingListPage.tsx"),
+    ];
+
+    for (const client of webClients) {
+      expect(client).toContain("BOOKING_SNAPSHOT_HEADER");
+      expect(client).not.toContain("If-Unmodified-Since");
+    }
   });
 });

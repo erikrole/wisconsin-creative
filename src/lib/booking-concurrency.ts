@@ -1,6 +1,7 @@
 import { HttpError } from "@/lib/http";
 
 const STALE_BOOKING_MESSAGE = "This booking was modified by someone else. Please refresh and try again.";
+export const BOOKING_SNAPSHOT_HEADER = "X-Booking-Updated-At";
 
 function secondPrecision(value: Date | string) {
   const timestamp = new Date(value).getTime();
@@ -9,14 +10,15 @@ function secondPrecision(value: Date | string) {
 }
 
 export function parseBookingSnapshotHeader(req: Request) {
-  const value = req.headers.get("if-unmodified-since");
+  const value = req.headers.get(BOOKING_SNAPSHOT_HEADER)
+    ?? req.headers.get("if-unmodified-since");
   if (!value) {
-    throw new HttpError(428, "Missing If-Unmodified-Since header. Refresh and try again.");
+    throw new HttpError(428, "Missing booking snapshot header. Refresh and try again.");
   }
 
   const parsed = new Date(value);
   if (!Number.isFinite(parsed.getTime())) {
-    throw new HttpError(400, "Invalid If-Unmodified-Since header.");
+    throw new HttpError(400, "Invalid booking snapshot header.");
   }
   return parsed;
 }

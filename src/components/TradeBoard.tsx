@@ -75,6 +75,8 @@ type Trade = {
   shiftAssignment: TradeAssignment;
   postedBy: { id: string; name: string };
   claimedBy: { id: string; name: string } | null;
+  reviewEscalatesAt?: string | null;
+  reviewAutoApprovesAt?: string | null;
   viewerAvailabilityContext?: AvailabilityContext | null;
   claimedByAvailabilityContext?: AvailabilityContext | null;
   viewerCanClaim?: boolean;
@@ -118,6 +120,8 @@ type PickupRequest = {
   hasConflict: boolean;
   conflictNote: string | null;
   createdAt: string;
+  reviewEscalatesAt?: string | null;
+  reviewAutoApprovesAt?: string | null;
   user: { id: string; name: string; primaryArea: string | null; avatarUrl?: string | null };
   shift: OpenWorkShift["shift"];
 };
@@ -186,6 +190,14 @@ const TRADE_OUTCOME_COPY = {
     server: "Could not cancel the trade. The shift stays assigned to the poster.",
     network: "Could not reach the server. The trade was not cancelled.",
   },
+  withdrawClaim: {
+    server: "Could not withdraw the claim. Refresh the Trade Board and try again.",
+    network: "Could not reach the server. The claim was not withdrawn.",
+  },
+  withdrawRequest: {
+    server: "Could not withdraw the request. Refresh the Trade Board and try again.",
+    network: "Could not reach the server. The request was not withdrawn.",
+  },
   claimShift: {
     server: "Could not claim the shift. Refresh the Trade Board and try again.",
     network: "Could not reach the server. The shift was not claimed.",
@@ -244,7 +256,10 @@ function canViewerClaimTrade(trade: Trade, isStaff: boolean) {
 }
 
 function tradeCancelContext(trade: Trade) {
-  const shift = trade.shiftAssignment.shift;
+  return shiftActionContext(trade.shiftAssignment.shift);
+}
+
+function shiftActionContext(shift: Pick<TradeShift, "startsAt" | "endsAt" | "shiftGroup">) {
   const event = shift.shiftGroup.event;
   const titleParts = scheduleEventTitleParts({
     summary: event.summary,
@@ -256,6 +271,11 @@ function tradeCancelContext(trade: Trade) {
     eventLabel: titleParts.detail ? `${titleParts.title} (${titleParts.detail})` : titleParts.title,
     windowLabel: formatShiftWindow(shift),
   };
+}
+
+function reviewDeadlineCopy(at: string | null | undefined) {
+  if (!at) return null;
+  return `Auto-approval check by ${formatDateShort(at)}, ${formatTimeShort(at)}.`;
 }
 
 function TradeSkeleton() {
@@ -472,7 +492,15 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
     setActing(null);
   }, []);
 
-  const handleClaim = useCallback(async (tradeId: string) => {
+  const handleClaim = useCallback(async (trade: Trade) => {
+    const tradeId = trade.id;
+    const { eventLabel, windowLabel } = tradeCancelContext(trade);
+    const ok = await confirm({
+      title: "Claim this shift?",
+      message: `Claim ${eventLabel} on ${windowLabel}? Staff review this before you're on the schedule.`,
+      confirmLabel: "Claim shift",
+    });
+    if (!ok || actingRef.current) return;
     if (!beginAction(tradeId)) return;
     try {
       const res = await fetch(`/api/shift-trades/${tradeId}/claim`, { method: "POST" });
@@ -490,7 +518,7 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
     } finally {
       endAction(tradeId);
     }
-  }, [beginAction, endAction, reloadWork]);
+  }, [beginAction, confirm, endAction, reloadWork]);
 
   const handleCancel = useCallback(async (trade: Trade) => {
     const tradeId = trade.id;
@@ -573,7 +601,74 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
     }
   }, [beginAction, endAction, reloadWork]);
 
+  const handleWithdrawClaim = useCallback(async (trade: Trade) => {
+    const actionId = `withdraw-claim:${trade.id}`;
+    const { eventLabel, windowLabel } = tradeCancelContext(trade);
+    const ok = await confirm({
+      title: "Withdraw claim",
+      message: `Withdraw your claim for ${eventLabel} on ${windowLabel}? The post will return to the Trade Board.`,
+      confirmLabel: "Withdraw claim",
+      variant: "danger",
+    });
+    if (!ok || actingRef.current) return;
+    if (!beginAction(actionId)) return;
+
+    try {
+      const res = await fetch(`/api/shift-trades/${trade.id}/withdraw`, { method: "PATCH" });
+      if (handleAuthRedirect(res)) return;
+      if (res.ok) {
+        toast.success("Claim withdrawn; the trade is back on the board");
+        await reloadWork();
+      } else {
+        const msg = await parseErrorMessage(res, TRADE_OUTCOME_COPY.withdrawClaim.server);
+        toast.error(msg);
+        if (isStaleWorkResponse(res.status)) await reloadWork();
+      }
+    } catch {
+      toast.error(TRADE_OUTCOME_COPY.withdrawClaim.network);
+    } finally {
+      endAction(actionId);
+    }
+  }, [beginAction, confirm, endAction, reloadWork]);
+
+  const handleWithdrawRequest = useCallback(async (request: PickupRequest) => {
+    const actionId = `withdraw-request:${request.id}`;
+    const { eventLabel, windowLabel } = shiftActionContext(request.shift);
+    const ok = await confirm({
+      title: "Withdraw request",
+      message: `Withdraw your request for ${eventLabel} on ${windowLabel}? You will no longer be considered for this shift.`,
+      confirmLabel: "Withdraw request",
+      variant: "danger",
+    });
+    if (!ok || actingRef.current) return;
+    if (!beginAction(actionId)) return;
+
+    try {
+      const res = await fetch(`/api/shift-assignments/${request.id}/withdraw`, { method: "PATCH" });
+      if (handleAuthRedirect(res)) return;
+      if (res.ok) {
+        toast.success("Request withdrawn");
+        await reloadWork();
+      } else {
+        const msg = await parseErrorMessage(res, TRADE_OUTCOME_COPY.withdrawRequest.server);
+        toast.error(msg);
+        if (isStaleWorkResponse(res.status)) await reloadWork();
+      }
+    } catch {
+      toast.error(TRADE_OUTCOME_COPY.withdrawRequest.network);
+    } finally {
+      endAction(actionId);
+    }
+  }, [beginAction, confirm, endAction, reloadWork]);
+
   const handlePickup = useCallback(async (shift: OpenWorkShift) => {
+    const { eventLabel, windowLabel } = shiftActionContext(shift.shift);
+    const ok = await confirm({
+      title: "Claim this open shift?",
+      message: `Claim ${eventLabel} on ${windowLabel}? Staff review this before you're on the schedule.`,
+      confirmLabel: "Claim shift",
+    });
+    if (!ok || actingRef.current) return;
     const actionId = `pickup:${shift.id}`;
     if (!beginAction(actionId)) return;
     try {
@@ -596,7 +691,7 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
     } finally {
       endAction(actionId);
     }
-  }, [beginAction, endAction, reloadWork]);
+  }, [beginAction, confirm, endAction, reloadWork]);
 
   const hasFilters = !!(areaFilter || statusFilter || myTradesOnly);
   const activeFilters: OperationalActiveFilter[] = [
@@ -805,6 +900,7 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
                   const areaLabel = AREA_LABELS[shift.area] ?? shift.area;
                   const isApproving = acting === `approve:${request.id}`;
                   const isDeclining = acting === `decline:${request.id}`;
+                  const deadline = reviewDeadlineCopy(request.reviewAutoApprovesAt);
 
                   return (
                     <article key={`review-request-${request.id}`} className="px-4 py-3 transition-colors hover:bg-muted/25">
@@ -836,6 +932,13 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
                             <p className="flex items-start gap-1.5 rounded-md bg-muted/50 px-2.5 py-2 text-xs leading-relaxed text-muted-foreground">
                               <AlertTriangleIcon className="mt-0.5 size-3.5 shrink-0" />
                               <span>{request.conflictNote}</span>
+                            </p>
+                          )}
+
+                          {deadline && (
+                            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <Clock3Icon className="size-3.5 shrink-0" />
+                              <span>{deadline}</span>
                             </p>
                           )}
 
@@ -872,6 +975,7 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
                   const areaLabel = AREA_LABELS[shift.area] ?? shift.area;
                   const isApproving = acting === `approve:${trade.id}`;
                   const isDeclining = acting === `decline:${trade.id}`;
+                  const deadline = reviewDeadlineCopy(trade.reviewAutoApprovesAt);
 
                   return (
                     <article key={`review-trade-${trade.id}`} className="px-4 py-3 transition-colors hover:bg-muted/25">
@@ -905,6 +1009,13 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
                             </p>
                           )}
                           <AvailabilityContextNote context={trade.claimedByAvailabilityContext} />
+
+                          {deadline && (
+                            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <Clock3Icon className="size-3.5 shrink-0" />
+                              <span>{deadline}</span>
+                            </p>
+                          )}
 
                           <div className="flex flex-wrap gap-2">
                             <Button className="h-10"
@@ -1090,7 +1201,7 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
                         <div className="flex flex-wrap items-center gap-2 pt-1">
                           <Button
                             className="h-10 gap-1.5"
-                            onClick={() => void handleClaim(trade.id)}
+                            onClick={() => void handleClaim(trade)}
                             disabled={acting !== null}
                           >
                             <CheckIcon className="size-3.5" />
@@ -1214,7 +1325,7 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
             {(myPendingRequests.length + myPendingClaims.length) > 0 && (
               <WorkSection
                 title="Waiting on Staff"
-                description="You've claimed these. You are not on the schedule until staff approve them."
+                description="These requests and claims are waiting for staff. You are not on the schedule until approval."
                 count={myPendingRequests.length + myPendingClaims.length}
               >
                 {myPendingRequests.map((request) => {
@@ -1227,6 +1338,8 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
                     isHome: event.isHome ?? null,
                   });
                   const areaLabel = AREA_LABELS[shift.area] ?? shift.area;
+                  const isBusy = acting === `withdraw-request:${request.id}`;
+                  const deadline = reviewDeadlineCopy(request.reviewAutoApprovesAt);
 
                   return (
                     <article key={`mine-request-${request.id}`} className="px-4 py-3">
@@ -1254,6 +1367,22 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
                               <span className="truncate">{areaLabel}</span>
                             </span>
                           </div>
+                          {deadline && (
+                            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <Clock3Icon className="size-3.5 shrink-0" />
+                              <span>{deadline}</span>
+                            </p>
+                          )}
+                          <div className="flex flex-wrap gap-2 pt-1">
+                            <Button
+                              variant="outline"
+                              className="h-10"
+                              onClick={() => void handleWithdrawRequest(request)}
+                              disabled={acting !== null}
+                            >
+                              {isBusy ? "Withdrawing…" : "Withdraw request"}
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </article>
@@ -1270,6 +1399,8 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
                     isHome: event.isHome ?? null,
                   });
                   const areaLabel = AREA_LABELS[shift.area] ?? shift.area;
+                  const isBusy = acting === `withdraw-claim:${trade.id}`;
+                  const deadline = reviewDeadlineCopy(trade.reviewAutoApprovesAt);
 
                   return (
                     <article key={`mine-claim-${trade.id}`} className="px-4 py-3">
@@ -1295,9 +1426,25 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
                               <span className="truncate">{areaLabel}</span>
                             </span>
                           </div>
+                          {deadline && (
+                            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <Clock3Icon className="size-3.5 shrink-0" />
+                              <span>{deadline}</span>
+                            </p>
+                          )}
                           {trade.viewerClaimReason && (
                             <p className="text-xs leading-relaxed text-muted-foreground">{trade.viewerClaimReason}</p>
                           )}
+                          <div className="flex flex-wrap gap-2 pt-1">
+                            <Button
+                              variant="outline"
+                              className="h-10"
+                              onClick={() => void handleWithdrawClaim(trade)}
+                              disabled={acting !== null}
+                            >
+                              {isBusy ? "Withdrawing…" : "Withdraw claim"}
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </article>

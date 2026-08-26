@@ -99,10 +99,7 @@ struct KioskShellView: View {
             // One keyboard popup for the whole kiosk. Every text field already
             // reports focus through `scanner.setEditing`, so the shell can own
             // this instead of each field mounting its own copy.
-            KioskKeyboardHint(
-                isFieldFocused: store.scanner.isEditing,
-                isScannerConnected: store.scanner.hardwareConnected
-            )
+            KioskKeyboardHint(isFieldFocused: store.scanner.isEditing)
 
             // Not during standby: see `KioskStore.isStandbyVisible`.
             if store.isActive, !store.isResuming, store.screen != .activation, !store.isStandbyVisible {

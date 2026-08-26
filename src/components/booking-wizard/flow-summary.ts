@@ -24,6 +24,9 @@ export function getTurnaroundWarningTotal(counts: AvailabilityWarningCounts) {
 }
 
 export function getStep2PrimaryActionLabel(input: Step2PrimaryLabelInput) {
+  if (input.conflictCount > 0) {
+    return input.conflictCount === 1 ? "Resolve conflict" : "Resolve conflicts";
+  }
   if (input.itemCount > 0) {
     const itemLabel = `${input.itemCount} item${input.itemCount !== 1 ? "s" : ""}`;
     if (getAvailabilityWarningTotal(input) > 0) return `Review with warnings (${itemLabel})`;
@@ -121,9 +124,9 @@ export function buildAvailabilityReview(counts: AvailabilityWarningCounts) {
   if (counts.conflictCount > 0) {
     return {
       tone: "conflict" as const,
-      title: "Availability needs review",
+      title: "Resolve availability conflicts",
       description:
-        "Submit will re-check these items. If a hard conflict still overlaps, the wizard returns to Equipment with affected items removed.",
+        "Remove the conflicted items or change the booking dates before reviewing. The server will recheck the final selection when you reserve.",
       total,
       advisoryCount,
       turnaroundCount,
@@ -134,7 +137,7 @@ export function buildAvailabilityReview(counts: AvailabilityWarningCounts) {
     tone: "advisory" as const,
     title: "Availability warnings noted",
     description:
-      "Next-use and turnaround warnings do not block creation, but pickup and return timing should be confirmed before handoff.",
+      "Upcoming needs and turnaround warnings do not block creation, but pickup and return timing should be confirmed before handoff.",
     total,
     advisoryCount,
     turnaroundCount,

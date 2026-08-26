@@ -78,6 +78,7 @@ const EMPTY_PICKER_SELECTION_STATE: EquipmentPickerSelectionState = {
   turnaroundRiskCount: 0,
   bulkTurnaroundRiskCount: 0,
   checkingAvailability: false,
+  availabilityError: null,
 };
 
 /* ───── Form reducer ───── */
@@ -321,6 +322,18 @@ export function BookingWizard() {
     } else if (step === 2) {
       if (itemCount === 0 && pickerSelectionState.unresolvedAssetCount > 0) {
         setCreateError("Remove unavailable selected items or pick replacement equipment before review");
+        return;
+      }
+      if (pickerSelectionState.conflictCount > 0) {
+        setCreateError("Remove conflicted items or change the booking dates before review");
+        return;
+      }
+      if (pickerSelectionState.checkingAvailability) {
+        setCreateError("Wait for the availability check to finish before review");
+        return;
+      }
+      if (pickerSelectionState.availabilityError) {
+        setCreateError("Availability could not be verified. Retry the check before review");
         return;
       }
       const error = validateStep2();

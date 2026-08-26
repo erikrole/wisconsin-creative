@@ -9,14 +9,11 @@ struct KioskIdleView: View {
     @State private var isLoading = false
     @State private var lastLoadedAt: Date?
     @State private var loadFailedAt: Date?
-    @State private var selectedSummary: KioskSummarySelection = .all
+    @State private var selectedSummary: KioskSummarySelection = .checkouts
     @State private var selectedEvent: KioskEvent?
     @State private var selectedCheckout: KioskCheckoutDrawerContext?
     @State private var identityScanFeedback: IdentityScanFeedback?
     @State private var isIdentifyingScan = false
-    #if DEBUG
-    @State private var debugForcesSleepMode = false
-    #endif
 
     /// The idle screen is a monitoring surface, not a live custody mutation
     /// flow. Five minutes lets Neon scale down between unattended checks while
@@ -66,15 +63,6 @@ struct KioskIdleView: View {
                     )
                     .transition(.opacity)
                 }
-
-                #if DEBUG
-                // Bottom-trailing, not top: the shell mounts the scanner
-                // status pill at topTrailing, and this 0.45-opacity circle sat
-                // directly underneath it as a ghost behind the pill.
-                debugSleepModeButton
-                    .padding(24)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                #endif
 
                 // Only capture card scans when the roster is actually the
                 // active surface. While a detail sheet is open or the kiosk is
@@ -142,9 +130,6 @@ struct KioskIdleView: View {
     }
 
     private var shouldShowSleepMode: Bool {
-        #if DEBUG
-        if debugForcesSleepMode { return true }
-        #endif
         guard dashboard?.standby?.sleepMode == true else { return false }
         guard sleepModeReason != "active_window" else { return false }
         if let sleepDismissedUntil = store.sleepDismissedUntil, sleepDismissedUntil > Date() {
@@ -154,9 +139,6 @@ struct KioskIdleView: View {
     }
 
     private var sleepModeReason: String {
-        #if DEBUG
-        if debugForcesSleepMode { return "debug_night_mode" }
-        #endif
         guard let dashboard, let standby = dashboard.standby else { return "idle_window" }
         if standby.reason == "night_hours", !Self.isLocalNightHours(Date()) {
             return isLocallyIdleWindow(dashboard, standby: standby) ? "idle_window" : "active_window"
@@ -195,30 +177,6 @@ struct KioskIdleView: View {
         if isStale { return Color.statusText(.orange) }
         return Color.statusText(.green)
     }
-
-    #if DEBUG
-    private var debugSleepModeButton: some View {
-        Button {
-            debugForcesSleepMode.toggle()
-            if debugForcesSleepMode {
-                store.clearSleepModeDismissal()
-            }
-        } label: {
-            Image(systemName: debugForcesSleepMode ? "moon.zzz.fill" : "moon.zzz")
-                .font(.callout.weight(.bold))
-                .foregroundStyle(debugForcesSleepMode ? Color.black : Color.white)
-                .frame(width: 40, height: 40)
-                .background(debugForcesSleepMode ? Color.white : Color.white.opacity(0.12), in: Circle())
-                .overlay(
-                    Circle()
-                        .stroke(Color.white.opacity(debugForcesSleepMode ? 0.9 : 0.2), lineWidth: 1)
-                )
-        }
-        .buttonStyle(.plain)
-        .opacity(debugForcesSleepMode ? 1 : 0.45)
-        .accessibilityLabel(debugForcesSleepMode ? "Disable debug night mode" : "Enable debug night mode")
-    }
-    #endif
 
     private func dismissSleepMode() {
         store.deferSleepMode(for: sleepWakeDuration)
@@ -286,33 +244,45 @@ struct KioskIdleView: View {
 
             // Stats row
             if let stats = dashboard?.stats {
-                HStack(spacing: 16) {
-                    StatTile(
-                        value: stats.itemsOut,
-                        label: "Items Out",
-                        accent: .white,
-                        isSelected: selectedSummary == .itemsOut,
-                        reduceMotion: reduceMotion
-                    ) { toggleSummary(.itemsOut) }
-                    StatTile(
-                        value: stats.checkouts,
-                        label: "Checkouts",
-                        accent: .white,
-                        isSelected: selectedSummary == .checkouts,
-                        reduceMotion: reduceMotion
-                    ) { toggleSummary(.checkouts) }
-                    StatTile(
-                        value: stats.overdue,
-                        label: "Overdue",
-                        accent: stats.overdue > 0 ? Color.statusText(.red) : .white,
-                        isSelected: selectedSummary == .overdue,
-                        reduceMotion: reduceMotion
-                    ) { toggleSummary(.overdue) }
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "line.3.horizontal.decrease.circle")
+                            .font(.callout.weight(.semibold))
+                        Text("Tap a count to filter the list")
+                    }
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(KioskText.tertiary)
+                    .accessibilityHidden(true)
+
+                    HStack(spacing: 16) {
+                        StatTile(
+                            value: stats.checkouts,
+                            label: "Checkouts",
+                            accent: .white,
+                            isSelected: selectedSummary == .checkouts,
+                            selectedAccessibilityHint: "Showing all active checkouts",
+                            reduceMotion: reduceMotion
+                        ) { toggleSummary(.checkouts) }
+                        StatTile(
+                            value: stats.itemsOut,
+                            label: "Items Out",
+                            accent: .white,
+                            isSelected: selectedSummary == .itemsOut,
+                            reduceMotion: reduceMotion
+                        ) { toggleSummary(.itemsOut) }
+                        StatTile(
+                            value: stats.overdue,
+                            label: "Overdue",
+                            accent: stats.overdue > 0 ? Color.statusText(.red) : .white,
+                            isSelected: selectedSummary == .overdue,
+                            reduceMotion: reduceMotion
+                        ) { toggleSummary(.overdue) }
+                    }
                 }
             } else {
                 HStack(spacing: 16) {
-                    StatTilePlaceholder(label: "Items Out")
                     StatTilePlaceholder(label: "Checkouts")
+                    StatTilePlaceholder(label: "Items Out")
                     StatTilePlaceholder(label: "Overdue")
                 }
             }
@@ -328,7 +298,7 @@ struct KioskIdleView: View {
 
             // Quiet-day state: without it the left panel is a black void
             // below the stat tiles whenever nothing is out and no events run.
-            if dashboard != nil, dueTodayCheckouts.isEmpty, selectedSummary == .all {
+            if let dashboard, dashboard.checkouts.isEmpty, selectedSummary == .checkouts {
                 Spacer()
                 VStack(spacing: 14) {
                     ZStack {
@@ -570,24 +540,29 @@ struct KioskIdleView: View {
     }
 
     private func toggleSummary(_ summary: KioskSummarySelection) {
-        selectedSummary = selectedSummary == summary ? .all : summary
+        if summary == .checkouts {
+            selectedSummary = .checkouts
+        } else {
+            selectedSummary = selectedSummary == summary ? .checkouts : summary
+        }
         store.resetInactivity()
+    }
+
+    /// Custody urgency must not depend on response or fixture ordering. Keep
+    /// every overdue checkout ahead of on-time work, then walk forward through
+    /// return times. Title is only a stable tie-breaker for equal timestamps.
+    private func orderedCheckouts(_ checkouts: [KioskActiveCheckout]) -> [KioskActiveCheckout] {
+        checkouts.sorted { lhs, rhs in
+            if lhs.isOverdue != rhs.isOverdue { return lhs.isOverdue }
+            if lhs.endsAt != rhs.endsAt { return lhs.endsAt < rhs.endsAt }
+            return lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
+        }
     }
 
     @ViewBuilder
     private var dashboardDetailPanel: some View {
         if let dashboard {
             switch selectedSummary {
-            case .all:
-                KioskDashboardList(title: "Due Today", emptyMessage: "Nothing due today.", isEmpty: dueTodayCheckouts.isEmpty, onClose: nil) {
-                    ForEach(dueTodayCheckouts) { checkout in
-                        CheckoutRow(
-                            checkout: checkout,
-                            onTap: { openCheckout(checkout) },
-                            onReturn: { startReturn(row: checkout) }
-                        )
-                    }
-                }
             case .itemsOut:
                 let itemGroups = ActiveItemGroup.groups(from: dashboard.activeItems)
                 KioskDashboardList(title: "Items Out", emptyMessage: "No items are out.", isEmpty: dashboard.activeItems.isEmpty, onClose: { toggleSummary(.itemsOut) }) {
@@ -596,8 +571,9 @@ struct KioskIdleView: View {
                     }
                 }
             case .checkouts:
-                KioskDashboardList(title: "Active Checkouts", emptyMessage: "No active checkouts.", isEmpty: dashboard.checkouts.isEmpty, onClose: { toggleSummary(.checkouts) }) {
-                    ForEach(dashboard.checkouts) { checkout in
+                let checkouts = orderedCheckouts(dashboard.checkouts)
+                KioskDashboardList(title: "Active Checkouts", emptyMessage: "No active checkouts.", isEmpty: checkouts.isEmpty, onClose: nil) {
+                    ForEach(checkouts) { checkout in
                         CheckoutRow(
                             checkout: checkout,
                             onTap: { openCheckout(checkout) },
@@ -606,7 +582,7 @@ struct KioskIdleView: View {
                     }
                 }
             case .overdue:
-                let overdueCheckouts = dashboard.checkouts.filter(\.isOverdue)
+                let overdueCheckouts = orderedCheckouts(dashboard.checkouts.filter(\.isOverdue))
                 KioskDashboardList(title: "Overdue", emptyMessage: "No overdue checkouts.", isEmpty: overdueCheckouts.isEmpty, onClose: { toggleSummary(.overdue) }) {
                     ForEach(overdueCheckouts) { checkout in
                         CheckoutRow(
@@ -617,20 +593,6 @@ struct KioskIdleView: View {
                     }
                 }
             }
-        }
-    }
-
-    /// The dashboard's resting list: what has to come back by the end of today.
-    ///
-    /// Overdue rows are included deliberately. They are past due -- which is
-    /// "today or earlier" -- and hiding them would let the kiosk show a red
-    /// OVERDUE count above a list that does not contain the overdue gear. A
-    /// checkout due later in the week is real but is not today's work, and it
-    /// is still one tap away via the Checkouts tile.
-    private var dueTodayCheckouts: [KioskActiveCheckout] {
-        let calendar = Calendar.current
-        return (dashboard?.checkouts ?? []).filter { checkout in
-            checkout.isOverdue || calendar.isDateInToday(checkout.endsAt)
         }
     }
 
@@ -917,11 +879,9 @@ private enum IdentityScanFeedback: Equatable {
     }
 }
 
-/// Which slice of live custody the idle list is showing. `all` is the resting
-/// state: the idle screen leads with what is actually out, and the stat tiles
-/// filter that list rather than opening and closing a drawer over dead space.
+/// Which slice of live custody the idle list is showing. `checkouts` is the
+/// resting state; the other stat tiles temporarily narrow that complete list.
 private enum KioskSummarySelection {
-    case all
     case itemsOut
     case checkouts
     case overdue
@@ -949,6 +909,7 @@ private struct StatTile: View {
     let label: String
     let accent: Color
     let isSelected: Bool
+    var selectedAccessibilityHint = "Selected. Tap to show all active checkouts"
     let reduceMotion: Bool
     let action: () -> Void
 
@@ -957,7 +918,7 @@ private struct StatTile: View {
             VStack(spacing: 6) {
                 Text("\(value)")
                     .font(.system(size: 44, weight: .bold, design: .rounded))
-                    .foregroundStyle(isSelected ? Color.kioskRed : accent)
+                    .foregroundStyle(accent)
                     .contentTransition(.numericText())
                     .animation(reduceMotion ? nil : .easeInOut(duration: 0.4), value: value)
                     .monospacedDigit()
@@ -974,22 +935,22 @@ private struct StatTile: View {
             .overlay(alignment: .topTrailing) {
                 Image(systemName: isSelected ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
                     .font(.caption)
-                    .foregroundStyle(isSelected ? Color.kioskRed : KioskText.muted)
+                    .foregroundStyle(isSelected ? KioskText.primary : KioskText.muted)
                     .padding(10)
                     .accessibilityHidden(true)
             }
-            // Selection reads brand red — this gives red a real job on the
-            // idle screen instead of another white-opacity rung.
+            // Selection uses neutral contrast. Red remains reserved for
+            // overdue counts, actions, and other genuinely urgent states.
             .kioskCard(
                 isSelected ? KioskSurface.cardSelected : KioskSurface.cardRaised,
                 radius: KioskRadius.xl,
-                stroke: isSelected ? Color.kioskRed : KioskStroke.standard,
+                stroke: isSelected ? KioskStroke.selected : KioskStroke.standard,
                 lineWidth: isSelected ? 2 : 1
             )
             .overlay(alignment: .bottom) {
                 if isSelected {
                     Capsule()
-                        .fill(Color.kioskRed)
+                        .fill(KioskText.primary)
                         .frame(width: 34, height: 3)
                         .padding(.bottom, 8)
                 }
@@ -998,7 +959,7 @@ private struct StatTile: View {
         .buttonStyle(KioskPressStyle())
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(value) \(label.lowercased())")
-        .accessibilityHint(isSelected ? "Selected. Tap to clear this filter" : "Tap to filter the list below")
+        .accessibilityHint(isSelected ? selectedAccessibilityHint : "Tap to filter the list below")
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 }
@@ -1253,9 +1214,9 @@ private struct CheckoutRow: View {
     // This row was previously a single tap that opened the manage sheet, on the
     // reasoning that a Return button beside a chevron gave the row two
     // competing destinations. The competition was real, but the fix removed the
-    // wrong half: "Due Today" is the idle screen's resting list, its entire job
-    // is naming gear that has to come back, and handing that gear back was
-    // three steps away behind an unlabelled chevron and a sheet load.
+    // wrong half: the idle screen's resting list is naming gear that is still
+    // out, and handing that gear back was three steps away behind an unlabelled
+    // chevron and a sheet load.
     //
     // The chevron is what goes. What is left is a named body action and a named
     // Return — the same shape the student hub already uses for the same
@@ -1282,14 +1243,14 @@ private struct CheckoutRow: View {
                             .foregroundStyle(KioskText.primary)
                             .lineLimit(1)
                             .minimumScaleFactor(0.85)
-                        Text(itemSummary)
+                        Text(holderSummary)
                             .font(.caption)
                             .foregroundStyle(KioskText.secondary)
                             .lineLimit(1)
                             .minimumScaleFactor(0.85)
                     }
                     Spacer(minLength: 6)
-                    Text(checkout.endsAt.kioskDueStamp())
+                    Text(checkout.endsAt.kioskDashboardDueStamp(isOverdue: checkout.isOverdue))
                         .font(KioskType.micro)
                         .foregroundStyle(tone)
                         .padding(.horizontal, 8)
@@ -1345,18 +1306,16 @@ private struct CheckoutRow: View {
             .foregroundStyle(KioskText.primary)
     }
 
-    private var itemSummary: String {
-        let names = checkout.items.prefix(2).map(\.name)
-        let head = names.joined(separator: ", ")
-        let extra = checkout.itemCount - names.count
-        if extra > 0, !head.isEmpty {
-            return "\(head) · +\(extra) more"
-        }
-        return head
+    private var itemCountSummary: String {
+        "\(checkout.itemCount) \(checkout.itemCount == 1 ? "item" : "items")"
+    }
+
+    private var holderSummary: String {
+        "\(checkout.requesterName) · \(itemCountSummary)"
     }
 
     private var accessibilitySummary: String {
-        let prefix = checkout.isOverdue ? "Overdue: " : ""
-        return "\(prefix)\(checkout.title), \(itemSummary)"
+        let dueSummary = checkout.endsAt.kioskDashboardDueStamp(isOverdue: checkout.isOverdue)
+        return "\(checkout.title), held by \(checkout.requesterName), \(itemCountSummary), \(dueSummary)"
     }
 }

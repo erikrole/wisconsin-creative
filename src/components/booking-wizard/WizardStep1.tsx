@@ -24,6 +24,7 @@ import { formatChipTime, formatDateTime } from "@/lib/format";
 import { formatCalendarEventDateRange } from "@/lib/calendar-event-dates";
 import { cn } from "@/lib/utils";
 import { MAX_LINKED_EVENTS_PER_BOOKING } from "@/lib/request-limits";
+import { minimumBookingEndDate } from "@/lib/quarter-hour";
 import { VENUE_TONES, venueBadgeVariant, venueToneFromIsHome } from "@/lib/venue-tone";
 import {
   toLocalDateTimeValue,
@@ -129,6 +130,8 @@ export function WizardStep1({
   myShiftForEvent,
   toggleEvent,
 }: Props) {
+  const startsAt = form.startsAt ? new Date(form.startsAt) : new Date();
+  const minimumEndDate = minimumBookingEndDate(startsAt);
   const selectedEventIds = new Set(form.selectedEvents.map((e) => e.id));
   const atCap = form.selectedEvents.length >= MAX_LINKED_EVENTS_PER_BOOKING;
   const contextBadgeLabel = form.tieToEvent
@@ -542,6 +545,7 @@ export function WizardStep1({
                 id="booking-ends-at"
                 value={form.endsAt ? new Date(form.endsAt) : undefined}
                 onChange={(d) => dispatch({ type: "SET_ENDS_AT", value: toLocalDateTimeValue(d) })}
+                minDate={minimumEndDate}
                 placeholder="End date & time"
               />
             </Field>

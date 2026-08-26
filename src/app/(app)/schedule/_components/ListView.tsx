@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect, useLayoutEffect } from "react";
 import Link from "next/link";
-import { ArchiveIcon, CalendarDaysIcon, ChevronDownIcon, ChevronRightIcon, EyeOffIcon, UserIcon, UsersRoundIcon } from "lucide-react";
+import { ArchiveIcon, CalendarDaysIcon, ChevronDownIcon, ChevronRightIcon, EyeOffIcon, UserIcon, UsersRoundIcon, XIcon } from "lucide-react";
 import { toast } from "sonner";
 import { SkeletonTable } from "@/components/Skeleton";
 import EmptyState from "@/components/EmptyState";
@@ -20,6 +20,7 @@ import {
   DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 import { OperationalRowActions } from "@/components/OperationalRowActions";
+import { useConfirm } from "@/components/ConfirmDialog";
 import {
   Dialog,
   DialogContent,
@@ -260,14 +261,18 @@ function ShiftRowList({
   entry,
   currentUserId,
   postingTradeId,
+  cancelingTradeId,
   onPostTrade,
+  onCancelTrade,
   onSelectGroup,
   compact = false,
 }: {
   entry: CalendarEntry;
   currentUserId: string;
   postingTradeId: string | null;
+  cancelingTradeId: string | null;
   onPostTrade?: (assignmentId: string) => void;
+  onCancelTrade?: (tradeId: string) => void;
   onSelectGroup: () => void;
   compact?: boolean;
 }) {
@@ -289,6 +294,16 @@ function ShiftRowList({
         const user = activeAssignment?.user ?? null;
         const myAssignment = shift.assignments.find(
           (assignment) => assignment.user.id === currentUserId && ACTIVE_STATUSES.includes(assignment.status),
+        );
+        const activeTrade = myAssignment?.activeTrade ?? null;
+        const effectiveStart = myAssignment?.callStartsAt ?? shift.callStartsAt ?? shift.startsAt;
+        const canPostTrade = Boolean(
+          onPostTrade
+          && myAssignment
+          && !activeTrade
+          && !entry.archivedAt
+          && Number.isFinite(new Date(effectiveStart).getTime())
+          && new Date(effectiveStart).getTime() > Date.now(),
         );
         const areaLabel = AREA_LABELS[shift.area] ?? shift.area;
         const workerType = workerKindForShift(shift);
@@ -369,7 +384,7 @@ function ShiftRowList({
 
             <div className={cn("flex min-h-10", compact ? "justify-start" : "shrink-0 justify-end")}>
               <div className={cn("flex min-w-0 items-center gap-1.5", compact && "flex-wrap")}>
-                {onPostTrade && myAssignment && (
+                {canPostTrade && myAssignment && (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -377,11 +392,33 @@ function ShiftRowList({
                     disabled={postingTradeId === myAssignment.id}
                     onClick={(event) => {
                       event.stopPropagation();
-                      onPostTrade(myAssignment.id);
+                      onPostTrade?.(myAssignment.id);
                     }}
                   >
                     {postingTradeId === myAssignment.id ? "Posting..." : "Trade"}
                   </Button>
+                )}
+                {activeTrade && (
+                  <>
+                    <Badge
+                      variant={activeTrade.status === "CLAIMED" ? "orange" : "green"}
+                      size="sm"
+                    >
+                      {activeTrade.status === "CLAIMED" ? "Trade claimed" : "On Trade Board"}
+                    </Badge>
+                    {onCancelTrade && (
+                      <OperationalRowActions label={`Trade Board actions for ${areaLabel} shift`}>
+                        <DropdownMenuItem
+                          variant="destructive"
+                          disabled={Boolean(cancelingTradeId)}
+                          onSelect={() => onCancelTrade(activeTrade.id)}
+                        >
+                          <XIcon className="size-4" />
+                          {cancelingTradeId === activeTrade.id ? "Removing..." : "Remove post"}
+                        </DropdownMenuItem>
+                      </OperationalRowActions>
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -536,6 +573,7 @@ export function ListView({
   onQuickManageCrew,
   settingUpEventIds,
 }: ListViewProps) {
+  const confirm = useConfirm();
   const [expandedRowIds, setExpandedRowIds] = useState<Set<string>>(() =>
     expandedRowId ? new Set([expandedRowId]) : new Set(),
   );
@@ -849,6 +887,8 @@ export function ListView({
 
   const [postingTradeId, setPostingTradeId] = useState<string | null>(null);
   const postingTradeRef = useRef<string | null>(null);
+  const [cancelingTradeId, setCancelingTradeId] = useState<string | null>(null);
+  const cancelingTradeRef = useRef<string | null>(null);
   const [tradeDialogAssignmentId, setTradeDialogAssignmentId] = useState<string | null>(null);
   const [tradeNotes, setTradeNotes] = useState("");
   const [tradeError, setTradeError] = useState<string | null>(null);
@@ -892,6 +932,7 @@ export function ListView({
         const msg = await parseErrorMessage(res, "Failed to post trade");
         setTradeError(msg);
         toast.error(msg);
+        if (res.status === 404 || res.status === 409 || res.status === 410) loadData();
       }
     } catch {
       const msg = "Network error - could not post trade";
@@ -902,6 +943,37 @@ export function ListView({
       setPostingTradeId(null);
     }
   }, [loadData]);
+
+  const handleCancelTrade = useCallback(async (tradeId: string) => {
+    if (cancelingTradeRef.current) return;
+    const ok = await confirm({
+      title: "Remove trade post",
+      message: "Remove this post from the Trade Board? The shift stays assigned to you.",
+      confirmLabel: "Remove post",
+      variant: "danger",
+    });
+    if (!ok || cancelingTradeRef.current) return;
+
+    cancelingTradeRef.current = tradeId;
+    setCancelingTradeId(tradeId);
+    try {
+      const res = await fetch(`/api/shift-trades/${tradeId}/cancel`, { method: "PATCH" });
+      if (handleAuthRedirect(res)) return;
+      if (res.ok) {
+        toast.success("Trade post removed");
+        loadData();
+      } else {
+        const msg = await parseErrorMessage(res, "Could not remove the trade post");
+        toast.error(msg);
+        if (res.status === 404 || res.status === 409 || res.status === 410) loadData();
+      }
+    } catch {
+      toast.error("Network error — the trade post was not removed");
+    } finally {
+      cancelingTradeRef.current = null;
+      setCancelingTradeId(null);
+    }
+  }, [confirm, loadData]);
 
   return (
     <>
@@ -1040,7 +1112,9 @@ export function ListView({
                             currentUserId={currentUserId}
                             showShiftStatus={myShiftsOnly}
                             postingTradeId={postingTradeId}
+                            cancelingTradeId={cancelingTradeId}
                             onPostTrade={isStaff ? undefined : openTradeDialog}
+                            onCancelTrade={isStaff ? undefined : handleCancelTrade}
                             onSetupCrew={isStaff ? onSetupCrew : undefined}
                             onQuickManageCrew={isStaff ? onQuickManageCrew : undefined}
                             onPublished={loadData}
@@ -1202,7 +1276,9 @@ export function ListView({
                           entry={entry}
                           currentUserId={currentUserId}
                           postingTradeId={postingTradeId}
+                          cancelingTradeId={cancelingTradeId}
                           onPostTrade={isStaff ? undefined : openTradeDialog}
+                          onCancelTrade={isStaff ? undefined : handleCancelTrade}
                           onSelectGroup={() => onSelectGroup(entry.shiftGroupId)}
                           compact
                         />
@@ -1231,7 +1307,7 @@ export function ListView({
             <div className="flex flex-col gap-1">
               <DialogTitle>Post shift for trade</DialogTitle>
               <DialogDescription>
-                Add a short note so teammates understand the swap.
+                Eligible teammates can claim it. You stay scheduled until staff approve a claim.
               </DialogDescription>
             </div>
           </DialogHeader>
@@ -1310,7 +1386,9 @@ function EventRows({
   currentUserId,
   showShiftStatus,
   postingTradeId,
+  cancelingTradeId,
   onPostTrade,
+  onCancelTrade,
   onSetupCrew,
   onQuickManageCrew,
   onPublished,
@@ -1329,7 +1407,9 @@ function EventRows({
   currentUserId: string;
   showShiftStatus: boolean;
   postingTradeId: string | null;
+  cancelingTradeId: string | null;
   onPostTrade?: (assignmentId: string) => void;
+  onCancelTrade?: (tradeId: string) => void;
   onSetupCrew?: (eventId: string, templateSide: CrewTemplateSide) => void;
   onQuickManageCrew?: (eventId: string) => void;
   onPublished: () => void;
@@ -1441,7 +1521,9 @@ function EventRows({
                   entry={entry}
                   currentUserId={currentUserId}
                   postingTradeId={postingTradeId}
+                  cancelingTradeId={cancelingTradeId}
                   onPostTrade={onPostTrade}
+                  onCancelTrade={onCancelTrade}
                   onSelectGroup={onSelectGroup}
                 />
               )}

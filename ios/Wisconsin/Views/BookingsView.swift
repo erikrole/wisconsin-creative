@@ -33,7 +33,8 @@ final class BookingsViewModel {
     var pageError: String?
     var searchText = ""
     var hasMore = true
-    /// Native list scope. Students default to Mine; staff/admin default to All.
+    /// Native list scope. Students, staff, and admins default to All;
+    /// collaborators stay on their own gear unless they are in an explicit preview.
     var scope: BookingScope = .all
     var currentUserId: String?
     var currentUserRole = ""
@@ -58,7 +59,7 @@ final class BookingsViewModel {
         currentUserId = id
         currentUserRole = role ?? ""
         guard !didApplyUserDefault else { return }
-        scope = currentUserRole == "STUDENT" || currentUserRole == "COLLABORATOR" ? .mine : .all
+        scope = currentUserRole == "COLLABORATOR" ? .mine : .all
         didApplyUserDefault = true
     }
 
@@ -179,7 +180,7 @@ final class BookingsViewModel {
         loadTask?.cancel()
         loadRequests.invalidate()
         searchText = ""
-        scope = currentUserRole == "STUDENT" || currentUserRole == "COLLABORATOR" ? .mine : .all
+        scope = currentUserRole == "COLLABORATOR" ? .mine : .all
         bookings = []
         offset = 0
         hasMore = true

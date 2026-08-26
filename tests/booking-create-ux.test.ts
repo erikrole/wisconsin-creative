@@ -70,11 +70,11 @@ describe("booking create UX helpers", () => {
 
     expect(review).toMatchObject({
       tone: "conflict",
-      title: "Availability needs review",
+      title: "Resolve availability conflicts",
       total: 2,
       advisoryCount: 1,
     });
-    expect(review?.description).toContain("hard conflict");
+    expect(review?.description).toContain("Remove the conflicted items");
   });
 
   it("uses advisory copy for next-use and turnaround warnings", () => {

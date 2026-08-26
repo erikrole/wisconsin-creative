@@ -1,6 +1,6 @@
 # Tasks Index
 
-Last updated: 2026-08-25
+Last updated: 2026-08-26
 
 ## Start Here
 
@@ -61,6 +61,7 @@ Audit files intentionally remain at root for now because the repo audit skills r
 - `scoreboard-tie-result-plan-2026-08-24.md` - restore source-backed soccer tie results across Calendar sync, web/native Scoreboard contracts, and the migration/deployment proof boundary.
 - `admin-role-preview-recovery-plan-2026-08-24.md` - recover the signed, read-only Admin role preview; production deployment is complete in `dpl_9cFHwpSQA9QjsQTV3GF3uKf65QtE`, while the authenticated role matrix remains open.
 - `ios-role-preview-plan-2026-08-25.md` - add the Admin-only native iOS Student presentation preview over the shared signed, read-only role-preview session.
+- `ios-student-bookings-visibility-plan-2026-08-26.md` - make internal Student booking list/detail reads team-visible across web and native while preserving own-only mutations, personal iOS Home scope, and collaborator boundaries.
 - `student-privacy-dashboard-licenses-plan-2026-08-24.md` - restore broad Student team dashboard and visible user/profile reads, expose safe Photo Mechanic holder identity with masked keys, and retain write/private boundaries; production deployment is complete, while authenticated Student acceptance remains tracked in the ledger.
 - `multi-event-five-cap-plan-2026-08-24.md` - expand linked booking/reservation events from three to five across web, API, draft, and native contracts; production deployment is complete, while authenticated five-link interaction remains open.
 - `signature-signing-experience-plan-2026-08-25.md` - make the iPad signing surface consistent and rehearsable: exported line weight is normalized so one setting delivers one uniform line across a roster, and the admin settings panel previews the real pen; the practice pad, pre-commit artifact view, Save-and-next progression, and per-revision pen settings remain queued.

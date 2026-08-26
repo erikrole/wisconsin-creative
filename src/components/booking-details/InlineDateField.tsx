@@ -7,9 +7,9 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Check, X, CalendarIcon } from "lucide-react";
+import { clampToQuarterHour } from "@/lib/quarter-hour";
 
 function pad(n: number) { return String(n).padStart(2, "0"); }
-function roundTo15(m: number) { return Math.round(m / 15) * 15; }
 
 const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => i);
 const MINUTE_OPTIONS = [0, 15, 30, 45];
@@ -37,6 +37,7 @@ export function InlineDateField({
   formatValue?: (iso: string) => string;
 }) {
   const current = new Date(value);
+  const minDateObj = minDate ? new Date(minDate) : undefined;
   const displayText = formatValue?.(value) ?? current.toLocaleString("en-US", {
     weekday: "short",
     month: "short",
@@ -59,7 +60,9 @@ export function InlineDateField({
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
 
   function handleOpenChange(next: boolean) {
-    if (!next) {
+    if (next) {
+      setPendingDate(clampToQuarterHour(new Date(value), minDateObj));
+    } else {
       // Discard uncommitted changes
       setPendingDate(new Date(value));
     }
@@ -69,20 +72,21 @@ export function InlineDateField({
   function handleDaySelect(day: Date | undefined) {
     if (!day) return;
     const next = new Date(day);
-    next.setHours(pendingDate.getHours(), pendingDate.getMinutes(), 0, 0);
-    setPendingDate(next);
+    const pickerDate = clampToQuarterHour(pendingDate, minDateObj);
+    next.setHours(pickerDate.getHours(), pickerDate.getMinutes(), 0, 0);
+    setPendingDate(clampToQuarterHour(next, minDateObj));
   }
 
   function handleTimeChange(h: number, m: number) {
     const next = new Date(pendingDate);
     next.setHours(h, m, 0, 0);
-    setPendingDate(next);
+    setPendingDate(clampToQuarterHour(next, minDateObj));
   }
 
   async function handleApply() {
     setStatus("saving");
     try {
-      await onSave(pendingDate.toISOString());
+      await onSave(clampToQuarterHour(pendingDate, minDateObj).toISOString());
       setStatus("saved");
       timerRef.current = setTimeout(() => setStatus("idle"), 2000);
     } catch {
@@ -102,9 +106,9 @@ export function InlineDateField({
     return <span>{displayText}</span>;
   }
 
-  const minDateObj = minDate ? new Date(minDate) : undefined;
-  const h = pendingDate.getHours();
-  const m = roundTo15(pendingDate.getMinutes());
+  const pickerDate = clampToQuarterHour(pendingDate, minDateObj);
+  const h = pickerDate.getHours();
+  const m = pickerDate.getMinutes();
 
   return (
     <span className="inline-flex items-center gap-1.5">

@@ -335,3 +335,62 @@ final class PasswordManagerScreenshotUITests: XCTestCase {
         add(screenshot)
     }
 }
+
+/// Captures the real Student preview shell against local fixtures so the
+/// persistent mode marker can be compared without credentials or production
+/// data. The pair intentionally visits the same Guides surface as the kickoff
+/// presentation flow.
+@MainActor
+final class PreviewChromeScreenshotUITests: XCTestCase {
+    override func setUpWithError() throws {
+        continueAfterFailure = false
+    }
+
+    func testStudentPreviewChromeCaptures() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "preview-chrome"
+        app.launch()
+
+        let browseTab = app.buttons["Browse"]
+        XCTAssertTrue(browseTab.waitForExistence(timeout: 20), "Browse tab never rendered")
+        browseTab.tap()
+
+        let guides = app.staticTexts["Guides"]
+        XCTAssertTrue(guides.waitForExistence(timeout: 15), "Guides destination never rendered")
+        guides.tap()
+
+        let firstGuide = app.staticTexts["Key contacts"]
+        XCTAssertTrue(firstGuide.waitForExistence(timeout: 20), "Guide fixture never loaded")
+
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "preview-chrome-guides"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+    }
+}
+
+/// Captures the real native Bookings tab as a Student. The fixture honors the
+/// request's requester filter, so the committed Mine default and the changed
+/// shared All default can be compared against the same data and viewport.
+@MainActor
+final class StudentBookingsScreenshotUITests: XCTestCase {
+    override func setUpWithError() throws {
+        continueAfterFailure = false
+    }
+
+    func testStudentBookingsVisibilityCaptures() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "student-bookings"
+        app.launch()
+
+        let title = app.navigationBars["Bookings"]
+        XCTAssertTrue(title.waitForExistence(timeout: 20), "Bookings never rendered")
+        XCTAssertTrue(app.staticTexts["Student camera kit"].waitForExistence(timeout: 20),
+                      "Booking rows never rendered")
+
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "student-bookings"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+    }
+}

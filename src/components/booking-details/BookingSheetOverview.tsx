@@ -28,6 +28,7 @@ import {
   isDueToday,
 } from "@/lib/format";
 import type { BookingDetail } from "./types";
+import { minimumBookingEndDate } from "@/lib/quarter-hour";
 
 type EditableBookingField = "startsAt" | "endsAt" | "notes";
 
@@ -161,6 +162,7 @@ function NotesField({
 export default function BookingSheetOverview({ booking, canEdit, onSaveField }: Props) {
   const now = new Date();
   const isReservation = booking.kind === "RESERVATION";
+  const minimumEndDate = minimumBookingEndDate(new Date(booking.startsAt)).toISOString();
   const timingLabel = isReservation
     ? formatStartsIn(booking.startsAt, now)
     : formatDueLabel(booking.endsAt, now);
@@ -186,7 +188,7 @@ export default function BookingSheetOverview({ booking, canEdit, onSaveField }: 
                   <InlineDateField
                     value={booking.endsAt}
                     canEdit={canEdit}
-                    minDate={isReservation ? booking.startsAt : undefined}
+                    minDate={minimumEndDate}
                     formatValue={formatSheetDateTime}
                     onSave={(value) => onSaveField("endsAt", value)}
                   />

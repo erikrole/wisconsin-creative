@@ -48,6 +48,24 @@ final class KioskFlowRoutingTests: XCTestCase {
         }
     }
 
+    func testQuarterHourRoundsForwardWithoutMovingAnExactBoundary() {
+        let base = Date(timeIntervalSinceReferenceDate: 8 * 60 * 60)
+        XCTAssertEqual(KioskQuarterHour.roundedUp(base), base)
+        XCTAssertEqual(
+            KioskQuarterHour.roundedUp(base.addingTimeInterval(7 * 60)),
+            base.addingTimeInterval(15 * 60)
+        )
+    }
+
+    func testQuarterHourClampNeverFallsBeforeTheRoundedMinimum() {
+        let base = Date(timeIntervalSinceReferenceDate: 8 * 60 * 60)
+        let minimum = base.addingTimeInterval(8 * 60)
+        XCTAssertEqual(
+            KioskQuarterHour.clamped(base, minimum: minimum),
+            base.addingTimeInterval(15 * 60)
+        )
+    }
+
     @MainActor
     func testScannerHasOnlyOneLogicalOwner() {
         let scanner = KioskScannerCoordinator()

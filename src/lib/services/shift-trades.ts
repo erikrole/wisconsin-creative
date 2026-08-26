@@ -15,6 +15,7 @@ import { assertNoWorkingCopy } from "@/lib/schedule-working-copy-guard";
 import { visibleActiveUserWhere } from "@/lib/user-visibility";
 import { enqueuePendingClaimReview } from "@/lib/claim-review-workflow";
 import { createAuditEntryTx } from "@/lib/audit";
+import { claimReviewDeadlines } from "@/lib/claim-review-deadlines";
 
 function assertShiftNotStarted(startsAt: Date) {
   if (startsAt <= new Date()) {
@@ -494,6 +495,123 @@ export async function claimTrade(tradeId: string, userId: string) {
 }
 
 /**
+ * Let the claimer withdraw while the trade is still waiting for staff. The
+ * post returns to OPEN; the original assignment never changes hands.
+ */
+export async function withdrawTradeClaim(
+  tradeId: string,
+  actor: { id: string; role: Role },
+) {
+  const result = await withSerializationRetry(() => db.$transaction(async (tx) => {
+    const trade = await tx.shiftTrade.findUnique({
+      where: { id: tradeId },
+      include: {
+        shiftAssignment: {
+          include: {
+            shift: {
+              include: {
+                shiftGroup: {
+                  include: {
+                    workingCopy: { select: { version: true } },
+                    event: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        postedBy: { select: { id: true, name: true } },
+        claimedBy: { select: { id: true, name: true } },
+      },
+    });
+    if (!trade) throw new HttpError(404, "Trade not found");
+    if (trade.status !== "CLAIMED") {
+      throw new HttpError(400, "Only claimed trades can be withdrawn");
+    }
+    if (trade.claimedByUserId !== actor.id) {
+      throw new HttpError(403, "You can only withdraw your own trade claim");
+    }
+    assertNoWorkingCopy(trade.shiftAssignment.shift.shiftGroup?.workingCopy);
+
+    const updated = await tx.shiftTrade.update({
+      where: { id: tradeId },
+      data: {
+        claimedByUserId: null,
+        claimedAt: null,
+        status: "OPEN",
+      },
+      include: {
+        shiftAssignment: {
+          include: {
+            shift: {
+              include: { shiftGroup: { include: { event: true } } },
+            },
+            user: { select: { id: true, name: true } },
+          },
+        },
+        postedBy: { select: { id: true, name: true } },
+        claimedBy: { select: { id: true, name: true } },
+      },
+    });
+
+    await createAuditEntryTx(tx, {
+      actorId: actor.id,
+      actorRole: actor.role,
+      entityType: "shift_trade",
+      entityId: tradeId,
+      action: "trade_claim_withdrawn",
+      before: {
+        status: trade.status,
+        claimedByUserId: trade.claimedByUserId,
+        claimedAt: trade.claimedAt?.toISOString() ?? null,
+      },
+      after: {
+        status: updated.status,
+        claimedByUserId: updated.claimedByUserId,
+        claimedAt: updated.claimedAt?.toISOString() ?? null,
+      },
+    });
+
+    return {
+      trade: updated,
+      posterUserId: trade.postedByUserId,
+      claimerName: trade.claimedBy?.name ?? "The claimer",
+      claimCycle: trade.claimedAt?.toISOString() ?? "unknown",
+      area: trade.shiftAssignment.shift.area,
+      eventSummary: trade.shiftAssignment.shift.shiftGroup?.event?.summary ?? "the event",
+      payload: scheduleNotificationPayload({
+        tradeId,
+        assignmentId: trade.shiftAssignment.id,
+        shiftId: trade.shiftAssignment.shift.id,
+        eventId: trade.shiftAssignment.shift.shiftGroup.event.id,
+      }),
+    };
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }));
+
+  const title = "Trade claim withdrawn";
+  const body = `${result.claimerName} withdrew their claim for your ${result.area} shift at ${result.eventSummary}. The post is back on the Trade Board.`;
+  await notify(
+    result.posterUserId,
+    "trade_claim_withdrawn",
+    title,
+    body,
+    `trade_claim_withdrawn_${tradeId}_${result.claimCycle}`,
+    result.payload,
+  );
+  await dispatchTradeSideEffects({
+    pushJobs: [{ userId: result.posterUserId, title, body, payload: result.payload }],
+    emailJobs: [{
+      userId: result.posterUserId,
+      title,
+      body,
+      eventSummary: result.eventSummary,
+      area: result.area,
+    }],
+  });
+  return result.trade;
+}
+
+/**
  * Staff approves a claimed trade → executes swap.
  */
 export async function approveTrade(tradeId: string, actor: TradeApprovalActor = null) {
@@ -579,6 +697,32 @@ export async function approveTrade(tradeId: string, actor: TradeApprovalActor = 
       userId: trade.claimedByUserId,
       title,
       body,
+      eventSummary,
+      area,
+    });
+
+    // The outgoing worker needs a separate confirmation: the claimer is now
+    // on the schedule, but the poster is no longer responsible for the slot.
+    const posterTitle = "Your trade was approved — you're off the shift";
+    const posterBody = `Your trade for ${area} at ${eventSummary} was approved. You're no longer on the schedule.`;
+    await notify(
+      trade.postedByUserId,
+      "trade_approved_poster",
+      posterTitle,
+      posterBody,
+      `trade_approved_poster_${tradeId}`,
+      payload,
+    );
+    pushJobs.push({
+      userId: trade.postedByUserId,
+      title: posterTitle,
+      body: posterBody,
+      payload,
+    });
+    emailJobs.push({
+      userId: trade.postedByUserId,
+      title: posterTitle,
+      body: posterBody,
       eventSummary,
       area,
     });
@@ -677,7 +821,16 @@ export async function cancelTrade(tradeId: string, actor: TradeActor) {
   const emailJobs: ShiftTradeEmail[] = [];
 
   const result = await db.$transaction(async (tx) => {
-    const trade = await tx.shiftTrade.findUnique({ where: { id: tradeId } });
+    const trade = await tx.shiftTrade.findUnique({
+      where: { id: tradeId },
+      include: {
+        shiftAssignment: {
+          include: {
+            shift: { include: { shiftGroup: { include: { event: true } } } },
+          },
+        },
+      },
+    });
     if (!trade) throw new HttpError(404, "Trade not found");
     const isPoster = trade.postedByUserId === actor.id;
     if (!isPoster && !isTradeManager(actor)) {
@@ -724,6 +877,38 @@ export async function cancelTrade(tradeId: string, actor: TradeActor) {
       pushJobs.push({ userId: trade.postedByUserId, title, body, payload });
       emailJobs.push({
         userId: trade.postedByUserId,
+        title,
+        body,
+        eventSummary,
+        area: shift.area,
+      });
+    }
+
+    if (trade.claimedByUserId) {
+      const shift = updated.shiftAssignment.shift;
+      const eventSummary = shift.shiftGroup?.event?.summary ?? "the event";
+      const title = "Your trade claim was withdrawn";
+      const body = isPoster
+        ? `The trade post for ${shift.area} at ${eventSummary} was cancelled by the poster. Your claim is no longer active.`
+        : `Staff removed the trade post for ${shift.area} at ${eventSummary}. Your claim is no longer active.`;
+      const payload = scheduleNotificationPayload({
+        tradeId,
+        assignmentId: updated.shiftAssignment.id,
+        shiftId: shift.id,
+        eventId: shift.shiftGroup.event.id,
+      });
+      const claimCycle = trade.claimedAt?.toISOString() ?? "unknown";
+      await notify(
+        trade.claimedByUserId,
+        "trade_claim_cancelled",
+        title,
+        body,
+        `trade_claim_cancelled_${tradeId}_${claimCycle}`,
+        payload,
+      );
+      pushJobs.push({ userId: trade.claimedByUserId, title, body, payload });
+      emailJobs.push({
+        userId: trade.claimedByUserId,
         title,
         body,
         eventSummary,
@@ -832,6 +1017,9 @@ export async function listTrades(filters: {
   return {
     data: data.map((trade) => {
       const window = effectiveAssignmentWindow(trade.shiftAssignment);
+      const reviewDeadlines = trade.status === "CLAIMED"
+        ? claimReviewDeadlines(window.startsAt, trade.claimedAt ?? now)
+        : null;
       const viewerAvailabilityContext = filters.userId && trade.postedByUserId !== filters.userId
         ? availabilityContextFromBlocks(viewerBlocks, window)
         : null;
@@ -871,6 +1059,8 @@ export async function listTrades(filters: {
         claimedByAvailabilityContext,
         viewerCanClaim,
         viewerClaimReason,
+        reviewEscalatesAt: reviewDeadlines?.escalateAt.toISOString() ?? null,
+        reviewAutoApprovesAt: reviewDeadlines?.autoApproveAt.toISOString() ?? null,
       };
     }),
     total,

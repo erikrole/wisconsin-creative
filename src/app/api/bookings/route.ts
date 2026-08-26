@@ -84,9 +84,9 @@ export const GET = withAuth(async (req, { user }) => {
         : {}),
     ...(locationId ? { locationId } : {}),
     ...(sportCode ? { sportCode } : {}),
-    // Students may only see their own bookings — ignore any requester_id
-    // override they pass and pin to their own user id.
-    ...(user.role === "STUDENT" || (user.role === "COLLABORATOR" && !collaboratorPreview)
+    // Internal Students have team-visible booking reads. Private collaborators
+    // remain pinned to their own rows unless the signed preview is active.
+    ...(user.role === "COLLABORATOR" && !collaboratorPreview
       ? { requesterUserId: user.id }
       : requesterId
         ? { requesterUserId: requesterId }

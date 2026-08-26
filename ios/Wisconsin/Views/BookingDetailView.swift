@@ -5,6 +5,7 @@ struct BookingDetailView: View {
 
     @State private var booking: Booking?
     @State private var conflicts: [String: AssetConflict] = [:]
+    @State private var availabilityError: String?
     @State private var returnInsight = CheckoutReturnInsight(nextNeedAt: nil, hasUpcomingNeed: false)
     @State private var isLoading = true
     @State private var error: String?
@@ -101,7 +102,11 @@ struct BookingDetailView: View {
                                     serializedItems: booking.serializedItems,
                                     bulkItems: booking.bulkItems,
                                     conflicts: conflicts,
-                                    bookingStatus: booking.status
+                                    bookingStatus: booking.status,
+                                    availabilityError: availabilityError,
+                                    bookingStartsAt: booking.startsAt,
+                                    bookingEndsAt: booking.endsAt,
+                                    onRetryAvailability: { Task { await loadConflicts(for: booking) } }
                                 )
                             }
                         }
@@ -194,26 +199,35 @@ struct BookingDetailView: View {
         }
     }
 
-    /// Non-blocking preflight: surface per-item scheduling conflicts on active
-    /// bookings, mirroring the web Equipment tab. Server enforcement at
-    /// create/checkout remains authoritative; this is an at-a-glance hint.
+    /// Surface per-item scheduling conflicts on active bookings, mirroring the
+    /// web Equipment tab. A failed refresh never clears an existing result or
+    /// makes the booking look clear; server enforcement remains authoritative.
     private func loadConflicts(for booking: Booking) async {
         guard session.currentUser?.role != "COLLABORATOR" else {
             conflicts = [:]
+            availabilityError = nil
             return
         }
         let activeStatuses: Set<BookingStatus> = [.draft, .booked, .pendingPickup, .open]
         guard activeStatuses.contains(booking.status), !booking.serializedItems.isEmpty else {
             conflicts = [:]
+            availabilityError = nil
             return
         }
-        conflicts = await APIClient.shared.checkAvailability(
+        let outcome = await APIClient.shared.checkAvailabilityOutcome(
             locationId: booking.location.id,
             serializedAssetIds: booking.serializedItems.map(\.assetId),
             startsAt: booking.startsAt,
             endsAt: booking.endsAt,
-            excludeBookingId: booking.id
+            excludeBookingId: booking.id,
+            bookingKind: booking.kind
         )
+        if let result = outcome.result {
+            conflicts = result.conflictsByAssetId
+            availabilityError = nil
+        } else {
+            availabilityError = outcome.errorMessage ?? "Availability could not be refreshed. Try again."
+        }
     }
 
     private func loadReturnInsight(for booking: Booking) async {
@@ -255,6 +269,7 @@ struct BookingDetailView: View {
             let cancelled = try await APIClient.shared.cancelBooking(id: bookingId)
             booking = cancelled
             conflicts = [:]
+            availabilityError = nil
             returnInsight = CheckoutReturnInsight(nextNeedAt: nil, hasUpcomingNeed: false)
             await reconcileLiveActivity(afterLoading: cancelled)
             Haptics.success()
@@ -881,6 +896,10 @@ private struct EquipmentSection: View {
     let bulkItems: [BookingBulkItem]
     let conflicts: [String: AssetConflict]
     let bookingStatus: BookingStatus
+    let availabilityError: String?
+    let bookingStartsAt: Date
+    let bookingEndsAt: Date
+    let onRetryAvailability: (() -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: Brand.Space.xs) {
@@ -888,6 +907,22 @@ private struct EquipmentSection: View {
                 Text("\(serializedItems.count + bulkItems.count)")
                     .font(.subheadline.monospacedDigit())
                     .foregroundStyle(.secondary)
+            }
+            if let availabilityError {
+                HStack(alignment: .top, spacing: 8) {
+                    Label(availabilityError, systemImage: "wifi.exclamationmark")
+                        .font(.caption)
+                        .foregroundStyle(Color.statusText(.orange))
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                    if let onRetryAvailability {
+                        Button("Retry", action: onRetryAvailability)
+                            .font(.caption.weight(.semibold))
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                    }
+                }
+                .padding(.vertical, 4)
             }
             ForEach(serializedItems) { item in
                 serializedRow(item)
@@ -916,7 +951,7 @@ private struct EquipmentSection: View {
                         .lineLimit(1)
                 }
                 if let conflict {
-                    Text(conflict.conflictingBookingTitle.map { "Conflicts with \($0)" } ?? "Scheduling conflict")
+                    Text(conflictMessage(conflict))
                         .font(.caption2)
                         .foregroundStyle(Color.statusText(.red))
                         .lineLimit(2)
@@ -998,9 +1033,25 @@ private struct EquipmentSection: View {
         parts.append(item.asset.itemListPrimaryTitle)
         if let subtitle = item.asset.itemListSecondaryTitle { parts.append(subtitle) }
         if let conflict {
-            parts.append(conflict.conflictingBookingTitle.map { "conflicts with \($0)" } ?? "scheduling conflict")
+            parts.append(conflictMessage(conflict))
         }
         return parts.joined(separator: ", ")
+    }
+
+    private func conflictMessage(_ conflict: AssetConflict) -> String {
+        let title = conflict.conflictingBookingTitle.map { "Conflict with \($0)" } ?? "Scheduling conflict"
+        guard let startsAt = conflict.startsAt, let endsAt = conflict.endsAt else {
+            return "\(title); choose another item or change the dates."
+        }
+        let window = "\(startsAt.gearShort) – \(endsAt.gearShort)"
+        let buffer: TimeInterval = 60 * 60
+        if startsAt >= bookingEndsAt {
+            return "\(title) (\(window)); return by \(startsAt.addingTimeInterval(-buffer).gearShort)."
+        }
+        if endsAt <= bookingStartsAt {
+            return "\(title) (\(window)); available after \(endsAt.addingTimeInterval(buffer).gearShort)."
+        }
+        return "\(title) (\(window)); choose another item or change the dates."
     }
 }
 

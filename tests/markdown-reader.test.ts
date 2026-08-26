@@ -11,7 +11,7 @@ describe("MarkdownReader", () => {
 
     expect(html).toContain('src="https://example.com/portrait.png"');
     expect(html).toContain('alt="Portrait screenshot"');
-    expect(html).toContain('class="block h-auto w-full"');
+    expect(html).toContain('class="block h-auto max-w-full w-auto"');
     expect(html).not.toContain('width="1400"');
     expect(html).not.toContain('height="900"');
   });

@@ -223,32 +223,17 @@ struct AppTabView: View {
             Task { await ResumeReservationTip.minimizedReservation.donate() }
         }
         .task(id: session.currentUser?.shellIdentity) {
-            guard hasCapability("RESERVATION_CREATE"), !isReadOnlyPreview else { return }
-            await drafts.loadSavedDraft()
-        }
-        .safeAreaInset(edge: .top, spacing: 0) {
-            VStack(spacing: 0) {
-                if let preview = session.currentUser?.preview, preview.readOnly {
-                    BannerView(
-                        severity: .warning,
-                        message: "Previewing as \(preview.roleLabel) · Read-only",
-                        systemImage: "eye.slash.fill",
-                        actionLabel: session.isRolePreviewActionInFlight ? "Exiting…" : "Exit",
-                        action: exitRolePreview
-                    )
-                }
-                if !network.isConnected {
-                    BannerView(
-                        severity: .warning,
-                        message: "No connection — some actions may fail",
-                        systemImage: "wifi.slash"
-                    )
-                    .transition(.move(edge: .top).combined(with: .opacity))
-                }
-            }
+            await loadDraftIfAllowed()
         }
         .modifier(AppTabShellStyle(usesSidebarAdaptableStyle: showsSidebarDestinations))
+        .modifier(AppTabStatusOverlays(isReadOnlyPreview: isReadOnlyPreview))
         .animation(reduceMotion ? nil : .easeInOut, value: network.isConnected)
+    }
+
+    private func loadDraftIfAllowed() async {
+        guard !isReadOnlyPreview else { return }
+        guard hasCapability("RESERVATION_CREATE") else { return }
+        await drafts.loadSavedDraft()
     }
 
     /// A reservation can be created long after the screen that started it is
@@ -260,10 +245,6 @@ struct AppTabView: View {
         guard hasCapability("MY_GEAR_VIEW") else { return }
         appState.pendingBookingDetailId = bookingId
         appState.selectedTab = 1
-    }
-
-    private func exitRolePreview() {
-        Task { await session.stopRolePreview() }
     }
 
     private func routePendingEventPush() {
@@ -383,6 +364,35 @@ private struct AppTabShellStyle: ViewModifier {
         } else {
             content.tabViewStyle(.tabBarOnly)
         }
+    }
+}
+
+private struct AppTabStatusOverlays: ViewModifier {
+    @Environment(NetworkMonitor.self) private var network
+    let isReadOnlyPreview: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .safeAreaInset(edge: .top, spacing: 0) {
+                if !network.isConnected {
+                    BannerView(
+                        severity: .warning,
+                        message: "No connection — some actions may fail",
+                        systemImage: "wifi.slash"
+                    )
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
+            }
+            .overlay {
+                if isReadOnlyPreview {
+                    Rectangle()
+                        .strokeBorder(Color.statusText(.orange).opacity(0.65), lineWidth: 1)
+                        .padding(1)
+                        .ignoresSafeArea()
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
+            }
     }
 }
 

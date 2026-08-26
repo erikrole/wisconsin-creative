@@ -8,6 +8,8 @@ import { availabilityContextFromCandidate } from "@/lib/schedule-availability-co
 import { shiftWorkerTypeForProfile } from "@/lib/shift-display";
 import { withSerializationRetry } from "@/lib/serialization";
 import { assertNoWorkingCopy } from "@/lib/schedule-working-copy-guard";
+import { createAuditEntryTx } from "@/lib/audit";
+import { claimReviewDeadlines } from "@/lib/claim-review-deadlines";
 
 const ACTIVE_STATUSES = ACTIVE_ASSIGNMENT_STATUSES as ShiftAssignmentStatus[];
 
@@ -318,21 +320,26 @@ export async function getScheduleOpenWork(filters: OpenWorkFilters) {
       candidate,
       now,
     })),
-    pickupRequests: pickupRequests.map((request) => ({
-      id: request.id,
-      kind: "pickup_request" as const,
-      status: request.status,
-      hasConflict: request.hasConflict,
-      conflictNote: request.conflictNote,
-      createdAt: request.createdAt.toISOString(),
-      user: request.user,
-      shift: serializeOpenShift(request.shift, {
-        userId: request.user.id,
-        role: "STUDENT",
-        candidate: null,
-        now,
-      }).shift,
-    })),
+    pickupRequests: pickupRequests.map((request) => {
+      const deadlines = claimReviewDeadlines(effectiveWindow(request.shift).startsAt, request.createdAt);
+      return {
+        id: request.id,
+        kind: "pickup_request" as const,
+        status: request.status,
+        hasConflict: request.hasConflict,
+        conflictNote: request.conflictNote,
+        reviewEscalatesAt: deadlines?.escalateAt.toISOString() ?? null,
+        reviewAutoApprovesAt: deadlines?.autoApproveAt.toISOString() ?? null,
+        createdAt: request.createdAt.toISOString(),
+        user: request.user,
+        shift: serializeOpenShift(request.shift, {
+          userId: request.user.id,
+          role: "STUDENT",
+          candidate: null,
+          now,
+        }).shift,
+      };
+    }),
   };
 }
 
@@ -464,5 +471,53 @@ export async function pickupOpenShift(shiftId: string, userId: string) {
         },
       },
     });
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }));
+}
+
+/**
+ * Withdraw a student's pending open-slot request. REQUESTED is intentionally
+ * retained as the only pending state, so the existing DECLINED terminal state
+ * records the withdrawal without a schema migration; the audit action carries
+ * the more precise reason.
+ */
+export async function withdrawPickupRequest(
+  assignmentId: string,
+  actor: { id: string; role: Role },
+) {
+  return withSerializationRetry(() => db.$transaction(async (tx) => {
+    const assignment = await tx.shiftAssignment.findUnique({
+      where: { id: assignmentId },
+      include: {
+        shift: {
+          select: {
+            id: true,
+            shiftGroup: { select: { workingCopy: { select: { version: true } } } },
+          },
+        },
+      },
+    });
+    if (!assignment) throw new HttpError(404, "Assignment not found");
+    assertNoWorkingCopy(assignment.shift?.shiftGroup?.workingCopy);
+    if (assignment.userId !== actor.id) {
+      throw new HttpError(403, "You can only withdraw your own shift request");
+    }
+    if (assignment.status !== "REQUESTED") {
+      throw new HttpError(400, "Only pending requests can be withdrawn");
+    }
+
+    const updated = await tx.shiftAssignment.update({
+      where: { id: assignmentId },
+      data: { status: "DECLINED" },
+    });
+    await createAuditEntryTx(tx, {
+      actorId: actor.id,
+      actorRole: actor.role,
+      entityType: "shift_assignment",
+      entityId: assignmentId,
+      action: "shift_request_withdrawn",
+      before: { status: assignment.status, userId: assignment.userId, shiftId: assignment.shiftId },
+      after: { status: updated.status, userId: updated.userId, shiftId: updated.shiftId },
+    });
+    return updated;
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }));
 }

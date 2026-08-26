@@ -32,9 +32,9 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
  * no assignment, no schedule entry. The person's Scoreboard totals move;
  * nothing else about their week does.
  *
- * The badge recount that follows is silent too: a badge this row pushed the
- * person over is granted without its "badge earned" notification, which is the
- * only message adding a worker could otherwise produce.
+ * The badge recount that follows is fully silent too: awards still persist, but
+ * no badge-earned notification is created, even when the same pass also finds
+ * scheduled assignments that cross a threshold.
  */
 export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
   requirePermission(user.role, "event_worker", "manage");
@@ -102,8 +102,10 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
 
   // Outside the audit transaction: badge evaluation opens its own serializable
   // transaction, and a recognition failure must not roll back the row. The
-  // evaluator suppresses notifications for anything only this row earned.
-  if (addedUserId) await badges.onShiftsWorked({ userId: addedUserId });
+  // explicit option suppresses every badge notification for this backfill,
+  // including notifications that an already-scheduled assignment could have
+  // produced in the same recount.
+  if (addedUserId) await badges.onShiftsWorked({ userId: addedUserId }, { notify: false });
 
   return ok({ data: await listEventWorkers(params.id) });
 });

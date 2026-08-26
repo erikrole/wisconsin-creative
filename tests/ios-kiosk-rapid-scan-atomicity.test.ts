@@ -18,4 +18,9 @@ describe("iOS kiosk rapid-scan atomicity", () => {
     expect(checkout).toContain("guard !isCompleting, pendingScanIdentities.isEmpty else { return }");
     expect(checkout).toContain("isEnabled: !scannedItems.isEmpty && pendingScanIdentities.isEmpty");
   });
+
+  it("does not turn a stale availability response into a scan success receipt", () => {
+    expect(checkout).toContain("} else if preflight == nil {");
+    expect(checkout).toContain("availability could not be verified. Check before checkout.");
+  });
 });

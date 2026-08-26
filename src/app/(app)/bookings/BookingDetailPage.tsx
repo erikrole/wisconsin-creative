@@ -44,6 +44,7 @@ import { EditBookingEventsDialog } from "@/components/booking-details/EditBookin
 import { TransferOwnerDialog } from "@/components/booking-details/TransferOwnerDialog";
 import { UserAvatar } from "@/components/UserAvatar";
 import { formatCountdownCompact, formatDateTime, getUrgency } from "@/lib/format";
+import { nextQuarterHourAfter } from "@/lib/quarter-hour";
 
 import BookingEquipmentTab from "./BookingEquipmentTab";
 import BookingHistoryTab from "./BookingHistoryTab";
@@ -119,7 +120,12 @@ export default function BookingDetailPage({
 
   function toggleExtend() {
     setShowExtend((v) => {
-      if (!v && booking) setExtendDate(toLocalDateTimeValue(new Date(booking.endsAt)));
+      if (!v && booking) {
+        const minimum = nextQuarterHourAfter(
+          new Date(Math.max(new Date(booking.endsAt).getTime(), Date.now())),
+        );
+        setExtendDate(toLocalDateTimeValue(minimum));
+      }
       return !v;
     });
   }
@@ -289,7 +295,9 @@ export default function BookingDetailPage({
           <DateTimePicker
             value={extendDate ? new Date(extendDate) : undefined}
             onChange={(d) => setExtendDate(toLocalDateTimeValue(d))}
-            minDate={new Date(Math.max(new Date(booking.endsAt).getTime(), Date.now()))}
+            minDate={nextQuarterHourAfter(
+              new Date(Math.max(new Date(booking.endsAt).getTime(), Date.now())),
+            )}
             placeholder="Select new end date"
           />
           <div className="flex items-center gap-2 flex-wrap">

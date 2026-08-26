@@ -196,7 +196,7 @@ describe("iOS guides reader polish", () => {
     expect(guidesView).toContain("Text(\"\\(number)\")");
     expect(guidesView).toContain('.accessibilityLabel("Step \\(number). \\(text.plain)")');
     expect(guidesView).toContain(".accessibilityLabel(accessibilityLabel)");
-    expect(guidesView).toContain("parts.append(guide.updatedSummary)");
+    expect(guidesView).not.toContain("parts.append(guide.updatedSummary)");
     expect(guidesView).not.toContain(".safeAreaInset(edge: .bottom)");
     expect(guidesView).toContain(".toolbar(.hidden, for: .tabBar)");
   });
@@ -428,6 +428,9 @@ describe("iOS API contracts — kiosk checkout context", () => {
     expect(checkoutView).toContain("KioskCartGroupRow");
     expect(checkoutView).toContain("dueBackAt");
     expect(checkoutView).toContain("availabilityResult.hasBlockingIssue");
+    expect(checkoutView).toContain("let preflight = await refreshAvailability(for: updated)");
+    expect(checkoutView).toContain("scanAvailabilityFeedback(for: cartItem, result: $0)");
+    expect(checkoutView).toContain("Remove it before checkout.");
     expect(checkoutView).toContain("Start Scanning");
     expect(checkoutView).toContain("Checkout Details");
     expect(checkoutView).toContain("Scan Items");
@@ -453,12 +456,27 @@ describe("iOS API contracts — availability check", () => {
   it("iOS decodes the route's top-level result (no data envelope)", () => {
     const route = source("src/app/api/availability/check/route.ts");
     const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
+    const models = source("ios/Wisconsin/Models/Models.swift");
 
     // Route returns the availability result spread at the top level.
     expect(route).toContain("return ok({ ...result, bulkAvailability });");
-    // iOS must decode conflicts at the top level, not under `data`.
-    expect(apiClient).toContain("struct CheckResponse: Decodable { let conflicts: [AssetConflict]? }");
-    expect(apiClient).toContain("for conflict in resp.conflicts ?? []");
+    // iOS must decode the full top-level result, not an invented `data`
+    // envelope. New advisory arrays remain optional at the wire boundary.
+    expect(models).toContain("struct AvailabilityCheckResult: Decodable");
+    expect(models).toContain("decodeIfPresent([AvailabilityCommitment].self, forKey: .upcomingCommitments)");
+    expect(models).toContain("decodeIfPresent([AvailabilityTurnaroundRisk].self, forKey: .turnaroundRisks)");
+    expect(models).toContain("decodeIfPresent([AvailabilityBulkTurnaroundRisk].self, forKey: .bulkTurnaroundRisks)");
+    expect(apiClient).toContain("async -> AvailabilityCheckResult");
+    expect(apiClient).toContain("decoder.decode(AvailabilityCheckResult.self, from: data)");
+    expect(apiClient).toContain("let bulkItems: [BulkReservationRequest]");
+    expect(apiClient).toContain("bulkItems: bulkItems");
+    expect(apiClient).not.toContain("struct CheckResponse: Decodable { let conflicts: [AssetConflict]? }");
+    expect(apiClient).toContain("kind: bookingKind.rawValue");
+    expect(apiClient).toContain("bookingKind: BookingKind = .reservation");
+    expect(source("ios/Wisconsin/Views/CreateBooking/CreateBookingViewModel.swift"))
+      .toContain("bookingKind: .reservation");
+    expect(source("ios/Wisconsin/Views/BookingDetailView.swift"))
+      .toContain("bookingKind: booking.kind");
   });
 });
 

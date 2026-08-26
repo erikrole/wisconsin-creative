@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Checkouts
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-25
+- Last Updated: 2026-08-26
 - Status: Active — V1 Shipped
 - Version: V1
 
@@ -17,8 +17,9 @@ Maintain the custody ledger for gear that has physically left or returned throug
 4. Status and availability logic remain derived from allocations, never authoritative stored status.
 5. Role and ownership controls follow `AREA_USERS.md`.
 6. `PENDING_PICKUP` checkout allocations block overlapping serialized-item reservations and checkouts because custody has not transferred yet but the gear is already committed.
-7. Serialized booking windows include a 60-minute turnaround buffer before the next pickup/reservation start. A booking ending exactly when the next pickup starts conflicts; serialized gear must be due back at least 60 minutes earlier. Bulk/countable availability remains overlap-based against committed quantities.
-8. Checkout creation is guarded at the shared service boundary: non-kiosk callers must not create checkout custody, kiosk/source creates require at least one equipment item, duplicate multi-event links and duplicate bulk lines are rejected, invalid windows fail before availability work, and DB overlap races return booking conflict responses.
+7. Serialized booking windows include a 60-minute turnaround buffer before the next pickup/reservation start in both directions: a new start must follow an existing return by at least 60 minutes, and a new return must precede an existing next start by at least 60 minutes. Bulk/countable availability remains overlap-based against committed quantities.
+8. Kiosk scan preflight gives item-level feedback for conflicts, shortages, unavailable assets, and turnaround risk immediately after an item is staged; completion still performs the authoritative transactional check.
+9. Checkout creation is guarded at the shared service boundary: non-kiosk callers must not create checkout custody, kiosk/source creates require at least one equipment item, duplicate multi-event links and duplicate bulk lines are rejected, invalid windows fail before availability work, and DB overlap races return booking conflict responses.
 
 ## V1 Workflow
 
@@ -42,7 +43,7 @@ Legacy documentation below describes the retired web wizard contract and is pres
 1. Full `EquipmentPicker` with quiet section chips, search, availability conflict markers, QR scan-to-add, and deliberate per-item selection.
 2. Equipment guidance warns about compatible battery availability and support gear. Battery units are selected by quantity here; kiosk pickup scans bind the actual numbered units.
 3. On mobile checkout: scan-first UI (camera open by default).
-4. The Step 2 header shows selected count. Warning/status chrome appears only for unavailable stale selections, hard conflicts, next-use notices, turnaround warnings, or active availability rechecks.
+4. The Step 2 header shows selected count. Warning/status chrome appears only for unavailable stale selections, hard conflicts, needed-next notices, turnaround warnings, or active availability rechecks.
 
 **Step 3 — Confirmation:**
 1. Apple-like review panel leads with the selected window, requester, location, pending-pickup status, linked event, and equipment count.
@@ -63,6 +64,7 @@ Legacy documentation below describes the retired web wizard contract and is pres
 ### Extend Checkout
 1. `OPEN` checkouts can be extended if no conflicts exist.
 2. Conflict must show blocking item and conflicting booking window.
+3. Web due-back and Extend controls use forward-only 15-minute steps. Extend opens at the first valid quarter-hour after both the stored due time and now; an untouched stored timestamp is never rewritten merely by opening a detail surface.
 
 ### Check In
 1. Partial check-in allowed for multi-item allocations.
@@ -125,10 +127,10 @@ Adding new rules: add entries to `EQUIPMENT_GUIDANCE_RULES` array in `src/lib/eq
 
 ### Availability Preview Badges
 When a booking date window is set (startsAt/endsAt), the picker calls `POST /api/availability/check` with all asset IDs to detect scheduling conflicts. Results are shown as:
-- Amber conflict badge on each conflicting item row with booking title and date range.
+- Red conflict badge on each conflicting item row with booking title, date range, and the recovery action when the conflict is outside the requested window.
 - Blue "Back before" badge when an item is free for the selected window but already needed by the next future booking.
-- Orange/red "Turnaround" badge when a technically valid booking has operational risk: short time until next use, next use at another location, recent damage/lost report, or tight future bulk commitment.
-- Conflicting items remain selectable (staff may need to override) but show warning styling.
+- Separate orange/red badges for timing, transfer, and condition risk when a technically valid booking has an operational concern: short time until the next need, the next need at another location, or a recent damage/lost report. Bulk turnaround notices appear only when the requested quantity would consume stock needed by the next same-location booking.
+- Known serialized conflicts are disabled before selection; a conflict discovered after selection remains removable and blocks review. The server still rechecks the final payload authoritatively.
 - Future-booking context also appears in the booking detail Equipment tab for active checkouts so extend decisions show the next needed time before action.
 - Badges update automatically when the date range changes (debounced 500ms).
 - When no dates are set, falls back to current derived-status dots only.
@@ -315,7 +317,10 @@ The checkout detail page (`/checkouts/[id]`) uses the shared `BookingDetailPage`
 
 ## Change Log
 
-- 2026-08-25: **Committed booking edits no longer fall through to false error feedback locally.** Shared checkout title, due-back, notes, owner-transfer, cancellation, and linked-event writes now use a 30-second mutation budget instead of the generic 8-second read timeout. Detail-sheet and linked-event success callbacks run after the request error boundary, so a committed server response cannot be relabeled as a network/save failure by local refresh or close work. Real validation, permission, timeout, and optimistic-lock failures remain errors. Focused booking coverage and TypeScript/lint checks pass; authenticated interaction and deployment remain open.
+- 2026-08-26: **Availability feedback now distinguishes blockers from advisories.** Reservation and checkout pickers surface known serialized conflicts before selection, show conflict windows with return-by/available-after recovery guidance, and block review only for actual conflicts or an unavailable availability check. Kiosk scans announce item-specific conflict, shortage, transfer, condition, and timing feedback immediately; capacity-aware bulk turnaround notices avoid warnings when on-hand stock covers both requests. Final kiosk completion and server booking writes remain authoritative.
+- 2026-08-26: **Web due-back edits now match the kiosk's forward-only quarter-hour contract.** Shared booking detail, quick-view, legacy edit, and Extend controls continue to offer `00/15/30/45`, but off-grid values now round forward across hour/day boundaries instead of rounding backward or producing an invalid `:60` selection. Active checkout minimums start at the first valid quarter-hour after both checkout start and now, and Extend opens on the next valid step after the later of the stored due time or now. Existing timestamps remain unchanged until an operator confirms an edit. API, permission, audit, availability, and kiosk custody contracts are unchanged. Focused tests, TypeScript, full lint, and the app build pass; authenticated isolated-browser proof is unavailable in this workspace.
+- 2026-08-25: **Kiosk scans now explain item conflicts immediately.** A staged item receives item-specific feedback for unavailable status, serialized booking conflict, bulk shortage, or tight turnaround instead of only an unconditional success receipt; the cart remains editable and completion-time transactional availability enforcement is unchanged. Next-needed web rows now state the needed-at and return-by times, with a critical advisory for handoffs within two hours. The shared serialized buffer is enforced on both sides of a new booking window.
+- 2026-08-25: **Committed booking edits no longer fall through to false error feedback locally.** Shared checkout title, due-back, notes, owner-transfer, cancellation, and linked-event writes now use a 30-second mutation budget instead of the generic 8-second read timeout. Detail-sheet and linked-event success callbacks run after the request error boundary, so a committed server response cannot be relabeled as a network/save failure by local refresh or close work. A Dia production reproduction also isolated a platform HTTP 412 on the web `If-Unmodified-Since` header even though application stale-write responses are HTTP 409; web mutations now use the application-owned `X-Booking-Updated-At` header, while the API retains legacy-header compatibility for native clients. Real validation, permission, timeout, and optimistic-lock failures remain errors. Focused booking coverage and TypeScript/lint checks pass; deployment and post-deploy acceptance remain open.
 - 2026-08-24: **Linked-event capacity expanded.** Checkout records can carry up to 5 scheduled event links through the shared reservation-to-checkout handoff and active-booking relinking, matching the shared API, draft, web, and native picker contracts. Direct kiosk checkout entry remains the single event-or-purpose custody path; the `BookingEvent` junction, chronologically-first `Booking.eventId` primary, gear window, custody state, and return evidence are unchanged. The server/web slice is deployed in `dpl_9cFHwpSQA9QjsQTV3GF3uKf65QtE`; authenticated five-link interaction remains a separate acceptance gate.
 
 - 2026-08-20: **Linked-event editing now stays in the present and future.** The shared booking detail dialog no longer loads unrelated scheduled events that already ended, while existing historical links remain available so operators can review or remove them. The event-link API, booking lifecycle, authorization, allocations, and kiosk custody boundaries are unchanged.

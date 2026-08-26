@@ -276,7 +276,7 @@ export function MarkdownReader({ markdown }: Props) {
                 alt={caption}
                 loading="lazy"
                 decoding="async"
-                className="block h-auto w-full"
+                className="block h-auto max-w-full w-auto"
               />
             </span>
             {caption && (

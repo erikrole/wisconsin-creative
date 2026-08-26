@@ -638,6 +638,7 @@ type ShiftScheduleEvent =
   | "assigned"
   | "requested"
   | "approved"
+  | "declined"
   | "removed"
   | "shift_time_changed"
   | "personal_call_time_changed";
@@ -676,6 +677,12 @@ function shiftScheduleNotificationCopy(args: {
         type: "shift_request_approved",
         title: "Shift request approved",
         body: `You're approved for the ${args.area} ${role} slot for ${args.eventTitle}.${timing}${note}`,
+      };
+    case "declined":
+      return {
+        type: "shift_request_declined",
+        title: "Shift request declined",
+        body: `Your request for the ${args.area} ${role} slot for ${args.eventTitle} was declined.`,
       };
     case "removed":
       return {
@@ -880,7 +887,7 @@ export async function dispatchScheduleAssignmentNotifications(
     // A pending request holds no slot, so telling the student to prep gear for
     // it would be telling them to prep for a shift they may not get. The nudge
     // waits for the approval, which dispatches "approved" and fires it then.
-    ...(event === "requested"
+    ...(event === "requested" || event === "declined"
       ? []
       : [createShiftGearUpNotification(assignmentId, { source: "assignment" })]),
     createShiftScheduleNotification(assignmentId, event),

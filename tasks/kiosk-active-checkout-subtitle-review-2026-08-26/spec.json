@@ -1,0 +1,53 @@
+{
+  "title": "Kiosk Checkout Row Context",
+  "eyebrow": "iOS · Wisconsin Creative · Kiosk",
+  "lede": "The idle dashboard is read by staff at the counter: each row must identify the booking, who holds it, how much custody is involved, and when it is due. The item manifest belongs one tap deeper in checkout details.",
+  "stats": [
+    {
+      "k": "Row layout",
+      "v": "unchanged",
+      "n": "Copy-only change; due-time pill and Return action remain in place"
+    },
+    {
+      "k": "Scope",
+      "v": "1 line",
+      "n": "Holder identity plus singular/plural item count"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Side by side",
+      "note": "Same iPad Air 11-inch simulator, same live kiosk fixture, same dashboard state. The clock/freshness stamp naturally advanced between captures; the checkout row structure and fixture records are otherwise unchanged.",
+      "pairs": [
+        {
+          "title": "Active checkout rows",
+          "sub": "Look at the secondary line under each booking name.",
+          "before": "tasks/kiosk-active-checkout-subtitle-review-2026-08-26/before/dashboard.png",
+          "beforeCap": "The row spent its only small supporting line on a truncated item-name preview, which did not help staff identify the holder or the size of the custody.",
+          "after": "tasks/kiosk-active-checkout-subtitle-review-2026-08-26/after/dashboard.png",
+          "afterCap": "The row now answers who and how much at a glance: requester name plus item count. Tap the row for the actual manifest.",
+          "wide": true
+        }
+      ]
+    }
+  ],
+  "changesHeading": "What changed, and why",
+  "changes": [
+    {
+      "h": "The secondary line now carries operational context",
+      "was": "Item names were previewed under the booking title. With several items, the line became a truncated list and still omitted the person responsible for the checkout.",
+      "now": "The line reads `Requester · n item(s)`, with correct singular/plural grammar. The accessibility label also names the holder and count, while the detail drawer remains the complete item-manifest surface."
+    }
+  ],
+  "verification": [
+    "<strong>16 focused Vitest source-contract tests</strong> pass across the idle checkout list, sleep-mode removal, and iOS quality contracts.",
+    "<strong>WisconsinKiosk Xcode build and run</strong> succeeds on the iPad Air 11-inch (M4) simulator, iOS 26.5.",
+    "<strong>Runtime snapshot</strong> exposes `Kelsey Sharkey · 1 item`, `Maddy Pehler · 7 items`, and `AJ Harrison · 1 item`; the removed sleep control is absent."
+  ],
+  "notesHeading": "Remaining dashboard decisions",
+  "notes": [
+    "The due pills still use absolute weekday/date text even when a checkout is due today. A follow-up could use `Due today · 12:00 PM` or a short relative countdown for near deadlines.",
+    "The stat tiles are real filters, but the filter glyph is subtle. A follow-up could label the control group or make the active-list relationship explicit without adding another dashboard section.",
+    "No change was made to those two follow-ups in this slice; they need a deliberate copy/interaction decision rather than being bundled into the row subtitle fix."
+  ]
+}

@@ -12,6 +12,7 @@ import { SaveableField, useSaveField, FieldGroup } from "@/components/SaveableFi
 import { InlineDateField } from "./InlineDateField";
 import { BoxesIcon, CameraIcon, LinkIcon, TriangleAlert } from "lucide-react";
 import { formatDateTime, formatDuration } from "@/lib/format";
+import { minimumBookingEndDate } from "@/lib/quarter-hour";
 import type { BookingDetail, BookingPhoto } from "./types";
 
 type Props = {
@@ -33,6 +34,7 @@ export default function BookingInfoCard({
   bare = false,
 }: Props) {
   const isReservation = booking.kind === "RESERVATION";
+  const minimumEndDate = minimumBookingEndDate(new Date(booking.startsAt)).toISOString();
 
   const saveStart = useCallback(
     async (iso: string) => {
@@ -65,7 +67,7 @@ export default function BookingInfoCard({
             value={booking.endsAt}
             canEdit={canEdit}
             onSave={saveEnd}
-            minDate={booking.startsAt}
+            minDate={minimumEndDate}
           />
         </SaveableField>
         <SaveableField label="Duration">

@@ -10,6 +10,7 @@ import {
 import type { FormAction } from "./types";
 import { handleAuthRedirect, isAbortError, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { MAX_LINKED_EVENTS_PER_BOOKING } from "@/lib/request-limits";
+import { roundUpToQuarterHour } from "@/lib/quarter-hour";
 
 const BOOKING_EVENT_LOOKAHEAD_DAYS = 30;
 
@@ -29,7 +30,7 @@ export function deriveFromPrimary(events: CalendarEvent[], sport: string) {
   const returnBuffer = last.isHome === false ? 24 * 60 * 60 * 1000 : 2 * 60 * 60 * 1000;
   const end = allDaySpan
     ? new Date(last.endsAt)
-    : new Date(new Date(last.endsAt).getTime() + returnBuffer);
+    : roundUpToQuarterHour(new Date(new Date(last.endsAt).getTime() + returnBuffer));
   return {
     title,
     startsAt: toLocalDateTimeValue(start),

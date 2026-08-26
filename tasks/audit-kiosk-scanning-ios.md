@@ -129,3 +129,28 @@ The current uncommitted five-minute idle polling and heartbeat changes are not t
 ## Stop recommendation
 
 Do not change API or custody logic for this crash. The source/build correction is complete. Stop after replaying numbered-battery pickup and return on the managed M2 iPad Air and confirming no new crash report is produced.
+
+## 2026-08-26 booking-detail keyboard-hint follow-up
+
+### Goal and diagnosis
+
+- [x] Show the existing double-trigger recovery popup when an active-checkout title field has focus and the paired HID scanner suppresses the iPad software keyboard.
+- [x] Keep the popup hidden whenever a real software keyboard appears or the field loses focus.
+- [x] Preserve scanner focus ownership, scan-add behavior, API contracts, custody behavior, and the unrelated availability work already present in the checkout source.
+
+`KioskKeyboardHint` previously required both a focused field and `KioskScannerCoordinator.hardwareConnected`. The latter is derived only from `GCKeyboard`, but the reported scanner is already suppressing the software keyboard without satisfying that signal. The missing software keyboard after a focused-field grace period is the direct observable condition this recovery UI exists to explain; gating that condition on a second, incomplete hardware signal prevented the popup from appearing on the booking-detail sheet.
+
+### Stop conditions
+
+- Stop if the booking-detail field is not reporting `titleFocused`, if a real software-keyboard notification is present, or if the popup is mounted behind the sheet rather than inside it.
+- Do not change hidden HID focus acquisition, scanner ownership, active-checkout mutations, or kiosk API behavior for this presentation defect.
+
+### Verification
+
+- [x] Focused source-contract coverage for the keyboard-hint predicate and booking-detail sheet mount: 9 focused scanner tests pass.
+- [x] `npm run ios:project:check` passes. `npm run drift:ios` reaches one unrelated pre-existing `SettingsView.swift` raw `.red` literal and remains open outside this slice.
+- [x] `WisconsinKiosk` generic Simulator build and the shared `Wisconsin` iPhone 16 Pro Simulator build pass with cached packages.
+- [x] `git diff --check`, docs verification, and final scoped diff review pass.
+- [ ] Physical managed-iPad confirmation with the affected HID scanner; source/build proof does not replace this acceptance gate.
+
+The managed M2 iPad Air and iPad Pro were unavailable to Xcode on 2026-08-26. The existing `keyboard-tip` fixture hard-codes the popup visible, so it cannot produce an honest affected-state before/after for this regression; visual/device acceptance remains open rather than using a misleading capture.

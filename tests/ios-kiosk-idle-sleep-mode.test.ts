@@ -23,6 +23,16 @@ describe("iOS kiosk idle sleep mode", () => {
     expect(store).toContain("private static let heartbeatIdleInterval: UInt64 = 3_600_000_000_000");
   });
 
+  it("does not expose the debug sleep control on the idle screen", () => {
+    const idle = source("ios/Wisconsin/Kiosk/KioskIdleView.swift");
+    const store = source("ios/Wisconsin/Kiosk/KioskStore.swift");
+
+    expect(idle).not.toContain("debugSleepModeButton");
+    expect(idle).not.toContain("debugForcesSleepMode");
+    expect(idle).not.toContain("Enable debug night mode");
+    expect(store).not.toContain("clearSleepModeDismissal");
+  });
+
   it("keeps sleep dismissal across idle navigation and preserves readable overlay text", () => {
     const idle = source("ios/Wisconsin/Kiosk/KioskIdleView.swift");
     const sleepView = source("ios/Wisconsin/Kiosk/KioskSleepModeView.swift");
@@ -34,7 +44,6 @@ describe("iOS kiosk idle sleep mode", () => {
     expect(store).toContain("func deferSleepMode(for duration: TimeInterval = 10 * 60)");
     expect(idle).toContain("store.sleepDismissedUntil");
     expect(idle).toContain("store.deferSleepMode(for: sleepWakeDuration)");
-    expect(idle).toContain("store.clearSleepModeDismissal()");
     expect(idle).toContain('if standby.reason == "night_hours", !Self.isLocalNightHours(Date())');
     expect(idle).toContain('return isLocallyIdleWindow(dashboard, standby: standby) ? "idle_window" : "active_window"');
     expect(idle).toContain('guard sleepModeReason != "active_window" else { return false }');

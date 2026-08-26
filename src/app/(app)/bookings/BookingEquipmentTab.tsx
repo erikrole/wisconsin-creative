@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { AssetImage } from "@/components/AssetImage";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,14 +15,23 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Check, ImageIcon, MoreHorizontal, Search } from "lucide-react";
+import { AlertCircle, Check, ImageIcon, MoreHorizontal, Search } from "lucide-react";
 import { StaggerList, StaggerItem } from "@/components/ui/motion";
 import { toast } from "sonner";
 import type { BookingDetail, SerializedItem, BulkItem } from "@/components/booking-details/types";
 import { handleAuthRedirect, isAbortError, parseJsonSafely } from "@/lib/errors";
+import {
+  availabilityConflictMessage,
+  availabilityRiskBadgeLabel,
+  availabilityRiskMessage,
+  availabilityRiskTitle,
+  upcomingCommitmentLabel,
+  upcomingCommitmentTitle,
+} from "@/lib/availability-copy";
 
 type ConflictInfo = {
   assetId: string;
+  conflictingBookingId?: string;
   conflictingBookingTitle?: string;
   startsAt: string;
   endsAt: string;
@@ -55,7 +65,7 @@ type TurnaroundRiskInfo = {
 type BulkTurnaroundRiskInfo = {
   bulkSkuId: string;
   code: "BULK_SHORT_TURNAROUND";
-  severity: "warning";
+  severity: "warning" | "critical";
   message: string;
   bookingId: string;
   bookingTitle?: string;
@@ -63,19 +73,6 @@ type BulkTurnaroundRiskInfo = {
   gapMinutes: number;
   plannedQuantity: number;
 };
-
-function formatUpcomingStart(startsAt: string) {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(new Date(startsAt));
-}
-
-function upcomingCommitmentLabel(commitment: UpcomingCommitmentInfo) {
-  return `Back before ${formatUpcomingStart(commitment.startsAt)}`;
-}
 
 function primaryRisk<T extends { severity: "warning" | "critical" }>(risks: T[] | undefined) {
   if (!risks || risks.length === 0) return undefined;
@@ -85,11 +82,12 @@ function primaryRisk<T extends { severity: "warning" | "critical" }>(risks: T[] 
 function riskLabel(risks: Array<{ message: string; severity: "warning" | "critical" }> | undefined) {
   const risk = primaryRisk(risks);
   if (!risk) return null;
-  return risks && risks.length > 1 ? `${risk.message} +${risks.length - 1}` : risk.message;
+  const message = availabilityRiskMessage(risk);
+  return risks && risks.length > 1 ? `${message} +${risks.length - 1}` : message;
 }
 
-function riskTitle(risks: Array<{ message: string }> | undefined) {
-  return risks?.map((risk) => risk.message).join(" · ") || "Turnaround risk";
+function riskTitle(risks: Array<{ message: string; severity: "warning" | "critical" }> | undefined) {
+  return availabilityRiskTitle(risks);
 }
 
 export default function BookingEquipmentTab({
@@ -126,19 +124,22 @@ export default function BookingEquipmentTab({
   const [upcomingCommitments, setUpcomingCommitments] = useState<Map<string, UpcomingCommitmentInfo>>(new Map());
   const [turnaroundRisks, setTurnaroundRisks] = useState<Map<string, TurnaroundRiskInfo[]>>(new Map());
   const [bulkTurnaroundRisks, setBulkTurnaroundRisks] = useState<Map<string, BulkTurnaroundRiskInfo[]>>(new Map());
+  const [availabilityError, setAvailabilityError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   const fetchConflicts = useCallback(async () => {
-    if (!isActive || booking.serializedItems.length === 0) {
+    if (!isActive || (booking.serializedItems.length === 0 && booking.bulkItems.length === 0)) {
       setConflicts(new Map());
       setUpcomingCommitments(new Map());
       setTurnaroundRisks(new Map());
       setBulkTurnaroundRisks(new Map());
+      setAvailabilityError(null);
       return;
     }
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
+    setAvailabilityError(null);
 
     try {
       const res = await fetch("/api/availability/check", {
@@ -160,17 +161,22 @@ export default function BookingEquipmentTab({
       });
       if (controller.signal.aborted) return;
       if (handleAuthRedirect(res)) return;
-      if (!res.ok) return;
+      if (!res.ok) {
+        setAvailabilityError("Availability could not be refreshed. Showing the last known result.");
+        return;
+      }
       const json = await parseJsonSafely<{
-        data?: {
         conflicts?: Array<{ assetId: string; conflictingBookingTitle?: string; startsAt: string; endsAt: string }>;
         upcomingCommitments?: UpcomingCommitmentInfo[];
         turnaroundRisks?: TurnaroundRiskInfo[];
         bulkTurnaroundRisks?: BulkTurnaroundRiskInfo[];
-        };
       }>(res);
-      const data = json?.data;
-      if (!data) return;
+      // The availability route returns its result at the top level.
+      const data = json;
+      if (!data) {
+        setAvailabilityError("Availability could not be refreshed. Showing the last known result.");
+        return;
+      }
       const conflictMap = new Map<string, ConflictInfo>();
       if (data.conflicts) {
         for (const c of data.conflicts) {
@@ -198,9 +204,11 @@ export default function BookingEquipmentTab({
       setUpcomingCommitments(upcomingMap);
       setTurnaroundRisks(riskMap);
       setBulkTurnaroundRisks(bulkRiskMap);
+      setAvailabilityError(null);
     } catch (err) {
       if (isAbortError(err)) return;
-      toast.error("Failed to check equipment conflicts — try refreshing.");
+      setAvailabilityError("Availability could not be refreshed. Showing the last known result.");
+      toast.error("Failed to check equipment availability — try refreshing.");
     }
   }, [isActive, booking.id, booking.kind, booking.location.id, booking.startsAt, booking.endsAt, booking.serializedItems, booking.bulkItems]);
 
@@ -256,6 +264,19 @@ export default function BookingEquipmentTab({
         </div>
       </CardHeader>
 
+      {availabilityError && (
+        <div className="mx-4 mt-3 flex items-start gap-2 rounded-md border border-[var(--orange)]/30 bg-[var(--orange)]/[0.06] px-3 py-2.5">
+          <AlertCircle className="mt-0.5 size-4 shrink-0 text-[var(--orange-text)]" />
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold">Availability check unavailable</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">{availabilityError}</p>
+          </div>
+          <Button type="button" variant="outline" size="sm" className="h-10 shrink-0" onClick={() => void fetchConflicts()}>
+            Retry
+          </Button>
+        </div>
+      )}
+
       {/* Search */}
       {itemCount > 3 && (
         <div className="px-4 pt-3">
@@ -292,6 +313,8 @@ export default function BookingEquipmentTab({
                   conflict={conflicts.get(item.asset.id)}
                   upcoming={upcomingCommitments.get(item.asset.id)}
                   risks={turnaroundRisks.get(item.asset.id)}
+                  currentStartsAt={booking.startsAt}
+                  currentEndsAt={booking.endsAt}
                 />
               </StaggerItem>
             ))}
@@ -325,12 +348,16 @@ function SerializedRow({
   conflict,
   upcoming,
   risks,
+  currentStartsAt,
+  currentEndsAt,
 }: {
   item: SerializedItem;
   isCheckout: boolean;
   conflict?: ConflictInfo;
   upcoming?: UpcomingCommitmentInfo;
   risks?: TurnaroundRiskInfo[];
+  currentStartsAt: string;
+  currentEndsAt: string;
 }) {
   const returned = item.allocationStatus === "returned";
   const risk = primaryRisk(risks);
@@ -366,7 +393,7 @@ function SerializedRow({
         </div>
         {upcoming && !conflict && !returned && (
           <div className="truncate text-[11px] text-[var(--blue-text)]">
-            {upcomingCommitmentLabel(upcoming)}
+            {upcomingCommitmentLabel(upcoming, currentEndsAt)}
             {upcoming.bookingTitle ? ` · ${upcoming.bookingTitle}` : ""}
           </div>
         )}
@@ -375,16 +402,21 @@ function SerializedRow({
             {riskText}
           </div>
         )}
+        {conflict && !returned && (
+          <div className="truncate text-[11px] text-[var(--red-text)]" title={availabilityConflictMessage(conflict, { currentStartsAt, currentEndsAt })}>
+            {availabilityConflictMessage(conflict, { currentStartsAt, currentEndsAt })}
+          </div>
+        )}
       </div>
 
       {/* Status + row actions */}
       <div className="shrink-0 flex items-center gap-1.5">
         {conflict && !returned && (
-          <Badge variant="orange" size="sm" title={
-            conflict.conflictingBookingTitle
-              ? `Conflicts with ${conflict.conflictingBookingTitle}`
-              : "Scheduling conflict"
-          }>
+          <Badge
+            variant="red"
+            size="sm"
+            title={availabilityConflictMessage(conflict, { currentStartsAt, currentEndsAt })}
+          >
             Conflict
           </Badge>
         )}
@@ -393,12 +425,10 @@ function SerializedRow({
             variant="blue"
             size="sm"
             title={
-              upcoming.bookingTitle
-                ? `Needed next for ${upcoming.bookingTitle}`
-                : "Needed next by another booking"
+              upcomingCommitmentTitle(upcoming)
             }
           >
-            Next use
+            Needed next
           </Badge>
         )}
         {risk && !conflict && !returned && (
@@ -407,7 +437,7 @@ function SerializedRow({
             size="sm"
             title={riskTitle(risks)}
           >
-            Turnaround
+            {availabilityRiskBadgeLabel(risk)}
           </Badge>
         )}
         {returned && (
@@ -450,6 +480,7 @@ function BulkRow({
   const inQty = item.checkedInQuantity ?? 0;
   const allReturned = isCheckout && item.checkedOutQuantity > 0 && inQty >= outQty;
   const riskText = riskLabel(risks);
+  const risk = primaryRisk(risks);
 
   // Unit-tracked bulk SKUs (e.g. numbered batteries) carry specific unit numbers.
   const assignedUnits =
@@ -511,8 +542,8 @@ function BulkRow({
       {/* Status */}
       <div className="shrink-0 flex items-center gap-2">
         {risks && risks.length > 0 && !allReturned && (
-          <Badge variant="orange" size="sm" title={riskTitle(risks)}>
-            Turnaround
+          <Badge variant={risk?.severity === "critical" ? "red" : "orange"} size="sm" title={riskTitle(risks)}>
+            {risk ? availabilityRiskBadgeLabel(risk) : "Notice"}
           </Badge>
         )}
         {allReturned && (

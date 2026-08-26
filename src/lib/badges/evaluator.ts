@@ -22,6 +22,7 @@ import {
   type AppOpenedBadgeEvent,
   type CheckoutOpenedBadgeEvent,
   type CheckoutReturnedBadgeEvent,
+  type ShiftsWorkedBadgeOptions,
   type ShiftsWorkedBadgeEvent,
   type TradeCompletedBadgeEvent,
 } from "./types";
@@ -68,9 +69,8 @@ async function grantBadges(tx: TxClient, args: {
   definitions: Array<{ id: string; name: string }>;
   /**
    * Whether earning this badge is worth telling the person about. False only
-   * for a badge that only a worker an admin added pushed them over: adding a
-   * worker is deliberately silent (D-057), and a "badge earned" ping is the one
-   * way it could announce itself. The award itself is written either way.
+   * when the caller explicitly requests a silent recognition pass. The award
+   * itself is written either way.
    */
   notify?: boolean;
 }) {
@@ -125,13 +125,10 @@ async function awardThresholdBadges(tx: TxClient, args: {
   trigger: string;
   count: number;
   ruleKey?: string;
-  /**
-   * The count reached without admin-added workers. Badges at or below it were
-   * earned on the schedule's own record and notify; anything above it exists
-   * only because of an added-worker row and is granted silently. Defaults to
-   * `count`, so a caller with no added workers behaves exactly as before.
-   */
+  /** Counts reached without admin-added workers for the normal nightly pass. */
   notifiableCount?: number;
+  /** Suppress every notification for an explicit backfill recognition pass. */
+  notify?: boolean;
 }) {
   const definitions = await tx.badgeDefinition.findMany({
     where: {
@@ -143,6 +140,15 @@ async function awardThresholdBadges(tx: TxClient, args: {
     },
     select: { id: true, name: true, threshold: true },
   });
+
+  if (args.notify === false) {
+    await grantBadges(tx, {
+      userId: args.userId,
+      definitions,
+      notify: false,
+    });
+    return;
+  }
 
   const notifiable = args.notifiableCount ?? args.count;
   await grantBadges(tx, {
@@ -177,8 +183,10 @@ async function awardMeasuredRuleBadges(tx: TxClient, args: {
   userId: string;
   trigger: string;
   counts: Map<string, number>;
-  /** Per-rule counts without admin-added workers. See `notifiableCount`. */
+  /** Per-rule counts without admin-added workers for the normal nightly pass. */
   notifiableCounts?: Map<string, number>;
+  /** Suppress every notification for an explicit backfill recognition pass. */
+  notify?: boolean;
 }) {
   const ruleKeys = [...args.counts.keys()];
   if (ruleKeys.length === 0) return;
@@ -198,6 +206,15 @@ async function awardMeasuredRuleBadges(tx: TxClient, args: {
     && definition.threshold !== null
     && (args.counts.get(definition.ruleKey) ?? 0) >= definition.threshold
   ));
+
+  if (args.notify === false) {
+    await grantBadges(tx, {
+      userId: args.userId,
+      definitions: earnedDefinitions,
+      notify: false,
+    });
+    return;
+  }
 
   const earnedWithoutAddedWorkers = args.notifiableCounts
     ? new Set(earnedDefinitions.filter((definition) => (
@@ -622,19 +639,22 @@ export async function onAppOpened(event: AppOpenedBadgeEvent): Promise<void> {
  * deduplication so the progress bar on a profile and the award written here
  * cannot disagree.
  *
- * A badge the person had already earned on their own assignments notifies as
- * usual. One that only an added-worker row pushed them over is granted
- * silently, because adding a worker is not supposed to announce itself and
- * "badge earned" is the only message it could otherwise produce. Silence is durable rather than deferred:
- * the award row exists after the silent grant, so no later pass re-inserts it
- * and none can notify late.
+ * A normal nightly pass keeps the existing schedule-earned notification
+ * behavior. A backfill pass supplies `notify: false`, which makes every award
+ * in that recount silent, including one whose threshold is also met by a
+ * scheduled assignment. Silence is durable rather than deferred: the award
+ * row exists after the silent grant, so no later pass re-inserts it and none
+ * can notify late.
  *
  * Archived events still count. `morning-refresh` stamps `archivedAt` on events
  * older than four months purely as list hygiene -- "nothing is deleted" -- so
  * excluding them would make a person's worked-shift total fall over time and
  * strand them below a threshold they had already passed.
  */
-export async function onShiftsWorked(event: ShiftsWorkedBadgeEvent): Promise<void> {
+export async function onShiftsWorked(
+  event: ShiftsWorkedBadgeEvent,
+  options: ShiftsWorkedBadgeOptions = {},
+): Promise<void> {
   await runBadgeTransaction(async (tx) => {
     const worked = await loadWorkedShiftEvidence(tx, event.userId);
     const scheduled = worked.filter((evidence) => evidence.source === "ASSIGNMENT");
@@ -647,15 +667,17 @@ export async function onShiftsWorked(event: ShiftsWorkedBadgeEvent): Promise<voi
       category: BadgeCategory.SHIFT,
       trigger: "shift:completed",
       count: worked.length,
-      notifiableCount: hasAddedWorkers ? scheduled.length : undefined,
+      notifiableCount: options.notify === false || !hasAddedWorkers ? undefined : scheduled.length,
+      notify: options.notify,
     });
     await awardMeasuredRuleBadges(tx, {
       userId: event.userId,
       trigger: "shift:completed",
       counts: shiftAutomaticRuleCounts(worked, env.appTimezone),
-      notifiableCounts: hasAddedWorkers
-        ? shiftAutomaticRuleCounts(scheduled, env.appTimezone)
-        : undefined,
+      notifiableCounts: options.notify === false || !hasAddedWorkers
+        ? undefined
+        : shiftAutomaticRuleCounts(scheduled, env.appTimezone),
+      notify: options.notify,
     });
   });
 }

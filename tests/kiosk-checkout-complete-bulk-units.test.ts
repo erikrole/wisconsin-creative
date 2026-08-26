@@ -401,7 +401,6 @@ describe("kiosk checkout complete bulk units", () => {
       serializedAssetIds: ["asset-1"],
       bulkItems: [],
       bookingKind: "CHECKOUT",
-      includeBulkTurnaroundRisks: false,
       startsAt: expect.any(Date),
       endsAt: new Date(endsAt),
     }));
@@ -566,7 +565,6 @@ describe("kiosk checkout complete bulk units", () => {
     expect(res.status).toBe(200);
     expect(mocks.checkAvailability).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       locationId: "loc-1",
-      includeBulkTurnaroundRisks: false,
     }));
     expect(mocks.bookingCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({
@@ -586,7 +584,6 @@ describe("kiosk checkout complete bulk units", () => {
     expect(res.status).toBe(200);
     expect(mocks.checkAvailability).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       locationId: "loc-1",
-      includeBulkTurnaroundRisks: false,
       serializedAssetIds: ["asset-1"],
     }));
     expect(mocks.bookingCreate).toHaveBeenCalledWith({

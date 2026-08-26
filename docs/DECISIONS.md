@@ -1110,6 +1110,7 @@ These are non-negotiable integrity constraints. Every feature must preserve them
   `docs/RELEASE_VERIFICATION.md`.
 
 ## Change Log
+- 2026-08-26: Amended D-057 so event-worker backfill recognition is explicitly all-silent. Awards still persist, but no badge notification is created for any badge in the backfill recount; the worker surface contains no recipient-notification promise and finished-event adds remain immediate.
 - 2026-08-25: Released the accepted Scoreboard, event-worker, Student-read, role-preview, app-activity, and linked-event-cap slices in production deployment `dpl_9cFHwpSQA9QjsQTV3GF3uKf65QtE` from commit `c48dd43d`; authenticated role-specific and interaction proof remains tracked by the relevant area gaps.
 - 2026-08-24: Amended D-056 so Scoreboard result authority is W/L/T rather than W/L-only. The calendar `[T]` marker is retained in raw source evidence, stored as `TIE`, included in official records and filters, and counted as half a win for rate. The enum and idempotent source-backed backfill are split across migrations `0132` and `0133` so the new value is committed before the backfill uses it; migration and compatible route deployment are complete, while authenticated production proof remains pending.
 - 2026-08-23: Renamed D-057's record from "Scoreboard credit" to **event worker** in product language, schema, routes, and UI: the control is "Add worker". The Scoreboard's `eventCredits`/`gameCredits` tallies keep the word credit, because a credit is what gets counted and a worker is who gets counted. Migration `0131` was renamed with it -- it had not been deployed anywhere, so the table changed cleanly with no data step.
@@ -1362,7 +1363,7 @@ These are non-negotiable integrity constraints. Every feature must preserve them
 ## D-057: Event Workers Are Recorded Separately From Shift Scheduling
 
 - Date: 2026-08-23
-- Status: Accepted; migration deployed in `dpl_9cFHwpSQA9QjsQTV3GF3uKf65QtE`; authenticated production proof pending
+- Status: Accepted; migration deployed in `dpl_9cFHwpSQA9QjsQTV3GF3uKf65QtE`; fully-silent backfill amendment implemented locally; authenticated production proof pending
 - Context:
   - People work events they were never staffed on: a late fill-in, someone who covered without a slot, or a collaborator whose contribution is tracked but who is never scheduled through our crew system.
   - Backfilling those contributions as shift assignments would be wrong in every direction. It would message the person, publish them into a crew, put a past or future event on their My Shifts, expose them to trade and acknowledgement flows, and let staffing coverage math count a slot that never existed.
@@ -1379,7 +1380,7 @@ These are non-negotiable integrity constraints. Every feature must preserve them
 - Consequences:
   - Season stats can be corrected after the fact without rewriting schedule history or paging anyone.
   - The audit trail is the only record of an added worker, so audit coverage is the accountability mechanism for a control that silently moves recognition numbers.
-  - Silence covers the badge recount as well. A badge the person had already earned on their own assignments notifies as usual; one that only an added-worker row pushed them over is granted silently, so no surface announces the addition. The suppression is durable, not deferred: the award row exists after the silent grant, so no later pass re-inserts it and none can notify late.
+  - Silence covers the entire backfill badge recount. Every newly earned badge is still written, but no badge notification is created, including when scheduled assignments also cross a threshold in the same pass. The suppression is durable, not deferred: the award row exists after the silent grant, so no later pass re-inserts it and none can notify late. Ordinary scheduled-shift recognition remains separate and may notify when it is not part of a backfill pass.
   - Because the shared Scoreboard response boundary is unchanged, no client -- web, native, or collaborator -- learns how a person came to be on an event; an added worker appears exactly like an assigned one.
 - Guardrails:
   - Never notify, publish, or schedule from an added worker, and never surface one as a shift.
@@ -1387,7 +1388,7 @@ These are non-negotiable integrity constraints. Every feature must preserve them
   - Never let an added worker double-count a person who also holds an assignment on the same event.
   - Never let an added worker invent an area, a call window, or an hour-of-day fact it does not have; breadth and time-of-day rules must stay unearned rather than approximated.
   - Never let the awarding path and the progress path read worked evidence from two different queries again.
-  - Never notify for a badge that only an added worker earned, and never suppress a notification for one the schedule's own record already earned.
+  - Never notify for any badge award produced by an added-worker backfill, including one whose threshold is also reached by schedule-owned assignments.
   - Do not widen writes beyond ADMIN, and do not add a worker-writing path that skips the audit entry.
   - Do not reintroduce "credit" as the name for this record; the Scoreboard's own `eventCredits`/`gameCredits` tallies keep that word.
 - Reference: `docs/AREA_EVENTS.md`, `docs/AREA_COLLABORATORS.md`, `src/lib/services/event-worker.ts`, `src/lib/badges/worked-evidence.ts`, `prisma/migrations/0131_event_workers/migration.sql`.
@@ -1400,7 +1401,7 @@ These are non-negotiable integrity constraints. Every feature must preserve them
   - Photo Mechanic needs a useful shared-capacity view: students should know who holds an active linked slot, but that does not require exposing another account's private profile fields or the pool's management controls.
   - `scope=ios-home` is an explicit native personal payload, and collaborator capabilities/private-field minimization remain separate boundaries.
 - Decision:
-  - Normal `/api/dashboard` and `/api/dashboard/stats` responses are team-visible for internal Students, Staff, and Admins. Student regular web Home shows team checkouts/reservations/pending pickup/overdue counts and generic Upcoming Events. `scope=ios-home` remains personal; collaborators remain capability-driven.
+  - Normal `/api/dashboard` and `/api/dashboard/stats` responses and the authenticated web/native Bookings list/detail reads are team-visible for internal Students, Staff, and Admins. Student regular web Home shows team checkouts/reservations/pending pickup/overdue counts and generic Upcoming Events. `scope=ios-home` remains personal; collaborators remain capability-driven.
   - Student `/api/users` list and `/api/users/[id]` profile reads cover all active visible users/profiles. Hidden-roster protections remain server-owned; collaborator cross-user profile data remains minimized.
   - Student Photo Mechanic responses keep activation keys masked unless the student owns the active claim, while allowing the name/avatar of active linked holders. Other holder ids, email, occupant labels, and management fields remain server-side. The web pool's Action column is staff/admin-only; row selection continues to own the student claim flow.
 - Guardrails:

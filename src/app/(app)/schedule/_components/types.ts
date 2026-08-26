@@ -35,6 +35,7 @@ export type ShiftAssignment = {
   id: string;
   status: string;
   user: ShiftUser;
+  activeTrade?: { id: string; status: string } | null;
   callStartsAt?: string | null;
   callEndsAt?: string | null;
   callNote?: string | null;

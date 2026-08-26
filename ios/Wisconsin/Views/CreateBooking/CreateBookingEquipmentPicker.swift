@@ -42,6 +42,10 @@ struct CreateBookingEquipmentPicker: View {
                 submissionConflictSection(submissionConflict)
             }
 
+            if let availabilityCheckError = vm.availabilityCheckError {
+                availabilityCheckSection(availabilityCheckError)
+            }
+
             if isBrowsing && vm.browseCategories.count > 1 {
                 categoryChips
             }
@@ -56,6 +60,8 @@ struct CreateBookingEquipmentPicker: View {
                             quantity: vm.quantity(for: sku),
                             locationName: vm.locationName(for: sku),
                             isAtPickupLocation: vm.isAtPickupLocation(sku),
+                            turnaroundMessage: vm.bulkTurnaroundMessage(for: sku.id),
+                            turnaroundIsCritical: vm.bulkTurnaroundIsCritical(for: sku.id),
                             onDecrement: { handleBulkDecrement(sku) },
                             onIncrement: { handleBulkIncrement(sku) }
                         )
@@ -72,7 +78,11 @@ struct CreateBookingEquipmentPicker: View {
                                 asset: asset,
                                 isSelected: vm.selectedAssetIds.contains(asset.id),
                                 isConflicted: vm.conflictedAssetIds.contains(asset.id),
-                                isAtPickupLocation: vm.isAtPickupLocation(asset)
+                                conflictMessage: vm.conflictMessage(for: asset.id),
+                                isAtPickupLocation: vm.isAtPickupLocation(asset),
+                                upcomingCommitmentLabel: vm.upcomingCommitmentLabel(for: asset.id),
+                                turnaroundMessage: vm.turnaroundMessage(for: asset.id),
+                                turnaroundIsCritical: vm.turnaroundIsCritical(for: asset.id)
                             ) {
                                 handleAssetTap(asset)
                             }
@@ -82,6 +92,8 @@ struct CreateBookingEquipmentPicker: View {
                                 quantity: vm.quantity(for: sku),
                                 locationName: vm.locationName(for: sku),
                                 isAtPickupLocation: vm.isAtPickupLocation(sku),
+                                turnaroundMessage: vm.bulkTurnaroundMessage(for: sku.id),
+                                turnaroundIsCritical: vm.bulkTurnaroundIsCritical(for: sku.id),
                                 onDecrement: { handleBulkDecrement(sku) },
                                 onIncrement: { handleBulkIncrement(sku) }
                             )
@@ -97,7 +109,11 @@ struct CreateBookingEquipmentPicker: View {
                             asset: asset,
                             isSelected: vm.selectedAssetIds.contains(asset.id),
                             isConflicted: vm.conflictedAssetIds.contains(asset.id),
-                            isAtPickupLocation: vm.isAtPickupLocation(asset)
+                            conflictMessage: vm.conflictMessage(for: asset.id),
+                            isAtPickupLocation: vm.isAtPickupLocation(asset),
+                            upcomingCommitmentLabel: vm.upcomingCommitmentLabel(for: asset.id),
+                            turnaroundMessage: vm.turnaroundMessage(for: asset.id),
+                            turnaroundIsCritical: vm.turnaroundIsCritical(for: asset.id)
                         ) {
                             handleAssetTap(asset)
                         }
@@ -171,18 +187,18 @@ struct CreateBookingEquipmentPicker: View {
                 Haptics.tap()
             } label: {
                 HStack(spacing: 12) {
-                    Image(systemName: vm.conflictedAssetIds.isEmpty && vm.selectedLocationMismatchCount == 0 ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                    Image(systemName: selectedSummaryHasWarning ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
                         .font(.title3.weight(.semibold))
                         .foregroundStyle(
-                            vm.conflictedAssetIds.isEmpty && vm.selectedLocationMismatchCount == 0
-                                ? Color.statusText(.green)
-                                : Color.statusText(.orange)
+                            selectedSummaryHasWarning
+                                ? Color.statusText(.orange)
+                                : Color.statusText(.green)
                         )
                         .frame(width: 38, height: 38)
                         .background(
-                            vm.conflictedAssetIds.isEmpty && vm.selectedLocationMismatchCount == 0
-                                ? Color.statusBackground(.green)
-                                : Color.statusBackground(.orange),
+                            selectedSummaryHasWarning
+                                ? Color.statusBackground(.orange)
+                                : Color.statusBackground(.green),
                             in: Circle()
                         )
 
@@ -193,9 +209,9 @@ struct CreateBookingEquipmentPicker: View {
                         Text(selectionSummaryText)
                             .font(.caption)
                             .foregroundStyle(
-                                vm.conflictedAssetIds.isEmpty && vm.selectedLocationMismatchCount == 0
-                                    ? Color.secondary
-                                    : Color.statusText(.orange)
+                                selectedSummaryHasWarning
+                                    ? Color.statusText(.orange)
+                                    : Color.secondary
                             )
                     }
 
@@ -217,14 +233,32 @@ struct CreateBookingEquipmentPicker: View {
         }
     }
 
+    private var selectedSummaryHasWarning: Bool {
+        vm.selectedLocationMismatchCount > 0
+            || vm.selectedConflictCount > 0
+            || vm.hasSelectedTimingAdvisories
+            || vm.availabilityCheckError != nil
+            || vm.isCheckingAvailability
+    }
+
     private var selectionSummaryText: String {
         let mismatchCount = vm.selectedLocationMismatchCount
         if mismatchCount > 0 {
             return "\(mismatchCount) item\(mismatchCount == 1 ? " is" : "s are") at another pickup location"
         }
-        let count = vm.conflictedAssetIds.count
+        let count = vm.selectedConflictCount
         if count > 0 {
             return "\(count) conflict\(count == 1 ? "" : "s") to review"
+        }
+        if let availabilityCheckError = vm.availabilityCheckError {
+            return availabilityCheckError
+        }
+        let timingCount = vm.selectedTimingAdvisoryCount
+        if timingCount > 0 {
+            return "\(timingCount) timing notice\(timingCount == 1 ? "" : "s") to review"
+        }
+        if vm.isCheckingAvailability {
+            return "Checking availability…"
         }
         return "Ready to review"
     }
@@ -245,6 +279,29 @@ struct CreateBookingEquipmentPicker: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer(minLength: 0)
+            }
+        }
+    }
+
+    private func availabilityCheckSection(_ message: String) -> some View {
+        Section {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "wifi.exclamationmark")
+                    .font(.title3)
+                    .foregroundStyle(Color.statusText(.orange))
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Availability check unavailable")
+                        .font(.subheadline.weight(.semibold))
+                    Text(message)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+                Button("Retry") { vm.scheduleConflictCheck() }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
             }
         }
     }
@@ -376,7 +433,7 @@ struct CreateBookingEquipmentPicker: View {
                 Text(
                     vm.selectedLocationMismatchCount > 0
                         ? "Fix Location"
-                        : (vm.conflictedAssetIds.isEmpty ? "Review" : "Review Conflicts")
+                        : (vm.selectedConflictCount == 0 ? "Review" : "Resolve Conflicts")
                 )
                     .fontWeight(.semibold)
                     .padding(.horizontal, 6)
@@ -480,6 +537,8 @@ struct BulkResultRow: View {
     let quantity: Int
     let locationName: String
     let isAtPickupLocation: Bool
+    var turnaroundMessage: String?
+    var turnaroundIsCritical = false
     let onDecrement: () -> Void
     let onIncrement: () -> Void
 
@@ -505,6 +564,13 @@ struct BulkResultRow: View {
                     Text("Choose \(locationName) pickup to add")
                         .font(.caption2.weight(.medium))
                         .foregroundStyle(Color.statusText(.orange))
+                }
+                if let turnaroundMessage {
+                    Label(turnaroundMessage, systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption2)
+                        .foregroundStyle(Color.statusText(turnaroundIsCritical ? .red : .orange))
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
 
@@ -648,7 +714,7 @@ struct EquipmentCartSheet: View {
         let mismatchCount = vm.selectedLocationMismatchCount
         NavigationStack {
             Group {
-                if vm.selectedEquipmentCount == 0 {
+                        if vm.selectedEquipmentCount == 0 {
                     ContentUnavailableView(
                         "No equipment selected",
                         systemImage: "shippingbox",
@@ -656,15 +722,27 @@ struct EquipmentCartSheet: View {
                     )
                 } else {
                     List {
-                        if !vm.conflictedAssetIds.isEmpty {
-                            let count = vm.conflictedAssetIds.count
+                        if vm.selectedConflictCount > 0 {
+                            let count = vm.selectedConflictCount
                             Section {
                                 Label(
-                                    "\(count) scheduling conflict\(count == 1 ? "" : "s") — availability is rechecked when you reserve.",
+                                    "\(count) scheduling conflict\(count == 1 ? "" : "s") — remove conflicted gear or change the dates before review.",
                                     systemImage: "exclamationmark.triangle.fill"
                                 )
                                 .font(.footnote)
                                 .foregroundStyle(Color.statusText(.orange))
+                            }
+                        }
+
+                        if vm.selectedTimingAdvisoryCount > 0 {
+                            let count = vm.selectedTimingAdvisoryCount
+                            Section {
+                                Label(
+                                    "\(count) timing notice\(count == 1 ? "" : "s") — review the item details before reserving.",
+                                    systemImage: "clock.arrow.circlepath"
+                                )
+                                .font(.footnote)
+                                .foregroundStyle(Color.statusText(.blue))
                             }
                         }
 
@@ -685,7 +763,11 @@ struct EquipmentCartSheet: View {
                                     SelectedEquipmentRow(
                                         asset: asset,
                                         isConflicted: vm.conflictedAssetIds.contains(asset.id),
-                                        isAtPickupLocation: vm.isAtPickupLocation(asset)
+                                        conflictMessage: vm.conflictMessage(for: asset.id),
+                                        isAtPickupLocation: vm.isAtPickupLocation(asset),
+                                        upcomingCommitmentLabel: vm.upcomingCommitmentLabel(for: asset.id),
+                                        turnaroundMessage: vm.turnaroundMessage(for: asset.id),
+                                        turnaroundIsCritical: vm.turnaroundIsCritical(for: asset.id)
                                     ) {
                                         vm.removeSelectedAsset(asset)
                                         Haptics.selection()
@@ -697,6 +779,8 @@ struct EquipmentCartSheet: View {
                                         quantity: vm.quantity(for: sku),
                                         locationName: vm.locationName(for: sku),
                                         isAtPickupLocation: vm.isAtPickupLocation(sku),
+                                        turnaroundMessage: vm.bulkTurnaroundMessage(for: sku.id),
+                                        turnaroundIsCritical: vm.bulkTurnaroundIsCritical(for: sku.id),
                                         onDecrement: {
                                             vm.decrementBulk(sku)
                                             Haptics.selection()

@@ -18,6 +18,7 @@ import { db } from "@/lib/db";
 import { shiftAutomaticRuleCounts } from "@/lib/badges/automatic-rules";
 import {
   loadWorkedShiftEvidence,
+  recentlyWorkedEventUsers,
   usersWithRecentlyWorkedEvents,
 } from "@/lib/badges/worked-evidence";
 
@@ -183,6 +184,20 @@ describe("loadWorkedShiftEvidence", () => {
 });
 
 describe("usersWithRecentlyWorkedEvents", () => {
+  it("marks recent added-worker users for a silent nightly recognition pass", async () => {
+    mocks.assignmentFindMany.mockResolvedValue([{ userId: "user-1" }, { userId: "user-2" }]);
+    mocks.workerFindMany.mockResolvedValue([{ userId: "user-2" }, { userId: "user-3" }]);
+
+    const since = new Date("2026-10-30T12:00:00.000Z");
+    const users = await recentlyWorkedEventUsers(since, NOW);
+
+    expect(users).toEqual([
+      { userId: "user-1", hasAddedWorker: false },
+      { userId: "user-2", hasAddedWorker: true },
+      { userId: "user-3", hasAddedWorker: true },
+    ]);
+  });
+
   it("sweeps added workers alongside assigned people, without duplicates", async () => {
     mocks.assignmentFindMany.mockResolvedValue([{ userId: "user-1" }, { userId: "user-2" }]);
     mocks.workerFindMany.mockResolvedValue([{ userId: "user-2" }, { userId: "user-3" }]);

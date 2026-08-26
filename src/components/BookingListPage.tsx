@@ -13,6 +13,7 @@ import { Card } from "@/components/ui/card";
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
+import { BOOKING_SNAPSHOT_HEADER } from "@/lib/booking-concurrency";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useFormOptions } from "@/hooks/use-form-options";
@@ -292,7 +293,7 @@ export default function BookingListPage({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "If-Unmodified-Since": new Date(item.updatedAt).toUTCString(),
+          [BOOKING_SNAPSHOT_HEADER]: new Date(item.updatedAt).toISOString(),
         },
         body: JSON.stringify({ endsAt: new Date(new Date(item.endsAt).getTime() + days * 24 * 60 * 60 * 1000).toISOString() }),
       });

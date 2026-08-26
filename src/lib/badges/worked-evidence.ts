@@ -178,10 +178,15 @@ export async function loadWorkedShiftEvidence(
 }
 
 /** Users whose worked record changed recently enough to re-evaluate. */
-export async function usersWithRecentlyWorkedEvents(
+export type RecentlyWorkedEventUser = {
+  userId: string;
+  hasAddedWorker: boolean;
+};
+
+export async function recentlyWorkedEventUsers(
   since: Date,
   now: Date = new Date(),
-): Promise<string[]> {
+): Promise<RecentlyWorkedEventUser[]> {
   const window = { endsAt: { lt: now, gte: since }, status: "CONFIRMED" as const };
   const [assigned, added] = await Promise.all([
     db.shiftAssignment.findMany({
@@ -199,5 +204,18 @@ export async function usersWithRecentlyWorkedEvents(
     }),
   ]);
 
-  return [...new Set([...assigned, ...added].map((row) => row.userId))];
+  const users = new Map<string, RecentlyWorkedEventUser>();
+  for (const row of assigned) users.set(row.userId, { userId: row.userId, hasAddedWorker: false });
+  for (const row of added) {
+    users.set(row.userId, { userId: row.userId, hasAddedWorker: true });
+  }
+  return [...users.values()];
+}
+
+/** Backward-compatible user-id projection for callers that only need counts. */
+export async function usersWithRecentlyWorkedEvents(
+  since: Date,
+  now: Date = new Date(),
+): Promise<string[]> {
+  return (await recentlyWorkedEventUsers(since, now)).map(({ userId }) => userId);
 }

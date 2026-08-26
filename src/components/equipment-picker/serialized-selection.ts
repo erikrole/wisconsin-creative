@@ -17,9 +17,12 @@ export function canSelectSerializedAssetForWindow(
     conflict?: ConflictInfo;
   },
 ) {
+  // A schedule conflict is a hard picker exclusion even when the asset's
+  // inventory status still says AVAILABLE. The status describes the item, not
+  // whether this requested window can use it.
+  if (args.conflict) return false;
   if (asset.computedStatus === "AVAILABLE") return true;
   if (!ACTIVE_ALLOCATION_STATUSES.has(asset.computedStatus)) return false;
-  if (args.conflict) return false;
 
   const holderEndsAt = parseTime(asset.currentHolder?.endsAt);
   const requestedStartsAt = parseTime(args.startsAt);

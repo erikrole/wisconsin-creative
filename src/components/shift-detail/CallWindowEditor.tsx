@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { handleAuthRedirect, parseErrorMessage } from "@/lib/errors";
+import { QUARTER_HOUR_MINUTES, roundUpToQuarterHour } from "@/lib/quarter-hour";
 import {
   callWindowSourceLabel,
   dateTimeLocalToIso,
@@ -156,7 +157,10 @@ export function CallWindowEditor({
       setError("Set both call time and coverage end.");
       return;
     }
-    void patchWindow(callStartsAt, callEndsAt);
+    void patchWindow(
+      roundUpToQuarterHour(new Date(callStartsAt)).toISOString(),
+      roundUpToQuarterHour(new Date(callEndsAt)).toISOString(),
+    );
   }
 
   const label = formatCallTime(effectiveWindow);
@@ -209,6 +213,7 @@ export function CallWindowEditor({
               <Input
                 id={`${target.id}-call-start`}
                 type="datetime-local"
+                step={QUARTER_HOUR_MINUTES * 60}
                 value={startDraft}
                 onChange={(event) => setStartDraft(event.target.value)}
                 disabled={saving}
@@ -219,6 +224,7 @@ export function CallWindowEditor({
               <Input
                 id={`${target.id}-call-end`}
                 type="datetime-local"
+                step={QUARTER_HOUR_MINUTES * 60}
                 value={endDraft}
                 onChange={(event) => setEndDraft(event.target.value)}
                 disabled={saving}

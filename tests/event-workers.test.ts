@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   shiftGroupFindFirst: vi.fn(),
   audit: vi.fn(),
   rateLimit: vi.fn(),
+  badges: { onShiftsWorked: vi.fn() },
 }));
 
 const tx = {
@@ -53,6 +54,7 @@ vi.mock("@/lib/db", () => ({
 }));
 
 vi.mock("@/lib/audit", () => ({ createAuditEntryTx: mocks.audit }));
+vi.mock("@/lib/badges", () => ({ badges: mocks.badges }));
 vi.mock("@/lib/rate-limit", () => ({
   enforceRateLimit: mocks.rateLimit,
   SCHEDULE_MUTATION_LIMIT: { windowMs: 1, max: 1 },
@@ -85,7 +87,8 @@ beforeEach(() => {
   mocks.eventFindUnique.mockResolvedValue({
     id: "event-1",
     summary: "Wisconsin vs Ohio State",
-    startsAt: new Date("2026-10-04T18:00:00.000Z"),
+    startsAt: new Date("2026-08-01T18:00:00.000Z"),
+    endsAt: new Date("2026-08-01T22:00:00.000Z"),
   });
   mocks.userFindUnique.mockResolvedValue({ id: "user-1", name: "Casey Cole", role: "COLLABORATOR" });
   mocks.workerFindUnique.mockResolvedValue(null);
@@ -108,6 +111,12 @@ describe("EventWorkersCard load failure", () => {
     expect(source).toContain("setLoadFailed(true);");
     // Success has to clear it, or one blip would leave the card stuck in error.
     expect(source).toContain("setLoadFailed(false);");
+  });
+
+  it("keeps notification policy out of the worker-surface copy", () => {
+    expect(source).not.toMatch(/assignee.*notif/i);
+    expect(source).not.toMatch(/will be notified/i);
+    expect(source).not.toMatch(/no one was notified/i);
   });
 });
 
@@ -169,6 +178,10 @@ describe("POST /api/calendar-events/[id]/workers", () => {
       action: "event_worker_added",
       entityId: "event-1",
     }));
+    expect(mocks.badges.onShiftsWorked).toHaveBeenCalledWith(
+      { userId: "user-1" },
+      { notify: false },
+    );
   });
 
   it("lets the unique constraint reject a duplicate rather than racing a pre-read", async () => {

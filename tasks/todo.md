@@ -1,6 +1,6 @@
 # Task Queue
 
-Last updated: 2026-08-25
+Last updated: 2026-08-26
 
 ---
 ## In progress: Native iOS Student role preview (2026-08-25)
@@ -8,9 +8,16 @@ Last updated: 2026-08-25
 Plan: `tasks/ios-role-preview-plan-2026-08-25.md`.
 
 - [x] Confirm the native app shares the web session cookie and can reuse the signed server preview route.
-- [x] Add the Admin-only Student start/exit control, persistent read-only banner, and shell remount.
+- [x] Add the Admin-only Student start/exit control, persistent read-only indicator, and shell remount.
 - [x] Suppress native preview background writes and push/Live Activity registration.
 - [x] Pass focused source contracts, docs verification, and the iPhone 16 Pro build.
+- [x] Quiet the persistent preview marker to a thin orange screen edge, keep exit in Settings, and capture matched native before/after UI review.
+
+### Review
+
+- **Shipped locally:** The top preview pill is replaced with a one-point orange screen-edge accent; Settings → Presentation remains the only exit path, and network/error banners retain their existing emphasis.
+- **Verified:** Focused source contracts, matched fixture UI captures, the Wisconsin iPhone 16 Pro / iOS 26.5 simulator Debug build, and `git diff --check` pass.
+- **UI review:** `tasks/ios-role-preview-chrome-review-2026-08-26/review.html`.
 
 Authenticated native start/exit and presentation capture remain open as separate runtime acceptance gates.
 
@@ -537,6 +544,24 @@ Plan: `tasks/settings-sweeping-ownership-pass.md`
 - **Shipped:** Settings now has a full-width shared page shell, grouped mobile discovery, intent-first destination labels, a quieter overview, named Booking extensions load recovery, persistence-aware notification pause/resume feedback, and honest Appearance/Database diagnostics copy.
 - **Verified:** 40 focused Settings tests, focused ESLint, TypeScript, all 93 migration prefixes, codemap/docs, whitespace, and `npm run build:app` passed.
 - **Browser limitation:** Dia blocks `localhost`; `127.0.0.1` served the freshly compiled Settings route but could not reuse the localhost authentication cookie and redirected to login. Authenticated desktop and narrow visual proof is therefore not claimed.
+
+## Completed: Resources card interaction polish (2026-08-26)
+
+Plan: `tasks/resources-card-interaction-polish-plan-2026-08-26.md`
+
+- [x] Remove misleading whole-card hover emphasis from guide and non-actionable contact cards.
+- [x] Preserve visible focus and tactile press feedback for the existing guide/reference actions.
+- [x] Add a restrained guide-card directional affordance and quiet metadata/icon hierarchy.
+- [x] Make web guide cards/list rows and the native iOS guide row title-first hero surfaces by removing landing previews, visibility/audience labels, author names, and dates while retaining compact type/status cues.
+- [x] Complete focused web/iOS source-contract coverage and repository gates.
+
+### Review
+
+- **Shipped:** Web guide cards/list rows and the native iOS Guides row are title-first surfaces with compact type/status cues; previews, visibility/audience labels, author names, and dates stay out of the landing/list surfaces. Web surfaces remain visually quiet on hover while retaining a local chevron affordance; contact cards no longer imply whole-card interactivity; reference shortcuts keep a subtle action hover. Existing route, filter, search, permission, API, model, and reader behavior is unchanged.
+- **Verified:** 11 focused Resources tests, 45 focused iOS contract tests, full ESLint, TypeScript, migration checks, codemap/docs verification, whitespace, iOS project/drift/gap checks, `npm run build:app`, and the iPhone 16 Pro iOS 26.5 simulator build passed.
+- **UI review:** Matched source-equivalent before/after captures and measured hover-state differences are in `tasks/resources-card-interaction-polish-review-2026-08-26/review.html`.
+- **Browser proof:** The visible local in-app browser rendered the authenticated Resources route at desktop and 390px narrow sizes. Guide links contained only title/type/status cues; the hovered card had no shadow or underline and its local chevron moved 2px. Production deployment/read-back remains separate.
+- **Native iOS boundary:** The source change is limited to `GuideRow`; the existing API/model/search/detail reader contract is preserved. Xcode build proof is complete; native runtime visual proof remains a separate acceptance gate.
 
 ## Completed: Resources end-to-end UI ownership pass (2026-07-10)
 

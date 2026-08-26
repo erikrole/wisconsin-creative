@@ -436,6 +436,71 @@ struct KioskScannerReadinessBadge: View {
     }
 }
 
+// MARK: Quarter-hour time input
+
+/// Shared kiosk return-time policy. Custody times are chosen in quarter-hour
+/// steps, and generated suggestions always round forward so a smart default
+/// never promises an earlier return than the source event or safety minimum.
+enum KioskQuarterHour {
+    static let minuteInterval = 15
+    private static let secondsPerInterval = TimeInterval(minuteInterval * 60)
+
+    static func roundedUp(_ date: Date) -> Date {
+        let intervals = date.timeIntervalSinceReferenceDate / secondsPerInterval
+        return Date(timeIntervalSinceReferenceDate: ceil(intervals) * secondsPerInterval)
+    }
+
+    static func clamped(_ date: Date, minimum: Date) -> Date {
+        roundedUp(max(date, minimum))
+    }
+}
+
+/// Native compact time control with a real 15-minute wheel interval. SwiftUI's
+/// `DatePicker` does not expose `UIDatePicker.minuteInterval`, which previously
+/// made staff scroll through minute-by-minute values for a custody timestamp.
+struct KioskQuarterHourTimePicker: UIViewRepresentable {
+    @Binding var selection: Date
+    var minimumDate: Date?
+    var accessibilityLabel = "Return time, 15-minute increments"
+
+    func makeUIView(context: Context) -> UIDatePicker {
+        let picker = UIDatePicker()
+        picker.datePickerMode = .time
+        picker.preferredDatePickerStyle = .compact
+        picker.minuteInterval = KioskQuarterHour.minuteInterval
+        picker.tintColor = UIColor(Color.kioskRed)
+        picker.addTarget(context.coordinator, action: #selector(Coordinator.valueChanged(_:)), for: .valueChanged)
+        picker.accessibilityLabel = accessibilityLabel
+        return picker
+    }
+
+    func updateUIView(_ picker: UIDatePicker, context: Context) {
+        context.coordinator.parent = self
+        picker.minimumDate = minimumDate
+        picker.accessibilityLabel = accessibilityLabel
+        if abs(picker.date.timeIntervalSince(selection)) >= 1 {
+            picker.setDate(selection, animated: false)
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(parent: self)
+    }
+
+    @MainActor
+    final class Coordinator: NSObject {
+        var parent: KioskQuarterHourTimePicker
+
+        init(parent: KioskQuarterHourTimePicker) {
+            self.parent = parent
+        }
+
+        @objc func valueChanged(_ picker: UIDatePicker) {
+            parent.selection = KioskQuarterHour.roundedUp(picker.date)
+        }
+    }
+}
+
 // MARK: Choice chip
 
 /// A single-tap choice on the kiosk: return-time presets, purpose shortcuts.
@@ -953,7 +1018,9 @@ struct KioskPressStyle: ButtonStyle {
 /// up, which reads as "typing is broken". This watches keyboard frame
 /// notifications while a field is focused; if no real keyboard lands within a
 /// short grace, it says what to do about it, and it clears itself the instant a
-/// keyboard appears or focus ends.
+/// keyboard appears or focus ends. The missing keyboard is the authoritative
+/// signal: some scanner models suppress software input without being exposed
+/// through `GCKeyboard`, so hardware monitoring must not gate this recovery.
 ///
 /// It is mounted at screen level and centered rather than tucked under the
 /// field, which two earlier placements ruled out. Anchored above the field the
@@ -972,7 +1039,6 @@ struct KioskKeyboardHint: View {
     /// True while a kiosk text field holds focus. Screens feed this from
     /// `store.scanner.isEditing`, which the fields already maintain.
     let isFieldFocused: Bool
-    var isScannerConnected: Bool = true
 
     @State private var keyboardVisible = false
     @State private var showTip = KioskKeyboardHint.fixtureForcesTip
@@ -995,7 +1061,7 @@ struct KioskKeyboardHint: View {
         #if DEBUG
         if Self.fixtureForcesTip { return true }
         #endif
-        return isFieldFocused && isScannerConnected && !keyboardVisible
+        return isFieldFocused && !keyboardVisible
     }
 
     var body: some View {

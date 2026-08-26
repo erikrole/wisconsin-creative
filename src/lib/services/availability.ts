@@ -1,5 +1,10 @@
 import { BookingKind, BookingStatus, PrismaClient, type Prisma } from "@prisma/client";
-import { subtractSerializedTurnaroundBuffer } from "@/lib/booking-availability-window";
+import {
+  TURNAROUND_WARNING_WINDOW_MINUTES,
+  addSerializedTurnaroundBuffer,
+  subtractSerializedTurnaroundBuffer,
+  turnaroundSeverity,
+} from "@/lib/booking-availability-window";
 
 export type BulkRequest = {
   bulkSkuId: string;
@@ -49,7 +54,7 @@ export type AvailabilityResult = {
   bulkTurnaroundRisks: Array<{
     bulkSkuId: string;
     code: "BULK_SHORT_TURNAROUND";
-    severity: "warning";
+    severity: "warning" | "critical";
     message: string;
     bookingId: string;
     bookingTitle?: string;
@@ -65,7 +70,7 @@ const serializedBlockingStatuses = [
   BookingStatus.OPEN,
 ];
 const bulkReservationCommitmentStatuses = [BookingStatus.BOOKED];
-const turnaroundWarningWindowMs = 12 * 60 * 60 * 1000;
+const turnaroundWarningWindowMs = TURNAROUND_WARNING_WINDOW_MINUTES * 60_000;
 const recentCheckinReportWindowMs = 30 * 24 * 60 * 60 * 1000;
 
 function formatDuration(minutes: number) {
@@ -89,6 +94,7 @@ export async function checkSerializedConflicts(
   }
 
   const bufferedStartsAt = subtractSerializedTurnaroundBuffer(args.startsAt);
+  const bufferedEndsAt = addSerializedTurnaroundBuffer(args.endsAt);
 
   const conflicts = await tx.assetAllocation.findMany({
     where: {
@@ -97,7 +103,10 @@ export async function checkSerializedConflicts(
       booking: {
         status: { in: serializedBlockingStatuses }
       },
-      startsAt: { lt: args.endsAt },
+      // Apply the turnaround buffer in both directions: a new booking must
+      // start at least 60m after an existing booking ends, and it must end at
+      // least 60m before an existing next booking starts.
+      startsAt: { lt: bufferedEndsAt },
       endsAt: { gt: bufferedStartsAt },
       ...(args.excludeBookingId ? { bookingId: { not: args.excludeBookingId } } : {})
     },
@@ -266,8 +275,10 @@ export async function checkSerializedTurnaroundRisks(
       risks.push({
         assetId: commitment.assetId,
         code: "SHORT_TURNAROUND",
-        severity: "warning",
-        message: `Only ${formatDuration(gapMinutes)} until next use`,
+        severity: turnaroundSeverity(gapMinutes),
+        message: gapMinutes === 0
+          ? "Needed next now"
+          : `Needed next in ${formatDuration(gapMinutes)}`,
         bookingId: commitment.bookingId,
         bookingTitle: commitment.bookingTitle,
         startsAt: commitment.startsAt,
@@ -275,14 +286,19 @@ export async function checkSerializedTurnaroundRisks(
       });
     }
 
-    if (commitment.nextLocationId && commitment.nextLocationId !== args.locationId) {
+    if (
+      commitment.nextLocationId
+      && commitment.nextLocationId !== args.locationId
+      && gapMs >= 0
+      && gapMs <= turnaroundWarningWindowMs
+    ) {
       risks.push({
         assetId: commitment.assetId,
         code: "LOCATION_TRANSFER",
         severity: "warning",
         message: commitment.nextLocationName
-          ? `Next use is at ${commitment.nextLocationName}; confirm transfer time`
-          : "Next use is at another location; confirm transfer time",
+          ? `Needed next at ${commitment.nextLocationName}; confirm transfer time`
+          : "Needed next at another location; confirm transfer time",
         bookingId: commitment.bookingId,
         bookingTitle: commitment.bookingTitle,
         startsAt: commitment.startsAt,
@@ -352,6 +368,25 @@ export async function checkBulkTurnaroundRisks(
     },
   });
 
+  // A next booking is only a turnaround risk when this checkout would consume
+  // stock that the next booking needs. The old check warned for every future
+  // booking in the twelve-hour window, even when the family had plenty of
+  // units; that made kiosk scans noisy and trained staff to ignore the notice.
+  // Missing balances are already represented by `checkBulkShortages`, so do
+  // not manufacture a second advisory for an unknown inventory row.
+  const balanceRows = await tx.bulkStockBalance.findMany({
+    where: {
+      locationId: args.locationId,
+      bulkSkuId: { in: args.bulkItems.map((item) => item.bulkSkuId) },
+    },
+    select: {
+      bulkSkuId: true,
+      onHandQuantity: true,
+    },
+  });
+  const onHandBySku = new Map((balanceRows ?? []).map((row) => [row.bulkSkuId, row.onHandQuantity]));
+  const requestedBySku = new Map(args.bulkItems.map((item) => [item.bulkSkuId, item.quantity]));
+
   const nextBySku = new Map<string, (typeof futureRows)[number]>();
   for (const row of futureRows) {
     if (row.booking.locationId !== args.locationId) continue;
@@ -360,14 +395,19 @@ export async function checkBulkTurnaroundRisks(
 
   const risks: AvailabilityResult["bulkTurnaroundRisks"] = [];
   for (const row of nextBySku.values()) {
+    const onHand = onHandBySku.get(row.bulkSkuId);
+    const requested = requestedBySku.get(row.bulkSkuId) ?? 0;
+    if (onHand === undefined || requested + row.plannedQuantity <= onHand) continue;
     const gapMs = row.booking.startsAt.getTime() - args.endsAt.getTime();
     if (gapMs < 0 || gapMs > turnaroundWarningWindowMs) continue;
     const gapMinutes = Math.max(0, Math.round(gapMs / 60_000));
     risks.push({
       bulkSkuId: row.bulkSkuId,
       code: "BULK_SHORT_TURNAROUND",
-      severity: "warning",
-      message: `Only ${formatDuration(gapMinutes)} until next bulk booking needs ${row.plannedQuantity}`,
+      severity: turnaroundSeverity(gapMinutes),
+      message: gapMinutes === 0
+        ? `Next bulk booking needs ${row.plannedQuantity} now`
+        : `Next bulk booking needs ${row.plannedQuantity} in ${formatDuration(gapMinutes)}`,
       bookingId: row.bookingId,
       bookingTitle: row.booking.title,
       startsAt: row.booking.startsAt,

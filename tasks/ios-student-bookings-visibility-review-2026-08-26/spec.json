@@ -1,0 +1,56 @@
+{
+  "title": "Student Bookings: shared list by default",
+  "eyebrow": "iOS · Wisconsin Creative",
+  "lede": "Students now open the Bookings tab on the same team-visible read surface as staff and admins, while the existing Mine control and ownership-based actions remain intact.",
+  "stats": [
+    {
+      "k": "Active rows",
+      "v": "1 → 3",
+      "n": "Same Student fixture, same 393pt viewport",
+      "tone": "good"
+    },
+    {
+      "k": "Other owners shown",
+      "v": "0 → 2",
+      "n": "Avery Nakamura and Jordan Lee appear in the shared list"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "The Bookings tab",
+      "note": "Captured through the real native view against the same fixture, with the simulator clock held at 09:42 and list timestamps anchored to the same hour.",
+      "pairs": [
+        {
+          "title": "Student default scope",
+          "sub": "Look at the Active count, the person filter icon, and the owners named on each row.",
+          "before": "tasks/ios-student-bookings-visibility-review-2026-08-26/before/bookings.png",
+          "beforeCap": "Mine was the default: one row owned by Rowan Diaz.",
+          "after": "tasks/ios-student-bookings-visibility-review-2026-08-26/after/bookings.png",
+          "afterCap": "All is the default: the same row plus two team bookings, with Mine still available."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "The list opened too narrowly",
+      "was": "Students landed on their own active bookings, so the Bookings tab did not match the shared operational view used by staff and admins.",
+      "now": "Students land on All visible active bookings and can still switch back to Mine when they need a personal view."
+    },
+    {
+      "h": "Read visibility was mixed across endpoints",
+      "was": "Student requester scoping was applied to the combined list, checkout list, reservation list, change signal, and booking detail read.",
+      "now": "Internal Student reads are team-visible across those paths; collaborator privacy, own-only Student mutations, kiosk custody, and personal iOS Home scope remain separate."
+    }
+  ],
+  "verification": [
+    "<strong>76 focused route/native tests</strong> pass across booking lists, detail access, change signals, collaborator controls, sport boundaries, and iOS source contracts.",
+    "<strong>TypeScript, scoped ESLint, app build, docs verification, and iOS project registration</strong> pass.",
+    "<strong>Wisconsin Debug build</strong> passes for iPhone 16 Pro, iOS 26.5; the matched before and after UI-test captures also pass.",
+    "<strong>Capture note:</strong> the first baseline runner wedged in Xcode's test finalizer and was stopped; a rerun with the exact booted device ID and clean derived data completed successfully."
+  ],
+  "notes": [
+    "This slice changes authenticated web/native read visibility only. It does not deploy, run authenticated browser acceptance, or install the app on Erik's physical iPhone.",
+    "Students still receive actions only for bookings they own; collaborators remain private by default; iOS Home remains personal through scope=ios-home."
+  ]
+}

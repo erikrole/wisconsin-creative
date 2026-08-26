@@ -1,0 +1,57 @@
+{
+  "title": "Kiosk Dashboard Timing and Filters",
+  "eyebrow": "iOS · Wisconsin Creative · Kiosk",
+  "lede": "The idle dashboard now tells staff how close a checkout is to its deadline and makes the count tiles' filter behavior visible before anyone has to guess or tap around.",
+  "stats": [
+    {
+      "k": "Due language",
+      "v": "relative",
+      "n": "Near deadlines, today/tomorrow, weekday, and overdue age each get distinct copy"
+    },
+    {
+      "k": "Filter cue",
+      "v": "visible",
+      "n": "The tile row now explains that counts change the list below"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Side by side",
+      "note": "Same iPad Air 11-inch simulator, same live kiosk fixture, same dashboard state. The clock/freshness stamp naturally advanced between captures; the row subtitle fix from the preceding slice is present in both captures.",
+      "pairs": [
+        {
+          "title": "Deadline and filter signals",
+          "sub": "Look first at the due pills, then at the space immediately above the three metric tiles.",
+          "before": "tasks/kiosk-dashboard-proximity-filter-review-2026-08-26/before/dashboard.png",
+          "beforeCap": "Every due pill used the same calendar-style timestamp, and the metric row relied on a small filter glyph with no visible instruction.",
+          "after": "tasks/kiosk-dashboard-proximity-filter-review-2026-08-26/after/dashboard.png",
+          "afterCap": "The first row reads `Due today · 12:00 PM`, later rows use a concise weekday/time form, and the count row now says `Tap a count to filter the list`. Near-deadline and overdue variants are covered by source contracts.",
+          "wide": true
+        }
+      ]
+    }
+  ],
+  "changesHeading": "What changed, and why",
+  "changes": [
+    {
+      "h": "Timing now follows operational proximity",
+      "was": "Absolute date text made a checkout due later today look like an ordinary future date and did not tell staff how close an overdue item was to its deadline.",
+      "now": "Dashboard-only copy uses `Due now`, `Due in …`, `Due today`, `Due tomorrow`, short weekday/date forms, and `Overdue · …`. Full timestamps remain on detail and edit surfaces."
+    },
+    {
+      "h": "The metric row now explains its interaction",
+      "was": "The tiles looked like read-only KPI cards, with the filter affordance carried mostly by a small icon.",
+      "now": "A visible instruction sits above the tiles and the filter icon has stronger weight; the existing button states and accessibility hints remain intact."
+    }
+  ],
+  "verification": [
+    "<strong>18 focused Vitest source-contract tests</strong> pass across the idle dashboard, sleep-mode removal, and iOS quality contracts.",
+    "<strong>WisconsinKiosk Xcode build and run</strong> succeeds on the iPad Air 11-inch (M4) simulator, iOS 26.5.",
+    "<strong>Runtime snapshot</strong> exposes `Due today · 12:00 PM`, `Due Mon · 12:00 PM`, and the holder/count row context on active checkouts."
+  ],
+  "notesHeading": "Remaining proof boundaries",
+  "notes": [
+    "The simulator fixture currently shows a due-today and future-day state. The `Due in …` and `Overdue · …` branches are source-tested and build-verified, but still deserve a live fixture/device replay during kiosk QA.",
+    "No API, schema, custody, or detail-surface behavior changed in this slice."
+  ]
+}

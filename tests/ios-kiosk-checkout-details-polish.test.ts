@@ -88,11 +88,13 @@ describe("iOS kiosk checkout details polish", () => {
     expect(checkout).not.toContain("KioskChoiceChip(");
 
     // Custom reveals two separate native compact pickers -- one for the date,
-    // one for the time. The previous inline UICalendarView (300pt) and wheel
+    // one for the time. The time bridge exposes UIDatePicker's real 15-minute
+    // interval instead of making staff scroll minute by minute.
+    // The previous inline UICalendarView (300pt) and wheel
     // (180pt) were both `.clipped()` inside a card too short to hold them and
-    // visibly overlapped on device. Neither UIKit bridge has a consumer now.
+    // visibly overlapped on device.
     expect(checkout).toContain("displayedComponents: .date");
-    expect(checkout).toContain("displayedComponents: .hourAndMinute");
+    expect(checkout).toContain("KioskQuarterHourTimePicker(");
     expect(checkout).toContain(".datePickerStyle(.compact)");
     expect(checkout).not.toContain("KioskUICalendarPicker");
     expect(checkout).not.toContain("KioskUIDatePicker");
@@ -104,6 +106,7 @@ describe("iOS kiosk checkout details polish", () => {
     // time is not identical to the time people glance past and ignore.
     expect(checkout).toContain("static let linkedEventReturnBuffer: TimeInterval = 90 * 60");
     expect(checkout).toContain("dueBackDate(afterEventEndsAt:");
+    expect(checkout).toContain("return KioskQuarterHour.roundedUp(proposed)");
     expect(checkout).toContain('"90 minutes after the linked event ends"');
     expect(checkout).not.toContain('"Matches the linked event\'s end time"');
 
@@ -113,5 +116,18 @@ describe("iOS kiosk checkout details polish", () => {
     expect(checkout).toContain(`title: "Continue to Scan"`);
     expect(checkout).toContain("STEP 1 OF 2");
     expect(checkout).not.toContain("showDetailsSheet");
+  });
+
+  it("uses the same quarter-hour return-time control for active checkout edits", () => {
+    const components = source("ios/Wisconsin/Kiosk/KioskComponents.swift");
+    const detail = source("ios/Wisconsin/Kiosk/KioskCheckoutDetailSheet.swift");
+
+    expect(components).toContain("enum KioskQuarterHour");
+    expect(components).toContain("static let minuteInterval = 15");
+    expect(components).toContain("picker.minuteInterval = KioskQuarterHour.minuteInterval");
+    expect(components).toContain("struct KioskQuarterHourTimePicker: UIViewRepresentable");
+    expect(detail).toContain("KioskQuarterHourTimePicker(");
+    expect(detail).toContain("selection: clampedEditEndsAt");
+    expect(detail).toContain("displayedComponents: .date");
   });
 });

@@ -79,7 +79,10 @@ export const GET = withAuth(async (req, { user }) => {
   const { searchParams } = new URL(req.url);
   const since = decodeCursor(searchParams.get("since"));
   const collaboratorPreview = user.role === "COLLABORATOR" && user.preview?.role === "COLLABORATOR";
-  const visibleBookingWhere = user.role === "STUDENT" || (user.role === "COLLABORATOR" && !collaboratorPreview)
+  // Internal Students receive the shared booking change signal so their
+  // team-visible Bookings list stays fresh. Private collaborators remain
+  // restricted to their own rows unless the signed preview is active.
+  const visibleBookingWhere = user.role === "COLLABORATOR" && !collaboratorPreview
     ? { requesterUserId: user.id }
     : {};
 

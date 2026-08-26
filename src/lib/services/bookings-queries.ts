@@ -68,7 +68,7 @@ export async function listBookings(
   kind: BookingKind,
   searchParams: URLSearchParams,
   extraWhere?: Prisma.BookingWhereInput,
-  /** When set, forces requesterUserId scoping regardless of query params (used to lock STUDENT to own bookings). */
+  /** When set, forces requesterUserId scoping regardless of query params (used for private collaborator reads). */
   restrictToRequesterUserId?: string,
 ) {
   const q = searchParams.get("q")?.trim();

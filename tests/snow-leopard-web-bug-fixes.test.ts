@@ -13,8 +13,9 @@ describe("Snow Leopard website bug regressions", () => {
     const concurrency = source("src/lib/booking-concurrency.ts");
 
     expect(types).toContain("updatedAt: string;");
-    expect(list).toContain('"If-Unmodified-Since": new Date(item.updatedAt).toUTCString()');
+    expect(list).toContain("[BOOKING_SNAPSHOT_HEADER]: new Date(item.updatedAt).toISOString()");
     expect(route).toContain("parseBookingSnapshotHeader(req)");
+    expect(concurrency).toContain('req.headers.get(BOOKING_SNAPSHOT_HEADER)');
     expect(concurrency).toContain('req.headers.get("if-unmodified-since")');
   });
 

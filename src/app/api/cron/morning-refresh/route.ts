@@ -12,7 +12,7 @@ import { getScheduleAutomationDigest } from "@/lib/services/schedule-automation"
 import { refreshCompanionProjection } from "@/lib/services/companion-projection";
 import { cleanupPendingSignatureArtifacts } from "@/lib/services/signatures";
 import { badges, badgesEnabled } from "@/lib/badges";
-import { usersWithRecentlyWorkedEvents } from "@/lib/badges/worked-evidence";
+import { recentlyWorkedEventUsers } from "@/lib/badges/worked-evidence";
 
 function maintenanceValue<T>(
   result: PromiseSettledResult<T>,
@@ -140,13 +140,13 @@ export const GET = withCron(async () => {
   let shiftBadgeUsers = 0;
   if (badgesEnabled()) {
     try {
-      const recentlyEnded = await usersWithRecentlyWorkedEvents(
+      const recentlyEnded = await recentlyWorkedEventUsers(
         new Date(now.getTime() - SHIFT_BADGE_LOOKBACK_MS),
         now,
       );
 
-      for (const userId of recentlyEnded) {
-        await badges.onShiftsWorked({ userId });
+      for (const { userId, hasAddedWorker } of recentlyEnded) {
+        await badges.onShiftsWorked({ userId }, { notify: !hasAddedWorker });
       }
       shiftBadgeUsers = recentlyEnded.length;
     } catch (err) {

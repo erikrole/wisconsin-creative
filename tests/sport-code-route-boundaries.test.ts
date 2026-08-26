@@ -41,6 +41,12 @@ const staffUser = {
   avatarUrl: null,
 };
 
+const studentUser = {
+  ...staffUser,
+  id: "student-1",
+  role: Role.STUDENT,
+};
+
 function req(path: string) {
   return new Request(`https://app.example.com${path}`, {
     method: "GET",
@@ -141,6 +147,16 @@ describe("sport-code route boundaries", () => {
       "cancel",
       "transfer-owner",
     ]));
+  });
+
+  it("leaves the combined booking list team-visible for students", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(studentUser);
+
+    const res = await getBookingsRoute(req("/api/bookings"), { params: Promise.resolve({}) });
+
+    expect(res.status).toBe(200);
+    const query = vi.mocked(db.booking.findMany).mock.calls[0]?.[0] as { where: Record<string, unknown> };
+    expect(query.where).not.toHaveProperty("requesterUserId");
   });
 
   it("rejects unknown combined booking sport filters before querying", async () => {

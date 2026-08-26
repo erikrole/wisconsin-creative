@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { BOOKING_MUTATION_TIMEOUT_MS, fetchWithTimeout } from "@/lib/fetch-with-timeout";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { getBookingCancelCopy } from "@/hooks/booking-action-copy";
+import { BOOKING_SNAPSHOT_HEADER } from "@/lib/booking-concurrency";
 import type { BookingDetail } from "@/components/booking-details/types";
 
 type ActionResult = { ok: boolean; error?: string };
@@ -101,7 +102,7 @@ export function useBookingActions(
       if (!guardStart("extend")) return false;
       try {
         const extraHeaders = updatedAt
-          ? { "If-Unmodified-Since": new Date(updatedAt).toUTCString() }
+          ? { [BOOKING_SNAPSHOT_HEADER]: new Date(updatedAt).toISOString() }
           : undefined;
         const result = await callAction(
           `/api/bookings/${bookingId}/extend`,
@@ -176,7 +177,7 @@ export function useBookingActions(
   const saveField = useCallback(
     async (field: string, value: unknown): Promise<BookingDetail> => {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (updatedAt) headers["If-Unmodified-Since"] = new Date(updatedAt).toUTCString();
+      if (updatedAt) headers[BOOKING_SNAPSHOT_HEADER] = new Date(updatedAt).toISOString();
       const res = await fetchWithTimeout(`/api/bookings/${bookingId}`, {
         method: "PATCH",
         timeoutMs: BOOKING_MUTATION_TIMEOUT_MS,

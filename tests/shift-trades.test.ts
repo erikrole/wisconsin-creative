@@ -84,7 +84,15 @@ import { badges } from "@/lib/badges";
 import { checkTimeConflict } from "@/lib/services/shift-assignments";
 import { sendShiftTradeEmail } from "@/lib/services/shift-trade-emails";
 import { sendPushToUser } from "@/lib/services/notifications";
-import { postTrade, claimTrade, approveTrade, declineTrade, cancelTrade, listTrades } from "@/lib/services/shift-trades";
+import {
+  postTrade,
+  claimTrade,
+  approveTrade,
+  declineTrade,
+  cancelTrade,
+  listTrades,
+  withdrawTradeClaim,
+} from "@/lib/services/shift-trades";
 
 const mockDb = db as unknown as ShiftTradesDb;
 const mockTx = mockDb._mockTx;
@@ -670,6 +678,13 @@ describe("approveTrade", () => {
         area: "Field",
       })
     );
+    expect(sendShiftTradeEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: "poster-1",
+        title: "Your trade was approved — you're off the shift",
+        body: expect.stringContaining("no longer on the schedule"),
+      })
+    );
     expect(badges.onTradeCompleted).toHaveBeenCalledWith({
       userId: "poster-1",
       tradeId: trade.id,
@@ -949,6 +964,85 @@ describe("cancelTrade", () => {
       "student-1",
       expect.objectContaining({ title: "Removed from the Trade Board" })
     );
+  });
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// withdrawTradeClaim
+// ═════════════════════════════════════════════════════════════════════════════
+describe("withdrawTradeClaim", () => {
+  function claimedTrade() {
+    const shift = makeShift({ area: "Field" });
+    const assignment = {
+      ...makeShiftAssignment({ userId: "poster-1" }),
+      shift: {
+        ...shift,
+        shiftGroup: {
+          workingCopy: null,
+          event: { id: "evt-1", summary: "Wisconsin vs Iowa" },
+        },
+      },
+    };
+    return {
+      ...makeShiftTrade({
+        id: "trade-claim-1",
+        status: "CLAIMED",
+        postedByUserId: "poster-1",
+        claimedByUserId: "claimer-1",
+        claimedAt: new Date("2026-03-01T10:00:00.000Z"),
+      }),
+      shiftAssignment: assignment,
+      postedBy: { id: "poster-1", name: "Avery Poster" },
+      claimedBy: { id: "claimer-1", name: "Rowan Claimer" },
+    };
+  }
+
+  it("returns a claimed trade to OPEN and records the withdrawal", async () => {
+    const trade = claimedTrade();
+    mockTx.shiftTrade.findUnique.mockResolvedValue(trade);
+    mockTx.shiftTrade.update.mockResolvedValue({
+      ...trade,
+      status: "OPEN",
+      claimedByUserId: null,
+      claimedAt: null,
+    });
+
+    const result = await withdrawTradeClaim(trade.id, { id: "claimer-1", role: "STUDENT" });
+
+    expect(result.status).toBe("OPEN");
+    expect(mockTx.shiftTrade.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: { claimedByUserId: null, claimedAt: null, status: "OPEN" },
+    }));
+    expect(mockTx.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ action: "trade_claim_withdrawn" }),
+    }));
+    expectSerializableIsolation(transactionCalls, 0);
+    expect(sendPushToUser).toHaveBeenCalledWith(
+      "poster-1",
+      expect.objectContaining({ title: "Trade claim withdrawn" }),
+    );
+    expect(sendShiftTradeEmail).toHaveBeenCalledWith(expect.objectContaining({
+      userId: "poster-1",
+      title: "Trade claim withdrawn",
+    }));
+  });
+
+  it("only lets the current claimer withdraw a CLAIMED trade", async () => {
+    const trade = claimedTrade();
+    mockTx.shiftTrade.findUnique.mockResolvedValue(trade);
+
+    await expect(withdrawTradeClaim(trade.id, { id: "other-user", role: "STUDENT" }))
+      .rejects.toThrow("only withdraw your own trade claim");
+    expect(mockTx.shiftTrade.update).not.toHaveBeenCalled();
+  });
+
+  it("rejects an OPEN trade because there is no pending claim to withdraw", async () => {
+    const trade = claimedTrade();
+    mockTx.shiftTrade.findUnique.mockResolvedValue({ ...trade, status: "OPEN" });
+
+    await expect(withdrawTradeClaim(trade.id, { id: "claimer-1", role: "STUDENT" }))
+      .rejects.toThrow("Only claimed trades can be withdrawn");
+    expect(mockTx.shiftTrade.update).not.toHaveBeenCalled();
   });
 });
 

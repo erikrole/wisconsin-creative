@@ -57,6 +57,7 @@ export type {
   BadgeService,
   CheckoutOpenedBadgeEvent,
   CheckoutReturnedBadgeEvent,
+  ShiftsWorkedBadgeOptions,
   ShiftsWorkedBadgeEvent,
   TradeCompletedBadgeEvent,
 } from "./types";

@@ -1,0 +1,82 @@
+{
+  "title": "Kiosk Idle: All Active Checkouts",
+  "eyebrow": "Native iPad kiosk · Wisconsin Creative",
+  "lede": "The gear counter can now see every open checkout from the resting dashboard without first knowing that a future return is hidden behind a filter.",
+  "stats": [
+    {
+      "k": "Visible checkouts",
+      "v": "3 → 4",
+      "n": "Same four-checkout fixture; the tomorrow row is no longer excluded",
+      "tone": "good"
+    },
+    {
+      "k": "Extra taps",
+      "v": "1 → 0",
+      "n": "Future custody is visible on arrival"
+    },
+    {
+      "k": "Urgency order",
+      "v": "Payload → due",
+      "n": "Overdue first, then earliest return time",
+      "tone": "good"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Matched idle dashboard",
+      "note": "Same source-controlled baseline, same fixture data, same iPad Air 11-inch Simulator, and fresh app state. The live clock differs only because captures are time-driven.",
+      "pairs": [
+        {
+          "title": "Left custody rail",
+          "sub": "Look for Softball Road Kit, due tomorrow at 9:00 AM.",
+          "before": "tasks/archive/proofs/kiosk-idle-all-checkouts-2026-08-26/before.png",
+          "beforeCap": "Due Today hides the future checkout even though the Checkouts count is four.",
+          "after": "tasks/archive/proofs/kiosk-idle-all-checkouts-2026-08-26/after.png",
+          "afterCap": "Active Checkouts shows all four, earliest due first, including tomorrow's return."
+        }
+      ]
+    },
+    {
+      "heading": "Summary and urgency follow-up",
+      "note": "Same four-checkout fixture and iPad Air 11-inch Simulator. The earlier accepted after capture is the baseline for this follow-up.",
+      "pairs": [
+        {
+          "title": "Default selection and custody order",
+          "sub": "Look at the first summary tile and read the return chips from top to bottom.",
+          "before": "tasks/archive/proofs/kiosk-idle-all-checkouts-2026-08-26/after.png",
+          "beforeCap": "Checkouts sits in the middle, while rows follow an out-of-order fixture payload.",
+          "after": "tasks/archive/proofs/kiosk-idle-all-checkouts-2026-08-26/after-layout.png",
+          "afterCap": "Checkouts anchors the row; custody reads overdue, 9:00 AM, noon, then tomorrow."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Future custody was hidden by default",
+      "was": "The resting list filtered the complete dashboard response down to today and overdue, so staff had to tap Checkouts to discover gear due later.",
+      "now": "The resting list consumes every active checkout and keeps the existing due-time chips and earliest-due-first ordering."
+    },
+    {
+      "h": "The Checkouts toggle would become a no-op",
+      "was": "Using the old toggle model with the new default would claim to clear a filter while rendering the same rows.",
+      "now": "Checkouts is the explicit resting selection. Items Out and Overdue temporarily narrow the rail and return to all checkouts when cleared."
+    },
+    {
+      "h": "Layout and payload order disagreed with the default",
+      "was": "The selected Checkouts tile sat between two other filters, and the view trusted whatever row order arrived from the server or fixture.",
+      "now": "Checkouts is first, and the native view guarantees overdue-first then earliest-due ordering with a stable title tie-breaker."
+    }
+  ],
+  "verification": [
+    "<strong>11 focused Vitest assertions</strong> pass across the idle-list, ordering, cancellation, and polling-budget contracts.",
+    "<strong>WisconsinKiosk Xcode verification</strong> passes: Simulator build, XCTest suite, and generic iOS build.",
+    "<strong>Native integrity</strong> passes: project parity, 56/56 audit coverage, and zero iOS drift findings after correcting the separate Settings error-color issue.",
+    "<strong>Repository TypeScript:</strong> blocked by unrelated dirty <code>BookingEquipmentTab.tsx</code> references to an unimported <code>Button</code> at lines 273 and 275; the kiosk Swift target builds and tests cleanly."
+  ],
+  "notes": [
+    "The matched review uses the repository's DEBUG-only fixture harness; it does not contact production or require a kiosk session.",
+    "The Simulator preserved list scroll state on the first updated launch. That invalid capture was discarded; the accepted after image was taken after clearing only the fixture app's Simulator data.",
+    "The existing iOS 26 UIRequiresFullScreen deprecation warning remains a documented future landscape-lock migration opportunity."
+  ]
+}

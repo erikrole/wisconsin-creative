@@ -6,8 +6,15 @@ const transactionCalls: Array<{ options: unknown }> = [];
 vi.mock("@/lib/db", () => {
   const mockTx = {
     shift: { findUnique: vi.fn() },
-    shiftAssignment: { findFirst: vi.fn(), create: vi.fn(), updateMany: vi.fn() },
+    shiftAssignment: {
+      findFirst: vi.fn(),
+      findUnique: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      updateMany: vi.fn(),
+    },
     user: { findUnique: vi.fn() },
+    auditLog: { create: vi.fn() },
   };
 
   return {
@@ -25,7 +32,11 @@ vi.mock("@/lib/db", () => {
 });
 
 import { db } from "@/lib/db";
-import { getScheduleOpenWork, pickupOpenShift } from "@/lib/services/schedule-open-work";
+import {
+  getScheduleOpenWork,
+  pickupOpenShift,
+  withdrawPickupRequest,
+} from "@/lib/services/schedule-open-work";
 
 const mockDb = db as unknown as {
   user: { findUnique: ReturnType<typeof vi.fn> };
@@ -35,10 +46,13 @@ const mockDb = db as unknown as {
     shift: { findUnique: ReturnType<typeof vi.fn> };
     shiftAssignment: {
       findFirst: ReturnType<typeof vi.fn>;
+      findUnique: ReturnType<typeof vi.fn>;
       create: ReturnType<typeof vi.fn>;
+      update: ReturnType<typeof vi.fn>;
       updateMany: ReturnType<typeof vi.fn>;
     };
     user: { findUnique: ReturnType<typeof vi.fn> };
+    auditLog: { create: ReturnType<typeof vi.fn> };
   };
 };
 
@@ -100,9 +114,13 @@ beforeEach(() => {
   mockDb.shiftAssignment.findMany.mockReset();
   mockDb._mockTx.shift.findUnique.mockReset();
   mockDb._mockTx.user.findUnique.mockReset();
+  mockDb._mockTx.shiftAssignment.findUnique.mockReset();
   mockDb._mockTx.shiftAssignment.findFirst.mockReset();
   mockDb._mockTx.shiftAssignment.create.mockReset();
+  mockDb._mockTx.shiftAssignment.update.mockReset();
   mockDb._mockTx.shiftAssignment.updateMany.mockReset();
+  mockDb._mockTx.auditLog.create.mockReset();
+  mockDb._mockTx.auditLog.create.mockResolvedValue({});
   mockDb._mockTx.shiftAssignment.updateMany.mockResolvedValue({ count: 0 });
 });
 
@@ -363,5 +381,53 @@ describe("schedule open work", () => {
 
     await expect(pickupOpenShift("shift-1", "student-1")).rejects.toThrow("This shift has already started");
     expect(mockDb._mockTx.shiftAssignment.create).not.toHaveBeenCalled();
+  });
+
+  it("withdraws only the student's pending request and records the reason", async () => {
+    const assignment = {
+      id: "request-1",
+      shiftId: "shift-1",
+      userId: "student-1",
+      status: "REQUESTED",
+      shift: { id: "shift-1", shiftGroup: { workingCopy: null } },
+    };
+    mockDb._mockTx.shiftAssignment.findUnique.mockResolvedValue(assignment);
+    mockDb._mockTx.shiftAssignment.update.mockResolvedValue({
+      ...assignment,
+      status: "DECLINED",
+    });
+
+    const result = await withdrawPickupRequest("request-1", {
+      id: "student-1",
+      role: "STUDENT",
+    });
+
+    expect(result.status).toBe("DECLINED");
+    expect(mockDb._mockTx.shiftAssignment.update).toHaveBeenCalledWith({
+      where: { id: "request-1" },
+      data: { status: "DECLINED" },
+    });
+    expect(mockDb._mockTx.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ action: "shift_request_withdrawn" }),
+    }));
+    expectSerializableIsolation(transactionCalls, 0);
+  });
+
+  it("does not let another user or a resolved request be withdrawn", async () => {
+    const assignment = {
+      id: "request-1",
+      shiftId: "shift-1",
+      userId: "student-1",
+      status: "REQUESTED",
+      shift: { id: "shift-1", shiftGroup: { workingCopy: null } },
+    };
+    mockDb._mockTx.shiftAssignment.findUnique.mockResolvedValue(assignment);
+
+    await expect(withdrawPickupRequest("request-1", { id: "student-2", role: "STUDENT" }))
+      .rejects.toThrow("only withdraw your own");
+    mockDb._mockTx.shiftAssignment.findUnique.mockResolvedValue({ ...assignment, status: "DECLINED" });
+    await expect(withdrawPickupRequest("request-1", { id: "student-1", role: "STUDENT" }))
+      .rejects.toThrow("Only pending requests");
+    expect(mockDb._mockTx.shiftAssignment.update).not.toHaveBeenCalled();
   });
 });

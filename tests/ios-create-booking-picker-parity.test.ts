@@ -411,7 +411,7 @@ describe("iOS create booking picker parity", () => {
     expect(picker).toContain('Text("Selected Gear")');
     expect(picker).toContain('return "Ready to review"');
     expect(picker).toContain('return "\\(count) conflict\\(count == 1 ? "" : "s") to review"');
-    expect(picker).toContain('(vm.conflictedAssetIds.isEmpty ? "Review" : "Review Conflicts")');
+    expect(picker).toContain('(vm.selectedConflictCount == 0 ? "Review" : "Resolve Conflicts")');
     expect(picker).toContain('vm.selectedLocationMismatchCount > 0');
     expect(sheet).toContain('reviewSectionHeader(title: "Schedule", editStep: 1)');
     expect(sheet).toContain('reviewSectionHeader(title: "Gear", count: vm.selectedEquipmentCount, editStep: 2)');
@@ -420,6 +420,47 @@ describe("iOS create booking picker parity", () => {
     const cartSheet = picker.slice(picker.indexOf("struct EquipmentCartSheet"));
     expect(cartSheet).not.toContain('Section("Equipment")');
     expect(cartSheet).not.toContain('Section("Supplies")');
+  });
+
+  it("previews conflicts for visible reservation rows before selection", () => {
+    const viewModel = source("ios/Wisconsin/Views/CreateBooking/CreateBookingViewModel.swift");
+
+    expect(viewModel).toContain("private var conflictPreviewAssetIds: [String]");
+    expect(viewModel).toContain("for asset in availableAssets");
+    expect(viewModel).toContain("let ids = conflictPreviewAssetIds");
+    expect(viewModel).toContain("scheduleConflictCheck()\n        } catch {");
+    expect(viewModel).toContain("selectedLocationId = value\n        scheduleConflictCheck()");
+  });
+
+  it("surfaces needed-next and turnaround advisories before reservation review", () => {
+    const models = source("ios/Wisconsin/Models/Models.swift");
+    const api = source("ios/Wisconsin/Core/APIClient.swift");
+    const viewModel = source("ios/Wisconsin/Views/CreateBooking/CreateBookingViewModel.swift");
+    const picker = source("ios/Wisconsin/Views/CreateBooking/CreateBookingEquipmentPicker.swift");
+    const rows = source("ios/Wisconsin/Views/CreateBooking/CreateBookingEquipmentRows.swift");
+
+    expect(models).toContain("struct AvailabilityCommitment: Decodable");
+    expect(models).toContain("struct AvailabilityTurnaroundRisk: Decodable");
+    expect(models).toContain("struct AvailabilityBulkTurnaroundRisk: Decodable");
+    expect(models).toContain("upcomingCommitmentsByAssetId");
+    expect(models).toContain("turnaroundRisksByAssetId");
+    expect(api).toContain("AvailabilityCheckOutcome(result: AvailabilityCheckResult(), errorMessage: nil)");
+    expect(api).toContain("let bulkItems: [BulkReservationRequest]");
+    expect(api).toContain("bulkItems: bulkItems");
+    expect(viewModel).toContain("private var conflictPreviewBulkItems: [BulkReservationRequest]");
+    expect(viewModel).toContain("for sku in visibleSkus where quantities[sku.id] == nil");
+    expect(viewModel).toContain("var upcomingCommitmentsByAssetId: [String: AvailabilityCommitment]");
+    expect(viewModel).toContain("Needed next at \\(nextLabel)");
+    expect(viewModel).toContain("return by \\(returnByLabel)");
+    expect(viewModel).toContain("selectedTimingAdvisoryCount");
+    expect(picker).toContain("upcomingCommitmentLabel: vm.upcomingCommitmentLabel(for: asset.id)");
+    expect(picker).toContain("turnaroundMessage: vm.turnaroundMessage(for: asset.id)");
+    expect(picker).toContain("turnaroundMessage: vm.bulkTurnaroundMessage(for: sku.id)");
+    expect(picker).toContain("conflictMessage: vm.conflictMessage(for: asset.id)");
+    expect(rows).toContain(".disabled((isConflicted && !isSelected) || (!isAtPickupLocation && !isSelected))");
+    expect(rows).toContain("var conflictMessage: String?");
+    expect(rows).toContain('systemImage: "clock.arrow.circlepath"');
+    expect(rows).toContain("turnaroundIsCritical ? .red : .orange");
   });
 
   it("returns create-time conflicts to gear without dropping the selection", () => {

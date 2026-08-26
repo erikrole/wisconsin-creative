@@ -188,7 +188,7 @@ describe("booking change signal route", () => {
     });
   });
 
-  it("scopes student-visible booking evidence to the signed-in requester", async () => {
+  it("returns team-visible booking evidence for a student", async () => {
     vi.mocked(requireAuth).mockResolvedValue(studentUser);
     vi.mocked(db.booking.findMany)
       .mockResolvedValueOnce([{ id: "student-booking", updatedAt: new Date("2026-06-24T10:01:00.000Z") }] as never)
@@ -204,7 +204,6 @@ describe("booking change signal route", () => {
     expect(body.data.changedBookingIds).toEqual(["student-booking"]);
     expect(db.booking.findMany).toHaveBeenNthCalledWith(1, expect.objectContaining({
       where: {
-        requesterUserId: "student-1",
         OR: [
           { updatedAt: { gt: new Date("2026-06-24T10:00:00.000Z") } },
           { updatedAt: new Date("2026-06-24T10:00:00.000Z"), id: { gt: "" } },
@@ -212,7 +211,7 @@ describe("booking change signal route", () => {
       },
     }));
     expect(db.booking.findMany).toHaveBeenNthCalledWith(2, expect.objectContaining({
-      where: { requesterUserId: "student-1", id: { in: ["student-booking"] } },
+      where: { id: { in: ["student-booking"] } },
     }));
   });
 

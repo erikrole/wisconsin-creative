@@ -59,6 +59,14 @@ import { handleAuthRedirect, isAbortError, parseJsonSafely } from "@/lib/errors"
 import { getBatteryCompatibilitySummaries } from "@/lib/battery-compatibility";
 import { compareItemAssetTags } from "@/lib/item-asset-tag-sort";
 import { AssetImage } from "@/components/AssetImage";
+import {
+  availabilityConflictMessage,
+  availabilityRiskBadgeLabel,
+  availabilityRiskMessage,
+  availabilityRiskTitle,
+  upcomingCommitmentLabel,
+  upcomingCommitmentTitle,
+} from "@/lib/availability-copy";
 
 /* ───── Types ───── */
 
@@ -108,6 +116,7 @@ export type EquipmentPickerSelectionState = {
   turnaroundRiskCount: number;
   bulkTurnaroundRiskCount: number;
   checkingAvailability: boolean;
+  availabilityError: string | null;
 };
 
 export type EquipmentPickerProps = {
@@ -141,25 +150,6 @@ export type EquipmentPickerProps = {
 
 export { type BulkTurnaroundRiskInfo, type ConflictInfo, type TurnaroundRiskInfo, type UpcomingCommitmentInfo };
 
-function formatUpcomingStart(startsAt: string) {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(new Date(startsAt));
-}
-
-function upcomingCommitmentLabel(commitment: UpcomingCommitmentInfo) {
-  return `Back before ${formatUpcomingStart(commitment.startsAt)}`;
-}
-
-function upcomingCommitmentTitle(commitment: UpcomingCommitmentInfo) {
-  return commitment.bookingTitle
-    ? `Needed next for ${commitment.bookingTitle}`
-    : "Needed next by another booking";
-}
-
 function primaryRisk<T extends { severity: "warning" | "critical" }>(risks: T[] | undefined) {
   if (!risks || risks.length === 0) return undefined;
   return risks.find((risk) => risk.severity === "critical") ?? risks[0];
@@ -168,11 +158,12 @@ function primaryRisk<T extends { severity: "warning" | "critical" }>(risks: T[] 
 function riskLabel(risks: Array<{ message: string; severity: "warning" | "critical" }> | undefined) {
   const risk = primaryRisk(risks);
   if (!risk) return null;
-  return risks && risks.length > 1 ? `${risk.message} +${risks.length - 1}` : risk.message;
+  const message = availabilityRiskMessage(risk);
+  return risks && risks.length > 1 ? `${message} +${risks.length - 1}` : message;
 }
 
-function riskTitle(risks: Array<{ message: string }> | undefined) {
-  return risks?.map((risk) => risk.message).join(" · ") || "Turnaround risk";
+function riskTitle(risks: Array<{ message: string; severity: "warning" | "critical" }> | undefined) {
+  return availabilityRiskTitle(risks);
 }
 
 function statusText(status: string) {
@@ -316,6 +307,8 @@ export default function EquipmentPicker({
     turnaroundRisks,
     bulkTurnaroundRisks,
     checking: conflictsLoading,
+    availabilityError: conflictsError,
+    retry: retryAvailability,
   } = useConflictCheck({
     startsAt,
     endsAt,
@@ -427,9 +420,11 @@ export default function EquipmentPicker({
 
   function toggleAsset(id: string, asset?: PickerAsset) {
     if (asset) rememberAsset(asset);
-    setSelectedAssetIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
+    setSelectedAssetIds((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      if (conflicts.has(id)) return prev;
+      return [...prev, id];
+    });
   }
 
   const setBulkQty = useCallback((bulkSkuId: string, qty: number) => {
@@ -506,9 +501,11 @@ export default function EquipmentPicker({
       turnaroundRiskCount: selectedTurnaroundRiskCount,
       bulkTurnaroundRiskCount: selectedBulkTurnaroundRiskCount,
       checkingAvailability: conflictsLoading,
+      availabilityError: conflictsError,
     });
   }, [
     bulkQuantity,
+    conflictsError,
     conflictsLoading,
     onSelectionStateChange,
     resolvedSelectedAssets.length,
@@ -630,6 +627,21 @@ export default function EquipmentPicker({
         </div>
       )}
 
+      {conflictsError && (
+        <div className="border-b border-border/60 bg-background px-3 py-2">
+          <Alert className="rounded-md border-[var(--orange)]/30 bg-[var(--orange)]/[0.06] py-2.5">
+            <AlertCircleIcon />
+            <AlertTitle className="text-sm">Availability check unavailable</AlertTitle>
+            <AlertDescription className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+              <span>{conflictsError}</span>
+              <Button type="button" variant="outline" size="sm" className="h-10" onClick={retryAvailability}>
+                Retry
+              </Button>
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
+
       {/* ── Item list ── */}
       <div className="max-h-[28rem] overflow-y-auto bg-background">
         {searchLoading ? (
@@ -725,9 +737,14 @@ export default function EquipmentPicker({
                             {holder.endsAt && ` · Returns ${new Date(holder.endsAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}
                           </p>
                         )}
+                        {conflict && (
+                          <p className="mt-0.5 truncate text-[10px] text-[var(--red-text)]" title={availabilityConflictMessage(conflict, { currentStartsAt: startsAt, currentEndsAt: endsAt })}>
+                            {availabilityConflictMessage(conflict, { currentStartsAt: startsAt, currentEndsAt: endsAt })}
+                          </p>
+                        )}
                         {upcoming && !conflict && !isUnavailable && (
                           <p className="mt-0.5 truncate text-[10px] text-[var(--blue-text)]">
-                            {upcomingCommitmentLabel(upcoming)}
+                            {upcomingCommitmentLabel(upcoming, endsAt)}
                             {upcoming.bookingTitle ? ` · ${upcoming.bookingTitle}` : ""}
                           </p>
                         )}
@@ -750,7 +767,14 @@ export default function EquipmentPicker({
                         </Badge>
                       )}
                       {conflict && (
-                        <Badge variant="orange" size="sm" className="shrink-0">Conflict</Badge>
+                        <Badge
+                          variant="red"
+                          size="sm"
+                          className="shrink-0"
+                          title={availabilityConflictMessage(conflict, { currentStartsAt: startsAt, currentEndsAt: endsAt })}
+                        >
+                          Conflict
+                        </Badge>
                       )}
                       {!conflict && upcoming && (
                         <Badge
@@ -759,7 +783,7 @@ export default function EquipmentPicker({
                           className="shrink-0"
                           title={upcomingCommitmentTitle(upcoming)}
                         >
-                          Next use
+                          Needed next
                         </Badge>
                       )}
                       {!conflict && risk && (
@@ -769,7 +793,7 @@ export default function EquipmentPicker({
                           className="shrink-0"
                           title={riskTitle(risks)}
                         >
-                          Turnaround
+                          {availabilityRiskBadgeLabel(risk)}
                         </Badge>
                       )}
                       {isSelected && !conflict ? (
@@ -787,6 +811,7 @@ export default function EquipmentPicker({
               const noneAvailable = available === 0;
               const hasSeparator = sectionResults.length > 0 || index > 0;
               const risks = bulkTurnaroundRisks.get(sku.id);
+              const risk = primaryRisk(risks);
               const riskText = riskLabel(risks);
 
               return (
@@ -813,15 +838,25 @@ export default function EquipmentPicker({
                           : `${available} available · ${bulkQuantityHint(sku)}`}
                       </ItemDescription>
                       {riskText && (
-                        <p className="mt-0.5 truncate text-[10px] text-[var(--orange-text)]">
+                        <p className={cn(
+                          "mt-0.5 truncate text-[10px]",
+                          risk?.severity === "critical"
+                            ? "text-[var(--red-text)]"
+                            : "text-[var(--orange-text)]",
+                        )}>
                           {riskText}
                         </p>
                       )}
                     </ItemContent>
                     <ItemActions className="ml-auto">
                       {risks && risks.length > 0 && (
-                        <Badge variant="orange" size="sm" className="shrink-0" title={riskTitle(risks)}>
-                          Turnaround
+                        <Badge
+                          variant={risk?.severity === "critical" ? "red" : "orange"}
+                          size="sm"
+                          className="shrink-0"
+                          title={riskTitle(risks)}
+                        >
+                          {risk ? availabilityRiskBadgeLabel(risk) : "Notice"}
                         </Badge>
                       )}
                       <div className="flex h-10 items-center rounded-full border border-border/60 bg-background/70">
@@ -869,6 +904,8 @@ export default function EquipmentPicker({
         upcomingCommitments={upcomingCommitments}
         turnaroundRisks={turnaroundRisks}
         bulkTurnaroundRisks={bulkTurnaroundRisks}
+        currentStartsAt={startsAt}
+        currentEndsAt={endsAt}
         onClearAll={clearAllSelections}
         onRemoveAsset={(id) => toggleAsset(id)}
         onRemoveBulk={(id) => setBulkQty(id, 0)}

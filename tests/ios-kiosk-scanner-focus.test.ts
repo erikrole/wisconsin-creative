@@ -141,11 +141,11 @@ describe("iOS kiosk scanner focus", () => {
 
     expect(components).toContain("struct KioskKeyboardHint: View");
     expect(components).toContain("Double-tap trigger to enable keyboard");
-    // The missing keyboard is caused by iPadOS counting an awake HID scanner
-    // as the hardware keyboard. With no scanner attached there is nothing to
-    // double-tap, so the tip must not fire — a slow software keyboard is not
-    // this problem.
-    expect(components).toContain("isFieldFocused && isScannerConnected && !keyboardVisible");
+    // The missing software keyboard is the authoritative condition. Some HID
+    // scanners suppress it without being exposed through GCKeyboard, so the
+    // recovery must not depend on the coordinator's best-effort hardware flag.
+    expect(components).toContain("isFieldFocused && !keyboardVisible");
+    expect(components).not.toContain("isFieldFocused && isScannerConnected");
     // Only a real software keyboard counts — the hardware-keyboard assistant
     // strip posts keyboard notifications too, with a short frame.
     expect(components).toContain("UIResponder.keyboardDidShowNotification");
@@ -167,13 +167,13 @@ describe("iOS kiosk scanner focus", () => {
     const shell = source("ios/Wisconsin/Kiosk/KioskShellView.swift");
     expect(shell).toContain("KioskKeyboardHint(");
     expect(shell).toContain("isFieldFocused: store.scanner.isEditing");
-    expect(shell).toContain("isScannerConnected: store.scanner.hardwareConnected");
     expect(components).toContain(".allowsHitTesting(false)");
     // A sheet presents above the shell, so it carries its own mount and must
     // report focus for the shell-level gate to be meaningful anywhere else.
     expect(sheet).toContain("KioskKeyboardHint(");
     expect(sheet).toContain("isFieldFocused: titleFocused");
     expect(sheet).toContain("store.scanner.setEditing(isFocused)");
+    expect(sheet).not.toContain("isScannerConnected: store.scanner.hardwareConnected");
     // No field-anchored copies left behind.
     expect(checkout).not.toContain("KioskKeyboardHint(");
   });

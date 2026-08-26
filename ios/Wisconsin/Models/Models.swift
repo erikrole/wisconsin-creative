@@ -12,6 +12,13 @@ struct RolePreviewInfo: Codable, Equatable {
     let readOnly: Bool
     let expiresAt: TimeInterval
 
+    init(actualRole: String = "ADMIN", role: String, readOnly: Bool = true, expiresAt: TimeInterval) {
+        self.actualRole = actualRole
+        self.role = role
+        self.readOnly = readOnly
+        self.expiresAt = expiresAt
+    }
+
     var roleLabel: String {
         switch role {
         case "STAFF": "Staff"
@@ -359,11 +366,15 @@ struct Booking: Codable, Identifiable, Hashable {
 struct BookingStub: Codable { let id: String }
 
 /// A scheduling conflict surfaced by `/api/availability/check`: another booking
-/// holds `assetId` during the requested window. Server enforcement at
-/// create/checkout is authoritative — this is a non-blocking preflight hint.
+/// holds `assetId` during the requested window or its serialized turnaround
+/// buffer. The picker can prevent a known conflict; server enforcement at
+/// create/checkout remains authoritative for races.
 struct AssetConflict: Decodable {
     let assetId: String
+    let conflictingBookingId: String?
     let conflictingBookingTitle: String?
+    let startsAt: Date?
+    let endsAt: Date?
 }
 
 struct BookingAvailabilityShortage: Decodable {
@@ -377,10 +388,90 @@ struct BookingUnavailableAsset: Decodable {
     let status: String
 }
 
-struct BookingAvailabilityResult: Decodable {
+/// The top-level response from `/api/availability/check`.
+///
+/// The advisory arrays are optional at the wire boundary so a native build can
+/// continue to render hard availability results while the server rolls out
+/// timing-aware response fields.
+struct AvailabilityCommitment: Decodable {
+    let assetId: String
+    let bookingId: String?
+    let bookingTitle: String?
+    let startsAt: Date?
+    let endsAt: Date?
+    let status: String?
+    let nextLocationId: String?
+    let nextLocationName: String?
+}
+
+struct AvailabilityTurnaroundRisk: Decodable {
+    let assetId: String
+    let code: String?
+    let severity: String?
+    let message: String?
+    let bookingId: String?
+    let bookingTitle: String?
+    let startsAt: Date?
+    let gapMinutes: Int?
+    let nextLocationName: String?
+    let reportType: String?
+    let reportCreatedAt: Date?
+}
+
+struct AvailabilityBulkTurnaroundRisk: Decodable {
+    let bulkSkuId: String
+    let code: String?
+    let severity: String?
+    let message: String?
+    let bookingId: String?
+    let bookingTitle: String?
+    let startsAt: Date?
+    let gapMinutes: Int?
+    let plannedQuantity: Int?
+}
+
+struct AvailabilityCheckResult: Decodable {
     let conflicts: [AssetConflict]
     let shortages: [BookingAvailabilityShortage]
     let unavailableAssets: [BookingUnavailableAsset]
+    let upcomingCommitments: [AvailabilityCommitment]
+    let turnaroundRisks: [AvailabilityTurnaroundRisk]
+    let bulkTurnaroundRisks: [AvailabilityBulkTurnaroundRisk]
+
+    init(
+        conflicts: [AssetConflict] = [],
+        shortages: [BookingAvailabilityShortage] = [],
+        unavailableAssets: [BookingUnavailableAsset] = [],
+        upcomingCommitments: [AvailabilityCommitment] = [],
+        turnaroundRisks: [AvailabilityTurnaroundRisk] = [],
+        bulkTurnaroundRisks: [AvailabilityBulkTurnaroundRisk] = []
+    ) {
+        self.conflicts = conflicts
+        self.shortages = shortages
+        self.unavailableAssets = unavailableAssets
+        self.upcomingCommitments = upcomingCommitments
+        self.turnaroundRisks = turnaroundRisks
+        self.bulkTurnaroundRisks = bulkTurnaroundRisks
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        conflicts = try container.decodeIfPresent([AssetConflict].self, forKey: .conflicts) ?? []
+        shortages = try container.decodeIfPresent([BookingAvailabilityShortage].self, forKey: .shortages) ?? []
+        unavailableAssets = try container.decodeIfPresent([BookingUnavailableAsset].self, forKey: .unavailableAssets) ?? []
+        upcomingCommitments = try container.decodeIfPresent([AvailabilityCommitment].self, forKey: .upcomingCommitments) ?? []
+        turnaroundRisks = try container.decodeIfPresent([AvailabilityTurnaroundRisk].self, forKey: .turnaroundRisks) ?? []
+        bulkTurnaroundRisks = try container.decodeIfPresent([AvailabilityBulkTurnaroundRisk].self, forKey: .bulkTurnaroundRisks) ?? []
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case conflicts
+        case shortages
+        case unavailableAssets
+        case upcomingCommitments
+        case turnaroundRisks
+        case bulkTurnaroundRisks
+    }
 
     var isAvailable: Bool {
         conflicts.isEmpty && shortages.isEmpty && unavailableAssets.isEmpty
@@ -392,7 +483,36 @@ struct BookingAvailabilityResult: Decodable {
             ? "That return time conflicts with another booking."
             : "That return time creates \(affectedCount) availability conflicts."
     }
+
+    var conflictsByAssetId: [String: AssetConflict] {
+        conflicts.reduce(into: [:]) { result, conflict in
+            result[conflict.assetId] = conflict
+        }
+    }
+
+    var upcomingCommitmentsByAssetId: [String: AvailabilityCommitment] {
+        upcomingCommitments.reduce(into: [:]) { result, commitment in
+            if result[commitment.assetId] == nil {
+                result[commitment.assetId] = commitment
+            }
+        }
+    }
+
+    var turnaroundRisksByAssetId: [String: [AvailabilityTurnaroundRisk]] {
+        turnaroundRisks.reduce(into: [:]) { result, risk in
+            result[risk.assetId, default: []].append(risk)
+        }
+    }
+
+    var bulkTurnaroundRisksBySkuId: [String: [AvailabilityBulkTurnaroundRisk]] {
+        bulkTurnaroundRisks.reduce(into: [:]) { result, risk in
+            result[risk.bulkSkuId, default: []].append(risk)
+        }
+    }
 }
+
+/// Compatibility name used by the booking-edit availability flow.
+typealias BookingAvailabilityResult = AvailabilityCheckResult
 
 // MARK: - Users
 

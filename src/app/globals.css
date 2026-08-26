@@ -1101,7 +1101,8 @@ a[data-slot="button"]:hover {
 }
 
 .guide-markdown-image-frame {
-  display: block;
+  display: flex;
+  justify-content: center;
   overflow: hidden;
   border-radius: 10px;
   background:

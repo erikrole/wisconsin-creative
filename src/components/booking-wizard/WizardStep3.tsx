@@ -179,7 +179,7 @@ export function WizardStep3({
               )}
               {selectionState.upcomingCommitmentCount > 0 && (
                 <Badge variant="blue" size="sm" className="tabular-nums">
-                  {selectionState.upcomingCommitmentCount} next use
+                  {selectionState.upcomingCommitmentCount} needed next
                 </Badge>
               )}
               {turnaroundCount > 0 && (

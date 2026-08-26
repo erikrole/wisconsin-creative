@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { BOOKING_MUTATION_TIMEOUT_MS, fetchWithTimeout } from "@/lib/fetch-with-timeout";
+import { BOOKING_SNAPSHOT_HEADER } from "@/lib/booking-concurrency";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import EmptyState from "@/components/EmptyState";
@@ -296,7 +297,7 @@ export default function BookingDetailsSheet({
     let updated: BookingDetail | null = null;
     try {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (booking.updatedAt) headers["If-Unmodified-Since"] = new Date(booking.updatedAt).toUTCString();
+      if (booking.updatedAt) headers[BOOKING_SNAPSHOT_HEADER] = new Date(booking.updatedAt).toISOString();
       const res = await fetchWithTimeout(`/api/bookings/${booking.id}`, {
         method: "PATCH",
         timeoutMs: BOOKING_MUTATION_TIMEOUT_MS,
@@ -337,7 +338,7 @@ export default function BookingDetailsSheet({
     let updated: BookingDetail | null = null;
     try {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (booking.updatedAt) headers["If-Unmodified-Since"] = new Date(booking.updatedAt).toUTCString();
+      if (booking.updatedAt) headers[BOOKING_SNAPSHOT_HEADER] = new Date(booking.updatedAt).toISOString();
       const res = await fetchWithTimeout(`/api/bookings/${booking.id}`, {
         method: "PATCH",
         timeoutMs: BOOKING_MUTATION_TIMEOUT_MS,

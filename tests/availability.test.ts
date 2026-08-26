@@ -78,11 +78,36 @@ describe("checkSerializedConflicts", () => {
     expect(tx.assetAllocation.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
-          startsAt: { lt: new Date("2026-04-01T12:00:00Z") },
+          startsAt: { lt: new Date("2026-04-01T13:00:00Z") },
           endsAt: { gt: new Date("2026-04-01T07:00:00Z") },
         }),
       }),
     );
+  });
+
+  it("blocks a new booking that ends inside the next booking turnaround buffer", async () => {
+    const tx = createMockTx();
+    tx.assetAllocation.findMany.mockResolvedValue([{
+      assetId: "a-1",
+      bookingId: "b-next",
+      startsAt: new Date("2026-04-01T12:30:00Z"),
+      endsAt: new Date("2026-04-01T14:00:00Z"),
+      booking: { title: "Next booking" },
+    }]);
+
+    const result = await checkSerializedConflicts(availabilityTx(tx), {
+      serializedAssetIds: ["a-1"],
+      startsAt: new Date("2026-04-01T08:00:00Z"),
+      endsAt: new Date("2026-04-01T12:00:00Z"),
+    });
+
+    expect(result).toEqual([{
+      assetId: "a-1",
+      conflictingBookingId: "b-next",
+      conflictingBookingTitle: "Next booking",
+      startsAt: new Date("2026-04-01T12:30:00Z"),
+      endsAt: new Date("2026-04-01T14:00:00Z"),
+    }]);
   });
 
   it("blocks reuse when an earlier booking ends inside the serialized turnaround buffer", async () => {
@@ -303,17 +328,70 @@ describe("checkSerializedTurnaroundRisks", () => {
         assetId: "a-1",
         code: "SHORT_TURNAROUND",
         severity: "warning",
-        message: "Only 12h until next use",
+        message: "Needed next in 12h",
         gapMinutes: 720,
       }),
       expect.objectContaining({
         assetId: "a-1",
         code: "LOCATION_TRANSFER",
         severity: "warning",
-        message: "Next use is at Camp Randall; confirm transfer time",
+        message: "Needed next at Camp Randall; confirm transfer time",
         nextLocationName: "Camp Randall",
       }),
     ]));
+  });
+
+  it("marks a two-hour-or-closer handoff as very tight without blocking it", async () => {
+    const tx = createMockTx();
+    tx.checkinItemReport.findMany.mockResolvedValue([]);
+
+    const result = await checkSerializedTurnaroundRisks(availabilityTx(tx), {
+      serializedAssetIds: ["a-1"],
+      locationId: "loc-1",
+      endsAt: new Date("2026-04-01T20:00:00Z"),
+      upcomingCommitments: [{
+        assetId: "a-1",
+        bookingId: "b-next",
+        bookingTitle: "Next shoot",
+        startsAt: new Date("2026-04-01T21:30:00Z"),
+        endsAt: new Date("2026-04-01T22:30:00Z"),
+        status: BookingStatus.BOOKED,
+        nextLocationId: "loc-1",
+        nextLocationName: "Main gear room",
+      }],
+    });
+
+    expect(result).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        code: "SHORT_TURNAROUND",
+        severity: "critical",
+        message: "Needed next in 1h 30m",
+        gapMinutes: 90,
+      }),
+    ]));
+  });
+
+  it("does not raise a transfer notice for a distant future booking", async () => {
+    const tx = createMockTx();
+    tx.checkinItemReport.findMany.mockResolvedValue([]);
+
+    const result = await checkSerializedTurnaroundRisks(availabilityTx(tx), {
+      serializedAssetIds: ["a-1"],
+      locationId: "loc-1",
+      endsAt: new Date("2026-04-01T20:00:00Z"),
+      upcomingCommitments: [{
+        assetId: "a-1",
+        bookingId: "b-next",
+        bookingTitle: "Next month shoot",
+        startsAt: new Date("2026-04-03T08:00:00Z"),
+        endsAt: new Date("2026-04-03T12:00:00Z"),
+        status: BookingStatus.BOOKED,
+        nextLocationId: "loc-away",
+        nextLocationName: "Camp Randall",
+      }],
+    });
+
+    expect(result).toEqual([]);
   });
 
   it("flags recent damaged or lost reports for selected assets", async () => {
@@ -372,6 +450,9 @@ describe("checkSerializedTurnaroundRisks", () => {
 describe("checkBulkTurnaroundRisks", () => {
   it("flags tight future bulk commitments in the same location", async () => {
     const tx = createMockTx();
+    tx.bulkStockBalance.findMany.mockResolvedValue([
+      { bulkSkuId: "sku-1", onHandQuantity: 7 },
+    ]);
     tx.bookingBulkItem.findMany.mockResolvedValue([
       {
         bulkSkuId: "sku-1",
@@ -395,13 +476,40 @@ describe("checkBulkTurnaroundRisks", () => {
       bulkSkuId: "sku-1",
       code: "BULK_SHORT_TURNAROUND",
       severity: "warning",
-      message: "Only 10h until next bulk booking needs 6",
+      message: "Next bulk booking needs 6 in 10h",
       bookingId: "b-next",
       bookingTitle: "Next media booking",
       startsAt: new Date("2026-04-02T08:00:00Z"),
       gapMinutes: 600,
       plannedQuantity: 6,
     }]);
+  });
+
+  it("does not warn when on-hand stock covers this checkout and the next booking", async () => {
+    const tx = createMockTx();
+    tx.bulkStockBalance.findMany.mockResolvedValue([
+      { bulkSkuId: "sku-1", onHandQuantity: 8 },
+    ]);
+    tx.bookingBulkItem.findMany.mockResolvedValue([
+      {
+        bulkSkuId: "sku-1",
+        plannedQuantity: 6,
+        bookingId: "b-next",
+        booking: {
+          title: "Next media booking",
+          startsAt: new Date("2026-04-02T08:00:00Z"),
+          locationId: "loc-1",
+        },
+      },
+    ]);
+
+    const result = await checkBulkTurnaroundRisks(availabilityTx(tx), {
+      locationId: "loc-1",
+      bulkItems: [{ bulkSkuId: "sku-1", quantity: 2 }],
+      endsAt: new Date("2026-04-01T22:00:00Z"),
+    });
+
+    expect(result).toEqual([]);
   });
 });
 
@@ -630,11 +738,21 @@ describe("checkAvailability", () => {
     });
   });
 
-  it("BUG: skips bulk turnaround advisories when exact kiosk units bind at checkout", async () => {
+  it("includes capacity-aware bulk turnaround advisories for exact kiosk units", async () => {
     const tx = createMockTx();
     tx.assetAllocation.findMany.mockResolvedValue([]);
-    tx.bulkStockBalance.findMany.mockResolvedValue([{ bulkSkuId: "sku-1", onHandQuantity: 20 }]);
+    tx.bulkStockBalance.findMany.mockResolvedValue([{ bulkSkuId: "sku-1", onHandQuantity: 7 }]);
     tx.bookingBulkItem.groupBy.mockResolvedValue([]);
+    tx.bookingBulkItem.findMany.mockResolvedValue([{
+      bulkSkuId: "sku-1",
+      plannedQuantity: 6,
+      bookingId: "b-next",
+      booking: {
+        title: "Next kiosk booking",
+        startsAt: new Date("2026-04-02T08:00:00Z"),
+        locationId: "loc-1",
+      },
+    }]);
     tx.checkinItemReport.findMany.mockResolvedValue([]);
     tx.asset.findMany.mockResolvedValue([]);
 
@@ -644,11 +762,14 @@ describe("checkAvailability", () => {
       endsAt: new Date("2026-04-02"),
       serializedAssetIds: [],
       bulkItems: [{ bulkSkuId: "sku-1", quantity: 2 }],
-      includeBulkTurnaroundRisks: false,
     });
 
-    expect(result.bulkTurnaroundRisks).toEqual([]);
-    expect(tx.bookingBulkItem.findMany).not.toHaveBeenCalled();
+    expect(result.bulkTurnaroundRisks).toEqual([expect.objectContaining({
+      bulkSkuId: "sku-1",
+      bookingId: "b-next",
+      plannedQuantity: 6,
+    })]);
+    expect(tx.bookingBulkItem.findMany).toHaveBeenCalled();
     expect(tx.bookingBulkItem.groupBy).toHaveBeenCalled();
   });
 });

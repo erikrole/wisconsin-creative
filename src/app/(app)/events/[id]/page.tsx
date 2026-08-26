@@ -36,6 +36,7 @@ import { ShiftCoverageCard } from "./_components/ShiftCoverageCard";
 import { EventTravelCard } from "./_components/EventTravelCard";
 import { EventWorkersCard } from "./_components/EventWorkersCard";
 import { effectiveCallWindow, summarizeEffectiveCallWindows } from "@/lib/shift-call-windows";
+import { QUARTER_HOUR_MINUTES, roundUpToQuarterHour } from "@/lib/quarter-hour";
 
 type LocationOption = { id: string; name: string };
 type EventTypeDraft = VenueTone;
@@ -137,6 +138,7 @@ function EventDateTimeField({
           <Input
             id={fieldId}
             type="time"
+            step={QUARTER_HOUR_MINUTES * 60}
             value={time}
             onChange={(event) => onTimeChange(event.target.value)}
             className="w-[120px] shrink-0 tabular-nums"
@@ -202,6 +204,8 @@ export default function EventDetailPage() {
   const [startTimeDraft, setStartTimeDraft] = useState("09:00");
   const [endDateDraft, setEndDateDraft] = useState<Date | undefined>();
   const [endTimeDraft, setEndTimeDraft] = useState("17:00");
+  const [startTimingTouched, setStartTimingTouched] = useState(false);
+  const [endTimingTouched, setEndTimingTouched] = useState(false);
   const [editError, setEditError] = useState("");
   const [saving, setSaving] = useState(false);
   const [locations, setLocations] = useState<LocationOption[]>([]);
@@ -272,6 +276,8 @@ export default function EventDetailPage() {
     setStartTimeDraft(event.allDay ? "09:00" : eventDraftTime(event.startsAt));
     setEndDateDraft(eventDraftDate(event.endsAt, event.allDay, true));
     setEndTimeDraft(event.allDay ? "17:00" : eventDraftTime(event.endsAt));
+    setStartTimingTouched(false);
+    setEndTimingTouched(false);
     setEditError("");
     setEditOpen(true);
 
@@ -326,17 +332,31 @@ export default function EventDetailPage() {
       const body: Record<string, unknown> = {};
 
       if (!event.source) {
-        const startsAt = buildEventDraftDateTime(startDateDraft, startTimeDraft, allDayDraft, false);
-        const endsAt = buildEventDraftDateTime(endDateDraft, endTimeDraft, allDayDraft, true);
-        if (!startsAt || !endsAt) {
+        const draftStartsAt = buildEventDraftDateTime(startDateDraft, startTimeDraft, allDayDraft, false);
+        const draftEndsAt = buildEventDraftDateTime(endDateDraft, endTimeDraft, allDayDraft, true);
+        if (!draftStartsAt || !draftEndsAt) {
           setEditError("Start and end dates are required");
           return;
         }
+        const timingModeChanged = allDayDraft !== event.allDay;
+        // Preserve untouched legacy off-grid values. A newly chosen timed value
+        // moves forward to the next quarter-hour so we never imply an earlier
+        // event or crew commitment than the operator selected.
+        const startsAt = !timingModeChanged && !startTimingTouched
+          ? event.startsAt
+          : !allDayDraft
+            ? roundUpToQuarterHour(new Date(draftStartsAt)).toISOString()
+            : draftStartsAt;
+        const endsAt = !timingModeChanged && !endTimingTouched
+          ? event.endsAt
+          : !allDayDraft
+            ? roundUpToQuarterHour(new Date(draftEndsAt)).toISOString()
+            : draftEndsAt;
         if (new Date(endsAt) <= new Date(startsAt)) {
           setEditError("End must be after start");
           return;
         }
-        const timingChanged = allDayDraft !== event.allDay
+        const timingChanged = timingModeChanged
           || new Date(startsAt).getTime() !== new Date(event.startsAt).getTime()
           || new Date(endsAt).getTime() !== new Date(event.endsAt).getTime();
         if (timingChanged) {
@@ -612,8 +632,14 @@ export default function EventDetailPage() {
                   time={startTimeDraft}
                   allDay={allDayDraft}
                   disabled={saving}
-                  onDateChange={setStartDateDraft}
-                  onTimeChange={setStartTimeDraft}
+                  onDateChange={(date) => {
+                    setStartDateDraft(date);
+                    setStartTimingTouched(true);
+                  }}
+                  onTimeChange={(time) => {
+                    setStartTimeDraft(time);
+                    setStartTimingTouched(true);
+                  }}
                 />
                 <EventDateTimeField
                   label={allDayDraft ? "Ends (inclusive)" : "Ends"}
@@ -622,8 +648,14 @@ export default function EventDetailPage() {
                   time={endTimeDraft}
                   allDay={allDayDraft}
                   disabled={saving}
-                  onDateChange={setEndDateDraft}
-                  onTimeChange={setEndTimeDraft}
+                  onDateChange={(date) => {
+                    setEndDateDraft(date);
+                    setEndTimingTouched(true);
+                  }}
+                  onTimeChange={(time) => {
+                    setEndTimeDraft(time);
+                    setEndTimingTouched(true);
+                  }}
                 />
               </div>
             )}

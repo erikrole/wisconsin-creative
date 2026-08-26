@@ -410,10 +410,6 @@ final class KioskStore {
         resetInactivity()
     }
 
-    func clearSleepModeDismissal() {
-        sleepDismissedUntil = nil
-    }
-
     // MARK: - Cart persistence (P0 #2 fix)
 
     func cart(for userId: String) -> [KioskCartItem] {

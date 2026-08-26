@@ -286,10 +286,14 @@ private struct GuideRow: View {
     let guide: GuideListItem
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
+        HStack(alignment: .center, spacing: 12) {
             ZStack {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Color.statusBackground(guide.type.tone))
+                    .fill(Color.cardSurfaceRaised)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .strokeBorder(Color.secondary.opacity(0.22))
+                    }
                 Image(systemName: guide.type.systemImage)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Color.statusText(guide.type.tone))
@@ -307,22 +311,12 @@ private struct GuideRow: View {
                     }
                 }
 
-                if !guide.summary.isEmpty {
-                    Text(guide.summary)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                }
-
                 HStack(spacing: 8) {
                     StatusPill(label: guide.type.label, tone: guide.type.tone)
-                    Text(guide.updatedSummary)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
                 }
             }
         }
-        .padding(.vertical, 5)
+        .padding(.vertical, 8)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
@@ -330,10 +324,9 @@ private struct GuideRow: View {
 
     private var accessibilityLabel: String {
         var parts = [guide.title, guide.type.label]
-        if !guide.category.isEmpty && guide.category != guide.type.label {
-            parts.append(guide.category)
+        if !guide.published {
+            parts.append("Draft")
         }
-        parts.append(guide.updatedSummary)
         return parts.joined(separator: ", ")
     }
 }

@@ -79,7 +79,7 @@ struct SettingsView: View {
                     if let error = session.rolePreviewError {
                         Label(error, systemImage: "exclamationmark.triangle.fill")
                             .font(.footnote)
-                            .foregroundStyle(.red)
+                            .foregroundStyle(Color.statusText(.red))
                     }
                 } header: {
                     Text("Presentation")

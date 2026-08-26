@@ -570,7 +570,7 @@ export async function approveRequest(assignmentId: string, actor: ShiftApprovalA
  * Decline a shift request. Staff/admin action.
  */
 export async function declineRequest(assignmentId: string) {
-  return db.$transaction(async (tx) => {
+  const result = await db.$transaction(async (tx) => {
     const assignment = await tx.shiftAssignment.findUnique({
       where: { id: assignmentId },
       include: { shift: { select: { shiftGroup: { select: { workingCopy: { select: { version: true } } } } } } },
@@ -586,6 +586,9 @@ export async function declineRequest(assignmentId: string) {
       data: { status: "DECLINED" },
     });
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+
+  await dispatchScheduleAssignmentNotifications(result.id, "declined");
+  return result;
 }
 
 /**

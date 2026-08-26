@@ -1,0 +1,77 @@
+{
+  "title": "Resources card interaction polish",
+  "eyebrow": "Web + native iOS · Wisconsin Creative · Resources",
+  "lede": "Web guide cards and the native iOS Guides row are now title-first surfaces: type and status remain as small orientation cues, while preview text and ownership metadata stay in the guide.",
+  "stats": [
+    {
+      "k": "Matched capture",
+      "v": "1280 × 895",
+      "n": "Same source-equivalent fixture, data, viewport, pointer position, and card geometry"
+    },
+    {
+      "k": "Card geometry",
+      "v": "320 × 128px",
+      "n": "Hovered title-first guide card bounds remain unchanged between baseline and refinement",
+      "tone": "good"
+    },
+    {
+      "k": "Hover signal",
+      "v": "Local",
+      "n": "After state moves only the guide chevron 2px and removes the whole-card shadow"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Hovered guide card",
+      "note": "The pair uses the same five title-first guide cards and two reference shortcuts. The pointer is held over Photo Naming & Organization Guide in both captures; only the hover treatment changes.",
+      "pairs": [
+        {
+          "title": "A library card should not become a raised panel",
+          "sub": "Look at the Photo Naming & Organization Guide card in the All guides section. Both states keep the title and small type cue visible; the baseline elevates the entire surface, while the refinement keeps it stable and reserves motion for the directional cue. The native iOS list row follows the same title-first content hierarchy.",
+          "before": "/Users/role/Code/wisconsin-creative/tasks/resources-card-interaction-polish-review-2026-08-26/before.png",
+          "beforeCap": "Before: the hovered guide card changes its border and adds a visible shadow across the whole card.",
+          "after": "/Users/role/Code/wisconsin-creative/tasks/resources-card-interaction-polish-review-2026-08-26/after.png",
+          "afterCap": "After: the card surface stays quiet; its chevron supplies the small navigation response while the reference rows retain their action hover."
+        }
+      ]
+    }
+  ],
+  "changesHeading": "What changed, and why",
+  "changesNote": "This is an interaction hierarchy correction, not a removal of feedback. Focus rings and 0.96 press feedback remain on the existing actions; reference shortcuts still have a subtle action hover.",
+  "changes": [
+    {
+      "h": "Guide cards carried too much secondary content",
+      "was": "Each guide card surfaced a Markdown preview, visibility/audience labels, author, and date alongside the title, making the library feel closer to a content feed than a quick-reference index.",
+      "now": "Web guide cards and the native iOS Guides row are title-first surfaces. Small type/status cues remain for orientation, while preview text, visibility/audience labels, author names, and dates are left to the guide reader."
+    },
+    {
+      "h": "Every guide card announced hover at the container level",
+      "was": "Guide cards and list rows changed border color and added a shadow whenever the pointer entered any part of the link, making every library tile feel like a raised control.",
+      "now": "Guide surfaces keep their border and shadow quiet on hover. The existing link remains fully interactive and adds a restrained chevron cue near the title."
+    },
+    {
+      "h": "Non-actionable contact cards implied a whole-card action",
+      "was": "Contact cards used the same border/shadow hover treatment even though the card itself is a layout container around individual contact links and a View profile action.",
+      "now": "Contact cards are visually quiet; the individual fields and profile action retain their own interaction targets."
+    },
+    {
+      "h": "The remaining card cues needed a quieter hierarchy",
+      "was": "Type icons and small status/category cues blended into the card content, while the broad hover state carried too much of the visual hierarchy.",
+      "now": "Type icons use a quiet bordered treatment, small type/status cues stay compact, and the guide title receives a little more identity without adding a new semantic color."
+    }
+  ],
+  "verification": [
+    "<strong>11 focused Resources tests</strong> and <strong>45 focused iOS contract tests</strong> pass, including the quiet-card/local-affordance and title-first content source contracts.",
+    "<strong>TypeScript and lint:</strong> full <code>npm run lint</code> and <code>npx tsc --noEmit --pretty false</code> pass.",
+    "<strong>Repository and iOS static checks:</strong> migration-prefix validation, <code>git diff --check</code>, <code>npm run codemap:check</code>, <code>npm run verify:docs</code>, <code>npm run ios:project:check</code>, <code>npm run drift:ios</code>, and <code>npm run audit:ios:gaps</code> pass.",
+    "<strong>Production-shaped build:</strong> <code>npm run build:app</code> compiles successfully.",
+    "<strong>Native build:</strong> the <code>Wisconsin</code> app target builds for the available <code>iPhone 16 Pro, iOS 26.5</code> simulator.",
+    "<strong>Matched fixture measurement:</strong> the hovered title-first card remains 320 × 128px; baseline computes a #666 border and 0 4px 12px shadow, while the refined state computes the quiet #272727 border, no shadow, and a 2px chevron translation.",
+    "<strong>Authenticated in-app browser:</strong> the real local <code>/resources</code> route rendered at 1428 × 1153 and 390 × 844; guide-link DOM text contains only title plus type/status cues, and the hovered card has no shadow or underline while its local chevron translates 2px."
+  ],
+  "notes": [
+    "The paired images are a source-equivalent static fixture captured through the in-app browser. They isolate the exact hover change without presenting a different data set as a baseline; authenticated runtime captures are saved beside them.",
+    "Authenticated local desktop and narrow proof confirmed title-only guide surfaces and the restrained hover response. Native iOS source/build proof confirms the list-row contract; a native simulator visual walkthrough was not performed in this slice. Production deployment and production read-back remain separate gates; no production data was changed.",
+    "The dev server was launched with the preview database environment and an in-process development session secret; repository env files were not modified."
+  ]
+}

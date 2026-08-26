@@ -99,7 +99,7 @@ The current operating model is clear:
 ### Reservation Creation
 - Event context is easy to select and can link multiple related events.
 - Users choose serialized gear and item-family quantities in one equipment flow.
-- Conflict, next-use, shortage, and turnaround warnings are visible before submit, while server checks remain authoritative.
+- Conflict, needed-next, shortage, and turnaround warnings are visible before submit, while server checks remain authoritative.
 - The end state says "reserved for pickup" instead of pretending custody already changed.
 
 ### Kiosk Checkout, Pickup, and Return

@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import type { BookingDetail } from "./types";
+import { minimumBookingEndDate } from "@/lib/quarter-hour";
 
 type Props = {
   booking: BookingDetail;
@@ -51,6 +52,8 @@ export default function BookingEditForm({
   onSave,
   onCancel,
 }: Props) {
+	  const startsAt = parseLocalDateTime(editStartsAt) ?? new Date(booking.startsAt);
+	  const minimumEndDate = minimumBookingEndDate(startsAt);
 	  return (
 	    <div className="px-5 py-4">
 	      <div className="mb-3 flex flex-col gap-1">
@@ -82,6 +85,7 @@ export default function BookingEditForm({
 	            name="endsAt"
 	            value={parseLocalDateTime(editEndsAt)}
 	            onChange={(d) => onEditEndsAt(toLocalDateTimeValue(d))}
+	            minDate={minimumEndDate}
 	          />
 	        </div>
 	      </div>

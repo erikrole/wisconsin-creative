@@ -56,6 +56,15 @@ vi.mock("@/lib/services/signatures", () => ({
   cleanupPendingSignatureArtifacts: vi.fn(),
 }));
 
+vi.mock("@/lib/badges", () => ({
+  badgesEnabled: vi.fn(),
+  badges: { onShiftsWorked: vi.fn() },
+}));
+
+vi.mock("@/lib/badges/worked-evidence", () => ({
+  recentlyWorkedEventUsers: vi.fn(),
+}));
+
 import { db } from "@/lib/db";
 import { syncCalendarSource } from "@/lib/services/calendar-sync";
 import { updateCalendarSyncHealth } from "@/lib/services/calendar-sync-health";
@@ -66,6 +75,8 @@ import { pollFirmwareWatchTargets } from "@/lib/services/firmware-watch";
 import { getScheduleAutomationDigest } from "@/lib/services/schedule-automation";
 import { refreshCompanionProjection } from "@/lib/services/companion-projection";
 import { cleanupPendingSignatureArtifacts } from "@/lib/services/signatures";
+import { badges, badgesEnabled } from "@/lib/badges";
+import { recentlyWorkedEventUsers } from "@/lib/badges/worked-evidence";
 import { GET } from "@/app/api/cron/morning-refresh/route";
 
 const mockDb = db as unknown as {
@@ -147,6 +158,8 @@ describe("morning refresh cron route", () => {
     });
     vi.mocked(refreshCompanionProjection).mockResolvedValue({} as never);
     vi.mocked(cleanupPendingSignatureArtifacts).mockResolvedValue({ abandoned: 0, attempted: 0, deleted: 0 });
+    vi.mocked(badgesEnabled).mockReturnValue(false);
+    vi.mocked(recentlyWorkedEventUsers).mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -205,6 +218,30 @@ describe("morning refresh cron route", () => {
     expect(res.status).toBe(200);
     expect(body.ok).toBe(true);
     expect(refreshCompanionProjection).not.toHaveBeenCalled();
+  });
+
+  it("keeps recently added-worker badge recognition fully silent", async () => {
+    vi.mocked(badgesEnabled).mockReturnValue(true);
+    vi.mocked(recentlyWorkedEventUsers).mockResolvedValue([
+      { userId: "scheduled-user", hasAddedWorker: false },
+      { userId: "backfilled-user", hasAddedWorker: true },
+    ]);
+
+    const res = await GET(request(), { params: Promise.resolve({}) });
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.shiftBadgeUsers).toBe(2);
+    expect(badges.onShiftsWorked).toHaveBeenNthCalledWith(
+      1,
+      { userId: "scheduled-user" },
+      { notify: true },
+    );
+    expect(badges.onShiftsWorked).toHaveBeenNthCalledWith(
+      2,
+      { userId: "backfilled-user" },
+      { notify: false },
+    );
   });
 
   it("reports projection publication failure separately from committed expiry", async () => {

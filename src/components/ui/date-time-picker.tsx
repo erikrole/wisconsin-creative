@@ -13,13 +13,10 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { NativeSelect } from "@/components/ui/native-select"
+import { clampToQuarterHour } from "@/lib/quarter-hour"
 
 function pad(n: number) {
   return String(n).padStart(2, "0")
-}
-
-function roundTo15(minutes: number) {
-  return Math.round(minutes / 15) * 15
 }
 
 type DateTimePickerProps = {
@@ -43,20 +40,25 @@ function DateTimePicker({
 }: DateTimePickerProps) {
   const [open, setOpen] = React.useState(false)
 
-  const hours = value ? value.getHours() : 12
-  const minutes = value ? roundTo15(value.getMinutes()) : 0
+  const pickerValue = value
+    ? clampToQuarterHour(value, minDate)
+    : minDate
+      ? clampToQuarterHour(minDate)
+      : undefined
+  const hours = pickerValue ? pickerValue.getHours() : 12
+  const minutes = pickerValue ? pickerValue.getMinutes() : 0
 
   function handleDateSelect(day: Date | undefined) {
     if (!day) return
     const next = new Date(day)
     next.setHours(hours, minutes, 0, 0)
-    onChange(next)
+    onChange(clampToQuarterHour(next, minDate))
   }
 
   function handleTimeChange(h: number, m: number) {
-    const base = value ? new Date(value) : new Date()
+    const base = pickerValue ? new Date(pickerValue) : new Date()
     base.setHours(h, m, 0, 0)
-    onChange(base)
+    onChange(clampToQuarterHour(base, minDate))
   }
 
   // Generate hour options

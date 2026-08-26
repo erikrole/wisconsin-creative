@@ -21,6 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { BOOKING_CHANGE_SYNC_EVENT } from "@/hooks/use-booking-change-sync";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { BOOKING_MUTATION_TIMEOUT_MS, fetchWithTimeout } from "@/lib/fetch-with-timeout";
+import { BOOKING_SNAPSHOT_HEADER } from "@/lib/booking-concurrency";
 import type { BookingDetail } from "./types";
 
 type PickerUser = {
@@ -121,7 +122,7 @@ export function TransferOwnerDialog({
         timeoutMs: BOOKING_MUTATION_TIMEOUT_MS,
         headers: {
           "Content-Type": "application/json",
-          "If-Unmodified-Since": new Date(booking.updatedAt).toUTCString(),
+          [BOOKING_SNAPSHOT_HEADER]: new Date(booking.updatedAt).toISOString(),
         },
         body: JSON.stringify({
           targetUserId,
