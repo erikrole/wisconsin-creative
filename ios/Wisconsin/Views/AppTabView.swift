@@ -30,6 +30,10 @@ struct AppTabView: View {
         session.currentUser?.role == "COLLABORATOR"
     }
 
+    private var isReadOnlyPreview: Bool {
+        session.currentUser?.isReadOnlyRolePreview == true
+    }
+
     private func hasCapability(_ capability: String) -> Bool {
         !isCollaborator || (session.currentUser?.capabilities ?? []).contains(capability)
     }
@@ -128,7 +132,7 @@ struct AppTabView: View {
             routePendingAppIntent()
             routePendingEventPush()
             routePendingBookingPush()
-            AppSurface.recordView(for: appState.selectedTab)
+            AppSurface.recordView(for: appState.selectedTab, isReadOnlyPreview: isReadOnlyPreview)
         }
         .modifier(SurfaceViewTracking(selectedTab: appState.selectedTab))
         .onChange(of: appState.pendingAppIntentDestination) { _, _ in
@@ -218,18 +222,29 @@ struct AppTabView: View {
             guard showsCard else { return }
             Task { await ResumeReservationTip.minimizedReservation.donate() }
         }
-        .task(id: session.currentUser?.id) {
-            guard hasCapability("RESERVATION_CREATE") else { return }
+        .task(id: session.currentUser?.shellIdentity) {
+            guard hasCapability("RESERVATION_CREATE"), !isReadOnlyPreview else { return }
             await drafts.loadSavedDraft()
         }
         .safeAreaInset(edge: .top, spacing: 0) {
-            if !network.isConnected {
-                BannerView(
-                    severity: .warning,
-                    message: "No connection — some actions may fail",
-                    systemImage: "wifi.slash"
-                )
-                .transition(.move(edge: .top).combined(with: .opacity))
+            VStack(spacing: 0) {
+                if let preview = session.currentUser?.preview, preview.readOnly {
+                    BannerView(
+                        severity: .warning,
+                        message: "Previewing as \(preview.roleLabel) · Read-only",
+                        systemImage: "eye.slash.fill",
+                        actionLabel: session.isRolePreviewActionInFlight ? "Exiting…" : "Exit",
+                        action: exitRolePreview
+                    )
+                }
+                if !network.isConnected {
+                    BannerView(
+                        severity: .warning,
+                        message: "No connection — some actions may fail",
+                        systemImage: "wifi.slash"
+                    )
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
             }
         }
         .modifier(AppTabShellStyle(usesSidebarAdaptableStyle: showsSidebarDestinations))
@@ -245,6 +260,10 @@ struct AppTabView: View {
         guard hasCapability("MY_GEAR_VIEW") else { return }
         appState.pendingBookingDetailId = bookingId
         appState.selectedTab = 1
+    }
+
+    private func exitRolePreview() {
+        Task { await session.stopRolePreview() }
     }
 
     private func routePendingEventPush() {
@@ -320,7 +339,8 @@ private enum AppSurface {
     }
 
     @MainActor
-    static func recordView(for tab: Int) {
+    static func recordView(for tab: Int, isReadOnlyPreview: Bool = false) {
+        guard !isReadOnlyPreview else { return }
         let surface = name(for: tab)
         Task {
             await APIClient.shared.recordProductEvent(eventName: "surface_viewed", surface: surface)
@@ -378,11 +398,15 @@ private struct ScheduleVisitDonation: ViewModifier {
 }
 
 private struct SurfaceViewTracking: ViewModifier {
+    @Environment(SessionStore.self) private var session
     let selectedTab: Int
 
     func body(content: Content) -> some View {
         content.onChange(of: selectedTab) { _, newValue in
-            AppSurface.recordView(for: newValue)
+            AppSurface.recordView(
+                for: newValue,
+                isReadOnlyPreview: session.currentUser?.isReadOnlyRolePreview == true
+            )
         }
     }
 }

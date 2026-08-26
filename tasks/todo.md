@@ -1,6 +1,20 @@
 # Task Queue
 
-Last updated: 2026-08-24
+Last updated: 2026-08-25
+
+---
+## In progress: Native iOS Student role preview (2026-08-25)
+
+Plan: `tasks/ios-role-preview-plan-2026-08-25.md`.
+
+- [x] Confirm the native app shares the web session cookie and can reuse the signed server preview route.
+- [x] Add the Admin-only Student start/exit control, persistent read-only banner, and shell remount.
+- [x] Suppress native preview background writes and push/Live Activity registration.
+- [x] Pass focused source contracts, docs verification, and the iPhone 16 Pro build.
+
+Authenticated native start/exit and presentation capture remain open as separate runtime acceptance gates.
+
+**Boundary:** personal Admin QA/presentation only. No student access change, identity impersonation, deployment, or production data mutation.
 
 ---
 ## In progress: Scoreboard soccer tie result (2026-08-24)

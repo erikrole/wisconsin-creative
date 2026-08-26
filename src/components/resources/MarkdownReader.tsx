@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import {
   CheckIcon,
   CopyIcon,
@@ -270,13 +269,14 @@ export function MarkdownReader({ markdown }: Props) {
         return (
           <span className="guide-markdown-media">
             <span className="guide-markdown-image-frame">
-              <Image
+              {/* Markdown images can have arbitrary source dimensions; native img preserves that ratio. */}
+              {/* eslint-disable-next-line @next/next/no-img-element -- source dimensions are not known until the Markdown image loads. */}
+              <img
                 src={src}
                 alt={caption}
-                width={1400}
-                height={900}
-                className="h-auto w-full object-contain"
-                unoptimized
+                loading="lazy"
+                decoding="async"
+                className="block h-auto w-full"
               />
             </span>
             {caption && (

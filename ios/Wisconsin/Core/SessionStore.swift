@@ -40,6 +40,8 @@ final class SessionStore {
     var isRestoring = true
     var error: String?
     var isOffline = false
+    var rolePreviewError: String?
+    private(set) var isRolePreviewActionInFlight = false
     private(set) var isInitialSessionValidationInFlight = true
 
     /// True when this launch optimistically seeded `currentUser` from a stored
@@ -92,6 +94,8 @@ final class SessionStore {
                 self.didSeedFromSnapshot = false
                 self.currentUser = nil
                 SessionSnapshot.clear()
+                self.rolePreviewError = nil
+                self.isRolePreviewActionInFlight = false
                 self.error = "Your session expired — please sign in again."
             }
         }
@@ -253,6 +257,8 @@ final class SessionStore {
         currentUser = nil
         isLoading = false
         isRestoring = false
+        rolePreviewError = nil
+        isRolePreviewActionInFlight = false
         PushTokenStorage.registrationAllowed = false
         let pushCleanup = pushCredentialMutations.enqueue {
             try? await APIClient.shared.revokeAllDeviceTokens()
@@ -274,6 +280,8 @@ final class SessionStore {
         currentUser = nil
         isLoading = false
         isRestoring = false
+        rolePreviewError = nil
+        isRolePreviewActionInFlight = false
         PushTokenStorage.registrationAllowed = false
         let mutation = authMutations.enqueue {
             try? await APIClient.shared.logout()
@@ -284,6 +292,51 @@ final class SessionStore {
     /// Clear a stale auth error — call from views when the user starts typing again.
     func clearError() {
         if error != nil { error = nil }
+    }
+
+    /// Starts the native Student presentation view for the underlying Admin
+    /// session. The server issues the signed cookie; the following `/api/me`
+    /// read publishes the effective Student shell and preview metadata.
+    func startStudentRolePreview() async {
+        guard currentUser?.role == "ADMIN",
+              currentUser?.preview == nil,
+              !isRolePreviewActionInFlight else { return }
+        await mutateRolePreview(start: true)
+    }
+
+    /// Ends either a native- or web-started preview while retaining the same
+    /// Admin session and identity.
+    func stopRolePreview() async {
+        guard currentUser?.isReadOnlyRolePreview == true,
+              !isRolePreviewActionInFlight else { return }
+        await mutateRolePreview(start: false)
+    }
+
+    private func mutateRolePreview(start: Bool) async {
+        let mutation = authMutations.enqueue { [weak self] in
+            guard let self else { return }
+            let requestToken = self.authRequests.begin()
+            self.isRolePreviewActionInFlight = true
+            self.rolePreviewError = nil
+            do {
+                if start {
+                    try await APIClient.shared.startStudentRolePreview()
+                } else {
+                    try await APIClient.shared.stopRolePreview()
+                }
+                let user = try await APIClient.shared.me()
+                guard self.authRequests.owns(requestToken) else { return }
+                self.publishCurrentUserIfChanged(user)
+                self.isOffline = false
+            } catch {
+                guard self.authRequests.owns(requestToken) else { return }
+                self.rolePreviewError = error.localizedDescription
+            }
+            if self.authRequests.owns(requestToken) {
+                self.isRolePreviewActionInFlight = false
+            }
+        }
+        await mutation.value
     }
 
     func refreshCurrentUser() async {

@@ -304,6 +304,22 @@ final class APIClient {
         return resp.user
     }
 
+    /// The native presentation control intentionally exposes only the Student
+    /// preset. Authorization and the signed read-only cookie remain owned by
+    /// the shared server route; `/api/me` is refreshed by `SessionStore` after
+    /// this request so the native shell never invents an effective role.
+    func startStudentRolePreview() async throws {
+        struct Body: Encodable { let role: String }
+        var req = request(path: "/api/admin/role-preview", method: "POST")
+        req.httpBody = try JSONEncoder().encode(Body(role: "STUDENT"))
+        let _: DataWrapper<RolePreviewMutationResponse> = try await perform(req)
+    }
+
+    func stopRolePreview() async throws {
+        let req = request(path: "/api/admin/role-preview", method: "DELETE")
+        let _: DataWrapper<RolePreviewMutationResponse> = try await perform(req)
+    }
+
     func changePassword(currentPassword: String, newPassword: String, revokeOtherSessions: Bool = true) async throws {
         struct Body: Encodable {
             let currentPassword: String
@@ -2032,6 +2048,11 @@ private struct PasskeyOptionsResponse<T: Decodable>: Decodable {
 
 private struct MeResponse: Decodable {
     let user: CurrentUser
+}
+
+private struct RolePreviewMutationResponse: Decodable {
+    let preview: RolePreviewInfo?
+    let success: Bool?
 }
 
 private struct ChangePasswordResponse: Decodable {

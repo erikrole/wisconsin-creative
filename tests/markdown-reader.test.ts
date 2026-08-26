@@ -4,6 +4,18 @@ import { describe, expect, it } from "vitest";
 import { MarkdownReader } from "@/components/resources/MarkdownReader";
 
 describe("MarkdownReader", () => {
+  it("preserves each Markdown image's intrinsic aspect ratio", () => {
+    const html = renderToStaticMarkup(createElement(MarkdownReader, {
+      markdown: "![Portrait screenshot](https://example.com/portrait.png)",
+    }));
+
+    expect(html).toContain('src="https://example.com/portrait.png"');
+    expect(html).toContain('alt="Portrait screenshot"');
+    expect(html).toContain('class="block h-auto w-full"');
+    expect(html).not.toContain('width="1400"');
+    expect(html).not.toContain('height="900"');
+  });
+
   it("uses visible rich heading text for rendered heading ids", () => {
     const html = renderToStaticMarkup(createElement(MarkdownReader, {
       markdown: "## **Server** [Paths](https://example.com)",

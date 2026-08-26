@@ -165,8 +165,9 @@ describe("iOS system hardening contracts", () => {
       signedOutHandler.indexOf("AppDelegate.clearRemoteNotificationsForSignedOutUser()"),
     );
     expect(app).toContain("PasswordSetupView(email: user.email)\n                    .id(user.id)");
-    expect(app).toContain("ProfileCompletionWelcomeView()\n                        .id(user.id)");
-    expect(app).toContain("AppTabView()\n                        .id(user.id)");
+    expect(app).toContain("ProfileCompletionWelcomeView()");
+    expect(app).toContain("if user.isReadOnlyRolePreview");
+    expect(app).toContain("AppTabView()\n                        .id(user.shellIdentity)");
   });
 
   it("cancels session-owned Live Activity observers and serializes guarded token writes", () => {

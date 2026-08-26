@@ -37,6 +37,57 @@ struct SettingsView: View {
                 }
             }
 
+            if canStartStudentPreview || activeRolePreview != nil {
+                Section {
+                    if let preview = activeRolePreview {
+                        SettingsRow(title: "Current view", systemImage: "eye.slash.fill", color: .orange) {
+                            Text("\(preview.roleLabel) · Read-only")
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.trailing)
+                        }
+                        Button {
+                            Task { await session.stopRolePreview() }
+                        } label: {
+                            SettingsRow(title: "Exit \(preview.roleLabel) preview", systemImage: "rectangle.portrait.and.arrow.right", color: .orange) {
+                                if session.isRolePreviewActionInFlight {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                } else {
+                                    EmptyView()
+                                }
+                            }
+                        }
+                        .disabled(session.isRolePreviewActionInFlight)
+                    } else {
+                        Button {
+                            Task { await session.startStudentRolePreview() }
+                        } label: {
+                            SettingsRow(title: "Preview as Student", systemImage: "eye.fill", color: .orange) {
+                                if session.isRolePreviewActionInFlight {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                } else {
+                                    Image(systemName: "chevron.forward")
+                                        .font(.footnote.weight(.semibold))
+                                        .foregroundStyle(.tertiary)
+                                        .accessibilityHidden(true)
+                                }
+                            }
+                        }
+                        .disabled(session.isRolePreviewActionInFlight)
+                    }
+                    if let error = session.rolePreviewError {
+                        Label(error, systemImage: "exclamationmark.triangle.fill")
+                            .font(.footnote)
+                            .foregroundStyle(.red)
+                    }
+                } header: {
+                    Text("Presentation")
+                } footer: {
+                    Text("This is an Admin-only, read-only view for checking the Student experience. It does not change your account or permit writes.")
+                }
+            }
+
             Section {
                 Picker(selection: $themeChoice) {
                     ForEach(ThemeChoice.allCases) { choice in
@@ -104,6 +155,17 @@ struct SettingsView: View {
     }
 
     // MARK: - Helpers
+
+    private var canStartStudentPreview: Bool {
+        session.currentUser?.role == "ADMIN" && session.currentUser?.preview == nil
+    }
+
+    private var activeRolePreview: RolePreviewInfo? {
+        guard let preview = session.currentUser?.preview,
+              preview.actualRole == "ADMIN",
+              preview.readOnly else { return nil }
+        return preview
+    }
 
     private var pushAllowed: Bool {
         pushAuth == .authorized || pushAuth == .provisional || pushAuth == .ephemeral

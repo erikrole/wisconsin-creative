@@ -108,11 +108,16 @@ struct WisconsinApp: App {
             return
         }
 
-        PushTokenStorage.registrationAllowed = true
+        let isReadOnlyPreview = user?.isReadOnlyRolePreview == true
+        PushTokenStorage.registrationAllowed = !isReadOnlyPreview
+        if isReadOnlyPreview {
+            CheckoutReturnLiveActivityManager.shared.cancelObserverWork()
+        }
         // Push permission is now requested via PushPrePromptView, not as a
         // cold OS alert on login. Home owns the first checkout reconciliation
         // after its useful payload arrives.
-        guard user?.forcePasswordChange == false else { return }
+        guard user?.forcePasswordChange == false,
+              !isReadOnlyPreview else { return }
         let userId = user?.id ?? ""
         let sessionBoundary = authSessionBoundary.capture()
         Task {
@@ -146,8 +151,10 @@ struct WisconsinApp: App {
 
         async let badgeRefresh: Void = appState.refresh()
         async let profileRefresh: Void = profileCompletion.load(for: user, force: true)
-        await CheckoutReturnLiveActivityManager.shared.prepareRemoteStartRegistration()
-        await CheckoutReturnLiveActivityManager.shared.reconcileCurrentUserCheckouts(requesterId: user.id)
+        if !user.isReadOnlyRolePreview {
+            await CheckoutReturnLiveActivityManager.shared.prepareRemoteStartRegistration()
+            await CheckoutReturnLiveActivityManager.shared.reconcileCurrentUserCheckouts(requesterId: user.id)
+        }
         await badgeRefresh
         await profileRefresh
     }
@@ -162,6 +169,7 @@ struct WisconsinApp: App {
         let settings = await UNUserNotificationCenter.current().notificationSettings()
         guard session.currentUser?.id == userId,
               authSessionBoundary.owns(sessionBoundary),
+              session.currentUser?.isReadOnlyRolePreview != true,
               PushTokenStorage.registrationAllowed else {
             return
         }
@@ -480,16 +488,21 @@ struct RootView: View {
                 PasswordSetupView(email: user.email)
                     .id(user.id)
             } else if let user = session.currentUser {
-                switch profileCompletion.route(
-                    for: user,
-                    optimisticSession: session.usedOptimisticSessionSnapshot
-                ) {
-                case .welcome:
-                    ProfileCompletionWelcomeView()
-                        .id(user.id)
-                case .app:
+                if user.isReadOnlyRolePreview {
                     AppTabView()
-                        .id(user.id)
+                        .id(user.shellIdentity)
+                } else {
+                    switch profileCompletion.route(
+                        for: user,
+                        optimisticSession: session.usedOptimisticSessionSnapshot
+                    ) {
+                    case .welcome:
+                        ProfileCompletionWelcomeView()
+                            .id(user.id)
+                    case .app:
+                        AppTabView()
+                            .id(user.shellIdentity)
+                    }
                 }
             } else {
                 LoginView()
@@ -507,15 +520,19 @@ struct RootView: View {
             }
         }
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: session.isRestoring)
-        .task(id: session.currentUser?.id) {
-            guard let user = session.currentUser, !user.forcePasswordChange else { return }
+        .task(id: session.currentUser?.shellIdentity) {
+            guard let user = session.currentUser,
+                  !user.forcePasswordChange,
+                  !user.isReadOnlyRolePreview else { return }
             await profileCompletion.load(for: user)
+            guard session.currentUser?.shellIdentity == user.shellIdentity else { return }
             await APIClient.shared.recordProductEvent(eventName: "app_opened", surface: "home")
         }
-        .task(id: "badge-rewards-\(session.currentUser?.id ?? "signed-out")") {
+        .task(id: "badge-rewards-\(session.currentUser?.shellIdentity ?? "signed-out")") {
             earnedBadgeQueue.removeAll()
             guard let user = session.currentUser,
                   !user.forcePasswordChange,
+                  !user.isReadOnlyRolePreview,
                   user.role != "COLLABORATOR" else { return }
 
             // Establish the no-history-replay cursor before the app-open event
@@ -534,7 +551,8 @@ struct RootView: View {
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active,
                   let user = session.currentUser,
-                  !user.forcePasswordChange else { return }
+                  !user.forcePasswordChange,
+                  !user.isReadOnlyRolePreview else { return }
             Task {
                 await APIClient.shared.recordProductEvent(eventName: "app_opened", surface: "home")
                 if user.role != "COLLABORATOR" {
@@ -571,6 +589,7 @@ struct RootView: View {
 
     @MainActor
     private func pollBadgeRewards(for userId: String) async {
+        guard session.currentUser?.isReadOnlyRolePreview != true else { return }
         guard !badgeRewardPollInFlight else { return }
         badgeRewardPollInFlight = true
         defer { badgeRewardPollInFlight = false }
@@ -593,6 +612,7 @@ struct RootView: View {
 
     @MainActor
     private func refreshBadgeRewardsForAppOpen(for userId: String) async {
+        guard session.currentUser?.isReadOnlyRolePreview != true else { return }
         let cursorKey = "WisconsinBadgeRewardCursor.\(userId)"
         await pollBadgeRewards(for: userId)
         if UserDefaults.standard.string(forKey: cursorKey) == nil {
@@ -616,7 +636,8 @@ struct RootView: View {
         let key = "WisconsinPushSoftPromptShown"
         guard !UserDefaults.standard.bool(forKey: key) else { return }
         guard session.currentUser?.id == userId,
-              authSessionBoundary.owns(sessionBoundary) else {
+              authSessionBoundary.owns(sessionBoundary),
+              session.currentUser?.isReadOnlyRolePreview != true else {
             return
         }
         let settings = await UNUserNotificationCenter.current().notificationSettings()

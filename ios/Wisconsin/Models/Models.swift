@@ -2,6 +2,38 @@ import Foundation
 
 // MARK: - Auth
 
+/// The server-owned, signed role-preview state returned by `/api/me`.
+/// `expiresAt` is an epoch-millisecond value, matching the web contract; it is
+/// kept as a number so a native rollout can read the response without making
+/// a client-owned expiration decision.
+struct RolePreviewInfo: Codable, Equatable {
+    let actualRole: String
+    let role: String
+    let readOnly: Bool
+    let expiresAt: TimeInterval
+
+    var roleLabel: String {
+        switch role {
+        case "STAFF": "Staff"
+        case "STUDENT": "Student"
+        case "COLLABORATOR": "Collaborator"
+        default: role.capitalized
+        }
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case actualRole, role, readOnly, expiresAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        actualRole = try container.decodeIfPresent(String.self, forKey: .actualRole) ?? "ADMIN"
+        role = try container.decode(String.self, forKey: .role)
+        readOnly = try container.decodeIfPresent(Bool.self, forKey: .readOnly) ?? true
+        expiresAt = try container.decodeIfPresent(TimeInterval.self, forKey: .expiresAt) ?? 0
+    }
+}
+
 struct CurrentUser: Codable, Identifiable, Equatable {
     struct CollaboratorPolicyMetadata: Codable, Equatable {
         let id: String
@@ -23,6 +55,7 @@ struct CurrentUser: Codable, Identifiable, Equatable {
     let staffingType: String?
     let avatarUrl: String?
     let forcePasswordChange: Bool
+    let preview: RolePreviewInfo?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -36,6 +69,7 @@ struct CurrentUser: Codable, Identifiable, Equatable {
         case staffingType
         case avatarUrl
         case forcePasswordChange
+        case preview
     }
 
     init(
@@ -49,7 +83,8 @@ struct CurrentUser: Codable, Identifiable, Equatable {
         collaboratorPolicy: CollaboratorPolicyMetadata? = nil,
         staffingType: String? = nil,
         avatarUrl: String?,
-        forcePasswordChange: Bool = false
+        forcePasswordChange: Bool = false,
+        preview: RolePreviewInfo? = nil
     ) {
         self.id = id
         self.name = name
@@ -62,6 +97,7 @@ struct CurrentUser: Codable, Identifiable, Equatable {
         self.staffingType = staffingType
         self.avatarUrl = avatarUrl
         self.forcePasswordChange = forcePasswordChange
+        self.preview = preview
     }
 
     init(from decoder: Decoder) throws {
@@ -77,6 +113,22 @@ struct CurrentUser: Codable, Identifiable, Equatable {
         staffingType = try container.decodeIfPresent(String.self, forKey: .staffingType)
         avatarUrl = try container.decodeIfPresent(String.self, forKey: .avatarUrl)
         forcePasswordChange = try container.decodeIfPresent(Bool.self, forKey: .forcePasswordChange) ?? false
+        preview = try container.decodeIfPresent(RolePreviewInfo.self, forKey: .preview)
+    }
+
+    /// Preview mode is a presentation/inspection state over an Admin session,
+    /// not a new authenticated identity. Keep the check tied to the server's
+    /// actual-role marker so a normal Student response can never opt itself in.
+    var isReadOnlyRolePreview: Bool {
+        preview?.actualRole == "ADMIN" && preview?.readOnly == true
+    }
+
+    /// Changes when the effective shell or signed preview changes. Root tasks
+    /// use it to cancel account-owned background work and rebuild role-adaptive
+    /// navigation after preview start/stop without pretending the user id changed.
+    var shellIdentity: String {
+        let previewIdentity = preview.map { "\($0.role)-\($0.expiresAt)" } ?? "live"
+        return "\(id)-\(role)-\(previewIdentity)"
     }
 }
 
