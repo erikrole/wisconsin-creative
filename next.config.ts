@@ -26,6 +26,11 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ["date-fns", "motion"],
     devtoolSegmentExplorer: false,
+    // Sentry and Workflow both customize webpack, so Next does not enable its
+    // separate build worker automatically. Isolate compilation and release
+    // intermediate webpack data earlier to stay within Vercel's memory budget.
+    webpackBuildWorker: true,
+    webpackMemoryOptimizations: true,
   },
   transpilePackages: ["@mdxeditor/editor"],
   images: {
