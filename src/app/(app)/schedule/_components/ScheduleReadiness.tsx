@@ -43,6 +43,7 @@ type ScheduleReadinessProps = {
   sourceSignal: ScheduleSourceSignal | null;
   digest: ScheduleAutomationDigestData | null;
   isStaff: boolean;
+  canReviewClaims: boolean;
   onShowQueue: (queue: ScheduleQueue) => void;
   onOpenTradeBoard: () => void;
 };
@@ -131,6 +132,7 @@ export function ScheduleReadiness({
   sourceSignal,
   digest,
   isStaff,
+  canReviewClaims,
   onShowQueue,
   onOpenTradeBoard,
 }: ScheduleReadinessProps) {
@@ -228,14 +230,14 @@ export function ScheduleReadiness({
     {
       label: "Trades",
       value: openTrades,
-      detail: tradeApprovals > 0
+      detail: canReviewClaims && tradeApprovals > 0
         ? `${tradeApprovals} awaiting approval`
         : openTrades > 0
           ? "Open trades"
           : "No open trades",
       icon: Repeat2Icon,
-      tone: openTrades > 0 || tradeApprovals > 0 ? "attention" : "neutral",
-      onClick: tradeApprovals > 0 ? () => onShowQueue("trade-approval") : onOpenTradeBoard,
+      tone: openTrades > 0 || (canReviewClaims && tradeApprovals > 0) ? "attention" : "neutral",
+      onClick: canReviewClaims && tradeApprovals > 0 ? () => onShowQueue("trade-approval") : onOpenTradeBoard,
     },
   ];
 
@@ -252,7 +254,7 @@ export function ScheduleReadiness({
           onClick: () => onShowQueue("my-calls-today"),
         }]
       : []),
-    ...(pendingRequests > 0
+    ...(canReviewClaims && pendingRequests > 0
       ? [{
           label: "Requests",
           value: pendingRequests,
@@ -357,6 +359,7 @@ export function ScheduleReadiness({
               {isStaff && digest && (
                 <ScheduleAutomationCards
                   digest={digest}
+                  canReviewClaims={canReviewClaims}
                   onShowQueue={onShowQueue}
                   onOpenTradeBoard={onOpenTradeBoard}
                   className="mt-3 border-t border-border/60 pt-3"

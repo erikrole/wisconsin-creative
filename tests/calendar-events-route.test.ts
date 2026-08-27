@@ -563,6 +563,81 @@ describe("POST /api/calendar-events", () => {
 });
 
 describe("PATCH /api/calendar-events/[id]", () => {
+  it("captures the site when a sport-only edit turns the home/away lock on", async () => {
+    // The lock shuts sync out of this row's classification. Locking a row that
+    // has no stored site froze it as an unknown one, so the Scoreboard showed
+    // "Unknown site" for a game Schedule rendered as Neutral.
+    vi.mocked(db.calendarEvent.findUnique).mockResolvedValueOnce({
+      id: "cmevent000000000000000001",
+      sourceId: "calendar-source-1",
+      summary: "Men's Basketball vs Marquette",
+      subtitle: null,
+      startsAt: new Date("2026-08-29T18:00:00.000Z"),
+      endsAt: new Date("2026-08-29T20:00:00.000Z"),
+      allDay: false,
+      sportCode: "MBB",
+      isHome: null,
+      site: null,
+      locationId: null,
+      rawSummary: "Men's Basketball vs Marquette",
+      rawLocationText: "Milwaukee, WI, Fiserv Forum",
+      opponent: "Marquette",
+      summaryLocked: false,
+      isHomeLocked: false,
+      locationLocked: false,
+      location: null,
+    } as unknown as Awaited<ReturnType<typeof db.calendarEvent.findUnique>>);
+
+    const res = await PATCH(
+      patch({ sportCode: "WBB" }),
+      { params: Promise.resolve({ id: "cmevent000000000000000001" }) },
+    );
+
+    expect(res.status).toBe(200);
+    expect(db.calendarEvent.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          sportCode: "WBB",
+          isHomeLocked: true,
+          site: "NEUTRAL",
+        }),
+      }),
+    );
+  });
+
+  it("leaves a stored site alone on a sport-only edit", async () => {
+    vi.mocked(db.calendarEvent.findUnique).mockResolvedValueOnce({
+      id: "cmevent000000000000000001",
+      sourceId: "calendar-source-1",
+      summary: "Football vs Notre Dame",
+      subtitle: null,
+      startsAt: new Date("2026-08-29T18:00:00.000Z"),
+      endsAt: new Date("2026-08-29T20:00:00.000Z"),
+      allDay: false,
+      sportCode: "FB",
+      isHome: true,
+      site: "HOME",
+      locationId: null,
+      rawSummary: "Football vs Notre Dame",
+      rawLocationText: "Madison, WI, Camp Randall Stadium",
+      opponent: "Notre Dame",
+      summaryLocked: false,
+      isHomeLocked: false,
+      locationLocked: false,
+      location: null,
+    } as unknown as Awaited<ReturnType<typeof db.calendarEvent.findUnique>>);
+
+    await PATCH(
+      patch({ sportCode: "VB" }),
+      { params: Promise.resolve({ id: "cmevent000000000000000001" }) },
+    );
+
+    const data = vi.mocked(db.calendarEvent.update).mock.calls.at(-1)?.[0]?.data as Record<string, unknown>;
+    expect(data.sportCode).toBe("VB");
+    expect(data).not.toHaveProperty("site");
+  });
+
+
   it("moves a manual event to a new date and audits the previous window", async () => {
     const res = await PATCH(
       patch({

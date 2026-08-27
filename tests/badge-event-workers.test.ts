@@ -192,9 +192,23 @@ describe("usersWithRecentlyWorkedEvents", () => {
     const users = await recentlyWorkedEventUsers(since, NOW);
 
     expect(users).toEqual([
-      { userId: "user-1", hasAddedWorker: false },
-      { userId: "user-2", hasAddedWorker: true },
-      { userId: "user-3", hasAddedWorker: true },
+      { userId: "user-1", hasAddedWorker: false, hasBackfilledAssignment: false },
+      { userId: "user-2", hasAddedWorker: true, hasBackfilledAssignment: false },
+      { userId: "user-3", hasAddedWorker: true, hasBackfilledAssignment: false },
+    ]);
+  });
+
+  it("marks assignments created after their event ended for silent recognition", async () => {
+    mocks.assignmentFindMany.mockResolvedValue([
+      {
+        userId: "user-1",
+        createdAt: new Date("2026-10-31T23:00:00.000Z"),
+        shift: { shiftGroup: { event: { endsAt: new Date("2026-10-31T22:00:00.000Z") } } },
+      },
+    ]);
+
+    await expect(recentlyWorkedEventUsers(new Date("2026-10-30T12:00:00.000Z"), NOW)).resolves.toEqual([
+      { userId: "user-1", hasAddedWorker: false, hasBackfilledAssignment: true },
     ]);
   });
 

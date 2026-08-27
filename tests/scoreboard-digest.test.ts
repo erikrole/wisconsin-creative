@@ -12,6 +12,7 @@ import type { ScoreboardBucket, ScoreboardEvent, UserScoreboard } from "@/lib/se
 function game(id: string, startsAt: string, result: "WIN" | "LOSS" | "TIE"): ScoreboardEvent {
   return {
     id,
+    summary: `Event ${id}`,
     startsAt,
     allDay: false,
     result,
@@ -46,6 +47,7 @@ function scoreboard(overrides: Partial<UserScoreboard> = {}): UserScoreboard {
       bucket("Kohl Center", "Kohl Center", 1, 0, 100),
     ],
     events: [],
+    eventCount: 38,
     nextCursor: null,
     ...overrides,
   };
@@ -95,6 +97,43 @@ describe("scoreboard digest", () => {
     ];
 
     expect(currentStreak(games)).toEqual({ count: 2, result: "TIE", isWin: false, label: "2 straight ties" });
+  });
+
+  it("does not turn a worked event without a result into a tie streak", () => {
+    const workedEvent: ScoreboardEvent = {
+      id: "event",
+      summary: "Veterans Plaza Ceremony",
+      startsAt: "2026-12-05T18:00:00.000Z",
+      allDay: false,
+      result: null,
+      sportCode: null,
+      sportLabel: null,
+      opponent: null,
+      site: null,
+      venue: null,
+      shiftAreas: ["VIDEO"],
+    };
+
+    expect(currentStreak([workedEvent, workedEvent])).toBeNull();
+  });
+
+  it("keeps worked events out of the resolved-results form strip", () => {
+    const workedEvent: ScoreboardEvent = {
+      id: "worked",
+      summary: "Veterans Plaza Ceremony",
+      startsAt: "2026-12-05T18:00:00.000Z",
+      allDay: false,
+      result: null,
+      sportCode: null,
+      sportLabel: null,
+      opponent: null,
+      site: null,
+      venue: null,
+      shiftAreas: ["VIDEO"],
+    };
+
+    expect(recentForm([workedEvent, game("resolved", "2026-12-04T18:00:00.000Z", "WIN")]).map((entry) => entry.id))
+      .toEqual(["resolved"]);
   });
 
   it("merges paged events without repeating a row that moved between offsets", () => {

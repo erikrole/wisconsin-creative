@@ -16,6 +16,8 @@ final class ScoreboardModelsTests: XCTestCase {
         XCTAssertEqual(scoreboard.nextOffset, 25)
 
         let event = try XCTUnwrap(scoreboard.events.first)
+        XCTAssertEqual(scoreboard.eventCount, 7)
+        XCTAssertEqual(event.summary, "Wisconsin vs Iowa")
         XCTAssertEqual(event.resultLabel, "W")
         XCTAssertEqual(event.resultName, "Win")
         XCTAssertTrue(event.isWin)
@@ -72,6 +74,40 @@ final class ScoreboardModelsTests: XCTestCase {
         XCTAssertEqual(summary.ties, 1)
         XCTAssertEqual(summary.games, 2)
         XCTAssertEqual(summary.recordLabel, "1–0–1")
+    }
+
+    func testWorkedEventDecodesWithoutResultAndStaysOutOfRecordDigest() throws {
+        let json = """
+        {
+          "id": "event-worked",
+          "summary": "Veterans Plaza Ceremony",
+          "startsAt": "2026-08-25T21:30:00.000Z",
+          "allDay": false,
+          "result": null,
+          "sportCode": null,
+          "sportLabel": null,
+          "opponent": null,
+          "site": null,
+          "venue": null,
+          "shiftAreas": ["VIDEO"]
+        }
+        """.data(using: .utf8)!
+
+        let workedEvent = try JSONDecoder().decode(ScoreboardEvent.self, from: json)
+        let resolvedEvents = [
+            workedEvent,
+            game(id: "resolved-1", starts: "2026-08-24T21:30:00.000Z", result: "WIN"),
+            game(id: "resolved-2", starts: "2026-08-23T21:30:00.000Z", result: "WIN"),
+        ]
+
+        XCTAssertNil(workedEvent.result)
+        XCTAssertEqual(workedEvent.resultLabel, "—")
+        XCTAssertEqual(workedEvent.resultName, "Worked event")
+        XCTAssertEqual(workedEvent.matchupLabel, "Veterans Plaza Ceremony")
+        XCTAssertFalse(workedEvent.isWin)
+        XCTAssertFalse(workedEvent.isTie)
+        XCTAssertEqual(ScoreboardDigest.form(resolvedEvents).map(\.id), ["resolved-1", "resolved-2"])
+        XCTAssertEqual(ScoreboardDigest.streak(resolvedEvents)?.label, "2 straight wins")
     }
 
     /// The cursor is an offset. A cursor that is not one has to end the list
@@ -372,6 +408,7 @@ final class ScoreboardModelsTests: XCTestCase {
         "games": 3,
         "winRate": 66.7
       },
+      "eventCount": 7,
       "bySport": [
         {"key":"FB","label":"Football","wins":2,"losses":1,"games":3,"winRate":66.7}
       ],
@@ -387,6 +424,7 @@ final class ScoreboardModelsTests: XCTestCase {
       "events": [
         {
           "id":"event-1",
+          "summary":"Wisconsin vs Iowa",
           "startsAt":"2026-09-05T18:00:00.000Z",
           "allDay":false,
           "result":"WIN",

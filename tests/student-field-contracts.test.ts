@@ -305,7 +305,7 @@ describe("student field mobile contracts", () => {
     expect(tradeBoard).toContain("Text(\"Claim this shift\")");
     expect(tradeBoard).toContain("Text(\"Cancel post\")");
     expect(tradeBoard).toContain("Canceling removes the post; the shift stays assigned to you.");
-    expect(tradeBoard).toContain("Staff review this before you're on the schedule.");
+    expect(tradeBoard).toContain("An admin reviews this before you're on the schedule.");
     expect(postTrade).toContain("Text(\"Choose a Shift\")");
     expect(postTrade).toContain("Text(\"Post to Trade Board\")");
   });

@@ -44,6 +44,7 @@ import {
   X,
 } from "lucide-react";
 import { handleAuthRedirect, parseErrorMessage, classifyError, isAbortError, parseJsonSafely } from "@/lib/errors";
+import { copyTextToClipboard } from "@/lib/clipboard";
 import { useFetch } from "@/hooks/use-fetch";
 import { formatRelativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -363,9 +364,15 @@ export default function KioskDevicesPage() {
     }
   }
 
-  function copyCode(code: string) {
-    navigator.clipboard.writeText(code);
-    toast.success("Code copied to clipboard");
+  async function copyCode(code: string) {
+    const copied = await copyTextToClipboard(code);
+    if (copied) {
+      toast.success("Code copied to clipboard");
+      return;
+    }
+    toast.error("Could not copy the activation code", {
+      description: "Select the visible code and copy it manually.",
+    });
   }
 
   function formatRelative(dateStr: string | null): string {
@@ -682,7 +689,9 @@ export default function KioskDevicesPage() {
               variant="outline"
               size="icon"
               className="size-10"
-              onClick={() => codeDialog && copyCode(codeDialog.code)}
+              onClick={() => {
+                if (codeDialog) void copyCode(codeDialog.code);
+              }}
               aria-label="Copy activation code"
             >
               <Copy className="size-4" />

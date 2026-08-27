@@ -20,6 +20,37 @@ enum ScoreboardResultFilter: String, CaseIterable, Hashable {
     }
 }
 
+/// Home, away, and neutral are a fixed, complete set, so unlike sport these
+/// options never have to be read back out of a response.
+enum ScoreboardSiteFilter: String, CaseIterable, Hashable, Identifiable {
+    case all
+    case home = "HOME"
+    case away = "AWAY"
+    case neutral = "NEUTRAL"
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .all: "All sites"
+        case .home: "Home"
+        case .away: "Away"
+        case .neutral: "Neutral"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .all: "map"
+        case .home: "house.fill"
+        case .away: "car.fill"
+        case .neutral: "flag.fill"
+        }
+    }
+
+    var apiValue: String? { self == .all ? nil : rawValue }
+}
+
 /// Which dimension the breakdown card is showing. The route sends all four at
 /// once; stacking all four as separate tables made the middle of the screen
 /// four identical objects the reader had to scroll past to reach their games.
@@ -73,6 +104,7 @@ struct ScoreboardView: View {
     @State private var nextOffset: Int?
     @State private var resultFilter: ScoreboardResultFilter = .all
     @State private var sportCode: String?
+    @State private var siteFilter: ScoreboardSiteFilter = .all
     /// Sport choices held from an unfiltered read. The route filters its own
     /// breakdowns, so reading the options out of the current response left the
     /// picker offering only the sport already chosen -- a filter you could not
@@ -93,11 +125,11 @@ struct ScoreboardView: View {
     private let pageSize = 25
 
     private var queryKey: String {
-        "\(userId)|\(resultFilter.rawValue)|\(sportCode ?? "all")"
+        "\(userId)|\(resultFilter.rawValue)|\(sportCode ?? "all")|\(siteFilter.rawValue)"
     }
 
     private var hasFilters: Bool {
-        resultFilter != .all || sportCode != nil
+        resultFilter != .all || sportCode != nil || siteFilter != .all
     }
 
     var body: some View {
@@ -132,6 +164,7 @@ struct ScoreboardView: View {
                         ScoreboardFilterBar(
                             resultFilter: $resultFilter,
                             sportCode: $sportCode,
+                            siteFilter: $siteFilter,
                             sportOptions: sportMenuOptions,
                             reduceMotion: reduceMotion,
                             onChange: { tapFeedback.toggle() }
@@ -155,7 +188,7 @@ struct ScoreboardView: View {
 
                         ScoreboardGamesCard(
                             games: events,
-                            total: scoreboard.summary.games,
+                            total: scoreboard.eventCount,
                             hasMore: nextOffset != nil,
                             hasFilters: hasFilters,
                             isBusy: isLoading || isLoadingMore,
@@ -192,10 +225,12 @@ struct ScoreboardView: View {
         if reduceMotion {
             resultFilter = .all
             sportCode = nil
+            siteFilter = .all
         } else {
             withAnimation(.snappy(duration: 0.18)) {
                 resultFilter = .all
                 sportCode = nil
+                siteFilter = .all
             }
         }
     }
@@ -220,6 +255,7 @@ struct ScoreboardView: View {
                 userId: userId,
                 sportCode: sportCode,
                 result: resultFilter.apiValue,
+                site: siteFilter.apiValue,
                 limit: pageSize,
                 offset: offset
             )
@@ -589,6 +625,7 @@ private struct ScoreboardHighlightsCard: View {
 private struct ScoreboardFilterBar: View {
     @Binding var resultFilter: ScoreboardResultFilter
     @Binding var sportCode: String?
+    @Binding var siteFilter: ScoreboardSiteFilter
     let sportOptions: [ScoreboardBucket]
     let reduceMotion: Bool
     let onChange: () -> Void
@@ -631,6 +668,26 @@ private struct ScoreboardFilterBar: View {
                 }
                 .scrollClipDisabled()
             }
+
+            // The site breakdown already sits below this bar; this is the
+            // control that row invites -- "how do they do on the road".
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(ScoreboardSiteFilter.allCases) { option in
+                        FilterChip(
+                            label: option.title,
+                            systemImage: option.symbol,
+                            isOn: siteFilter == option,
+                            tone: .blue
+                        ) {
+                            select(site: option)
+                        }
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+            .scrollClipDisabled()
+            .accessibilityLabel("Filter scoreboard site")
         }
         .brandCard(padding: Brand.Space.sm)
     }
@@ -642,6 +699,16 @@ private struct ScoreboardFilterBar: View {
             sportCode = code
         } else {
             withAnimation(.snappy(duration: 0.18)) { sportCode = code }
+        }
+    }
+
+    private func select(site option: ScoreboardSiteFilter) {
+        guard siteFilter != option else { return }
+        onChange()
+        if reduceMotion {
+            siteFilter = option
+        } else {
+            withAnimation(.snappy(duration: 0.18)) { siteFilter = option }
         }
     }
 }
@@ -819,7 +886,7 @@ private struct ScoreboardGamesCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
-                Label("Resolved games", systemImage: "calendar")
+                Label("Worked events", systemImage: "calendar")
                     .font(.subheadline.weight(.semibold))
                 Spacer(minLength: 8)
                 if isBusy {
@@ -862,7 +929,7 @@ private struct ScoreboardGamesCard: View {
                 if hasMore {
                     Divider()
                     VStack(spacing: 6) {
-                        Button(isBusy ? "Loading…" : "Show more games", action: loadMore)
+                        Button(isBusy ? "Loading…" : "Show more events", action: loadMore)
                             .font(.caption.weight(.semibold))
                             .frame(maxWidth: .infinity, minHeight: 44)
                             .contentShape(Rectangle())
@@ -897,11 +964,11 @@ private struct ScoreboardGamesEmptyState: View {
             Image(systemName: hasFilters ? "line.3.horizontal.decrease.circle" : "trophy")
                 .font(.title3)
                 .foregroundStyle(.tertiary)
-            Text(hasFilters ? "No games match these filters" : "No resolved games on record")
+            Text(hasFilters ? "No games match these filters" : "No worked events on record")
                 .font(.subheadline.weight(.semibold))
             Text(hasFilters
-                ? "Try another result or sport filter."
-                : "Completed events with a recorded result will appear here.")
+                ? "Try another result, sport, or site filter."
+                : "Completed events will appear here when this person has worked them.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -928,6 +995,7 @@ private struct ScoreboardGameRow: View {
     static let copyInset: CGFloat = Brand.Space.md + resultColumnWidth + columnSpacing
 
     private var tone: StatusTone {
+        if game.result == nil { return .gray }
         if game.isWin { return .green }
         if game.isTie { return .orange }
         return .red

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useCopyFeedback } from "@/hooks/use-copy-feedback";
 import { useInvalidateItemCatalog } from "@/hooks/use-item-cache-invalidation";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -301,7 +302,8 @@ function LinkField({
   onSave: (v: string) => Promise<void>;
 }) {
   const [draft, setDraft] = useState(value);
-  const [copied, setCopied] = useState(false);
+  const { copiedKey, copy: copyWithFeedback } = useCopyFeedback(2000);
+  const copied = copiedKey === "link";
   const saveField = useSaveField(onSave);
   const fieldId = useId();
 
@@ -334,9 +336,12 @@ function LinkField({
 
   async function copyUrl() {
     if (!value) return;
-    await navigator.clipboard.writeText(openUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    const result = await copyWithFeedback(openUrl, "link");
+    if (result === "failed") {
+      toast.error("Could not copy the link", {
+        description: "Select the visible URL and copy it manually.",
+      });
+    }
   }
 
   return (
@@ -923,7 +928,12 @@ export function QRModal({
   const [qrDraft, setQrDraft] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [copied, setCopied] = useState(false);
+  const {
+    copiedKey,
+    copy: copyWithFeedback,
+    reset: resetCopyFeedback,
+  } = useCopyFeedback(1600);
+  const copied = copiedKey === "qr";
   const savingRef = useRef(false);
 
   function beginSave() {
@@ -940,19 +950,22 @@ export function QRModal({
   }
 
   useEffect(() => {
+    resetCopyFeedback();
     if (open) {
       setManualEntry(false);
       setQrDraft("");
       setError("");
-      setCopied(false);
     }
-  }, [open]);
+  }, [open, resetCopyFeedback]);
 
   async function copyCode() {
     if (!asset.qrCodeValue) return;
-    await navigator.clipboard.writeText(asset.qrCodeValue);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1600);
+    const result = await copyWithFeedback(asset.qrCodeValue, "qr");
+    if (result === "failed") {
+      toast.error("Could not copy the QR code", {
+        description: "Select the visible code and copy it manually.",
+      });
+    }
   }
 
   async function downloadPng() {
@@ -1201,7 +1214,7 @@ export default function ItemInfoCard({
   onCategoriesChanged: () => void;
 }) {
   const [showQrModal, setShowQrModal] = useState(false);
-  const [copiedScanValue, setCopiedScanValue] = useState<"qr" | "serial" | null>(null);
+  const { copiedKey: copiedScanValue, copy: copyWithFeedback } = useCopyFeedback(1600);
   const invalidateItemCatalog = useInvalidateItemCatalog();
   const saveField = useCallback(
     async (patchKey: string, value: string) => {
@@ -1315,9 +1328,12 @@ export default function ItemInfoCard({
 
   async function copyScanValue(kind: "qr" | "serial", value: string) {
     if (!value) return;
-    await navigator.clipboard.writeText(value);
-    setCopiedScanValue(kind);
-    setTimeout(() => setCopiedScanValue(null), 1600);
+    const result = await copyWithFeedback(value, kind);
+    if (result === "failed") {
+      toast.error(`Could not copy the ${kind === "qr" ? "QR code" : "serial number"}`, {
+        description: "Select the visible value and copy it manually.",
+      });
+    }
   }
 
   return (

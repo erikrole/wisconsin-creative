@@ -1,5 +1,26 @@
 import SwiftUI
 
+/// One row of the Admin review queue. Trade claims and open-shift requests are
+/// two records but one job, so they share a list and one ordering key.
+enum TradeReviewItem: Identifiable {
+    case request(OpenWorkPickupRequest)
+    case trade(ShiftTrade)
+
+    var id: String {
+        switch self {
+        case .request(let request): "request:\(request.id)"
+        case .trade(let trade): "trade:\(trade.id)"
+        }
+    }
+
+    var effectiveStartsAt: Date {
+        switch self {
+        case .request(let request): request.shift.effectiveStartsAt
+        case .trade(let trade): trade.shiftAssignment.effectiveStartsAt
+        }
+    }
+}
+
 @MainActor
 @Observable
 final class TradeBoardViewModel {
@@ -11,9 +32,11 @@ final class TradeBoardViewModel {
         var myTrades: [ShiftTrade] = []
         var resolvedTrades: [ShiftTrade] = []
         var postedTrades: [ShiftTrade] = []
-        /// Staff-only: claims owed a decision.
+        /// Admin-only: claims owed a decision.
         var reviewTrades: [ShiftTrade] = []
         var reviewRequests: [OpenWorkPickupRequest] = []
+        /// The two above interleaved by shift start — what the queue renders.
+        var reviewQueue: [TradeReviewItem] = []
         /// Student-only: claims this person is waiting on.
         var myPendingClaims: [ShiftTrade] = []
         var myPendingRequests: [OpenWorkPickupRequest] = []
@@ -46,12 +69,13 @@ final class TradeBoardViewModel {
             Task { await load() }
         }
     }
-    /// A staff review queue makes the 30-row cap far likelier to bite, so the
+    /// An Admin review queue makes the 30-row cap far likelier to bite, so the
     /// board can now reach past the first page instead of silently truncating.
     var isLoadingMore = false
     var canLoadMore: Bool { trades.count < total }
 
     var isStaff: Bool { currentUserRole == "ADMIN" || currentUserRole == "STAFF" }
+    var canReview: Bool { currentUserRole == "ADMIN" }
     var availableOpenShifts: [OpenWorkShift] { sections.availableOpenShifts }
     var waitingOpenShifts: [OpenWorkShift] { sections.waitingOpenShifts }
     var availableTrades: [ShiftTrade] { sections.availableTrades }
@@ -61,6 +85,11 @@ final class TradeBoardViewModel {
     var postedTrades: [ShiftTrade] { sections.postedTrades }
     var reviewTrades: [ShiftTrade] { sections.reviewTrades }
     var reviewRequests: [OpenWorkPickupRequest] { sections.reviewRequests }
+    /// Both kinds of pending claim in one chronological queue. Rendering them as
+    /// two consecutive groups sorted the trades and the requests separately, so
+    /// a request four days out still landed above a claim on tomorrow's shift —
+    /// the queue looked ordered without being ordered.
+    var reviewQueue: [TradeReviewItem] { sections.reviewQueue }
     var myPendingClaims: [ShiftTrade] { sections.myPendingClaims }
     var myPendingRequests: [OpenWorkPickupRequest] { sections.myPendingRequests }
     var reviewCount: Int { sections.reviewTrades.count + sections.reviewRequests.count }
@@ -76,12 +105,12 @@ final class TradeBoardViewModel {
             + reviewCount
             + myPendingCount
     }
-    /// What the person can act on. For staff that is the review queue: a claim
+    /// What the person can act on. For Admin that is the review queue: a claim
     /// waiting on them is work, an open shift someone else may take is not.
     var actionableCount: Int {
-        isStaff
-            ? reviewCount
-            : sections.availableOpenShifts.count + sections.availableTrades.count
+        if canReview { return reviewCount }
+        if isStaff { return 0 }
+        return sections.availableOpenShifts.count + sections.availableTrades.count
     }
     var isLoading: Bool { isLoadingTrades || isLoadingOpenWork }
     var hasSourceFailure: Bool { tradeLoadError != nil || openWorkLoadError != nil }
@@ -93,9 +122,9 @@ final class TradeBoardViewModel {
 
     private func rebuildSections() {
         var next = Sections()
-        // The server scopes pickupRequests: every row for staff, only their own
-        // for a student.
-        if isStaff {
+        // The server scopes pickupRequests: every row for Admin, only the
+        // viewer's own for everyone else.
+        if canReview {
             next.reviewRequests = openWork.pickupRequests
         } else {
             next.myPendingRequests = openWork.pickupRequests
@@ -111,9 +140,9 @@ final class TradeBoardViewModel {
 
         for trade in trades {
             if trade.status == .claimed {
-                // A claimed trade is a decision waiting to happen. Staff owe it;
+                // A claimed trade is a decision waiting to happen. Admins owe it;
                 // the claimer is waiting on it; the poster tracks it in My Posts.
-                if isStaff {
+                if canReview {
                     next.reviewTrades.append(trade)
                 } else if trade.claimedBy?.id == currentUserId {
                     next.myPendingClaims.append(trade)
@@ -139,6 +168,15 @@ final class TradeBoardViewModel {
                 next.postedTrades.append(trade)
             }
         }
+        // Urgency is the shift, not the post. A claim filed this morning on a
+        // shift tonight outranks one filed last week on a shift in March, so the
+        // review queue runs soonest-first rather than in whatever order the two
+        // sources happened to return.
+        next.reviewTrades.sort { $0.shiftAssignment.effectiveStartsAt < $1.shiftAssignment.effectiveStartsAt }
+        next.reviewRequests.sort { $0.shift.effectiveStartsAt < $1.shift.effectiveStartsAt }
+        next.reviewQueue = (next.reviewRequests.map(TradeReviewItem.request)
+            + next.reviewTrades.map(TradeReviewItem.trade))
+            .sorted { $0.effectiveStartsAt < $1.effectiveStartsAt }
         sections = next
     }
 
@@ -366,7 +404,7 @@ struct TradeBoardSheet: View {
                 Button("Claim Shift") { claimConfirmedTrade() }
                 Button("Cancel", role: .cancel) { tradeToConfirm = nil }
             } message: {
-                Text("Staff review this before you're on the schedule.")
+                Text("An admin reviews this before you're on the schedule.")
             }
             .confirmationDialog(pickupDialogTitle, isPresented: Binding(
                 get: { openShiftToPickup != nil },
@@ -375,7 +413,7 @@ struct TradeBoardSheet: View {
                 Button("Claim Shift") { pickupConfirmedOpenShift() }
                 Button("Cancel", role: .cancel) { openShiftToPickup = nil }
             } message: {
-                Text("Staff review this before you're on the schedule.")
+                Text("An admin reviews this before you're on the schedule.")
             }
             .confirmationDialog(cancelDialogTitle, isPresented: Binding(
                 get: { tradeToCancel != nil },
@@ -384,7 +422,7 @@ struct TradeBoardSheet: View {
                 Button("Cancel Trade", role: .destructive) { cancelConfirmedTrade() }
                 Button("Keep Posted", role: .cancel) { tradeToCancel = nil }
             } message: {
-                Text("Canceling removes the post; the shift stays assigned to you.")
+                Text(cancelDialogMessage)
             }
             .confirmationDialog(withdrawClaimDialogTitle, isPresented: Binding(
                 get: { tradeClaimToWithdraw != nil },
@@ -411,6 +449,16 @@ struct TradeBoardSheet: View {
     private var cancelDialogTitle: String {
         guard let trade = tradeToCancel else { return "Cancel trade?" }
         return "Cancel \(trade.shiftAssignment.shift.area.shiftAreaLabel) trade?"
+    }
+
+    /// Cancelling a claimed post drops someone else's pending claim. Saying only
+    /// that the shift stays yours hides the half of this that lands on another
+    /// person.
+    private var cancelDialogMessage: String {
+        let base = "Canceling removes the post; the shift stays assigned to you."
+        guard let trade = tradeToCancel, trade.status == .claimed else { return base }
+        let claimer = trade.claimedBy?.name ?? "The claimer"
+        return "\(base) \(claimer)'s pending claim is cancelled too."
     }
 
     private var claimDialogTitle: String {
@@ -442,6 +490,7 @@ struct TradeBoardSheet: View {
                     mineOnly: mineOnly,
                     isComplete: !vm.hasSourceFailure,
                     isStaff: vm.isStaff,
+                    isReviewer: vm.canReview,
                     onToggleMine: {
                         mineOnly.toggle()
                         Haptics.selection()
@@ -518,33 +567,35 @@ struct TradeBoardSheet: View {
 
     @ViewBuilder
     private var availableContent: some View {
-            if vm.reviewCount > 0 {
+            if vm.canReview, vm.reviewCount > 0 {
                 Section {
-                    ForEach(vm.reviewRequests) { request in
-                        PickupRequestRow(
-                            request: request,
-                            isReview: true,
-                            isActioning: pendingActionId == request.id,
-                            approveAction: { review(id: request.id) { try await vm.approveRequest(id: request.id) } },
-                            declineAction: { review(id: request.id) { try await vm.declineRequest(id: request.id) } }
-                        )
-                        .tradeBoardCardRow()
-                    }
-                    ForEach(vm.reviewTrades) { trade in
-                        TradeRow(
-                            trade: trade,
-                            context: .review,
-                            isActioning: pendingActionId == trade.id,
-                            action: nil,
-                            cancelAction: nil,
-                            approveAction: { review(id: trade.id) { try await vm.approveTrade(id: trade.id) } },
-                            declineAction: { review(id: trade.id) { try await vm.declineTrade(id: trade.id) } }
-                        )
-                        .tradeBoardCardRow()
+                    ForEach(vm.reviewQueue) { item in
+                        switch item {
+                        case .request(let request):
+                            PickupRequestRow(
+                                request: request,
+                                isReview: true,
+                                isActioning: pendingActionId == request.id,
+                                approveAction: { review(id: request.id) { try await vm.approveRequest(id: request.id) } },
+                                declineAction: { review(id: request.id) { try await vm.declineRequest(id: request.id) } }
+                            )
+                            .tradeBoardCardRow()
+                        case .trade(let trade):
+                            TradeRow(
+                                trade: trade,
+                                context: .review,
+                                isActioning: pendingActionId == trade.id,
+                                action: nil,
+                                cancelAction: nil,
+                                approveAction: { review(id: trade.id) { try await vm.approveTrade(id: trade.id) } },
+                                declineAction: { review(id: trade.id) { try await vm.declineTrade(id: trade.id) } }
+                            )
+                            .tradeBoardCardRow()
+                        }
                     }
                 } header: {
                     TradeSectionHeader(
-                        title: "Staff Review",
+                        title: "Admin Review",
                         subtitle: "Students are waiting. Nothing moves until you decide."
                     )
                 }
@@ -564,7 +615,7 @@ struct TradeBoardSheet: View {
                     ForEach(vm.myPendingClaims) { trade in
                         TradeRow(
                             trade: trade,
-                            context: .waitingOnStaff,
+                            context: .waitingOnAdmin,
                             isActioning: pendingActionId == "withdraw-claim:\(trade.id)",
                             action: nil,
                             cancelAction: nil,
@@ -574,7 +625,7 @@ struct TradeBoardSheet: View {
                     }
                 } header: {
                     TradeSectionHeader(
-                        title: "Waiting on Staff",
+                        title: "Waiting on Admin",
                         subtitle: "You're not on the schedule until these are approved."
                     )
                 }
@@ -603,7 +654,7 @@ struct TradeBoardSheet: View {
                         .tradeBoardCardRow()
                     }
                 } header: {
-                    TradeSectionHeader(title: "Available Now", subtitle: "Claiming sends this to staff for approval.")
+                    TradeSectionHeader(title: "Available Now", subtitle: "Claiming sends this to an admin for approval.")
                 }
             }
 
@@ -829,11 +880,12 @@ private struct TradeBoardSummaryCard: View {
     let myPostCount: Int
     let mineOnly: Bool
     let isComplete: Bool
-    /// Staff and students are counting different things. For staff the number is
-    /// claims owed a decision; describing those as shifts they can claim was
+    /// Reviewers and students are counting different things. For Admin the
+    /// number is claims owed a decision; describing those as shifts they can claim was
     /// worse than saying nothing, because the words contradicted the buttons
     /// directly below them.
     let isStaff: Bool
+    let isReviewer: Bool
     let onToggleMine: () -> Void
 
     private var summaryTone: StatusTone {
@@ -844,14 +896,17 @@ private struct TradeBoardSummaryCard: View {
     private var summaryIcon: String {
         if !isComplete { return "exclamationmark.triangle.fill" }
         if actionableCount == 0 { return "checkmark" }
-        return isStaff ? "checklist" : "arrow.left.arrow.right"
+        return isReviewer ? "checklist" : "arrow.left.arrow.right"
     }
 
     private var summaryTitle: String {
         if mineOnly { return "Your trade posts" }
         if !isComplete { return "Coverage is incomplete" }
-        if actionableCount == 0 { return isStaff ? "Nothing to review" : "Coverage is clear" }
-        if isStaff {
+        if actionableCount == 0 {
+            if isReviewer { return "Nothing to review" }
+            return isStaff ? "Trade Board overview" : "Coverage is clear"
+        }
+        if isReviewer {
             return "\(actionableCount) \(actionableCount == 1 ? "claim" : "claims") to review"
         }
         return "\(actionableCount) \(actionableCount == 1 ? "shift" : "shifts") available"
@@ -861,9 +916,10 @@ private struct TradeBoardSummaryCard: View {
         if mineOnly { return "\(myPostCount) active \(myPostCount == 1 ? "post" : "posts")" }
         if !isComplete { return "Refresh the unavailable source before relying on this board" }
         if actionableCount == 0 {
-            return isStaff ? "No claims are waiting on you" : "Open shifts and trades you can claim now"
+            if isReviewer { return "No claims are waiting on you" }
+            return isStaff ? "Open shifts and trade posts across the team" : "Open shifts and trades you can claim now"
         }
-        return isStaff
+        return isReviewer
             ? "Students are waiting on your decision"
             : "Open shifts and trades you can claim now"
     }
@@ -934,7 +990,7 @@ private struct OpenWorkShiftRow: View {
     private var shift: ShiftTradeShift { item.shift }
     private var consequence: String {
         switch item.action {
-        case "claim": "Staff review this before you're on the schedule."
+        case "claim": "An admin reviews this before you're on the schedule."
         default: item.reason
         }
     }
@@ -1007,19 +1063,19 @@ private enum TradeRowContext: Equatable {
     case myPost
     case posted
     case resolved
-    /// Staff owe this claim a decision.
+    /// Admins owe this claim a decision.
     case review
     /// The viewer claimed it and is waiting.
-    case waitingOnStaff
+    case waitingOnAdmin
 
     func consequence(for trade: ShiftTrade) -> String {
         switch self {
         case .availableNow:
-            return "Claiming sends this to staff; the shift stays with its owner until they approve."
+            return "Claiming sends this to an admin; the shift stays with its owner until approval."
         case .review:
             return "Nothing changes on the schedule until you approve or decline."
-        case .waitingOnStaff:
-            return "Waiting for staff to approve your claim."
+        case .waitingOnAdmin:
+            return "Waiting for an admin to approve your claim."
         case .blocked:
             return trade.viewerAvailabilityContext?.detail ?? "This shift is not available with your current schedule."
         case .myPost:
@@ -1047,14 +1103,14 @@ private struct TradeRow: View {
         switch context {
         case .blocked: "Blocked"
         case .review: "Needs review"
-        case .waitingOnStaff: "Waiting"
+        case .waitingOnAdmin: "Waiting"
         default: trade.status.label
         }
     }
     private var tone: StatusTone {
         switch context {
         case .blocked: return StatusTone.red
-        case .review, .waitingOnStaff: return StatusTone.orange
+        case .review, .waitingOnAdmin: return StatusTone.orange
         default: return trade.status.tone
         }
     }
@@ -1066,7 +1122,7 @@ private struct TradeRow: View {
     }
 
     private var reviewDeadlineLine: String? {
-        guard context == .review || context == .waitingOnStaff,
+        guard context == .review || context == .waitingOnAdmin,
               let deadline = trade.reviewAutoApprovesAt else { return nil }
         return "Auto-approval check by \(deadline.formatted(date: .abbreviated, time: .shortened))."
     }
@@ -1110,7 +1166,7 @@ private struct TradeRow: View {
                         .foregroundStyle(Color.statusText(.orange))
                 }
 
-                if context == .waitingOnStaff {
+                if context == .waitingOnAdmin {
                     Text(context.consequence(for: trade))
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -1201,7 +1257,7 @@ private struct TradeRow: View {
     }
 }
 
-/// A student's claim on an open slot, shown to staff as work and to the student
+/// A student's claim on an open slot, shown to Admin as work and to the student
 /// as something they are waiting on.
 private struct PickupRequestRow: View {
     let request: OpenWorkPickupRequest
@@ -1248,7 +1304,7 @@ private struct PickupRequestRow: View {
                 }
 
                 if !isReview {
-                    Text("Waiting for staff to approve your request.")
+                    Text("Waiting for an admin to approve your request.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
@@ -1429,8 +1485,6 @@ private struct ShiftAvailabilityContextNote: View {
 }
 
 private extension ShiftTradeShift {
-    var effectiveStartsAt: Date { callStartsAt ?? startsAt }
-    var effectiveEndsAt: Date { callEndsAt ?? endsAt }
     var timeRange: String {
         "\(effectiveStartsAt.formatted(date: .abbreviated, time: .shortened)) - \(effectiveEndsAt.formatted(date: .omitted, time: .shortened))"
     }

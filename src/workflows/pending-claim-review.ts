@@ -83,6 +83,13 @@ export async function autoApprovePendingClaimStep(kind: PendingClaimKind, claimI
     // slot was refilled, time off was approved. Forcing it through would be
     // worse than leaving it: tell staff what stopped it and let a human decide.
     if (error instanceof HttpError && error.status >= 400 && error.status < 500) {
+      // Unless what changed is that the claim stopped being pending between the
+      // check above and the approve call — staff decided, or a second run for a
+      // re-claimed post got there first. Reporting "could not be approved" then
+      // sends reviewers after work that is already done.
+      if (!await isStillPending(kind, claimId)) {
+        return { status: "superseded" as const, kind, claimId };
+      }
       await reportPendingClaimAutoApproval(kind, claimId, error.message);
       return { status: "blocked" as const, kind, claimId, error: error.message };
     }

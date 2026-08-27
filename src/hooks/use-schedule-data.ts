@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -33,6 +33,62 @@ import {
 export type ViewMode = "list" | "calendar" | "week";
 
 export type HomeAwayFilter = VenueFilter;
+
+function parseScheduleViewMode(raw: string | null): ViewMode | null {
+  return raw === "list" || raw === "calendar" || raw === "week" ? raw : null;
+}
+
+function defaultScheduleMonth() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), 1);
+}
+
+function defaultScheduleWeek() {
+  return getMonday(new Date());
+}
+
+function parseScheduleMonth(raw: string | null): Date | null {
+  const match = raw?.match(/^(\d{4})-(\d{2})$/);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) return null;
+  return new Date(year, month - 1, 1);
+}
+
+function parseScheduleWeek(raw: string | null): Date | null {
+  const match = raw?.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const parsed = new Date(year, month - 1, day);
+  if (
+    !Number.isInteger(year)
+    || !Number.isInteger(month)
+    || !Number.isInteger(day)
+    || parsed.getFullYear() !== year
+    || parsed.getMonth() !== month - 1
+    || parsed.getDate() !== day
+  ) return null;
+  return getMonday(parsed);
+}
+
+function formatScheduleMonth(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function formatScheduleDate(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function parseScheduleCoverage(raw: string | null) {
+  return raw === "unfilled" || raw === "filled" ? raw : "";
+}
+
+function parseScheduleVenue(raw: string | null): HomeAwayFilter {
+  return raw === "home" || raw === "away" || raw === "neutral" || raw === "non-game" ? raw : "all";
+}
 
 type ScheduleDeepLink = {
   myShiftsOnly: boolean;
@@ -371,27 +427,27 @@ export function useScheduleData(): UseScheduleDataResult {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>("list");
-  const [calMonth, setCalMonth] = useState(() => {
-    const d = new Date();
-    return new Date(d.getFullYear(), d.getMonth(), 1);
-  });
+  const [viewMode, setViewMode] = useState<ViewMode>(() => parseScheduleViewMode(searchParams.get("view")) ?? "list");
+  const [calMonth, setCalMonth] = useState(() => parseScheduleMonth(searchParams.get("month")) ?? defaultScheduleMonth());
   const [expandedDay, setExpandedDay] = useState<number | null>(null);
-  const [weekStart, setWeekStart] = useState(() => getMonday(new Date()));
+  const [weekStart, setWeekStart] = useState(() => parseScheduleWeek(searchParams.get("week")) ?? defaultScheduleWeek());
 
   // Filters
-  const [sportFilter, setSportFilter] = useState("");
-  const [areaFilter, setAreaFilter] = useState("");
-  const [coverageFilter, setCoverageFilter] = useState("");
-  const [homeAwayFilter, setHomeAwayFilter] = useState<HomeAwayFilter>("all");
-  const [includeArchived, setIncludeArchived] = useState(false);
-  const [myShiftsOnly, setMyShiftsOnly] = useState(false);
+  const [sportFilter, setSportFilter] = useState(() => searchParams.get("sportCode") ?? "");
+  const [areaFilter, setAreaFilter] = useState(() => searchParams.get("area") ?? "");
+  const [coverageFilter, setCoverageFilter] = useState(() => parseScheduleCoverage(searchParams.get("coverage")));
+  const [homeAwayFilter, setHomeAwayFilter] = useState<HomeAwayFilter>(() => parseScheduleVenue(searchParams.get("venue")));
+  const [includeArchived, setIncludeArchived] = useState(() => searchParams.get("includeArchived") === "true");
+  const [myShiftsOnly, setMyShiftsOnly] = useState(() => searchParams.get("myShifts") === "true");
 
   // UI state
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
   const [tradeSheetOpen, setTradeSheetOpen] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const searchParamsString = searchParams.toString();
+  const scheduleSearchSignatureRef = useRef(searchParamsString);
+  const skipNextScheduleUrlWriteRef = useRef(false);
+  const initialPreferencesAppliedRef = useRef(false);
   const deepLink = useMemo<ScheduleDeepLink>(() => {
     const query = new URLSearchParams(searchParamsString);
     const start = query.get("startDate");
@@ -411,6 +467,27 @@ export function useScheduleData(): UseScheduleDataResult {
   const activeQueue = parseScheduleQueue(searchParams.get("queue"));
   const activeQueueMeta = activeQueue ? SCHEDULE_QUEUE_META[activeQueue] : null;
 
+  // Rehydrate the list context when browser Back/Forward or another route
+  // changes the query string. The matching URL-write effect below skips this
+  // render so it cannot immediately overwrite the history entry with stale
+  // React state.
+  useEffect(() => {
+    if (scheduleSearchSignatureRef.current === searchParamsString) return;
+    scheduleSearchSignatureRef.current = searchParamsString;
+    skipNextScheduleUrlWriteRef.current = true;
+
+    const query = new URLSearchParams(searchParamsString);
+    setViewMode(parseScheduleViewMode(query.get("view")) ?? "list");
+    setCalMonth(parseScheduleMonth(query.get("month")) ?? defaultScheduleMonth());
+    setWeekStart(parseScheduleWeek(query.get("week")) ?? defaultScheduleWeek());
+    setSportFilter(query.get("sportCode") ?? "");
+    setAreaFilter(query.get("area") ?? "");
+    setCoverageFilter(parseScheduleCoverage(query.get("coverage")));
+    setHomeAwayFilter(parseScheduleVenue(query.get("venue")));
+    setIncludeArchived(query.get("includeArchived") === "true");
+    setMyShiftsOnly(query.get("myShifts") === "true");
+  }, [searchParamsString]);
+
   const setQueue = useCallback((queue: ScheduleQueue | null) => {
     const params = new URLSearchParams(searchParams.toString());
     if (queue) {
@@ -424,21 +501,21 @@ export function useScheduleData(): UseScheduleDataResult {
   }, [pathname, router, searchParams]);
 
   useEffect(() => {
-    const storedView = localStorage.getItem(LS_VIEW_MODE);
-    if (!deepLink.myShiftsOnly && !deepLink.dateRange && (storedView === "calendar" || storedView === "week")) {
-      setViewMode(storedView);
+    if (initialPreferencesAppliedRef.current) return;
+    initialPreferencesAppliedRef.current = true;
+
+    const query = new URLSearchParams(searchParamsString);
+    if (!query.has("view") && !deepLink.myShiftsOnly && !deepLink.dateRange) {
+      const storedView = localStorage.getItem(LS_VIEW_MODE);
+      if (storedView === "calendar" || storedView === "week") setViewMode(storedView);
     }
 
-    const storedMyShifts = localStorage.getItem(LS_MY_SHIFTS);
-    if (storedMyShifts !== null) {
-      setMyShiftsOnly(storedMyShifts === "true");
+    if (!query.has("myShifts")) {
+      const storedMyShifts = localStorage.getItem(LS_MY_SHIFTS);
+      if (storedMyShifts !== null) setMyShiftsOnly(storedMyShifts === "true");
     }
 
-    if (deepLink.myShiftsOnly || deepLink.dateRange) {
-      setViewMode("list");
-      if (deepLink.myShiftsOnly) setMyShiftsOnly(true);
-    }
-    if (deepLink.sportCode) setSportFilter(deepLink.sportCode);
+    if (deepLink.myShiftsOnly || deepLink.dateRange) setViewMode("list");
 
     setPreferencesLoaded(true);
     setDeepLinkApplied(true);
@@ -454,6 +531,57 @@ export function useScheduleData(): UseScheduleDataResult {
     localStorage.setItem(LS_MY_SHIFTS, String(myShiftsOnly));
   }, [myShiftsOnly, preferencesLoaded]);
 
+  // Keep the complete list context in the App Router's history state. This is
+  // what lets detail -> Back restore the same filtered result instead of the
+  // default Schedule view.
+  useEffect(() => {
+    if (!preferencesLoaded) return;
+    if (skipNextScheduleUrlWriteRef.current) {
+      skipNextScheduleUrlWriteRef.current = false;
+      return;
+    }
+
+    const params = new URLSearchParams(searchParamsString);
+    if (viewMode === "list") params.delete("view");
+    else params.set("view", viewMode);
+    if (viewMode === "calendar") params.set("month", formatScheduleMonth(calMonth));
+    else params.delete("month");
+    if (viewMode === "week") params.set("week", formatScheduleDate(weekStart));
+    else params.delete("week");
+
+    if (sportFilter) params.set("sportCode", sportFilter);
+    else params.delete("sportCode");
+    if (areaFilter) params.set("area", areaFilter);
+    else params.delete("area");
+    if (coverageFilter) params.set("coverage", coverageFilter);
+    else params.delete("coverage");
+    if (homeAwayFilter !== "all") params.set("venue", homeAwayFilter);
+    else params.delete("venue");
+    if (includeArchived) params.set("includeArchived", "true");
+    else params.delete("includeArchived");
+    if (myShiftsOnly) params.set("myShifts", "true");
+    else params.delete("myShifts");
+
+    const query = params.toString();
+    const nextUrl = query ? `${pathname}?${query}` : pathname;
+    const currentUrl = searchParamsString ? `${pathname}?${searchParamsString}` : pathname;
+    if (nextUrl !== currentUrl) router.replace(nextUrl, { scroll: false });
+  }, [
+    calMonth,
+    coverageFilter,
+    homeAwayFilter,
+    includeArchived,
+    myShiftsOnly,
+    pathname,
+    router,
+    searchParamsString,
+    areaFilter,
+    sportFilter,
+    viewMode,
+    weekStart,
+    preferencesLoaded,
+  ]);
+
   // --- React Query: user info ---
   const { data: meData } = useCurrentUser();
   const currentUserId = meData?.id ?? "";
@@ -464,10 +592,11 @@ export function useScheduleData(): UseScheduleDataResult {
   // Set default myShiftsOnly for students
   useEffect(() => {
     if (!preferencesLoaded) return;
-    if (meData?.role === "STUDENT" && localStorage.getItem(LS_MY_SHIFTS) === null) {
+    const hasMyShiftsParam = searchParams.get("myShifts") !== null;
+    if (meData?.role === "STUDENT" && !hasMyShiftsParam && localStorage.getItem(LS_MY_SHIFTS) === null) {
       setMyShiftsOnly(true);
     }
-  }, [meData?.role, preferencesLoaded]);
+  }, [meData?.role, preferencesLoaded, searchParams]);
 
   // --- React Query: trade count ---
   const { data: tradeCount = 0, refetch: refetchTrades } = useQuery({
@@ -671,10 +800,15 @@ export function useScheduleData(): UseScheduleDataResult {
         setHomeAwayFilter("all");
         setIncludeArchived(false);
         setMyShiftsOnly(false);
+        skipNextScheduleUrlWriteRef.current = true;
         const params = new URLSearchParams(searchParams.toString());
         params.delete("queue");
         params.delete("myShifts");
         params.delete("sportCode");
+        params.delete("area");
+        params.delete("coverage");
+        params.delete("venue");
+        params.delete("includeArchived");
         params.delete("startDate");
         params.delete("endDate");
         const query = params.toString();

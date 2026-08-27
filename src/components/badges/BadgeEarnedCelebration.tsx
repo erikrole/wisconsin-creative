@@ -1,58 +1,8 @@
 "use client";
 
-import type { ComponentType } from "react";
-import {
-  AlarmClock,
-  AlarmClockCheck,
-  Aperture,
-  ArrowLeftRight,
-  AudioLines,
-  BadgeCheck,
-  BatteryCharging,
-  BatteryLow,
-  Binoculars,
-  Boxes,
-  BusFront,
-  Cable,
-  Camera,
-  CalendarCheck2,
-  CalendarClock,
-  CalendarDays,
-  CalendarRange,
-  Clapperboard,
-  Clock3,
-  CloudRain,
-  Combine,
-  Dumbbell,
-  Flame,
-  Gift,
-  Focus,
-  HardDrive,
-  Handshake,
-  Lightbulb,
-  LifeBuoy,
-  LayoutGrid,
-  MoonStar,
-  PackageCheck,
-  PackageOpen,
-  QrCode,
-  Repeat2,
-  ScanLine,
-  ScanSearch,
-  ShieldCheck,
-  ShoppingCart,
-  Shuffle,
-  Sparkles,
-  Timer,
-  Sunrise,
-  Sunset,
-  Ticket,
-  Trophy,
-  Truck,
-  UserCheck,
-  Warehouse,
-} from "lucide-react";
-import { BadgeMedallion, type BadgeMedallionShape } from "@/components/badges/BadgeMedallion";
+import { Sparkles } from "lucide-react";
+import { BadgeMedallion } from "@/components/badges/BadgeMedallion";
+import { badgeIcon } from "@/components/badges/badge-artwork";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -76,58 +26,10 @@ export type EarnedBadgeReward = {
   category: string;
   rarity: BadgeRarity;
   awardedAt: string;
-};
-
-const iconMap: Record<string, ComponentType<{ className?: string }>> = {
-  AlarmClock,
-  AlarmClockCheck,
-  Aperture,
-  ArrowLeftRight,
-  AudioLines,
-  BadgeCheck,
-  BatteryCharging,
-  BatteryLow,
-  Binoculars,
-  Boxes,
-  BusFront,
-  Cable,
-  Camera,
-  CalendarCheck2,
-  CalendarClock,
-  CalendarDays,
-  CalendarRange,
-  Clapperboard,
-  Clock3,
-  CloudRain,
-  Combine,
-  Dumbbell,
-  Flame,
-  Gift,
-  Focus,
-  HardDrive,
-  Handshake,
-  Lightbulb,
-  LifeBuoy,
-  LayoutGrid,
-  MoonStar,
-  PackageCheck,
-  PackageOpen,
-  QrCode,
-  Repeat2,
-  ScanLine,
-  ScanSearch,
-  ShieldCheck,
-  ShoppingCart,
-  Shuffle,
-  Sparkles,
-  Timer,
-  Sunrise,
-  Sunset,
-  Ticket,
-  Trophy,
-  Truck,
-  UserCheck,
-  Warehouse,
+  /** Served so the celebration and the shelf cut the same silhouette. */
+  kind?: string | null;
+  trigger?: string | null;
+  source?: string | null;
 };
 
 const rarityStage: Record<BadgeRarity, string> = {
@@ -135,16 +37,6 @@ const rarityStage: Record<BadgeRarity, string> = {
   Uncommon: "from-[var(--blue-bg)] via-[var(--blue-bg)]/45 to-background",
   Rare: "from-[var(--orange-bg)] via-[var(--orange-bg)]/45 to-background",
   Legendary: "from-[var(--purple-bg)] via-[var(--purple-bg)]/50 to-background",
-};
-
-const categoryShape: Record<string, BadgeMedallionShape> = {
-  CHECKOUT: "stack",
-  ON_TIME: "shield",
-  SCAN: "hex",
-  TRADE: "coin",
-  SHIFT: "shield",
-  STREAK: "coin",
-  MILESTONE: "hex",
 };
 
 export function BadgeEarnedCelebration({
@@ -156,7 +48,7 @@ export function BadgeEarnedCelebration({
   remaining: number;
   onDismiss: () => void;
 }) {
-  const Icon = iconMap[reward.icon] ?? Trophy;
+  const Icon = badgeIcon(reward.icon);
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onDismiss(); }}>
@@ -181,7 +73,6 @@ export function BadgeEarnedCelebration({
             icon={Icon}
             earned
             rarity={reward.rarity}
-            shape={categoryShape[reward.category] ?? "coin"}
             className="relative z-10 mt-5 size-28 motion-safe:animate-in motion-safe:zoom-in-75 motion-safe:duration-500"
             iconClassName="size-11"
           />

@@ -32,7 +32,7 @@ export async function handleOpenShiftPickup(
     },
   });
 
-  // "requested", not "assigned": the student holds nothing until staff approve,
+  // "requested", not "assigned": the student holds nothing until Admin approves,
   // and the copy has to say so.
   dispatchScheduleAssignmentNotifications(assignment.id, "requested").catch(() => {});
   notifyPickupRequestReviewers(assignment.id).catch(() => {});

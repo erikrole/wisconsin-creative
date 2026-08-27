@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { SortingState } from "@tanstack/react-table";
@@ -158,6 +158,8 @@ async function fetchAssets(url: string, signal?: AbortSignal): Promise<AssetsRes
 }
 
 export function useItemsQuery(deps: QueryDeps) {
+  const pathname = usePathname();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const searchSignature = searchParams.toString();
   const lastObservedSearchSignatureRef = useRef(searchSignature);
@@ -176,15 +178,17 @@ export function useItemsQuery(deps: QueryDeps) {
     setLimitState((current) => (current === nextLimit ? current : nextLimit));
   }, [searchParams, searchSignature]);
 
-  // Sync page + limit into the URL alongside the filter params owned by use-url-filters.
+  // Sync page + limit into the URL alongside the filter params owned by
+  // use-url-filters. Router-owned replacement keeps Next's history state in
+  // step with the visible query so detail → Back rehydrates the same page.
   const setPage = useCallback((next: number) => {
     setPageState(next);
     const params = new URLSearchParams(window.location.search);
     if (next > 0) params.set("page", String(next));
     else params.delete("page");
     const qs = params.toString();
-    window.history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname);
-  }, []);
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [pathname, router]);
 
   const setLimit = useCallback((next: number) => {
     setLimitState(next);
@@ -192,8 +196,8 @@ export function useItemsQuery(deps: QueryDeps) {
     if (next !== 25) params.set("limit", String(next));
     else params.delete("limit");
     const qs = params.toString();
-    window.history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname);
-  }, []);
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [pathname, router]);
 
   const url = buildUrl(page, limit, deps);
   const queryKey = ["items", url];

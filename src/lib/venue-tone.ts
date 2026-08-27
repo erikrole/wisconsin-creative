@@ -103,6 +103,27 @@ export function venueToneFromEvent(event: {
   return venueToneFromIsHome(event.isHome);
 }
 
+/**
+ * The site an event's stored evidence implies, for the write paths that have to
+ * persist one.
+ *
+ * `isHome` is a nullable boolean, so it cannot tell a neutral-site game apart
+ * from an unclassifiable one -- that ambiguity is the whole reason `site`
+ * exists. Anything deriving a site from `isHome` alone reintroduces it and
+ * turns every neutral game into an unknown one. Route the derivation through
+ * `venueToneFromEvent` instead, so a stored site still wins and the fallback
+ * says what Schedule has always displayed for the same row.
+ */
+export function resolvedEventSite(event: {
+  isHome?: boolean | null;
+  site?: CalendarEventSiteValue | null;
+  opponent?: string | null;
+  summary?: string | null;
+  rawSummary?: string | null;
+}): CalendarEventSiteValue | null {
+  return siteFromVenueTone(venueToneFromEvent(event));
+}
+
 export function venueBadgeVariant(isHome: boolean | null | undefined): VenueToneStyle["badgeVariant"] {
   return VENUE_TONES[venueToneFromIsHome(isHome)].badgeVariant;
 }

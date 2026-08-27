@@ -129,9 +129,12 @@ describe("iOS user directory polish", () => {
     // A server that predates the filter ignores it and returns the caller's own
     // shifts, which would print your shifts on somebody else's profile. The
     // response says whose it is and the client drops what it cannot attribute.
-    expect(route).toContain("return ok({ data, userId: targetUserId })");
+    expect(route).toContain("return ok({ data, userId: targetUserId, total, limit, offset })");
     expect(models).toContain("let userId: String?");
+    expect(models).toContain("let total: Int?");
     expect(apiClient).toContain("if let userId, resp.userId != userId { return [] }");
+    expect(apiClient).toContain("func allMyShifts(");
+    expect(apiClient).toContain(".init(name: \"offset\", value: \"\\(offset)\")");
   });
 
   it("keeps profile Next Up fed only by work that is actually live", () => {

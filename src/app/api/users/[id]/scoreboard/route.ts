@@ -15,6 +15,7 @@ const scoreboardQuerySchema = z.object({
   season: z.string().trim().max(20).optional(),
   sportCode: z.string().trim().max(20).optional(),
   result: z.enum(["WIN", "LOSS", "TIE"]).optional(),
+  site: z.enum(["HOME", "AWAY", "NEUTRAL"]).optional(),
 });
 
 export const GET = withAuth<{ id: string }>(async (req, { user, params }) => {
@@ -33,6 +34,7 @@ export const GET = withAuth<{ id: string }>(async (req, { user, params }) => {
     season: url.searchParams.get("season") ?? undefined,
     sportCode: url.searchParams.get("sportCode") ?? undefined,
     result: url.searchParams.get("result") ?? undefined,
+    site: url.searchParams.get("site") ?? undefined,
   });
   if (!getScoreboardScope(query.season)) {
     throw new HttpError(400, "Unsupported scoreboard season");
@@ -44,6 +46,7 @@ export const GET = withAuth<{ id: string }>(async (req, { user, params }) => {
     {
       sportCode: query.sportCode ? normalizeSportCode(query.sportCode) : undefined,
       result: query.result as ScoreboardResult | undefined,
+      site: query.site,
     },
     { limit, offset },
   );

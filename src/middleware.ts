@@ -17,7 +17,7 @@ function buildContentSecurityPolicy(nonce: string) {
     "img-src 'self' blob: data: https:",
     "font-src 'self' data:",
     isVercelDeployment
-      ? "connect-src 'self' https://*.public.blob.vercel-storage.com https://*.sentry.io https://*.ingest.sentry.io"
+      ? "connect-src 'self' https://vercel.com https://*.public.blob.vercel-storage.com https://*.sentry.io https://*.ingest.sentry.io"
       : "connect-src 'self' http: https: ws: wss:",
     "worker-src 'self'",
     "manifest-src 'self'",

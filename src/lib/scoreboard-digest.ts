@@ -49,9 +49,9 @@ export function groupByMonth(games: ScoreboardEvent[]): ScoreboardMonth[] {
   return order.map((key) => ({ key, label: labels.get(key) ?? key, games: grouped.get(key) ?? [] }));
 }
 
-/** The most recent results, newest first — the order the route already returns. */
+/** The most recent resolved results, newest first — worked events without a result are not form. */
 export function recentForm(games: ScoreboardEvent[], limit = 5): ScoreboardEvent[] {
-  return games.slice(0, limit);
+  return games.filter((game) => game.result !== null).slice(0, limit);
 }
 
 /**
@@ -73,11 +73,12 @@ export function mergeScoreboardEvents(...pages: ScoreboardEvent[][]): Scoreboard
  * not a streak and does not get announced as one.
  */
 export function currentStreak(games: ScoreboardEvent[]): ScoreboardStreak | null {
-  const first = games[0];
-  if (!first) return null;
+  const resolved = games.filter((game) => game.result !== null);
+  const first = resolved[0];
+  if (!first || first.result === null) return null;
   const result = first.result;
   let count = 0;
-  for (const game of games) {
+  for (const game of resolved) {
     if (game.result !== result) break;
     count += 1;
   }

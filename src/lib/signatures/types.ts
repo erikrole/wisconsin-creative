@@ -209,7 +209,7 @@ export const signatureRosterEntrySchema = z.object({
   roleGroup: z.enum(SIGNATURE_MEMBER_GROUPS),
   title: z.string().trim().max(160).nullable(),
   // Older persisted snapshots do not have this field; keeping it optional
-  // makes them replayable while new imports can seed the player profile form.
+  // makes them replayable while new imports preserve official roster metadata.
   hometown: z.string().trim().max(160).nullable().optional(),
 });
 
@@ -238,43 +238,6 @@ export const signatureAdHocMemberSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(160),
   category: z.string().trim().min(1, "Sport or category is required").max(160),
 });
-
-function isValidSignatureDateOnly(value: string) {
-  const [yearValue, monthValue, dayValue] = value.split("-");
-  const year = Number(yearValue);
-  const month = Number(monthValue);
-  const day = Number(dayValue);
-  const date = new Date(Date.UTC(year, month - 1, day));
-  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
-}
-
-export const signatureBirthdaySchema = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "Birthday must use YYYY-MM-DD format")
-  .refine(isValidSignatureDateOnly, "Enter a valid birthday");
-
-const signatureHandleValueSchema = z
-  .string()
-  .trim()
-  .max(80, "Handle must be 80 characters or fewer")
-  .transform((value) => value.replace(/^@+/, ""))
-  .refine((value) => /^[A-Za-z0-9._-]+$/.test(value), "Enter a handle, not a link");
-
-export const signatureHandleSchema = z.preprocess(
-  (value) => typeof value === "string" && value.trim() === "" ? null : value,
-  signatureHandleValueSchema.nullable(),
-);
-
-export const signatureAthleteProfileSchema = z.object({
-  expectedCollectionVersion: z.number().int().min(1),
-  birthday: signatureBirthdaySchema,
-  hometown: z.string().trim().min(1, "Hometown is required").max(160, "Hometown must be 160 characters or fewer"),
-  instagramHandle: signatureHandleSchema.optional(),
-  tiktokHandle: signatureHandleSchema.optional(),
-  xHandle: signatureHandleSchema.optional(),
-});
-
-export type SignatureAthleteProfile = z.infer<typeof signatureAthleteProfileSchema>;
 
 export const signatureSettingsUpdateSchema = penSettingsSchema.extend({
   expectedSettingsVersion: z.number().int().min(1),

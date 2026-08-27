@@ -897,6 +897,7 @@ export default function EventDetailPage() {
           acting={acting}
           linkParams={{ titleParam, dateParam, endParam, locationParam, eventParam }}
           eventAllDay={event.allDay}
+          eventEndsAt={event.endsAt}
           onUpdated={() => {
             reloadShiftGroup();
             if (isStaffOrAdmin) reloadCommandCenter();

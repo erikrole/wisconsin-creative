@@ -8,6 +8,7 @@ import type { ScheduleQueue } from "@/lib/schedule-queues";
 
 type ScheduleAutomationCardsProps = {
   digest: ScheduleAutomationDigestType;
+  canReviewClaims: boolean;
   onShowQueue: (queue: ScheduleQueue) => void;
   onOpenTradeBoard: () => void;
   className?: string;
@@ -29,6 +30,7 @@ const CARD_TONE: Record<ScheduleAutomationCard["tone"], "red" | "orange" | "gree
  */
 export function ScheduleAutomationCards({
   digest,
+  canReviewClaims,
   onShowQueue,
   onOpenTradeBoard,
   className,
@@ -37,6 +39,24 @@ export function ScheduleAutomationCards({
     hour: "numeric",
     minute: "2-digit",
   });
+  const cards: ScheduleAutomationCard[] = canReviewClaims
+    ? digest.cards
+    : digest.cards.map((card) => {
+      if (card.id !== "risk") return card;
+      const { conflicts, gearGaps } = digest.metrics;
+      return {
+        ...card,
+        value: conflicts + gearGaps,
+        detail: `${conflicts} conflicts, ${gearGaps} gear gaps`,
+        tone: conflicts > 0 ? "critical" : gearGaps > 0 ? "attention" : "good",
+        action: conflicts > 0
+          ? { label: "Review conflicts", queue: "conflicts" }
+          : gearGaps > 0
+            ? { label: "Review gear", queue: "gear-gaps" }
+            : undefined,
+        eventIds: undefined,
+      };
+    });
 
   return (
     <div className={className}>
@@ -53,7 +73,7 @@ export function ScheduleAutomationCards({
       </div>
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-        {digest.cards.map((card) => {
+        {cards.map((card) => {
           const action = card.action;
           const onClick = action?.queue || action?.openTradeBoard
             ? () => {

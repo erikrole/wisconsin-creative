@@ -986,6 +986,78 @@ describe("splitEventsForSync", () => {
     expect(result.toUpdate[0]!.data.opponent).toBeNull();
   });
 
+  it("isHomeLocked: a locked neutral game is given its site instead of an unknown one", () => {
+    // `site` was added after these rows existed and the lock keeps every other
+    // writer away from them, so a locked neutral game sat at site=null forever
+    // -- "Unknown site" on the Scoreboard while Schedule showed it as Neutral.
+    const parsed = [makeParsedEvent({
+      uid: "evt-1",
+      summary: "Men's Basketball vs Marquette",
+      dtstart: "20260320T100000Z", // changed start → the row is written
+    })];
+    const existing = [makeExistingRow({
+      id: "db-1", externalId: "evt-1",
+      sportCode: "MBB",
+      opponent: "Marquette",
+      isHome: null,
+      site: null,
+      isHomeLocked: true,
+    })];
+    const result = splitEventsForSync(parsed, existing, []);
+    expect(result.toUpdate[0]!.data.site).toBe("NEUTRAL");
+    // The locked choice itself is still untouched.
+    expect(result.toUpdate[0]!.data.isHome).toBeNull();
+    expect(result.toUpdate[0]!.data.opponent).toBe("Marquette");
+  });
+
+  it("isHomeLocked: a missing site is a change on its own, so the row self-heals", () => {
+    // Nothing else about the row differs. Without site in the diff these rows
+    // would stay unknown until someone ran a manual repair script.
+    const parsed = [makeParsedEvent({ uid: "evt-1", summary: "Test Event" })];
+    const existing = [makeExistingRow({
+      id: "db-1", externalId: "evt-1",
+      opponent: "Marquette",
+      isHome: null,
+      site: null,
+      isHomeLocked: true,
+    })];
+    const result = splitEventsForSync(parsed, existing, []);
+    expect(result.toUpdate).toHaveLength(1);
+    expect(result.toUpdate[0]!.data.site).toBe("NEUTRAL");
+  });
+
+  it("isHomeLocked: a locked home or away choice still wins over the feed", () => {
+    const parsed = [makeParsedEvent({
+      uid: "evt-1",
+      summary: "Men's Basketball at Marquette",
+      dtstart: "20260320T100000Z",
+    })];
+    const existing = [makeExistingRow({
+      id: "db-1", externalId: "evt-1",
+      opponent: "Marquette",
+      isHome: true,
+      site: null,
+      isHomeLocked: true,
+    })];
+    const result = splitEventsForSync(parsed, existing, []);
+    expect(result.toUpdate[0]!.data.site).toBe("HOME");
+  });
+
+  it("isHomeLocked: a stored site is authoritative, and a non-game gets none", () => {
+    const parsed = [makeParsedEvent({ uid: "evt-1", summary: "Changed", dtstart: "20260320T100000Z" })];
+    const stored = splitEventsForSync(parsed, [makeExistingRow({
+      id: "db-1", externalId: "evt-1",
+      opponent: "Marquette", isHome: true, site: "NEUTRAL", isHomeLocked: true,
+    })], []);
+    expect(stored.toUpdate[0]!.data.site).toBe("NEUTRAL");
+
+    const nonGame = splitEventsForSync(parsed, [makeExistingRow({
+      id: "db-2", externalId: "evt-1",
+      opponent: null, isHome: null, site: null, isHomeLocked: true,
+    })], []);
+    expect(nonGame.toUpdate[0]!.data.site).toBeNull();
+  });
+
   it("unlocked fields are updated as normal", () => {
     const parsed = [makeParsedEvent({ uid: "evt-1", summary: "Changed Title" })];
     const existing = [makeExistingRow({

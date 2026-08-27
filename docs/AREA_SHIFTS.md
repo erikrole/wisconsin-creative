@@ -3,12 +3,12 @@
 ## Document Control
 - Area: Shift Calendar & Scheduling
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-26
+- Last Updated: 2026-08-27
 - Status: Active — implemented V1 with ongoing hardening
 
 ## Purpose
 
-Replace Asana-based shift scheduling with a native shift calendar in Gear Tracker. Auto-generate shifts from ICS-synced calendar events using sport-specific templates, support staff assignment plus approval-first student requests for open Student slots, and provide a trade board for staff-approved student shift swaps.
+Replace Asana-based shift scheduling with a native shift calendar in Gear Tracker. Auto-generate shifts from ICS-synced calendar events using sport-specific templates, support staff assignment plus approval-first student requests for open Student slots, and provide a trade board for Admin-approved student shift swaps.
 
 ## Key Concepts
 
@@ -17,9 +17,10 @@ Replace Asana-based shift scheduling with a native shift calendar in Gear Tracke
 - **SportConfig**: Per-sport Staff and Student shift counts for home/away events per area
 - **Settings-owned Student call time**: Sport and Non-game offsets are the shared fallback for Student coverage. Staff and collaborator coverage retains the event window internally but exposes no call-time value or event-time substitute; all-day events retain date-only boundaries.
 - **ShiftGroup**: 1:1 with CalendarEvent, container for all shifts at an event
-- **Pending schedule**: One private, versioned staff editing copy per ShiftGroup. Every edit restarts a durable ten-minute quiet period; the newest version then reconciles automatically while worker-facing reads retain the last released schedule.
+- **Pending schedule**: One private, versioned staff editing copy per ShiftGroup. Future edits restart a durable ten-minute quiet period and reconcile automatically; the same editor publishes an ended event synchronously as a silent backfill while worker-facing reads retain the last released schedule until that write completes.
 - **Assignment provenance**: `ShiftAssignment.source` distinguishes manual staffing, preview-approved auto-fill, and reservation-managed schedule work. Reservation lifecycle cleanup can release only the last category.
-- **Trade Board**: Area-filtered board where students post shifts they can't work; other students in the same area can claim them. A claim is a request: staff approve or decline it, and the poster keeps the shift until then.
+- **Trade Board**: Area-filtered board where students post shifts they can't work; other students in the same area can claim them. A claim is a request: an Admin approves or declines it, and the poster keeps the shift until then.
+- **Contextual open-slot claims**: The expanded Schedule disclosure and Event detail Crew table own the student `Claim shift` action and its `Awaiting approval`/`Withdraw` state through one shared helper. The legacy `ShiftDetailPanel` remains read-only for student claim submission; Staff/Admin still use the shared versioned working-copy editor for crew changes.
 - **StudentAvailabilityBlock**: Weekly or ad hoc student availability signal used by scheduling. Weekly blocks describe recurring class windows; ad hoc blocks can cover an inclusive date range and all-day time away. Existing blocks read as approved cannot-work advisory conflicts; newer blocks can express prefer, dislike, pending time off, approved time off, or denied time off.
 
 ## Acceptance Criteria
@@ -28,15 +29,16 @@ Replace Asana-based shift scheduling with a native shift calendar in Gear Tracke
 - [x] Sport roster: students/staff assigned to sports, synced to user profiles
 - [x] Auto-generation: shifts created when calendar events sync from ICS
 - [x] Staff assignment: pick students from sport pool for each shift
-- [x] Open shift pickup: students claim published open Student shifts, creating a `REQUESTED` assignment that staff approve or decline
+- [x] Open shift pickup: students claim published open Student shifts, creating a `REQUESTED` assignment that an Admin approves or declines
 - [x] Trade board: students post shifts for trade, area-filtered visibility
-- [x] Trade claims: a same-area student claim holds the post as `CLAIMED` for staff review; approval executes the swap
+- [x] Trade claims: a same-area student claim holds the post as `CLAIMED` for Admin review; approval executes the swap
 - [x] Claim eligibility: active Student-class workers may claim work in either their primary area or an assigned secondary area; missing area membership fails closed
 - [x] Approval revalidation: both approval paths re-check active state, scheduling class, availability, conflicts, and current slot ownership immediately before changing the schedule; trade approval also re-checks area membership
-- [x] Claim review queues: staff see waiting trade claims and open-slot requests as one Trade Board review section on web and native, and students see what they are waiting on
-- [x] Claim review deadlines: an unreviewed claim escalates to staff and then approves itself on a per-claim durable workflow, reporting the outcome and standing down when a blocker appears
+- [x] Claim review queues: Admins see waiting trade claims and open-slot requests as one Trade Board review section on web and native; Staff do not receive reviewer payloads or actions, and claimants see only what they are waiting on
+- [x] Claim review deadlines: both unreviewed open-slot requests and Trade Board claims alert active visible Admin reviewers; each then approves itself on a per-claim durable workflow, reports the outcome to the same Admin audience, and stands down when a blocker appears
 - [x] Calendar view: month grid with coverage indicators (green/orange/red)
 - [x] List view: grouped by event, filterable by sport/area/status
+- [x] Schedule list context: view, calendar/week position, venue, sport, area, coverage, archived, and personal-shifts state is URL-backed and rehydrates after detail navigation or browser Back
 - [x] User profiles: inline contact info, primary/secondary area, assigned sports
 - [x] Mobile: responsive card layout, full-screen detail panel
 - [x] Week view: 7-day time-block view with coverage dots, navigation, My Shifts highlight
@@ -57,12 +59,14 @@ Replace Asana-based shift scheduling with a native shift calendar in Gear Tracke
 - [x] Candidate recommendations: staff/admin assignment pickers can show read-only recommended, good fit, warning, and overloaded candidate groups without changing manual assignment behavior
 - [x] Preview-first auto-fill: staff/admin auto-fill actions show proposed assignments, skipped slots, warnings, and require an explicit apply action before mutating assignments
 - [x] Timed schedule release: staff/admin edits remain private for ten minutes after the newest change, then an exact-version durable workflow reconciles them atomically. Manual Publish/Republish and active acknowledgement state are retired.
+- [x] Automatic past-event backfill: the standard Schedule crew editor publishes edits to ended events immediately, skips the cooldown, clears pending notification state, suppresses every recipient and badge notification, and makes the assignment Scoreboard-visible without a second control.
 - [x] Pending schedule recovery: web and native staff surfaces show the release time, restart the timer on edit, allow Revert before release, and surface permanent validation failures without exposing partial changes.
 - [x] Bundled release notifications: first release and changed-worker delivery is deduped by released version and limited to one event summary per affected worker
 - [x] Collaborator assignment: an active collaborator with published-Schedule access can be assigned deliberately to a Staff slot without entering Student availability, Open Work, Trade Board, or auto-fill.
 - [x] Non-game defaults: Settings owns per-area Staff and Student counts plus Student call offsets for events without an opponent; sync, backfill, and manual event creation use them.
 - [x] Scheduling notification policy: worker-facing assignment, call-time, gear-prep, and trade notifications respect publication state, additive schedule/trade/gear-prep preferences, and event-routable payloads
 - [x] Open Work: Trade Board now also surfaces published open Student shifts, claimable trades, and my trade posts in one Schedule work surface
+- [x] Contextual student claims: expanded Schedule rows and Event detail share one approval-aware claim/withdraw helper; the legacy shift panel is read-only for student claim submission and pending state is viewer-private
 - [x] Preferences and time off: Availability blocks now support prefer/dislike/cannot-work signals plus pending/approved/denied time-off lifecycle, feeding candidate scoring, Open Work, assignment, trade, and call-window conflict checks
 - [x] In-season automation review: Schedule surfaces read-only automation suggestions for staffing gaps, auto-fill preview, publish readiness, risk blockers, stale sources, and daily cleanup inside the collapsible Schedule details panel without silently mutating worker-facing commitments
 - [x] Auto-fill and manual crew review: staff/admin can preview auto-fill recommendations before applying assignments through existing safety checks. Template-review UI is retired to keep Event detail focused.
@@ -79,17 +83,17 @@ Replace Asana-based shift scheduling with a native shift calendar in Gear Tracke
 5. **Data quality queue** — staff/admin Schedule health flags visible events with missing sport context, missing opponents, missing venue/location mapping, future archived status, or shifts without sport metadata. The queue filters the list to affected events and routes cleanup back through existing Event detail, Locations, and Venue Mappings ownership.
 6. **Filter Bar** (`ScheduleFilters`) — quiet `OperationalToolbar` with View, Venue, My Shifts, a Filters popover (Past, Archived, Sport, Area, Coverage), source-signal status, and the active queue banner
 7. **View Toggle** — List | Week | Calendar (persisted to localStorage)
-8. **List View** (`ListView`) — the event triage, crew-setup, and compact crew-management workstation. Staff use each event row's overflow menu to choose Home, Away, or empty crew setup, open the shared compact Manage crew editor, or open Event detail. Expanded staff rows call the same versioned editor used by Event detail; workers retain read-only schedule context. Event detail adds the deeper event, gear, and recent-change context around that editor.
+8. **List View** (`ListView`) — the event triage, crew-setup, and compact crew-management workstation. Staff use each event row's overflow menu to choose Home, Away, or empty crew setup, open the shared compact Manage crew editor, or open Event detail. Expanded staff rows call the same versioned editor used by Event detail; workers retain read-only schedule context, with eligible Student open slots exposing the shared Claim/Awaiting approval helper inline. Event detail adds the deeper event, gear, and recent-change context around that editor.
 9. **Week View** (`WeekView`) — 7-day strip with time-block events, coverage dots, navigation (prev/next/this week)
 10. **Calendar View** (`CalendarView`) — month grid with coverage indicator dots (green/orange/red)
-11. **ShiftDetailPanel** — read-only schedule context plus archive and preview-first auto-fill; crew assignment management lives on Event detail.
+11. **ShiftDetailPanel** — read-only schedule context plus archive and preview-first auto-fill; crew assignment management and Student open-slot claims live on the expanded Schedule row and Event detail.
 12. **Open Work / Trade Board** — sheet overlay with area/status filters for open shifts, posted trades, my trade posts, blocked context, and resolved trade history
 13. **Assignment review** (`/schedule/assign`) — month-level coverage, conflict, and open-slot review plus preview-first bulk assignment. Per-cell live mutations are retired; individual crew changes open the Event's private working schedule editor.
 
 ### Event Detail Page (`/events/[id]`)
 1. Event identity card — status plus Synced, Manual, or Edited source state, event timing, opponent, venue, and source context
 2. Link summary — crew fill, gear links/gaps, travel state, and source edit state
-3. Shift Coverage card — merged with Command Center (staff/admin: versioned working-copy crew editor plus gear summary; students: read-only 5-col table)
+3. Shift Coverage card — merged with Command Center (staff/admin: versioned working-copy crew editor plus gear summary; students: read-only 5-col table with the shared claim helper for eligible open Student slots)
 4. Crew gear state — staff/admin can distinguish assignment-linked gear, event reservations, pickup-ready gear, checked-out gear, and missing gear from the Crew table
 5. Action CTAs — "Reserve gear for this event" and staff/admin "Review schedule"; normal web checkout creation is not exposed because kiosk owns custody
 
@@ -109,6 +113,11 @@ Replace Asana-based shift scheduling with a native shift calendar in Gear Tracke
 - Sports code mappings (existing — `src/lib/sports.ts`)
 
 ## Change Log
+
+- 2026-08-26: **Schedule list context now survives Event detail navigation.** The current List/Week/Calendar view, calendar or week position, Venue, Sport, Area, Coverage, Archived, and My Shifts state are URL-backed through the App Router, so browser Back returns to the same filtered Schedule result instead of the default view. Existing queue and deep-link parameters remain compatible; no schedule API, permission, staffing, or publication behavior changed.
+- 2026-08-26: **Past-event assignment backfill is now the default Schedule edit.** The existing crew editor uses the live event end time to publish ended-event changes immediately, with no ten-minute cooldown, no schedule/follower/gear-prep/badge/in-app/push/email notification, and no “assignees notified” copy. Future events retain the private ten-minute release. Published assignments now appear immediately in Scoreboard worked-event totals and event history, including result-less events, while official W/L/T stats remain resolved-only. Local focused coverage, TypeScript, the generic Wisconsin iOS build, 14 native Scoreboard model tests, and a matched iPhone 16 Pro iOS 26.5 Scoreboard capture pass; authenticated browser proof, deployment, and production read-back remain separate gates.
+- 2026-08-27: **All student claim review is Admin-only.** `shift_assignment.approve` and `shift_trade.approve` now authorize only Admins. Active visible Admins alone receive initial and deadline/outcome reviewer notifications for open-slot requests and Trade Board claims, receive the full pending-request payload, and see approve/decline queues on web and native. Staff retain ordinary Schedule/Trade Board reads, posting, cancellation, and non-review staffing tools without approval access or reviewer alerts. Claimants continue to see their own pending lifecycle, and automatic deadline approval is unchanged.
+- 2026-08-26: **Student claims now use contextual Schedule surfaces.** Expanded Schedule rows and Event detail share one approval-aware Claim/Awaiting approval/Withdraw helper; the legacy ShiftDetailPanel no longer submits student claims. The shift-group response exposes only the current viewer's pending request, and open-slot pickup fans out durable in-app plus best-effort push review notifications to active visible Admin users. Focused source contracts, TypeScript, ESLint, `build:app`, and the exact iPhone 16 Pro iOS 26.5 native build pass; authenticated web, deployment, and device acceptance remain separate gates.
 
 - 2026-08-26: **Student shift recovery and trade-state visibility are closed locally.** Schedule rows no longer offer posting for past, archived, or already-posted assignments; active posts show whether they are open or claimed and can be removed with confirmation. Students can withdraw their own pending open-shift requests and Trade Board claims through permission-checked, serializable, audited transitions, with deadline visibility in the web and native waiting queues when the server supplies it. Approval, decline, cancellation, and withdrawal paths now notify the affected poster, claimer, or requester after commit, without treating a declined request as held coverage. Verification: 146 focused tests, TypeScript, ESLint, and the pinned iPhone 16 Pro iOS 26.5 build pass locally. `npm run build:app` compiled the changed code but remains blocked in the existing Next page-data/generated-manifest phase; authenticated browser, workflow-runtime timing, deployment, TestFlight, and physical-device acceptance remain separate gates.
 - 2026-08-23: **Trade approval and assignment gates are closed across web and native contracts.** Trade Board claim/list/approval eligibility now use one server-owned active/Student/area rule that recognizes both primary and secondary area membership and fails closed when no membership exists. Both approval paths revalidate mutable worker state, assignment availability, conflicts, and current slot ownership immediately before the serialized schedule write; trade approval also re-checks area membership. Human and deadline-driven approvals now write distinct audit actions from inside the service transaction; open-shift approval notifications also run for the deadline-driven path. `/schedule/assign` is review and preview-first bulk assignment only, and its former per-cell live assignment/slot endpoints return `410 Gone` with an Event working-schedule handoff after authorization. Web and iOS consequence copy consistently says claims wait for staff approval. Verification: 73 schedule/shift/trade test files with 520 tests, TypeScript, ESLint, `build:app`, iOS project/drift checks, and the pinned iPhone 16 Pro iOS 26.5 build pass locally. Authenticated browser, in-app workflow timing, deployment, and TestFlight/production acceptance remain separate rollout gates.

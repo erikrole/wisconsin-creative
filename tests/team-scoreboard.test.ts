@@ -73,6 +73,11 @@ describe("getTeamScoreboard", () => {
       ])
       .mockResolvedValueOnce([
         event("game-fb-win", "FB", "WIN", [[alice]], { workers: [alice, bob] }),
+      ])
+      .mockResolvedValueOnce([
+        event("worked-fb", "FB", null, []),
+        event("worked-sb", "SB", null, []),
+        event("game-fb-win", "FB", "WIN", []),
       ]);
 
     const scoreboard = await getTeamScoreboard({ now: new Date("2026-12-01T18:00:00.000Z") });
@@ -108,6 +113,9 @@ describe("getTeamScoreboard", () => {
       ])
       .mockResolvedValueOnce([
         event("soccer-tie", "WSOC", "TIE", [[alice]], { opponent: "Marquette", site: "HOME" }),
+      ])
+      .mockResolvedValueOnce([
+        event("soccer-tie", "WSOC", "TIE", [], { opponent: "Marquette", site: "HOME" }),
       ]);
 
     const scoreboard = await getTeamScoreboard({ now: new Date("2026-12-01T18:00:00.000Z") });
@@ -130,12 +138,21 @@ describe("getTeamScoreboard", () => {
         event("game-fb-win", "FB", "WIN", [[alice], [alice, bob]]),
         event("game-fb-loss", "FB", "LOSS", [[bob]]),
         event("game-sb-win", "SB", "WIN", [[alice]]),
+      ])
+      .mockResolvedValueOnce([
+        event("worked-fb", "FB", null, []),
+        event("worked-sb", "SB", null, []),
+        event("game-fb-win", "FB", "WIN", []),
+        event("game-fb-loss", "FB", "LOSS", []),
+        event("game-sb-win", "SB", "WIN", []),
       ]);
 
     const now = new Date("2026-12-01T18:00:00.000Z");
     const scoreboard = await getTeamScoreboard({ now });
 
-    expect(mockedFindMany).toHaveBeenCalledTimes(2);
+    // Two bounded aggregate reads plus one scalar-only facet read. Nothing
+    // scales with the number of people.
+    expect(mockedFindMany).toHaveBeenCalledTimes(3);
     expect(scoreboard.summary).toEqual({
       contributors: 2,
       eventsCovered: 2,
@@ -196,12 +213,25 @@ describe("getTeamScoreboard", () => {
     expect(officialWhere).toMatchObject({
       result: { not: null },
       startsAt: { gte: SCOREBOARD_SCOPE.startsAt, lt: SCOREBOARD_SCOPE.endsAt },
+      // A result is only official once the game is over, exactly as the worked
+      // read requires.
+      endsAt: { lt: now },
       status: { not: "CANCELLED" },
       isHidden: false,
       archivedAt: null,
     });
 
-    for (const call of mockedFindMany.mock.calls) {
+    // The facet read covers the union of both windows and never loads a crew.
+    const facetQuery = mockedFindMany.mock.calls[2]?.[0];
+    expect(facetQuery.where.OR).toHaveLength(2);
+    expect(facetQuery.select).toEqual({
+      sportCode: true,
+      opponent: true,
+      site: true,
+      rawLocationText: true,
+    });
+
+    for (const call of mockedFindMany.mock.calls.slice(0, 2)) {
       const query = call[0];
       expect(query.where.OR[0].shiftGroup.shifts.some.assignments.some).toMatchObject({
         status: { in: ["DIRECT_ASSIGNED", "APPROVED"] },
@@ -254,6 +284,23 @@ describe("getTeamScoreboard", () => {
           rawLocationText: "Madison, WI, Kohl Center",
         }),
         event("mbb-road", "MBB", "LOSS", [[bob]], {
+          opponent: "Iowa",
+          site: "AWAY",
+          rawLocationText: "Iowa City, IA, Carver-Hawkeye Arena",
+        }),
+      ])
+      .mockResolvedValueOnce([
+        event("vb-field-house", "VB", null, [], {
+          opponent: "Minnesota",
+          site: "HOME",
+          rawLocationText: "Madison, WI, UW Field House",
+        }),
+        event("vb-kohl", "VB", null, [], {
+          opponent: "Iowa",
+          site: "HOME",
+          rawLocationText: "Madison, WI, Kohl Center",
+        }),
+        event("mbb-road", "MBB", null, [], {
           opponent: "Iowa",
           site: "AWAY",
           rawLocationText: "Iowa City, IA, Carver-Hawkeye Arena",
@@ -311,10 +358,25 @@ describe("getTeamScoreboard", () => {
     ]);
     expect(scoreboard.facets.opponents.map((facet) => facet.key)).toEqual(["Iowa", "Minnesota"]);
     expect(scoreboard.facets.sites.map((facet) => facet.key)).toEqual(["HOME", "AWAY"]);
+
+    // Sport and site are exact scalar columns, so the database narrows the
+    // crew reads instead of shipping the whole season to be filtered here.
+    // Venue is derived and opponent is compared after trimming, so both stay
+    // out of the query and `matchesFilters` remains the authority.
+    for (const call of mockedFindMany.mock.calls.slice(0, 2)) {
+      expect(call[0].where).toMatchObject({ sportCode: "VB", site: "HOME" });
+      expect(call[0].where).not.toHaveProperty("opponent");
+      expect(call[0].where).not.toHaveProperty("rawLocationText");
+    }
+    // Facet options describe the full window whatever the filter stack is.
+    expect(mockedFindMany.mock.calls[2]?.[0]?.where).not.toHaveProperty("sportCode");
   });
 
   it("returns an explicit empty season without inventing leaders", async () => {
-    mockedFindMany.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+    mockedFindMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
 
     await expect(getTeamScoreboard({ now: new Date("2026-12-01T18:00:00.000Z") })).resolves.toMatchObject({
       summary: {

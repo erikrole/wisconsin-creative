@@ -40,7 +40,7 @@ describe("native Schedule edit times and post trade redesign", () => {
     const postTrade = source("ios/Wisconsin/Views/Schedule/PostTradeSheet.swift");
 
     expect(postTrade).toContain('Text(candidate.isCurrentUser ? "You stay assigned"');
-    expect(postTrade).toContain("The shift stays on the schedule until staff approve a claim.");
+    expect(postTrade).toContain("The shift stays on the schedule until an Admin approves a claim.");
     expect(postTrade).toContain("Optional context for the person claiming it");
     expect(postTrade).toContain("trimmedNotes.isEmpty ? nil : trimmedNotes");
     expect(postTrade).toContain('Text("Couldn\'t post shift")');

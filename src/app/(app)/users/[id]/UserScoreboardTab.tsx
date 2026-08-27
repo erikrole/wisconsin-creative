@@ -34,6 +34,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { ScoreboardBucket, ScoreboardEvent, UserScoreboard } from "@/lib/services/scoreboard";
 
 type ResultFilter = "all" | "WIN" | "LOSS" | "TIE";
+type SiteFilter = "all" | "HOME" | "AWAY" | "NEUTRAL";
 type SportOption = { key: string; label: string };
 type ExtraEvents = { requestUrl: string; events: ScoreboardEvent[]; nextCursor: string | null | undefined };
 
@@ -44,6 +45,15 @@ type Dimension = "sport" | "opponent" | "site" | "venue";
 
 const INITIAL_LIMIT = 25;
 const COLLAPSED_ROWS = 5;
+
+/// Home, away, and neutral are a fixed, complete set, so unlike sport the
+/// options do not have to be read back out of a response.
+const SITE_FILTERS: Array<{ value: SiteFilter; label: string }> = [
+  { value: "all", label: "All sites" },
+  { value: "HOME", label: "Home" },
+  { value: "AWAY", label: "Away" },
+  { value: "NEUTRAL", label: "Neutral" },
+];
 
 const DIMENSIONS: Array<{ value: Dimension; label: string }> = [
   { value: "sport", label: "Sport" },
@@ -88,6 +98,7 @@ function SiteIcon({ site }: { site: ScoreboardEvent["site"] }) {
 }
 
 function matchupLabel(event: ScoreboardEvent): string {
+  if (event.result === null) return event.summary;
   const sport = event.sportLabel ?? "Worked event";
   if (!event.opponent) return sport;
   return `${sport} ${event.site === "AWAY" ? "at" : "vs"} ${event.opponent}`;
@@ -103,21 +114,24 @@ function toSportOptions(buckets: ScoreboardBucket[]): SportOption[] {
     .map((bucket) => ({ key: bucket.key, label: bucket.label }));
 }
 
-function resultVariant(result: ScoreboardEvent["result"]): "green" | "red" | "orange" {
+function resultVariant(result: ScoreboardEvent["result"]): "green" | "red" | "orange" | "gray" {
   if (result === "WIN") return "green";
   if (result === "LOSS") return "red";
+  if (result === null) return "gray";
   return "orange";
 }
 
 function resultShortLabel(result: ScoreboardEvent["result"]): string {
   if (result === "WIN") return "W";
   if (result === "LOSS") return "L";
+  if (result === null) return "—";
   return "T";
 }
 
 function resultSpokenLabel(result: ScoreboardEvent["result"]): string {
   if (result === "WIN") return "Win";
   if (result === "LOSS") return "Loss";
+  if (result === null) return "Worked event";
   return "Tie";
 }
 
@@ -150,7 +164,7 @@ function RecordMeter({ wins, losses, ties }: { wins: number; losses: number; tie
           <span className="size-[7px] rounded-full" style={{ background: LOSS_FILL }} aria-hidden="true" />
           {losses} {losses === 1 ? "loss" : "losses"}
         </span>
-        <span className="inline-flex items-center justify-center gap-1.5 tabular-nums">
+        <span className="inline-flex items-center gap-1.5 tabular-nums">
           <span className="size-[7px] rounded-full" style={{ background: TIE_FILL }} aria-hidden="true" />
           {ties} {ties === 1 ? "tie" : "ties"}
         </span>
@@ -209,7 +223,7 @@ function SeasonCard({
   isFiltered: boolean;
   seasonResolvedGames: number | null;
 }) {
-  const form = recentForm(games);
+  const form = recentForm(games.filter((game) => game.result !== null));
   const sentence = totalsSentence({
     eventsWorked: scoreboard.summary.eventsWorked,
     resolvedGames: scoreboard.summary.games,
@@ -433,7 +447,7 @@ function GamesCard({
         <div className="flex items-center justify-between gap-3">
           <CardTitle className="flex items-center gap-2 text-sm">
             <CalendarDays className="size-4 text-muted-foreground" aria-hidden="true" />
-            Resolved games
+            Worked events
           </CardTitle>
           {refreshing ? (
             <span className="text-xs text-muted-foreground">Refreshing…</span>
@@ -466,8 +480,8 @@ function GamesCard({
                 >
                   <p className="text-xs text-muted-foreground">
                     {loadMoreError === "network"
-                      ? "Couldn’t reach the server. The games already shown are still here."
-                      : "Couldn’t load more games. The games already shown are still here."}
+                      ? "Couldn’t reach the server. The events already shown are still here."
+                      : "Couldn’t load more events. The events already shown are still here."}
                   </p>
                   <Button variant="outline" className="h-10" onClick={loadMore}>Try again</Button>
                 </div>
@@ -480,7 +494,7 @@ function GamesCard({
                     disabled={refreshing}
                     loading={loadingMore}
                   >
-                    Show more games
+                    Show more events
                   </Button>
                 </div>
               )}
@@ -492,11 +506,11 @@ function GamesCard({
           <div className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
             <Trophy className="size-5" aria-hidden="true" />
           </div>
-          <p className="text-sm font-medium">{hasFilters ? "No games match these filters" : "No resolved games on record"}</p>
+          <p className="text-sm font-medium">{hasFilters ? "No games match these filters" : "No worked events on record"}</p>
           <p className="max-w-md text-sm text-muted-foreground">
             {hasFilters
-              ? "Try another result or sport filter."
-              : "Completed events with a recorded result will appear here when this person has worked them."}
+              ? "Try another result, sport, or site filter."
+              : "Completed events will appear here when this person has worked them."}
           </p>
           {hasFilters ? (
             <Button variant="ghost" className="h-10" onClick={clearFilters}>Clear filters</Button>
@@ -556,6 +570,7 @@ export default function UserScoreboardTab({
 }) {
   const [resultFilter, setResultFilter] = useState<ResultFilter>("all");
   const [sportFilter, setSportFilter] = useState("all");
+  const [siteFilter, setSiteFilter] = useState<SiteFilter>("all");
   const [dimension, setDimension] = useState<Dimension>("sport");
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState<FetchErrorKind | null>(null);
@@ -577,8 +592,9 @@ export default function UserScoreboardTab({
     const params = new URLSearchParams({ limit: String(INITIAL_LIMIT) });
     if (resultFilter !== "all") params.set("result", resultFilter);
     if (sportFilter !== "all") params.set("sportCode", sportFilter);
+    if (siteFilter !== "all") params.set("site", siteFilter);
     return `/api/users/${userId}/scoreboard?${params.toString()}`;
-  }, [resultFilter, sportFilter, userId]);
+  }, [resultFilter, siteFilter, sportFilter, userId]);
   const loadingMoreRef = useRef(false);
   const loadMoreAbortRef = useRef<AbortController | null>(null);
   const requestUrlRef = useRef(requestUrl);
@@ -603,7 +619,7 @@ export default function UserScoreboardTab({
     return () => loadMoreAbortRef.current?.abort();
   }, [requestUrl]);
 
-  const isUnfiltered = resultFilter === "all" && sportFilter === "all";
+  const isUnfiltered = resultFilter === "all" && sportFilter === "all" && siteFilter === "all";
 
   useEffect(() => {
     // `keepPreviousData` keeps the last response on screen while a changed URL
@@ -666,6 +682,7 @@ export default function UserScoreboardTab({
   const clearFilters = useCallback(() => {
     setResultFilter("all");
     setSportFilter("all");
+    setSiteFilter("all");
   }, []);
 
   if (loading && !data) return <ScoreboardSkeleton />;
@@ -676,7 +693,7 @@ export default function UserScoreboardTab({
         <AlertCircle className="size-4" />
         <AlertTitle>Scoreboard unavailable</AlertTitle>
         <AlertDescription className="mt-2 flex flex-col gap-3">
-          <p>We couldn’t load this profile’s worked-game record.</p>
+          <p>We couldn’t load this profile’s Scoreboard record.</p>
           <Button variant="outline" onClick={reload} className="h-10 w-fit">Retry</Button>
         </AlertDescription>
       </Alert>
@@ -685,7 +702,7 @@ export default function UserScoreboardTab({
 
   if (!data) return null;
 
-  const hasFilters = resultFilter !== "all" || sportFilter !== "all";
+  const hasFilters = resultFilter !== "all" || sportFilter !== "all" || siteFilter !== "all";
   // With no filter on, this response is the unfiltered read, so the list comes
   // straight from it and the control does not flicker in on first paint.
   const listedSports = isUnfiltered ? toSportOptions(data.bySport) : sportOptions;
@@ -726,19 +743,34 @@ export default function UserScoreboardTab({
           <ToggleGroupItem value="LOSS" className="h-10 text-xs">Losses</ToggleGroupItem>
           <ToggleGroupItem value="TIE" className="h-10 text-xs">Ties</ToggleGroupItem>
         </ToggleGroup>
-        {sportChoices.length > 0 ? (
-          <Select value={sportFilter} onValueChange={setSportFilter}>
-            <SelectTrigger className="h-10 w-[190px] text-xs" aria-label="Filter scoreboard sport">
-              <SelectValue placeholder="All sports" />
+        <div className="flex flex-wrap items-center gap-2">
+          {sportChoices.length > 0 ? (
+            <Select value={sportFilter} onValueChange={setSportFilter}>
+              <SelectTrigger className="h-10 w-[190px] text-xs" aria-label="Filter scoreboard sport">
+                <SelectValue placeholder="All sports" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All sports</SelectItem>
+                {sportChoices.map((sport) => (
+                  <SelectItem key={sport.key} value={sport.key}>{sport.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : null}
+          {/* The site breakdown already sits below; this is the control that
+              row invites -- "how do they do on the road" -- and it narrows the
+              record, the breakdowns, and the games together. */}
+          <Select value={siteFilter} onValueChange={(value) => setSiteFilter(value as SiteFilter)}>
+            <SelectTrigger className="h-10 w-[150px] text-xs" aria-label="Filter scoreboard site">
+              <SelectValue placeholder="All sites" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All sports</SelectItem>
-              {sportChoices.map((sport) => (
-                <SelectItem key={sport.key} value={sport.key}>{sport.label}</SelectItem>
+              {SITE_FILTERS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
               ))}
             </SelectContent>
           </Select>
-        ) : null}
+        </div>
       </div>
 
       <div className="grid items-start gap-4 lg:grid-cols-2">
@@ -750,7 +782,7 @@ export default function UserScoreboardTab({
         />
         <GamesCard
           events={events}
-          total={data.summary.games}
+          total={data.eventCount}
           hasFilters={hasFilters}
           refreshing={refreshing}
           nextCursor={nextCursor}

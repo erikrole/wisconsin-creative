@@ -531,7 +531,10 @@ function appOpenMoment(occurredAt: Date): AppOpenMoment {
 
   return {
     date: `${value("year")}-${value("month")}-${value("day")}`,
-    hour: Number(value("hour")),
+    // `-1` for an unreadable hour, never `0`. `Number("")` is `0`, which is the
+    // exact value `local_hour_0` matches on, so a formatting failure would have
+    // minted the midnight easter egg for whoever opened the app next.
+    hour: Number(value("hour") || -1),
     month,
     day,
     // Read back from the local calendar date, so the weekday is the one the

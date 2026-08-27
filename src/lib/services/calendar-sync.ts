@@ -9,6 +9,7 @@ import {
   isHomeLocationText,
 } from "@/lib/schedule-event-identity";
 import { sortVenueMappings, venueMappingMatches } from "@/lib/venue-mapping-contract";
+import { resolvedEventSite } from "@/lib/venue-tone";
 
 // Sport/opponent classification lives with the other summary parsing in
 // `schedule-event-identity`. Re-exported here so existing sync-side importers
@@ -409,9 +410,14 @@ export function splitEventsForSync(
           data.sportCode = existing.sportCode;
           data.isHome = existing.isHome;
           data.opponent = existing.opponent;
-          data.site = existing.site ?? (existing.opponent
-            ? existing.isHome === true ? "HOME" : existing.isHome === false ? "AWAY" : null
-            : null);
+          // The lock protects the operator's choice, and that choice lives in
+          // `isHome` + `opponent`. Re-deriving the site from `isHome` alone
+          // could only ever say HOME, AWAY, or nothing, so a locked neutral
+          // game was written back as an unknown site -- and stayed one, because
+          // sync is the only writer that reaches these rows. Deriving it the
+          // way Schedule reads the same row keeps a stored site authoritative
+          // and gives a locked neutral game its NEUTRAL.
+          data.site = resolvedEventSite(existing);
         }
         if (existing.locationLocked) data.locationId = existing.locationId;
 

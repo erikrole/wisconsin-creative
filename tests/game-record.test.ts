@@ -18,6 +18,7 @@ import {
   getGameRecordForUser,
   workedEventWhere,
 } from "@/lib/services/game-record";
+import { scoreboardEventWhere } from "@/lib/services/scoreboard";
 
 const mockedDb = db as unknown as {
   calendarEvent: { groupBy: ReturnType<typeof vi.fn>; count: ReturnType<typeof vi.fn> };
@@ -67,10 +68,29 @@ describe("gameRecordEventWhere", () => {
     expect(gameRecordEventWhere("user-1").result).toEqual({ not: null });
   });
 
-  it("starts counting at the July 1, 2026 app-timezone boundary", () => {
+  it("bounds the record to the 2026-27 app-timezone season at both ends", () => {
     expect(gameRecordEventWhere("user-1").startsAt).toEqual({
       gte: GAME_RECORD_START_DATE,
+      lt: GAME_RECORD_END_DATE,
     });
+  });
+
+  it("counts a game only once it has finished", () => {
+    const now = new Date("2026-12-01T18:00:00.000Z");
+    expect(gameRecordEventWhere("user-1", now).endsAt).toEqual({ lt: now });
+  });
+
+  it("agrees with the Scoreboard on which games are in the season", () => {
+    // The profile chip and the Scoreboard tab describe the same season on the
+    // same screen, so they cannot disagree about the window they cover.
+    const now = new Date("2026-12-01T18:00:00.000Z");
+    const record = gameRecordEventWhere("user-1", now);
+    const scoreboard = scoreboardEventWhere("user-1");
+    expect(record.startsAt).toEqual(scoreboard.startsAt);
+    expect(record.status).toEqual(scoreboard.status);
+    expect(record.archivedAt).toEqual(scoreboard.archivedAt);
+    expect(record.isHidden).toEqual(scoreboard.isHidden);
+    expect(record.NOT).toEqual(scoreboard.NOT);
   });
 
   it("excludes cancelled, hidden, and archived events", () => {

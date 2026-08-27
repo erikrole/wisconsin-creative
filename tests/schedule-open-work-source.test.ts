@@ -16,10 +16,10 @@ describe("schedule open work source contracts", () => {
     expect(tradeBoard).toContain("My Posts");
     expect(tradeBoard).toContain("Waiting or Blocked");
     expect(tradeBoard).toContain("Canceling removes the post; the shift stays assigned to you.");
-    expect(tradeBoard).toContain("Staff review this before you're on the schedule.");
-    // The staff queue and the student's waiting state are both part of the gate.
-    expect(tradeBoard).toContain("Staff Review");
-    expect(tradeBoard).toContain("Waiting on Staff");
+    expect(tradeBoard).toContain("An admin reviews this before you're on the schedule.");
+    // The Admin queue and the student's waiting state are both part of the gate.
+    expect(tradeBoard).toContain("Admin Review");
+    expect(tradeBoard).toContain("Waiting on Admin");
     expect(tradeBoard).toContain("AvailabilityContextNote");
     expect(tradeBoard).toContain("viewerAvailabilityContext");
     expect(tradeBoard).toContain("claimedByAvailabilityContext");
@@ -29,7 +29,7 @@ describe("schedule open work source contracts", () => {
     expect(tradeBoard).toContain("/api/shift-trades/${tradeId}/claim");
     expect(tradeBoard).toContain("/api/shift-trades/${tradeId}/cancel");
     expect(tradeBoard).toContain("Claim shift");
-    expect(tradeBoard).toContain("Request sent for staff approval");
+    expect(tradeBoard).toContain("Request sent for Admin approval");
     expect(tradeBoard).toContain("const hasAnyLoadError = loadError || openWorkError");
     expect(tradeBoard).toContain("Trade Board posts are unavailable");
     expect(tradeBoard).toContain("Open Student slots are unavailable");
@@ -49,6 +49,7 @@ describe("schedule open work source contracts", () => {
     expect(service).toContain("scoreCandidatesForShift");
     expect(service).toContain("availabilityContextFromCandidate");
     expect(service).toContain("availabilityContext,");
+    expect(service).toContain('filters.role === "ADMIN"');
   });
 
   it("keeps pickup mutation audited, publication-safe, and notification-policy wired", () => {
@@ -109,11 +110,12 @@ describe("schedule open work source contracts", () => {
     expect(sheet).toContain("Available Now");
     expect(sheet).toContain("My Posts");
     expect(sheet).toContain("Waiting or Blocked");
-    expect(sheet).toContain("Staff review this before you're on the schedule.");
-    expect(sheet).toContain("Staff Review");
-    expect(sheet).toContain("Waiting on Staff");
+    expect(sheet).toContain("An admin reviews this before you're on the schedule.");
+    expect(sheet).toContain("Admin Review");
+    expect(sheet).toContain("Waiting on Admin");
     expect(sheet).toContain("Canceling removes the post; the shift stays assigned to you.");
     expect(sheet).toContain("trade.viewerCanClaim ?? (!isStaff && trade.viewerAvailabilityContext?.blocking != true)");
+    expect(sheet).toContain('var canReview: Bool { currentUserRole == "ADMIN" }');
     expect(sheet).toContain("TradeBoardSourceErrorRow(");
   });
 });

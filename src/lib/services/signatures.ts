@@ -26,7 +26,6 @@ import {
   isStandaloneStaffSignatureCollection,
   normalizeSignatureName,
   penSettingsSchema,
-  signatureAthleteProfileSchema,
   signatureAdHocMemberSchema,
   signatureCreativeStaffCollectionSchema,
   signatureRosterEntrySchema,
@@ -89,30 +88,16 @@ const signatureRosterApplyMemberSelect = {
   title: true,
   active: true,
   required: true,
-  birthday: true,
-  hometown: true,
-  instagramHandle: true,
-  tiktokHandle: true,
-  xHandle: true,
   capture: { select: signatureRosterApplyCaptureSelect },
 } satisfies Prisma.SignatureMemberSelect;
 
 type SignatureRosterApplyMember = Prisma.SignatureMemberGetPayload<{ select: typeof signatureRosterApplyMemberSelect }>;
 type SignatureRosterApplyCapture = Prisma.SignatureCaptureGetPayload<{ select: typeof signatureRosterApplyCaptureSelect }>;
-type SignatureRosterProfile = {
-  birthday: Date | null;
-  hometown: string | null;
-  instagramHandle: string | null;
-  tiktokHandle: string | null;
-  xHandle: string | null;
-};
 
 type SignatureRosterMergePlan = {
   source: SignatureRosterApplyMember;
   targetMemberId: string;
   targetSourceExternalId: string;
-  targetIsNew: boolean;
-  targetProfile: SignatureRosterProfile;
 };
 
 type SignatureRosterMergeResult = {
@@ -167,35 +152,6 @@ function canDonateSignatureRosterCapture(capture: SignatureRosterApplyCapture | 
     && capture.currentRevision?.id === capture.currentRevisionId
     && capture.currentRevision.state === SignatureArtifactState.READY,
   );
-}
-
-function signatureRosterMergeProfileData(
-  source: SignatureRosterApplyMember,
-  target: SignatureRosterProfile,
-  targetIsNew: boolean,
-) {
-  const data: Partial<SignatureRosterProfile> = {};
-  const sourceBirthday = source.birthday ?? null;
-  const targetBirthday = target.birthday ?? null;
-  const nextBirthday = targetIsNew ? sourceBirthday ?? targetBirthday : targetBirthday ?? sourceBirthday;
-  if (nextBirthday !== targetBirthday) data.birthday = nextBirthday;
-  const sourceHometown = source.hometown ?? null;
-  const targetHometown = target.hometown ?? null;
-  const nextHometown = targetIsNew ? sourceHometown ?? targetHometown : targetHometown ?? sourceHometown;
-  if (nextHometown !== targetHometown) data.hometown = nextHometown;
-  const sourceInstagramHandle = source.instagramHandle ?? null;
-  const targetInstagramHandle = target.instagramHandle ?? null;
-  const nextInstagramHandle = targetIsNew ? sourceInstagramHandle ?? targetInstagramHandle : targetInstagramHandle ?? sourceInstagramHandle;
-  if (nextInstagramHandle !== targetInstagramHandle) data.instagramHandle = nextInstagramHandle;
-  const sourceTiktokHandle = source.tiktokHandle ?? null;
-  const targetTiktokHandle = target.tiktokHandle ?? null;
-  const nextTiktokHandle = targetIsNew ? sourceTiktokHandle ?? targetTiktokHandle : targetTiktokHandle ?? sourceTiktokHandle;
-  if (nextTiktokHandle !== targetTiktokHandle) data.tiktokHandle = nextTiktokHandle;
-  const sourceXHandle = source.xHandle ?? null;
-  const targetXHandle = target.xHandle ?? null;
-  const nextXHandle = targetIsNew ? sourceXHandle ?? targetXHandle : targetXHandle ?? sourceXHandle;
-  if (nextXHandle !== targetXHandle) data.xHandle = nextXHandle;
-  return data;
 }
 
 const artifactRevisionSelect = {
@@ -404,32 +360,6 @@ function staffSignatureMembers<T extends { active: boolean; roleGroup: Signature
     : [];
 }
 
-function signatureDateOnly(value: Date | null) {
-  return value?.toISOString().slice(0, 10) ?? null;
-}
-
-function parseSignatureDateOnly(value: string) {
-  return new Date(`${value}T00:00:00.000Z`);
-}
-
-function serializeAthleteProfile(member: {
-  roleGroup: SignatureMemberGroup;
-  birthday: Date | null;
-  hometown: string | null;
-  instagramHandle: string | null;
-  tiktokHandle: string | null;
-  xHandle: string | null;
-}) {
-  if (member.roleGroup !== SignatureMemberGroup.PLAYER) return null;
-  return {
-    birthday: signatureDateOnly(member.birthday),
-    hometown: member.hometown,
-    instagramHandle: member.instagramHandle,
-    tiktokHandle: member.tiktokHandle,
-    xHandle: member.xHandle,
-  };
-}
-
 export async function listSignatureCollections(options: { includeArchived?: boolean } = {}) {
   const collections = await db.signatureCollection.findMany({
     where: options.includeArchived ? undefined : { status: SignatureCollectionStatus.OPEN },
@@ -559,8 +489,6 @@ function serializeSignatureCollection(
         revisions,
         revisionCount,
         revisionHistoryTruncated: revisionCount > revisions.length,
-        athleteProfile: serializeAthleteProfile(member),
-        athleteProfileComplete: member.roleGroup !== SignatureMemberGroup.PLAYER || Boolean(member.birthday && member.hometown),
       };
     })
     .sort(compareSignatureRosterMembers);
@@ -614,11 +542,6 @@ export async function getSignatureMemberCaptureBootstrap(collectionId: string, m
       roleGroup: true,
       active: true,
       linkedUserId: true,
-      birthday: true,
-      hometown: true,
-      instagramHandle: true,
-      tiktokHandle: true,
-      xHandle: true,
       collection: {
         select: {
           id: true,
@@ -670,130 +593,8 @@ export async function getSignatureMemberCaptureBootstrap(collectionId: string, m
       artifact: capture.currentRevision?.state === SignatureArtifactState.READY
         ? { id: capture.currentRevision.id }
         : null,
-      athleteProfile: serializeAthleteProfile(member),
-      athleteProfileComplete: member.roleGroup !== SignatureMemberGroup.PLAYER || Boolean(member.birthday && member.hometown),
     },
   };
-}
-
-export async function updateSignatureAthleteProfile(input: {
-  actor: Actor;
-  collectionId: string;
-  memberId: string;
-  profile: {
-    expectedCollectionVersion: number;
-    birthday: string;
-    hometown: string;
-    instagramHandle?: string | null;
-    tiktokHandle?: string | null;
-    xHandle?: string | null;
-  };
-}) {
-  const parsed = signatureAthleteProfileSchema.parse(input.profile);
-  return db.$transaction(async (tx) => {
-    const member = await tx.signatureMember.findFirst({
-      where: { id: input.memberId, collectionId: input.collectionId },
-      select: {
-        id: true,
-        name: true,
-        roleGroup: true,
-        active: true,
-        birthday: true,
-        hometown: true,
-        instagramHandle: true,
-        tiktokHandle: true,
-        xHandle: true,
-        capture: {
-          select: {
-            currentRevision: { select: { state: true } },
-          },
-        },
-        collection: { select: { id: true, status: true, collectionVersion: true } },
-      },
-    });
-    if (!member) throw new HttpError(404, "Signature member not found");
-    if (member.roleGroup !== SignatureMemberGroup.PLAYER) {
-      throw new HttpError(400, "Only student-athletes have website profiles");
-    }
-    if (!member.active) throw new HttpError(409, "This roster member is inactive");
-    if (member.collection.status === SignatureCollectionStatus.ARCHIVED) {
-      throw new HttpError(409, "Archived signature collections are read-only");
-    }
-    if (member.collection.collectionVersion !== parsed.expectedCollectionVersion) {
-      throw new HttpError(409, "Roster changed since this profile was opened");
-    }
-    if (member.capture?.currentRevision?.state !== SignatureArtifactState.READY) {
-      throw new HttpError(409, "Save this student-athlete's signature before editing the website profile");
-    }
-
-    const nextProfile = {
-      birthday: parseSignatureDateOnly(parsed.birthday),
-      hometown: parsed.hometown,
-      instagramHandle: Object.prototype.hasOwnProperty.call(parsed, "instagramHandle") ? parsed.instagramHandle ?? null : member.instagramHandle,
-      tiktokHandle: Object.prototype.hasOwnProperty.call(parsed, "tiktokHandle") ? parsed.tiktokHandle ?? null : member.tiktokHandle,
-      xHandle: Object.prototype.hasOwnProperty.call(parsed, "xHandle") ? parsed.xHandle ?? null : member.xHandle,
-    };
-    const changed = signatureDateOnly(member.birthday) !== parsed.birthday
-      || member.hometown !== nextProfile.hometown
-      || member.instagramHandle !== nextProfile.instagramHandle
-      || member.tiktokHandle !== nextProfile.tiktokHandle
-      || member.xHandle !== nextProfile.xHandle;
-
-    if (!changed) {
-      return {
-        memberId: member.id,
-        collectionVersion: member.collection.collectionVersion,
-        athleteProfile: {
-          birthday: parsed.birthday,
-          hometown: nextProfile.hometown,
-          instagramHandle: nextProfile.instagramHandle,
-          tiktokHandle: nextProfile.tiktokHandle,
-          xHandle: nextProfile.xHandle,
-        },
-      };
-    }
-
-    await tx.signatureMember.update({ where: { id: member.id }, data: nextProfile });
-    const collection = await tx.signatureCollection.update({
-      where: { id: input.collectionId },
-      data: { collectionVersion: { increment: 1 }, updatedById: input.actor.id },
-      select: { collectionVersion: true },
-    });
-    await createAuditEntryTx(tx, {
-      actorId: input.actor.id,
-      actorRole: input.actor.role,
-      entityType: "SignatureMember",
-      entityId: member.id,
-      action: "UPDATE_ATHLETE_PROFILE",
-      before: {
-        profileComplete: Boolean(member.birthday && member.hometown),
-        socialHandles: {
-          instagram: Boolean(member.instagramHandle),
-          tiktok: Boolean(member.tiktokHandle),
-          x: Boolean(member.xHandle),
-        },
-      },
-      after: {
-        profileComplete: true,
-        socialHandles: {
-          instagram: Boolean(nextProfile.instagramHandle),
-          tiktok: Boolean(nextProfile.tiktokHandle),
-          x: Boolean(nextProfile.xHandle),
-        },
-      },
-    });
-    return {
-      memberId: member.id,
-      collectionVersion: collection.collectionVersion,
-      athleteProfile: {
-        birthday: parsed.birthday,
-        hometown: nextProfile.hometown,
-        instagramHandle: nextProfile.instagramHandle,
-        tiktokHandle: nextProfile.tiktokHandle,
-        xHandle: nextProfile.xHandle,
-      },
-    };
-  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
 
 export async function createSignatureRosterPreview(input: {
@@ -945,15 +746,6 @@ export async function applySignatureRosterSnapshot(input: {
         incomingIdentityCounts,
         reservedSourceMemberIds,
       );
-      const targetProfile: SignatureRosterProfile = {
-        birthday: existingMember?.birthday ?? null,
-        hometown: entry.roleGroup === SignatureMemberGroup.PLAYER
-          ? existingMember?.hometown ?? entry.hometown ?? null
-          : null,
-        instagramHandle: existingMember?.instagramHandle ?? null,
-        tiktokHandle: existingMember?.tiktokHandle ?? null,
-        xHandle: existingMember?.xHandle ?? null,
-      };
       const canMergeHistoricalMember = Boolean(
         historicalMember
         && existingMember?.active !== false
@@ -966,8 +758,6 @@ export async function applySignatureRosterSnapshot(input: {
             source: historicalMember!,
             targetMemberId: existingMember.id,
             targetSourceExternalId: entry.sourceExternalId,
-            targetIsNew: false,
-            targetProfile,
           });
           reservedSourceMemberIds.add(historicalMember!.id);
         }
@@ -981,9 +771,6 @@ export async function applySignatureRosterSnapshot(input: {
             jerseyNumber: entry.jerseyNumber,
             roleGroup: entry.roleGroup as SignatureMemberGroup,
             title: entry.title,
-            hometown: entry.roleGroup === SignatureMemberGroup.PLAYER
-              ? existingMember.hometown ?? entry.hometown ?? null
-              : null,
             // Players always require a signature. Preserve an admin's
             // readiness decision for unchanged non-player groups.
             required: entry.roleGroup === SignatureMemberGroup.PLAYER
@@ -1008,7 +795,6 @@ export async function applySignatureRosterSnapshot(input: {
             jerseyNumber: entry.jerseyNumber,
             roleGroup: entry.roleGroup as SignatureMemberGroup,
             title: entry.title,
-            hometown: entry.roleGroup === SignatureMemberGroup.PLAYER ? entry.hometown ?? null : null,
             required: defaultImportedMemberRequired(snapshot.collection.sportCode, entry.roleGroup),
           },
         });
@@ -1023,11 +809,6 @@ export async function applySignatureRosterSnapshot(input: {
           title: entry.title,
           active: true,
           required: member.required ?? defaultImportedMemberRequired(snapshot.collection.sportCode, entry.roleGroup),
-          birthday: null,
-          hometown: entry.roleGroup === SignatureMemberGroup.PLAYER ? entry.hometown ?? null : null,
-          instagramHandle: null,
-          tiktokHandle: null,
-          xHandle: null,
           capture: null,
         };
         existingBySource.set(entry.sourceExternalId, createdMember);
@@ -1036,8 +817,6 @@ export async function applySignatureRosterSnapshot(input: {
             source: historicalMember!,
             targetMemberId: member.id,
             targetSourceExternalId: entry.sourceExternalId,
-            targetIsNew: true,
-            targetProfile,
           });
           reservedSourceMemberIds.add(historicalMember!.id);
         }
@@ -1118,11 +897,7 @@ export async function applySignatureRosterSnapshot(input: {
           transferredRevisionCount = movedRevisions.count;
         }
 
-        const profileData = signatureRosterMergeProfileData(plan.source, plan.targetProfile, plan.targetIsNew);
-        if (Object.keys(profileData).length > 0) {
-          await tx.signatureMember.update({ where: { id: plan.targetMemberId }, data: profileData });
-        }
-        if (artifactTransferred || Object.keys(profileData).length > 0) {
+        if (artifactTransferred) {
           await createAuditEntryTx(tx, {
             actorId: input.actor.id,
             actorRole: input.actor.role,
@@ -1140,11 +915,10 @@ export async function applySignatureRosterSnapshot(input: {
               sourceMemberRetainedInactive: true,
               artifactTransferred,
               transferredRevisionCount,
-              preservedProfileFields: Object.keys(profileData),
             },
           });
         }
-        if (artifactTransferred || Object.keys(profileData).length > 0) {
+        if (artifactTransferred) {
           mergeResults.push({
             sourceMemberId: plan.source.id,
             sourceExternalId: plan.source.sourceExternalId,

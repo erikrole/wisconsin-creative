@@ -141,8 +141,11 @@ final class ScheduleViewModel {
             }
         }
         do {
-            async let eventsTask = APIClient.shared.calendarEvents(includePast: requestedIncludePast)
-            async let shiftsTask = APIClient.shared.myShifts()
+            // The API is paginated, but Schedule owns a complete read window
+            // so list filters and calendar navigation do not silently stop at
+            // the first 60 events. SwiftUI still materializes rows lazily.
+            async let eventsTask = APIClient.shared.allCalendarEvents(includePast: requestedIncludePast)
+            async let shiftsTask = APIClient.shared.allMyShifts()
             let (fetchedEvents, fetchedShifts) = try await (eventsTask, shiftsTask)
             guard loadRequests.owns(requestToken), !Task.isCancelled else { return }
             events = fetchedEvents

@@ -9,7 +9,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/reports/badges`
 - APIs: `/api/badges/award/[id]`, `/api/badges/award`, `/api/badges/events/app-open`, `/api/badges/recent`, `/api/badges`, `/api/badges/user/[userId]`, `/api/reports/badges`
 - Services: _none matched_
-- Tests: `tests/badges-award-route.test.ts`, `tests/badges-celebration-ui.test.ts`, `tests/badges-display.test.ts`, `tests/badges-flag-off.test.ts`, `tests/badges-manual-awards.test.ts`, `tests/badges-recent-route.test.ts`, `tests/badges-report-route.test.ts`, `tests/badges-routes.test.ts`
+- Tests: `tests/badges-award-route.test.ts`, `tests/badges-celebration-ui.test.ts`, `tests/badges-display.test.ts`, `tests/badges-flag-off.test.ts`, `tests/badges-manual-awards.test.ts`, `tests/badges-recent-route.test.ts`, `tests/badges-report-route.test.ts`, `tests/badges-review-hardening.test.ts`
 
 ## bulk-inventory
 
@@ -135,7 +135,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 
 - Doc: `docs/AREA_RESOURCES.md`
 - Pages: `/resources/[slug]/edit`, `/resources/[slug]`, `/resources/new`, `/resources`
-- APIs: `/api/resources/[id]`, `/api/resources`, `/api/resources/upload-image`
+- APIs: `/api/resources/[id]`, `/api/resources/assets/[id]/download`, `/api/resources/assets/[id]/favorite`, `/api/resources/assets/[id]/restore`, `/api/resources/assets/[id]`, `/api/resources/assets/complete`, `/api/resources/assets/folders`, `/api/resources/assets`, `/api/resources/assets/upload-token`, `/api/resources`
 - Services: _none matched_
 - Tests: `tests/ios-resources-area-consistency.test.ts`, `tests/resources-filters.test.ts`, `tests/resources-ui-ownership-contract.test.ts`, `tests/resources-ui-polish-source.test.ts`
 
@@ -175,7 +175,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 
 - Doc: `docs/AREA_SIGNATURES.md`
 - Pages: `/signatures/[id]/capture/[memberId]`, `/signatures/[id]`, `/signatures`
-- APIs: `/api/signatures/artifacts/[revisionId]/[kind]`, `/api/signatures/cleanup`, `/api/signatures/collections/[id]/archive`, `/api/signatures/collections/[id]/capture/[memberId]`, `/api/signatures/collections/[id]/creative-staff`, `/api/signatures/collections/[id]/download`, `/api/signatures/collections/[id]/members/[memberId]/profile`, `/api/signatures/collections/[id]/members/[memberId]/required`, `/api/signatures/collections/[id]/members/[memberId]`, `/api/signatures/collections/[id]/reset`
+- APIs: `/api/signatures/artifacts/[revisionId]/[kind]`, `/api/signatures/cleanup`, `/api/signatures/collections/[id]/archive`, `/api/signatures/collections/[id]/capture/[memberId]`, `/api/signatures/collections/[id]/creative-staff`, `/api/signatures/collections/[id]/download`, `/api/signatures/collections/[id]/members/[memberId]/required`, `/api/signatures/collections/[id]/members/[memberId]`, `/api/signatures/collections/[id]/reset`
 - Services: `src/lib/services/signatures.ts`
 - Tests: _none matched_
 
@@ -191,6 +191,6 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 
 - Doc: `docs/AREA_USERS.md`
 - Pages: `/profile`, `/settings/allowed-emails`, `/settings/profile`, `/users/[id]`, `/users/onboarding-status`, `/users/org-chart`, `/users`
-- APIs: `/api/allowed-emails/[id]`, `/api/allowed-emails/preview`, `/api/allowed-emails`, `/api/kiosk/users`, `/api/me/profile-completion`, `/api/me/profile`, `/api/profile`, `/api/signatures/collections/[id]/members/[memberId]/profile`, `/api/users/[id]/activity`, `/api/users/[id]/availability/[blockId]`
+- APIs: `/api/allowed-emails/[id]`, `/api/allowed-emails/preview`, `/api/allowed-emails`, `/api/kiosk/users`, `/api/me/profile-completion`, `/api/me/profile`, `/api/profile`, `/api/users/[id]/activity`, `/api/users/[id]/availability/[blockId]`
 - Services: `src/lib/services/hidden-users-cleanup.ts`, `src/lib/services/onboarding-lifecycle.ts`
 - Tests: `tests/allowed-emails-preview.test.ts`, `tests/allowed-emails.test.ts`, `tests/email-first-onboarding-source.test.ts`, `tests/hidden-users-cleanup.test.ts`, `tests/ios-notification-categories-profile.test.ts`, `tests/onboarding-dialog-source.test.ts`, `tests/onboarding-lifecycle.test.ts`, `tests/onboarding-readiness-route.test.ts`

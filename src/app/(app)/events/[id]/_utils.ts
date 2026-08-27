@@ -46,6 +46,12 @@ export type ShiftGroupSummary = {
     endsAt: string;
     callStartsAt?: string | null;
     callEndsAt?: string | null;
+    viewerRequest?: {
+      id: string;
+      status: string;
+      hasConflict?: boolean;
+      conflictNote?: string | null;
+    } | null;
     assignments: Array<{
       id: string;
       status: string;

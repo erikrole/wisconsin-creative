@@ -138,7 +138,7 @@ type TradePushJob = {
   payload: Record<string, unknown>;
 };
 
-/** A claim waiting on staff. Fanned out to reviewers after the claim commits. */
+/** A claim waiting on Admin. Fanned out to reviewers after the claim commits. */
 type TradeReviewJob = {
   tradeId: string;
   title: string;
@@ -165,7 +165,7 @@ async function dispatchTradeSideEffects({
 }
 
 /**
- * Tell staff a claim is waiting on them. Runs after the claim commits: a
+ * Tell admins a claim is waiting on them. Runs after the claim commits: a
  * reviewer fanout has no business inside the SERIALIZABLE claim transaction,
  * where it would widen the read set that two students racing a trade contend
  * over. Per-reviewer dedupe keys make a retried dispatch idempotent.
@@ -174,7 +174,7 @@ async function notifyTradeReviewers(jobs: TradeReviewJob[]) {
   if (jobs.length === 0) return;
 
   const reviewers = await db.user.findMany({
-    where: visibleActiveUserWhere({ role: { in: ["ADMIN", "STAFF"] } }),
+    where: visibleActiveUserWhere({ role: "ADMIN" }),
     select: { id: true },
   });
   if (reviewers.length === 0) return;
@@ -219,11 +219,24 @@ export async function postTrade(
     const assignment = await tx.shiftAssignment.findUnique({
       where: { id: shiftAssignmentId },
       include: {
-        shift: { include: { shiftGroup: { include: { event: { select: { id: true, summary: true } } } } } },
+        shift: {
+          include: {
+            shiftGroup: {
+              include: {
+                workingCopy: { select: { version: true } },
+                event: { select: { id: true, summary: true } },
+              },
+            },
+          },
+        },
         user: { select: { id: true, name: true, role: true, staffingType: true } },
       },
     });
     if (!assignment) throw new HttpError(404, "Assignment not found");
+    // Same gate every sibling schedule mutation applies. A post filed against a
+    // shift staff are still redrafting advertises coverage that the pending
+    // publish can move or delete, and no claim on it could be approved anyway.
+    assertNoWorkingCopy(assignment.shift.shiftGroup?.workingCopy);
     const isOwner = assignment.userId === actor.id;
     if (!isOwner) {
       if (!isTradeManager(actor)) {
@@ -281,7 +294,7 @@ export async function postTrade(
       // someone shows up for work they no longer have.
       const eventSummary = assignment.shift.shiftGroup?.event?.summary ?? "an event";
       const title = "Your shift is on the Trade Board";
-      const body = `Staff posted your ${assignment.shift.area} shift for ${eventSummary} to the Trade Board. You're still scheduled until staff approve a claim.`;
+      const body = `Staff posted your ${assignment.shift.area} shift for ${eventSummary} to the Trade Board. You're still scheduled until an admin approves a claim.`;
       const payload = scheduleNotificationPayload({
         tradeId: trade.id,
         assignmentId: assignment.id,
@@ -308,7 +321,7 @@ export async function postTrade(
 
 /**
  * Claim an open trade. The claim is a request: it holds the post and waits for
- * a staff approve/decline. The poster keeps the assignment until `approveTrade`
+ * an Admin approve/decline. The poster keeps the assignment until `approveTrade`
  * runs the swap, so a claim alone never leaves a shift uncovered.
  */
 export async function claimTrade(tradeId: string, userId: string) {
@@ -402,7 +415,7 @@ export async function claimTrade(tradeId: string, userId: string) {
       throw new HttpError(409, "This shift already has an active assignment");
     }
 
-    // The swap itself waits for staff. Until they approve, the poster keeps the
+    // The swap itself waits for Admin. Until an admin approves, the poster keeps the
     // assignment: a claim is a request to be released, not the release.
     const claimed = await tx.shiftTrade.update({
       where: { id: tradeId },
@@ -433,11 +446,11 @@ export async function claimTrade(tradeId: string, userId: string) {
       eventId: claimed.shiftAssignment.shift.shiftGroup.event.id,
     });
 
-    // Poster: someone wants it, but they are still on the hook until staff act.
+    // Poster: someone wants it, but they are still on the hook until Admin acts.
     // Saying only "claimed" is how a person stops showing up for a shift they
     // still hold.
     const posterTitle = "Your trade was claimed";
-    const posterBody = `${claimerName} claimed your ${shift.area} shift for ${eventSummary}. You're still scheduled until staff approve the trade.`;
+    const posterBody = `${claimerName} claimed your ${shift.area} shift for ${eventSummary}. You're still scheduled until an admin approves the trade.`;
     await notify(
       trade.postedByUserId,
       "trade_claimed",
@@ -457,7 +470,7 @@ export async function claimTrade(tradeId: string, userId: string) {
 
     // Claimer: say plainly that they are not on the schedule yet.
     const claimerTitle = "Claim sent for approval";
-    const claimerBody = `Your claim on the ${shift.area} shift for ${eventSummary} is waiting for staff approval. You're not on the schedule until it's approved.`;
+    const claimerBody = `Your claim on the ${shift.area} shift for ${eventSummary} is waiting for Admin approval. You're not on the schedule until it's approved.`;
     await notify(
       userId,
       "trade_claim_pending",
@@ -495,7 +508,7 @@ export async function claimTrade(tradeId: string, userId: string) {
 }
 
 /**
- * Let the claimer withdraw while the trade is still waiting for staff. The
+ * Let the claimer withdraw while the trade is still waiting for Admin. The
  * post returns to OPEN; the original assignment never changes hands.
  */
 export async function withdrawTradeClaim(
@@ -612,7 +625,7 @@ export async function withdrawTradeClaim(
 }
 
 /**
- * Staff approves a claimed trade → executes swap.
+ * Admin approves a claimed trade → executes swap.
  */
 export async function approveTrade(tradeId: string, actor: TradeApprovalActor = null) {
   const emailJobs: ShiftTradeEmail[] = [];
@@ -736,9 +749,9 @@ export async function approveTrade(tradeId: string, actor: TradeApprovalActor = 
 }
 
 /**
- * Staff declines a claimed trade → back to OPEN.
+ * Admin declines a claimed trade → back to OPEN.
  */
-export async function declineTrade(tradeId: string) {
+export async function declineTrade(tradeId: string, actor: TradeApprovalActor = null) {
   const emailJobs: ShiftTradeEmail[] = [];
   const pushJobs: TradePushJob[] = [];
 
@@ -769,6 +782,23 @@ export async function declineTrade(tradeId: string) {
       },
     });
 
+    // Written in the transaction, like approve and withdraw. A decline is the
+    // one review outcome that leaves no trace on the trade row — the claimer is
+    // cleared — so without this entry there is no record of who was turned down.
+    await createAuditEntryTx(tx, {
+      actorId: actor?.id ?? null,
+      actorRole: actor?.role ?? null,
+      entityType: "shift_trade",
+      entityId: tradeId,
+      action: "trade_declined",
+      before: {
+        status: trade.status,
+        claimedByUserId: trade.claimedByUserId,
+        claimedAt: trade.claimedAt?.toISOString() ?? null,
+      },
+      after: { status: updated.status, claimedByUserId: updated.claimedByUserId },
+    });
+
     // Notify claimer: declined, trade is back open
     if (trade.claimedByUserId) {
       const area = trade.shiftAssignment.shift.area;
@@ -782,12 +812,15 @@ export async function declineTrade(tradeId: string) {
         eventId: trade.shiftAssignment.shift.shiftGroup.event.id,
       });
 
+      // Keyed on the claim being declined, not the wall clock: a retried
+      // dispatch must not tell the same student twice, while a later claim on
+      // the same post carries a new `claimedAt` and so still gets its own notice.
       await notify(
         trade.claimedByUserId,
         "trade_declined",
         title,
         body,
-        `trade_declined_${tradeId}_${Date.now()}`,
+        `trade_declined_${tradeId}_${trade.claimedAt?.toISOString() ?? "unknown"}`,
         payload,
       );
       pushJobs.push({
@@ -986,7 +1019,15 @@ export async function listTrades(filters: {
       postedBy: { select: { id: true, name: true } },
       claimedBy: { select: { id: true, name: true } },
     },
-    orderBy: { postedAt: "desc" },
+    // Actionable before resolved, then newest first. `ShiftTradeStatus` is
+    // declared OPEN, CLAIMED, APPROVED, COMPLETED, CANCELLED, so ascending
+    // status puts everything someone still owes a decision on ahead of history.
+    // Without it an unfiltered page is pure recency, and COMPLETED/CANCELLED
+    // rows accumulate forever — a season in, a claim waiting on Admin falls off
+    // the end of the window and out of the review queue entirely. `id` is the
+    // tiebreaker so offset paging (native "load more") cannot repeat or skip a
+    // row when two trades share a timestamp.
+    orderBy: [{ status: "asc" }, { postedAt: "desc" }, { id: "asc" }],
   });
   const total = await db.shiftTrade.count({ where });
   const availabilityUserIds = new Set<string>();
@@ -1035,10 +1076,10 @@ export async function listTrades(filters: {
         // "Not open" is true but useless here. Whoever is looking is either the
         // person waiting on the decision or the person who has to make it.
         viewerClaimReason = trade.claimedByUserId === filters.userId
-          ? "Waiting for staff to approve your claim"
+          ? "Waiting for an admin to approve your claim"
           : trade.postedByUserId === filters.userId
-            ? `${trade.claimedBy?.name ?? "Someone"} claimed this — waiting for staff approval`
-            : "Claimed and waiting for staff approval";
+            ? `${trade.claimedBy?.name ?? "Someone"} claimed this — waiting for Admin approval`
+            : "Claimed and waiting for Admin approval";
       } else if (trade.status !== "OPEN") {
         viewerClaimReason = "This trade is not open";
       } else if (!filters.userId || !viewer) {
@@ -1082,6 +1123,7 @@ export async function expireOpenTrades(): Promise<{ expired: number }> {
     select: {
       id: true,
       postedByUserId: true,
+      claimedByUserId: true,
       shiftAssignment: {
         select: {
           shift: {
@@ -1107,27 +1149,46 @@ export async function expireOpenTrades(): Promise<{ expired: number }> {
     data: { status: "CANCELLED", resolvedAt: now },
   });
 
-  // Notify posters (best-effort, skip duplicates)
-  if (staleTrades.length > 0) {
-    await db.notification.createMany({
-      data: staleTrades.map((t) => ({
-        userId: t.postedByUserId,
-        type: "trade_expired",
-        title: "Trade expired",
-        body: `Your trade for ${t.shiftAssignment.shift.area} at ${
-          t.shiftAssignment.shift.shiftGroup?.event?.summary ?? "the event"
-        } expired — the shift has passed.`,
-        payload: JSON.parse(JSON.stringify(scheduleNotificationPayload({
-          tradeId: t.id,
-          eventId: t.shiftAssignment.shift.shiftGroup.event.id,
-        }))),
+  // Notify posters and anyone left holding a claim (best-effort, skip
+  // duplicates). A claimer who is told nothing is the dangerous case: they
+  // asked for the shift, never heard a decision, and have no way to know the
+  // request died rather than being approved.
+  const expiryNotifications = staleTrades.flatMap((t) => {
+    const area = t.shiftAssignment.shift.area;
+    const eventSummary = t.shiftAssignment.shift.shiftGroup?.event?.summary ?? "the event";
+    const payload = JSON.parse(JSON.stringify(scheduleNotificationPayload({
+      tradeId: t.id,
+      eventId: t.shiftAssignment.shift.shiftGroup.event.id,
+    })));
+    const rows = [{
+      userId: t.postedByUserId,
+      type: "trade_expired",
+      title: "Trade expired",
+      body: `Your trade for ${area} at ${eventSummary} expired — the shift has passed.`,
+      payload,
+      channel: "IN_APP" as const,
+      sentAt: now,
+      dedupeKey: `trade_expired_${t.id}`,
+    }];
+    if (t.claimedByUserId && t.claimedByUserId !== t.postedByUserId) {
+      rows.push({
+        userId: t.claimedByUserId,
+        type: "trade_claim_expired",
+        title: "Trade claim expired",
+        body: `Your claim on the ${area} shift at ${eventSummary} expired without an Admin decision — the shift has passed and you were never added to it.`,
+        payload,
         channel: "IN_APP" as const,
         sentAt: now,
-        dedupeKey: `trade_expired_${t.id}`,
-      })),
-      skipDuplicates: true,
-    });
-  }
+        dedupeKey: `trade_claim_expired_${t.id}`,
+      });
+    }
+    return rows;
+  });
+
+  await db.notification.createMany({
+    data: expiryNotifications,
+    skipDuplicates: true,
+  });
 
   return { expired: staleTrades.length };
 }

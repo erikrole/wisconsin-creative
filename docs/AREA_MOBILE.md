@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Mobile Operations
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-26
+- Last Updated: 2026-08-27
 - Status: Active
 - Version: V1
 
@@ -18,11 +18,12 @@ Cheqroom mobile patterns show useful primitives but too much menu depth and too 
 2. Student flows prioritize `My check-outs`, `My reservations`, due/overdue handling, and scan.
 3. Role-adaptive actions apply everywhere:
    - `STUDENT`: own mutations only, broad read visibility.
-   - `STAFF` and `ADMIN`: global mutation access per `AREA_USERS.md`.
+   - `STAFF` and `ADMIN`: global mutation access per `AREA_USERS.md`, except student claim approval and decline, which are Admin-only.
 4. Overdue is always visually red and sorted to the top.
 5. Event sync supports booking context and prefill, but V1 mobile does not require an Upcoming Events dashboard section.
 6. Tap targets stay at 44px or larger.
 7. Native reservation equipment rows consume the server's top-level availability result before selection. Known serialized conflicts are disabled and block review; next-use, close-turnaround, transfer, and condition notices remain actionable advisories. A failed refresh preserves the last known result and blocks review until availability can be checked again.
+8. Native Schedule reads the complete selected event window through total-aware API pages; SwiftUI keeps row materialization lazy while the current past-event permission boundary remains unchanged. Native Event detail shows an approval-aware pending state for the signed-in student's own open-slot request, while claim review queues and approve/decline actions render only for Admins.
 
 ## Mobile Navigation Contract (V1)
 1. Primary destinations:
@@ -136,7 +137,12 @@ Navigation shell versioned roadmap: `tasks/sidebar-roadmap.md` (revised 2026-03-
 
 ## Change Log
 
+- 2026-08-27: **Native claim review is Admin-only.** Trade Board and Event detail expose pending open-slot requests, pending trade claims, and approve/decline actions only to Admins. Staff retain ordinary Schedule and Trade Board context plus existing non-review staffing tools, but no longer receive the all-request reviewer payload or review affordances. Student-scheduling-class users continue to see their own pending claims even when their app role is Staff.
+
+- 2026-08-27: **Native profile Scoreboard now filters by site.** A Home/Away/Neutral chip strip sits with the existing result and sport controls, re-keys the load like every other filter, and clears with them; the site breakdown below it already asked the question. `APIClient.scoreboard` gained the matching `site` query item, and the server owns the filter exactly as it owns sport and result. The iPhone 16 Pro iOS 26.5 `Wisconsin` build and the Swift source-contract tests pass; native runtime visual acceptance remains a separate gate.
+
 - 2026-08-26: **Native Student Bookings now opens on the shared team list.** Internal Students see all visible checkout and reservation rows on the Bookings tab, matching the web and staff/admin read surface; the existing Mine toggle remains available. Server-owned row actions still expose only the student's own mutations, kiosk custody stays separate, collaborators remain private by default, and native Home remains personal through `scope=ios-home`.
+- 2026-08-26: **Native Schedule now reads the complete selected window.** The client follows total-aware `/api/calendar-events` and `/api/my-shifts` pages instead of stopping at the first page (the previous event page covered roughly one busy month). Future events load for every role; the existing staff/admin-only Past toggle still controls whether historical events are requested. Event detail carries the current student's own `REQUESTED` open-slot state so a submitted claim reads `Awaiting approval` rather than offering a duplicate claim. The exact iPhone 16 Pro iOS 26.5 build and focused source contracts pass; native runtime, authenticated web, deployment, and push-delivery proof remain separate gates.
 
 - 2026-08-26: **Native kiosk idle now keeps all active checkouts visible in its resting left rail.** Checkouts moves to the first summary tile and the complete checkout payload replaces the previous today-or-overdue subset. The client orders custody overdue-first and then by earliest due time even if payload order drifts; Items Out and Overdue remain temporary filters that return to the full checkout list when cleared. Kiosk detail, Return, API, and custody behavior are unchanged; managed-iPad visual acceptance remains separate.
 

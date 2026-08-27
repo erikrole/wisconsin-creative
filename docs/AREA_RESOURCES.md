@@ -6,17 +6,20 @@
 - Owner: Erik Role (Wisconsin Athletics Creative)
 - Status: Shipped
 - Created: 2026-04-14
-- Last Updated: 2026-08-26
+- Last Updated: 2026-08-27
 - Brief: `tasks/guides-plan.md` (archived)
 
 ## Description
 In-app Markdown Guide library for Wisconsin Athletics Creative operational reference: contact numbers, building numbers, Media Drive context, server paths, SOPs, how-to guides, account notes, troubleshooting steps, event operations, and general information. Staff break broad reference material into focused Guides in a Markdown WYSIWYG editor; students read published Guides in-app. The landing page is guide-first: search/filter toolbar, cards/list browsing, compact server-path copy utility, and supporting Contacts plus Sport assignments references stay below the Guide results instead of competing with them.
+
+The same `/resources` surface also contains a separate Brand assets tab for authenticated file storage. It uses Vercel Blob for private binary storage and Prisma/Neon for folders, stable logical files, immutable versions, and short-lived upload intents; it does not change the Markdown Guide contract.
 
 ## Components
 - `/resources` — first-class Guide library landing page with a top operational toolbar for search, guide focus, sort, and cards/list layout. A ⌘K/Ctrl+K command palette (`ResourceCommandPalette`) provides instant client-side search across every loaded guide (title, category, typed focus, author, and a bounded body excerpt) plus quick jumps to the Contacts and Sport assignments reference views; it opens to a Recently-updated shortlist when empty. When admins mark guides featured, the home hub leads with an opt-in "Featured" section (`featuredRank`-ordered); the block is hidden entirely when nothing is featured, so a clean library is unchanged. It puts Guide results first, keeps a compact copyable Media Drive server path in the header, and shows Contacts plus Sport assignments as supporting references. URL-backed via `filter`, `category`, `q`, `sort`, and `layout` params while preserving legacy `view` and `area` compatibility.
 - `/resources/[slug]` — Markdown reader with editorial document styling, polished image treatment, sticky desktop table of contents, quiet update metadata, and an allowed-editor Mark verified action. Renders GitHub-style alert callouts (`> [!NOTE|TIP|IMPORTANT|WARNING|CAUTION]`) as themed cards and safe YouTube/Vimeo embeds via a fenced ` ```embed ` block (allowlisted providers only; raw HTML stays disabled). On wide (2xl) screens it adds a left "in this section" rail listing title-sorted sibling guides that share the typed focus, and every guide gets a prev/next section footer; the right-hand sticky TOC is unchanged.
 - `/resources/new` — create page (Staff/Admin only) with a typed Guide focus selector and starter templates for Contacts, Building Numbers, Media Drive, Server Paths, SOPs, and Troubleshooting
 - `/resources/[slug]/edit` — edit page with typed Guide focus, publish toggle, unsaved-change guard, and admin delete
+- `/resources?tab=brand-assets` — lightweight Brand assets library with user-created folders at any depth, a walkable folder rail, server-backed search/filter/sort with sortable column headers, current-file metadata, PDF/image/font previews, downloads, favorites, device-local recent files, authenticated internal links, and version history. Staff/Admin can create folders, upload one or many files (including by dropping them onto the folder view), upload a new version from an existing file row, and restore an older version as a new current version; prior versions are retained.
 - Native iOS Guides - read-only SwiftUI list and reader backed by `/api/resources`, reachable from compact Browse on iPhone and as a sidebar-only Resources destination on regular-width iPad. (Settings has no Directory section; the earlier claim of a `Settings > Directory` fallback was stale.) Markdown is parsed with apple/swift-markdown so the reader implements the same CommonMark + GFM contract as the web reader — see `docs/GUIDE_MARKDOWN.md`. Authoring, deletion, verification, Contacts, and sport-assignment reference tools remain web-owned.
 
 ## Data Model
@@ -34,6 +37,15 @@ In-app Markdown Guide library for Wisconsin Athletics Creative operational refer
 
 Migrations: `prisma/migrations/0032_add_guides/migration.sql`, `prisma/migrations/0045_drop_guide_order/migration.sql` (drops unused `order` column), `prisma/migrations/0057_add_guide_markdown/migration.sql`, `prisma/migrations/0058_guide_personalization/migration.sql`, `prisma/migrations/0061_add_guide_freshness/migration.sql`, `prisma/migrations/0068_rename_guides_to_resources/migration.sql`, `prisma/migrations/0087_resource_type/migration.sql`
 
+Brand assets are additive models in `prisma/schema.prisma`:
+- `ResourceAssetFolder` — hierarchical folder name/path records. The migration creates only the empty technical `Brand assets` root; no PDF, asset, or category folders are seeded.
+- `ResourceAsset` — stable logical file identity, unique by normalized name within a folder, with an explicit `currentVersionId` pointer.
+- `ResourceAssetVersion` — append-only Blob pathname and server-verified metadata for each uploaded version.
+- `ResourceAssetUpload` — short-lived actor-bound upload intent used to authorize and finalize a client-side private Blob upload, including an optional version note.
+- `ResourceAssetFavorite` — per-user favorite marker for a logical asset. Recent files are intentionally browser-local and are not persisted as product records.
+
+Migrations: `prisma/migrations/0135_brand_asset_library/migration.sql` and `prisma/migrations/0136_brand_asset_experience/migration.sql`. The supplied brand guide remains a normal viewable PDF upload through the authenticated Brand assets flow.
+
 ## Auth Rules
 | Action | Roles |
 |--------|-------|
@@ -42,6 +54,10 @@ Migrations: `prisma/migrations/0032_add_guides/migration.sql`, `prisma/migration
 | Create | STAFF, ADMIN |
 | Edit | STAFF (own only), ADMIN (any) |
 | Delete | ADMIN only |
+| Browse Brand assets, current versions, History, and authenticated downloads | STUDENT, STAFF, ADMIN |
+| Favorite Brand assets and use authenticated internal links | STUDENT, STAFF, ADMIN |
+| Create Brand asset folders/files and upload new versions | STAFF, ADMIN |
+| Restore a historical Brand asset version as a new current version | STAFF, ADMIN |
 
 All mutations use `createAuditEntry` per D-007.
 
@@ -54,6 +70,8 @@ All mutations use `createAuditEntry` per D-007.
 - `updateGuide(id, patch, editorRole, editorId)` — STAFF restricted to own guides; regenerates slug only if title changed
 - `deleteGuide(id)`
 
+`src/lib/resource-assets.ts` owns folder listing, logical-file/version reads, upload-intent validation/finalization, folder creation, and audit snapshots. `src/lib/resource-assets-storage.ts` wraps the dedicated private Vercel Blob token; raw Blob URLs are not returned to clients.
+
 ## API Endpoints
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
@@ -63,6 +81,15 @@ All mutations use `createAuditEntry` per D-007.
 | PATCH | `/api/resources/[id]` | STAFF/ADMIN | Update resource |
 | DELETE | `/api/resources/[id]` | ADMIN | Delete resource |
 | POST | `/api/resources/upload-image` | STAFF/ADMIN | Upload image to Vercel Blob; returns `{ url }`. Max 10MB per image. Used by the Markdown editor image upload handler. |
+| GET | `/api/resources/assets` | All internal Resource readers | List folders/files with optional all-folder search, kind/favorite filters, and sorting |
+| POST | `/api/resources/assets` | STAFF/ADMIN | Prepare a new file or replacement upload intent |
+| POST | `/api/resources/assets/folders` | STAFF/ADMIN | Create a user-named child folder |
+| POST | `/api/resources/assets/upload-token` | STAFF/ADMIN | Issue an intent-bound private Blob client-upload token |
+| POST | `/api/resources/assets/complete` | STAFF/ADMIN | Verify Blob metadata and commit the new logical file/version |
+| GET | `/api/resources/assets/[id]` | All internal Resource readers | Read current metadata and immutable version History |
+| GET | `/api/resources/assets/[id]/download` | All internal Resource readers | Stream a selected current or historical version through the authenticated private-storage proxy |
+| POST | `/api/resources/assets/[id]/favorite` | All internal Resource readers | Toggle the signed-in user's favorite marker |
+| POST | `/api/resources/assets/[id]/restore` | STAFF/ADMIN | Copy a historical private Blob into a new current immutable version |
 
 ## Acceptance Criteria Status
 
@@ -85,8 +112,30 @@ All mutations use `createAuditEntry` per D-007.
 | AC-15 | A ⌘K/Ctrl+K palette provides instant client-side search across guide title/category/focus/author/body plus reference jumps | ✅ Complete (2026-07-03, slice 2) |
 | AC-16 | The home hub leads with an opt-in Featured section when admins mark guides featured, and is unchanged otherwise | ✅ Complete (2026-07-03, slice 3) |
 | AC-17 | The guide reader offers docs-style in-section sibling navigation (wide screens) and a prev/next footer | ✅ Complete (2026-07-03, slice 4) |
+| AC-18 | Resources exposes a separate Brand assets tab with user-created folders and current-file metadata | ✅ Authenticated Admin empty-state and Preview read-back verified; file upload lifecycle proof pending |
+| AC-19 | Staff/Admin can upload a file and upload a replacement from its row without deleting the prior version | ✅ Private store and migration wired; upload/replacement proof pending |
+| AC-20 | Current and historical Brand asset versions are available through authenticated preview/download routes; raw Blob URLs are not exposed | ✅ Authenticated route shape and empty-state read pass; PDF/history proof pending |
+| AC-21 | Upload intents bind actor, target, pathname, size, content type, and expiry; finalization re-verifies Blob metadata before the serializable commit | ✅ Source and focused tests |
+| AC-22 | The Brand assets migration seeds no PDF, file, or category folders | ✅ Complete; only the empty technical root container is created |
+| AC-23 | Brand asset folder creation and version uploads are audit-logged | ✅ Source and migration coverage; mutation audit read-back pending |
+| AC-24 | Users can search the current folder or descendant folders and filter by kind or favorite | ✅ Preview migration plus source/type/build gates; authenticated populated-data proof pending |
+| AC-25 | Images, PDFs, and supported fonts provide authenticated previews; unsupported files explain native-app download | ✅ Preview migration plus source/type/build gates; authenticated populated-data proof pending |
+| AC-26 | Version notes appear in History and Staff/Admin can restore a historical version as a new audited current version | ✅ Preview migration plus source/type/build gates; private Blob copy and audit read-back pending |
+| AC-27 | Multi-file upload exposes per-file progress, retry, drag/drop, and duplicate-name choices | ✅ Preview migration plus source/type/build gates; authenticated upload proof pending |
+| AC-28 | Favorites persist per user, recent shortcuts remain device-local, and internal links reopen the selected asset without a raw Blob URL | ✅ Preview migration plus source/type/build gates; authenticated populated-data proof pending |
 
 ## Change Log
+- 2026-08-27: **Rapid repeat copies in the Guide reader now receive a complete feedback window.** A newer table or code-reference copy cancels the older reset timer, ignores superseded clipboard results, and cleans up pending timers when the control leaves the page. Authenticated local timing proof kept Copied visible 650 ms after a second click made 900 ms after the first, then reset normally with no browser warnings or errors. Guide content, rendering, and permissions are unchanged; focused tests, TypeScript, full lint, and `npm run build:app` pass locally.
+
+- 2026-08-26: **Guide reference copy controls now recover when clipboard access is unavailable.** Code-block and table copy buttons only show Copied after a successful browser write and otherwise keep the reference visible with manual-copy guidance. Guide content, rendering, and read-only permissions are unchanged. Focused source/behavior tests, TypeScript, and lint pass locally; the full build remains blocked by unrelated dirty Trade Board work.
+
+- 2026-08-26: Bug-fix and hardening pass on Brand assets. Fixed: nested folders were unreachable because the folder grid rendered only at the library root; descendant search matched sibling folders that shared a name prefix (`logos` also returned `logos-archive`); the rail's Home button left a subfolder selected and appeared inert; a preview opened from an internal link could not be closed because the pending `?asset=` param immediately reopened it; re-picking the same file in the replacement dialog emptied the queue; and a duplicate-name conflict stalled the rest of a multi-file batch. Hardened: the version number is now assigned inside the finalize transaction, so two replacements prepared at the same time land as consecutive versions instead of the second losing its row to the `(assetId, versionNumber)` unique constraint; duplicate folder names return a named 409 instead of the generic unique-constraint fallback; inline SVG downloads carry a `sandbox` CSP so a hostile upload cannot run script against the signed-in session; `Content-Length` comes from the stored object; expired upload intents are pruned; localStorage recents are validated and quota failures are non-fatal; and row thumbnails/font specimens stop streaming very large originals into a 40px cell. Added: drop-to-upload over the whole folder view, sortable Name/Type/Last-modified column headers, child folders in the navigation rail, and client-side type/size pre-validation before an upload intent is spent. Storage, versioning, permission, and audit contracts are unchanged. Focused source/unit tests, TypeScript, ESLint, and `build:app` pass; unauthenticated route shape re-verified locally (`401`/`405`/`307`). Authenticated populated proof remains open.
+- 2026-08-26: Simplified Brand assets into a Google Drive-style file browser: a desktop folder rail and breadcrumb, a working New/Home/Recent/Starred navigation group, one compact search/filter toolbar, suggested-folder tiles, a unified file table, and overflow row actions. Storage, versioning, permissions, and API contracts are unchanged. Focused source tests, TypeScript, lint, build-app, and clean authenticated desktop browser proof pass; narrow-viewport and remaining populated lifecycle proof remain separate gates.
+- 2026-08-26: Applied the supplied Google Drive screenshot as a structural reference for the Brand assets redesign. The existing Wisconsin Creative shell, theme tokens, brand identity, authenticated file flow, and no-seeding policy remain intact; the review records the source/implementation comparison and intentional product-specific differences.
+- 2026-08-26: Provisioned the dedicated private Vercel Blob store for Brand assets and connected it to the project environments under the separate asset token name. Applied migration `0135_brand_asset_library` to Preview and verified migration health, the authenticated Admin empty-state (`GET /api/resources/assets` returned 200), the one technical root with zero assets/versions/uploads, and an empty private Blob store. No PDF, asset, category folder, or test file was seeded or uploaded; the full upload/replacement/history/audit lifecycle remains open.
+- 2026-08-26: Applied migration `0136_brand_asset_experience` to Preview through the authenticated Neon operator path. Migration health now reports 141/141 local migrations applied with no pending or failed rows; direct read-back confirms one technical root and zero assets, versions, uploads, or favorites. No content was seeded or uploaded.
+- 2026-08-26: Added the Brand assets experience follow-up: server-backed folder-tree search, kind/favorite filters, sort controls, authenticated image/PDF/font previews, version notes, audited restore-as-new-version, multi-file drag/drop upload with progress/retry/duplicate choices, per-user favorites, device-local recents, and authenticated internal links. Migration `0136_brand_asset_experience` adds version-note columns and per-user favorites without seeding any content. Source/type/lint/build gates pass; populated authenticated lifecycle proof remains open.
+- 2026-08-26: Added the additive Brand assets tab and lightweight versioned file library. Private Vercel Blob stores binary files while Prisma/Neon stores user-created folders, stable logical files, immutable versions, and upload intents. Replacements advance the current pointer without deleting History; PDFs can be viewed inline through the authenticated proxy. No PDF, asset, or category-folder records are seeded; the supplied brand guide remains a normal uploadable/viewable file. Local schema/API/UI/source/type/migration gates pass; dedicated private-store provisioning and authenticated upload/replacement/download proof remain open.
 - 2026-08-26: Refined the published Media Drive guide with a network prerequisite callout, a visible server address, clearer Finder labels, bold folder names, a five-step Finder connection sequence, ordered screenshots with captions, keyboard-shortcut tips, and troubleshooting guidance. The guide remains published with no role or area restrictions; authenticated reader rendering and production database read-back confirmed the updated Markdown, and the `resource_updated` audit entry was recorded.
 - 2026-08-26: Resources card interaction polish made guide cards and list rows title-first hero surfaces: previews, visibility/audience labels, author names, and dates are removed from the landing cards while compact type/status cues remain. Whole-card border/shadow and anchor-underline hover states are gone; navigable guides retain a restrained local chevron, contact cards stay quiet, and reference shortcuts retain a subtle action hover. Guide-first IA, URL-backed filtering, permissions, and data contracts are unchanged. Source tests, full lint, TypeScript, migration checks, codemap/docs verification, and build-app passed; authenticated local in-app browser proof covered desktop and 390px rendering with `/api/resources` and `/api/users` returning 200.
 - 2026-08-26: Native iOS Guides now mirrors the title-first landing hierarchy: list rows keep the title with compact type/status cues and no summary, visibility/audience, author, or update-date metadata. Search, filtering, list decoding, and the detail reader remain on the existing read-only Resources contract; focused iOS source-contract tests and the iPhone 16 Pro iOS 26.5 simulator build passed, with native runtime visual acceptance tracked separately.

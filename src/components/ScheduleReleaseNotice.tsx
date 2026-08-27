@@ -8,6 +8,7 @@ import { formatScheduleReleaseCountdown } from "@/lib/schedule-release";
 
 type ScheduleReleaseNoticeProps = {
   hasWorkingCopy?: boolean;
+  eventEndsAt?: string | null;
   autoReleaseAt?: string | null;
   autoReleaseError?: string | null;
   onRefresh?: () => void | Promise<void>;
@@ -15,22 +16,24 @@ type ScheduleReleaseNoticeProps = {
 
 export function ScheduleReleaseNotice({
   hasWorkingCopy = false,
+  eventEndsAt = null,
   autoReleaseAt = null,
   autoReleaseError = null,
   onRefresh,
 }: ScheduleReleaseNoticeProps) {
   const [clock, setClock] = useState(() => Date.now());
+  const eventHasEnded = eventEndsAt ? new Date(eventEndsAt).getTime() <= clock : false;
 
   useEffect(() => {
-    if (!hasWorkingCopy) return;
+    if (!hasWorkingCopy || eventHasEnded) return;
     const timer = window.setInterval(() => {
       setClock(Date.now());
       void onRefresh?.();
     }, 15_000);
     return () => window.clearInterval(timer);
-  }, [hasWorkingCopy, onRefresh]);
+  }, [eventHasEnded, hasWorkingCopy, onRefresh]);
 
-  if (!hasWorkingCopy) return null;
+  if (!hasWorkingCopy || eventHasEnded) return null;
 
   const hasReleaseError = Boolean(autoReleaseError);
 

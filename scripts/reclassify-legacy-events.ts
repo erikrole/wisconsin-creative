@@ -30,6 +30,7 @@ import { PrismaClient } from "@prisma/client";
 
 import { buildVenueSearchText, classifySourceEvent } from "@/lib/schedule-event-identity";
 import { sortVenueMappings, venueMappingMatches } from "@/lib/venue-mapping-contract";
+import { resolvedEventSite } from "@/lib/venue-tone";
 
 const APPLY = process.argv.includes("--apply");
 
@@ -67,7 +68,16 @@ async function main() {
       where: {
         sourceId: { not: null },
         rawSummary: { not: null },
-        startsAt: { lt: BACKFILL_CUTOFF },
+        OR: [
+          { startsAt: { lt: BACKFILL_CUTOFF } },
+          // A locked row with no site is reachable by nobody else. Sync repairs
+          // one only while the game is still in the feed, and a finished game
+          // drops out -- which is exactly when the Scoreboard starts counting
+          // it. The cutoff exists to stop this script fighting sync over rows
+          // sync owns; it does not own a locked row's classification, so these
+          // are pulled in at any date and only ever have `site` staged.
+          { isHomeLocked: true, site: null },
+        ],
       },
       select: {
         id: true, summary: true, rawSummary: true, rawLocationText: true,
@@ -109,15 +119,28 @@ async function main() {
         }
       };
 
-      if (!row.summaryLocked) stage("summary", row.summary, next.summary);
-      if (!row.isHomeLocked) {
+      // Past the cutoff, sync is the owner of everything except a locked
+      // classification, so those rows are here for their missing site alone.
+      const withinCutoff = row.startsAt < BACKFILL_CUTOFF;
+
+      if (withinCutoff && !row.summaryLocked) stage("summary", row.summary, next.summary);
+      if (withinCutoff && !row.isHomeLocked) {
         stage("sportCode", row.sportCode, next.sportCode);
         stage("opponent", row.opponent, next.opponent);
         stage("isHome", row.isHome, next.isHome);
         stage("site", row.site, next.site);
+      } else if (row.site === null) {
+        // A locked row keeps its operator-chosen sport, opponent, and
+        // home/away. It does not get to keep a missing site: `site` was added
+        // after these rows were written, the lock kept every writer away from
+        // them, and the result is a locked neutral game reading as an unknown
+        // one on the Scoreboard while Schedule shows it as neutral. This
+        // records the choice already stored in `isHome` + `opponent`; it never
+        // overrides one.
+        stage("site", row.site, resolvedEventSite(row));
       }
       // Sticky, exactly as sync treats it: set or correct, never erase.
-      if (next.result !== null) stage("result", row.result, next.result);
+      if (withinCutoff && next.result !== null) stage("result", row.result, next.result);
 
       if (changes.length > 0) plan.push({ id: row.id, title: row.summary, changes, data });
     }
@@ -127,8 +150,10 @@ async function main() {
       for (const c of item.changes) byField.set(c.field, (byField.get(c.field) ?? 0) + 1);
     }
 
+    const strandedSites = rows.filter((row) => row.isHomeLocked && row.site === null).length;
     console.log(`Backfill cutoff: events before ${BACKFILL_CUTOFF.toISOString().slice(0, 10)}`);
-    console.log(`Synced rows with stored raw evidence before the cutoff: ${rows.length}`);
+    console.log(`Synced rows with stored raw evidence in scope: ${rows.length}`);
+    console.log(`Locked rows with no site (site repair only, any date): ${strandedSites}`);
     console.log(`Rows needing repair: ${plan.length}\n`);
     console.log("Field changes:");
     for (const [field, count] of [...byField].sort((a, b) => b[1] - a[1])) {

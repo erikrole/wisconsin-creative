@@ -145,24 +145,41 @@ export type BadgeRarityInput = BadgeDisplayInput & {
  * not been available long enough for anyone to reach. Both fall back to rating
  * by difficulty.
  */
-export function getBadgeRarity(badge: BadgeRarityInput, now: Date = new Date()): BadgeRarity {
+export type BadgeRarityDetail = {
+  rarity: BadgeRarity;
+  /**
+   * True when the rating came from the difficulty fallback rather than from
+   * measured scarcity -- nobody holds it yet, or the definition is still inside
+   * the proving period. The word is the same either way, so a surface that
+   * presents rarity as a fact needs this to know when it is a guess.
+   */
+  provisional: boolean;
+};
+
+export function getBadgeRarityDetail(badge: BadgeRarityInput, now: Date = new Date()): BadgeRarityDetail {
   const holders = badge.holders ?? 0;
   const eligible = badge.eligible ?? 0;
 
-  if (holders === 0 || eligible <= 0) return difficultyRarity(badge);
+  if (holders === 0 || eligible <= 0) {
+    return { rarity: difficultyRarity(badge), provisional: true };
+  }
 
   if (badge.createdAt) {
     const created = badge.createdAt instanceof Date ? badge.createdAt : new Date(badge.createdAt);
     if (now.getTime() - created.getTime() < RARITY_PROVING_PERIOD_MS) {
-      return difficultyRarity(badge);
+      return { rarity: difficultyRarity(badge), provisional: true };
     }
   }
 
   const share = holders / eligible;
-  if (share >= 0.5) return "Common";
-  if (share >= 0.2) return "Uncommon";
-  if (share >= 0.05) return "Rare";
-  return "Legendary";
+  if (share >= 0.5) return { rarity: "Common", provisional: false };
+  if (share >= 0.2) return { rarity: "Uncommon", provisional: false };
+  if (share >= 0.05) return { rarity: "Rare", provisional: false };
+  return { rarity: "Legendary", provisional: false };
+}
+
+export function getBadgeRarity(badge: BadgeRarityInput, now: Date = new Date()): BadgeRarity {
+  return getBadgeRarityDetail(badge, now).rarity;
 }
 
 export function badgeRarityVariant(rarity: BadgeRarity): BadgeProps["variant"] {
@@ -172,18 +189,35 @@ export function badgeRarityVariant(rarity: BadgeRarity): BadgeProps["variant"] {
   return "gray";
 }
 
+/**
+ * The disc a badge is drawn on, everywhere it appears.
+ *
+ * One circle for every badge, told apart by rarity — the same medallion iOS
+ * has drawn since July. The web carried four silhouettes (coin, hex, shield,
+ * stack) until 2026-08-27, and they never actually cut a silhouette: the rim,
+ * the rarity ring, and the shadow all belonged to a rounded rect, and the
+ * shape survived only as a faint outline drawn inside it. At the 48-56px the
+ * shelf renders, `hex` was a 48px box at `rounded-[1.35rem]` — a circle. Four
+ * shapes, one appearance, a mapping table and a coverage test to maintain, and
+ * a documented divergence from the native app. What tells a badge apart is its
+ * glyph and its rarity; what tells a *category* apart is the shelf it sits on.
+ *
+ * Earned is a saturated rarity gradient under a white glyph. Locked is a quiet
+ * muted wash under the badge's own dimmed glyph — never a padlock, because a
+ * shelf of identical padlocks says nothing about what is left to earn.
+ */
 export function badgeRarityMedallionClass(rarity: BadgeRarity, earned: boolean): string {
   if (!earned) {
     return "bg-muted text-muted-foreground shadow-[inset_0_0_0_1px_var(--border)]";
   }
   if (rarity === "Legendary") {
-    return "bg-[var(--purple-bg)] text-[var(--purple-text)] shadow-[inset_0_0_0_1px_var(--purple-text),0_0_0_4px_var(--purple-bg)]";
+    return "bg-[linear-gradient(150deg,var(--badge-legendary),var(--badge-legendary-deep))] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.30),0_4px_12px_color-mix(in_oklch,var(--purple-text)_35%,transparent)]";
   }
   if (rarity === "Rare") {
-    return "bg-[var(--orange-bg)] text-[var(--orange-text)] shadow-[inset_0_0_0_1px_var(--orange-text),0_0_0_4px_var(--orange-bg)]";
+    return "bg-[linear-gradient(150deg,var(--badge-rare),var(--badge-rare-deep))] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.30),0_4px_12px_color-mix(in_oklch,var(--orange-text)_35%,transparent)]";
   }
   if (rarity === "Uncommon") {
-    return "bg-[var(--blue-bg)] text-[var(--blue-text)] shadow-[inset_0_0_0_1px_var(--blue-text),0_0_0_4px_var(--blue-bg)]";
+    return "bg-[linear-gradient(150deg,var(--badge-uncommon),var(--badge-uncommon-deep))] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.30),0_4px_12px_color-mix(in_oklch,var(--blue-text)_35%,transparent)]";
   }
-  return "bg-primary/10 text-primary shadow-[inset_0_0_0_1px_var(--primary)]";
+  return "bg-[linear-gradient(150deg,var(--badge-common),var(--badge-common-deep))] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.30),0_4px_12px_color-mix(in_oklch,var(--badge-common)_35%,transparent)]";
 }

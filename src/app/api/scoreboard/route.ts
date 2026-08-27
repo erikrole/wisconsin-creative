@@ -4,17 +4,30 @@ import { HttpError, ok } from "@/lib/http";
 import { requirePermission } from "@/lib/rbac";
 import { normalizeOpponentName, scheduleVenueDisplayName } from "@/lib/schedule-event-identity";
 import { getScoreboardScope } from "@/lib/services/scoreboard";
+import { normalizeSportCode } from "@/lib/sports";
 import { getTeamScoreboard } from "@/lib/services/team-scoreboard";
-import { optionalSportCodeSchema } from "@/lib/validation";
 
 const optionalDimensionSchema = (maximum: number) => z.preprocess(
   (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
   z.string().trim().min(1).max(maximum).optional(),
 );
 
+/**
+ * A sport code that is on record, not one that is currently varsity. Facets are
+ * built from the sport codes the events actually carry, and `sportLabel` still
+ * names retired codes such as `SWIM` and `XC`. Validating against the current
+ * varsity set rejected a code the Scoreboard had just offered, so the filter
+ * snapped back to "All sports" with a 400 the reader never saw. An unknown code
+ * now answers honestly with an empty intersection instead.
+ */
+const storedSportCodeSchema = z.preprocess(
+  (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+  z.string().trim().min(1).max(20).transform(normalizeSportCode).optional(),
+);
+
 const scoreboardQuerySchema = z.object({
   season: z.string().trim().max(20).optional(),
-  sportCode: optionalSportCodeSchema,
+  sportCode: storedSportCodeSchema,
   venue: optionalDimensionSchema(200),
   opponent: optionalDimensionSchema(200),
   site: z.enum(["HOME", "AWAY", "NEUTRAL"]).optional(),

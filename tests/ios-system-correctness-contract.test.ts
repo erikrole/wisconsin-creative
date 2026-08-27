@@ -104,7 +104,10 @@ describe("iOS system correctness request ownership", () => {
     expect(viewModel).toContain("await task.value");
     expect(viewModel).toMatch(/onCancel:\s*\{[\s\S]*?task\.cancel\(\)/);
     expect(viewModel).toContain(
-      "APIClient.shared.calendarEvents(includePast: requestedIncludePast)",
+      "APIClient.shared.allCalendarEvents(includePast: requestedIncludePast)",
+    );
+    expect(viewModel).toContain(
+      "APIClient.shared.allMyShifts()",
     );
     expect(viewModel).toContain(
       "guard loadRequests.owns(requestToken), !Task.isCancelled else { return }",

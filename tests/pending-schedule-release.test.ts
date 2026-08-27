@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   createInitialNotifications: vi.fn(),
   notifyWorkers: vi.fn(),
   notifyFollowers: vi.fn(),
+  onShiftsWorked: vi.fn(),
   recordBulkOutcome: vi.fn(),
 }));
 
@@ -31,6 +32,9 @@ vi.mock("@/lib/services/notifications", () => ({
 vi.mock("@/lib/services/bulk-schedule-assignment", () => ({
   recordBulkScheduleReleaseOutcome: mocks.recordBulkOutcome,
 }));
+vi.mock("@/lib/badges", () => ({
+  badges: { onShiftsWorked: mocks.onShiftsWorked },
+}));
 
 import { releasePendingScheduleVersion } from "@/workflows/pending-schedule-release";
 
@@ -41,6 +45,7 @@ describe("pending schedule release step", () => {
       version: 4,
       updatedById: "staff-1",
       updatedBy: { role: "STAFF" },
+      shiftGroup: { event: { endsAt: new Date("2026-09-01T20:00:00.000Z") } },
     });
   });
 
@@ -87,6 +92,61 @@ describe("pending schedule release step", () => {
       expectedVersion: 4,
       status: "RELEASED",
       releasedVersion: 1,
+    });
+  });
+
+  it("publishes a release that wakes after the event ended without notifying anyone", async () => {
+    mocks.findUnique.mockResolvedValue({
+      version: 4,
+      updatedById: "staff-1",
+      updatedBy: { role: "STAFF" },
+      shiftGroup: { event: { endsAt: new Date("2026-08-01T20:00:00.000Z") } },
+    });
+    mocks.publishShiftGroup.mockResolvedValue({
+      before: { publishedAt: "2026-08-07T12:00:00.000Z" },
+      after: {},
+      publishedSnapshotChanged: true,
+      affectedUserIds: ["student-1"],
+    });
+
+    await expect(releasePendingScheduleVersion("group-1", 4)).resolves.toMatchObject({ status: "released" });
+    expect(mocks.publishShiftGroup).toHaveBeenCalledWith(
+      "group-1",
+      "staff-1",
+      4,
+      "STAFF",
+      { clearNotificationPending: true },
+    );
+    expect(mocks.createInitialNotifications).not.toHaveBeenCalled();
+    expect(mocks.notifyWorkers).not.toHaveBeenCalled();
+    expect(mocks.notifyFollowers).not.toHaveBeenCalled();
+    expect(mocks.onShiftsWorked).toHaveBeenCalledWith({ userId: "student-1" }, { notify: false });
+  });
+
+  it("records a silent ended-event bulk release as released", async () => {
+    mocks.findUnique.mockResolvedValue({
+      version: 4,
+      updatedById: "staff-1",
+      updatedBy: { role: "STAFF" },
+      shiftGroup: { event: { endsAt: new Date("2026-08-01T20:00:00.000Z") } },
+    });
+    mocks.publishShiftGroup.mockResolvedValue({
+      before: { publishedAt: "2026-08-07T12:00:00.000Z" },
+      after: {},
+      workingVersion: 4,
+      publishedSnapshotChanged: true,
+      affectedUserIds: ["student-1"],
+    });
+
+    await expect(releasePendingScheduleVersion("group-1", 4, "batch-1")).resolves.toMatchObject({ status: "released" });
+    expect(mocks.notifyFollowers).not.toHaveBeenCalled();
+    expect(mocks.onShiftsWorked).toHaveBeenCalledWith({ userId: "student-1" }, { notify: false });
+    expect(mocks.recordBulkOutcome).toHaveBeenCalledWith({
+      batchId: "batch-1",
+      shiftGroupId: "group-1",
+      expectedVersion: 4,
+      status: "RELEASED",
+      releasedVersion: 4,
     });
   });
 

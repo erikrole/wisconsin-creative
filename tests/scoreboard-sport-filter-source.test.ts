@@ -16,7 +16,9 @@ describe("profile Scoreboard sport filter", () => {
     expect(service).toContain("if (filters.sportCode) where.sportCode = filters.sportCode;");
 
     expect(tab).toContain("const [sportOptions, setSportOptions] = useState<SportOption[]>([]);");
-    expect(tab).toContain("const isUnfiltered = resultFilter === \"all\" && sportFilter === \"all\";");
+    expect(tab).toContain(
+      "const isUnfiltered = resultFilter === \"all\" && sportFilter === \"all\" && siteFilter === \"all\";",
+    );
     // Only a settled, unfiltered response may replace the held list.
     expect(tab).toContain("if (!data || !isUnfiltered || loading || refreshing) return;");
     // The dropdown must never be built from whatever the current response holds.
@@ -38,10 +40,23 @@ describe("profile Scoreboard sport filter", () => {
     expect(tab).toContain("requestUrlRef.current !== requestUrl");
     expect(tab).toContain("mergeScoreboardEvents(");
     expect(tab).toContain("extraEvents.nextCursor !== undefined");
-    expect(tab).toContain("Couldn’t load more games");
+    expect(tab).toContain("Couldn’t load more events");
     expect(tab).toContain('loading={loadingMore}');
     expect(tab).toContain('value="WIN" className="h-10 text-xs"');
     expect(tab).toContain('className="h-10 w-[190px] text-xs"');
+  });
+
+  it("filters by site from a fixed option set rather than a response echo", () => {
+    // Home, away, and neutral are complete and never change, so the control
+    // does not need the held-options dance the sport picker needs.
+    expect(service).toContain("if (filters.site) where.site = filters.site;");
+    expect(tab).toContain('const [siteFilter, setSiteFilter] = useState<SiteFilter>("all");');
+    expect(tab).toContain('params.set("site", siteFilter)');
+    expect(tab).toContain('aria-label="Filter scoreboard site"');
+    // A cleared stack has to clear every dimension, or the empty state offers
+    // to clear filters that stay on.
+    const clear = tab.slice(tab.indexOf("const clearFilters = useCallback"));
+    expect(clear.slice(0, clear.indexOf("}, []);"))).toContain('setSiteFilter("all")');
   });
 
   it("keeps web record bars in W-L-T order", () => {

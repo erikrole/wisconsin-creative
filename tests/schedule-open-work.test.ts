@@ -8,6 +8,7 @@ vi.mock("@/lib/db", () => {
     shift: { findUnique: vi.fn() },
     shiftAssignment: {
       findFirst: vi.fn(),
+      findMany: vi.fn(),
       findUnique: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
@@ -46,6 +47,7 @@ const mockDb = db as unknown as {
     shift: { findUnique: ReturnType<typeof vi.fn> };
     shiftAssignment: {
       findFirst: ReturnType<typeof vi.fn>;
+      findMany: ReturnType<typeof vi.fn>;
       findUnique: ReturnType<typeof vi.fn>;
       create: ReturnType<typeof vi.fn>;
       update: ReturnType<typeof vi.fn>;
@@ -67,6 +69,7 @@ function baseEvent() {
     sportCode: "football",
     opponent: "Iowa",
     isHome: true,
+    allDay: false,
     isHidden: false,
     archivedAt: null,
     status: "CONFIRMED",
@@ -116,9 +119,11 @@ beforeEach(() => {
   mockDb._mockTx.user.findUnique.mockReset();
   mockDb._mockTx.shiftAssignment.findUnique.mockReset();
   mockDb._mockTx.shiftAssignment.findFirst.mockReset();
+  mockDb._mockTx.shiftAssignment.findMany.mockReset();
   mockDb._mockTx.shiftAssignment.create.mockReset();
   mockDb._mockTx.shiftAssignment.update.mockReset();
   mockDb._mockTx.shiftAssignment.updateMany.mockReset();
+  mockDb._mockTx.shiftAssignment.findMany.mockResolvedValue([]);
   mockDb._mockTx.auditLog.create.mockReset();
   mockDb._mockTx.auditLog.create.mockResolvedValue({});
   mockDb._mockTx.shiftAssignment.updateMany.mockResolvedValue({ count: 0 });
@@ -143,6 +148,7 @@ describe("schedule open work", () => {
             OR: [
               { callStartsAt: null, startsAt: { gt: now } },
               { callStartsAt: { gt: now } },
+              { shiftGroup: { event: { allDay: true, startsAt: { gt: now } } } },
             ],
           },
         ],
@@ -180,12 +186,34 @@ describe("schedule open work", () => {
             OR: [
               { callStartsAt: null, startsAt: { gt: now } },
               { callStartsAt: { gt: now } },
+              { shiftGroup: { event: { allDay: true, startsAt: { gt: now } } } },
             ],
           },
         ],
       }),
       orderBy: { startsAt: "asc" },
     }));
+  });
+
+  it("returns the full pending-request review payload only to Admin", async () => {
+    mockDb.user.findUnique.mockResolvedValue(activeStudent());
+    mockDb.shift.findMany.mockResolvedValue([]);
+    mockDb.shiftAssignment.findMany.mockResolvedValue([]);
+
+    await getScheduleOpenWork({ userId: "staff-1", role: "STAFF", now });
+    const staffRequestQuery = mockDb.shiftAssignment.findMany.mock.calls
+      .map(([query]) => query)
+      .find((query) => query.where?.status === "REQUESTED");
+    expect(staffRequestQuery).toEqual(expect.objectContaining({
+      where: expect.objectContaining({ status: "REQUESTED", userId: "staff-1" }),
+    }));
+
+    mockDb.shiftAssignment.findMany.mockClear();
+    await getScheduleOpenWork({ userId: "admin-1", role: "ADMIN", now });
+    const adminRequestQuery = mockDb.shiftAssignment.findMany.mock.calls
+      .map(([query]) => query)
+      .find((query) => query.where?.status === "REQUESTED");
+    expect(adminRequestQuery?.where).not.toHaveProperty("userId");
   });
 
   it("does not present malformed Staff slots as student-pickup actions", async () => {
@@ -337,9 +365,7 @@ describe("schedule open work", () => {
     mockDb._mockTx.shift.findUnique.mockResolvedValue(baseShift());
     mockDb._mockTx.user.findUnique.mockResolvedValue(activeStudent());
     // No active assignment, but this student already has one waiting.
-    mockDb._mockTx.shiftAssignment.findFirst
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({ id: "existing-request" });
+    mockDb._mockTx.shiftAssignment.findFirst.mockResolvedValue({ id: "existing-request" });
 
     await expect(pickupOpenShift("shift-1", "student-1")).rejects.toThrow(
       "already have a request waiting"
@@ -380,6 +406,48 @@ describe("schedule open work", () => {
     mockDb._mockTx.user.findUnique.mockResolvedValue(activeStudent());
 
     await expect(pickupOpenShift("shift-1", "student-1")).rejects.toThrow("This shift has already started");
+    expect(mockDb._mockTx.shiftAssignment.create).not.toHaveBeenCalled();
+  });
+
+  it("uses the canonical all-day event window when rejecting pickup conflicts", async () => {
+    const eventStartsAt = new Date("2026-09-05T00:00:00Z");
+    const eventEndsAt = new Date("2026-09-06T00:00:00Z");
+    mockDb._mockTx.shift.findUnique.mockResolvedValue(baseShift({
+      startsAt: new Date("2026-09-05T18:00:00Z"),
+      endsAt: new Date("2026-09-05T19:00:00Z"),
+      shiftGroup: {
+        id: "group-1",
+        publishedAt: new Date("2026-09-01T10:00:00Z"),
+        archivedAt: null,
+        event: {
+          ...baseEvent(),
+          startsAt: eventStartsAt,
+          endsAt: eventEndsAt,
+          allDay: true,
+        },
+      },
+    }));
+    mockDb._mockTx.user.findUnique.mockResolvedValue(activeStudent());
+    mockDb._mockTx.shiftAssignment.findMany.mockResolvedValue([{
+      id: "existing-assignment",
+      callStartsAt: null,
+      callEndsAt: null,
+      shift: {
+        area: "PHOTO",
+        startsAt: new Date("2026-09-05T02:00:00Z"),
+        endsAt: new Date("2026-09-05T03:00:00Z"),
+        callStartsAt: null,
+        callEndsAt: null,
+        shiftGroup: {
+          event: { startsAt: eventStartsAt, endsAt: eventEndsAt, allDay: true },
+        },
+      },
+    }]);
+    mockDb._mockTx.shiftAssignment.findFirst.mockResolvedValue(null);
+
+    await expect(pickupOpenShift("shift-1", "student-1")).rejects.toThrow(
+      "User already has a shift during this time (PHOTO)"
+    );
     expect(mockDb._mockTx.shiftAssignment.create).not.toHaveBeenCalled();
   });
 

@@ -106,6 +106,25 @@ export const GET = withAuth(async (req, { user }) => {
     activeTrades.map((t) => [t.shiftAssignmentId, { id: t.id, status: t.status }]),
   );
 
+  // The list deliberately includes only active assignments, but a student
+  // still needs to know whether their own pending request already exists. Keep
+  // that queue private to the caller and batch it across the loaded groups so
+  // both Schedule disclosure rows and Event detail can render one honest claim
+  // state without exposing other students' requests.
+  const shiftIds = groups.flatMap((g) => g.shifts.map((s) => s.id));
+  const viewerRequests = shiftIds.length > 0
+    ? await db.shiftAssignment.findMany({
+        where: { shiftId: { in: shiftIds }, userId: user.id, status: "REQUESTED" },
+        select: { id: true, shiftId: true, status: true, hasConflict: true, conflictNote: true },
+      })
+    : [];
+  const viewerRequestByShiftId = new Map(viewerRequests.map((request) => [request.shiftId, {
+    id: request.id,
+    status: request.status,
+    hasConflict: request.hasConflict,
+    conflictNote: request.conflictNote,
+  }]));
+
   // Add coverage summary
   const data = groups.map((g) => {
     const totalShifts = g.shifts.length;
@@ -126,6 +145,7 @@ export const GET = withAuth(async (req, { user }) => {
       workingCopy: undefined,
       shifts: g.shifts.map((s) => ({
         ...s,
+        viewerRequest: viewerRequestByShiftId.get(s.id) ?? null,
         assignments: s.assignments.map((a) => ({
           ...a,
           activeTrade: tradeByAssignmentId.get(a.id) ?? null,

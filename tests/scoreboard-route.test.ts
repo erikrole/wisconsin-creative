@@ -83,7 +83,7 @@ describe("GET /api/users/[id]/scoreboard", () => {
     expect(mocks.requirePermission).toHaveBeenCalledWith("ADMIN", "scoreboard", "view");
     expect(mocks.getScoreboardForUser).toHaveBeenCalledWith(
       "target-1",
-      { sportCode: "normalized-SB", result: "WIN" },
+      { sportCode: "normalized-SB", result: "WIN", site: undefined },
       { limit: 25, offset: 4 },
     );
     await expect(response.json()).resolves.toEqual({ data: { summary: { wins: 1, losses: 0 } } });
@@ -95,7 +95,7 @@ describe("GET /api/users/[id]/scoreboard", () => {
     expect(response.status).toBe(200);
     expect(mocks.getScoreboardForUser).toHaveBeenCalledWith(
       "target-1",
-      { sportCode: undefined, result: "TIE" },
+      { sportCode: undefined, result: "TIE", site: undefined },
       { limit: 25, offset: 4 },
     );
   });
@@ -107,7 +107,7 @@ describe("GET /api/users/[id]/scoreboard", () => {
     expect(mocks.getScoreboardScope).toHaveBeenCalledWith(undefined);
     expect(mocks.getScoreboardForUser).toHaveBeenCalledWith(
       "target-1",
-      { sportCode: undefined, result: undefined },
+      { sportCode: undefined, result: undefined, site: undefined },
       { limit: 25, offset: 4 },
     );
   });

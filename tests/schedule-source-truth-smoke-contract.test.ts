@@ -78,7 +78,7 @@ describe("schedule source-of-truth and browser smoke contracts", () => {
     expect(hook).toContain('searchParams.get("queue")');
     expect(hook).toContain('params.set("queue", queue)');
     expect(hook).toContain("filterEntriesForScheduleQueue");
-    expect(page).toContain('initialStatusFilter={data.filters.queue === "trade-approval" ? "CLAIMED" : undefined}');
+    expect(page).toContain('initialStatusFilter={canReviewClaims && data.filters.queue === "trade-approval" ? "CLAIMED" : undefined}');
     expect(readiness).toContain("<ScheduleChangePreview");
     expect(readiness).toContain('setPreviewFilter("assignee")');
     expect(changePreview).toContain("Open event");
@@ -157,7 +157,7 @@ describe("schedule source-of-truth and browser smoke contracts", () => {
     expect(tradeBoard).toContain("OpenWorkShift");
     expect(tradeBoard).toContain("/api/schedule/open-work");
     expect(tradeBoard).toContain("Claim shift");
-    expect(tradeBoard).toContain("Request sent for staff approval");
+    expect(tradeBoard).toContain("Request sent for Admin approval");
 
     expect(listView).not.toContain("Reserve gear");
     expect(listView).not.toContain("/reservations/new?");

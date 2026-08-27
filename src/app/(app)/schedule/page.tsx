@@ -70,6 +70,7 @@ export default function SchedulePage() {
 function InternalSchedulePage() {
   const data = useScheduleData();
   const isStaff = data.currentUserRole === "STAFF" || data.currentUserRole === "ADMIN";
+  const canReviewClaims = data.currentUserRole === "ADMIN";
   const { loadData, setExpandedRowId, setTradeSheetOpen } = data;
   const { queue, setQueue } = data.filters;
   const hidingRef = useRef<Set<string>>(new Set());
@@ -170,9 +171,10 @@ function InternalSchedulePage() {
   }, [setTradeSheetOpen]);
 
   const showQueue = useCallback((nextQueue: NonNullable<typeof queue>) => {
+    if (!canReviewClaims && (nextQueue === "pending-requests" || nextQueue === "trade-approval")) return;
     setQueue(nextQueue);
     if (nextQueue === "trade-approval") setTradeSheetOpen(true);
-  }, [setQueue, setTradeSheetOpen]);
+  }, [canReviewClaims, setQueue, setTradeSheetOpen]);
 
   const buildExportHref = useCallback((type: (typeof SCHEDULE_EXPORTS)[number]["type"]) => {
     const params = new URLSearchParams({ type });
@@ -211,8 +213,12 @@ function InternalSchedulePage() {
   }, [data.calMonth, data.filters.includeArchived, data.filters.sportFilter, data.filters.viewMode, data.weekStart]);
 
   useEffect(() => {
+    if (!canReviewClaims && (queue === "pending-requests" || queue === "trade-approval")) {
+      setQueue(null);
+      return;
+    }
     if (queue === "trade-approval") setTradeSheetOpen(true);
-  }, [queue, setTradeSheetOpen]);
+  }, [canReviewClaims, queue, setQueue, setTradeSheetOpen]);
 
   /**
    * Publish the sticky frame's height so the list can position against it.
@@ -360,6 +366,7 @@ function InternalSchedulePage() {
         sourceSignal={data.sourceSignal}
         digest={data.scheduleAutomation}
         isStaff={isStaff}
+        canReviewClaims={canReviewClaims}
         onShowQueue={showQueue}
         onOpenTradeBoard={openTradeBoard}
       />
@@ -457,7 +464,9 @@ function InternalSchedulePage() {
           <SheetHeader>
             <SheetTitle>Trade Board</SheetTitle>
             <SheetDescription>
-              Review, claim, approve, decline, or cancel posted shift trades.
+              {canReviewClaims
+                ? "Review and manage posted shift trades and open Student slots."
+                : "View and manage available shifts and posted trades."}
             </SheetDescription>
           </SheetHeader>
           <SheetBody>
@@ -465,7 +474,7 @@ function InternalSchedulePage() {
               <TradeBoard
                 currentUserId={data.currentUserId}
                 currentUserRole={data.currentUserRole}
-                initialStatusFilter={data.filters.queue === "trade-approval" ? "CLAIMED" : undefined}
+                initialStatusFilter={canReviewClaims && data.filters.queue === "trade-approval" ? "CLAIMED" : undefined}
               />
             )}
           </SheetBody>

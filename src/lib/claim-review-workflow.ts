@@ -8,7 +8,7 @@ import { pendingClaimReviewWorkflow, type PendingClaimKind } from "@/workflows/p
  * Deliberately best-effort, unlike `enqueuePendingScheduleRelease`, which fails
  * its request when the timer will not start. The difference is what a missing
  * run costs: there, staff edits stay invisible forever; here, the claim is
- * already recorded and visible in the staff queue, and the only loss is the
+ * already recorded and visible in the Admin queue, and the only loss is the
  * automatic nudge. Rejecting the claim would be the worse outcome.
  */
 export async function enqueuePendingClaimReview(args: {

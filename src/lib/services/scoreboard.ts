@@ -29,6 +29,7 @@ export type ScoreboardSite = CalendarEventSite | null;
 export type ScoreboardFilters = {
   sportCode?: string;
   result?: ScoreboardResult;
+  site?: CalendarEventSite;
 };
 
 export type ScoreboardBucket = {
@@ -43,9 +44,10 @@ export type ScoreboardBucket = {
 
 export type ScoreboardEvent = {
   id: string;
+  summary: string;
   startsAt: string;
   allDay: boolean;
-  result: ScoreboardResult;
+  result: ScoreboardResult | null;
   sportCode: string | null;
   sportLabel: string | null;
   opponent: string | null;
@@ -75,6 +77,7 @@ export type UserScoreboard = {
   bySite: ScoreboardBucket[];
   byVenue: ScoreboardBucket[];
   events: ScoreboardEvent[];
+  eventCount: number;
   nextCursor: string | null;
 };
 
@@ -167,8 +170,9 @@ export function scoreboardEventWhere(
 ): Prisma.CalendarEventWhereInput {
   const where: Prisma.CalendarEventWhereInput = {
     ...OFFICIAL_RECORD_EVENT_EXCLUSION,
-    result: filters.result ?? { not: null },
+    ...(filters.result ? { result: filters.result } : {}),
     startsAt: { gte: SCOREBOARD_SCOPE.startsAt, lt: SCOREBOARD_SCOPE.endsAt },
+    endsAt: { lt: new Date() },
     status: { not: "CANCELLED" },
     isHidden: false,
     archivedAt: null,
@@ -178,6 +182,11 @@ export function scoreboardEventWhere(
   };
 
   if (filters.sportCode) where.sportCode = filters.sportCode;
+  // Home, away, and neutral are already a breakdown row here. Filtering by one
+  // is the question that row invites -- "how do I do on the road" -- and it
+  // narrows the record, the breakdowns, and the game list together, exactly as
+  // sport and result do.
+  if (filters.site) where.site = filters.site;
   return where;
 }
 
@@ -196,7 +205,7 @@ export async function getScoreboardForUser(
     startsAt: SCOREBOARD_SCOPE.startsAt,
     endsAt: SCOREBOARD_SCOPE.endsAt,
   };
-  const [grouped, eventRows, eventsWorked] = await Promise.all([
+  const [grouped, eventRows, eventCount, eventsWorked] = await Promise.all([
     db.calendarEvent.groupBy({
       by: ["result", "sportCode", "site", "opponent", "rawLocationText"],
       where,
@@ -209,6 +218,7 @@ export async function getScoreboardForUser(
       take: page.limit + 1,
       select: {
         id: true,
+        summary: true,
         startsAt: true,
         allDay: true,
         result: true,
@@ -230,6 +240,7 @@ export async function getScoreboardForUser(
         },
       },
     }),
+    db.calendarEvent.count({ where }),
     getWorkedEventCountForUser(userId, eventBounds),
   ]);
 
@@ -242,6 +253,9 @@ export async function getScoreboardForUser(
   let ties = 0;
 
   for (const row of grouped) {
+    // Result-less worked events belong in the event list and work total, not
+    // in the official W/L/T record or its dimensional breakdowns.
+    if (row.result === null) continue;
     const count = row._count._all;
     if (row.result === "WIN") wins += count;
     if (row.result === "LOSS") losses += count;
@@ -256,9 +270,10 @@ export async function getScoreboardForUser(
   const hasMore = eventRows.length > page.limit;
   const events = eventRows.slice(0, page.limit).map((event): ScoreboardEvent => ({
     id: event.id,
+    summary: event.summary,
     startsAt: event.startsAt.toISOString(),
     allDay: event.allDay,
-    result: event.result as ScoreboardResult,
+    result: event.result as ScoreboardResult | null,
     sportCode: event.sportCode,
     sportLabel: event.sportCode ? sportLabel(event.sportCode) : null,
     opponent: trimmedOrNull(event.opponent),
@@ -281,6 +296,7 @@ export async function getScoreboardForUser(
     bySite: finishBuckets(bySite, "site"),
     byVenue: finishBuckets(byVenue, "venue"),
     events,
+    eventCount,
     nextCursor: hasMore ? String(page.offset + page.limit) : null,
   };
 }

@@ -45,9 +45,15 @@ describe("badge display metadata", () => {
   });
 
   it("maps rarity to medallion classes", () => {
-    expect(badgeRarityMedallionClass("Legendary", true)).toContain("--purple-bg");
-    expect(badgeRarityMedallionClass("Rare", true)).toContain("--orange-bg");
+    // Earned is a rarity gradient carrying a white glyph; the tokens are the
+    // disc palette, not the semantic text/background pair, because they are
+    // picked for contrast against white. Locked is the muted wash.
+    expect(badgeRarityMedallionClass("Legendary", true)).toContain("--badge-legendary");
+    expect(badgeRarityMedallionClass("Rare", true)).toContain("--badge-rare");
+    expect(badgeRarityMedallionClass("Uncommon", true)).toContain("--badge-uncommon");
+    expect(badgeRarityMedallionClass("Common", true)).toContain("--badge-common");
     expect(badgeRarityMedallionClass("Common", false)).toContain("text-muted-foreground");
+    expect(badgeRarityMedallionClass("Common", false)).not.toContain("--badge-common");
   });
 
   it("formats enum-style report labels for operators", () => {

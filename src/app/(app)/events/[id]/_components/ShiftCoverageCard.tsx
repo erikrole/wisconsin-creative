@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
 import { CallWindowEditor } from "@/components/shift-detail/CallWindowEditor";
 import { ScheduleReleaseNotice } from "@/components/ScheduleReleaseNotice";
+import { ClaimShiftAction } from "@/components/ClaimShiftAction";
 import { WorkingCrewEditor, type WorkingCrewEntry } from "@/app/(app)/schedule/_components/WorkingCrewEditor";
 import type { ShiftGroupSummary, CommandCenterData } from "../_utils";
 import { AREA_LABELS } from "../_utils";
@@ -44,6 +45,7 @@ type Props = {
     eventParam: string;
   };
   eventAllDay?: boolean;
+  eventEndsAt: string;
   onNudge: (assignmentId: string, userName: string) => void;
   onUpdated?: () => void;
 };
@@ -51,10 +53,12 @@ type Props = {
 export function ShiftCoverageCard({
   shiftGroup,
   commandCenter,
+  currentUserId,
   currentUserRole,
   acting,
   linkParams,
   eventAllDay = false,
+  eventEndsAt,
   onNudge,
   onUpdated,
 }: Props) {
@@ -168,6 +172,7 @@ export function ShiftCoverageCard({
           <TableHead className="w-24">Type</TableHead>
           <TableHead>Person</TableHead>
           <TableHead className="w-32">Status</TableHead>
+          {!isStaffOrAdmin && <TableHead className="w-36 text-right">Action</TableHead>}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -181,7 +186,7 @@ export function ShiftCoverageCard({
           return [
             // Area sub-header
             <TableRow key={`header-${area}`} striped={false} className="border-b-0 bg-transparent hover:bg-transparent">
-              <TableCell colSpan={4} className="pt-5 pb-1.5">
+              <TableCell colSpan={isStaffOrAdmin ? 4 : 5} className="pt-5 pb-1.5">
                 <CrewAreaHeading
                   area={area}
                   filled={filledInArea}
@@ -223,13 +228,27 @@ export function ShiftCoverageCard({
                   <TableCell className="py-2.5">
                     {renderStatus(shift, activeAssignment, pendingRequests)}
                   </TableCell>
+                  {!isStaffOrAdmin && (
+                    <TableCell className="py-2.5 text-right">
+                      <ClaimShiftAction
+                        shiftId={shift.id}
+                        workerType={shift.workerType}
+                        startsAt={shift.startsAt}
+                        isAssigned={Boolean(activeAssignment)}
+                        viewerRequest={shift.viewerRequest}
+                        canClaim={currentUserRole === "STUDENT" && Boolean(currentUserId)}
+                        isPublished={Boolean(publication?.publishedAt)}
+                        onChanged={onUpdated}
+                      />
+                    </TableCell>
+                  )}
                 </TableRow>
               );
             }),
             // Empty area placeholder
             ...(shifts.length === 0 ? [
               <TableRow key={`empty-${area}`} striped={false} className="border-border/40">
-                  <TableCell colSpan={4} className="py-3 text-sm text-muted-foreground">
+                  <TableCell colSpan={isStaffOrAdmin ? 4 : 5} className="py-3 text-sm text-muted-foreground">
                   No {areaLabel(area).toLowerCase()} slots yet.
                 </TableCell>
               </TableRow>
@@ -261,6 +280,7 @@ export function ShiftCoverageCard({
         {isStaffOrAdmin && (
           <ScheduleReleaseNotice
             hasWorkingCopy={shiftGroup.hasWorkingCopy}
+            eventEndsAt={eventEndsAt}
             autoReleaseAt={shiftGroup.autoReleaseAt}
             autoReleaseError={shiftGroup.autoReleaseError}
             onRefresh={onUpdated}

@@ -670,7 +670,7 @@ function shiftScheduleNotificationCopy(args: {
       return {
         type: "shift_request_pending",
         title: "Shift request sent",
-        body: `Your request for the ${args.area} ${role} slot for ${args.eventTitle} is waiting for staff approval. You're not on the schedule until it's approved.${timing}${note}`,
+        body: `Your request for the ${args.area} ${role} slot for ${args.eventTitle} is waiting for Admin approval. You're not on the schedule until it's approved.${timing}${note}`,
       };
     case "approved":
       return {
@@ -895,7 +895,7 @@ export async function dispatchScheduleAssignmentNotifications(
 }
 
 /**
- * Tell staff a student is waiting on a decision for an open slot. Runs after
+ * Tell admins a student is waiting on a decision for an open slot. Runs after
  * the request commits; the per-reviewer dedupe key makes a retry idempotent.
  */
 export async function notifyPickupRequestReviewers(assignmentId: string): Promise<void> {
@@ -918,7 +918,7 @@ export async function notifyPickupRequestReviewers(assignmentId: string): Promis
   if (!assignment?.shift.shiftGroup.publishedAt) return;
 
   const reviewers = await db.user.findMany({
-    where: visibleActiveUserWhere({ role: { in: ["ADMIN", "STAFF"] } }),
+    where: visibleActiveUserWhere({ role: "ADMIN" }),
     select: { id: true },
   });
   if (reviewers.length === 0) return;

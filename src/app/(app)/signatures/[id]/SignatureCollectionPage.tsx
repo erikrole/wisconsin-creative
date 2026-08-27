@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Archive, CheckCircle2, ChevronDown, Download, FilePenLine, History, LockKeyhole, Pencil, RefreshCw, RotateCcw, Settings2, ShieldCheck, Trash2, UserRound, UsersRound } from "lucide-react";
+import { Archive, CheckCircle2, ChevronDown, Download, FilePenLine, History, LockKeyhole, RefreshCw, RotateCcw, Settings2, ShieldCheck, Trash2, UserRound, UsersRound } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { useBreadcrumbLabel } from "@/components/BreadcrumbContext";
 import { FadeUp } from "@/components/ui/motion";
@@ -34,7 +34,6 @@ import {
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import EmptyState from "@/components/EmptyState";
 import { OperationalRowActions } from "@/components/OperationalRowActions";
-import { SignatureAthleteProfileForm, type SignatureAthleteProfileValues } from "@/components/signatures/SignatureAthleteProfileForm";
 import { SignaturePenPreview } from "@/components/signatures/SignaturePenPreview";
 import { useFetch } from "@/hooks/use-fetch";
 import { handleAuthRedirect, parseErrorMessage } from "@/lib/errors";
@@ -65,8 +64,6 @@ type Member = {
   revisions?: Array<{ id: string; revision: number; width: number; height: number; committedAt: string | null; replacedAt: string | null }>;
   revisionCount?: number;
   revisionHistoryTruncated?: boolean;
-  athleteProfile: SignatureAthleteProfileValues | null;
-  athleteProfileComplete: boolean;
 };
 
 type Collection = {
@@ -142,8 +139,6 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
   const [settings, setSettings] = useState<Collection["penSettings"] | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [previewMember, setPreviewMember] = useState<Member | null>(null);
-  const [profileMember, setProfileMember] = useState<Member | null>(null);
-  const [profileSaving, setProfileSaving] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<Member["roleGroup"]>>(new Set());
   const [isIpad, setIsIpad] = useState(false);
   const isCreativeStaffRoster = collection?.sportCode === SIGNATURE_CREATIVE_STAFF_SPORT_CODE;
@@ -229,25 +224,6 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
       toast.success(`${member.name} is now ${member.required ? "optional" : "required"}`);
     } catch (requestError) {
       toast.error(requestError instanceof Error ? requestError.message : "Required state was not changed");
-    }
-  }
-
-  async function saveAthleteProfile(values: { birthday: string; hometown: string; instagramHandle: string; tiktokHandle: string; xHandle: string }) {
-    if (!collection || !profileMember) return;
-    setProfileSaving(true);
-    try {
-      await mutate(`/api/signatures/collections/${collection.id}/members/${profileMember.id}/profile`, "PATCH", {
-        expectedCollectionVersion: collection.collectionVersion,
-        ...values,
-      });
-      setProfileMember(null);
-      await invalidateSignatureCollectionCaches(queryClient, collection.id);
-      reload();
-      toast.success(`${profileMember.name}'s website profile saved`);
-    } catch (requestError) {
-      toast.error(requestError instanceof Error ? requestError.message : "Athlete profile was not saved");
-    } finally {
-      setProfileSaving(false);
     }
   }
 
@@ -385,8 +361,7 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
                      {section.members.map((member) => {
                        const priorRevisions = (member.revisions ?? []).filter((revision) => revision.id !== member.artifact?.id);
                        const canChangeRequirement = Boolean(isAdmin && collection.status === "OPEN" && member.roleGroup !== "PLAYER");
-                       const canEditProfile = member.roleGroup === "PLAYER" && Boolean(member.artifact) && collection.status === "OPEN";
-                       const showRowActions = Boolean(member.artifact || priorRevisions.length > 0 || canChangeRequirement || canEditProfile);
+                       const showRowActions = Boolean(member.artifact || priorRevisions.length > 0 || canChangeRequirement);
                        return (
                          <div
                            key={member.id}
@@ -420,7 +395,7 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
                                    </span>
                                  )}
                                </div>
-                               {!isCreativeStaffRoster && <span className="block max-w-full truncate whitespace-nowrap text-xs leading-4 text-muted-foreground" title={member.title || roleLabel(member.roleGroup)}>{member.title || roleLabel(member.roleGroup)}{member.roleGroup === "PLAYER" && member.artifact && !member.athleteProfileComplete ? " · Profile needed" : ""}</span>}
+                               {!isCreativeStaffRoster && <span className="block max-w-full truncate whitespace-nowrap text-xs leading-4 text-muted-foreground" title={member.title || roleLabel(member.roleGroup)}>{member.title || roleLabel(member.roleGroup)}</span>}
                              </div>
                            </div>
 
@@ -445,7 +420,6 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
                            <div className="flex items-center justify-center">
                              {showRowActions && (
                                <OperationalRowActions label={`Actions for ${member.name}'s signature`} triggerClassName="size-11">
-                                 {canEditProfile && <DropdownMenuItem onSelect={() => setProfileMember(member)}><Pencil />Edit athlete profile</DropdownMenuItem>}
                                  {member.artifact && collection.status === "OPEN" && (isIpad ? (
                                    <DropdownMenuItem asChild>
                                      <Link href={`/signatures/${collection.id}/capture/${member.id}`}><FilePenLine />Replace signature</Link>
@@ -580,22 +554,6 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
         </DialogContent>
       </Dialog>
 
-      <Dialog open={Boolean(profileMember)} onOpenChange={(open) => { if (!open && !profileSaving) setProfileMember(null); }}>
-        <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{profileMember?.name} website profile</DialogTitle>
-            <DialogDescription>These details are used for the student-athlete website listing.</DialogDescription>
-          </DialogHeader>
-          <DialogBody>
-            {profileMember && <SignatureAthleteProfileForm
-              initialValues={profileMember.athleteProfile ?? { birthday: null, hometown: null, instagramHandle: null, tiktokHandle: null, xHandle: null }}
-              busy={profileSaving}
-              onSubmit={saveAthleteProfile}
-              onCancel={() => setProfileMember(null)}
-            />}
-          </DialogBody>
-        </DialogContent>
-      </Dialog>
     </FadeUp>
   );
 }

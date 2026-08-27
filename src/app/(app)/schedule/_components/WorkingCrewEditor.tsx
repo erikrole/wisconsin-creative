@@ -65,6 +65,8 @@ type EditorData = {
   workingVersion: number;
   hasWorkingCopy: boolean;
   allDay: boolean;
+  eventStartsAt: string;
+  eventEndsAt: string;
   defaultWindow: { startsAt: string; endsAt: string };
   changes: {
     addedSlots: number;
@@ -653,6 +655,7 @@ export function WorkingCrewEditor({
   const replacementUsers = replacementTarget
     ? availableUsersForSlot(replacementTarget.workerType)
     : [];
+  const eventHasEnded = new Date(data.eventEndsAt).getTime() <= Date.now();
 
   return (
     <div className="flex flex-col gap-2">
@@ -661,13 +664,13 @@ export function WorkingCrewEditor({
         || compact
         || (!data.allDay && data.schedule.slots.some((slot) => slot.workerType === "ST"))) && (
         <div className="flex min-h-10 flex-wrap items-center gap-2 pb-1">
-          {showReleaseCountdown && data.hasWorkingCopy && data.autoReleaseAt && !data.autoReleaseError && (
+          {showReleaseCountdown && !eventHasEnded && data.hasWorkingCopy && data.autoReleaseAt && !data.autoReleaseError && (
             <span className="text-xs text-muted-foreground">{formatNotificationCountdown(data.autoReleaseAt, clock)}</span>
           )}
-          {showReleaseCountdown && data.hasWorkingCopy && !data.autoReleaseAt && !data.autoReleaseError && (
+          {showReleaseCountdown && !eventHasEnded && data.hasWorkingCopy && !data.autoReleaseAt && !data.autoReleaseError && (
             <span className="text-xs text-muted-foreground">Assignees notified after this change is released</span>
           )}
-          {showReleaseCountdown && data.autoReleaseError && (
+          {showReleaseCountdown && !eventHasEnded && data.autoReleaseError && (
             <span className="text-xs text-destructive">Release needs attention: {data.autoReleaseError}</span>
           )}
           <div className="ml-0 flex w-full flex-wrap items-center gap-1.5 sm:ml-auto sm:w-auto">

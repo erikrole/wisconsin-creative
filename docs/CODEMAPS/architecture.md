@@ -11,10 +11,10 @@ Gear Tracker is a Next.js App Router application with a companion native iOS app
 |---|---:|
 | App pages | 88 |
 | App layouts | 7 |
-| API route handlers | 301 |
+| API route handlers | 309 |
 | Service files | 75 |
-| Component files | 148 |
-| Test files | 562 |
+| Component files | 151 |
+| Test files | 572 |
 
 ## Oversized Source Watchlist
 
@@ -22,26 +22,26 @@ Informational only. These are the largest TypeScript and TSX files under `src/`;
 
 | File | Lines |
 |---|---:|
-| `src/lib/services/signatures.ts` | 2212 |
+| `src/lib/services/signatures.ts` | 1986 |
 | `src/lib/services/bookings-lifecycle.ts` | 2160 |
 | `src/lib/services/reports.ts` | 1932 |
-| `src/components/TradeBoard.tsx` | 1714 |
+| `src/components/resources/BrandAssetLibrary.tsx` | 1827 |
+| `src/components/TradeBoard.tsx` | 1793 |
 | `src/lib/services/notifications.ts` | 1631 |
-| `src/app/(app)/items/[id]/ItemInfoTab.tsx` | 1587 |
-| `src/app/(app)/schedule/_components/ListView.tsx` | 1537 |
-| `src/app/(app)/users/[id]/UserInfoTab.tsx` | 1442 |
-| `src/app/(app)/resources/page.tsx` | 1390 |
+| `src/app/(app)/items/[id]/ItemInfoTab.tsx` | 1609 |
+| `src/app/(app)/schedule/_components/ListView.tsx` | 1566 |
+| `src/app/(app)/users/[id]/UserInfoTab.tsx` | 1450 |
+| `src/app/(app)/resources/page.tsx` | 1425 |
 | `src/components/ActivityTimeline.tsx` | 1368 |
 | `src/app/(app)/bulk-inventory/batteries/page.tsx` | 1341 |
-| `src/lib/services/shift-trades.ts` | 1255 |
+| `src/lib/services/shift-trades.ts` | 1316 |
 | `src/app/api/assets/route.ts` | 1227 |
-| `src/app/(app)/users/[id]/page.tsx` | 1118 |
+| `src/app/(app)/users/[id]/page.tsx` | 1127 |
 | `src/app/(app)/accountability/AccountabilityClient.tsx` | 1065 |
-| `src/lib/services/schedule-publication.ts` | 1019 |
-| `src/app/(app)/schedule/_components/WorkingCrewEditor.tsx` | 997 |
+| `src/app/(app)/users/[id]/UserBadgesTab.tsx` | 1050 |
+| `src/lib/services/schedule-publication.ts` | 1028 |
+| `src/app/(app)/schedule/_components/WorkingCrewEditor.tsx` | 1000 |
 | `src/components/onboarding/OnboardingDialog.tsx` | 996 |
-| `src/app/(app)/events/[id]/page.tsx` | 978 |
-| `src/app/(app)/kits/[id]/page.tsx` | 977 |
 
 ## High-Level Data Flow
 

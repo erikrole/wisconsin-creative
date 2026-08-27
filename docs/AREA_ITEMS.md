@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Items
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-23
+- Last Updated: 2026-08-27
 - Status: Active
 - Version: V1
 
@@ -124,6 +124,7 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 ### Pagination
 1. Show `Showing X to Y of Z`.
 2. Rows per page defaults to 25.
+3. Search, filters, sort, page, and rows-per-page are URL-backed and rehydrate after item-detail navigation or browser Back.
 
 ## Create Item Surface (V1)
 
@@ -435,6 +436,11 @@ Item families can optionally enable `trackByNumber` on the backing `BulkSku` imp
 
 ## Change Log
 
+- 2026-08-27: **Repeated item copies now keep the latest feedback authoritative.** Link, QR-dialog, and QR/serial identity copy controls cancel the older reset timer, ignore superseded clipboard results, and clear pending timers when the control leaves the page. A second success receives its full copied-state window instead of being cleared early by the first click. Item identity, QR generation, permissions, and data contracts are unchanged. Focused tests, TypeScript, full lint, and `npm run build:app` pass locally; populated Item browser proof remains separate.
+
+- 2026-08-26: **Item identity and links now report copy failures honestly.** Link, QR, and QR/serial identity controls only enter their copied state after the browser accepts the write and show visible-value manual-copy recovery when clipboard access is unavailable. Item identity, QR generation, permissions, and data contracts are unchanged. Focused source/behavior tests, TypeScript, and lint pass locally; the full build remains blocked by unrelated dirty Trade Board work.
+
+- 2026-08-26: **Items list context now survives Item detail navigation.** Search, filters, sort, page, and rows-per-page continue to share one query string, and their updates now go through the App Router so browser Back returns to the same result set instead of the default full Items list. No item API, pagination, permission, or detail behavior changed.
 - 2026-08-23: **Items list now opens on Most popular, and select-all matching follows the visible kind.** `/items` defaults to the existing popularity sort from recent checkout, reservation, and scan usage. Clearing a column sort snaps back to Most popular instead of falling through to Asset tag. The clean `/items` URL means Most popular; choosing Asset tag writes `sort=assetTag`. Select all matching now sends `item_type` and includes item-family ids.
 
 - 2026-08-23: **Omitted `/api/assets` sort and native Items now match web Most popular.** Callers that leave `sort` off `/api/assets` receive the same popularity ranking as `/items`. Native Items opens on Most popular, treats that sort as the resting toolbar state, and still offers Asset tag. Dedicated picker-search stays asset-tag ordered so category lists remain scannable.

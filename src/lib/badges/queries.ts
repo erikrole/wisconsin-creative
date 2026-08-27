@@ -5,7 +5,7 @@ import type { AuthUser } from "@/lib/auth";
 import { HttpError } from "@/lib/http";
 import { normalizePrefs } from "@/lib/services/notification-prefs";
 import { ON_TIME_GRACE_MS } from "./types";
-import { getBadgeRarity } from "./display";
+import { getBadgeRarityDetail } from "./display";
 import {
   automaticCheckoutRuleKeys,
   automaticMeasuredRuleKeys,
@@ -60,7 +60,10 @@ export type EarnedBadge = {
   description: string;
   icon: string;
   category: string;
-  rarity: ReturnType<typeof getBadgeRarity>;
+  kind: string;
+  trigger: string;
+  source: string;
+  rarity: ReturnType<typeof getBadgeRarityDetail>["rarity"];
   awardedAt: string;
 };
 
@@ -91,6 +94,7 @@ export async function listEarnedBadgesSince(args: {
     select: {
       id: true,
       awardedAt: true,
+      source: true,
       definition: {
         select: {
           id: true,
@@ -114,7 +118,7 @@ export async function listEarnedBadgesSince(args: {
   const [holderCounts, eligibleUsers] = await Promise.all([
     db.studentBadge.groupBy({
       by: ["definitionId"],
-      where: { definitionId: { in: definitionIds } },
+      where: { definitionId: { in: definitionIds }, user: { active: true } },
       _count: { userId: true },
     }),
     db.user.count({ where: { active: true } }),
@@ -131,7 +135,10 @@ export async function listEarnedBadgesSince(args: {
     description: award.definition.description,
     icon: award.definition.icon,
     category: award.definition.category,
-    rarity: getBadgeRarity({
+    kind: award.definition.kind,
+    trigger: award.definition.trigger,
+    source: award.source,
+    rarity: getBadgeRarityDetail({
       key: award.definition.key,
       category: award.definition.category,
       kind: award.definition.kind,
@@ -140,7 +147,7 @@ export async function listEarnedBadgesSince(args: {
       holders: holdersByDefinition.get(award.definition.id) ?? 0,
       eligible: eligibleUsers,
       createdAt: award.definition.createdAt,
-    }),
+    }).rarity,
     awardedAt: award.awardedAt.toISOString(),
   }));
 }
@@ -561,8 +568,12 @@ export async function getUserBadgeProfile(viewer: AuthUser, userId: string) {
     definitions = await loadDefinitions();
   }
 
+  // Holders are counted among the same population `eligibleUsers` measures.
+  // Counting every award while dividing by the active roster let a badge held
+  // mostly by departed students report a share above 1.0 and read as Common.
   const holderCounts = await db.studentBadge.groupBy({
     by: ["definitionId"],
+    where: { user: { active: true } },
     _count: { userId: true },
   });
   const holdersByDefinition = new Map(holderCounts.map((row) => [row.definitionId, row._count.userId]));
@@ -570,8 +581,22 @@ export async function getUserBadgeProfile(viewer: AuthUser, userId: string) {
   const badges = definitions.map((definition) => {
     const award = definition.awards[0] ?? null;
     const progress = progressByKey.get(definition.key) ?? null;
+    const rarityDetail = getBadgeRarityDetail({
+      key: definition.key,
+      category: definition.category,
+      kind: definition.kind,
+      trigger: definition.trigger,
+      threshold: definition.threshold,
+      holders: holdersByDefinition.get(definition.id) ?? 0,
+      eligible: eligibleUsers,
+      createdAt: definition.createdAt,
+    });
     return {
       id: definition.id,
+      // The award row's own id, which is what `DELETE /api/badges/award/[id]`
+      // resolves. The tab used to send `definition.id` here, so every revoke
+      // looked up a `StudentBadge` by a `BadgeDefinition` id and 404'd.
+      awardId: award?.id ?? null,
       key: definition.key,
       name: definition.name,
       description: definition.description,
@@ -593,16 +618,11 @@ export async function getUserBadgeProfile(viewer: AuthUser, userId: string) {
       // Served, not derived on each client. Web and iOS had their own copies of
       // a hardcoded rarity table, which is how they were free to disagree.
       holders: holdersByDefinition.get(definition.id) ?? 0,
-      rarity: getBadgeRarity({
-        key: definition.key,
-        category: definition.category,
-        kind: definition.kind,
-        trigger: definition.trigger,
-        threshold: definition.threshold,
-        holders: holdersByDefinition.get(definition.id) ?? 0,
-        eligible: eligibleUsers,
-        createdAt: definition.createdAt,
-      }),
+      rarity: rarityDetail.rarity,
+      // A rating from the difficulty fallback is a guess, not a measurement.
+      // Without this the client shows "Legendary" identically whether one
+      // person in forty holds it or nobody has had the chance yet.
+      rarityProvisional: rarityDetail.provisional,
     };
   });
 

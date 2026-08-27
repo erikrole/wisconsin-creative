@@ -197,6 +197,12 @@ export default function AppShell({
   const [overdueBadgeCount, setOverdueBadgeCount] = useState(0);
   const [dueTodayBadgeCount, setDueTodayBadgeCount] = useState(0);
   const [earnedBadgeQueue, setEarnedBadgeQueue] = useState<EarnedBadgeReward[]>([]);
+  // The reward poll needs the current path only to build an auth return URL. Held
+  // in a ref so it cannot sit in the effect's dependency list: `pathname` there
+  // tore the poll down and re-bootstrapped it on every client-side navigation,
+  // which re-POSTed the app-open easter-egg event and reset the 15s interval.
+  const rewardPathRef = useRef(pathname);
+  rewardPathRef.current = pathname;
 
   useEffect(() => {
     if (!isLoading && !user) router.replace("/login");
@@ -208,10 +214,11 @@ export default function AppShell({
     if (!allowed) router.replace("/");
   }, [isCollaborator, pathname, router, user]);
 
+  const rewardUserId = user?.role === "COLLABORATOR" ? null : user?.id ?? null;
   useEffect(() => {
-    if (!user || user.role === "COLLABORATOR" || isRolePreview) return;
+    if (!rewardUserId || isRolePreview) return;
 
-    const cursorKey = `gear-tracker:badge-reward-cursor:${user.id}`;
+    const cursorKey = `gear-tracker:badge-reward-cursor:${rewardUserId}`;
     let stopped = false;
     let loading = false;
     let memoryCursor: string | null = null;
@@ -234,7 +241,7 @@ export default function AppShell({
           try { localStorage.removeItem(cursorKey); } catch { /* storage unavailable */ }
           return;
         }
-        if (handleAuthRedirect(response, pathname) || !response.ok || stopped) return;
+        if (handleAuthRedirect(response, rewardPathRef.current) || !response.ok || stopped) return;
 
         const json = await parseJsonSafely<RecentBadgeAwardsResponse>(response);
         const nextCursor = json?.data?.nextCursor;
@@ -297,7 +304,9 @@ export default function AppShell({
       window.clearInterval(interval);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [isRolePreview, pathname, user]);
+    // Deliberately keyed on identity alone. An app open is a foreground event,
+    // not a navigation, and this effect owns a POST with a durable side effect.
+  }, [isRolePreview, rewardUserId]);
 
   // Badge counts — refresh on navigation so counts stay fresh after user actions
   useEffect(() => {

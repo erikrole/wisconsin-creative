@@ -23,7 +23,7 @@
 | `src/lib/services/bulk-schedule-assignment.ts` | 745 |
 | `src/lib/services/bulk-unit-scans.ts` | 617 |
 | `src/lib/services/calendar-sync-health.ts` | 165 |
-| `src/lib/services/calendar-sync.ts` | 728 |
+| `src/lib/services/calendar-sync.ts` | 734 |
 | `src/lib/services/candidate-scoring.ts` | 438 |
 | `src/lib/services/category-mutations.ts` | 168 |
 | `src/lib/services/checkout-policies.ts` | 40 |
@@ -36,7 +36,7 @@
 | `src/lib/services/event-defaults.ts` | 69 |
 | `src/lib/services/event-worker.ts` | 125 |
 | `src/lib/services/firmware-watch.ts` | 299 |
-| `src/lib/services/game-record.ts` | 161 |
+| `src/lib/services/game-record.ts` | 171 |
 | `src/lib/services/hidden-users-cleanup.ts` | 122 |
 | `src/lib/services/kiosk-checkout-complete.ts` | 90 |
 | `src/lib/services/kiosk-location.ts` | 72 |
@@ -63,21 +63,21 @@
 | `src/lib/services/schedule-notification-diff.ts` | 197 |
 | `src/lib/services/schedule-notification-flush.ts` | 175 |
 | `src/lib/services/schedule-notification-policy.ts` | 138 |
-| `src/lib/services/schedule-open-work.ts` | 524 |
-| `src/lib/services/schedule-publication.ts` | 1019 |
+| `src/lib/services/schedule-open-work.ts` | 545 |
+| `src/lib/services/schedule-publication.ts` | 1028 |
 | `src/lib/services/schedule-template-review.ts` | 554 |
-| `src/lib/services/schedule-working-copy.ts` | 914 |
-| `src/lib/services/scoreboard.ts` | 287 |
+| `src/lib/services/schedule-working-copy.ts` | 928 |
+| `src/lib/services/scoreboard.ts` | 303 |
 | `src/lib/services/shift-assignment-conflicts.ts` | 43 |
-| `src/lib/services/shift-assignments.ts` | 734 |
+| `src/lib/services/shift-assignments.ts` | 676 |
 | `src/lib/services/shift-generation.ts` | 628 |
 | `src/lib/services/shift-trade-emails.ts` | 56 |
-| `src/lib/services/shift-trades.ts` | 1255 |
-| `src/lib/services/signatures.ts` | 2212 |
+| `src/lib/services/shift-trades.ts` | 1316 |
+| `src/lib/services/signatures.ts` | 1986 |
 | `src/lib/services/software.ts` | 271 |
 | `src/lib/services/sport-configs.ts` | 257 |
 | `src/lib/services/status.ts` | 444 |
-| `src/lib/services/team-scoreboard.ts` | 572 |
+| `src/lib/services/team-scoreboard.ts` | 613 |
 | `src/lib/services/usage-analytics-report.ts` | 33 |
 | `src/lib/services/user-deactivation.ts` | 386 |
 
@@ -123,6 +123,7 @@
 | `src/lib/checkout-notification-workflow.ts` | 24 |
 | `src/lib/claim-review-deadlines.ts` | 52 |
 | `src/lib/claim-review-workflow.ts` | 41 |
+| `src/lib/clipboard.ts` | 19 |
 | `src/lib/collaborator-access.ts` | 164 |
 | `src/lib/collaborator-gear.ts` | 151 |
 | `src/lib/companion-projection-contract.ts` | 68 |
@@ -133,7 +134,7 @@
 | `src/lib/db.ts` | 18 |
 | `src/lib/editor-snippets.ts` | 28 |
 | `src/lib/email.ts` | 129 |
-| `src/lib/env.ts` | 108 |
+| `src/lib/env.ts` | 112 |
 | `src/lib/equipment-guidance.ts` | 133 |
 | `src/lib/equipment-section-filters.ts` | 87 |
 | `src/lib/equipment-sections.ts` | 200 |
@@ -164,7 +165,7 @@
 | `src/lib/ops-checks.ts` | 176 |
 | `src/lib/passkey-client.ts` | 73 |
 | `src/lib/passkey.ts` | 371 |
-| `src/lib/permissions.ts` | 220 |
+| `src/lib/permissions.ts` | 221 |
 | `src/lib/profile-completion-events.ts` | 6 |
 | `src/lib/profile-completion.ts` | 157 |
 | `src/lib/profile-phone.ts` | 44 |
@@ -176,6 +177,9 @@
 | `src/lib/rbac.ts` | 59 |
 | `src/lib/remark-callouts.ts` | 73 |
 | `src/lib/request-limits.ts` | 16 |
+| `src/lib/resource-assets-client.ts` | 20 |
+| `src/lib/resource-assets-storage.ts` | 75 |
+| `src/lib/resource-assets.ts` | 865 |
 | `src/lib/resource-search.ts` | 124 |
 | `src/lib/role-preview.ts` | 226 |
 | `src/lib/sanitize.ts` | 40 |
@@ -194,9 +198,10 @@
 | `src/lib/schedule-queues.ts` | 185 |
 | `src/lib/schedule-release.ts` | 16 |
 | `src/lib/schedule-template-review-types.ts` | 105 |
+| `src/lib/schedule-window.ts` | 152 |
 | `src/lib/schedule-working-copy-guard.ts` | 20 |
 | `src/lib/schedule-working-copy.ts` | 424 |
-| `src/lib/scoreboard-digest.ts` | 171 |
+| `src/lib/scoreboard-digest.ts` | 172 |
 | `src/lib/search-pages.ts` | 78 |
 | `src/lib/search-result-title.ts` | 13 |
 | `src/lib/serialization.ts` | 47 |
@@ -224,7 +229,7 @@
 | `src/lib/validation.ts` | 803 |
 | `src/lib/venue-mapping-audit.ts` | 56 |
 | `src/lib/venue-mapping-contract.ts` | 46 |
-| `src/lib/venue-tone.ts` | 114 |
+| `src/lib/venue-tone.ts` | 135 |
 | `src/lib/webmcp-tools.ts` | 504 |
 
 ## API Route Groups
@@ -574,6 +579,14 @@
 ### `/api/resources`
 
 - `/api/resources/[id]`
+- `/api/resources/assets/[id]/download`
+- `/api/resources/assets/[id]/favorite`
+- `/api/resources/assets/[id]/restore`
+- `/api/resources/assets/[id]`
+- `/api/resources/assets/complete`
+- `/api/resources/assets/folders`
+- `/api/resources/assets`
+- `/api/resources/assets/upload-token`
 - `/api/resources`
 - `/api/resources/upload-image`
 
@@ -663,7 +676,6 @@
 - `/api/signatures/collections/[id]/capture/[memberId]`
 - `/api/signatures/collections/[id]/creative-staff`
 - `/api/signatures/collections/[id]/download`
-- `/api/signatures/collections/[id]/members/[memberId]/profile`
 - `/api/signatures/collections/[id]/members/[memberId]/required`
 - `/api/signatures/collections/[id]/members/[memberId]`
 - `/api/signatures/collections/[id]/reset`

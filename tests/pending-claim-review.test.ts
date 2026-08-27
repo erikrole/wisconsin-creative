@@ -147,6 +147,21 @@ describe("pending claim review steps", () => {
     );
   });
 
+  it("stays quiet when the claim was resolved between the check and the approval", async () => {
+    // Staff decided in the gap, or a second run for a re-claimed post got there
+    // first. Reporting "could not be approved" then sends reviewers back to a
+    // queue with nothing in it.
+    mocks.tradeFindUnique
+      .mockResolvedValueOnce({ status: "CLAIMED" })
+      .mockResolvedValueOnce({ status: "COMPLETED" });
+    mocks.approveTrade.mockRejectedValue(new HttpError(400, "Only claimed trades can be approved"));
+
+    await expect(autoApprovePendingClaimStep("trade", "trade-1")).resolves.toMatchObject({
+      status: "superseded",
+    });
+    expect(mocks.report).not.toHaveBeenCalled();
+  });
+
   it("rethrows an unexpected failure instead of silently dropping the claim", async () => {
     mocks.approveTrade.mockRejectedValue(new Error("database is on fire"));
 

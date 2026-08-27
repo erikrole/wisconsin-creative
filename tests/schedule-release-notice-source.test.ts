@@ -12,6 +12,7 @@ describe("schedule release notification notice", () => {
 
     expect(notice).toContain("formatScheduleReleaseCountdown");
     expect(notice).toContain("hasWorkingCopy");
+    expect(notice).toContain("eventEndsAt");
     expect(notice).toContain("autoReleaseAt");
     expect(notice).toContain("autoReleaseError");
     expect(notice).toContain("Each new edit restarts the timer");
@@ -36,6 +37,7 @@ describe("schedule release notification notice", () => {
     for (const consumer of [eventCrew, shiftPanel]) {
       expect(consumer).toContain("<ScheduleReleaseNotice");
       expect(consumer).toContain("hasWorkingCopy=");
+      expect(consumer).toContain("eventEndsAt=");
       expect(consumer).toContain("autoReleaseAt=");
       expect(consumer).toContain("autoReleaseError=");
     }

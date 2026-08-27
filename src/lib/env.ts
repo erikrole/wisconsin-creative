@@ -67,6 +67,10 @@ export const env = {
   get blobReadWriteToken() {
     return process.env.BLOB_READ_WRITE_TOKEN || "";
   },
+  /** Optional — required for authenticated Brand assets uploads/downloads. */
+  get resourceAssetBlobReadWriteToken() {
+    return process.env.RESOURCE_ASSET_BLOB_READ_WRITE_TOKEN || "";
+  },
   /** Optional. Enables Brave-backed product image search */
   get braveSearchApiKey() {
     return process.env.BRAVE_SEARCH_API_KEY || "";

@@ -394,3 +394,50 @@ final class StudentBookingsScreenshotUITests: XCTestCase {
         add(screenshot)
     }
 }
+
+/// Captures the Trade Board review queue as staff. The fixture holds two claims
+/// whose shifts fall on different days but whose posts share a timestamp, so the
+/// order the rows land in is decided entirely by how the queue sorts them.
+@MainActor
+final class TradeBoardReviewScreenshotUITests: XCTestCase {
+    override func setUpWithError() throws {
+        continueAfterFailure = false
+    }
+
+    func testStaffReviewQueueCaptures() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "tradeBoardStaff"
+        app.launch()
+
+        XCTAssertTrue(app.navigationBars["Trade Board"].waitForExistence(timeout: 20),
+                      "Trade Board never rendered")
+        // Wait on fixture rows, not the section chrome: the queue header renders
+        // before the trades arrive.
+        XCTAssertTrue(app.staticTexts["Staff Review"].waitForExistence(timeout: 15),
+                      "Review queue never appeared")
+        XCTAssertTrue(app.staticTexts["football vs Minnesota"].waitForExistence(timeout: 15),
+                      "Fixture claims never loaded")
+
+        attach(app, name: "trade-board-staff-review")
+    }
+
+    func testStudentWaitingStateCaptures() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "tradeBoardStudent"
+        app.launch()
+
+        XCTAssertTrue(app.navigationBars["Trade Board"].waitForExistence(timeout: 20),
+                      "Trade Board never rendered")
+        XCTAssertTrue(app.staticTexts["Waiting on Staff"].waitForExistence(timeout: 15),
+                      "Waiting section never appeared")
+
+        attach(app, name: "trade-board-student-waiting")
+    }
+
+    private func attach(_ app: XCUIApplication, name: String) {
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = name
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+    }
+}

@@ -51,6 +51,19 @@ describe("native Scoreboard wiring", () => {
     expect(client).toContain('.init(name: "offset", value: "\\(offset)")');
   });
 
+  it("offers the same site filter the web profile Scoreboard offers", () => {
+    const client = source("ios/Wisconsin/Core/APIClient.swift");
+    const view = source("ios/Wisconsin/Views/ScoreboardView.swift");
+
+    expect(client).toContain("site: String? = nil");
+    expect(view).toContain("enum ScoreboardSiteFilter: String");
+    expect(view).toContain("@State private var siteFilter: ScoreboardSiteFilter = .all");
+    // A changed site has to re-key the load, or the screen keeps the old games.
+    expect(view).toContain('"\\(userId)|\\(resultFilter.rawValue)|\\(sportCode ?? "all")|\\(siteFilter.rawValue)"');
+    expect(view).toContain("resultFilter != .all || sportCode != nil || siteFilter != .all");
+    expect(view).toContain("site: siteFilter.apiValue");
+  });
+
   it("exposes the same read-only screen from both native profile surfaces", () => {
     expect(source("ios/Wisconsin/Views/ProfileView.swift")).toContain("ScoreboardView(userId: userId)");
     expect(source("ios/Wisconsin/Views/UserDetailView.swift")).toContain("ScoreboardLinkCard(userId: detail.id)");
@@ -97,8 +110,8 @@ describe("native Scoreboard wiring", () => {
     expect(models).toContain("static func streak(");
     expect(models).toContain("var highlights: [ScoreboardHighlight]");
     // A run of one is not a streak, and a tie run must not merge with losses.
-    expect(models).toContain("let run = games.prefix { $0.result == first.result }.count");
-    expect(models).toContain("ScoreboardStreak(count: run, result: first.result");
+    expect(models).toContain("let run = resolved.prefix { $0.result == result }.count");
+    expect(models).toContain("ScoreboardStreak(count: run, result: result");
   });
 
   it("says what a filtered view covers next to the numbers it qualifies", () => {

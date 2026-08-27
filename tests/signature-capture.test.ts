@@ -8,7 +8,7 @@ import { buildSignatureDraft, isFreshSignatureDraft, signatureDraftKey, signatur
 import { renderSignatureArtifacts, SIGNATURE_PNG_MIN_WIDTH } from "@/lib/signatures/artifacts";
 import { buildSignatureCurve, buildSignatureSvg, resolveSignatureExportSize, resolveSignatureStrokeWidth, signaturePathData, SIGNATURE_STROKE_SCALE_MIN } from "@/lib/signatures/geometry";
 import { acceptsSignaturePointer, appendCoalescedPointerEvents } from "@/lib/signatures/pointer";
-import { captureSaveRequestSchema, DEFAULT_SIGNATURE_PEN_SETTINGS, isRequiredSignatureGroup, SIGNATURE_IMPORTED_SPORT_CODES, SIGNATURE_SPORT_REGISTRY, signatureAdHocMemberSchema, signatureAthleteProfileSchema, signatureCollectionTitle, signatureCollectionVersionSchema, signatureRosterEntrySchema } from "@/lib/signatures/types";
+import { captureSaveRequestSchema, DEFAULT_SIGNATURE_PEN_SETTINGS, isRequiredSignatureGroup, SIGNATURE_IMPORTED_SPORT_CODES, SIGNATURE_SPORT_REGISTRY, signatureAdHocMemberSchema, signatureCollectionTitle, signatureCollectionVersionSchema, signatureRosterEntrySchema } from "@/lib/signatures/types";
 import { compareSignatureRosterMembers } from "@/lib/signatures/roster";
 import { buildUWBadgersRosterUrl, fetchUWBadgersRoster, isAllowedUWBadgersUrl, normalizedRosterHash, parseUWBadgersRosterHtml } from "@/lib/signatures/uwbadgers";
 
@@ -152,6 +152,15 @@ describe("signature input and draft contracts", () => {
     expect(source).toContain("Couldn’t load this signer");
     expect(source).toContain(">Retry</Button>");
     expect(source).toContain("invalidateSignatureCollectionCaches");
+    expect(source).toContain("setSaveSucceeded(true)");
+    expect(source).toContain('window.matchMedia("(prefers-reduced-motion: reduce)")');
+    expect(source).toContain("motion-safe:animate-in");
+    expect(source).toContain("router.replace(`/signatures/${collection.id}`)");
+    expect(source).toContain("if (committed)");
+    expect(source).toContain("Signature saved. Return to the roster to continue.");
+    expect(source).toContain("disabled={saveSucceeded || saving || drawing || strokes.length === 0}");
+    expect(source).not.toContain("SignatureAthleteProfileForm");
+    expect(source).not.toContain("/profile");
   });
 
   it("BUG: reads the nested capture bootstrap before checking collection state", () => {
@@ -432,29 +441,7 @@ describe("signature roster presentation", () => {
     expect(() => signatureAdHocMemberSchema.parse({ season: "2026", name: "", category: "" })).toThrow();
   });
 
-  it("validates the student-athlete website profile contract", () => {
-    expect(signatureAthleteProfileSchema.parse({
-      expectedCollectionVersion: 4,
-      birthday: "2004-02-29",
-      hometown: "Madison, WI",
-      instagramHandle: "@badger",
-      tiktokHandle: "court.star",
-      xHandle: "",
-    })).toEqual({
-      expectedCollectionVersion: 4,
-      birthday: "2004-02-29",
-      hometown: "Madison, WI",
-      instagramHandle: "badger",
-      tiktokHandle: "court.star",
-      xHandle: null,
-    });
-    expect(() => signatureAthleteProfileSchema.parse({
-      expectedCollectionVersion: 4,
-      birthday: "2003-02-29",
-      hometown: "Madison, WI",
-      instagramHandle: "https://instagram.com/badger",
-    })).toThrow();
-
+  it("keeps optional roster hometown metadata backward compatible", () => {
     expect(signatureRosterEntrySchema.parse({
       sourceExternalId: "100",
       sourceProfileUrl: "https://uwbadgers.com/sports/mens-basketball/roster/alpha-player/100",
@@ -471,8 +458,6 @@ describe("signature roster presentation", () => {
       "src/app/(app)/signatures/[id]/SignatureCollectionPage.tsx",
       "utf8",
     );
-    const profileFormSource = readFileSync("src/components/signatures/SignatureAthleteProfileForm.tsx", "utf8");
-
     expect(source).toContain("grid h-16 grid-cols-");
     expect(source).toContain('<span className="text-center">Signature</span>');
     expect(source).toContain('className="flex items-center justify-center"');
@@ -506,11 +491,10 @@ describe("signature roster presentation", () => {
     expect(source).toContain("Capture on iPad");
     expect(source).toContain("Capture can only be done on an iPad with an Apple Pencil.");
     expect(source).toContain("disabled");
-    expect(source).toContain("SignatureAthleteProfileForm");
-    expect(source).toContain("member.roleGroup === \"PLAYER\"");
-    expect(source).toContain("/profile");
-    expect(profileFormSource).toContain('autoComplete="address-level2"');
-    expect(profileFormSource).toContain("official roster pre-fills this value");
+    expect(source).not.toContain("SignatureAthleteProfileForm");
+    expect(source).not.toContain("Profile needed");
+    expect(source).not.toContain("Edit athlete profile");
+    expect(source).not.toContain("/profile");
     expect(source).not.toContain("syncCreativeStaff");
     expect(source).toContain("<AlertDialogTitle>Reset every captured signature?</AlertDialogTitle>");
     expect(source).toContain("/png?download=1");
@@ -554,10 +538,10 @@ describe("signature roster presentation", () => {
     expect(detailSource).toContain('PLAYER: { label: "Student-Athletes"');
     expect(detailSource).toContain('COACHING_STAFF: { label: "Coaching Staff"');
     expect(detailSource).toContain('SUPPORT_STAFF: { label: "Support Staff"');
-    expect(detailSource).toContain("Edit athlete profile");
-    expect(detailSource).toContain("Profile needed");
-    expect(detailSource).toContain("SignatureAthleteProfileForm");
-    expect(detailSource).toContain("/profile");
+    expect(detailSource).not.toContain("Edit athlete profile");
+    expect(detailSource).not.toContain("Profile needed");
+    expect(detailSource).not.toContain("SignatureAthleteProfileForm");
+    expect(detailSource).not.toContain("/profile");
     expect(detailSource).toContain('className="h-11 sm:min-w-40"');
     expect(landingSource).toContain("automaticSyncAttempt");
     expect(landingSource).toContain("/creative-staff");
@@ -714,6 +698,6 @@ describe("signature permissions", () => {
     expect(getAllowedRoles("signature", "delete")).toEqual(["ADMIN"]);
     expect(getAllowedRoles("signature", "download")).not.toContain("STUDENT");
     expect(getAllowedRoles("signature", "download")).not.toContain("COLLABORATOR");
-    expect(getAllowedRoles("signature", "profile")).toEqual(["ADMIN", "STAFF"]);
+    expect(() => getAllowedRoles("signature", "profile")).toThrow("No permission defined for signature.profile");
   });
 });

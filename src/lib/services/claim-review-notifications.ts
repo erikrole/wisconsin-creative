@@ -84,7 +84,7 @@ async function notifyReviewers(args: {
   body: string;
 }) {
   const reviewers = await db.user.findMany({
-    where: visibleActiveUserWhere({ role: { in: ["ADMIN", "STAFF"] } }),
+    where: visibleActiveUserWhere({ role: "ADMIN" }),
     select: { id: true },
   });
   if (reviewers.length === 0) return;
@@ -146,7 +146,7 @@ export async function escalatePendingClaim(kind: PendingClaimKind, claimId: stri
 
 /**
  * Report what the deadline did. An auto-approval that nobody is told about is a
- * schedule change staff did not make and cannot see.
+ * schedule change reviewers did not make and cannot see.
  */
 export async function reportPendingClaimAutoApproval(
   kind: PendingClaimKind,

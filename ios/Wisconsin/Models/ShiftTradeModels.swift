@@ -43,6 +43,9 @@ struct ShiftTradeShift: Codable {
     let callStartsAt: Date?
     let callEndsAt: Date?
     let shiftGroup: ShiftTradeGroup?
+
+    var effectiveStartsAt: Date { callStartsAt ?? startsAt }
+    var effectiveEndsAt: Date { callEndsAt ?? endsAt }
 }
 
 struct ShiftTradeGroup: Codable {
@@ -69,7 +72,14 @@ struct ShiftTradeEvent: Codable {
 struct ShiftTradeAssignment: Codable {
     let id: String
     let shift: ShiftTradeShift
+    /// The worker's personal call window, when one is set. It takes precedence
+    /// over the slot's own call window everywhere the server decides staleness
+    /// or a review deadline, so anything ordering by urgency needs it too.
+    let callStartsAt: Date?
+    let callEndsAt: Date?
     let user: ShiftTradeUser
+
+    var effectiveStartsAt: Date { callStartsAt ?? shift.effectiveStartsAt }
 }
 
 struct ShiftAvailabilityContext: Codable, Hashable {

@@ -45,7 +45,7 @@ export const SCHEDULE_QUEUE_META: Record<ScheduleQueue, ScheduleQueueMeta> = {
     label: "Trade approval",
     shortLabel: "Trade approval",
     emptyTitle: "No trade approvals",
-    emptyDescription: "There are no claimed trades waiting for staff review.",
+    emptyDescription: "There are no claimed trades waiting for Admin review.",
   },
   "gear-gaps": {
     label: "Gear gaps",

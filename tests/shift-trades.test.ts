@@ -12,7 +12,8 @@ type ShiftTradesTx = {
 type ShiftTradesDb = {
   _mockTx: ShiftTradesTx;
   $transaction: MockFn;
-  shiftTrade: Record<"findMany" | "count", MockFn>;
+  shiftTrade: Record<"findMany" | "count" | "updateMany", MockFn>;
+  notification: Record<"createMany", MockFn>;
   user: Record<"findMany", MockFn>;
 };
 
@@ -51,6 +52,10 @@ vi.mock("@/lib/db", () => {
       shiftTrade: {
         findMany: vi.fn(),
         count: vi.fn(),
+        updateMany: vi.fn(),
+      },
+      notification: {
+        createMany: vi.fn(),
       },
       user: {
         findMany: vi.fn(),
@@ -90,6 +95,7 @@ import {
   approveTrade,
   declineTrade,
   cancelTrade,
+  expireOpenTrades,
   listTrades,
   withdrawTradeClaim,
 } from "@/lib/services/shift-trades";
@@ -158,6 +164,22 @@ describe("postTrade", () => {
     };
     mockTx.shiftAssignment.findUnique.mockResolvedValue(assignment);
     await expect(postTrade(assignment.id, { id: "user-1" })).rejects.toThrow("only trade your own");
+  });
+
+  it("refuses to post against a shift group with an unpublished working copy", async () => {
+    const assignment = {
+      ...makeShiftAssignment({ userId: "user-1" }),
+      shift: {
+        ...makeShift(),
+        shiftGroup: { workingCopy: { version: 3 } },
+      },
+    };
+    mockTx.shiftAssignment.findUnique.mockResolvedValue(assignment);
+
+    await expect(postTrade(assignment.id, { id: "user-1" })).rejects.toThrow(
+      "unpublished Schedule changes",
+    );
+    expect(mockTx.shiftTrade.create).not.toHaveBeenCalled();
   });
 
   it("throws 400 for inactive assignment status", async () => {
@@ -887,12 +909,109 @@ describe("declineTrade", () => {
     );
   });
 
+  it("records the declining staff actor and the claimer it cleared", async () => {
+    const claimedAt = new Date("2026-02-27T09:00:00.000Z");
+    const trade = {
+      ...makeShiftTrade({ status: "CLAIMED", claimedByUserId: "claimer-1", claimedAt }),
+      shiftAssignment: {
+        ...makeShiftAssignment(),
+        shift: {
+          ...makeShift({ area: "Field" }),
+          shiftGroup: { event: { summary: "Wisconsin vs Iowa" } },
+        },
+      },
+    };
+    mockTx.shiftTrade.findUnique.mockResolvedValue(trade);
+    mockTx.shiftTrade.update.mockResolvedValue({ ...trade, status: "OPEN", claimedByUserId: null });
+
+    await declineTrade(trade.id, { id: "staff-9", role: "STAFF" });
+
+    expect(mockTx.auditLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          actorUserId: "staff-9",
+          entityType: "shift_trade",
+          entityId: trade.id,
+          action: "trade_declined",
+          beforeJson: expect.objectContaining({ claimedByUserId: "claimer-1" }),
+          afterJson: expect.objectContaining({
+            status: "OPEN",
+            claimedByUserId: null,
+            _actorRole: "STAFF",
+          }),
+        }),
+      })
+    );
+  });
+
   it("throws 400 when trade is not CLAIMED", async () => {
     mockTx.shiftTrade.findUnique.mockResolvedValue({
       ...makeShiftTrade({ status: "OPEN" }),
       shiftAssignment: { ...makeShiftAssignment(), shift: makeShift() },
     });
     await expect(declineTrade("trade-1")).rejects.toThrow("Only claimed trades");
+  });
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// expireOpenTrades
+// ═════════════════════════════════════════════════════════════════════════════
+describe("expireOpenTrades", () => {
+  function staleTrade(overrides: Record<string, unknown> = {}) {
+    return {
+      id: "trade-stale",
+      postedByUserId: "poster-1",
+      claimedByUserId: null,
+      shiftAssignment: {
+        shift: {
+          area: "Field",
+          shiftGroup: { event: { id: "event-1", summary: "Wisconsin vs Iowa" } },
+        },
+      },
+      ...overrides,
+    };
+  }
+
+  it("tells the claimer their claim died with the post, not just the poster", async () => {
+    mockDb.shiftTrade.findMany.mockResolvedValue([
+      staleTrade({ claimedByUserId: "claimer-1" }),
+    ]);
+    mockDb.shiftTrade.updateMany.mockResolvedValue({ count: 1 });
+    mockDb.notification.createMany.mockResolvedValue({ count: 2 });
+
+    await expect(expireOpenTrades()).resolves.toEqual({ expired: 1 });
+
+    const rows = mockDb.notification.createMany.mock.calls.at(-1)?.[0]?.data as Array<{
+      userId: string;
+      type: string;
+      dedupeKey: string;
+    }>;
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toMatchObject({ userId: "poster-1", type: "trade_expired" });
+    expect(rows[1]).toMatchObject({
+      userId: "claimer-1",
+      type: "trade_claim_expired",
+      dedupeKey: "trade_claim_expired_trade-stale",
+    });
+  });
+
+  it("notifies only the poster when nobody had claimed the post", async () => {
+    mockDb.shiftTrade.findMany.mockResolvedValue([staleTrade()]);
+    mockDb.shiftTrade.updateMany.mockResolvedValue({ count: 1 });
+    mockDb.notification.createMany.mockResolvedValue({ count: 1 });
+
+    await expireOpenTrades();
+
+    const rows = mockDb.notification.createMany.mock.calls.at(-1)?.[0]?.data as unknown[];
+    expect(rows).toHaveLength(1);
+  });
+
+  it("does no work when nothing is stale", async () => {
+    mockDb.shiftTrade.findMany.mockResolvedValue([]);
+
+    await expect(expireOpenTrades()).resolves.toEqual({ expired: 0 });
+    expect(mockDb.shiftTrade.updateMany).not.toHaveBeenCalled();
+    expect(mockDb.notification.createMany).not.toHaveBeenCalled();
   });
 });
 
@@ -1050,6 +1169,22 @@ describe("withdrawTradeClaim", () => {
 // listTrades
 // ═════════════════════════════════════════════════════════════════════════════
 describe("listTrades", () => {
+  it("keeps actionable trades ahead of resolved history in the page window", async () => {
+    mockDb.shiftTrade.findMany.mockResolvedValue([]);
+    mockDb.shiftTrade.count.mockResolvedValue(0);
+
+    await listTrades({ limit: 100, offset: 0 });
+
+    // Resolved trades accumulate forever. Sorting on recency alone eventually
+    // pushes a claim waiting on staff off the end of the page — and out of the
+    // review queue that is built from it.
+    expect(mockDb.shiftTrade.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: [{ status: "asc" }, { postedAt: "desc" }, { id: "asc" }],
+      }),
+    );
+  });
+
   it("hides stale open trades from the default board query", async () => {
     mockDb.shiftTrade.findMany.mockResolvedValue([]);
     mockDb.shiftTrade.count.mockResolvedValue(0);

@@ -45,6 +45,13 @@ export type ShiftAssignment = {
   acknowledgedById?: string | null;
 };
 
+export type ShiftViewerRequest = {
+  id: string;
+  status: string;
+  hasConflict?: boolean;
+  conflictNote?: string | null;
+};
+
 export type Shift = {
   id: string;
   area: string;
@@ -55,6 +62,7 @@ export type Shift = {
   callEndsAt?: string | null;
   notes: string | null;
   assignments: ShiftAssignment[];
+  viewerRequest?: ShiftViewerRequest | null;
 };
 
 export type ShiftGroup = {

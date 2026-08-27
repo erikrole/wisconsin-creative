@@ -1,0 +1,76 @@
+{
+  "title": "Daily Operator Trust Pass",
+  "eyebrow": "Web / Wisconsin Creative",
+  "lede": "Two small safeguards for the actions operators repeat all day, plus a second-pass fix that keeps rapid copy feedback truthful.",
+  "stats": [
+    {
+      "k": "Deactivation",
+      "v": "Guarded",
+      "n": "Confirmation names the user and the cleanup consequences",
+      "tone": "good"
+    },
+    {
+      "k": "Clipboard",
+      "v": "Honest",
+      "n": "Success follows a resolved write; failure leaves a manual-copy path",
+      "tone": "good"
+    },
+    {
+      "k": "Repeat copy",
+      "v": "Latest wins",
+      "n": "Older promises and timers cannot overwrite the newest attempt",
+      "tone": "good"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Side by side",
+      "note": "The user-status pair uses the same authenticated admin, user, and viewport with its pre-change capture from clean HEAD. The copy pair is a timed interaction proof on the same authenticated guide and viewport.",
+      "pairs": [
+        {
+          "title": "User status action",
+          "sub": "The Admin actions menu now pauses before a destructive status change.",
+          "before": "tasks/operator-qol-clipboard-deactivation-review-2026-08-26/before-deactivation-confirmation.png",
+          "beforeCap": "Before: Deactivate user was the next click and had no consequence summary.",
+          "after": "tasks/operator-qol-clipboard-deactivation-review-2026-08-26/after-deactivation-confirmation.png",
+          "afterCap": "After: the named user, sign-out, future-cancellation, and open-checkout constraint are visible before confirmation."
+        },
+        {
+          "title": "Repeated guide copy",
+          "sub": "A second copy 900 ms after the first must receive its own complete 1.4-second feedback window.",
+          "before": "tasks/operator-qol-clipboard-deactivation-review-2026-08-26/before-repeat-copy-window.png",
+          "beforeCap": "Resting state: the table reference is ready to copy.",
+          "after": "tasks/operator-qol-clipboard-deactivation-review-2026-08-26/after-repeat-copy-window.png",
+          "afterCap": "650 ms after the second click: Copied is still visible. The superseded first timer would already have fired 150 ms before this capture."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Destructive status changes now explain their cost",
+      "was": "The operator could select Deactivate user and immediately start the cleanup mutation without a second look at who would be affected.",
+      "now": "The existing mutation waits behind the shared danger confirmation. Cancel closes the prompt without changing status; confirm keeps the existing server-side custody, cleanup, permission, and audit behavior."
+    },
+    {
+      "h": "Copy actions now tell the truth",
+      "was": "Selected copy controls relied on direct browser writes, so denied or unavailable clipboard access could leave the operator without a useful outcome or recovery instruction.",
+      "now": "A shared helper reports success only after the browser write resolves. Failure shows a short manual-copy instruction while the visible value remains available across kiosk codes, guide references, calendar feeds, and item identity controls."
+    },
+    {
+      "h": "Rapid repeats no longer shorten or scramble feedback",
+      "was": "Every successful item or guide copy started an independent timer. A first timer could clear a later success early, and a slow older clipboard result could replace the latest clicked identity value.",
+      "now": "The latest attempt owns the visible copied state. A repeat success cancels the older timer and receives the full display window; superseded promises are ignored and timers are cleared when the control leaves the page."
+    }
+  ],
+  "verification": [
+    "<strong>Focused Vitest:</strong> 5 files and 24 tests passed, including clipboard rejection/unavailable-API behavior, latest-attempt wiring, Markdown, user, and item-link contracts.",
+    "<strong>TypeScript, lint, and app build:</strong> <code>npx tsc --noEmit --pretty false</code>, full <code>npm run lint</code>, and <code>npm run build:app</code> passed.",
+    "<strong>Authenticated local browser:</strong> the repeat-copy sequence held Copied 650 ms after the second click and reset afterward; the page had meaningful content, no framework overlay, and no warning/error logs. Prior confirmation proof still covers rendering, cancel-without-PATCH, and the controlled no-database confirm path.",
+    "<strong>Diff and docs hygiene:</strong> <code>git diff --check</code> passed. <code>npm run verify:docs</code> is blocked by generated architecture/frontend codemap drift in already-modified shared files, which this slice did not overwrite."
+  ],
+  "notes": [
+    "This is a local Preview-backed review. No production deployment or production acceptance is claimed, and the browser confirmation apply used a fetch stub so no user record was changed.",
+    "The exact Kiosk Devices and Item identity click paths were source-wired, focused-tested, type-checked, linted, and compiled, but their populated browser states were not available as separate runtime captures in this pass."
+  ]
+}

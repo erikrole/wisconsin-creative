@@ -2,62 +2,25 @@
 
 import { useMemo, useState, type ComponentType } from "react";
 import {
-  AlarmClock,
   AlarmClockCheck,
-  Aperture,
-  ArrowLeftRight,
   AlertCircle,
-  AudioLines,
   Award,
   BadgeCheck,
-  BatteryCharging,
-  BatteryLow,
-  Binoculars,
-  Boxes,
-  BusFront,
-  Cable,
-  Camera,
   CalendarCheck2,
-  CalendarClock,
-  CalendarDays,
-  CalendarRange,
-  Clapperboard,
-  Clock3,
-  CloudRain,
-  Combine,
-  Dumbbell,
-  Flame,
-  Gift,
-  Focus,
-  HardDrive,
+  ChevronDown,
+  ChevronUp,
   Handshake,
-  Lightbulb,
   LockKeyhole,
-  LifeBuoy,
-  LayoutGrid,
-  MoonStar,
   PackageCheck,
-  PackageOpen,
-  QrCode,
-  Repeat2,
   ScanLine,
-  ScanSearch,
-  ShieldCheck,
-  ShoppingCart,
-  Shuffle,
   Sparkles,
-  Timer,
   Star,
-  Sunrise,
-  Sunset,
-  Ticket,
   Trash2,
   Trophy,
-  Truck,
   UserCheck,
-  Warehouse,
 } from "lucide-react";
-import { BadgeMedallion, type BadgeMedallionShape } from "@/components/badges/BadgeMedallion";
+import { BadgeMedallion } from "@/components/badges/BadgeMedallion";
+import { badgeIcon, isManualBadge } from "@/components/badges/badge-artwork";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -90,7 +53,10 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 type UserBadge = {
+  /** The `BadgeDefinition` id. Not the award row -- see `awardId`. */
   id: string;
+  /** The `StudentBadge` row id, present only when earned. What revoke needs. */
+  awardId?: string | null;
   key: string;
   name: string;
   description: string;
@@ -113,7 +79,26 @@ type UserBadge = {
    *  still renders, falling back to the difficulty-based rating. */
   rarity?: BadgeRarity;
   holders?: number;
+  /** True when `rarity` came from the difficulty fallback, not from scarcity. */
+  rarityProvisional?: boolean;
 };
+
+/**
+ * "12 people have this" -- what makes the rarity word above it believable.
+ *
+ * When the server says the rating is provisional, that sentence cannot be
+ * written honestly: the word came from the difficulty fallback because nobody
+ * holds the badge yet or the definition is still inside its 30-day proving
+ * period. The v8 expansion adds 50 definitions at once, so a large share of the
+ * catalog sits in that window at launch, and showing "Legendary" with no hedge
+ * would present a guess in exactly the same voice as a measurement.
+ */
+function holdersLine(badge: UserBadge): string | null {
+  if (badge.rarityProvisional) return "Too new to rate by scarcity yet";
+  const holders = badge.holders;
+  if (typeof holders !== "number" || holders <= 0) return null;
+  return holders === 1 ? "1 person has this" : `${holders} people have this`;
+}
 
 type UserBadgesResponse = {
   userId: string;
@@ -132,66 +117,12 @@ type AwardCollectionDefinition = {
   title: string;
   description: string;
   icon: ComponentType<{ className?: string }>;
-  shape: BadgeMedallionShape;
   countsTowardCompletion: boolean;
 };
 
 type BadgeShelf = AwardCollectionDefinition & {
   badges: UserBadge[];
   earnedCount: number;
-  hiddenCount: number;
-};
-
-const iconMap: Record<string, ComponentType<{ className?: string }>> = {
-  AlarmClock,
-  AlarmClockCheck,
-  Aperture,
-  ArrowLeftRight,
-  AudioLines,
-  BadgeCheck,
-  BatteryCharging,
-  BatteryLow,
-  Binoculars,
-  Boxes,
-  BusFront,
-  Cable,
-  Camera,
-  CalendarCheck2,
-  CalendarClock,
-  CalendarDays,
-  CalendarRange,
-  Clapperboard,
-  Clock3,
-  CloudRain,
-  Combine,
-  Dumbbell,
-  Flame,
-  Gift,
-  Focus,
-  HardDrive,
-  Handshake,
-  Lightbulb,
-  LifeBuoy,
-  LayoutGrid,
-  MoonStar,
-  PackageCheck,
-  PackageOpen,
-  QrCode,
-  Repeat2,
-  ScanLine,
-  ScanSearch,
-  ShieldCheck,
-  ShoppingCart,
-  Shuffle,
-  Sparkles,
-  Timer,
-  Sunrise,
-  Sunset,
-  Ticket,
-  Trophy,
-  Truck,
-  UserCheck,
-  Warehouse,
 };
 
 const categoryLabel: Record<string, string> = {
@@ -218,7 +149,6 @@ const awardCollectionDefinitions: AwardCollectionDefinition[] = [
     title: "Gear Flow",
     description: "Checkout, pickup, full-kit, and clean handoff awards.",
     icon: PackageCheck,
-    shape: "stack",
     countsTowardCompletion: true,
   },
   {
@@ -226,7 +156,6 @@ const awardCollectionDefinitions: AwardCollectionDefinition[] = [
     title: "Reliability",
     description: "On-time returns, clean streaks, and no-drama follow-through.",
     icon: AlarmClockCheck,
-    shape: "coin",
     countsTowardCompletion: true,
   },
   {
@@ -234,7 +163,6 @@ const awardCollectionDefinitions: AwardCollectionDefinition[] = [
     title: "Legacy Scan Awards",
     description: "Previously earned scan awards, preserved as history.",
     icon: ScanLine,
-    shape: "hex",
     countsTowardCompletion: false,
   },
   {
@@ -242,7 +170,6 @@ const awardCollectionDefinitions: AwardCollectionDefinition[] = [
     title: "Teamwork",
     description: "Trades, coverage, and event help.",
     icon: Handshake,
-    shape: "shield",
     countsTowardCompletion: true,
   },
   {
@@ -250,7 +177,6 @@ const awardCollectionDefinitions: AwardCollectionDefinition[] = [
     title: "Staff Picks",
     description: "Manual awards, inside jokes, and custom recognition.",
     icon: Sparkles,
-    shape: "hex",
     countsTowardCompletion: false,
   },
 ];
@@ -313,11 +239,24 @@ function progressPercent(badge: UserBadge) {
   return Math.min(100, Math.round((badge.progressCurrent! / badge.progressTarget!) * 100));
 }
 
+/**
+ * The one line under a badge's name.
+ *
+ * A locked badge with no derivable progress used to read `25 required` or
+ * `Unlocks automatically` -- twenty-five *what*, and unlocks from *what*. The
+ * answer was already in the payload as `description` ("Checked out the same
+ * item 25 times"), one click away in the detail dialog. With most of a
+ * hundred-badge catalog locked for any given person, that is the difference
+ * between a shelf worth reading and a wall of grey.
+ */
 function badgeMetaLine(badge: UserBadge) {
   if (badge.earned && badge.awardedAt) return `Earned ${formatDateFull(badge.awardedAt)}`;
+  if (badge.earned) return "Earned";
+  // Real progress beats prose: a number this person is moving is more useful
+  // than the sentence describing the goal, and the bar below repeats it.
   if (hasProgress(badge)) return `${badge.progressCurrent}/${badge.progressTarget}`;
-  if (badge.threshold) return `${badge.threshold} required`;
-  return badge.earned ? "Earned" : badge.trigger === "manual" ? "Staff recognition" : "Unlocks automatically";
+  if (badge.description) return badge.description;
+  return badge.trigger === "manual" ? "Staff recognition" : "Unlocks automatically";
 }
 
 function rarityGlowClass(rarity: BadgeRarity) {
@@ -347,59 +286,68 @@ function rarityAccentClass(rarity: BadgeRarity) {
   return "bg-primary text-primary-foreground";
 }
 
-function isManualBadge(badge: UserBadge) {
-  return badge.source === "MANUAL" || (badge.kind === "RULE" && badge.trigger === "manual");
-}
-
 /// Every badge lives on exactly one shelf so the flat layout never repeats a
 /// medallion. Staff recognition wins over thematic hints; automatic milestone
 /// badges follow the checkout or shift workflow that actually earned them.
 function primaryCollectionKey(badge: UserBadge): AwardCollectionKey {
   if (isManualBadge(badge)) return "staff_picks";
-  if (badge.category === "MILESTONE" && badge.trigger === "checkout:opened") return "gear_flow";
-  if (badge.category === "MILESTONE" && badge.trigger === "shift:completed") return "teamwork";
-  if (badge.category === "MILESTONE") return "staff_picks";
-  if (badge.category === "CHECKOUT") return "gear_flow";
-  if (badge.category === "ON_TIME") return "reliability";
   if (badge.category === "SCAN") return "scans";
+
+  // Route by the workflow that earns it, before falling back to category. The
+  // v8 expansion filed every return and trade rule under `MILESTONE`, and the
+  // old `MILESTONE` catch-all swept them onto Staff Picks -- a shelf whose own
+  // description reads "manual awards, inside jokes, and custom recognition",
+  // and which is excluded from the earned/total count. Eleven automatic return
+  // rules and two trade rules were sitting on the staff shelf.
+  if (badge.trigger === "checkout:returned") return "reliability";
+  if (badge.trigger === "checkout:opened") return "gear_flow";
+  if (badge.trigger === "trade:completed" || badge.trigger === "shift:completed") return "teamwork";
+
+  if (badge.category === "CHECKOUT") return "gear_flow";
+  if (badge.category === "ON_TIME" || badge.category === "STREAK") return "reliability";
   if (badge.category === "TRADE" || badge.category === "SHIFT") return "teamwork";
   if (badge.key.includes("streak") || badge.key.includes("reliable") || badge.key.includes("zero_errors")) return "reliability";
-  return "gear_flow";
+  // Whatever is left is a rule with no workflow behind it -- an app-open
+  // surprise or a one-off. Those belong with the inside jokes.
+  return badge.category === "MILESTONE" ? "staff_picks" : "gear_flow";
 }
 
-function badgeShape(badge: UserBadge): BadgeMedallionShape {
-  if (badge.category === "SCAN") return "hex";
-  if (badge.category === "TRADE" || badge.category === "SHIFT") return "shield";
-  if (badge.category === "CHECKOUT" || badge.category === "ON_TIME" || badge.trigger === "checkout:opened") return "stack";
-  if (badge.trigger === "shift:completed") return "shield";
-  if (isManualBadge(badge)) return "hex";
-  return "coin";
-}
-
+/**
+ * Earned first, newest first; then locked goals this person is actually moving,
+ * nearest completion first; then the rest by catalog order.
+ *
+ * The middle rule is what makes a collapsed shelf worth collapsing: the first
+ * rows show what you have and what you are closest to, rather than whichever
+ * unstarted goal the catalog happened to sort first.
+ */
 function sortedForDisplay(badges: UserBadge[]) {
   return [...badges].sort((a, b) => {
     if (a.earned !== b.earned) return a.earned ? -1 : 1;
-    const aDate = a.awardedAt ? new Date(a.awardedAt).getTime() : 0;
-    const bDate = b.awardedAt ? new Date(b.awardedAt).getTime() : 0;
-    if (aDate !== bDate) return bDate - aDate;
+    if (a.earned && b.earned) {
+      const aDate = a.awardedAt ? new Date(a.awardedAt).getTime() : 0;
+      const bDate = b.awardedAt ? new Date(b.awardedAt).getTime() : 0;
+      if (aDate !== bDate) return bDate - aDate;
+      return a.sortOrder - b.sortOrder;
+    }
+    const aStarted = hasProgress(a) && a.progressCurrent! > 0;
+    const bStarted = hasProgress(b) && b.progressCurrent! > 0;
+    if (aStarted !== bStarted) return aStarted ? -1 : 1;
+    if (aStarted && bStarted) {
+      const aShare = a.progressCurrent! / a.progressTarget!;
+      const bShare = b.progressCurrent! / b.progressTarget!;
+      if (aShare !== bShare) return bShare - aShare;
+    }
     return a.sortOrder - b.sortOrder;
   });
 }
 
-function buildShelves(galleryBadges: UserBadge[], allBadges: UserBadge[]): BadgeShelf[] {
+function buildShelves(galleryBadges: UserBadge[]): BadgeShelf[] {
   const grouped = new Map<AwardCollectionKey, UserBadge[]>(
     awardCollectionDefinitions.map((definition) => [definition.key, []]),
   );
 
   for (const badge of galleryBadges) {
     grouped.get(primaryCollectionKey(badge))?.push(badge);
-  }
-
-  const hiddenByKey = new Map<AwardCollectionKey, number>();
-  for (const badge of allBadges) {
-    if (badge.earned || !badge.active || !isHiddenUntilEarnedBadge(badge.key)) continue;
-    const key = primaryCollectionKey(badge);
-    hiddenByKey.set(key, (hiddenByKey.get(key) ?? 0) + 1);
   }
 
   return awardCollectionDefinitions
@@ -409,12 +357,19 @@ function buildShelves(galleryBadges: UserBadge[], allBadges: UserBadge[]): Badge
         ...definition,
         badges: shelfBadges,
         earnedCount: shelfBadges.filter((badge) => badge.earned).length,
-        hiddenCount: hiddenByKey.get(definition.key) ?? 0,
       };
     })
-    .filter((shelf) => shelf.badges.length > 0 || shelf.hiddenCount > 0);
+    .filter((shelf) => shelf.badges.length > 0);
 }
 
+/**
+ * Leads with the count, not the percentage.
+ *
+ * The catalog is built to be mostly unearned -- 98 visible automatic goals once
+ * the v8 expansion deploys -- so a percentage headline tells a genuinely strong
+ * student "20%" and calls that their score. The count is the thing they earned;
+ * the bar still carries the proportion for anyone who wants it.
+ */
 function BadgeSummaryBand({
   earned,
   goalsEarned,
@@ -433,17 +388,19 @@ function BadgeSummaryBand({
       <CardContent className="flex flex-wrap items-center gap-x-8 gap-y-4 p-5">
         <div className="min-w-[180px] flex-1">
           <div className="flex items-baseline justify-between gap-3">
-            <span className="text-3xl font-semibold tabular-nums">{completion}%</span>
-            <span className="text-xs text-muted-foreground">of automatic goals</span>
+            <span className="text-3xl font-semibold tabular-nums">
+              {earned}
+              <span className="ml-1.5 text-base font-medium text-muted-foreground">
+                {earned === 1 ? "badge" : "badges"}
+              </span>
+            </span>
+            <span className="text-xs text-muted-foreground tabular-nums">
+              {goalsEarned} of {goals} goals
+            </span>
           </div>
-          <Progress value={completion} className="mt-2 h-1.5" aria-label="Badge catalog completion" />
+          <Progress value={completion} className="mt-2 h-1.5" aria-label={`${goalsEarned} of ${goals} automatic goals earned`} />
         </div>
         <dl className="flex items-center gap-6 text-right">
-          <div>
-            <dt className="sr-only">Earned</dt>
-            <dd className="text-xl font-semibold tabular-nums">{earned}</dd>
-            <dd className="text-xs text-muted-foreground">Earned</dd>
-          </div>
           <div>
             <dt className="sr-only">Remaining</dt>
             <dd className="text-xl font-semibold tabular-nums">{Math.max(0, goals - goalsEarned)}</dd>
@@ -462,6 +419,78 @@ function BadgeSummaryBand({
   );
 }
 
+/**
+ * The visible goal this person is nearest to finishing.
+ *
+ * Ties break on how few steps are left, so "9 of 10" leads "90 of 100" rather
+ * than whichever the catalog happened to sort first. Mirrors the native
+ * `closestToEarned` row so both clients point at the same badge.
+ */
+function closestToEarned(badges: UserBadge[]): UserBadge | null {
+  let best: UserBadge | null = null;
+  let bestFraction = -1;
+  let bestRemaining = Number.POSITIVE_INFINITY;
+
+  for (const badge of badges) {
+    if (!hasProgress(badge)) continue;
+    const fraction = badge.progressCurrent! / badge.progressTarget!;
+    const remaining = badge.progressTarget! - badge.progressCurrent!;
+    if (fraction > bestFraction || (fraction === bestFraction && remaining < bestRemaining)) {
+      best = badge;
+      bestFraction = fraction;
+      bestRemaining = remaining;
+    }
+  }
+
+  return best;
+}
+
+function NextUpRow({
+  badge,
+  onSelect,
+}: {
+  badge: UserBadge;
+  onSelect: (badge: UserBadge) => void;
+}) {
+  const Icon = badgeIcon(badge.icon);
+  const rarity = badge.rarity ?? getBadgeRarity(badge);
+  const remaining = badge.progressTarget! - badge.progressCurrent!;
+
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(badge)}
+      className="group flex w-full items-center gap-4 rounded-xl bg-card px-4 py-3.5 text-left shadow-[0_0_0_1px_var(--border)] outline-none transition-[box-shadow,transform] duration-200 hover:shadow-[0_10px_28px_color-mix(in_oklch,var(--foreground)_7%,transparent),0_0_0_1px_var(--border)] focus-visible:ring-[3px] focus-visible:ring-ring/50"
+      aria-label={`Closest goal: ${badge.name}, ${badge.progressCurrent} of ${badge.progressTarget}. Open badge details.`}
+    >
+      <BadgeMedallion
+        icon={Icon}
+        earned={false}
+        rarity={rarity}
+        className="size-11"
+        iconClassName="size-5"
+      />
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          Closest goal
+        </p>
+        <h3 className="mt-0.5 truncate text-sm font-semibold leading-5">{badge.name}</h3>
+        <Progress
+          value={progressPercent(badge)}
+          className="mt-2 h-1.5"
+          aria-label={`${badge.name} progress`}
+        />
+      </div>
+      <div className="shrink-0 text-right">
+        <p className="text-sm font-semibold tabular-nums">{badge.progressCurrent}/{badge.progressTarget}</p>
+        <p className="text-xs text-muted-foreground tabular-nums">
+          {remaining === 1 ? "1 to go" : `${remaining} to go`}
+        </p>
+      </div>
+    </button>
+  );
+}
+
 function BadgeTile({
   badge,
   selected,
@@ -471,7 +500,7 @@ function BadgeTile({
   selected: boolean;
   onSelect: (badge: UserBadge) => void;
 }) {
-  const Icon = iconMap[badge.icon] ?? Trophy;
+  const Icon = badgeIcon(badge.icon);
   const rarity = badge.rarity ?? getBadgeRarity(badge);
   const recentlyEarned = badge.earned && isRecentlyEarned(badge.awardedAt);
 
@@ -480,7 +509,7 @@ function BadgeTile({
       type="button"
       onClick={() => onSelect(badge)}
       className={cn(
-        "group relative flex w-full flex-col items-center gap-2 rounded-xl bg-card px-3 pb-4 pt-5 text-center shadow-[0_0_0_1px_var(--border)] outline-none transition-[transform,box-shadow,background-color] duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_34px_color-mix(in_oklch,var(--foreground)_8%,transparent),0_0_0_1px_var(--border)] focus-visible:ring-[3px] focus-visible:ring-ring/50 active:scale-[0.96]",
+        "group relative flex h-full w-full flex-col items-center gap-2 rounded-xl bg-card px-3 pb-4 pt-5 text-center shadow-[0_0_0_1px_var(--border)] outline-none transition-[transform,box-shadow,background-color] duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_34px_color-mix(in_oklch,var(--foreground)_8%,transparent),0_0_0_1px_var(--border)] focus-visible:ring-[3px] focus-visible:ring-ring/50 active:scale-[0.96]",
         !badge.earned && "bg-muted/30",
         recentlyEarned && rarityGlowClass(rarity),
         selected && "ring-[3px] ring-ring/30",
@@ -494,20 +523,23 @@ function BadgeTile({
         icon={Icon}
         earned={badge.earned}
         rarity={rarity}
-        shape={badgeShape(badge)}
-        className={cn("size-14", recentlyEarned && "scale-[1.03]")}
+        className="size-14"
         iconClassName="size-6"
       />
       <div className="min-w-0">
-        <h3 className={cn("text-balance text-sm font-semibold leading-5", badge.earned ? "text-foreground" : "text-muted-foreground")}>
+        <h3 className={cn("line-clamp-2 min-h-10 text-balance text-sm font-semibold leading-5", badge.earned ? "text-foreground" : "text-muted-foreground")}>
           {badge.name}
         </h3>
-        <p className="mt-1 text-xs text-muted-foreground tabular-nums">{badgeMetaLine(badge)}</p>
+        {/* Two lines, reserved whether the meta is a date, a count, or a
+            requirement sentence, so a row of tiles keeps one baseline. */}
+        <p className="mt-1 line-clamp-2 min-h-8 text-xs leading-4 text-muted-foreground tabular-nums">
+          {badgeMetaLine(badge)}
+        </p>
       </div>
       {hasProgress(badge) ? (
         <Progress
           value={progressPercent(badge)}
-          className="mt-1 h-1 w-full max-w-[120px] bg-muted [&_[data-slot=progress-indicator]]:bg-primary/70"
+          className="mt-auto h-1 w-full max-w-[120px] bg-muted [&_[data-slot=progress-indicator]]:bg-primary/70"
           aria-label={`${badge.name} progress`}
         />
       ) : null}
@@ -515,35 +547,44 @@ function BadgeTile({
   );
 }
 
-function SurpriseTile({ count }: { count: number }) {
-  return (
-    <div className="flex w-full flex-col items-center gap-2 rounded-xl bg-muted/30 px-3 pb-4 pt-5 text-center text-muted-foreground shadow-[0_0_0_1px_var(--border)]">
-      <BadgeMedallion icon={Sparkles} earned={false} rarity="Rare" shape="hex" className="size-14 opacity-80" iconClassName="size-6" />
-      <div className="min-w-0">
-        <h3 className="text-sm font-semibold text-foreground">Surprise awards</h3>
-        <p className="mt-1 text-xs">
-          {count} hidden until earned
-        </p>
-      </div>
-    </div>
-  );
-}
+/**
+ * How many tiles a shelf shows before it asks. Two full rows at the widest
+ * breakpoint, and the sort above guarantees those rows are the earned awards
+ * and the goals nearest completion.
+ *
+ * The flat "every badge always visible" shelf was designed against a 30-badge
+ * catalog. The catalog is 115 definitions now -- 98 of them visible once the
+ * v8 expansion deploys -- which is 23 rows and roughly 4,600px of scrolling,
+ * and for someone new almost every one of those tiles is an identical locked
+ * disc. Collapsing is per shelf and per session; nothing is hidden from a
+ * filter, because a filter is already the reader narrowing on purpose.
+ */
+const SHELF_PREVIEW_COUNT = 10;
 
 function ShelfSection({
   shelf,
   filter,
+  expanded,
+  onToggleExpanded,
   selectedBadge,
   onSelect,
 }: {
   shelf: BadgeShelf;
   filter: BadgeFilter;
+  expanded: boolean;
+  onToggleExpanded: (key: AwardCollectionKey) => void;
   selectedBadge: UserBadge | null;
   onSelect: (badge: UserBadge) => void;
 }) {
   const filteredBadges = filterBadges(shelf.badges, filter);
-  const showSurpriseTile = shelf.hiddenCount > 0 && (filter === "all" || filter === "locked");
-  if (filteredBadges.length === 0 && !showSurpriseTile) return null;
+  if (filteredBadges.length === 0) return null;
   const ShelfIcon = shelf.icon;
+
+  const collapsible = filter === "all" && filteredBadges.length > SHELF_PREVIEW_COUNT;
+  const visibleBadges = collapsible && !expanded
+    ? filteredBadges.slice(0, SHELF_PREVIEW_COUNT)
+    : filteredBadges;
+  const hiddenByCollapse = filteredBadges.length - visibleBadges.length;
 
   return (
     <section aria-label={`${shelf.title} awards`}>
@@ -564,17 +605,33 @@ function ShelfSection({
         </p>
       </div>
       <StaggerList className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-        {filteredBadges.map((badge) => (
-          <StaggerItem key={badge.id}>
+        {visibleBadges.map((badge) => (
+          <StaggerItem key={badge.id} className="h-full">
             <BadgeTile badge={badge} selected={selectedBadge?.id === badge.id} onSelect={onSelect} />
           </StaggerItem>
         ))}
-        {showSurpriseTile ? (
-          <StaggerItem>
-            <SurpriseTile count={shelf.hiddenCount} />
-          </StaggerItem>
-        ) : null}
       </StaggerList>
+      {collapsible ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="mt-2.5 h-10 w-full text-xs text-muted-foreground hover:text-foreground"
+          onClick={() => onToggleExpanded(shelf.key)}
+          aria-expanded={expanded}
+        >
+          {expanded ? (
+            <>
+              <ChevronUp className="size-3.5" aria-hidden="true" />
+              Show less
+            </>
+          ) : (
+            <>
+              <ChevronDown className="size-3.5" aria-hidden="true" />
+              {`Show ${hiddenByCollapse} more in ${shelf.title}`}
+            </>
+          )}
+        </Button>
+      ) : null}
     </section>
   );
 }
@@ -597,16 +654,23 @@ function BadgeDetailDialog({
   onAwardRequest?: (badge: UserBadge) => void;
 }) {
   const [revokeBusy, setRevokeBusy] = useState(false);
-  const Icon = badge ? iconMap[badge.icon] ?? Trophy : Trophy;
+  const Icon = badgeIcon(badge?.icon);
   const rarity = badge ? (badge.rarity ?? getBadgeRarity(badge)) : "Common";
   const progressValue = badge ? progressPercent(badge) : 0;
   const recentlyEarned = badge ? badge.earned && isRecentlyEarned(badge.awardedAt) : false;
 
   async function handleRevoke() {
     if (!badge || revokeBusy) return;
+    // `badge.id` is the definition; the route resolves a `StudentBadge`. Sending
+    // the wrong one made every revoke 404 with "Badge award not found".
+    const awardId = badge.awardId;
+    if (!awardId) {
+      toast.error("This award cannot be revoked.");
+      return;
+    }
     setRevokeBusy(true);
     try {
-      const res = await fetch(`/api/badges/award/${badge.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/badges/award/${awardId}`, { method: "DELETE" });
       if (handleAuthRedirect(res, `/users/${userId}?tab=badges`)) return;
       if (!res.ok) {
         toast.error(await parseErrorMessage(res, "Failed to revoke badge"));
@@ -633,13 +697,14 @@ function BadgeDetailDialog({
 
               {/* Centered medallion stage */}
               <div className="relative mx-auto mb-6 flex size-44 items-center justify-center">
-                <span className={cn("absolute inset-0 rounded-[2.75rem] opacity-35 blur-2xl", rarityAccentClass(rarity))} aria-hidden="true" />
-                <span className="absolute inset-3 rounded-[2.25rem] bg-background/40 shadow-[inset_0_1px_0_rgba(255,255,255,0.60),0_28px_56px_rgba(0,0,0,0.18)]" aria-hidden="true" />
+                {/* The stage is round because the medallion is. A squircle
+                    plate behind a disc read as two competing shapes. */}
+                <span className={cn("absolute inset-0 rounded-full opacity-35 blur-2xl", rarityAccentClass(rarity))} aria-hidden="true" />
+                <span className="absolute inset-3 rounded-full bg-background/40 shadow-[inset_0_1px_0_rgba(255,255,255,0.60),0_28px_56px_rgba(0,0,0,0.18)]" aria-hidden="true" />
                 <BadgeMedallion
                   icon={Icon}
                   earned={badge.earned}
                   rarity={rarity}
-                  shape={badgeShape(badge)}
                   className="size-32"
                   iconClassName="size-14"
                 />
@@ -655,7 +720,9 @@ function BadgeDetailDialog({
               <div className="relative text-center">
                 <div className="mb-4 flex flex-wrap justify-center gap-2">
                   <Badge variant={badge.earned ? "secondary" : "outline"}>{badge.earned ? "Earned" : "Locked"}</Badge>
-                  <Badge variant={badgeRarityVariant(rarity)}>{rarity}</Badge>
+                  <Badge variant={badgeRarityVariant(rarity)}>
+                    {badge.rarityProvisional ? `${rarity} (provisional)` : rarity}
+                  </Badge>
                   {badge.source === "MANUAL" ? <Badge variant="purple">Manual</Badge> : null}
                   {recentlyEarned ? <Badge variant="green">Fresh</Badge> : null}
                   {!badge.active && badge.earned ? <Badge variant="gray">Retired</Badge> : null}
@@ -666,6 +733,11 @@ function BadgeDetailDialog({
                 <DialogDescription className="mx-auto mt-3 max-w-[48ch] text-pretty text-base leading-7 text-foreground/75">
                   {badge.description}
                 </DialogDescription>
+                {holdersLine(badge) ? (
+                  <p className="mt-3 text-xs font-medium text-foreground/60 tabular-nums">
+                    {holdersLine(badge)}
+                  </p>
+                ) : null}
               </div>
             </DialogHeader>
             <DialogBody className="bg-background px-6 pb-7 pt-5 sm:px-8">
@@ -712,7 +784,7 @@ function BadgeDetailDialog({
                 </div>
               ) : null}
 
-              {(!badge.earned && !hasProgress(badge)) || canRevoke || (canAward && !badge.earned && badge.trigger === "manual") ? (
+              {(!badge.earned && !hasProgress(badge)) || (canRevoke && badge.source === "MANUAL" && Boolean(badge.awardId)) || (canAward && !badge.earned && badge.trigger === "manual") ? (
                 <>
                   <Separator className="my-5" />
                   <div className="flex flex-wrap items-center justify-between gap-3">
@@ -731,7 +803,7 @@ function BadgeDetailDialog({
                           Award this badge
                         </Button>
                       ) : null}
-                      {canRevoke && badge.earned && badge.source === "MANUAL" ? (
+                      {canRevoke && badge.earned && badge.source === "MANUAL" && badge.awardId ? (
                         <Button
                           variant="outline"
                           onClick={handleRevoke}
@@ -801,6 +873,7 @@ export default function UserBadgesTab({
   onAwardRequest?: (badge: UserBadge) => void;
 }) {
   const [filter, setFilter] = useState<BadgeFilter>("all");
+  const [expandedShelves, setExpandedShelves] = useState<Set<AwardCollectionKey>>(new Set());
   const [selectedBadge, setSelectedBadge] = useState<UserBadge | null>(null);
   const [revision, setRevision] = useState(0);
   const { data, loading, error } = useFetch<UserBadgesResponse>({
@@ -817,8 +890,8 @@ export default function UserBadgesTab({
   }, [data]);
 
   const shelves = useMemo(
-    () => buildShelves(galleryBadges, data?.badges ?? []),
-    [galleryBadges, data],
+    () => buildShelves(galleryBadges),
+    [galleryBadges],
   );
 
   if (loading) {
@@ -845,19 +918,26 @@ export default function UserBadgesTab({
   const hiddenSurpriseCount = data.badges.filter(
     (badge) => !badge.earned && badge.active && isHiddenUntilEarnedBadge(badge.key),
   ).length;
-  const filteredShelfCount = shelves.filter((shelf) => {
-    const showSurpriseTile = shelf.hiddenCount > 0 && (filter === "all" || filter === "locked");
-    return filterBadges(shelf.badges, filter).length > 0 || showSurpriseTile;
-  }).length;
+  const filteredShelfCount = shelves.filter(
+    (shelf) => filterBadges(shelf.badges, filter).length > 0,
+  ).length;
+  // Locked-only view already reads as a to-do list; the row would repeat a tile.
+  const nextUp = filter === "all" ? closestToEarned(galleryBadges) : null;
+  // A 0% band stacked on "Badges unavailable" is chrome measuring nothing.
+  const hasCatalog = !data.disabled && data.badges.length > 0;
 
   return (
     <div className="flex flex-col gap-6">
-      <BadgeSummaryBand
-        earned={earnedBadges.length}
-        goalsEarned={automaticGoalsEarned}
-        goals={automaticGoals.length}
-        hidden={hiddenSurpriseCount}
-      />
+      {hasCatalog ? (
+        <BadgeSummaryBand
+          earned={earnedBadges.length}
+          goalsEarned={automaticGoalsEarned}
+          goals={automaticGoals.length}
+          hidden={hiddenSurpriseCount}
+        />
+      ) : null}
+
+      {nextUp ? <NextUpRow badge={nextUp} onSelect={setSelectedBadge} /> : null}
 
       {data.disabled ? (
         <Empty>
@@ -908,6 +988,15 @@ export default function UserBadgesTab({
                   key={shelf.key}
                   shelf={shelf}
                   filter={filter}
+                  expanded={expandedShelves.has(shelf.key)}
+                  onToggleExpanded={(key) =>
+                    setExpandedShelves((current) => {
+                      const next = new Set(current);
+                      if (next.has(key)) next.delete(key);
+                      else next.add(key);
+                      return next;
+                    })
+                  }
                   selectedBadge={selectedBadge}
                   onSelect={setSelectedBadge}
                 />
@@ -927,11 +1016,17 @@ export default function UserBadgesTab({
             </Empty>
           )}
 
-          {earnedBadges.length > 0 ? (
-            <p className="text-xs text-muted-foreground">
-              Recently earned awards get a soft glow for one week. Surprise awards stay hidden until earned.
-            </p>
-          ) : null}
+          {/*
+            One line for the whole page. This used to be a tile on every shelf
+            that happened to hold a hidden definition -- four copies of the same
+            sentence on one screen, for a count the summary band already reports.
+          */}
+          <p className="text-xs text-muted-foreground">
+            {hiddenSurpriseCount > 0
+              ? `${hiddenSurpriseCount} surprise ${hiddenSurpriseCount === 1 ? "award stays" : "awards stay"} hidden until earned. `
+              : ""}
+            Recently earned awards get a soft glow for one week.
+          </p>
         </>
       )}
 

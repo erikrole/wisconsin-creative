@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { getAllowedRoles } from "@/lib/permissions";
 
 function source(path: string) {
   return readFileSync(path, "utf8");
@@ -8,7 +9,7 @@ function source(path: string) {
 /**
  * Student claims are approval-first on both paths: an open Student slot becomes
  * a REQUESTED assignment, and a Trade Board claim holds the post as CLAIMED.
- * Staff resolve both. These are the assertions that keep the two paths from
+ * Admins resolve both. These are the assertions that keep the two paths from
  * silently diverging again — the previous instant-claim policy drifted into a
  * half-removed state precisely because nothing pinned it.
  */
@@ -22,7 +23,7 @@ describe("Schedule claim-approval contract", () => {
     expect(pickupHandler).toContain("pickupOpenShift(body.shiftId, user.id)");
     expect(pickupHandler).toContain('action: "shift_pickup_requested"');
     expect(pickupHandler).toContain('dispatchScheduleAssignmentNotifications(assignment.id, "requested")');
-    // Staff cannot review a queue nobody tells them filled.
+    // Admins cannot review a queue nobody tells them filled.
     expect(pickupHandler).toContain("notifyPickupRequestReviewers(assignment.id)");
     expect(compatibilityRoute).toContain("withAuth(handleOpenShiftPickup)");
   });
@@ -60,7 +61,7 @@ describe("Schedule claim-approval contract", () => {
     expect(claim).toContain("already has an active assignment");
   });
 
-  it("keeps the staff review routes reachable for both queues", () => {
+  it("keeps the Admin review routes permission-gated for both queues", () => {
     const tradeApprove = source("src/app/api/shift-trades/[id]/approve/route.ts");
     const tradeDecline = source("src/app/api/shift-trades/[id]/decline/route.ts");
     const assignApprove = source("src/app/api/shift-assignments/[id]/approve/route.ts");
@@ -70,6 +71,8 @@ describe("Schedule claim-approval contract", () => {
     expect(tradeDecline).toContain('requirePermission(user.role, "shift_trade", "approve")');
     expect(assignApprove).toContain('requirePermission(user.role, "shift_assignment", "approve")');
     expect(assignDecline).toContain('requirePermission(user.role, "shift_assignment", "approve")');
+    expect(getAllowedRoles("shift_trade", "approve")).toEqual(["ADMIN"]);
+    expect(getAllowedRoles("shift_assignment", "approve")).toEqual(["ADMIN"]);
   });
 
   it("keeps approval audit and worker notification ownership in services", () => {

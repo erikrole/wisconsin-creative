@@ -7,7 +7,7 @@ import { createAuditEntryTx } from "@/lib/audit";
 import { cleanSummary } from "@/lib/services/calendar-sync";
 import { classifySourceEvent, normalizeOpponentName } from "@/lib/schedule-event-identity";
 import { nullableSportCodeSchema } from "@/lib/validation";
-import { isHomeFromVenueTone, siteFromVenueTone, VENUE_TONE_VALUES } from "@/lib/venue-tone";
+import { isHomeFromVenueTone, resolvedEventSite, siteFromVenueTone, VENUE_TONE_VALUES } from "@/lib/venue-tone";
 import { z } from "zod";
 import { normalizeManualEventTitle } from "@/lib/title-normalization";
 import { enforceRateLimit, SCHEDULE_MUTATION_LIMIT } from "@/lib/rate-limit";
@@ -259,6 +259,18 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
       patch.isHomeLocked = true;
       after.sportCode = patch.sportCode;
       after.isHomeLocked = true;
+      // Changing only the sport still sets the home/away lock, which shuts sync
+      // out of this row's classification for good. Locking a row that has no
+      // stored site froze it as an unknown one, so capture the site the row
+      // already implies at the moment the lock goes on.
+      if (existing.site === null) {
+        const locked = resolvedEventSite(existing);
+        if (locked !== null) {
+          before.site = existing.site;
+          patch.site = locked;
+          after.site = locked;
+        }
+      }
     }
 
     if (body.revertLocation) {

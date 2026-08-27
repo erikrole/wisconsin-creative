@@ -122,7 +122,7 @@ export const PERMISSIONS: Record<string, Record<string, Role[]>> = {
     view: ["ADMIN", "STAFF", "STUDENT"],
     assign: ["ADMIN", "STAFF"],
     request: ["ADMIN", "STAFF", "STUDENT"],
-    approve: ["ADMIN", "STAFF"],
+    approve: ["ADMIN"],
   },
   sport_config: {
     view: ["ADMIN", "STAFF"],
@@ -140,7 +140,7 @@ export const PERMISSIONS: Record<string, Record<string, Role[]>> = {
     view: ["ADMIN", "STAFF", "STUDENT"],
     post: ["ADMIN", "STAFF", "STUDENT"],
     claim: ["ADMIN", "STAFF", "STUDENT"],
-    approve: ["ADMIN", "STAFF"],
+    approve: ["ADMIN"],
   },
   // Sending a blast reaches every targeted phone at once, so authoring stays with
   // ADMIN + STAFF. Receiving needs no permission: the /api/me/blasts routes scope
@@ -174,6 +174,7 @@ export const PERMISSIONS: Record<string, Record<string, Role[]>> = {
   },
   resource: {
     view: ["ADMIN", "STAFF", "STUDENT"],
+    favorite: ["ADMIN", "STAFF", "STUDENT"],
     create: ["ADMIN", "STAFF"],
     edit: ["ADMIN", "STAFF"],
     delete: ["ADMIN"],
@@ -194,7 +195,6 @@ export const PERMISSIONS: Record<string, Record<string, Role[]>> = {
     import: ["ADMIN", "STAFF"],
     reconcile: ["ADMIN", "STAFF"],
     capture: ["ADMIN", "STAFF"],
-    profile: ["ADMIN", "STAFF"],
     download: ["ADMIN", "STAFF"],
     remove: ["ADMIN", "STAFF"],
     settings: ["ADMIN"],

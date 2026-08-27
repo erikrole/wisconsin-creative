@@ -2,6 +2,13 @@ import { Prisma, type Role, type ShiftArea, type ShiftAssignmentStatus } from "@
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
 import { ACTIVE_ASSIGNMENT_STATUSES } from "@/lib/shift-constants";
+import {
+  buildShiftAssignmentOverlapWhere,
+  resolveEffectiveAssignmentWindow,
+  resolveEffectiveShiftWindow,
+  scheduleWindowsOverlap,
+  type ScheduleShiftTiming,
+} from "@/lib/schedule-window";
 import { scoreCandidatesForShift, type CandidateScoringUser } from "@/lib/services/candidate-scoring";
 import { evaluateAvailabilityPreferences } from "@/lib/student-availability";
 import { availabilityContextFromCandidate } from "@/lib/schedule-availability-context";
@@ -23,16 +30,8 @@ type OpenWorkFilters = {
 
 type OpenWorkShift = Awaited<ReturnType<typeof loadOpenShiftRows>>[number];
 
-function effectiveWindow(item: {
-  startsAt: Date;
-  endsAt: Date;
-  callStartsAt?: Date | null;
-  callEndsAt?: Date | null;
-}) {
-  return {
-    startsAt: item.callStartsAt ?? item.startsAt,
-    endsAt: item.callEndsAt ?? item.endsAt,
-  };
+function effectiveWindow(item: ScheduleShiftTiming) {
+  return resolveEffectiveShiftWindow(item);
 }
 
 function futureEffectiveShiftWhere(now: Date): Prisma.ShiftWhereInput {
@@ -40,6 +39,7 @@ function futureEffectiveShiftWhere(now: Date): Prisma.ShiftWhereInput {
     OR: [
       { callStartsAt: null, startsAt: { gt: now } },
       { callStartsAt: { gt: now } },
+      { shiftGroup: { event: { allDay: true, startsAt: { gt: now } } } },
     ],
   };
 }
@@ -81,6 +81,7 @@ function openShiftSelect() {
             summary: true,
             startsAt: true,
             endsAt: true,
+            allDay: true,
             sportCode: true,
             opponent: true,
             isHome: true,
@@ -243,7 +244,7 @@ function serializeOpenShift(shift: OpenWorkShift, args: {
     canAct,
     reason: blockedReason
         ? blockedReason
-        : "Staff approval required",
+        : "Admin approval required",
     availabilityContext,
     score: recommendation?.score ?? null,
     bucket: recommendation?.bucket ?? null,
@@ -252,7 +253,7 @@ function serializeOpenShift(shift: OpenWorkShift, args: {
     warnings: recommendation?.warnings ?? [],
     reasons: recommendation?.reasons ?? [],
     ownRequestId: ownRequest?.id ?? null,
-    requestCount: shift.assignments.length,
+    requestCount: args.role === "ADMIN" ? shift.assignments.length : ownRequest ? 1 : 0,
     shift: {
       id: shift.id,
       area: shift.area,
@@ -280,15 +281,14 @@ export async function getScheduleOpenWork(filters: OpenWorkFilters) {
   const [candidate, shifts, pickupRequests] = await Promise.all([
     loadCurrentCandidate(filters.userId, now, futureEnd),
     loadOpenShiftRows({ ...filters, now }),
-    // Staff see every request because reviewing them is the job. A student sees
-    // only their own — without it, claiming a shift looks like nothing happened.
+    // Admins see every request because they own review. Everyone else sees only
+    // their own — without it, claiming a shift looks like nothing happened.
     db.shiftAssignment.findMany({
         where: {
           status: "REQUESTED",
-          ...(filters.role === "ADMIN" || filters.role === "STAFF"
+          ...(filters.role === "ADMIN"
             ? {}
             : { userId: filters.userId }),
-          ...(filters.area ? { shift: { area: filters.area } } : {}),
           shift: {
             AND: [futureEffectiveShiftWhere(now)],
             ...(filters.area ? { area: filters.area } : {}),
@@ -365,7 +365,16 @@ export async function pickupOpenShift(shiftId: string, userId: string) {
           shiftGroup: {
             include: {
               workingCopy: { select: { version: true } },
-              event: { select: { isHidden: true, archivedAt: true, status: true } },
+              event: {
+                select: {
+                  startsAt: true,
+                  endsAt: true,
+                  allDay: true,
+                  isHidden: true,
+                  archivedAt: true,
+                  status: true,
+                },
+              },
             },
           },
         },
@@ -416,19 +425,31 @@ export async function pickupOpenShift(shiftId: string, userId: string) {
     );
     if (activeAssignment) throw new HttpError(409, "This shift already has an active assignment");
 
-    const conflictWhere: Prisma.ShiftAssignmentWhereInput = {
-      userId,
-      status: { in: ACTIVE_STATUSES },
-      OR: [
-        { shift: { startsAt: { lt: window.endsAt }, endsAt: { gt: window.startsAt } } },
-        { callStartsAt: { lt: window.endsAt }, callEndsAt: { gt: window.startsAt } },
-        { shift: { callStartsAt: { lt: window.endsAt }, callEndsAt: { gt: window.startsAt } } },
-      ],
-    };
-    const hardConflict = await tx.shiftAssignment.findFirst({
-      where: conflictWhere,
-      select: { id: true, shift: { select: { area: true } } },
+    const conflictCandidates = await tx.shiftAssignment.findMany({
+      where: buildShiftAssignmentOverlapWhere({ userId, window }),
+      select: {
+        id: true,
+        callStartsAt: true,
+        callEndsAt: true,
+        shift: {
+          select: {
+            area: true,
+            startsAt: true,
+            endsAt: true,
+            callStartsAt: true,
+            callEndsAt: true,
+            shiftGroup: {
+              select: {
+                event: { select: { startsAt: true, endsAt: true, allDay: true } },
+              },
+            },
+          },
+        },
+      },
     });
+    const hardConflict = conflictCandidates.find((assignment) =>
+      scheduleWindowsOverlap(window, resolveEffectiveAssignmentWindow(assignment))
+    );
     if (hardConflict) {
       throw new HttpError(409, `User already has a shift during this time (${hardConflict.shift.area})`);
     }
@@ -459,7 +480,7 @@ export async function pickupOpenShift(shiftId: string, userId: string) {
         hasConflict: Boolean(conflictNote),
         conflictNote,
         // Deliberately no acknowledgement: there is nothing to acknowledge until
-        // staff approve. Stamping it here would show the student as confirmed
+        // Admin approves. Stamping it here would show the student as confirmed
         // for a slot they do not hold.
       },
       include: {

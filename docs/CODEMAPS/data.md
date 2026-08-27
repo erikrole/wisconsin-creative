@@ -11,7 +11,7 @@
 
 | Model | Fields | Model-level indexes/constraints |
 |---|---:|---:|
-| `User` | 112 | 5 |
+| `User` | 118 | 5 |
 | `Session` | 6 | 2 |
 | `PasswordResetToken` | 6 | 2 |
 | `PasskeyCredential` | 12 | 2 |
@@ -93,6 +93,11 @@
 | `CheckinItemReport` | 11 | 3 |
 | `KioskDevice` | 19 | 3 |
 | `Resource` | 19 | 7 |
+| `ResourceAssetFolder` | 12 | 2 |
+| `ResourceAsset` | 18 | 3 |
+| `ResourceAssetVersion` | 14 | 3 |
+| `ResourceAssetUpload` | 21 | 4 |
+| `ResourceAssetFavorite` | 6 | 4 |
 | `EventTravelMember` | 7 | 3 |
 
 ## Enums
@@ -437,3 +442,20 @@
 - `ACCOUNT_NOTE`
 - `EVENT_OPS`
 - `GENERAL`
+
+### `ResourceAssetKind`
+
+- `LOGO`
+- `FONT`
+- `GRAPHIC_ELEMENT`
+- `TEMPLATE`
+- `COLOR_REFERENCE`
+- `PHOTO`
+- `VIDEO`
+- `DOCUMENT`
+- `OTHER`
+
+### `ResourceAssetUploadStatus`
+
+- `PENDING`
+- `COMPLETED`

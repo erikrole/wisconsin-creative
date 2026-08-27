@@ -165,6 +165,7 @@ export default function ShiftDetailPanel({
   const [userSearch, setUserSearch] = useState("");
 
   const isStaff = currentUserRole === "ADMIN" || currentUserRole === "STAFF";
+  const canReviewClaims = currentUserRole === "ADMIN";
   // Schedule is the only staffing authoring surface. Keeping this detail panel
   // read-only prevents direct mutations from bypassing the 10-minute buffer.
   const canEditPublishedSchedule = false;
@@ -357,14 +358,6 @@ export default function ShiftDetailPanel({
     });
     if (!yes) return;
     mutate(id, `/api/shift-assignments/${id}`, { method: "DELETE" }, "Assignment removed");
-  }
-
-  function handleRequest(shiftId: string) {
-    mutate(shiftId, "/api/shift-assignments/request", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ shiftId }),
-    }, "Request sent for staff approval");
   }
 
   async function handleAutoFill() {
@@ -562,6 +555,7 @@ export default function ShiftDetailPanel({
             {isStaff && (
               <ScheduleReleaseNotice
                 hasWorkingCopy={group.hasWorkingCopy}
+                eventEndsAt={group.event.endsAt}
                 autoReleaseAt={group.autoReleaseAt}
                 autoReleaseError={group.autoReleaseError}
                 onRefresh={fetchGroup}
@@ -607,6 +601,7 @@ export default function ShiftDetailPanel({
                   shifts={shifts}
                   eventAllDay={group.event.allDay}
                   isStaff={isStaff}
+                  canReviewClaims={canReviewClaims}
                   canEdit={canEditPublishedSchedule}
                   currentUserId={currentUserId}
                   acting={acting}
@@ -623,7 +618,6 @@ export default function ShiftDetailPanel({
                   onRemove={handleRemove}
                   onApprove={handleApprove}
                   onDecline={handleDecline}
-                  onRequest={handleRequest}
                   onPostTrade={!isStaff && !isPast && !group.archivedAt
                     ? (assignmentId) => { setTradeDialogAssignmentId(assignmentId); setTradeNotes(""); }
                     : undefined}
@@ -680,7 +674,7 @@ export default function ShiftDetailPanel({
         <DialogHeader>
           <DialogTitle>Post Shift for Trade</DialogTitle>
           <DialogDescription>
-            Eligible crew can claim your shift. You stay scheduled until staff approve a claim.
+            Eligible crew can claim your shift. You stay scheduled until an admin approves a claim.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-2 py-1">

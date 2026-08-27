@@ -9,7 +9,9 @@ function source(relativeFile: string) {
 describe("earned badge celebration", () => {
   it("polls from a per-user cursor without replaying badge history", () => {
     const shell = source("src/components/AppShell.tsx");
-    expect(shell).toContain("gear-tracker:badge-reward-cursor:${user.id}");
+    // Namespaced per signed-in user so one person's cursor cannot suppress
+    // another's celebration on a shared machine.
+    expect(shell).toContain("gear-tracker:badge-reward-cursor:${rewardUserId}");
     expect(shell).toContain("/api/badges/recent");
     expect(shell).toContain("setEarnedBadgeQueue");
     expect(shell).toContain("current.slice(1)");

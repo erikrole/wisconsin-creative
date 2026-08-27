@@ -13,6 +13,7 @@ import {
   ClipboardListIcon,
   FileTextIcon,
   FolderTreeIcon,
+  FolderOpenIcon,
   HardDriveIcon,
   LayoutGridIcon,
   ListIcon,
@@ -55,6 +56,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { ResourceCommandPalette } from "@/components/resources/ResourceCommandPalette";
+import { BrandAssetLibrary } from "@/components/resources/BrandAssetLibrary";
 import { ServerPathCopy } from "@/components/resources/ServerPathCopy";
 import { DebouncedSearchInput } from "@/components/DebouncedSearchInput";
 import { OperationalPartialResultsAlert } from "@/components/OperationalFeedback";
@@ -463,6 +465,24 @@ function totalAssignedPeople(groups: SportAssignmentGroup[]) {
   return new Set(groups.flatMap((group) => group.users.map((user) => user.id))).size;
 }
 
+function ResourceSectionSwitcher({ active }: { active: "guides" | "brand-assets" }) {
+  return (
+    <div className="inline-flex items-center rounded-md border border-border/80 p-0.5" aria-label="Resource section">
+      <Button asChild variant={active === "guides" ? "secondary" : "ghost"} size="sm" className="h-10 rounded-sm">
+        <Link href="/resources" aria-current={active === "guides" ? "page" : undefined}>
+          <FileTextIcon data-icon="inline-start" />
+          Guides
+        </Link>
+      </Button>
+      <Button asChild variant={active === "brand-assets" ? "secondary" : "ghost"} size="sm" className="h-10 rounded-sm">
+        <Link href="/resources?tab=brand-assets" aria-current={active === "brand-assets" ? "page" : undefined}>
+          <FolderOpenIcon data-icon="inline-start" />
+          Brand assets
+        </Link>
+      </Button>
+    </div>
+  );
+}
 
 export default function ResourcesPage() {
   const router = useRouter();
@@ -473,6 +493,7 @@ export default function ResourcesPage() {
   const activeFilter = parseResourceFilter(searchParams);
   const sort = parseResourceSort(searchParams.get("sort"));
   const layout = parseResourceLayout(searchParams.get("layout"));
+  const resourceTab = searchParams.get("tab") === "brand-assets" ? "brand-assets" : "guides";
   const [contactRoleFilter, setContactRoleFilter] = useState<ContactRoleFilter>("ALL");
   const [contactAreaFilter, setContactAreaFilter] = useState<ContactAreaFilter>("ALL");
   const [contactHygieneFilter, setContactHygieneFilter] = useState<ContactHygieneFilter>("ALL");
@@ -518,6 +539,7 @@ export default function ResourcesPage() {
 
   const { data: guides, loading: guidesLoading, error: guidesError, reload: reloadGuides } = useFetch<GuideListItem[]>({
     url: "/api/resources",
+    enabled: resourceTab === "guides",
     transform: (json) => (json as { data: GuideListItem[] }).data ?? [],
   });
 
@@ -530,6 +552,7 @@ export default function ResourcesPage() {
 
   const { data: contactUsers, loading: contactsLoading, error: contactsError, reload: reloadContacts } = useFetch<ContactUsersResponse>({
     url: "/api/users?limit=200&sort=name",
+    enabled: resourceTab === "guides",
     refetchOnFocus: true,
     transform: (json) => json as unknown as ContactUsersResponse,
   });
@@ -643,24 +666,34 @@ export default function ResourcesPage() {
   const contactDirectoryCompact = activeFilter !== "contacts" && !search.trim();
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className={cn("flex flex-col p-6", resourceTab === "brand-assets" ? "gap-4" : "gap-6")}>
       <PageHeader
         title="Resources"
-        description="Find Creative guides, contacts, assignments, and the Media Drive path."
+        description={resourceTab === "brand-assets" ? undefined : "Find Creative guides, contacts, assignments, and the Media Drive path."}
+        className={resourceTab === "brand-assets" ? "mb-2" : undefined}
       >
         <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-          {isStaffOrAdmin && (
-            <Button asChild size="sm" className="h-10">
-              <Link href="/resources/new">
-                <PlusIcon data-icon="inline-start" />
-                New guide
-              </Link>
-            </Button>
+          <ResourceSectionSwitcher active={resourceTab} />
+          {resourceTab === "guides" && (
+            <>
+              {isStaffOrAdmin && (
+                <Button asChild size="sm" className="h-10">
+                  <Link href="/resources/new">
+                    <PlusIcon data-icon="inline-start" />
+                    New guide
+                  </Link>
+                </Button>
+              )}
+              <ServerPathCopy path="smb://ath01-nas.uwia.wisc.edu/users/" />
+            </>
           )}
-          <ServerPathCopy path="smb://ath01-nas.uwia.wisc.edu/users/" />
         </div>
       </PageHeader>
 
+      {resourceTab === "brand-assets" ? (
+        <BrandAssetLibrary canManage={isStaffOrAdmin} />
+      ) : (
+        <>
       <OperationalToolbar aria-label="Guide search and filters">
         <div className="flex flex-col gap-2 xl:flex-row xl:items-center">
           <DebouncedSearchInput
@@ -899,6 +932,8 @@ export default function ResourcesPage() {
             <GuideResults guides={filtered} layout={layout} />
           </section>
         </div>
+      )}
+        </>
       )}
     </div>
   );

@@ -82,20 +82,30 @@ export async function getWorkedEventCountForUser(
 }
 
 /**
- * Games that count toward a record: a real, visible event on or after the
- * profile-record start date that carries a source-derived outcome (win, loss,
- * or tie). Mirrors
+ * Games that count toward a record: a real, visible event inside the
+ * profile-record season that has finished and carries a source-derived outcome
+ * (win, loss, or tie). Mirrors
  * `buildScheduleEventWhere`'s definition of a countable event so a profile
  * record never disagrees with the schedule's event visibility rules.
  * Exhibition, scrimmage, and alumni-match rows remain schedule history but
  * are not official record games. Workers an admin added outside the schedule
  * count here exactly like an active assignment.
+ *
+ * The window is bounded at both ends and the game has to be over, because the
+ * profile chip and the Scoreboard tab describe the same season on the same
+ * screen. An open-ended `startsAt` let a next-season game land in a record
+ * labelled this one, and a result posted before the final whistle counted a
+ * game the Scoreboard had not counted yet.
  */
-export function gameRecordEventWhere(userId: string): Prisma.CalendarEventWhereInput {
+export function gameRecordEventWhere(
+  userId: string,
+  now: Date = new Date(),
+): Prisma.CalendarEventWhereInput {
   return {
     ...OFFICIAL_RECORD_EVENT_EXCLUSION,
     result: { not: null },
-    startsAt: { gte: GAME_RECORD_START_DATE },
+    startsAt: { gte: GAME_RECORD_START_DATE, lt: GAME_RECORD_END_DATE },
+    endsAt: { lt: now },
     status: { not: "CANCELLED" },
     isHidden: false,
     archivedAt: null,

@@ -37,6 +37,7 @@ type Props = {
   shifts: Shift[];
   eventAllDay?: boolean;
   isStaff: boolean;
+  canReviewClaims?: boolean;
   canEdit?: boolean;
   currentUserId?: string;
   acting: string | null;
@@ -53,7 +54,6 @@ type Props = {
   onRemove: (assignmentId: string) => void;
   onApprove: (assignmentId: string) => void;
   onDecline: (assignmentId: string) => void;
-  onRequest: (shiftId: string) => void;
   onPostTrade?: (assignmentId: string) => void;
   onCallWindowSaved?: () => void;
 };
@@ -63,6 +63,7 @@ export function ShiftAreaSection({
   shifts,
   eventAllDay = false,
   isStaff,
+  canReviewClaims = false,
   canEdit = isStaff,
   currentUserId,
   acting,
@@ -79,7 +80,6 @@ export function ShiftAreaSection({
   onRemove,
   onApprove,
   onDecline,
-  onRequest,
   onPostTrade,
   onCallWindowSaved,
 }: Props) {
@@ -121,6 +121,7 @@ export function ShiftAreaSection({
               activeAssignment={activeAssignment ?? null}
               pendingRequests={pendingRequests}
               isStaff={isStaff}
+              canReviewClaims={canReviewClaims}
               canEdit={canEdit}
               currentUserId={currentUserId}
               acting={acting}
@@ -135,7 +136,6 @@ export function ShiftAreaSection({
               onRemove={onRemove}
               onApprove={onApprove}
               onDecline={onDecline}
-              onRequest={() => onRequest(shift.id)}
               onDeleteShift={() => onDeleteShift(shift.id, !!activeAssignment)}
               onPostTrade={onPostTrade}
               onCallWindowSaved={onCallWindowSaved}

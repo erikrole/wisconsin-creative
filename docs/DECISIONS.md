@@ -3,7 +3,7 @@
 ## Document Control
 - Owner: Erik Role (Wisconsin Athletics Creative)
 - Product: Gear Tracker
-- Last Updated: 2026-08-25
+- Last Updated: 2026-08-27
 - Status: Living decision log
 - Purpose: track durable decisions, rationale, and downstream constraints
 
@@ -963,8 +963,10 @@ These are non-negotiable integrity constraints. Every feature must preserve them
   - The versioned working-copy model already provides safe staging, optimistic concurrency, atomic reconciliation, and compatibility with existing worker-facing relational reads.
 - Decision:
   - Staff schedule edits remain private for ten minutes after the most recent edit. Every new edit restarts the quiet period.
+  - When the live event `endsAt` is already past, the standard Schedule editor is the default backfill path: the mutation clears pending release metadata and publishes synchronously instead of entering the quiet period.
   - Each mutation pre-enqueues a version-specific durable Workflow run before committing the pending version. When it wakes, the run releases only if that exact version is still current; superseded runs no-op.
   - Release reconciles the pending copy into relational shifts and assignments atomically, updates the collaborator snapshot, preserves history and safety blockers, and sends at most one consolidated event notification per affected worker.
+  - Past-event publication sends no schedule, follower, gear-prep, push, email, in-app, or badge notification. The resulting assignment is immediately Scoreboard-visible; result-less worked events contribute to the work total and event list but not to official W/L/T stats.
   - Draft, Publish, Republish, and Unacknowledged are retired as active product concepts. Staff see Pending changes, the scheduled release time, Revert changes, and actionable recovery when validation blocks release.
   - The relational schedule remains worker-facing truth. Until the quiet period completes, My Shifts, Dashboard, ICS, Open Work, Trade Board, collaborator Schedule, and existing iOS clients continue showing the last released version.
   - Active collaborators whose policy grants `PUBLISHED_SCHEDULE_VIEW` may be manually assigned to Staff slots. They remain outside Student availability, Open Work pickup, and Trade Board workflows, and reservation-created collaborator staffing remains excluded.
@@ -972,13 +974,15 @@ These are non-negotiable integrity constraints. Every feature must preserve them
   - Every eligible future event receives configured slots. Home events use their sport Home template; Away and neutral-site games with an opponent use the sport Away template; events without an opponent use the Settings-owned Non-game template. Cancelled, hidden, and archived events are excluded.
   - Assignment acknowledgement timestamps remain historical compatibility data but no longer gate readiness, visibility, or release.
 - Consequences:
-  - A name becomes worker-visible only after the ten-minute quiet period, at the same boundary that creates consolidated notification evidence.
+  - For future events, a name becomes worker-visible only after the ten-minute quiet period, at the same boundary that creates consolidated notification evidence.
+  - For ended events, the same editing flow corrects the published schedule immediately without a second backfill control or any recipient notification.
   - Operators can make several quick changes without notification churn or a separate publish ceremony.
   - The staging table remains an internal reliability mechanism, but product surfaces no longer present a draft lifecycle.
 - Guardrails:
   - Never commit a pending schedule mutation unless its version-specific release run was successfully enqueued.
   - Never let an older workflow release a newer pending version.
   - Never hide a permanent release blocker; persist and surface recovery state.
+  - Never present a pending-release countdown or “assignees notified” copy for an ended event.
   - Never expose collaborators to internal contacts, availability, Trade Board, Open Work, or broader Schedule controls through assignment eligibility.
   - Never apply Student call-time offsets or overrides to Staff or collaborator assignments.
 - Reference: `tasks/event-shift-working-schedule-plan.md`, `docs/AREA_SHIFTS.md`, `docs/AREA_MOBILE.md`, and `docs/AREA_SETTINGS.md`.
@@ -1110,6 +1114,7 @@ These are non-negotiable integrity constraints. Every feature must preserve them
   `docs/RELEASE_VERIFICATION.md`.
 
 ## Change Log
+- 2026-08-27: Amended D-055 so Admin is the only human reviewer for both open-slot requests and Trade Board claims. Both approval permissions, full review payloads, web/native review queues, and initial/deadline reviewer notifications are Admin-only; Staff retain ordinary scheduling tools but no claim approvals or reviewer alerts, and student lifecycle messages are unchanged.
 - 2026-08-26: Amended D-057 so event-worker backfill recognition is explicitly all-silent. Awards still persist, but no badge notification is created for any badge in the backfill recount; the worker surface contains no recipient-notification promise and finished-event adds remain immediate.
 - 2026-08-25: Released the accepted Scoreboard, event-worker, Student-read, role-preview, app-activity, and linked-event-cap slices in production deployment `dpl_9cFHwpSQA9QjsQTV3GF3uKf65QtE` from commit `c48dd43d`; authenticated role-specific and interaction proof remains tracked by the relevant area gaps.
 - 2026-08-24: Amended D-056 so Scoreboard result authority is W/L/T rather than W/L-only. The calendar `[T]` marker is retained in raw source evidence, stored as `TIE`, included in official records and filters, and counted as half a win for rate. The enum and idempotent source-backed backfill are split across migrations `0132` and `0133` so the new value is committed before the backfill uses it; migration and compatible route deployment are complete, while authenticated production proof remains pending.
@@ -1212,7 +1217,7 @@ These are non-negotiable integrity constraints. Every feature must preserve them
   - Track save operations and pending-delete cleanup as durable signature state because database and Blob writes are not atomic. Successful recaptures retain immutable prior `READY` revisions for authenticated version-history downloads. Explicit signer removal and collection reset are privacy-erasure actions that queue every retained revision in their scope for deletion.
   - Collection delete is an admin-only, version-checked destructive action. It archives and invalidates the collection first, marks all retained revisions pending deletion, cleans private artifacts before removing roster records, and leaves the archived collection retryable when private cleanup fails.
   - Mounting the collection landing page automatically invokes the existing standalone Creative staff reconciliation mutation. Collection-list GET remains read-only so framework prefetch cannot alter roster state. Reconciliation remains version-checked and writes an audit entry only when membership or identity links change. It adds active visible full-time Video/Photo/Graphics users, links uniquely matching same-season team staff, preserves required-state choices and captures, and deactivates stale linked users without deleting their history. One canonical Creative staff capture owns the private artifacts for every linked row. Creative staff are required by default; admins may make individual members optional.
-  - Student-athlete signature members also own the website profile contract: full birthday and hometown are required after a committed signature, while Instagram, TikTok, and X/Twitter handles are optional and stored as handles without URLs. Profile completeness is separate from signature-artifact completeness, the version-checked profile mutation is limited to `PLAYER` members, and the normalized profile is returned with the authenticated collection member contract for the website consumer. Coaching, support, Creative Staff, and ad-hoc signers do not enter this step.
+  - Amended 2026-08-27: Signatures is artifact-only and no longer owns a student-athlete website-profile workflow. A committed capture returns directly to the roster; Signatures does not expose or mutate birthday, hometown, or social handles. Existing nullable member columns and historical values remain in place for non-destructive rollback safety, while official roster hometowns may remain dormant source metadata. No destructive migration is required to retire the feature.
 - Consequences:
   - A tile is complete only when the current capture revision is committed and both private artifacts are ready.
   - Physical iPad Safari, private Blob provisioning, deterministic rendering, and cleanup failure-injection tests are release gates.
@@ -1316,12 +1321,13 @@ These are non-negotiable integrity constraints. Every feature must preserve them
   - That was the deliberate 2026-07-02 premier-removal policy, but it was never carried through. `approveTrade`/`declineTrade` and their routes survived with no UI caller, `APIClient.approveShiftTrade`/`declineShiftTrade` became dead Swift, the Schedule "Trade approval" chip counted a `CLAIMED` status that `claimTrade` could no longer produce, and `getScheduleOpenWork` returned a staff-only `pickupRequests` array that could never be non-empty. The system read as approval-first while behaving instantly.
   - This decision supersedes the instant-pickup policy recorded in `tasks/schedule-mvp-end-to-end-plan.md`.
 - Decision:
-  - A student claiming an open Student slot creates a `REQUESTED` assignment. Several students may hold requests on one slot; staff choose, and `approveRequest` declines the rest in the same transaction. A student cannot file two requests on one shift.
+  - A student claiming an open Student slot creates a `REQUESTED` assignment. Several students may hold requests on one slot; an Admin chooses, and `approveRequest` declines the rest in the same transaction. A student cannot file two requests on one shift.
   - A student claiming a Trade Board post moves it to `CLAIMED` and nothing else. The poster keeps the assignment until `approveTrade` runs the swap, so a claim alone never leaves a shift uncovered.
-  - Both queues resolve through the existing `shift_trade.approve` and `shift_assignment.approve` permissions (`ADMIN` + `STAFF`); no permission changed.
-  - An unreviewed claim escalates to staff, then approves itself at a deadline, carried by a per-claim durable workflow (`pendingClaimReviewWorkflow`) modelled on `pendingScheduleReleaseWorkflow`. Deadlines derive from the claim's *effective* window start: escalate at T-48h, resolve at T-24h, falling back to a proportional split for a claim filed inside those leads.
+  - Both queues resolve through `shift_trade.approve` and `shift_assignment.approve`, and both permissions are Admin-only. Staff retain ordinary Schedule/Trade Board reads, posting, cancellation, and non-review staffing tools but receive no full reviewer payload, queue action, or approve/decline authority.
+  - Initial and deadline-driven reviewer notifications for both open-slot requests and Trade Board claims target active visible Admins only. Student lifecycle messages still go to the affected requester, poster, or claimer.
+  - An unreviewed claim alerts its reviewer audience, then approves itself at a deadline, carried by a per-claim durable workflow (`pendingClaimReviewWorkflow`) modelled on `pendingScheduleReleaseWorkflow`. Deadlines derive from the claim's *effective* window start: escalate at T-48h, resolve at T-24h, falling back to a proportional split for a claim filed inside those leads.
 - Guardrails:
-  - Auto-approval calls `approveTrade`/`approveRequest` and never bypasses their re-checks. A 4xx (conflict appeared, slot refilled, time off approved) leaves the claim for a human and tells staff why.
+  - Auto-approval calls `approveTrade`/`approveRequest` and never bypasses their re-checks. A 4xx (conflict appeared, slot refilled, time off approved) leaves the claim for an Admin and tells the same reviewer audience why.
   - `REQUESTED` stays outside `ACTIVE_ASSIGNMENT_STATUSES`, so a pending request holds no slot, raises no conflict, stays out of My Shifts and the personal ICS feed, and never blocks staff from assigning directly.
   - A pending request sends no gear-prep nudge. Prep belongs to coverage the student actually holds.
   - Reviewer fanout runs after the claim commits, never inside the `SERIALIZABLE` claim transaction, whose read set two students racing a trade already contend over.
@@ -1329,7 +1335,7 @@ These are non-negotiable integrity constraints. Every feature must preserve them
 - Consequences:
   - Claims fail toward approval rather than expiry. Both students have already agreed to the swap, and an unresolved claim reaching the shift is the outcome where the poster believes they are off, the claimer believes they are on, and coverage depends on who guesses right.
   - No schema migration: `ShiftTradeStatus.CLAIMED` and `ShiftAssignmentStatus.REQUESTED`/`APPROVED`/`DECLINED` all survived the 2026-07-02 cleanup.
-  - An auto-approval is a schedule change staff did not make, so it is always reported to them.
+  - An auto-approval is a schedule change reviewers did not make, so it is always reported to the applicable reviewer audience.
 - Reference: `docs/AREA_SHIFTS.md`, `src/lib/services/shift-trades.ts`, `src/lib/services/schedule-open-work.ts`, `src/workflows/pending-claim-review.ts`, and `tests/schedule-instant-pickup-source.test.ts`.
 
 ## D-056: Scoreboard Metrics Are Shared Authenticated Team Data
@@ -1346,6 +1352,7 @@ These are non-negotiable integrity constraints. Every feature must preserve them
   - The aggregate route accepts at most one exact Sport, Schedule venue, opponent, and site value. Different dimensions stack with AND semantics. The service applies that one intersection to unique totals, all dimensional breakdowns, and every person summary; stable facets continue to come from the full bounded window so narrowing one dimension never removes the available choices in another.
   - Venue means the cleaned display component of `CalendarEvent.rawLocationText`, never an equipment pickup location. Site means the canonical `CalendarEvent.site` Home/Away/Neutral classification. The clients use generic “Current season” copy while the server retains ownership of the active scope key and date bounds.
   - The shared identity contract is limited to user id, display name, avatar, and Scoreboard metrics. Cross-user detail resolves only that minimal identity and the dedicated Scoreboard response; it does not load or expose the private user-profile payload, and protected event links are omitted from the shared detail surface.
+  - Per-person event history includes every completed event with an active assignment or EventWorker, including result-less work. Result-less rows carry event summary identity but remain out of wins/losses/ties, form, streak, and result-filtered views.
   - The shared roster includes active, non-hidden people. Existing self and internal-operator handling of inactive or hidden records remains outside aggregate discovery and retains its current visibility rules.
   - This is an authenticated app surface, not public internet publishing. Unauthenticated reads remain denied.
 - Consequences:
@@ -1375,10 +1382,12 @@ These are non-negotiable integrity constraints. Every feature must preserve them
   - Badge evidence is read through one shared reader used by both the awarding evaluator and the profile progress bar, so a badge can never award from a count the profile cannot show. An added worker contributes the event's own sport, site, result, opponent, and mapped venue; it claims no area and no call window, because it records that the work happened, not how it was staffed. An all-day event's midnight boundaries are a date rather than hours, so an added worker on one is excluded from the early-start and late-finish rules instead of tripping them.
   - Adding a worker to a finished event re-evaluates that person's badges immediately; a worker added to a future event is picked up by the nightly sweep once the event ends. Badges are never revoked, so removing a worker lowers live Scoreboard totals but leaves an already-earned badge in place.
   - Nothing else reads the table. Schedule, working copies, published snapshots, crew coverage, My Shifts, trades, acknowledgements, notifications, and ICS are unchanged and unaware.
+  - An ended event that already has a planned shift slot is corrected through the normal Schedule working-copy editor; that automatic past-event backfill is a schedule publication, not an `EventWorker` record. `EventWorker` remains for work with no shift or slot to correct.
   - Writes are ADMIN-only, rate-limited, transactional, and audited on the event. Staff may read the worker list for an event they are running. Adding or removing a worker sends no notification of any kind, by design and not by omission.
   - Workers can be added to past and future events alike, and in any role including `COLLABORATOR`.
 - Consequences:
   - Season stats can be corrected after the fact without rewriting schedule history or paging anyone.
+  - Operators use one Schedule editing flow for both future planning and ended-event correction; no separate backfill affordance is required when a slot already exists.
   - The audit trail is the only record of an added worker, so audit coverage is the accountability mechanism for a control that silently moves recognition numbers.
   - Silence covers the entire backfill badge recount. Every newly earned badge is still written, but no badge notification is created, including when scheduled assignments also cross a threshold in the same pass. The suppression is durable, not deferred: the award row exists after the silent grant, so no later pass re-inserts it and none can notify late. Ordinary scheduled-shift recognition remains separate and may notify when it is not part of a backfill pass.
   - Because the shared Scoreboard response boundary is unchanged, no client -- web, native, or collaborator -- learns how a person came to be on an event; an added worker appears exactly like an assigned one.
@@ -1413,3 +1422,35 @@ These are non-negotiable integrity constraints. Every feature must preserve them
   - A Student can see team booking totals, other visible dashboard bookings, generic Upcoming Events, and all active visible user profiles without receiving cross-user mutation rights or hidden/private collaborator fields.
   - Local source and focused route/UI contracts are verified; deployment and authenticated browser proof remain rollout gates.
 - Reference: `docs/AREA_DASHBOARD.md`, `docs/AREA_LICENSES.md`, `docs/AREA_USERS.md`, `src/app/api/dashboard/route.ts`, `src/app/api/licenses/route.ts`, `src/app/api/users/route.ts`, `src/app/api/users/[id]/route.ts`, and the Student privacy plan in `tasks/student-privacy-dashboard-licenses-plan-2026-08-24.md`.
+
+## D-059: Brand Assets Are Logical Files With Immutable Versions in a Private Blob Store
+- Date: 2026-08-26
+- Status: Accepted; implemented locally with the dedicated private store and Preview migrations/runtime foundation verified; populated file lifecycle proof pending
+- Context:
+  - Resources currently stores Markdown knowledge-base entries and public editor images, but it does not provide a durable home for the logos, fonts, brand guide, templates, and other production files the Creative team needs to reuse.
+  - Replacing a file by uploading a second name and deleting the first loses provenance and makes links or operational references ambiguous. The product needs one stable file identity with explicit replacement history.
+  - The supplied 2026 brand guide supplies useful content categories, but its editorial design instructions must not silently become application authorization, validation, or approval rules.
+- Decision:
+  - Add an additive `Brand assets` tab under `/resources` backed by separate folder, logical asset, version, and short-lived upload-intent records. Keep the existing Markdown `Resource` model and guide routes unchanged.
+  - Treat `(folder, normalized file name)` as the logical identity. A new upload to an existing identity creates the next `ResourceAssetVersion`, leaves prior versions intact, and advances the asset's explicit `currentVersionId` in one serializable transaction.
+  - Use the existing Vercel Blob SDK's client-upload/multipart flow for binary transport, but require a dedicated private store credential (`RESOURCE_ASSET_BLOB_READ_WRITE_TOKEN`). Do not reuse the public Markdown-image token or the private Signature Capture token, and do not fall back silently when the dedicated credential is missing.
+  - Store only the verified Blob pathname and metadata in Prisma. Serve files through an authenticated download route with safe content-disposition and no-store headers; never return raw Blob URLs from the asset API.
+  - Use existing `resource.view` for internal reads and `resource.create`/`resource.edit` for Staff/Admin folder and upload management. No collaborator visibility or new permission family is inferred in V1.
+  - Create only the empty technical `Brand assets` root container in the migration. Do not seed the supplied PDF, assets, or category folders; users create the taxonomy that fits their work. The guide's visual rules remain human reference content, not code-enforced upload policy.
+  - Add server-backed all-folder search, kind/favorite filters, and explicit sorting; keep folder browsing as the default and make broader discovery an explicit scope choice.
+  - Provide authenticated previews for PDFs, images, and supported fonts. Preview requests continue through the app route, and unsupported production files retain a download/native-application path.
+  - Make version notes part of the immutable version record. Restoring an older version copies its private Blob to a new pathname and creates a new version row/current pointer with an audit entry; it never repoints history or deletes a prior Blob.
+  - Use a client upload queue for drag/drop and multi-file uploads with per-file progress, retry, and explicit duplicate handling. Favorites are server-persisted per user; recent shortcuts are deliberately browser-local and are not product records.
+  - Generate internal links to the authenticated Resources route only. Links may identify a folder and logical asset, but never expose a raw Blob URL or public sharing capability.
+- Guardrails:
+  - Never delete or overwrite a previous version as part of replacement, and never let the client choose the current version pointer.
+  - Bind each upload token to one pending intent, actor, exact pathname, size, content type, target folder/file, and expiry. Finalization must re-read Blob metadata before committing the version row.
+  - Never expose a raw asset URL, secret Blob token, or private file to an unauthenticated or unauthorized caller. Missing private-store configuration fails closed.
+  - Keep upload finalization and the current-version pointer/audit write in the same serializable transaction. Abandoned intents may remain pending until a later cleanup job; cleanup is not a destructive user action in V1.
+  - Do not promote PDF copy about brand approvals, tone, logo usage, or design restrictions into a hidden validator without a separate accepted decision.
+- Consequences:
+  - The Resources tab can house the supplied brand guide and related assets without growing the Markdown guide model or requiring a bespoke binary protocol.
+  - A replacement is visible as a single file row with a new version badge, while History provides traceable prior downloads.
+  - The first real upload remains a separate authenticated browser read-back gate. Preview private storage is provisioned and empty, and migrations `0135`/`0136` are applied with no supplied PDF ingested; source, migration, and empty-state success alone do not prove the upload/replacement/history lifecycle.
+  - The experience remains small by omitting delete, move, rename, public/external links, generated server thumbnails, and approval workflow. Browser previews, favorites, local recents, and internal authenticated links improve retrieval without changing ownership or publication policy.
+- Reference: `docs/BRIEF_BRAND_ASSET_LIBRARY_V1.md`, `tasks/brand-asset-library-plan-2026-08-26.md`, `docs/AREA_RESOURCES.md`, `src/app/(app)/resources/page.tsx`, `src/lib/blob.ts`, and `src/lib/signatures/storage.ts`.

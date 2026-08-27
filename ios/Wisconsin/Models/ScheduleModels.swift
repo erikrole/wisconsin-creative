@@ -255,6 +255,17 @@ struct ShiftGroupEvent: Codable, Identifiable {
     let locationId: String?
 }
 
+/// The current viewer's pending request for one open Student slot. It is
+/// intentionally not the full assignment queue: other students' requests are
+/// staff-only, while a student only needs to know whether their own claim is
+/// awaiting review.
+struct ViewerShiftRequest: Codable, Identifiable {
+    let id: String
+    let status: String
+    let hasConflict: Bool?
+    let conflictNote: String?
+}
+
 struct EventShift: Codable, Identifiable {
     let id: String
     let area: String
@@ -265,9 +276,10 @@ struct EventShift: Codable, Identifiable {
     let callEndsAt: Date?
     let notes: String?
     let assignments: [ShiftAssignmentRecord]
+    let viewerRequest: ViewerShiftRequest?
 
     private enum CodingKeys: String, CodingKey {
-        case id, area, workerType, startsAt, endsAt, callStartsAt, callEndsAt, notes, assignments
+        case id, area, workerType, startsAt, endsAt, callStartsAt, callEndsAt, notes, assignments, viewerRequest
     }
 
     init(
@@ -279,7 +291,8 @@ struct EventShift: Codable, Identifiable {
         callStartsAt: Date? = nil,
         callEndsAt: Date? = nil,
         notes: String?,
-        assignments: [ShiftAssignmentRecord]
+        assignments: [ShiftAssignmentRecord],
+        viewerRequest: ViewerShiftRequest? = nil
     ) {
         self.id = id
         self.area = area
@@ -290,6 +303,7 @@ struct EventShift: Codable, Identifiable {
         self.callEndsAt = callEndsAt
         self.notes = notes
         self.assignments = assignments
+        self.viewerRequest = viewerRequest
     }
 
     init(from decoder: Decoder) throws {
@@ -303,6 +317,7 @@ struct EventShift: Codable, Identifiable {
         callEndsAt = try container.decodeIfPresent(Date.self, forKey: .callEndsAt)
         notes = try container.decodeIfPresent(String.self, forKey: .notes)
         assignments = try container.decodeIfPresent([ShiftAssignmentRecord].self, forKey: .assignments) ?? []
+        viewerRequest = try container.decodeIfPresent(ViewerShiftRequest.self, forKey: .viewerRequest)
     }
 
     var isOpen: Bool { assignments.isEmpty }
@@ -591,6 +606,11 @@ struct MyShiftsResponse: Decodable {
     /// Whose shifts the server actually answered for. Absent on servers that
     /// predate the `userId` filter, which is the case this exists to catch.
     let userId: String?
+    /// Pagination metadata is optional for rollout tolerance with older
+    /// servers; the native client stops after the first page when absent.
+    let total: Int?
+    let limit: Int?
+    let offset: Int?
 }
 
 // MARK: - Availability blocks

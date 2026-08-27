@@ -157,6 +157,20 @@ const TEAM_EVENT_SELECT = {
 
 type TeamEventRow = Prisma.CalendarEventGetPayload<{ select: typeof TEAM_EVENT_SELECT }>;
 
+/**
+ * The columns every filter dimension is derived from. Facet options need only
+ * these, so the query that builds the always-unfiltered option lists reads
+ * four scalars per event instead of the whole crew graph.
+ */
+const FACET_EVENT_SELECT = {
+  sportCode: true,
+  opponent: true,
+  site: true,
+  rawLocationText: true,
+} satisfies Prisma.CalendarEventSelect;
+
+type EventDimensions = Prisma.CalendarEventGetPayload<{ select: typeof FACET_EVENT_SELECT }>;
+
 type MutablePersonSport = {
   key: string | null;
   eventIds: Set<string>;
@@ -213,7 +227,7 @@ function trimmedOrNull(value: string | null): string | null {
   return trimmed || null;
 }
 
-function dimensionKey(event: TeamEventRow, dimension: TeamScoreboardDimension): string | null {
+function dimensionKey(event: EventDimensions, dimension: TeamScoreboardDimension): string | null {
   if (dimension === "sport") return event.sportCode;
   if (dimension === "venue") return scheduleVenueDisplayName(event.rawLocationText);
   if (dimension === "opponent") return trimmedOrNull(event.opponent);
@@ -227,7 +241,7 @@ function dimensionLabel(dimension: TeamScoreboardDimension, key: string | null):
   return key ? SITE_LABELS[key as CalendarEventSite] : "Unknown site";
 }
 
-function matchesFilters(event: TeamEventRow, filters: TeamScoreboardFilters): boolean {
+function matchesFilters(event: EventDimensions, filters: TeamScoreboardFilters): boolean {
   if (filters.sportCode && event.sportCode !== filters.sportCode) return false;
   if (filters.venue && dimensionKey(event, "venue") !== filters.venue) return false;
   if (filters.opponent && dimensionKey(event, "opponent") !== filters.opponent) return false;
@@ -301,7 +315,7 @@ function teamBreakdownState(
 
 function breakdownStatesForEvent(
   maps: TeamScoreboardBreakdownMaps,
-  event: TeamEventRow,
+  event: EventDimensions,
 ): MutableTeamBreakdown[] {
   return (Object.keys(maps) as TeamScoreboardDimension[]).map((dimension) => (
     teamBreakdownState(maps[dimension], dimensionKey(event, dimension))
@@ -383,7 +397,7 @@ function finishBreakdowns(
 }
 
 function facetOptions(
-  events: TeamEventRow[],
+  events: EventDimensions[],
   dimension: TeamScoreboardDimension,
 ): TeamScoreboardFacet[] {
   const keys = new Set<string>();
@@ -409,39 +423,66 @@ function visibleParticipationWhere(eventWhere: Prisma.CalendarEventWhereInput): 
   };
 }
 
+/**
+ * The filter dimensions the database can decide by itself. Venue is derived
+ * from `rawLocationText` in TypeScript and opponent is compared after
+ * trimming, so both stay with `matchesFilters` -- which remains the single
+ * authority for every dimension. This fragment only narrows how much of the
+ * crew graph has to be read to answer a filtered request.
+ */
+function narrowedFilterWhere(filters: TeamScoreboardFilters): Prisma.CalendarEventWhereInput {
+  return {
+    ...(filters.sportCode ? { sportCode: filters.sportCode } : {}),
+    ...(filters.site ? { site: filters.site } : {}),
+  };
+}
+
 export async function getTeamScoreboard(
   options: { now?: Date; filters?: TeamScoreboardFilters } = {},
 ): Promise<TeamScoreboard> {
   const now = options.now ?? new Date();
   const filters = options.filters ?? {};
-  const [workedEvents, recordEvents] = await Promise.all([
+  const workedEventWhere = visibleParticipationWhere({
+    startsAt: { gte: SCOREBOARD_SCOPE.startsAt, lt: SCOREBOARD_SCOPE.endsAt },
+    endsAt: { lt: now },
+    status: "CONFIRMED",
+    isHidden: false,
+  });
+  // A result is only official once the game is over. Without the same
+  // completed-game bound the worked query carries, a result posted against a
+  // fixture that has not ended landed in the team record while the per-person
+  // Scoreboard for the very same game still showed nothing.
+  const recordEventWhere = visibleParticipationWhere({
+    ...OFFICIAL_RECORD_EVENT_EXCLUSION,
+    result: { not: null },
+    startsAt: { gte: SCOREBOARD_SCOPE.startsAt, lt: SCOREBOARD_SCOPE.endsAt },
+    endsAt: { lt: now },
+    status: { not: "CANCELLED" },
+    isHidden: false,
+    archivedAt: null,
+  });
+  const narrowed = narrowedFilterWhere(filters);
+
+  const [workedEvents, recordEvents, facetEvents] = await Promise.all([
     db.calendarEvent.findMany({
-      where: visibleParticipationWhere({
-        startsAt: { gte: SCOREBOARD_SCOPE.startsAt, lt: SCOREBOARD_SCOPE.endsAt },
-        endsAt: { lt: now },
-        status: "CONFIRMED",
-        isHidden: false,
-      }),
+      where: { ...workedEventWhere, ...narrowed },
       orderBy: [{ startsAt: "asc" }, { id: "asc" }],
       select: TEAM_EVENT_SELECT,
     }),
     db.calendarEvent.findMany({
-      where: visibleParticipationWhere({
-        ...OFFICIAL_RECORD_EVENT_EXCLUSION,
-        result: { not: null },
-        startsAt: { gte: SCOREBOARD_SCOPE.startsAt, lt: SCOREBOARD_SCOPE.endsAt },
-        status: { not: "CANCELLED" },
-        isHidden: false,
-        archivedAt: null,
-      }),
+      where: { ...recordEventWhere, ...narrowed },
       orderBy: [{ startsAt: "asc" }, { id: "asc" }],
       select: TEAM_EVENT_SELECT,
+    }),
+    // Facets describe the full bounded window whatever the filter stack is, so
+    // this one is deliberately unfiltered -- and reads four scalars per event
+    // rather than every crew row, which the option lists never look at.
+    db.calendarEvent.findMany({
+      where: { OR: [workedEventWhere, recordEventWhere] },
+      select: FACET_EVENT_SELECT,
     }),
   ]);
 
-  const facetEvents = [...new Map(
-    [...workedEvents, ...recordEvents].map((event) => [event.id, event]),
-  ).values()];
   const filteredWorkedEvents = workedEvents.filter((event) => matchesFilters(event, filters));
   const filteredRecordEvents = recordEvents.filter((event) => matchesFilters(event, filters));
 

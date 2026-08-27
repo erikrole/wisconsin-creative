@@ -13,10 +13,12 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import type { ReactNode } from "react";
-import { Children, isValidElement, useMemo, useState } from "react";
+import { Children, isValidElement, useMemo } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { AnimatePresence, motion } from "motion/react";
+import { toast } from "sonner";
+import { useCopyFeedback } from "@/hooks/use-copy-feedback";
 import { headingId, markdownHeadingId, markdownHeadingText } from "@/lib/guide-content";
 import { parseEmbed } from "@/lib/media-embed";
 import { type CalloutType, parseCalloutType, remarkCallouts } from "@/lib/remark-callouts";
@@ -82,13 +84,18 @@ function HeadingLink({
 }
 
 function CopyReferenceButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
+  const { copiedKey, copy: copyWithFeedback } = useCopyFeedback(1400);
+  const copied = copiedKey === "reference";
 
   async function copy() {
-    if (!text.trim()) return;
-    await navigator.clipboard.writeText(text.trimEnd());
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1400);
+    const value = text.trimEnd();
+    if (!value) return;
+    const result = await copyWithFeedback(value, "reference");
+    if (result === "failed") {
+      toast.error("Could not copy the reference", {
+        description: "Select the visible text and copy it manually.",
+      });
+    }
   }
 
   return (

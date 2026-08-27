@@ -37,9 +37,11 @@ Audit files intentionally remain at root for now because the repo audit skills r
 
 ## Active Follow-up Ledgers
 
+- `list-state-preservation-plan-2026-08-26.md` - preserve Schedule and Items filters, view state, sort, and pagination across detail navigation and browser Back.
 - `macos-companion-hardening-polish-plan.md` - shipped Developer ID/notarized macOS 1.0.0 companion with event-driven refresh, projection/session privacy hardening, and native interaction/accessibility polish; native XCTest, full smoke, and real APNs proof remain.
 - `repository-audit-improvement-plan.md` - current whole-repository evidence-first audit, ranked repair, verification, and proof-boundary ledger.
 - `overdue-notification-hardening-plan.md` - durable five-stage checkout escalation is implemented locally; migration, responder configuration, deployment, and authenticated channel/timing proof remain.
+- `schedule-window-kernel-plan-2026-08-26.md` - centralize effective schedule-window and conflict overlap semantics across assignment and Open Work paths.
 - `schedule-mvp-end-to-end-plan.md` - implementation and source/build verification are complete; authenticated web and native Trade Board runtime inspection remains.
 - `ios-app-web-trust-contract-plan.md` - Build 24 is in Internal QA and External Beta; physical-device acceptance and authenticated production mutation proof remain.
 - `reservation-auto-schedule-plan.md` - event-linked reservations infer internal work and attach the requester to the primary event schedule.
@@ -67,6 +69,9 @@ Audit files intentionally remain at root for now because the repo audit skills r
 - `signature-signing-experience-plan-2026-08-25.md` - make the iPad signing surface consistent and rehearsable: exported line weight is normalized so one setting delivers one uniform line across a roster, and the admin settings panel previews the real pen; the practice pad, pre-commit artifact view, Save-and-next progression, and per-revision pen settings remain queued.
 - `event-all-day-conversion-plan-2026-08-25.md` - let manual Event detail switch between all-day and timed windows and update Veterans Plaza Ceremony today; production data, notification, and editor proof are complete.
 - `booking-mutation-toast-fix-plan-2026-08-25.md` - prevent committed booking detail mutations from being misreported as request failures when local success callbacks fail.
+- `past-event-assignment-backfill-plan-2026-08-26.md` - make the existing Schedule crew editor automatically publish ended-event assignment corrections silently and immediately; local route, Scoreboard, and generic iOS build gates pass, while authenticated UI, simulator runtime, deployment, and production proof remain open.
+- `brand-asset-library-plan-2026-08-26.md` - add the authenticated Resources Brand assets library with user-created folders, private Vercel Blob client uploads, immutable replacement history, and explicit private-store/browser proof gates.
+- `claim-surfaces-ios-schedule-window-plan-2026-08-26.md` - centralize Student open-slot claims in expanded Schedule rows and Event detail, carry viewer-private pending state, and make native Schedule read all total-aware event and personal-shift pages; local and authenticated-preview gates pass while deployment, push delivery, and device proof remain open.
 
 ## Archive Buckets
 

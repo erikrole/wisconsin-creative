@@ -110,12 +110,13 @@
 
 | File | Lines |
 |---|---:|
-| `src/components/TradeBoard.tsx` | 1714 |
+| `src/components/resources/BrandAssetLibrary.tsx` | 1827 |
+| `src/components/TradeBoard.tsx` | 1793 |
 | `src/components/ActivityTimeline.tsx` | 1368 |
 | `src/components/onboarding/OnboardingDialog.tsx` | 996 |
 | `src/components/EquipmentPicker.tsx` | 916 |
-| `src/components/AppShell.tsx` | 887 |
-| `src/components/ShiftDetailPanel.tsx` | 797 |
+| `src/components/AppShell.tsx` | 896 |
+| `src/components/ShiftDetailPanel.tsx` | 789 |
 | `src/components/ChooseImageModal.tsx` | 769 |
 | `src/components/profile-completion/ProfileCompletionWizard.tsx` | 769 |
 | `src/components/booking-wizard/BookingWizard.tsx` | 721 |
@@ -127,11 +128,11 @@
 | `src/components/Sidebar.tsx` | 413 |
 | `src/components/booking-details/BookingHeader.tsx` | 412 |
 | `src/components/ui/chart.tsx` | 389 |
-| `src/components/shift-detail/ShiftSlotCard.tsx` | 356 |
 | `src/components/booking-details/BookingInfoCard.tsx` | 344 |
 | `src/components/booking-details/EditBookingEventsDialog.tsx` | 342 |
+| `src/components/shift-detail/ShiftSlotCard.tsx` | 341 |
 | `src/components/FormCombobox.tsx` | 329 |
-| `src/components/resources/MarkdownReader.tsx` | 305 |
+| `src/components/resources/MarkdownReader.tsx` | 315 |
 | `src/components/public-showroom/showroom-blocks.tsx` | 290 |
 | `src/components/PageBreadcrumb.tsx` | 286 |
 | `src/components/booking-details/BookingSheetOverview.tsx` | 285 |
@@ -139,7 +140,6 @@
 | `src/components/booking-wizard/WizardStep3.tsx` | 263 |
 | `src/components/shift-detail/CallWindowEditor.tsx` | 260 |
 | `src/components/ui/dropdown-menu.tsx` | 258 |
-| `src/components/shift-detail/UserAvatarPicker.tsx` | 254 |
 
 ## Hooks
 
@@ -160,7 +160,7 @@
 | `src/hooks/use-mobile.ts` | 20 |
 | `src/hooks/use-operational-polling-activity.ts` | 131 |
 | `src/hooks/use-profile-completion.ts` | 65 |
-| `src/hooks/use-schedule-data.ts` | 705 |
+| `src/hooks/use-schedule-data.ts` | 839 |
 | `src/hooks/use-url-state.ts` | 166 |
 | `src/hooks/useBookingActions.ts` | 218 |
 | `src/hooks/useBookingDetail.ts` | 70 |

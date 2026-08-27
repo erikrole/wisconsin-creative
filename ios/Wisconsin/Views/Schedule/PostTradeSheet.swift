@@ -211,7 +211,7 @@ struct PostTradeSheet: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(candidate.isCurrentUser ? "You stay assigned" : "\(candidate.ownerName) stays assigned")
                     .font(.subheadline.weight(.semibold))
-                Text("The shift stays on the schedule until staff approve a claim.")
+                Text("The shift stays on the schedule until an Admin approves a claim.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

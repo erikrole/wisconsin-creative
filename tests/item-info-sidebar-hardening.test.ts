@@ -26,7 +26,8 @@ describe("item info sidebar hardening", () => {
     expect(source).toContain('`https://${trimmed}`');
     expect(source).toContain("function getExternalUrlHost");
     expect(source).toContain("sourceHost &&");
-    expect(source).toContain("navigator.clipboard.writeText(openUrl)");
+    expect(source).toContain('copyWithFeedback(openUrl, "link")');
+    expect(source).not.toContain("navigator.clipboard.writeText(openUrl)");
     expect(source).toContain('window.open(openUrl, "_blank", "noopener")');
   });
 

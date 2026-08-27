@@ -1,4 +1,5 @@
 import { sleep } from "workflow";
+import { badges } from "@/lib/badges";
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
 import {
@@ -35,6 +36,7 @@ export async function releasePendingScheduleVersion(
       version: true,
       updatedById: true,
       updatedBy: { select: { role: true } },
+      shiftGroup: { select: { event: { select: { endsAt: true } } } },
     },
   });
   if (!pending || pending.version !== expectedVersion) {
@@ -50,14 +52,32 @@ export async function releasePendingScheduleVersion(
   }
 
   try {
+    const eventHasEnded = pending.shiftGroup.event.endsAt.getTime() <= Date.now();
     const result = await publishShiftGroup(
       shiftGroupId,
       pending.updatedById,
       expectedVersion,
       pending.updatedBy.role,
+      ...(eventHasEnded ? [{ clearNotificationPending: true }] : []),
     );
 
-    if (batchId) {
+    if (eventHasEnded) {
+      // A queued future release can wake after the event ends. Publication is
+      // still useful for correcting the relational schedule, but the
+      // backfill contract is completely silent for every recipient channel.
+      await Promise.allSettled(
+        result.affectedUserIds.map((userId) => badges.onShiftsWorked({ userId }, { notify: false })),
+      );
+      if (batchId) {
+        await recordBulkScheduleReleaseOutcome({
+          batchId,
+          shiftGroupId,
+          expectedVersion,
+          status: "RELEASED",
+          releasedVersion: result.workingVersion ?? expectedVersion,
+        });
+      }
+    } else if (batchId) {
       if (result.publishedSnapshotChanged) {
         await Promise.allSettled([notifyPublishedScheduleFollowers(shiftGroupId)]);
       }

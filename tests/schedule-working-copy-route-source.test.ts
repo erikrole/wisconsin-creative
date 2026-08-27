@@ -29,6 +29,11 @@ describe("schedule working-copy route wiring", () => {
     expect(editor).toContain("formatScheduleReleaseCountdown");
     expect(release).toContain("notified in");
     expect(route).toContain("enqueuePendingScheduleRelease");
+    expect(route).toContain("getWorkingScheduleEventEndsAt");
+    expect(route).toContain("const eventHasEnded");
+    expect(route).toContain("const autoRelease = eventHasEnded");
+    expect(route).toContain("data.workingVersion,\n      user.role,\n      { clearNotificationPending: true }");
+    expect(route).toContain("badges.onShiftsWorked({ userId }, { notify: false })");
     expect(route.indexOf("await enqueuePendingScheduleRelease")).toBeLessThan(route.indexOf("await mutateWorkingSchedule"));
     expect(route).toContain("version: body.expectedVersion + 1");
     expect(editor).toContain('type: "setCallWindow"');

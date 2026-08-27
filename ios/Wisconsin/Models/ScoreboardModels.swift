@@ -78,9 +78,10 @@ struct ScoreboardBucket: Codable, Equatable, Identifiable {
 
 struct ScoreboardEvent: Codable, Equatable, Identifiable {
     let id: String
+    let summary: String
     let startsAt: String
     let allDay: Bool
-    let result: String
+    let result: String?
     let sportCode: String?
     let sportLabel: String?
     let opponent: String?
@@ -91,9 +92,10 @@ struct ScoreboardEvent: Codable, Equatable, Identifiable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(String.self, forKey: .id)
+        summary = try container.decodeIfPresent(String.self, forKey: .summary) ?? "Worked event"
         startsAt = try container.decode(String.self, forKey: .startsAt)
         allDay = try container.decodeIfPresent(Bool.self, forKey: .allDay) ?? false
-        result = try container.decode(String.self, forKey: .result)
+        result = try container.decodeIfPresent(String.self, forKey: .result)
         sportCode = try container.decodeIfPresent(String.self, forKey: .sportCode)
         sportLabel = try container.decodeIfPresent(String.self, forKey: .sportLabel)
         opponent = try container.decodeIfPresent(String.self, forKey: .opponent)
@@ -119,20 +121,22 @@ struct ScoreboardEvent: Codable, Equatable, Identifiable {
 
     var resultLabel: String {
         switch result {
-        case "WIN": "W"
-        case "LOSS": "L"
-        case "TIE": "T"
-        default: result
+        case .some("WIN"): "W"
+        case .some("LOSS"): "L"
+        case .some("TIE"): "T"
+        case .some(let result): result
+        case .none: "—"
         }
     }
 
     /// Spoken form for VoiceOver, where "W" is read as a letter.
     var resultName: String {
         switch result {
-        case "WIN": "Win"
-        case "LOSS": "Loss"
-        case "TIE": "Tie"
-        default: result
+        case .some("WIN"): "Win"
+        case .some("LOSS"): "Loss"
+        case .some("TIE"): "Tie"
+        case .some(let result): result
+        case .none: "Worked event"
         }
     }
 
@@ -149,6 +153,7 @@ struct ScoreboardEvent: Codable, Equatable, Identifiable {
     /// that would print "Football vs" with nothing after it, so blank-but-
     /// present text is treated the same way here as a missing value.
     var matchupLabel: String {
+        if result == nil { return summary.nonBlankText ?? "Worked event" }
         let sport = sportLabel.nonBlankText ?? "Worked event"
         guard let opponent = opponent.nonBlankText else { return sport }
         return "\(sport) \(site == "AWAY" ? "at" : "vs") \(opponent)"
@@ -203,6 +208,7 @@ struct UserScoreboard: Codable, Equatable {
     let bySite: [ScoreboardBucket]
     let byVenue: [ScoreboardBucket]
     let events: [ScoreboardEvent]
+    let eventCount: Int
     let nextCursor: String?
 
     init(from decoder: Decoder) throws {
@@ -216,6 +222,7 @@ struct UserScoreboard: Codable, Equatable {
         bySite = try container.decodeIfPresent([ScoreboardBucket].self, forKey: .bySite) ?? []
         byVenue = try container.decodeIfPresent([ScoreboardBucket].self, forKey: .byVenue) ?? []
         events = try container.decodeIfPresent([ScoreboardEvent].self, forKey: .events) ?? []
+        eventCount = try container.decodeIfPresent(Int.self, forKey: .eventCount) ?? events.count
         nextCursor = (try? container.decode(String.self, forKey: .nextCursor))
             ?? (try? container.decode(Int.self, forKey: .nextCursor)).map(String.init)
     }
@@ -526,16 +533,17 @@ enum ScoreboardDigest {
 
     /// The most recent results, newest first.
     static func form(_ games: [ScoreboardEvent], limit: Int = 5) -> [ScoreboardEvent] {
-        Array(games.prefix(limit))
+        Array(games.filter { $0.result != nil }.prefix(limit))
     }
 
     /// The current run, or nil when the last two games disagree. A run of one
     /// is not a streak and does not get announced as one.
     static func streak(_ games: [ScoreboardEvent]) -> ScoreboardStreak? {
-        guard let first = games.first else { return nil }
-        let run = games.prefix { $0.result == first.result }.count
+        let resolved = games.filter { $0.result != nil }
+        guard let first = resolved.first, let result = first.result else { return nil }
+        let run = resolved.prefix { $0.result == result }.count
         return run >= 2
-            ? ScoreboardStreak(count: run, result: first.result, isWin: first.isWin)
+            ? ScoreboardStreak(count: run, result: result, isWin: first.isWin)
             : nil
     }
 }

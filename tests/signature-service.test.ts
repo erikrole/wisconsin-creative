@@ -86,7 +86,7 @@ vi.mock("@/lib/signatures/storage", () => ({
   getPrivateSignatureArtifact: vi.fn(),
 }));
 
-import { applySignatureRosterSnapshot, cleanupPendingSignatureArtifacts, createAdHocSignatureMember, createSignatureRosterPreview, deleteSignatureCollection, ensureSignatureCreativeStaffCollection, getReadySignatureArtifact, getSignatureCollection, getSignatureCollectionZip, getSignatureMemberCaptureBootstrap, listSignatureCollections, removeSignatureCapture, resetSignatureCollection, saveSignatureCapture, signatureArtifactFilename, syncSignatureCreativeStaff, updateSignatureAthleteProfile, updateSignatureMemberRequired } from "@/lib/services/signatures";
+import { applySignatureRosterSnapshot, cleanupPendingSignatureArtifacts, createAdHocSignatureMember, createSignatureRosterPreview, deleteSignatureCollection, ensureSignatureCreativeStaffCollection, getReadySignatureArtifact, getSignatureCollection, getSignatureCollectionZip, getSignatureMemberCaptureBootstrap, listSignatureCollections, removeSignatureCapture, resetSignatureCollection, saveSignatureCapture, signatureArtifactFilename, syncSignatureCreativeStaff, updateSignatureMemberRequired } from "@/lib/services/signatures";
 import { createAuditEntryTx } from "@/lib/audit";
 import { renderSignatureArtifacts } from "@/lib/signatures/artifacts";
 import { deletePrivateSignatureArtifacts, getPrivateSignatureArtifact, uploadPrivateSignatureArtifact } from "@/lib/signatures/storage";
@@ -1183,7 +1183,8 @@ describe("signature collection detail shape", () => {
       }],
     });
 
-    await expect(getSignatureCollection("collection-1")).resolves.toMatchObject({
+    const detail = await getSignatureCollection("collection-1");
+    expect(detail).toMatchObject({
       members: [{
         artifact: { id: "revision-6" },
         revisions: [
@@ -1198,6 +1199,8 @@ describe("signature collection detail shape", () => {
         revisionHistoryTruncated: true,
       }],
     });
+    expect(detail.members[0]).not.toHaveProperty("athleteProfile");
+    expect(detail.members[0]).not.toHaveProperty("athleteProfileComplete");
 
     const query = dbMock.signatureCollection.findUnique.mock.calls.at(-1)?.[0] as {
       include: { members: { include: Record<string, unknown> } };
@@ -1224,11 +1227,6 @@ describe("signature member capture bootstrap", () => {
       roleGroup: "PLAYER",
       active: true,
       linkedUserId: null,
-      birthday: new Date("2004-02-29T00:00:00.000Z"),
-      hometown: "Madison, WI",
-      instagramHandle: "badger",
-      tiktokHandle: null,
-      xHandle: null,
       collection: {
         id: "collection-1",
         sportCode: "MBB",
@@ -1268,14 +1266,6 @@ describe("signature member capture bootstrap", () => {
         settingsVersion: 3,
         captureSettings: { strokeColor: "#111827", strokeWidth: 4, cropPadding: 24, maxWidth: 1600, maxHeight: 900 },
         artifact: { id: "revision-2" },
-        athleteProfile: {
-          birthday: "2004-02-29",
-          hometown: "Madison, WI",
-          instagramHandle: "badger",
-          tiktokHandle: null,
-          xHandle: null,
-        },
-        athleteProfileComplete: true,
       },
     });
 
@@ -1283,12 +1273,17 @@ describe("signature member capture bootstrap", () => {
       select: { capture: { select: Record<string, unknown> } } & Record<string, unknown>;
     };
     expect(query.select).not.toHaveProperty("sourceProfileUrl");
+    expect(query.select).not.toHaveProperty("birthday");
+    expect(query.select).not.toHaveProperty("hometown");
+    expect(query.select).not.toHaveProperty("instagramHandle");
+    expect(query.select).not.toHaveProperty("tiktokHandle");
+    expect(query.select).not.toHaveProperty("xHandle");
     expect(query.select.capture.select).not.toHaveProperty("revisions");
   });
 });
 
-describe("roster hometown defaults", () => {
-  it("seeds missing player hometowns without overwriting a manual value", async () => {
+describe("roster source metadata", () => {
+  it("keeps official hometowns in the snapshot without writing profile fields", async () => {
     tx.signatureRosterSnapshot.findUnique.mockResolvedValue({
       id: "snapshot-1",
       collectionId: "collection-1",
@@ -1318,7 +1313,7 @@ describe("roster hometown defaults", () => {
       collection: { status: SignatureCollectionStatus.OPEN, collectionVersion: 4, settingsVersion: 1 },
     });
     tx.signatureMember.findMany
-      .mockResolvedValueOnce([{ id: "member-existing", sourceExternalId: "existing-player", required: true, roleGroup: "PLAYER", hometown: "Milwaukee, WI" }])
+      .mockResolvedValueOnce([{ id: "member-existing", sourceExternalId: "existing-player", required: true, roleGroup: "PLAYER" }])
       .mockResolvedValueOnce([{ id: "member-existing" }, { id: "member-new" }]);
     tx.signatureMember.create.mockResolvedValue({ id: "member-new", sourceExternalId: "new-player", required: true, roleGroup: "PLAYER" });
     tx.signatureCollection.update.mockResolvedValue({ id: "collection-1", collectionVersion: 5 });
@@ -1329,13 +1324,10 @@ describe("roster hometown defaults", () => {
       expectedCollectionVersion: 4,
     })).resolves.toMatchObject({ collectionId: "collection-1", collectionVersion: 5, memberCount: 2 });
 
-    expect(tx.signatureMember.update).toHaveBeenCalledWith(expect.objectContaining({
-      where: { id: "member-existing" },
-      data: expect.objectContaining({ hometown: "Milwaukee, WI" }),
-    }));
-    expect(tx.signatureMember.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ hometown: "Austin, Texas" }),
-    });
+    const existingUpdate = tx.signatureMember.update.mock.calls.find(([call]) => call.where?.id === "member-existing")?.[0];
+    const newMemberCreate = tx.signatureMember.create.mock.calls.find(([call]) => call.data?.sourceExternalId === "new-player")?.[0];
+    expect(existingUpdate?.data).not.toHaveProperty("hometown");
+    expect(newMemberCreate?.data).not.toHaveProperty("hometown");
   });
 });
 
@@ -1523,112 +1515,6 @@ describe("signature readiness requirements", () => {
     })).resolves.toEqual({ collectionVersion: 5 });
 
     expect(tx.signatureMember.update).toHaveBeenCalledWith({ where: { id: "staff-1" }, data: { required: false } });
-  });
-});
-
-describe("student-athlete website profiles", () => {
-  it("stores a complete athlete profile with handles normalized without @ prefixes", async () => {
-    tx.signatureMember.findFirst.mockResolvedValue({
-      id: "player-1",
-      name: "Bucky Badger",
-      roleGroup: "PLAYER",
-      active: true,
-      birthday: null,
-      hometown: null,
-      instagramHandle: null,
-      tiktokHandle: null,
-      xHandle: null,
-      capture: { currentRevision: { state: SignatureArtifactState.READY } },
-      collection: { id: "collection-1", status: SignatureCollectionStatus.OPEN, collectionVersion: 4 },
-    });
-    tx.signatureMember.update.mockResolvedValue({ id: "player-1" });
-    tx.signatureCollection.update.mockResolvedValue({ collectionVersion: 5 });
-
-    await expect(updateSignatureAthleteProfile({
-      actor,
-      collectionId: "collection-1",
-      memberId: "player-1",
-      profile: {
-        expectedCollectionVersion: 4,
-        birthday: "2004-02-29",
-        hometown: "Madison, WI",
-        instagramHandle: "@badger",
-        tiktokHandle: "court.star",
-        xHandle: "",
-      },
-    })).resolves.toEqual({
-      memberId: "player-1",
-      collectionVersion: 5,
-      athleteProfile: {
-        birthday: "2004-02-29",
-        hometown: "Madison, WI",
-        instagramHandle: "badger",
-        tiktokHandle: "court.star",
-        xHandle: null,
-      },
-    });
-
-    expect(tx.signatureMember.update).toHaveBeenCalledWith({
-      where: { id: "player-1" },
-      data: {
-        birthday: new Date("2004-02-29T00:00:00.000Z"),
-        hometown: "Madison, WI",
-        instagramHandle: "badger",
-        tiktokHandle: "court.star",
-        xHandle: null,
-      },
-    });
-  });
-
-  it("rejects profile writes for non-athlete signers", async () => {
-    tx.signatureMember.findFirst.mockResolvedValue({
-      id: "staff-1",
-      name: "Staff Member",
-      roleGroup: "SUPPORT_STAFF",
-      active: true,
-      birthday: null,
-      hometown: null,
-      instagramHandle: null,
-      tiktokHandle: null,
-      xHandle: null,
-      collection: { id: "collection-1", status: SignatureCollectionStatus.OPEN, collectionVersion: 4 },
-    });
-
-    await expect(updateSignatureAthleteProfile({
-      actor,
-      collectionId: "collection-1",
-      memberId: "staff-1",
-      profile: { expectedCollectionVersion: 4, birthday: "2004-02-29", hometown: "Madison, WI" },
-    })).rejects.toMatchObject({ status: 400, message: "Only student-athletes have website profiles" });
-    expect(tx.signatureMember.update).not.toHaveBeenCalled();
-  });
-
-  it("rejects profile writes until the student-athlete has a committed signature", async () => {
-    tx.signatureMember.findFirst.mockResolvedValue({
-      id: "player-1",
-      name: "Unsigned Player",
-      roleGroup: "PLAYER",
-      active: true,
-      birthday: null,
-      hometown: null,
-      instagramHandle: null,
-      tiktokHandle: null,
-      xHandle: null,
-      capture: { currentRevision: null },
-      collection: { id: "collection-1", status: SignatureCollectionStatus.OPEN, collectionVersion: 4 },
-    });
-
-    await expect(updateSignatureAthleteProfile({
-      actor,
-      collectionId: "collection-1",
-      memberId: "player-1",
-      profile: { expectedCollectionVersion: 4, birthday: "2004-02-29", hometown: "Madison, WI" },
-    })).rejects.toMatchObject({
-      status: 409,
-      message: "Save this student-athlete's signature before editing the website profile",
-    });
-    expect(tx.signatureMember.update).not.toHaveBeenCalled();
-    expect(tx.signatureCollection.update).not.toHaveBeenCalled();
   });
 });
 

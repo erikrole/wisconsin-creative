@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Settings
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-25
+- Last Updated: 2026-08-26
 - Status: Active
 - Version: V1
 
@@ -219,6 +219,8 @@ Navigation breadcrumb versioned roadmap: `tasks/breadcrumbs-roadmap.md`
 All versions shipped. Duplicate breadcrumb removed; parent-level sibling quick-jump dropdown on "Settings" crumb navigates between sub-pages. Role-gated Settings sibling menus now wait for the current role before becoming dropdowns, so the loading frame does not expose an empty menu. The global breadcrumb UI now uses a lighter trail treatment with the current Settings sub-page marked by a subtle underline instead of a filled chip.
 
 ## Change Log
+
+- 2026-08-26: **Kiosk activation-code copy feedback now reflects browser reality.** The activation dialog only reports success after the clipboard write resolves and gives manual-copy guidance when access is unavailable. Activation-code lifecycle, device permissions, and kiosk behavior are unchanged. Focused source/behavior tests, TypeScript, and lint pass locally; the full build remains blocked by unrelated dirty Trade Board work.
 
 - 2026-08-24: **Password managers can find, fill, and update the right
   credential.** Every screen that shows a password box on its own — the second

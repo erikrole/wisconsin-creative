@@ -50,12 +50,16 @@ type TradeShift = {
   workerType: string;
   startsAt: string;
   endsAt: string;
+  callStartsAt?: string | null;
+  callEndsAt?: string | null;
   shiftGroup: { event: TradeEvent };
 };
 
 type TradeAssignment = {
   id: string;
   shift: TradeShift;
+  callStartsAt?: string | null;
+  callEndsAt?: string | null;
   user: { id: string; name: string; primaryArea: string | null };
 };
 
@@ -130,6 +134,11 @@ type OpenWorkResponse = {
   openShifts: OpenWorkShift[];
   pickupRequests: PickupRequest[];
 };
+
+/** One row of the Admin review queue, whichever record it came from. */
+type ReviewQueueItem =
+  | { kind: "request"; key: string; startsAtMs: number; request: PickupRequest }
+  | { kind: "trade"; key: string; startsAtMs: number; trade: Trade };
 
 const AREAS = ["VIDEO", "PHOTO", "GRAPHICS", "SOCIAL", "COMMS", "LIVE_PRODUCTION"] as const;
 const TRADE_STATUSES = ["OPEN", "CLAIMED", "COMPLETED", "CANCELLED"] as const;
@@ -235,7 +244,7 @@ function formatShiftWindow(shift: Pick<TradeShift, "startsAt" | "endsAt" | "shif
 }
 
 function openShiftActionCopy(item: OpenWorkShift) {
-  if (item.action === "claim") return "Staff review this before you're on the schedule.";
+  if (item.action === "claim") return "An admin reviews this before you're on the schedule.";
   return item.reason;
 }
 
@@ -245,7 +254,7 @@ function tradeOutcomeCopy(trade: Trade, args: { currentUserId: string; isStaff: 
     return "Canceling removes the post; the shift stays assigned to you.";
   }
   if (trade.status === "OPEN") {
-    return "Claiming sends this to staff for approval; the shift stays with its owner until then.";
+    return "Claiming sends this to an admin for approval; the shift stays with its owner until then.";
   }
   return statusMeta(trade.status).helper;
 }
@@ -273,9 +282,40 @@ function shiftActionContext(shift: Pick<TradeShift, "startsAt" | "endsAt" | "shi
   };
 }
 
-function reviewDeadlineCopy(at: string | null | undefined) {
+/**
+ * When the shift actually starts for whoever works it: personal call window,
+ * then the slot's call window, then the shift itself — the same precedence the
+ * server uses to decide staleness and review deadlines.
+ */
+function effectiveStartMs(
+  shift: Pick<TradeShift, "startsAt" | "callStartsAt">,
+  assignmentCallStartsAt?: string | null,
+) {
+  const raw = assignmentCallStartsAt ?? shift.callStartsAt ?? shift.startsAt;
+  const parsed = new Date(raw).getTime();
+  // An unparseable timestamp sorts last rather than poisoning the comparator.
+  return Number.isNaN(parsed) ? Number.POSITIVE_INFINITY : parsed;
+}
+
+/**
+ * The same deadline means different things to the two people looking at it.
+ * Admins need to know the clock runs out on them; the person waiting needs to
+ * know the wait ends without knowing which way.
+ *
+ * Both stay on "check", never "will be approved". The deadline runs the same
+ * conflict, availability, and refill re-checks a human approval does, and a 4xx
+ * from any of them stands the claim down for Admin instead of forcing it
+ * through — so an auto-approval is attempted at this time, not promised.
+ */
+function reviewDeadlineCopy(
+  at: string | null | undefined,
+  audience: "reviewer" | "claimant",
+) {
   if (!at) return null;
-  return `Auto-approval check by ${formatDateShort(at)}, ${formatTimeShort(at)}.`;
+  const when = `${formatDateShort(at)}, ${formatTimeShort(at)}`;
+  return audience === "reviewer"
+    ? `Auto-approval check by ${when} if nobody reviews it.`
+    : `Auto-approval check by ${when}. You are not on the schedule until a decision lands.`;
 }
 
 function TradeSkeleton() {
@@ -368,6 +408,7 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
   const [myTradesOnly, setMyTradesOnly] = useState(false);
 
   const isStaff = currentUserRole === "ADMIN" || currentUserRole === "STAFF";
+  const canReview = currentUserRole === "ADMIN";
 
   useEffect(() => {
     if (initialStatusFilter) setStatusFilter(initialStatusFilter);
@@ -452,8 +493,13 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
         (trade) => trade.postedBy.id === currentUserId || trade.claimedBy?.id === currentUserId,
       );
     } else if (!statusFilter && !isStaff) {
+      // A trade the viewer claimed has to survive this filter: it is neither
+      // OPEN nor theirs to post, and dropping it took "Waiting on Admin" — and
+      // with it the only Withdraw claim button — off the default board.
       result = result.filter(
-        (trade) => trade.status === "OPEN" || trade.postedBy.id === currentUserId,
+        (trade) => trade.status === "OPEN"
+          || trade.postedBy.id === currentUserId
+          || trade.claimedBy?.id === currentUserId,
       );
     }
     return result;
@@ -497,7 +543,7 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
     const { eventLabel, windowLabel } = tradeCancelContext(trade);
     const ok = await confirm({
       title: "Claim this shift?",
-      message: `Claim ${eventLabel} on ${windowLabel}? Staff review this before you're on the schedule.`,
+      message: `Claim ${eventLabel} on ${windowLabel}? An admin reviews this before you're on the schedule.`,
       confirmLabel: "Claim shift",
     });
     if (!ok || actingRef.current) return;
@@ -506,7 +552,7 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
       const res = await fetch(`/api/shift-trades/${tradeId}/claim`, { method: "POST" });
       if (handleAuthRedirect(res)) return;
       if (res.ok) {
-        toast.success("Claim sent for staff approval");
+        toast.success("Claim sent for Admin approval");
         await reloadWork();
       } else {
         const msg = await parseErrorMessage(res, TRADE_OUTCOME_COPY.claimTrade.server);
@@ -523,9 +569,15 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
   const handleCancel = useCallback(async (trade: Trade) => {
     const tradeId = trade.id;
     const { eventLabel, windowLabel } = tradeCancelContext(trade);
+    // Cancelling a claimed post drops someone else's pending claim. Saying only
+    // "the shift stays assigned to you" hides the half of this that lands on
+    // another person.
+    const claimerName = trade.status === "CLAIMED" ? trade.claimedBy?.name ?? null : null;
     const ok = await confirm({
       title: "Cancel trade",
-      message: `Cancel the trade posting for ${eventLabel} on ${windowLabel}? The shift stays assigned to ${trade.postedBy.name}.`,
+      message: claimerName
+        ? `Cancel the trade posting for ${eventLabel} on ${windowLabel}? The shift stays assigned to ${trade.postedBy.name}, and ${claimerName}'s pending claim is cancelled.`
+        : `Cancel the trade posting for ${eventLabel} on ${windowLabel}? The shift stays assigned to ${trade.postedBy.name}.`,
       confirmLabel: "Cancel trade",
       variant: "danger",
     });
@@ -665,7 +717,7 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
     const { eventLabel, windowLabel } = shiftActionContext(shift.shift);
     const ok = await confirm({
       title: "Claim this open shift?",
-      message: `Claim ${eventLabel} on ${windowLabel}? Staff review this before you're on the schedule.`,
+      message: `Claim ${eventLabel} on ${windowLabel}? An admin reviews this before you're on the schedule.`,
       confirmLabel: "Claim shift",
     });
     if (!ok || actingRef.current) return;
@@ -679,7 +731,7 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
       });
       if (handleAuthRedirect(res)) return;
       if (res.ok) {
-        toast.success("Request sent for staff approval");
+        toast.success("Request sent for Admin approval");
         await reloadWork();
       } else {
         const msg = await parseErrorMessage(res, TRADE_OUTCOME_COPY.claimShift.server);
@@ -722,17 +774,39 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
   const hasAnyLoadError = loadError || openWorkError;
   const hasLoadError = loadError && openWorkError;
   const countLabel = `${totalRows} ${totalRows === 1 ? "item" : "items"}`;
-  // Staff owe a decision on every claimed trade and every pending request.
-  const tradesAwaitingReview = isStaff
+  // Admins owe a decision on every claimed trade and every pending request.
+  // Urgency is the shift, not the post: a claim filed this morning on a shift
+  // tonight outranks one filed last week on a shift in March, so the queue runs
+  // soonest-first rather than in the list order the two sources happen to use.
+  const tradesAwaitingReview = canReview
     ? filteredTrades.filter((trade) => trade.status === "CLAIMED")
     : [];
-  const requestsAwaitingReview = isStaff ? openWork.pickupRequests : [];
+  const requestsAwaitingReview = canReview ? openWork.pickupRequests : [];
   const reviewCount = tradesAwaitingReview.length + requestsAwaitingReview.length;
+  // Trade claims and pickup requests are two records but one job, so they share
+  // one queue and one ordering key. Rendering them as two consecutive groups
+  // sorted each separately: a request four days out still landed above a claim
+  // on tomorrow's shift, which looks ordered without being ordered.
+  const reviewQueue: ReviewQueueItem[] = [
+    ...requestsAwaitingReview.map((request): ReviewQueueItem => ({
+      kind: "request",
+      key: `request:${request.id}`,
+      startsAtMs: effectiveStartMs(request.shift),
+      request,
+    })),
+    ...tradesAwaitingReview.map((trade): ReviewQueueItem => ({
+      kind: "trade",
+      key: `trade:${trade.id}`,
+      startsAtMs: effectiveStartMs(trade.shiftAssignment.shift, trade.shiftAssignment.callStartsAt),
+      trade,
+    })),
+  ].sort((a, b) => a.startsAtMs - b.startsAtMs);
 
   // A student sees what they are waiting on. The server already scopes
-  // pickupRequests to their own rows for non-staff.
-  const myPendingRequests = isStaff ? [] : openWork.pickupRequests;
-  const myPendingClaims = isStaff
+  // pickupRequests to all rows only for Admin and to the viewer's own rows for
+  // everyone else.
+  const myPendingRequests = canReview ? [] : openWork.pickupRequests;
+  const myPendingClaims = canReview
     ? []
     : filteredTrades.filter(
       (trade) => trade.status === "CLAIMED" && trade.claimedBy?.id === currentUserId,
@@ -762,6 +836,157 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
     && !tradesAwaitingReview.some((item) => item.id === trade.id)
     && !myPendingClaims.some((item) => item.id === trade.id)
   );
+
+  // Both review row shapes, so one ordered queue can render either.
+  const renderReviewRequest = (request: PickupRequest) => {
+    const shift = request.shift;
+    const event = shift.shiftGroup.event;
+    const titleParts = scheduleEventTitleParts({
+      summary: event.summary,
+      sportCode: event.sportCode,
+      opponent: event.opponent ?? null,
+      isHome: event.isHome ?? null,
+    });
+    const areaLabel = AREA_LABELS[shift.area] ?? shift.area;
+    const isApproving = acting === `approve:${request.id}`;
+    const isDeclining = acting === `decline:${request.id}`;
+    const deadline = reviewDeadlineCopy(request.reviewAutoApprovesAt, "reviewer");
+
+    return (
+      <article key={`review-request-${request.id}`} className="px-4 py-3 transition-colors hover:bg-muted/25">
+        <div className="flex items-start gap-3">
+          <UserAvatar name={request.user.name} size="sm" className="mt-0.5 shrink-0" />
+          <div className="min-w-0 flex-1 flex flex-col gap-2">
+            <div className="flex min-w-0 items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className="truncate text-sm font-semibold leading-tight">{titleParts.title}</h3>
+                <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                  {request.user.name} wants this slot
+                </p>
+              </div>
+              <Badge variant="orange" size="sm">Needs review</Badge>
+            </div>
+
+            <div className="grid gap-1.5 text-xs text-muted-foreground sm:grid-cols-2">
+              <span className="flex min-w-0 items-center gap-1.5">
+                <CalendarClockIcon className="size-3.5 shrink-0" />
+                <span className="truncate tabular-nums">{formatShiftWindow(shift)}</span>
+              </span>
+              <span className="flex min-w-0 items-center gap-1.5">
+                <ClipboardListIcon className="size-3.5 shrink-0" />
+                <span className="truncate">{areaLabel}</span>
+              </span>
+            </div>
+
+            {request.conflictNote && (
+              <p className="flex items-start gap-1.5 rounded-md bg-muted/50 px-2.5 py-2 text-xs leading-relaxed text-muted-foreground">
+                <AlertTriangleIcon className="mt-0.5 size-3.5 shrink-0" />
+                <span>{request.conflictNote}</span>
+              </p>
+            )}
+
+            {deadline && (
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Clock3Icon className="size-3.5 shrink-0" />
+                <span>{deadline}</span>
+              </p>
+            )}
+
+            <div className="flex flex-wrap gap-2">
+              <Button className="h-10"
+                onClick={() => void handleReviewRequest(request, "approve")}
+                disabled={Boolean(acting)}
+              >
+                {isApproving ? "Approving…" : "Approve"}
+              </Button>
+              <Button className="h-10"
+                variant="outline"
+                onClick={() => void handleReviewRequest(request, "decline")}
+                disabled={Boolean(acting)}
+              >
+                {isDeclining ? "Declining…" : "Decline"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </article>
+    );
+  };
+
+  const renderReviewTrade = (trade: Trade) => {
+    const shift = trade.shiftAssignment.shift;
+    const event = shift.shiftGroup.event;
+    const titleParts = scheduleEventTitleParts({
+      summary: event.summary,
+      sportCode: event.sportCode,
+      opponent: event.opponent ?? null,
+      isHome: event.isHome ?? null,
+    });
+    const areaLabel = AREA_LABELS[shift.area] ?? shift.area;
+    const isApproving = acting === `approve:${trade.id}`;
+    const isDeclining = acting === `decline:${trade.id}`;
+    const deadline = reviewDeadlineCopy(trade.reviewAutoApprovesAt, "reviewer");
+
+    return (
+      <article key={`review-trade-${trade.id}`} className="px-4 py-3 transition-colors hover:bg-muted/25">
+        <div className="flex items-start gap-3">
+          <UserAvatar name={trade.claimedBy?.name ?? trade.postedBy.name} size="sm" className="mt-0.5 shrink-0" />
+          <div className="min-w-0 flex-1 flex flex-col gap-2">
+            <div className="flex min-w-0 items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className="truncate text-sm font-semibold leading-tight">{titleParts.title}</h3>
+                <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                  {trade.claimedBy?.name ?? "Someone"} wants to take {trade.postedBy.name}&apos;s shift
+                </p>
+              </div>
+              <Badge variant="orange" size="sm">Needs review</Badge>
+            </div>
+
+            <div className="grid gap-1.5 text-xs text-muted-foreground sm:grid-cols-2">
+              <span className="flex min-w-0 items-center gap-1.5">
+                <CalendarClockIcon className="size-3.5 shrink-0" />
+                <span className="truncate tabular-nums">{formatShiftWindow(shift)}</span>
+              </span>
+              <span className="flex min-w-0 items-center gap-1.5">
+                <ArrowLeftRightIcon className="size-3.5 shrink-0" />
+                <span className="truncate">{areaLabel}</span>
+              </span>
+            </div>
+
+            {trade.notes && (
+              <p className="rounded-md bg-muted/50 px-2.5 py-2 text-xs leading-relaxed text-muted-foreground">
+                {trade.notes}
+              </p>
+            )}
+            <AvailabilityContextNote context={trade.claimedByAvailabilityContext} />
+
+            {deadline && (
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Clock3Icon className="size-3.5 shrink-0" />
+                <span>{deadline}</span>
+              </p>
+            )}
+
+            <div className="flex flex-wrap gap-2">
+              <Button className="h-10"
+                onClick={() => void handleReviewTrade(trade.id, "approve")}
+                disabled={Boolean(acting)}
+              >
+                {isApproving ? "Approving…" : "Approve trade"}
+              </Button>
+              <Button className="h-10"
+                variant="outline"
+                onClick={() => void handleReviewTrade(trade.id, "decline")}
+                disabled={Boolean(acting)}
+              >
+                {isDeclining ? "Declining…" : "Decline"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </article>
+    );
+  };
 
   return (
     <div className="flex flex-col gap-3">
@@ -884,165 +1109,21 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
           <div>
             {reviewCount > 0 && (
               <WorkSection
-                title="Staff Review"
+                title="Admin Review"
                 description="Students are waiting on these. Nothing moves on the schedule until you decide."
                 count={reviewCount}
               >
-                {requestsAwaitingReview.map((request) => {
-                  const shift = request.shift;
-                  const event = shift.shiftGroup.event;
-                  const titleParts = scheduleEventTitleParts({
-                    summary: event.summary,
-                    sportCode: event.sportCode,
-                    opponent: event.opponent ?? null,
-                    isHome: event.isHome ?? null,
-                  });
-                  const areaLabel = AREA_LABELS[shift.area] ?? shift.area;
-                  const isApproving = acting === `approve:${request.id}`;
-                  const isDeclining = acting === `decline:${request.id}`;
-                  const deadline = reviewDeadlineCopy(request.reviewAutoApprovesAt);
-
-                  return (
-                    <article key={`review-request-${request.id}`} className="px-4 py-3 transition-colors hover:bg-muted/25">
-                      <div className="flex items-start gap-3">
-                        <UserAvatar name={request.user.name} size="sm" className="mt-0.5 shrink-0" />
-                        <div className="min-w-0 flex-1 flex flex-col gap-2">
-                          <div className="flex min-w-0 items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <h3 className="truncate text-sm font-semibold leading-tight">{titleParts.title}</h3>
-                              <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                                {request.user.name} wants this slot
-                              </p>
-                            </div>
-                            <Badge variant="orange" size="sm">Needs review</Badge>
-                          </div>
-
-                          <div className="grid gap-1.5 text-xs text-muted-foreground sm:grid-cols-2">
-                            <span className="flex min-w-0 items-center gap-1.5">
-                              <CalendarClockIcon className="size-3.5 shrink-0" />
-                              <span className="truncate tabular-nums">{formatShiftWindow(shift)}</span>
-                            </span>
-                            <span className="flex min-w-0 items-center gap-1.5">
-                              <ClipboardListIcon className="size-3.5 shrink-0" />
-                              <span className="truncate">{areaLabel}</span>
-                            </span>
-                          </div>
-
-                          {request.conflictNote && (
-                            <p className="flex items-start gap-1.5 rounded-md bg-muted/50 px-2.5 py-2 text-xs leading-relaxed text-muted-foreground">
-                              <AlertTriangleIcon className="mt-0.5 size-3.5 shrink-0" />
-                              <span>{request.conflictNote}</span>
-                            </p>
-                          )}
-
-                          {deadline && (
-                            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                              <Clock3Icon className="size-3.5 shrink-0" />
-                              <span>{deadline}</span>
-                            </p>
-                          )}
-
-                          <div className="flex flex-wrap gap-2">
-                            <Button className="h-10"
-                              onClick={() => void handleReviewRequest(request, "approve")}
-                              disabled={Boolean(acting)}
-                            >
-                              {isApproving ? "Approving…" : "Approve"}
-                            </Button>
-                            <Button className="h-10"
-                              variant="outline"
-                              onClick={() => void handleReviewRequest(request, "decline")}
-                              disabled={Boolean(acting)}
-                            >
-                              {isDeclining ? "Declining…" : "Decline"}
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </article>
-                  );
-                })}
-
-                {tradesAwaitingReview.map((trade) => {
-                  const shift = trade.shiftAssignment.shift;
-                  const event = shift.shiftGroup.event;
-                  const titleParts = scheduleEventTitleParts({
-                    summary: event.summary,
-                    sportCode: event.sportCode,
-                    opponent: event.opponent ?? null,
-                    isHome: event.isHome ?? null,
-                  });
-                  const areaLabel = AREA_LABELS[shift.area] ?? shift.area;
-                  const isApproving = acting === `approve:${trade.id}`;
-                  const isDeclining = acting === `decline:${trade.id}`;
-                  const deadline = reviewDeadlineCopy(trade.reviewAutoApprovesAt);
-
-                  return (
-                    <article key={`review-trade-${trade.id}`} className="px-4 py-3 transition-colors hover:bg-muted/25">
-                      <div className="flex items-start gap-3">
-                        <UserAvatar name={trade.claimedBy?.name ?? trade.postedBy.name} size="sm" className="mt-0.5 shrink-0" />
-                        <div className="min-w-0 flex-1 flex flex-col gap-2">
-                          <div className="flex min-w-0 items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <h3 className="truncate text-sm font-semibold leading-tight">{titleParts.title}</h3>
-                              <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                                {trade.claimedBy?.name ?? "Someone"} wants to take {trade.postedBy.name}&apos;s shift
-                              </p>
-                            </div>
-                            <Badge variant="orange" size="sm">Needs review</Badge>
-                          </div>
-
-                          <div className="grid gap-1.5 text-xs text-muted-foreground sm:grid-cols-2">
-                            <span className="flex min-w-0 items-center gap-1.5">
-                              <CalendarClockIcon className="size-3.5 shrink-0" />
-                              <span className="truncate tabular-nums">{formatShiftWindow(shift)}</span>
-                            </span>
-                            <span className="flex min-w-0 items-center gap-1.5">
-                              <ArrowLeftRightIcon className="size-3.5 shrink-0" />
-                              <span className="truncate">{areaLabel}</span>
-                            </span>
-                          </div>
-
-                          {trade.notes && (
-                            <p className="rounded-md bg-muted/50 px-2.5 py-2 text-xs leading-relaxed text-muted-foreground">
-                              {trade.notes}
-                            </p>
-                          )}
-                          <AvailabilityContextNote context={trade.claimedByAvailabilityContext} />
-
-                          {deadline && (
-                            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                              <Clock3Icon className="size-3.5 shrink-0" />
-                              <span>{deadline}</span>
-                            </p>
-                          )}
-
-                          <div className="flex flex-wrap gap-2">
-                            <Button className="h-10"
-                              onClick={() => void handleReviewTrade(trade.id, "approve")}
-                              disabled={Boolean(acting)}
-                            >
-                              {isApproving ? "Approving…" : "Approve trade"}
-                            </Button>
-                            <Button className="h-10"
-                              variant="outline"
-                              onClick={() => void handleReviewTrade(trade.id, "decline")}
-                              disabled={Boolean(acting)}
-                            >
-                              {isDeclining ? "Declining…" : "Decline"}
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </article>
-                  );
-                })}
+                {reviewQueue.map((item) => (
+                  item.kind === "request"
+                    ? renderReviewRequest(item.request)
+                    : renderReviewTrade(item.trade)
+                ))}
               </WorkSection>
             )}
 
             <WorkSection
               title="Available Now"
-              description="Claim these to send them to staff for approval."
+              description="Claim these to send them to an admin for approval."
               count={claimableOpenShifts.length + claimableTrades.length}
             >
               {claimableOpenShifts.map((item) => {
@@ -1267,7 +1348,7 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
                         <span className="flex min-w-0 items-center gap-1.5">
                           <ShieldCheckIcon className="size-3.5 shrink-0" />
                           <span className="truncate">
-                            Staff approval required
+                            Admin approval required
                           </span>
                         </span>
                         <span className="flex min-w-0 items-center gap-1.5">
@@ -1324,8 +1405,8 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
 
             {(myPendingRequests.length + myPendingClaims.length) > 0 && (
               <WorkSection
-                title="Waiting on Staff"
-                description="These requests and claims are waiting for staff. You are not on the schedule until approval."
+                title="Waiting on Admin"
+                description="These requests and claims are waiting for an admin. You are not on the schedule until approval."
                 count={myPendingRequests.length + myPendingClaims.length}
               >
                 {myPendingRequests.map((request) => {
@@ -1339,7 +1420,7 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
                   });
                   const areaLabel = AREA_LABELS[shift.area] ?? shift.area;
                   const isBusy = acting === `withdraw-request:${request.id}`;
-                  const deadline = reviewDeadlineCopy(request.reviewAutoApprovesAt);
+                  const deadline = reviewDeadlineCopy(request.reviewAutoApprovesAt, "claimant");
 
                   return (
                     <article key={`mine-request-${request.id}`} className="px-4 py-3">
@@ -1400,7 +1481,7 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
                   });
                   const areaLabel = AREA_LABELS[shift.area] ?? shift.area;
                   const isBusy = acting === `withdraw-claim:${trade.id}`;
-                  const deadline = reviewDeadlineCopy(trade.reviewAutoApprovesAt);
+                  const deadline = reviewDeadlineCopy(trade.reviewAutoApprovesAt, "claimant");
 
                   return (
                     <article key={`mine-claim-${trade.id}`} className="px-4 py-3">

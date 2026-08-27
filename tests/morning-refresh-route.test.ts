@@ -223,15 +223,16 @@ describe("morning refresh cron route", () => {
   it("keeps recently added-worker badge recognition fully silent", async () => {
     vi.mocked(badgesEnabled).mockReturnValue(true);
     vi.mocked(recentlyWorkedEventUsers).mockResolvedValue([
-      { userId: "scheduled-user", hasAddedWorker: false },
-      { userId: "backfilled-user", hasAddedWorker: true },
+      { userId: "scheduled-user", hasAddedWorker: false, hasBackfilledAssignment: false },
+      { userId: "backfilled-user", hasAddedWorker: true, hasBackfilledAssignment: false },
+      { userId: "late-assigned-user", hasAddedWorker: false, hasBackfilledAssignment: true },
     ]);
 
     const res = await GET(request(), { params: Promise.resolve({}) });
     const body = await res.json();
 
     expect(res.status).toBe(200);
-    expect(body.shiftBadgeUsers).toBe(2);
+    expect(body.shiftBadgeUsers).toBe(3);
     expect(badges.onShiftsWorked).toHaveBeenNthCalledWith(
       1,
       { userId: "scheduled-user" },
@@ -240,6 +241,11 @@ describe("morning refresh cron route", () => {
     expect(badges.onShiftsWorked).toHaveBeenNthCalledWith(
       2,
       { userId: "backfilled-user" },
+      { notify: false },
+    );
+    expect(badges.onShiftsWorked).toHaveBeenNthCalledWith(
+      3,
+      { userId: "late-assigned-user" },
       { notify: false },
     );
   });

@@ -181,6 +181,7 @@ export async function loadWorkedShiftEvidence(
 export type RecentlyWorkedEventUser = {
   userId: string;
   hasAddedWorker: boolean;
+  hasBackfilledAssignment: boolean;
 };
 
 export async function recentlyWorkedEventUsers(
@@ -194,8 +195,17 @@ export async function recentlyWorkedEventUsers(
         status: { in: ACTIVE_ASSIGNMENT_STATUSES },
         shift: { shiftGroup: { event: window } },
       },
-      select: { userId: true },
-      distinct: ["userId"],
+      select: {
+        userId: true,
+        createdAt: true,
+        shift: {
+          select: {
+            shiftGroup: {
+              select: { event: { select: { endsAt: true } } },
+            },
+          },
+        },
+      },
     }),
     db.eventWorker.findMany({
       where: { event: window },
@@ -205,9 +215,24 @@ export async function recentlyWorkedEventUsers(
   ]);
 
   const users = new Map<string, RecentlyWorkedEventUser>();
-  for (const row of assigned) users.set(row.userId, { userId: row.userId, hasAddedWorker: false });
+  for (const row of assigned) {
+    const existing = users.get(row.userId);
+    const hasBackfilledAssignment = row.createdAt instanceof Date
+      && row.shift?.shiftGroup?.event?.endsAt instanceof Date
+      && row.createdAt.getTime() > row.shift.shiftGroup.event.endsAt.getTime();
+    users.set(row.userId, {
+      userId: row.userId,
+      hasAddedWorker: existing?.hasAddedWorker ?? false,
+      hasBackfilledAssignment: Boolean(existing?.hasBackfilledAssignment || hasBackfilledAssignment),
+    });
+  }
   for (const row of added) {
-    users.set(row.userId, { userId: row.userId, hasAddedWorker: true });
+    const existing = users.get(row.userId);
+    users.set(row.userId, {
+      userId: row.userId,
+      hasAddedWorker: true,
+      hasBackfilledAssignment: existing?.hasBackfilledAssignment ?? false,
+    });
   }
   return [...users.values()];
 }

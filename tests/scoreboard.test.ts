@@ -62,10 +62,18 @@ describe("scoreboardEventWhere", () => {
     ]);
   });
 
+  it("narrows to one site when the reader asks for home, away, or neutral", () => {
+    expect(scoreboardEventWhere("user-1", { site: "AWAY" }).site).toBe("AWAY");
+    // No site filter must never become a filter for "site unknown".
+    expect(scoreboardEventWhere("user-1")).not.toHaveProperty("site");
+  });
+
   it("counts an admin-added worker the same way it counts an assignment", () => {
     const where = scoreboardEventWhere("user-1");
     const [assigned, added] = where.OR ?? [];
 
+    expect(where).not.toHaveProperty("result");
+    expect(where.endsAt).toEqual({ lt: expect.any(Date) });
     expect(assigned).toHaveProperty("shiftGroup");
     expect(added).toEqual({ workers: { some: { userId: "user-1" } } });
   });
@@ -88,6 +96,14 @@ describe("getScoreboardForUser", () => {
         site: "AWAY",
         opponent: "Minnesota",
         rawLocationText: "Madison, WI, McClimon Track/Soccer Complex",
+        _count: { _all: 1 },
+      },
+      {
+        result: null,
+        sportCode: null,
+        site: null,
+        opponent: null,
+        rawLocationText: null,
         _count: { _all: 1 },
       },
       {
@@ -144,6 +160,7 @@ describe("getScoreboardForUser", () => {
     const eventSelect = mockedDb.calendarEvent.findMany.mock.calls[0]?.[0]?.select;
 
     expect(scoreboard.summary).toEqual({ eventsWorked: 7, wins: 3, losses: 1, ties: 1, games: 5, winRate: 70 });
+    expect(scoreboard.eventCount).toBe(7);
     expect(scoreboard.bySport[0]).toMatchObject({ label: "Softball", wins: 2, losses: 1, ties: 1, games: 4, winRate: 62.5 });
     expect(scoreboard.byOpponent[0]).toMatchObject({ label: "Minnesota", wins: 2, losses: 1, ties: 1, games: 4 });
     expect(scoreboard.bySite.map((bucket) => bucket.label)).toEqual(["Home", "Away", "Unknown site"]);
@@ -164,6 +181,49 @@ describe("getScoreboardForUser", () => {
     expect(scoreboard.nextCursor).toBe("1");
   });
 
+  it("lists a completed worked event without inventing a result or breakdown", async () => {
+    mockedDb.calendarEvent.groupBy.mockResolvedValue([
+      {
+        result: null,
+        sportCode: null,
+        site: null,
+        opponent: null,
+        rawLocationText: null,
+        _count: { _all: 1 },
+      },
+    ]);
+    mockedDb.calendarEvent.count.mockResolvedValue(1);
+    mockedDb.calendarEvent.findMany.mockResolvedValue([
+      {
+        id: "event-past",
+        summary: "Veterans Plaza Ceremony",
+        startsAt: new Date("2026-08-25T21:30:00.000Z"),
+        allDay: false,
+        result: null,
+        sportCode: null,
+        opponent: null,
+        site: null,
+        rawLocationText: null,
+        shiftGroup: { shifts: [{ area: "VIDEO" }] },
+      },
+    ]);
+
+    const scoreboard = await getScoreboardForUser("user-1");
+
+    expect(scoreboard.summary).toMatchObject({ eventsWorked: 1, wins: 0, losses: 0, ties: 0, games: 0 });
+    expect(scoreboard.eventCount).toBe(1);
+    expect(scoreboard.bySport).toEqual([]);
+    expect(scoreboard.events).toEqual([
+      expect.objectContaining({
+        id: "event-past",
+        summary: "Veterans Plaza Ceremony",
+        result: null,
+        sportLabel: null,
+        shiftAreas: ["VIDEO"],
+      }),
+    ]);
+  });
+
   it("returns a zero record without inventing breakdowns", async () => {
     mockedDb.calendarEvent.groupBy.mockResolvedValue([]);
 
@@ -174,6 +234,7 @@ describe("getScoreboardForUser", () => {
       bySite: [],
       byVenue: [],
       events: [],
+      eventCount: 0,
       nextCursor: null,
     });
   });

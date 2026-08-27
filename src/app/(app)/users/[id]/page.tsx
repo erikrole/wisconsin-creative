@@ -165,7 +165,6 @@ function AwardPreviewHeader({
           icon={icon ?? Trophy}
           earned={false}
           rarity={rarity}
-          shape="hex"
           className="size-24 shadow-[0_16px_40px_rgba(0,0,0,0.18)]"
           iconClassName="size-9"
         />
@@ -387,8 +386,18 @@ export default function UserDetailPage() {
     activeBusyRef.current = true;
     setTogglingActive(true);
     const newActive = !effectiveUser.active;
-    setUserOverrides((prev) => ({ ...prev, active: newActive }));
     try {
+      if (!newActive) {
+        const ok = await confirm({
+          title: `Deactivate ${effectiveUser.name}?`,
+          message: `${effectiveUser.name} will be signed out, and future reservations or pending pickups will be cancelled. Any open checkout must be returned before deactivation.`,
+          confirmLabel: "Deactivate user",
+          variant: "danger",
+        });
+        if (!ok) return;
+      }
+
+      setUserOverrides((prev) => ({ ...prev, active: newActive }));
       const res = await fetch(`/api/users/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },

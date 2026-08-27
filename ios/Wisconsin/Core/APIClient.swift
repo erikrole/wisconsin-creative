@@ -1225,6 +1225,7 @@ final class APIClient {
         season: String? = nil,
         sportCode: String? = nil,
         result: String? = nil,
+        site: String? = nil,
         limit: Int = 25,
         offset: Int = 0
     ) async throws -> UserScoreboard {
@@ -1240,6 +1241,9 @@ final class APIClient {
         }
         if let result, !result.isEmpty {
             items.append(.init(name: "result", value: result))
+        }
+        if let site, !site.isEmpty {
+            items.append(.init(name: "site", value: site))
         }
         let response: DataWrapper<UserScoreboard> = try await perform(
             request(path: "/api/users/\(userId)/scoreboard", queryItems: items)
@@ -1345,17 +1349,63 @@ final class APIClient {
 
     // MARK: - Schedule
 
+    private func calendarEventPage(
+        includePast: Bool,
+        limit: Int,
+        offset: Int
+    ) async throws -> ScheduleEventsResponse {
+        var items: [URLQueryItem] = [
+            .init(name: "limit", value: "\(limit)"),
+            .init(name: "offset", value: "\(offset)"),
+        ]
+        if includePast { items.append(.init(name: "includePast", value: "true")) }
+        return try await perform(request(path: "/api/calendar-events", queryItems: items))
+    }
+
     func calendarEvents(
         includePast: Bool = false,
         limit: Int = 60
     ) async throws -> [ScheduleEvent] {
-        var items: [URLQueryItem] = [
-            .init(name: "limit", value: "\(limit)"),
-            .init(name: "offset", value: "0"),
-        ]
-        if includePast { items.append(.init(name: "includePast", value: "true")) }
-        let resp: ScheduleEventsResponse = try await perform(request(path: "/api/calendar-events", queryItems: items))
-        return resp.data
+        let response = try await calendarEventPage(includePast: includePast, limit: limit, offset: 0)
+        return response.data
+    }
+
+    /// Reads the complete event window through the API's total-driven pages.
+    /// SwiftUI still renders the result lazily, while the client no longer
+    /// mistakes the first 60 events (roughly one month during a busy season)
+    /// for the entire schedule. The bounded page size matches the server cap.
+    func allCalendarEvents(
+        includePast: Bool = false,
+        pageSize: Int = 200
+    ) async throws -> [ScheduleEvent] {
+        let pageSize = min(max(pageSize, 1), 200)
+        var events: [ScheduleEvent] = []
+        var seenIds = Set<String>()
+        var offset = 0
+
+        while true {
+            try Task.checkCancellation()
+            let response = try await calendarEventPage(
+                includePast: includePast,
+                limit: pageSize,
+                offset: offset
+            )
+            let countBefore = events.count
+            for event in response.data where seenIds.insert(event.id).inserted {
+                events.append(event)
+            }
+
+            let pageCount = response.data.count
+            guard pageCount > 0,
+                  pageCount >= pageSize,
+                  offset + pageCount < response.total,
+                  events.count > countBefore else {
+                break
+            }
+            offset += pageCount
+        }
+
+        return events
     }
 
     func shiftGroup(eventId: String) async throws -> EventShiftGroup? {
@@ -1394,13 +1444,49 @@ final class APIClient {
     /// contains. A server without the `userId` filter ignores the parameter and
     /// returns the caller's own, which would silently print your shifts on a
     /// teammate's profile; if the answer cannot be attributed, return nothing.
-    func myShifts(userId: String? = nil, limit: Int = 20) async throws -> [MyShift] {
-        var items: [URLQueryItem] = [.init(name: "limit", value: "\(limit)")]
+    private func myShiftsPage(
+        userId: String?,
+        limit: Int,
+        offset: Int
+    ) async throws -> MyShiftsResponse {
+        var items: [URLQueryItem] = [
+            .init(name: "limit", value: "\(limit)"),
+            .init(name: "offset", value: "\(offset)"),
+        ]
         if let userId { items.append(.init(name: "userId", value: userId)) }
-        let req = request(path: "/api/my-shifts", queryItems: items)
-        let resp: MyShiftsResponse = try await perform(req)
+        return try await perform(request(path: "/api/my-shifts", queryItems: items))
+    }
+
+    func myShifts(userId: String? = nil, limit: Int = 20) async throws -> [MyShift] {
+        let resp = try await myShiftsPage(userId: userId, limit: limit, offset: 0)
         if let userId, resp.userId != userId { return [] }
         return resp.data
+    }
+
+    /// Reads every active assignment for the caller. The route is still
+    /// page-compatible with older servers: if `total` is absent, return the
+    /// first response instead of guessing at more offsets.
+    func allMyShifts(
+        userId: String? = nil,
+        pageSize: Int = 20
+    ) async throws -> [MyShift] {
+        let pageSize = min(max(pageSize, 1), 20)
+        var response = try await myShiftsPage(userId: userId, limit: pageSize, offset: 0)
+        if let userId, response.userId != userId { return [] }
+
+        var shifts = response.data
+        guard let total = response.total else { return shifts }
+        var offset = response.data.count
+
+        while offset < total, !response.data.isEmpty {
+            try Task.checkCancellation()
+            response = try await myShiftsPage(userId: userId, limit: pageSize, offset: offset)
+            if let userId, response.userId != userId { return [] }
+            shifts.append(contentsOf: response.data)
+            offset += response.data.count
+        }
+
+        return shifts
     }
 
     func publishedSchedule(limit: Int = 100, offset: Int = 0) async throws -> PublishedScheduleResponse {

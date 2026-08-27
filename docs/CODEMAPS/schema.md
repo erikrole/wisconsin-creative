@@ -127,102 +127,108 @@ Values: `UPLOADING`, `FINALIZING`, `COMMITTED`, `FAILED`
 
 ## Model `User`
 
-Fields: 112
+Fields: 118
 
-- `id                           String                           @id @default(cuid())`
-- `name                         String`
-- `email                        String                           @unique`
-- `passwordHash                 String                           @map("password_hash")`
-- `forcePasswordChange          Boolean                          @default(false) @map("force_password_change")`
-- `role                         Role`
-- `affiliation                  Affiliation?`
-- `collaboratorProfile          CollaboratorProfile?             @map("collaborator_profile")`
-- `collaboratorPolicyId         String?                          @map("collaborator_policy_id")`
-- `staffingType                 ShiftWorkerType                  @default(ST) @map("staffing_type")`
-- `active                       Boolean                          @default(true)`
-- `hiddenFromRoster             Boolean                          @default(false) @map("hidden_from_roster")`
-- `phone                        String?`
-- `personalPhone                String?                          @map("personal_phone")`
-- `workPhone                    String?                          @map("work_phone")`
-- `workPhoneNotApplicable       Boolean                          @default(false) @map("work_phone_not_applicable")`
-- `wiscardNumber                String?                          @unique @map("wiscard_number")`
-- `wiscardCardNumber            String?                          @unique @map("wiscard_card_number")`
-- `wiscardIssueCode             String?                          @map("wiscard_issue_code")`
-- `profilePromptSnoozedUntil    DateTime?                        @map("profile_prompt_snoozed_until")`
-- `slackHandle                  String?                          @map("slack_handle")`
-- `slackProfileUrl              String?                          @map("slack_profile_url")`
-- `avatarUrl                    String?                          @map("avatar_url")`
-- `primaryArea                  ShiftArea?                       @map("primary_area")`
-- `locationId                   String?                          @map("location_id")`
-- `createdAt                    DateTime                         @default(now()) @map("created_at")`
-- `updatedAt                    DateTime                         @updatedAt @map("updated_at")`
-- `lastActiveAt                 DateTime?                        @map("last_active_at")`
-- `location                     Location?                        @relation(fields: [locationId], references: [id], onDelete: SetNull)`
-- `sessions                     Session[]`
-- `passkeyCredentials           PasskeyCredential[]`
-- `passkeyChallenges            PasskeyChallenge[]`
-- `requested                    Booking[]                        @relation("BookingRequester")`
-- `createdBookings              Booking[]                        @relation("BookingCreator")`
-- `scanEvents                   ScanEvent[]`
-- `scanSessions                 ScanSession[]`
-- `overrides                    OverrideEvent[]`
-- `bulkMovements                BulkStockMovement[]`
-- `audits                       AuditLog[]                       @relation("AuditActor")`
-- `shiftAssignments             ShiftAssignment[]                @relation("ShiftAssignee")`
-- `shiftAssignedBy              ShiftAssignment[]                @relation("ShiftAssigner")`
-- `shiftGroupsPublished         ShiftGroup[]                     @relation("ShiftGroupPublisher")`
-- `shiftWorkingCopiesCreated    ShiftGroupWorkingCopy[]          @relation("ShiftWorkingCopyCreator")`
-- `shiftWorkingCopiesUpdated    ShiftGroupWorkingCopy[]          @relation("ShiftWorkingCopyUpdater")`
-- `shiftAcknowledged            ShiftAssignment[]                @relation("ShiftAssignmentAcknowledgedBy")`
-- `sportAssignments             StudentSportAssignment[]`
-- `areaAssignments              StudentAreaAssignment[]`
-- `tradesPosted                 ShiftTrade[]                     @relation("TradePostedBy")`
-- `tradesClaimed                ShiftTrade[]                     @relation("TradeClaimedBy")`
-- `favorites                    FavoriteItem[]`
-- `familyFavorites              FavoriteItemFamily[]`
-- `passwordResetTokens          PasswordResetToken[]`
-- `notifications                Notification[]`
-- `deviceTokens                 DeviceToken[]`
-- `appInstallations             UserAppInstallation[]`
-- `liveActivityTokens           LiveActivityToken[]`
-- `liveActivityStartTokens      LiveActivityStartToken[]`
-- `liveActivityStarts           LiveActivityStart[]`
-- `blastsAuthored               Blast[]                          @relation("BlastAuthor")`
-- `blastsCancelled              Blast[]                          @relation("BlastCanceller")`
-- `blastsReceived               BlastRecipient[]                 @relation("BlastRecipient")`
-- `bookingPhotos                BookingPhoto[]                   @relation("BookingPhotoActor")`
-- `checkinReports               CheckinItemReport[]              @relation("CheckinReports")`
-- `allowedEmailsCreated         AllowedEmail[]                   @relation("AllowedEmailCreator")`
-- `allowedEmailsClaimed         AllowedEmail[]                   @relation("AllowedEmailClaimer")`
-- `licenseCodesHeld             LicenseCode[]                    @relation("LicenseClaimedBy")`
-- `licenseCodesCreated          LicenseCode[]                    @relation("LicenseCreatedBy")`
-- `licenseClaims                LicenseCodeClaim[]`
-- `resources                    Resource[]`
-- `resourcesVerified            Resource[]                       @relation("ResourceLastVerifiedBy")`
-- `availabilityBlocks           StudentAvailabilityBlock[]`
-- `availabilityReviewed         StudentAvailabilityBlock[]       @relation("AvailabilityReviewer")`
-- `travelMemberships            EventTravelMember[]              @relation("TravelMembers")`
-- `badges                       StudentBadge[]`
-- `badgesAwardedByMe            StudentBadge[]                   @relation("BadgeAwardedBy")`
-- `badgeStreaks                 BadgeStreak[]`
-- `badgeEventReceipts           BadgeEventReceipt[]`
-- `notificationPrefs            Json?                            @map("notification_prefs")`
-- `icsToken                     String?                          @unique @map("ics_token")`
-- `scheduleEventFollows         ScheduleEventFollow[]`
-- `collaboratorPolicy           CollaboratorPolicy?              @relation(fields: [collaboratorPolicyId], references: [id], onDelete: Restrict)`
-- `collaboratorPolicyRevisions  CollaboratorPolicyRevision[]     @relation("CollaboratorPolicyRevisionActor")`
-- `accountabilityExclusions     BookingAccountabilityExclusion[] @relation("AccountabilityExcludedBy")`
-- `accountabilityRestorations   BookingAccountabilityExclusion[] @relation("AccountabilityRestoredBy")`
-- `bookingDueDateChanges        BookingDueDateChange[]           @relation("BookingDueDateChangeActor")`
-- `signatureCollectionsCreated  SignatureCollection[]            @relation("SignatureCollectionCreator")`
-- `signatureCollectionsUpdated  SignatureCollection[]            @relation("SignatureCollectionUpdater")`
-- `signatureCollectionsArchived SignatureCollection[]            @relation("SignatureCollectionArchiver")`
-- `signatureSnapshotsApplied    SignatureRosterSnapshot[]        @relation("SignatureSnapshotApplier")`
-- `signatureMembers             SignatureMember[]                @relation("SignatureMemberUser")`
-- `signatureCaptures            SignatureCapture[]               @relation("SignatureCaptureActor")`
-- `signatureSaveOperations      SignatureSaveOperation[]         @relation("SignatureSaveActor")`
-- `eventWork                    EventWorker[]                    @relation("EventWorkerUser")`
-- `eventWorkersAdded            EventWorker[]                    @relation("EventWorkerAdder")`
+- `id                            String                           @id @default(cuid())`
+- `name                          String`
+- `email                         String                           @unique`
+- `passwordHash                  String                           @map("password_hash")`
+- `forcePasswordChange           Boolean                          @default(false) @map("force_password_change")`
+- `role                          Role`
+- `affiliation                   Affiliation?`
+- `collaboratorProfile           CollaboratorProfile?             @map("collaborator_profile")`
+- `collaboratorPolicyId          String?                          @map("collaborator_policy_id")`
+- `staffingType                  ShiftWorkerType                  @default(ST) @map("staffing_type")`
+- `active                        Boolean                          @default(true)`
+- `hiddenFromRoster              Boolean                          @default(false) @map("hidden_from_roster")`
+- `phone                         String?`
+- `personalPhone                 String?                          @map("personal_phone")`
+- `workPhone                     String?                          @map("work_phone")`
+- `workPhoneNotApplicable        Boolean                          @default(false) @map("work_phone_not_applicable")`
+- `wiscardNumber                 String?                          @unique @map("wiscard_number")`
+- `wiscardCardNumber             String?                          @unique @map("wiscard_card_number")`
+- `wiscardIssueCode              String?                          @map("wiscard_issue_code")`
+- `profilePromptSnoozedUntil     DateTime?                        @map("profile_prompt_snoozed_until")`
+- `slackHandle                   String?                          @map("slack_handle")`
+- `slackProfileUrl               String?                          @map("slack_profile_url")`
+- `avatarUrl                     String?                          @map("avatar_url")`
+- `primaryArea                   ShiftArea?                       @map("primary_area")`
+- `locationId                    String?                          @map("location_id")`
+- `createdAt                     DateTime                         @default(now()) @map("created_at")`
+- `updatedAt                     DateTime                         @updatedAt @map("updated_at")`
+- `lastActiveAt                  DateTime?                        @map("last_active_at")`
+- `location                      Location?                        @relation(fields: [locationId], references: [id], onDelete: SetNull)`
+- `sessions                      Session[]`
+- `passkeyCredentials            PasskeyCredential[]`
+- `passkeyChallenges             PasskeyChallenge[]`
+- `requested                     Booking[]                        @relation("BookingRequester")`
+- `createdBookings               Booking[]                        @relation("BookingCreator")`
+- `scanEvents                    ScanEvent[]`
+- `scanSessions                  ScanSession[]`
+- `overrides                     OverrideEvent[]`
+- `bulkMovements                 BulkStockMovement[]`
+- `audits                        AuditLog[]                       @relation("AuditActor")`
+- `shiftAssignments              ShiftAssignment[]                @relation("ShiftAssignee")`
+- `shiftAssignedBy               ShiftAssignment[]                @relation("ShiftAssigner")`
+- `shiftGroupsPublished          ShiftGroup[]                     @relation("ShiftGroupPublisher")`
+- `shiftWorkingCopiesCreated     ShiftGroupWorkingCopy[]          @relation("ShiftWorkingCopyCreator")`
+- `shiftWorkingCopiesUpdated     ShiftGroupWorkingCopy[]          @relation("ShiftWorkingCopyUpdater")`
+- `shiftAcknowledged             ShiftAssignment[]                @relation("ShiftAssignmentAcknowledgedBy")`
+- `sportAssignments              StudentSportAssignment[]`
+- `areaAssignments               StudentAreaAssignment[]`
+- `tradesPosted                  ShiftTrade[]                     @relation("TradePostedBy")`
+- `tradesClaimed                 ShiftTrade[]                     @relation("TradeClaimedBy")`
+- `favorites                     FavoriteItem[]`
+- `familyFavorites               FavoriteItemFamily[]`
+- `passwordResetTokens           PasswordResetToken[]`
+- `notifications                 Notification[]`
+- `deviceTokens                  DeviceToken[]`
+- `appInstallations              UserAppInstallation[]`
+- `liveActivityTokens            LiveActivityToken[]`
+- `liveActivityStartTokens       LiveActivityStartToken[]`
+- `liveActivityStarts            LiveActivityStart[]`
+- `blastsAuthored                Blast[]                          @relation("BlastAuthor")`
+- `blastsCancelled               Blast[]                          @relation("BlastCanceller")`
+- `blastsReceived                BlastRecipient[]                 @relation("BlastRecipient")`
+- `bookingPhotos                 BookingPhoto[]                   @relation("BookingPhotoActor")`
+- `checkinReports                CheckinItemReport[]              @relation("CheckinReports")`
+- `allowedEmailsCreated          AllowedEmail[]                   @relation("AllowedEmailCreator")`
+- `allowedEmailsClaimed          AllowedEmail[]                   @relation("AllowedEmailClaimer")`
+- `licenseCodesHeld              LicenseCode[]                    @relation("LicenseClaimedBy")`
+- `licenseCodesCreated           LicenseCode[]                    @relation("LicenseCreatedBy")`
+- `licenseClaims                 LicenseCodeClaim[]`
+- `resources                     Resource[]`
+- `resourcesVerified             Resource[]                       @relation("ResourceLastVerifiedBy")`
+- `resourceAssetFoldersCreated   ResourceAssetFolder[]            @relation("ResourceAssetFolderCreator")`
+- `resourceAssetsCreated         ResourceAsset[]                  @relation("ResourceAssetCreator")`
+- `resourceAssetsUpdated         ResourceAsset[]                  @relation("ResourceAssetUpdater")`
+- `resourceAssetVersionsUploaded ResourceAssetVersion[]           @relation("ResourceAssetVersionUploader")`
+- `resourceAssetUploads          ResourceAssetUpload[]            @relation("ResourceAssetUploadActor")`
+- `resourceAssetFavorites        ResourceAssetFavorite[]          @relation("ResourceAssetFavoriteUser")`
+- `availabilityBlocks            StudentAvailabilityBlock[]`
+- `availabilityReviewed          StudentAvailabilityBlock[]       @relation("AvailabilityReviewer")`
+- `travelMemberships             EventTravelMember[]              @relation("TravelMembers")`
+- `badges                        StudentBadge[]`
+- `badgesAwardedByMe             StudentBadge[]                   @relation("BadgeAwardedBy")`
+- `badgeStreaks                  BadgeStreak[]`
+- `badgeEventReceipts            BadgeEventReceipt[]`
+- `notificationPrefs             Json?                            @map("notification_prefs")`
+- `icsToken                      String?                          @unique @map("ics_token")`
+- `scheduleEventFollows          ScheduleEventFollow[]`
+- `collaboratorPolicy            CollaboratorPolicy?              @relation(fields: [collaboratorPolicyId], references: [id], onDelete: Restrict)`
+- `collaboratorPolicyRevisions   CollaboratorPolicyRevision[]     @relation("CollaboratorPolicyRevisionActor")`
+- `accountabilityExclusions      BookingAccountabilityExclusion[] @relation("AccountabilityExcludedBy")`
+- `accountabilityRestorations    BookingAccountabilityExclusion[] @relation("AccountabilityRestoredBy")`
+- `bookingDueDateChanges         BookingDueDateChange[]           @relation("BookingDueDateChangeActor")`
+- `signatureCollectionsCreated   SignatureCollection[]            @relation("SignatureCollectionCreator")`
+- `signatureCollectionsUpdated   SignatureCollection[]            @relation("SignatureCollectionUpdater")`
+- `signatureCollectionsArchived  SignatureCollection[]            @relation("SignatureCollectionArchiver")`
+- `signatureSnapshotsApplied     SignatureRosterSnapshot[]        @relation("SignatureSnapshotApplier")`
+- `signatureMembers              SignatureMember[]                @relation("SignatureMemberUser")`
+- `signatureCaptures             SignatureCapture[]               @relation("SignatureCaptureActor")`
+- `signatureSaveOperations       SignatureSaveOperation[]         @relation("SignatureSaveActor")`
+- `eventWork                     EventWorker[]                    @relation("EventWorkerUser")`
+- `eventWorkersAdded             EventWorker[]                    @relation("EventWorkerAdder")`
 - `title               String?`
 - `athleticsEmail      String?         @unique @map("athletics_email")`
 - `startDate           DateTime?       @map("start_date") @db.Date`
@@ -2280,6 +2286,14 @@ Indexes and constraints:
 
 Values: `CONTACTS`, `BUILDING_NUMBERS`, `MEDIA_DRIVE`, `SERVER_PATHS`, `SOP`, `HOW_TO`, `TROUBLESHOOTING`, `ACCOUNT_NOTE`, `EVENT_OPS`, `GENERAL`
 
+## Enum `ResourceAssetKind`
+
+Values: `LOGO`, `FONT`, `GRAPHIC_ELEMENT`, `TEMPLATE`, `COLOR_REFERENCE`, `PHOTO`, `VIDEO`, `DOCUMENT`, `OTHER`
+
+## Enum `ResourceAssetUploadStatus`
+
+Values: `PENDING`, `COMPLETED`
+
 ## Model `Resource`
 
 Fields: 19
@@ -2313,6 +2327,133 @@ Indexes and constraints:
 - `@@index([lastVerifiedById])`
 - `@@index([published])`
 - `@@map("resources")`
+
+## Model `ResourceAssetFolder`
+
+Fields: 12
+
+- `id          String   @id @default(cuid())`
+- `name        String`
+- `path        String   @unique`
+- `parentId    String?  @map("parent_id")`
+- `createdById String?  @map("created_by_id")`
+- `createdAt   DateTime @default(now()) @map("created_at")`
+- `updatedAt   DateTime @updatedAt @map("updated_at")`
+- `parent    ResourceAssetFolder?  @relation("ResourceAssetFolderTree", fields: [parentId], references: [id], onDelete: Cascade)`
+- `children  ResourceAssetFolder[] @relation("ResourceAssetFolderTree")`
+- `createdBy User?                 @relation("ResourceAssetFolderCreator", fields: [createdById], references: [id], onDelete: SetNull)`
+- `assets    ResourceAsset[]`
+- `uploads   ResourceAssetUpload[]`
+
+Indexes and constraints:
+
+- `@@index([parentId])`
+- `@@map("resource_asset_folders")`
+
+## Model `ResourceAsset`
+
+Fields: 18
+
+- `id               String            @id @default(cuid())`
+- `name             String`
+- `normalizedName   String            @map("normalized_name")`
+- `folderId         String            @map("folder_id")`
+- `kind             ResourceAssetKind @default(OTHER)`
+- `description      String?`
+- `currentVersionId String?           @unique @map("current_version_id")`
+- `createdById      String            @map("created_by_id")`
+- `updatedById      String            @map("updated_by_id")`
+- `createdAt        DateTime          @default(now()) @map("created_at")`
+- `updatedAt        DateTime          @updatedAt @map("updated_at")`
+- `folder         ResourceAssetFolder     @relation(fields: [folderId], references: [id], onDelete: Restrict)`
+- `currentVersion ResourceAssetVersion?   @relation("ResourceAssetCurrentVersion", fields: [currentVersionId], references: [id], onDelete: SetNull)`
+- `versions       ResourceAssetVersion[]  @relation("ResourceAssetVersions")`
+- `createdBy      User                    @relation("ResourceAssetCreator", fields: [createdById], references: [id], onDelete: Restrict)`
+- `updatedBy      User                    @relation("ResourceAssetUpdater", fields: [updatedById], references: [id], onDelete: Restrict)`
+- `uploads        ResourceAssetUpload[]`
+- `favorites      ResourceAssetFavorite[] @relation("ResourceAssetFavoriteAsset")`
+
+Indexes and constraints:
+
+- `@@unique([folderId, normalizedName])`
+- `@@index([folderId, name])`
+- `@@map("resource_assets")`
+
+## Model `ResourceAssetVersion`
+
+Fields: 14
+
+- `id            String   @id @default(cuid())`
+- `assetId       String   @map("asset_id")`
+- `versionNumber Int      @map("version_number")`
+- `originalName  String   @map("original_name")`
+- `storagePath   String   @unique @map("storage_path")`
+- `contentType   String   @map("content_type")`
+- `sizeBytes     Int      @map("size_bytes")`
+- `etag          String?`
+- `versionNote   String?  @map("version_note")`
+- `uploadedById  String   @map("uploaded_by_id")`
+- `createdAt     DateTime @default(now()) @map("created_at")`
+- `asset      ResourceAsset  @relation("ResourceAssetVersions", fields: [assetId], references: [id], onDelete: Cascade)`
+- `currentFor ResourceAsset? @relation("ResourceAssetCurrentVersion")`
+- `uploadedBy User           @relation("ResourceAssetVersionUploader", fields: [uploadedById], references: [id], onDelete: Restrict)`
+
+Indexes and constraints:
+
+- `@@unique([assetId, versionNumber])`
+- `@@index([assetId, versionNumber])`
+- `@@map("resource_asset_versions")`
+
+## Model `ResourceAssetUpload`
+
+Fields: 21
+
+- `id             String                    @id @default(cuid())`
+- `actorId        String                    @map("actor_id")`
+- `folderId       String                    @map("folder_id")`
+- `assetId        String?                   @map("asset_id")`
+- `name           String`
+- `normalizedName String                    @map("normalized_name")`
+- `kind           ResourceAssetKind         @default(OTHER)`
+- `description    String?`
+- `originalName   String                    @map("original_name")`
+- `storagePath    String                    @unique @map("storage_path")`
+- `contentType    String                    @map("content_type")`
+- `sizeBytes      Int                       @map("size_bytes")`
+- `versionNumber  Int                       @map("version_number")`
+- `versionNote    String?                   @map("version_note")`
+- `status         ResourceAssetUploadStatus @default(PENDING)`
+- `expiresAt      DateTime                  @map("expires_at")`
+- `completedAt    DateTime?                 @map("completed_at")`
+- `createdAt      DateTime                  @default(now()) @map("created_at")`
+- `actor  User                @relation("ResourceAssetUploadActor", fields: [actorId], references: [id], onDelete: Restrict)`
+- `folder ResourceAssetFolder @relation(fields: [folderId], references: [id], onDelete: Restrict)`
+- `asset  ResourceAsset?      @relation(fields: [assetId], references: [id], onDelete: SetNull)`
+
+Indexes and constraints:
+
+- `@@index([assetId, versionNumber])`
+- `@@index([actorId, status])`
+- `@@index([expiresAt, status])`
+- `@@map("resource_asset_uploads")`
+
+## Model `ResourceAssetFavorite`
+
+Fields: 6
+
+- `id        String   @id @default(cuid())`
+- `userId    String   @map("user_id")`
+- `assetId   String   @map("asset_id")`
+- `createdAt DateTime @default(now()) @map("created_at")`
+- `user  User          @relation("ResourceAssetFavoriteUser", fields: [userId], references: [id], onDelete: Cascade)`
+- `asset ResourceAsset @relation("ResourceAssetFavoriteAsset", fields: [assetId], references: [id], onDelete: Cascade)`
+
+Indexes and constraints:
+
+- `@@unique([userId, assetId])`
+- `@@index([userId, createdAt])`
+- `@@index([assetId])`
+- `@@map("resource_asset_favorites")`
 
 ## Model `EventTravelMember`
 

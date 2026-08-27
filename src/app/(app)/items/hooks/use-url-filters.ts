@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { SortingState } from "@tanstack/react-table";
 
 export type ItemTypeFilter = "all" | "serialized" | "unit-tracked" | "quantity-tracked";
@@ -75,6 +75,8 @@ function sortingEqual(a: SortingState, b: SortingState) {
 }
 
 export function useUrlFilters() {
+  const pathname = usePathname();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const searchSignature = searchParams.toString();
   const lastObservedSearchSignatureRef = useRef(searchSignature);
@@ -132,7 +134,9 @@ export function useUrlFilters() {
     showAccessories ||
     itemType !== "all";
 
-  // Sync filters to URL search params
+  // Sync filters to URL search params through the App Router. A raw
+  // `history.replaceState` leaves Next's router state stale; the next detail
+  // navigation can then restore the unfiltered list on browser Back.
   useEffect(() => {
     if (skipNextWriteRef.current) {
       skipNextWriteRef.current = false;
@@ -168,9 +172,10 @@ export function useUrlFilters() {
       if (sorting[0]!.desc) params.set("order", "desc");
     }
     const qs = params.toString();
-    const newUrl = qs ? `?${qs}` : window.location.pathname;
-    window.history.replaceState(null, "", newUrl);
-  }, [search, statusFilter, locationFilter, categoryFilter, brandFilter, departmentFilter, itemType, showAccessories, favoritesOnly, sorting]);
+    const newUrl = qs ? `${pathname}?${qs}` : pathname;
+    const currentUrl = `${pathname}${window.location.search}`;
+    if (newUrl !== currentUrl) router.replace(newUrl, { scroll: false });
+  }, [search, statusFilter, locationFilter, categoryFilter, brandFilter, departmentFilter, itemType, showAccessories, favoritesOnly, sorting, pathname, router]);
 
   const clearAllFilters = useCallback(() => {
     setSearch("");

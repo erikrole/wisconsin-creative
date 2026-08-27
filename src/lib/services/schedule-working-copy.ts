@@ -82,6 +82,8 @@ const groupEditorSelect = {
 
 type EditorGroup = Prisma.ShiftGroupGetPayload<{ select: typeof groupEditorSelect }>;
 
+type WorkingScheduleAutoRelease = { at: Date; runId: string };
+
 function iso(value: Date | null) {
   return value?.toISOString() ?? null;
 }
@@ -248,6 +250,8 @@ async function editorResponse(group: EditorGroup, tx: Prisma.TransactionClient =
   return {
     shiftGroupId: group.id,
     allDay: group.event.allDay,
+    eventStartsAt: group.event.startsAt.toISOString(),
+    eventEndsAt: group.event.endsAt.toISOString(),
     publicationState: group.workingCopy
       ? "unpublished_changes"
       : group.publishedAt
@@ -287,6 +291,16 @@ export async function getWorkingScheduleEditor(shiftGroupId: string) {
   return editorResponse(await findEditorGroup(shiftGroupId));
 }
 
+/** Read the live event boundary used to choose between release and backfill. */
+export async function getWorkingScheduleEventEndsAt(shiftGroupId: string): Promise<Date> {
+  const group = await db.shiftGroup.findUnique({
+    where: { id: shiftGroupId },
+    select: { event: { select: { endsAt: true } } },
+  });
+  if (!group) throw new HttpError(404, "Shift group not found");
+  return group.event.endsAt;
+}
+
 export async function getWorkingScheduleCandidateScores(
   shiftGroupId: string,
   slotKey: string,
@@ -316,7 +330,7 @@ export async function mutateWorkingSchedule(
   expectedVersion: number,
   command: WorkingScheduleCommand,
   actor: { id: string; role: Role },
-  autoRelease?: { at: Date; runId: string },
+  autoRelease?: WorkingScheduleAutoRelease | null,
 ) {
   return db.$transaction(async (tx) => {
     const group = await findEditorGroup(shiftGroupId, tx);
@@ -643,9 +657,9 @@ export async function mutateWorkingSchedule(
           version: nextVersion,
           payload: afterPayload as unknown as Prisma.InputJsonValue,
           updatedById: actor.id,
-          ...(autoRelease ? {
-            autoReleaseAt: autoRelease.at,
-            autoReleaseRunId: autoRelease.runId,
+          ...(autoRelease !== undefined ? {
+            autoReleaseAt: autoRelease?.at ?? null,
+            autoReleaseRunId: autoRelease?.runId ?? null,
             autoReleaseError: null,
           } : {}),
         },
@@ -662,9 +676,9 @@ export async function mutateWorkingSchedule(
             basePublishedVersion: group.publishedVersion,
             payloadVersion: 2,
             payload: afterPayload as unknown as Prisma.InputJsonValue,
-            ...(autoRelease ? {
-              autoReleaseAt: autoRelease.at,
-              autoReleaseRunId: autoRelease.runId,
+            ...(autoRelease !== undefined ? {
+              autoReleaseAt: autoRelease?.at ?? null,
+              autoReleaseRunId: autoRelease?.runId ?? null,
               autoReleaseError: null,
             } : {}),
             createdById: actor.id,
@@ -730,7 +744,7 @@ export async function rebaseWorkingSchedule(
   shiftGroupId: string,
   expectedVersion: number,
   actor: { id: string; role: Role },
-  autoRelease?: { at: Date; runId: string },
+  autoRelease?: WorkingScheduleAutoRelease | null,
 ) {
   return db.$transaction(async (tx) => {
     const group = await findEditorGroup(shiftGroupId, tx);
@@ -847,9 +861,9 @@ export async function rebaseWorkingSchedule(
         // becomes a version 2 draft the moment it is refreshed.
         payloadVersion: 2,
         updatedById: actor.id,
-        ...(autoRelease ? {
-          autoReleaseAt: autoRelease.at,
-          autoReleaseRunId: autoRelease.runId,
+        ...(autoRelease !== undefined ? {
+          autoReleaseAt: autoRelease?.at ?? null,
+          autoReleaseRunId: autoRelease?.runId ?? null,
           autoReleaseError: null,
         } : {}),
       },

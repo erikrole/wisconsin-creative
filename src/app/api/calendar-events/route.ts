@@ -103,7 +103,10 @@ export const GET = withAuth(async (req, { user }) => {
         location: { select: { id: true, name: true } },
         source: { select: { id: true, name: true } }
       },
-      orderBy: { startsAt: "asc" },
+      // Offset pagination needs a total ordering; several imported events can
+      // share an exact start time, so the id tie-breaker prevents a later page
+      // from skipping or repeating a row while the native client drains it.
+      orderBy: [{ startsAt: "asc" }, { id: "asc" }],
       take: limit,
       skip: offset
     }),

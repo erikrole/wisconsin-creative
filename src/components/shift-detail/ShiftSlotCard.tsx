@@ -59,6 +59,7 @@ type Props = {
   activeAssignment: ShiftAssignment | null;
   pendingRequests: ShiftAssignment[];
   isStaff: boolean;
+  canReviewClaims?: boolean;
   canEdit?: boolean;
   currentUserId?: string;
   acting: string | null;
@@ -75,7 +76,6 @@ type Props = {
   onRemove: (assignmentId: string) => void;
   onApprove: (assignmentId: string) => void;
   onDecline: (assignmentId: string) => void;
-  onRequest: () => void;
   onDeleteShift: () => void;
   // Trade
   onPostTrade?: (assignmentId: string) => void;
@@ -93,6 +93,7 @@ export function ShiftSlotCard({
   activeAssignment,
   pendingRequests,
   isStaff,
+  canReviewClaims = false,
   canEdit = isStaff,
   currentUserId,
   acting,
@@ -107,13 +108,11 @@ export function ShiftSlotCard({
   onRemove,
   onApprove,
   onDecline,
-  onRequest,
   onDeleteShift,
   onPostTrade,
   onCallWindowSaved,
 }: Props) {
   const isAssigned = !!activeAssignment;
-  const userHasRequested = pendingRequests.some((a) => a.user.id === currentUserId);
   const isMyAssignment = activeAssignment?.user.id === currentUserId;
   const shiftWindow = { startsAt, endsAt, callStartsAt, callEndsAt };
   const slotWindow = effectiveCallWindow(shiftWindow);
@@ -262,8 +261,9 @@ export function ShiftSlotCard({
             </>
           )}
 
-          {/* Students claim open slots into this queue; staff approve or decline. */}
-          {pendingRequests.length > 0 && (
+          {/* Admins can review the pending queue here, but student claims belong
+              to the expanded Schedule row or Event detail. */}
+          {isStaff && pendingRequests.length > 0 && (
             <div className="mt-2 flex flex-col gap-1">
               {pendingRequests.map((req) => (
                 <div key={req.id} className="flex items-center justify-between">
@@ -275,7 +275,7 @@ export function ShiftSlotCard({
                     />
                     {req.user.name}
                   </span>
-                  {canEdit && (
+                  {canReviewClaims && (
                     <div className="flex gap-1">
                       <Button
                         size="sm"
@@ -301,7 +301,8 @@ export function ShiftSlotCard({
             </div>
           )}
 
-          {/* Empty slot - assign staff-side or let Students claim published Student slots. */}
+          {/* Empty slot - assignment context only. Student claim actions live in
+              the expanded Schedule row and Event detail. */}
           {!isAssigned && (
             <div className="mt-1">
               {canEdit && (
@@ -330,20 +331,6 @@ export function ShiftSlotCard({
                     />
                   </PopoverContent>
                 </Popover>
-              )}
-              {!isStaff && workerType === "ST" && !userHasRequested && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-1 h-10 text-xs"
-                  onClick={onRequest}
-                  disabled={acting !== null}
-                >
-                  {acting === shiftId ? "Claiming..." : "Claim this shift"}
-                </Button>
-              )}
-              {userHasRequested && (
-                <span className="text-xs text-muted-foreground pl-1">Your request is waiting for staff approval</span>
               )}
             </div>
           )}

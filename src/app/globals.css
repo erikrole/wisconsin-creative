@@ -160,6 +160,27 @@
   --blue-text: #2563eb;
   --yellow-text: #ca8a04;
 
+  /* Badge rarity discs — saturated fills that sit *under* a white glyph, so
+     they are chosen for contrast against white rather than against the page.
+     That is why they are their own tokens and not `--blue` / `--orange` /
+     `--purple`: `--orange` (#f59e0b) carries white at 2.2:1, well under the
+     3:1 WCAG non-text minimum. Every stop below clears 3:1 against white.
+
+     Fixed across both themes, exactly like their iOS counterparts in
+     `ios/Wisconsin/Shared/BadgeEarnedCelebration.swift` — a filled disc does
+     not need the dark-mode lightening that keeps *typography* legible, and a
+     badge that changed colour with the theme would not be one system with the
+     native app. Common is the brand red (`#C5050C`, `Color.kioskRed`);
+     see docs/COLOR_SYSTEM.md. */
+  --badge-common: #c5050c;
+  --badge-common-deep: #8a0308;
+  --badge-uncommon: #3b82f6;
+  --badge-uncommon-deep: #1d4ed8;
+  --badge-rare: #e08a06;
+  --badge-rare-deep: #96490a;
+  --badge-legendary: #7c3aed;
+  --badge-legendary-deep: #5b21b6;
+
   /* Border radius — base value only; derived sizes come from @theme inline calc() above */
   --radius: 8px;
 

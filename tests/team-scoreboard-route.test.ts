@@ -88,14 +88,24 @@ describe("GET /api/scoreboard", () => {
     });
   });
 
-  it.each([
-    ["sport", "?sportCode=not-a-sport"],
-    ["site", "?site=ROAD"],
-  ])("rejects an invalid %s filter before the service runs", async (_label, query) => {
-    const response = await run(request(query), { params: Promise.resolve({}) });
+  it("rejects an invalid site filter before the service runs", async () => {
+    const response = await run(request("?site=ROAD"), { params: Promise.resolve({}) });
 
     expect(response.status).toBe(400);
     expect(mocks.getTeamScoreboard).not.toHaveBeenCalled();
+  });
+
+  it("answers a retired sport code with its own empty intersection, not a 400", async () => {
+    // Facets are built from the sport codes the events carry, and `sportLabel`
+    // still names retired codes such as SWIM. Rejecting one against the current
+    // varsity set turned a filter the Scoreboard had just offered into an error
+    // the reader never saw, and the stack snapped back to "All sports".
+    const response = await run(request("?sportCode=swim"), { params: Promise.resolve({}) });
+
+    expect(response.status).toBe(200);
+    expect(mocks.getTeamScoreboard).toHaveBeenCalledWith({
+      filters: { sportCode: "SWIM", venue: undefined, opponent: undefined, site: undefined },
+    });
   });
 
   it("keeps the current season scope server-owned", async () => {

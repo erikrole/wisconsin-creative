@@ -37,6 +37,7 @@ function gearStatusPriority(status: string) {
  *   - eventId: (optional) filter to a specific event
  *   - userId:  (optional, defaults to the caller) whose shifts to return
  *   - limit:   (optional, default 5) max results
+ *   - offset:  (optional, default 0) page offset
  */
 export const GET = withAuth(async (req, { user }) => {
   // Live assignments, including groups that were never published, and readable
@@ -48,6 +49,8 @@ export const GET = withAuth(async (req, { user }) => {
   const eventId = url.searchParams.get("eventId");
   const rawLimit = Number(url.searchParams.get("limit") || "5");
   const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(Math.trunc(rawLimit), 1), 20) : 5;
+  const rawOffset = Number(url.searchParams.get("offset") || "0");
+  const offset = Number.isFinite(rawOffset) ? Math.min(Math.max(Math.trunc(rawOffset), 0), 10_000) : 0;
   // Whose shifts. Defaults to the caller, so every existing request is
   // unchanged. Another person's assignments are not private here -- the
   // Schedule tab already shows who is covering what to everyone -- and a
@@ -74,35 +77,41 @@ export const GET = withAuth(async (req, { user }) => {
     },
   };
 
-  const assignments = await db.shiftAssignment.findMany({
-    where,
-    orderBy: { shift: { startsAt: "asc" } },
-    take: limit,
-    include: {
-      shift: {
-        include: {
-          shiftGroup: {
-            include: {
-              event: {
-                select: {
-                  id: true,
-                  summary: true,
-                  startsAt: true,
-                  endsAt: true,
-                  allDay: true,
-                  sportCode: true,
-                  isHome: true,
-                  opponent: true,
-                  locationId: true,
-                  location: { select: { id: true, name: true } },
+  const [total, assignments] = await Promise.all([
+    db.shiftAssignment.count({ where }),
+    db.shiftAssignment.findMany({
+      where,
+      // Several assignments can share a shift start. Keep the offset cursor
+      // stable while native Schedule follows every page.
+      orderBy: [{ shift: { startsAt: "asc" } }, { id: "asc" }],
+      skip: offset,
+      take: limit,
+      include: {
+        shift: {
+          include: {
+            shiftGroup: {
+              include: {
+                event: {
+                  select: {
+                    id: true,
+                    summary: true,
+                    startsAt: true,
+                    endsAt: true,
+                    allDay: true,
+                    sportCode: true,
+                    isHome: true,
+                    opponent: true,
+                    locationId: true,
+                    location: { select: { id: true, name: true } },
+                  },
                 },
               },
             },
           },
         },
       },
-    },
-  });
+    }),
+  ]);
 
   // For each assignment, check if that same person has gear linked to the event.
   // This must follow `targetUserId`, not the caller: pointed at somebody else's
@@ -222,5 +231,5 @@ export const GET = withAuth(async (req, { user }) => {
   // other way to tell a server that honoured `userId` from one that ignored it
   // and returned the caller's own -- and silently attributing one person's
   // shifts to another on their profile is worse than showing none.
-  return ok({ data, userId: targetUserId });
+  return ok({ data, userId: targetUserId, total, limit, offset });
 });

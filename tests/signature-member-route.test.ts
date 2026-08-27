@@ -68,14 +68,6 @@ beforeEach(() => {
         maxHeight: 900,
       },
       artifact: { id: "revision-2" },
-      athleteProfile: {
-        birthday: "2004-02-29",
-        hometown: "Madison, WI",
-        instagramHandle: null,
-        tiktokHandle: null,
-        xHandle: null,
-      },
-      athleteProfileComplete: true,
     },
   });
 });

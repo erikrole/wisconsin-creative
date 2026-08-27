@@ -1,8 +1,13 @@
 import { Prisma, Role, ShiftAssignmentStatus, ShiftWorkerType, type CollaboratorPolicyStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
-import { normalizeAllDayToUtcMidnight } from "@/lib/app-time";
 import { ACTIVE_ASSIGNMENT_STATUSES } from "@/lib/shift-constants";
+import {
+  buildShiftAssignmentOverlapWhere,
+  resolveEffectiveAssignmentWindow,
+  resolveEffectiveShiftWindow,
+  scheduleWindowsOverlap,
+} from "@/lib/schedule-window";
 import { shiftWorkerTypeForProfile } from "@/lib/shift-display";
 import { evaluateAvailabilityPreferences } from "@/lib/student-availability";
 import { assertNoWorkingCopy } from "@/lib/schedule-working-copy-guard";
@@ -21,8 +26,6 @@ export type RoleSlotOutcome = {
 };
 
 export type ShiftApprovalActor = { id: string; role: Role } | null;
-
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 const assignableShiftSelect = {
   id: true,
@@ -49,48 +52,8 @@ const assignableShiftSelect = {
 
 type AssignableShift = Prisma.ShiftGetPayload<{ select: typeof assignableShiftSelect }>;
 
-function explicitCallWindow(window: {
-  callStartsAt?: Date | null;
-  callEndsAt?: Date | null;
-}) {
-  if (!window.callStartsAt || !window.callEndsAt) return null;
-  return { startsAt: window.callStartsAt, endsAt: window.callEndsAt };
-}
-
-function effectiveShiftWindow(shift: {
-  startsAt: Date;
-  endsAt: Date;
-  callStartsAt?: Date | null;
-  callEndsAt?: Date | null;
-  shiftGroup?: {
-    event: {
-      startsAt: Date;
-      endsAt: Date;
-      allDay: boolean;
-    };
-  } | null;
-}) {
-  const explicitWindow = explicitCallWindow(shift);
-  if (explicitWindow) return explicitWindow;
-  if (shift.shiftGroup?.event.allDay) {
-    return {
-      startsAt: normalizeAllDayToUtcMidnight(shift.shiftGroup.event.startsAt),
-      endsAt: normalizeAllDayToUtcMidnight(shift.shiftGroup.event.endsAt),
-    };
-  }
-  return {
-    startsAt: shift.startsAt,
-    endsAt: shift.endsAt,
-  };
-}
-
-function effectiveAssignmentWindow(assignment: {
-  callStartsAt?: Date | null;
-  callEndsAt?: Date | null;
-  shift: Parameters<typeof effectiveShiftWindow>[0];
-}) {
-  return explicitCallWindow(assignment) ?? effectiveShiftWindow(assignment.shift);
-}
+const effectiveShiftWindow = resolveEffectiveShiftWindow;
+const effectiveAssignmentWindow = resolveEffectiveAssignmentWindow;
 
 async function resolveAssignableShiftForUser(
   tx: Prisma.TransactionClient,
@@ -201,41 +164,20 @@ export async function findTimeConflict(
   endsAt: Date,
   excludeAssignmentId?: string,
 ): Promise<string | null> {
-  const allDayPrefilterStartsAt = new Date(startsAt.getTime() - DAY_MS);
-  const allDayPrefilterEndsAt = new Date(endsAt.getTime() + DAY_MS);
-  const where: Prisma.ShiftAssignmentWhereInput = {
-    userId,
-    status: { in: ACTIVE_ASSIGNMENT_STATUSES as ShiftAssignmentStatus[] },
-    OR: [
-      { shift: { startsAt: { lt: endsAt }, endsAt: { gt: startsAt } } },
-      { callStartsAt: { lt: endsAt }, callEndsAt: { gt: startsAt } },
-      { shift: { callStartsAt: { lt: endsAt }, callEndsAt: { gt: startsAt } } },
-      {
-        shift: {
-          shiftGroup: {
-            event: {
-              allDay: true,
-              startsAt: { lt: allDayPrefilterEndsAt },
-              endsAt: { gt: allDayPrefilterStartsAt },
-            },
-          },
-        },
-      },
-    ],
-  };
-  if (excludeAssignmentId) {
-    where.id = { not: excludeAssignmentId };
-  }
+  const requestedWindow = { startsAt, endsAt };
   // No row cap: the where clause is a raw-window prefilter, and a capped read
   // could return only rows the effective-window recheck filters out while a
   // real conflict sits past the cap.
   const conflicts = await tx.shiftAssignment.findMany({
-    where,
+    where: buildShiftAssignmentOverlapWhere({
+      userId,
+      window: requestedWindow,
+      excludeAssignmentId,
+    }),
     include: { shift: { select: assignableShiftSelect } },
   });
   for (const conflict of conflicts) {
-    const { startsAt: conflictStartsAt, endsAt: conflictEndsAt } = effectiveAssignmentWindow(conflict);
-    if (!(conflictStartsAt < endsAt && conflictEndsAt > startsAt)) continue;
+    if (!scheduleWindowsOverlap(requestedWindow, effectiveAssignmentWindow(conflict))) continue;
     return `User already has a shift during this time (${conflict.shift.area})`;
   }
   return null;
@@ -511,7 +453,7 @@ export async function approveRequest(assignmentId: string, actor: ShiftApprovalA
     }
 
     // Re-check time conflicts — the user may have been assigned another shift
-    // between the time they requested and the time staff approves.
+    // between the time they requested and the time Admin approves.
     const conflictWindow = effectiveShiftWindow(assignment.shift);
     await checkTimeConflict(tx, assignment.userId, conflictWindow.startsAt, conflictWindow.endsAt);
     const availability = shiftWorkerTypeForProfile(assignment.user) === "ST"

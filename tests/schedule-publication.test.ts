@@ -267,6 +267,34 @@ describe("publishShiftGroup", () => {
     expect(result.after.status).toBe("published");
   });
 
+  it("clears pending notification state for a silent backfill publish", async () => {
+    const group = {
+      id: "group-1",
+      publishedAt: new Date("2026-08-25T20:00:00.000Z"),
+      publishedById: "staff-1",
+      publishedVersion: 4,
+      lastPublishedSnapshot: null,
+      shifts: [shift()],
+    };
+    mockTx.shiftGroup.findUnique.mockResolvedValue(group);
+    mockTx.shiftGroup.update.mockImplementation(async ({ data }) => ({
+      ...group,
+      publishedAt: data.publishedAt,
+      publishedById: data.publishedById,
+      lastPublishedSnapshot: data.lastPublishedSnapshot,
+    }));
+
+    await publishShiftGroup("group-1", "staff-1", undefined, undefined, { clearNotificationPending: true });
+
+    expect(mockTx.shiftGroup.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        notifyAfter: null,
+        notifyAttemptedAt: expect.any(Date),
+        notifyError: null,
+      }),
+    }));
+  });
+
   it("retries one serialization conflict before returning a publish result", async () => {
     const group = {
       id: "group-1",

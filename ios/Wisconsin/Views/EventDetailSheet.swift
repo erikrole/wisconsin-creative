@@ -214,6 +214,10 @@ struct EventDetailView: View {
         return role == "STAFF" || role == "ADMIN"
     }
 
+    private var canReviewClaims: Bool {
+        (session.currentUser?.role ?? "") == "ADMIN"
+    }
+
     private var isStudent: Bool {
         (session.currentUser?.role ?? "") == "STUDENT"
     }
@@ -406,7 +410,7 @@ struct EventDetailView: View {
     private func message(for pending: EventConfirmation) -> String? {
         switch pending {
         case .claim:
-            return "Staff review this before you're on the schedule."
+            return "An admin reviews this before you're on the schedule."
         case .cancelTrade(let assignment):
             let owner = assignment.user.id == session.currentUser?.id
                 ? "You stay"
@@ -620,12 +624,25 @@ struct EventDetailView: View {
     private var claimableStudentShifts: [EventShift] {
         guard isStudent, myShift == nil, !eventHasEnded else { return [] }
         return vm.displayedShifts.filter {
-            $0.workerType == "ST" && $0.isOpen && $0.startsAt > Date()
+            $0.workerType == "ST"
+                && $0.isOpen
+                && $0.viewerRequest == nil
+                && $0.startsAt > Date()
+        }
+    }
+
+    private var pendingStudentClaimShifts: [EventShift] {
+        guard isStudent, myShift == nil, !eventHasEnded else { return [] }
+        return vm.displayedShifts.filter {
+            $0.workerType == "ST"
+                && $0.isOpen
+                && $0.viewerRequest?.status == "REQUESTED"
+                && $0.startsAt > Date()
         }
     }
 
     private var showsOpenShiftSection: Bool {
-        !claimableStudentShifts.isEmpty
+        !claimableStudentShifts.isEmpty || !pendingStudentClaimShifts.isEmpty
     }
 
     /// Your own shift on this event: when to report and which area. Gear used to
@@ -665,19 +682,56 @@ struct EventDetailView: View {
     private var openShiftSection: some View {
         VStack(alignment: .leading, spacing: Brand.Space.sm) {
             BrandSectionHeader("Open Shifts", systemImage: "person.badge.plus")
-            VStack(spacing: 0) {
-                ForEach(Array(claimableStudentShifts.enumerated()), id: \.element.id) { index, shift in
-                    Button {
-                        confirmation = .claim(shift)
-                    } label: {
+            if !claimableStudentShifts.isEmpty {
+                VStack(spacing: 0) {
+                    ForEach(Array(claimableStudentShifts.enumerated()), id: \.element.id) { index, shift in
+                        Button {
+                            confirmation = .claim(shift)
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: "hand.raised.fill")
+                                    .foregroundStyle(Color.statusText(.purple))
+                                    .frame(width: 24)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(shift.area.shiftAreaLabel)
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(.primary)
+                                    if !event.displayAllDay {
+                                        Text("\(shift.effectiveStartsAt.formatted(date: .omitted, time: .shortened)) to \(shift.effectiveEndsAt.formatted(date: .omitted, time: .shortened))")
+                                            .font(.caption.monospacedDigit())
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                                Spacer()
+                                Text("Claim")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(Color.statusText(.purple))
+                                Image(systemName: "chevron.right")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.tertiary)
+                            }
+                            .padding(.vertical, 12)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        if index < claimableStudentShifts.count - 1 {
+                            Divider().padding(.leading, 36)
+                        }
+                    }
+                }
+                .brandCard()
+            }
+
+            if !pendingStudentClaimShifts.isEmpty {
+                VStack(spacing: 0) {
+                    ForEach(Array(pendingStudentClaimShifts.enumerated()), id: \.element.id) { index, shift in
                         HStack(spacing: 12) {
-                            Image(systemName: "hand.raised.fill")
-                                .foregroundStyle(Color.statusText(.purple))
+                            Image(systemName: "clock.badge.checkmark")
+                                .foregroundStyle(Color.statusText(.orange))
                                 .frame(width: 24)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(shift.area.shiftAreaLabel)
                                     .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(.primary)
                                 if !event.displayAllDay {
                                     Text("\(shift.effectiveStartsAt.formatted(date: .omitted, time: .shortened)) to \(shift.effectiveEndsAt.formatted(date: .omitted, time: .shortened))")
                                         .font(.caption.monospacedDigit())
@@ -685,23 +739,18 @@ struct EventDetailView: View {
                                 }
                             }
                             Spacer()
-                            Text("Claim")
+                            Text("Awaiting approval")
                                 .font(.caption.weight(.semibold))
-                                .foregroundStyle(Color.statusText(.purple))
-                            Image(systemName: "chevron.right")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(.tertiary)
+                                .foregroundStyle(Color.statusText(.orange))
                         }
                         .padding(.vertical, 12)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    if index < claimableStudentShifts.count - 1 {
-                        Divider().padding(.leading, 36)
+                        if index < pendingStudentClaimShifts.count - 1 {
+                            Divider().padding(.leading, 36)
+                        }
                     }
                 }
+                .brandCard(fill: Color.statusBackground(.orange))
             }
-            .brandCard()
         }
     }
 
@@ -1372,8 +1421,12 @@ struct EventDetailView: View {
                     },
                     onCancelTrade: { assignment in confirmation = .cancelTrade(assignment) },
                     onUnassign: { assignment in confirmation = .unassign(assignment) },
-                    onApprove: { assignment in Task { await approveRequest(assignment) } },
-                    onDecline: { assignment in Task { await declineRequest(assignment) } },
+                    onApprove: canReviewClaims
+                        ? { assignment in Task { await approveRequest(assignment) } }
+                        : nil,
+                    onDecline: canReviewClaims
+                        ? { assignment in Task { await declineRequest(assignment) } }
+                        : nil,
                     onDuplicate: { shift in Task { await duplicateShift(shift) } },
                     onEditTimes: { shift in editTimesTarget = shift },
                     onDelete: { shift in
@@ -1875,7 +1928,9 @@ struct ShiftRow: View {
                         .lineLimit(1)
                         .fixedSize()
                 }
-                if canManageShifts && assignment.status == "REQUESTED" {
+                if canManageShifts,
+                   assignment.status == "REQUESTED",
+                   onApprove != nil || onDecline != nil {
                     // Approve is the primary call-to-action (filled green);
                     // Decline is a clearly-separated outlined red. Bumped from
                     // .mini to .small + wider spacing so two consequential

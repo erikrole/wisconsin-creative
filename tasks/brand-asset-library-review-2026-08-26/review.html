@@ -1,0 +1,144 @@
+<title>Brand assets — implementation review</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@600;700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+  :root {
+    --ground:#EEF0F4; --surface:#FFFFFF; --raised:#F7F8FA;
+    --ink:#14171C; --muted:#5B6472; --faint:#8B95A3;
+    --line:#D8DDE5; --accent:#C5050C; --good:#1B7F3B; --warn:#A65A00;
+    --shadow:0 1px 2px rgba(20,23,28,.06), 0 8px 24px rgba(20,23,28,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#131519; --surface:#1B1E24; --raised:#22262E;
+      --ink:#E9ECF1; --muted:#9AA4B2; --faint:#727D8C;
+      --line:#2C313A; --accent:#F2545B; --good:#4ADE80; --warn:#F0A64A;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#131519; --surface:#1B1E24; --raised:#22262E;
+    --ink:#E9ECF1; --muted:#9AA4B2; --faint:#727D8C;
+    --line:#2C313A; --accent:#F2545B; --good:#4ADE80; --warn:#F0A64A;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; background:var(--ground); color:var(--ink);
+    font-family:"Public Sans", ui-sans-serif, system-ui, sans-serif;
+    font-size:16px; line-height:1.6; -webkit-font-smoothing:antialiased;
+  }
+  .wrap { max-width:1080px; margin:0 auto; padding:56px 24px 96px; }
+  .eyebrow {
+    font-family:"IBM Plex Mono", ui-monospace, monospace; font-size:.72rem;
+    letter-spacing:.14em; text-transform:uppercase; color:var(--accent); margin:0 0 14px;
+  }
+  h1 {
+    font-family:"Archivo Narrow", Arial Narrow, sans-serif; font-weight:700;
+    font-size:clamp(2.4rem,6vw,3.9rem); line-height:1.02; letter-spacing:-.015em;
+    margin:0 0 18px; text-wrap:balance;
+  }
+  .lede { font-size:1.12rem; color:var(--muted); max-width:60ch; margin:0; }
+  .rule { height:2px; background:var(--accent); width:64px; margin:34px 0 0; border:0; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:14px; margin:44px 0 0; }
+  .stat { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:20px; box-shadow:var(--shadow); }
+  .stat .k { font-family:"IBM Plex Mono", monospace; font-size:.68rem; letter-spacing:.12em;
+             text-transform:uppercase; color:var(--faint); margin:0 0 10px; }
+  .stat .v { font-family:"Archivo Narrow", sans-serif; font-weight:700; font-size:2.15rem;
+             line-height:1; margin:0 0 6px; font-variant-numeric:tabular-nums; }
+  .stat .n { font-size:.86rem; color:var(--muted); margin:0; line-height:1.45; }
+  .down { color:var(--good); }
+  h2 { font-family:"Archivo Narrow", sans-serif; font-weight:700;
+       font-size:1.9rem; letter-spacing:-.01em; margin:72px 0 6px; }
+  .sec-note { color:var(--muted); margin:0 0 26px; font-size:.95rem; }
+  .pair { margin:0 0 40px; }
+  .pair-head h3 { font-family:"Archivo Narrow",sans-serif; font-weight:600; font-size:1.2rem; margin:0 0 2px; }
+  .pair-head p { margin:0 0 16px; color:var(--muted); font-size:.92rem; }
+  .shots { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  figure { margin:0; display:flex; flex-direction:column; gap:10px; }
+  figure img { width:100%; height:auto; display:block; border-radius:14px;
+               border:1px solid var(--line); box-shadow:var(--shadow); background:var(--surface); }
+  figcaption { font-size:.85rem; color:var(--muted); line-height:1.5; }
+  .tag { font-family:"IBM Plex Mono",monospace; font-size:.66rem; letter-spacing:.12em;
+         text-transform:uppercase; padding:4px 9px; border-radius:5px; align-self:flex-start; font-weight:600; }
+  .tag-before { background:color-mix(in srgb, var(--muted) 14%, transparent); color:var(--muted); }
+  .tag-after { background:color-mix(in srgb, var(--accent) 13%, transparent); color:var(--accent); }
+  .change { border-top:1px solid var(--line); padding:22px 0 4px; }
+  .change h3 { font-family:"Archivo Narrow",sans-serif; font-weight:600; font-size:1.18rem; margin:0 0 14px; }
+  .ba { display:grid; grid-template-columns:1fr 1fr; gap:26px; }
+  .ba p { margin:6px 0 0; font-size:.93rem; color:var(--muted); }
+  .lbl { font-family:"IBM Plex Mono",monospace; font-size:.64rem; letter-spacing:.13em;
+         text-transform:uppercase; font-weight:600; }
+  .lbl-b { color:var(--faint); }
+  .lbl-a { color:var(--accent); }
+  .panel { background:var(--surface); border:1px solid var(--line); border-radius:12px;
+           padding:24px 26px; box-shadow:var(--shadow); }
+  .panel ul { margin:0; padding-left:19px; }
+  .panel li { margin:0 0 9px; font-size:.94rem; }
+  .panel li:last-child { margin-bottom:0; }
+  code { font-family:"IBM Plex Mono",monospace; font-size:.86em; background:var(--raised);
+         border:1px solid var(--line); padding:1px 5px; border-radius:4px; }
+  .flag { border-left:3px solid var(--warn); }
+  @media (max-width:720px) {
+    .wrap { padding:36px 16px 64px; }
+    .ba { grid-template-columns:1fr; gap:16px; }
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Resources · Web · Versioned private files</p>
+    <h1>Brand assets — implementation review</h1>
+    <p class="lede">Resources now has a separate, Google Drive-style Brand assets library for logos, fonts, reference files, templates, and the viewable brand-guide PDF. The library keeps one stable file row while each replacement becomes an immutable version.</p>
+    <hr class="rule">
+  </header>
+  <div class="stats">
+    <div class="stat">
+      <p class="k">Storage boundary</p>
+      <p class="v">Blob + Prisma</p>
+      <p class="n">Vercel Blob stores private binaries; Prisma/Neon stores folders, file identity, versions, and upload intents</p>
+    </div>
+    <div class="stat">
+      <p class="k">Replacement model</p>
+      <p class="v">File → History</p>
+      <p class="n">The current pointer advances to the next version; earlier files remain available</p>
+    </div>
+    <div class="stat">
+      <p class="k">Seeded content</p>
+      <p class="v">No seed data</p>
+      <p class="n">The current Preview PDF was uploaded explicitly during testing; migrations create no content</p>
+    </div></div>
+  
+  <h2>What changed, and why</h2><p class="sec-note">The source implementation is supplemented by a clean authenticated desktop check and a side-by-side comparison with the supplied Google Drive reference. The review is intentionally presented as reference comparison plus runtime evidence rather than a matched before/after pair: the V1 component was untracked in the starting worktree, so a trustworthy same-product baseline capture is unavailable.</p>
+  <div class="change">
+    <h3>Resources was guide-only</h3>
+    <div class="ba">
+      <div><span class="lbl lbl-b">Was</span><p>The existing Resources page handled Markdown guides and supporting references, but had no durable file-library boundary for brand binaries.</p></div>
+      <div><span class="lbl lbl-a">Now</span><p>A URL-backed Brand assets tab isolates folders, file metadata, current versions, History, PDF viewing, and downloads without changing guide filters or Markdown semantics.</p></div>
+    </div>
+  </div>
+  <div class="change">
+    <h3>Replacing a file would lose continuity</h3>
+    <div class="ba">
+      <div><span class="lbl lbl-b">Was</span><p>A simple upload/delete workflow would force people to manage duplicate names and would remove the prior file from the product record.</p></div>
+      <div><span class="lbl lbl-a">Now</span><p>A stable logical file is unique within its folder. Uploading a new version advances an explicit current pointer and preserves the previous version in authenticated History.</p></div>
+    </div>
+  </div>
+  <div class="change">
+    <h3>Large binaries need a storage boundary</h3>
+    <div class="ba">
+      <div><span class="lbl lbl-b">Was</span><p>Routing a roughly 21.7 MB guide through a small server form upload would add unnecessary transport and timeout pressure, while a public URL would weaken access control.</p></div>
+      <div><span class="lbl lbl-a">Now</span><p>The client uses <code>@vercel/blob/client</code> with a short-lived actor-bound intent; the dedicated private store is read through an authenticated app proxy with no raw Blob URL returned.</p></div>
+    </div>
+  </div>
+  <div class="change">
+    <h3>The first file-library layout was too dense</h3>
+    <div class="ba">
+      <div><span class="lbl lbl-b">Was</span><p>The Brand assets surface repeated the same context across a large intro card, separate controls, recent cards, folder cards, and file cards with many always-visible actions.</p></div>
+      <div><span class="lbl lbl-a">Now</span><p>The surface now follows a Drive-style hierarchy: folder rail, working New/Home/Recent/Starred navigation, breadcrumb, one compact toolbar, suggested-folder tiles, and a unified table with secondary actions behind the row menu.</p></div>
+    </div>
+  </div>
+  <h2>Verification</h2><div class="panel"><ul><li><strong>Focused asset tests:</strong> 26 tests pass for name/type/size validation, the original V1 contracts, and the approved experience contracts.</li><li><strong>Repository gates:</strong> <code>npx tsc --noEmit --pretty false</code>, full <code>npm run lint</code>, <code>npx prisma validate</code>, <code>npm run db:migrate:check</code>, <code>npm run build:app</code>, <code>npm run codemap</code>, <code>npm run verify:docs</code>, and <code>git diff --check</code> pass.</li><li><strong>Build route proof:</strong> the optimized build includes <code>/resources</code> plus all Brand assets list, folder, upload-token, completion, detail, download, favorite, and restore routes.</li><li><strong>Full suite:</strong> 3,890 tests pass and 9 fail in 7 unrelated existing files (Welcome, Schedule timeline, Snow Leopard, operational target baseline, two kiosk hardening suites, and hidden-user visibility); clean-checkout reproduction was not run because the worktree already contains parallel changes.</li><li><strong>Runtime proof:</strong> a fresh authenticated Admin browser tab reached <code>/resources?tab=brand-assets</code> at desktop, rendered the uploaded PDF in the unified table, opened and closed the compact New, Filters, and row-action menus, switched Recent/Starred/Home views, observed 200 responses for the asset-list and PDF download routes, and recorded zero browser console errors. The browser capture is saved as <code>brand-assets-drive-after.jpg</code>.</li><li><strong>Migration/read-back:</strong> Preview migration health passed with 141/141 local migrations applied and no pending or failed rows. The earlier provisioning read-back confirmed one technical root and no seeded content; current Preview contains one explicitly uploaded PDF for lifecycle testing.</li></ul></div>
+  <h2>Acceptance still needed</h2><div class="panel flag"><ul><li>The supplied PDF was explicitly uploaded through the authenticated UI and its list/download/preview route read-back passed. Upload one replacement and confirm both versions plus audit rows read back.</li><li>A matched same-product before/after UI capture remains deferred because the component was untracked at the start of this pass; the supplied Google Drive screenshot is used as a structural reference, not mislabeled as a product baseline.</li><li>No initial folders, files, or PDF are required. The migration creates only the empty technical root container so users can create their own organization.</li></ul></div>
+</div>

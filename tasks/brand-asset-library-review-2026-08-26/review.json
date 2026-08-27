@@ -1,0 +1,61 @@
+{
+  "title": "Brand assets — implementation review",
+  "eyebrow": "Resources · Web · Versioned private files",
+  "lede": "Resources now has a separate, Google Drive-style Brand assets library for logos, fonts, reference files, templates, and the viewable brand-guide PDF. The library keeps one stable file row while each replacement becomes an immutable version.",
+  "stats": [
+    {
+      "k": "Storage boundary",
+      "v": "Blob + Prisma",
+      "n": "Vercel Blob stores private binaries; Prisma/Neon stores folders, file identity, versions, and upload intents"
+    },
+    {
+      "k": "Replacement model",
+      "v": "File → History",
+      "n": "The current pointer advances to the next version; earlier files remain available"
+    },
+    {
+      "k": "Seeded content",
+      "v": "No seed data",
+      "n": "The current Preview PDF was uploaded explicitly during testing; migrations create no content"
+    }
+  ],
+  "sections": [],
+  "changesHeading": "What changed, and why",
+  "changesNote": "The source implementation is supplemented by a clean authenticated desktop check and a side-by-side comparison with the supplied Google Drive reference. The review is intentionally presented as reference comparison plus runtime evidence rather than a matched before/after pair: the V1 component was untracked in the starting worktree, so a trustworthy same-product baseline capture is unavailable.",
+  "changes": [
+    {
+      "h": "Resources was guide-only",
+      "was": "The existing Resources page handled Markdown guides and supporting references, but had no durable file-library boundary for brand binaries.",
+      "now": "A URL-backed Brand assets tab isolates folders, file metadata, current versions, History, PDF viewing, and downloads without changing guide filters or Markdown semantics."
+    },
+    {
+      "h": "Replacing a file would lose continuity",
+      "was": "A simple upload/delete workflow would force people to manage duplicate names and would remove the prior file from the product record.",
+      "now": "A stable logical file is unique within its folder. Uploading a new version advances an explicit current pointer and preserves the previous version in authenticated History."
+    },
+    {
+      "h": "Large binaries need a storage boundary",
+      "was": "Routing a roughly 21.7 MB guide through a small server form upload would add unnecessary transport and timeout pressure, while a public URL would weaken access control.",
+      "now": "The client uses <code>@vercel/blob/client</code> with a short-lived actor-bound intent; the dedicated private store is read through an authenticated app proxy with no raw Blob URL returned."
+    },
+    {
+      "h": "The first file-library layout was too dense",
+      "was": "The Brand assets surface repeated the same context across a large intro card, separate controls, recent cards, folder cards, and file cards with many always-visible actions.",
+      "now": "The surface now follows a Drive-style hierarchy: folder rail, working New/Home/Recent/Starred navigation, breadcrumb, one compact toolbar, suggested-folder tiles, and a unified table with secondary actions behind the row menu."
+    }
+  ],
+  "verification": [
+    "<strong>Focused asset tests:</strong> 26 tests pass for name/type/size validation, the original V1 contracts, and the approved experience contracts.",
+    "<strong>Repository gates:</strong> <code>npx tsc --noEmit --pretty false</code>, full <code>npm run lint</code>, <code>npx prisma validate</code>, <code>npm run db:migrate:check</code>, <code>npm run build:app</code>, <code>npm run codemap</code>, <code>npm run verify:docs</code>, and <code>git diff --check</code> pass.",
+    "<strong>Build route proof:</strong> the optimized build includes <code>/resources</code> plus all Brand assets list, folder, upload-token, completion, detail, download, favorite, and restore routes.",
+    "<strong>Full suite:</strong> 3,890 tests pass and 9 fail in 7 unrelated existing files (Welcome, Schedule timeline, Snow Leopard, operational target baseline, two kiosk hardening suites, and hidden-user visibility); clean-checkout reproduction was not run because the worktree already contains parallel changes.",
+    "<strong>Runtime proof:</strong> a fresh authenticated Admin browser tab reached <code>/resources?tab=brand-assets</code> at desktop, rendered the uploaded PDF in the unified table, opened and closed the compact New, Filters, and row-action menus, switched Recent/Starred/Home views, observed 200 responses for the asset-list and PDF download routes, and recorded zero browser console errors. The browser capture is saved as <code>brand-assets-drive-after.jpg</code>.",
+    "<strong>Migration/read-back:</strong> Preview migration health passed with 141/141 local migrations applied and no pending or failed rows. The earlier provisioning read-back confirmed one technical root and no seeded content; current Preview contains one explicitly uploaded PDF for lifecycle testing."
+  ],
+  "notesHeading": "Acceptance still needed",
+  "notes": [
+    "The supplied PDF was explicitly uploaded through the authenticated UI and its list/download/preview route read-back passed. Upload one replacement and confirm both versions plus audit rows read back.",
+    "A matched same-product before/after UI capture remains deferred because the component was untracked at the start of this pass; the supplied Google Drive screenshot is used as a structural reference, not mislabeled as a product baseline.",
+    "No initial folders, files, or PDF are required. The migration creates only the empty technical root container so users can create their own organization."
+  ]
+}

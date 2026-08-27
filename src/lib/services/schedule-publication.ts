@@ -560,9 +560,13 @@ export async function publishShiftGroup(
    * rows become truth immediately, while `lastPublishedSnapshot` stays where it
    * was so the debounced flush can still see what workers have yet to hear.
    */
-  options: { advanceNotificationMark?: boolean } = {},
+  options: {
+    advanceNotificationMark?: boolean;
+    clearNotificationPending?: boolean;
+  } = {},
 ) {
   const advanceNotificationMark = options.advanceNotificationMark ?? true;
+  const clearNotificationPending = options.clearNotificationPending ?? false;
   return withSerializationRetry(() => db.$transaction(async (tx) => {
     let group = await findGroupForPublication(shiftGroupId, tx);
     const before = getSchedulePublicationState(group);
@@ -887,6 +891,11 @@ export async function publishShiftGroup(
         publishedAt,
         publishedById: actorId,
         publishedVersion: { increment: 1 },
+        ...(clearNotificationPending ? {
+          notifyAfter: null,
+          notifyAttemptedAt: publishedAt,
+          notifyError: null,
+        } : {}),
         ...(advanceNotificationMark
           ? { lastPublishedSnapshot: snapshot as unknown as Prisma.InputJsonValue }
           : {}),

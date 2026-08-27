@@ -41,6 +41,7 @@ import { SaveableField, useSaveField } from "@/components/SaveableField";
 import { OperationalRowActions } from "@/components/OperationalRowActions";
 import { cn } from "@/lib/utils";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
+import { copyTextToClipboard } from "@/lib/clipboard";
 import { PROFILE_COMPLETION_QUERY_KEY } from "@/hooks/use-profile-completion";
 import { syncCachedUserLists } from "@/lib/user-list-cache";
 import { formatPhoneInput } from "@/lib/profile-phone";
@@ -1377,9 +1378,16 @@ function CalendarSubscriptionCard({
     }
   }
 
-  function copyUrl() {
+  async function copyUrl() {
     if (!feedUrl) return;
-    navigator.clipboard.writeText(feedUrl).then(() => toast.success("Feed URL copied"));
+    const copied = await copyTextToClipboard(feedUrl);
+    if (copied) {
+      toast.success("Feed URL copied");
+      return;
+    }
+    toast.error("Could not copy the feed URL", {
+      description: "Select the visible URL and copy it manually.",
+    });
   }
 
   return (
@@ -1401,7 +1409,7 @@ function CalendarSubscriptionCard({
                 className="h-8 text-xs font-mono"
                 onFocus={(e) => e.target.select()}
               />
-              <Button variant="outline" className="h-10" onClick={copyUrl} title="Copy URL">
+              <Button variant="outline" className="h-10" onClick={() => void copyUrl()} title="Copy URL">
                 <Copy className="size-4" />
               </Button>
             </div>

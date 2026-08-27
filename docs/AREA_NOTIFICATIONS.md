@@ -3,9 +3,9 @@
 ## Document Control
 - Area: Notifications
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-20
+- Last Updated: 2026-08-27
 - Status: Active; durable overdue escalation hardening is implemented locally with migration and production rollout pending
-- Version: V1.4
+- Version: V1.6
 
 ## Direction
 Surface custody urgency and overdue situations to the right people at the right time, with zero duplicate noise and a clear escalation path.
@@ -16,6 +16,7 @@ Surface custody urgency and overdue situations to the right people at the right 
 3. In-app and email channels coexist; dev mode logs to console in place of SMTP.
 4. The 24h overdue trigger reaches the requester and all admins, per accepted D-009.
 5. Notification center supports mark-read and mark-all-read; read mutations must keep the inbox and bell count honest.
+6. Approval-first open Student-slot requests and Trade Board claims create reviewer notifications only for active visible Admins. Staff receive no claim-review alerts; the request holds no slot until approved.
 
 ## Escalation Schedule (Local Candidate; Migration 0111 Pending)
 
@@ -62,17 +63,30 @@ Implementation: `src/lib/checkout-escalation-policy.ts`, `src/lib/services/notif
 
 | Event | Type | Recipient | Channels |
 |---|---|---|---|
-| Trade claimed, staff approval required | `trade_claimed` | Original poster | In-app + email |
+| Trade claimed, Admin approval required | `trade_claimed` | Original poster | In-app + email |
 | Trade completed instantly | `trade_completed` | Original poster | In-app + email |
-| Trade approved by staff | `trade_approved` | Claimer | In-app + email |
-| Trade declined by staff | `trade_declined` | Claimer | In-app + email |
+| Trade approved by an Admin | `trade_approved` | Claimer | In-app + email |
+| Trade declined by an Admin | `trade_declined` | Claimer | In-app + email |
 
 - Email is best-effort and sent after the trade transaction resolves.
 - Email respects `notificationPrefs.channels.email`, `notificationPrefs.categories.trade`, and `pausedUntil`.
 - Trade lifecycle rows now carry event-routable payloads with `eventId`, `shiftId`, `assignmentId`, `tradeId`, and `/events/{eventId}` where the trade can be tied back to a scheduled event.
 - Native push is best-effort for claimed, completed, approved, and declined trade events when push and the `trade` category are enabled.
-- Staff-wide claim fanout and direct-assignment emails are out of scope.
+- Initial Trade Board claim review plus escalation, blocked, and auto-approved outcome notifications target active visible Admins only. Staff do not receive claim-review alerts.
+- Direct-assignment emails remain out of scope; open Student-slot requests have their own reviewer fanout below.
 - Implementation: `src/lib/services/shift-trades.ts` + `src/lib/services/shift-trade-emails.ts`
+
+## Open Shift Claim Triggers (Implemented 2026-08-26)
+
+| Event | Type | Recipient | Channels |
+|---|---|---|---|
+| Student requests a published open Student slot | `shift_request_review` | Active visible ADMIN reviewers | Durable in-app + best-effort push |
+
+- The pickup route creates the `REQUESTED` assignment first, then calls the reviewer fanout after the request has committed. The reviewer row is informational: `REQUESTED` remains outside `ACTIVE_ASSIGNMENT_STATUSES`, so it does not hold coverage, create a gear-prep nudge, or appear in My Shifts.
+- Reviewer rows are deduplicated by assignment and reviewer, carry the event-routable payload, and use the schedule notification preference category for push gating. A retry is safe.
+- Initial open-slot request alerts plus the request workflow's escalation, blocked, and auto-approved outcome alerts are Admin-only. Staff have no claim approve/decline permission or queue visibility. Trade Board claim reviewer alerts follow the same Admin-only policy.
+- The student receives the existing `shift_request_pending` lifecycle notification; approval or decline continues through the existing assignment notification path.
+- Implementation: `handleOpenShiftPickup` in `src/app/api/shift-assignments/pickup/handler.ts` and `notifyPickupRequestReviewers` in `src/lib/services/notifications.ts`.
 
 ## Shift Schedule Triggers (Implemented 2026-05-21)
 
@@ -325,6 +339,8 @@ Current behavior:
 | `EMAIL_FROM` | No | From address for transactional email. Default: `Wisconsin Creative <noreply@wisconsincreative.com>` |
 
 ## Change Log
+- 2026-08-27: **Student claim reviewer alerts are Admin-only.** Initial fanout plus escalation, blocked, and auto-approved outcome notifications for both open Student-slot requests and Trade Board claims target active visible Admins. Staff have no claim-review alerts, approval permission, or queue access; students continue receiving their own request and trade lifecycle messages.
+- 2026-08-26: **Open Student-slot claims now notify active reviewers.** The canonical approval-first pickup path persists the student's `REQUESTED` assignment, then creates deduplicated durable `shift_request_review` rows for active visible Admin/Staff users and sends best-effort push through the existing schedule preference gate. The student-facing claim helper is documented under the Schedule/Event surfaces; direct-assignment email remains out of scope. Focused source contracts pass; deployment and authenticated delivery acceptance remain separate gates.
 - 2026-08-21: **macOS companion restart recovery.** A login-item launch that occurs before the data-protection Keychain is available no longer converts a missing read into an immediate logout. Wisconsin Creative keeps the last trusted local identity/projection, retries on macOS session activation and menu presentation, and only clears the cached account after a confirmed post-activation miss.
 - 2026-08-20: **macOS companion session persistence.** Active credentials now renew through an authenticated Upstash-only route before projection refresh, with the replacement saved to device-only Keychain before the old session is revoked. Network, Keychain, or server interruptions keep the current credential and last trusted projection instead of forcing a logout; inactive credentials still expire after 90 days.
 - 2026-08-20: **macOS companion notification cleanup.** Companion alerts now request the sound capability needed by the opt-in sound setting, while delivery remains silent by default. Sign-out and identity replacement remove pending and delivered local booking requests; APNs invalidation remains detail-free and the external projection remains the data source.

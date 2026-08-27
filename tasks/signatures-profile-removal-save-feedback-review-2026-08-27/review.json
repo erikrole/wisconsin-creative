@@ -1,0 +1,67 @@
+{
+  "title": "Signatures Profile Removal",
+  "eyebrow": "Web / Wisconsin Creative",
+  "lede": "Signed athletes now stay focused on the one job at the signature station: save the private signature, see a brief confirmation, and return to the roster.",
+  "stats": [
+    {
+      "k": "Profile prompts",
+      "v": "112 &rarr; 0",
+      "n": "Same Football roster and signed-player data",
+      "tone": "good"
+    },
+    {
+      "k": "Profile action",
+      "v": "1 &rarr; 0",
+      "n": "Same first signed-player action menu",
+      "tone": "good"
+    },
+    {
+      "k": "Save feedback",
+      "v": "650ms",
+      "n": "250ms when reduced motion is requested"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Matched roster comparison",
+      "note": "Production before and authenticated local Preview after use the same live Football roster, same account, same browser, same viewport, and same first signed-player action menu.",
+      "pairs": [
+        {
+          "title": "Signed player row and actions",
+          "sub": "Justus Boone, Football 2026-27.",
+          "before": "tasks/signatures-profile-removal-save-feedback-review-2026-08-27/before.png",
+          "beforeCap": "Production asks for a second website-profile task and exposes Edit athlete profile.",
+          "after": "tasks/signatures-profile-removal-save-feedback-review-2026-08-27/after.png",
+          "afterCap": "Local Preview removes both profile signals while preserving signature Quick Look and replacement actions."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Capture had a second workflow after commit",
+      "was": "A player save opened a website-profile form, while the roster kept warning that a profile was needed.",
+      "now": "A committed save changes the action to Saved with a restrained check animation, then replaces the capture history entry with the roster."
+    },
+    {
+      "h": "Profile data leaked into the capture contract",
+      "was": "Detail and bootstrap responses exposed profile completeness and fields, and a Signatures-only mutation route could update them.",
+      "now": "The UI, response fields, mutation route, service, validation schema, and permission are removed. Existing database columns remain dormant and untouched."
+    },
+    {
+      "h": "A post-commit navigation failure could lie",
+      "was": "An exception after commit could fall into generic save-failure feedback.",
+      "now": "Committed state remains Saved, repeat save is disabled, and the operator gets a truthful manual roster-return message."
+    }
+  ],
+  "verification": [
+    "<strong>104 focused Signature tests</strong> pass across capture, cache, route, service, storage, and ZIP behavior.",
+    "<strong>TypeScript, ESLint, and <code>build:app</code></strong> pass; Next generated all 245 pages and the deleted profile API route is absent from the route inventory.",
+    "<strong>Authenticated local Preview:</strong> 0 Profile needed labels and no Edit athlete profile action on the same roster where Production has 112 labels and the action.",
+    "<strong>Console:</strong> no errors on either matched roster page."
+  ],
+  "notes": [
+    "The save animation was not triggered against live roster data because that would replace a real private signature artifact. Its state ordering, reduced-motion timing, direct roster navigation, and post-commit failure fallback are covered by focused source contracts; physical iPad and Apple Pencil acceptance remains open.",
+    "This is local source and authenticated Preview proof only. The profile removal and save feedback are not committed, deployed, or production-verified."
+  ]
+}

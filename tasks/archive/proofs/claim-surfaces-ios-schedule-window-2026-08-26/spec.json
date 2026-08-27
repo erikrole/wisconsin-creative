@@ -1,0 +1,50 @@
+{
+  "title": "Claim surfaces and complete Schedule loading",
+  "eyebrow": "Web · iOS · Wisconsin Creative",
+  "lede": "Students claim published open shifts from the context where they discover them, while native Schedule reads the complete available window before SwiftUI materializes rows.",
+  "stats": [
+    {
+      "k": "Claim surfaces",
+      "v": "2",
+      "n": "Expanded Schedule row and Event detail table"
+    },
+    {
+      "k": "Native reads",
+      "v": "All pages",
+      "n": "Total-aware calendar and personal-shift pagination"
+    },
+    {
+      "k": "Approval state",
+      "v": "Visible",
+      "n": "Awaiting approval and Withdraw remain in the same helper"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Authenticated preview",
+      "note": "The local preview was checked in a safe Admin → Student read-only role preview. The expanded Women's Soccer vs UIC row and its Event detail page visibly rendered Claim shift for future published Student slots. No claim, withdrawal, assignment, or other task-data mutation was performed. Paired before/after image files are intentionally omitted because the checkout already contains unrelated parallel UI changes and reconstructing a clean baseline would overwrite user work."
+    }
+  ],
+  "changes": [
+    {
+      "h": "Claims now stay with Schedule context",
+      "was": "The legacy shift side panel exposed a stale student claim action.",
+      "now": "ClaimShiftAction is shared by the expanded Schedule disclosure and Event detail; it also renders the approval-pending and withdraw states."
+    },
+    {
+      "h": "Native loading is total-aware",
+      "was": "Schedule stopped after the first event and shift page.",
+      "now": "The native client follows total/limit/offset metadata through every page; SwiftUI still lazily materializes the rendered rows."
+    }
+  ],
+  "verification": [
+    "<strong>165 affected Vitest tests</strong> pass across the claim, Schedule, event-detail, API, and native source-contract suites.",
+    "<strong>TypeScript, repository lint, app build, docs verification, and XcodeGen project check</strong> pass.",
+    "<strong>iPhone 16 Pro, iOS 26.5 Simulator Xcode build</strong> passes.",
+    "<strong>Authenticated local preview:</strong> Schedule reads two calendar/shift pages, Student role preview is read-only, and both claim controls are visible."
+  ],
+  "notes": [
+    "Deployment, production read-back, push-delivery confirmation, and physical-device acceptance remain separate gates.",
+    "The native Past toggle remains staff/admin-only; the web List view retains its existing past-inclusive internal timeline."
+  ]
+}

@@ -509,8 +509,10 @@ export function shiftAutomaticRuleCounts(assignments: ShiftBadgeEvidence[], time
       ?? assignment.shift.endsAt;
     if (hoursKnown && effectiveEnd) {
       const end = localParts(effectiveEnd, timeZone);
-      if (end.hour >= 22 || end.date > start.date) increment(counts, "shift_after_22");
-      if (end.hour >= 22 || end.date > start.date) lateFinishes += 1;
+      if (end.hour >= 22 || end.date > start.date) {
+        increment(counts, "shift_after_22");
+        lateFinishes += 1;
+      }
     }
     if (hoursKnown && start.hour >= 0 && start.hour < 7) earlyStarts += 1;
   }

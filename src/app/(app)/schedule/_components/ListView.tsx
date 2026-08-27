@@ -33,6 +33,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { UserAvatarGroup } from "@/components/UserAvatarGroup";
+import { ClaimShiftAction } from "@/components/ClaimShiftAction";
 import { CallWindowEditor } from "@/components/shift-detail/CallWindowEditor";
 import { cn } from "@/lib/utils";
 import { handleAuthRedirect, parseErrorMessage } from "@/lib/errors";
@@ -66,7 +67,7 @@ type ListViewProps = {
   groupedEntries: [string, CalendarEntry[]][];
   loading: boolean;
   loadError: false | "network" | "server";
-  loadData: () => void;
+  loadData: () => void | Promise<void>;
   myShiftsOnly: boolean;
   setMyShiftsOnly: (v: boolean) => void;
   clearFilters: () => void;
@@ -265,6 +266,8 @@ function ShiftRowList({
   onPostTrade,
   onCancelTrade,
   onSelectGroup,
+  canClaim,
+  onClaimed,
   compact = false,
 }: {
   entry: CalendarEntry;
@@ -274,6 +277,8 @@ function ShiftRowList({
   onPostTrade?: (assignmentId: string) => void;
   onCancelTrade?: (tradeId: string) => void;
   onSelectGroup: () => void;
+  canClaim: boolean;
+  onClaimed?: () => void | Promise<void>;
   compact?: boolean;
 }) {
   const commonCall = commonCallWindow(entry);
@@ -296,6 +301,7 @@ function ShiftRowList({
           (assignment) => assignment.user.id === currentUserId && ACTIVE_STATUSES.includes(assignment.status),
         );
         const activeTrade = myAssignment?.activeTrade ?? null;
+        const viewerRequest = shift.viewerRequest;
         const effectiveStart = myAssignment?.callStartsAt ?? shift.callStartsAt ?? shift.startsAt;
         const canPostTrade = Boolean(
           onPostTrade
@@ -384,6 +390,19 @@ function ShiftRowList({
 
             <div className={cn("flex min-h-10", compact ? "justify-start" : "shrink-0 justify-end")}>
               <div className={cn("flex min-w-0 items-center gap-1.5", compact && "flex-wrap")}>
+                {!user && (
+                  <ClaimShiftAction
+                    shiftId={shift.id}
+                    workerType={shift.workerType}
+                    startsAt={shift.startsAt}
+                    isAssigned={Boolean(activeAssignment)}
+                    viewerRequest={viewerRequest}
+                    canClaim={canClaim}
+                    isPublished={Boolean(entry.publication?.publishedAt)}
+                    compact={compact}
+                    onChanged={onClaimed}
+                  />
+                )}
                 {canPostTrade && myAssignment && (
                   <Button
                     variant="ghost"
@@ -1115,6 +1134,8 @@ export function ListView({
                             cancelingTradeId={cancelingTradeId}
                             onPostTrade={isStaff ? undefined : openTradeDialog}
                             onCancelTrade={isStaff ? undefined : handleCancelTrade}
+                            canClaim={!isStaff}
+                            onClaimed={loadData}
                             onSetupCrew={isStaff ? onSetupCrew : undefined}
                             onQuickManageCrew={isStaff ? onQuickManageCrew : undefined}
                             onPublished={loadData}
@@ -1279,6 +1300,8 @@ export function ListView({
                           cancelingTradeId={cancelingTradeId}
                           onPostTrade={isStaff ? undefined : openTradeDialog}
                           onCancelTrade={isStaff ? undefined : handleCancelTrade}
+                          canClaim={!isStaff}
+                          onClaimed={loadData}
                           onSelectGroup={() => onSelectGroup(entry.shiftGroupId)}
                           compact
                         />
@@ -1307,7 +1330,7 @@ export function ListView({
             <div className="flex flex-col gap-1">
               <DialogTitle>Post shift for trade</DialogTitle>
               <DialogDescription>
-                Eligible teammates can claim it. You stay scheduled until staff approve a claim.
+                Eligible teammates can claim it. You stay scheduled until an admin approves a claim.
               </DialogDescription>
             </div>
           </DialogHeader>
@@ -1389,6 +1412,8 @@ function EventRows({
   cancelingTradeId,
   onPostTrade,
   onCancelTrade,
+  canClaim,
+  onClaimed,
   onSetupCrew,
   onQuickManageCrew,
   onPublished,
@@ -1410,6 +1435,8 @@ function EventRows({
   cancelingTradeId: string | null;
   onPostTrade?: (assignmentId: string) => void;
   onCancelTrade?: (tradeId: string) => void;
+  canClaim: boolean;
+  onClaimed?: () => void | Promise<void>;
   onSetupCrew?: (eventId: string, templateSide: CrewTemplateSide) => void;
   onQuickManageCrew?: (eventId: string) => void;
   onPublished: () => void;
@@ -1524,6 +1551,8 @@ function EventRows({
                   cancelingTradeId={cancelingTradeId}
                   onPostTrade={onPostTrade}
                   onCancelTrade={onCancelTrade}
+                  canClaim={canClaim}
+                  onClaimed={onClaimed}
                   onSelectGroup={onSelectGroup}
                 />
               )}

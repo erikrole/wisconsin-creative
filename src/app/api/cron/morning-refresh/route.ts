@@ -145,8 +145,8 @@ export const GET = withCron(async () => {
         now,
       );
 
-      for (const { userId, hasAddedWorker } of recentlyEnded) {
-        await badges.onShiftsWorked({ userId }, { notify: !hasAddedWorker });
+      for (const { userId, hasAddedWorker, hasBackfilledAssignment } of recentlyEnded) {
+        await badges.onShiftsWorked({ userId }, { notify: !(hasAddedWorker || hasBackfilledAssignment) });
       }
       shiftBadgeUsers = recentlyEnded.length;
     } catch (err) {
