@@ -80,6 +80,17 @@ final class HomeViewModel {
         do {
             let loadedDashboard = try await APIClient.shared.dashboard()
             dashboard = loadedDashboard
+            // Home is the only surface that loads the whole dashboard, so it
+            // is where the Home Screen widgets get their data. Publishing here
+            // keeps the widget as fresh as the app itself, with no second
+            // fetch and no session in the widget process.
+            GearWidgetPublisher.publish(from: loadedDashboard)
+            SpotlightIndexer.index(from: loadedDashboard)
+            // The Home Screen long-press menu reads the same snapshot, so the
+            // icon menu and the widgets can never disagree about the counts.
+            GearTrackerQuickAction.refreshSubtitles(
+                from: GearWidgetPublisher.snapshot(from: loadedDashboard)
+            )
             if let appState {
                 appState.overdueCount = loadedDashboard.overdueCount
                 appState.myShiftCount = loadedDashboard.myEventWork.count
@@ -146,6 +157,7 @@ struct HomeView: View {
     @Environment(AppState.self) private var appState
     @Environment(SessionStore.self) private var session
     @Environment(ReservationDraftStore.self) private var drafts
+    @Environment(NetworkMonitor.self) private var network
 
     /// Rendered in every state of `mainContent` -- loading, error, and loaded. A
     /// message someone is being asked to acknowledge must not be hidden because the
@@ -365,6 +377,14 @@ struct HomeView: View {
                     }
                     .accessibilityLabel(appState.unreadNotifCount > 0 ? "\(appState.unreadNotifCount) unread notifications" : "Notifications")
                 }
+            }
+            // Walking back into signal should not require noticing the list is
+            // stale and pulling it down. Gated on the visible tab so a
+            // reconnection does not fan out into a refetch from every tab that
+            // happens to still be alive.
+            .onChange(of: network.reconnectionToken) { _, _ in
+                guard appState.selectedTab == 0 else { return }
+                Task { await vm.load(appState: appState, requesterId: session.currentUser?.id, forceRefresh: true) }
             }
             .refreshable {
                 // Concurrent, not sequential: the blast banner must not wait on the

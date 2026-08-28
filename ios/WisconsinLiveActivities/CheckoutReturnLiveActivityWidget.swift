@@ -24,6 +24,8 @@ private extension Color {
 struct WisconsinLiveActivitiesBundle: WidgetBundle {
     var body: some Widget {
         CheckoutReturnLiveActivityWidget()
+        NextShiftWidget()
+        GearDueWidget()
     }
 }
 

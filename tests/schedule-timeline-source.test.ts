@@ -132,7 +132,10 @@ describe("schedule timeline", () => {
     expect(appShell).toContain("data-app-shell-header");
     expect(appShell).toContain("sticky top-0 z-40");
     expect(appShell).toContain('data-app-shell-breadcrumb-frame={pathname === "/schedule" ? "" : undefined}');
-    expect(appShell).toContain('"sticky top-12 z-[35]');
+    // The frame's offset moved onto its own clause so the role-preview banner
+    // can push it down; the default is still flush under the 48px header.
+    expect(appShell).toContain('"sticky z-[35]');
+    expect(appShell).toContain('isRolePreview ? "top-[5.5rem]" : "top-12"');
     expect(page).toContain("sticky z-30");
     expect(listView).toContain("sticky z-10");
     expect(page).toContain('[data-app-shell-header]');

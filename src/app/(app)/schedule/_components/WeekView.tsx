@@ -55,6 +55,9 @@ function weekRangeLabel(weekStart: Date): string {
   const startStr = weekStart.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
+    // A week straddling New Year reads "Dec 29 - Jan 4, 2027" without this,
+    // which dates the wrong half of the range.
+    ...(weekStart.getFullYear() !== end.getFullYear() ? { year: "numeric" as const } : {}),
   });
   const endStr = end.toLocaleDateString("en-US", {
     month: "short",

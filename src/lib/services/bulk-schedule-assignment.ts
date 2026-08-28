@@ -3,7 +3,6 @@ import {
   Prisma,
   Role,
   ShiftAssignmentStatus,
-  ShiftWorkerType,
 } from "@prisma/client";
 import { createAuditEntriesTx } from "@/lib/audit";
 import { ACTIVE_BOOKING_STATUSES } from "@/lib/booking-statuses";
@@ -17,6 +16,7 @@ import {
 import {
   bulkAssignmentApplySchema,
   bulkAssignmentScopeSchema,
+  summarizeAssignmentPeople,
   type BulkAssignmentApplyInput,
   type BulkAssignmentPreviewEvent,
   type BulkAssignmentPreviewProposal,
@@ -27,6 +27,19 @@ import {
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
 import { scheduleAssigneeWorkerType } from "@/lib/schedule-assignee";
+import {
+  isOnSportRoster,
+  isSportRosterEligible,
+  isTravelEligible,
+  sportHasTravelRoster,
+} from "@/lib/schedule-assignment-eligibility";
+import {
+  policyAllowsWorkerType,
+  resolveSportAutoAssignPolicy,
+  SportAutoAssignPolicy,
+  SPORT_AUTO_ASSIGN_POLICY_DESCRIPTIONS,
+} from "@/lib/sport-auto-assign-policy";
+import { loadSportAutoAssignPolicies, loadTravelRosterCounts } from "@/lib/services/sport-auto-assign-policies";
 import {
   applyWorkingScheduleCommand,
   reconcileWorkingAssignmentSources,
@@ -161,6 +174,37 @@ function hasAreaFit(score: CandidateRecommendation) {
   return score.reasons.some((reason) => reason.code === "primary_area" || reason.code === "area_assignment");
 }
 
+/**
+ * Which open slots this scope is allowed to fill. The worker scope narrows the
+ * slots considered -- it never relaxes the rule that an `ST` slot takes a
+ * student and an `FT` slot takes staff.
+ */
+function slotInScope(
+  slot: WorkingSchedulePayload["slots"][number],
+  scope: BulkAssignmentScope,
+  policy: SportAutoAssignPolicy,
+) {
+  if (scope.area && slot.area !== scope.area) return false;
+  if (scope.workerScope !== "ALL" && slot.workerType !== scope.workerScope) return false;
+  // A student slot on a STAFF_ONLY sport is deliberately left open for students
+  // to request, so it is out of scope rather than a gap this run failed to fill.
+  if (!policyAllowsWorkerType(policy, slot.workerType)) return false;
+  return true;
+}
+
+function openSlotsScopeReason(scope: BulkAssignmentScope, policy: SportAutoAssignPolicy) {
+  if (policy === SportAutoAssignPolicy.STAFF_ONLY) {
+    return "No open staff slots on this event. Student slots stay open for students to request.";
+  }
+  const qualifiers = [
+    scope.workerScope === "ST" ? "student" : scope.workerScope === "FT" ? "staff" : null,
+    scope.area ? scope.area.toLowerCase().replace("_", " ") : null,
+  ].filter((value): value is string => Boolean(value));
+  return qualifiers.length > 0
+    ? `No open ${qualifiers.join(" ")} slots on this event.`
+    : "This event has no open crew slots.";
+}
+
 function hasWarning(score: CandidateRecommendation, code: string) {
   return score.warnings.some((warning) => warning.code === code);
 }
@@ -238,9 +282,18 @@ function buildSkippedSlot(
   scores: CandidateRecommendation[],
   candidatesById: Map<string, CandidateScoringUser>,
   usedUserIds: Set<string>,
+  eventSportCode: string | null,
+  travel: { isHome: boolean | null; hasTravelRoster: boolean },
 ): BulkAssignmentPreviewSkipped {
   const visibleScores = scores.filter((score) => candidatesById.has(score.userId));
-  const classScores = visibleScores.filter((score) => {
+  const rosterScores = visibleScores.filter((score) => isSportRosterEligible(score, eventSportCode));
+  const travelScores = rosterScores.filter((score) => {
+    const candidate = candidatesById.get(score.userId);
+    return candidate
+      ? isTravelEligible(candidate.sportAssignments, eventSportCode, travel.isHome, travel.hasTravelRoster)
+      : false;
+  });
+  const classScores = travelScores.filter((score) => {
     const candidate = candidatesById.get(score.userId);
     return candidate ? shiftWorkerTypeForProfile(candidate) === slot.workerType : false;
   });
@@ -256,6 +309,12 @@ function buildSkippedSlot(
   if (visibleScores.length === 0) {
     reasonCode = "no_visible_candidates";
     reason = "No active candidates were available for this slot.";
+  } else if (rosterScores.length === 0) {
+    reasonCode = "no_sport_roster";
+    reason = "Nobody is assigned to this sport.";
+  } else if (travelScores.length === 0) {
+    reasonCode = "no_travel_roster";
+    reason = "Nobody on this sport's travel roster is available for this away game.";
   } else if (classScores.length === 0) {
     reasonCode = "no_scheduling_class_match";
     reason = `No ${slot.workerType === "ST" ? "Student" : "Staff"} candidates were available.`;
@@ -281,8 +340,14 @@ function buildSkippedSlot(
     reason,
     reasonDetails: [
       `${visibleScores.length} active candidate${visibleScores.length === 1 ? "" : "s"} considered.`,
-      visibleScores.length > classScores.length
-        ? `${visibleScores.length - classScores.length} did not match the scheduling class.`
+      eventSportCode && visibleScores.length > rosterScores.length
+        ? `${visibleScores.length - rosterScores.length} are not on the ${eventSportCode} roster.`
+        : null,
+      travel.isHome === false && travel.hasTravelRoster && rosterScores.length > travelScores.length
+        ? `${rosterScores.length - travelScores.length} are not on the travel roster for this away game.`
+        : null,
+      travelScores.length > classScores.length
+        ? `${travelScores.length - classScores.length} did not match the scheduling class.`
         : null,
       classScores.length > areaScores.length
         ? `${classScores.length - areaScores.length} lacked area fit.`
@@ -295,6 +360,7 @@ function buildSkippedSlot(
 }
 
 function buildEventResult(state: ReadyEvent, proposals: BulkAssignmentPreviewProposal[], skipped: BulkAssignmentPreviewSkipped[]): BulkAssignmentPreviewEvent {
+  const unfilledSlots = state.openSlots.length - proposals.length;
   return {
     shiftGroupId: state.group.id,
     eventId: state.event.id,
@@ -307,48 +373,97 @@ function buildEventResult(state: ReadyEvent, proposals: BulkAssignmentPreviewPro
     proposals,
     skipped,
     openSlots: state.openSlots.length,
+    unfilledSlots,
+    fullyCrewed: unfilledSlots === 0,
   };
 }
 
-async function loadScopeEvents(scope: BulkAssignmentScope): Promise<BulkCalendarEvent[]> {
+/**
+ * Held sports can never produce a proposal, so loading their events -- each one
+ * pulling a whole shift group, working copy, and assignment tree -- and letting
+ * them consume the event cap is pure waste. A single sport on hold across a
+ * season is enough to push a legitimate scope over the limit. They are counted
+ * separately instead, cheaply, so the preview can still say how many were held.
+ */
+function heldSportFilter(scope: BulkAssignmentScope, heldCodes: string[]): Prisma.CalendarEventWhereInput {
+  if (heldCodes.length === 0) {
+    return scope.sportCodes.length > 0 ? { sportCode: { in: scope.sportCodes } } : {};
+  }
+  const held = new Set(heldCodes);
+  if (scope.sportCodes.length > 0) {
+    return { sportCode: { in: scope.sportCodes.filter((code) => !held.has(code)) } };
+  }
+  // No sport filter: keep non-sport events, which a bare `notIn` would drop
+  // because SQL `NOT IN` is null for a null column.
+  return { OR: [{ sportCode: null }, { sportCode: { notIn: heldCodes } }] };
+}
+
+function scopeWindowFilter(scope: BulkAssignmentScope): Prisma.CalendarEventWhereInput {
   const startsAt = new Date(scope.rangeStartsAt);
   const endsAt = new Date(scope.rangeEndsAt);
-  const events = await db.calendarEvent.findMany({
-    where: {
-      ...(scope.sportCode ? { sportCode: scope.sportCode } : {}),
-      isHidden: false,
-      archivedAt: null,
-      status: { not: "CANCELLED" },
-      AND: [
-        { startsAt: { lt: endsAt } },
-        { endsAt: { gt: startsAt } },
-        { endsAt: { gt: new Date() } },
-      ],
-    },
-    orderBy: [{ startsAt: "asc" }, { id: "asc" }],
-    take: MAX_BULK_EVENTS + 1,
-    select: {
-      id: true,
-      summary: true,
-      startsAt: true,
-      endsAt: true,
-      allDay: true,
-      status: true,
-      sportCode: true,
-      opponent: true,
-      isHome: true,
-      shiftGroup: { select: bulkShiftGroupSelect },
-    },
-  });
+  return {
+    isHidden: false,
+    archivedAt: null,
+    status: { not: "CANCELLED" },
+    AND: [
+      { startsAt: { lt: endsAt } },
+      { endsAt: { gt: startsAt } },
+      { endsAt: { gt: new Date() } },
+    ],
+  };
+}
+
+async function loadScopeEvents(
+  scope: BulkAssignmentScope,
+  heldCodes: string[],
+): Promise<{ events: BulkCalendarEvent[]; heldEventCount: number }> {
+  const window = scopeWindowFilter(scope);
+  const inScopeHeldCodes = scope.sportCodes.length > 0
+    ? heldCodes.filter((code) => scope.sportCodes.includes(code))
+    : heldCodes;
+
+  const [events, heldEventCount] = await Promise.all([
+    db.calendarEvent.findMany({
+      where: { ...window, ...heldSportFilter(scope, heldCodes) },
+      orderBy: [{ startsAt: "asc" }, { id: "asc" }],
+      take: MAX_BULK_EVENTS + 1,
+      select: {
+        id: true,
+        summary: true,
+        startsAt: true,
+        endsAt: true,
+        allDay: true,
+        status: true,
+        sportCode: true,
+        opponent: true,
+        isHome: true,
+        shiftGroup: { select: bulkShiftGroupSelect },
+      },
+    }),
+    inScopeHeldCodes.length === 0
+      ? Promise.resolve(0)
+      : db.calendarEvent.count({ where: { ...window, sportCode: { in: inScopeHeldCodes } } }),
+  ]);
+
   if (events.length > MAX_BULK_EVENTS) {
-    throw new HttpError(400, `This scope contains more than ${MAX_BULK_EVENTS} events. Narrow the month, sport, or area filter before previewing.`);
+    throw new HttpError(400, `This scope contains more than ${MAX_BULK_EVENTS} events. Choose a shorter period, fewer sports, or a single area before previewing.`);
   }
-  return events;
+  return { events, heldEventCount };
 }
 
 export async function getBulkAssignmentPreview(rawScope: BulkAssignmentScope): Promise<BulkAssignmentPreviewResponse> {
   const scope = bulkAssignmentScopeSchema.parse(rawScope);
-  const rawEvents = await loadScopeEvents(scope);
+  // Policies decide which sports are even worth loading, so they come first.
+  const policies = await loadSportAutoAssignPolicies(scope.sportCodes.length > 0 ? scope.sportCodes : undefined);
+  const heldCodes = [...policies.entries()]
+    .filter(([, policy]) => policy === SportAutoAssignPolicy.HOLD)
+    .map(([sportCode]) => sportCode);
+  const { events: rawEvents, heldEventCount } = await loadScopeEvents(scope, heldCodes);
+  const travelRosterCounts = await loadTravelRosterCounts(
+    [...new Set(rawEvents.filter((event) => event.isHome === false)
+      .map((event) => event.sportCode)
+      .filter((code): code is string => Boolean(code)))],
+  );
   const readyStates: ReadyEvent[] = [];
   const events: BulkAssignmentPreviewEvent[] = [];
   const snapshots = rawEvents.map((event) => eventSnapshot(event, event.shiftGroup));
@@ -375,6 +490,37 @@ export async function getBulkAssignmentPreview(rawScope: BulkAssignmentScope): P
           reasonDetails: [],
         }],
         openSlots: 0,
+        unfilledSlots: 0,
+        fullyCrewed: false,
+      });
+      continue;
+    }
+    const policy = resolveSportAutoAssignPolicy(policies, event.sportCode);
+    // Backstop. The scope query already excludes held sports, so this should
+    // not fire; it exists so a future change to that filter degrades into a
+    // correctly-reported skip rather than assigning a sport that is on hold.
+    if (policy === SportAutoAssignPolicy.HOLD) {
+      events.push({
+        shiftGroupId: group.id,
+        eventId: event.id,
+        summary: event.summary,
+        startsAt: iso(event.startsAt),
+        sportCode: event.sportCode,
+        workingVersion: group.workingCopy?.version ?? null,
+        publishedVersion: group.publishedVersion,
+        status: "skipped",
+        proposals: [],
+        skipped: [{
+          shiftId: null,
+          area: null,
+          workerType: null,
+          reasonCode: "sport_policy_hold",
+          reason: `${event.sportCode} is on hold for auto assignment.`,
+          reasonDetails: [SPORT_AUTO_ASSIGN_POLICY_DESCRIPTIONS.HOLD, "Change the policy in the sport setup wizard to include it."],
+        }],
+        openSlots: 0,
+        unfilledSlots: 0,
+        fullyCrewed: false,
       });
       continue;
     }
@@ -398,19 +544,21 @@ export async function getBulkAssignmentPreview(rawScope: BulkAssignmentScope): P
           reasonDetails: ["Review or release the pending event changes before adding it to a bulk assignment."],
         }],
         openSlots: 0,
+        unfilledSlots: 0,
+        fullyCrewed: false,
       });
       continue;
     }
 
     const payload = parseWorkingPayload(group);
-    const openSlots = payload.slots.filter((slot) => !slot.assignment && (!scope.area || slot.area === scope.area));
+    const openSlots = payload.slots.filter((slot) => !slot.assignment && slotInScope(slot, scope, policy));
     if (openSlots.length === 0) {
       events.push(buildEventResult({ event, group, payload, openSlots }, [], [{
         shiftId: null,
         area: scope.area,
-        workerType: null,
+        workerType: scope.workerScope === "ALL" ? null : scope.workerScope,
         reasonCode: "no_open_slots",
-        reason: scope.area ? "No open slots in the selected area." : "This event has no open crew slots.",
+        reason: openSlotsScopeReason(scope, policy),
         reasonDetails: [],
       }]));
       continue;
@@ -433,15 +581,25 @@ export async function getBulkAssignmentPreview(rawScope: BulkAssignmentScope): P
       for (const slot of state.openSlots) {
         const target = candidateTarget(slot, state.event.sportCode);
         const scores = scoreCandidatesForShift({ shift: target, candidates, now: new Date() });
+        const eventHasTravelRoster = sportHasTravelRoster(travelRosterCounts, state.event.sportCode);
         const chosen = scores.find((score) => {
           const candidate = candidatesById.get(score.userId);
           if (!candidate || usedUserIds.has(score.userId)) return false;
+          // The sport roster is the pool, not a tiebreaker.
+          if (!isSportRosterEligible(score, state.event.sportCode)) return false;
+          // Away games narrow that pool to whoever travels.
+          if (!isTravelEligible(candidate.sportAssignments, state.event.sportCode, state.event.isHome, eventHasTravelRoster)) {
+            return false;
+          }
           if (shiftWorkerTypeForProfile(candidate) !== slot.workerType) return false;
           if (!hasAreaFit(score) || score.blockingConflict) return false;
           return true;
         });
         if (!chosen) {
-          skipped.push(buildSkippedSlot(slot, scores, candidatesById, usedUserIds));
+          skipped.push(buildSkippedSlot(slot, scores, candidatesById, usedUserIds, state.event.sportCode, {
+            isHome: state.event.isHome,
+            hasTravelRoster: eventHasTravelRoster,
+          }));
           continue;
         }
 
@@ -455,6 +613,7 @@ export async function getBulkAssignmentPreview(rawScope: BulkAssignmentScope): P
           userId: candidate.id,
           eventSummary: state.event.summary,
           eventStartsAt: iso(state.event.startsAt),
+          eventSportCode: state.event.sportCode,
           area: slot.area,
           workerType: slot.workerType,
           userName: candidate.name ?? candidate.id,
@@ -468,6 +627,26 @@ export async function getBulkAssignmentPreview(rawScope: BulkAssignmentScope): P
         });
         appendTentativeAssignment(candidate, target);
       }
+
+      // Refusing to half-crew an event is all-or-nothing: drop the partial set
+      // rather than staging a schedule that releases a position short.
+      if (scope.requireFullCrew && proposals.length < state.openSlots.length) {
+        events.push({
+          ...buildEventResult(state, [], skipped),
+          skipped: [
+            {
+              shiftId: null,
+              area: null,
+              workerType: null,
+              reasonCode: "partial_crew_blocked",
+              reason: `Only ${proposals.length} of ${state.openSlots.length} open slots could be filled.`,
+              reasonDetails: ["Full-crew-only is on, so no assignment was proposed for this event."],
+            },
+            ...skipped,
+          ],
+        });
+        continue;
+      }
       events.push(buildEventResult(state, proposals, skipped));
     }
   }
@@ -475,11 +654,14 @@ export async function getBulkAssignmentPreview(rawScope: BulkAssignmentScope): P
   events.sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime() || a.eventId.localeCompare(b.eventId));
   const fingerprint = buildFingerprint(scope, events, snapshots);
   const readyEvents = events.filter((event) => event.status === "ready");
+  const people = summarizeAssignmentPeople(events.flatMap((event) => event.proposals));
+  const proposingEvents = events.filter((event) => event.proposals.length > 0);
   return {
     generatedAt: new Date().toISOString(),
     scope,
     fingerprint,
     events,
+    people,
     summary: {
       eventsMatched: events.length,
       eventsReady: readyEvents.length,
@@ -487,6 +669,13 @@ export async function getBulkAssignmentPreview(rawScope: BulkAssignmentScope): P
       proposed: events.reduce((sum, event) => sum + event.proposals.length, 0),
       skipped: events.reduce((sum, event) => sum + event.skipped.length, 0),
       warnings: events.reduce((sum, event) => sum + event.proposals.filter((proposal) => proposal.warnings.length > 0).length, 0),
+      peopleAffected: people.length,
+      eventsFullyCrewed: proposingEvents.filter((event) => event.fullyCrewed).length,
+      eventsPartiallyCrewed: proposingEvents.filter((event) => !event.fullyCrewed).length,
+      eventsPendingChanges: events.filter((event) => event.skipped.some((entry) => entry.reasonCode === "pending_working_copy")).length,
+      // Held events are excluded from the scope query, so this comes from the
+      // separate count rather than the loaded rows.
+      eventsOnHold: heldEventCount + events.filter((event) => event.skipped.some((entry) => entry.reasonCode === "sport_policy_hold")).length,
     },
   };
 }
@@ -557,6 +746,13 @@ export async function applyBulkScheduleAssignment(
     const groups = await tx.shiftGroup.findMany({ where: { id: { in: groupIds } }, select: bulkShiftGroupSelect });
     if (groups.length !== groupIds.length) throw new HttpError(409, "One or more selected events changed. Review the preview again.");
     const groupById = new Map(groups.map((group) => [group.id, group]));
+    const liveSportCodes = [...new Set(groups.map((group) => group.event.sportCode).filter((code): code is string => Boolean(code)))];
+    const livePolicies = await loadSportAutoAssignPolicies(liveSportCodes);
+    const liveTravelCounts = await loadTravelRosterCounts(
+      [...new Set(groups.filter((group) => group.event.isHome === false)
+        .map((group) => group.event.sportCode)
+        .filter((code): code is string => Boolean(code)))],
+    );
     const userIds = [...new Set([...grouped.values()].flat().map((proposal) => proposal.userId))];
     const users = await tx.user.findMany({
       where: { id: { in: userIds } },
@@ -566,6 +762,7 @@ export async function applyBulkScheduleAssignment(
         role: true,
         staffingType: true,
         collaboratorPolicy: { select: { status: true, grants: { select: { capabilityKey: true } } } },
+        sportAssignments: { select: { sportCode: true, defaultTraveler: true } },
         availabilityBlocks: {
           select: {
             kind: true,
@@ -598,6 +795,11 @@ export async function applyBulkScheduleAssignment(
         throw new HttpError(409, "One or more selected events changed. Review the preview again.");
       }
 
+      const groupPolicy = resolveSportAutoAssignPolicy(livePolicies, group.event.sportCode);
+      if (groupPolicy === SportAutoAssignPolicy.HOLD) {
+        throw new HttpError(409, "One of these sports was put on hold for auto assignment. Review the preview again.");
+      }
+
       let working = parseWorkingPayload(group);
       const assignedWithinEvent = new Set(
         working.slots.flatMap((slot) => slot.assignment ? [slot.assignment.userId] : []),
@@ -610,16 +812,28 @@ export async function applyBulkScheduleAssignment(
         if (user.role === Role.COLLABORATOR || scheduleAssigneeWorkerType(user) !== slot.workerType) {
           throw new HttpError(409, "One of the proposed workers no longer matches the slot rules.");
         }
+        if (!isOnSportRoster(user.sportAssignments, group.event.sportCode)) {
+          throw new HttpError(409, "One of the proposed workers is no longer on this event's sport roster.");
+        }
+        if (!policyAllowsWorkerType(groupPolicy, slot.workerType)) {
+          throw new HttpError(409, "One of these sports no longer auto-assigns this kind of slot. Review the preview again.");
+        }
+        if (!isTravelEligible(
+          user.sportAssignments,
+          group.event.sportCode,
+          group.event.isHome,
+          sportHasTravelRoster(liveTravelCounts, group.event.sportCode),
+        )) {
+          throw new HttpError(409, "One of the proposed workers is no longer on the travel roster for an away game.");
+        }
         if (assignedWithinEvent.has(user.id)) {
           throw new HttpError(409, "A worker cannot receive two assignments in the same event.");
         }
         const window = effectiveSlotWindow(slot);
         await checkTimeConflict(tx, user.id, window.startsAt, window.endsAt);
         addTentativeWindow(tentativeWindows, user.id, window);
-        if (slot.workerType === ShiftWorkerType.ST) {
-          const availability = evaluateAvailabilityPreferences(user.availabilityBlocks, window);
-          if (availability.blocking) throw new HttpError(409, availability.blocking.note);
-        }
+        const availability = evaluateAvailabilityPreferences(user.availabilityBlocks, window);
+        if (availability.blocking) throw new HttpError(409, availability.blocking.note);
         working = applyWorkingScheduleCommand(working, {
           type: "assign",
           slotKey: slot.key,
@@ -640,7 +854,9 @@ export async function applyBulkScheduleAssignment(
       data: {
         id: batchId,
         createdById: actor.id,
-        sportCode: input.scope.sportCode,
+        // The column holds a single code; a multi-sport scope is recorded in
+        // full on the audit entries below.
+        sportCode: input.scope.sportCodes.length === 1 ? input.scope.sportCodes[0]! : null,
         rangeStartsAt: new Date(input.scope.rangeStartsAt),
         rangeEndsAt: new Date(input.scope.rangeEndsAt),
         area: input.scope.area,
@@ -686,6 +902,14 @@ export async function applyBulkScheduleAssignment(
           proposalCount: grouped.get(shiftGroupId)?.length ?? 0,
           releaseAt: release.at.toISOString(),
           batchId,
+          scope: {
+            sportCodes: input.scope.sportCodes,
+            workerScope: input.scope.workerScope,
+            period: input.scope.period,
+            area: input.scope.area,
+            rangeStartsAt: input.scope.rangeStartsAt,
+            rangeEndsAt: input.scope.rangeEndsAt,
+          },
         },
       });
     }

@@ -1,6 +1,22 @@
 # Task Queue
 
-Last updated: 2026-08-26
+Last updated: 2026-08-28
+
+---
+## In progress: Android PWA browser notifications (2026-08-28)
+
+- [x] Add browser subscription persistence, VAPID delivery, service-worker presentation, and tap-through.
+- [x] Add authenticated Settings → Notifications enrollment, disable, and test controls.
+- [x] Configure stable VAPID settings in Vercel Preview and Production.
+- [x] Apply migration `0137_web_push_subscriptions` to Production and confirm clean migration health.
+- [x] Deploy the clean PWA/Web Push slice to Production and verify public assets plus authenticated push configuration.
+- [ ] Complete physical Android Chrome permission, test delivery, and notification tap-through acceptance with the student.
+
+### Review
+
+- **Shipped to Production:** Browser push is live at `https://wisconsincreative.com`; deployment `dpl_9stXTaEbeKN1bWDuyUp9ZcSqT6X1` is READY and aliased to the canonical host.
+- **Verified:** 11 focused PWA/Web Push tests, 23 related notification/blast tests, TypeScript, lint, Prisma validation, production app build, migration health (`142/142`), public manifest/service-worker/offline assets, authenticated `/settings/notifications`, and authenticated `/api/push/web` configuration read-back.
+- **Deferred:** The student must perform the final physical-device permission, delivery, and tap-through test. Browser push is additive; native iOS APNs and the native Android-app port remain unchanged.
 
 ---
 ## In progress: Native iOS Student role preview (2026-08-25)

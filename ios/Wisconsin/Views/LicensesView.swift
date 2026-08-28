@@ -606,6 +606,20 @@ private struct LicensePoolRow: View {
         }
         .padding(.vertical, 6)
         .opacity(isRetired ? 0.7 : 1)
+        // A claimed code exists to be pasted into something else, and the row
+        // renders it in a monospaced line you cannot select. Gated on the same
+        // `canRevealCode` the visible line is: long press must never surface a
+        // code the row is deliberately hiding.
+        .contextMenu {
+            if canRevealCode, !code.code.isEmpty {
+                Button {
+                    UIPasteboard.general.string = code.code
+                    Haptics.tap()
+                } label: {
+                    Label("Copy License Code", systemImage: "doc.on.doc")
+                }
+            }
+        }
     }
 
     /// Retired rows say the two things that are still true — when it lapsed and

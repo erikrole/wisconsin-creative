@@ -75,6 +75,9 @@ targets:
         aps-environment: production
         com.apple.developer.associated-domains:
           - webcredentials:wisconsincreative.com
+        # Shared container the Home Screen widgets read their snapshot from.
+        com.apple.security.application-groups:
+          - group.com.erikrole.Wisconsin
     dependencies:
       - target: WisconsinLiveActivities
       - package: swift-markdown
@@ -197,6 +200,15 @@ targets:
     sources:
       - path: WisconsinLiveActivities
       - path: Wisconsin/LiveActivities/CheckoutReturnActivityAttributes.swift
+      # The widget process has no session of its own; this is the whole of
+      # what it is allowed to know. Shared, not duplicated, so the two
+      # processes can never disagree about the payload shape.
+      - path: Wisconsin/Widgets/GearWidgetSnapshot.swift
+    entitlements:
+      path: WisconsinLiveActivities/WisconsinLiveActivities.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.erikrole.Wisconsin
     info:
       path: WisconsinLiveActivities/Info.plist
       properties:

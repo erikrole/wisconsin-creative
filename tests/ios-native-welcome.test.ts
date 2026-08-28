@@ -10,8 +10,23 @@ describe("native iOS Welcome flow", () => {
   it("routes forced-password users before Welcome and Welcome before the tab shell", () => {
     const app = source("ios/Wisconsin/App/WisconsinApp.swift");
 
-    expect(app.indexOf("PasswordSetupView(email: user.email)")).toBeLessThan(app.indexOf("ProfileCompletionWelcomeView()"));
-    expect(app.indexOf("ProfileCompletionWelcomeView()")).toBeLessThan(app.indexOf("AppTabView()"));
+    // Precedence inside the routing switch, not raw file offsets. The
+    // read-only role preview short-circuits to a second, *earlier*
+    // `AppTabView()` branch, so a bare indexOf comparison read the Welcome
+    // route as coming last and failed against correct source.
+    const route = app.slice(
+      app.indexOf("switch profileCompletion.route("),
+      app.indexOf("LoginView()"),
+    );
+    expect(route.indexOf("case .welcome:")).toBeLessThan(route.indexOf("case .app:"));
+    expect(route).toContain("ProfileCompletionWelcomeView()");
+    expect(route).toContain("AppTabView()");
+
+    // Forced password change outranks the completion route entirely.
+    expect(app.indexOf("user.forcePasswordChange")).toBeLessThan(app.indexOf("switch profileCompletion.route("));
+    expect(app.indexOf("PasswordSetupView(email: user.email)")).toBeLessThan(app.indexOf("switch profileCompletion.route("));
+    // The preview shell is a deliberate bypass, not an accident.
+    expect(app).toContain("user.isReadOnlyRolePreview");
     expect(app).toContain("session.usedOptimisticSessionSnapshot");
     expect(app).toContain("profileCompletion.pushPromptEligibleUserId");
   });

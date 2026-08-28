@@ -1,7 +1,10 @@
 import type { CandidateRecommendation, CandidateScoreSignal } from "@/lib/candidate-scoring-types";
 
 export type AutoFillPreviewSkippedReasonCode =
+  | "sport_policy_hold"
+  | "sport_policy_staff_only"
   | "no_visible_candidates"
+  | "no_sport_roster"
   | "no_scheduling_class_match"
   | "no_area_fit"
   | "approved_time_off_blocked"

@@ -43,6 +43,16 @@ export const env = {
   get appUrl() {
     return process.env.APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
   },
+  /** Optional — enables browser push delivery when all three values are set. */
+  get webPushVapidPublicKey() {
+    return process.env.WEB_PUSH_VAPID_PUBLIC_KEY || "";
+  },
+  get webPushVapidPrivateKey() {
+    return process.env.WEB_PUSH_VAPID_PRIVATE_KEY || "";
+  },
+  get webPushSubject() {
+    return process.env.WEB_PUSH_SUBJECT || "";
+  },
   /** WebAuthn relying-party name shown by the platform authenticator. */
   get passkeyRpName() {
     return process.env.PASSKEY_RP_NAME || "Wisconsin Creative";

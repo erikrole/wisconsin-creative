@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Star, Trash2, AlertCircle } from "lucide-react";
+import { Plus, Plane, Trash2, AlertCircle } from "lucide-react";
 import { useFetch } from "@/hooks/use-fetch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -217,7 +217,7 @@ function RosterPicker({
                   }`}
                   aria-label={entry.defaultTraveler ? `Remove ${entry.user.name} as default traveler` : `Mark ${entry.user.name} as default traveler`}
                 >
-                  <Star className="size-3.5" fill={entry.defaultTraveler ? "currentColor" : "none"} />
+                  <Plane className="size-3.5" fill={entry.defaultTraveler ? "currentColor" : "none"} />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
@@ -326,7 +326,7 @@ export function EventTravelCard({
             </PopoverTrigger>
             <PopoverContent className="w-72 p-2" align="end">
               <p className="text-xs font-medium text-muted-foreground px-1 pb-2">
-                Sport roster - starred users are default travelers
+                Sport roster - marked users are default travelers
               </p>
               <RosterPicker
                 sportCode={sportCode}

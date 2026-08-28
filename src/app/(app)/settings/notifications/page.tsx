@@ -17,6 +17,7 @@ import {
   parseErrorMessage,
 } from "@/lib/errors";
 import { SettingsPageShell } from "../SettingsPageShell";
+import { WebPushSettings } from "@/components/notifications/WebPushSettings";
 
 type Prefs = {
   pausedUntil: string | null;
@@ -137,33 +138,6 @@ export default function NotificationsSettingsPage() {
     if (saved) toast.success("Notifications resumed");
   }
 
-  const [testingPush, setTestingPush] = useState(false);
-
-  async function sendTestPush() {
-    setTestingPush(true);
-    try {
-      const res = await fetch("/api/devices/test", { method: "POST" });
-      if (handleAuthRedirect(res, "/settings/notifications")) return;
-      if (!res.ok) {
-        toast.error(await parseErrorMessage(res, "Test push failed"));
-        return;
-      }
-      const { delivered, devices } = (await res.json()).data as { delivered: number; devices: number };
-      if (devices === 0) {
-        toast.info("No registered devices. Sign in on the iOS app and allow notifications first.");
-      } else if (delivered === 0) {
-        toast.error(`Sent to ${devices} device${devices === 1 ? "" : "s"}, none accepted. Check the iOS app's notification settings.`);
-      } else {
-        toast.success(`Test push delivered to ${delivered} of ${devices} device${devices === 1 ? "" : "s"}.`);
-      }
-    } catch (err) {
-      if (isAbortError(err)) return;
-      toast.error(classifyError(err) === "network" ? "You’re offline. Check your connection." : "Test push failed");
-    } finally {
-      setTestingPush(false);
-    }
-  }
-
   const description = "Control how and when you receive updates about gear, shifts, and reservations. The in-app inbox always stays available regardless of these settings.";
 
   if (loading) {
@@ -259,18 +233,12 @@ export default function NotificationsSettingsPage() {
             <ChannelRow
               icon={<Smartphone className="size-4" />}
               label="Push"
-              description="Send push notifications to your iOS app (requires the app installed and notifications allowed)."
+              description="Send push notifications to the iOS app or an enrolled browser."
               checked={prefs.channels.push}
               onChange={(v) => setChannel("push", v)}
               disabled={saving || isPaused}
             />
-            {prefs.channels.push && !isPaused && (
-              <div className="pt-1">
-                <Button className="h-10" variant="outline" onClick={sendTestPush} disabled={testingPush}>
-                  {testingPush ? "Sending…" : "Send test notification"}
-                </Button>
-              </div>
-            )}
+            <WebPushSettings pushEnabled={prefs.channels.push} disabled={saving || isPaused} />
             {isPaused && (
               <p className="text-xs text-muted-foreground pt-2 m-0">
                 Channels are temporarily overridden by your active pause.

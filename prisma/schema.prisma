@@ -253,6 +253,7 @@ model User {
   passwordResetTokens           PasswordResetToken[]
   notifications                 Notification[]
   deviceTokens                  DeviceToken[]
+  webPushSubscriptions          WebPushSubscription[]
   appInstallations              UserAppInstallation[]
   liveActivityTokens            LiveActivityToken[]
   liveActivityStartTokens       LiveActivityStartToken[]
@@ -1313,6 +1314,21 @@ model DeviceToken {
   @@map("device_tokens")
 }
 
+model WebPushSubscription {
+  id         String    @id @default(cuid())
+  userId     String    @map("user_id")
+  endpoint   String    @unique
+  p256dh     String
+  auth       String
+  lastSeenAt DateTime  @default(now()) @map("last_seen_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  revokedAt  DateTime? @map("revoked_at")
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+  @@map("web_push_subscriptions")
+}
+
 model LiveActivityToken {
   id         String    @id @default(cuid())
   userId     String    @map("user_id")
@@ -1800,6 +1816,19 @@ enum ShiftAssignmentSource {
   AUTO_FILL
 }
 
+/// How far auto assignment may go for a sport. Sports are run differently:
+/// some are crewed entirely by auto assignment, some staff the full-time
+/// positions and deliberately leave student slots open for students to request,
+/// and some are held back from automation altogether.
+enum SportAutoAssignPolicy {
+  /// Fill every open slot, staff and student alike.
+  FULL_CREW
+  /// Fill staff slots only; student slots stay open for students to request.
+  STAFF_ONLY
+  /// Propose nothing for this sport.
+  HOLD
+}
+
 enum ScheduleBulkAssignmentStatus {
   PENDING
   RELEASED
@@ -1823,11 +1852,12 @@ enum ShiftTradeStatus {
 }
 
 model SportConfig {
-  id               String             @id @default(cuid())
-  sportCode        String             @unique @map("sport_code")
-  active           Boolean            @default(true)
-  shiftStartOffset Int                @default(60) @map("shift_start_offset")
-  shiftEndOffset   Int                @default(60) @map("shift_end_offset")
+  id               String                 @id @default(cuid())
+  sportCode        String                 @unique @map("sport_code")
+  active           Boolean                @default(true)
+  autoAssignPolicy SportAutoAssignPolicy  @default(FULL_CREW) @map("auto_assign_policy")
+  shiftStartOffset Int                    @default(60) @map("shift_start_offset")
+  shiftEndOffset   Int                    @default(60) @map("shift_end_offset")
   createdAt        DateTime           @default(now()) @map("created_at")
   updatedAt        DateTime           @updatedAt @map("updated_at")
   shiftConfigs     SportShiftConfig[]

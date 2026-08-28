@@ -11,10 +11,10 @@ Gear Tracker is a Next.js App Router application with a companion native iOS app
 |---|---:|
 | App pages | 88 |
 | App layouts | 7 |
-| API route handlers | 309 |
-| Service files | 75 |
-| Component files | 151 |
-| Test files | 572 |
+| API route handlers | 311 |
+| Service files | 76 |
+| Component files | 153 |
+| Test files | 586 |
 
 ## Oversized Source Watchlist
 
@@ -22,14 +22,14 @@ Informational only. These are the largest TypeScript and TSX files under `src/`;
 
 | File | Lines |
 |---|---:|
-| `src/lib/services/signatures.ts` | 1986 |
 | `src/lib/services/bookings-lifecycle.ts` | 2160 |
+| `src/lib/services/signatures.ts` | 1986 |
 | `src/lib/services/reports.ts` | 1932 |
 | `src/components/resources/BrandAssetLibrary.tsx` | 1827 |
-| `src/components/TradeBoard.tsx` | 1793 |
-| `src/lib/services/notifications.ts` | 1631 |
-| `src/app/(app)/items/[id]/ItemInfoTab.tsx` | 1609 |
-| `src/app/(app)/schedule/_components/ListView.tsx` | 1566 |
+| `src/components/TradeBoard.tsx` | 1795 |
+| `src/lib/services/notifications.ts` | 1662 |
+| `src/app/(app)/items/[id]/ItemInfoTab.tsx` | 1603 |
+| `src/app/(app)/schedule/_components/ListView.tsx` | 1594 |
 | `src/app/(app)/users/[id]/UserInfoTab.tsx` | 1450 |
 | `src/app/(app)/resources/page.tsx` | 1425 |
 | `src/components/ActivityTimeline.tsx` | 1368 |

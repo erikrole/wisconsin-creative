@@ -11,7 +11,7 @@
 
 | Model | Fields | Model-level indexes/constraints |
 |---|---:|---:|
-| `User` | 118 | 5 |
+| `User` | 119 | 5 |
 | `Session` | 6 | 2 |
 | `PasswordResetToken` | 6 | 2 |
 | `PasskeyCredential` | 12 | 2 |
@@ -55,6 +55,7 @@
 | `BookingEvent` | 7 | 4 |
 | `LocationMapping` | 6 | 1 |
 | `DeviceToken` | 9 | 2 |
+| `WebPushSubscription` | 9 | 2 |
 | `LiveActivityToken` | 10 | 3 |
 | `LiveActivityStartToken` | 8 | 2 |
 | `LiveActivityStart` | 9 | 4 |

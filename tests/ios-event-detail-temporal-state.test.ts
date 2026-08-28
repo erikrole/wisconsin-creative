@@ -37,8 +37,12 @@ describe("iOS Event detail temporal state", () => {
 
   it("keeps the list row's finished and live treatments", () => {
     expect(scheduleView).toContain("timeState == .past ? 0.55 : 1");
-    expect(scheduleView).toContain('Text("NOW")');
-    expect(scheduleView).toContain("if timeState == .live { return Color.brandPrimary.opacity(0.55) }");
+    // Live reads entirely in the time gutter now -- red time plus the word --
+    // rather than a filled badge inside a heavier red border. No row wash: a
+    // tinted card put green venue rails against pink on every live home game.
+    expect(scheduleView).toContain('Text("Now")');
+    expect(scheduleView).toContain("timeState == .live ? Color.brandPrimary : Color.primary");
+    expect(scheduleView).not.toContain("Color.statusBackground(.red) : Color.cardSurface");
   });
 
   it("does not blank a loaded roster when the staff working copy fails", () => {

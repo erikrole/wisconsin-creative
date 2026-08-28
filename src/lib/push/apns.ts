@@ -375,12 +375,24 @@ async function dispatch(
 
 export async function sendPush(
   deviceTokens: string[],
-  opts: { title: string; body: string; payload?: Record<string, unknown> }
+  opts: {
+    title: string;
+    body: string;
+    payload?: Record<string, unknown>;
+    /**
+     * APNs category, which selects the long-press action set the native client
+     * registered under the same identifier. Omit for a tap-only notification.
+     * An identifier the installed build does not know is ignored by iOS, so
+     * this stays safe to send ahead of a native release.
+     */
+    category?: string;
+  }
 ): Promise<DispatchResult> {
   const notification = {
     aps: {
       alert: { title: opts.title, body: opts.body },
       sound: "default",
+      ...(opts.category ? { category: opts.category } : {}),
     },
     ...(opts.payload ?? {}),
   };

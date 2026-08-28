@@ -111,17 +111,18 @@
 | File | Lines |
 |---|---:|
 | `src/components/resources/BrandAssetLibrary.tsx` | 1827 |
-| `src/components/TradeBoard.tsx` | 1793 |
+| `src/components/TradeBoard.tsx` | 1795 |
 | `src/components/ActivityTimeline.tsx` | 1368 |
 | `src/components/onboarding/OnboardingDialog.tsx` | 996 |
 | `src/components/EquipmentPicker.tsx` | 916 |
 | `src/components/AppShell.tsx` | 896 |
-| `src/components/ShiftDetailPanel.tsx` | 789 |
+| `src/components/ShiftDetailPanel.tsx` | 791 |
 | `src/components/ChooseImageModal.tsx` | 769 |
 | `src/components/profile-completion/ProfileCompletionWizard.tsx` | 769 |
 | `src/components/booking-wizard/BookingWizard.tsx` | 721 |
 | `src/components/ui/sidebar.tsx` | 710 |
 | `src/components/BookingDetailsSheet.tsx` | 702 |
+| `src/components/schedule/AutoAssignDialog.tsx` | 642 |
 | `src/components/booking-wizard/WizardStep1.tsx` | 572 |
 | `src/components/BookingListPage.tsx` | 526 |
 | `src/components/ui/heatmap.tsx` | 434 |
@@ -129,17 +130,16 @@
 | `src/components/booking-details/BookingHeader.tsx` | 412 |
 | `src/components/ui/chart.tsx` | 389 |
 | `src/components/booking-details/BookingInfoCard.tsx` | 344 |
+| `src/components/shift-detail/ShiftSlotCard.tsx` | 343 |
 | `src/components/booking-details/EditBookingEventsDialog.tsx` | 342 |
-| `src/components/shift-detail/ShiftSlotCard.tsx` | 341 |
 | `src/components/FormCombobox.tsx` | 329 |
-| `src/components/resources/MarkdownReader.tsx` | 315 |
+| `src/components/resources/MarkdownReader.tsx` | 312 |
 | `src/components/public-showroom/showroom-blocks.tsx` | 290 |
 | `src/components/PageBreadcrumb.tsx` | 286 |
 | `src/components/booking-details/BookingSheetOverview.tsx` | 285 |
 | `src/components/booking-details/TransferOwnerDialog.tsx` | 271 |
 | `src/components/booking-wizard/WizardStep3.tsx` | 263 |
 | `src/components/shift-detail/CallWindowEditor.tsx` | 260 |
-| `src/components/ui/dropdown-menu.tsx` | 258 |
 
 ## Hooks
 
@@ -148,6 +148,7 @@
 | `src/hooks/booking-action-copy.ts` | 22 |
 | `src/hooks/use-assignment-grid.ts` | 226 |
 | `src/hooks/use-booking-change-sync.ts` | 167 |
+| `src/hooks/use-copy-feedback.ts` | 62 |
 | `src/hooks/use-current-user.ts` | 53 |
 | `src/hooks/use-dashboard-data.ts` | 232 |
 | `src/hooks/use-dashboard-filters.ts` | 130 |

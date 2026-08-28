@@ -13,6 +13,8 @@ import { AREAS, SPORT_GROUPS, defaultShiftConfigs } from "./types";
 import ShiftConfigTable from "./ShiftConfigTable";
 import NonGameScheduleCard from "./NonGameScheduleCard";
 import { SettingsPageShell } from "../SettingsPageShell";
+import { SportSetupWizard } from "@/components/schedule/SportSetupWizard";
+import type { SportSetupResponse } from "@/lib/services/sport-setup";
 
 type RebaseSummary = {
   groupsCreated: number;
@@ -51,6 +53,18 @@ export default function SportsSettingsPage() {
     setLocalConfigs(typeof updater === "function" ? updater(configs) : updater);
   };
   const [saving, setSaving] = useState<string | null>(null);
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardSportCode, setWizardSportCode] = useState<string | null>(null);
+  // Policy, roster, and travel are read from the same endpoint the wizard
+  // writes through, so this page cannot drift from what the wizard shows.
+  const {
+    data: sportSetup,
+    reload: reloadSportSetup,
+  } = useFetch<SportSetupResponse | null>({
+    url: "/api/schedule/sport-setup",
+    returnTo: "/settings/sports",
+    transform: (json) => (json.data as SportSetupResponse) ?? null,
+  });
   const [dirtyCodes, setDirtyCodes] = useState<Set<string>>(() => new Set());
 
   function getConfig(sportCode: string) {
@@ -317,9 +331,43 @@ export default function SportsSettingsPage() {
   return (
     <SettingsPageShell title="Sports" description={description}>
       <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/60 bg-card/80 p-3 shadow-sm">
+          <div className="min-w-0">
+            <p className="text-sm font-medium">Auto assign setup</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Step through every sport to set what Auto assign does for it, who it can pick from, and who travels.
+              What you set there is what shows on the cards below.
+            </p>
+          </div>
+          <Button
+            className="h-10 shrink-0"
+            onClick={() => {
+              setWizardSportCode(null);
+              setWizardOpen(true);
+            }}
+          >
+            Sport setup wizard
+          </Button>
+        </div>
+
+        <SportSetupWizard
+          open={wizardOpen}
+          onOpenChange={setWizardOpen}
+          startAtSportCode={wizardSportCode}
+          onCompleted={() => {
+            reload();
+            reloadSportSetup();
+          }}
+        />
+
         <NonGameScheduleCard />
         <ShiftConfigTable
           configs={configs}
+          sportSetup={sportSetup ?? null}
+          onOpenSetup={(sportCode) => {
+            setWizardSportCode(sportCode);
+            setWizardOpen(true);
+          }}
           saving={saving}
           onToggleActive={toggleActive}
           onUpdateShift={updateShiftCount}

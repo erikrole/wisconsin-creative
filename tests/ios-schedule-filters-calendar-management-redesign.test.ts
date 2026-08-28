@@ -12,8 +12,10 @@ describe("iOS Schedule filters and calendar management", () => {
 
   it("keeps neutral games separate from non-game events in both schedule modes", () => {
     expect(schedule).toContain('case nonGame = "Non-game"');
-    expect(schedule).toContain("case .neutral: return event.isHome == nil && event.opponent != nil");
-    expect(schedule).toContain("case .nonGame: return event.isHome == nil && event.opponent == nil");
+    // Both now read the resolved venue rather than the raw isHome tri-state,
+    // which could not tell a neutral site from an unclassified one.
+    expect(schedule).toContain("case .neutral: return event.venue == .neutral");
+    expect(schedule).toContain("case .nonGame: return event.venue == .nonGame");
     expect(schedule.match(/scheduleEventMatches\(\$0, filter: homeAwayFilter\)/g)?.length).toBe(2);
   });
 

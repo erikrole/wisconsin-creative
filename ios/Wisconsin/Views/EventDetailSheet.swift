@@ -993,13 +993,19 @@ struct EventDetailView: View {
 
     // MARK: - Event Header
 
+    /// Reads the event's resolved calendar days, not its raw timestamps.
+    ///
+    /// An imported all-day event is stored at UTC midnight, so formatting
+    /// `startsAt` locally printed the day *before* the one the Schedule list --
+    /// which groups by `spannedDays` -- had just shown for the same row. The
+    /// span end is already exclusive-adjusted, so the local `endRef` step-back
+    /// this used to do is now the model's job.
     private var eventDateText: String {
         guard event.isMultiDay else {
-            return detailDateLabel(event.startsAt, abbreviatedWeekday: false)
+            return detailDateLabel(event.displayStartDay, abbreviatedWeekday: false)
         }
-        let endRef = event.displayAllDay ? event.endsAt.addingTimeInterval(-1) : event.endsAt
-        let start = detailDateLabel(event.startsAt, abbreviatedWeekday: true)
-        let end = detailDateLabel(endRef, abbreviatedWeekday: true)
+        let start = detailDateLabel(event.displayStartDay, abbreviatedWeekday: true)
+        let end = detailDateLabel(event.displayEndDay, abbreviatedWeekday: true)
         return "\(start) – \(end)"
     }
 
@@ -1031,10 +1037,13 @@ struct EventDetailView: View {
     }
 
     private var eventTypeLabel: String {
-        switch event.isHome {
-        case true: return "Home"
-        case false: return "Away"
-        case nil: return event.opponent == nil ? "Non-game" : "Neutral"
+        // Same resolved venue the rail beside it and the Schedule row use, so
+        // a row listed as Neutral cannot open onto a header reading Home.
+        switch event.venue {
+        case .home: return "Home"
+        case .away: return "Away"
+        case .neutral: return "Neutral"
+        case .nonGame: return "Non-game"
         }
     }
 
@@ -1059,11 +1068,13 @@ struct EventDetailView: View {
     /// urgent enough to spend a line on.
     private var eventCountdownText: String? {
         let calendar = Calendar.current
+        // Same resolved day `eventDateText` prints, so "Tomorrow, Jun 17" and
+        // "in 2 days" can never disagree about which day the event is on.
+        let eventDay = event.displayStartDay
         guard !eventHasEnded,
-              !calendar.isDateInToday(event.startsAt),
-              !calendar.isDateInTomorrow(event.startsAt) else { return nil }
+              !calendar.isDateInToday(eventDay),
+              !calendar.isDateInTomorrow(eventDay) else { return nil }
         let today = calendar.startOfDay(for: .now)
-        let eventDay = calendar.startOfDay(for: event.startsAt)
         guard let days = calendar.dateComponents([.day], from: today, to: eventDay).day,
               days > 1, days <= 14 else { return nil }
         return "in \(days) days"
@@ -1093,7 +1104,7 @@ struct EventDetailView: View {
     }
 
     private var eventRailColor: Color {
-        venueRailColor(isHome: event.isHome)
+        venueRailColor(for: event)
     }
 
     private var eventVenueName: String? {

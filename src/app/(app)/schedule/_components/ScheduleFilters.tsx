@@ -24,6 +24,8 @@ import type { ScheduleFilters as ScheduleFiltersType, ViewMode, HomeAwayFilter }
 type ScheduleFiltersProps = {
   filters: ScheduleFiltersType;
   entries: CalendarEntry[];
+  /** Rows surviving every active filter, used to size the queue banner. */
+  filteredEntries: CalendarEntry[];
 };
 
 const VIEW_MODES: { value: ViewMode; label: string; icon: ReactNode }[] = [
@@ -51,8 +53,18 @@ function ToolbarGroup({
   );
 }
 
-export function ScheduleFilters({ filters, entries }: ScheduleFiltersProps) {
+export function ScheduleFilters({ filters, entries, filteredEntries }: ScheduleFiltersProps) {
+  /**
+   * Sport is the one filter the server applies, so a selected sport narrows the
+   * loaded window to itself. Deriving the options from those rows offered the
+   * reader only the sport they were already on, leaving no way to switch
+   * without clearing first -- so while a sport is selected the full list stands
+   * in for a window that can no longer answer which other sports have events.
+   */
   const sportOptions = useMemo(() => {
+    if (filters.sportFilter) {
+      return SPORT_CODES.map((s) => ({ value: s.code, label: s.label }));
+    }
     const codes = new Set(
       entries.map((e) => e.sportCode).filter(Boolean) as string[],
     );
@@ -60,7 +72,7 @@ export function ScheduleFilters({ filters, entries }: ScheduleFiltersProps) {
       value: s.code,
       label: s.label,
     }));
-  }, [entries]);
+  }, [entries, filters.sportFilter]);
 
   const isListView = filters.viewMode === "list";
   const menuFilterCount = [
@@ -124,7 +136,9 @@ export function ScheduleFilters({ filters, entries }: ScheduleFiltersProps) {
                 {filters.queueMeta.label}
               </div>
               <div className="text-pretty text-xs text-muted-foreground">
-                Shareable Schedule queue from the current window.
+                {filteredEntries.length === 1
+                  ? "1 event in this shareable queue."
+                  : `${filteredEntries.length} events in this shareable queue.`}
               </div>
             </div>
           </div>

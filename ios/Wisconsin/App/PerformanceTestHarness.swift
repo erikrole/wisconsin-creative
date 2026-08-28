@@ -75,7 +75,7 @@ struct PerformanceTestRootView: View {
             BookingDetailHarnessView()
         case .itemEdit:
             ItemDetailHarnessView()
-        case .createBookingScanner:
+        case .createBookingScanner, .createBookingEvents:
             CreateBookingScannerHarnessView()
         case .search, .searchPartial:
             GlobalSearchHarnessView()
@@ -646,9 +646,14 @@ enum BookingFixtureAPI {
         requesterName: String,
         startsIn: Int,
         endsIn: Int,
-        sportCode: String? = nil
+        sportCode: String? = nil,
+        // Server-owned row actions. Defaults to none so team rows keep showing
+        // a student what they may not do; the student's own OPEN checkout gets
+        // the pair the checkout matrix in `booking-rules.ts` actually grants.
+        allowedActions: [String] = []
     ) -> String {
         let sportJSON = sportCode.map { "\"\($0)\"" } ?? "null"
+        let actionsJSON = allowedActions.map { "\"\($0)\"" }.joined(separator: ",")
         return """
         {"id":"\(id)","kind":"\(kind)","title":"\(title)","status":"\(status)",
          "startsAt":"\(studentISO(startsIn))","endsAt":"\(studentISO(endsIn))","notes":null,"refNumber":null,
@@ -656,7 +661,7 @@ enum BookingFixtureAPI {
          "location":{"id":"loc-1","name":"Camp Randall Creative Desk"},
          "serializedItems":[],"bulkItems":[],
          "event":{"id":"event-\(id)","summary":"\(title)","sportCode":\(sportJSON),"opponent":null,"isHome":null},
-         "allowedActions":[],"updatedAt":"\(studentISO(-15))","pickupKioskDevice":null}
+         "allowedActions":[\(actionsJSON)],"updatedAt":"\(studentISO(-15))","pickupKioskDevice":null}
         """
     }
 
@@ -666,7 +671,11 @@ enum BookingFixtureAPI {
             listBooking(
                 id: "bk-student-own", kind: "CHECKOUT", title: "Student camera kit", status: "OPEN",
                 requesterId: "fixture-student", requesterName: "Rowan Diaz", startsIn: -120, endsIn: 240,
-                sportCode: "VB"
+                sportCode: "VB",
+                // OPEN checkout, owned by the caller: edit and extend, no
+                // cancel. Matches the checkout state x action matrix in
+                // `src/lib/services/booking-rules.ts`.
+                allowedActions: ["edit", "extend"]
             ),
             listBooking(
                 id: "bk-team-reservation", kind: "RESERVATION", title: "Volleyball photo package", status: "BOOKED",
@@ -1460,6 +1469,11 @@ enum ScheduleFixtureAPI {
             "sportCode": "WBB", "opponent": "Iowa", "isHome": true,
             "location": { "id": "loc-kc", "name": "Kohl Center" },
             "coverage": { "total": 5, "filled": 2, "percentage": 40 } },
+          { "id": "e10", "summary": "Men's Basketball vs Duke", "startsAt": "\(at(0, 20, 30))",
+            "endsAt": "\(at(0, 23))", "allDay": false, "status": "CONFIRMED",
+            "sportCode": "MBB", "opponent": "Duke", "isHome": true, "site": "NEUTRAL",
+            "location": null,
+            "coverage": { "total": 4, "filled": 4, "percentage": 100 } },
           { "id": "e9", "summary": "Women's Soccer vs Penn State", "startsAt": "\(fromNow(-45))",
             "endsAt": "\(fromNow(75))", "allDay": false, "status": "CONFIRMED",
             "sportCode": "WSOC", "opponent": "Penn State", "isHome": true,
@@ -1492,7 +1506,7 @@ enum ScheduleFixtureAPI {
             "coverage": { "total": 3, "filled": 3, "percentage": 100 } }
         ]
         """
-        return Data("{ \"data\": \(events), \"total\": 8 }".utf8)
+        return Data("{ \"data\": \(events), \"total\": 9 }".utf8)
     }
 
     /// Event detail reads the crew roster from here. Keyed off the requested

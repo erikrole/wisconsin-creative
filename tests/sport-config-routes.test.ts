@@ -46,6 +46,7 @@ beforeEach(() => {
     id: "sc-vb",
     sportCode: "VB",
     active: true,
+    autoAssignPolicy: "STAFF_ONLY",
     shiftStartOffset: 120,
     shiftEndOffset: 120,
     shiftConfigs: [],

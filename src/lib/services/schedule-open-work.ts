@@ -102,7 +102,7 @@ async function loadCurrentCandidate(userId: string, now: Date, futureEnd: Date):
       active: true,
       primaryArea: true,
       areaAssignments: { select: { area: true, isPrimary: true } },
-      sportAssignments: { select: { sportCode: true } },
+      sportAssignments: { select: { sportCode: true, defaultTraveler: true } },
       availabilityBlocks: {
         select: {
           kind: true,

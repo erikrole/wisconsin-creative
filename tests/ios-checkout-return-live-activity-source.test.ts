@@ -17,7 +17,9 @@ describe("iOS checkout return Live Activity source contract", () => {
     expect(project).toContain("com.apple.widgetkit-extension");
     expect(project).toContain("CFBundleURLSchemes:");
     expect(project).toContain("- wisconsin");
-    expect(app).toContain('url.host == "booking"');
+    // `onOpenURL` switches on `url.host` now that widget taps share it.
+    expect(app).toContain("switch url.host {");
+    expect(app).toContain('case "booking":');
     // A booking link routes to booking detail and nothing else. Extend is an
     // action taken deliberately on that page, never opened by a tapped link, so
     // no routing slot may carry a link straight into a mutation sheet.

@@ -156,6 +156,10 @@ export function CalendarView({
     const cells: Array<{ day: number | null }> = [];
     for (let i = 0; i < firstDay; i++) cells.push({ day: null });
     for (let d = 1; d <= daysInMonth; d++) cells.push({ day: d });
+    // Pad out the last week. Without this the month ends mid-row and the grid
+    // finishes on a torn edge: no cell background, no borders, just a gap where
+    // the remaining weekdays should be.
+    while (cells.length % 7 !== 0) cells.push({ day: null });
     return cells;
   }, [calMonth]);
 
@@ -180,19 +184,22 @@ export function CalendarView({
     return map;
   }, [calMonth, entries]);
 
+  // The expanded cell is tracked by day-of-month, which does not survive a
+  // month change: paging away from an expanded 15th left the 15th of the next
+  // month blown open and offering "show less" on a day with nothing to hide.
+  function goToMonth(next: Date) {
+    setExpandedDay(null);
+    setCalMonth(next);
+  }
   function prevMonth() {
-    setCalMonth(
-      new Date(calMonth.getFullYear(), calMonth.getMonth() - 1, 1),
-    );
+    goToMonth(new Date(calMonth.getFullYear(), calMonth.getMonth() - 1, 1));
   }
   function nextMonth() {
-    setCalMonth(
-      new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 1),
-    );
+    goToMonth(new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 1));
   }
   function goCalToday() {
     const d = new Date();
-    setCalMonth(new Date(d.getFullYear(), d.getMonth(), 1));
+    goToMonth(new Date(d.getFullYear(), d.getMonth(), 1));
   }
 
   return (

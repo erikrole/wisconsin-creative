@@ -12,7 +12,7 @@
 | `src/lib/services/availability-conflict-recompute.ts` | 130 |
 | `src/lib/services/availability.ts` | 597 |
 | `src/lib/services/blast-targeting.ts` | 165 |
-| `src/lib/services/blasts.ts` | 329 |
+| `src/lib/services/blasts.ts` | 352 |
 | `src/lib/services/booking-ref.ts` | 26 |
 | `src/lib/services/booking-rules.ts` | 108 |
 | `src/lib/services/bookings-checkin.ts` | 846 |
@@ -20,7 +20,7 @@
 | `src/lib/services/bookings-lifecycle.ts` | 2160 |
 | `src/lib/services/bookings-queries.ts` | 301 |
 | `src/lib/services/bookings.ts` | 4 |
-| `src/lib/services/bulk-schedule-assignment.ts` | 745 |
+| `src/lib/services/bulk-schedule-assignment.ts` | 781 |
 | `src/lib/services/bulk-unit-scans.ts` | 617 |
 | `src/lib/services/calendar-sync-health.ts` | 165 |
 | `src/lib/services/calendar-sync.ts` | 734 |
@@ -47,7 +47,7 @@
 | `src/lib/services/manual-event-time.ts` | 303 |
 | `src/lib/services/non-game-schedule-defaults.ts` | 49 |
 | `src/lib/services/notification-prefs.ts` | 103 |
-| `src/lib/services/notifications.ts` | 1631 |
+| `src/lib/services/notifications.ts` | 1662 |
 | `src/lib/services/onboarding-lifecycle.ts` | 766 |
 | `src/lib/services/pending-pickup-expiry.ts` | 281 |
 | `src/lib/services/reports.ts` | 1932 |
@@ -76,6 +76,7 @@
 | `src/lib/services/signatures.ts` | 1986 |
 | `src/lib/services/software.ts` | 271 |
 | `src/lib/services/sport-configs.ts` | 257 |
+| `src/lib/services/sport-roster-preview.ts` | 91 |
 | `src/lib/services/status.ts` | 444 |
 | `src/lib/services/team-scoreboard.ts` | 613 |
 | `src/lib/services/usage-analytics-report.ts` | 33 |
@@ -112,7 +113,7 @@
 | `src/lib/booking-statuses.ts` | 9 |
 | `src/lib/breadcrumbs.ts` | 146 |
 | `src/lib/bulk-batteries.ts` | 28 |
-| `src/lib/bulk-schedule-assignment-types.ts` | 98 |
+| `src/lib/bulk-schedule-assignment-types.ts` | 192 |
 | `src/lib/bulk-unit-qr.ts` | 111 |
 | `src/lib/bulk-unit-status.ts` | 52 |
 | `src/lib/calendar-event-dates.ts` | 198 |
@@ -134,7 +135,7 @@
 | `src/lib/db.ts` | 18 |
 | `src/lib/editor-snippets.ts` | 28 |
 | `src/lib/email.ts` | 129 |
-| `src/lib/env.ts` | 112 |
+| `src/lib/env.ts` | 122 |
 | `src/lib/equipment-guidance.ts` | 133 |
 | `src/lib/equipment-section-filters.ts` | 87 |
 | `src/lib/equipment-sections.ts` | 200 |
@@ -165,7 +166,7 @@
 | `src/lib/ops-checks.ts` | 176 |
 | `src/lib/passkey-client.ts` | 73 |
 | `src/lib/passkey.ts` | 371 |
-| `src/lib/permissions.ts` | 221 |
+| `src/lib/permissions.ts` | 220 |
 | `src/lib/profile-completion-events.ts` | 6 |
 | `src/lib/profile-completion.ts` | 157 |
 | `src/lib/profile-phone.ts` | 44 |
@@ -184,6 +185,7 @@
 | `src/lib/role-preview.ts` | 226 |
 | `src/lib/sanitize.ts` | 40 |
 | `src/lib/schedule-assignee.ts` | 27 |
+| `src/lib/schedule-assignment-window.ts` | 188 |
 | `src/lib/schedule-auto-release.ts` | 42 |
 | `src/lib/schedule-automation-types.ts` | 55 |
 | `src/lib/schedule-availability-context.ts` | 93 |
@@ -558,6 +560,11 @@
 
 - `/api/profile`
 
+### `/api/push`
+
+- `/api/push/web`
+- `/api/push/web/test`
+
 ### `/api/reports`
 
 - `/api/reports/audit`
@@ -601,6 +608,7 @@
 - `/api/schedule/published/[id]/follow`
 - `/api/schedule/published/[id]`
 - `/api/schedule/published`
+- `/api/schedule/sport-roster`
 
 ### `/api/scoreboard`
 

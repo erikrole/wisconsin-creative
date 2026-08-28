@@ -28,6 +28,19 @@ struct GlobalSearchSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppState.self) private var appState
     @Environment(SessionStore.self) private var session
+    @Environment(ReservationDraftStore.self) private var drafts
+
+    /// Same composer prefill the Items list uses. The search sheet dismisses
+    /// first so the reservation opens over the app rather than behind a modal
+    /// the user then has to close.
+    private func startReservation(for asset: Asset) {
+        dismiss()
+        drafts.start({
+            let composer = CreateBookingViewModel()
+            composer.prefillReservation(for: asset)
+            return composer
+        }())
+    }
     @State private var query = ""
     @State private var results = SearchResults()
     @State private var isSearching = false
@@ -289,6 +302,26 @@ struct GlobalSearchSheet: View {
                             AssetResultRow(asset: asset)
                         }
                         .buttonStyle(.plain)
+                        // Same menu the Items list carries, because this is the
+                        // same row reached a different way — someone who
+                        // learned the gesture there should not lose it here.
+                        .contextMenu {
+                            if asset.computedStatus != .retired {
+                                Button {
+                                    startReservation(for: asset)
+                                } label: {
+                                    Label("Reserve", systemImage: "plus.circle")
+                                }
+                            }
+                            if let tag = asset.assetTag, !tag.isEmpty {
+                                Button {
+                                    UIPasteboard.general.string = tag
+                                    Haptics.tap()
+                                } label: {
+                                    Label("Copy Asset Tag", systemImage: "doc.on.doc")
+                                }
+                            }
+                        }
                     }
                 }
             }

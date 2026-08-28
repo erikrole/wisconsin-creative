@@ -127,7 +127,7 @@ Values: `UPLOADING`, `FINALIZING`, `COMMITTED`, `FAILED`
 
 ## Model `User`
 
-Fields: 118
+Fields: 119
 
 - `id                            String                           @id @default(cuid())`
 - `name                          String`
@@ -183,6 +183,7 @@ Fields: 118
 - `passwordResetTokens           PasswordResetToken[]`
 - `notifications                 Notification[]`
 - `deviceTokens                  DeviceToken[]`
+- `webPushSubscriptions          WebPushSubscription[]`
 - `appInstallations              UserAppInstallation[]`
 - `liveActivityTokens            LiveActivityToken[]`
 - `liveActivityStartTokens       LiveActivityStartToken[]`
@@ -1379,6 +1380,25 @@ Indexes and constraints:
 
 - `@@index([userId, revokedAt])`
 - `@@map("device_tokens")`
+
+## Model `WebPushSubscription`
+
+Fields: 9
+
+- `id         String    @id @default(cuid())`
+- `userId     String    @map("user_id")`
+- `endpoint   String    @unique`
+- `p256dh     String`
+- `auth       String`
+- `lastSeenAt DateTime  @default(now()) @map("last_seen_at")`
+- `createdAt  DateTime  @default(now()) @map("created_at")`
+- `revokedAt  DateTime? @map("revoked_at")`
+- `user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)`
+
+Indexes and constraints:
+
+- `@@index([userId, revokedAt])`
+- `@@map("web_push_subscriptions")`
 
 ## Model `LiveActivityToken`
 

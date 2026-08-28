@@ -18,7 +18,6 @@ import {
   OperationalStatusRail,
   type OperationalStatusRailItem,
 } from "@/components/OperationalStatusRail";
-import EmptyState from "@/components/EmptyState";
 import type { ScheduleHealthSnapshot } from "@/lib/schedule-health-types";
 import type { ScheduleChangeItem, ScheduleChangeKind } from "@/lib/schedule-change-history-types";
 import type { ScheduleSourceSignal } from "@/lib/calendar-source-freshness";
@@ -168,7 +167,7 @@ export function ScheduleReadiness({
   const hiddenAndArchivedCount = (health?.queues.hiddenEvents.count ?? 0) + (health?.queues.archivedEvents.count ?? 0);
   const healthWarnings = health?.partialFailures.length ?? 0;
 
-  const items: ReadinessItem[] = [
+  const staffItems: ReadinessItem[] = [
     {
       label: "Synced calendar",
       value: recentCalendarChanges,
@@ -189,6 +188,9 @@ export function ScheduleReadiness({
       tone: recentAssigneeChanges > 0 ? "good" : "neutral",
       onClick: recentAssigneeChanges > 0 ? () => setPreviewFilter("assignee") : undefined,
     },
+  ];
+
+  const sharedItems: ReadinessItem[] = [
     {
       label: "Crew needed",
       value: openSlots,
@@ -203,8 +205,11 @@ export function ScheduleReadiness({
       value: coveredEvents,
       detail: `${totalVisibleEvents} event${totalVisibleEvents === 1 ? "" : "s"} in current view`,
       icon: CheckCircle2Icon,
-      tone: "good",
+      tone: coveredEvents > 0 ? "good" : "neutral",
     },
+  ];
+
+  const staffQueueItems: ReadinessItem[] = [
     {
       label: "Gear gaps",
       value: gearGaps,
@@ -227,6 +232,9 @@ export function ScheduleReadiness({
       tone: dataQualityIssues > 0 ? "attention" : "good",
       onClick: () => onShowQueue("data-quality"),
     },
+  ];
+
+  const tradeItems: ReadinessItem[] = [
     {
       label: "Trades",
       value: openTrades,
@@ -240,6 +248,17 @@ export function ScheduleReadiness({
       onClick: canReviewClaims && tradeApprovals > 0 ? () => onShowQueue("trade-approval") : onOpenTradeBoard,
     },
   ];
+
+  /**
+   * Calendar-sync activity, gear gaps, and data quality are control-room work:
+   * the health snapshot behind them is staff/admin-only, so for a student every
+   * one of those cards reads zero and still routes into a staff queue. Students
+   * get the surfaces they can act on -- coverage they can claim, their own
+   * calls, and trades -- instead of a grid of other people's queues.
+   */
+  const items: ReadinessItem[] = isStaff
+    ? [...staffItems, ...sharedItems, ...staffQueueItems, ...tradeItems]
+    : [...sharedItems, ...tradeItems];
 
   const contextualItems: ReadinessItem[] = [
     ...(myCallsTodayCount > 0
@@ -297,11 +316,27 @@ export function ScheduleReadiness({
     (item) => (item.tone === "critical" || item.tone === "attention") && isActionableValue(item.value),
   );
   const personalItem = contextualItems.find((item) => item.tone === "personal");
-  const activityItems = items.slice(0, 2);
-  const filtersHideEverything = filteredEntries.length === 0 && entries.length > 0;
+  /**
+   * Activity counters are context, not work: they earn a rail slot only when
+   * something actually changed. Reporting "Synced calendar 0" every visit spent
+   * the rail on nothing and pushed the all-clear state out of reach.
+   */
+  const activityLabels = new Set(staffItems.map((item) => item.label));
+  const activityItems = items.filter(
+    (item) => activityLabels.has(item.label) && isActionableValue(item.value),
+  );
+  /**
+   * The rail is the part of the readiness block that is visible without
+   * expanding it, and it sorts by tone and caps at three. Feeding it only the
+   * activity counters buried every genuine exception -- open crew slots,
+   * conflicts, requests awaiting review -- one collapsed panel below the fold.
+   * Exceptions lead; the reader's own calls and activity fill what is left and
+   * otherwise roll into the overflow count.
+   */
   const railItems: OperationalStatusRailItem[] = [
-    ...activityItems,
+    ...attentionItems,
     ...(personalItem ? [personalItem] : []),
+    ...activityItems,
   ].map((item) => ({
     id: item.label,
     label: item.label,
@@ -325,15 +360,7 @@ export function ScheduleReadiness({
       <OperationalStatusRail
         className="mb-3"
         items={railItems}
-        allClearLabel={attentionItems.length === 0 && healthWarnings === 0 ? "No recent schedule activity" : undefined}
-        notice={filtersHideEverything ? (
-          <EmptyState
-            icon="calendar"
-            title="Filters hide every event"
-            description="Adjust or clear the schedule filters to see events again."
-            inline
-          />
-        ) : undefined}
+        allClearLabel={attentionItems.length === 0 && healthWarnings === 0 ? "Nothing needs attention" : undefined}
         details={(
           <>
               {sourceSignal && (

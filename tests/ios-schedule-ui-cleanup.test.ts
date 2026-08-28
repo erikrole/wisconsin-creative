@@ -55,9 +55,10 @@ describe("iOS Schedule UI cleanup", () => {
     expect(filterSheet).toContain("Button(\"Clear\") { onClear() }");
     expect(filterSheet).toContain("Text(showResultsTitle)");
     expect(filterSheet).toContain(".safeAreaInset(edge: .bottom)");
-    expect(scheduleView).toContain('case true: return "Home"');
-    expect(scheduleView).toContain('case false: return "Away"');
-    expect(scheduleView).toContain('case nil: return event.opponent == nil ? "Non-game" : "Neutral"');
+    expect(scheduleView).toContain('case .home: return "Home"');
+    expect(scheduleView).toContain('case .away: return "Away"');
+    expect(scheduleView).toContain('case .neutral: return "Neutral"');
+    expect(scheduleView).toContain('case .nonGame: return "Non-game"');
   });
 
   it("gives personal work priority without stealing the venue rail", () => {
@@ -69,7 +70,11 @@ describe("iOS Schedule UI cleanup", () => {
     );
 
     expect(scheduleView.match(/contentMargins\(\.bottom, 96, for: \.scrollContent\)/g)?.length).toBeGreaterThanOrEqual(2);
+    // The venue accent stays the shared inner rail, like every other list in
+    // the app. Drawing it as the card's leading edge instead escaped the
+    // rounded corner and put green against the live row's tint.
     expect(eventRow).toContain("StatusRail(color: barColor)");
+    expect(eventRow).not.toContain(".background(alignment: .leading)");
     expect(eventRow).toContain("Text(eventTypeLabel)");
     // Venue shares the meta line with the home/away word now that the time has
     // moved to the gutter, so it is an inline icon + text rather than a Label.
@@ -77,10 +82,14 @@ describe("iOS Schedule UI cleanup", () => {
     expect(eventRow).toContain("Text(venueName)");
     expect(eventRow).toContain("personalWorkLine(myShift)");
     expect(eventRow).toContain("parts.append(shift.gear.gearLabel)");
-    // Row background/stroke are computed properties now, because the live
-    // ("NOW") state also claims the stroke. The my-shift tint is unchanged.
-    expect(eventRow).toContain("Color.statusBackground(.blue).opacity(0.34)");
-    expect(eventRow).toContain("return Color.cardSurface");
+    // One border and one surface for every row. My shift is carried by the blue
+    // personal-work line alone, which names the call time and area rather than
+    // washing the card; live is carried by the red time and "Now".
+    expect(eventRow).toContain(".strokeBorder(Color.hairline, lineWidth: 0.5)");
+    expect(eventRow).toContain(".background(Color.cardSurface)");
+    expect(eventRow).not.toContain("Color.statusBackground(.blue).opacity(0.34)");
+    expect(eventRow).not.toContain("private var rowStrokeWidth");
+    expect(eventRow).not.toContain("private var rowBackground");
     expect(eventRow).toContain(".foregroundStyle(Color.statusText(.blue))");
     expect(eventRow).toContain("if showsCrewCoverage, let cov = event.coverage");
   });
@@ -100,9 +109,9 @@ describe("iOS Schedule UI cleanup", () => {
     // They used to assert it by each spelling out green/orange/grey inline,
     // which is what let the two drift onto different greys; both now read the
     // shared `venueRailColor`, so alignment is structural rather than asserted.
-    expect(scheduleView).toContain("DotInfo(color: venueRailColor(isHome: event.isHome)");
+    expect(scheduleView).toContain("DotInfo(color: venueRailColor(for: event)");
     expect(scheduleView).toMatch(
-      /private var barColor: Color \{\s*venueRailColor\(isHome: event\.isHome\)/,
+      /private var barColor: Color \{\s*venueRailColor\(for: event\)/,
     );
     // Month arrows are deliberately unfilled (no raised circle) and compact so
     // the header reads lighter above a dense grid. Asserting their exact frame

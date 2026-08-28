@@ -2,6 +2,7 @@ import type { BlastSeverity, Prisma, Role } from "@prisma/client";
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
 import { sendPush } from "@/lib/push/apns";
+import { sendWebPushToUsers } from "@/lib/push/web";
 import { deferPush } from "@/lib/services/notifications";
 import { normalizePrefs, shouldDeliverPush } from "@/lib/services/notification-prefs";
 import {
@@ -140,9 +141,10 @@ async function writeInboxCopies(
 }
 
 /**
- * Batched APNs send for a whole blast: ~4 queries and one dispatch regardless of
- * recipient count. Looping `sendPushToUser` would be two queries and one dispatch
- * per person, all held open by `after()`.
+ * Batched native/browser send for a whole blast: the native path remains one
+ * bounded APNs dispatch and the browser path remains one subscription query.
+ * Looping `sendPushToUser` would be two queries and one dispatch per person,
+ * all held open by `after()`.
  *
  * Never throws -- this runs inside `deferPush`/`after()`, where an unhandled
  * rejection is fatal in modern Node.
@@ -201,21 +203,42 @@ export async function sendBlastPush(blastId: string): Promise<void> {
     if (tokens.length > 0) {
       ({ accepted, revoked } = await sendPush(
         tokens.map((t) => t.token),
-        { title: blast.title, body: blast.body, payload: { blastId } },
+        // `GT_BLAST` adds the "Got it" action, which posts the same
+        // idempotent acknowledgement the in-app banner button does.
+        { title: blast.title, body: blast.body, payload: { blastId }, category: "GT_BLAST" },
       ));
     }
+
+    const webDeliveries = await sendWebPushToUsers(eligible, {
+      title: blast.title,
+      body: blast.body,
+      payload: { blastId },
+    });
 
     const acceptedSet = new Set(accepted);
     const withAnyToken = new Set(tokens.map((t) => t.userId));
     const withLiveToken = new Set(
       tokens.filter((t) => acceptedSet.has(t.token)).map((t) => t.userId),
     );
+    const withAnyWebSubscription = new Set(
+      [...webDeliveries.entries()]
+        .filter(([, delivery]) => delivery.devices > 0)
+        .map(([userId]) => userId),
+    );
+    const withLiveWebSubscription = new Set(
+      [...webDeliveries.entries()]
+        .filter(([, delivery]) => delivery.delivered > 0)
+        .map(([userId]) => userId),
+    );
 
-    const sentIds = eligible.filter((id) => withLiveToken.has(id));
+    const sentIds = eligible.filter((id) => withLiveToken.has(id) || withLiveWebSubscription.has(id));
     // Had tokens, but APNs accepted none of them. Permanent revocation and
-    // transient provider failures must not read as delivered.
-    const failedIds = eligible.filter((id) => withAnyToken.has(id) && !withLiveToken.has(id));
-    const noDeviceIds = eligible.filter((id) => !withAnyToken.has(id));
+    // transient provider failures must not read as delivered. The same status
+    // rule applies to browser subscriptions.
+    const failedIds = eligible.filter((id) =>
+      (withAnyToken.has(id) || withAnyWebSubscription.has(id)) && !sentIds.includes(id),
+    );
+    const noDeviceIds = eligible.filter((id) => !withAnyToken.has(id) && !withAnyWebSubscription.has(id));
 
     await Promise.all([
       updatePushStatus(blastId, skipped, "SKIPPED_PREFS", attemptedAt),

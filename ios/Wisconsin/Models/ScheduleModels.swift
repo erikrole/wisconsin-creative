@@ -12,6 +12,15 @@ struct ScheduleEvent: Codable, Identifiable {
     let sportCode: String?
     let opponent: String?
     let isHome: Bool?
+    /// The canonical venue direction, and the reason `isHome` alone is not
+    /// enough: `isHome == nil` means both "neutral site" and "no idea", and a
+    /// row can carry `isHome == true` alongside `site == "NEUTRAL"` when the
+    /// title said "vs" but was explicitly marked neutral. `/api/calendar-events`
+    /// has always returned this; reading it is what stops Schedule showing a
+    /// neutral game as a home game here while web shows it as neutral.
+    /// Optional `var` (see `coverage` below) so it decodes and still defaults
+    /// to nil for the event seeds that construct this type by hand.
+    var site: String?
     let location: EventLocation?
     /// Original calendar venue text. Imported events can carry a useful venue
     /// before that text has been mapped to a Gear Tracker location.
@@ -44,11 +53,89 @@ enum ScheduleEventTimeState {
     case past
 }
 
+// MARK: - Venue
+
+/// Where an event is played. Mirrors `VenueTone` in `src/lib/venue-tone.ts` so
+/// the two clients name the same thing the same way.
+enum ScheduleVenue {
+    case home
+    case away
+    case neutral
+    case nonGame
+}
+
 extension ScheduleEvent {
-    var timeState: ScheduleEventTimeState {
-        let now = Date.now
-        if endsAt <= now { return .past }
-        if startsAt <= now { return .live }
+    /// Mirrors `venueToneFromEvent` in `src/lib/venue-tone.ts`, in the same
+    /// order: no opponent is a non-game; a stored `site` is authoritative; a
+    /// bracketed title prefix comes next; `isHome` is the last resort.
+    ///
+    /// Deriving this from `isHome` alone -- which every Schedule surface used to
+    /// do -- collapses "neutral site" and "unclassified" back together and, for
+    /// a row marked neutral on a home-mapped venue, reports a home game.
+    var venue: ScheduleVenue {
+        // Blank, not just nil: web tests `!event.opponent`, so an empty string
+        // is a non-game there. Every other Swift surface that asks this
+        // question -- `scheduleEventDisplayTitle`, the booking scope label --
+        // already trims before deciding, so an untrimmed check here would have
+        // classified a blank-opponent row as a game the title renders as a
+        // non-game.
+        guard let opponent, !opponent.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return .nonGame
+        }
+        switch site?.uppercased() {
+        case "HOME": return .home
+        case "AWAY": return .away
+        case "NEUTRAL": return .neutral
+        default: break
+        }
+        switch summaryVenuePrefix {
+        case "H": return .home
+        case "A": return .away
+        case "N": return .neutral
+        default: break
+        }
+        switch isHome {
+        case true: return .home
+        case false: return .away
+        case nil: return .neutral
+        }
+    }
+
+    /// A leading `[H]` / `[A]` / `[N]` marker. Stored summaries arrive already
+    /// cleaned of it, same as on web -- this is the shared fallback rung, not a
+    /// path either client reaches from `/api/calendar-events` today.
+    private var summaryVenuePrefix: String? {
+        let trimmed = summary.trimmingCharacters(in: .whitespaces)
+        guard trimmed.count >= 3, trimmed.hasPrefix("[") else { return nil }
+        let marker = trimmed[trimmed.index(trimmed.startIndex, offsetBy: 1)]
+        guard trimmed[trimmed.index(trimmed.startIndex, offsetBy: 2)] == "]" else { return nil }
+        return String(marker).uppercased()
+    }
+}
+
+extension ScheduleEvent {
+    /// All-day events encode calendar dates, not instants, so their raw
+    /// timestamps cannot answer this. An imported ICS all-day event is stored at
+    /// UTC midnight (`calendar-sync.ts` writes `Date.UTC(y, m, d)`), which in
+    /// Central lands `startsAt` at 7 PM the evening before and the exclusive
+    /// `endsAt` at 7 PM on the day itself. Comparing those instants marked a
+    /// one-day all-day event "Now" from the previous night and dimmed it to
+    /// "Ended" while it was still running. Compare calendar days instead,
+    /// against the same UTC-read span the Schedule list groups by.
+    var timeState: ScheduleEventTimeState { timeState(now: .now) }
+
+    /// Injectable `now` so the all-day branch can be tested without depending on
+    /// the wall clock: the whole defect is a several-hour offset, so a test that
+    /// reads the real time only reproduces it during part of the day.
+    func timeState(now: Date) -> ScheduleEventTimeState {
+        guard displayAllDay else {
+            if endsAt <= now { return .past }
+            if startsAt <= now { return .live }
+            return .upcoming
+        }
+        let today = Calendar.current.startOfDay(for: now)
+        if today > displayEndDay { return .past }
+        if today >= displayStartDay { return .live }
         return .upcoming
     }
 }
@@ -142,6 +229,18 @@ extension ScheduleEvent {
     }
 
     var dayCount: Int { spannedDays.count }
+
+    /// Local midnight of the first calendar day the event covers.
+    ///
+    /// Anything *displaying* an event's date needs this rather than `startsAt`:
+    /// the raw instant of an all-day event is a UTC-encoded calendar date, and
+    /// formatting it locally names the previous evening. This is the Swift
+    /// counterpart of `calendarDate(iso, allDay)` in `src/lib/format.ts`.
+    var displayStartDay: Date { spanStartDay }
+
+    /// Local midnight of the last calendar day the event covers, inclusive --
+    /// already stepped back off an all-day event's exclusive end.
+    var displayEndDay: Date { spanEndDay }
 
     /// 1-based position of `day` within the span (for "Day n of m"); nil if the
     /// day isn't part of the span.

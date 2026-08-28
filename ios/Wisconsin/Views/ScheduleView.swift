@@ -184,12 +184,16 @@ enum HomeAwayFilter: String, CaseIterable {
 }
 
 private func scheduleEventMatches(_ event: ScheduleEvent, filter: HomeAwayFilter) -> Bool {
+    // Reads the same resolved venue the rail and the dots do, so filtering to
+    // Neutral cannot hide a row the list is drawing as neutral. The raw
+    // `isHome` tri-state used to answer this, which put every explicitly
+    // neutral game on a home-mapped venue under Home instead.
     switch filter {
     case .all: return true
-    case .home: return event.isHome == true
-    case .away: return event.isHome == false
-    case .neutral: return event.isHome == nil && event.opponent != nil
-    case .nonGame: return event.isHome == nil && event.opponent == nil
+    case .home: return event.venue == .home
+    case .away: return event.venue == .away
+    case .neutral: return event.venue == .neutral
+    case .nonGame: return event.venue == .nonGame
     }
 }
 
@@ -1024,7 +1028,8 @@ private struct InternalScheduleView: View {
                                 sportFilter: sportFilter,
                                 shiftsByEventId: vm.shiftsByEventId,
                                 showsCrewCoverage: showsCrewCoverage,
-                                onSelectEvent: { navigationPath.append(ScheduleEventRoute(id: $0.id)) }
+                                onSelectEvent: { navigationPath.append(ScheduleEventRoute(id: $0.id)) },
+                                onClearFilters: clearFiltersAction
                             )
                         }
                     }
@@ -1252,6 +1257,16 @@ private struct InternalScheduleView: View {
                 }
             }
         }
+    }
+
+    /// The clear action, or nil when there is nothing to clear.
+    ///
+    /// Spelled as a property rather than a ternary at the call site: inferring
+    /// `cond ? clearScheduleFilters : nil` into an optional closure is what tips
+    /// this file past what the Swift type-checker will solve.
+    private var clearFiltersAction: (() -> Void)? {
+        guard activeFilterCount > 0 else { return nil }
+        return clearScheduleFilters
     }
 
     /// Your own future, still-active shift on this event, if you have one. A
@@ -1844,6 +1859,9 @@ struct ScheduleCalendarView: View {
     let shiftsByEventId: [String: MyShift]
     let showsCrewCoverage: Bool
     let onSelectEvent: (ScheduleEvent) -> Void
+    /// Supplied by the Schedule screen, which owns the filter state the day
+    /// list can be emptied by. nil when there is nothing to clear.
+    var onClearFilters: (() -> Void)?
 
     @State private var displayedMonth: Date = {
         let c = Calendar.current
@@ -1938,14 +1956,18 @@ struct ScheduleCalendarView: View {
     }
 
     private var dotLegend: some View {
+        // Grey is the third venue colour, not an absence of one: every neutral
+        // game and every non-game day draws one. Naming only home and away left
+        // the most common dot on a practice-heavy month unexplained.
         HStack(spacing: 12) {
             LegendAssignmentMark(label: "My shift")
             LegendDot(color: Color.statusText(.green), label: "Home")
             LegendDot(color: Color.statusText(.orange), label: "Away")
+            LegendDot(color: Color.statusText(.gray), label: "Other")
         }
         .frame(maxWidth: .infinity, alignment: .center)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Legend: my shift, home, away")
+        .accessibilityLabel("Legend: my shift, home, away, other")
     }
 
     private func changeMonth(by delta: Int) {
@@ -2021,14 +2043,25 @@ struct ScheduleCalendarView: View {
     private var dayEventList: some View {
         let events = selectedDayEvents
         if events.isEmpty {
-            VStack {
+            // "No events" is two different facts. A day that is genuinely clear
+            // and a day whose events the filters removed looked identical here,
+            // and only list mode offered a way out of the second one.
+            let hiddenCount = hiddenEventCount(on: selectedDate)
+            VStack(spacing: 8) {
                 Spacer()
-                Text("No events on \(selectedDate.formatted(.dateTime.month(.abbreviated).day()))")
+                Text(emptyDayMessage(hiddenCount: hiddenCount))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                if hiddenCount > 0, let onClearFilters {
+                    Button("Clear Filters") { onClearFilters() }
+                        .font(.subheadline.weight(.medium))
+                        .buttonStyle(.bordered)
+                }
                 Spacer()
             }
             .frame(maxWidth: .infinity)
+            .padding(.horizontal, 24)
         } else {
             List {
                 ForEach(events) { event in
@@ -2055,6 +2088,20 @@ struct ScheduleCalendarView: View {
 
     // MARK: Helpers
 
+    /// Events on this day that the active filters removed.
+    private func hiddenEventCount(on date: Date) -> Int {
+        let day = calendar.startOfDay(for: date)
+        let all = eventsByDay[day]?.count ?? 0
+        return max(all - filteredEvents(on: date).count, 0)
+    }
+
+    private func emptyDayMessage(hiddenCount: Int) -> String {
+        let dayLabel = selectedDate.formatted(.dateTime.month(.abbreviated).day())
+        guard hiddenCount > 0 else { return "No events on " + dayLabel }
+        let noun = hiddenCount == 1 ? "1 event" : "\(hiddenCount) events"
+        return "Filters hide " + noun + " on " + dayLabel
+    }
+
     private func daysInMonth() -> [Date?] {
         guard let range = calendar.range(of: .day, in: .month, for: displayedMonth),
               let firstDay = calendar.date(from: calendar.dateComponents([.year, .month], from: displayedMonth))
@@ -2071,7 +2118,7 @@ struct ScheduleCalendarView: View {
         let visible = filteredEvents(on: date)
         return visible.prefix(3).map { event in
             let isShift = shiftsByEventId[event.id] != nil
-            return DotInfo(color: venueRailColor(isHome: event.isHome), isShift: isShift)
+            return DotInfo(color: venueRailColor(for: event), isShift: isShift)
         }
     }
 }
@@ -2313,18 +2360,18 @@ struct EventRow: View {
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
 
-                // Crew fill still right-aligns into a scannable trailing column,
-                // one line lower than before. Sharing the meta line instead of
-                // the title line is what buys the title its full width back.
-                if !metaParts.isEmpty || hasCoverageChip {
-                    HStack(spacing: 8) {
-                        if !metaParts.isEmpty {
-                            metaLine
-                        }
-                        Spacer(minLength: 0)
-                        if showsCrewCoverage, let cov = event.coverage, cov.total > 0 {
-                            coverageChip(cov)
-                        }
+                // Coverage rides the meta line, not the title line. Sharing the
+                // title's row costs it about 90pt, which wrapped most titles to
+                // two lines and dropped the screen from seven events to five --
+                // more card, less schedule. Dropping the inner rail already
+                // widened this line enough to stop the venue truncating.
+                HStack(spacing: 8) {
+                    if !metaParts.isEmpty {
+                        metaLine
+                    }
+                    Spacer(minLength: 0)
+                    if showsCrewCoverage, let cov = event.coverage, cov.total > 0 {
+                        coverageChip(cov)
                     }
                 }
 
@@ -2338,14 +2385,15 @@ struct EventRow: View {
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(.tertiary)
                 .accessibilityHidden(true)
+                .padding(.top, 2)
         }
         .padding(.vertical, 11)
         .padding(.horizontal, 12)
-        .background(rowBackground)
+        .background(Color.cardSurface)
         .clipShape(RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous)
-                .strokeBorder(rowStroke, lineWidth: rowStrokeWidth)
+                .strokeBorder(Color.hairline, lineWidth: 0.5)
         )
         // A finished event still belongs on the day, but it should stop
         // competing with the work that has not happened yet.
@@ -2361,21 +2409,16 @@ struct EventRow: View {
     /// same question the same way.
     private var timeState: ScheduleEventTimeState { event.timeState }
 
-    private var rowBackground: Color {
-        if myShift != nil { return Color.statusBackground(.blue).opacity(0.34) }
-        return Color.cardSurface
-    }
-
-    private var rowStroke: Color {
-        if timeState == .live { return Color.brandPrimary.opacity(0.55) }
-        if myShift != nil { return Color.statusText(.blue).opacity(0.32) }
-        return Color.hairline
-    }
-
-    private var rowStrokeWidth: CGFloat {
-        if timeState == .live { return 1.5 }
-        return myShift == nil ? 0.5 : 1
-    }
+    /// Every card is the same surface.
+    ///
+    /// Two washes used to live here. "My shift" took a blue one *and* a blue
+    /// border *and* the blue personal-work line -- three signals for one fact,
+    /// on what is often half the rows. Live briefly took a red one, which put
+    /// a green venue rail against a pink card on every live home game.
+    ///
+    /// Both are now carried by the things that already say more: the blue line
+    /// names the call time and the area, and the time gutter turns red and says
+    /// "Now" in the column the eye is already scanning.
 
     // MARK: Time gutter
 
@@ -2405,12 +2448,9 @@ struct EventRow: View {
                 .foregroundStyle(timeState == .live ? Color.brandPrimary : Color.primary)
 
             if timeState == .live {
-                Text("NOW")
-                    .font(.caption2.weight(.heavy))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 1)
-                    .background(Color.brandPrimary, in: Capsule())
+                Text("Now")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.brandPrimary)
             } else if let secondary = lines.secondary {
                 Text(secondary)
                     .font(.caption.monospacedDigit())
@@ -2433,15 +2473,14 @@ struct EventRow: View {
         return parts
     }
 
-    private var hasCoverageChip: Bool {
-        showsCrewCoverage && (event.coverage?.total ?? 0) > 0
-    }
-
     private var metaLine: some View {
         HStack(spacing: 4) {
             if let eventTypeLabel {
                 Text(eventTypeLabel)
-                metaDot
+                // The separator belongs between two parts, not after one. An
+                // away or neutral game with no mapped venue printed a dangling
+                // "Away ·" with nothing following it.
+                if venueName != nil { metaDot }
             }
             if let venueName {
                 Image(systemName: "mappin.and.ellipse")
@@ -2467,20 +2506,21 @@ struct EventRow: View {
     /// which one it is by naming an opponent or not — so when there is a venue
     /// to print, the word loses to the venue rather than truncating it.
     private var eventTypeLabel: String? {
-        switch event.isHome {
-        case true: return nil
-        case false: return "Away"
-        case nil:
+        switch event.venue {
+        case .home: return nil
+        case .away: return "Away"
+        case .neutral, .nonGame:
             guard venueName == nil else { return nil }
-            return event.opponent == nil ? "Non-game" : "Neutral"
+            return event.venue == .nonGame ? "Non-game" : "Neutral"
         }
     }
 
     private var accessibilityTypeLabel: String {
-        switch event.isHome {
-        case true: return "Home"
-        case false: return "Away"
-        case nil: return event.opponent == nil ? "Non-game" : "Neutral"
+        switch event.venue {
+        case .home: return "Home"
+        case .away: return "Away"
+        case .neutral: return "Neutral"
+        case .nonGame: return "Non-game"
         }
     }
 
@@ -2559,14 +2599,14 @@ struct EventRow: View {
     /// detail screen must report the same staffing the same way.
     @ViewBuilder
     private func coverageChip(_ cov: ShiftCoverage) -> some View {
-        CoverageChip(coverage: cov)
+        CoverageChip(coverage: cov, emphasis: .dense)
             .accessibilityHidden(true) // surfaced via the combined row label
     }
 
     /// The left rail always encodes the venue (home/away/neutral); "my shift"
     /// is signalled by the card's accent stroke instead, so the two don't fight.
     private var barColor: Color {
-        venueRailColor(isHome: event.isHome)
+        venueRailColor(for: event)
     }
 
     private var eventTimeLabel: String {

@@ -99,6 +99,16 @@ export const PATCH = withAuth<{ sportCode: string }>(async (req, { user, params 
     include: { user: { select: { id: true, name: true, role: true, primaryArea: true } } },
   });
 
+  await createAuditEntry({
+    actorId: user.id,
+    actorRole: user.role,
+    entityType: "student_sport_assignment",
+    entityId: assignmentId,
+    action: "roster_travel_set",
+    before: { defaultTraveler: !defaultTraveler },
+    after: { sportCode, userId: updated.userId, defaultTraveler },
+  });
+
   return ok({ data: updated });
 });
 

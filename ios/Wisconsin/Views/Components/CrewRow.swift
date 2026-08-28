@@ -152,10 +152,30 @@ struct CrewAreaHeading: View {
 /// event reported its staffing one way in the list and another once opened.
 /// Both already tinted from `coverageTone`; this is the merge.
 struct CoverageChip: View {
+    /// How much weight the chip is allowed to carry.
+    ///
+    /// A filled capsule is right for the one hero stat on Event detail. On a
+    /// list it repeats on every row, so a screen of fully-staffed events read
+    /// as a column of green pills competing with the rows that actually need
+    /// someone. Dense keeps the number and drops the capsule, and stays grey
+    /// until the crew is short.
+    enum Emphasis {
+        case hero
+        case dense
+    }
+
     let coverage: ShiftCoverage
     /// Dense surfaces (a list row) take the bare count. The detail header has
     /// room for the word, which is what makes "0/5" unambiguous on first read.
     var showsLabel = false
+    var emphasis: Emphasis = .hero
+
+    private var isShort: Bool { coverage.filled < coverage.total }
+
+    private var tint: Color {
+        if emphasis == .dense && !isShort { return .secondary }
+        return Color.statusText(coverageTone(coverage))
+    }
 
     var body: some View {
         HStack(spacing: 3) {
@@ -169,10 +189,14 @@ struct CoverageChip: View {
                 .lineLimit(1)
                 .fixedSize(horizontal: true, vertical: false)
         }
-        .foregroundStyle(Color.statusText(coverageTone(coverage)))
-        .padding(.horizontal, 6)
-        .padding(.vertical, 2)
-        .background(Color.statusBackground(coverageTone(coverage)), in: Capsule())
+        .foregroundStyle(tint)
+        .padding(.horizontal, emphasis == .hero ? 6 : 0)
+        .padding(.vertical, emphasis == .hero ? 2 : 0)
+        .background {
+            if emphasis == .hero {
+                Capsule().fill(Color.statusBackground(coverageTone(coverage)))
+            }
+        }
         .accessibilityLabel("Crew coverage: \(coverage.filled) of \(coverage.total) filled")
     }
 }

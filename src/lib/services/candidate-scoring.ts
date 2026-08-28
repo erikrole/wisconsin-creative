@@ -46,7 +46,7 @@ export type CandidateScoringUser = {
   staffingType: ShiftWorkerType;
   primaryArea?: ShiftArea | null;
   areaAssignments: Array<{ area: ShiftArea; isPrimary: boolean }>;
-  sportAssignments: Array<{ sportCode: string }>;
+  sportAssignments: Array<{ sportCode: string; defaultTraveler: boolean }>;
   availabilityBlocks: AvailabilityBlockLike[];
   assignments: CandidateScoringAssignment[];
 };
@@ -201,9 +201,10 @@ export function scoreCandidatesForShift({ shift, candidates, now }: ScoreArgs): 
         addWarning("overlapping_assignment", "Already assigned during this call window", -60);
       }
 
-      const availability = candidateWorkerType === "ST"
-        ? evaluateAvailabilityPreferences(candidate.availabilityBlocks, targetWindow)
-        : null;
+      // Approved time off blocks staff exactly as it blocks students. Gating
+      // this on the scheduling class let an approved staff absence through as a
+      // mere warning, and the apply transaction would then reject the write.
+      const availability = evaluateAvailabilityPreferences(candidate.availabilityBlocks, targetWindow);
       if (availability?.blocking) {
         addWarning("approved_time_off", availability.blocking.note, -70);
       } else if (availability?.advisory) {
@@ -353,7 +354,7 @@ export async function loadCandidateScoringUsersForRange(args: {
       staffingType: true,
       primaryArea: true,
       areaAssignments: { select: { area: true, isPrimary: true } },
-      sportAssignments: { select: { sportCode: true } },
+      sportAssignments: { select: { sportCode: true, defaultTraveler: true } },
       availabilityBlocks: {
         select: {
           kind: true,

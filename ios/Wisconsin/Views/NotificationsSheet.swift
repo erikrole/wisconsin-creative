@@ -211,6 +211,19 @@ struct NotificationsSheet: View {
                                 .accessibilityLabel("Mark as read")
                             }
                         }
+                        // Long press agrees with the swipe. A row that offers
+                        // an action one way and not the other trains people to
+                        // distrust both.
+                        .contextMenu {
+                            if notif.isUnread {
+                                Button {
+                                    swipeMarkHaptic.toggle()
+                                    Task { await vm.markRead(id: notif.id) }
+                                } label: {
+                                    Label("Mark Read", systemImage: "checkmark")
+                                }
+                            }
+                        }
                     }
                 }
             }

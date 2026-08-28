@@ -50,6 +50,7 @@
 | `tailwindcss` | `^4.2.1` |
 | `tw-animate-css` | `^1.4.0` |
 | `vaul` | `^1.1.2` |
+| `web-push` | `^3.6.7` |
 | `workflow` | `4.5.0` |
 | `zod` | `^3.24.2` |
 
@@ -64,6 +65,7 @@
 | `@types/qrcode` | `^1.5.6` |
 | `@types/react` | `^19.2.17` |
 | `@types/react-dom` | `^19.0.4` |
+| `@types/web-push` | `^3.6.4` |
 | `@vitest/coverage-v8` | `^3.2.6` |
 | `eslint` | `^9.39.4` |
 | `eslint-config-next` | `^15.5.16` |

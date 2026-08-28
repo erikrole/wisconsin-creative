@@ -295,3 +295,250 @@ struct ScheduleVenueNameTests {
         #expect(subject.bookingEventPickerVenue == scheduleEventVenueName(subject))
     }
 }
+
+/// Locks in `ScheduleEvent.venue` against `venueToneFromEvent` in
+/// `src/lib/venue-tone.ts`.
+///
+/// The two clients used to answer this differently: web read the stored `site`,
+/// iOS read the `isHome` tri-state. `isHome == nil` means both "neutral site"
+/// and "unclassified", which is the whole reason `site` exists — and a row can
+/// carry `isHome == true` alongside `site == "NEUTRAL"`, which is where the two
+/// surfaces visibly disagreed.
+struct ScheduleVenueTests {
+
+    private func event(
+        summary: String = "WSOC vs BYU",
+        opponent: String? = "BYU",
+        isHome: Bool?,
+        site: String? = nil
+    ) -> ScheduleEvent {
+        var subject = ScheduleEvent(
+            id: "e", summary: summary, startsAt: .now, endsAt: .now, allDay: false,
+            status: "CONFIRMED", sportCode: "WSOC", opponent: opponent, isHome: isHome,
+            location: nil
+        )
+        subject.site = site
+        return subject
+    }
+
+    // MARK: A stored site wins
+
+    /// The regression this exists for. `classifySourceEvent` writes exactly this
+    /// shape for a title marked "(Neutral)": the summary said "vs", so `isHome`
+    /// stayed true, while `site` recorded the neutral finding.
+    @Test func storedNeutralSiteBeatsAHomeIsHomeFlag() {
+        #expect(event(isHome: true, site: "NEUTRAL").venue == .neutral)
+    }
+
+    @Test func storedSiteBeatsAConflictingIsHomeFlag() {
+        #expect(event(isHome: false, site: "HOME").venue == .home)
+        #expect(event(isHome: true, site: "AWAY").venue == .away)
+    }
+
+    /// `isHome == nil` alone cannot say which of these it is; `site` can.
+    @Test func storedSiteResolvesTheNilIsHomeAmbiguity() {
+        #expect(event(isHome: nil, site: "HOME").venue == .home)
+        #expect(event(isHome: nil, site: "AWAY").venue == .away)
+        #expect(event(isHome: nil, site: "NEUTRAL").venue == .neutral)
+    }
+
+    @Test func readsSiteCaseInsensitively() {
+        #expect(event(isHome: nil, site: "home").venue == .home)
+    }
+
+    // MARK: No opponent is a non-game, whatever the site says
+
+    @Test func noOpponentIsAlwaysNonGame() {
+        #expect(event(summary: "Media Day", opponent: nil, isHome: nil).venue == .nonGame)
+        #expect(event(summary: "Media Day", opponent: nil, isHome: true, site: "HOME").venue == .nonGame)
+    }
+
+    /// Web tests `!event.opponent`, so an empty string is a non-game there, and
+    /// `scheduleEventDisplayTitle` already renders a blank-opponent row as one.
+    /// A bare `opponent != nil` check classified it as a game.
+    @Test func blankOpponentIsANonGame() {
+        #expect(event(summary: "Media Day", opponent: "", isHome: true, site: "HOME").venue == .nonGame)
+        #expect(event(summary: "Media Day", opponent: "   ", isHome: false).venue == .nonGame)
+    }
+
+    // MARK: Fallbacks, in the web's order
+
+    @Test func fallsBackToABracketedTitlePrefix() {
+        #expect(event(summary: "[A] WSOC vs BYU", isHome: nil).venue == .away)
+        #expect(event(summary: "[H] WSOC at BYU", isHome: nil).venue == .home)
+        #expect(event(summary: "[N] WSOC vs BYU", isHome: nil).venue == .neutral)
+    }
+
+    @Test func fallsBackToIsHomeLast() {
+        #expect(event(isHome: true).venue == .home)
+        #expect(event(isHome: false).venue == .away)
+        #expect(event(isHome: nil).venue == .neutral)
+    }
+
+    @Test func ignoresABracketThatIsNotAVenueMarker() {
+        #expect(event(summary: "[W] WSOC vs BYU", isHome: false).venue == .away)
+        #expect(event(summary: "WSOC vs BYU", isHome: false).venue == .away)
+    }
+
+    // MARK: Colour vocabulary matches the web table
+
+    @Test func neutralAndNonGameShareGrey() {
+        #expect(venueTone(.home) == .green)
+        #expect(venueTone(.away) == .orange)
+        #expect(venueTone(.neutral) == .gray)
+        #expect(venueTone(.nonGame) == .gray)
+    }
+}
+
+
+/// Locks in that a *displayed* all-day date is the encoded calendar date, not
+/// the raw instant.
+///
+/// `calendar-sync.ts` stores an imported all-day event as `Date.UTC(y, m, d)`.
+/// Read locally in Central that instant is the previous evening, so every
+/// surface formatting `startsAt` directly named the day before the one the
+/// Schedule list -- which groups by `spannedDays` -- had just shown for the
+/// same row, and the shared `timeState` flipped to "Ended" at 7 PM on the day
+/// the event was actually running.
+///
+/// Serialized because each test overrides the process-wide default time zone.
+@Suite(.serialized)
+struct ScheduleAllDayDisplayTests {
+
+    private func utcMidnight(_ year: Int, _ month: Int, _ day: Int) -> Date {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "UTC")!
+        return cal.date(from: DateComponents(year: year, month: month, day: day))!
+    }
+
+    private func localMidnight(_ year: Int, _ month: Int, _ day: Int) -> Date {
+        Calendar.current.date(from: DateComponents(year: year, month: month, day: day))!
+    }
+
+    /// A local wall-clock instant in the active default zone.
+    private func local(_ year: Int, _ month: Int, _ day: Int, _ hour: Int) -> Date {
+        Calendar.current.date(from: DateComponents(
+            year: year, month: month, day: day, hour: hour
+        ))!
+    }
+
+    private func allDayEvent(start: Date, end: Date) -> ScheduleEvent {
+        ScheduleEvent(
+            id: "e", summary: "Big Ten Championships", startsAt: start, endsAt: end,
+            allDay: true, status: "CONFIRMED", sportCode: "WSWIM", opponent: nil,
+            isHome: nil, location: nil
+        )
+    }
+
+    private func timedEvent(start: Date, end: Date) -> ScheduleEvent {
+        ScheduleEvent(
+            id: "e", summary: "WSOC vs BYU", startsAt: start, endsAt: end,
+            allDay: false, status: "CONFIRMED", sportCode: "WSOC", opponent: "BYU",
+            isHome: true, location: nil
+        )
+    }
+
+    private func withTimeZone(_ identifier: String, _ body: () -> Void) {
+        let previous = NSTimeZone.default
+        NSTimeZone.default = TimeZone(identifier: identifier)!
+        defer { NSTimeZone.default = previous }
+        body()
+    }
+
+    // MARK: Display days
+
+    /// The regression: `2026-06-17T00:00:00Z` is Jun 16, 7 PM in Central.
+    @Test func displayDaysReadTheEncodedDateNotTheLocalInstant() {
+        withTimeZone("America/Chicago") {
+            let event = allDayEvent(
+                start: utcMidnight(2026, 6, 17),
+                end: utcMidnight(2026, 6, 18)
+            )
+            #expect(event.displayStartDay == localMidnight(2026, 6, 17))
+            #expect(event.displayEndDay == localMidnight(2026, 6, 17))
+        }
+    }
+
+    /// The exclusive end is already stepped back, so a three-day event ends on
+    /// its last covered day rather than the day after it.
+    @Test func displayEndDayIsInclusive() {
+        withTimeZone("America/Chicago") {
+            let event = allDayEvent(
+                start: utcMidnight(2026, 6, 17),
+                end: utcMidnight(2026, 6, 20)
+            )
+            #expect(event.displayStartDay == localMidnight(2026, 6, 17))
+            #expect(event.displayEndDay == localMidnight(2026, 6, 19))
+            #expect(event.spannedDays == [
+                localMidnight(2026, 6, 17),
+                localMidnight(2026, 6, 18),
+                localMidnight(2026, 6, 19),
+            ])
+        }
+    }
+
+    /// A timed event's display days are just its own local days -- no shift.
+    @Test func timedEventDisplayDaysAreLocal() {
+        withTimeZone("America/Chicago") {
+            let event = timedEvent(
+                start: local(2026, 6, 17, 19),
+                end: local(2026, 6, 17, 22)
+            )
+            #expect(event.displayStartDay == localMidnight(2026, 6, 17))
+            #expect(event.displayEndDay == localMidnight(2026, 6, 17))
+        }
+    }
+
+    // MARK: Time state
+
+    /// 8 PM on the event day is squarely inside a one-day all-day event. The raw
+    /// `endsAt` (Jun 18 UTC midnight = Jun 17, 7 PM Central) had already passed,
+    /// so the row read "Ended" and dimmed an hour earlier.
+    @Test func allDayEventIsLiveLateOnItsOwnDay() {
+        withTimeZone("America/Chicago") {
+            let event = allDayEvent(
+                start: utcMidnight(2026, 6, 17),
+                end: utcMidnight(2026, 6, 18)
+            )
+            #expect(event.timeState(now: local(2026, 6, 17, 20)) == .live)
+            #expect(event.timeState(now: local(2026, 6, 17, 1)) == .live)
+        }
+    }
+
+    /// The mirror image: the raw `startsAt` (Jun 17 UTC midnight = Jun 16, 7 PM
+    /// Central) made tomorrow's all-day event read "Now" the night before.
+    @Test func allDayEventIsUpcomingTheEveningBefore() {
+        withTimeZone("America/Chicago") {
+            let event = allDayEvent(
+                start: utcMidnight(2026, 6, 17),
+                end: utcMidnight(2026, 6, 18)
+            )
+            #expect(event.timeState(now: local(2026, 6, 16, 20)) == .upcoming)
+        }
+    }
+
+    @Test func allDayEventIsPastOnceItsLastDayIsOver() {
+        withTimeZone("America/Chicago") {
+            let event = allDayEvent(
+                start: utcMidnight(2026, 6, 17),
+                end: utcMidnight(2026, 6, 19)
+            )
+            #expect(event.timeState(now: local(2026, 6, 18, 23)) == .live)
+            #expect(event.timeState(now: local(2026, 6, 19, 0)) == .past)
+        }
+    }
+
+    /// Timed events keep instant-level precision -- the day comparison is only
+    /// for events that encode a date.
+    @Test func timedEventStillUsesInstants() {
+        withTimeZone("America/Chicago") {
+            let event = timedEvent(
+                start: local(2026, 6, 17, 19),
+                end: local(2026, 6, 17, 22)
+            )
+            #expect(event.timeState(now: local(2026, 6, 17, 18)) == .upcoming)
+            #expect(event.timeState(now: local(2026, 6, 17, 20)) == .live)
+            #expect(event.timeState(now: local(2026, 6, 17, 23)) == .past)
+        }
+    }
+}

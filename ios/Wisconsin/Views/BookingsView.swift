@@ -6,6 +6,121 @@ enum BookingScope: String {
     case all
 }
 
+/// Status scope for the native Bookings list (GAP-34). Web splits this across
+/// an active/past segmented control plus a status dropdown
+/// (`src/app/(app)/bookings/page.tsx`); a phone gets one flat list of the
+/// scopes people actually triage by, with the two date-derived ones the web
+/// desk reaches through its own filters.
+enum BookingStatusFilter: String, CaseIterable, Identifiable {
+    case active
+    case overdue
+    case dueToday
+    case reserved
+    case pendingPickup
+    case checkedOut
+    case completed
+    case cancelled
+
+    var id: String { rawValue }
+
+    /// Product language, not enum language: the row badges already say
+    /// "Reserved" and "Checked Out" rather than BOOKED and OPEN.
+    var label: String {
+        switch self {
+        case .active: "Active"
+        case .overdue: "Overdue"
+        case .dueToday: "Due Today"
+        case .reserved: "Reserved"
+        case .pendingPickup: "Pending Pickup"
+        case .checkedOut: "Checked Out"
+        case .completed: "Completed"
+        case .cancelled: "Cancelled"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .active: "tray.full"
+        case .overdue: "exclamationmark.triangle"
+        case .dueToday: "clock"
+        case .reserved: "calendar"
+        case .pendingPickup: "shippingbox"
+        case .checkedOut: "arrow.up.forward.square"
+        case .completed: "checkmark.circle"
+        case .cancelled: "xmark.circle"
+        }
+    }
+
+    /// Matches the tone the same state carries on a row rail, so the filter
+    /// menu and the list agree on what red and purple mean.
+    var tone: StatusTone {
+        // Explicit `return` per the StatusTone convention `BookingRow.accentTone`
+        // already follows — the implicit form reads as a raw SwiftUI color to
+        // the drift check (R7).
+        switch self {
+        case .active: return .blue
+        case .overdue: return .red
+        case .dueToday, .pendingPickup: return .orange
+        case .reserved: return .purple
+        case .checkedOut: return .blue
+        case .completed, .cancelled: return .gray
+        }
+    }
+
+    /// `/api/bookings` request shape. The route treats `active`, `past`, and
+    /// `status` as one scope selector and applies `filter` on top, so overdue
+    /// and due-today stay date filters over the operational statuses rather
+    /// than statuses of their own.
+    var query: (activeOnly: Bool, pastOnly: Bool, status: BookingStatus?, filter: String?) {
+        switch self {
+        case .active: (activeOnly: true, pastOnly: false, status: nil, filter: nil)
+        case .overdue: (activeOnly: true, pastOnly: false, status: nil, filter: "overdue")
+        case .dueToday: (activeOnly: true, pastOnly: false, status: nil, filter: "due-today")
+        case .reserved: (activeOnly: false, pastOnly: false, status: .booked, filter: nil)
+        case .pendingPickup: (activeOnly: false, pastOnly: false, status: .pendingPickup, filter: nil)
+        case .checkedOut: (activeOnly: false, pastOnly: false, status: .open, filter: nil)
+        case .completed: (activeOnly: false, pastOnly: false, status: .completed, filter: nil)
+        case .cancelled: (activeOnly: false, pastOnly: false, status: .cancelled, filter: nil)
+        }
+    }
+}
+
+/// Ordering for the native Bookings list (GAP-34). Every key here exists in
+/// the server's `BOOKING_SORT_MAP`; an unmapped key would fall through to
+/// `startsAt desc` silently, which is the failure
+/// `tests/ios-booking-list-sort-contract.test.ts` exists to catch.
+enum BookingSortOption: String, CaseIterable, Identifiable {
+    case operational
+    case dueLatest
+    case titleAZ
+    case titleZA
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .operational: "Next Handoff"
+        case .dueLatest: "Due Latest"
+        case .titleAZ: "Title A–Z"
+        case .titleZA: "Title Z–A"
+        }
+    }
+
+    var serverKey: String {
+        switch self {
+        case .operational: "endsAt"
+        case .dueLatest: "endsAt_desc"
+        case .titleAZ: "title"
+        case .titleZA: "title_desc"
+        }
+    }
+
+    /// Only the default refines the server order locally, mixing reservation
+    /// pickup times into a due-date stream. Every explicit choice is already
+    /// ordered across the whole result set by the server.
+    var sortsLocally: Bool { self == .operational }
+}
+
 private enum BookingListAction: Identifiable {
     case edit(Booking)
     case transfer(Booking)
@@ -36,6 +151,11 @@ final class BookingsViewModel {
     /// Native list scope. Students, staff, and admins default to All;
     /// collaborators stay on their own gear unless they are in an explicit preview.
     var scope: BookingScope = .all
+    /// Status scope and ordering (GAP-34). Both persist across launches from
+    /// the view's `@AppStorage` mirrors — a filter you have to re-pick every
+    /// time is a filter you stop using.
+    var statusFilter: BookingStatusFilter = .active
+    var sortOption: BookingSortOption = .operational
     var currentUserId: String?
     var currentUserRole = ""
 
@@ -55,11 +175,23 @@ final class BookingsViewModel {
 
     private(set) var sortedBookings: [Booking] = []
 
-    func applyUserContext(id: String?, role: String?) {
+    /// Restores the persisted list preferences on first appearance. Scope is
+    /// the one value the role can override: a private collaborator is pinned
+    /// to their own gear regardless of what they last chose on another
+    /// account or before a role change.
+    func applyUserContext(
+        id: String?,
+        role: String?,
+        restoredScope: BookingScope = .all,
+        restoredStatusFilter: BookingStatusFilter = .active,
+        restoredSortOption: BookingSortOption = .operational
+    ) {
         currentUserId = id
         currentUserRole = role ?? ""
         guard !didApplyUserDefault else { return }
-        scope = currentUserRole == "COLLABORATOR" ? .mine : .all
+        scope = currentUserRole == "COLLABORATOR" ? .mine : restoredScope
+        statusFilter = restoredStatusFilter
+        sortOption = restoredSortOption
         didApplyUserDefault = true
     }
 
@@ -107,10 +239,15 @@ final class BookingsViewModel {
             } else {
                 bookings += result.data
             }
+            applyServerOrderIfNeeded()
             offset += result.data.count
             hasMore = offset < result.total
             pageError = nil
-            if reset && searchText.isEmpty && scope == .all {
+            // Only the unfiltered default list seeds the offline cache. A
+            // "Cancelled" or "Mine" page is a slice, and caching it would let
+            // the next cold launch open on a subset that looks like the whole
+            // list.
+            if reset && searchText.isEmpty && scope == .all && statusFilter == .active {
                 GearStore.shared.seedBookings(result.data)
             }
             await CheckoutReturnLiveActivityManager.shared.reconcileCurrentUserCheckouts(
@@ -129,18 +266,33 @@ final class BookingsViewModel {
         }
     }
 
-    private func fetchBookings(search: String?, requesterId: String?, filter: String? = nil) async throws -> PaginatedResponse<Booking> {
+    private func fetchBookings(search: String?, requesterId: String?) async throws -> PaginatedResponse<Booking> {
         guard hasMore else {
             return PaginatedResponse(data: [], total: offset, limit: limit, offset: offset)
         }
+        let query = statusFilter.query
         return try await APIClient.shared.bookings(
-            activeOnly: true,
+            activeOnly: query.activeOnly,
+            pastOnly: query.pastOnly,
+            status: query.status,
             search: search,
             requesterId: requesterId,
-            filter: filter,
+            filter: query.filter,
+            sort: sortOption.serverKey,
             limit: limit,
             offset: offset
         )
+    }
+
+    /// `bookings.didSet` re-sorts every loaded page by its next operational
+    /// handoff, which is the right default for a merged pickup/due queue. An
+    /// explicit sort choice is already applied by the server across the whole
+    /// result set, so re-sorting the loaded prefix locally would fight it —
+    /// and the rows it would bury are exactly the ones the user sorted to
+    /// find.
+    func applyServerOrderIfNeeded() {
+        guard !sortOption.sortsLocally else { return }
+        sortedBookings = bookings
     }
 
     /// One merged list ordered by the next operational handoff: scheduled
@@ -181,6 +333,8 @@ final class BookingsViewModel {
         loadRequests.invalidate()
         searchText = ""
         scope = currentUserRole == "COLLABORATOR" ? .mine : .all
+        statusFilter = .active
+        sortOption = .operational
         bookings = []
         offset = 0
         hasMore = true
@@ -196,9 +350,16 @@ struct BookingsView: View {
     @State private var presentedAction: BookingListAction?
     @State private var cancelTarget: Booking?
     @State private var navigationPath = NavigationPath()
+    // Persisted list preferences (GAP-34). The view model stays the source of
+    // truth for the session; these mirror it so the next launch opens on the
+    // scope the user actually works in.
+    @AppStorage("bookingsScope") private var storedScope: BookingScope = .all
+    @AppStorage("bookingsStatusFilter") private var storedStatusFilter: BookingStatusFilter = .active
+    @AppStorage("bookingsSortOption") private var storedSortOption: BookingSortOption = .operational
     @Environment(SessionStore.self) private var session
     @Environment(AppState.self) private var appState
     @Environment(ReservationDraftStore.self) private var drafts
+    @Environment(NetworkMonitor.self) private var network
 
     private var canCreateForOthers: Bool {
         let role = session.currentUser?.role ?? ""
@@ -221,10 +382,12 @@ struct BookingsView: View {
             && vm.error == nil
             && vm.searchText.isEmpty
             && vm.scope == .all
+            && vm.statusFilter == .active
     }
 
     private var emptyTitle: String {
         guard vm.searchText.isEmpty else { return "No matches" }
+        if vm.statusFilter != .active { return "No \(vm.statusFilter.label.lowercased()) bookings" }
         switch vm.scope {
         case .mine: return "You're all clear"
         case .all: return "No active bookings"
@@ -233,16 +396,22 @@ struct BookingsView: View {
 
     private var emptyIcon: String {
         guard vm.searchText.isEmpty else { return "magnifyingglass" }
+        if vm.statusFilter != .active { return vm.statusFilter.systemImage }
         return vm.scope == .mine ? "checkmark.seal.fill" : "calendar.badge.plus"
     }
 
     private var emptyTone: StatusTone {
         guard vm.searchText.isEmpty else { return .gray }
+        if vm.statusFilter != .active { return vm.statusFilter.tone }
         return vm.scope == .mine ? .green : .purple
     }
 
     private var emptyDescription: String {
         if !vm.searchText.isEmpty { return "No bookings match \"\(vm.searchText)\"." }
+        if vm.statusFilter != .active {
+            let scopeSuffix = vm.scope == .mine ? " of yours" : ""
+            return "Nothing\(scopeSuffix) is \(vm.statusFilter.label.lowercased()) right now."
+        }
         if vm.scope == .mine {
             return "You don't have any active checkouts or reservations."
         }
@@ -260,6 +429,16 @@ struct BookingsView: View {
 
     private var searchPrompt: String {
         "Search bookings..."
+    }
+
+    /// One merged section for both kinds, named for the scope on screen.
+    /// Checkouts and reservations never split into separate sections.
+    private var sectionTitle: String {
+        vm.statusFilter == .active ? "Active" : vm.statusFilter.label
+    }
+
+    private var isDefaultFiltering: Bool {
+        vm.statusFilter == .active && vm.sortOption == .operational
     }
 
     private var showsSearch: Bool {
@@ -314,7 +493,7 @@ struct BookingsView: View {
                         }
                     } else {
                         List {
-                            BookingListSection(title: "Active", count: vm.sortedBookings.count) {
+                            BookingListSection(title: sectionTitle, count: vm.sortedBookings.count) {
                                 ForEach(vm.sortedBookings) { booking in
                                     bookingRowLink(booking)
                                 }
@@ -353,11 +532,53 @@ struct BookingsView: View {
             .navigationBarTitleDisplayMode(.inline)
             .modifier(BookingsSearchModifier(isVisible: showsSearch, text: $vm.searchText, prompt: searchPrompt))
             .onChange(of: vm.searchText) { vm.onSearchChange() }
-            .onChange(of: vm.scope) { _, _ in
+            .onChange(of: vm.scope) { _, scope in
+                storedScope = scope
                 Haptics.selection()
                 Task { await vm.load(reset: true, clearExistingRows: true) }
             }
+            .onChange(of: vm.statusFilter) { _, filter in
+                storedStatusFilter = filter
+                Haptics.selection()
+                Task { await vm.load(reset: true, clearExistingRows: true) }
+            }
+            .onChange(of: vm.sortOption) { _, option in
+                storedSortOption = option
+                Haptics.selection()
+                // Re-order what is already on screen before the refetch lands,
+                // so the list responds to the tap instead of the round trip.
+                vm.applyServerOrderIfNeeded()
+                Task { await vm.load(reset: true, clearExistingRows: true) }
+            }
             .toolbar {
+                // Leading edge: the root of a NavigationStack has no back
+                // button, so the filter sits opposite the create action
+                // instead of crowding three icons against the inline title.
+                ToolbarItem(placement: .topBarLeading) {
+                    Menu {
+                        Picker("Show", selection: $vm.statusFilter) {
+                            ForEach(BookingStatusFilter.allCases) { filter in
+                                Label(filter.label, systemImage: filter.systemImage)
+                                    .tag(filter)
+                            }
+                        }
+                        .pickerStyle(.inline)
+
+                        Picker("Sort", selection: $vm.sortOption) {
+                            ForEach(BookingSortOption.allCases) { option in
+                                Text(option.label).tag(option)
+                            }
+                        }
+                        .pickerStyle(.inline)
+                    } label: {
+                        Image(systemName: isDefaultFiltering
+                            ? "line.3.horizontal.decrease.circle"
+                            : "line.3.horizontal.decrease.circle.fill")
+                    }
+                    .tint(isDefaultFiltering ? Color.primary : Color.statusText(vm.statusFilter.tone))
+                    .accessibilityLabel("Filter and sort bookings")
+                    .accessibilityValue("\(vm.statusFilter.label), sorted by \(vm.sortOption.label)")
+                }
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     if !isCollaborator {
                         Button {
@@ -420,9 +641,22 @@ struct BookingsView: View {
             } message: {
                 Text("This removes the reservation and releases its gear.")
             }
+            // See HomeView: refetch when signal returns, only for the tab the
+            // user is actually looking at. Existing rows are kept so a
+            // reconnection never blanks a list that was readable a moment ago.
+            .onChange(of: network.reconnectionToken) { _, _ in
+                guard appState.selectedTab == 1 else { return }
+                Task { await vm.load(reset: true) }
+            }
             .refreshable { await vm.load(reset: true) }
             .task {
-                vm.applyUserContext(id: session.currentUser?.id, role: session.currentUser?.role)
+                vm.applyUserContext(
+                    id: session.currentUser?.id,
+                    role: session.currentUser?.role,
+                    restoredScope: storedScope,
+                    restoredStatusFilter: storedStatusFilter,
+                    restoredSortOption: storedSortOption
+                )
                 consumePendingScope()
                 consumePendingAppIntent()
                 await vm.load(reset: true)
@@ -531,6 +765,17 @@ struct BookingsView: View {
             .buttonStyle(.bordered)
             .buttonBorderShape(.capsule)
             .controlSize(.regular)
+        } else if vm.statusFilter != .active {
+            Button {
+                vm.statusFilter = .active
+                Task { await vm.load(reset: true, clearExistingRows: true) }
+            } label: {
+                Label("Show Active Bookings", systemImage: "tray.full")
+            }
+            .buttonStyle(.bordered)
+            .buttonBorderShape(.capsule)
+            .controlSize(.regular)
+            .tint(Color.statusText(.blue))
         } else if vm.scope != .all {
             Button {
                 vm.scope = .all
@@ -649,6 +894,49 @@ private struct BookingRowLink: View {
         ZStack {
             NavigationLink(value: booking) { EmptyView() }.opacity(0)
             BookingRow(booking: booking)
+        }
+        // The same actions the context menu carries, one swipe away. Long-press
+        // is discoverable only once you know it is there; a swipe is the list
+        // gesture people already try. `allowsFullSwipe` stays off on both edges
+        // so no booking is cancelled or extended by an over-travelled thumb.
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            if canCancel {
+                Button(role: .destructive) {
+                    Haptics.warning()
+                    onCancel()
+                } label: {
+                    Label("Cancel", systemImage: "xmark.circle")
+                }
+            }
+            if canExtend {
+                Button {
+                    Haptics.selection()
+                    onExtend()
+                } label: {
+                    Label("Extend", systemImage: "clock.arrow.circlepath")
+                }
+                .tint(Color.statusText(.blue))
+            }
+        }
+        .swipeActions(edge: .leading, allowsFullSwipe: false) {
+            if canEdit {
+                Button {
+                    Haptics.selection()
+                    onEdit()
+                } label: {
+                    Label("Edit", systemImage: "pencil")
+                }
+                .tint(Color.statusText(.purple))
+            }
+            if canTransfer {
+                Button {
+                    Haptics.selection()
+                    onTransfer()
+                } label: {
+                    Label("Transfer", systemImage: "person.2")
+                }
+                .tint(Color.statusText(.orange))
+            }
         }
         .contextMenu {
             if canEdit {

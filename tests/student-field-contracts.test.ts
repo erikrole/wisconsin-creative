@@ -113,7 +113,8 @@ describe("student field mobile contracts", () => {
     expect(homeView).toContain(".buttonStyle(.plain)");
     expect(homeView).not.toContain("Circle().strokeBorder(Color(.separator)");
     expect(bookingsView).toContain('scope = currentUserRole == "COLLABORATOR" ? .mine : .all');
-    expect(bookingsView).toContain('BookingListSection(title: "Active"');
+    expect(bookingsView).toContain("BookingListSection(title: sectionTitle");
+    expect(bookingsView).toContain('vm.statusFilter == .active ? "Active" : vm.statusFilter.label');
     expect(bookingsView).not.toContain('BookingListSection(title: "Checkouts"');
     expect(bookingsView).not.toContain('BookingListSection(title: "Reservations"');
     expect(bookingsView).toContain('"Search bookings..."');

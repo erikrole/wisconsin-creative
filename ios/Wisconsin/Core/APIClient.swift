@@ -366,11 +366,17 @@ final class APIClient {
     /// request backs the merged Bookings list. Merging two independently paged
     /// calls client-side would let a later page insert rows above ones already
     /// on screen.
-    func bookings(activeOnly: Bool = true, search: String? = nil, requesterId: String? = nil, filter: String? = nil, sort: String? = "endsAt", limit: Int = 30, offset: Int = 0) async throws -> PaginatedResponse<Booking> {
+    /// The merged checkout + reservation list. `activeOnly` keeps the default
+    /// operational set; `pastOnly` and `status` open the closed and
+    /// single-status scopes the native list exposes for GAP-34 parity. The
+    /// route reads `active`, `past`, and `status` as mutually exclusive, so
+    /// pass exactly one scope selector.
+    func bookings(activeOnly: Bool = true, pastOnly: Bool = false, status: BookingStatus? = nil, search: String? = nil, requesterId: String? = nil, filter: String? = nil, sort: String? = "endsAt", limit: Int = 30, offset: Int = 0) async throws -> PaginatedResponse<Booking> {
         try await perform(bookingListRequest(
             path: "/api/bookings",
             active: activeOnly,
-            status: nil,
+            past: pastOnly,
+            status: status,
             statusList: nil,
             search: search,
             requesterId: requesterId,
@@ -404,12 +410,13 @@ final class APIClient {
         ))
     }
 
-    private func bookingListRequest(path: String, active: Bool, status: BookingStatus?, statusList: [BookingStatus]?, search: String?, requesterId: String?, filter: String?, sort: String?, limit: Int, offset: Int) -> URLRequest {
+    private func bookingListRequest(path: String, active: Bool, past: Bool = false, status: BookingStatus?, statusList: [BookingStatus]?, search: String?, requesterId: String?, filter: String?, sort: String?, limit: Int, offset: Int) -> URLRequest {
         var items: [URLQueryItem] = [
             .init(name: "limit", value: "\(limit)"),
             .init(name: "offset", value: "\(offset)"),
         ]
         if active { items.append(.init(name: "active", value: "true")) }
+        if past { items.append(.init(name: "past", value: "true")) }
         if let status { items.append(.init(name: "status", value: status.rawValue)) }
         if let statusList, !statusList.isEmpty {
             items.append(.init(name: "status_in", value: statusList.map(\.rawValue).joined(separator: ",")))
@@ -1520,6 +1527,21 @@ final class APIClient {
         let req = request(path: "/api/assets/\(assetId)/favorite", method: "POST")
         let resp: Response = try await perform(req)
         return resp.favorited
+    }
+
+    /// Toggles an item between MAINTENANCE and AVAILABLE. Server-side this is
+    /// a SERIALIZABLE transaction so two people flagging the same camera cannot
+    /// lose one another's update, and it writes an audit entry either way.
+    ///
+    /// Only `status` is decoded. The route replies with the raw Prisma row,
+    /// whose `status` is the stored enum — not the derived `computedStatus`
+    /// every Swift asset model reads — so decoding the whole row as an `Asset`
+    /// would fail. Callers refetch the detail for display state.
+    func toggleAssetMaintenance(assetId: String) async throws -> Bool {
+        struct AssetStatus: Decodable { let status: String }
+        let req = request(path: "/api/assets/\(assetId)/maintenance", method: "POST")
+        let resp: DataWrapper<AssetStatus> = try await perform(req)
+        return resp.data.status == "MAINTENANCE"
     }
 
     // MARK: - Notifications

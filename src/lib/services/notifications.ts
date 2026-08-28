@@ -2,6 +2,7 @@ import { after } from "next/server";
 import { db } from "@/lib/db";
 import { sendEmail, buildNotificationEmail } from "@/lib/email";
 import { sendPush } from "@/lib/push/apns";
+import { sendWebPushToUsers } from "@/lib/push/web";
 import { ACTIVE_ASSIGNMENT_STATUSES } from "@/lib/shift-constants";
 import { loadUserPrefs, normalizePrefs, shouldDeliverEmail, shouldDeliverPush, shouldDeliverCategory, type NotificationCategory } from "@/lib/services/notification-prefs";
 import { loadCheckoutPolicies } from "@/lib/services/checkout-policies";
@@ -50,6 +51,24 @@ export function deferPush(task: Promise<void>): void {
   }
 }
 
+/**
+ * Preference category -> the native client's registered action set.
+ *
+ * These are grouped by what the reader can usefully *do*, not by what the
+ * notification is about: everything gear-custody-shaped offers the same two
+ * actions, everything schedule-shaped offers one. `licenseExpiry` is absent on
+ * purpose — there is no action a phone can take on an expiring license, and a
+ * menu with only "View" in it is worse than a plain tap.
+ */
+const APNS_ACTION_CATEGORY: Partial<Record<NotificationCategory, string>> = {
+  checkoutDue: "GT_BOOKING",
+  checkoutOverdue: "GT_BOOKING",
+  reservation: "GT_BOOKING",
+  gearPrep: "GT_BOOKING",
+  schedule: "GT_SCHEDULE",
+  trade: "GT_SCHEDULE",
+};
+
 export async function sendPushToUser(
   userId: string,
   opts: { title: string; body?: string | null; payload?: Record<string, unknown>; category?: NotificationCategory }
@@ -61,19 +80,31 @@ export async function sendPushToUser(
     if (!shouldDeliverPush(prefs)) return;
     if (opts.category && !shouldDeliverCategory(prefs, opts.category)) return;
 
-    const tokens = await db.deviceToken.findMany({
-      where: {
-        userId,
-        revokedAt: null,
-        user: { active: true },
-      },
-      select: { token: true },
-    });
+    // Keep native APNs tokens and browser subscriptions on their own delivery
+    // paths. The web sender is best-effort and has its own failure boundary, so
+    // missing VAPID configuration never suppresses iOS delivery.
+    const [tokens] = await Promise.all([
+      db.deviceToken.findMany({
+        where: {
+          userId,
+          platform: "IOS",
+          revokedAt: null,
+          user: { active: true },
+        },
+        select: { token: true },
+      }),
+      sendWebPushToUsers([userId], opts),
+    ]);
     if (tokens.length === 0) return;
 
     const { revoked } = await sendPush(
       tokens.map((t) => t.token),
-      { title: opts.title, body: opts.body ?? "", payload: opts.payload }
+      {
+        title: opts.title,
+        body: opts.body ?? "",
+        payload: opts.payload,
+        category: opts.category ? APNS_ACTION_CATEGORY[opts.category] : undefined,
+      }
     );
 
     if (revoked.length > 0) {

@@ -76,6 +76,11 @@ enum AppRuntimeMode {
         /// camera, so this captures the permission priming a first-time user
         /// actually meets, not a live viewfinder.
         case createBookingScanner = "create-booking-scanner"
+        /// The same New Reservation sheet with the scanner *not* seeded, so the
+        /// event picker behind it is reachable. It is the one surface outside
+        /// Schedule that reads `/api/calendar-events`, which is the payload
+        /// carrying `site`.
+        case createBookingEvents = "create-booking-events"
         /// Global search with a query already run, so the result destinations
         /// -- items, bookings, and people in one list -- are on screen.
         case search
@@ -154,7 +159,7 @@ enum AppRuntimeMode {
              .home, .homeAllClear, .scoreboard, .profile,
              .studentBookings,
              .bookingDetail, .bookingExtend, .bookingEdit, .bookingCancel,
-             .itemEdit, .createBookingScanner, .search, .searchPartial,
+             .itemEdit, .createBookingScanner, .createBookingEvents, .search, .searchPartial,
              .itemsList, .reports, .accountSecurity, .login:
             return true
         default:

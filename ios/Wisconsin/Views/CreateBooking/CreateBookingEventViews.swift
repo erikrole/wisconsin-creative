@@ -117,14 +117,17 @@ struct AllEventsPickerView: View {
         }
     }
 
+    /// Filters on the same resolved venue the row's rail and scope label draw,
+    /// so picking "Neutral" cannot hide a row this list is labelling Neutral.
+    /// Reading `isHome` directly filed every explicitly neutral game that sits
+    /// on a home-mapped venue under Home instead.
     private func matchesScope(_ event: ScheduleEvent) -> Bool {
-        let isGame = event.opponent?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
-        return switch scope {
-        case .all: true
-        case .home: isGame && event.isHome == true
-        case .away: isGame && event.isHome == false
-        case .neutral: isGame && event.isHome == nil
-        case .nonGame: !isGame
+        switch scope {
+        case .all: return true
+        case .home: return event.venue == .home
+        case .away: return event.venue == .away
+        case .neutral: return event.venue == .neutral
+        case .nonGame: return event.venue == .nonGame
         }
     }
 

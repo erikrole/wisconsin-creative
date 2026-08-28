@@ -10,6 +10,7 @@ struct ItemDetailView: View {
     @State private var isFavorited = false
     @State private var favoriteToggleCount = 0  // user-action ticks; isolates haptic from initial load
     @State private var toast: Toast?
+    @State private var isTogglingMaintenance = false
     @Environment(SessionStore.self) private var session
     @Environment(ReservationDraftStore.self) private var drafts
 
@@ -105,6 +106,23 @@ struct ItemDetailView: View {
                                 Button { showEdit = true } label: {
                                     Label("Edit Item", systemImage: "pencil")
                                 }
+                                // The one lifecycle action that belongs on a
+                                // phone: gear breaks at a venue, and the person
+                                // holding it is the one who knows. Duplicate,
+                                // Retire, and Delete stay web-only — they are
+                                // catalog administration, not field work
+                                // (`docs/AREA_MOBILE.md`).
+                                Button {
+                                    Task { await toggleMaintenance(for: asset) }
+                                } label: {
+                                    Label(
+                                        asset.computedStatus == .maintenance ? "Clear Maintenance" : "Needs Maintenance",
+                                        systemImage: asset.computedStatus == .maintenance
+                                            ? "wrench.and.screwdriver.fill"
+                                            : "wrench.and.screwdriver"
+                                    )
+                                }
+                                .disabled(isTogglingMaintenance)
                             }
                             if let qr = asset.qrCodeValue, !qr.isEmpty {
                                 Button { copyQR(qr) } label: {
@@ -157,6 +175,33 @@ struct ItemDetailView: View {
             self.error = error.localizedDescription
         }
         isLoading = false
+    }
+
+    /// Flags or clears maintenance, then refetches so every derived field on
+    /// screen — status pill, availability, reserve affordance — comes from the
+    /// server rather than from a locally guessed status. Deliberately not
+    /// optimistic: this changes what other people can reserve.
+    private func toggleMaintenance(for asset: AssetDetail) async {
+        guard !isTogglingMaintenance else { return }
+        isTogglingMaintenance = true
+        defer { isTogglingMaintenance = false }
+        do {
+            let nowInMaintenance = try await APIClient.shared.toggleAssetMaintenance(assetId: asset.id)
+            await loadAsset()
+            Haptics.success()
+            toast = Toast(
+                message: nowInMaintenance ? "Flagged for maintenance" : "Maintenance cleared",
+                icon: nowInMaintenance ? "wrench.and.screwdriver.fill" : "checkmark.circle.fill",
+                role: .success
+            )
+        } catch {
+            Haptics.error()
+            toast = Toast(
+                message: (error as? APIError)?.errorDescription ?? "Couldn't update maintenance",
+                icon: "exclamationmark.triangle.fill",
+                role: .error
+            )
+        }
     }
 
     /// Copy the QR sticker code to the clipboard with a confirming toast +

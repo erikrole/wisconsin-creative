@@ -13,6 +13,10 @@ struct BookingDetailView: View {
     @State private var showExtend = AppRuntimeMode.CaptureSeed.bookingExtend
     @State private var showEdit = AppRuntimeMode.CaptureSeed.bookingEdit
     @State private var isActioning = false
+    /// Web guards this call with an AbortController. Without an equivalent, a
+    /// pull-to-refresh mid-flight lets the older availability answer land last
+    /// and overwrite the newer one.
+    @State private var availabilityRequests = LatestRequestGeneration()
     @Environment(SessionStore.self) private var session
     @Environment(AppState.self) private var appState
 
@@ -214,6 +218,7 @@ struct BookingDetailView: View {
             availabilityError = nil
             return
         }
+        let requestToken = availabilityRequests.begin()
         let outcome = await APIClient.shared.checkAvailabilityOutcome(
             locationId: booking.location.id,
             serializedAssetIds: booking.serializedItems.map(\.assetId),
@@ -222,6 +227,7 @@ struct BookingDetailView: View {
             excludeBookingId: booking.id,
             bookingKind: booking.kind
         )
+        guard availabilityRequests.owns(requestToken) else { return }
         if let result = outcome.result {
             conflicts = result.conflictsByAssetId
             availabilityError = nil

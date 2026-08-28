@@ -17,9 +17,20 @@ The script runs these gates in order:
 1. `npm run ios:project:check`
 2. `npm run drift:ios`
 3. `npm run audit:ios:gaps`
-4. `xcodebuild test` for `Wisconsin` on the configured simulator destination
-5. `xcodebuild` for `Wisconsin` on `generic/platform=iOS Simulator`
+4. `xcodebuild` for `Wisconsin` on `generic/platform=iOS Simulator`
+5. `xcodebuild test` for `Wisconsin` on the resolved simulator destination
 6. `xcodebuild` for `Wisconsin` on `generic/platform=iOS`
+
+Any gate that exits non-zero aborts the run with that status. A run only prints
+`OK: iOS Xcode verification passed` when every gate above actually ran and passed.
+
+The XCTest destination is resolved to a **UDID** at runtime from `xcrun simctl list
+devices available` — `iPhone 16 Pro` for `Wisconsin`, `iPad (A16)` for `WisconsinKiosk`,
+preferring a booted device and otherwise the newest runtime that has one. A
+`name=...,OS=latest` destination is matched only against the newest installed runtime,
+so it fails outright for a device such as the iPhone 16 Pro that is installed under an
+older runtime. If the device is not available the script stops and lists the available
+simulators rather than substituting another one, per the AGENTS.md simulator policy.
 
 The script sets `-derivedDataPath` to `${TMPDIR}/gear-tracker-xcode-derived-data` by default. That keeps command-line builds out of Xcode's shared DerivedData and avoids the build database lock failures that happen when multiple `xcodebuild` processes hit the same location.
 
@@ -35,8 +46,11 @@ IOS_SKIP_DEVICE_BUILD=1 npm run ios:xcode:verify
 # Skip XCTest only when isolating a compile failure. Normal closeout must run tests.
 IOS_SKIP_TESTS=1 npm run ios:xcode:verify
 
-# Override the simulator used by the XCTest action.
-IOS_TEST_DESTINATION='platform=iOS Simulator,name=iPhone 16' npm run ios:xcode:verify
+# Use a different simulator by name; still resolved to a UDID.
+IOS_SIMULATOR_NAME='iPad (A16)' npm run ios:xcode:verify
+
+# Bypass resolution entirely with a literal xcodebuild destination.
+IOS_TEST_DESTINATION='platform=iOS Simulator,id=<udid>' npm run ios:xcode:verify
 
 # Keep static gates out when repeating a compile-only check after a failed Swift build.
 IOS_SKIP_STATIC_GATES=1 npm run ios:xcode:verify

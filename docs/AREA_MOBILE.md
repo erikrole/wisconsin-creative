@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Mobile Operations
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-27
+- Last Updated: 2026-08-28
 - Status: Active
 - Version: V1
 
@@ -95,6 +95,13 @@ Cheqroom mobile patterns show useful primitives but too much menu depth and too 
 - [x] AC-6: Dashboard remains chart-light and action-first in V1.
 - [x] AC-7: Every authenticated role can reach the shared team Scoreboard from Browse; regular-width navigation also exposes it directly without opening a private user profile.
 - [x] AC-8: Native team Scoreboard stacks Sport, Venue, Opponent, and Site with system controls, refetches one server-owned intersection, and tolerates the additive explorer response during server-first rollout.
+- [x] AC-9: Native Bookings exposes status scope and ordering that map to request shapes the server already honours, persists the choice across launches, and never re-sorts a server-ordered page.
+- [x] AC-10: Home Screen widgets publish only the signed-in user's own work, degrade to a placeholder without the App Group, and clear at every session boundary.
+- [x] AC-11: Home Screen quick actions are built from the signed-in role, so no shortcut is offered that the capability router will decline.
+- [x] AC-12: Home and Bookings refetch when connectivity returns, without falling back to cached rows.
+- [x] AC-13: Push notifications carry an action set matched to what the reader can usefully do, and no notification action opens a mutation sheet or performs a non-idempotent write.
+- [x] AC-14: Where a row offers an action by swipe, it offers the same action by long press.
+- [x] AC-15: A long-press action can never reveal data the row it sits on is deliberately hiding.
 
 ## Dependencies
 - `AREA_DASHBOARD.md`
@@ -136,6 +143,24 @@ Navigation shell versioned roadmap: `tasks/sidebar-roadmap.md` (revised 2026-03-
 - **V3 (later)**: Bottom nav badge counts via live `/api/nav-counts` polling, game-day/shift context cards
 
 ## Change Log
+
+- 2026-08-28: **Android students can receive browser push from the PWA.** The deployed web app registers a root-scoped service worker, lets an authenticated student enroll the current HTTPS browser from Settings → Notifications, and delivers the existing preference-gated push families without adding a native Android target or changing iOS APNs. Physical Android permission, delivery, and notification tap-through remain separate acceptance gates.
+
+- 2026-08-28: **Contextual actions pass: notification long press, in-app long press, and a state-aware icon menu.**
+  - **Notification actions.** `sendPush` now carries an `aps.category`, mapped from the existing preference category (`checkoutDue`/`checkoutOverdue`/`reservation`/`gearPrep` → `GT_BOOKING`, `schedule`/`trade` → `GT_SCHEDULE`, blasts → `GT_BLAST`). Native registers matching `UNNotificationCategory` action sets: gear alerts offer **Remind Me in 1 Hour** and **View Booking**, schedule alerts offer **View Shift**, blasts offer **Got it** and **Open**. `licenseExpiry` is deliberately excluded — there is no action a phone can take on an expiring license.
+  - **Two rules bound that list.** No action opens a mutation sheet: `onOpenURL` already refuses to route a tapped link into Extend, and a lock-screen button is a weaker signal of intent than a tapped link, not a stronger one. Every foreground action shares one routing path with the plain tap. The only server write is the blast acknowledgement, which *is* the acknowledgement — the same idempotent call the in-app banner button makes. Snooze is entirely on-device and writes nothing.
+  - **In-app long press** where the gesture previously did nothing: Notification rows carry Mark Read, matching their existing swipe action; global Search results carry Reserve and Copy Asset Tag, matching the Items list so the gesture transfers between the two ways of reaching the same row; License rows carry Copy License Code, gated on the same `canRevealCode` the visible line uses, so long press can never surface a code the row is hiding.
+  - **Home Screen icon menu is now state-aware.** My Gear reads "2 overdue" or "1 due today"; Schedule reads the next shift's time. Both come from the snapshot the widgets already read, so the icon menu and the widgets can never disagree. The refresh maps over the installed items rather than rebuilding from scratch, so it cannot reintroduce a shortcut the role filter removed.
+  - Verification: `npm run ios:xcode:verify` green end to end on iPhone 16 Pro. Both notification categories proved end to end on the simulator with `xcrun simctl push` carrying a real `aps.category`, with the rendered action sets captured. Rollout is additive in both directions: an unknown category is ignored by iOS, and a build with no category renders a plain tap-only alert.
+
+- 2026-08-28: **Native quality-of-life pass: list power, Home Screen surfaces, reconnect refresh, and a field maintenance flag.**
+  - **Bookings power filters (closes GAP-34).** A leading filter menu carries one flat status scope list — Active, Overdue, Due Today, Reserved, Pending Pickup, Checked Out, Completed, Cancelled — plus ordering by Next Handoff, Due Latest, or title. Each scope maps to a request shape `/api/bookings` already reads (`active`, `past`, `status`, `filter`), and every sort key exists in `BOOKING_SORT_MAP`. Scope, status, and sort persist across launches; a private collaborator stays pinned to their own gear whatever the stored scope says. The client re-sorts a loaded page only under the operational default, never over a server-ordered result, which is the paging invariant `tests/ios-booking-list-sort-contract.test.ts` protects. Only the unfiltered default list seeds the offline cache.
+  - **Swipe actions on booking rows.** Edit and Transfer lead, Extend and Cancel trail, matching the context menu exactly. Full swipe is off on both edges so nothing is cancelled by an over-travelled thumb.
+  - **Home Screen widgets.** Next Shift (small, medium, lock-screen rectangular) and My Gear (small, medium) render from an App Group snapshot the app writes after each dashboard load. The widget process has no session and never fetches. Only `my`-scoped dashboard fields are published — `myCheckouts.overdue`, never the team-wide `overdueCount` — because a widget renders on a locked phone. Cleared at every session boundary. Requires App Group `group.com.erikrole.Wisconsin` on both the app and the Live Activities extension.
+  - **Quick actions and Spotlight.** Long-press the app icon for Scan, My Gear, Schedule, and New Reservation, built from the signed-in role so a collaborator is never offered a shortcut the router will decline. The caller's own bookings are indexed into Spotlight and cleared at the session boundary; a hit routes through the existing booking deep link.
+  - **Reconnect refresh.** `NetworkMonitor` now signals the offline → online transition specifically, and Home and Bookings refetch on it when they are the visible tab. Walking back into signal no longer requires a manual pull. Booking detail availability checks gained request ownership so a refresh mid-flight cannot let the older answer land last.
+  - **Needs Maintenance on Item detail (narrows GAP-36).** STAFF/ADMIN can flag or clear maintenance from the phone, matching `asset:maintenance` in the permission matrix. The call is not optimistic and refetches, because it changes what other people can reserve. Duplicate, Retire, and Delete stay web-only.
+  - Verification: `npm run ios:xcode:verify` green end to end on iPhone 16 Pro — XcodeGen drift, iOS drift check, audit gaps, simulator build, XCTest suite, and the generic device build. Swift source contracts pass. Native runtime visual acceptance on device remains a separate gate.
 
 - 2026-08-27: **Native claim review is Admin-only.** Trade Board and Event detail expose pending open-slot requests, pending trade claims, and approve/decline actions only to Admins. Staff retain ordinary Schedule and Trade Board context plus existing non-review staffing tools, but no longer receive the all-request reviewer payload or review affordances. Student-scheduling-class users continue to see their own pending claims even when their app role is Staff.
 

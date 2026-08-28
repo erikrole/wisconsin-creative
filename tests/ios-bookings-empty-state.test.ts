@@ -38,7 +38,10 @@ describe("iOS bookings empty state recovery", () => {
     // reservation pickup time or checkout due-back time.
     expect(source).toContain("booking.kind == .reservation ? booking.startsAt : booking.endsAt");
     expect(source).toContain("sortedBookings = bookings.sorted(by: Self.operationalTimeSort)");
-    expect(source).toContain('BookingListSection(title: "Active"');
+    // One merged section for both kinds; its header names the selected
+    // scope, which is "Active" on the default list.
+    expect(source).toContain("BookingListSection(title: sectionTitle");
+    expect(source).toContain('vm.statusFilter == .active ? "Active" : vm.statusFilter.label');
     expect(source).not.toContain('BookingListSection(title: "Checkouts"');
     expect(source).not.toContain('BookingListSection(title: "Reservations"');
     expect(source).toContain('"Search bookings..."');

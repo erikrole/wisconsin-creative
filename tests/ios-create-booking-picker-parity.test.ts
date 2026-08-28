@@ -216,8 +216,12 @@ describe("iOS create booking picker parity", () => {
     expect(eventCard).toContain('case away = "Away"');
     expect(eventCard).toContain('case neutral = "Neutral"');
     expect(eventCard).toContain('case nonGame = "Non-game"');
-    expect(eventCard).toContain("case .neutral: isGame && event.isHome == nil");
-    expect(eventCard).toContain("case .nonGame: !isGame");
+    // Filters on the resolved venue, not the raw isHome tri-state -- see
+    // tests/ios-all-day-calendar-date.test.ts. Reading isHome here filed a
+    // game stored as neutral but flagged isHome == true under Home, while the
+    // Schedule tab showed the same row as Neutral.
+    expect(eventCard).toContain("case .neutral: return event.venue == .neutral");
+    expect(eventCard).toContain("case .nonGame: return event.venue == .nonGame");
     expect(createSheet).toContain("StatusRail(color: event.bookingEventRailColor)");
     expect(createSheet).toContain("Text(event.bookingEventScopeLabel)");
     expect(createSheet).toContain("Text(event.bookingEventPickerDate)");

@@ -1,13 +1,15 @@
 "use client";
 
 import type { SportConfig } from "./types";
+import { SPORT_AUTO_ASSIGN_POLICY_LABELS } from "@/lib/sport-auto-assign-policy";
+import type { SportSetupEntry, SportSetupResponse } from "@/lib/services/sport-setup";
 import { AREAS, AREA_LABELS, SPORT_GROUPS } from "./types";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { RotateCcwIcon, SaveIcon } from "lucide-react";
+import { PlaneIcon, RotateCcwIcon, SaveIcon, SlidersHorizontalIcon } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -41,8 +43,12 @@ export default function ShiftConfigTable({
   dirtyCodes,
   onSave,
   onDiscard,
+  sportSetup,
+  onOpenSetup,
 }: {
   configs: SportConfig[];
+  sportSetup: SportSetupResponse | null;
+  onOpenSetup: (sportCode: string) => void;
   saving: string | null;
   onToggleActive: (sportCode: string) => void;
   onUpdateShift: (
@@ -71,6 +77,10 @@ export default function ShiftConfigTable({
 
   function isGroupActive(codes: string[]) {
     return codes.some((c) => getConfig(c)?.active);
+  }
+
+  function getSetup(sportCode: string): SportSetupEntry | null {
+    return sportSetup?.sports.find((entry) => entry.sportCode === sportCode) ?? null;
   }
 
   function getShiftCount(
@@ -143,6 +153,53 @@ export default function ShiftConfigTable({
                   />
                 </div>
               </div>
+
+              {sportSetup ? (
+                <div className="mt-3 flex flex-col gap-1.5 rounded-md border border-border/60 bg-muted/25 p-2.5">
+                  {group.codes.map((code) => {
+                    const setup = getSetup(code);
+                    const travel = setup
+                      ? [...setup.staff, ...setup.students].filter((member) => member.defaultTraveler).length
+                      : 0;
+                    const rosterSize = setup ? setup.staff.length + setup.students.length : 0;
+                    return (
+                      <div key={code} className="flex flex-wrap items-center gap-2 text-xs">
+                        {group.codes.length > 1 ? (
+                          <span className="min-w-14 font-medium text-muted-foreground">{code}</span>
+                        ) : null}
+                        <span className="text-muted-foreground">Auto assign</span>
+                        <Badge
+                          variant={setup?.policy === "HOLD" ? "orange" : setup?.policy === "STAFF_ONLY" ? "blue" : "gray"}
+                          size="sm"
+                        >
+                          {SPORT_AUTO_ASSIGN_POLICY_LABELS[setup?.policy ?? "FULL_CREW"]}
+                        </Badge>
+                        <span className="text-muted-foreground">
+                          {rosterSize === 0
+                            ? "Nobody on the roster"
+                            : `${rosterSize} on the roster`}
+                        </span>
+                        {travel > 0 ? (
+                          <span className="inline-flex items-center gap-1 text-muted-foreground">
+                            <PlaneIcon className="size-3" />
+                            {travel} travel
+                          </span>
+                        ) : null}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="ml-auto h-10 px-2 text-xs"
+                          onClick={() => onOpenSetup(code)}
+                        >
+                          <SlidersHorizontalIcon data-icon="inline-start" className="size-3.5" />
+                          Set up
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
             </CardHeader>
 
             {active && (

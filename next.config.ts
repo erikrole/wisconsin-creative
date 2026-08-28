@@ -33,6 +33,7 @@ const nextConfig: NextConfig = {
     webpackMemoryOptimizations: true,
   },
   transpilePackages: ["@mdxeditor/editor"],
+  serverExternalPackages: ["web-push"],
   images: {
     remotePatterns: [
       {

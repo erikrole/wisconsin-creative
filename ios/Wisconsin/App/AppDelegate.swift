@@ -18,7 +18,21 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         UNUserNotificationCenter.current().delegate = self
+        GearTrackerNotificationCategory.register()
         return true
+    }
+
+    /// Home Screen quick actions. Deliberately not read out of
+    /// `launchOptions[.shortcutItem]`, which is deprecated as of iOS 26 in
+    /// favour of the UIScene lifecycle — with no scene delegate of our own,
+    /// UIKit routes the shortcut here in both the cold and warm cases, and
+    /// `GearTrackerAppIntentHandoff` holds it until `AppTabView` appears.
+    func application(
+        _ application: UIApplication,
+        performActionFor shortcutItem: UIApplicationShortcutItem,
+        completionHandler: @escaping (Bool) -> Void
+    ) {
+        completionHandler(GearTrackerQuickAction.handle(shortcutItem))
     }
 
     func application(_ application: UIApplication, supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
@@ -116,6 +130,59 @@ extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
         }
         let notificationBoundary = authSessionBoundary.capture()
         let userInfo = response.notification.request.content.userInfo
+
+        // A dismissal is not a destination. Only delivered when a category opts
+        // into `.customDismissAction`, which none of ours do — guarded anyway,
+        // because the fallthrough below would otherwise treat it as a tap.
+        guard response.actionIdentifier != UNNotificationDismissActionIdentifier else {
+            completionHandler()
+            return
+        }
+
+        switch GearTrackerNotificationAction(rawValue: response.actionIdentifier) {
+        case .snooze:
+            // Entirely on-device: nothing to route, nothing to write. The
+            // payload is lifted off the notification here, on the delegate's
+            // actor, because `UNNotification` cannot cross into the task.
+            let snooze = NotificationSnooze.Payload(notification: response.notification)
+            Task {
+                await NotificationSnooze.schedule(snooze)
+                completionHandler()
+            }
+            return
+
+        case .acknowledgeBlast:
+            guard let blastId = userInfo["blastId"] as? String else {
+                completionHandler()
+                return
+            }
+            Task { @MainActor in
+                defer { completionHandler() }
+                guard PushTokenStorage.registrationAllowed,
+                      authSessionBoundary.owns(notificationBoundary) else { return }
+                // Idempotent server-side, so a double press costs nothing. A
+                // failure is swallowed on purpose: there is no surface left to
+                // show a retry on, and the in-app banner will still be there.
+                try? await APIClient.shared.acknowledgeBlast(id: blastId)
+            }
+            return
+
+        case .view, .none:
+            // `.view` and the default tap mean the same thing: open the thing
+            // the notification is about.
+            break
+        }
+
+        routeNotificationDestination(userInfo: userInfo, notificationBoundary: notificationBoundary)
+        completionHandler()
+    }
+
+    /// One routing path for a tapped notification and for every `.foreground`
+    /// action, so an action can never reach a destination a tap could not.
+    private func routeNotificationDestination(
+        userInfo: [AnyHashable: Any],
+        notificationBoundary: UUID
+    ) {
         if let blastId = userInfo["blastId"] as? String {
             Task { @MainActor in
                 guard PushTokenStorage.registrationAllowed,
@@ -135,6 +202,5 @@ extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
                 sharedAppState?.pendingPushEventId = eventId
             }
         }
-        completionHandler()
     }
 }

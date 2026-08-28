@@ -219,7 +219,9 @@ describe("schedule source-of-truth and browser smoke contracts", () => {
     expect(readiness).toContain('label: "Synced calendar"');
     expect(readiness).toContain('label: "Assignee changes"');
     expect(readiness).toContain("value: sourceNeedsAttention || healthWarnings > 0 ? \"Check\"");
-    expect(readiness).toContain("No recent schedule activity");
+    // The all-clear is reachable now that zero-value activity counters no longer
+    // occupy the rail, so it names the state it actually reports.
+    expect(readiness).toContain('attentionItems.length === 0 && healthWarnings === 0 ? "Nothing needs attention"');
     expect(readiness).toContain("<ScheduleSourceStatus signal={sourceSignal} />");
     expect(readiness).not.toContain('label: "Next call"');
   });

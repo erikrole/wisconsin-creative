@@ -36,7 +36,7 @@ function candidate(overrides: Partial<CandidateScoringUser> & { id: string }): C
     staffingType: "ST",
     primaryArea: "VIDEO",
     areaAssignments: [{ area: "VIDEO", isPrimary: true }],
-    sportAssignments: [{ sportCode: "VB" }],
+    sportAssignments: [{ sportCode: "VB", defaultTraveler: false }],
     availabilityBlocks: [],
     assignments: [],
     ...overrides,

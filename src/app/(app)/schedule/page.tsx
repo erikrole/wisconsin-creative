@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
-import { MoreHorizontalIcon } from "lucide-react";
+import { MoreHorizontalIcon, SparklesIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -36,6 +36,8 @@ import { NewEventSheet } from "./_components/NewEventSheet";
 import { ScheduleReadiness } from "./_components/ScheduleReadiness";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { CollaboratorSchedule } from "./_components/CollaboratorSchedule";
+import { AutoAssignDialog } from "@/components/schedule/AutoAssignDialog";
+import type { Area } from "@/types/areas";
 
 const ShiftDetailPanel = dynamic(
   () => import("@/components/ShiftDetailPanel"),
@@ -76,6 +78,7 @@ function InternalSchedulePage() {
   const hidingRef = useRef<Set<string>>(new Set());
   const [hidingEventIds, setHidingEventIds] = useState<Set<string>>(() => new Set());
   const [newEventOpen, setNewEventOpen] = useState(false);
+  const [autoAssignOpen, setAutoAssignOpen] = useState(false);
   const settingUpRef = useRef<Set<string>>(new Set());
   const [settingUpEventIds, setSettingUpEventIds] = useState<Set<string>>(() => new Set());
 
@@ -302,6 +305,10 @@ function InternalSchedulePage() {
         <PageHeader title="Schedule">
           {isStaff ? (
             <>
+              <Button size="sm" className="h-10" onClick={() => setAutoAssignOpen(true)}>
+                <SparklesIcon data-icon="inline-start" />
+                Auto assign
+              </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="h-10" aria-label="More schedule actions">
@@ -354,6 +361,7 @@ function InternalSchedulePage() {
         <ScheduleFilters
           filters={data.filters}
           entries={data.entries}
+          filteredEntries={data.filteredEntries}
         />
       </div>
 
@@ -448,6 +456,17 @@ function InternalSchedulePage() {
           open={newEventOpen}
           onOpenChange={setNewEventOpen}
           onCreated={data.loadData}
+        />
+      )}
+
+      {/* Auto assign (staff/admin only), seeded from the current schedule filters */}
+      {isStaff && (
+        <AutoAssignDialog
+          open={autoAssignOpen}
+          onOpenChange={setAutoAssignOpen}
+          initialSportCodes={data.filters.sportFilter ? [data.filters.sportFilter] : []}
+          initialArea={(data.filters.areaFilter || null) as Area | null}
+          onApplied={data.loadData}
         />
       )}
 

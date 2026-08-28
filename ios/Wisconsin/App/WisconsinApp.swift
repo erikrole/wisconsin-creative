@@ -1,3 +1,4 @@
+import CoreSpotlight
 import SwiftUI
 import SwiftData
 import TipKit
@@ -59,11 +60,29 @@ struct WisconsinApp: App {
                     // Extend is a deliberate action taken on that page, never
                     // something a tapped link opens on the user's behalf, so no
                     // query parameter here may reach a mutation sheet.
-                    if url.scheme == "wisconsin", url.host == "booking" {
+                    guard url.scheme == "wisconsin" else { return }
+                    switch url.host {
+                    case "booking":
                         let bookingId = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
                         guard !bookingId.isEmpty else { return }
                         appState.pendingPushBookingId = bookingId
+                    // Widget taps. Both land on a tab the router already
+                    // capability-gates, so a widget left on the Home Screen
+                    // after a role change opens nothing the user may not see.
+                    case "schedule":
+                        appState.pendingAppIntentDestination = .todaySchedule
+                    case "bookings":
+                        appState.pendingAppIntentDestination = .myGear
+                    default:
+                        break
                     }
+                }
+                .onContinueUserActivity(CSSearchableItemActionType) { activity in
+                    // A Spotlight hit carries the booking id, which the push
+                    // router already knows how to open — same destination, one
+                    // routing path.
+                    guard let bookingId = SpotlightIndexer.bookingId(from: activity.userInfo) else { return }
+                    appState.pendingPushBookingId = bookingId
                 }
                 .tint(.brandPrimary)
         }
@@ -93,6 +112,10 @@ struct WisconsinApp: App {
             CheckoutReturnLiveActivityManager.shared.cancelObserverWork()
             AppDelegate.clearRemoteNotificationsForSignedOutUser()
             SearchRecentsStorage.clear()
+            // A Home Screen widget renders without unlocking the app, so the
+            // previous account's shift and gear cannot outlive their session.
+            GearWidgetPublisher.clear()
+            SpotlightIndexer.clear()
             ThumbnailCache.shared.clearForSignOut()
 
             if oldUser != nil {
@@ -103,6 +126,11 @@ struct WisconsinApp: App {
                 Task { await CheckoutReturnLiveActivityManager.shared.endAll() }
             }
         }
+
+        // Rebuilt on every identity change, including sign-out (which empties
+        // the menu). A shortcut is a claim about what the phone's owner can
+        // do, so it must track the role rather than the install.
+        GearTrackerQuickAction.refresh(for: user)
 
         if user == nil {
             return

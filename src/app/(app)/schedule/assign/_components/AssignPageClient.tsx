@@ -16,10 +16,9 @@ import { PageHeader } from "@/components/PageHeader";
 import { FadeUp } from "@/components/ui/motion";
 import { useAssignmentGrid } from "@/hooks/use-assignment-grid";
 import { AssignmentGrid } from "./AssignmentGrid";
-import { BulkAssignmentDialog } from "./BulkAssignmentDialog";
+import { AutoAssignDialog, type AutoAssignCustomWindow } from "@/components/schedule/AutoAssignDialog";
 import { SPORT_CODES } from "@/lib/sports";
 import { AREAS, AREA_LABELS, type Area } from "@/types/areas";
-import type { BulkAssignmentScope } from "@/lib/bulk-schedule-assignment-types";
 import { cn } from "@/lib/utils";
 import { ChevronLeft, ChevronRight, FilterIcon } from "lucide-react";
 import {
@@ -32,7 +31,7 @@ export function AssignPageClient() {
   const router = useRouter();
   const grid = useAssignmentGrid();
   const [reviewFilter, setReviewFilter] = useState<ReviewFilter>("all");
-  const [bulkAssignmentOpen, setBulkAssignmentOpen] = useState(false);
+  const [autoAssignOpen, setAutoAssignOpen] = useState(false);
 
   const reviewSummary = useMemo(() => summarizeAssignmentReview(grid.events), [grid.events]);
   const reviewEvents = useMemo(
@@ -40,20 +39,25 @@ export function AssignPageClient() {
     [grid.events, reviewFilter],
   );
   const monthLabel = grid.month.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-  const bulkScope = useMemo<BulkAssignmentScope>(() => {
+  // The grid is a month view, so auto assignment offers that month as its own
+  // period option alongside the standard presets.
+  const monthWindow = useMemo<AutoAssignCustomWindow>(() => {
     const monthStart = new Date(grid.month.getFullYear(), grid.month.getMonth(), 1);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const start = monthStart < today ? today : monthStart;
     const end = new Date(grid.month.getFullYear(), grid.month.getMonth() + 1, 0, 23, 59, 59, 999);
-    const area = AREAS.includes(grid.areaFilter as Area) ? grid.areaFilter as Area : null;
     return {
-      sportCode: grid.sportFilter || null,
       rangeStartsAt: start.toISOString(),
       rangeEndsAt: end.toISOString(),
-      area,
+      label: grid.month.toLocaleDateString("en-US", { month: "long" }),
     };
-  }, [grid.areaFilter, grid.month, grid.sportFilter]);
+  }, [grid.month]);
+  const scopeArea = AREAS.includes(grid.areaFilter as Area) ? grid.areaFilter as Area : null;
+  const scopeSportCodes = useMemo(
+    () => (grid.sportFilter ? [grid.sportFilter] : []),
+    [grid.sportFilter],
+  );
   const currentMonthStart = new Date();
   currentMonthStart.setDate(1);
   currentMonthStart.setHours(0, 0, 0, 0);
@@ -78,8 +82,8 @@ export function AssignPageClient() {
   return (
     <FadeUp>
       <PageHeader title="Assign shifts">
-        <Button className="h-10" onClick={() => setBulkAssignmentOpen(true)} disabled={grid.loading}>
-          Bulk assign
+        <Button className="h-10" onClick={() => setAutoAssignOpen(true)} disabled={grid.loading}>
+          Auto assign
         </Button>
         <Button variant="outline" className="h-10" onClick={() => router.push("/schedule")}>
           <ChevronLeft className="size-4" />
@@ -246,10 +250,13 @@ export function AssignPageClient() {
         onViewSchedule={() => router.push("/schedule")}
       />
 
-      <BulkAssignmentDialog
-        open={bulkAssignmentOpen}
-        onOpenChange={setBulkAssignmentOpen}
-        scope={bulkScope}
+      <AutoAssignDialog
+        open={autoAssignOpen}
+        onOpenChange={setAutoAssignOpen}
+        initialSportCodes={scopeSportCodes}
+        initialArea={scopeArea}
+        initialPeriod="custom"
+        customWindow={monthWindow}
         onApplied={() => grid.refetch()}
       />
     </FadeUp>

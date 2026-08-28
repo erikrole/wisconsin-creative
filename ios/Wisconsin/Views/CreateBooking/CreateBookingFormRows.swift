@@ -59,34 +59,49 @@ extension ScheduleEvent {
     }
 
     var bookingEventSubtitle: String {
-        let when = startsAt.formatted(date: .abbreviated, time: allDay ? .omitted : .shortened)
-        let venue = location?.name
-        let venuePrefix: String?
-        if isHome == false {
-            venuePrefix = "Away"
-        } else if isHome == true {
-            venuePrefix = "Home"
-        } else {
-            venuePrefix = nil
+        let venueName = location?.name
+        let venuePrefix: String? = switch venue {
+        case .home: "Home"
+        case .away: "Away"
+        case .neutral, .nonGame: nil
         }
-        return [when, venuePrefix, venue].compactMap { $0 }.joined(separator: " · ")
+        return [bookingEventDateText, venuePrefix, venueName]
+            .compactMap { $0 }
+            .joined(separator: " · ")
     }
 
+    /// The resolved venue, not the raw `isHome` tri-state.
+    ///
+    /// This picker reads `/api/calendar-events`, the one payload that carries
+    /// `site` -- so a game stored as neutral but flagged `isHome == true` was
+    /// listed here as "Home" with a green rail while the Schedule tab, which
+    /// resolves venue properly, showed the same row as Neutral.
     var bookingEventScopeLabel: String {
-        let hasOpponent = opponent?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
-        guard hasOpponent else { return "Non-game" }
-        return switch isHome {
-        case true: "Home"
-        case false: "Away"
-        case nil: "Neutral"
+        switch venue {
+        case .home: return "Home"
+        case .away: return "Away"
+        case .neutral: return "Neutral"
+        case .nonGame: return "Non-game"
         }
+    }
+
+    /// Date-only for all-day events, and read off the resolved calendar day.
+    /// The raw instant of an imported all-day event is UTC midnight, so this
+    /// used to name the previous evening and stamp a meaningless "12:00 AM"
+    /// on it.
+    private var bookingEventDateText: String {
+        displayAllDay
+            ? displayStartDay.formatted(date: .abbreviated, time: .omitted)
+            : startsAt.formatted(date: .abbreviated, time: .shortened)
     }
 
     var bookingEventPickerDate: String {
-        let month = startsAt.formatted(.dateTime.month(.abbreviated))
-        return startsAt
-            .formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day().hour().minute())
-            .replacingOccurrences(of: "\(month) ", with: "\(month). ")
+        let day = displayAllDay ? displayStartDay : startsAt
+        let month = day.formatted(.dateTime.month(.abbreviated))
+        let formatted = displayAllDay
+            ? day.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
+            : day.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day().hour().minute())
+        return formatted.replacingOccurrences(of: "\(month) ", with: "\(month). ")
     }
 
     /// The same venue Schedule rows and Event detail name — see
@@ -109,6 +124,6 @@ extension ScheduleEvent {
     }
 
     var bookingEventRailColor: Color {
-        venueRailColor(isHome: isHome)
+        venueRailColor(for: self)
     }
 }

@@ -37,6 +37,25 @@ func venueRailColor(isHome: Bool?) -> Color {
     Color.statusText(venueTone(isHome: isHome))
 }
 
+/// The same three colours, keyed off a resolved venue rather than the raw
+/// `isHome` tri-state.
+///
+/// Anything holding a `ScheduleEvent` should come through here: `isHome` cannot
+/// separate a neutral site from an unclassified one, so a row stored as neutral
+/// but flagged `isHome == true` painted a home-green rail on iOS while web drew
+/// it grey. Neutral and non-game share grey, matching the web table.
+func venueTone(_ venue: ScheduleVenue) -> StatusTone {
+    switch venue {
+    case .home: return .green
+    case .away: return .orange
+    case .neutral, .nonGame: return .gray
+    }
+}
+
+func venueRailColor(for event: ScheduleEvent) -> Color {
+    Color.statusText(venueTone(event.venue))
+}
+
 // MARK: Crew coverage (staffing domain)
 
 /// How well a shift is staffed: green fully covered, orange partially, red

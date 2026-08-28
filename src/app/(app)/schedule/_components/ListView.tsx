@@ -608,8 +608,15 @@ export function ListView({
       else next.add(entryId);
       return next;
     });
-    setExpandedRowId(expandedRowIds.has(entryId) ? null : entryId);
-  }, [expandedRowIds, setExpandedRowId]);
+    // Only this row's own collapse clears the shared pointer. Clearing it while
+    // it named a different open row left "Manage crew" on that row unable to
+    // re-open it, because the id it would set was already the current value.
+    if (expandedRowIds.has(entryId)) {
+      if (expandedRowId === entryId) setExpandedRowId(null);
+    } else {
+      setExpandedRowId(entryId);
+    }
+  }, [expandedRowId, expandedRowIds, setExpandedRowId]);
 
   /**
    * Open on today.
@@ -1011,7 +1018,11 @@ export function ListView({
           </div>
         </div>
 
-        <div className={cn("hidden min-h-9 items-center gap-2 border-b border-border/50 bg-muted/10 px-2 text-[11px] font-medium text-muted-foreground lg:grid", EVENT_GRID_CLASS)}>
+        {/*
+          The 3px left border matches the venue rail every body row carries.
+          Without it the header labels sit 3px left of the columns they name.
+        */}
+        <div className={cn("hidden min-h-9 items-center gap-2 border-b border-l-[3px] border-border/50 border-l-transparent bg-muted/10 px-2 text-[11px] font-medium text-muted-foreground lg:grid", EVENT_GRID_CLASS)}>
           <span aria-hidden="true" />
           <span>Time</span>
           <span>Event</span>
@@ -1187,6 +1198,73 @@ export function ListView({
               const titleParts = scheduleEventTitleParts(entry);
 
               const venueTone = VENUE_TONES[venueToneFromEvent(entry)];
+              /*
+                Shared by both card shells below: an event with crew to reveal
+                is a disclosure button, one without is plain text.
+              */
+              const cardSummary = (
+                <>
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <span className="font-semibold text-sm flex items-center gap-1.5 leading-tight">
+                      {canExpand && (
+                        isExpanded ? (
+                          <ChevronDownIcon className="size-3.5 text-muted-foreground shrink-0 mt-0.5" />
+                        ) : (
+                          <ChevronRightIcon className="size-3.5 text-muted-foreground shrink-0 mt-0.5" />
+                        )
+                      )}
+                      <span
+                        className="text-[10px] text-muted-foreground/60 tabular-nums font-normal shrink-0"
+                        style={{ fontFamily: entry.allDay ? "var(--font-heading)" : "var(--font-mono)" }}
+                      >
+                        {eventStartLabel(entry)}
+                      </span>
+                      {titleParts.title}
+                    </span>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      {myShiftsOnly && shiftStatus === "Pending" && (
+                        <Badge
+                          variant="orange"
+                          size="sm"
+                        >
+                          {shiftStatus}
+                        </Badge>
+                      )}
+                      {entry.coverage && (
+                        <CoverageBadge
+                          percentage={entry.coverage.percentage}
+                          filled={entry.coverage.filled}
+                          total={entry.coverage.total}
+                        />
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-xs text-muted-foreground flex gap-2 flex-wrap pl-5">
+                    <span>
+                      {entry.allDay
+                        ? formatCalendarEventDateRange(entry)
+                        : formatDateShort(entry.startsAt, entry.allDay)}
+                    </span>
+                    {entry.sportCode && (
+                      <span>{sportLabel(entry.sportCode)}</span>
+                    )}
+                    {titleParts.detail && (
+                      <span>{titleParts.detail}</span>
+                    )}
+                    <span>{venueTone.label}</span>
+                    {entry.subtitle && (
+                      <span className="font-medium text-primary/70">{entry.subtitle}</span>
+                    )}
+                    {entry.archivedAt && (
+                      <span className="inline-flex items-center gap-0.5 text-muted-foreground/50">
+                        <ArchiveIcon className="size-3" />
+                        Archived
+                      </span>
+                    )}
+                    <CrewSummary entry={entry} compact />
+                  </div>
+                </>
+              );
               return (
                 <div
                   key={entry.id}
@@ -1196,75 +1274,25 @@ export function ListView({
                     isAssignedToMe && "bg-primary/5",
                   )}
                 >
-                  <button
-                    className="w-full px-4 py-3 pr-14 text-left"
-                    onClick={() =>
-                      canExpand
-                        ? toggleExpandedRow(entry.id)
-                        : undefined
-                    }
-                    aria-expanded={canExpand ? isExpanded : undefined}
-                  >
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <span className="font-semibold text-sm flex items-center gap-1.5 leading-tight">
-                        {canExpand && (
-                          isExpanded ? (
-                            <ChevronDownIcon className="size-3.5 text-muted-foreground shrink-0 mt-0.5" />
-                          ) : (
-                            <ChevronRightIcon className="size-3.5 text-muted-foreground shrink-0 mt-0.5" />
-                          )
-                        )}
-                        <span
-                          className="text-[10px] text-muted-foreground/60 tabular-nums font-normal shrink-0"
-                          style={{ fontFamily: entry.allDay ? "var(--font-heading)" : "var(--font-mono)" }}
-                        >
-                          {eventStartLabel(entry)}
-                        </span>
-                        {titleParts.title}
-                      </span>
-                      <div className="flex items-center gap-1 flex-shrink-0">
-                        {myShiftsOnly && shiftStatus === "Pending" && (
-                          <Badge
-                            variant="orange"
-                            size="sm"
-                          >
-                            {shiftStatus}
-                          </Badge>
-                        )}
-                        {entry.coverage && (
-                          <CoverageBadge
-                            percentage={entry.coverage.percentage}
-                            filled={entry.coverage.filled}
-                            total={entry.coverage.total}
-                          />
-                        )}
-                      </div>
+                  {/*
+                    A card with no crew to reveal is a label, not a control.
+                    Rendering it as a button anyway left an inert stop in the
+                    mobile tab order on every event without a crew.
+                  */}
+                  {canExpand ? (
+                    <button
+                      type="button"
+                      className="w-full px-4 py-3 pr-14 text-left"
+                      onClick={() => toggleExpandedRow(entry.id)}
+                      aria-expanded={isExpanded}
+                    >
+                      {cardSummary}
+                    </button>
+                  ) : (
+                    <div className="w-full px-4 py-3 pr-14 text-left">
+                      {cardSummary}
                     </div>
-                    <div className="text-xs text-muted-foreground flex gap-2 flex-wrap pl-5">
-                      <span>
-                        {entry.allDay
-                          ? formatCalendarEventDateRange(entry)
-                          : formatDateShort(entry.startsAt, entry.allDay)}
-                      </span>
-                      {entry.sportCode && (
-                        <span>{sportLabel(entry.sportCode)}</span>
-                      )}
-                      {titleParts.detail && (
-                        <span>{titleParts.detail}</span>
-                      )}
-                      <span>{venueTone.label}</span>
-                      {entry.subtitle && (
-                        <span className="font-medium text-primary/70">{entry.subtitle}</span>
-                      )}
-                      {entry.archivedAt && (
-                        <span className="inline-flex items-center gap-0.5 text-muted-foreground/50">
-                          <ArchiveIcon className="size-3" />
-                          Archived
-                        </span>
-                      )}
-                      <CrewSummary entry={entry} compact />
-                    </div>
-                  </button>
+                  )}
 
                   {isStaff && (Boolean(entry.shiftGroupId) || onSetupCrew || onHideEvent) && (
                     <div className="absolute right-2 top-2">

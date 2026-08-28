@@ -3,9 +3,9 @@
 ## Document Control
 - Area: Notifications
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-27
-- Status: Active; durable overdue escalation hardening is implemented locally with migration and production rollout pending
-- Version: V1.6
+- Last Updated: 2026-08-28
+- Status: Active; browser push is deployed to Production, with physical Android acceptance still open
+- Version: V1.7
 
 ## Direction
 Surface custody urgency and overdue situations to the right people at the right time, with zero duplicate noise and a clear escalation path.
@@ -140,6 +140,15 @@ Implementation: `src/lib/checkout-escalation-policy.ts`, `src/lib/services/notif
 - Required env vars: `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID`, `APNS_P8_KEY` (base64-encoded full PEM including headers). Missing = push silently skipped.
 - Source: `src/lib/push/apns.ts` (dispatch/sendPush), `src/lib/services/notifications.ts` (sendPushToUser, deferPush), `src/app/api/devices/route.ts`, `src/app/api/devices/test/route.ts`
 
+## Browser Push (Android PWA — 2026-08-28)
+- Transport: Web Push via the Node `web-push` library and VAPID keys; the root-scoped `/sw.js` service worker presents the payload and routes notification taps to the authenticated inbox.
+- Schema: `WebPushSubscription` in migration `0137_web_push_subscriptions`; endpoint identity is unique, active subscriptions are capped at eight per account, and 404/410 provider responses revoke stale rows.
+- Enrollment: authenticated `/settings/notifications` exposes browser capability detection, permission recovery, enable/disable, and a browser-scoped self-test. A browser service worker and notification permission are required; adding the PWA to the Android home screen is optional.
+- Delivery: `sendPushToUser` and blast fanout reuse the existing Push channel/category gates. Browser delivery is additive and does not change native APNs registration or routing. Logout revokes the account's active browser subscriptions before clearing the session.
+- Required env vars: `WEB_PUSH_VAPID_PUBLIC_KEY`, `WEB_PUSH_VAPID_PRIVATE_KEY`, and `WEB_PUSH_SUBJECT`. The private key is server-only and the same VAPID pair must remain stable across deployments.
+- Production rollout: migration `0137_web_push_subscriptions` is applied; deployment `dpl_9stXTaEbeKN1bWDuyUp9ZcSqT6X1` is READY and aliased to `https://wisconsincreative.com`; authenticated route read-back reports browser push configured. Physical Android permission, delivery, and tap-through remain separate acceptance gates.
+- Source: `src/lib/push/web.ts`, `src/app/api/push/web/route.ts`, `src/app/api/push/web/test/route.ts`, `src/components/notifications/WebPushSettings.tsx`, and `public/sw.js`
+
 ### macOS companion invalidation
 
 - Wisconsin Creative registers its macOS APNs token against `/api/companion/devices` with a signed companion credential held in Keychain.
@@ -151,8 +160,9 @@ Implementation: `src/lib/checkout-escalation-policy.ts`, `src/lib/services/notif
 - Account deactivation and role changes revoke that user's external companion sessions and device registrations. Companion credentials are 90-day leases renewed through the Upstash-only session route during normal restore, APNs, or manual refresh; a credential that is unused past its lease still requires sign-in again.
 - Existing production KV/Upstash, session-secret, and APNs provider variables satisfy the server prerequisites. The macOS App ID capability and Developer ID signed/notarized build shipped in `macos-v1.0.0` with profile `4f4171d8-f959-4ed5-be70-7cc663253d52`; real APNs delivery and end-to-end notification acceptance remain rollout gates.
 
-## Channels (V1 + Email)
+## Channels (V1 + Email + Browser Push)
 - **In-app**: `Notification` records are durable for the requester and configured operational recipients
+- **Browser push**: Web Push for enrolled browsers when the recipient's push channel, pause state, and notification category allow delivery
 - **Email**: Via Resend (`RESEND_API_KEY` env var). Falls back to `console.log` in dev. Non-fatal on failure.
 - **Admin escalation**: +24h notifies all active visible admins by in-app + email; push is reserved for configured or fallback location responders
 - **Preferences**: requester, responder, and admin outbound delivery all use the checkout due/overdue category plus the recipient's channel and pause preferences
@@ -337,8 +347,45 @@ Current behavior:
 | `CRON_SECRET` | Yes (prod) | Bearer token for Vercel Cron → `/api/cron/notifications` |
 | `RESEND_API_KEY` | No (optional) | Enables email delivery via Resend. Falls back to console.log |
 | `EMAIL_FROM` | No | From address for transactional email. Default: `Wisconsin Creative <noreply@wisconsincreative.com>` |
+| `WEB_PUSH_VAPID_PUBLIC_KEY` | Yes for browser push | Public VAPID key returned to authenticated browsers |
+| `WEB_PUSH_VAPID_PRIVATE_KEY` | Yes for browser push | Server-only VAPID signing key |
+| `WEB_PUSH_SUBJECT` | Yes for browser push | VAPID contact URL or `mailto:` subject |
+
+## Push Action Categories (Implemented 2026-08-28)
+
+`sendPush` accepts an `aps.category`, which selects the action set the native
+client registered under the same identifier. `sendPushToUser` derives it from
+the notification's existing preference category:
+
+| Preference category | APNs category | Actions |
+| --- | --- | --- |
+| `checkoutDue`, `checkoutOverdue`, `reservation`, `gearPrep` | `GT_BOOKING` | Remind Me in 1 Hour, View Booking |
+| `schedule`, `trade` | `GT_SCHEDULE` | View Shift |
+| `licenseExpiry` | *(none)* | tap only |
+| Blasts (`src/lib/services/blasts.ts`) | `GT_BLAST` | Got it, Open |
+
+Rules that bound the action list:
+
+1. **No action opens a mutation sheet.** A tapped booking link already routes to
+   booking detail and nothing else, because extending is a decision taken
+   deliberately on that page. A lock-screen button is a weaker signal of intent
+   than a tapped link, not a stronger one. Every `.foreground` action shares one
+   routing path with the plain tap, so an action can never reach a destination a
+   tap could not.
+2. **One server write, and only the idempotent one.** "Got it" posts the same
+   `/api/me/blasts/[id]/ack` call the in-app banner button makes. Snooze is a
+   local `UNTimeIntervalNotificationTrigger` — there is no snooze concept on the
+   server, and inventing one from a lock-screen button would put a row in the
+   audit trail no operator asked for.
+3. **`licenseExpiry` has no category on purpose.** A menu whose only entry is
+   "View" is worse than a plain tap.
+
+Rollout is additive in both directions: iOS ignores a category identifier the
+installed build has not registered, and a build that receives no category
+renders a tap-only alert. Neither side needs to ship first.
 
 ## Change Log
+- 2026-08-28: **Android browser push is deployed.** Authenticated students can enroll the current HTTPS browser from Settings → Notifications, where the service worker receives safe same-origin notification taps and a browser-scoped test is available. `WebPushSubscription` migration `0137_web_push_subscriptions`, stable VAPID configuration, stale-endpoint cleanup, logout revocation, preference-aware normal/blast delivery, and deployment `dpl_9stXTaEbeKN1bWDuyUp9ZcSqT6X1` are complete. Physical Android Chrome permission, delivery, and tap-through acceptance remain open; iOS APNs is unchanged.
 - 2026-08-27: **Student claim reviewer alerts are Admin-only.** Initial fanout plus escalation, blocked, and auto-approved outcome notifications for both open Student-slot requests and Trade Board claims target active visible Admins. Staff have no claim-review alerts, approval permission, or queue access; students continue receiving their own request and trade lifecycle messages.
 - 2026-08-26: **Open Student-slot claims now notify active reviewers.** The canonical approval-first pickup path persists the student's `REQUESTED` assignment, then creates deduplicated durable `shift_request_review` rows for active visible Admin/Staff users and sends best-effort push through the existing schedule preference gate. The student-facing claim helper is documented under the Schedule/Event surfaces; direct-assignment email remains out of scope. Focused source contracts pass; deployment and authenticated delivery acceptance remain separate gates.
 - 2026-08-21: **macOS companion restart recovery.** A login-item launch that occurs before the data-protection Keychain is available no longer converts a missing read into an immediate logout. Wisconsin Creative keeps the last trusted local identity/projection, retries on macOS session activation and menu presentation, and only clears the cached account after a confirmed post-activation miss.
