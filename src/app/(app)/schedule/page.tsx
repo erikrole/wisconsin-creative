@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
-import { MoreHorizontalIcon, SparklesIcon } from "lucide-react";
+import { FileSpreadsheetIcon, MoreHorizontalIcon, SparklesIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -37,6 +37,7 @@ import { ScheduleReadiness } from "./_components/ScheduleReadiness";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { CollaboratorSchedule } from "./_components/CollaboratorSchedule";
 import { AutoAssignDialog } from "@/components/schedule/AutoAssignDialog";
+import { FootballStaffingSheetPreviewDialog } from "@/components/schedule/FootballStaffingSheetPreviewDialog";
 import type { Area } from "@/types/areas";
 
 const ShiftDetailPanel = dynamic(
@@ -79,6 +80,7 @@ function InternalSchedulePage() {
   const [hidingEventIds, setHidingEventIds] = useState<Set<string>>(() => new Set());
   const [newEventOpen, setNewEventOpen] = useState(false);
   const [autoAssignOpen, setAutoAssignOpen] = useState(false);
+  const [footballSheetPreviewOpen, setFootballSheetPreviewOpen] = useState(false);
   const settingUpRef = useRef<Set<string>>(new Set());
   const [settingUpEventIds, setSettingUpEventIds] = useState<Set<string>>(() => new Set());
 
@@ -328,6 +330,12 @@ function InternalSchedulePage() {
                       </Badge>
                     )}
                   </DropdownMenuItem>
+                  {canReviewClaims && (
+                    <DropdownMenuItem onSelect={() => setFootballSheetPreviewOpen(true)}>
+                      <FileSpreadsheetIcon />
+                      Preview Football staffing sheet
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuLabel>Export CSV</DropdownMenuLabel>
                   <DropdownMenuGroup>
@@ -456,6 +464,13 @@ function InternalSchedulePage() {
           open={newEventOpen}
           onOpenChange={setNewEventOpen}
           onCreated={data.loadData}
+        />
+      )}
+
+      {canReviewClaims && (
+        <FootballStaffingSheetPreviewDialog
+          open={footballSheetPreviewOpen}
+          onOpenChange={setFootballSheetPreviewOpen}
         />
       )}
 

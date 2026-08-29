@@ -1,10 +1,33 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Check, CopyIcon, Plane, RefreshCw, UserPlus, X } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Check,
+  CircleCheck,
+  CopyIcon,
+  Plane,
+  RefreshCw,
+  Search,
+  TriangleAlert,
+  UserPlus,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Command,
   CommandEmpty,
@@ -23,7 +46,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import {
@@ -35,11 +60,15 @@ import {
 import type {
   SportSetupEntry,
   SportSetupMember,
-  SportSetupPerson,
   SportSetupResponse,
 } from "@/lib/services/sport-setup";
 import { AREA_LABELS } from "@/types/areas";
 import { cn } from "@/lib/utils";
+import { isBigSixSportCode } from "@/lib/sports";
+import { VarsityOwnershipEditor } from "@/components/schedule/VarsityOwnershipEditor";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { evaluateTravelReadiness } from "@/lib/travel-readiness";
+import { summarizeSportRosterCoverage } from "@/lib/sport-roster-coverage";
 
 type SportSetupWizardProps = {
   open: boolean;
@@ -54,64 +83,85 @@ function areaLabel(area: string | null) {
   return AREA_LABELS[area as keyof typeof AREA_LABELS] ?? area;
 }
 
-function MemberChip({
+function MemberRow({
   member,
   onRemove,
   onToggleTravel,
+  onSelect,
+  selected,
   busy,
 }: {
   member: SportSetupMember;
   onRemove: () => void;
   onToggleTravel: () => void;
+  onSelect: () => void;
+  selected: boolean;
   busy: boolean;
 }) {
   return (
-    <span
+    <div
       className={cn(
-        "inline-flex items-center gap-1 rounded-md py-1 pl-1 pr-1 text-sm",
-        member.defaultTraveler ? "bg-[var(--yellow-bg)]/60" : "bg-muted/50",
+        "flex min-h-12 items-center gap-3 rounded-md border px-3 py-2",
+        member.defaultTraveler
+          ? "border-[var(--yellow-text)]/25 bg-[var(--yellow-bg)]/35"
+          : "border-border/60 bg-card",
       )}
     >
+      <Checkbox
+        checked={selected}
+        onCheckedChange={onSelect}
+        aria-label={`Select ${member.name}`}
+        disabled={busy}
+        className="shrink-0"
+      />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium">{member.name}</p>
+        {member.primaryArea ? (
+          <p className="truncate text-xs text-muted-foreground">{areaLabel(member.primaryArea)}</p>
+        ) : (
+          <Link
+            href={`/users/${member.id}`}
+            className="text-xs text-muted-foreground underline decoration-dotted underline-offset-2 hover:text-foreground"
+          >
+            No area · Set on profile
+          </Link>
+        )}
+      </div>
+      <Button
+        variant={member.defaultTraveler ? "outline" : "ghost"}
+        size="sm"
+        className={cn(
+          "h-10 shrink-0 px-3 text-xs",
+          member.defaultTraveler && "border-[var(--yellow-text)]/30 bg-[var(--yellow-bg)]/50 text-[var(--yellow-text)]",
+        )}
+        aria-pressed={member.defaultTraveler}
+        aria-label={
+          member.defaultTraveler
+            ? `Remove ${member.name} from the travel roster`
+            : `Add ${member.name} to the travel roster`
+        }
+        disabled={busy}
+        onClick={onToggleTravel}
+      >
+        <Plane className="size-3.5" fill={member.defaultTraveler ? "currentColor" : "none"} />
+        {member.defaultTraveler ? "Travels" : "Add to travel"}
+      </Button>
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
             variant="ghost"
             size="sm"
-            className={cn(
-              "size-8 p-0",
-              member.defaultTraveler
-                ? "text-[var(--yellow-text)] hover:brightness-110"
-                : "text-muted-foreground/40 hover:text-muted-foreground",
-            )}
-            aria-pressed={member.defaultTraveler}
-            aria-label={
-              member.defaultTraveler
-                ? `Remove ${member.name} from the travel roster`
-                : `Add ${member.name} to the travel roster`
-            }
+            className="size-10 shrink-0 p-0 text-muted-foreground hover:text-destructive"
+            aria-label={`Remove ${member.name} from this sport`}
             disabled={busy}
-            onClick={onToggleTravel}
+            onClick={onRemove}
           >
-            <Plane className="size-3.5" fill={member.defaultTraveler ? "currentColor" : "none"} />
+            <X className="size-4" />
           </Button>
         </TooltipTrigger>
-        <TooltipContent>
-          {member.defaultTraveler ? "Travels by default — click to unset" : "Add to the travel roster"}
-        </TooltipContent>
+        <TooltipContent>Remove from this sport</TooltipContent>
       </Tooltip>
-      <span className="font-medium">{member.name}</span>
-      <span className="text-xs text-muted-foreground">{areaLabel(member.primaryArea)}</span>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="size-8 p-0 text-muted-foreground hover:text-foreground"
-        aria-label={`Remove ${member.name} from ${"this sport"}`}
-        disabled={busy}
-        onClick={onRemove}
-      >
-        <X className="size-3.5" />
-      </Button>
-    </span>
+    </div>
   );
 }
 
@@ -130,14 +180,25 @@ export function SportSetupWizard({
   startAtSportCode,
   onCompleted,
 }: SportSetupWizardProps) {
+  const { data: currentUser } = useCurrentUser();
   const [setup, setSetup] = useState<SportSetupResponse | null>(null);
   const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerWorkerType, setPickerWorkerType] = useState<"ALL" | "FT" | "ST">("ALL");
+  const [pickerArea, setPickerArea] = useState("ALL");
+  const [selectedPersonIds, setSelectedPersonIds] = useState<Set<string>>(() => new Set());
   const [matchOpen, setMatchOpen] = useState(false);
   const [matchRoster, setMatchRoster] = useState(true);
+  const [rosterQuery, setRosterQuery] = useState("");
+  const [rosterView, setRosterView] = useState<"ALL" | "TRAVEL">("ALL");
+  const [rosterWorkerType, setRosterWorkerType] = useState<"ALL" | "FT" | "ST">("ALL");
+  const [rosterArea, setRosterArea] = useState("ALL");
+  const [selectedRosterIds, setSelectedRosterIds] = useState<Set<string>>(() => new Set());
+  const [travelFallbackTarget, setTravelFallbackTarget] = useState<SportSetupMember[] | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<SportSetupMember | null>(null);
   const [touchedCodes, setTouchedCodes] = useState<Set<string>>(() => new Set());
 
   const load = useCallback(async () => {
@@ -176,6 +237,14 @@ export function SportSetupWizard({
     setIndex(target >= 0 ? target : 0);
   }, [setup, startAtSportCode]);
 
+  useEffect(() => {
+    setRosterQuery("");
+    setRosterView("ALL");
+    setRosterWorkerType("ALL");
+    setRosterArea("ALL");
+    setSelectedRosterIds(new Set());
+  }, [index]);
+
   const sport: SportSetupEntry | null = setup?.sports[index] ?? null;
   const total = setup?.sports.length ?? 0;
 
@@ -187,11 +256,69 @@ export function SportSetupWizard({
     () => (setup?.people ?? []).filter((person) => !assignedIds.has(person.id)),
     [assignedIds, setup],
   );
+  const availableAreas = useMemo(
+    () => Array.from(new Set(availablePeople.map((person) => person.primaryArea).filter((area): area is string => !!area)))
+      .sort((a, b) => areaLabel(a).localeCompare(areaLabel(b))),
+    [availablePeople],
+  );
+  const filteredAvailablePeople = useMemo(
+    () => availablePeople.filter((person) =>
+      (pickerWorkerType === "ALL" || person.workerType === pickerWorkerType)
+      && (pickerArea === "ALL" || person.primaryArea === pickerArea)),
+    [availablePeople, pickerArea, pickerWorkerType],
+  );
   const rosterSize = (sport?.staff.length ?? 0) + (sport?.students.length ?? 0);
   const travelers = useMemo(
     () => [...(sport?.staff ?? []), ...(sport?.students ?? [])].filter((member) => member.defaultTraveler),
     [sport],
   );
+  const travelReadiness = useMemo(
+    () => sport
+      ? evaluateTravelReadiness(sport.awayRequirements, [...sport.staff, ...sport.students])
+      : null,
+    [sport],
+  );
+  const rosterMembers = useMemo(
+    () => [...(sport?.staff ?? []), ...(sport?.students ?? [])],
+    [sport],
+  );
+  const rosterCoverage = useMemo(
+    () => summarizeSportRosterCoverage(rosterMembers)
+      .sort((a, b) => areaLabel(a.area).localeCompare(areaLabel(b.area))),
+    [rosterMembers],
+  );
+  const rosterAreas = useMemo(
+    () => rosterCoverage.filter((coverage) => coverage.area !== null),
+    [rosterCoverage],
+  );
+  const selectedRosterMembers = useMemo(
+    () => rosterMembers.filter((member) => selectedRosterIds.has(member.assignmentId)),
+    [rosterMembers, selectedRosterIds],
+  );
+  const filteredStaff = useMemo(() => {
+    const query = rosterQuery.trim().toLocaleLowerCase();
+    return (sport?.staff ?? []).filter((member) =>
+      (rosterView === "ALL" || member.defaultTraveler)
+      && (rosterWorkerType === "ALL" || rosterWorkerType === "FT")
+      && (rosterArea === "ALL" || (rosterArea === "NO_AREA" ? !member.primaryArea : member.primaryArea === rosterArea))
+      && (!query || `${member.name} ${areaLabel(member.primaryArea)}`.toLocaleLowerCase().includes(query)),
+    );
+  }, [rosterArea, rosterQuery, rosterView, rosterWorkerType, sport]);
+  const filteredStudents = useMemo(() => {
+    const query = rosterQuery.trim().toLocaleLowerCase();
+    return (sport?.students ?? []).filter((member) =>
+      (rosterView === "ALL" || member.defaultTraveler)
+      && (rosterWorkerType === "ALL" || rosterWorkerType === "ST")
+      && (rosterArea === "ALL" || (rosterArea === "NO_AREA" ? !member.primaryArea : member.primaryArea === rosterArea))
+      && (!query || `${member.name} ${areaLabel(member.primaryArea)}`.toLocaleLowerCase().includes(query)),
+    );
+  }, [rosterArea, rosterQuery, rosterView, rosterWorkerType, sport]);
+  const visibleRosterIds = useMemo(
+    () => [...filteredStaff, ...filteredStudents].map((member) => member.assignmentId),
+    [filteredStaff, filteredStudents],
+  );
+  const allVisibleSelected = visibleRosterIds.length > 0
+    && visibleRosterIds.every((assignmentId) => selectedRosterIds.has(assignmentId));
 
   function patchSport(
     sportCode: string,
@@ -239,35 +366,43 @@ export function SportSetupWizard({
     }
   }
 
-  async function addPerson(person: SportSetupPerson) {
-    if (!sport || busy) return;
+  function setPickerVisibility(nextOpen: boolean) {
+    setPickerOpen(nextOpen);
+    if (nextOpen) {
+      setPickerWorkerType("ALL");
+      setPickerArea("ALL");
+      setSelectedPersonIds(new Set());
+    }
+  }
+
+  function toggleSelectedPerson(personId: string) {
+    setSelectedPersonIds((current) => {
+      const next = new Set(current);
+      if (next.has(personId)) next.delete(personId);
+      else next.add(personId);
+      return next;
+    });
+  }
+
+  async function addSelectedPeople() {
+    if (!sport || busy || selectedPersonIds.size === 0) return;
+    const userIds = Array.from(selectedPersonIds);
     setBusy(true);
     setPickerOpen(false);
     try {
       const response = await fetch(`/api/sport-configs/${sport.sportCode}/roster`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: person.id }),
+        body: JSON.stringify({ userIds }),
       });
       if (handleAuthRedirect(response)) return;
       if (!response.ok) {
-        toast.error(await parseErrorMessage(response, `${person.name} was not added.`));
+        toast.error(await parseErrorMessage(response, "Those people were not added."));
         return;
       }
-      const json = await parseJsonSafely<{ data?: { id?: string } }>(response);
-      const assignmentId = json?.data?.id;
-      if (!assignmentId) {
-        // Without the new row's id the chip could not be removed again, so
-        // reload rather than render something that cannot be undone.
-        await load();
-        return;
-      }
-      const member: SportSetupMember = { ...person, assignmentId, defaultTraveler: false };
-      patchSport(sport.sportCode, (entry) => ({
-        ...entry,
-        staff: member.workerType === "FT" ? [...entry.staff, member] : entry.staff,
-        students: member.workerType === "ST" ? [...entry.students, member] : entry.students,
-      }));
+      setTouchedCodes((current) => new Set(current).add(sport.sportCode));
+      toast.success(`Added ${userIds.length} ${userIds.length === 1 ? "person" : "people"} to ${sport.label}`);
+      await load();
     } catch {
       toast.error("Could not reach the server.");
     } finally {
@@ -313,35 +448,76 @@ export function SportSetupWizard({
     }
   }
 
-  async function toggleTravel(member: SportSetupMember) {
-    if (!sport || busy) return;
-    const next = !member.defaultTraveler;
+  function toggleRosterSelection(assignmentId: string) {
+    setSelectedRosterIds((current) => {
+      const next = new Set(current);
+      if (next.has(assignmentId)) next.delete(assignmentId);
+      else next.add(assignmentId);
+      return next;
+    });
+  }
+
+  async function setTravelForMembers(members: SportSetupMember[], next: boolean) {
+    if (!sport || busy || members.length === 0) return;
+    const assignmentIds = members.map((member) => member.assignmentId);
+    const selected = new Set(assignmentIds);
+    const previous = new Map(members.map((member) => [member.assignmentId, member.defaultTraveler]));
     setBusy(true);
     const applyTravel = (value: boolean, touched = true) => patchSport(sport.sportCode, (entry) => ({
       ...entry,
       staff: entry.staff.map((candidate) =>
-        candidate.assignmentId === member.assignmentId ? { ...candidate, defaultTraveler: value } : candidate),
+        selected.has(candidate.assignmentId) ? { ...candidate, defaultTraveler: value } : candidate),
       students: entry.students.map((candidate) =>
-        candidate.assignmentId === member.assignmentId ? { ...candidate, defaultTraveler: value } : candidate),
+        selected.has(candidate.assignmentId) ? { ...candidate, defaultTraveler: value } : candidate),
     }), { touched });
     applyTravel(next);
     try {
       const response = await fetch(`/api/sport-configs/${sport.sportCode}/roster`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ assignmentId: member.assignmentId, defaultTraveler: next }),
+        body: JSON.stringify({ assignmentIds, defaultTraveler: next }),
       });
       if (handleAuthRedirect(response)) return;
       if (!response.ok) {
-        applyTravel(!next, false);
-        toast.error(await parseErrorMessage(response, `${member.name}'s travel roster was not updated.`));
+        patchSport(sport.sportCode, (entry) => ({
+          ...entry,
+          staff: entry.staff.map((candidate) => selected.has(candidate.assignmentId)
+            ? { ...candidate, defaultTraveler: previous.get(candidate.assignmentId) ?? candidate.defaultTraveler }
+            : candidate),
+          students: entry.students.map((candidate) => selected.has(candidate.assignmentId)
+            ? { ...candidate, defaultTraveler: previous.get(candidate.assignmentId) ?? candidate.defaultTraveler }
+            : candidate),
+        }), { touched: false });
+        toast.error(await parseErrorMessage(response, "The travel roster was not updated."));
+        return;
       }
+      setSelectedRosterIds(new Set());
+      toast.success(`${members.length} ${members.length === 1 ? "person" : "people"} ${next ? "added to" : "removed from"} travel`);
     } catch {
-      applyTravel(!next, false);
+      patchSport(sport.sportCode, (entry) => ({
+        ...entry,
+        staff: entry.staff.map((candidate) => selected.has(candidate.assignmentId)
+          ? { ...candidate, defaultTraveler: previous.get(candidate.assignmentId) ?? candidate.defaultTraveler }
+          : candidate),
+        students: entry.students.map((candidate) => selected.has(candidate.assignmentId)
+          ? { ...candidate, defaultTraveler: previous.get(candidate.assignmentId) ?? candidate.defaultTraveler }
+          : candidate),
+      }), { touched: false });
       toast.error("Could not reach the server. The travel roster was not updated.");
     } finally {
       setBusy(false);
     }
+  }
+
+  function requestTravelUpdate(members: SportSetupMember[], next: boolean) {
+    if (!next && travelers.length > 0) {
+      const selected = new Set(members.map((member) => member.assignmentId));
+      if (travelers.every((member) => selected.has(member.assignmentId))) {
+        setTravelFallbackTarget(members);
+        return;
+      }
+    }
+    void setTravelForMembers(members, next);
   }
 
   async function removeMember(member: SportSetupMember) {
@@ -362,6 +538,13 @@ export function SportSetupWizard({
         staff: entry.staff.filter((candidate) => candidate.assignmentId !== member.assignmentId),
         students: entry.students.filter((candidate) => candidate.assignmentId !== member.assignmentId),
       }));
+      setSelectedRosterIds((current) => {
+        const next = new Set(current);
+        next.delete(member.assignmentId);
+        return next;
+      });
+      setRemoveTarget(null);
+      toast.success(`${member.name} removed from ${sport.label}`);
     } catch {
       toast.error("Could not reach the server.");
     } finally {
@@ -380,8 +563,9 @@ export function SportSetupWizard({
   const isLast = index >= total - 1;
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="grid max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden sm:max-w-2xl">
+      <DialogContent className="grid max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden sm:max-w-3xl">
         <DialogHeader className="pr-16">
           <div>
             <DialogTitle>Sport setup</DialogTitle>
@@ -407,9 +591,26 @@ export function SportSetupWizard({
           ) : sport ? (
             <div className="flex flex-col gap-5">
               <div className="flex flex-wrap items-start justify-between gap-2">
-                <div>
+                <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="text-lg font-semibold">{sport.label}</h2>
+                    <Select
+                      value={sport.sportCode}
+                      onValueChange={(sportCode) => {
+                        const nextIndex = setup?.sports.findIndex((entry) => entry.sportCode === sportCode) ?? -1;
+                        if (nextIndex >= 0) setIndex(nextIndex);
+                      }}
+                    >
+                      <SelectTrigger className="h-10 w-full min-w-56 sm:w-72" aria-label="Choose sport">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(setup?.sports ?? []).map((entry) => (
+                          <SelectItem key={entry.sportCode} value={entry.sportCode}>
+                            {entry.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <Badge variant="gray" size="sm">{sport.sportCode}</Badge>
                     {touchedCodes.has(sport.sportCode) ? (
                       <Badge variant="green" size="sm">Saved</Badge>
@@ -507,6 +708,10 @@ export function SportSetupWizard({
                 </div>
               </div>
 
+              {currentUser?.role === "ADMIN" && !isBigSixSportCode(sport.sportCode)
+                ? <VarsityOwnershipEditor sportCode={sport.sportCode} />
+                : null}
+
               <div className="flex flex-col gap-2">
                 <div>
                   <span className="text-sm font-medium">Who can it pick from?</span>
@@ -516,39 +721,89 @@ export function SportSetupWizard({
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs font-medium text-muted-foreground">Roster</span>
-                  <span className="text-xs text-muted-foreground">
-                    {sport.staff.length} staff · {sport.students.length} student{sport.students.length === 1 ? "" : "s"}
-                    {travelers.length > 0 ? ` · ${travelers.length} travel` : ""}
-                  </span>
-                  <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+                  <span className="text-xs font-medium text-muted-foreground">Roster controls</span>
+                  <Popover open={pickerOpen} onOpenChange={setPickerVisibility}>
                     <PopoverTrigger asChild>
                       <Button variant="outline" size="sm" className="ml-auto h-10" disabled={busy}>
                         <UserPlus data-icon="inline-start" className="size-3.5" />
                         Add person
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent align="end" className="w-72 p-0">
+                    <PopoverContent align="end" className="w-[min(24rem,calc(100vw-2rem))] p-0">
+                      <div className="space-y-2 border-b p-3">
+                        <div className="flex rounded-md border border-border/60 bg-muted/20 p-1" aria-label="Person type">
+                          {(["ALL", "FT", "ST"] as const).map((workerType) => (
+                            <Button
+                              key={workerType}
+                              type="button"
+                              variant={pickerWorkerType === workerType ? "secondary" : "ghost"}
+                              size="sm"
+                              className="h-8 flex-1 text-xs"
+                              aria-pressed={pickerWorkerType === workerType}
+                              onClick={() => setPickerWorkerType(workerType)}
+                            >
+                              {workerType === "ALL" ? "Everyone" : workerType === "FT" ? "Staff" : "Students"}
+                            </Button>
+                          ))}
+                        </div>
+                        <Select value={pickerArea} onValueChange={setPickerArea}>
+                          <SelectTrigger className="h-10" aria-label="Filter people by area">
+                            <SelectValue placeholder="All areas" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="ALL">All areas</SelectItem>
+                            {availableAreas.map((area) => (
+                              <SelectItem key={area} value={area}>{areaLabel(area)}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                       <Command>
                         <CommandInput placeholder="Find a person…" />
-                        <CommandList>
-                          <CommandEmpty>Nobody left to add.</CommandEmpty>
+                        <CommandList className="max-h-72">
+                          <CommandEmpty>No available people match.</CommandEmpty>
                           <CommandGroup>
-                            {availablePeople.map((person) => (
+                            {filteredAvailablePeople.map((person) => {
+                              const selected = selectedPersonIds.has(person.id);
+                              return (
                               <CommandItem
                                 key={person.id}
-                                value={person.name}
-                                onSelect={() => void addPerson(person)}
+                                value={`${person.name} ${areaLabel(person.primaryArea)} ${person.workerType}`}
+                                onSelect={() => toggleSelectedPerson(person.id)}
+                                aria-selected={selected}
                               >
-                                <span className="flex-1 truncate">{person.name}</span>
-                                <span className="text-xs text-muted-foreground">
-                                  {person.workerType === "FT" ? "Staff" : "Student"}
+                                <span className={cn(
+                                  "flex size-4 shrink-0 items-center justify-center rounded border",
+                                  selected ? "border-primary bg-primary text-primary-foreground" : "border-border",
+                                )}>
+                                  {selected ? <Check className="size-3" /> : null}
+                                </span>
+                                <span className="min-w-0 flex-1">
+                                  <span className="block truncate">{person.name}</span>
+                                  <span className="block truncate text-xs text-muted-foreground">
+                                    {person.workerType === "FT" ? "Staff" : "Student"} · {areaLabel(person.primaryArea)}
+                                  </span>
                                 </span>
                               </CommandItem>
-                            ))}
+                              );
+                            })}
                           </CommandGroup>
                         </CommandList>
                       </Command>
+                      <div className="flex items-center justify-between gap-3 border-t p-3">
+                        <span className="text-xs text-muted-foreground">
+                          {selectedPersonIds.size === 0 ? "Select one or more people" : `${selectedPersonIds.size} selected`}
+                        </span>
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="h-10"
+                          disabled={busy || selectedPersonIds.size === 0}
+                          onClick={() => void addSelectedPeople()}
+                        >
+                          Add selected
+                        </Button>
+                      </div>
                     </PopoverContent>
                   </Popover>
                 </div>
@@ -560,115 +815,453 @@ export function SportSetupWizard({
                   </p>
                 ) : null}
 
-                {rosterSize > 0 ? (
-                <div className="rounded-md border border-[var(--yellow-text)]/25 bg-[var(--yellow-bg)]/30 px-3 py-2">
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <span className="inline-flex items-center gap-1.5 text-xs font-medium">
-                      <Plane className="size-3.5 text-[var(--yellow-text)]" />
-                      Travel roster
-                    </span>
-                    {travelers.length === 0 ? (
-                      <span className="text-xs text-muted-foreground">
-                        Nobody travels by default. Mark anyone below who does.
-                      </span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">
-                        {travelers.map((member) => member.name).join(", ")}
-                      </span>
-                    )}
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="rounded-md border border-border/60 bg-muted/20 px-3 py-3">
+                    <p className="text-xs font-medium text-muted-foreground">Full roster</p>
+                    <p className="mt-0.5 text-lg font-semibold tabular-nums">{rosterSize}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {sport.staff.length} staff · {sport.students.length} student{sport.students.length === 1 ? "" : "s"}
+                    </p>
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Who goes on the road for this sport. Auto assign crews away games from this list; if nobody is
-                    marked, away games fall back to the full roster.
-                  </p>
+                  <div className={cn(
+                    "rounded-md border px-3 py-3",
+                    travelers.length > 0
+                      ? "border-[var(--yellow-text)]/25 bg-[var(--yellow-bg)]/35"
+                      : "border-[var(--orange-text)]/25 bg-[var(--orange-bg)]/30",
+                  )}>
+                    <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                      <Plane className="size-3.5" /> Travel roster
+                    </p>
+                    <p className="mt-0.5 text-lg font-semibold tabular-nums">{travelers.length}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {travelers.length > 0
+                        ? "Away events use only these marked travelers."
+                        : "Fallback active: away events use the full roster."}
+                    </p>
+                  </div>
                 </div>
+
+                {rosterCoverage.length > 0 ? (
+                  <div className="rounded-md border border-border/60 bg-muted/15 p-3">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-medium">Full roster coverage</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          Primary coverage areas saved on each person&apos;s profile. Select one to review that group.
+                        </p>
+                      </div>
+                      <Badge variant="gray" size="sm">{rosterCoverage.length} {rosterCoverage.length === 1 ? "area" : "areas"}</Badge>
+                    </div>
+                    <div className="mt-3 grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+                      {rosterCoverage.map((coverage) => {
+                        const value = coverage.area ?? "NO_AREA";
+                        const active = rosterView === "ALL" && rosterArea === value;
+                        return (
+                          <button
+                            key={value}
+                            type="button"
+                            aria-pressed={active}
+                            className={cn(
+                              "min-h-12 rounded-md border px-3 py-2 text-left transition-colors",
+                              active
+                                ? "border-[var(--blue-text)] bg-[var(--blue-bg)]/40"
+                                : "border-border/60 bg-card hover:bg-muted/40",
+                            )}
+                            onClick={() => {
+                              setRosterView("ALL");
+                              setRosterArea(active ? "ALL" : value);
+                              setRosterWorkerType("ALL");
+                              setRosterQuery("");
+                            }}
+                          >
+                            <span className="flex items-center justify-between gap-2 text-xs font-medium">
+                              <span className="truncate">{areaLabel(coverage.area)}</span>
+                              <span className="tabular-nums text-muted-foreground">{coverage.total}</span>
+                            </span>
+                            <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                              {coverage.staffCount} staff · {coverage.studentCount} student{coverage.studentCount === 1 ? "" : "s"}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 ) : null}
 
-                <div className="flex flex-col gap-2 rounded-md border border-border/60 bg-muted/20 p-3">
-                  <div>
-                    <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Staff</span>
-                    <div className="mt-1 flex flex-wrap gap-1.5">
-                      {sport.staff.length === 0 ? (
-                        <span className="text-xs text-muted-foreground">Nobody yet.</span>
-                      ) : (
-                        sport.staff.map((member) => (
-                          <MemberChip
-                            key={member.assignmentId}
-                            member={member}
-                            busy={busy}
-                            onRemove={() => void removeMember(member)}
-                            onToggleTravel={() => void toggleTravel(member)}
-                          />
-                        ))
-                      )}
+                {travelReadiness ? (
+                  <div className={cn(
+                    "rounded-md border p-3",
+                    travelReadiness.status === "READY"
+                      ? "border-[var(--green-text)]/25 bg-[var(--green-bg)]/25"
+                      : travelReadiness.status === "GAPS"
+                        ? "border-[var(--orange-text)]/25 bg-[var(--orange-bg)]/25"
+                        : "border-border/60 bg-muted/15",
+                  )}>
+                    <div className="flex flex-wrap items-start gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="flex items-center gap-1.5 text-sm font-medium">
+                          {travelReadiness.status === "READY" ? (
+                            <CircleCheck className="size-4 text-[var(--green-text)]" />
+                          ) : travelReadiness.status === "GAPS" ? (
+                            <TriangleAlert className="size-4 text-[var(--orange-text)]" />
+                          ) : (
+                            <Plane className="size-4 text-muted-foreground" />
+                          )}
+                          Away crew readiness
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {travelReadiness.mode === "EXPLICIT_TRAVEL"
+                            ? `Checking ${travelReadiness.effectivePoolSize} marked travelers against saved away minimums.`
+                            : `No travel roster is set, so this checks all ${travelReadiness.effectivePoolSize} roster members.`}
+                        </p>
+                      </div>
+                      <Badge
+                        variant={travelReadiness.status === "READY" ? "green" : travelReadiness.status === "GAPS" ? "orange" : "gray"}
+                        size="sm"
+                      >
+                        {travelReadiness.status === "READY"
+                          ? "Ready by template"
+                          : travelReadiness.status === "GAPS"
+                            ? `${travelReadiness.gaps.length} ${travelReadiness.gaps.length === 1 ? "gap" : "gaps"}`
+                            : "No away minimums"}
+                      </Badge>
                     </div>
+
+                    {travelReadiness.status === "GAPS" ? (
+                      <div className="mt-3 grid gap-1.5 sm:grid-cols-2">
+                        {travelReadiness.gaps.map((gap) => (
+                          <button
+                            key={`${gap.area}-${gap.workerType}`}
+                            type="button"
+                            className="flex min-h-10 items-center gap-3 rounded-md border border-border/60 bg-card px-3 py-2 text-left transition-colors hover:bg-muted/40"
+                            onClick={() => {
+                              setRosterView(travelReadiness.mode === "EXPLICIT_TRAVEL" ? "TRAVEL" : "ALL");
+                              setRosterArea(gap.area);
+                              setRosterWorkerType(gap.workerType);
+                              setRosterQuery("");
+                            }}
+                          >
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-xs font-medium">{areaLabel(gap.area)} · {gap.workerType === "FT" ? "Staff" : "Student"}</span>
+                              <span className="block text-xs text-muted-foreground">{gap.eligible} eligible for {gap.required} required</span>
+                            </span>
+                            <Badge variant="orange" size="sm">Need {gap.missing}</Badge>
+                          </button>
+                        ))}
+                      </div>
+                    ) : travelReadiness.status === "NO_TEMPLATE" ? (
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        Set away Staff and Student minimums on this sport card to evaluate its travel pool.
+                      </p>
+                    ) : null}
+
+                    {travelReadiness.membersWithoutArea > 0 ? (
+                      <Button
+                        type="button"
+                        variant="link"
+                        size="sm"
+                        className="mt-2 h-auto px-0 text-xs"
+                        onClick={() => {
+                          setRosterView(travelReadiness.mode === "EXPLICIT_TRAVEL" ? "TRAVEL" : "ALL");
+                          setRosterArea("NO_AREA");
+                          setRosterWorkerType("ALL");
+                          setRosterQuery("");
+                        }}
+                      >
+                        Review {travelReadiness.membersWithoutArea} {travelReadiness.membersWithoutArea === 1 ? "person" : "people"} without a coverage area
+                      </Button>
+                    ) : null}
+
+                    <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+                      This is a template check, not an event promise. Auto assign still rechecks travel eligibility,
+                      availability, approved time off, conflicts, and current schedule state for each event.
+                    </p>
+                    {sport.sportCode === "FB" ? (
+                      <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                        Football game-day positions stay in Staffing sheet review; they are not coverage areas or crew minimums.
+                      </p>
+                    ) : null}
                   </div>
-                  <div>
-                    <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                      Students
-                      {sport.policy === "STAFF_ONLY" ? " · request their own slots" : ""}
-                    </span>
-                    <div className="mt-1 flex flex-wrap gap-1.5">
-                      {sport.students.length === 0 ? (
-                        <span className="text-xs text-muted-foreground">Nobody yet.</span>
-                      ) : (
-                        sport.students.map((member) => (
-                          <MemberChip
-                            key={member.assignmentId}
-                            member={member}
-                            busy={busy}
-                            onRemove={() => void removeMember(member)}
-                            onToggleTravel={() => void toggleTravel(member)}
-                          />
-                        ))
-                      )}
+                ) : null}
+
+                {rosterSize > 0 ? (
+                  <div className="flex flex-col gap-3 rounded-md border border-border/60 bg-muted/15 p-3">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <div className="relative min-w-0 flex-1">
+                        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          value={rosterQuery}
+                          onChange={(event) => setRosterQuery(event.target.value)}
+                          placeholder="Find a roster member or area…"
+                          aria-label="Find a roster member or area"
+                          className="h-10 pl-9"
+                        />
+                      </div>
+                      <div className="flex rounded-md border border-border/60 bg-card p-1" aria-label="Roster view">
+                        <Button
+                          variant={rosterView === "ALL" ? "secondary" : "ghost"}
+                          size="sm"
+                          className="h-8 flex-1 px-3 text-xs sm:flex-none"
+                          aria-pressed={rosterView === "ALL"}
+                          onClick={() => setRosterView("ALL")}
+                        >
+                          All {rosterSize}
+                        </Button>
+                        <Button
+                          variant={rosterView === "TRAVEL" ? "secondary" : "ghost"}
+                          size="sm"
+                          className="h-8 flex-1 px-3 text-xs sm:flex-none"
+                          aria-pressed={rosterView === "TRAVEL"}
+                          onClick={() => setRosterView("TRAVEL")}
+                        >
+                          <Plane className="size-3.5" /> Travel {travelers.length}
+                        </Button>
+                      </div>
                     </div>
+
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <div className="flex rounded-md border border-border/60 bg-card p-1" aria-label="Roster person type">
+                        {(["ALL", "FT", "ST"] as const).map((workerType) => (
+                          <Button
+                            key={workerType}
+                            type="button"
+                            variant={rosterWorkerType === workerType ? "secondary" : "ghost"}
+                            size="sm"
+                            className="h-8 flex-1 px-3 text-xs sm:flex-none"
+                            aria-pressed={rosterWorkerType === workerType}
+                            onClick={() => setRosterWorkerType(workerType)}
+                          >
+                            {workerType === "ALL" ? "Everyone" : workerType === "FT" ? "Staff" : "Students"}
+                          </Button>
+                        ))}
+                      </div>
+                      <Select value={rosterArea} onValueChange={setRosterArea}>
+                        <SelectTrigger className="h-10 w-full sm:w-48" aria-label="Filter roster by area">
+                          <SelectValue placeholder="All coverage areas" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ALL">All coverage areas</SelectItem>
+                          {rosterAreas.map((coverage) => (
+                            <SelectItem key={coverage.area} value={coverage.area!}>{areaLabel(coverage.area)}</SelectItem>
+                          ))}
+                          {rosterCoverage.some((coverage) => coverage.area === null) ? (
+                            <SelectItem value="NO_AREA">No area</SelectItem>
+                          ) : null}
+                        </SelectContent>
+                      </Select>
+                      {rosterWorkerType !== "ALL" || rosterArea !== "ALL" || rosterQuery ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-10 sm:ml-auto"
+                          onClick={() => {
+                            setRosterWorkerType("ALL");
+                            setRosterArea("ALL");
+                            setRosterQuery("");
+                          }}
+                        >
+                          Clear filters
+                        </Button>
+                      ) : null}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 rounded-md border border-border/60 bg-card px-2 py-2">
+                      <label className="flex min-h-10 cursor-pointer items-center gap-2 px-1 text-xs font-medium">
+                        <Checkbox
+                          checked={allVisibleSelected ? true : selectedRosterMembers.length > 0 ? "indeterminate" : false}
+                          onCheckedChange={(checked) => {
+                            if (checked === true) {
+                              setSelectedRosterIds((current) => new Set([...current, ...visibleRosterIds]));
+                            } else {
+                              setSelectedRosterIds((current) => {
+                                const next = new Set(current);
+                                for (const assignmentId of visibleRosterIds) next.delete(assignmentId);
+                                return next;
+                              });
+                            }
+                          }}
+                          disabled={busy || visibleRosterIds.length === 0}
+                        />
+                        {selectedRosterMembers.length > 0
+                          ? `${selectedRosterMembers.length} selected`
+                          : `Select visible (${visibleRosterIds.length})`}
+                      </label>
+                      <div className="ml-auto flex flex-wrap items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-10"
+                          disabled={busy || !selectedRosterMembers.some((member) => !member.defaultTraveler)}
+                          onClick={() => requestTravelUpdate(selectedRosterMembers, true)}
+                        >
+                          <Plane className="size-3.5" /> Add to travel
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-10"
+                          disabled={busy || !selectedRosterMembers.some((member) => member.defaultTraveler)}
+                          onClick={() => requestTravelUpdate(
+                            selectedRosterMembers.filter((member) => member.defaultTraveler),
+                            false,
+                          )}
+                        >
+                          Remove from travel
+                        </Button>
+                      </div>
+                    </div>
+
+                    {filteredStaff.length === 0 && filteredStudents.length === 0 ? (
+                      <p className="rounded-md border border-dashed border-border/70 px-3 py-6 text-center text-xs text-muted-foreground">
+                        {rosterView === "TRAVEL" && travelers.length === 0
+                          ? "Nobody is marked for travel. Away events currently fall back to the full roster."
+                          : "No roster members match this search."}
+                      </p>
+                    ) : (
+                      <div className={cn(
+                        "grid gap-4",
+                        filteredStaff.length > 0 && filteredStudents.length > 0 && "sm:grid-cols-2",
+                      )}>
+                        {filteredStaff.length > 0 ? <div className="min-w-0">
+                          <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Staff</span>
+                          <div className="mt-1.5 flex flex-col gap-1.5">
+                            {filteredStaff.map((member) => (
+                              <MemberRow
+                                key={member.assignmentId}
+                                member={member}
+                                busy={busy}
+                                selected={selectedRosterIds.has(member.assignmentId)}
+                                onSelect={() => toggleRosterSelection(member.assignmentId)}
+                                onRemove={() => setRemoveTarget(member)}
+                                onToggleTravel={() => requestTravelUpdate([member], !member.defaultTraveler)}
+                              />
+                            ))}
+                          </div>
+                        </div> : null}
+                        {filteredStudents.length > 0 ? <div className="min-w-0">
+                          <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                            Students{sport.policy === "STAFF_ONLY" ? " · request their own slots" : ""}
+                          </span>
+                          <div className="mt-1.5 flex flex-col gap-1.5">
+                            {filteredStudents.map((member) => (
+                              <MemberRow
+                                key={member.assignmentId}
+                                member={member}
+                                busy={busy}
+                                selected={selectedRosterIds.has(member.assignmentId)}
+                                onSelect={() => toggleRosterSelection(member.assignmentId)}
+                                onRemove={() => setRemoveTarget(member)}
+                                onToggleTravel={() => requestTravelUpdate([member], !member.defaultTraveler)}
+                              />
+                            ))}
+                          </div>
+                        </div> : null}
+                      </div>
+                    )}
                   </div>
-                </div>
+                ) : (
+                  <p className="rounded-md border border-dashed border-border/70 px-3 py-6 text-center text-xs text-muted-foreground">
+                    Nobody is on this sport roster yet. Add a person to make them eligible for Auto assign.
+                  </p>
+                )}
               </div>
             </div>
           ) : null}
         </DialogBody>
 
-        <DialogFooter className="border-t pt-4">
-          <div className="mr-auto text-xs text-muted-foreground">
+        <DialogFooter className="flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center">
+          <div className="w-full text-xs text-muted-foreground sm:mr-auto sm:w-auto">
             {touchedCodes.size > 0
               ? `${touchedCodes.size} sport${touchedCodes.size === 1 ? "" : "s"} updated · already saved`
               : "Nothing changed yet · Skip leaves a sport exactly as it is"}
           </div>
-          <Button
-            variant="outline"
-            className="h-10"
-            disabled={index === 0 || busy}
-            onClick={() => setIndex((current) => Math.max(0, current - 1))}
-          >
-            <ChevronLeft className="size-4" />
-            Back
-          </Button>
-          {isLast ? (
-            <Button className="h-10" onClick={finish} disabled={busy}>Done</Button>
-          ) : (
-            <>
-              <Button
-                variant="ghost"
-                className="h-10"
-                disabled={busy}
-                onClick={() => setIndex((current) => Math.min(total - 1, current + 1))}
-              >
-                Skip
-              </Button>
-              <Button
-                className="h-10"
-                disabled={busy}
-                onClick={() => setIndex((current) => Math.min(total - 1, current + 1))}
-              >
-                Next
-                <ChevronRight className="size-4" />
-              </Button>
-            </>
-          )}
+          <div className="flex w-full items-center gap-2 sm:w-auto">
+            <Button
+              variant="outline"
+              className="h-10 flex-1 sm:flex-none"
+              disabled={index === 0 || busy}
+              onClick={() => setIndex((current) => Math.max(0, current - 1))}
+            >
+              <ChevronLeft className="size-4" />
+              Back
+            </Button>
+            {isLast ? (
+              <Button className="h-10 flex-1 sm:flex-none" onClick={finish} disabled={busy}>Done</Button>
+            ) : (
+              <>
+                <Button
+                  variant="ghost"
+                  className="h-10"
+                  disabled={busy}
+                  onClick={() => setIndex((current) => Math.min(total - 1, current + 1))}
+                >
+                  Skip
+                </Button>
+                <Button
+                  className="h-10 flex-1 sm:flex-none"
+                  disabled={busy}
+                  onClick={() => setIndex((current) => Math.min(total - 1, current + 1))}
+                >
+                  Next
+                  <ChevronRight className="size-4" />
+                </Button>
+              </>
+            )}
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    <AlertDialog open={!!removeTarget} onOpenChange={(nextOpen) => { if (!nextOpen) setRemoveTarget(null); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Remove {removeTarget?.name} from {sport?.label}?</AlertDialogTitle>
+          <AlertDialogDescription>
+            They will no longer be eligible for this sport in Auto assign. This does not remove any existing shift assignments.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={busy}>Keep on roster</AlertDialogCancel>
+          <AlertDialogAction
+            variant="destructive"
+            disabled={busy || !removeTarget}
+            onClick={() => { if (removeTarget) void removeMember(removeTarget); }}
+          >
+            Remove from roster
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    <AlertDialog
+      open={!!travelFallbackTarget}
+      onOpenChange={(nextOpen) => { if (!nextOpen) setTravelFallbackTarget(null); }}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Use the full roster for away events?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This removes the final {travelFallbackTarget?.length === 1 ? "traveler" : "travelers"} from {sport?.label}.
+            With no travel roster set, Auto assign will fall back to everyone on the full sport roster for away events.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={busy}>Keep travel roster</AlertDialogCancel>
+          <AlertDialogAction
+            disabled={busy || !travelFallbackTarget}
+            onClick={() => {
+              if (!travelFallbackTarget) return;
+              const members = travelFallbackTarget;
+              setTravelFallbackTarget(null);
+              void setTravelForMembers(members, false);
+            }}
+          >
+            Use full roster fallback
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

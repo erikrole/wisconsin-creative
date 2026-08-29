@@ -1,5 +1,7 @@
-import { Prisma, ShiftArea } from "@prisma/client";
+import { Prisma, Role, ShiftArea } from "@prisma/client";
+import { createAuditEntriesTx } from "@/lib/audit";
 import { db } from "@/lib/db";
+import { HttpError } from "@/lib/http";
 
 export type SportShiftConfigInput = {
   area: ShiftArea;
@@ -221,6 +223,7 @@ export async function getSportRoster(sportCode: string) {
     id: a.id,
     userId: a.userId,
     sportCode: a.sportCode,
+    defaultTraveler: a.defaultTraveler,
     user: a.user,
     createdAt: a.createdAt,
   }));
@@ -253,4 +256,53 @@ export async function bulkAddToRoster(userIds: string[], sportCode: string) {
     skipDuplicates: true,
   });
   return getSportRoster(sportCode);
+}
+
+/**
+ * Set travel status for one or more members as one audited roster mutation.
+ * The route uses this for both the existing single-person toggle and the bulk
+ * toolbar so the client can never leave a partially updated travel roster.
+ */
+export async function setRosterTravelStatus(args: {
+  assignmentIds: string[];
+  sportCode: string;
+  defaultTraveler: boolean;
+  actor: { id: string; role: Role };
+}) {
+  const assignmentIds = [...new Set(args.assignmentIds)];
+
+  return db.$transaction(async (tx) => {
+    const assignments = await tx.studentSportAssignment.findMany({
+      where: { id: { in: assignmentIds }, sportCode: args.sportCode },
+      select: { id: true, userId: true, defaultTraveler: true },
+    });
+    if (assignments.length !== assignmentIds.length) {
+      throw new HttpError(404, "One or more roster members were not found");
+    }
+
+    await tx.studentSportAssignment.updateMany({
+      where: { id: { in: assignmentIds }, sportCode: args.sportCode },
+      data: { defaultTraveler: args.defaultTraveler },
+    });
+
+    await createAuditEntriesTx(tx, assignments.map((assignment) => ({
+      actorId: args.actor.id,
+      actorRole: args.actor.role,
+      entityType: "student_sport_assignment",
+      entityId: assignment.id,
+      action: "roster_travel_set",
+      before: { defaultTraveler: assignment.defaultTraveler },
+      after: {
+        sportCode: args.sportCode,
+        userId: assignment.userId,
+        defaultTraveler: args.defaultTraveler,
+      },
+    })));
+
+    return tx.studentSportAssignment.findMany({
+      where: { id: { in: assignmentIds }, sportCode: args.sportCode },
+      include: { user: { select: { id: true, name: true, role: true, primaryArea: true } } },
+      orderBy: { user: { name: "asc" } },
+    });
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }

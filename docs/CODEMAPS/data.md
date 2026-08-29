@@ -11,7 +11,7 @@
 
 | Model | Fields | Model-level indexes/constraints |
 |---|---:|---:|
-| `User` | 119 | 5 |
+| `User` | 121 | 5 |
 | `Session` | 6 | 2 |
 | `PasswordResetToken` | 6 | 2 |
 | `PasskeyCredential` | 12 | 2 |
@@ -78,16 +78,17 @@
 | `LicenseCode` | 15 | 4 |
 | `LicenseCodeClaim` | 10 | 3 |
 | `SoftwareCredential` | 10 | 2 |
-| `SportConfig` | 8 | 1 |
+| `SportConfig` | 9 | 1 |
 | `SportShiftConfig` | 12 | 2 |
 | `ShiftGroup` | 20 | 4 |
 | `ShiftGroupWorkingCopy` | 15 | 3 |
 | `ScheduleBulkAssignment` | 13 | 3 |
 | `ScheduleBulkAssignmentItem` | 12 | 3 |
 | `Shift` | 14 | 4 |
-| `ShiftAssignment` | 26 | 5 |
+| `ShiftAssignment` | 27 | 5 |
 | `StudentSportAssignment` | 6 | 3 |
 | `StudentAreaAssignment` | 6 | 3 |
+| `VarsitySeasonOwner` | 10 | 4 |
 | `ShiftTrade` | 14 | 4 |
 | `StudentAvailabilityBlock` | 22 | 7 |
 | `BookingPhoto` | 8 | 2 |
@@ -408,6 +409,27 @@
 - `MANUAL`
 - `RESERVATION`
 - `AUTO_FILL`
+
+### `FootballGameDayRole`
+
+- `SLOW1`
+- `SLOW2`
+- `BENCH`
+- `ROAM1`
+- `ROAM2`
+- `ROAM3`
+- `ROAM4`
+- `PHOTO1`
+- `PHOTO2`
+- `PHOTO3`
+- `PHOTO4`
+- `SOCIAL`
+
+### `SportAutoAssignPolicy`
+
+- `FULL_CREW`
+- `STAFF_ONLY`
+- `HOLD`
 
 ### `ScheduleBulkAssignmentStatus`
 

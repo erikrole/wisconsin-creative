@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangleIcon, CalendarDays, Check, ChevronsUpDown, RefreshCw, Users } from "lucide-react";
+import { AlertTriangleIcon, ArrowRight, CalendarDays, Check, ChevronsUpDown, Clock3, RefreshCw, ShieldCheck, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -93,6 +93,40 @@ function sportSummary(codes: string[]) {
     return codes.map((code) => SPORT_CODES.find((sport) => sport.code === code)?.label ?? code).join(", ");
   }
   return `${codes.length} sports`;
+}
+
+function WorkflowProgress({ applying, reviewActive }: { applying: boolean; reviewActive: boolean }) {
+  const currentStep = applying ? 2 : reviewActive ? 1 : 0;
+  const steps = ["Scope", "Review", "Apply"];
+
+  return (
+    <ol className="mt-4 flex items-center" aria-label="Auto assign progress">
+      {steps.map((label, index) => {
+        const complete = index < currentStep;
+        const current = index === currentStep;
+        return (
+          <li
+            key={label}
+            className="flex min-w-0 flex-1 items-center gap-2 text-xs font-medium last:flex-none"
+            aria-current={current ? "step" : undefined}
+          >
+            <span
+              className={cn(
+                "flex size-6 shrink-0 items-center justify-center rounded-full border text-[11px] tabular-nums transition-colors",
+                current && "border-primary bg-primary text-primary-foreground",
+                complete && "border-[var(--blue-text)]/30 bg-[var(--blue-bg)] text-[var(--blue-text)]",
+                !current && !complete && "border-border text-muted-foreground",
+              )}
+            >
+              {complete ? <Check className="size-3.5" aria-hidden="true" /> : index + 1}
+            </span>
+            <span className={cn("truncate", current ? "text-foreground" : "text-muted-foreground")}>{label}</span>
+            {index < steps.length - 1 ? <span className="h-px min-w-3 flex-1 bg-border" aria-hidden="true" /> : null}
+          </li>
+        );
+      })}
+    </ol>
+  );
 }
 
 /**
@@ -276,6 +310,8 @@ export function AutoAssignDialog({
     [selectedProposals],
   );
 
+  const reviewActive = loading || preview !== null;
+
   function toggleSport(code: string) {
     setSportCodes((current) => {
       if (current.includes(code)) return current.filter((value) => value !== code);
@@ -291,6 +327,12 @@ export function AutoAssignDialog({
       else next.delete(eventId);
       return next;
     });
+  }
+
+  function returnToScope() {
+    setPreview(null);
+    setSelectedEventIds(new Set());
+    setError(null);
   }
 
   async function applyAssignments() {
@@ -347,164 +389,228 @@ export function AutoAssignDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="grid max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden sm:max-w-3xl">
-        <DialogHeader className="pr-16">
-          <div>
-            <DialogTitle>Auto assign crew</DialogTitle>
-            <DialogDescription className="mt-1">
-              Pick what to cover, review every proposed worker, then apply. Applying stages the schedule and gives you
-              ten minutes to cancel before workers are notified.
-            </DialogDescription>
+      <DialogContent className="grid max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden sm:max-w-4xl">
+        <DialogHeader className="block pr-16">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <DialogTitle>Build assignment plan</DialogTitle>
+              <DialogDescription className="mt-1">
+                Set the scope, review every proposed assignment, then apply it to a private schedule.
+              </DialogDescription>
+            </div>
+            <Badge variant="outline" className="hidden h-7 shrink-0 sm:inline-flex">
+              <Clock3 aria-hidden="true" /> 10-minute cancel window
+            </Badge>
           </div>
+          <WorkflowProgress applying={applying} reviewActive={reviewActive} />
         </DialogHeader>
 
         <DialogBody className="min-h-0 px-6 py-4">
           <div className="flex flex-col gap-4">
             <PendingAssignmentBatches batches={pendingBatches} onChanged={() => { void refreshBatches(); onApplied(); }} />
 
-            <div className="flex flex-col gap-3 rounded-lg border border-border/60 bg-card/60 p-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-medium text-muted-foreground">Sports</span>
-                <Popover open={sportPickerOpen} onOpenChange={setSportPickerOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-10 min-w-52 justify-between"
-                      aria-label="Select sports to auto assign"
-                    >
-                      <span className="truncate">{sportSummary(sportCodes)}</span>
-                      <ChevronsUpDown className="size-3.5 opacity-60" />
+            {reviewActive ? (
+              <div className="flex flex-col gap-3 rounded-md border border-border/60 bg-muted/20 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">Assignment plan</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {sportSummary(sportCodes)} · {activeWindow.detail} · {BULK_ASSIGNMENT_WORKER_SCOPE_LABELS[workerScope]}
+                    {area ? ` · ${AREA_LABELS[area]}` : ""}
+                    {requireFullCrew ? " · Complete crews required" : ""}
+                  </p>
+                </div>
+                {!loading ? (
+                  <div className="flex w-full shrink-0 gap-2 sm:w-auto">
+                    <Button variant="ghost" className="h-10 flex-1 sm:flex-none" onClick={returnToScope} disabled={applying}>
+                      Change scope
                     </Button>
-                  </PopoverTrigger>
-                  <PopoverContent align="start" className="w-64 p-0">
-                    <Command>
-                      <CommandInput placeholder="Find a sport…" />
-                      <CommandList>
-                        <CommandEmpty>No sport matches.</CommandEmpty>
-                        <CommandGroup>
-                          {SPORT_CODES.map((sport) => {
-                            const selected = sportCodes.includes(sport.code);
-                            return (
-                              <CommandItem
-                                key={sport.code}
-                                value={`${sport.label} ${sport.code}`}
-                                onSelect={() => toggleSport(sport.code)}
-                              >
-                                <Check className={cn("size-4", selected ? "opacity-100" : "opacity-0")} />
-                                {sport.label}
-                              </CommandItem>
-                            );
-                          })}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-                {sportCodes.length > 0 ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-10 text-xs text-muted-foreground hover:text-foreground"
-                    onClick={() => setSportCodes([])}
-                  >
-                    Clear
-                  </Button>
+                    <Button variant="outline" className="h-10 flex-1 sm:flex-none" onClick={() => void buildPreview()} disabled={applying}>
+                      <RefreshCw className="size-4" /> Refresh review
+                    </Button>
+                  </div>
                 ) : null}
-
-                <Select value={area ?? "_all"} onValueChange={(value) => setArea(value === "_all" ? null : value as Area)}>
-                  <SelectTrigger size="sm" className="ml-auto h-10 w-36" aria-label="Auto assign area filter">
-                    <SelectValue placeholder="All areas" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_all">All areas</SelectItem>
-                    {AREAS.map((value) => (
-                      <SelectItem key={value} value={value}>{AREA_LABELS[value]}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
+            ) : (
+              <>
+                <div className="grid gap-3 lg:grid-cols-2">
+                  <section className="rounded-md border border-border/60 bg-card p-4 shadow-xs">
+                    <div className="mb-4 flex items-start gap-2.5">
+                      <CalendarDays className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                      <div>
+                        <h3 className="text-sm! font-semibold">Events</h3>
+                        <p className="text-xs text-muted-foreground">Choose what should be included in this plan.</p>
+                      </div>
+                    </div>
 
-              {sportCodes.length > 0 ? (
-                <SportRosterPreview
-                  roster={roster}
-                  loading={rosterLoading}
-                  error={rosterError}
-                  onEditSport={setWizardSportCode}
-                />
-              ) : (
-                <p className="text-xs text-muted-foreground">
-                  Every sport in the window is included. Pick specific sports to see who is on their rosters.
-                </p>
-              )}
+                    <div className="space-y-4">
+                      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_9rem] lg:grid-cols-1 xl:grid-cols-[minmax(0,1fr)_9rem]">
+                        <div className="min-w-0 space-y-1.5">
+                          <p className="text-xs font-medium">Sports</p>
+                          <div className="flex min-w-0 items-center gap-2">
+                            <Popover open={sportPickerOpen} onOpenChange={setSportPickerOpen}>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  className="h-10 min-w-0 flex-1 justify-between"
+                                  aria-label="Select sports to auto assign"
+                                >
+                                  <span className="truncate">{sportSummary(sportCodes)}</span>
+                                  <ChevronsUpDown className="size-3.5 opacity-60" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent align="start" className="w-64 p-0">
+                                <Command>
+                                  <CommandInput placeholder="Find a sport…" />
+                                  <CommandList>
+                                    <CommandEmpty>No sport matches.</CommandEmpty>
+                                    <CommandGroup>
+                                      {SPORT_CODES.map((sport) => {
+                                        const selected = sportCodes.includes(sport.code);
+                                        return (
+                                          <CommandItem
+                                            key={sport.code}
+                                            value={`${sport.label} ${sport.code}`}
+                                            onSelect={() => toggleSport(sport.code)}
+                                          >
+                                            <Check className={cn("size-4", selected ? "opacity-100" : "opacity-0")} />
+                                            {sport.label}
+                                          </CommandItem>
+                                        );
+                                      })}
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
+                            {sportCodes.length > 0 ? (
+                              <Button
+                                variant="ghost"
+                                className="h-10 shrink-0 px-3 text-xs text-muted-foreground hover:text-foreground"
+                                onClick={() => setSportCodes([])}
+                              >
+                                Clear
+                              </Button>
+                            ) : null}
+                          </div>
+                        </div>
 
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-medium text-muted-foreground">Period</span>
-                <ToggleGroup
-                  type="single"
-                  value={period}
-                  onValueChange={(value) => {
-                    if (value) setPeriod(value as AssignmentPeriodValue);
-                  }}
-                  className="gap-1"
-                  aria-label="Auto assign period"
-                >
-                  {ASSIGNMENT_PERIODS.map((value) => (
-                    <ToggleGroupItem key={value} value={value} className="h-10 px-2.5 text-xs">
-                      {windows[value].label}
-                    </ToggleGroupItem>
-                  ))}
-                  {customWindow ? (
-                    <ToggleGroupItem value="custom" className="h-10 px-2.5 text-xs">
-                      {customWindow.label}
-                    </ToggleGroupItem>
-                  ) : null}
-                </ToggleGroup>
-                <span className="text-xs text-muted-foreground">{activeWindow.detail}</span>
-              </div>
+                        <div className="space-y-1.5">
+                          <p className="text-xs font-medium">Area</p>
+                          <Select value={area ?? "_all"} onValueChange={(value) => setArea(value === "_all" ? null : value as Area)}>
+                            <SelectTrigger className="h-10 w-full" aria-label="Auto assign area filter">
+                              <SelectValue placeholder="All areas" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="_all">All areas</SelectItem>
+                              {AREAS.map((value) => (
+                                <SelectItem key={value} value={value}>{AREA_LABELS[value]}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
 
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-medium text-muted-foreground">Assign</span>
-                <ToggleGroup
-                  type="single"
-                  value={workerScope}
-                  onValueChange={(value) => {
-                    if (value) setWorkerScope(value as BulkAssignmentWorkerScope);
-                  }}
-                  className="gap-1"
-                  aria-label="Which slots to fill"
-                >
-                  {BULK_ASSIGNMENT_WORKER_SCOPES.map((value) => (
-                    <ToggleGroupItem key={value} value={value} className="h-10 px-2.5 text-xs">
-                      {BULK_ASSIGNMENT_WORKER_SCOPE_LABELS[value]}
-                    </ToggleGroupItem>
-                  ))}
-                </ToggleGroup>
-                <Button
-                  variant={requireFullCrew ? "secondary" : "ghost"}
-                  size="sm"
-                  className="h-10 text-xs"
-                  aria-pressed={requireFullCrew}
-                  onClick={() => setRequireFullCrew((current) => !current)}
-                >
-                  <Check className={cn("size-3.5", requireFullCrew ? "opacity-100" : "opacity-30")} />
-                  Full crews only
-                </Button>
-                <span className="text-xs text-muted-foreground max-lg:hidden">
-                  {requireFullCrew
-                    ? "Events that cannot be filled completely are held back."
-                    : "Events may be filled partway."}
-                </span>
-                <Button
-                  className="ml-auto h-10"
-                  onClick={() => void buildPreview()}
-                  disabled={loading || applying}
-                >
-                  {loading ? <RefreshCw className="size-4 animate-spin" /> : null}
-                  {preview ? "Rebuild preview" : "Build preview"}
-                </Button>
-              </div>
-            </div>
+                      <div className="space-y-1.5 border-t border-border/50 pt-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-xs font-medium">Time window</p>
+                          <p className="truncate text-xs text-muted-foreground">{activeWindow.detail}</p>
+                        </div>
+                        <ToggleGroup
+                          type="single"
+                          value={period}
+                          onValueChange={(value) => {
+                            if (value) setPeriod(value as AssignmentPeriodValue);
+                          }}
+                          className="w-full flex-wrap justify-start gap-1 rounded-md bg-muted/35 p-1"
+                          aria-label="Auto assign period"
+                        >
+                          {ASSIGNMENT_PERIODS.map((value) => (
+                            <ToggleGroupItem key={value} value={value} className="h-10 flex-1 px-2 text-xs data-[state=on]:shadow-xs">
+                              {windows[value].label}
+                            </ToggleGroupItem>
+                          ))}
+                          {customWindow ? (
+                            <ToggleGroupItem value="custom" className="h-10 flex-1 px-2 text-xs data-[state=on]:shadow-xs">
+                              {customWindow.label}
+                            </ToggleGroupItem>
+                          ) : null}
+                        </ToggleGroup>
+                      </div>
+
+                      {sportCodes.length > 0 ? (
+                        <SportRosterPreview
+                          roster={roster}
+                          loading={rosterLoading}
+                          error={rosterError}
+                          onEditSport={setWizardSportCode}
+                        />
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          All sports in the selected window are included. Choose specific sports to inspect their rosters.
+                        </p>
+                      )}
+                    </div>
+                  </section>
+
+                  <section className="rounded-md border border-border/60 bg-card p-4 shadow-xs">
+                    <div className="mb-4 flex items-start gap-2.5">
+                      <Users className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                      <div>
+                        <h3 className="text-sm! font-semibold">Crew rules</h3>
+                        <p className="text-xs text-muted-foreground">Decide which open positions this plan may fill.</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="space-y-1.5">
+                        <p className="text-xs font-medium">Open slots</p>
+                        <ToggleGroup
+                          type="single"
+                          value={workerScope}
+                          onValueChange={(value) => {
+                            if (value) setWorkerScope(value as BulkAssignmentWorkerScope);
+                          }}
+                          className="w-full justify-start gap-1 rounded-md bg-muted/35 p-1"
+                          aria-label="Which slots to fill"
+                        >
+                          {BULK_ASSIGNMENT_WORKER_SCOPES.map((value) => (
+                            <ToggleGroupItem key={value} value={value} className="h-10 flex-1 px-2 text-xs data-[state=on]:shadow-xs">
+                              {BULK_ASSIGNMENT_WORKER_SCOPE_LABELS[value]}
+                            </ToggleGroupItem>
+                          ))}
+                        </ToggleGroup>
+                        <p className="text-xs text-muted-foreground">Only compatible Student or Staff positions are considered.</p>
+                      </div>
+
+                      <label className="flex min-h-16 items-center gap-3 rounded-md border border-border/60 bg-muted/20 px-3 py-2.5">
+                        <Checkbox
+                          checked={requireFullCrew}
+                          onCheckedChange={(checked) => setRequireFullCrew(checked === true)}
+                        />
+                        <span className="min-w-0">
+                          <span className="block text-sm font-medium">Require complete crews</span>
+                          <span className="block text-xs text-muted-foreground">
+                            {requireFullCrew
+                              ? "Hold back any event that still has an open position."
+                              : "Allow safe proposals even when another position stays open."}
+                          </span>
+                        </span>
+                      </label>
+                    </div>
+                  </section>
+                </div>
+
+                <div className="flex items-start gap-3 rounded-md border border-[var(--blue-text)]/20 bg-[var(--blue-bg)]/35 px-4 py-3">
+                  <ShieldCheck className="mt-0.5 size-4 shrink-0 text-[var(--blue-text)]" aria-hidden="true" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">Preview checks every match</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      Roster, travel, class schedules, availability, approved time off, and conflicts are checked now and again when you apply. Sport policy still applies; held sports are skipped.
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
 
             {loading ? (
               <div className="flex min-h-56 items-center justify-center text-sm text-muted-foreground" aria-live="polite">
@@ -551,7 +657,7 @@ export function AutoAssignDialog({
                         <span>
                           <strong>{preview.summary.eventsPartiallyCrewed}</strong>{" "}
                           event{preview.summary.eventsPartiallyCrewed === 1 ? "" : "s"} would release short a position.
-                          {requireFullCrew ? " Full crews only is on, so they are held back." : " Turn on Full crews only to hold them back."}
+                          {requireFullCrew ? " Complete crews are required, so they are held back." : " Require complete crews to hold them back."}
                         </span>
                       </div>
                     ) : null}
@@ -706,19 +812,7 @@ export function AutoAssignDialog({
                     ) : null}
                 </div>
               </>
-            ) : (
-              <div className="flex min-h-40 flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border p-6 text-center">
-                <CalendarDays className="size-5 text-muted-foreground" />
-                <p className="text-sm font-medium">Choose what to cover, then build the preview.</p>
-                <p className="text-xs text-muted-foreground">
-                  {sportSummary(sportCodes)} · {activeWindow.detail} · {BULK_ASSIGNMENT_WORKER_SCOPE_LABELS[workerScope]}
-                </p>
-                <p className="max-w-md text-xs text-muted-foreground">
-                  Nothing is scheduled until you review the proposals and apply. Each sport&apos;s own policy still
-                  applies — a sport on hold is skipped whatever you pick here.
-                </p>
-              </div>
-            )}
+            ) : null}
           </div>
         </DialogBody>
 
@@ -729,10 +823,17 @@ export function AutoAssignDialog({
               ? `${selectedProposals.length} assignment${selectedProposals.length === 1 ? "" : "s"} for ${selectedPeople.length} ${selectedPeople.length === 1 ? "person" : "people"}`
               : ""}
           </div>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={applying}>Cancel</Button>
-          <Button onClick={() => void applyAssignments()} disabled={!preview || selectedProposals.length === 0 || applying || loading}>
-            {applying ? "Applying…" : `Apply ${selectedProposals.length || "assignments"}`}
-          </Button>
+          <Button variant="outline" className="h-10 w-full sm:w-auto" onClick={() => onOpenChange(false)} disabled={applying}>Cancel</Button>
+          {preview ? (
+            <Button className="h-10 w-full sm:w-auto" onClick={() => void applyAssignments()} disabled={selectedProposals.length === 0 || applying || loading}>
+              {applying ? "Applying…" : `Apply ${selectedProposals.length || "assignments"}`}
+            </Button>
+          ) : (
+            <Button className="h-10 w-full sm:w-auto" onClick={() => void buildPreview()} disabled={loading || applying}>
+              {loading ? <RefreshCw className="size-4 animate-spin" /> : <ArrowRight className="size-4" />}
+              Review assignments
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
 

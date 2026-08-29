@@ -246,6 +246,8 @@ model User {
   shiftAcknowledged             ShiftAssignment[]                @relation("ShiftAssignmentAcknowledgedBy")
   sportAssignments              StudentSportAssignment[]
   areaAssignments               StudentAreaAssignment[]
+  varsityOwnerships             VarsitySeasonOwner[]             @relation("VarsitySeasonOwner")
+  varsityOwnershipsCreated      VarsitySeasonOwner[]             @relation("VarsitySeasonOwnerCreator")
   tradesPosted                  ShiftTrade[]                     @relation("TradePostedBy")
   tradesClaimed                 ShiftTrade[]                     @relation("TradeClaimedBy")
   favorites                     FavoriteItem[]
@@ -1816,6 +1818,22 @@ enum ShiftAssignmentSource {
   AUTO_FILL
 }
 
+/// Football-only game-day assignment metadata. These are not coverage segments.
+enum FootballGameDayRole {
+  SLOW1
+  SLOW2
+  BENCH
+  ROAM1
+  ROAM2
+  ROAM3
+  ROAM4
+  PHOTO1
+  PHOTO2
+  PHOTO3
+  PHOTO4
+  SOCIAL
+}
+
 /// How far auto assignment may go for a sport. Sports are run differently:
 /// some are crewed entirely by auto assignment, some staff the full-time
 /// positions and deliberately leave student slots open for students to request,
@@ -1852,14 +1870,14 @@ enum ShiftTradeStatus {
 }
 
 model SportConfig {
-  id               String                 @id @default(cuid())
-  sportCode        String                 @unique @map("sport_code")
-  active           Boolean                @default(true)
-  autoAssignPolicy SportAutoAssignPolicy  @default(FULL_CREW) @map("auto_assign_policy")
-  shiftStartOffset Int                    @default(60) @map("shift_start_offset")
-  shiftEndOffset   Int                    @default(60) @map("shift_end_offset")
-  createdAt        DateTime           @default(now()) @map("created_at")
-  updatedAt        DateTime           @updatedAt @map("updated_at")
+  id               String                @id @default(cuid())
+  sportCode        String                @unique @map("sport_code")
+  active           Boolean               @default(true)
+  autoAssignPolicy SportAutoAssignPolicy @default(FULL_CREW) @map("auto_assign_policy")
+  shiftStartOffset Int                   @default(60) @map("shift_start_offset")
+  shiftEndOffset   Int                   @default(60) @map("shift_end_offset")
+  createdAt        DateTime              @default(now()) @map("created_at")
+  updatedAt        DateTime              @updatedAt @map("updated_at")
   shiftConfigs     SportShiftConfig[]
 
   @@map("sport_configs")
@@ -2002,6 +2020,7 @@ model ShiftAssignment {
   source           ShiftAssignmentSource @default(MANUAL)
   assignedBy       String?               @map("assigned_by")
   swapFromId       String?               @map("swap_from_id")
+  footballRoles    FootballGameDayRole[] @default([]) @map("football_roles")
   callStartsAt     DateTime?             @map("call_starts_at")
   callEndsAt       DateTime?             @map("call_ends_at")
   callNote         String?               @map("call_note")
@@ -2053,6 +2072,26 @@ model StudentAreaAssignment {
   @@unique([userId, area])
   @@index([area])
   @@map("student_area_assignments")
+}
+
+/// Immutable effective-dated primary coverage ownership for non-Big-Six varsity sports.
+/// Co-primary owners are represented by multiple rows for the same sport/area/window.
+model VarsitySeasonOwner {
+  id          String    @id @default(cuid())
+  sportCode   String    @map("sport_code")
+  area        ShiftArea
+  userId      String    @map("user_id")
+  startsOn    DateTime  @map("starts_on") @db.Date
+  endsOn      DateTime  @map("ends_on") @db.Date
+  createdById String    @map("created_by_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  user        User      @relation("VarsitySeasonOwner", fields: [userId], references: [id], onDelete: Restrict)
+  createdBy   User      @relation("VarsitySeasonOwnerCreator", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@unique([sportCode, area, userId, startsOn])
+  @@index([sportCode, area, startsOn, endsOn])
+  @@index([userId, startsOn, endsOn])
+  @@map("varsity_season_owners")
 }
 
 model ShiftTrade {

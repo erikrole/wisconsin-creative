@@ -103,6 +103,11 @@ export function ShiftCoverageCard({
             />
             <span className="min-w-0 truncate text-sm">{activeAssignment.user.name}</span>
           </span>
+          {shiftGroup.event?.sportCode === "FB" && (activeAssignment.footballRoles?.length ?? 0) > 0 && (
+            <span className="pl-8 text-[11px] text-muted-foreground">
+              {activeAssignment.footballRoles!.join(" · ")}
+            </span>
+          )}
           {activeAssignment.hasConflict && (
             <span className="flex items-center gap-1 pl-8 text-[11px] text-[var(--orange-text)]">
               <AlertTriangleIcon className="size-3 shrink-0" />

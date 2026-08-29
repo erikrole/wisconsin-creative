@@ -3,8 +3,10 @@ import { Prisma, Role, ShiftAssignmentStatus, ShiftWorkerType } from "@prisma/cl
 import { createAuditEntryTx } from "@/lib/audit";
 import { ACTIVE_BOOKING_STATUSES } from "@/lib/booking-statuses";
 import { db } from "@/lib/db";
+import { canonicalFootballGameDayRoles, isFootballSportCode } from "@/lib/football-roles";
 import { HttpError } from "@/lib/http";
 import { scheduleAssigneeWorkerType } from "@/lib/schedule-assignee";
+import { normalizeFootballSheetPersonName } from "@/lib/football-staffing-sheet";
 import { sportDefaultShiftWindow } from "@/lib/schedule-defaults";
 import {
   applyWorkingScheduleCommand,
@@ -24,7 +26,17 @@ const groupEditorSelect = {
   id: true,
   publishedAt: true,
   publishedVersion: true,
-  event: { select: { startsAt: true, endsAt: true, allDay: true, sportCode: true } },
+  event: {
+    select: {
+      id: true,
+      startsAt: true,
+      endsAt: true,
+      allDay: true,
+      sportCode: true,
+      opponent: true,
+      isHome: true,
+    },
+  },
   shifts: {
     orderBy: [{ startsAt: "asc" }, { area: "asc" }, { workerType: "asc" }, { createdAt: "asc" }],
     select: {
@@ -50,6 +62,7 @@ const groupEditorSelect = {
           callStartsAt: true,
           callEndsAt: true,
           callNote: true,
+          footballRoles: true,
           trades: {
             where: { status: { in: ["OPEN", "CLAIMED"] } },
             select: { id: true },
@@ -179,6 +192,9 @@ export function buildWorkingSchedulePayload(group: EditorGroup): WorkingSchedule
           callNote: assignment.callNote,
           activeTradeId: assignment.trades[0]?.id ?? null,
           bookingCount: assignment._count.bookings,
+          footballRoles: isFootballSportCode(group.event.sportCode)
+            ? canonicalFootballGameDayRoles(assignment.footballRoles)
+            : [],
         } : null,
       };
     }),
@@ -193,6 +209,16 @@ function parseStoredPayload(value: Prisma.JsonValue): WorkingSchedulePayload {
   return parsed.data;
 }
 
+function assertFootballRoleScope(
+  sportCode: string | null,
+  payload: WorkingSchedulePayload,
+) {
+  const hasFootballRoles = payload.slots.some((slot) => (slot.assignment?.footballRoles?.length ?? 0) > 0);
+  if (hasFootballRoles && !isFootballSportCode(sportCode)) {
+    throw new HttpError(409, "Football game-day roles can only be used on Football events.");
+  }
+}
+
 async function editorResponse(group: EditorGroup, tx: Prisma.TransactionClient = db) {
   const published = buildWorkingSchedulePayload(group);
   const working = group.workingCopy
@@ -201,6 +227,7 @@ async function editorResponse(group: EditorGroup, tx: Prisma.TransactionClient =
       group,
     )
     : published;
+  assertFootballRoleScope(group.event.sportCode, working);
   const defaultWindow = await resolveWorkingScheduleDefaultWindow(group, tx);
   const assignedUserIds = [...new Set(
     working.slots.flatMap((slot) => slot.assignment ? [slot.assignment.userId] : []),
@@ -249,6 +276,7 @@ async function editorResponse(group: EditorGroup, tx: Prisma.TransactionClient =
     : new Set(working.slots.flatMap((slot) => slot.assignment ? [slot.assignment.userId] : [])).size;
   return {
     shiftGroupId: group.id,
+    sportCode: group.event.sportCode,
     allDay: group.event.allDay,
     eventStartsAt: group.event.startsAt.toISOString(),
     eventEndsAt: group.event.endsAt.toISOString(),
@@ -289,6 +317,77 @@ async function findEditorGroup(shiftGroupId: string, tx: Prisma.TransactionClien
 
 export async function getWorkingScheduleEditor(shiftGroupId: string) {
   return editorResponse(await findEditorGroup(shiftGroupId));
+}
+
+export type FootballStaffingWorkingContext = {
+  shiftGroupId: string;
+  sportCode: string | null;
+  workingVersion: number;
+  slots: Array<{
+    key: string;
+    area: string;
+    workerType: string;
+    assignment: {
+      userId: string;
+      userName: string;
+      footballRoles: string[];
+    } | null;
+  }>;
+};
+
+/**
+ * Bounded read model for the Football staffing-sheet review. Loading all
+ * groups and assignee names in two queries keeps the preview from turning one
+ * sheet column into an editor-response N+1.
+ */
+export async function getFootballStaffingWorkingContexts(
+  shiftGroupIds: string[],
+): Promise<FootballStaffingWorkingContext[]> {
+  if (shiftGroupIds.length === 0) return [];
+  const groups = await db.shiftGroup.findMany({
+    where: { id: { in: [...new Set(shiftGroupIds)] } },
+    select: groupEditorSelect,
+  });
+  const schedules = groups.map((group) => ({
+    group,
+    working: group.workingCopy
+      ? refreshLiveAssignmentMetadata(
+        reconcileWorkingAssignmentSources(parseStoredPayload(group.workingCopy.payload), group.shifts),
+        group,
+      )
+      : buildWorkingSchedulePayload(group),
+  }));
+  const userIds = [...new Set(schedules.flatMap(({ working }) =>
+    working.slots.flatMap((slot) => slot.assignment ? [slot.assignment.userId] : []),
+  ))];
+  const users = userIds.length > 0
+    ? await db.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, name: true },
+    })
+    : [];
+  const userNames = new Map(users.map((user) => [user.id, user.name]));
+
+  return schedules.map(({ group, working }) => {
+    assertFootballRoleScope(group.event.sportCode, working);
+    return {
+      shiftGroupId: group.id,
+      sportCode: group.event.sportCode,
+      workingVersion: group.workingCopy?.version ?? 0,
+      slots: working.slots.map((slot) => ({
+        key: slot.key,
+        area: slot.area,
+        workerType: slot.workerType,
+        assignment: slot.assignment
+          ? {
+              userId: slot.assignment.userId,
+              userName: userNames.get(slot.assignment.userId) ?? "Current assignee",
+              footballRoles: canonicalFootballGameDayRoles(slot.assignment.footballRoles ?? []),
+            }
+          : null,
+      })),
+    };
+  });
 }
 
 /** Read the live event boundary used to choose between release and backfill. */
@@ -345,6 +444,105 @@ export async function mutateWorkingSchedule(
         group,
       )
       : buildWorkingSchedulePayload(group);
+    assertFootballRoleScope(group.event.sportCode, beforePayload);
+    const isFootballRoleCommand = command.type === "setFootballRoles"
+      || command.type === "applyFootballSheetAssignment"
+      || command.type === "clearFootballSheetRole";
+    if (isFootballRoleCommand) {
+      if (actor.role !== Role.ADMIN) {
+        throw new HttpError(403, "Only Admins can edit Football game-day roles.");
+      }
+      if (!isFootballSportCode(group.event.sportCode)) {
+        throw new HttpError(409, "Football game-day roles are available only for Football events.");
+      }
+    }
+    if (command.type === "applyFootballSheetAssignment" || command.type === "clearFootballSheetRole") {
+      const reviewedEvent = command.proof.event;
+      if (
+        group.event.id !== reviewedEvent.id
+        || group.event.startsAt.toISOString() !== reviewedEvent.startsAt
+        || group.event.opponent !== reviewedEvent.opponent
+        || group.event.isHome !== reviewedEvent.isHome
+      ) {
+        throw new HttpError(409, "This Football event changed after review. Preview the sheet again.");
+      }
+    }
+    if (command.type === "setFootballRoles") {
+      const slot = beforePayload.slots.find((candidate) => candidate.key === command.slotKey);
+      if (!slot) throw new HttpError(404, "Working slot not found");
+      if (!slot.assignment) throw new HttpError(409, "Assign a person before adding Football game-day roles.");
+    }
+    if (command.type === "applyFootballSheetAssignment") {
+      const slot = beforePayload.slots.find((candidate) => candidate.key === command.slotKey);
+      if (!slot) throw new HttpError(404, "Working slot not found");
+      if (slot.assignment && slot.assignment.userId !== command.userId) {
+        throw new HttpError(409, "The selected working slot is no longer available.");
+      }
+      if (slot.assignment?.footballRoles?.includes(command.role)) {
+        throw new HttpError(409, `${command.role} is already staged for this person.`);
+      }
+      const assignee = await tx.user.findUnique({
+        where: { id: command.userId },
+        select: {
+          id: true,
+          name: true,
+          active: true,
+          hiddenFromRoster: true,
+          role: true,
+          staffingType: true,
+          collaboratorPolicy: {
+            select: {
+              status: true,
+              grants: { select: { capabilityKey: true } },
+            },
+          },
+          availabilityBlocks: {
+            select: {
+              kind: true,
+              intent: true,
+              status: true,
+              dayOfWeek: true,
+              date: true,
+              dateEndsOn: true,
+              allDay: true,
+              startsAt: true,
+              endsAt: true,
+              label: true,
+              semesterLabel: true,
+              semesterStartsOn: true,
+              semesterEndsOn: true,
+            },
+          },
+        },
+      });
+      if (!assignee || !assignee.active || assignee.hiddenFromRoster) {
+        throw new HttpError(409, "The reviewed person is no longer active and visible.");
+      }
+      if (normalizeFootballSheetPersonName(assignee.name) !== normalizeFootballSheetPersonName(command.proof.sourceRaw)) {
+        throw new HttpError(409, "The reviewed person's exact name no longer matches this source cell.");
+      }
+      if (!slot.assignment) {
+        if (scheduleAssigneeWorkerType(assignee) !== slot.workerType) {
+          throw new HttpError(409, `Choose a ${slot.workerType === "FT" ? "Staff" : "Student"} worker for this slot.`);
+        }
+        if (beforePayload.slots.some((candidate) => candidate.assignment?.userId === assignee.id)) {
+          throw new HttpError(409, "This person is already assigned within this event draft.");
+        }
+        const startsAt = new Date(slot.callStartsAt ?? slot.startsAt);
+        const endsAt = new Date(slot.callEndsAt ?? slot.endsAt);
+        await checkTimeConflict(tx, assignee.id, startsAt, endsAt);
+        if (slot.workerType === "ST") {
+          const availability = evaluateAvailabilityPreferences(assignee.availabilityBlocks, { startsAt, endsAt });
+          if (availability.blocking) throw new HttpError(409, availability.blocking.note);
+        }
+      }
+    }
+    if (command.type === "clearFootballSheetRole") {
+      const holders = beforePayload.slots.filter((slot) => slot.assignment?.footballRoles?.includes(command.role));
+      if (holders.length === 0) {
+        throw new HttpError(409, `${command.role} is already intentionally vacant in this working schedule.`);
+      }
+    }
     const defaultWindow = command.type === "adjustSlots" && command.delta === 1
       ? await resolveWorkingScheduleDefaultWindow(group, tx)
       : undefined;
@@ -641,13 +839,20 @@ export async function mutateWorkingSchedule(
         throw new HttpError(409, "This slot is already assigned");
       }
       if (error instanceof Error && error.message === "WORKING_SLOT_NOT_ASSIGNED") {
-        throw new HttpError(409, "This slot is not assigned");
+        throw new HttpError(
+          409,
+          isFootballRoleCommand
+            ? "Assign a person before adding Football game-day roles."
+            : "This slot is not assigned",
+        );
       }
       if (error instanceof Error && error.message === "CALL_TIME_STUDENT_ONLY") {
         throw new HttpError(400, "Call times apply only to Student slots.");
       }
       throw error;
     }
+
+    assertFootballRoleScope(group.event.sportCode, afterPayload);
 
     const nextVersion = actualVersion + 1;
     if (group.workingCopy) {
@@ -693,14 +898,55 @@ export async function mutateWorkingSchedule(
       }
     }
 
+    const roleChangeBefore = command.type === "setFootballRoles" || command.type === "applyFootballSheetAssignment"
+      ? {
+          slotKey: command.slotKey,
+          roles: beforePayload.slots.find((slot) => slot.key === command.slotKey)?.assignment?.footballRoles ?? [],
+        }
+      : command.type === "clearFootballSheetRole"
+        ? {
+            role: command.role,
+            holders: beforePayload.slots
+              .filter((slot) => slot.assignment?.footballRoles?.includes(command.role))
+              .map((slot) => ({ slotKey: slot.key, userId: slot.assignment!.userId })),
+          }
+        : null;
+    const roleChangeAfter = command.type === "setFootballRoles" || command.type === "applyFootballSheetAssignment"
+      ? {
+          slotKey: command.slotKey,
+          roles: afterPayload.slots.find((slot) => slot.key === command.slotKey)?.assignment?.footballRoles ?? [],
+        }
+      : command.type === "clearFootballSheetRole"
+        ? {
+            role: command.role,
+            holders: afterPayload.slots
+              .filter((slot) => slot.assignment?.footballRoles?.includes(command.role))
+              .map((slot) => ({ slotKey: slot.key, userId: slot.assignment!.userId })),
+          }
+        : null;
+    const sheetProof = command.type === "applyFootballSheetAssignment" || command.type === "clearFootballSheetRole"
+      ? command.proof
+      : null;
+
     await createAuditEntryTx(tx, {
       actorId: actor.id,
       actorRole: actor.role,
       entityType: "shift_group_working_copy",
       entityId: shiftGroupId,
       action: `working_schedule_${command.type}`,
-      before: { version: actualVersion, command, changes: summarizeWorkingScheduleChanges(buildWorkingSchedulePayload(group), beforePayload) },
-      after: { version: nextVersion, changes: summarizeWorkingScheduleChanges(buildWorkingSchedulePayload(group), afterPayload) },
+      before: {
+        version: actualVersion,
+        command,
+        changes: summarizeWorkingScheduleChanges(buildWorkingSchedulePayload(group), beforePayload),
+        ...(roleChangeBefore ? { footballRoleChange: roleChangeBefore } : {}),
+        ...(sheetProof ? { footballStaffingSheet: sheetProof } : {}),
+      },
+      after: {
+        version: nextVersion,
+        changes: summarizeWorkingScheduleChanges(buildWorkingSchedulePayload(group), afterPayload),
+        ...(roleChangeAfter ? { footballRoleChange: roleChangeAfter } : {}),
+        ...(sheetProof ? { footballStaffingSheet: sheetProof } : {}),
+      },
     });
 
     return editorResponse(await findEditorGroup(shiftGroupId, tx), tx);

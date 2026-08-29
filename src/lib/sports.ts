@@ -30,6 +30,18 @@ export const SPORT_CODES = [
 export type SportCode = (typeof SPORT_CODES)[number]["code"];
 export const SPORT_CODE_SET = new Set<string>(SPORT_CODES.map((sport) => sport.code));
 
+export const BIG_SIX_SPORT_CODES = ["FB", "MBB", "WBB", "MHKY", "WHKY", "VB"] as const;
+export const BIG_SIX_SPORT_CODE_SET = new Set<string>(BIG_SIX_SPORT_CODES);
+export const VARSITY_OWNERSHIP_AREAS = ["VIDEO", "PHOTO", "GRAPHICS"] as const;
+
+export function isBigSixSportCode(value: string | null | undefined): boolean {
+  return Boolean(value && BIG_SIX_SPORT_CODE_SET.has(normalizeSportCode(value)));
+}
+
+export function isVarsityOwnershipArea(value: string): value is (typeof VARSITY_OWNERSHIP_AREAS)[number] {
+  return (VARSITY_OWNERSHIP_AREAS as readonly string[]).includes(value);
+}
+
 export function normalizeSportCode(value: string): string {
   return value.trim().toUpperCase();
 }

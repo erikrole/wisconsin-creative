@@ -123,6 +123,7 @@ export const PERMISSIONS: Record<string, Record<string, Role[]>> = {
     assign: ["ADMIN", "STAFF"],
     request: ["ADMIN", "STAFF", "STUDENT"],
     approve: ["ADMIN"],
+    manage_roles: ["ADMIN"],
   },
   sport_config: {
     view: ["ADMIN", "STAFF"],

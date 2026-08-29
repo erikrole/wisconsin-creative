@@ -127,7 +127,7 @@ Values: `UPLOADING`, `FINALIZING`, `COMMITTED`, `FAILED`
 
 ## Model `User`
 
-Fields: 119
+Fields: 121
 
 - `id                            String                           @id @default(cuid())`
 - `name                          String`
@@ -176,6 +176,8 @@ Fields: 119
 - `shiftAcknowledged             ShiftAssignment[]                @relation("ShiftAssignmentAcknowledgedBy")`
 - `sportAssignments              StudentSportAssignment[]`
 - `areaAssignments               StudentAreaAssignment[]`
+- `varsityOwnerships             VarsitySeasonOwner[]             @relation("VarsitySeasonOwner")`
+- `varsityOwnershipsCreated      VarsitySeasonOwner[]             @relation("VarsitySeasonOwnerCreator")`
 - `tradesPosted                  ShiftTrade[]                     @relation("TradePostedBy")`
 - `tradesClaimed                 ShiftTrade[]                     @relation("TradeClaimedBy")`
 - `favorites                     FavoriteItem[]`
@@ -1914,6 +1916,14 @@ Values: `DIRECT_ASSIGNED`, `REQUESTED`, `APPROVED`, `DECLINED`, `SWAPPED`
 
 Values: `MANUAL`, `RESERVATION`, `AUTO_FILL`
 
+## Enum `FootballGameDayRole`
+
+Values: `SLOW1`, `SLOW2`, `BENCH`, `ROAM1`, `ROAM2`, `ROAM3`, `ROAM4`, `PHOTO1`, `PHOTO2`, `PHOTO3`, `PHOTO4`, `SOCIAL`
+
+## Enum `SportAutoAssignPolicy`
+
+Values: `FULL_CREW`, `STAFF_ONLY`, `HOLD`
+
 ## Enum `ScheduleBulkAssignmentStatus`
 
 Values: `PENDING`, `RELEASED`, `PARTIAL`, `BLOCKED`
@@ -1928,15 +1938,16 @@ Values: `OPEN`, `CLAIMED`, `APPROVED`, `COMPLETED`, `CANCELLED`
 
 ## Model `SportConfig`
 
-Fields: 8
+Fields: 9
 
-- `id               String             @id @default(cuid())`
-- `sportCode        String             @unique @map("sport_code")`
-- `active           Boolean            @default(true)`
-- `shiftStartOffset Int                @default(60) @map("shift_start_offset")`
-- `shiftEndOffset   Int                @default(60) @map("shift_end_offset")`
-- `createdAt        DateTime           @default(now()) @map("created_at")`
-- `updatedAt        DateTime           @updatedAt @map("updated_at")`
+- `id               String                @id @default(cuid())`
+- `sportCode        String                @unique @map("sport_code")`
+- `active           Boolean               @default(true)`
+- `autoAssignPolicy SportAutoAssignPolicy @default(FULL_CREW) @map("auto_assign_policy")`
+- `shiftStartOffset Int                   @default(60) @map("shift_start_offset")`
+- `shiftEndOffset   Int                   @default(60) @map("shift_end_offset")`
+- `createdAt        DateTime              @default(now()) @map("created_at")`
+- `updatedAt        DateTime              @updatedAt @map("updated_at")`
 - `shiftConfigs     SportShiftConfig[]`
 
 Indexes and constraints:
@@ -2098,7 +2109,7 @@ Indexes and constraints:
 
 ## Model `ShiftAssignment`
 
-Fields: 26
+Fields: 27
 
 - `id               String                @id @default(cuid())`
 - `shiftId          String                @map("shift_id")`
@@ -2107,6 +2118,7 @@ Fields: 26
 - `source           ShiftAssignmentSource @default(MANUAL)`
 - `assignedBy       String?               @map("assigned_by")`
 - `swapFromId       String?               @map("swap_from_id")`
+- `footballRoles    FootballGameDayRole[] @default([]) @map("football_roles")`
 - `callStartsAt     DateTime?             @map("call_starts_at")`
 - `callEndsAt       DateTime?             @map("call_ends_at")`
 - `callNote         String?               @map("call_note")`
@@ -2168,6 +2180,28 @@ Indexes and constraints:
 - `@@unique([userId, area])`
 - `@@index([area])`
 - `@@map("student_area_assignments")`
+
+## Model `VarsitySeasonOwner`
+
+Fields: 10
+
+- `id          String    @id @default(cuid())`
+- `sportCode   String    @map("sport_code")`
+- `area        ShiftArea`
+- `userId      String    @map("user_id")`
+- `startsOn    DateTime  @map("starts_on") @db.Date`
+- `endsOn      DateTime  @map("ends_on") @db.Date`
+- `createdById String    @map("created_by_id")`
+- `createdAt   DateTime  @default(now()) @map("created_at")`
+- `user        User      @relation("VarsitySeasonOwner", fields: [userId], references: [id], onDelete: Restrict)`
+- `createdBy   User      @relation("VarsitySeasonOwnerCreator", fields: [createdById], references: [id], onDelete: Restrict)`
+
+Indexes and constraints:
+
+- `@@unique([sportCode, area, userId, startsOn])`
+- `@@index([sportCode, area, startsOn, endsOn])`
+- `@@index([userId, startsOn, endsOn])`
+- `@@map("varsity_season_owners")`
 
 ## Model `ShiftTrade`
 

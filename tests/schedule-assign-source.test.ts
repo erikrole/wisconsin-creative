@@ -30,7 +30,7 @@ describe("schedule assign source wiring", () => {
     expect(assignPage).toContain('aria-label="Assignment area filter"');
   });
 
-  it("keeps auto-fill preview-first in the dedicated Shift detail surface", () => {
+  it("retires auto-fill from Shift detail and keeps auto-assign on Schedule", () => {
     const eventCrew = readFileSync("src/app/(app)/events/[id]/_components/ShiftCoverageCard.tsx", "utf8");
     const shiftDetail = readFileSync("src/components/ShiftDetailPanel.tsx", "utf8");
 
@@ -38,9 +38,11 @@ describe("schedule assign source wiring", () => {
     expect(eventCrew).not.toContain("/api/shift-groups/${groupId}/auto-assign/preview");
     expect(eventCrew).not.toContain("Apply recommended assignments");
 
-    expect(shiftDetail).toContain("/api/shift-groups/${group.id}/auto-assign/preview");
-    expect(shiftDetail).toContain("Apply recommended assignments");
-    expect(shiftDetail).toContain("Nothing changes until you apply.");
+    expect(shiftDetail).not.toContain("/api/shift-groups/${group.id}/auto-assign/preview");
+    expect(shiftDetail).not.toContain("Apply recommended assignments");
+    expect(shiftDetail).not.toContain("Nothing changes until you apply.");
+    expect(shiftDetail).toContain("Auto assign is managed on the Schedule page.");
+    expect(shiftDetail).toContain("review and stage changes safely");
   });
 
   it("retires manual release while preserving the audited reconciliation service", () => {

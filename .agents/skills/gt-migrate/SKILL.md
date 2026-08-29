@@ -41,7 +41,7 @@ Use the repo's current Prisma and Neon path. Do not fall back to generic Prisma 
 
 - Format schema: `npx prisma format`
 - Validate schema: `npx prisma validate`
-- Generate local migration: `npm run db:migrate:new -- --name <feature>_<short_change>` or the repo-supported equivalent confirmed from `package.json`
+- Generate local migration: `npm run db:migrate:new -- --name <feature>_<short_change>`. This is an offline committed-schema diff because the historical chain cannot replay in a fresh Prisma shadow database. Inspect the generated SQL before continuing.
 - Check migration folder prefixes: `npm run db:migrate:check`
 - Check live migration health: `npm run db:migrate:health`
 - Deploy migrations: `npm run db:migrate:deploy` when live migration mutation is explicitly in scope and approved

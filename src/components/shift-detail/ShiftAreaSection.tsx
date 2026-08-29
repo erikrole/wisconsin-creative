@@ -35,6 +35,7 @@ type Shift = {
 type Props = {
   area: string;
   shifts: Shift[];
+  sportCode?: string | null;
   eventAllDay?: boolean;
   isStaff: boolean;
   canReviewClaims?: boolean;
@@ -61,6 +62,7 @@ type Props = {
 export function ShiftAreaSection({
   area,
   shifts,
+  sportCode,
   eventAllDay = false,
   isStaff,
   canReviewClaims = false,
@@ -118,6 +120,7 @@ export function ShiftAreaSection({
               callStartsAt={shift.callStartsAt ?? null}
               callEndsAt={shift.callEndsAt ?? null}
               eventAllDay={eventAllDay}
+              sportCode={sportCode}
               activeAssignment={activeAssignment ?? null}
               pendingRequests={pendingRequests}
               isStaff={isStaff}

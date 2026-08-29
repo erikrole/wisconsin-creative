@@ -44,6 +44,7 @@ not downgrade it from Sensitive merely to make CLI download work.
 ## Supported Commands
 
 ```bash
+npm run db:migrate:new -- --name <feature_name>
 npm run db:migrate:check
 npm run db:migrate:status
 npm run db:migrate:health
@@ -51,6 +52,7 @@ npm run db:migrate:deploy
 npm run build
 ```
 
+- `db:migrate:new` (and its create-only compatibility alias `db:migrate:raw`) generates SQL offline by comparing the committed `HEAD` Prisma schema with the working schema. It chooses the next four-digit migration prefix, refuses dirty migration directories, and blocks destructive SQL unless the reviewed task passes `--allow-destructive`. It never connects to a database.
 - `db:migrate:check` verifies local migration folder shape, required `migration.sql` files, and prefix uniqueness.
 - `db:migrate:status` and `db:migrate:health` run the repo's Neon-backed health checker. They compare local migration folders with live `_prisma_migrations`, fail on pending local migrations, fail on unresolved failed rows, fail on applied DB rows missing locally, and verify the newest local migration is applied.
 - `db:migrate:deploy` resolves `DIRECT_URL` or `DATABASE_URL_UNPOOLED`, exports
@@ -66,7 +68,7 @@ Raw `prisma migrate status` is not the source of truth in this repo because the 
 
 1. Edit `prisma/schema.prisma`.
 2. Run `npx prisma format`.
-3. Create a migration with Prisma's migrate workflow.
+3. Create an offline migration with `npm run db:migrate:new -- --name <feature_name>` and inspect the generated SQL.
 4. Run `npm run db:migrate:check`.
 5. Run `npm run db:migrate:deploy`.
 6. Run `npm run db:migrate:health`.
@@ -92,3 +94,5 @@ npm run db:bootstrap:empty
 ```
 
 The command refuses any target containing application tables, generates the current schema from an offline Prisma empty-to-datamodel diff, restores Prisma-inexpressible exclusion/partial/trigram indexes, and reconciles local migration checksums. It must never be used on production, a database with user data, or as a substitute for normal incremental migrations.
+
+The same historical ordering also prevents raw `prisma migrate dev` from replaying the chain in a fresh shadow database. Generate new migrations through the offline `db:migrate:new` wrapper instead of weakening or rewriting applied migration history.

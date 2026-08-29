@@ -5,6 +5,7 @@ import {
   ShiftAssignmentStatus,
 } from "@prisma/client";
 import { createAuditEntriesTx } from "@/lib/audit";
+import { appTzDateKey } from "@/lib/app-time";
 import { ACTIVE_BOOKING_STATUSES } from "@/lib/booking-statuses";
 import type { CandidateRecommendation } from "@/lib/candidate-scoring-types";
 import {
@@ -50,6 +51,7 @@ import { ACTIVE_ASSIGNMENT_STATUSES } from "@/lib/shift-constants";
 import { checkTimeConflict } from "@/lib/services/shift-assignments";
 import { evaluateAvailabilityPreferences } from "@/lib/student-availability";
 import { shiftWorkerTypeForProfile } from "@/lib/shift-display";
+import { isBigSixSportCode, isVarsityOwnershipArea } from "@/lib/sports";
 import { buildWorkingSchedulePayload } from "@/lib/services/schedule-working-copy";
 import { createBulkScheduleAssignmentNotifications } from "@/lib/services/notifications";
 
@@ -207,6 +209,23 @@ function openSlotsScopeReason(scope: BulkAssignmentScope, policy: SportAutoAssig
 
 function hasWarning(score: CandidateRecommendation, code: string) {
   return score.warnings.some((warning) => warning.code === code);
+}
+
+function varsityOwnerScope(sportCode: string | null, slot: WorkingSchedulePayload["slots"][number]) {
+  return Boolean(sportCode && !isBigSixSportCode(sportCode) && slot.workerType === "ST" && isVarsityOwnershipArea(slot.area));
+}
+
+function activeOwnerIds(
+  rows: Array<{ sportCode: string; area: string; userId: string; startsOn: Date; endsOn: Date }>,
+  sportCode: string,
+  area: string,
+  eventStartsAt: Date,
+) {
+  const key = appTzDateKey(eventStartsAt);
+  return new Set(rows.filter((row) => row.sportCode === sportCode
+    && row.area === area
+    && row.startsOn.toISOString().slice(0, 10) <= key
+    && row.endsOn.toISOString().slice(0, 10) >= key).map((row) => row.userId));
 }
 
 function eventSnapshot(event: BulkCalendarEvent, group: BulkShiftGroup | null) {
@@ -570,7 +589,15 @@ export async function getBulkAssignmentPreview(rawScope: BulkAssignmentScope): P
   if (targetSlots.length > 0) {
     const startsAt = new Date(Math.min(...targetSlots.map((target) => target.startsAt.getTime())));
     const endsAt = new Date(Math.max(...targetSlots.map((target) => target.endsAt.getTime())));
-    const loadedCandidates = await loadCandidateScoringUsersForRange({ startsAt, endsAt });
+    const ownershipStartsOn = new Date(`${readyStates.map((state) => appTzDateKey(state.event.startsAt)).sort()[0]}T00:00:00.000Z`);
+    const ownershipEndsOn = new Date(`${readyStates.map((state) => appTzDateKey(state.event.startsAt)).sort().at(-1)}T00:00:00.000Z`);
+    const [loadedCandidates, ownershipRows] = await Promise.all([
+      loadCandidateScoringUsersForRange({ startsAt, endsAt }),
+      db.varsitySeasonOwner.findMany({
+        where: { startsOn: { lte: ownershipEndsOn }, endsOn: { gte: ownershipStartsOn } },
+        select: { sportCode: true, area: true, userId: true, startsOn: true, endsOn: true },
+      }),
+    ]);
     const candidates = loadedCandidates.filter((candidate) => candidate.role !== Role.COLLABORATOR);
     const candidatesById = new Map(candidates.map((candidate) => [candidate.id, candidate]));
 
@@ -581,8 +608,12 @@ export async function getBulkAssignmentPreview(rawScope: BulkAssignmentScope): P
       for (const slot of state.openSlots) {
         const target = candidateTarget(slot, state.event.sportCode);
         const scores = scoreCandidatesForShift({ shift: target, candidates, now: new Date() });
+        const ownerIds = varsityOwnerScope(state.event.sportCode, slot)
+          ? activeOwnerIds(ownershipRows, state.event.sportCode!, slot.area, state.event.startsAt)
+          : null;
+        const consideredScores = ownerIds ? scores.filter((score) => ownerIds.has(score.userId)) : scores;
         const eventHasTravelRoster = sportHasTravelRoster(travelRosterCounts, state.event.sportCode);
-        const chosen = scores.find((score) => {
+        const chosen = consideredScores.find((score) => {
           const candidate = candidatesById.get(score.userId);
           if (!candidate || usedUserIds.has(score.userId)) return false;
           // The sport roster is the pool, not a tiebreaker.
@@ -596,6 +627,22 @@ export async function getBulkAssignmentPreview(rawScope: BulkAssignmentScope): P
           return true;
         });
         if (!chosen) {
+          if (ownerIds) {
+            skipped.push({
+              shiftId: slot.sourceShiftId ?? slot.key,
+              area: slot.area,
+              workerType: slot.workerType,
+              reasonCode: "varsity_owner_unavailable",
+              reason: ownerIds.size === 0
+                ? "No current primary owner is configured for this varsity coverage area."
+                : "No current primary owner is eligible for this event.",
+              reasonDetails: [
+                `${ownerIds.size} current owner${ownerIds.size === 1 ? "" : "s"} considered.`,
+                "Auto assign does not fall back to another roster member.",
+              ],
+            });
+            continue;
+          }
           skipped.push(buildSkippedSlot(slot, scores, candidatesById, usedUserIds, state.event.sportCode, {
             isHome: state.event.isHome,
             hasTravelRoster: eventHasTravelRoster,
@@ -817,6 +864,20 @@ export async function applyBulkScheduleAssignment(
         }
         if (!policyAllowsWorkerType(groupPolicy, slot.workerType)) {
           throw new HttpError(409, "One of these sports no longer auto-assigns this kind of slot. Review the preview again.");
+        }
+        if (varsityOwnerScope(group.event.sportCode, slot)) {
+          const eventDay = new Date(`${appTzDateKey(group.event.startsAt)}T00:00:00.000Z`);
+          const owner = await tx.varsitySeasonOwner.findFirst({
+            where: {
+              sportCode: group.event.sportCode!,
+              area: slot.area,
+              userId: user.id,
+              startsOn: { lte: eventDay },
+              endsOn: { gte: eventDay },
+            },
+            select: { id: true },
+          });
+          if (!owner) throw new HttpError(409, "A proposed varsity owner is no longer current. Review the preview again.");
         }
         if (!isTravelEligible(
           user.sportAssignments,

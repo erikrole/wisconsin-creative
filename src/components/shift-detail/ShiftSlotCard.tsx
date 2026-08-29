@@ -18,6 +18,7 @@ import { AlertTriangle, XIcon } from "lucide-react";
 import { CallWindowEditor } from "./CallWindowEditor";
 import { UserAvatarPicker, type PickerUser } from "./UserAvatarPicker";
 import { effectiveCallWindow, isInheritedFullDayCallWindow } from "@/lib/shift-call-windows";
+import { isFootballSportCode } from "@/lib/football-roles";
 import { shiftWorkerLabelForProfile, shiftWorkerSlotLabel } from "@/lib/shift-display";
 import { cn } from "@/lib/utils";
 import {
@@ -45,6 +46,7 @@ type ShiftAssignment = {
   callStartsAt?: string | null;
   callEndsAt?: string | null;
   callNote?: string | null;
+  footballRoles?: string[];
   user: ShiftUser;
 };
 
@@ -53,6 +55,7 @@ type Props = {
   workerType: string;
   startsAt: string;
   endsAt: string;
+  sportCode?: string | null;
   callStartsAt?: string | null;
   callEndsAt?: string | null;
   eventAllDay?: boolean;
@@ -87,6 +90,7 @@ export function ShiftSlotCard({
   workerType,
   startsAt,
   endsAt,
+  sportCode,
   callStartsAt,
   callEndsAt,
   eventAllDay = false,
@@ -203,24 +207,31 @@ export function ShiftSlotCard({
           {activeAssignment && (
             <>
               <div className="flex items-center justify-between">
-                <span className="text-sm flex items-center gap-2">
-                  <UserAvatar
-                    name={activeAssignment.user.name}
-                    avatarUrl={activeAssignment.user.avatarUrl}
-                    size="default"
-                  />
-                  {activeAssignment.user.name}
-                  {activeAssignment.hasConflict && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <AlertTriangle className="size-3.5 text-[var(--orange-text)] shrink-0" aria-label="Schedule conflict" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        {activeAssignment.conflictNote ?? "Schedule conflict"}
-                      </TooltipContent>
-                    </Tooltip>
+                <div className="flex min-w-0 flex-col gap-0.5">
+                  <span className="text-sm flex items-center gap-2">
+                    <UserAvatar
+                      name={activeAssignment.user.name}
+                      avatarUrl={activeAssignment.user.avatarUrl}
+                      size="default"
+                    />
+                    <span className="min-w-0 truncate">{activeAssignment.user.name}</span>
+                    {activeAssignment.hasConflict && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <AlertTriangle className="size-3.5 text-[var(--orange-text)] shrink-0" aria-label="Schedule conflict" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {activeAssignment.conflictNote ?? "Schedule conflict"}
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                  </span>
+                  {isFootballSportCode(sportCode) && (activeAssignment.footballRoles?.length ?? 0) > 0 && (
+                    <span className="pl-9 text-[11px] text-muted-foreground">
+                      {activeAssignment.footballRoles!.join(" · ")}
+                    </span>
                   )}
-                </span>
+                </div>
                 {canEdit && (
                   <Button
                     variant="ghost"

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { ShiftArea } from "@prisma/client";
+import { Role, ShiftArea } from "@prisma/client";
 import { expectSerializableIsolation } from "./_helpers/assert-transaction";
 
 // ─── Transaction tracking ───────────────────────────────────────────────────
@@ -21,7 +21,11 @@ vi.mock("@/lib/db", () => {
       findMany: vi.fn(),
       create: vi.fn(),
       createMany: vi.fn(),
+      updateMany: vi.fn(),
       delete: vi.fn(),
+    },
+    auditLog: {
+      createMany: vi.fn(),
     },
   };
 
@@ -50,6 +54,7 @@ import {
   addToRoster,
   removeFromRoster,
   bulkAddToRoster,
+  setRosterTravelStatus,
 } from "@/lib/services/sport-configs";
 
 type SportConfigMockTx = {
@@ -66,7 +71,11 @@ type SportConfigMockTx = {
     findMany: ReturnType<typeof vi.fn>;
     create: ReturnType<typeof vi.fn>;
     createMany: ReturnType<typeof vi.fn>;
+    updateMany: ReturnType<typeof vi.fn>;
     delete: ReturnType<typeof vi.fn>;
+  };
+  auditLog: {
+    createMany: ReturnType<typeof vi.fn>;
   };
 };
 
@@ -314,6 +323,7 @@ describe("getSportRoster", () => {
         id: "ssa-1",
         userId: "u-1",
         sportCode: "FB",
+        defaultTraveler: true,
         user: { id: "u-1", name: "Student 1", email: "s1@uw.edu", role: "STUDENT", primaryArea: null },
         createdAt: new Date("2026-01-01"),
       },
@@ -324,6 +334,7 @@ describe("getSportRoster", () => {
     expect(result).toHaveLength(1);
     expect(result[0]!.userId).toBe("u-1");
     expect(result[0]!.user.name).toBe("Student 1");
+    expect(result[0]!.defaultTraveler).toBe(true);
   });
 });
 
@@ -376,5 +387,65 @@ describe("bulkAddToRoster", () => {
       })
     );
     expect(result).toHaveLength(2);
+  });
+});
+
+describe("setRosterTravelStatus", () => {
+  it("updates the selected sport members and their audits in one serializable transaction", async () => {
+    mockTx.studentSportAssignment.findMany
+      .mockResolvedValueOnce([
+        { id: "ssa-1", userId: "u-1", defaultTraveler: false },
+        { id: "ssa-2", userId: "u-2", defaultTraveler: true },
+      ])
+      .mockResolvedValueOnce([
+        { id: "ssa-1", userId: "u-1", defaultTraveler: true, user: { id: "u-1", name: "A" } },
+        { id: "ssa-2", userId: "u-2", defaultTraveler: true, user: { id: "u-2", name: "B" } },
+      ]);
+    mockTx.studentSportAssignment.updateMany.mockResolvedValue({ count: 2 });
+    mockTx.auditLog.createMany.mockResolvedValue({ count: 2 });
+
+    const result = await setRosterTravelStatus({
+      assignmentIds: ["ssa-1", "ssa-2"],
+      sportCode: "FB",
+      defaultTraveler: true,
+      actor: { id: "admin-1", role: Role.ADMIN },
+    });
+
+    expect(mockTx.studentSportAssignment.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ["ssa-1", "ssa-2"] }, sportCode: "FB" },
+      data: { defaultTraveler: true },
+    });
+    expect(mockTx.auditLog.createMany).toHaveBeenCalledWith({
+      data: expect.arrayContaining([
+        expect.objectContaining({
+          entityId: "ssa-1",
+          action: "roster_travel_set",
+          beforeJson: { defaultTraveler: false },
+        }),
+        expect.objectContaining({
+          entityId: "ssa-2",
+          action: "roster_travel_set",
+          beforeJson: { defaultTraveler: true },
+        }),
+      ]),
+    });
+    expectSerializableIsolation(transactionCalls);
+    expect(result).toHaveLength(2);
+  });
+
+  it("rejects a cross-sport or stale selection before writing", async () => {
+    mockTx.studentSportAssignment.findMany.mockResolvedValueOnce([
+      { id: "ssa-1", userId: "u-1", defaultTraveler: false },
+    ]);
+
+    await expect(setRosterTravelStatus({
+      assignmentIds: ["ssa-1", "ssa-other"],
+      sportCode: "FB",
+      defaultTraveler: true,
+      actor: { id: "admin-1", role: Role.ADMIN },
+    })).rejects.toMatchObject({ status: 404 });
+
+    expect(mockTx.studentSportAssignment.updateMany).not.toHaveBeenCalled();
+    expect(mockTx.auditLog.createMany).not.toHaveBeenCalled();
   });
 });

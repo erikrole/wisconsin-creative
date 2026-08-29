@@ -113,24 +113,26 @@
 | `src/components/resources/BrandAssetLibrary.tsx` | 1827 |
 | `src/components/TradeBoard.tsx` | 1795 |
 | `src/components/ActivityTimeline.tsx` | 1368 |
+| `src/components/schedule/SportSetupWizard.tsx` | 1268 |
 | `src/components/onboarding/OnboardingDialog.tsx` | 996 |
 | `src/components/EquipmentPicker.tsx` | 916 |
 | `src/components/AppShell.tsx` | 896 |
-| `src/components/ShiftDetailPanel.tsx` | 791 |
+| `src/components/schedule/AutoAssignDialog.tsx` | 855 |
 | `src/components/ChooseImageModal.tsx` | 769 |
 | `src/components/profile-completion/ProfileCompletionWizard.tsx` | 769 |
 | `src/components/booking-wizard/BookingWizard.tsx` | 721 |
 | `src/components/ui/sidebar.tsx` | 710 |
 | `src/components/BookingDetailsSheet.tsx` | 702 |
-| `src/components/schedule/AutoAssignDialog.tsx` | 642 |
+| `src/components/ShiftDetailPanel.tsx` | 641 |
 | `src/components/booking-wizard/WizardStep1.tsx` | 572 |
 | `src/components/BookingListPage.tsx` | 526 |
 | `src/components/ui/heatmap.tsx` | 434 |
+| `src/components/schedule/FootballStaffingSheetPreviewDialog.tsx` | 426 |
 | `src/components/Sidebar.tsx` | 413 |
 | `src/components/booking-details/BookingHeader.tsx` | 412 |
 | `src/components/ui/chart.tsx` | 389 |
+| `src/components/shift-detail/ShiftSlotCard.tsx` | 354 |
 | `src/components/booking-details/BookingInfoCard.tsx` | 344 |
-| `src/components/shift-detail/ShiftSlotCard.tsx` | 343 |
 | `src/components/booking-details/EditBookingEventsDialog.tsx` | 342 |
 | `src/components/FormCombobox.tsx` | 329 |
 | `src/components/resources/MarkdownReader.tsx` | 312 |
@@ -138,8 +140,6 @@
 | `src/components/PageBreadcrumb.tsx` | 286 |
 | `src/components/booking-details/BookingSheetOverview.tsx` | 285 |
 | `src/components/booking-details/TransferOwnerDialog.tsx` | 271 |
-| `src/components/booking-wizard/WizardStep3.tsx` | 263 |
-| `src/components/shift-detail/CallWindowEditor.tsx` | 260 |
 
 ## Hooks
 
