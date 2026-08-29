@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeftRightIcon, MoreHorizontalIcon, PlusIcon, UsersRoundIcon, XIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -38,6 +39,12 @@ import { handleAuthRedirect, isAbortError, parseErrorMessage, parseJsonSafely } 
 import { formatTimeShort } from "@/lib/format";
 import { formatScheduleReleaseCountdown } from "@/lib/schedule-release";
 import { QUARTER_HOUR_MINUTES, roundUpToQuarterHour } from "@/lib/quarter-hour";
+import {
+  canonicalFootballGameDayRoles,
+  FOOTBALL_GAME_DAY_ROLES,
+  isFootballSportCode,
+  type FootballGameDayRole,
+} from "@/lib/football-roles";
 import type { WorkingScheduleCommand, WorkingSchedulePayload } from "@/lib/schedule-working-copy";
 import type { CandidateRecommendation } from "@/lib/candidate-scoring-types";
 import { cn } from "@/lib/utils";
@@ -58,6 +65,8 @@ function formatNotificationCountdown(iso: string, now = Date.now()) {
 
 type EditorData = {
   shiftGroupId: string;
+  sportCode: string | null;
+  canEditFootballRoles: boolean;
   publicationState: "draft" | "published" | "unpublished_changes";
   publishedAt: string | null;
   publishedVersion: number;
@@ -306,6 +315,84 @@ function SetAllCallTimesEditor({
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+function FootballRoleEditor({
+  roles,
+  personName,
+  disabled,
+  onSave,
+}: {
+  roles: FootballGameDayRole[];
+  personName: string;
+  disabled: boolean;
+  onSave: (roles: FootballGameDayRole[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<FootballGameDayRole[]>(roles);
+
+  function handleOpenChange(nextOpen: boolean) {
+    if (nextOpen) setDraft(canonicalFootballGameDayRoles(roles));
+    setOpen(nextOpen);
+  }
+
+  return (
+    <Popover open={open} onOpenChange={handleOpenChange}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="xs"
+          className="h-7 self-start px-1 text-[11px] font-normal text-muted-foreground"
+          disabled={disabled}
+          aria-label={`${roles.length > 0 ? "Edit" : "Add"} Football game-day roles for ${personName}`}
+        >
+          {roles.length > 0 ? "Edit roles" : "Add role"}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80 max-w-[calc(100vw-2rem)] space-y-3 p-3" align="start">
+        <div>
+          <p className="text-sm font-medium">Football game-day roles</p>
+          <p className="text-xs text-muted-foreground">
+            Metadata on this shift; it does not create a coverage segment.
+          </p>
+        </div>
+        <fieldset className="grid grid-cols-2 gap-1">
+          <legend className="sr-only">Select Football game-day roles</legend>
+          {FOOTBALL_GAME_DAY_ROLES.map((role) => (
+            <label key={role} className="flex min-h-10 items-center gap-2 rounded-md px-2 text-sm hover:bg-muted/40">
+              <Checkbox
+                checked={draft.includes(role)}
+                onCheckedChange={(checked) => {
+                  setDraft((current) => checked === true
+                    ? canonicalFootballGameDayRoles([...current, role])
+                    : current.filter((candidate) => candidate !== role));
+                }}
+                disabled={disabled}
+              />
+              <span>{role}</span>
+            </label>
+          ))}
+        </fieldset>
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)} disabled={disabled}>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => {
+              onSave(canonicalFootballGameDayRoles(draft));
+              setOpen(false);
+            }}
+            disabled={disabled}
+          >
+            Save roles
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -734,6 +821,9 @@ export function WorkingCrewEditor({
                   const showCallWindow = !data.allDay && slot.workerType === "ST";
                   const canConvert = !slot.assignment && slot.assignmentHistoryCount === 0;
                   const eligibleUsers = availableUsersForSlot(slot.workerType);
+                  const footballRoles = isFootballSportCode(data.sportCode)
+                    ? (slot.assignment?.footballRoles ?? [])
+                    : [];
                   return slot.assignment ? (
                     <div key={slot.key} className={cn(`${CREW_ROW_GROUP} grid min-h-11 min-w-0 items-center gap-2 rounded-md px-1 hover:bg-muted/20`, SLOT_ROW_GRID_CLASS)}>
                       {showCallWindow ? (
@@ -747,9 +837,27 @@ export function WorkingCrewEditor({
                         />
                       ) : <span aria-hidden="true" />}
                       <CrewTypeLabel label={roleLabel} />
-                      <div className="flex min-w-0 items-center gap-2">
-                        <UserAvatar name={user?.name ?? "Assigned"} avatarUrl={user?.avatarUrl} size="sm" />
-                        <span className="min-w-0 truncate text-sm">{user?.name ?? "Assigned worker"}</span>
+                      <div className="flex min-w-0 flex-col gap-0.5">
+                        <span className="flex min-w-0 items-center gap-2">
+                          <UserAvatar name={user?.name ?? "Assigned"} avatarUrl={user?.avatarUrl} size="sm" />
+                          <span className="min-w-0 truncate text-sm">{user?.name ?? "Assigned worker"}</span>
+                        </span>
+                        {footballRoles.length > 0 && (
+                          <span className="pl-8 text-[11px] text-muted-foreground">
+                            {footballRoles.join(" · ")}
+                          </span>
+                        )}
+                        {data.canEditFootballRoles && (
+                          <FootballRoleEditor
+                            roles={footballRoles}
+                            personName={user?.name ?? "assigned worker"}
+                            disabled={Boolean(actingKey)}
+                            onSave={(roles) => void mutate(
+                              { type: "setFootballRoles", slotKey: slot.key, roles },
+                              `${slot.key}-football-roles`,
+                            )}
+                          />
+                        )}
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>

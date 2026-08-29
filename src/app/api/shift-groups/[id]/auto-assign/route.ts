@@ -1,23 +1,14 @@
 import { withAuth } from "@/lib/api";
-import { db } from "@/lib/db";
-import { HttpError, ok } from "@/lib/http";
+import { HttpError } from "@/lib/http";
 import { requirePermission } from "@/lib/rbac";
-import { autoAssignShiftGroup } from "@/lib/services/auto-assign";
 import { enforceRateLimit } from "@/lib/rate-limit";
-import { assertNoWorkingCopy } from "@/lib/schedule-working-copy-guard";
 
-export const POST = withAuth<{ id: string }>(async (_req, { user, params }) => {
+const RETIRED_MESSAGE =
+  "Auto assign from Shift Detail is retired. Use Schedule Auto assign to review and stage changes safely.";
+
+export const POST = withAuth<{ id: string }>(async (_req, { user }) => {
   requirePermission(user.role, "shift", "manage");
   await enforceRateLimit(`shift:auto-assign:${user.id}`, { max: 10, windowMs: 60_000 });
-  const { id } = params;
 
-  const group = await db.shiftGroup.findUnique({
-    where: { id },
-    select: { id: true, workingCopy: { select: { version: true } } },
-  });
-  if (!group) throw new HttpError(404, "Shift group not found");
-  assertNoWorkingCopy(group.workingCopy);
-
-  const result = await autoAssignShiftGroup(id, user.id);
-  return ok({ data: result });
+  throw new HttpError(410, RETIRED_MESSAGE);
 });

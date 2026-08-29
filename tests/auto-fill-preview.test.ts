@@ -4,18 +4,14 @@ vi.mock("@/lib/auth", () => ({
   requireAuth: vi.fn(),
 }));
 
-vi.mock("@/lib/services/auto-fill-preview", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/services/auto-fill-preview")>("@/lib/services/auto-fill-preview");
-  return {
-    ...actual,
-    getAutoFillPreview: vi.fn(),
-  };
-});
+vi.mock("@/lib/rate-limit", () => ({
+  enforceRateLimit: vi.fn(),
+}));
 
 import { requireAuth } from "@/lib/auth";
 import { GET as getPreviewRoute } from "@/app/api/shift-groups/[id]/auto-assign/preview/route";
 import { buildAutoFillPreview } from "@/lib/services/auto-fill-preview";
-import { getAutoFillPreview } from "@/lib/services/auto-fill-preview";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import type { CandidateRecommendation } from "@/lib/candidate-scoring-types";
 
 const staffUser = {
@@ -245,32 +241,24 @@ describe("buildAutoFillPreview", () => {
   });
 });
 
-describe("auto-fill preview route", () => {
+describe("retired Shift Detail auto-assign preview route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("returns preview data for staff without mutating assignments", async () => {
+  it("BUG: rate-limits staff before returning the retired response", async () => {
     vi.mocked(requireAuth).mockResolvedValue(staffUser);
-    vi.mocked(getAutoFillPreview).mockResolvedValue({
-      shiftGroupId: "group-1",
-      eventId: "event-1",
-      eventSummary: "Volleyball",
-      generatedAt: "2026-10-01T12:00:00.000Z",
-      proposals: [],
-      skipped: [],
-      summary: { openSlots: 0, proposed: 0, skipped: 0, warnings: 0 },
-    });
 
     const res = await getPreviewRoute(
       request("/api/shift-groups/group-1/auto-assign/preview"),
       params({ id: "group-1" }),
     );
-    const body = await res.json();
 
-    expect(res.status).toBe(200);
-    expect(body.data.shiftGroupId).toBe("group-1");
-    expect(getAutoFillPreview).toHaveBeenCalledWith("group-1");
+    expect(res.status).toBe(410);
+    expect(enforceRateLimit).toHaveBeenCalledWith(
+      "shift:auto-assign:preview:staff-1",
+      { max: 20, windowMs: 60_000 },
+    );
   });
 
   it("denies students from reading staffing previews", async () => {
@@ -282,6 +270,6 @@ describe("auto-fill preview route", () => {
     );
 
     expect(res.status).toBe(403);
-    expect(getAutoFillPreview).not.toHaveBeenCalled();
+    expect(enforceRateLimit).not.toHaveBeenCalled();
   });
 });

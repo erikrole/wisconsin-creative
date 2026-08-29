@@ -91,8 +91,8 @@
 - `db:migrate:check`: `node scripts/check-migration-prefixes.mjs`
 - `db:migrate:deploy`: `node scripts/prisma-migrate-deploy.mjs`
 - `db:migrate:health`: `node scripts/prisma-migrate-health.mjs`
-- `db:migrate:new`: `prisma migrate dev`
-- `db:migrate:raw`: `prisma migrate dev --create-only`
+- `db:migrate:new`: `node scripts/prisma-migrate-create.mjs`
+- `db:migrate:raw`: `node scripts/prisma-migrate-create.mjs`
 - `db:migrate:status`: `node scripts/prisma-migrate-health.mjs`
 - `db:seed`: `node prisma/seed.mjs`
 - `db:setup`: `node --env-file=.env scripts/setup-db.mjs`

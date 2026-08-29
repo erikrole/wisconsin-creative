@@ -30,8 +30,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ScheduleReleaseNotice } from "@/components/ScheduleReleaseNotice";
-import { formatRoleSlotAssignmentOutcome, shiftWorkerLabel, shiftWorkerSlotLabel, type RoleSlotOutcomeLike } from "@/lib/shift-display";
-import type { AutoFillPreviewResponse } from "@/lib/auto-fill-preview-types";
+import { formatRoleSlotAssignmentOutcome, shiftWorkerLabel, type RoleSlotOutcomeLike } from "@/lib/shift-display";
+import type { FootballGameDayRole } from "@/lib/football-roles";
 
 /* ───── Types ───── */
 
@@ -52,6 +52,7 @@ type ShiftAssignment = {
   callStartsAt?: string | null;
   callEndsAt?: string | null;
   callNote?: string | null;
+  footballRoles?: FootballGameDayRole[];
   hasConflict: boolean;
   conflictNote: string | null;
   acknowledgedAt?: string | null;
@@ -139,10 +140,6 @@ export default function ShiftDetailPanel({
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<false | "network" | "server">(false);
   const [acting, setActing] = useState<string | null>(null);
-  const [autoFilling, setAutoFilling] = useState(false);
-  const [autoFillApplying, setAutoFillApplying] = useState(false);
-  const [autoFillPreview, setAutoFillPreview] = useState<AutoFillPreviewResponse | null>(null);
-  const [autoFillPreviewOpen, setAutoFillPreviewOpen] = useState(false);
   const [archiving, setArchiving] = useState(false);
   const [tradeDialogAssignmentId, setTradeDialogAssignmentId] = useState<string | null>(null);
   const [tradeNotes, setTradeNotes] = useState("");
@@ -153,7 +150,6 @@ export default function ShiftDetailPanel({
   const abortRef = useRef<AbortController | null>(null);
   const usersAbortRef = useRef<AbortController | null>(null);
   const actingRef = useRef<string | null>(null);
-  const autoFillingRef = useRef(false);
   const archivingRef = useRef(false);
   const postingRef = useRef(false);
 
@@ -360,76 +356,6 @@ export default function ShiftDetailPanel({
     mutate(id, `/api/shift-assignments/${id}`, { method: "DELETE" }, "Assignment removed");
   }
 
-  async function handleAutoFill() {
-    if (!canEditPublishedSchedule) {
-      toast.error("Review or discard the private working schedule before running auto-fill.");
-      return;
-    }
-    if (!group || autoFillingRef.current) return;
-    autoFillingRef.current = true;
-    setAutoFilling(true);
-    try {
-      const res = await fetch(`/api/shift-groups/${group.id}/auto-assign/preview`);
-      if (handleAuthRedirect(res)) return;
-      if (res.ok) {
-        const json = await parseJsonSafely<{ data?: AutoFillPreviewResponse }>(res);
-        if (!json?.data) {
-          toast.error("Auto-fill preview could not be read. Refresh schedule before continuing.");
-          return;
-        }
-        setAutoFillPreview(json.data);
-        setAutoFillPreviewOpen(true);
-      } else {
-        const msg = await parseErrorMessage(res, "Auto-fill preview failed");
-        toast.error(msg);
-      }
-    } catch {
-      toast.error("Could not reach the server. Auto-fill preview was not loaded.");
-    } finally {
-      autoFillingRef.current = false;
-      setAutoFilling(false);
-    }
-  }
-
-  async function handleApplyAutoFill() {
-    if (!group || autoFillingRef.current || !autoFillPreview) return;
-    autoFillingRef.current = true;
-    setAutoFillApplying(true);
-    try {
-      const res = await fetch(`/api/shift-groups/${group.id}/auto-assign`, { method: "POST" });
-      if (handleAuthRedirect(res)) return;
-      if (res.ok) {
-        const json = await parseJsonSafely<{ data?: { assigned?: number; conflicts?: number; skipped?: number } }>(res);
-        const assigned = json?.data?.assigned;
-        const conflicts = json?.data?.conflicts;
-        if (typeof assigned !== "number" || typeof conflicts !== "number") {
-          toast.error("Auto-fill finished, but the response could not be read. Refresh schedule before continuing.");
-          await fetchGroup();
-          onUpdated?.();
-          return;
-        }
-        if (assigned === 0) {
-          toast.info("No eligible workers found for open shifts");
-        } else if (conflicts > 0) {
-          toast.warning(`${assigned} shift${assigned !== 1 ? "s" : ""} filled. Review ${conflicts} schedule conflict${conflicts !== 1 ? "s" : ""}.`);
-        } else {
-          toast.success(`${assigned} shift${assigned !== 1 ? "s" : ""} auto-filled`);
-        }
-        setAutoFillPreviewOpen(false);
-        await fetchGroup();
-        onUpdated?.();
-      } else {
-        const msg = await parseErrorMessage(res, "Auto-fill failed");
-        toast.error(msg);
-      }
-    } catch {
-      toast.error("Could not reach the server. Open shifts were not auto-filled.");
-    } finally {
-      autoFillingRef.current = false;
-      setAutoFillApplying(false);
-    }
-  }
-
   async function handleArchive() {
     if (!group || archivingRef.current) return;
     archivingRef.current = true;
@@ -566,6 +492,13 @@ export default function ShiftDetailPanel({
                 <AlertDescription>{actionError || createdShiftNotice}</AlertDescription>
               </Alert>
             )}
+            {isStaff && (
+              <Alert className="mb-4">
+                <AlertDescription>
+                  Auto assign is managed on the Schedule page. Use Schedule Auto assign to review and stage changes safely.
+                </AlertDescription>
+              </Alert>
+            )}
 
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2 flex-wrap">
@@ -577,18 +510,6 @@ export default function ShiftDetailPanel({
                   {eventTimingLabel}
                 </span>
               </div>
-              {canEditPublishedSchedule && (
-                <div className="flex flex-wrap items-center justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    className="h-10"
-                    onClick={handleAutoFill}
-                    disabled={autoFilling || acting !== null}
-                  >
-                    {autoFilling ? "Building preview..." : "Preview auto-fill"}
-                  </Button>
-                </div>
-              )}
             </div>
 
             {(AREAS as readonly string[]).map((area) => {
@@ -599,6 +520,7 @@ export default function ShiftDetailPanel({
                   key={area}
                   area={area}
                   shifts={shifts}
+                  sportCode={group.event.sportCode}
                   eventAllDay={group.event.allDay}
                   isStaff={isStaff}
                   canReviewClaims={canReviewClaims}
@@ -713,78 +635,6 @@ export default function ShiftDetailPanel({
       </DialogContent>
     </Dialog>
 
-    {/* Auto-fill preview dialog */}
-    <Dialog open={autoFillPreviewOpen} onOpenChange={setAutoFillPreviewOpen}>
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Auto-fill preview</DialogTitle>
-          <DialogDescription>
-            Review suggested assignments before applying them. Nothing changes until you apply.
-          </DialogDescription>
-        </DialogHeader>
-        {autoFillPreview && (
-          <div className="flex flex-col gap-4">
-            <div className="grid grid-cols-3 gap-2 text-sm">
-              <div className="rounded-lg bg-muted/50 p-3">
-                <div className="text-xs text-muted-foreground">Open slots</div>
-                <div className="text-lg font-semibold tabular-nums">{autoFillPreview.summary.openSlots}</div>
-              </div>
-              <div className="rounded-lg bg-muted/50 p-3">
-                <div className="text-xs text-muted-foreground">Proposed</div>
-                <div className="text-lg font-semibold tabular-nums">{autoFillPreview.summary.proposed}</div>
-              </div>
-              <div className="rounded-lg bg-muted/50 p-3">
-                <div className="text-xs text-muted-foreground">Warnings</div>
-                <div className="text-lg font-semibold tabular-nums">{autoFillPreview.summary.warnings}</div>
-              </div>
-            </div>
-            <div className="max-h-80 flex flex-col gap-2 overflow-y-auto pr-1">
-              {autoFillPreview.proposals.map((proposal) => (
-                <div key={proposal.shiftId} className="rounded-lg border border-border/60 p-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="font-medium">{proposal.userName}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {proposal.area.charAt(0) + proposal.area.slice(1).toLowerCase()} · Planned {shiftWorkerSlotLabel(proposal.workerType)} · Assigned {proposal.userStaffingType ? shiftWorkerLabel(proposal.userStaffingType) : "worker"}
-                      </div>
-                    </div>
-                    <Badge variant={proposal.warnings.length > 0 ? "orange" : "green"} className="shrink-0 tabular-nums">
-                      {proposal.score}
-                    </Badge>
-                  </div>
-                  <div className="mt-2 text-xs text-muted-foreground">
-                    {[proposal.warnings[0]?.label, proposal.reasons[0]?.label].filter(Boolean).join(" · ")}
-                  </div>
-                </div>
-              ))}
-              {autoFillPreview.skipped.map((slot) => (
-                <div key={slot.shiftId} className="rounded-lg border border-dashed border-border/70 p-3 text-sm">
-                  <div className="font-medium">
-                    {slot.area.charAt(0) + slot.area.slice(1).toLowerCase()} · {shiftWorkerSlotLabel(slot.workerType)}
-                  </div>
-                  <div className="text-xs text-muted-foreground">{slot.reason}</div>
-                  {slot.reasonDetails.length > 0 && (
-                    <ul className="mt-1 list-disc flex flex-col gap-0.5 pl-4 text-xs text-muted-foreground">
-                      {slot.reasonDetails.map((detail) => (
-                        <li key={detail}>{detail}</li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setAutoFillPreviewOpen(false)} disabled={autoFillApplying}>
-            Cancel
-          </Button>
-          <Button onClick={handleApplyAutoFill} disabled={autoFillApplying || !autoFillPreview || autoFillPreview.proposals.length === 0}>
-            {autoFillApplying ? "Applying..." : "Apply recommended assignments"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
     </>
   );
 }

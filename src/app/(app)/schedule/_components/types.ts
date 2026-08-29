@@ -2,6 +2,7 @@ import type { BadgeProps } from "@/components/ui/badge";
 import { cleanSourceSummary, normalizeOpponentName } from "@/lib/schedule-event-identity";
 import { sportLabel } from "@/lib/sports";
 import { venueToneFromEvent } from "@/lib/venue-tone";
+import type { FootballGameDayRole } from "@/lib/football-roles";
 
 /* ───── Types ───── */
 
@@ -39,6 +40,7 @@ export type ShiftAssignment = {
   callStartsAt?: string | null;
   callEndsAt?: string | null;
   callNote?: string | null;
+  footballRoles?: FootballGameDayRole[];
   hasConflict?: boolean;
   conflictNote?: string | null;
   acknowledgedAt?: string | null;

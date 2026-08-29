@@ -257,6 +257,8 @@ describe("bulk schedule assignment contracts", () => {
       "src/app/api/schedule/bulk-assignment/batches/[id]/cancel/route.ts",
       "src/app/api/schedule/bulk-assignment/preview/route.ts",
       "src/app/api/schedule/bulk-assignment/apply/route.ts",
+      "src/app/api/shift-groups/[id]/auto-assign/preview/route.ts",
+      "src/app/api/shift-groups/[id]/auto-assign/route.ts",
     ];
     for (const route of routes) {
       expect(read(route), `${route} is missing a rate limit`).toContain("enforceRateLimit");

@@ -11,10 +11,10 @@ Gear Tracker is a Next.js App Router application with a companion native iOS app
 |---|---:|
 | App pages | 88 |
 | App layouts | 7 |
-| API route handlers | 311 |
-| Service files | 76 |
-| Component files | 153 |
-| Test files | 586 |
+| API route handlers | 317 |
+| Service files | 80 |
+| Component files | 156 |
+| Test files | 594 |
 
 ## Oversized Source Watchlist
 
@@ -36,12 +36,12 @@ Informational only. These are the largest TypeScript and TSX files under `src/`;
 | `src/app/(app)/bulk-inventory/batteries/page.tsx` | 1341 |
 | `src/lib/services/shift-trades.ts` | 1316 |
 | `src/app/api/assets/route.ts` | 1227 |
+| `src/lib/services/schedule-working-copy.ts` | 1174 |
 | `src/app/(app)/users/[id]/page.tsx` | 1127 |
+| `src/app/(app)/schedule/_components/WorkingCrewEditor.tsx` | 1108 |
 | `src/app/(app)/accountability/AccountabilityClient.tsx` | 1065 |
 | `src/app/(app)/users/[id]/UserBadgesTab.tsx` | 1050 |
-| `src/lib/services/schedule-publication.ts` | 1028 |
-| `src/app/(app)/schedule/_components/WorkingCrewEditor.tsx` | 1000 |
-| `src/components/onboarding/OnboardingDialog.tsx` | 996 |
+| `src/lib/services/schedule-publication.ts` | 1043 |
 
 ## High-Level Data Flow
 

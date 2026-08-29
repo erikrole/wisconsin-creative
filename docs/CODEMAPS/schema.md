@@ -1914,6 +1914,14 @@ Values: `DIRECT_ASSIGNED`, `REQUESTED`, `APPROVED`, `DECLINED`, `SWAPPED`
 
 Values: `MANUAL`, `RESERVATION`, `AUTO_FILL`
 
+## Enum `FootballGameDayRole`
+
+Values: `SLOW1`, `SLOW2`, `BENCH`, `ROAM1`, `ROAM2`, `ROAM3`, `ROAM4`, `PHOTO1`, `PHOTO2`, `PHOTO3`, `PHOTO4`, `SOCIAL`
+
+## Enum `SportAutoAssignPolicy`
+
+Values: `FULL_CREW`, `STAFF_ONLY`, `HOLD`
+
 ## Enum `ScheduleBulkAssignmentStatus`
 
 Values: `PENDING`, `RELEASED`, `PARTIAL`, `BLOCKED`
@@ -1928,15 +1936,16 @@ Values: `OPEN`, `CLAIMED`, `APPROVED`, `COMPLETED`, `CANCELLED`
 
 ## Model `SportConfig`
 
-Fields: 8
+Fields: 9
 
-- `id               String             @id @default(cuid())`
-- `sportCode        String             @unique @map("sport_code")`
-- `active           Boolean            @default(true)`
-- `shiftStartOffset Int                @default(60) @map("shift_start_offset")`
-- `shiftEndOffset   Int                @default(60) @map("shift_end_offset")`
-- `createdAt        DateTime           @default(now()) @map("created_at")`
-- `updatedAt        DateTime           @updatedAt @map("updated_at")`
+- `id               String                @id @default(cuid())`
+- `sportCode        String                @unique @map("sport_code")`
+- `active           Boolean               @default(true)`
+- `autoAssignPolicy SportAutoAssignPolicy @default(FULL_CREW) @map("auto_assign_policy")`
+- `shiftStartOffset Int                   @default(60) @map("shift_start_offset")`
+- `shiftEndOffset   Int                   @default(60) @map("shift_end_offset")`
+- `createdAt        DateTime              @default(now()) @map("created_at")`
+- `updatedAt        DateTime              @updatedAt @map("updated_at")`
 - `shiftConfigs     SportShiftConfig[]`
 
 Indexes and constraints:
@@ -2098,7 +2107,7 @@ Indexes and constraints:
 
 ## Model `ShiftAssignment`
 
-Fields: 26
+Fields: 27
 
 - `id               String                @id @default(cuid())`
 - `shiftId          String                @map("shift_id")`
@@ -2107,6 +2116,7 @@ Fields: 26
 - `source           ShiftAssignmentSource @default(MANUAL)`
 - `assignedBy       String?               @map("assigned_by")`
 - `swapFromId       String?               @map("swap_from_id")`
+- `footballRoles    FootballGameDayRole[] @default([]) @map("football_roles")`
 - `callStartsAt     DateTime?             @map("call_starts_at")`
 - `callEndsAt       DateTime?             @map("call_ends_at")`
 - `callNote         String?               @map("call_note")`

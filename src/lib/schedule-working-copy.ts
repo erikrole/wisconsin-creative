@@ -1,5 +1,11 @@
 import { ShiftArea, ShiftAssignmentSource, ShiftWorkerType } from "@prisma/client";
 import { z } from "zod";
+import {
+  canonicalFootballGameDayRoles,
+  footballGameDayRoleSchema,
+  footballGameDayRolesSchema,
+} from "@/lib/football-roles";
+import { footballStaffingSheetCommandProofSchema } from "@/lib/football-staffing-sheet";
 
 const isoDate = z.string().datetime({ offset: true });
 
@@ -13,6 +19,7 @@ export const workingAssignmentSchema = z.object({
   callNote: z.string().max(5000).nullable(),
   activeTradeId: z.string().min(1).nullable(),
   bookingCount: z.number().int().min(0),
+  footballRoles: footballGameDayRolesSchema.optional(),
 });
 
 export const workingSlotSchema = z.object({
@@ -207,6 +214,23 @@ export const workingScheduleCommandSchema = z.discriminatedUnion("type", [
     callStartsAt: isoDate.nullable(),
     callEndsAt: isoDate.nullable(),
   }),
+  z.object({
+    type: z.literal("setFootballRoles"),
+    slotKey: z.string().min(1),
+    roles: footballGameDayRolesSchema,
+  }),
+  z.object({
+    type: z.literal("applyFootballSheetAssignment"),
+    slotKey: z.string().min(1),
+    userId: z.string().min(1),
+    role: footballGameDayRoleSchema,
+    proof: footballStaffingSheetCommandProofSchema,
+  }),
+  z.object({
+    type: z.literal("clearFootballSheetRole"),
+    role: footballGameDayRoleSchema,
+    proof: footballStaffingSheetCommandProofSchema,
+  }),
 ]);
 
 export type WorkingScheduleCommand = z.infer<typeof workingScheduleCommandSchema>;
@@ -366,6 +390,7 @@ export function applyWorkingScheduleCommand(
       callNote: null,
       activeTradeId: null,
       bookingCount: 0,
+      footballRoles: [],
     };
   } else if (command.type === "assign") {
     const slot = next.slots.find((candidate) => candidate.key === command.slotKey);
@@ -380,6 +405,7 @@ export function applyWorkingScheduleCommand(
       callNote: null,
       activeTradeId: null,
       bookingCount: 0,
+      footballRoles: [],
     };
   } else if (command.type === "unassign") {
     const slot = next.slots.find((candidate) => candidate.key === command.slotKey);
@@ -407,7 +433,7 @@ export function applyWorkingScheduleCommand(
       slot.callStartsAt = command.callStartsAt;
       slot.callEndsAt = command.callEndsAt;
     }
-  } else {
+  } else if (command.type === "setCallWindowForAll") {
     for (const slot of next.slots) {
       if (slot.workerType !== "ST") continue;
       slot.callStartsAt = command.callStartsAt;
@@ -416,6 +442,41 @@ export function applyWorkingScheduleCommand(
         slot.assignment.callStartsAt = null;
         slot.assignment.callEndsAt = null;
       }
+    }
+  } else if (command.type === "setFootballRoles") {
+    const slot = next.slots.find((candidate) => candidate.key === command.slotKey);
+    if (!slot) throw new Error("WORKING_SLOT_NOT_FOUND");
+    if (!slot.assignment) throw new Error("WORKING_SLOT_NOT_ASSIGNED");
+    slot.assignment.footballRoles = canonicalFootballGameDayRoles(command.roles);
+  } else if (command.type === "applyFootballSheetAssignment") {
+    const slot = next.slots.find((candidate) => candidate.key === command.slotKey);
+    if (!slot) throw new Error("WORKING_SLOT_NOT_FOUND");
+    if (slot.assignment && slot.assignment.userId !== command.userId) {
+      throw new Error("WORKING_SLOT_ALREADY_ASSIGNED");
+    }
+    if (!slot.assignment) {
+      slot.assignment = {
+        sourceAssignmentId: null,
+        userId: command.userId,
+        status: "DIRECT_ASSIGNED",
+        callStartsAt: null,
+        callEndsAt: null,
+        callNote: null,
+        activeTradeId: null,
+        bookingCount: 0,
+        footballRoles: [],
+      };
+    }
+    slot.assignment.footballRoles = canonicalFootballGameDayRoles([
+      ...(slot.assignment.footballRoles ?? []),
+      command.role,
+    ]);
+  } else {
+    for (const slot of next.slots) {
+      if (!slot.assignment) continue;
+      slot.assignment.footballRoles = canonicalFootballGameDayRoles(
+        (slot.assignment.footballRoles ?? []).filter((role) => role !== command.role),
+      );
     }
   }
 

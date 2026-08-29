@@ -2,6 +2,7 @@ import { Prisma, Role, ShiftAssignmentStatus, ShiftArea, ShiftWorkerType } from 
 import { db } from "@/lib/db";
 import { createAuditEntryTx } from "@/lib/audit";
 import { ACTIVE_BOOKING_STATUSES } from "@/lib/booking-statuses";
+import { canonicalFootballGameDayRoles, isFootballSportCode } from "@/lib/football-roles";
 import { HttpError } from "@/lib/http";
 import { scheduleAssigneeWorkerType } from "@/lib/schedule-assignee";
 import {
@@ -221,6 +222,7 @@ async function findGroupForPublication(shiftGroupId: string, tx: Prisma.Transact
       publishedById: true,
       lastPublishedSnapshot: true,
       publishedVersion: true,
+      event: { select: { sportCode: true } },
       workingCopy: {
         select: {
           version: true,
@@ -250,6 +252,7 @@ async function findGroupForPublication(shiftGroupId: string, tx: Prisma.Transact
               callStartsAt: true,
               callEndsAt: true,
               callNote: true,
+              footballRoles: true,
               acknowledgedAt: true,
               trades: {
                 where: { status: { in: ["OPEN", "CLAIMED"] } },
@@ -584,6 +587,10 @@ export async function publishShiftGroup(
 
       const workingPayload = reconcileWorkingAssignmentSources(parsed.data, group.shifts);
       const workingSlots = workingPayload.slots;
+      const hasFootballRoles = workingSlots.some((slot) => (slot.assignment?.footballRoles?.length ?? 0) > 0);
+      if (hasFootballRoles && !isFootballSportCode(group.event.sportCode)) {
+        throw new HttpError(409, "Football game-day roles can only be used on Football events.");
+      }
       const currentById = new Map(group.shifts.map((shift) => [shift.id, shift]));
       const workingSourceIds = new Set(
         workingSlots.flatMap((slot) => slot.sourceShiftId ? [slot.sourceShiftId] : []),
@@ -632,7 +639,9 @@ export async function publishShiftGroup(
         const assignmentFieldsChanged = iso(assignment.callStartsAt) !== workingAssignment.callStartsAt
           || iso(assignment.callEndsAt) !== workingAssignment.callEndsAt
           || (assignment.callNote ?? null) !== workingAssignment.callNote;
-        if (!windowChanged && !assignmentFieldsChanged) return [];
+        const workingFootballRoles = canonicalFootballGameDayRoles(workingAssignment.footballRoles ?? []);
+        const footballRolesChanged = stableJson(assignment.footballRoles ?? []) !== stableJson(workingFootballRoles);
+        if (!windowChanged && !assignmentFieldsChanged && !footballRolesChanged) return [];
         return [{
           slot,
           assignment,
@@ -640,6 +649,8 @@ export async function publishShiftGroup(
           afterWindow,
           windowChanged,
           assignmentFieldsChanged,
+          footballRolesChanged,
+          workingFootballRoles,
           workerVisibleWindowChanged: slot.workerType === "ST" && windowChanged,
         }];
       });
@@ -678,6 +689,8 @@ export async function publishShiftGroup(
           afterWindow,
           windowChanged,
           assignmentFieldsChanged,
+          footballRolesChanged,
+          workingFootballRoles,
           workerVisibleWindowChanged,
         } of changedAssignedWindows) {
           const user = userById.get(assignment.userId);
@@ -705,6 +718,7 @@ export async function publishShiftGroup(
               callEndsAt: workingAssignment.callEndsAt ? new Date(workingAssignment.callEndsAt) : null,
               callNote: workingAssignment.callNote,
             } : {}),
+            ...(footballRolesChanged ? { footballRoles: workingFootballRoles } : {}),
             ...(workerVisibleChange ? {
               acknowledgedAt: null,
               acknowledgedById: null,
@@ -867,6 +881,7 @@ export async function publishShiftGroup(
               callStartsAt: slot.workerType === "ST" && assignment.callStartsAt ? new Date(assignment.callStartsAt) : null,
               callEndsAt: slot.workerType === "ST" && assignment.callEndsAt ? new Date(assignment.callEndsAt) : null,
               callNote: assignment.callNote,
+              footballRoles: canonicalFootballGameDayRoles(assignment.footballRoles ?? []),
             },
           });
           affectedUserIds.add(user.id);

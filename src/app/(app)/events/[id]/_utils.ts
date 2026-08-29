@@ -1,4 +1,5 @@
 import type { ScheduleChangeItem } from "@/lib/schedule-change-history-types";
+import type { FootballGameDayRole } from "@/lib/football-roles";
 
 export type CalendarEvent = {
   id: string;
@@ -24,6 +25,7 @@ export type CalendarEvent = {
 
 export type ShiftGroupSummary = {
   id: string;
+  event?: { sportCode: string | null };
   hasWorkingCopy?: boolean;
   coverage?: { total: number; filled: number; percentage: number };
   publication?: {
@@ -58,6 +60,7 @@ export type ShiftGroupSummary = {
       callStartsAt?: string | null;
       callEndsAt?: string | null;
       callNote?: string | null;
+      footballRoles?: FootballGameDayRole[];
       hasConflict?: boolean;
       conflictNote?: string | null;
       acknowledgedAt?: string | null;

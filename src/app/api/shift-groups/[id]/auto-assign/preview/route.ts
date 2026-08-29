@@ -1,12 +1,14 @@
 import { withAuth } from "@/lib/api";
-import { ok } from "@/lib/http";
+import { HttpError } from "@/lib/http";
 import { requirePermission } from "@/lib/rbac";
-import { getAutoFillPreview } from "@/lib/services/auto-fill-preview";
+import { enforceRateLimit } from "@/lib/rate-limit";
 
-export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
+const RETIRED_MESSAGE =
+  "Auto assign from Shift Detail is retired. Use Schedule Auto assign to review and stage changes safely.";
+
+export const GET = withAuth<{ id: string }>(async (_req, { user }) => {
   requirePermission(user.role, "shift", "manage");
+  await enforceRateLimit(`shift:auto-assign:preview:${user.id}`, { max: 20, windowMs: 60_000 });
 
-  const preview = await getAutoFillPreview(params.id);
-
-  return ok({ data: preview });
+  throw new HttpError(410, RETIRED_MESSAGE);
 });
