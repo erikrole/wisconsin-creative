@@ -1,6 +1,6 @@
 "use client";
 
-import { SlidersHorizontalIcon } from "lucide-react";
+import { Plane, SlidersHorizontalIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -50,11 +50,13 @@ export function SportRosterPreview({ roster, loading, error, onEditSport }: Spor
 
   return (
     <div className="flex flex-col gap-2">
-      {roster.sports.map((sport) => (
-        <div
-          key={sport.sportCode}
-          className="flex flex-wrap items-start justify-between gap-2 rounded-md border border-border/60 bg-muted/25 px-3 py-2"
-        >
+      {roster.sports.map((sport) => {
+        const travelers = [...sport.staff, ...sport.students].filter((member) => member.defaultTraveler);
+        return (
+          <div
+            key={sport.sportCode}
+            className="flex flex-wrap items-start justify-between gap-2 rounded-md border border-border/60 bg-muted/25 px-3 py-2"
+          >
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm font-medium">{sport.label}</span>
@@ -68,6 +70,16 @@ export function SportRosterPreview({ roster, loading, error, onEditSport }: Spor
                   {sport.total} assigned
                 </Badge>
               )}
+              {sport.total > 0 ? (
+                <Badge
+                  variant={travelers.length > 0 ? "gray" : "orange"}
+                  size="sm"
+                  className={travelers.length > 0 ? "bg-[var(--yellow-bg)] text-[var(--yellow-text)]" : undefined}
+                >
+                  <Plane className="size-3" />
+                  {travelers.length > 0 ? `${travelers.length} travel` : "Travel fallback"}
+                </Badge>
+              ) : null}
             </div>
             {sport.policy === "HOLD" ? (
               <p className="mt-1 text-xs text-muted-foreground">
@@ -88,6 +100,11 @@ export function SportRosterPreview({ roster, loading, error, onEditSport }: Spor
                     {sport.policy === "STAFF_ONLY" ? " (request their own slots)" : ""}
                   </span>
                 ) : null}
+                <span>
+                  <span className="font-medium text-foreground/80">Away events</span> · {travelers.length > 0
+                    ? nameList(travelers)
+                    : "Full roster (no travel roster set)"}
+                </span>
               </div>
             )}
           </div>
@@ -100,8 +117,9 @@ export function SportRosterPreview({ roster, loading, error, onEditSport }: Spor
             <SlidersHorizontalIcon data-icon="inline-start" className="size-3.5" />
             Change
           </Button>
-        </div>
-      ))}
+          </div>
+        );
+      })}
     </div>
   );
 }

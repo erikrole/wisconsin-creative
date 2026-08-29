@@ -38,6 +38,11 @@ export type SportSetupEntry = {
   sportCode: string;
   label: string;
   policy: SportAutoAssignPolicy;
+  awayRequirements: Array<{
+    area: string;
+    staffRequired: number;
+    studentRequired: number;
+  }>;
   staff: SportSetupMember[];
   students: SportSetupMember[];
 };
@@ -58,7 +63,21 @@ function sportOrder(a: string, b: string) {
 
 export async function getSportSetup(): Promise<SportSetupResponse> {
   const [configs, assignments, users] = await Promise.all([
-    db.sportConfig.findMany({ select: { sportCode: true, autoAssignPolicy: true } }),
+    db.sportConfig.findMany({
+      select: {
+        sportCode: true,
+        autoAssignPolicy: true,
+        shiftConfigs: {
+          select: {
+            area: true,
+            awayCount: true,
+            awayStaffCount: true,
+            awayStudentCount: true,
+          },
+          orderBy: { area: "asc" },
+        },
+      },
+    }),
     db.studentSportAssignment.findMany({
       where: { user: visibleActiveUserWhere({ role: { not: Role.COLLABORATOR } }) },
       orderBy: [{ sportCode: "asc" }, { user: { name: "asc" } }],
@@ -77,6 +96,14 @@ export async function getSportSetup(): Promise<SportSetupResponse> {
   ]);
 
   const policyByCode = new Map(configs.map((config) => [config.sportCode, config.autoAssignPolicy]));
+  const awayRequirementsByCode = new Map(configs.map((config) => [
+    config.sportCode,
+    config.shiftConfigs.map((shiftConfig) => ({
+      area: shiftConfig.area,
+      staffRequired: shiftConfig.awayStaffCount ?? 0,
+      studentRequired: shiftConfig.awayStudentCount ?? shiftConfig.awayCount,
+    })),
+  ]));
   const membersByCode = new Map<string, SportSetupMember[]>();
   for (const assignment of assignments) {
     const workerType = shiftWorkerTypeForProfile(assignment.user);
@@ -105,6 +132,7 @@ export async function getSportSetup(): Promise<SportSetupResponse> {
         sportCode,
         label: sportLabel(sportCode),
         policy: policyByCode.get(sportCode) ?? DEFAULT_SPORT_AUTO_ASSIGN_POLICY,
+        awayRequirements: awayRequirementsByCode.get(sportCode) ?? [],
         staff: members.filter((member) => member.workerType === "FT"),
         students: members.filter((member) => member.workerType === "ST"),
       };

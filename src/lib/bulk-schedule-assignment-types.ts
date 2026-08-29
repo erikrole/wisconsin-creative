@@ -102,6 +102,7 @@ export type BulkAssignmentPreviewSkipped = {
     | "approved_time_off_blocked"
     | "overlapping_assignment_blocked"
     | "already_proposed"
+    | "varsity_owner_unavailable"
     | "partial_crew_blocked"
     | "no_safe_candidate";
   reason: string;

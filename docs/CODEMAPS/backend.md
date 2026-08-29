@@ -20,7 +20,7 @@
 | `src/lib/services/bookings-queries.ts` | 301 |
 | `src/lib/services/bookings.ts` | 4 |
 | `src/lib/services/bulk-assignment-batches.ts` | 252 |
-| `src/lib/services/bulk-schedule-assignment.ts` | 969 |
+| `src/lib/services/bulk-schedule-assignment.ts` | 1030 |
 | `src/lib/services/bulk-unit-scans.ts` | 617 |
 | `src/lib/services/calendar-sync-health.ts` | 165 |
 | `src/lib/services/calendar-sync.ts` | 734 |
@@ -78,13 +78,14 @@
 | `src/lib/services/signatures.ts` | 1986 |
 | `src/lib/services/software.ts` | 271 |
 | `src/lib/services/sport-auto-assign-policies.ts` | 46 |
-| `src/lib/services/sport-configs.ts` | 257 |
+| `src/lib/services/sport-configs.ts` | 309 |
 | `src/lib/services/sport-roster-preview.ts` | 107 |
-| `src/lib/services/sport-setup.ts` | 210 |
+| `src/lib/services/sport-setup.ts` | 238 |
 | `src/lib/services/status.ts` | 444 |
 | `src/lib/services/team-scoreboard.ts` | 613 |
 | `src/lib/services/usage-analytics-report.ts` | 33 |
 | `src/lib/services/user-deactivation.ts` | 386 |
+| `src/lib/services/varsity-season-ownership.ts` | 106 |
 
 ## Key Library Files
 
@@ -117,7 +118,7 @@
 | `src/lib/booking-statuses.ts` | 9 |
 | `src/lib/breadcrumbs.ts` | 146 |
 | `src/lib/bulk-batteries.ts` | 28 |
-| `src/lib/bulk-schedule-assignment-types.ts` | 213 |
+| `src/lib/bulk-schedule-assignment-types.ts` | 214 |
 | `src/lib/bulk-unit-qr.ts` | 111 |
 | `src/lib/bulk-unit-status.ts` | 52 |
 | `src/lib/calendar-event-dates.ts` | 198 |
@@ -146,7 +147,7 @@
 | `src/lib/errors.ts` | 80 |
 | `src/lib/fetch-with-timeout.ts` | 25 |
 | `src/lib/firmware-watch-targets.ts` | 124 |
-| `src/lib/football-roles.ts` | 53 |
+| `src/lib/football-roles.ts` | 52 |
 | `src/lib/football-staffing-sheet.ts` | 414 |
 | `src/lib/format.ts` | 302 |
 | `src/lib/guide-categories.ts` | 140 |
@@ -223,7 +224,8 @@
 | `src/lib/software-vault-crypto.ts` | 61 |
 | `src/lib/software-vault-validation.ts` | 39 |
 | `src/lib/sport-auto-assign-policy.ts` | 60 |
-| `src/lib/sports.ts` | 78 |
+| `src/lib/sport-roster-coverage.ts` | 32 |
+| `src/lib/sports.ts` | 90 |
 | `src/lib/status-colors.ts` | 49 |
 | `src/lib/status-styles.ts` | 46 |
 | `src/lib/student-availability.ts` | 206 |
@@ -231,6 +233,7 @@
 | `src/lib/theme.ts` | 145 |
 | `src/lib/time.ts` | 28 |
 | `src/lib/title-normalization.ts` | 101 |
+| `src/lib/travel-readiness.ts` | 74 |
 | `src/lib/url-sync.ts` | 16 |
 | `src/lib/usage-analytics.ts` | 67 |
 | `src/lib/user-list-cache.ts` | 73 |
@@ -623,6 +626,7 @@
 - `/api/schedule/sport-roster`
 - `/api/schedule/sport-setup/match`
 - `/api/schedule/sport-setup`
+- `/api/schedule/varsity-ownership`
 
 ### `/api/scoreboard`
 

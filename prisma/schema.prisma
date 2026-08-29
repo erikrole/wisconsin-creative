@@ -246,6 +246,8 @@ model User {
   shiftAcknowledged             ShiftAssignment[]                @relation("ShiftAssignmentAcknowledgedBy")
   sportAssignments              StudentSportAssignment[]
   areaAssignments               StudentAreaAssignment[]
+  varsityOwnerships             VarsitySeasonOwner[]             @relation("VarsitySeasonOwner")
+  varsityOwnershipsCreated      VarsitySeasonOwner[]             @relation("VarsitySeasonOwnerCreator")
   tradesPosted                  ShiftTrade[]                     @relation("TradePostedBy")
   tradesClaimed                 ShiftTrade[]                     @relation("TradeClaimedBy")
   favorites                     FavoriteItem[]
@@ -2070,6 +2072,26 @@ model StudentAreaAssignment {
   @@unique([userId, area])
   @@index([area])
   @@map("student_area_assignments")
+}
+
+/// Immutable effective-dated primary coverage ownership for non-Big-Six varsity sports.
+/// Co-primary owners are represented by multiple rows for the same sport/area/window.
+model VarsitySeasonOwner {
+  id          String    @id @default(cuid())
+  sportCode   String    @map("sport_code")
+  area        ShiftArea
+  userId      String    @map("user_id")
+  startsOn    DateTime  @map("starts_on") @db.Date
+  endsOn      DateTime  @map("ends_on") @db.Date
+  createdById String    @map("created_by_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  user        User      @relation("VarsitySeasonOwner", fields: [userId], references: [id], onDelete: Restrict)
+  createdBy   User      @relation("VarsitySeasonOwnerCreator", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@unique([sportCode, area, userId, startsOn])
+  @@index([sportCode, area, startsOn, endsOn])
+  @@index([userId, startsOn, endsOn])
+  @@map("varsity_season_owners")
 }
 
 model ShiftTrade {

@@ -64,6 +64,9 @@
 - D-055: Student shift claims are approval-first on both paths
 - D-056: Scoreboard metrics are shared authenticated team data
 - D-057: Event workers are recorded separately from shift scheduling
+- D-058: Student operational reads are team-visible
+- D-059: Brand assets are logical files with immutable versions in a private Blob store
+- D-060: Non-Big-Six varsity coverage uses effective season ownership
 
 ---
 
@@ -1454,3 +1457,28 @@ These are non-negotiable integrity constraints. Every feature must preserve them
   - The first real upload remains a separate authenticated browser read-back gate. Preview private storage is provisioned and empty, and migrations `0135`/`0136` are applied with no supplied PDF ingested; source, migration, and empty-state success alone do not prove the upload/replacement/history lifecycle.
   - The experience remains small by omitting delete, move, rename, public/external links, generated server thumbnails, and approval workflow. Browser previews, favorites, local recents, and internal authenticated links improve retrieval without changing ownership or publication policy.
 - Reference: `docs/BRIEF_BRAND_ASSET_LIBRARY_V1.md`, `tasks/brand-asset-library-plan-2026-08-26.md`, `docs/AREA_RESOURCES.md`, `src/app/(app)/resources/page.tsx`, `src/lib/blob.ts`, and `src/lib/signatures/storage.ts`.
+
+## D-060: Non-Big-Six Varsity Coverage Uses Effective Season Ownership
+
+- Date: 2026-08-29
+- Status: Accepted; implemented locally, migration deployment and authenticated runtime proof pending
+- Context:
+  - The Big Six ordinarily use Student request pools with Admin crew selection, while other varsity sports need durable named Student coverage across a semester or season.
+  - Roster membership alone does not identify who owns Photo, Video, or Graphics coverage, and silently choosing another roster member when an owner is unavailable hides the operational gap that a later candidate-opening workflow must resolve.
+- Decision:
+  - The pilot keeps the Big Six classification code-owned: Football, Men's and Women's Basketball, Men's and Women's Hockey, and Volleyball. Every other canonical sport is varsity.
+  - A non-Big-Six sport may have multiple co-primary Student owners per Photo, Video, or Graphics area. Ownership is stored as inclusive effective-date rows with creator provenance.
+  - An Admin handoff closes every interval active on the handoff date and creates replacement co-owner rows atomically in one `SERIALIZABLE`, audited transaction. Historical owner identity is never overwritten or deleted.
+  - Bulk Auto assign limits a covered Student slot to owners current on the event's institutional calendar date, then applies the existing roster, travel, scheduling-class, area, availability, approved-time-off, conflict, and workload checks. Apply revalidates current ownership inside the existing working-copy transaction.
+  - If no current owner is eligible, preview leaves the slot unproposed with an explicit owner-unavailable reason. It never falls back to another roster member.
+- Guardrails:
+  - Do not expose ownership controls for Big Six sports or areas outside Photo, Video, and Graphics.
+  - Do not accept inactive, hidden, non-Student, off-roster, or area-ineligible owners.
+  - Do not create overlapping future handoff periods through the Admin workflow.
+  - Do not bypass the fingerprinted preview, live apply revalidation, working-copy, release, or audit boundary.
+  - Candidate openings, notifications, and automatic replacement workflows require a later decision and implementation slice.
+- Consequences:
+  - Current varsity owners become deterministic staffing authority without converting ownership into a shift assignment or weakening live eligibility checks.
+  - Owner absence remains visible as an explicit scheduling gap until the candidate-opening lifecycle is added.
+  - The code-owned classification can later move to persisted policy only through an explicit product/schema decision.
+- Reference: `docs/AREA_SHIFTS.md`, `tasks/football-auto-assign-pilot-plan-2026-08-28.md`, `src/lib/sports.ts`, `src/lib/services/varsity-season-ownership.ts`, `src/lib/services/bulk-schedule-assignment.ts`, and `prisma/migrations/0140_varsity_season_ownership/migration.sql`.

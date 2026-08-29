@@ -340,6 +340,7 @@
 - `/api/schedule/sport-roster` -> `src/app/api/schedule/sport-roster/route.ts`
 - `/api/schedule/sport-setup/match` -> `src/app/api/schedule/sport-setup/match/route.ts`
 - `/api/schedule/sport-setup` -> `src/app/api/schedule/sport-setup/route.ts`
+- `/api/schedule/varsity-ownership` -> `src/app/api/schedule/varsity-ownership/route.ts`
 - `/api/scoreboard` -> `src/app/api/scoreboard/route.ts`
 - `/api/seed` -> `src/app/api/seed/route.ts`
 - `/api/settings/app-activity` -> `src/app/api/settings/app-activity/route.ts`

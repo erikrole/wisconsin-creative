@@ -43,7 +43,10 @@ describe("bulk schedule assignment contracts", () => {
     const assignPage = read("src/app/(app)/schedule/assign/_components/AssignPageClient.tsx");
     const scheduleHook = read("src/hooks/use-schedule-data.ts");
 
-    expect(dialog).toContain("review every proposed worker, then apply");
+    expect(dialog).toContain("Set the scope, review every proposed assignment, then apply it to a private schedule");
+    expect(dialog).toContain('const steps = ["Scope", "Review", "Apply"]');
+    expect(dialog).toContain("Review assignments");
+    expect(dialog).toContain("Change scope");
     expect(dialog).toContain("/api/schedule/bulk-assignment/preview");
     expect(dialog).toContain("/api/schedule/bulk-assignment/apply");
     expect(assignPage).toContain("AutoAssignDialog");
@@ -105,7 +108,7 @@ describe("bulk schedule assignment contracts", () => {
     expect(service).toContain('reasonCode: "partial_crew_blocked"');
     expect(service).toContain("eventsPartiallyCrewed");
     expect(service).toContain("eventsPendingChanges");
-    expect(dialog).toContain("Full crews only");
+    expect(dialog).toContain("Require complete crews");
     expect(dialog).toContain("would release short a position");
     expect(dialog).toContain("skipped for unreleased staff changes");
   });
@@ -178,7 +181,7 @@ describe("bulk schedule assignment contracts", () => {
     expect(setup).toContain("defaultTraveler");
     // Same PATCH the Event travel card uses -- one writer for travel state.
     expect(wizard).toContain('method: "PATCH"');
-    expect(wizard).toContain("defaultTraveler: next");
+    expect(wizard).toContain("body: JSON.stringify({ assignmentIds, defaultTraveler: next })");
     expect(travelCard).toContain("defaultTraveler: !entry.defaultTraveler");
     // Same plane idiom, so travel state reads the same in both places.
     expect(wizard).toContain("Travel roster");
@@ -189,6 +192,83 @@ describe("bulk schedule assignment contracts", () => {
     expect(travelCard).not.toContain("<Star ");
     expect(wizard).toContain("aria-pressed={member.defaultTraveler}");
     expect(wizard).toContain("fill={member.defaultTraveler ? \"currentColor\" : \"none\"}");
+    expect(wizard).toContain("Add to travel");
+    expect(wizard).toContain("Fallback active: away events use the full roster.");
+    expect(wizard).toContain('aria-label="Find a roster member or area"');
+    expect(wizard).toContain('rosterView === "TRAVEL"');
+  });
+
+  it("makes sport roster maintenance faster without adding a second writer", () => {
+    const wizard = read("src/components/schedule/SportSetupWizard.tsx");
+    const rosterRoute = read("src/app/api/sport-configs/[sportCode]/roster/route.ts");
+
+    expect(wizard).toContain('aria-label="Choose sport"');
+    expect(wizard).toContain('aria-label="Person type"');
+    expect(wizard).toContain('aria-label="Filter people by area"');
+    expect(wizard).toContain("selectedPersonIds");
+    expect(wizard).toContain("body: JSON.stringify({ userIds })");
+    expect(wizard).toContain("Add selected");
+    expect(rosterRoute).toContain("sportRosterBulkSchema");
+    expect(rosterRoute).toContain("bulkAddToRoster");
+    expect(rosterRoute).toContain('action: "roster_bulk_added"');
+  });
+
+  it("updates selected travelers atomically and makes missing areas actionable", () => {
+    const wizard = read("src/components/schedule/SportSetupWizard.tsx");
+    const rosterRoute = read("src/app/api/sport-configs/[sportCode]/roster/route.ts");
+    const rosterService = read("src/lib/services/sport-configs.ts");
+
+    expect(wizard).toContain("selectedRosterIds");
+    expect(wizard).toContain("Select visible");
+    expect(wizard).toContain("Add to travel");
+    expect(wizard).toContain("Remove from travel");
+    expect(wizard).toContain("Use full roster fallback");
+    expect(wizard).toContain('href={`/users/${member.id}`}');
+    expect(wizard).toContain("No area · Set on profile");
+    expect(rosterRoute).toContain("setRosterTravelStatus");
+    expect(rosterRoute).toContain("assignmentIds");
+    expect(rosterService).toContain("createAuditEntriesTx");
+    expect(rosterService).toContain("Prisma.TransactionIsolationLevel.Serializable");
+  });
+
+  it("shows read-only away readiness without inventing Football role eligibility", () => {
+    const wizard = read("src/components/schedule/SportSetupWizard.tsx");
+    const setup = read("src/lib/services/sport-setup.ts");
+    const readiness = read("src/lib/travel-readiness.ts");
+
+    expect(setup).toContain("awayRequirements");
+    expect(setup).toContain("awayStaffCount");
+    expect(setup).toContain("awayStudentCount");
+    expect(readiness).toContain('mode: explicitTravel ? "EXPLICIT_TRAVEL" : "FULL_ROSTER_FALLBACK"');
+    expect(wizard).toContain("Away crew readiness");
+    expect(wizard).toContain("Ready by template");
+    expect(wizard).toContain("This is a template check, not an event promise.");
+    expect(wizard).toContain("Football game-day positions stay in Staffing sheet review");
+    expect(wizard).not.toContain("docs.google.com/spreadsheets");
+  });
+
+  it("makes ordinary full-roster assignments scannable by area and class", () => {
+    const wizard = read("src/components/schedule/SportSetupWizard.tsx");
+    const coverage = read("src/lib/sport-roster-coverage.ts");
+
+    expect(coverage).toContain("summarizeSportRosterCoverage");
+    expect(coverage).toContain("primaryArea");
+    expect(wizard).toContain("Full roster coverage");
+    expect(wizard).toContain('aria-label="Roster person type"');
+    expect(wizard).toContain('aria-label="Filter roster by area"');
+    expect(wizard).toContain("Clear filters");
+    expect(wizard).toContain('setRosterArea("NO_AREA")');
+    expect(wizard).toContain('setRosterView("ALL")');
+  });
+
+  it("confirms roster removal and explains its limited effect", () => {
+    const wizard = read("src/components/schedule/SportSetupWizard.tsx");
+
+    expect(wizard).toContain("setRemoveTarget(member)");
+    expect(wizard).toContain("<AlertDialogTitle>Remove {removeTarget?.name} from {sport?.label}?</AlertDialogTitle>");
+    expect(wizard).toContain("This does not remove any existing shift assignments.");
+    expect(wizard).toContain("Remove from roster");
+    expect(wizard).toContain('{ method: "DELETE" }');
   });
 
   it("matches one sport's setup onto another without deleting a roster", () => {
@@ -226,11 +306,11 @@ describe("bulk schedule assignment contracts", () => {
     const dialog = read("src/components/schedule/AutoAssignDialog.tsx");
     const wizard = read("src/components/schedule/SportSetupWizard.tsx");
 
-    expect(dialog).toContain("ten minutes to cancel before workers are notified");
-    expect(dialog).toContain("a sport on hold is skipped whatever you pick here");
+    expect(dialog).toContain("10-minute cancel window");
+    expect(dialog).toContain("Sport policy still applies; held sports are skipped");
     expect(wizard).toContain("take effect the next time Auto assign runs");
     expect(wizard).toContain("Skip leaves a sport exactly as it is");
-    expect(wizard).toContain("\n                Skip\n              </Button>");
+    expect(wizard).toMatch(/>\s*Skip\s*<\/Button>/);
   });
 
   it("does not spend the event cap on sports that can never produce a proposal", () => {
@@ -267,12 +347,14 @@ describe("bulk schedule assignment contracts", () => {
 
   it("audits every roster mutation, travel included", () => {
     const roster = read("src/app/api/sport-configs/[sportCode]/roster/route.ts");
+    const service = read("src/lib/services/sport-configs.ts");
 
     expect(roster).toContain('action: "roster_added"');
     expect(roster).toContain('action: "roster_bulk_added"');
     expect(roster).toContain('action: "roster_removed"');
     // Travel used to be the one roster change that left no trail.
-    expect(roster).toContain('action: "roster_travel_set"');
+    expect(service).toContain('action: "roster_travel_set"');
+    expect(roster).toContain("SETTINGS_MUTATION_LIMIT");
   });
 
   it("keeps an optimistic failure from claiming a sport was saved", () => {
@@ -281,7 +363,8 @@ describe("bulk schedule assignment contracts", () => {
     expect(wizard).toContain("function revertSport");
     expect(wizard).toContain("Undo an optimistic change without claiming the sport was updated");
     expect(wizard).toContain("revertSport(sport.sportCode, (entry) => ({ ...entry, policy: previous }));");
-    expect(wizard).toContain("applyTravel(!next, false);");
+    expect(wizard).toContain("previous.get(candidate.assignmentId)");
+    expect(wizard).toContain("{ touched: false }");
   });
 
   it("crews away games from the travel roster in both engines and at the write", () => {
@@ -311,6 +394,9 @@ describe("bulk schedule assignment contracts", () => {
     expect(preview).toContain("Nobody assigned");
     expect(preview).toContain("only proposes people on a sport");
     expect(preview).toContain("SPORT_AUTO_ASSIGN_POLICY_LABELS");
+    expect(preview).toContain("Travel fallback");
+    expect(preview).toContain("Full roster (no travel roster set)");
+    expect(preview).toContain("member.defaultTraveler");
     expect(roster).toContain("heldSportCodes");
     expect(preview).toContain("onEditSport(sport.sportCode)");
   });

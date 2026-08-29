@@ -127,7 +127,7 @@ Values: `UPLOADING`, `FINALIZING`, `COMMITTED`, `FAILED`
 
 ## Model `User`
 
-Fields: 119
+Fields: 121
 
 - `id                            String                           @id @default(cuid())`
 - `name                          String`
@@ -176,6 +176,8 @@ Fields: 119
 - `shiftAcknowledged             ShiftAssignment[]                @relation("ShiftAssignmentAcknowledgedBy")`
 - `sportAssignments              StudentSportAssignment[]`
 - `areaAssignments               StudentAreaAssignment[]`
+- `varsityOwnerships             VarsitySeasonOwner[]             @relation("VarsitySeasonOwner")`
+- `varsityOwnershipsCreated      VarsitySeasonOwner[]             @relation("VarsitySeasonOwnerCreator")`
 - `tradesPosted                  ShiftTrade[]                     @relation("TradePostedBy")`
 - `tradesClaimed                 ShiftTrade[]                     @relation("TradeClaimedBy")`
 - `favorites                     FavoriteItem[]`
@@ -2178,6 +2180,28 @@ Indexes and constraints:
 - `@@unique([userId, area])`
 - `@@index([area])`
 - `@@map("student_area_assignments")`
+
+## Model `VarsitySeasonOwner`
+
+Fields: 10
+
+- `id          String    @id @default(cuid())`
+- `sportCode   String    @map("sport_code")`
+- `area        ShiftArea`
+- `userId      String    @map("user_id")`
+- `startsOn    DateTime  @map("starts_on") @db.Date`
+- `endsOn      DateTime  @map("ends_on") @db.Date`
+- `createdById String    @map("created_by_id")`
+- `createdAt   DateTime  @default(now()) @map("created_at")`
+- `user        User      @relation("VarsitySeasonOwner", fields: [userId], references: [id], onDelete: Restrict)`
+- `createdBy   User      @relation("VarsitySeasonOwnerCreator", fields: [createdById], references: [id], onDelete: Restrict)`
+
+Indexes and constraints:
+
+- `@@unique([sportCode, area, userId, startsOn])`
+- `@@index([sportCode, area, startsOn, endsOn])`
+- `@@index([userId, startsOn, endsOn])`
+- `@@map("varsity_season_owners")`
 
 ## Model `ShiftTrade`
 
