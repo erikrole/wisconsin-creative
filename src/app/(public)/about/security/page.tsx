@@ -4,7 +4,7 @@ import { pageMockups, securityControls } from "@/lib/public-showroom";
 
 export const metadata: Metadata = {
   title: "Security",
-  description: "Public-safe security, trust, access, auditability, and reliability overview for Gear Tracker.",
+  description: "Public-safe security, trust, access, auditability, and reliability overview for Wisconsin Creative.",
 };
 
 export default function SecurityPage() {

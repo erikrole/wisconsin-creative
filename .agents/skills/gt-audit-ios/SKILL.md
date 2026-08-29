@@ -1,6 +1,6 @@
 ---
 name: gt-audit-ios
-description: Canonical read-only Gear Tracker iOS readiness audit. Use when the user runs /gt-audit-ios, asks to audit a Wisconsin SwiftUI screen or native workflow, asks whether an iOS surface is ready, or wants prioritized native findings before deciding what to fix. Do not implement during the audit.
+description: Canonical read-only Wisconsin Creative iOS readiness audit. Use when the user runs /gt-audit-ios, asks to audit a Wisconsin SwiftUI screen or native workflow, asks whether an iOS surface is ready, or wants prioritized native findings before deciding what to fix. Do not implement during the audit.
 ---
 
 # GT Audit iOS

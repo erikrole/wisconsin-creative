@@ -9,7 +9,7 @@
 
 ## 2) Problem
 - **Current pain:** The shift scheduling system works but is rigid and impractical for daily operations. Shifts auto-generate from sport config templates (fixed home/away counts per area), but no two events are the same. Staff need to manually add or remove shifts per event. Assignment is restricted to sport rosters, but in practice any student or full-time staff member can be assigned to any event. The current assignment UI (a text-searchable user list in ShiftDetailPanel) is slow — staff want an avatar-based, visual process for adding/removing people from shifts.
-- **Why now:** The team previously used WhenToWork (scheduling app) but dropped it due to cost. Gear Tracker's shift system was built to replace it but stopped at "functional" — not "fast and pleasant." This is the #1 daily friction point for the scheduling coordinator.
+- **Why now:** The team previously used WhenToWork (scheduling app) but dropped it due to cost. Wisconsin Creative's shift system was built to replace it but stopped at "functional" — not "fast and pleasant." This is the #1 daily friction point for the scheduling coordinator.
 - **Who is blocked:** Full-time staff who coordinate shift schedules across 10+ events per week. Students who need clear shift visibility and easy trade workflows.
 
 ## 3) Outcome

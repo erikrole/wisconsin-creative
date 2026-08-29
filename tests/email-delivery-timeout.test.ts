@@ -42,7 +42,7 @@ describe("sendEmail", () => {
 
   it("passes an aborting signal through the real Resend client and returns false on timeout", async () => {
     process.env.RESEND_API_KEY = "re_test";
-    process.env.EMAIL_FROM = "Gear Tracker <gear@example.com>";
+    process.env.EMAIL_FROM = "Wisconsin Creative <gear@example.com>";
     await import("resend");
     vi.useFakeTimers();
 

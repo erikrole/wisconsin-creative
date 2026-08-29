@@ -1,8 +1,8 @@
-# Gear Tracker Product Scope Index
+# Wisconsin Creative Product Scope Index
 
 ## Document Control
 - Owner: Erik Role (Wisconsin Athletics Creative)
-- Product: Gear Tracker
+- Product: Wisconsin Creative
 - Last Updated: 2026-03-11
 - Status: Living index
 - Purpose: route planning work to focused area files so implementation agents can load only relevant context
@@ -11,7 +11,7 @@
 Replace Cheqroom with an athletics-first, event-driven gear system for Wisconsin Athletics Creative across Camp Randall Stadium and Kohl Center.
 
 ## North Star
-Read `NORTH_STAR.md` first in any Claude session. It is the authoritative product direction document: what Gear Tracker is, who it serves, product principles, decision filters, roadmap, and gaps in current planning.
+Read `NORTH_STAR.md` first in any Claude session. It is the authoritative product direction document: what Wisconsin Creative is, who it serves, product principles, decision filters, roadmap, and gaps in current planning.
 
 ## Core Invariants
 1. Asset status is derived from active allocations, never authoritative stored status.

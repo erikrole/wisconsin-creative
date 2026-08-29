@@ -8,7 +8,7 @@
 
 ## Design Direction
 
-**What "Clean Editorial" means for Gear Tracker:**
+**What "Clean Editorial" means for Wisconsin Creative:**
 - Gotham headings with tight tracking create authority and sports-brand feel
 - Wisconsin Red as primary action color (buttons, links, active sidebar) — not just a decoration
 - Warm neutral backgrounds with subtle texture — not flat white

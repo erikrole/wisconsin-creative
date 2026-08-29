@@ -137,7 +137,7 @@ private struct NotificationSettingsTab: View {
                 Toggle("Booking alerts", isOn: $settings.isEnabled)
                     .toggleStyle(.switch)
             } footer: {
-                Text("Alerts are silent by default and open the affected booking in Gear Tracker. Wisconsin Creative never changes custody from this app.")
+                Text("Alerts are silent by default and open the affected booking in Wisconsin Creative. Wisconsin Creative never changes custody from this app.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -254,13 +254,13 @@ private struct AccountSettingsTab: View {
             } header: {
                 Text("Status")
             } footer: {
-                Text("Wisconsin Creative reads a cached projection. It never writes to Gear Tracker.")
+                Text("Wisconsin Creative reads a cached projection. It never writes to Wisconsin Creative.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
             Section {
-                Button("Open Gear Tracker") { model.openDashboard() }
+                Button("Open Wisconsin Creative") { model.openDashboard() }
                 if model.user != nil {
                     Button("Sign Out", role: .destructive) {
                         Task { await model.signOut() }

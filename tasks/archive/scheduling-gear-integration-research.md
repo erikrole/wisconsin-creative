@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-Wisconsin Athletics Creative has two fully-implemented systems in Gear Tracker:
+Wisconsin Athletics Creative has two fully-implemented systems in Wisconsin Creative:
 
 1. **Shift Scheduling** — ICS event sync, auto-generated shifts per sport/area config, student assignments, trade board
 2. **Gear Management** — equipment checkout/reservation with QR scanning, conflict detection, event-linked bookings
@@ -33,7 +33,7 @@ Both already pivot on `CalendarEvent` as a shared entity, but they operate as se
 | **DSE Rec** | Partial (facilities) | Staff scheduling | No (campus rec) | Limited |
 | **FMX** | Maintenance tracking | Team assignments | No (facilities) | Shared work orders |
 | **Univerus Rec** | Space booking | Facility scheduling | No (campus rec) | Shared space model |
-| **Gear Tracker (Us)** | Core product | Core product | **Yes** | **Shared CalendarEvent** |
+| **Wisconsin Creative (Us)** | Core product | Core product | **Yes** | **Shared CalendarEvent** |
 
 ### WebCheckout — Closest Competitor (200+ institutions, $400+/mo)
 - Has both equipment and personnel scheduling modules

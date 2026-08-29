@@ -209,7 +209,7 @@ struct ScheduleVenueNameTests {
 
     // MARK: Event resolution
 
-    /// A mapped Gear Tracker location is admin-entered and shown verbatim — it
+    /// A mapped Wisconsin Creative location is admin-entered and shown verbatim — it
     /// is already the name the team uses, and it never carries a feed qualifier.
     @Test func mappedLocationWins() {
         let subject = event(

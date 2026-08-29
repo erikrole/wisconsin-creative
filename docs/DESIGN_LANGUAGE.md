@@ -1,20 +1,20 @@
-# Gear Tracker Design Language
+# Wisconsin Creative Design Language
 
 ## Document Control
 - Owner: Wisconsin Athletics Creative Product
 - Last Updated: 2026-08-23
 - Status: Active
-- Purpose: Define the UI and UX rules that keep Gear Tracker cohesive, fast, dense, calm, and operationally clear.
+- Purpose: Define the UI and UX rules that keep Wisconsin Creative cohesive, fast, dense, calm, and operationally clear.
 
 ## Highest-Impact Findings
-1. Gear Tracker already has the right foundation: shadcn/ui primitives, semantic status colors, `PageHeader`, tag-first item identity, role-aware navigation, and operational queue surfaces.
+1. Wisconsin Creative already has the right foundation: shadcn/ui primitives, semantic status colors, `PageHeader`, tag-first item identity, role-aware navigation, and operational queue surfaces.
 2. The drift is route-level: pages solve the same problems with slightly different headers, metric cards, partial-result warnings, filter shells, and state copy.
 3. Green misuse is the easiest trust bug to introduce. Green means available/free. Waiting, pending, maintenance, and pickup handoff states are orange.
 4. Small icon controls are operational risk, not polish debt. Every action target needs a real label, visible focus, and at least a 40px target on web.
 5. Future work should standardize shared surfaces before inventing page-local UI. Prefer `PageHeader`, `DetailPageHeader`, `OperationalToolbar`, `OperationalStatusRail`, `OperationalMetricCard`, `OperationalPartialResultsAlert`, `Badge`, `Button`, `Input`, `Select`, `ToggleGroup`, `Switch`, `Dialog`, `AlertDialog`, `Sheet`, `Drawer`, `Table`, and `Card`.
 
 ## Product Personality
-Gear Tracker should feel:
+Wisconsin Creative should feel:
 1. **Operational**: every screen should answer what needs action, who owns it, and where to go next.
 2. **Dense but readable**: favor compact rows, clear grouping, and restrained spacing over large promotional panels.
 3. **Calm under pressure**: urgent work is obvious, but the app should not look noisy when nothing is wrong.
@@ -230,7 +230,7 @@ Feature ideas to consider separately:
 - `/schedule` in-row density exception: dense shift-row controls keep their compact footprint per the density rules. The always-visible icon-only controls (remove-assignment and the expand/collapse chevron) now carry a ≥40px effective hit target via the existing expanded-hit-area idiom (`before:-inset-*`) without resizing rows; the remaining text-labeled compact actions (Add, Trade, Manage event, Reserve gear) are a documented density exception, not drift.
 - `/schedule` Readiness strip: the "filters hide everything" notice now uses shared `EmptyState inline` instead of a one-off dashed text row.
 - Shared operational status rail: Schedule readiness and Operations (formerly Admin Fix Today) now use `OperationalStatusRail` for one compact orientation-plus-exceptions line with bounded visible items, overflow accounting, and shadcn-backed details. Metric cards remain inside details instead of competing with the primary queue.
-- `/operations` (formerly `/admin/fix-today`): no duplicate queue health badge, oversized summary card, or separate all-clear card. The shared rail owns queue orientation and exception priority; check cards retain their status indicators and use semantic Gear Tracker status tokens plus shadcn Card footer and Separator composition.
+- `/operations` (formerly `/admin/fix-today`): no duplicate queue health badge, oversized summary card, or separate all-clear card. The shared rail owns queue orientation and exception priority; check cards retain their status indicators and use semantic Wisconsin Creative status tokens plus shadcn Card footer and Separator composition.
 
 ## Implementation Roadmap
 Quick wins:

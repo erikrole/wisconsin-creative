@@ -1,6 +1,6 @@
 ---
 name: prisma-migrate-safely
-description: Compatibility alias for Gear Tracker schema-first migration work. Use only when the user explicitly invokes /prisma-migrate-safely; immediately delegate to gt-migrate, which is the canonical Prisma and Neon workflow.
+description: Compatibility alias for Wisconsin Creative schema-first migration work. Use only when the user explicitly invokes /prisma-migrate-safely; immediately delegate to gt-migrate, which is the canonical Prisma and Neon workflow.
 ---
 
 # Prisma Migrate Safely

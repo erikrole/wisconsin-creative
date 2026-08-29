@@ -1,10 +1,10 @@
-# Gear Tracker
+# Wisconsin Creative
 
 > Event-driven gear operations for Wisconsin Athletics Creative.
 
 [Production site](https://wisconsincreative.com) · [Public product overview](https://wisconsincreative.com/about) · [Releases](https://github.com/erikrole/wisconsin-creative/releases)
 
-Gear Tracker is the operational command system for equipment, reservations,
+Wisconsin Creative is the operational command system for equipment, reservations,
 game-day schedules, and physical handoffs. It replaces spreadsheets and manual
 sign-out sheets with a scan-enforced, conflict-aware workflow from reservation
 through return.
@@ -15,7 +15,7 @@ operational routes require an authenticated account.
 
 ## The product
 
-Gear Tracker connects the work that normally gets split across an inventory
+Wisconsin Creative connects the work that normally gets split across an inventory
 tool, a calendar, and a sign-out sheet:
 
 - **Inventory** — Serialized gear and bulk item families share one tag-first

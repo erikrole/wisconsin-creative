@@ -1,18 +1,18 @@
-# Gear Tracker - North Star
+# Wisconsin Creative - North Star
 
 ## Document Control
 - Owner: Erik Role (Wisconsin Athletics Creative)
-- Product: Gear Tracker
+- Product: Wisconsin Creative
 - Created: 2026-03-09
-- Last Updated: 2026-06-24
-- Status: Authoritative - read this first in any Gear Tracker session
-- Purpose: Define what Gear Tracker is, who it serves, what principles guide every decision, and what deserves focus next
+- Last Updated: 2026-08-29
+- Status: Authoritative - read this first in any Wisconsin Creative session
+- Purpose: Define what Wisconsin Creative is, who it serves, what principles guide every decision, and what deserves focus next
 
 ---
 
 ## Executive Summary
 
-Gear Tracker is the operational command system for Wisconsin Athletics Creative gear, scheduling, and game-day handoffs. It replaces Cheqroom as the inventory and custody source of truth, and it now also owns the surrounding workflow context that Cheqroom never handled well: event-linked reservations, native iOS field work, counter-based kiosk custody, shift scheduling, item-family battery operations, and accountable exceptions.
+Wisconsin Creative is the operational command system for Wisconsin Athletics Creative gear, scheduling, and game-day handoffs. It replaces Cheqroom as the inventory and custody source of truth, and it now also owns the surrounding workflow context that Cheqroom never handled well: event-linked reservations, native iOS field work, counter-based kiosk custody, shift scheduling, item-family battery operations, and accountable exceptions.
 
 The product's primary value is **operational speed, clarity, and trust**. The core question is not "how many surfaces exist?" It is: can students and staff move gear through the right physical handoff, know who has what, know when it comes back, and recover from real-world exceptions without inventing side channels?
 
@@ -26,7 +26,7 @@ The current operating model is clear:
 
 ---
 
-## 1. What Gear Tracker Is Trying To Be
+## 1. What Wisconsin Creative Is Trying To Be
 
 - **The operational gear layer** for Wisconsin Athletics Creative's daily and game-day workflows.
 - **Event-driven by default**: athletics events, shifts, call times, and gear prep are first-class context for reservations and custody.
@@ -77,7 +77,7 @@ The current operating model is clear:
 - **Context:** Desktop-first web, lower frequency, high impact.
 - **Primary jobs:** Configure users, roles, kiosk devices, locations, calendar sources, venue mappings, notification policy, imports, reporting, audit review, and data-quality cleanup.
 - **What they need:** Full access, clear system health, bounded operations, audit evidence, and safe controls for fixing bad data.
-- **Success metric:** An admin can investigate and resolve an incident from Gear Tracker's own audit trail, route history, and source-of-truth docs.
+- **Success metric:** An admin can investigate and resolve an incident from Wisconsin Creative's own audit trail, route history, and source-of-truth docs.
 
 ---
 

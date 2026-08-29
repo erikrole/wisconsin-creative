@@ -33,7 +33,7 @@ Rebuild the import API to batch all DB operations and add a column mapping step.
 
 ### 2. Column Mapping UI (High)
 - New step between Upload and Preview: "Map columns"
-- Show detected CSV headers on left, Gear Tracker fields on right
+- Show detected CSV headers on left, Wisconsin Creative fields on right
 - Auto-detect common Cheqroom headers (preset mapping)
 - User can override any mapping via dropdown
 - Unmapped columns stored in `notes` JSON payload

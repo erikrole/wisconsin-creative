@@ -19,7 +19,7 @@ Bring the dashboard overdue checkout card and the remaining action columns into 
 - [x] Remove full-row severity washes while preserving semantic rails and badges.
 - [x] Refresh column labels, empty states, shift rows, draft rows, and event rows using current dashboard patterns.
 - [x] Run focused tests, TypeScript, lint, migration checks, whitespace checks, and `build:app`.
-- [ ] Authenticated browser smoke. The local app reached the sign-in boundary, but the available in-app browser had no authenticated Gear Tracker session.
+- [ ] Authenticated browser smoke. The local app reached the sign-in boundary, but the available in-app browser had no authenticated Wisconsin Creative session.
 
 ## Verification
 

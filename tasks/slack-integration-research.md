@@ -8,7 +8,7 @@
 
 ## Summary
 
-Integrating Slack notifications into Gear Tracker is straightforward. The right approach is **Incoming Webhooks** for V1 — no OAuth, no Slack app distribution, just a webhook URL that posts messages to a channel. The three requested events all have clear, single hook points in the API. Config lives in the existing `SystemConfig` table (no migration needed). A new `/settings/slack` sub-page fits the existing settings layout pattern exactly.
+Integrating Slack notifications into Wisconsin Creative is straightforward. The right approach is **Incoming Webhooks** for V1 — no OAuth, no Slack app distribution, just a webhook URL that posts messages to a channel. The three requested events all have clear, single hook points in the API. Config lives in the existing `SystemConfig` table (no migration needed). A new `/settings/slack` sub-page fits the existing settings layout pattern exactly.
 
 ---
 
@@ -20,7 +20,7 @@ A webhook is a unique HTTPS URL (`https://hooks.slack.com/services/T.../B.../xxx
 ### Setup (one-time, done by an admin at the org level)
 1. Go to `api.slack.com/apps` → create app → **Incoming Webhooks** → toggle on
 2. Click **Add New Webhook** → pick channel → copy URL
-3. Paste URL into `/settings/slack` in Gear Tracker
+3. Paste URL into `/settings/slack` in Wisconsin Creative
 
 ### Why webhooks (not a full Slack app)
 | Need | Webhooks | Full App |
@@ -230,7 +230,7 @@ Matches the existing `settings-split` layout pattern (sidebar description + main
 ┌─────────────────────────────────────────────────────────┐
 │  Slack Notifications                                      │
 │  Send real-time notifications to a Slack channel          │
-│  when key events occur in Gear Tracker.                   │
+│  when key events occur in Wisconsin Creative.                   │
 ├─────────────────────────────────────────────────────────┤
 │  [● Enable Slack notifications]                toggle     │
 │                                                           │

@@ -1,6 +1,6 @@
 ---
 name: page-ownership-pass
-description: Compatibility alias for the former Gear Tracker page-ownership workflow. Use only when the user explicitly invokes /page-ownership-pass; immediately continue with gt-page, the canonical end-to-end web route workflow.
+description: Compatibility alias for the former Wisconsin Creative page-ownership workflow. Use only when the user explicitly invokes /page-ownership-pass; immediately continue with gt-page, the canonical end-to-end web route workflow.
 ---
 
 # Page Ownership Pass

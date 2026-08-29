@@ -1724,7 +1724,7 @@ private struct ScheduleCalendarSubscriptionSheet: View {
                 .font(.headline)
                 .foregroundStyle(.primary)
 
-            calendarExplanationRow("Gear Tracker updates the feed when your assignment or call time changes.")
+            calendarExplanationRow("Wisconsin Creative updates the feed when your assignment or call time changes.")
             calendarExplanationRow("Apple Calendar controls when subscribed calendars refresh.")
             calendarExplanationRow("Editing a calendar event does not change your official Schedule assignment.")
         }

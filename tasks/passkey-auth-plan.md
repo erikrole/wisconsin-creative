@@ -2,7 +2,7 @@
 
 ## Goal
 
-- Let active, invite-granted Gear Tracker users enroll a passkey and use it for web or native iOS sign-in while preserving password recovery, the existing cookie-backed `Session` model, and kiosk device authentication.
+- Let active, invite-granted Wisconsin Creative users enroll a passkey and use it for web or native iOS sign-in while preserving password recovery, the existing cookie-backed `Session` model, and kiosk device authentication.
 
 ## Route
 

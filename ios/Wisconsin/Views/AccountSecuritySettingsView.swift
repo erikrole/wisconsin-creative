@@ -157,7 +157,7 @@ struct AccountSecuritySettingsView: View {
             } header: {
                 Text("Passkeys")
             } footer: {
-                Text("Passkeys use the same Gear Tracker account and session as password sign-in. Your current password is required to add or remove one. Leave the name blank to name it after this device.")
+                Text("Passkeys use the same Wisconsin Creative account and session as password sign-in. Your current password is required to add or remove one. Leave the name blank to name it after this device.")
             }
 
             Section {
@@ -293,7 +293,7 @@ struct AccountSecuritySettingsView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This passkey will no longer sign in to Gear Tracker.")
+            Text("This passkey will no longer sign in to Wisconsin Creative.")
         }
         .task {
             await loadPasskeys()

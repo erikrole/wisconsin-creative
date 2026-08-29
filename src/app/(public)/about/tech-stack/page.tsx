@@ -4,7 +4,7 @@ import { pageMockups, stackGroups } from "@/lib/public-showroom";
 
 export const metadata: Metadata = {
   title: "Tech Stack",
-  description: "Public-safe platform overview for the Wisconsin Creative Gear Tracker stack.",
+  description: "Public-safe platform overview for the Wisconsin Creative Wisconsin Creative stack.",
 };
 
 export default function TechStackPage() {

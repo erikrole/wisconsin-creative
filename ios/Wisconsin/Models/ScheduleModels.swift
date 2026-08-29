@@ -23,7 +23,7 @@ struct ScheduleEvent: Codable, Identifiable {
     var site: String?
     let location: EventLocation?
     /// Original calendar venue text. Imported events can carry a useful venue
-    /// before that text has been mapped to a Gear Tracker location.
+    /// before that text has been mapped to a Wisconsin Creative location.
     var rawLocationText: String?
     /// Crew coverage from `/api/calendar-events`. nil when the event has no
     /// (non-archived) shift group; lets the list show fill without drilling in.
@@ -853,7 +853,7 @@ func scheduleEventDisplayTitle(_ event: ScheduleEvent) -> String {
 
 // MARK: - Venue display
 
-/// The venue every schedule surface shows: the mapped Gear Tracker location
+/// The venue every schedule surface shows: the mapped Wisconsin Creative location
 /// name when the event has one, otherwise the imported calendar text with its
 /// city/state qualifier stripped.
 ///

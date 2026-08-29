@@ -1,7 +1,7 @@
 # iOS 17 Kiosk-Only Compatibility Plan - 2026-06-22
 
 ## Goal
-- Let the iPad Pro 10.5-inch running iPadOS 17.7.11 install and run a native kiosk-only Wisconsin app, so the device can operate as an app-based kiosk without Gear Tracker user sign-in.
+- Let the iPad Pro 10.5-inch running iPadOS 17.7.11 install and run a native kiosk-only Wisconsin app, so the device can operate as an app-based kiosk without Wisconsin Creative user sign-in.
 - Keep the existing full Wisconsin app target on iOS 26.0. No non-kiosk pages or views are part of this slice.
 
 ## Source Checks

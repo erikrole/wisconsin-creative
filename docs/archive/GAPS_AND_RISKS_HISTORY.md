@@ -1,4 +1,4 @@
-# Gear Tracker — Gaps, Pending Decisions, and Risks History
+# Wisconsin Creative — Gaps, Pending Decisions, and Risks History
 
 ## Document Control
 - Owner: Wisconsin Athletics Creative Product

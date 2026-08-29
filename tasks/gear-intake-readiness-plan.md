@@ -1,7 +1,7 @@
 # Gear Intake Readiness Plan - 2026-06-10
 
 ## Goal
-- Confirm whether Gear Tracker is ready for a large new-gear logging session on 2026-06-11, and identify the smallest improvements that would reduce operator friction or data risk.
+- Confirm whether Wisconsin Creative is ready for a large new-gear logging session on 2026-06-11, and identify the smallest improvements that would reduce operator friction or data risk.
 
 ## Source Checks
 - `docs/AREA_ITEMS.md`: Items support Standard, Units, and Quantity tracking styles; `/items` is the primary discovery surface for serialized assets and item families.

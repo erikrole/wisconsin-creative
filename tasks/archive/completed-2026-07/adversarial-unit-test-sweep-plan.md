@@ -2,7 +2,7 @@
 
 ## Goal
 
-- Establish a clean, repeatable automated-test baseline and deliberately attack malformed input, boundary values, concurrency, idempotency, resource bounds, corrupted state, and invalid assumptions across Gear Tracker.
+- Establish a clean, repeatable automated-test baseline and deliberately attack malformed input, boundary values, concurrency, idempotency, resource bounds, corrupted state, and invalid assumptions across Wisconsin Creative.
 - Keep only tests that protect meaningful behavior. Consolidate or remove tests only when their behavioral coverage is demonstrably duplicated or obsolete.
 - Fix every verified product or test-harness bug found, add a permanent regression test for each product bug, and repeat the relevant focused and full suites until no unexplained failures remain.
 

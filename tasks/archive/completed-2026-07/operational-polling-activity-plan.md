@@ -6,7 +6,7 @@ Date: 2026-07-16
 
 ## Outcome
 
-Reduce Neon compute wake time caused by unattended browser tabs without weakening freshness while someone is using Gear Tracker.
+Reduce Neon compute wake time caused by unattended browser tabs without weakening freshness while someone is using Wisconsin Creative.
 
 ## Shipped Scope
 

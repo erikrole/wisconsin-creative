@@ -1,7 +1,7 @@
-# Gear Tracker Design Language Plan - 2026-05-20
+# Wisconsin Creative Design Language Plan - 2026-05-20
 
 ## Goal
-- Build a practical UI/UX system for Gear Tracker that keeps future work cohesive, fast, dense, calm, and operationally clear without turning into a brand refresh.
+- Build a practical UI/UX system for Wisconsin Creative that keeps future work cohesive, fast, dense, calm, and operationally clear without turning into a brand refresh.
 
 ## Source Checks
 - `docs/NORTH_STAR.md` defines the product as an event-driven operations layer where speed, clarity, trust, mobile-first workflows, tag-first identity, and accountable custody matter more than feature breadth.

@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Gear Tracker are documented here.
+All notable changes to Wisconsin Creative are documented here.
 
 Versioning: [CalVer](https://calver.org/) — `YYYY.MM.DD.N` (N = build number that day).
 
@@ -8,7 +8,7 @@ Versioning: [CalVer](https://calver.org/) — `YYYY.MM.DD.N` (N = build number t
 
 ## 2026.03.27.1 — Beta Release
 
-The first official Beta release. Gear Tracker is ready for daily operational use by Wisconsin Athletics Creative.
+The first official Beta release. Wisconsin Creative is ready for daily operational use by Wisconsin Athletics Creative.
 
 ### What's New
 

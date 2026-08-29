@@ -18,7 +18,7 @@ Archived from `tasks/todo.md` on 2026-06-18.
 - Verified with `npx vitest run tests/search-pages.test.ts`, `npx tsc --noEmit`, `npm run db:migrate:check`, `git diff --check`, and `npx next build`.
 - Authenticated browser smoke was blocked by local Prisma `P1000` invalid database credentials during login; the protected search UI could not be reached in-browser in this environment.
 
-### Gear Tracker Design Language (2026-05-20)
+### Wisconsin Creative Design Language (2026-05-20)
 - [x] Slice 1: Status and accessibility quick wins.
 - [x] Slice 2: Shared operational feedback primitives.
 - [x] Slice 3: Shared list/filter/page structure.

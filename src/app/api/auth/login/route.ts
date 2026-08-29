@@ -62,7 +62,7 @@ export const POST = withHandler(async (req) => {
 
   const companionLogin = body.companion === true;
   if (companionLogin && user.forcePasswordChange) {
-    throw new HttpError(403, "Change your password in Gear Tracker before enrolling this companion.");
+    throw new HttpError(403, "Change your password in Wisconsin Creative before enrolling this companion.");
   }
   if (!companionLogin) {
     await createSession(user.id, body.rememberMe ?? false);

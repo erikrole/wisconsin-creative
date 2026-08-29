@@ -13,7 +13,7 @@
 - Who is blocked: Staff cannot complete migration without a reliable importer.
 
 ## 3) Outcome
-- Expected behavior after release: CSV rows import into Gear Tracker items with deterministic mapping, full diagnostics, and no silent data loss.
+- Expected behavior after release: CSV rows import into Wisconsin Creative items with deterministic mapping, full diagnostics, and no silent data loss.
 - Success signal: Full file parses with actionable report and mapped records aligned to item-kind rules.
 
 ## 4) Scope
@@ -99,7 +99,7 @@
 ## Claude Handoff Prompt (Copy/Paste)
 
 ```text
-You are implementing one scoped feature in Gear Tracker.
+You are implementing one scoped feature in Wisconsin Creative.
 
 Rules:
 - Do not redesign architecture.

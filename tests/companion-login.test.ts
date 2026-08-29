@@ -176,7 +176,7 @@ describe("companion login", () => {
 
     expect(response.status).toBe(403);
     await expect(response.json()).resolves.toEqual({
-      error: "Change your password in Gear Tracker before enrolling this companion.",
+      error: "Change your password in Wisconsin Creative before enrolling this companion.",
     });
     expect(mocks.refreshProjection).not.toHaveBeenCalled();
     expect(mocks.issueCompanionSession).not.toHaveBeenCalled();

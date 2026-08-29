@@ -1,4 +1,4 @@
-// Gear Tracker Service Worker — static asset caching with a safe offline fallback
+// Wisconsin Creative Service Worker — static asset caching with a safe offline fallback
 const CACHE_NAME = "gear-tracker-v3";
 
 // Only cache public, identity-independent files during install. Authenticated

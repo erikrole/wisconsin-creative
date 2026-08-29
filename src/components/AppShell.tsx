@@ -621,7 +621,7 @@ export default function AppShell({
           {cmdLoading && (
             <OperationalLoadingState
               variant="command"
-              title="Searching Gear Tracker"
+              title="Searching Wisconsin Creative"
               rows={3}
             />
           )}

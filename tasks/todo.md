@@ -385,12 +385,12 @@ Plan: `tasks/event-shift-working-schedule-plan.md`
 - **Boundary:** The pre-existing Xcode project and generated architecture-codemap drift remain owned by unrelated work; this slice did not regenerate or rewrite either artifact.
 
 ---
-## Completed: Gear Tracker skill-system consolidation (2026-07-17)
+## Completed: Wisconsin Creative skill-system consolidation (2026-07-17)
 
 - [x] Make `gt-page`, `gt-audit-web`, and `gt-audit-ios` the canonical page and audit owners.
 - [x] Convert the three legacy page/audit workflows into explicit-invocation compatibility aliases.
 - [x] Rework `improve` around current task-ledger routing while preserving explicit branch, plan, execute, reconcile, and issue variants.
-- [x] Replace generic UI doctrine with Gear Tracker-specific design-language and installed-component workflows.
+- [x] Replace generic UI doctrine with Wisconsin Creative-specific design-language and installed-component workflows.
 - [x] Normalize API, iOS, deployment, merge-cleanup, doc-sync, planning, and shipping guidance against `AGENTS.md` verification and authorization boundaries.
 - [x] Remove unreferenced generic skill reference material and migrate shadcn UI metadata to `agents/openai.yaml`.
 - [x] Validate all 18 skills, YAML metadata, whitespace, stale references, and cold routing behavior.
@@ -1461,13 +1461,13 @@ Plan: make subscribed worker calendars glanceable and state-trustworthy without 
 - [x] Audit the current ICS token/feed route, shift call-window fields, calendar event identity fields, and trade swap lifecycle.
 - [x] Rename subscription events to `Area: SPORT vs/at Opponent` with fallback cleanup for non-game summaries.
 - [x] Use the effective assignment call start/end window for subscribed event times.
-- [x] Include a Gear Tracker event deep link, omit descriptions, and remove gear-prep copy from the feed.
+- [x] Include a Wisconsin Creative event deep link, omit descriptions, and remove gear-prep copy from the feed.
 - [x] Prefix active open/claimed trade-board posts with `🔁` and rely on active assignment status to remove completed swaps from the original worker feed.
 - [x] Add focused ICS regression coverage and sync area docs.
 - [x] Run focused verification.
 
 ### Review
-- 2026-06-30: Personal shift calendar subscription sync now emits compact worker-facing titles like `Photo: MBB vs Iowa`, uses effective assignment/shift call windows for calendar event times, includes a Gear Tracker event URL, omits descriptions and gear-prep copy, prefixes active open/claimed trade posts with `🔁`, and leaves completed trade removals to the existing `SWAPPED` assignment lifecycle. Verification passed with focused ICS Vitest, whitespace check, docs verification, and `npm run build:app`; the build still reports the existing unused-parameter warnings in `src/lib/booking-status-display.ts`.
+- 2026-06-30: Personal shift calendar subscription sync now emits compact worker-facing titles like `Photo: MBB vs Iowa`, uses effective assignment/shift call windows for calendar event times, includes a Wisconsin Creative event URL, omits descriptions and gear-prep copy, prefixes active open/claimed trade posts with `🔁`, and leaves completed trade removals to the existing `SWAPPED` assignment lifecycle. Verification passed with focused ICS Vitest, whitespace check, docs verification, and `npm run build:app`; the build still reports the existing unused-parameter warnings in `src/lib/booking-status-display.ts`.
 
 ---
 
@@ -1896,14 +1896,14 @@ Plan: move the next command-surface slice from status indicators into a bounded 
 
 ## Active: shadcn operational status indicator (2026-06-26)
 
-Plan: keep operational status indicators on shadcn `Badge` composition and Gear Tracker semantic status colors.
+Plan: keep operational status indicators on shadcn `Badge` composition and Wisconsin Creative semantic status colors.
 
 - [x] Refactor the shared status indicator away from raw colored spans.
 - [x] Preserve existing Calendar Sources health behavior while moving stale health to orange.
 - [x] Sync Settings docs and run focused verification.
 
 ### Review
-- 2026-06-26: Shared status indicators now compose shadcn `Badge` variants instead of custom raw color spans. Calendar Sources health keeps the same active/error/disabled/never-synced behavior, maps stale feeds to the Gear Tracker orange warning tone, and uses gray for idle states. Verification passed with `npx tsc --noEmit`, `npm run codemap`, `npm run verify:docs`, `git diff --check -- src/components/ui/status-indicator.tsx docs/AREA_SETTINGS.md tasks/todo.md docs/CODEMAPS/architecture.md docs/CODEMAPS/backend.md docs/CODEMAPS/frontend.md docs/CODEMAPS/data.md docs/CODEMAPS/schema.md`, and `npm run build:app`. Browser smoke on `http://127.0.0.1:3071/settings/calendar-sources` redirected to `/login` because the Chrome context was unauthenticated; login rendered cleanly with no app console errors.
+- 2026-06-26: Shared status indicators now compose shadcn `Badge` variants instead of custom raw color spans. Calendar Sources health keeps the same active/error/disabled/never-synced behavior, maps stale feeds to the Wisconsin Creative orange warning tone, and uses gray for idle states. Verification passed with `npx tsc --noEmit`, `npm run codemap`, `npm run verify:docs`, `git diff --check -- src/components/ui/status-indicator.tsx docs/AREA_SETTINGS.md tasks/todo.md docs/CODEMAPS/architecture.md docs/CODEMAPS/backend.md docs/CODEMAPS/frontend.md docs/CODEMAPS/data.md docs/CODEMAPS/schema.md`, and `npm run build:app`. Browser smoke on `http://127.0.0.1:3071/settings/calendar-sources` redirected to `/login` because the Chrome context was unauthenticated; login rendered cleanly with no app console errors.
 
 ---
 
@@ -2168,25 +2168,25 @@ Deferred: endpoint dry-run after a future production deployment if active hidden
 
 ## Active: selected workflow skill refresh (2026-06-24)
 
-Plan: refresh the selected Gear Tracker skills so future doc sync, UI polish, shadcn, and migration work follow the current ledger, verification, and source-of-truth rules.
+Plan: refresh the selected Wisconsin Creative skills so future doc sync, UI polish, shadcn, and migration work follow the current ledger, verification, and source-of-truth rules.
 
 - [x] Read the selected skills and current repo contracts: task root, task index, package scripts, design language, shadcn config, and migration workflows.
 - [x] Update `area-doc-sync` for current task-ledger routing, completed-plan archive buckets, codemap/docs verification, `build:app`, approved full build, and browser proof notes.
-- [x] Update `make-interfaces-feel-better` with Gear Tracker design-language, shared operational primitives, status-color semantics, hit targets, and browser proof context.
-- [x] Update `shadcn` with Gear Tracker project rules for existing primitives, installed components, lucide icons, semantic status colors, verification, and browser smoke.
+- [x] Update `make-interfaces-feel-better` with Wisconsin Creative design-language, shared operational primitives, status-color semantics, hit targets, and browser proof context.
+- [x] Update `shadcn` with Wisconsin Creative project rules for existing primitives, installed components, lucide icons, semantic status colors, verification, and browser smoke.
 - [x] Promote `gt-migrate` as the canonical Prisma/Neon workflow and fold in schema-first guardrails from `prisma-migrate-safely`.
 - [x] Convert `prisma-migrate-safely` to a compatibility alias that delegates to `gt-migrate`.
 - [x] Validate the changed skills and inspect the diff.
 - [x] Record final review and verification.
 
 ### Review
-- 2026-06-24: Selected workflow skills refreshed. `area-doc-sync` now routes through current task ledgers, completed-plan archive buckets, codemap/docs gates, `build:app`, approved full-build handling, and browser proof notes. `make-interfaces-feel-better` now includes Gear Tracker design-language context, shared operational primitives, status color semantics, hit targets, and authenticated browser proof expectations. `shadcn` now checks installed components/project config first, prefers Gear Tracker shared primitives, pins lucide/status semantics, and records docs/build/browser proof expectations; the stale unsupported `user-invocable` frontmatter key was removed. `gt-migrate` is now the canonical Prisma/Neon workflow, with schema-first audit, task-ledger, wrapper-backed health/deploy, codemap/docs, approval, and closeout guardrails. `prisma-migrate-safely` is now a compatibility alias that delegates to `gt-migrate` while preserving the key schema-safety warnings. Verification passed with `python3 /Users/erole/.codex/skills/.system/skill-creator/scripts/quick_validate.py` run individually for `area-doc-sync`, `make-interfaces-feel-better`, `shadcn`, `gt-migrate`, and `prisma-migrate-safely`; `git diff --check -- .agents/skills/area-doc-sync/SKILL.md .agents/skills/make-interfaces-feel-better/SKILL.md .agents/skills/shadcn/SKILL.md .agents/skills/gt-migrate/SKILL.md .agents/skills/prisma-migrate-safely/SKILL.md tasks/todo.md` also passed.
+- 2026-06-24: Selected workflow skills refreshed. `area-doc-sync` now routes through current task ledgers, completed-plan archive buckets, codemap/docs gates, `build:app`, approved full-build handling, and browser proof notes. `make-interfaces-feel-better` now includes Wisconsin Creative design-language context, shared operational primitives, status color semantics, hit targets, and authenticated browser proof expectations. `shadcn` now checks installed components/project config first, prefers Wisconsin Creative shared primitives, pins lucide/status semantics, and records docs/build/browser proof expectations; the stale unsupported `user-invocable` frontmatter key was removed. `gt-migrate` is now the canonical Prisma/Neon workflow, with schema-first audit, task-ledger, wrapper-backed health/deploy, codemap/docs, approval, and closeout guardrails. `prisma-migrate-safely` is now a compatibility alias that delegates to `gt-migrate` while preserving the key schema-safety warnings. Verification passed with `python3 /Users/erole/.codex/skills/.system/skill-creator/scripts/quick_validate.py` run individually for `area-doc-sync`, `make-interfaces-feel-better`, `shadcn`, `gt-migrate`, and `prisma-migrate-safely`; `git diff --check -- .agents/skills/area-doc-sync/SKILL.md .agents/skills/make-interfaces-feel-better/SKILL.md .agents/skills/shadcn/SKILL.md .agents/skills/gt-migrate/SKILL.md .agents/skills/prisma-migrate-safely/SKILL.md tasks/todo.md` also passed.
 
 ---
 
 ## Active: gt-plan skill hardening (2026-06-24)
 
-Plan: update `.agents/skills/gt-plan/SKILL.md` in place so future Gear Tracker planning is smarter, ledger-aware, and more trustworthy.
+Plan: update `.agents/skills/gt-plan/SKILL.md` in place so future Wisconsin Creative planning is smarter, ledger-aware, and more trustworthy.
 
 - [x] Audit the existing `gt-plan` skill, task-root contract, package verification scripts, and relevant project lessons.
 - [x] Patch `gt-plan` to route through current ledgers before creating new plan files.
@@ -2195,7 +2195,7 @@ Plan: update `.agents/skills/gt-plan/SKILL.md` in place so future Gear Tracker p
 - [x] Record final review and verification.
 
 ### Review
-- 2026-06-24: `gt-plan` now routes Gear Tracker work through current repo truth before implementation: North Star, task-root contracts, active ledgers, relevant area/brief/decision/gaps docs, schema when needed, source files, and tests. The workflow now distinguishes existing active plans, deferral ledgers, and new plan files; requires stop conditions; favors `npm run build:app` for app-only compile proof while keeping full `npm run build` for safe/approved shipping checks; adds docs/codemap, authenticated browser-smoke, and iOS drift/audit/build guidance; and requires closeout with shipped/verified/deferred/blocked/proof/next-slice notes. Verification passed with `python3 /Users/erole/.codex/skills/.system/skill-creator/scripts/quick_validate.py .agents/skills/gt-plan` and `git diff --check -- .agents/skills/gt-plan/SKILL.md tasks/todo.md`. The validator script is not directly executable, so the first direct invocation failed with `permission denied`; rerunning through Python passed.
+- 2026-06-24: `gt-plan` now routes Wisconsin Creative work through current repo truth before implementation: North Star, task-root contracts, active ledgers, relevant area/brief/decision/gaps docs, schema when needed, source files, and tests. The workflow now distinguishes existing active plans, deferral ledgers, and new plan files; requires stop conditions; favors `npm run build:app` for app-only compile proof while keeping full `npm run build` for safe/approved shipping checks; adds docs/codemap, authenticated browser-smoke, and iOS drift/audit/build guidance; and requires closeout with shipped/verified/deferred/blocked/proof/next-slice notes. Verification passed with `python3 /Users/erole/.codex/skills/.system/skill-creator/scripts/quick_validate.py .agents/skills/gt-plan` and `git diff --check -- .agents/skills/gt-plan/SKILL.md tasks/todo.md`. The validator script is not directly executable, so the first direct invocation failed with `permission denied`; rerunning through Python passed.
 
 ---
 

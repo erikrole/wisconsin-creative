@@ -9,7 +9,7 @@ out of scope.
 ## v7 Goal
 
 Add fifteen harder automatic badges -- ten visible challenges and five hidden
-easter eggs -- using only facts Gear Tracker already captures. The v6 catalog
+easter eggs -- using only facts Wisconsin Creative already captures. The v6 catalog
 recognises volume (counts and ladders) and single-checkout composition. It does
 not yet recognise breadth across the Schedule half of the product, custody
 duration, or the return moment itself, and it has exactly one easter egg.

@@ -71,7 +71,7 @@ Principles:
 
 1. **Pre-shift reminders**: tomorrow, same-day, one-hour, and call-time reminders, ideally with local iOS support once widgets and cached shift snapshots exist.
 2. **Schedule publish and delta digest**: "next week is posted" and "three of your shifts changed" instead of a burst of individual alerts.
-3. **Calendar trust alerts**: student-facing warning when their Apple Calendar subscription may be stale, token was rotated, or upcoming shift count differs from Gear Tracker.
+3. **Calendar trust alerts**: student-facing warning when their Apple Calendar subscription may be stale, token was rotated, or upcoming shift count differs from Wisconsin Creative.
 4. **Gear readiness for shifts**: no gear reserved for an upcoming shift, gear ready for pickup before call time, or gear still pending pickup close to call time.
 5. **Return urgency tied to next use**: gear due soon because another event, person, or checkout needs it next.
 6. **Pickup expiry warning**: 24-hour and 4-hour warnings before pending-pickup cancellation.

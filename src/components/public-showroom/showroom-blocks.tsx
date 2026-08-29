@@ -51,7 +51,7 @@ export function ShowroomHero({ mockup }: { mockup: ShowroomMockup }) {
           <div className="mb-6 flex justify-center">
             <Image src="/Badgers.png" alt="Wisconsin Motion W" width={72} height={72} className="size-16 object-contain drop-shadow-[0_18px_35px_rgba(0,0,0,0.45)]" priority />
           </div>
-          <p className="mb-5 text-sm font-semibold uppercase tracking-[0.22em] text-white/60">Wisconsin Creative Gear Tracker</p>
+          <p className="mb-5 text-sm font-semibold uppercase tracking-[0.22em] text-white/60">Wisconsin Creative Wisconsin Creative</p>
           <h1 className="font-[var(--font-heading)] text-5xl! font-black! leading-[0.95] text-balance tracking-normal sm:text-7xl! lg:text-8xl!">
             Gear reservations and custody for Wisconsin Creative.
           </h1>
@@ -273,7 +273,7 @@ export function StakeholderCta({
           Share these pages without opening the app.
         </h2>
         <p className="mx-auto mt-6 max-w-3xl text-lg leading-8 text-pretty text-white/68">
-          The content is public, static, and separate from authenticated Gear Tracker operations.
+          The content is public, static, and separate from authenticated Wisconsin Creative operations.
         </p>
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <Button asChild size="lg" className="h-12 bg-white px-6 text-black hover:bg-white/90">

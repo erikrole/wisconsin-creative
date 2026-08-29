@@ -330,7 +330,7 @@ final class GearOpsModel {
                 clearAuthenticatedState()
                 await clearPrivateArtifacts()
                 await discardIssuedCredential(response.companionToken)
-                statusMessage = "Open Gear Tracker in your browser to change your password."
+                statusMessage = "Open Wisconsin Creative in your browser to change your password."
                 return
             }
             try response.companionProjection.validate()

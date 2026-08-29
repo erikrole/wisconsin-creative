@@ -1,9 +1,9 @@
 ---
 name: improve
-description: Gear Tracker repository-wide read-only advisory workflow. Use when the user invokes /improve or asks for a broad codebase audit, cleanup opportunities, technical debt, security, performance, test coverage, developer experience, roadmap options, or prioritized implementation candidates. Diagnose and prioritize first; use gt-plan for selected implementation work.
+description: Wisconsin Creative repository-wide read-only advisory workflow. Use when the user invokes /improve or asks for a broad codebase audit, cleanup opportunities, technical debt, security, performance, test coverage, developer experience, roadmap options, or prioritized implementation candidates. Diagnose and prioritize first; use gt-plan for selected implementation work.
 ---
 
-# Improve Gear Tracker
+# Improve Wisconsin Creative
 
 Survey the current repository as a senior advisor. Produce a short, evidence-backed priority list. Do not modify source during the audit.
 

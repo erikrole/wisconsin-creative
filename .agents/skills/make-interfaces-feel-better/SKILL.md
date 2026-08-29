@@ -1,9 +1,9 @@
 ---
 name: make-interfaces-feel-better
-description: Gear Tracker web interface detail workflow. Use when visual implementation feels off or the user asks for UI polish, spacing, typography, color, borders, motion, interaction feedback, responsive refinement, or accessibility improvements on an existing Gear Tracker surface. Apply the product design language and verify the built route.
+description: Wisconsin Creative web interface detail workflow. Use when visual implementation feels off or the user asks for UI polish, spacing, typography, color, borders, motion, interaction feedback, responsive refinement, or accessibility improvements on an existing Wisconsin Creative surface. Apply the product design language and verify the built route.
 ---
 
-# Make Gear Tracker Interfaces Feel Better
+# Make Wisconsin Creative Interfaces Feel Better
 
 Improve an existing surface without changing its product ownership or inventing a new visual language.
 
@@ -22,10 +22,10 @@ Apply these in order:
 2. Hierarchy: the primary action and operational state are obvious.
 3. Recovery: loading, partial, empty, error, stale, and success states are useful.
 4. Accessibility: focus, names, contrast, keyboard use, reduced motion, and 40px targets.
-5. Consistency: shared Gear Tracker primitives and semantic tokens replace page-local variants where they fit.
+5. Consistency: shared Wisconsin Creative primitives and semantic tokens replace page-local variants where they fit.
 6. Finish: spacing, typography, wrapping, alignment, borders, icons, and restrained functional motion.
 
-## Gear Tracker defaults
+## Wisconsin Creative defaults
 
 - Keep operational surfaces dense, calm, and readable.
 - Prefer `PageHeader`, `OperationalToolbar`, `OperationalStatusRail`, operational feedback components, `EmptyState`, and installed shadcn primitives.

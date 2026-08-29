@@ -1,6 +1,6 @@
 ---
 name: gt-ship
-description: Canonical Gear Tracker closeout and shipping workflow. Use when the user runs /gt-ship or explicitly asks to verify and close out a completed slice, stage and commit it, push it, prepare a PR, or perform another named shipping action. Never sweep unrelated dirty work or infer permission for later shipping steps.
+description: Canonical Wisconsin Creative closeout and shipping workflow. Use when the user runs /gt-ship or explicitly asks to verify and close out a completed slice, stage and commit it, push it, prepare a PR, or perform another named shipping action. Never sweep unrelated dirty work or infer permission for later shipping steps.
 ---
 
 # GT Ship

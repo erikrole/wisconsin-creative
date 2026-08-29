@@ -61,7 +61,7 @@ export const publicShowroomNav: ShowroomNavItem[] = [
   {
     href: "/about",
     label: "Overview",
-    description: "What Gear Tracker does for Wisconsin Creative.",
+    description: "What Wisconsin Creative does for Wisconsin Creative.",
   },
   {
     href: "/about/features",

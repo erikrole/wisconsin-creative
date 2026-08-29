@@ -1,4 +1,4 @@
-Work in the existing repo: https://github.com/erikrole/gear-tracker
+Work in the existing repo: https://github.com/erikrole/wisconsin-creative
 There is no production data yet; schema can change.
 
 Goal: Phase 1 shipping MVP with:

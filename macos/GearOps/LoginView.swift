@@ -221,7 +221,7 @@ struct GearOpsLoginView: View {
 
     private var footer: some View {
         HStack {
-            Button("Open Gear Tracker") { model.openDashboard() }
+            Button("Open Wisconsin Creative") { model.openDashboard() }
             Spacer()
             Button("Quit") { model.quit() }
                 .keyboardShortcut("q", modifiers: .command)

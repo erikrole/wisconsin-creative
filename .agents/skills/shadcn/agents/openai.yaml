@@ -1,6 +1,6 @@
 interface:
-  display_name: "Gear Tracker shadcn/ui"
-  short_description: "Manage Gear Tracker shadcn primitives"
+  display_name: "Wisconsin Creative shadcn/ui"
+  short_description: "Manage Wisconsin Creative shadcn primitives"
   icon_small: "./assets/shadcn-small.png"
   icon_large: "./assets/shadcn.png"
-  default_prompt: "Use $shadcn to add or refine a Gear Tracker UI primitive while preserving local contracts."
+  default_prompt: "Use $shadcn to add or refine a Wisconsin Creative UI primitive while preserving local contracts."

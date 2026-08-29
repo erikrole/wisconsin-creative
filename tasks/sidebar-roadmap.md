@@ -24,7 +24,7 @@
 - Kits has a static "Soon" badge (muted style)
 - Role-based group filtering: STUDENT sees no Admin group
 - User profile header: avatar + name, links to `/users/{id}`
-- Brand mark (Badgers.png + "Gear Tracker" text)
+- Brand mark (Badgers.png + "Wisconsin Creative" text)
 - Theme toggle (light/dark/system) via `ToggleGroup` in footer
 - Logout button in footer with loading state + network failure recovery
 - Active item: red left border (`--wi-red`) + white text + opacity background

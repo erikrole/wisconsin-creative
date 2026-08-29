@@ -23,7 +23,7 @@
 
 ### Revive
 - PR #349: `chore(deps-dev): bump the development-dependencies group across 1 directory with 4 updates`
-  - URL: https://github.com/erikrole/gear-tracker/pull/349
+  - URL: https://github.com/erikrole/wisconsin-creative/pull/349
   - Head: `dependabot/npm_and_yarn/development-dependencies-0d41c07746`
   - Author: Dependabot.
   - Files: `package.json`, `package-lock.json`.
@@ -55,7 +55,7 @@
     - Final classification: Package-mergeable, but not merge-ready under a mandatory high-audit gate.
 
 - PR #353: `chore(deps): bump the production-dependencies group across 1 directory with 23 updates`
-  - URL: https://github.com/erikrole/gear-tracker/pull/353
+  - URL: https://github.com/erikrole/wisconsin-creative/pull/353
   - Head: `dependabot/npm_and_yarn/production-dependencies-7ef9f29df0`
   - Author: Dependabot.
   - Files: `package.json`, `package-lock.json`.
@@ -74,7 +74,7 @@
 
 ### Closed
 - PR #324: `chore(deps): bump in-range minors, lucide v1, and zod v4`
-  - URL: https://github.com/erikrole/gear-tracker/pull/324
+  - URL: https://github.com/erikrole/wisconsin-creative/pull/324
   - Head: `claude/deps-slices-1-2-4`
   - Author: Erik Role, commits authored by Claude.
   - Files: dependency files plus small Zod v4 route/helper migrations and `tasks/dependency-updates-plan.md`.
@@ -220,7 +220,7 @@ Decision: keep the orchestrator manual for now. Do not create an automatic recur
 Use this when creating a builder thread for one revived PR or one active plan slice:
 
 ```text
-You are the builder for one bounded Gear Tracker slice.
+You are the builder for one bounded Wisconsin Creative slice.
 
 Objective:
 - <one sentence objective>

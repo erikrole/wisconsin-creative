@@ -99,7 +99,7 @@
 ## Claude Handoff Prompt (Copy/Paste)
 
 ```text
-You are implementing one scoped feature in Gear Tracker.
+You are implementing one scoped feature in Wisconsin Creative.
 
 Rules:
 - Do not redesign architecture.

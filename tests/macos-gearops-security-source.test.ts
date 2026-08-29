@@ -45,7 +45,7 @@ describe("GearOps macOS security contracts", () => {
     const messages = client.slice(client.indexOf("private static func networkMessage"));
 
     expect(messages).toContain("Check your connection and try again.");
-    expect(messages).toContain("Gear Tracker timed out. Try again.");
+    expect(messages).toContain("Wisconsin Creative timed out. Try again.");
     expect(messages).not.toContain("Showing the last");
   });
 

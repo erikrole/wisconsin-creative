@@ -4,7 +4,7 @@ import { featurePillars, pageMockups } from "@/lib/public-showroom";
 
 export const metadata: Metadata = {
   title: "Features",
-  description: "Public overview of Gear Tracker reservations, kiosk custody, Schedule, item families, reports, and notifications.",
+  description: "Public overview of Wisconsin Creative reservations, kiosk custody, Schedule, item families, reports, and notifications.",
 };
 
 export default function FeaturesPage() {

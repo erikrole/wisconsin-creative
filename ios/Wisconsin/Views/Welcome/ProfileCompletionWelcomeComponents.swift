@@ -367,7 +367,7 @@ struct WelcomeWiscardStepView: View {
                         }
                 }
                 Label(
-                    "The issue code is in the bottom-right corner of your Wiscard. Gear Tracker combines both values for kiosk lookup.",
+                    "The issue code is in the bottom-right corner of your Wiscard. Wisconsin Creative combines both values for kiosk lookup.",
                     systemImage: "info.circle"
                 )
                 .font(.caption)

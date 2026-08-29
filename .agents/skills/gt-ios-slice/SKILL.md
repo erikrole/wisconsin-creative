@@ -1,6 +1,6 @@
 ---
 name: gt-ios-slice
-description: Canonical Gear Tracker native iOS implementation workflow. Use when the user runs /gt-ios-slice, asks to implement or polish a Wisconsin SwiftUI workflow, changes an API payload consumed by iOS, or needs native app readiness work. Keep native workflows native and verify the affected target.
+description: Canonical Wisconsin Creative native iOS implementation workflow. Use when the user runs /gt-ios-slice, asks to implement or polish a Wisconsin SwiftUI workflow, changes an API payload consumed by iOS, or needs native app readiness work. Keep native workflows native and verify the affected target.
 ---
 
 # GT iOS Slice

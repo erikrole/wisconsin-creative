@@ -1,4 +1,4 @@
-# Gear Tracker Agent Contract
+# Wisconsin Creative Agent Contract
 
 This file is the operating contract for work in this repository. Keep it short, enforceable, and current. Put durable implementation lessons in `tasks/lessons.md`, accepted architecture in `docs/DECISIONS.md`, and area-specific truth in the relevant `docs/AREA_*.md` file.
 

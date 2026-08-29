@@ -1,6 +1,6 @@
 ---
 name: gt-clean-after-merge
-description: Gear Tracker merge and parallel-work cleanup workflow. Use after merges, cherry-picks, worktree integrations, or parallel edits when duplicate types, helpers, UI remnants, imports, exports, CSS, routes, docs, tests, or task records may remain. Remove only confirmed artifacts and preserve intentional user work.
+description: Wisconsin Creative merge and parallel-work cleanup workflow. Use after merges, cherry-picks, worktree integrations, or parallel edits when duplicate types, helpers, UI remnants, imports, exports, CSS, routes, docs, tests, or task records may remain. Remove only confirmed artifacts and preserve intentional user work.
 ---
 
 # GT Clean After Merge

@@ -20,7 +20,7 @@ Create one reusable operational status rail for dense app surfaces, then prove t
 - [x] Add `OperationalStatusRail` with responsive orientation, prioritized status items, calm all-clear copy, overflow accounting, and optional details.
 - [x] Migrate Schedule readiness without changing queue math, filtering, automation, or details behavior.
 - [x] Migrate Admin Fix Today and remove its duplicate oversized summary surface.
-- [x] Clean touched Fix Today styling to semantic Gear Tracker tokens and shadcn composition.
+- [x] Clean touched Fix Today styling to semantic Wisconsin Creative tokens and shadcn composition.
 - [x] Add focused source contracts and sync Schedule, Dashboard, design-language, gaps, codemap, and task docs.
 - [x] Run focused tests, TypeScript, docs/codemap checks, whitespace, app build, and browser smoke.
 

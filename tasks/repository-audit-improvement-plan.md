@@ -2,7 +2,7 @@
 
 ## Goal
 
-- Audit the current Gear Tracker repository end to end, reject stale or unsupported concerns, and implement the highest-value confirmed repairs without disturbing unrelated work.
+- Audit the current Wisconsin Creative repository end to end, reject stale or unsupported concerns, and implement the highest-value confirmed repairs without disturbing unrelated work.
 - Finish with every retained finding repaired, explicitly deferred, or blocked by a named external requirement and with source, test, build, simulator, browser, device, and production proof kept distinct.
 
 ## Route

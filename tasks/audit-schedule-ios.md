@@ -34,7 +34,7 @@ The contract test now guards both. Verified by reverting the gutter to its fixed
 
 ### Scope decision 2026-08-20
 
-The owner set the boundary after reviewing these captures: Gear Tracker serves roughly 30-60 known staff and students, none of whom are expected to run accessibility text sizes, so **D-053** makes those sizes supported-but-not-designed-for. The proposed `EventRow` vertical-stack rewrite is cancelled, and the two items above are retired rather than carried as backlog.
+The owner set the boundary after reviewing these captures: Wisconsin Creative serves roughly 30-60 known staff and students, none of whom are expected to run accessibility text sizes, so **D-053** makes those sizes supported-but-not-designed-for. The proposed `EventRow` vertical-stack rewrite is cancelled, and the two items above are retired rather than carried as backlog.
 
 What stays: the two fixes already shipped, because they cost nothing and are already verified; semantic fonts; VoiceOver labels; contrast; and 44pt tap targets. What stops: running the accessibility-size pass as part of routine visual review. Light and dark remain required.
 
@@ -56,7 +56,7 @@ Reopen only on a trigger named in D-053 -- a public release, a real user complai
 - [x] Active filter context remains quiet in the first viewport and the sheet owns Clear plus one purple Show Events action.
 - [x] Shift Calendar reports private-feed readiness and the app's last Calendar handoff without claiming Apple subscription completion.
 - [x] Calendar status failures retain Retry, actions guard duplicate work, and private-link reset warns that existing subscriptions will stop updating.
-- [x] Shared host routing, token rate limits, token-rotation audit history, assignment scoping, and Gear Tracker schedule authority remain unchanged.
+- [x] Shared host routing, token rate limits, token-rotation audit history, assignment scoping, and Wisconsin Creative schedule authority remain unchanged.
 
 ## 2026-07-18 Core Redesign Follow-up
 

@@ -25,7 +25,7 @@ _None._ Dashboard has been through V2/V3 polish, BRK-001..004 stress tests, and 
 
 ## P2 — post-MVP
 - [ ] [Flows] Dead branch in `handleExtend` — `src/app/(app)/page.tsx:122-124` builds `/api/reservations/${id}/extend` if `booking.kind === "RESERVATION"`, but no such route exists (only `/api/bookings/[id]/extend`). Dashboard never invokes Extend on reservations today, so this is dead but a footgun for whoever next wires reservation-extend.
-- [ ] [Flows] When stats happen to be all-zero on a returning user, the first-run "Welcome to Gear Tracker" banner can flash before the full payload reveals real activity — `page.tsx:189-195`. Cosmetic.
+- [ ] [Flows] When stats happen to be all-zero on a returning user, the first-run "Welcome to Wisconsin Creative" banner can flash before the full payload reveals real activity — `page.tsx:189-195`. Cosmetic.
 - [ ] [Parity] iOS dashboard exists but does not yet expose nudge / extend / convert inline actions — covered by `audit-page-ios dashboard` later.
 - [ ] [UI] `OverdueBanner` and `MyGearColumn` row strings concatenate inline (`requesterName – itemCount items`) — fine, but no consistent locale-aware separator. Cosmetic.
 

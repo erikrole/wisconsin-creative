@@ -8,7 +8,7 @@ import LoginForm from "./LoginForm";
 
 export const metadata: Metadata = {
   title: "Sign in · Wisconsin Creative",
-  description: "Sign in to the Wisconsin Creative gear-tracker — the UW Athletics inventory and booking system.",
+  description: "Sign in to the Wisconsin Creative app — the UW Athletics inventory and booking system.",
 };
 
 async function hasActiveSession(): Promise<boolean> {

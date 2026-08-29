@@ -1,14 +1,14 @@
 {
-  "name": "gear-tracker",
+  "name": "wisconsin-creative",
   "interface": {
-    "displayName": "Gear Tracker Plugins"
+    "displayName": "Wisconsin Creative Plugins"
   },
   "plugins": [
     {
-      "name": "gear-tracker-workflows",
+      "name": "wisconsin-creative-workflows",
       "source": {
         "source": "local",
-        "path": "./plugins/gear-tracker-workflows"
+        "path": "./plugins/wisconsin-creative-workflows"
       },
       "policy": {
         "installation": "INSTALLED_BY_DEFAULT",

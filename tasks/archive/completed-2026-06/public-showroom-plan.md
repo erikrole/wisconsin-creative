@@ -1,7 +1,7 @@
 # Public Stakeholder Showroom Plan - 2026-07-01
 
 ## Goal
-- Build a public, unauthenticated `/about` showroom for stakeholders that explains Gear Tracker's product story, features, tech stack, security posture, and field execution model without exposing live operational data.
+- Build a public, unauthenticated `/about` showroom for stakeholders that explains Wisconsin Creative's product story, features, tech stack, security posture, and field execution model without exposing live operational data.
 
 ## Route
 - Owner area: Public Showroom

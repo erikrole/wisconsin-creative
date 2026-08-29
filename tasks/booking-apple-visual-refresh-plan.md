@@ -33,7 +33,7 @@
 - Lead with the chosen outcome, not the form mechanics. Apple review screens make the appointment or pickup moment the star, then place supporting facts underneath.
 - Use fewer, higher-confidence surfaces. Apple support review is mostly white space, one icon, one dominant time/place claim, a thin facts table, and one primary button.
 - Keep the previous step visible during final review. The dimmed background in the appointment screenshot reinforces "you are reviewing what you just chose" instead of feeling like a new page.
-- Treat pickup as a state machine. Apple pickup copy distinguishes order placed, ready notification, QR/pass, ID/order number, reminders, and picked-up state. Gear Tracker should mirror that with `pending pickup`, `kiosk scan required`, `custody starts after scan`, and `due back`.
+- Treat pickup as a state machine. Apple pickup copy distinguishes order placed, ready notification, QR/pass, ID/order number, reminders, and picked-up state. Wisconsin Creative should mirror that with `pending pickup`, `kiosk scan required`, `custody starts after scan`, and `due back`.
 - Make help feel adjacent, not instructional. Apple offers guided shopping/setup/help modules near flows, but does not flood the primary task with explanation.
 - Default to plain, centered language. Apple copy avoids operational jargon where a short noun phrase works: "Ready for Pickup", "Check in Today", "Reserve now".
 

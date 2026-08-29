@@ -1,11 +1,11 @@
 # Competitor Research & Feature Roadmap
 
 > **Date:** 2026-03-16
-> **Purpose:** Evaluate competitor features against Wisconsin Athletics Creative's operational needs and recommend a prioritized feature roadmap for Gear Tracker.
+> **Purpose:** Evaluate competitor features against Wisconsin Athletics Creative's operational needs and recommend a prioritized feature roadmap for Wisconsin Creative.
 
 ## Context
 
-Gear Tracker replaces Cheqroom for a game-day media production team managing cameras, lenses, audio gear, and accessories across Camp Randall Stadium and Kohl Center (~15-30 users). Every feature below is filtered through the product's North Star principles: operational speed over feature breadth, mobile-first, event-driven, simplicity, and derived status integrity.
+Wisconsin Creative replaces Cheqroom for a game-day media production team managing cameras, lenses, audio gear, and accessories across Camp Randall Stadium and Kohl Center (~15-30 users). Every feature below is filtered through the product's North Star principles: operational speed over feature breadth, mobile-first, event-driven, simplicity, and derived status integrity.
 
 **Why they left Cheqroom:** (1) No athletics-specific event integration, (2) mobile UX not optimized for student operators, (3) too much generic enterprise clutter, (4) no control over platform direction. The goal is NOT to replicate Cheqroom — it's to build a sharper, faster tool for this exact workflow.
 
@@ -227,7 +227,7 @@ The following competitor features were evaluated and explicitly rejected:
 4. **Checkout Templates (#7)** — Highest-impact workflow accelerator for primary use case
 5. **Digital Signature (#5) + Maintenance Scheduling (#6)** — Full "responsible gear lifecycle" story
 
-**Features 1-4 collectively answer "why not just use Cheqroom?":** Because Gear Tracker knows what game day looks like, protects your gear at the physical handoff boundary, and gives coordinators a purpose-built command center that no generic tool provides.
+**Features 1-4 collectively answer "why not just use Cheqroom?":** Because Wisconsin Creative knows what game day looks like, protects your gear at the physical handoff boundary, and gives coordinators a purpose-built command center that no generic tool provides.
 
 ---
 

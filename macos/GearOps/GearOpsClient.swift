@@ -14,7 +14,7 @@ enum GearOpsClientError: LocalizedError, Equatable, Sendable {
         case .forbidden(let message):
             message
         case .invalidResponse:
-            "Gear Tracker returned an unreadable response."
+            "Wisconsin Creative returned an unreadable response."
         case .network(let message):
             message
         case .server(_, let message):
@@ -157,7 +157,7 @@ actor GearOpsClient: GearOpsServing {
         }
 
         let message = (try? decoder.decode(ServerErrorResponse.self, from: data).error)
-            ?? "Gear Tracker returned HTTP \(http.statusCode)."
+            ?? "Wisconsin Creative returned HTTP \(http.statusCode)."
         switch http.statusCode {
         case 401:
             throw GearOpsClientError.unauthorized
@@ -173,11 +173,11 @@ actor GearOpsClient: GearOpsServing {
         case .notConnectedToInternet, .networkConnectionLost:
             "No internet connection. Check your connection and try again."
         case .timedOut:
-            "Gear Tracker timed out. Try again."
+            "Wisconsin Creative timed out. Try again."
         case .cannotFindHost, .cannotConnectToHost, .dnsLookupFailed:
-            "Gear Tracker could not be reached. Try again."
+            "Wisconsin Creative could not be reached. Try again."
         default:
-            "Gear Tracker could not complete the request. Try again."
+            "Wisconsin Creative could not complete the request. Try again."
         }
     }
 }

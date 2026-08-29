@@ -1,4 +1,4 @@
-# Gear Tracker Feature Brief Template (Claude-Optimized)
+# Wisconsin Creative Feature Brief Template (Claude-Optimized)
 
 ## How To Use This Template
 1. Fill only what is required for the current feature.
@@ -97,7 +97,7 @@
 ## Claude Handoff Prompt (Copy/Paste)
 
 ```text
-You are implementing one scoped feature in Gear Tracker.
+You are implementing one scoped feature in Wisconsin Creative.
 
 Rules:
 - Do not redesign architecture.

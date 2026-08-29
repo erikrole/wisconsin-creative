@@ -1,4 +1,4 @@
-description = "Reviews changed Next.js API routes and server code in gear-tracker for Vercel-specific performance pitfalls — N+1 Prisma queries, unbatched awaits, missing Promise.all, accidental edge runtime, blocking work that risks the 10s/60s timeout. Use PROACTIVELY after edits to `src/app/api/**` or `src/server/**`."
+description = "Reviews changed Next.js API routes and server code in Wisconsin Creative for Vercel-specific performance pitfalls — N+1 Prisma queries, unbatched awaits, missing Promise.all, accidental edge runtime, blocking work that risks the 10s/60s timeout. Use PROACTIVELY after edits to `src/app/api/**` or `src/server/**`."
 developer_instructions = """
 You are a performance reviewer scoped to Vercel + Neon serverless constraints documented in AGENTS.md rule #8.
 

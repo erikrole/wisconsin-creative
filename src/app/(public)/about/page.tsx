@@ -8,7 +8,7 @@ export default function AboutPage() {
       <ChapterBand
         eyebrow="Public overview"
         title="Built around physical handoffs."
-        description="Gear Tracker plans reservations in web and iOS. The kiosk records checkout, pickup, and return. Schedule keeps event and shift context connected to gear."
+        description="Wisconsin Creative plans reservations in web and iOS. The kiosk records checkout, pickup, and return. Schedule keeps event and shift context connected to gear."
       />
       <FeatureGrid cards={overviewPillars} />
       <ChapterBand

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a Gear Tracker UI review page from a spec JSON.
+"""Build a Wisconsin Creative UI review page from a spec JSON.
 
     python3 build_review_page.py spec.json out.html
     python3 build_review_page.py --example        # print a complete spec

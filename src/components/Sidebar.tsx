@@ -388,7 +388,7 @@ export default function AppSidebar({
               tooltip="Help & support"
               className="text-white/55 transition-[background-color,color,scale] duration-150 hover:bg-white/[0.05] hover:text-white/85 active:scale-[0.96]"
             >
-              <a href="mailto:erole@athletics.wisc.edu?subject=Wisconsin%20Creative%20gear-tracker%20help">
+              <a href="mailto:erole@athletics.wisc.edu?subject=Wisconsin%20Creative%20help">
                 <HelpCircleIcon />
                 <span>Help</span>
               </a>

@@ -107,7 +107,7 @@ export default function ForgotPasswordPage() {
               <p className="text-center text-xs text-muted-foreground">
                 Need help?{" "}
                 <a
-                  href="mailto:erole@athletics.wisc.edu?subject=Wisconsin%20Creative%20gear-tracker%20help"
+                  href="mailto:erole@athletics.wisc.edu?subject=Wisconsin%20Creative%20help"
                   className="underline underline-offset-2 hover:text-foreground transition-colors"
                 >
                   Contact Erik Role

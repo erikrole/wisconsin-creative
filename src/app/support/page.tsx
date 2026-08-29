@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Support - Wisconsin Creative",
-  description: "Support and contact information for the Wisconsin Creative iOS app and Gear Tracker service.",
+  description: "Support and contact information for the Wisconsin Creative iOS app and Wisconsin Creative service.",
 };
 
 const supportEmail = "erole@athletics.wisc.edu";

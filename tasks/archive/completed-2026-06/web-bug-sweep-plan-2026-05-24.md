@@ -1,7 +1,7 @@
 # Web Bug Sweep Plan - 2026-05-24
 
 ## Goal
-- Track down and patch high-impact, low-effort web bugs across Gear Tracker without touching iOS.
+- Track down and patch high-impact, low-effort web bugs across Wisconsin Creative without touching iOS.
 - Prioritize operator-trust fixes: broken states, weak errors, stale state, double-submit paths, inconsistent controls, and confusing cross-page workflows.
 
 ## Current Evidence Read

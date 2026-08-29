@@ -349,7 +349,7 @@ export default function SecuritySettingsPage() {
             ) : (
               <p className="text-sm text-muted-foreground">
                 This browser cannot create passkeys. Sign in with your password here, and add a passkey
-                from Safari, Chrome, or the Gear Tracker iPhone app instead.
+                from Safari, Chrome, or the Wisconsin Creative iPhone app instead.
               </p>
             )}
 

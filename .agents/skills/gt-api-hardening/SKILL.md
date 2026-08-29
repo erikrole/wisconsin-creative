@@ -1,6 +1,6 @@
 ---
 name: gt-api-hardening
-description: Canonical Gear Tracker API hardening workflow. Use when the user runs /gt-api-hardening or asks to audit or improve route authentication, authorization, validation, transactions, concurrency, audit entries, query efficiency, public or kiosk boundaries, cron behavior, exports, bulk work, or Vercel runtime safety.
+description: Canonical Wisconsin Creative API hardening workflow. Use when the user runs /gt-api-hardening or asks to audit or improve route authentication, authorization, validation, transactions, concurrency, audit entries, query efficiency, public or kiosk boundaries, cron behavior, exports, bulk work, or Vercel runtime safety.
 ---
 
 # GT API Hardening

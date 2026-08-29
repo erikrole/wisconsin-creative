@@ -180,7 +180,7 @@ function Sidebar({
         >
           <SheetHeader className="sr-only">
             <SheetTitle>Workspace navigation</SheetTitle>
-            <SheetDescription>Navigate Gear Tracker and manage your account.</SheetDescription>
+            <SheetDescription>Navigate Wisconsin Creative and manage your account.</SheetDescription>
           </SheetHeader>
           <div className="flex h-full w-full flex-col">{children}</div>
         </SheetContent>

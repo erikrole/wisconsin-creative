@@ -9,20 +9,20 @@ const showroomDescription =
 export const metadata: Metadata = {
   metadataBase: new URL("https://wisconsincreative.com"),
   title: {
-    default: "About Wisconsin Creative Gear Tracker",
-    template: "%s - Wisconsin Creative Gear Tracker",
+    default: "About Wisconsin Creative Wisconsin Creative",
+    template: "%s - Wisconsin Creative Wisconsin Creative",
   },
   description: showroomDescription,
   openGraph: {
     type: "website",
-    siteName: "Wisconsin Creative Gear Tracker",
-    title: "About Wisconsin Creative Gear Tracker",
+    siteName: "Wisconsin Creative Wisconsin Creative",
+    title: "About Wisconsin Creative Wisconsin Creative",
     description: showroomDescription,
     url: "/about",
   },
   twitter: {
     card: "summary_large_image",
-    title: "About Wisconsin Creative Gear Tracker",
+    title: "About Wisconsin Creative Wisconsin Creative",
     description: showroomDescription,
   },
 };

@@ -21,7 +21,7 @@ Build a generic CSV import pipeline with column mapping. The Cheqroom export for
 
 ### Core Pipeline
 1. Upload CSV → parse headers and sample rows.
-2. Column mapping step: user maps source columns to Gear Tracker target fields (or selects a preset).
+2. Column mapping step: user maps source columns to Wisconsin Creative target fields (or selects a preset).
 3. Validate mapped rows against target field requirements.
 4. Persist mapped data + full source payload snapshot.
 5. Return import report (`created`, `updated`, `skipped`, `errors`, `warnings`).
@@ -112,7 +112,7 @@ No column is discarded.
 ## Derived Status Policy During Import
 1. Source `Status` is not imported as authoritative asset status.
 2. Source `Status` is stored for migration traceability only.
-3. Live status remains derived from allocation and booking data in Gear Tracker.
+3. Live status remains derived from allocation and booking data in Wisconsin Creative.
 
 ## Dedup and Upsert Strategy
 1. Primary matching key order:

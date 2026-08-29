@@ -1,11 +1,11 @@
 ---
 name: gt-plan
-description: Gear Tracker planning and execution-routing workflow. Use when the user runs /gt-plan, asks to plan a feature/slice/fix/audit follow-up, asks what to do next, or starts any non-trivial Gear Tracker task that needs repo-grounded docs, schema, task-ledger, stop-condition, and verification sequencing before implementation.
+description: Wisconsin Creative planning and execution-routing workflow. Use when the user runs /gt-plan, asks to plan a feature/slice/fix/audit follow-up, asks what to do next, or starts any non-trivial Wisconsin Creative task that needs repo-grounded docs, schema, task-ledger, stop-condition, and verification sequencing before implementation.
 ---
 
 # /gt-plan
 
-Use this before non-trivial Gear Tracker work. The output is a practical execution route and, when needed, a plan file. Optimize for trustworthy future work: current source facts, narrow slices, explicit blockers, and closeout evidence.
+Use this before non-trivial Wisconsin Creative work. The output is a practical execution route and, when needed, a plan file. Optimize for trustworthy future work: current source facts, narrow slices, explicit blockers, and closeout evidence.
 
 ## Inputs
 

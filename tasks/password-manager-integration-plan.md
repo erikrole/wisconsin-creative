@@ -2,7 +2,7 @@
 
 ## Goal
 
-- Let a password manager find, fill, save, and update Gear Tracker credentials
+- Let a password manager find, fill, save, and update Wisconsin Creative credentials
   correctly on web and native iOS, without changing any authorization,
   validation, or session behaviour.
 

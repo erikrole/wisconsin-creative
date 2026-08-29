@@ -10,7 +10,7 @@
 - Decision Refs: D-034
 
 ## Direction
-Badges are lightweight recognition for every active user inside the existing ops app. Staff and admins earn badges on the same profile surface as students. Automatic badges come only from durable facts Gear Tracker already captures. Hidden easter eggs may come from a signed-in app foreground event only when the server evaluates the condition from trusted time.
+Badges are lightweight recognition for every active user inside the existing ops app. Staff and admins earn badges on the same profile surface as students. Automatic badges come only from durable facts Wisconsin Creative already captures. Hidden easter eggs may come from a signed-in app foreground event only when the server evaluates the condition from trusted time.
 
 ## Core Rules
 1. `BADGES_ENABLED !== "true"` returns before any badge evaluator work, database query, or side effect.

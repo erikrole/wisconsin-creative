@@ -1,6 +1,6 @@
 ---
 name: gt-ui-review
-description: Build a before/after visual review page for a Gear Tracker UI change. Use when the user runs /gt-ui-review, asks to see or compare a UI change, asks for screenshots of a screen before and after, or ships user-facing native/web UI that needs visual proof. Produces matched screenshots and a published review Artifact, not hand-captured one-offs.
+description: Build a before/after visual review page for a Wisconsin Creative UI change. Use when the user runs /gt-ui-review, asks to see or compare a UI change, asks for screenshots of a screen before and after, or ships user-facing native/web UI that needs visual proof. Produces matched screenshots and a published review Artifact, not hand-captured one-offs.
 ---
 
 # GT UI Review

@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "Wisconsin Creative Gear Tracker: reservations, Schedule, and gear custody.";
+export const alt = "Wisconsin Creative Wisconsin Creative: reservations, Schedule, and gear custody.";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -29,7 +29,7 @@ export default function OpengraphImage() {
             color: "rgba(255,255,255,0.6)",
           }}
         >
-          Wisconsin Creative Gear Tracker
+          Wisconsin Creative Wisconsin Creative
         </div>
         <div
           style={{
@@ -51,7 +51,7 @@ export default function OpengraphImage() {
             color: "rgba(255,255,255,0.72)",
           }}
         >
-          Public pages about Gear Tracker for Wisconsin Creative.
+          Public pages about Wisconsin Creative for Wisconsin Creative.
         </div>
       </div>
     ),

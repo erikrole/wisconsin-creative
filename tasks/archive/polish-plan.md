@@ -1,4 +1,4 @@
-# Gear Tracker — Polish & Enhancement Plan
+# Wisconsin Creative — Polish & Enhancement Plan
 
 ## Context
 The core mobile responsive pass is complete (app shell, dashboard, booking lists, forms, calendar/reports, scan page, creation flows). This plan covers the remaining 10 areas of polish: item detail mobile, notifications mobile, settings/profile mobile, search UX, empty states, dark mode, accessibility, performance, and PWA/offline support.
@@ -147,7 +147,7 @@ Ordered by **user impact** — student-facing features first, then infrastructur
 **Priority:** Medium-High (students in basements/stadiums with spotty signal)
 **Files:** `public/manifest.json` (new), `public/icons/` (new), `src/app/layout.tsx`, `next.config.ts`
 
-1. **Web app manifest** — Create `manifest.json` with app name "Gear Tracker", Wisconsin red theme color, display: standalone, icons at 192px and 512px
+1. **Web app manifest** — Create `manifest.json` with app name "Wisconsin Creative", Wisconsin red theme color, display: standalone, icons at 192px and 512px
 2. **Apple touch icon** — Add apple-touch-icon meta tag and 180px icon for iOS home screen
 3. **Meta tags** — Add `<meta name="theme-color">`, `<meta name="apple-mobile-web-app-capable">`, viewport-fit=cover for notched devices
 4. **Service worker** — Evaluate feasibility given Cloudflare Worker deployment. Options:

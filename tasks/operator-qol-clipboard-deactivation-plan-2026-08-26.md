@@ -2,7 +2,7 @@
 
 ## Goal
 
-Make two high-frequency operator actions trustworthy now that real users are using Gear Tracker daily:
+Make two high-frequency operator actions trustworthy now that real users are using Wisconsin Creative daily:
 
 1. Copy actions must report success only after the browser accepts the text.
 2. Deactivating a person must require an explicit, consequence-aware confirmation before the existing cleanup mutation runs.

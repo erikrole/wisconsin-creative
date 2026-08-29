@@ -1,6 +1,6 @@
 ---
 name: gt-deploy-debug
-description: Gear Tracker deployment diagnosis and recovery workflow. Use when the user runs /gt-deploy-debug or a Vercel build, production runtime, Prisma or Neon migration, cron, environment, authentication, or release deployment fails. Reproduce the real failure and fix the smallest safe root cause.
+description: Wisconsin Creative deployment diagnosis and recovery workflow. Use when the user runs /gt-deploy-debug or a Vercel build, production runtime, Prisma or Neon migration, cron, environment, authentication, or release deployment fails. Reproduce the real failure and fix the smallest safe root cause.
 ---
 
 # GT Deploy Debug

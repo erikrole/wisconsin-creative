@@ -329,7 +329,7 @@ Current behavior:
 1. SMS notifications.
 2. Multi-channel campaign orchestration or template management.
 3. Slack or other shared-channel notification delivery.
-4. SMS or shared-channel escalation beyond the configured Gear Tracker recipients.
+4. SMS or shared-channel escalation beyond the configured Wisconsin Creative recipients.
 5. Generic notification authoring tools outside the existing event-specific producers.
 
 ## Developer Brief

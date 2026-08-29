@@ -1,7 +1,7 @@
 # Wisconsin Creative Domain Cutover Plan - 2026-07-01
 
 ## Goal
-- Move Gear Tracker's public identity from the personal `gear.erikrole.com` host to `wisconsincreative.com` before App Store submission and broad onboarding, without stranding native app, kiosk, calendar, notification, or account-recovery flows.
+- Move Wisconsin Creative's public identity from the personal `gear.erikrole.com` host to `wisconsincreative.com` before App Store submission and broad onboarding, without stranding native app, kiosk, calendar, notification, or account-recovery flows.
 
 ## Route
 - Owner area: Mobile Operations, with Kiosk and Notifications as secondary owners.

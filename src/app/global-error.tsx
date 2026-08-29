@@ -19,7 +19,7 @@ export default function GlobalError({
     <html lang="en">
       <body>
         <ErrorRecoveryPanel
-          title="Gear Tracker could not finish loading"
+          title="Wisconsin Creative could not finish loading"
           description="Retry the app before trusting this screen. If the issue returns after signing in again, the error has been recorded for review."
           reset={reset}
           retryLabel="Retry app"

@@ -377,7 +377,7 @@ export default function LoginForm() {
       footer={
         <p className="login-rise text-center text-sm text-white/55 mt-6" style={{ "--rise-index": 6 } as React.CSSProperties}>
           Access is by invitation only.{" "}
-          <a href="mailto:erole@athletics.wisc.edu?subject=Wisconsin%20Creative%20gear-tracker%20access" className="text-white/80 underline underline-offset-2 hover:text-white transition-colors">Contact Erik Role</a>{" "}to request access.
+          <a href="mailto:erole@athletics.wisc.edu?subject=Wisconsin%20Creative%20access" className="text-white/80 underline underline-offset-2 hover:text-white transition-colors">Contact Erik Role</a>{" "}to request access.
         </p>
       }
     >

@@ -2,7 +2,7 @@
 
 ## Goal
 - Make upcoming shifts visible where students already look: iOS widgets, Apple Calendar, and the first screen of the native app.
-- Harden the Apple Calendar integration so it carries strong Gear Tracker metadata and can be reconciled, while Gear Tracker remains the authoritative schedule system.
+- Harden the Apple Calendar integration so it carries strong Wisconsin Creative metadata and can be reconciled, while Wisconsin Creative remains the authoritative schedule system.
 - Add a Gotham Black/Ultra-style greeting and quick summary line to the iOS Home/AFM surface.
 
 ## Source Checks
@@ -26,7 +26,7 @@
 Working name: **Shift Glance Widgets**.
 
 Problem:
-- Most students will not open Gear Tracker just to check "when do I work next?"
+- Most students will not open Wisconsin Creative just to check "when do I work next?"
 - The current Schedule tab is useful, but the fastest answer belongs on the Lock Screen, Home Screen, and Smart Stack.
 
 Product direction:
@@ -59,7 +59,7 @@ Problem:
 - Students will treat Apple Calendar as their source for shifts, so the feed needs stable identity, useful metadata, and a recovery path when the calendar is stale, missing, duplicated, or manually changed.
 
 Product direction:
-- Keep Gear Tracker authoritative for assignments and times.
+- Keep Wisconsin Creative authoritative for assignments and times.
 - Harden the ICS feed immediately with strong metadata, stable UIDs, sequence/last-modified, URL deep links, call-window fields, area, role, event id, shift id, assignment id, and gear status.
 - Add a native EventKit-managed-calendar path only if we need true local reconciliation beyond what a subscription can provide.
 
@@ -68,17 +68,17 @@ Likely V1 scope:
   - Stable `UID` based on assignment id.
   - `LAST-MODIFIED`, `SEQUENCE`, and `DTSTAMP` from assignment/shift/event update times.
   - `URL` deep link into the app or web event.
-  - `DESCRIPTION` with call time, shift time, area, role, gear status, and "managed by Gear Tracker" copy.
+  - `DESCRIPTION` with call time, shift time, area, role, gear status, and "managed by Wisconsin Creative" copy.
   - `CATEGORIES` for area/sport if Apple Calendar preserves them well enough.
   - Custom `X-GEAR-TRACKER-*` fields for assignment id, event id, shift id, sport, area, call window, gear status, and source version.
 - Native Calendar status screen:
   - Shows subscribed/not subscribed, token exists, last opened Calendar, and "Rotate feed link".
-  - Explains that Gear Tracker changes update the calendar feed and Apple Calendar refresh timing is controlled by iOS.
+  - Explains that Wisconsin Creative changes update the calendar feed and Apple Calendar refresh timing is controlled by iOS.
 - Server tests for ICS escaping, token auth, active-user gating, rate limits, event window, and metadata fields.
 
 Two-way metadata model:
-- V1: two-way context, not two-way schedule authority. Gear Tracker writes strong identifiers and links into the calendar feed, and the app can explain whether a user has opened/subscribed to the feed.
-- V2: EventKit managed mode. The app writes Gear Tracker-owned events into a dedicated local calendar, stores `EKEvent` identifiers locally, reads them back, and reports sync state to Gear Tracker. User local edits can be detected and shown as "calendar differs from Gear Tracker", but should not mutate official shift assignments without a separate product decision.
+- V1: two-way context, not two-way schedule authority. Wisconsin Creative writes strong identifiers and links into the calendar feed, and the app can explain whether a user has opened/subscribed to the feed.
+- V2: EventKit managed mode. The app writes Wisconsin Creative-owned events into a dedicated local calendar, stores `EKEvent` identifiers locally, reads them back, and reports sync state to Wisconsin Creative. User local edits can be detected and shown as "calendar differs from Wisconsin Creative", but should not mutate official shift assignments without a separate product decision.
 - Do not let Apple Calendar edits change shift assignment times or attendance. That would bypass staff/admin workflow, conflict review, trade approval, and audit.
 
 First slice:
@@ -149,6 +149,6 @@ First slice:
 - Stop if Gotham Ultra is referenced in native UI before the font file is actually bundled and licensed for the app target.
 
 ## Review
-- Shipped: Calendar Trust V1 is complete. The ICS feed carries stable assignment identity, effective personal call windows, deep links, update metadata, matchup context, and trade state. Native Shift Calendar management reports private-feed readiness and the app's last Calendar handoff, opens Apple Calendar, rotates the private link with an invalidation warning, and explains that Gear Tracker remains authoritative while Apple controls refresh timing.
+- Shipped: Calendar Trust V1 is complete. The ICS feed carries stable assignment identity, effective personal call windows, deep links, update metadata, matchup context, and trade state. Native Shift Calendar management reports private-feed readiness and the app's last Calendar handoff, opens Apple Calendar, rotates the private link with an invalidation warning, and explains that Wisconsin Creative remains authoritative while Apple controls refresh timing.
 - Verified: Server ICS and token contracts, focused native calendar-management contracts, shared-host routing, iOS audits, and Wisconsin simulator/device builds are recorded in the implementation ledgers.
 - Deferred: Shared shift summary, Home greeting, App Group snapshot writer, WidgetKit surfaces, and any EventKit-managed reconciliation mode remain future slices.

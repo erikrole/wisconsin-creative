@@ -13,7 +13,7 @@
 ## Slice 2: Column mapping UI
 - [x] New "Map columns" step between Upload and Preview
 - [x] Auto-detect Cheqroom preset headers
-- [x] Dropdown per CSV column → Gear Tracker field
+- [x] Dropdown per CSV column → Wisconsin Creative field
 - [x] Sample data preview in mapping table
 - [x] Save mapping to localStorage for future imports
 - [x] Pass mapping to preview + import API calls

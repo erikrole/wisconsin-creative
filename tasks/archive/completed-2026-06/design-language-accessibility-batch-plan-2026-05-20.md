@@ -19,4 +19,4 @@ Remove the next high-impact accessibility and control-size drift found during pr
 
 ## Review
 - TypeScript, migration-prefix, whitespace, and production build verification passed.
-- Browser smoke on the correct Gear Tracker dev server (`localhost:3011`) showed `/login` with no console errors, then protected `/items/test-item-id` and `/events/test-event-id` redirected cleanly to login with no console errors.
+- Browser smoke on the correct Wisconsin Creative dev server (`localhost:3011`) showed `/login` with no console errors, then protected `/items/test-item-id` and `/events/test-event-id` redirected cleanly to login with no console errors.

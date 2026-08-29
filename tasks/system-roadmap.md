@@ -1,4 +1,4 @@
-# Gear Tracker — System Roadmap
+# Wisconsin Creative — System Roadmap
 
 ## Document Control
 - Author: System Architecture Review
@@ -13,7 +13,7 @@
 
 ### Core System Purpose
 
-Gear Tracker is the internal gear management system for Wisconsin Athletics Creative. It replaces Cheqroom with an **event-driven, athletics-specific operational system** built for game-day media operations at Camp Randall Stadium and Kohl Center.
+Wisconsin Creative is the internal gear management system for Wisconsin Athletics Creative. It replaces Cheqroom with an **event-driven, athletics-specific operational system** built for game-day media operations at Camp Randall Stadium and Kohl Center.
 
 **Primary value**: Operational speed, clarity, and trust for check-outs, reservations, and gear handling. The right metric is not feature count — it's whether a student can check out a camera kit in three taps, and whether staff always know who has what gear.
 

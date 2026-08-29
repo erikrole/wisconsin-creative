@@ -1,0 +1,41 @@
+{
+  "name": "wisconsin-creative-workflows",
+  "version": "0.1.0",
+  "description": "Repo-specific workflows for Wisconsin Creative planning, page ownership, API hardening, Prisma and Neon migrations, iOS slices, deployment recovery, and shipping discipline.",
+  "author": {
+    "name": "Erik Role",
+    "email": "erikrole@users.noreply.github.com",
+    "url": "https://github.com/erikrole"
+  },
+  "homepage": "https://github.com/erikrole/wisconsin-creative",
+  "repository": "https://github.com/erikrole/wisconsin-creative",
+  "license": "UNLICENSED",
+  "keywords": [
+    "wisconsin-creative",
+    "nextjs",
+    "prisma",
+    "neon",
+    "vercel",
+    "swiftui",
+    "workflow"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Wisconsin Creative Workflows",
+    "shortDescription": "Focused repo workflows for planning, hardening, migrations, UI passes, iOS slices, deploy recovery, and shipping.",
+    "longDescription": "Use Wisconsin Creative Workflows to run source-grounded plans, page ownership passes, API hardening audits, Prisma and Neon migration work, iOS implementation slices, deployment recovery, post-merge cleanup, and scoped ship workflows with the repo's docs, tests, and Vercel constraints baked in.",
+    "developerName": "Erik Role",
+    "category": "Coding",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/erikrole/wisconsin-creative",
+    "privacyPolicyURL": "https://openai.com/policies/privacy-policy/",
+    "termsOfServiceURL": "https://openai.com/policies/terms-of-use/",
+    "defaultPrompt": "Run a Wisconsin Creative workflow such as /gt-plan, /gt-page, /gt-api-hardening, /gt-migrate, /gt-ios-slice, /gt-deploy-debug, /gt-clean-after-merge, or /gt-ship.",
+    "brandColor": "#C5050C",
+    "screenshots": []
+  }
+}

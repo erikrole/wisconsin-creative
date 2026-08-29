@@ -9,7 +9,7 @@
 
 ## What "Beta" Means
 
-Gear Tracker moves from Alpha (feature buildout, rapid iteration, frequent breaking changes) to Beta (stable core, hardened workflows, ready for daily operational use by Wisconsin Athletics Creative).
+Wisconsin Creative moves from Alpha (feature buildout, rapid iteration, frequent breaking changes) to Beta (stable core, hardened workflows, ready for daily operational use by Wisconsin Athletics Creative).
 
 ### Beta Criteria — All Met
 - [x] All P0 bugs resolved (dashboard filter, importer lossless, settings auth guard, notification icons, cron schedule)

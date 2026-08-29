@@ -185,7 +185,7 @@ function renderArchitecture({ pages, layouts, apiRoutes, services, components, t
   return `${renderGeneratedNote("Architecture Overview")}
 ## System Type
 
-Gear Tracker is a Next.js App Router application with a companion native iOS app under \`ios/\`. The web app deploys to Vercel Node.js serverless functions and uses Prisma with Neon PostgreSQL.
+Wisconsin Creative is a Next.js App Router application with a companion native iOS app under \`ios/\`. The web app deploys to Vercel Node.js serverless functions and uses Prisma with Neon PostgreSQL.
 
 ## Current Source Shape
 

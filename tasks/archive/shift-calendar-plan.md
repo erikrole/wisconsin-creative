@@ -2,7 +2,7 @@
 
 ## Context
 
-UW Athletics currently uses Asana to schedule student/staff coverage for sporting events (Video, Photo, Graphics, Comms positions). Asana isn't built for shift scheduling, and the previous tool (WhenToWork) got too expensive. This feature brings shift scheduling into Gear Tracker — auto-generating shifts from synced calendar events, supporting hybrid assignment (staff picks from sport-specific student pools + student self-request for premier events), and providing a shared calendar view for everyone.
+UW Athletics currently uses Asana to schedule student/staff coverage for sporting events (Video, Photo, Graphics, Comms positions). Asana isn't built for shift scheduling, and the previous tool (WhenToWork) got too expensive. This feature brings shift scheduling into Wisconsin Creative — auto-generating shifts from synced calendar events, supporting hybrid assignment (staff picks from sport-specific student pools + student self-request for premier events), and providing a shared calendar view for everyone.
 
 ## Data Model
 

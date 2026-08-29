@@ -2,7 +2,7 @@
 
 ## Context
 
-Gear Tracker has completed Phase A (core workflows) and Phase B (polish, decomposition, security hardening). The system is in Beta with 330 passing tests, solid architecture, and clean code patterns. This roadmap captures 10 new features the product team wants to plan for future development, organized into logical phases based on dependencies, complexity, and value delivery.
+Wisconsin Creative has completed Phase A (core workflows) and Phase B (polish, decomposition, security hardening). The system is in Beta with 330 passing tests, solid architecture, and clean code patterns. This roadmap captures 10 new features the product team wants to plan for future development, organized into logical phases based on dependencies, complexity, and value delivery.
 
 ---
 

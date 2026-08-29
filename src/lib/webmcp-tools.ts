@@ -297,10 +297,10 @@ async function fetchJson<T>(path: string, signal: AbortSignal): Promise<T> {
 function toolFailure(error: unknown) {
   if (error instanceof DOMException && error.name === "AbortError") throw error;
   if (error instanceof WebMcpRequestError) {
-    if (error.status === 401) return webMcpTextResult({ error: "Your Gear Tracker session has expired. Sign in again before using this tool." });
+    if (error.status === 401) return webMcpTextResult({ error: "Your Wisconsin Creative session has expired. Sign in again before using this tool." });
     if (error.status === 403) return webMcpTextResult({ error: "This read is not available to the signed-in user's role or capabilities." });
   }
-  return webMcpTextResult({ error: "Gear Tracker could not complete the read. Try again from the open page." });
+  return webMcpTextResult({ error: "Wisconsin Creative could not complete the read. Try again from the open page." });
 }
 
 function safeExecute(
@@ -336,8 +336,8 @@ export function createWebMcpTools({
   const tools: WebMcpTool[] = [
     {
       name: "gear-tracker.get-current-page",
-      title: "Get current Gear Tracker page",
-      description: "Returns the current Gear Tracker route and document title without changing data or navigation.",
+      title: "Get current Wisconsin Creative page",
+      description: "Returns the current Wisconsin Creative route and document title without changing data or navigation.",
       inputSchema: EMPTY_INPUT_SCHEMA,
       annotations: { readOnlyHint: true },
       execute: () => webMcpTextResult({
@@ -348,8 +348,8 @@ export function createWebMcpTools({
     },
     {
       name: "gear-tracker.open-page",
-      title: "Open a Gear Tracker page",
-      description: "Navigates the open Gear Tracker tab to one role-visible internal page. It does not create, edit, delete, check out, return, or reserve anything.",
+      title: "Open a Wisconsin Creative page",
+      description: "Navigates the open Wisconsin Creative tab to one role-visible internal page. It does not create, edit, delete, check out, return, or reserve anything.",
       inputSchema: {
         type: "object",
         properties: {
@@ -373,7 +373,7 @@ export function createWebMcpTools({
     },
     {
       name: "gear-tracker.get-dashboard-snapshot",
-      title: "Get Gear Tracker dashboard snapshot",
+      title: "Get Wisconsin Creative dashboard snapshot",
       description: "Returns a compact, read-only snapshot of dashboard counts and current operational rows already visible to the signed-in user.",
       inputSchema: EMPTY_INPUT_SCHEMA,
       annotations: { readOnlyHint: true, untrustedContentHint: true },
@@ -413,7 +413,7 @@ export function createWebMcpTools({
   if (user.role !== "COLLABORATOR" || hasCapability(user, "GEAR_CATALOG_VIEW")) {
     tools.push({
       name: "gear-tracker.search-items",
-      title: "Search Gear Tracker items",
+      title: "Search Wisconsin Creative items",
       description: "Searches role-visible serialized gear and item families by tag, name, brand, model, category, or location. Read-only; results omit serial numbers, notes, QR values, and private vault data.",
       inputSchema: {
         type: "object",
@@ -453,7 +453,7 @@ export function createWebMcpTools({
   if (user.role !== "COLLABORATOR" || hasCapability(user, "MY_GEAR_VIEW")) {
     tools.push({
       name: "gear-tracker.search-bookings",
-      title: "Search Gear Tracker bookings",
+      title: "Search Wisconsin Creative bookings",
       description: "Searches active reservations and checkouts visible to the signed-in user. Students and collaborators remain limited by the same server-side ownership and capability rules as the website.",
       inputSchema: {
         type: "object",

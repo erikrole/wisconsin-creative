@@ -2,7 +2,7 @@
 
 ## Objective
 
-Work through the remaining Gear Tracker design-language backlog in order, keeping the system practical for an internal operations app: dense, calm, fast, accessible, and consistent with shadcn/ui.
+Work through the remaining Wisconsin Creative design-language backlog in order, keeping the system practical for an internal operations app: dense, calm, fast, accessible, and consistent with shadcn/ui.
 
 ## Ordered Backlog
 
@@ -51,7 +51,7 @@ Work through the remaining Gear Tracker design-language backlog in order, keepin
 
 ## Review
 
-- 2026-05-21: Started Area 1 on `localhost:3014`. Local login with the documented seed admin reached `/api/auth/login`, but Prisma returned `P1000` database authentication failure before a session could be created. The only existing `localhost:3000` browser page was a different app, so it could not be used as Gear Tracker evidence. Area 1 remains open until valid local or authenticated browser access is available.
+- 2026-05-21: Started Area 1 on `localhost:3014`. Local login with the documented seed admin reached `/api/auth/login`, but Prisma returned `P1000` database authentication failure before a session could be created. The only existing `localhost:3000` browser page was a different app, so it could not be used as Wisconsin Creative evidence. Area 1 remains open until valid local or authenticated browser access is available.
 - 2026-05-21: Area 2 patch pass moved shared overlay close buttons, `EquipmentPicker` dense actions, and `ShiftSlotCard` dense staffing actions to the 40px operational target baseline. `npx tsc --noEmit`, `npm run db:migrate:check`, `git diff --check`, and `npx next build` passed. Browser smoke on `localhost:3014/login` confirmed the login form renders and the attempted local admin login still returns the documented `/api/auth/login` 500, so authenticated visual proof remains blocked.
 - 2026-05-21: Area 1 unblocked. Root cause was `.env.development.local` pointing `DATABASE_URL` at a different Neon host than the working `.env`; starting `next dev` with quote-stripped `.env` `DATABASE_URL` and `DIRECT_URL` produced a successful `POST /api/auth/login` as `admin@creative.local`. Authenticated Chrome proof captured with no console errors for dashboard, items, users, scan, settings, checkout creation, Fix Today, Hygiene, item scan identity, item image modal, and event detail. Screenshot evidence: `tasks/design-language-proof-dashboard.png`, `tasks/design-language-proof-items.png`, `tasks/design-language-proof-users.png`, `tasks/design-language-proof-scan.png`, `tasks/design-language-proof-settings.png`, `tasks/design-language-proof-checkout-new.png`, `tasks/design-language-proof-fix-today.png`, `tasks/design-language-proof-hygiene.png`, `tasks/design-language-proof-item-scan-identity.png`, `tasks/design-language-proof-item-image-modal.png`, `tasks/design-language-proof-event-full.png`, and `tasks/design-language-proof-event-crew-actions.png`.
 - 2026-05-21: Area 3 route-by-route checklist created at `tasks/design-language-route-conformance-checklist.md`. Dashboard, Schedule, Items, Bookings, Users, and Settings were checked against header, toolbar/filter, row-action, empty/error/loading, target/focus, status/color, and copy rules. No immediate code fix was required from the checklist itself. Next slice is Area 4 Settings sub-page follow-through.

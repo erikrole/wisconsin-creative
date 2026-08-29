@@ -4,7 +4,7 @@ import { fieldWorkMoments, pageMockups } from "@/lib/public-showroom";
 
 export const metadata: Metadata = {
   title: "Field Work",
-  description: "How Gear Tracker supports native iOS, iPad kiosk, scanner, and game-day field workflows.",
+  description: "How Wisconsin Creative supports native iOS, iPad kiosk, scanner, and game-day field workflows.",
 };
 
 export default function FieldWorkPage() {

@@ -1,7 +1,7 @@
 # Athletic Calendar Wrapped Plan - 2026-06-12
 
 ## Goal
-- Create a June athletic-calendar recap experience that feels like "Spotify Wrapped" for Gear Tracker, while collecting only durable operational facts that the product can defend.
+- Create a June athletic-calendar recap experience that feels like "Spotify Wrapped" for Wisconsin Creative, while collecting only durable operational facts that the product can defend.
 - Use the athletic year as July 1 through June 30 unless a later product decision chooses a different boundary.
 - Start with staff/admin preview and opt-in user profile recap before any public sharing or broad peer comparison.
 

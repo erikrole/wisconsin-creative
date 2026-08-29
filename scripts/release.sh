@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Release script for Gear Tracker
+# Release script for Wisconsin Creative
 # Usage: npm run release [-- --dry-run] [-- --yes]
 #
 # Creates a CalVer tag (YYYY.M.N) and updates package.json + package-lock.json.

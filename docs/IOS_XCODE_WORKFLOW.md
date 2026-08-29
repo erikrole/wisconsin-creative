@@ -2,7 +2,7 @@
 
 Last refreshed: 2026-07-17
 
-This is the default path for debugging, testing, and reviewing the native Gear Tracker iOS app.
+This is the default path for debugging, testing, and reviewing the native Wisconsin Creative iOS app.
 
 ## Fast Closeout
 

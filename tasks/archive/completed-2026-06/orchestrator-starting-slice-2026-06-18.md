@@ -1,12 +1,12 @@
 # Codex Orchestrator Plan - 2026-06-18
 
 ## Goal
-- Build a conservative Gear Tracker orchestration loop that can triage stale PRs, active plan files, and pending work without widening implementation scope.
+- Build a conservative Wisconsin Creative orchestration loop that can triage stale PRs, active plan files, and pending work without widening implementation scope.
 - Start with a read-only triage ledger. Only after that proves useful should worker and reviewer threads touch feature branches.
 
 ## Source Checks
 - `AGENTS.md`: non-trivial work starts with a plan, uses checkable items, verifies before done, and stops to re-plan when scope or contracts go sideways.
-- `docs/NORTH_STAR.md`: Gear Tracker prioritizes operational speed, clarity, trust, derived status, auditability, and integrity over broad feature churn.
+- `docs/NORTH_STAR.md`: Wisconsin Creative prioritizes operational speed, clarity, trust, derived status, auditability, and integrity over broad feature churn.
 - `docs/AI_COLLABORATION.md`: multi-agent handoffs need intent, state, validation, risks, and next actions; blocked agents should log evidence and stop instead of speculative refactors.
 - `docs/DECISIONS.md`: orchestration must preserve hard gates such as D-001 derived status, D-006 SERIALIZABLE integrity, D-007 audit logging, D-011 role inheritance, and D-040 kiosk-only custody.
 - `docs/GAPS_AND_RISKS.md`: active gaps and recent change-log entries are the source of truth for whether a revived PR still matches shipped reality.

@@ -8,7 +8,7 @@ const email = process.env.DEPLOY_SMOKE_EMAIL ?? (isLocalTarget ? defaultLocalEma
 const password = process.env.DEPLOY_SMOKE_PASSWORD ?? (isLocalTarget ? defaultLocalPassword : "");
 
 const publicChecks = [
-  { path: "/about", terms: ["Built around physical handoffs", "Wisconsin Creative Gear Tracker"] },
+  { path: "/about", terms: ["Built around physical handoffs", "Wisconsin Creative Wisconsin Creative"] },
   { path: "/about/features", terms: ["Features by workflow.", "What the public pages cover."] },
   { path: "/about/tech-stack", terms: ["Web app, Postgres data, native iOS.", "Major platform pieces."] },
   { path: "/about/security", terms: ["Public pages do not expose operations.", "Security controls at a high level."] },

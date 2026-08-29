@@ -2,7 +2,7 @@
 
 ## Goal
 - Flesh out roadmap ideas around direct user custody, MacBook lifecycle inventory, Brand Communications schedule-first onboarding, stronger badge gamification, guest gear access, football-owned gear warnings, student graduation lifecycle, Athletic Calendar Wrapped, iOS shift/calendar surfaces, smarter notification orchestration, and return exception reporting.
-- Log adjacent ideas that fit Gear Tracker's current product model without weakening checkout, kiosk, schedule, resources, or badge contracts.
+- Log adjacent ideas that fit Wisconsin Creative's current product model without weakening checkout, kiosk, schedule, resources, or badge contracts.
 
 ## Source Checks
 - `docs/AREA_ITEMS.md`: serialized assets are tag-first, status is derived from allocations, and `availableForReservation`, `availableForCheckout`, and `availableForCustody` are policy flags, not live status values.
@@ -156,7 +156,7 @@ Working name: **Guest Gear Requests**.
 
 Problem:
 - Some people need occasional gear access but should not become normal Creative users: external partners, Athletics partners, freelancers, visiting collaborators, or university units that work with the team a few times per year.
-- Giving them full app access is too broad, but handling their requests fully outside Gear Tracker makes custody, audit, and availability weaker.
+- Giving them full app access is too broad, but handling their requests fully outside Wisconsin Creative makes custody, audit, and availability weaker.
 
 Product direction:
 - Add a guest request intake flow where an external requester provides who, what, when, why, contact info, affiliation, sponsor/staff contact, and pickup/return expectations.
@@ -273,14 +273,14 @@ First slice:
 Working name: **Shift Glance**.
 
 Problem:
-- Students will often check shifts from iOS widgets or Apple Calendar before they open Gear Tracker.
-- The current iOS Calendar action opens a Gear Tracker ICS feed, but the feed is metadata-light and does not yet give strong local trust/reconciliation.
+- Students will often check shifts from iOS widgets or Apple Calendar before they open Wisconsin Creative.
+- The current iOS Calendar action opens a Wisconsin Creative ICS feed, but the feed is metadata-light and does not yet give strong local trust/reconciliation.
 - Native Home could use a branded greeting and one-line shift state so the app answers "what do I need to know right now?" immediately.
 
 Product direction:
 - Add WidgetKit widgets backed by a small cached "my shift snapshot" rather than making the widget process do fragile live auth work.
 - Harden the current ICS subscription feed first: stable identifiers, deep links, call-window metadata, gear status, area/role/sport, and custom `X-GEAR-TRACKER-*` fields.
-- Treat Gear Tracker as authoritative for shift data. Apple Calendar can mirror and reconcile metadata, but calendar edits should not mutate official assignments without a separate audited workflow.
+- Treat Wisconsin Creative as authoritative for shift data. Apple Calendar can mirror and reconcile metadata, but calendar edits should not mutate official assignments without a separate audited workflow.
 - Add a Gotham Black/Ultra-style Home/AFM greeting. Gotham Black is already bundled on iOS; Ultra requires a bundled font file before implementation.
 
 Likely V1 scope:
@@ -415,7 +415,7 @@ First slice:
 
 ### K. Calendar Trust Dashboard
 - A staff/admin and self-service diagnostic for calendar subscription status, last generated feed time, token rotation, upcoming assignment count, and common Apple Calendar refresh caveats.
-- Useful because students will treat Apple Calendar as the operational source even though Gear Tracker remains authoritative.
+- Useful because students will treat Apple Calendar as the operational source even though Wisconsin Creative remains authoritative.
 
 ### L. Notification Digest And Quiet Hours
 - Let students and staff choose immediate versus digest delivery by category once the taxonomy exists.

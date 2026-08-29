@@ -1,8 +1,8 @@
-# Gear Tracker Architectural and Product Decisions
+# Wisconsin Creative Architectural and Product Decisions
 
 ## Document Control
 - Owner: Erik Role (Wisconsin Athletics Creative)
-- Product: Gear Tracker
+- Product: Wisconsin Creative
 - Last Updated: 2026-08-27
 - Status: Living decision log
 - Purpose: track durable decisions, rationale, and downstream constraints
@@ -264,7 +264,7 @@
 - Date: 2026-03-01
 - Status: Accepted
 - Context:
-  - Migration data includes many columns, mixed quality, and legacy status labels that conflict with Gear Tracker derived-status architecture.
+  - Migration data includes many columns, mixed quality, and legacy status labels that conflict with Wisconsin Creative derived-status architecture.
 - Decision:
   - Importer must parse all source columns and preserve unmapped values in source payload metadata.
   - Source `Status` is stored for traceability only and never written as authoritative asset status.
@@ -604,7 +604,7 @@ These are non-negotiable integrity constraints. Every feature must preserve them
 - Date: 2026-06-03
 - Status: Accepted for V1 planning
 - Context:
-  - Gear Tracker needs to onboard large student and staff cohorts without forcing an operator to manually create users, add allowed emails, and separately manage first sign-in handoff.
+  - Wisconsin Creative needs to onboard large student and staff cohorts without forcing an operator to manually create users, add allowed emails, and separately manage first sign-in handoff.
   - Existing registration security depends on D-029's `AllowedEmail` gate.
   - Direct-created accounts previously used `forcePasswordChange`.
   - The beta launch should avoid shared first-time password handoffs.
@@ -991,7 +991,7 @@ These are non-negotiable integrity constraints. Every feature must preserve them
 - Date: 2026-07-31
 - Status: Accepted; web and native iOS slices implemented locally, production rollout pending
 - Context:
-  - Gear Tracker access is already invite-gated through `AllowedEmail`, and active users authenticate through the shared password/session boundary.
+  - Wisconsin Creative access is already invite-gated through `AllowedEmail`, and active users authenticate through the shared password/session boundary.
   - Users need a faster, phishing-resistant sign-in path on supported browsers and Apple devices without changing the invitation or kiosk custody contracts.
 - Decision:
   - Any active user who has completed invite-granted access may enroll one or more passkeys after current-password reauthentication.
@@ -1042,7 +1042,7 @@ These are non-negotiable integrity constraints. Every feature must preserve them
 - Date: 2026-08-09
 - Status: Accepted; implemented locally, production rollout pending
 - Context:
-  - A persistent menu bar helper that polls normal Gear Tracker routes would wake a suspended Neon compute even when no operational work is happening.
+  - A persistent menu bar helper that polls normal Wisconsin Creative routes would wake a suspended Neon compute even when no operational work is happening.
   - Booking and kiosk mutations already wake Neon naturally and are the authoritative moments when companion data can change.
 - Decision:
   - Explicit password enrollment may access Neon because the user initiated it. Enrollment builds the initial companion projection and returns a signed, revocable credential.
@@ -1065,7 +1065,7 @@ These are non-negotiable integrity constraints. Every feature must preserve them
 - Date: 2026-08-12
 - Status: Accepted; implemented locally, production configuration and migration pending
 - Decision:
-  - Gear Tracker may collect a small allowlisted set of authenticated product-usage events in its own database.
+  - Wisconsin Creative may collect a small allowlisted set of authenticated product-usage events in its own database.
   - Raw identity and client session keys are replaced with yearly rotating HMAC values before storage.
   - The private Usage report is authorized by `USAGE_ANALYTICS_OWNER_EMAILS`; role membership, including ADMIN, never grants access by itself.
 - Guardrails:
@@ -1206,10 +1206,10 @@ These are non-negotiable integrity constraints. Every feature must preserve them
 - Date: 2026-08-15
 - Status: Accepted; implementation and rollout proof pending
 - Context:
-  - Signature collection is a team/season workflow for external athletes and coaches, with a separate Creative staff collection backed by linked internal users. It is not an extension of internal Gear Tracker staffing assignments or a group nested in a team roster.
+  - Signature collection is a team/season workflow for external athletes and coaches, with a separate Creative staff collection backed by linked internal users. It is not an extension of internal Wisconsin Creative staffing assignments or a group nested in a team roster.
   - Public-media Blob helpers and client-generated files cannot provide the authorization, reproducibility, or failure compensation required for signatures.
 - Decision:
-  - Use a dedicated signature domain keyed by canonical collection code and season. Men’s Basketball uses `MBB`, Football uses `FB`, Volleyball uses `VB`, Men’s Hockey uses `MHKY`, Women’s Hockey uses `WHKY`, Women’s Basketball uses `WBB`, and Wrestling uses `WRES`; Creative staff use a standalone `CREATIVE` collection for the same season; Administration uses a standalone `ADMIN` collection sourced from the fixed official UWBadgers Administration staff directory; manually entered one-off signers use a standalone `ADHOC` collection and store their sport/category on the member. Imported roster members remain separate records with an optional link to a Gear Tracker user. Creative staff are separate signature-member records linked to active, visible full-time Video/Photo/Graphics users; Administration members are separate required support-staff records and do not participate in Creative Staff identity reconciliation or team roster linking. Creative staff and Administration do not require team-roster nesting. A same-season non-player team member may share that internal identity only through a unique exact normalized-name match among those eligible users; ambiguity, players, ad-hoc members, and existing conflicting links fail closed.
+  - Use a dedicated signature domain keyed by canonical collection code and season. Men’s Basketball uses `MBB`, Football uses `FB`, Volleyball uses `VB`, Men’s Hockey uses `MHKY`, Women’s Hockey uses `WHKY`, Women’s Basketball uses `WBB`, and Wrestling uses `WRES`; Creative staff use a standalone `CREATIVE` collection for the same season; Administration uses a standalone `ADMIN` collection sourced from the fixed official UWBadgers Administration staff directory; manually entered one-off signers use a standalone `ADHOC` collection and store their sport/category on the member. Imported roster members remain separate records with an optional link to a Wisconsin Creative user. Creative staff are separate signature-member records linked to active, visible full-time Video/Photo/Graphics users; Administration members are separate required support-staff records and do not participate in Creative Staff identity reconciliation or team roster linking. Creative staff and Administration do not require team-roster nesting. A same-season non-player team member may share that internal identity only through a unique exact normalized-name match among those eligible users; ambiguity, players, ad-hoc members, and existing conflicting links fail closed.
   - Use a pen-class web gate: Safari `pointerType === "pen"` may draw, while touch, mouse, trackpad, and palm input may not. Exact Apple Pencil identity is a physical acceptance concern, not a cryptographic web claim.
   - Import fixed UWBadgers adapters for MBB, Football, Volleyball, Men’s Hockey, Women’s Hockey, Women’s Basketball, Wrestling, and Administration as immutable normalized snapshots. Parse one structural representation, deduplicate by profile identity, preserve player/coaching/support groups, parse Administration's `/staff-directory/<slug>/<profileId>` links and fixed `/1` source page, map Football and Volleyball's `2026-27` season to the source site's `2026` URL segment, and use the full season segment for Men’s Hockey, Women’s Hockey, Women’s Basketball, and Wrestling. Preserve wrestling weight classes as player metadata and leave its jersey number nullable. Apply only with an observed collection version. Reconciliation never deletes members or captures. When a current `PLAYER` source ID changes, apply may transfer a committed READY capture only from one inactive historical member with the same normalized name and role into a blank target; jersey numbers are advisory, and ambiguity, active saves, conflicting captures, and erased history fail closed for review while the historical row remains inactive and audited.
   - The client submits normalized strokes. The server creates a sanitized path-only SVG and renders the transparent PNG from that same SVG with matching crop bounds and content hashes.
@@ -1232,7 +1232,7 @@ These are non-negotiable integrity constraints. Every feature must preserve them
 - Status: Accepted; implemented locally, rollout proof pending
 - Context:
   - Email blasts should send people to one app entry point. Separate registration links make web and native iOS behave differently and leave the user to understand an internal registration concept.
-  - `AllowedEmail` is already the source of truth for first-time access, and email delivery is intentionally not a required Gear Tracker dependency.
+  - `AllowedEmail` is already the source of truth for first-time access, and email delivery is intentionally not a required Wisconsin Creative dependency.
 - Decision:
   - The normal web and native sign-in flow starts with an email identity step. A rate-limited `POST /api/auth/discover` normalizes the address and returns only `flow: "onboarding"` for an unclaimed allowed email with no existing user, or `flow: "password"` for every other state.
   - The discovery response never includes role, name, profile fields, policy grants, or roster data. An inactive or missing collaborator policy stays on password sign-in rather than opening a registration path.
@@ -1276,7 +1276,7 @@ These are non-negotiable integrity constraints. Every feature must preserve them
 - Date: 2026-08-20
 - Status: Accepted
 - Context:
-  - Gear Tracker serves a known, bounded population: roughly 30-60 Wisconsin Athletics creative staff and students, not an open App Store audience.
+  - Wisconsin Creative serves a known, bounded population: roughly 30-60 Wisconsin Athletics creative staff and students, not an open App Store audience.
   - The 2026-08-20 Schedule capture matrix found real layout breakage at `accessibility-extra-large` and fixing the worst of it cost the venue line, which invited a larger `EventRow` layout rewrite.
   - Owner decision: no current user is expected to run accessibility text sizes, so that rewrite is not worth its cost or its regression risk.
 - Decision:

@@ -11,7 +11,7 @@ The V1 implementation is deployed through the web, API, schema, artifact, storag
 ## Scope
 
 - Canonical collection key: `sportCode + season`, with `MBB`, `FB`, `VB`, `MHKY`, `WHKY`, `WBB`, and `WRES` for team rosters, `CREATIVE` for the standalone Creative staff roster, `ADMIN` for the official UWBadgers Administration directory, and `ADHOC` for manually entered one-off signers.
-- External roster members are separate from Gear Tracker users and may have a nullable user link. Creative staff use linked full-time Video/Photo/Graphics accounts as separate signature members with no external snapshot and never live in the MBB collection.
+- External roster members are separate from Wisconsin Creative users and may have a nullable user link. Creative staff use linked full-time Video/Photo/Graphics accounts as separate signature members with no external snapshot and never live in the MBB collection.
 - UWBadgers import is fixed to an allowlisted adapter with structural parsing, profile-identity deduplication, preview persistence, and versioned reconciliation. MBB, Football, Volleyball, Men’s Hockey, Women’s Hockey, Women’s Basketball, and Wrestling use sport-specific source URLs and parser labels; Creative staff sync is explicit, version-checked, audited, and preserves imported roster state.
 - Required members are active players from the seven supported team rosters; coaching and support staff are imported as optional secondary work. Standalone Creative staff retain their existing default-required behavior; wrestling weight classes are metadata and jersey numbers remain nullable.
 - Private app-managed storage is required. Box signature-file integration, native PencilKit, scheduled roster sync, additional sport adapters beyond the 2026-27 target set, and pressure width are deferred.
@@ -23,7 +23,7 @@ The V1 implementation is deployed through the web, API, schema, artifact, storag
 - `src/lib/audit.ts`: audit rows retain only 90 days, so capture and artifact lifecycle state must be durable in signature tables.
 - `src/lib/blob.ts`: existing helper is public-media oriented and must not be extended for signatures.
 - `src/lib/sports.ts`: `MBB`, `MHKY`, `WHKY`, `WBB`, `VB`, and `WRES` are the canonical codes for the requested media-day sports; Football remains `FB`.
-- UWBadgers 2026-27 roster sources: Football and Volleyball use starting-year paths; Men’s Hockey, Women’s Hockey, Women’s Basketball, and Wrestling use full-season paths; Gear Tracker retains the canonical `2026-27` season.
+- UWBadgers 2026-27 roster sources: Football and Volleyball use starting-year paths; Men’s Hockey, Women’s Hockey, Women’s Basketball, and Wrestling use full-season paths; Wisconsin Creative retains the canonical `2026-27` season.
 - UWBadgers Men’s Basketball roster: duplicate list/card/table representations and separate coaching/support sections require structural scoping and profile-identity deduplication.
 
 ## Stop Conditions
@@ -522,7 +522,7 @@ Local verification on 2026-08-15: focused signature tests 11/11 plus six signatu
 ### Source Checks
 
 - Existing `SignatureCollection.sportCode` is a string and the unique collection key already includes season, so the new team collections do not require a schema migration.
-- The canonical Gear Tracker sport codes are `FB` and `VB`; the UWBadgers source uses `/sports/football/roster/2026` and `/sports/womens-volleyball/roster/2026` for the 2026 roster pages while Gear Tracker retains `2026-27`.
+- The canonical Wisconsin Creative sport codes are `FB` and `VB`; the UWBadgers source uses `/sports/football/roster/2026` and `/sports/womens-volleyball/roster/2026` for the 2026 roster pages while Wisconsin Creative retains `2026-27`.
 - The current parser already deduplicates profile links by source identity; the sport-aware source map keeps MBB behavior separate and prevents an unsupported sport from falling back to MBB.
 
 ### Slices

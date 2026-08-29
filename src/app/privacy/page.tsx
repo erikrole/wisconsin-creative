@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Privacy Policy - Wisconsin Creative",
-  description: "Privacy policy for the Wisconsin Creative iOS app and Gear Tracker service.",
+  description: "Privacy policy for the Wisconsin Creative iOS app and Wisconsin Creative service.",
 };
 
 const updatedAt = "August 21, 2026";
@@ -80,7 +80,7 @@ export default function PrivacyPage() {
             <h1 className="text-balance">Wisconsin Creative Privacy Policy</h1>
             <p className="text-base leading-7 text-muted-foreground">
               This policy describes how Wisconsin Creative handles information for the Wisconsin Creative iOS app and
-              Gear Tracker service.
+              Wisconsin Creative service.
             </p>
             <p className="text-sm text-muted-foreground">Last updated: {updatedAt}</p>
           </div>

@@ -1,6 +1,6 @@
 ---
 name: gt-audit-web
-description: Canonical read-only Gear Tracker web readiness audit. Use when the user runs /gt-audit-web, asks to audit a route or page, asks whether a web surface is ready to ship, or wants prioritized findings before deciding what to fix. Do not implement during the audit.
+description: Canonical read-only Wisconsin Creative web readiness audit. Use when the user runs /gt-audit-web, asks to audit a route or page, asks whether a web surface is ready to ship, or wants prioritized findings before deciding what to fix. Do not implement during the audit.
 ---
 
 # GT Audit Web
@@ -18,7 +18,7 @@ Audit one route or tightly related route family from current source and runtime 
 
 - Contracts: acceptance criteria, decisions, gaps, and current API response shapes.
 - Flows: every meaningful action, role, state transition, confirmation, recovery path, URL state, and destructive path.
-- UI: Gear Tracker design language, installed primitives, copy, density, accessibility, wrapping, and responsive desktop/tablet behavior.
+- UI: Wisconsin Creative design language, installed primitives, copy, density, accessibility, wrapping, and responsive desktop/tablet behavior.
 - Hardening: authentication, authorization, validation, transaction boundaries, stale/concurrent writes, audit entries, query shape, and bounded bulk/export work.
 - Failure cases: slow or partial data, expired session, role changes, empty data, long values, invalid pagination, retries, and duplicate submissions.
 - Parity: report web/iOS differences only when relevant; block readiness only when a required workflow is missing.

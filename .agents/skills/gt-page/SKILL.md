@@ -1,6 +1,6 @@
 ---
 name: gt-page
-description: Canonical Gear Tracker web page execution workflow. Use when the user runs /gt-page or asks to take a web route or tightly scoped page surface end to end through UX, UI, consistency, hardening, implementation, verification, and documentation. Use gt-audit-web instead for findings only.
+description: Canonical Wisconsin Creative web page execution workflow. Use when the user runs /gt-page or asks to take a web route or tightly scoped page surface end to end through UX, UI, consistency, hardening, implementation, verification, and documentation. Use gt-audit-web instead for findings only.
 ---
 
 # GT Page
@@ -19,7 +19,7 @@ Own one web route or one tightly scoped route surface through verified implement
 
 - Structure: route hierarchy, primary action, command bar, tabs, filters, scanability.
 - UX: role-specific golden paths; loading, empty, filtered-empty, error, success, stale, slow-network, and expired-session states.
-- UI: installed shadcn primitives, Gear Tracker operational components, 40px targets, restrained motion, wrapping, and semantic status colors.
+- UI: installed shadcn primitives, Wisconsin Creative operational components, 40px targets, restrained motion, wrapping, and semantic status colors.
 - Consistency: reuse local patterns before adding abstractions. Record propagation candidates when this page establishes a better shared pattern.
 - Hardening: server-side authorization, schema-boundary validation, concurrency, auditability, bounded bulk/export work, and useful failure recovery.
 

@@ -16,7 +16,7 @@ export default function RootError({
 
   return (
     <ErrorRecoveryPanel
-      title="Gear Tracker could not recover this page"
+      title="Wisconsin Creative could not recover this page"
       description="Retry the page before acting on the visible state. If the problem returns, go back to the dashboard and reopen the workflow."
       reset={reset}
       retryLabel="Retry page"

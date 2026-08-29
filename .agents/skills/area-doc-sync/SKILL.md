@@ -1,6 +1,6 @@
 ---
 name: area-doc-sync
-description: Gear Tracker documentation and task-lifecycle closeout workflow. Use when shipped or nearly shipped work needs AREA docs, gaps, decisions, active ledgers, plan archives, codemaps, and proof notes reconciled before handoff or gt-ship. Do not stage or commit unless explicitly requested.
+description: Wisconsin Creative documentation and task-lifecycle closeout workflow. Use when shipped or nearly shipped work needs AREA docs, gaps, decisions, active ledgers, plan archives, codemaps, and proof notes reconciled before handoff or gt-ship. Do not stage or commit unless explicitly requested.
 ---
 
 # Area Doc Sync

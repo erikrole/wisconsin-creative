@@ -90,7 +90,7 @@
 - ✅ Item-level audit trail
 
 ### Complexity vs. Cheqroom
-Cheqroom is simpler: scan item → confirm → close. Gear Tracker requires:
+Cheqroom is simpler: scan item → confirm → close. Wisconsin Creative requires:
 - Bulk item quantity handling (how many of X are back?)
 - Numbered item verification (scan Unit #5 specifically)
 - Loss marking (item didn't come back)

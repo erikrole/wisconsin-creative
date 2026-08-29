@@ -46,7 +46,7 @@ struct MenuBarContentView: View {
     private var restoringView: some View {
         VStack(spacing: 12) {
             ProgressView()
-            Text("Checking Gear Tracker…")
+            Text("Checking Wisconsin Creative…")
                 .font(.callout)
                 .foregroundStyle(.secondary)
         }
@@ -114,8 +114,8 @@ struct MenuBarContentView: View {
                 in: .rect(cornerRadius: 6)
             )
             .onHover { isHoveringRefresh = $0 }
-            .help("Refresh Gear Tracker status (⌘R)")
-            .accessibilityLabel("Refresh Gear Tracker status")
+            .help("Refresh Wisconsin Creative status (⌘R)")
+            .accessibilityLabel("Refresh Wisconsin Creative status")
         }
         .padding(16)
     }
@@ -296,7 +296,7 @@ struct MenuBarContentView: View {
             }
             .buttonStyle(.link)
             .keyboardShortcut("d", modifiers: .command)
-            .help("Open the Gear Tracker dashboard in your browser (⌘D)")
+            .help("Open the Wisconsin Creative dashboard in your browser (⌘D)")
             Spacer()
             Menu {
                 if let user = model.user {
@@ -422,7 +422,7 @@ private struct PickupBookingRow: View {
         .buttonStyle(.plain)
         .help(booking.title)
         .accessibilityLabel("\(booking.title), \(pickupLabel), \(booking.requester.name), \(booking.location.name)")
-        .accessibilityHint("Opens this booking in Gear Tracker")
+        .accessibilityHint("Opens this booking in Wisconsin Creative")
     }
 
     private var pickupLabel: String {
@@ -509,7 +509,7 @@ private struct OpenBookingRow: View {
         .buttonStyle(.plain)
         .help(booking.refNumber.map { "\(booking.title) · \($0)" } ?? booking.title)
         .accessibilityLabel(accessibilityLabel(at: now))
-        .accessibilityHint("Opens this checkout in Gear Tracker")
+        .accessibilityHint("Opens this checkout in Wisconsin Creative")
     }
 
     private var metadata: String {
@@ -610,7 +610,7 @@ private struct KioskRow: View {
             .onHover { isHovering = $0 }
             .accessibilityElement(children: .combine)
             .accessibilityAddTraits(.isButton)
-            .accessibilityHint("Opens kiosk devices in Gear Tracker")
+            .accessibilityHint("Opens kiosk devices in Wisconsin Creative")
             .help(buildHelp)
     }
 

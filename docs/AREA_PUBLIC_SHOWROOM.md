@@ -9,7 +9,7 @@
 - Version: V1
 
 ## Direction
-Make `/about` a shareable public overview for Gear Tracker. It should explain the product, feature set, technical stack, security model, and field-work model without exposing authenticated data or changing the operational app shell.
+Make `/about` a shareable public overview for Wisconsin Creative. It should explain the product, feature set, technical stack, security model, and field-work model without exposing authenticated data or changing the operational app shell.
 
 ## Core Rules
 1. Public showroom pages live outside `src/app/(app)` and must not use the authenticated `AppShell`.

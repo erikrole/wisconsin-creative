@@ -6,7 +6,7 @@ Status: Complete, with physical attachment mapping deferred to operator review
 
 ## Execution Prompt
 
-Clean up Gear Tracker item data without UI churn. Treat the current database, item docs, bulk inventory docs, importer contract, and schema as the source of truth. Work in thin, independently verifiable slices. Start with a repeatable read-only audit, then normalize taxonomy, resolve serialized-vs-item-family duplicates, backfill scan identity, and convert camera-tied accessories into attachments where operationally correct. Do not delete history. Do not write authoritative status from imported/source status text. Prove every mutation with before/after counts, affected rows, and focused tests or source-contract checks when code changes are involved. Keep `tasks/todo.md`, this plan, relevant `AREA_*.md`, `GAPS_AND_RISKS.md`, and codemaps in sync when functionality or docs change.
+Clean up Wisconsin Creative item data without UI churn. Treat the current database, item docs, bulk inventory docs, importer contract, and schema as the source of truth. Work in thin, independently verifiable slices. Start with a repeatable read-only audit, then normalize taxonomy, resolve serialized-vs-item-family duplicates, backfill scan identity, and convert camera-tied accessories into attachments where operationally correct. Do not delete history. Do not write authoritative status from imported/source status text. Prove every mutation with before/after counts, affected rows, and focused tests or source-contract checks when code changes are involved. Keep `tasks/todo.md`, this plan, relevant `AREA_*.md`, `GAPS_AND_RISKS.md`, and codemaps in sync when functionality or docs change.
 
 ## Source Contracts
 

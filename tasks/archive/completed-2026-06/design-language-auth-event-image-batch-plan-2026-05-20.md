@@ -24,4 +24,4 @@ Continue reducing route-level accessibility drift without changing product workf
 
 ## Review
 - TypeScript, migration-prefix, whitespace, and production build verification passed.
-- Browser smoke on the correct Gear Tracker dev server (`localhost:3012`) showed `/register`, `/forgot-password`, and `/reset-password?token=demo-token` with named inputs and no console errors. Protected `/change-password`, `/items/test-item-id`, and `/events/test-event-id` redirected cleanly to login with no console errors.
+- Browser smoke on the correct Wisconsin Creative dev server (`localhost:3012`) showed `/register`, `/forgot-password`, and `/reset-password?token=demo-token` with named inputs and no console errors. Protected `/change-password`, `/items/test-item-id`, and `/events/test-event-id` redirected cleanly to login with no console errors.

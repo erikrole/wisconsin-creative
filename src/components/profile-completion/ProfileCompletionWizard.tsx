@@ -54,7 +54,7 @@ import {
 const STEP_COPY: Record<ProfileCompletionStep, { title: string; description: string }> = {
   EMAIL: {
     title: "Confirm your email addresses",
-    description: "Your campus email is also your Gear Tracker login. Add your required Athletics address.",
+    description: "Your campus email is also your Wisconsin Creative login. Add your required Athletics address.",
   },
   PHONES: {
     title: "Add your phone numbers",
@@ -601,7 +601,7 @@ export function ProfileCompletionWizard({
                   />
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground">Issue code can be found in the bottom right of your Wiscard. Gear Tracker combines both values into the exact kiosk lookup value.</p>
+              <p className="text-xs text-muted-foreground">Issue code can be found in the bottom right of your Wiscard. Wisconsin Creative combines both values into the exact kiosk lookup value.</p>
             </div>
           )}
 

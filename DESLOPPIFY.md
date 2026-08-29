@@ -2,7 +2,7 @@
 
 Review date: 2026-06-22
 
-Scope: initial review of the current Gear Tracker repo, with cleanup execution tracked as tasks are selected. All items were completed or converted into standing maintenance policy on 2026-06-22.
+Scope: initial review of the current Wisconsin Creative repo, with cleanup execution tracked as tasks are selected. All items were completed or converted into standing maintenance policy on 2026-06-22.
 
 Verification run:
 

@@ -1,6 +1,6 @@
 ---
 name: audit-page-ios
-description: Compatibility alias for the former Gear Tracker iOS screen audit. Use only when the user explicitly invokes /audit-page-ios; immediately continue with gt-audit-ios, the canonical read-only native readiness audit.
+description: Compatibility alias for the former Wisconsin Creative iOS screen audit. Use only when the user explicitly invokes /audit-page-ios; immediately continue with gt-audit-ios, the canonical read-only native readiness audit.
 ---
 
 # Audit Page iOS

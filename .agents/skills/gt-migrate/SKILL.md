@@ -1,6 +1,6 @@
 ---
 name: gt-migrate
-description: Canonical Gear Tracker Prisma and Neon migration workflow. Use when the user runs /gt-migrate, changes Prisma schema, designs a schema slice, generates migrations, investigates migration drift, works with Neon, or needs database deploy recovery. Supersedes prisma-migrate-safely.
+description: Canonical Wisconsin Creative Prisma and Neon migration workflow. Use when the user runs /gt-migrate, changes Prisma schema, designs a schema slice, generates migrations, investigates migration drift, works with Neon, or needs database deploy recovery. Supersedes prisma-migrate-safely.
 ---
 
 # /gt-migrate

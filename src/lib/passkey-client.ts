@@ -36,10 +36,10 @@ export function passkeyErrorMessage(error: unknown, context: PasskeyContext): st
         return "This device already has a passkey for your account.";
       case "ERROR_INVALID_DOMAIN":
       case "ERROR_INVALID_RP_ID":
-        return "Passkeys are not available on this address. Open Gear Tracker at its usual web address.";
+        return "Passkeys are not available on this address. Open Wisconsin Creative at its usual web address.";
       case "ERROR_AUTHENTICATOR_MISSING_DISCOVERABLE_CREDENTIAL_SUPPORT":
       case "ERROR_AUTHENTICATOR_MISSING_USER_VERIFICATION_SUPPORT":
-        return "This security key cannot store a Gear Tracker passkey. Use Face ID, Touch ID, or your device unlock instead.";
+        return "This security key cannot store a Wisconsin Creative passkey. Use Face ID, Touch ID, or your device unlock instead.";
       default:
         break;
     }
@@ -53,9 +53,9 @@ export function passkeyErrorMessage(error: unknown, context: PasskeyContext): st
     case "InvalidStateError":
       return "This device already has a passkey for your account.";
     case "SecurityError":
-      return "Passkeys are not available on this address. Open Gear Tracker at its usual web address.";
+      return "Passkeys are not available on this address. Open Wisconsin Creative at its usual web address.";
     case "NotSupportedError":
-      return "This device cannot create a Gear Tracker passkey. Use your password instead.";
+      return "This device cannot create a Wisconsin Creative passkey. Use your password instead.";
     default:
       break;
   }

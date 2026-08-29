@@ -1,6 +1,6 @@
 ---
 name: audit-page-web
-description: Compatibility alias for the former Gear Tracker web page audit. Use only when the user explicitly invokes /audit-page-web; immediately continue with gt-audit-web, the canonical read-only web readiness audit.
+description: Compatibility alias for the former Wisconsin Creative web page audit. Use only when the user explicitly invokes /audit-page-web; immediately continue with gt-audit-web, the canonical read-only web readiness audit.
 ---
 
 # Audit Page Web

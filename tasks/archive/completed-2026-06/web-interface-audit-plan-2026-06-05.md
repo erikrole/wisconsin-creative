@@ -1,7 +1,7 @@
 # Web Interface Audit Plan - 2026-06-05
 
 ## Goal
-- Audit Gear Tracker web interfaces end to end and improve the weakest current UI/UX surfaces while preserving existing product contracts.
+- Audit Wisconsin Creative web interfaces end to end and improve the weakest current UI/UX surfaces while preserving existing product contracts.
 - Keep each slice narrow, independently testable, and documented.
 
 ## Source Checks
