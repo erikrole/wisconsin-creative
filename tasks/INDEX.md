@@ -37,8 +37,9 @@ Audit files intentionally remain at root for now because the repo audit skills r
 
 ## Active Follow-up Ledgers
 
+- `schedule-timeline-context-hardening-plan-2026-08-30.md` - end-to-end List/Week/Calendar browsing hardening is complete; the active follow-up brings the shared versioned staff crew editor and Home/Away/empty setup to all three views, with authenticated parity proof, matched review captures, and final shared-tree gates still tracked.
 - `list-state-preservation-plan-2026-08-26.md` - preserve Schedule and Items filters, view state, sort, and pagination across detail navigation and browser Back.
-- `macos-companion-hardening-polish-plan.md` - shipped Developer ID/notarized macOS 1.0.0 companion with event-driven refresh, projection/session privacy hardening, and native interaction/accessibility polish; native XCTest, full smoke, and real APNs proof remain.
+- `macos-companion-hardening-polish-plan.md` - installed Developer ID/notarized macOS 1.0.4 companion with crash-durable Keychain identity recovery, event-driven refresh, projection/session privacy hardening, and native interaction/accessibility polish; post-enrollment cold-restart, full smoke, and real APNs proof remain.
 - `repository-audit-improvement-plan.md` - current whole-repository evidence-first audit, ranked repair, verification, and proof-boundary ledger.
 - `overdue-notification-hardening-plan.md` - durable five-stage checkout escalation is implemented locally; migration, responder configuration, deployment, and authenticated channel/timing proof remain.
 - `schedule-window-kernel-plan-2026-08-26.md` - centralize effective schedule-window and conflict overlap semantics across assignment and Open Work paths.
@@ -55,6 +56,8 @@ Audit files intentionally remain at root for now because the repo audit skills r
 - `ios-schedule-core-redesign-plan.md` - implementation is complete; List and Calendar appearance screenshots remain blocked only by the locked Mac.
 - `admin-helper-followups.md` - remaining admin helper and low-priority systemic follow-ups.
 - `bulk-battery-followups.md` - remaining battery-adjacent future slices.
+- `battery-operations-experience-plan-2026-08-30.md` - compact Battery Ops family workspaces, product-aware unit receiving, derived numbered counts, quantity correction, and metadata handoff.
+- `football-sony-battery-family-plan-2026-08-30.md` - corrected two-family/one-policy contract is recorded and the local eligibility experiment is removed; physical family/unit creation and acceptance remain under GAP-74.
 - `internal-public-beta-release-cut-followup.md` - release cut work that requires a clean worktree and explicit shipping approval.
 - `repo-public-surface-plan-2026-08-15.md` - public README, GitHub About metadata, and conservative web-release posture.
 - `signature-capture-micro-app-plan.md` - Signatures execution ledger for supported team, Creative Staff, Administration, and one-off rosters; pen-only capture, private artifacts, hardening, and rollout proof.

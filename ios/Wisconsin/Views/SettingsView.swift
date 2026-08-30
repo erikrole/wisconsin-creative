@@ -16,6 +16,7 @@ struct SettingsView: View {
 
     @State private var showSignOutConfirm = false
     @AppStorage("WisconsinThemeChoice") private var themeChoice: ThemeChoice = .system
+    @AppStorage(HapticsPreference.key) private var hapticsEnabled = true
 
     private static let iosSettingsURL = URL(string: UIApplication.openSettingsURLString)!
     private static let privacyURL = AppEnvironment.baseURL.appending(path: "privacy")
@@ -67,10 +68,7 @@ struct SettingsView: View {
                                     ProgressView()
                                         .controlSize(.small)
                                 } else {
-                                    Image(systemName: "chevron.forward")
-                                        .font(.footnote.weight(.semibold))
-                                        .foregroundStyle(.tertiary)
-                                        .accessibilityHidden(true)
+                                    EmptyView()
                                 }
                             }
                         }
@@ -102,6 +100,14 @@ struct SettingsView: View {
                 .pickerStyle(.menu)
             } footer: {
                 Text("Your theme choice is saved on this device only.")
+            }
+
+            Section {
+                Toggle("Haptic feedback", isOn: $hapticsEnabled)
+            } header: {
+                Text("Feedback")
+            } footer: {
+                Text("Turn off app-generated vibration while keeping the system's standard control feedback.")
             }
 
             Section {

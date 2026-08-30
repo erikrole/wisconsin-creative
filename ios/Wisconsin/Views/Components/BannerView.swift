@@ -42,7 +42,7 @@ struct BannerView: View {
             if let actionLabel, let action {
                 Button(actionLabel, action: action)
                     .font(.footnote.weight(.semibold))
-                    .tint(severity == .info ? Color.accentColor : .white)
+                    .tint(severity == .info ? Color.brandPrimary : .white)
             }
         }
         .padding(.horizontal, 14)

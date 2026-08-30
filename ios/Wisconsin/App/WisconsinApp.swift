@@ -1,4 +1,5 @@
 import CoreSpotlight
+import Foundation
 import SwiftUI
 import SwiftData
 import TipKit
@@ -18,7 +19,7 @@ struct WisconsinApp: App {
 
     init() {
         AppMetricMonitor.shared.start()
-        try? Tips.configure()
+        try? Tips.configure([.displayFrequency(.daily)])
 #if DEBUG
         // Harness screenshots must be deterministic: a first-run tip popover
         // otherwise lands over whatever surface is being captured.
@@ -70,7 +71,12 @@ struct WisconsinApp: App {
                     // capability-gates, so a widget left on the Home Screen
                     // after a role change opens nothing the user may not see.
                     case "schedule":
-                        appState.pendingAppIntentDestination = .todaySchedule
+                        let eventId = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+                        if eventId.isEmpty {
+                            appState.pendingAppIntentDestination = .todaySchedule
+                        } else {
+                            appState.pendingPushEventId = eventId
+                        }
                     case "bookings":
                         appState.pendingAppIntentDestination = .myGear
                     default:
@@ -246,7 +252,7 @@ struct ScheduleOpenWorkTip: Tip {
     }
 
     var message: Text? {
-        Text("Claim an open shift, post a trade, or review your availability.")
+        Text("Open the Trade Board to review available shifts and post or claim a trade.")
     }
 
     var options: [Option] {
@@ -502,9 +508,9 @@ private struct WindowPrivacyShieldHost: UIViewRepresentable {
 struct RootView: View {
     @Environment(SessionStore.self) private var session
     @Environment(ProfileCompletionStore.self) private var profileCompletion
+    @Environment(AppState.self) private var appState
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
-    @State private var showPushPrePrompt = false
     @State private var earnedBadgeQueue: [EarnedBadgeReward] = []
     @State private var badgeRewardPollInFlight = false
 
@@ -588,21 +594,6 @@ struct RootView: View {
                 }
             }
         }
-        .onChange(of: profileCompletion.pushPromptEligibleUserId, initial: true) { _, userId in
-            guard let userId, session.currentUser?.id == userId else { return }
-            let sessionBoundary = authSessionBoundary.capture()
-            Task {
-                await maybeShowPushPrompt(
-                    for: userId,
-                    sessionBoundary: sessionBoundary
-                )
-            }
-        }
-        .sheet(isPresented: $showPushPrePrompt) {
-            PushPrePromptView()
-                .presentationDetents([.fraction(0.62), .large])
-                .presentationDragIndicator(.visible)
-        }
         .overlay {
             if session.currentUser != nil, let reward = earnedBadgeQueue.first {
                 BadgeEarnedCelebrationView(
@@ -612,6 +603,19 @@ struct RootView: View {
                 )
                 .zIndex(100)
             }
+        }
+        // iPad keyboards and Mac Catalyst users need a stable, app-wide way
+        // to reach Settings. The action feeds the same Profile destination
+        // used by the visible gear button; it does not create a second
+        // settings surface or bypass role routing.
+        .background {
+            Button("Settings…") {
+                appState.pendingSettingsRoute = true
+            }
+            .keyboardShortcut(",", modifiers: .command)
+            .frame(width: 0, height: 0)
+            .opacity(0.01)
+            .accessibilityHidden(true)
         }
     }
 
@@ -654,33 +658,4 @@ struct RootView: View {
         await pollBadgeRewards(for: userId)
     }
 
-    @MainActor
-    private func maybeShowPushPrompt(
-        for userId: String,
-        sessionBoundary: UUID
-    ) async {
-        // Only ever ask once — if the user dismissed the soft prompt without
-        // tapping Enable, respect that decision until they toggle from settings.
-        let key = "WisconsinPushSoftPromptShown"
-        guard !UserDefaults.standard.bool(forKey: key) else { return }
-        guard session.currentUser?.id == userId,
-              authSessionBoundary.owns(sessionBoundary),
-              session.currentUser?.isReadOnlyRolePreview != true else {
-            return
-        }
-        let settings = await UNUserNotificationCenter.current().notificationSettings()
-        guard settings.authorizationStatus == .notDetermined else { return }
-        // Small delay so it doesn't crash into the LoginView → AppTabView swap.
-        do {
-            try await Task.sleep(for: .milliseconds(600))
-        } catch {
-            return
-        }
-        guard session.currentUser?.id == userId,
-              authSessionBoundary.owns(sessionBoundary) else {
-            return
-        }
-        UserDefaults.standard.set(true, forKey: key)
-        showPushPrePrompt = true
-    }
 }

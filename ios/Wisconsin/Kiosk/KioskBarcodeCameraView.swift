@@ -87,7 +87,7 @@ struct KioskBarcodeCameraView: View {
             Button {
                 onCancel()
             } label: {
-                Label("Done", systemImage: "xmark")
+                Label("Close", systemImage: "xmark")
                     .font(.headline)
                     .foregroundStyle(.white)
                     .padding(.horizontal, 16)

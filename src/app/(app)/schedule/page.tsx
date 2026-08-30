@@ -30,7 +30,7 @@ import { useScheduleData } from "@/hooks/use-schedule-data";
 import { ScheduleFilters } from "./_components/ScheduleFilters";
 import { CalendarView } from "./_components/CalendarView";
 import { WeekView } from "./_components/WeekView";
-import { classifyError, handleAuthRedirect, isAbortError, parseErrorMessage } from "@/lib/errors";
+import { classifyError, handleAuthRedirect, isAbortError, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { ListView } from "./_components/ListView";
 import { NewEventSheet } from "./_components/NewEventSheet";
 import { ScheduleReadiness } from "./_components/ScheduleReadiness";
@@ -38,6 +38,8 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { CollaboratorSchedule } from "./_components/CollaboratorSchedule";
 import { AutoAssignDialog } from "@/components/schedule/AutoAssignDialog";
 import type { Area } from "@/types/areas";
+import { ScheduleCrewSheet, type CrewTemplateSide } from "./_components/ScheduleCrewSheet";
+import type { CalendarEntry } from "./_components/types";
 
 const ShiftDetailPanel = dynamic(
   () => import("@/components/ShiftDetailPanel"),
@@ -55,8 +57,6 @@ const SCHEDULE_EXPORTS = [
   { type: "trades", label: "Trade Board activity" },
   { type: "gear-readiness", label: "Gear readiness" },
 ] as const;
-
-type CrewTemplateSide = "HOME" | "AWAY" | "EMPTY";
 
 export default function SchedulePage() {
   const { data: user, isLoading } = useCurrentUser();
@@ -79,6 +79,7 @@ function InternalSchedulePage() {
   const [hidingEventIds, setHidingEventIds] = useState<Set<string>>(() => new Set());
   const [newEventOpen, setNewEventOpen] = useState(false);
   const [autoAssignOpen, setAutoAssignOpen] = useState(false);
+  const [selectedCrewEntryId, setSelectedCrewEntryId] = useState<string | null>(null);
   const settingUpRef = useRef<Set<string>>(new Set());
   const [settingUpEventIds, setSettingUpEventIds] = useState<Set<string>>(() => new Set());
 
@@ -134,11 +135,11 @@ function InternalSchedulePage() {
   }, [handleSetEventVisibility]);
 
   const handleQuickManageCrew = useCallback((eventId: string) => {
-    setExpandedRowId(eventId);
-  }, [setExpandedRowId]);
+    setSelectedCrewEntryId(eventId);
+  }, []);
 
-  const handleSetupCrew = useCallback(async (eventId: string, templateSide: CrewTemplateSide) => {
-    if (settingUpRef.current.has(eventId)) return;
+  const createCrewSetup = useCallback(async (eventId: string, templateSide: CrewTemplateSide): Promise<string | null> => {
+    if (settingUpRef.current.has(eventId)) return null;
     settingUpRef.current.add(eventId);
     setSettingUpEventIds((current) => new Set(current).add(eventId));
     try {
@@ -147,17 +148,23 @@ function InternalSchedulePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ eventId, templateSide }),
       });
-      if (handleAuthRedirect(res)) return;
+      if (handleAuthRedirect(res)) return null;
       if (res.ok) {
+        const json = await parseJsonSafely<{ data?: { id?: string } }>(res);
+        const groupId = json?.data?.id;
+        if (!groupId) {
+          toast.error("Crew setup response was incomplete. Refresh and try again.");
+          return null;
+        }
         const templateLabel = templateSide === "EMPTY" ? "Empty" : templateSide === "HOME" ? "Home" : "Away";
-        setExpandedRowId(eventId);
-        toast.success(`${templateLabel} crew setup created. Manage crew is open below.`);
-        loadData();
+        toast.success(`${templateLabel} crew setup created.`);
+        void loadData();
+        return groupId;
       } else {
         toast.error(await parseErrorMessage(res, "Failed to set up crew"));
       }
     } catch (error) {
-      if (isAbortError(error)) return;
+      if (isAbortError(error)) return null;
       toast.error(error instanceof TypeError ? "You're offline - crew setup was not created" : "Failed to set up crew");
     } finally {
       settingUpRef.current.delete(eventId);
@@ -167,7 +174,21 @@ function InternalSchedulePage() {
         return next;
       });
     }
-  }, [loadData, setExpandedRowId]);
+    return null;
+  }, [loadData]);
+
+  const handleListSetupCrew = useCallback(async (eventId: string, templateSide: CrewTemplateSide) => {
+    const groupId = await createCrewSetup(eventId, templateSide);
+    if (groupId) setExpandedRowId(eventId);
+  }, [createCrewSetup, setExpandedRowId]);
+
+  const openCrewSheet = useCallback((entry: CalendarEntry) => {
+    setSelectedCrewEntryId(entry.id);
+  }, []);
+
+  const selectedCrewEntry = selectedCrewEntryId
+    ? data.entries.find((entry) => entry.id === selectedCrewEntryId) ?? null
+    : null;
 
   const openTradeBoard = useCallback(() => {
     setTradeSheetOpen(true);
@@ -294,6 +315,7 @@ function InternalSchedulePage() {
       <div ref={sentinelRef} aria-hidden className="h-px" />
       <div
         ref={stickyRef}
+        data-schedule-sticky-frame
         className={cn(
           "sticky z-30 -mx-8 border-b bg-background px-8 max-md:-mx-4 max-md:px-4",
           pinned
@@ -383,12 +405,13 @@ function InternalSchedulePage() {
       {data.filters.viewMode === "calendar" && (
         <CalendarView
           entries={data.filteredEntries}
+          loading={data.loading}
           calMonth={data.calMonth}
           setCalMonth={data.setCalMonth}
           expandedDay={data.expandedDay}
           setExpandedDay={data.setExpandedDay}
-          onSelectGroup={data.setSelectedGroupId}
-          onSwitchToList={() => data.filters.setViewMode("list")}
+          canManageCrew={isStaff}
+          onOpenCrew={openCrewSheet}
         />
       )}
 
@@ -402,7 +425,7 @@ function InternalSchedulePage() {
           currentUserId={data.currentUserId}
           currentUserRole={data.currentUserRole}
           myShiftsOnly={data.filters.myShiftsOnly}
-          onSelectGroup={data.setSelectedGroupId}
+          onOpenCrew={openCrewSheet}
         />
       )}
 
@@ -413,6 +436,7 @@ function InternalSchedulePage() {
           filteredEntries={data.filteredEntries}
           groupedEntries={data.groupedEntries}
           loading={data.loading}
+          refreshing={data.refreshing}
           loadError={data.loadError}
           loadData={data.loadData}
           myShiftsOnly={data.filters.myShiftsOnly}
@@ -433,9 +457,21 @@ function InternalSchedulePage() {
           onSelectGroup={data.setSelectedGroupId}
           hidingEventIds={hidingEventIds}
           onHideEvent={isStaff ? handleHideEvent : undefined}
-          onSetupCrew={isStaff ? handleSetupCrew : undefined}
+          onSetupCrew={isStaff ? handleListSetupCrew : undefined}
           onQuickManageCrew={isStaff ? handleQuickManageCrew : undefined}
           settingUpEventIds={settingUpEventIds}
+        />
+      )}
+
+      {isStaff && (
+        <ScheduleCrewSheet
+          entry={selectedCrewEntry}
+          open={Boolean(selectedCrewEntry)}
+          onOpenChange={(open) => {
+            if (!open) setSelectedCrewEntryId(null);
+          }}
+          onSetupCrew={createCrewSetup}
+          onUpdated={data.loadData}
         />
       )}
 

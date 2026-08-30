@@ -5,11 +5,15 @@ import { HttpError, ok, parsePagination } from "@/lib/http";
 import { createAuditEntry } from "@/lib/audit";
 
 const patchNotificationSchema = z.object({
-  action: z.enum(["mark_all_read", "mark_read"]),
+  action: z.enum(["mark_all_read", "mark_read", "mark_unread"]),
   id: z.string().cuid().optional(),
+  ids: z.array(z.string().cuid()).max(500).optional(),
 }).refine(
   (data) => data.action !== "mark_read" || !!data.id,
   { message: "id is required for mark_read action" }
+).refine(
+  (data) => data.action !== "mark_unread" || Boolean(data.id || data.ids?.length),
+  { message: "id or ids is required for mark_unread action" }
 );
 
 export const GET = withAuth(async (req, { user }) => {
@@ -48,6 +52,10 @@ export const PATCH = withAuth(async (req, { user }) => {
   const body = patchNotificationSchema.parse(rawBody);
 
   if (body.action === "mark_all_read") {
+    const unread = await db.notification.findMany({
+      where: { userId: user.id, readAt: null },
+      select: { id: true },
+    });
     const result = await db.notification.updateMany({
       where: { userId: user.id, readAt: null },
       data: { readAt: new Date() }
@@ -60,7 +68,24 @@ export const PATCH = withAuth(async (req, { user }) => {
       action: "notifications_marked_all_read",
       after: { count: result.count },
     });
-    return ok({ success: true });
+    return ok({ success: true, ids: unread.map(({ id }) => id) });
+  }
+
+  if (body.action === "mark_unread") {
+    const ids = body.ids ?? (body.id ? [body.id] : []);
+    const result = await db.notification.updateMany({
+      where: { userId: user.id, id: { in: ids }, readAt: { not: null } },
+      data: { readAt: null },
+    });
+    await createAuditEntry({
+      actorId: user.id,
+      actorRole: user.role,
+      entityType: "notification",
+      entityId: user.id,
+      action: "notifications_marked_unread",
+      after: { requestedCount: ids.length, count: result.count },
+    });
+    return ok({ success: true, count: result.count });
   }
 
   const result = await db.notification.updateMany({

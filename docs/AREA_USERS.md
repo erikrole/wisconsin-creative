@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Users
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-26
+- Last Updated: 2026-08-30
 - Status: Active
 - Version: V1.4
 
@@ -130,6 +130,8 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 6. Ensure audit logs include actor role, target owner, and exception metadata.
 
 ## Change Log
+
+- 2026-08-30: **Self-service account deletion now performs real personal-data cleanup.** After current-password reauthentication and explicit confirmation, the authenticated delete route keeps only the minimum pseudonymized user row needed to preserve custody and audit history, removes direct profile and authentication data, deletes notification/device/app-preference records and passkeys, revokes companion access, and writes an exact retention-boundary audit entry. Admin deactivation remains a separate reversible lifecycle. Local service, route, and source-contract tests pass; authenticated production read-back remains a rollout gate.
 
 - 2026-08-27: **Scoreboard records now agree across the surfaces that show them, and the profile Scoreboard filters by site.** The profile "official games" chip was counted over an open-ended window that had no season end and no completed-game bound, so a next-season game could land in a record labelled 2026–27 immediately above "events worked in 2026–27"; that record is now bounded to the same season window and finished-game rule the Scoreboard tab uses. The team aggregate's record read gained the same completed-game bound its coverage read already had, so a result posted before a fixture ends no longer counts on the team Scoreboard while the per-person Scoreboard still shows nothing. `/api/scoreboard` no longer rejects a retired sport code (`SWIM`, `XC`) that its own facets had just offered — an unknown code answers with an empty intersection instead of a 400 that silently reset the filter stack. New: profile Scoreboard (web and native) filters by Home/Away/Neutral alongside result and sport, narrowing the record, breakdowns, and game list together. Hardening: the team aggregate pushes sport and site into the database and reads facet options as four scalar columns instead of the whole crew graph. Focused tests, `tsc`, lint, `npm run build:app`, and the iPhone 16 Pro iOS 26.5 `Wisconsin` build pass; authenticated production read-back remains under GAP-71.
 

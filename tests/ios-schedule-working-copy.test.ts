@@ -50,7 +50,7 @@ describe("native schedule working-copy adoption", () => {
     expect(eventDetail).toContain("Editing again restarts the 10-minute timer");
     expect(eventDetail).toContain("discardWorkingSchedule");
     expect(eventDetail).toContain("onConvertAndReplace");
-    expect(eventDetail).toContain("Replace and convert…");
+    expect(eventDetail).toContain("Replace and Convert…");
     expect(eventDetail).toContain("isWorkingCopy: canManageShifts && vm.workingEditor != nil");
     expect(eventDetail).not.toContain("APIClient.shared.updateShiftTimes");
     expect(eventDetail).not.toContain("APIClient.shared.deleteShift(");
@@ -74,5 +74,24 @@ describe("native schedule working-copy adoption", () => {
     expect(addSheet).toContain("callStartsAt: workerType == .student && customizeTimes ? startsAt : nil");
     expect(addSheet).toContain("Staff and collaborators do not have a separate call time.");
     expect(addSheet).not.toContain("APIClient.shared.addShift(");
+  });
+
+  it("exposes named server-backed undo and redo through the system edit routes", () => {
+    expect(apiClient).toContain("func undoWorkingSchedule");
+    expect(apiClient).toContain("func redoWorkingSchedule");
+    expect(apiClient).toContain('action: "undo"');
+    expect(apiClient).toContain('action: "redo"');
+    expect(scheduleModels).toContain("struct WorkingScheduleHistoryAction: Codable");
+    expect(scheduleModels).toContain("let canUndo: Bool?");
+    expect(scheduleModels).toContain("let canRedo: Bool?");
+    expect(scheduleModels).toContain("var hasUndo: Bool");
+    expect(scheduleModels).toContain("var hasRedo: Bool");
+    expect(eventDetail).toContain("ScheduleWorkingCopyUndoCoordinator");
+    expect(eventDetail).toContain("@Environment(\\.undoManager)");
+    expect(eventDetail).toContain('keyboardShortcut("z", modifiers: .command)');
+    expect(eventDetail).toContain('keyboardShortcut("z", modifiers: [.command, .shift])');
+    expect(eventDetail).toContain("workingHistoryError");
+    expect(eventDetail).toContain("acceptWorkingScheduleEditor");
+    expect(eventDetail).toContain("Revert Pending Changes");
   });
 });

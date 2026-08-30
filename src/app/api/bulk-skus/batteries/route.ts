@@ -5,6 +5,7 @@ import { buildActiveBulkUnitAllocationMap, effectiveBulkUnitStatus } from "@/lib
 import { db } from "@/lib/db";
 import { ok } from "@/lib/http";
 import { requirePermission } from "@/lib/rbac";
+import { getBatteryOpsFixture } from "@/lib/fixtures/battery-ops";
 import { BookingKind, BookingStatus } from "@prisma/client";
 
 function daysSince(value: Date | null | undefined, now: Date) {
@@ -12,8 +13,25 @@ function daysSince(value: Date | null | undefined, now: Date) {
   return Math.max(0, Math.floor((now.getTime() - value.getTime()) / (1000 * 60 * 60 * 24)));
 }
 
-export const GET = withAuth(async (_req, { user }) => {
+function wantsDevelopmentFixture(req: Request) {
+  if (process.env.NODE_ENV !== "development") return false;
+  if (new URL(req.url).searchParams.get("fixture") === "battery-ops") return true;
+
+  const referer = req.headers.get("referer");
+  if (!referer) return false;
+  try {
+    return new URL(referer).searchParams.get("fixture") === "battery-ops";
+  } catch {
+    return false;
+  }
+}
+
+export const GET = withAuth(async (req, { user }) => {
   requirePermission(user.role, "bulk_sku", "adjust");
+
+  if (wantsDevelopmentFixture(req)) {
+    return ok({ data: getBatteryOpsFixture() });
+  }
 
   const now = new Date();
   const [rawSkus, cameraAssets, activeUnitAllocations] = await Promise.all([
@@ -25,6 +43,18 @@ export const GET = withAuth(async (_req, { user }) => {
         location: { select: { id: true, name: true } },
         categoryRel: { select: { id: true, name: true } },
         balances: true,
+        products: {
+          where: { active: true },
+          select: {
+            id: true,
+            name: true,
+            brand: true,
+            model: true,
+            active: true,
+            _count: { select: { units: true } },
+          },
+          orderBy: [{ name: "asc" }],
+        },
         units: {
           orderBy: { unitNumber: "asc" },
         },
@@ -106,6 +136,7 @@ export const GET = withAuth(async (_req, { user }) => {
 
       return {
         id: unit.id,
+        productId: unit.productId,
         unitNumber: unit.unitNumber,
         status,
         notes: unit.notes,
@@ -151,6 +182,13 @@ export const GET = withAuth(async (_req, { user }) => {
       minThreshold: sku.minThreshold,
       threshold,
       binQrCodeValue: sku.binQrCodeValue,
+      products: (sku.products ?? []).map((product) => ({
+        id: product.id,
+        name: product.name,
+        brand: product.brand,
+        model: product.model,
+        assignedUnitCount: product._count.units,
+      })),
       counts: {
         total,
         available,

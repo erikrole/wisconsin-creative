@@ -74,7 +74,7 @@ describe("iOS native Guides page", () => {
     expect(view).toContain("NativeMarkdownArticle(markdown: displayedGuide.markdown)");
     expect(view).toContain("GuideReaderHeader(");
     expect(view).toContain(".font(.title.weight(.bold))");
-    expect(view).toContain('.navigationTitle("")');
+    expect(view).toContain(".navigationTitle(displayedGuide.title)");
     expect(view).toContain('Text("Updated \\(guide.updatedSummary) by \\(guide.author.name)")');
     expect(view).not.toContain("let summary: String");
     expect(view).toContain("if case .rule = block.kind { return true }");

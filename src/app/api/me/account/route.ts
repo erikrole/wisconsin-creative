@@ -11,7 +11,7 @@ const schema = z.object({
   confirmation: z.literal("DELETE"),
 });
 
-/** DELETE /api/me/account - deactivate the caller and revoke every session. */
+/** DELETE /api/me/account - erase direct account data and revoke access. */
 export const DELETE = withAuth(async (req, { user }) => {
   await enforceRateLimit(`account-delete:${user.id}`, { max: 5, windowMs: 60_000 });
 
@@ -41,10 +41,16 @@ export const DELETE = withAuth(async (req, { user }) => {
     targetUserId: user.id,
     actorId: user.id,
     actorRole: user.role,
+    erasePersonalData: true,
     audit: {
       action: "account_self_deleted",
       before: { active: true },
-      after: { active: false },
+      after: {
+        active: false,
+        personalData: "erased",
+        authentication: "revoked",
+        retainedRecords: ["historical custody", "audit attribution"],
+      },
     },
   });
 

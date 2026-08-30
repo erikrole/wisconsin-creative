@@ -1,5 +1,78 @@
 import SwiftUI
 
+/// Bridges server-backed Schedule history into the system undo manager. The
+/// manager remains the owner of three-finger/shake and keyboard dispatch; the
+/// target only registers the inverse operation and lets the server decide
+/// whether the expected version is still current.
+@MainActor
+private final class ScheduleWorkingCopyUndoCoordinator: NSObject {
+    typealias Action = @MainActor () async -> Bool
+
+    private(set) var hasUndoAction = false
+    private(set) var hasRedoAction = false
+
+    func clear(manager: UndoManager?) {
+        guard let manager else { return }
+        manager.removeAllActions(withTarget: self)
+        hasUndoAction = false
+        hasRedoAction = false
+    }
+
+    func registerCommand(
+        label: String,
+        manager: UndoManager?,
+        undo: @escaping Action,
+        redo: @escaping Action
+    ) {
+        guard let manager else { return }
+        manager.registerUndo(withTarget: self) { [weak self] _ in
+            self?.perform(
+                label: label,
+                manager: manager,
+                action: undo,
+                inverse: redo,
+                inverseMenuTitle: "Redo (label)"
+            )
+        }
+        manager.setActionName("Undo (label)")
+        hasUndoAction = true
+        hasRedoAction = false
+    }
+
+    private func perform(
+        label: String,
+        manager: UndoManager,
+        action: @escaping Action,
+        inverse: @escaping Action,
+        inverseMenuTitle: String
+    ) {
+        manager.registerUndo(withTarget: self) { [weak self] _ in
+            self?.perform(
+                label: label,
+                manager: manager,
+                action: inverse,
+                inverse: action,
+                inverseMenuTitle: "Undo (label)"
+            )
+        }
+        manager.setActionName(inverseMenuTitle)
+        if inverseMenuTitle.hasPrefix("Redo") {
+            hasUndoAction = false
+            hasRedoAction = true
+        } else {
+            hasUndoAction = true
+            hasRedoAction = false
+        }
+
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            if !(await action()) {
+                self.clear(manager: manager)
+            }
+        }
+    }
+}
+
 // MARK: - View Model
 
 @MainActor
@@ -33,6 +106,12 @@ final class EventDetailViewModel {
     /// Set when the staff draft overlay failed but the published roster loaded.
     /// Kept apart from `error`, which blanks the crew section.
     var workingCopyError: String?
+    /// A system undo/redo failure is kept with the working-copy state so the
+    /// same retryable error surface is used for buttons, keyboard, and the
+    /// three-finger/shake route.
+    var workingHistoryError: String?
+    var lastWorkingHistoryAction: String?
+    private var isPerformingHistoryAction = false
 
     init(event: ScheduleEvent, myShift: MyShift?) {
         self.event = event
@@ -48,43 +127,56 @@ final class EventDetailViewModel {
     /// state that starts `true`. Guarding on `isLoading` itself would have made
     /// the very first `load()` return immediately and never fetch anything.
     private var isFetching = false
+    private var loadRequests = LatestRequestGeneration()
 
-    func load(includeWorkingCopy: Bool? = nil) async {
-        guard !isFetching else { return }
+    func load(includeWorkingCopy: Bool? = nil, forceRefresh: Bool = false) async {
+        if !forceRefresh, isFetching { return }
         isFetching = true
         if let includeWorkingCopy { loadsWorkingCopy = includeWorkingCopy }
+        let shouldLoadWorkingCopy = includeWorkingCopy ?? loadsWorkingCopy
+        let requestToken = loadRequests.begin()
         isLoading = true
         error = nil
+        workingHistoryError = nil
         defer {
-            isFetching = false
-            isLoading = false
-            hasLoaded = true
+            if loadRequests.owns(requestToken) {
+                isFetching = false
+                isLoading = false
+                hasLoaded = true
+            }
         }
         do {
             let group = try await APIClient.shared.shiftGroup(eventId: event.id)
+            guard loadRequests.owns(requestToken), !Task.isCancelled else { return }
             shiftGroup = group
             workingCopyError = nil
-            if loadsWorkingCopy, let group {
+            if shouldLoadWorkingCopy, let group {
                 // The working copy is a staff draft overlay on a roster that has
                 // already loaded, and `displayedShifts` falls back to the
                 // published shifts without it. Losing it must not blank the crew
                 // everyone came here to read -- the Schedule list learned the
                 // same lesson with its separate `refreshError`.
                 do {
-                    workingEditor = try await APIClient.shared.workingScheduleEditor(shiftGroupId: group.id)
+                    let editor = try await APIClient.shared.workingScheduleEditor(shiftGroupId: group.id)
+                    guard loadRequests.owns(requestToken), !Task.isCancelled else { return }
+                    workingEditor = editor
                 } catch is CancellationError {
+                    guard loadRequests.owns(requestToken) else { return }
                     workingEditor = nil
                 } catch {
+                    guard loadRequests.owns(requestToken), !Task.isCancelled else { return }
                     workingEditor = nil
                     workingCopyError = error.localizedDescription
                 }
             } else {
+                guard loadRequests.owns(requestToken), !Task.isCancelled else { return }
                 workingEditor = nil
             }
         } catch APIError.unauthorized {
             // SessionStore handles the global routing on 401.
             return
         } catch {
+            guard loadRequests.owns(requestToken), !Task.isCancelled else { return }
             self.error = error.localizedDescription
         }
     }
@@ -111,6 +203,34 @@ final class EventDetailViewModel {
     func shift(containingAssignmentId assignmentId: String) -> EventShift? {
         displayedShifts.first { shift in
             shift.assignments.contains { $0.id == assignmentId }
+        }
+    }
+
+    func performWorkingHistoryAction(_ action: String) async -> Bool {
+        guard !isPerformingHistoryAction,
+              let groupId = shiftGroup?.id,
+              workingEditor?.hasWorkingCopy == true else { return false }
+        isPerformingHistoryAction = true
+        lastWorkingHistoryAction = action
+        defer { isPerformingHistoryAction = false }
+        do {
+            let editor = action == "redo"
+                ? try await APIClient.shared.redoWorkingSchedule(
+                    shiftGroupId: groupId,
+                    expectedVersion: workingVersion
+                )
+                : try await APIClient.shared.undoWorkingSchedule(
+                    shiftGroupId: groupId,
+                    expectedVersion: workingVersion
+                )
+            workingEditor = editor
+            workingHistoryError = nil
+            Haptics.success()
+            return true
+        } catch {
+            workingHistoryError = error.localizedDescription
+            Haptics.error()
+            return false
         }
     }
 }
@@ -143,10 +263,10 @@ enum EventConfirmation: Identifiable {
 
     var title: String {
         switch self {
-        case .claim(let shift): "Claim \(shift.area.shiftAreaLabel) shift?"
+        case .claim: "Claim shift?"
         case .cancelTrade: "Remove from Trade Board?"
-        case .unassign(let assignment): "Remove \(assignment.user.name)?"
-        case .delete(let shift): "Delete \(shift.area.shiftAreaLabel) shift?"
+        case .unassign: "Remove assignment?"
+        case .delete: "Delete shift?"
         case .revertWorkingSchedule: "Revert pending changes?"
         }
     }
@@ -187,6 +307,7 @@ struct EventDetailView: View {
     let myShift: MyShift?
     let eventWork: DashboardEventWork?
     @Environment(SessionStore.self) private var session
+    @Environment(\.undoManager) private var undoManager
 
     @State private var vm: EventDetailViewModel
     @State private var assignTarget: EventShift?
@@ -201,6 +322,8 @@ struct EventDetailView: View {
     @State private var actionError: String?
     @State private var actionErrorTitle = "Couldn't update event"
     @State private var actionRetry: (() -> Void)?
+    @State private var undoCoordinator = ScheduleWorkingCopyUndoCoordinator()
+    @State private var seededSystemUndo = false
 
     init(event: ScheduleEvent, myShift: MyShift?, eventWork: DashboardEventWork? = nil) {
         self.event = event
@@ -222,7 +345,7 @@ struct EventDetailView: View {
         (session.currentUser?.role ?? "") == "STUDENT"
     }
 
-    var body: some View {
+    private var eventContent: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: Brand.Space.md) {
                 eventHeader
@@ -241,115 +364,234 @@ struct EventDetailView: View {
             .padding(.bottom, 88)
         }
         .background(Color(.systemGroupedBackground))
-        // A hand-rolled `.principal` item stood in for this, which meant the
-        // system never owned the title: no large-title collapse, no automatic
-        // back-button labelling, and a font the platform didn't pick.
-        .navigationTitle("Event")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) { addShiftToolbarButton }
-            if hasOverflowActions {
-                ToolbarItem(placement: .topBarTrailing) { overflowMenu }
+    }
+
+    private var confirmationPresentedBinding: Binding<Bool> {
+        Binding(
+            get: { confirmation != nil },
+            set: { if !$0 { confirmation = nil } }
+        )
+    }
+
+    private var actionErrorPresentedBinding: Binding<Bool> {
+        Binding(
+            get: { actionError != nil },
+            set: {
+                if !$0 {
+                    actionError = nil
+                    actionRetry = nil
+                }
             }
-        }
-        .safeAreaInset(edge: .bottom) { primaryActionBar }
-        .task { await vm.load(includeWorkingCopy: canManageShifts) }
-        .task(id: vm.workingEditor?.autoReleaseAt) {
-            guard let releaseAt = vm.workingEditor?.autoReleaseAt else { return }
-            let delay = max(0, releaseAt.timeIntervalSinceNow) + 1
-            try? await Task.sleep(for: .seconds(delay))
-            if !Task.isCancelled { await vm.load() }
-        }
-        .refreshable { await vm.load() }
-        .sheet(item: $assignTarget) { shift in
-            assignStudentSheet(for: shift)
-        }
-        .sheet(item: $replaceTarget) { shift in
-            replacePersonSheet(for: shift)
-        }
-        .sheet(isPresented: $showAddShift) {
-            if let group = vm.shiftGroup {
-                AddShiftSheet(
-                    shiftGroupId: group.id,
-                    expectedWorkingVersion: vm.workingVersion,
-                    eventTitle: scheduleEventDisplayTitle(event),
-                    defaultStart: vm.workingEditor?.defaultWindow?.startsAt ?? event.startsAt,
-                    defaultEnd: vm.workingEditor?.defaultWindow?.endsAt ?? event.endsAt,
-                    onAdded: { Task { await vm.load() } }
-                )
+        )
+    }
+
+    private var eventBaseView: some View {
+        eventContent
+            // A hand-rolled `.principal` item stood in for this, which meant the
+            // system never owned the title: no large-title collapse, no automatic
+            // back-button labelling, and a font the platform didn't pick.
+            .navigationTitle("Event")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) { addShiftToolbarButton }
+                if hasOverflowActions {
+                    ToolbarItem(placement: .topBarTrailing) { overflowMenu }
+                }
             }
-        }
-        .sheet(item: $editTimesTarget) { shift in
-            EditShiftTimesSheet(
-                shift: shift,
-                eventTitle: scheduleEventDisplayTitle(event)
-            ) { newStart, newEnd in
-                await updateShiftTimes(shift, startsAt: newStart, endsAt: newEnd)
+            .safeAreaInset(edge: .bottom) { primaryActionBar }
+            .task {
+                await vm.load(includeWorkingCopy: canManageShifts)
+                seedSystemUndoIfNeeded()
             }
-        }
-        .sheet(isPresented: $showAllCallTimes) {
-            if let shift = vm.displayedShifts.first(where: { $0.workerType == "ST" }), let editor = vm.workingEditor {
+            .task(id: vm.workingEditor?.autoReleaseAt) {
+                guard let releaseAt = vm.workingEditor?.autoReleaseAt else { return }
+                let delay = max(0, releaseAt.timeIntervalSinceNow) + 1
+                try? await Task.sleep(for: .seconds(delay))
+                if !Task.isCancelled { await vm.load() }
+            }
+            .refreshable { await vm.load(forceRefresh: true) }
+            .onChange(of: vm.workingEditor?.hasWorkingCopy) { _, hasWorkingCopy in
+                if hasWorkingCopy != true {
+                    undoCoordinator.clear(manager: undoManager)
+                    seededSystemUndo = false
+                }
+            }
+    }
+
+    private var eventPresentedView: some View {
+        eventBaseView
+            .sheet(item: $assignTarget) { shift in
+                assignStudentSheet(for: shift)
+            }
+            .sheet(item: $replaceTarget) { shift in
+                replacePersonSheet(for: shift)
+            }
+            .sheet(isPresented: $showAddShift) {
+                if let group = vm.shiftGroup {
+                    AddShiftSheet(
+                        shiftGroupId: group.id,
+                        expectedWorkingVersion: vm.workingVersion,
+                        eventTitle: scheduleEventDisplayTitle(event),
+                        defaultStart: vm.workingEditor?.defaultWindow?.startsAt ?? event.startsAt,
+                        defaultEnd: vm.workingEditor?.defaultWindow?.endsAt ?? event.endsAt,
+                        onAdded: { editor in
+                            acceptWorkingScheduleEditor(editor)
+                        }
+                    )
+                }
+            }
+            .sheet(item: $editTimesTarget) { shift in
                 EditShiftTimesSheet(
                     shift: shift,
-                    eventTitle: scheduleEventDisplayTitle(event),
-                    scope: .allAssigned,
-                    defaultStart: editor.defaultWindow?.startsAt ?? event.startsAt,
-                    defaultEnd: editor.defaultWindow?.endsAt ?? event.endsAt
+                    eventTitle: scheduleEventDisplayTitle(event)
                 ) { newStart, newEnd in
-                    await updateAllShiftTimes(startsAt: newStart, endsAt: newEnd)
+                    await updateShiftTimes(shift, startsAt: newStart, endsAt: newEnd)
                 }
             }
-        }
-        .sheet(item: $postTradeTarget) { candidate in
-            PostTradeSheet(candidate: candidate) { _ in
-                Task { await vm.load() }
-            }
-        }
-        // One dialog for every confirmable action. This was five separate
-        // `confirmationDialog`s, each bound through a hand-rolled
-        // `Binding(get:set:)` against its own `@State` target, each repeating
-        // the same nil-out-on-dismiss dance. The action-error alert below stays
-        // separate — it reports a failure rather than confirming an intent.
-        .confirmationDialog(
-            confirmation?.title ?? "",
-            isPresented: Binding(
-                get: { confirmation != nil },
-                set: { if !$0 { confirmation = nil } }
-            ),
-            titleVisibility: .visible,
-            presenting: confirmation
-        ) { pending in
-            Button(pending.confirmTitle, role: pending.isDestructive ? .destructive : nil) {
-                perform(pending)
-            }
-            Button(pending.cancelTitle, role: .cancel) { confirmation = nil }
-        } message: { pending in
-            if let message = message(for: pending) {
-                Text(message)
-            }
-        }
-        .alert(
-            actionErrorTitle,
-            isPresented: Binding(
-                get: { actionError != nil },
-                set: {
-                    if !$0 {
-                        actionError = nil
-                        actionRetry = nil
+            .sheet(isPresented: $showAllCallTimes) {
+                if let shift = vm.displayedShifts.first(where: { $0.workerType == "ST" }), let editor = vm.workingEditor {
+                    EditShiftTimesSheet(
+                        shift: shift,
+                        eventTitle: scheduleEventDisplayTitle(event),
+                        scope: .allAssigned,
+                        defaultStart: editor.defaultWindow?.startsAt ?? event.startsAt,
+                        defaultEnd: editor.defaultWindow?.endsAt ?? event.endsAt
+                    ) { newStart, newEnd in
+                        await updateAllShiftTimes(startsAt: newStart, endsAt: newEnd)
                     }
                 }
-            )
-        ) {
-            if let retry = actionRetry {
-                Button("Try Again") { retry() }
             }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text(actionError ?? "")
+            .navigationDestination(item: $postTradeTarget) { candidate in
+                PostTradeSheet(candidate: candidate, wrapsInNavigationStack: false) { _ in
+                    Task { await vm.load() }
+                }
+            }
+    }
+
+    private var eventConfirmedView: some View {
+        eventPresentedView
+            // One dialog for every confirmable action. This was five separate
+            // `confirmationDialog`s, each bound through a hand-rolled
+            // `Binding(get:set:)` against its own `@State` target, each repeating
+            // the same nil-out-on-dismiss dance. The action-error alert below stays
+            // separate — it reports a failure rather than confirming an intent.
+            .confirmationDialog(
+                confirmation?.title ?? "",
+                isPresented: confirmationPresentedBinding,
+                titleVisibility: .visible,
+                presenting: confirmation
+            ) { pending in
+                confirmationActions(for: pending)
+            } message: { pending in
+                confirmationMessageView(for: pending)
+            }
+    }
+
+    private var eventErrorView: some View {
+        eventConfirmedView
+            .alert(
+                actionErrorTitle,
+                isPresented: actionErrorPresentedBinding
+            ) {
+                actionErrorActions
+            } message: {
+                Text(actionError ?? "")
+            }
+    }
+
+    @ViewBuilder
+    private func confirmationActions(for pending: EventConfirmation) -> some View {
+        Button(pending.confirmTitle, role: pending.isDestructive ? .destructive : nil) {
+            perform(pending)
+        }
+        Button(pending.cancelTitle, role: .cancel) { confirmation = nil }
+    }
+
+    @ViewBuilder
+    private func confirmationMessageView(for pending: EventConfirmation) -> some View {
+        if let message = message(for: pending) {
+            Text(message)
         }
     }
 
+    @ViewBuilder
+    private var actionErrorActions: some View {
+        if let retry = actionRetry {
+            Button("Retry") { retry() }
+        }
+        Button("Cancel", role: .cancel) {}
+    }
+
+    var body: some View {
+        eventErrorView
+    }
+
     // MARK: - Action handlers
+
+    private func acceptWorkingScheduleEditor(_ editor: WorkingScheduleEditor) {
+        vm.workingEditor = editor
+        vm.workingHistoryError = nil
+        vm.workingCopyError = nil
+        guard editor.hasWorkingCopy else {
+            undoCoordinator.clear(manager: undoManager)
+            seededSystemUndo = false
+            return
+        }
+        guard let label = editor.historyAction?.label ?? editor.undoLabel else { return }
+        registerSystemUndo(label: label)
+    }
+
+    /// Restore one server history entry for a newly opened draft so the system
+    /// undo manager can receive the same three-finger/shake and keyboard input
+    /// as an edit made during this presentation.
+    private func seedSystemUndoIfNeeded() {
+        guard !seededSystemUndo, let editor = vm.workingEditor else { return }
+        seededSystemUndo = true
+        guard editor.hasWorkingCopy, editor.hasUndo else { return }
+        if let label = editor.undoLabel {
+            registerSystemUndo(label: label)
+        }
+    }
+
+    private func registerSystemUndo(label: String) {
+        let model = vm
+        undoCoordinator.registerCommand(
+            label: label,
+            manager: undoManager,
+            undo: { [weak model] in
+                guard let model else { return false }
+                return await model.performWorkingHistoryAction("undo")
+            },
+            redo: { [weak model] in
+                guard let model else { return false }
+                return await model.performWorkingHistoryAction("redo")
+            }
+        )
+    }
+
+    private func requestWorkingHistoryAction(_ action: String) {
+        guard vm.workingEditor?.hasWorkingCopy == true else { return }
+        if action == "undo", undoCoordinator.hasUndoAction {
+            undoManager?.undo()
+            return
+        }
+        if action == "redo", undoCoordinator.hasRedoAction {
+            undoManager?.redo()
+            return
+        }
+
+        // A draft may have been opened after a previous session's undo stack
+        // was persisted. The server remains authoritative, so the visible
+        // button still works even when the hosting scene has no seeded action.
+        Task { @MainActor in
+            let succeeded = await vm.performWorkingHistoryAction(action)
+            if succeeded {
+                undoCoordinator.clear(manager: undoManager)
+                seededSystemUndo = false
+                seedSystemUndoIfNeeded()
+            }
+        }
+    }
 
     private func assignStudentSheet(for shift: EventShift) -> some View {
         let workingCopyShiftGroupId = canManageShifts ? vm.shiftGroup?.id : nil
@@ -364,7 +606,9 @@ struct EventDetailView: View {
             shiftEndsAt: shift.endsAt,
             eventTitle: scheduleEventDisplayTitle(event),
             sportCode: event.sportCode,
-            onAssigned: { Task { await vm.load() } }
+            onAssigned: { editor in
+                acceptWorkingScheduleEditor(editor)
+            }
         )
     }
 
@@ -383,7 +627,9 @@ struct EventDetailView: View {
             sportCode: event.sportCode,
             replacementWorkerType: targetWorkerType,
             replacingUserName: currentWorkerName,
-            onAssigned: { Task { await vm.load() } }
+            onAssigned: { editor in
+                acceptWorkingScheduleEditor(editor)
+            }
         )
     }
 
@@ -469,13 +715,13 @@ struct EventDetailView: View {
                   let shift = vm.shift(containingAssignmentId: assignment.id) else {
                 throw APIError.serverError("Crew is unavailable. Refresh and try again.")
             }
-            _ = try await APIClient.shared.unassignWorkingScheduleSlot(
+            let editor = try await APIClient.shared.unassignWorkingScheduleSlot(
                 shiftGroupId: groupId,
                 expectedVersion: vm.workingVersion,
                 slotKey: shift.id
             )
             Haptics.success()
-            await vm.load()
+            acceptWorkingScheduleEditor(editor)
         } catch {
             presentActionError(title: "Couldn't remove assignment", error: error) {
                 await unassign(assignment)
@@ -510,13 +756,13 @@ struct EventDetailView: View {
     private func deleteShift(_ shift: EventShift) async {
         guard let groupId = vm.shiftGroup?.id else { return }
         do {
-            _ = try await APIClient.shared.removeWorkingScheduleSlot(
+            let editor = try await APIClient.shared.removeWorkingScheduleSlot(
                 shiftGroupId: groupId,
                 expectedVersion: vm.workingVersion,
                 slotKey: shift.id
             )
             Haptics.success()
-            await vm.load()
+            acceptWorkingScheduleEditor(editor)
         } catch {
             presentActionError(title: "Couldn't delete shift", error: error) {
                 await deleteShift(shift)
@@ -527,7 +773,7 @@ struct EventDetailView: View {
     private func updateShiftTimes(_ shift: EventShift, startsAt: Date, endsAt: Date) async -> String? {
         do {
             guard let groupId = vm.shiftGroup?.id else { return "Crew is unavailable. Refresh and try again." }
-            _ = try await APIClient.shared.setWorkingScheduleCallWindow(
+            let editor = try await APIClient.shared.setWorkingScheduleCallWindow(
                 shiftGroupId: groupId,
                 expectedVersion: vm.workingVersion,
                 slotKey: shift.id,
@@ -535,7 +781,7 @@ struct EventDetailView: View {
                 callEndsAt: endsAt
             )
             Haptics.success()
-            await vm.load()
+            acceptWorkingScheduleEditor(editor)
             return nil
         } catch {
             Haptics.error()
@@ -546,14 +792,14 @@ struct EventDetailView: View {
     private func updateAllShiftTimes(startsAt: Date, endsAt: Date) async -> String? {
         do {
             guard let groupId = vm.shiftGroup?.id else { return "Crew is unavailable. Refresh and try again." }
-            _ = try await APIClient.shared.setWorkingScheduleCallWindowForAll(
+            let editor = try await APIClient.shared.setWorkingScheduleCallWindowForAll(
                 shiftGroupId: groupId,
                 expectedVersion: vm.workingVersion,
                 callStartsAt: startsAt,
                 callEndsAt: endsAt
             )
             Haptics.success()
-            await vm.load()
+            acceptWorkingScheduleEditor(editor)
             return nil
         } catch {
             Haptics.error()
@@ -564,7 +810,7 @@ struct EventDetailView: View {
     private func duplicateShift(_ shift: EventShift) async {
         guard let groupId = vm.shiftGroup?.id else { return }
         do {
-            _ = try await APIClient.shared.addWorkingScheduleSlot(
+            let editor = try await APIClient.shared.addWorkingScheduleSlot(
                 shiftGroupId: groupId,
                 expectedVersion: vm.workingVersion,
                 area: shift.area,
@@ -573,7 +819,7 @@ struct EventDetailView: View {
                 callEndsAt: shift.callEndsAt
             )
             Haptics.success()
-            await vm.load()
+            acceptWorkingScheduleEditor(editor)
         } catch {
             presentActionError(title: "Couldn't duplicate shift", error: error) {
                 await duplicateShift(shift)
@@ -588,12 +834,12 @@ struct EventDetailView: View {
         isDiscarding = true
         defer { isDiscarding = false }
         do {
-            _ = try await APIClient.shared.discardWorkingSchedule(
+            let editor = try await APIClient.shared.discardWorkingSchedule(
                 shiftGroupId: groupId,
                 expectedVersion: vm.workingVersion
             )
             Haptics.success()
-            await vm.load()
+            acceptWorkingScheduleEditor(editor)
         } catch {
             presentActionError(title: "Couldn't revert schedule changes", error: error) {
                 await self.discardWorkingSchedule()
@@ -773,11 +1019,11 @@ struct EventDetailView: View {
         }
     }
 
-    /// Staff commands that are neither the primary action nor a row action.
-    /// Gated as a whole so students never see an empty ellipsis.
-    private var hasOverflowActions: Bool {
-        canEditCallWindow || (canManageShifts && vm.hasUnpublishedChanges)
-    }
+    /// Sharing and copying are available to every viewer; staff-only commands
+    /// are added inside the same menu when their capabilities apply. Keeping
+    /// the entry point visible preserves a direct route to Share Event instead
+    /// of hiding it behind the event card's long press.
+    private var hasOverflowActions: Bool { true }
 
     @ViewBuilder
     private var overflowMenu: some View {
@@ -798,7 +1044,7 @@ struct EventDetailView: View {
                     Button {
                         showAllCallTimes = true
                     } label: {
-                        Label("Set Student call time", systemImage: "person.2")
+                        Label("Set Student Call Time…", systemImage: "person.2")
                     }
                 }
             }
@@ -807,7 +1053,7 @@ struct EventDetailView: View {
                     Button(role: .destructive) {
                         confirmation = .revertWorkingSchedule
                     } label: {
-                        Label("Revert pending changes", systemImage: "arrow.uturn.backward")
+                        Label("Revert Pending Changes", systemImage: "arrow.uturn.backward")
                     }
                 }
             }
@@ -1274,35 +1520,73 @@ struct EventDetailView: View {
     }
 
     private var workingScheduleReviewCard: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "pencil.and.list.clipboard")
-                .foregroundStyle(Color.statusText(.orange))
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Pending schedule changes")
-                    .font(.subheadline.weight(.semibold))
-                Text(vm.workingChangeSummary)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                // How many people this actually touches — the fact that decides
-                // whether reverting is safe. It was decoded and never shown.
-                if let affected = vm.workingEditor?.affectedWorkerCount, affected > 0 {
-                    Text(affected == 1 ? "1 worker affected" : "\(affected) workers affected")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Color.statusText(.orange))
-                }
-                if let error = vm.workingEditor?.autoReleaseError {
-                    Text(error)
-                        .font(.caption)
-                        .foregroundStyle(Color.statusText(.red))
-                } else if let releaseAt = vm.workingEditor?.autoReleaseAt {
-                    Text("Workers see this at \(releaseAt.formatted(date: .omitted, time: .shortened)). Editing again restarts the 10-minute timer.")
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "pencil.and.list.clipboard")
+                    .foregroundStyle(Color.statusText(.orange))
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Pending schedule changes")
+                        .font(.subheadline.weight(.semibold))
+                    Text(vm.workingChangeSummary)
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                    // How many people this actually touches — the fact that decides
+                    // whether reverting is safe. It was decoded and never shown.
+                    if let affected = vm.workingEditor?.affectedWorkerCount, affected > 0 {
+                        Text(affected == 1 ? "1 worker affected" : "\(affected) workers affected")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Color.statusText(.orange))
+                    }
+                    if let error = vm.workingEditor?.autoReleaseError {
+                        Text(error)
+                            .font(.caption)
+                            .foregroundStyle(Color.statusText(.red))
+                    } else if let releaseAt = vm.workingEditor?.autoReleaseAt {
+                        Text("Workers see this at \(releaseAt.formatted(date: .omitted, time: .shortened)). Editing again restarts the 10-minute timer.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            if let historyError = vm.workingHistoryError {
+                Label("Couldn't update schedule history", systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.statusText(.red))
+                Text(historyError)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                if let action = vm.lastWorkingHistoryAction {
+                    Button("Retry") { requestWorkingHistoryAction(action) }
+                        .font(.caption.weight(.semibold))
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            VStack(alignment: .trailing, spacing: 4) {
+
+            HStack(spacing: 8) {
+                Button {
+                    requestWorkingHistoryAction("undo")
+                } label: {
+                    Label("Undo", systemImage: "arrow.uturn.backward")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .keyboardShortcut("z", modifiers: .command)
+                .disabled(vm.workingEditor?.hasUndo != true)
+                .accessibilityLabel(vm.workingEditor?.undoLabel.map { "Undo \($0)" } ?? "Undo")
+
+                Button {
+                    requestWorkingHistoryAction("redo")
+                } label: {
+                    Label("Redo", systemImage: "arrow.uturn.forward")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .keyboardShortcut("z", modifiers: [.command, .shift])
+                .disabled(vm.workingEditor?.hasRedo != true)
+                .accessibilityLabel(vm.workingEditor?.redoLabel.map { "Redo \($0)" } ?? "Redo")
+
                 Button("Revert", role: .destructive) { confirmation = .revertWorkingSchedule }
                     .font(.caption.weight(.semibold))
                     .disabled(isDiscarding)
@@ -1650,7 +1934,13 @@ struct ShiftRow: View {
                                 .fixedSize()
                         }
                     }
-                    assignedPersonView
+                    HStack(alignment: .top, spacing: 8) {
+                        assignedPersonView
+                        Spacer(minLength: 4)
+                        if hasVisibleRowActions {
+                            rowActionsMenu
+                        }
+                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             } else {
@@ -1675,6 +1965,9 @@ struct ShiftRow: View {
                     assignedPersonView
 
                     Spacer(minLength: 0)
+                    if hasVisibleRowActions {
+                        rowActionsMenu
+                    }
                 }
             }
         }
@@ -1748,6 +2041,91 @@ struct ShiftRow: View {
         shift.assignments.filter { $0.status != "REQUESTED" }
     }
 
+    private var hasVisibleRowActions: Bool {
+        guard !shift.isOpen else { return false }
+        if canManageShifts { return true }
+        return activeAssignments.contains { assignment in
+            assignment.user.id == currentUserId
+        }
+    }
+
+    /// Visible overflow entry point for row lifecycle work. Long press remains
+    /// a shortcut, but consequential commands no longer depend on discovering a
+    /// hidden context menu. Shift-level commands appear once per row; trade
+    /// actions retain assignment names when a row has more than one person.
+    @ViewBuilder
+    private var rowActionsMenu: some View {
+        Menu {
+            if canManageShifts {
+                Section("Shift") {
+                    if isStudentSlot, let onEditTimes {
+                        Button { onEditTimes(shift) } label: {
+                            Label("Change Call Time", systemImage: "clock.badge.checkmark")
+                        }
+                    }
+                    if let onDuplicate {
+                        Button { onDuplicate(shift) } label: {
+                            Label("Duplicate Shift", systemImage: "plus.square.on.square")
+                        }
+                    }
+                }
+            }
+
+            if !isWorkingCopy, shift.startsAt > Date() {
+                Section("Trade Board") {
+                    ForEach(activeAssignments, id: \.id) { assignment in
+                        let isMine = currentUserId == assignment.user.id
+                        if assignment.isOnTradeBoard {
+                            if isMine || canManageShifts, let onCancelTrade {
+                                Button { onCancelTrade(assignment) } label: {
+                                    Label(
+                                        activeAssignments.count > 1
+                                            ? "Remove \(assignment.user.name) from Trade Board"
+                                            : "Remove from Trade Board",
+                                        systemImage: "arrow.uturn.backward"
+                                    )
+                                }
+                            }
+                        } else if isMine || (canManageShifts && assignment.user.isStudentSchedulingClass), let onPostTrade {
+                            Button { onPostTrade(shift, assignment) } label: {
+                                Label(
+                                    activeAssignments.count > 1
+                                        ? "Post \(assignment.user.name) to Trade Board"
+                                        : "Post to Trade Board",
+                                    systemImage: "arrow.left.arrow.right"
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            if canManageShifts {
+                Section {
+                    if let onUnassign {
+                        ForEach(activeAssignments, id: \.id) { assignment in
+                            Button(role: .destructive) { onUnassign(assignment) } label: {
+                                Label("Remove \(assignment.user.name)", systemImage: "person.fill.xmark")
+                            }
+                        }
+                    }
+                    if let onDelete {
+                        Button(role: .destructive) { onDelete(shift) } label: {
+                            Label("Delete Shift", systemImage: "trash")
+                        }
+                    }
+                }
+            }
+        } label: {
+            Image(systemName: "ellipsis.circle")
+                .font(.title3)
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Circle())
+        }
+        .accessibilityLabel("Actions for \(workerTypeLabel) shift")
+        .accessibilityHint("Shows shift, trade board, and removal actions")
+    }
+
     /// Long-pressing a crew row.
     ///
     /// HIG asks for grouped, ordered actions with destructive ones gathered at
@@ -1771,12 +2149,12 @@ struct ShiftRow: View {
         if shift.isOpen {
             if canManageShifts, let onAssign {
                 Button { onAssign(shift) } label: {
-                    Label("Assign someone", systemImage: "person.badge.plus")
+                    Label("Assign Someone", systemImage: "person.badge.plus")
                 }
             }
             if isStudent && isStudentSlot, let onRequest {
                 Button { onRequest(shift) } label: {
-                    Label("Claim this shift", systemImage: "hand.raised")
+                    Label("Claim Shift", systemImage: "hand.raised")
                 }
             }
         } else {
@@ -1790,7 +2168,7 @@ struct ShiftRow: View {
             if canManageShifts {
                 if isWorkingCopy, let onConvertAndReplace {
                     Button { onConvertAndReplace(shift) } label: {
-                        Label("Replace and convert…", systemImage: "arrow.left.arrow.right")
+                        Label("Replace and Convert…", systemImage: "arrow.left.arrow.right")
                     }
                 } else if !isWorkingCopy, let onAssign {
                     Button { onAssign(shift) } label: {
@@ -1840,12 +2218,12 @@ struct ShiftRow: View {
         if canManageShifts {
             if isStudentSlot, let onEditTimes {
                 Button { onEditTimes(shift) } label: {
-                    Label("Change call time", systemImage: "clock.badge.checkmark")
+                    Label("Change Call Time", systemImage: "clock.badge.checkmark")
                 }
             }
             if let onDuplicate {
                 Button { onDuplicate(shift) } label: {
-                    Label("Duplicate shift", systemImage: "plus.square.on.square")
+                    Label("Duplicate Shift", systemImage: "plus.square.on.square")
                 }
             }
         }
@@ -1872,7 +2250,7 @@ struct ShiftRow: View {
             }
             if let onDelete {
                 Button(role: .destructive) { onDelete(shift) } label: {
-                    Label("Delete shift", systemImage: "trash")
+                    Label("Delete Shift", systemImage: "trash")
                 }
             }
         }

@@ -9,6 +9,7 @@ import SwiftUI
 struct BlastBanner: View {
     let blast: ActiveBlast
     let onAcknowledge: () -> Void
+    @Environment(\.colorSchemeContrast) private var accessibilityContrast
 
     private var tone: StatusTone {
         switch blast.severity {
@@ -52,7 +53,9 @@ struct BlastBanner: View {
                 }
                 .buttonStyle(.plain)
                 .background(Color.statusText(tone), in: Capsule())
-                .foregroundStyle(.white)
+                .foregroundStyle(Color.statusControlForeground(tone, contrast: accessibilityContrast))
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Capsule())
                 .accessibilityLabel("Acknowledge: \(blast.title)")
             }
         }
@@ -89,6 +92,7 @@ struct BlastBannerStack: View {
     let blasts: [ActiveBlast]
     let onAppearBlast: (String) -> Void
     let onAcknowledge: (String) -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var visible: [ActiveBlast] {
         blasts.sorted { $0.severity.rank < $1.severity.rank }.prefix(3).map { $0 }
@@ -99,9 +103,9 @@ struct BlastBannerStack: View {
             ForEach(visible) { blast in
                 BlastBanner(blast: blast) { onAcknowledge(blast.id) }
                     .onAppear { onAppearBlast(blast.id) }
-                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
             }
         }
-        .animation(.snappy, value: visible.map(\.id))
+        .animation(reduceMotion ? nil : .snappy, value: visible.map(\.id))
     }
 }

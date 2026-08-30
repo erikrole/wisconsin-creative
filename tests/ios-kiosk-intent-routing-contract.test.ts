@@ -26,15 +26,16 @@ describe("iOS kiosk intent routing", () => {
     expect(event).toContain("Start Checkout for This Event");
   });
 
-  it("keeps exact-requester identity and editing scan rejection visible", () => {
+  it("keeps exact-requester identity and native editing intact", () => {
     const identity = source("ios/Wisconsin/Kiosk/KioskIdentityView.swift");
     const textField = source("ios/Wisconsin/Kiosk/KioskNativeTextField.swift");
     const shell = source("ios/Wisconsin/Kiosk/KioskShellView.swift");
     expect(identity).toContain("KioskFlowIntentReducer.canIdentify");
     expect(identity).toContain("intent?.expectedRequester.map { [$0] }");
-    expect(textField).toContain("KioskHIDBurstDetector");
-    expect(textField).toContain("rejectBurst(in: textField, baseline: baseline)");
-    expect(textField).toContain("parent.text = baseline");
+    expect(textField).not.toContain("KioskHIDBurstDetector");
+    expect(textField).not.toContain("rejectEditingBurst");
+    expect(textField).toContain("Returning `true` here preserves UITextField's");
+    expect(textField).toContain(") -> Bool { true }");
     expect(shell).toContain("KioskScannerStatusPill()");
   });
 });

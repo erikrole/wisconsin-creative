@@ -153,7 +153,7 @@ describe("iOS Schedule UI cleanup", () => {
     // Add Shift is a screen-level action and now lives in the navigation bar.
     expect(eventDetail).toContain("addShiftToolbarButton");
     expect(eventDetail).toContain("Label(\"Add Shift\", systemImage: \"plus\")");
-    expect(eventDetail).toContain("Button(\"Try Again\")");
+    expect(eventDetail).toContain("Button(\"Retry\")");
     expect(eventDetail).toContain('return "Today, \\(date.formatted');
     expect(eventDetail).toContain('return "Tomorrow, \\(date.formatted');
     // Gear is gone from this screen; a shift's gear no longer routes anywhere

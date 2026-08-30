@@ -39,9 +39,9 @@ describe("list state preservation source contracts", () => {
     expect(schedule).toContain("scheduleSearchSignatureRef");
     expect(schedule).toContain("skipNextScheduleUrlWriteRef");
     expect(schedule).toContain("router.replace(nextUrl, { scroll: false })");
-    expect(schedule).toContain("setViewMode(parseScheduleViewMode(query.get(\"view\")) ?? \"list\")");
-    expect(schedule).toContain("setAreaFilter(query.get(\"area\") ?? \"\")");
-    expect(schedule).toContain("setHomeAwayFilter(parseScheduleVenue(query.get(\"venue\")))");
+    expect(schedule).toContain("setViewModeRaw(parseScheduleViewMode(query.get(\"view\")) ?? \"list\")");
+    expect(schedule).toContain("setAreaFilterRaw(query.get(\"area\") ?? \"\")");
+    expect(schedule).toContain("setHomeAwayFilterRaw(parseScheduleVenue(query.get(\"venue\")))");
   });
 
   it("keeps existing queue/deep-link parameters while clearing owned filters", () => {

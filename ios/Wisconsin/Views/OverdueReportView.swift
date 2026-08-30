@@ -9,23 +9,32 @@ final class OverdueReportViewModel {
     var lastLoadedAt: Date?
 
     private static let freshnessWindow: TimeInterval = 60
+    private var loadRequests = LatestRequestGeneration()
 
     func load(forceRefresh: Bool = false) async {
         if !forceRefresh, let last = lastLoadedAt, Date().timeIntervalSince(last) < Self.freshnessWindow, report != nil {
             return
         }
-        guard !isLoading else { return }
+        if !forceRefresh, isLoading { return }
+        let requestToken = loadRequests.begin()
         isLoading = true
         if forceRefresh { error = nil }
+        defer {
+            if loadRequests.owns(requestToken) {
+                isLoading = false
+            }
+        }
         do {
-            report = try await APIClient.shared.overdueReport()
+            let fetchedReport = try await APIClient.shared.overdueReport()
+            guard loadRequests.owns(requestToken), !Task.isCancelled else { return }
+            report = fetchedReport
             error = nil
             lastLoadedAt = Date()
         } catch {
+            guard loadRequests.owns(requestToken), !Task.isCancelled else { return }
             // Keep stale data visible if a refresh fails.
             self.error = error.localizedDescription
         }
-        isLoading = false
     }
 }
 
@@ -36,7 +45,7 @@ struct OverdueReportView: View {
     var body: some View {
         Group {
             if vm.report == nil && vm.isLoading {
-                ProgressView()
+                ProgressView("Loading overdue report")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let error = vm.error, vm.report == nil {
                 ContentUnavailableView {
@@ -215,4 +224,3 @@ struct OverdueReportView: View {
         return rem > 0 ? "\(days)d \(rem)h" : "\(days)d"
     }
 }
-

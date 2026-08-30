@@ -152,6 +152,7 @@ struct BulkQuantityRow: View {
     var turnaroundIsCritical = false
     let onDecrement: () -> Void
     let onIncrement: () -> Void
+    @Environment(\.colorSchemeContrast) private var accessibilityContrast
 
     private var canIncrement: Bool { isAtPickupLocation && quantity < sku.availableQuantity }
     private var unitLabel: String {
@@ -198,7 +199,8 @@ struct BulkQuantityRow: View {
                         .background(Color(.tertiarySystemFill), in: Circle())
                 }
                 .buttonStyle(.plain)
-                .frame(width: 36, height: 36)
+                .frame(width: 44, height: 44)
+                .contentShape(Circle())
                 .disabled(quantity == 0)
                 .accessibilityLabel("Remove one \(sku.name)")
 
@@ -210,12 +212,13 @@ struct BulkQuantityRow: View {
                 Button(action: onIncrement) {
                     Image(systemName: "plus")
                         .font(.caption.weight(.bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Color.statusControlForeground(.purple, contrast: accessibilityContrast))
                         .frame(width: 28, height: 28)
                         .background(Color.statusText(.purple), in: Circle())
                 }
                 .buttonStyle(.plain)
-                .frame(width: 36, height: 36)
+                .frame(width: 44, height: 44)
+                .contentShape(Circle())
                 .disabled(!canIncrement)
                 .accessibilityLabel("Add one \(sku.name)")
             }

@@ -78,10 +78,10 @@
 | `LicenseCode` | 15 | 4 |
 | `LicenseCodeClaim` | 10 | 3 |
 | `SoftwareCredential` | 10 | 2 |
-| `SportConfig` | 8 | 1 |
+| `SportConfig` | 9 | 1 |
 | `SportShiftConfig` | 12 | 2 |
 | `ShiftGroup` | 20 | 4 |
-| `ShiftGroupWorkingCopy` | 15 | 3 |
+| `ShiftGroupWorkingCopy` | 17 | 3 |
 | `ScheduleBulkAssignment` | 13 | 3 |
 | `ScheduleBulkAssignmentItem` | 12 | 3 |
 | `Shift` | 14 | 4 |
@@ -408,6 +408,12 @@
 - `MANUAL`
 - `RESERVATION`
 - `AUTO_FILL`
+
+### `SportAutoAssignPolicy`
+
+- `FULL_CREW`
+- `STAFF_ONLY`
+- `HOLD`
 
 ### `ScheduleBulkAssignmentStatus`
 

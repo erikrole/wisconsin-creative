@@ -40,6 +40,10 @@ interface FormComboboxProps {
   allowClear?: boolean;
   /** Whether the combobox is disabled (renders plain text) */
   disabled?: boolean;
+  /** Additional trigger styling for a specific form surface. */
+  triggerClassName?: string;
+  ariaInvalid?: boolean;
+  ariaDescribedBy?: string;
 }
 
 export function FormCombobox({
@@ -52,6 +56,9 @@ export function FormCombobox({
   emptyLabel = "No results.",
   allowClear = false,
   disabled = false,
+  triggerClassName,
+  ariaInvalid,
+  ariaDescribedBy,
 }: FormComboboxProps) {
   const [open, setOpen] = useState(false);
   const selected = options.find((o) => o.value === value);
@@ -68,7 +75,9 @@ export function FormCombobox({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="h-9 w-full justify-between text-sm font-normal"
+          aria-invalid={ariaInvalid || undefined}
+          aria-describedby={ariaDescribedBy}
+          className={cn("h-9 w-full justify-between text-sm font-normal", triggerClassName)}
         >
           {selected ? (
             selected.label
@@ -137,6 +146,8 @@ interface CategoryComboboxProps {
   /** Button variant for the trigger */
   variant?: "outline" | "ghost";
   triggerClassName?: string;
+  ariaInvalid?: boolean;
+  ariaDescribedBy?: string;
 }
 
 export function CategoryCombobox({
@@ -151,6 +162,8 @@ export function CategoryCombobox({
   disabledLabel,
   variant = "outline",
   triggerClassName,
+  ariaInvalid,
+  ariaDescribedBy,
 }: CategoryComboboxProps) {
   const [open, setOpen] = useState(false);
 
@@ -169,6 +182,8 @@ export function CategoryCombobox({
           variant={variant}
           role="combobox"
           aria-expanded={open}
+          aria-invalid={ariaInvalid || undefined}
+          aria-describedby={ariaDescribedBy}
           className={cn("h-9 w-full justify-between text-sm font-normal", triggerClassName)}
         >
           {selectedCat ? (
@@ -265,6 +280,9 @@ interface BulkSkuComboboxProps {
   value: string;
   onValueChange: (value: string) => void;
   skus: BulkSkuOption[];
+  triggerClassName?: string;
+  ariaInvalid?: boolean;
+  ariaDescribedBy?: string;
 }
 
 export function BulkSkuCombobox({
@@ -272,6 +290,9 @@ export function BulkSkuCombobox({
   value,
   onValueChange,
   skus,
+  triggerClassName,
+  ariaInvalid,
+  ariaDescribedBy,
 }: BulkSkuComboboxProps) {
   const [open, setOpen] = useState(false);
   const selected = skus.find((s) => s.id === value);
@@ -284,7 +305,9 @@ export function BulkSkuCombobox({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="h-9 w-full justify-between text-sm font-normal"
+          aria-invalid={ariaInvalid || undefined}
+          aria-describedby={ariaDescribedBy}
+          className={cn("h-9 w-full justify-between text-sm font-normal", triggerClassName)}
         >
           {selected ? (
             selected.name

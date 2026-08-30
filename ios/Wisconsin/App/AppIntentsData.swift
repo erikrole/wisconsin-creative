@@ -5,10 +5,12 @@ import SwiftUI
 
 enum GearIntentError: Error, CustomLocalizedStringResourceConvertible {
     case signedOut
+    case unavailable
 
     var localizedStringResource: LocalizedStringResource {
         switch self {
         case .signedOut: "You're signed out. Open Wisconsin Creative and sign in first."
+        case .unavailable: "That shortcut isn't available for this account. Open Wisconsin Creative to see the tools available to you."
         }
     }
 }
@@ -21,6 +23,53 @@ private func mapIntentError(_ error: Error) -> Error {
     return error
 }
 
+/// Static App Shortcuts remain discoverable in system configuration, so each
+/// action verifies the signed-in role before it creates an app handoff. This
+/// turns a stale or role-inapplicable shortcut into a spoken, actionable result
+/// instead of leaving a pending destination that the app cannot open.
+func requireIntentCapability(_ capability: String) async throws {
+    do {
+        let user = try await APIClient.shared.me()
+        guard user.role != "COLLABORATOR"
+                || (user.capabilities ?? []).contains(capability) else {
+            throw GearIntentError.unavailable
+        }
+    } catch {
+        throw mapIntentError(error)
+    }
+}
+
+private func checkedOutSummaries() async throws -> [CheckoutIntentSummary] {
+    try await requireIntentCapability("MY_GEAR_VIEW")
+    do {
+        let me = try await APIClient.shared.me()
+        // `sort: endsAt` means the limited response still contains the
+        // soonest due checkouts — exactly the rows a compact snippet should
+        // prioritize.
+        let checkouts = try await APIClient.shared
+            .checkouts(activeOnly: false, status: .open, requesterId: me.id, sort: "endsAt", limit: 10)
+            .data
+        return checkouts
+            .map(CheckoutIntentSummary.init)
+            .sorted { $0.endsAt < $1.endsAt }
+    } catch {
+        throw mapIntentError(error)
+    }
+}
+
+private func nextShift() async throws -> MyShift? {
+    try await requireIntentCapability("PUBLISHED_SCHEDULE_VIEW")
+    do {
+        let shifts = try await APIClient.shared.myShifts(limit: 10)
+        let now = Date()
+        return shifts
+            .filter { $0.endsAt > now }
+            .min(by: { $0.startsAt < $1.startsAt })
+    } catch {
+        throw mapIntentError(error)
+    }
+}
+
 // MARK: - What Gear Is Out
 
 struct MyCheckedOutGearIntent: AppIntent {
@@ -30,28 +79,13 @@ struct MyCheckedOutGearIntent: AppIntent {
     )
     static let authenticationPolicy: IntentAuthenticationPolicy = .requiresLocalDeviceAuthentication
 
-    func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView {
-        let checkouts: [Booking]
-        do {
-            let me = try await APIClient.shared.me()
-            // `sort: endsAt` so a user with more than `limit` checkouts gets the
-            // soonest due — otherwise the overdue count below silently misses
-            // the oldest ones, which are exactly the overdue ones.
-            checkouts = try await APIClient.shared
-                .checkouts(activeOnly: false, status: .open, requesterId: me.id, sort: "endsAt", limit: 10)
-                .data
-        } catch {
-            throw mapIntentError(error)
-        }
-
-        let summaries = checkouts
-            .map(CheckoutIntentSummary.init)
-            .sorted { $0.endsAt < $1.endsAt }
+    func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetIntent {
+        let summaries = try await checkedOutSummaries()
 
         guard !summaries.isEmpty else {
             return .result(
                 dialog: "You don't have any gear checked out right now.",
-                view: GearOutSnippetView(checkouts: [])
+                snippetIntent: MyCheckedOutGearSnippetIntent()
             )
         }
 
@@ -74,7 +108,19 @@ struct MyCheckedOutGearIntent: AppIntent {
             dialog = IntentDialog("You have \(itemPhrase) out across \(checkoutPhrase).")
         }
 
-        return .result(dialog: dialog, view: GearOutSnippetView(checkouts: summaries))
+        return .result(dialog: dialog, snippetIntent: MyCheckedOutGearSnippetIntent())
+    }
+}
+
+/// The system calls this separately from the spoken result so the dialog can
+/// remain complete for Siri/AirPods without being printed above the same
+/// information in the onscreen snippet.
+struct MyCheckedOutGearSnippetIntent: SnippetIntent {
+    static let title: LocalizedStringResource = "Show Checked-Out Gear"
+    static let authenticationPolicy: IntentAuthenticationPolicy = .requiresLocalDeviceAuthentication
+
+    func perform() async throws -> some IntentResult & ShowsSnippetView {
+        .result(view: GearOutSnippetView(checkouts: try await checkedOutSummaries()))
     }
 }
 
@@ -115,6 +161,16 @@ struct CheckoutIntentSummary: Identifiable, Sendable {
 struct GearOutSnippetView: View {
     let checkouts: [CheckoutIntentSummary]
 
+    private let maxVisibleCheckouts = 3
+
+    private var visibleCheckouts: [CheckoutIntentSummary] {
+        Array(checkouts.prefix(maxVisibleCheckouts))
+    }
+
+    private var remainingCount: Int {
+        max(0, checkouts.count - visibleCheckouts.count)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             if checkouts.isEmpty {
@@ -122,7 +178,7 @@ struct GearOutSnippetView: View {
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.secondary)
             } else {
-                ForEach(checkouts) { checkout in
+                ForEach(visibleCheckouts) { checkout in
                     HStack(alignment: .firstTextBaseline, spacing: 10) {
                         Image(systemName: checkout.isOverdue ? "exclamationmark.triangle.fill" : "backpack")
                             .font(.subheadline)
@@ -144,6 +200,15 @@ struct GearOutSnippetView: View {
                     }
                     .accessibilityElement(children: .combine)
                 }
+                if remainingCount > 0 {
+                    Text("+\(remainingCount) more in My Gear")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
+                }
+                Button(intent: ShowMyGearIntent()) {
+                    Label("Open My Gear", systemImage: "arrow.up.forward.app")
+                }
+                .buttonStyle(.bordered)
             }
         }
         .padding()
@@ -166,22 +231,13 @@ struct NextShiftIntent: AppIntent {
     )
     static let authenticationPolicy: IntentAuthenticationPolicy = .requiresLocalDeviceAuthentication
 
-    func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView {
-        let shifts: [MyShift]
-        do {
-            shifts = try await APIClient.shared.myShifts(limit: 10)
-        } catch {
-            throw mapIntentError(error)
-        }
-
+    func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetIntent {
         let now = Date()
-        guard let shift = shifts
-            .filter({ $0.endsAt > now })
-            .min(by: { $0.startsAt < $1.startsAt })
+        guard let shift = try await nextShift()
         else {
             return .result(
                 dialog: "You don't have any upcoming shifts.",
-                view: NextShiftSnippetView(shift: nil)
+                snippetIntent: NextShiftSnippetIntent()
             )
         }
 
@@ -196,7 +252,19 @@ struct NextShiftIntent: AppIntent {
         } else {
             dialog = IntentDialog("Your next shift is \(time) — \(summary)\(place).")
         }
-        return .result(dialog: dialog, view: NextShiftSnippetView(shift: ShiftIntentSummary(shift: shift)))
+        return .result(dialog: dialog, snippetIntent: NextShiftSnippetIntent())
+    }
+}
+
+/// Separates the concise visual result from the complete spoken response and
+/// lets the system refresh the snippet without repeating the dialog visually.
+struct NextShiftSnippetIntent: SnippetIntent {
+    static let title: LocalizedStringResource = "Show Next Shift"
+    static let authenticationPolicy: IntentAuthenticationPolicy = .requiresLocalDeviceAuthentication
+
+    func perform() async throws -> some IntentResult & ShowsSnippetView {
+        let shift = try await nextShift()
+        return .result(view: NextShiftSnippetView(shift: shift.map(ShiftIntentSummary.init)))
     }
 }
 
@@ -252,6 +320,10 @@ struct NextShiftSnippetView: View {
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.secondary)
             }
+            Button(intent: ShowTodayScheduleIntent()) {
+                Label("Open Schedule", systemImage: "arrow.up.forward.app")
+            }
+            .buttonStyle(.bordered)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()

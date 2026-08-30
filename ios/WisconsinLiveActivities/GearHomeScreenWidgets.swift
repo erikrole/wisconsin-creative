@@ -4,12 +4,17 @@ import WidgetKit
 // The widget extension compiles only its own sources plus the two shared
 // contract files, so `Brand.swift` and `Color.statusText` are out of reach.
 // These mirror the same taxonomy the app uses: red overdue, orange due soon,
-// blue active, purple reserved.
+// blue active, purple reserved. In accented and vibrant modes the system owns
+// the palette, so the views fall back to a high-contrast primary foreground.
 private extension Color {
     static let widgetRed = Color(red: 0.78, green: 0.11, blue: 0.18)
     static let widgetOrange = Color(red: 0.85, green: 0.47, blue: 0.06)
     static let widgetBlue = Color(red: 0.11, green: 0.42, blue: 0.78)
     static let widgetPurple = Color(red: 0.42, green: 0.25, blue: 0.71)
+}
+
+private func widgetDisplayColor(_ fullColor: Color, renderingMode: WidgetRenderingMode) -> Color {
+    renderingMode == .fullColor ? fullColor : .primary
 }
 
 /// A snapshot older than this stops being presented as current. The app
@@ -38,13 +43,13 @@ private struct GearWidgetProvider: TimelineProvider {
 
     func getSnapshot(in context: Context, completion: @escaping (GearWidgetEntry) -> Void) {
         let snapshot = context.isPreview ? .preview : GearWidgetStore.read()
-        completion(GearWidgetEntry(date: .now, snapshot: snapshot))
+        completion(GearWidgetEntry(date: .now, snapshot: snapshot?.resolved(at: .now)))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<GearWidgetEntry>) -> Void) {
         let now = Date()
         let snapshot = GearWidgetStore.read()
-        let entry = GearWidgetEntry(date: now, snapshot: snapshot)
+        let entry = GearWidgetEntry(date: now, snapshot: snapshot?.resolved(at: now))
         completion(Timeline(entries: [entry], policy: .after(Self.nextRefresh(after: now, snapshot: snapshot))))
     }
 
@@ -56,8 +61,10 @@ private struct GearWidgetProvider: TimelineProvider {
     private static func nextRefresh(after now: Date, snapshot: GearWidgetSnapshot?) -> Date {
         let heartbeat = now.addingTimeInterval(60 * 30)
         guard let snapshot else { return heartbeat }
-        let boundaries = [snapshot.nextShift?.startsAt, snapshot.nextShift?.endsAt]
-            .compactMap { $0 }
+        let shifts = snapshot.upcomingShifts.isEmpty
+            ? snapshot.nextShift.map { [$0] } ?? []
+            : snapshot.upcomingShifts
+        let boundaries = shifts.flatMap { [$0.startsAt, $0.endsAt] }
             + snapshot.dueBookings.map(\.endsAt)
         let next = boundaries.filter { $0 > now }.min()
         return min(next ?? heartbeat, heartbeat)
@@ -131,6 +138,7 @@ private struct WidgetHeader: View {
         }
         .foregroundStyle(tint)
         .accessibilityHidden(true)
+        .widgetAccentable()
     }
 }
 
@@ -149,6 +157,8 @@ private struct StaleFooter: View {
 
 private struct NextShiftWidgetView: View {
     @Environment(\.widgetFamily) private var family
+    @Environment(\.widgetRenderingMode) private var renderingMode
+    @Environment(\.showsWidgetContainerBackground) private var showsWidgetContainerBackground
     let entry: GearWidgetEntry
 
     var body: some View {
@@ -156,6 +166,7 @@ private struct NextShiftWidgetView: View {
             if let shift = entry.snapshot?.nextShift {
                 switch family {
                 case .accessoryRectangular: accessoryBody(shift)
+                case .systemSmall where !showsWidgetContainerBackground: backgroundRemovedBody(shift)
                 default: cardBody(shift)
                 }
             } else if entry.snapshot == nil {
@@ -171,12 +182,16 @@ private struct NextShiftWidgetView: View {
             }
         }
         .containerBackground(.fill.tertiary, for: .widget)
-        .widgetURL(URL(string: "wisconsin://schedule"))
+        .widgetURL(scheduleURL(for: entry.snapshot?.nextShift))
     }
 
     private func cardBody(_ shift: GearWidgetSnapshot.Shift) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            WidgetHeader(title: "Next Shift", systemImage: "calendar", tint: .widgetPurple)
+            WidgetHeader(
+                title: "Next Shift",
+                systemImage: "calendar",
+                tint: widgetDisplayColor(.widgetPurple, renderingMode: renderingMode)
+            )
 
             Text(shift.title)
                 .font(.headline)
@@ -187,7 +202,7 @@ private struct NextShiftWidgetView: View {
             // entry, which is what makes a shift widget worth glancing at.
             Text(shift.startsAt, style: .relative)
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(Color.widgetPurple)
+                .foregroundStyle(widgetDisplayColor(.widgetPurple, renderingMode: renderingMode))
                 .monospacedDigit()
                 .lineLimit(1)
 
@@ -201,7 +216,28 @@ private struct NextShiftWidgetView: View {
             detailLine(shift)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .privacySensitive()
+    }
+
+    /// StandBy and CarPlay can remove the container background. Use one large
+    /// fact and one supporting line at those distances instead of squeezing
+    /// the handheld card's secondary metadata into the same space.
+    private func backgroundRemovedBody(_ shift: GearWidgetSnapshot.Shift) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            WidgetHeader(
+                title: "Next Shift",
+                systemImage: "calendar",
+                tint: widgetDisplayColor(.widgetPurple, renderingMode: renderingMode)
+            )
+            Text(shift.title)
+                .font(.headline)
+                .lineLimit(1)
+            Text(shift.startsAt, style: .relative)
+                .font(.title3.weight(.bold))
+                .foregroundStyle(widgetDisplayColor(.widgetPurple, renderingMode: renderingMode))
+                .monospacedDigit()
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
 
     @ViewBuilder
@@ -234,7 +270,17 @@ private struct NextShiftWidgetView: View {
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .privacySensitive()
+    }
+
+    private func scheduleURL(for shift: GearWidgetSnapshot.Shift?) -> URL? {
+        guard let eventId = shift?.eventId, !eventId.isEmpty else {
+            return URL(string: "wisconsin://schedule")
+        }
+        var components = URLComponents()
+        components.scheme = "wisconsin"
+        components.host = "schedule"
+        components.path = "/\(eventId)"
+        return components.url
     }
 }
 
@@ -244,7 +290,7 @@ struct NextShiftWidget: Widget {
             NextShiftWidgetView(entry: entry)
         }
         .configurationDisplayName("Next Shift")
-        .description("Your next assigned shift, its call window, and whether gear is ready.")
+        .description("See your next assigned shift, call window, and gear readiness.")
         .supportedFamilies([.systemSmall, .systemMedium, .accessoryRectangular])
     }
 }
@@ -253,19 +299,31 @@ struct NextShiftWidget: Widget {
 
 private struct GearDueWidgetView: View {
     @Environment(\.widgetFamily) private var family
+    @Environment(\.widgetRenderingMode) private var renderingMode
+    @Environment(\.showsWidgetContainerBackground) private var showsWidgetContainerBackground
     let entry: GearWidgetEntry
 
     private var accent: Color {
-        guard let snapshot = entry.snapshot else { return .widgetBlue }
-        if snapshot.overdueCount > 0 { return .widgetRed }
-        if snapshot.dueTodayCount > 0 { return .widgetOrange }
-        return .widgetBlue
+        guard let snapshot = entry.snapshot else {
+            return widgetDisplayColor(.widgetBlue, renderingMode: renderingMode)
+        }
+        if snapshot.overdueCount > 0 {
+            return widgetDisplayColor(.widgetRed, renderingMode: renderingMode)
+        }
+        if snapshot.dueTodayCount > 0 {
+            return widgetDisplayColor(.widgetOrange, renderingMode: renderingMode)
+        }
+        return widgetDisplayColor(.widgetBlue, renderingMode: renderingMode)
     }
 
     var body: some View {
         Group {
             if let snapshot = entry.snapshot {
-                cardBody(snapshot)
+                if family == .systemSmall, !showsWidgetContainerBackground {
+                    backgroundRemovedBody(snapshot)
+                } else {
+                    cardBody(snapshot)
+                }
             } else {
                 WidgetPlaceholder(
                     systemImage: "bag.badge.questionmark",
@@ -274,7 +332,7 @@ private struct GearDueWidgetView: View {
             }
         }
         .containerBackground(.fill.tertiary, for: .widget)
-        .widgetURL(URL(string: "wisconsin://bookings"))
+        .widgetURL(bookingURL(for: entry.snapshot))
     }
 
     private func cardBody(_ snapshot: GearWidgetSnapshot) -> some View {
@@ -289,7 +347,11 @@ private struct GearDueWidgetView: View {
                     .lineLimit(1)
                 Text("Due \(next.endsAt, style: .relative)")
                     .font(.caption)
-                    .foregroundStyle(next.isOverdue ? Color.widgetRed : .secondary)
+                    .foregroundStyle(
+                        next.isOverdue
+                            ? widgetDisplayColor(.widgetRed, renderingMode: renderingMode)
+                            : .secondary
+                    )
                     .monospacedDigit()
                     .lineLimit(1)
             }
@@ -308,7 +370,30 @@ private struct GearDueWidgetView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .privacySensitive()
+    }
+
+    private func backgroundRemovedBody(_ snapshot: GearWidgetSnapshot) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            WidgetHeader(title: "My Gear", systemImage: "bag", tint: accent)
+
+            headline(snapshot)
+
+            if let next = snapshot.dueBookings.first {
+                Text(next.title)
+                    .font(.caption.weight(.semibold))
+                    .lineLimit(1)
+                Text("Due \(next.endsAt, style: .relative)")
+                    .font(.caption2)
+                    .foregroundStyle(
+                        next.isOverdue
+                            ? widgetDisplayColor(.widgetRed, renderingMode: renderingMode)
+                            : .secondary
+                    )
+                    .monospacedDigit()
+                    .lineLimit(1)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
 
     @ViewBuilder
@@ -320,7 +405,7 @@ private struct GearDueWidgetView: View {
         } else if snapshot.dueBookings.isEmpty {
             Text("All clear")
                 .font(.headline)
-                .foregroundStyle(Color.widgetBlue)
+                .foregroundStyle(widgetDisplayColor(.widgetBlue, renderingMode: renderingMode))
         } else {
             countLine(snapshot.dueBookings.count, noun: "out", tint: .widgetBlue)
         }
@@ -334,11 +419,25 @@ private struct GearDueWidgetView: View {
             Text(noun)
                 .font(.subheadline.weight(.semibold))
         }
-        .foregroundStyle(tint)
+        .foregroundStyle(widgetDisplayColor(tint, renderingMode: renderingMode))
         .lineLimit(1)
         .minimumScaleFactor(0.8)
+        .widgetAccentable()
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(count) \(noun)")
+    }
+
+    private func bookingURL(for snapshot: GearWidgetSnapshot?) -> URL {
+        guard let bookingId = snapshot?.dueBookings.first?.id,
+              !bookingId.isEmpty else {
+            return URL(string: "wisconsin://bookings")!
+        }
+
+        var components = URLComponents()
+        components.scheme = "wisconsin"
+        components.host = "booking"
+        components.path = "/\(bookingId)"
+        return components.url ?? URL(string: "wisconsin://bookings")!
     }
 }
 
@@ -348,7 +447,7 @@ struct GearDueWidget: Widget {
             GearDueWidgetView(entry: entry)
         }
         .configurationDisplayName("My Gear")
-        .description("What you have checked out, and what is overdue or due today.")
+        .description("Check what you have out, including overdue and due-today gear.")
         .supportedFamilies([.systemSmall, .systemMedium])
     }
 }

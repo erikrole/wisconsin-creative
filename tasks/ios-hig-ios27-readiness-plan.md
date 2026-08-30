@@ -1,6 +1,6 @@
 # iOS HIG and iOS 27 Readiness Plan
 
-**Status:** Active, slices 1-19 shipped
+**Status:** Active, slices 1-19 and R2-R7 shipped locally
 **Created:** 2026-06-05
 **Scope:** `ios/Wisconsin`
 **Goal:** Refresh the native iOS app against current Apple Human Interface Guidelines, improve the highest-impact UI/UX gaps now, and keep the code ready for WWDC26/iOS 27 changes starting June 8, 2026.
@@ -12,6 +12,60 @@
 - Existing repo contract: mobile stays student-first, action-first, role-adaptive, scan one tap away, and 44pt minimum touch targets.
 - Existing task records: `tasks/hig-audit-ios.md`, `tasks/ios-swift62-liquidglass-plan.md`, `tasks/ios-first-class-upgrade-plan.md`, and recent iOS control-clarity plans.
 - Repo truth: current SwiftUI source, `docs/AREA_MOBILE.md`, relevant `docs/AREA_*.md`, `docs/DECISIONS.md`, `docs/GAPS_AND_RISKS.md`, and `prisma/schema.prisma`.
+
+## Full HIG audit remediation program — 2026-08-29
+
+### Goal
+
+- Close every current in-scope unchecked finding in `tasks/audit-hig-ios.md` — 99 source findings at the opening count (34 P1 and 65 P2) — through independently verifiable slices.
+- Complete the applicable iPhone, iPad, kiosk, and physical-device acceptance gates, while keeping source, build, authenticated runtime, deployment, and device proof distinct.
+- Preserve the product boundary. Conditional future-platform or future-feature dispositions such as tvOS, visionOS, Wallet, standalone watchOS, games, Tap to Pay, and a photo-editing extension remain explicitly deferred unless product direction changes.
+
+### Route
+
+- Owner area: native iOS, with secondary contracts in Users, Notifications, Shifts, Search, Reservations, Checkouts, Dashboard, Items, Privacy, and the native macOS companion where the audit names it.
+- Source-of-truth ledger: `tasks/audit-hig-ios.md`. This readiness plan owns sequencing and closeout; the audit ledger owns the finding text and acceptance checklist.
+- Use the audit's existing 24-point bounded fix order as the dependency-aware sequence. A slice may be implemented only after its current source, API/schema contract, and dirty-worktree ownership have been rechecked.
+
+### Stop conditions
+
+- Stop account-deletion implementation until the minimum custody/audit retention and erasure/pseudonymization contract is accepted; do not turn deactivation into deletion by wording alone.
+- Do not edit or absorb existing unrelated dirty work. In particular, re-inspect ownership before the MetricKit slice because `ios/Wisconsin/Core/PerformanceInstrumentation.swift` is already modified in this checkout.
+- Stop on any mismatch among the route response, Swift Codable model, Prisma/schema contract, role policy, or existing accepted decision; reconcile the owning document before changing behavior.
+- Do not call a source fix shipped when runtime, deployment, authenticated, APNs, scanner, or physical-device proof remains open.
+
+### Remediation slices
+
+- [ ] R1: Define and implement truthful account deletion, retention, credential revocation, completion state, partial-failure recovery, and privacy/account docs.
+- [x] R2: Make notification Settings truthful about account pause, OS authorization, APNs registration, category policy, test delivery, and failed-save recovery. Review artifact: `tasks/ios-notification-delivery-truth-review-2026-08-29/review.html`.
+- [x] R3: Declare the MetricKit file-timestamp required-reason API and add source-to-manifest coverage after dirty-file ownership is clear. `tests/ios-privacy-manifest.test.ts` now ties the compiled `.creationDateKey` use to reason `C617.1`; the main iOS target manifest is updated and the kiosk manifest remains target-scoped.
+- [x] R4: Correct Live Activity, widget, Watch, CarPlay, Lock Screen, StandBy, timeline, deep-link, privacy, and rendering-mode contracts. `ios/Wisconsin/Widgets/GearWidgetSnapshot.swift` now resolves cached shifts/bookings at timeline dates with backward-compatible payloads; widgets publish non-sensitive operational content, exact event/booking links, system rendering-mode accents, and background-removed compositions; the small Live Activity path carries reduced luminance for Apple Watch Smart Stack and CarPlay. Focused source contracts, XcodeGen consistency, iOS drift/gap checks, and the iPhone 16 Pro Simulator build pass. Watch, CarPlay, Always-On, StandBy, and physical-device proof remain runtime gates.
+- [x] R5: Make global Search complete, total-aware, role-correct, recent-query consistent, and actionable for bulk-item matches. Native Search now preserves per-source totals/cursors, paginates independently with retry, records opened queries across roles, and gives bulk-family rows a direct Reserve path. Focused source tests, 65 related assertions, the iPhone 16 Pro Simulator build, and matched before/after pagination captures pass; authenticated/offline/VoiceOver acceptance remains separate.
+- [x] R6: Make App Shortcuts, Action button labels, snippets, and scene-based Home Screen quick actions universally meaningful and recoverable. Static intents now verify capability and return explicit sign-in/unavailable errors; denied in-app handoffs clear with visible/spoken feedback; labels are verb-led; iOS 26 SnippetIntent separates spoken dialogue from bounded visual results and links to full lists; and warm/cold quick actions use UIWindowSceneDelegate. Focused source tests and the iPhone 16 Pro Simulator build pass; physical Action button, Shortcuts, VoiceOver, and scene-recreation acceptance remains separate.
+- [x] R7: Add concurrency-safe named Schedule working-copy undo/redo while retaining all-change Revert and the existing publish boundary. The working-copy row now stores bounded actor-owned before/after stacks; serializable version-checked undo/redo rejects stale and cross-operator inversions, clears redo on a new command, and returns the named action. Native Event detail wires the response into system UndoManager, Command-Z/Shift-Command-Z, retryable feedback, and explicit buttons while keeping batch Revert. Focused service/schema/route/native tests, TypeScript, Prisma validation/generation, and the iPhone 16 Pro iOS 26.5 Simulator build pass; migration deployment, authenticated runtime, and physical-device gesture proof remain separate.
+- [ ] R8: Restore stable tab/navigation identity, remove the blank accessory artifact, preserve sidebar destinations through compact collapse, and restore scene context.
+- [ ] R9: Correct modal stacking, cancellation/Back/Done semantics, reservation error surfaces, time selection, and action-sheet title behavior.
+- [ ] R10: Restore touch-target, Dynamic Type, kiosk identity, crop-slider, status-label, loading-label, and other accessibility-size fundamentals.
+- [ ] R11: Separate kiosk HID scanner capture from ordinary text editing; restore Paste, drag/drop, Scribble, camera cancellation, status visibility, and full-screen recovery.
+- [ ] R12: Make loading, refresh, transient feedback, VoiceOver announcements, reduced motion, haptics, and recovery states truthful and accessible.
+- [ ] R13: Move frequent crew and sharing actions into visible surfaces; correct menu, picker, selection, destructive-role, ellipsis, and command semantics.
+- [ ] R14: Make onboarding, sign-in, registration validation, passkey/authentication messaging, permission copy, account security, and notification interruption policy accurate.
+- [ ] R15: Correct profile/photo crop encoding, thumbnail failure recovery, image-view context/zoom, raster color profiles, status-bar appearance, and image-button behavior.
+- [ ] R16: Replace unavailable SF Symbols and audit dynamic symbol availability; repair adaptive color, contrast, Dark Mode, accent-token, branding, writing, and action-label issues.
+- [ ] R17: Correct chart selection duplication, calendar venue/noncolor semantics, RTL readiness, static-text selection, and equivalent-layout consistency.
+- [ ] R18: Complete remaining Settings, iPad keyboard-command, Mac companion visibility, selection-feedback, and other nonblocking platform refinements.
+- [ ] R19: Re-run the complete source-contract and gap inventory, reconcile stale tests/comments, and mark every current finding with acceptance evidence or an explicit product-scope disposition.
+- [ ] R20: Run the iPhone 16 Pro Simulator, iPad resizing/multitasking, VoiceOver/Dynamic Type/Reduce Motion, widget/Live Activity, kiosk, APNs, scanner, and other physical-device runtime gates recorded in the audit.
+
+### Verification bar
+
+- [ ] Focused service/route/source-contract tests for each slice.
+- [ ] `npx tsc --noEmit --pretty false` and focused lint when shared TypeScript/API code changes.
+- [ ] `npm run drift:ios`, `npm run audit:ios:gaps`, `git diff --check`, and `npm run ios:project:check` for native/project changes.
+- [ ] `npm run codemap` followed by `npm run verify:docs` when shared ownership, routes, schema, maps, or docs change.
+- [ ] `npm run build:app` plus the affected `Wisconsin` or `WisconsinKiosk` Xcode build; use the repository's iPhone 16 Pro Simulator destination when available.
+- [ ] Authenticated browser, simulator, APNs, scanner, and physical-device proof recorded separately from source/build proof.
+- [ ] No staging, commit, push, deployment, or App Store submission is part of a slice unless explicitly authorized.
 
 ## Slice 1 — Refresh Audit Before Code
 
@@ -300,4 +354,6 @@
 - 2026-08-19: Shipped Slice 24. Event detail was the destination of every row the Schedule pass changed, and it had no notion of an event being under way, so a NOW row opened a temporally silent screen. `ScheduleEvent.timeState` is now the single definition both read. Capturing detail through the harness also surfaced a resilience bug that predates this work: a staff working-copy 404 blanked the crew section behind "Couldn't load crew" while the header above it read "3/4 filled". Verified with the new contract test, the full Vitest suite (3406 passing; the 3 known `users-*` failures reproduce on clean `HEAD`), 45 Swift unit tests, drift/gap audits, `git diff --check`, and iPhone 16 Pro before/after capture.
 - 2026-08-19: Shipped Slice 22. Schedule was the last list still holding its controls in content while Items and Users had moved to the toolbar. Filters is now a toolbar control with the shared tint contract, the switcher takes the full width, and `ActiveControlBar` is shared from `Brand.swift` instead of private to `ItemsView`. Simulator capture found the Trade Board count badge was already broken before this slice -- the iOS 26 glass toolbar clips item content, leaving an orange half-disc with the number cut off -- so it was replaced with a filled symbol variant rather than reproduced. Verified with the full Vitest suite (3406 passing; the 3 `users-route`/`users-hidden-visibility` failures reproduce on clean `HEAD`), 45 Swift unit tests, `npm run drift:ios`, `npm run audit:ios:gaps`, `git diff --check`, an iPhone 17 Pro simulator build, and before/after screenshot capture through `ScheduleScreenshotUITests`.
 - 2026-08-19: Noted that the plan's tab-shell rollback record is stale. `AppTabView` currently uses value-based `Tab(...)` with `TabRole.search`, which the 2026-06-29 entry says was rolled back. CC-1/CC-2 should be re-confirmed on a device before `.tabBarMinimizeBehavior(.onScrollDown)` is added; opened as Slice 23 rather than shipped blind, because the blocking evidence was a device-only crash.
+- 2026-08-29: Shipped R4. Home Screen widgets now keep a bounded upcoming-shift cache, recompute time-derived state at timeline boundaries, deep-link to the displayed event or booking, adapt to WidgetKit rendering modes, and use compact background-removed compositions without privacy redaction. The checkout-return Live Activity's supplemental small family now explicitly serves Apple Watch Smart Stack and CarPlay and carries reduced-luminance state. Focused source contracts (19 assertions), `npm run ios:project:check`, `npm run drift:ios`, `npm run audit:ios:gaps`, `git diff --check`, and the iPhone 16 Pro iOS 26.5 Simulator build pass. Runtime Watch, CarPlay, Always-On, StandBy, and physical-device acceptance remain separate.
+- 2026-08-30: Shipped R7 locally. Schedule working-copy commands now keep a bounded actor-owned before/after history in migration `0139_schedule_working_copy_undo_redo`; undo and redo are serializable, version-checked, named, retryable, and isolated from another operator's latest edit. Native Event detail connects the server history to the system UndoManager, Command-Z/Shift-Command-Z, and visible Undo/Redo controls while retaining the confirmed batch Revert. Focused history/schema/route/native tests (17 assertions), existing Schedule working-copy tests (59 tests), TypeScript, Prisma validation/generation, and the iPhone 16 Pro iOS 26.5 Simulator build pass. Deployment, authenticated runtime, and physical-device three-finger/shake acceptance remain open.
 - 2026-06-29: User correction accepted: the first implementation was a floating action/full-screen cover, not Apple's trailing search-tab pattern. Reworked the slice so Scan remains tab tag `3`, the system tab bar is hidden, and a custom bottom bar renders main tabs in one pill with Scan as the dedicated trailing circular tab.

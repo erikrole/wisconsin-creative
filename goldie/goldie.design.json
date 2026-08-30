@@ -1,0 +1,8 @@
+{
+  "background": "linear-gradient(160deg, #5A0717 0%, #9B102A 45%, #C41230 100%)",
+  "frame": "17-pro-silver",
+  "fontFamily": "\"Lato\", system-ui, sans-serif",
+  "template": "magazine",
+  "layout": "offset",
+  "screenOnly": false
+}

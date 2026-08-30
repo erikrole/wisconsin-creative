@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Reservations
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-26
+- Last Updated: 2026-08-30
 - Status: Active — V1 Shipped (2026-03-10)
 - Version: V1
 
@@ -25,6 +25,7 @@ Make app and web reservation-first. A user who is not physically at a kiosk rese
 10. Reservation creation is guarded at the shared service boundary: creates require at least one equipment item, duplicate multi-event links and duplicate bulk lines are rejected, invalid windows fail before availability work, and DB overlap races return booking conflict responses.
 11. An event-linked reservation from an internal user also infers schedule work on the chronologically primary event: it reuses an active assignment or fills a safe slot using the requester’s staffing class and area. Explicit `shiftAssignmentId` links are validated for ownership, activity, and event scope. Reservation-managed links reconcile when events or owners change and release on cancellation, no-show expiry, or requester deactivation, while shared links, manual/auto-fill assignments, collaborator follow behavior, private working copies, and unconfigured crew setups remain protected.
 12. Internal Students can read all visible reservations and check-outs from the web and native Bookings surfaces. The native iOS Home payload remains personal, and Student edit, cancel, transfer, creation, and kiosk-custody actions remain ownership-gated.
+13. `Sony Battery` and `Football Sony Battery` are separate item-family quantities but share the same reservation policy. Requesters choose either family through the normal web/native picker with no Football-roster or role gate; availability and numbered-unit custody rules remain authoritative.
 
 ## V1 Workflow
 
@@ -262,6 +263,8 @@ The access labels below describe state-machine actions, not list/detail reads. I
 - Mobile operations contract from `AREA_MOBILE.md`.
 
 ## Change Log
+
+- 2026-08-30: **Both Sony battery families use the normal reservation flow.** `Football Sony Battery` remains a separate quantity pool, but web/native selection, availability, requester changes, and ownership transfer apply the same rules as `Sony Battery`. The earlier local roster-gating work was removed before deployment; physical family creation remains open under GAP-74.
 
 - 2026-08-26: **Item conflict recovery now happens before review.** Web and native reservation pickers preflight visible items before selection, disable known serialized conflicts (including the turnaround buffer), and keep late-discovered conflicts removable while blocking review. Conflict rows state the conflicting window and the return-by or available-after recovery time. Kiosk scan feedback distinguishes conflicts, shortages, timing, transfers, and condition reports; bulk turnaround notices are emitted only when requested stock would affect the next same-location booking. Failed availability refreshes preserve the last known result and show retry instead of looking clear. Local source and build verification remain separate from authenticated browser, iPhone, and physical kiosk acceptance.
 - 2026-08-26: **Web reservation return times now use the same forward-only quarter-hour policy as kiosk and native creation.** The existing `00/15/30/45` controls now normalize off-grid timestamps forward across hour/day boundaries, event-derived return buffers round forward, and new/detail/sheet edit surfaces prevent an end at or before the reservation start or current time. Opening an existing record does not save or rewrite its timestamp. Schedule and shift timing controls remain separate. Focused tests, TypeScript, full lint, and the app build pass; authenticated isolated-browser proof is unavailable in this workspace.

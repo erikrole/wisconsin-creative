@@ -11,33 +11,53 @@ final class NotificationsViewModel {
     var pageError: String?
     var actionError: String?
     private let pageSize = 20
+    private var lastMarkedUnreadIDs: [String] = []
+    private var undoTask: Task<Void, Never>?
+    private var loadRequests = LatestRequestGeneration()
 
-    func load() async {
-        guard !isLoading else { return }
+    var canUndoMarkAll: Bool { !lastMarkedUnreadIDs.isEmpty }
+
+    func load(forceRefresh: Bool = false) async {
+        if !forceRefresh, isLoading { return }
+        let requestToken = loadRequests.begin()
         isLoading = true
         error = nil
         pageError = nil
         actionError = nil
-        defer { isLoading = false }
+        defer {
+            if loadRequests.owns(requestToken) {
+                isLoading = false
+            }
+        }
         do {
             let resp = try await APIClient.shared.notifications(limit: pageSize, offset: 0)
+            guard loadRequests.owns(requestToken), !Task.isCancelled else { return }
             notifications = resp.data
             total = resp.total
             unreadCount = resp.unreadCount
         } catch {
+            guard loadRequests.owns(requestToken), !Task.isCancelled else { return }
             self.error = error.localizedDescription
         }
     }
 
     func loadMore() async {
         guard !isLoading, notifications.count < total else { return }
+        let requestToken = loadRequests.begin()
+        let offset = notifications.count
         isLoading = true
         pageError = nil
-        defer { isLoading = false }
+        defer {
+            if loadRequests.owns(requestToken) {
+                isLoading = false
+            }
+        }
         do {
-            let resp = try await APIClient.shared.notifications(limit: pageSize, offset: notifications.count)
+            let resp = try await APIClient.shared.notifications(limit: pageSize, offset: offset)
+            guard loadRequests.owns(requestToken), !Task.isCancelled else { return }
             notifications.append(contentsOf: resp.data)
         } catch {
+            guard loadRequests.owns(requestToken), !Task.isCancelled else { return }
             // Surface page errors so a Retry affordance can render in the
             // sentinel row — silent `try?` left users staring at an
             // unchanging list with no signal.
@@ -71,11 +91,37 @@ final class NotificationsViewModel {
         unreadCount = 0
         actionError = nil
         do {
-            try await APIClient.shared.markAllNotificationsRead()
+            lastMarkedUnreadIDs = try await APIClient.shared.markAllNotificationsRead()
+            scheduleUndoExpiry()
         } catch {
             notifications = previousNotifications
             unreadCount = previousUnreadCount
             actionError = "Couldn't mark all notifications read. Your inbox was restored."
+        }
+    }
+
+    func undoLastMarkAll() async {
+        let ids = lastMarkedUnreadIDs
+        guard !ids.isEmpty else { return }
+        lastMarkedUnreadIDs = []
+        undoTask?.cancel()
+
+        do {
+            try await APIClient.shared.markNotificationsUnread(ids: ids)
+            // Reload so notifications that arrived while the undo banner was
+            // visible and unread counts outside the first page remain truthful.
+            await load()
+        } catch {
+            actionError = "Couldn't undo that change. Refresh to check your inbox."
+        }
+    }
+
+    private func scheduleUndoExpiry() {
+        undoTask?.cancel()
+        undoTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 5_000_000_000)
+            guard !Task.isCancelled else { return }
+            self?.lastMarkedUnreadIDs = []
         }
     }
 }
@@ -96,15 +142,12 @@ struct NotificationsSheet: View {
 
     @State private var vm = NotificationsViewModel()
     @Environment(\.dismiss) private var dismiss
-    @State private var markAllHaptic = false
-    @State private var swipeMarkHaptic = false
-    @State private var actionErrorHaptic = false
 
     var body: some View {
         NavigationStack {
             Group {
                 if vm.isLoading && vm.notifications.isEmpty {
-                    ProgressView()
+                    ProgressView("Loading notifications")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if let error = vm.error, vm.notifications.isEmpty {
                     ContentUnavailableView {
@@ -128,30 +171,40 @@ struct NotificationsSheet: View {
             .navigationTitle("Notifications")
             .navigationBarTitleDisplayMode(.inline)
             .overlay(alignment: .top) {
-                if let actionError = vm.actionError {
-                    BannerView(
-                        severity: .error,
-                        message: actionError,
-                        systemImage: "wifi.exclamationmark",
-                        actionLabel: "Refresh"
-                    ) {
-                        Task { await vm.load() }
+                VStack(spacing: 8) {
+                    if let actionError = vm.actionError {
+                        BannerView(
+                            severity: .error,
+                            message: actionError,
+                            systemImage: "wifi.exclamationmark",
+                            actionLabel: "Refresh"
+                        ) {
+                            Task { await vm.load() }
+                        }
                     }
-                    .padding(.top, 8)
+                    if vm.canUndoMarkAll {
+                        BannerView(
+                            severity: .info,
+                            message: "Notifications marked read.",
+                            systemImage: "checkmark.circle",
+                            actionLabel: "Undo"
+                        ) {
+                            Task { await vm.undoLastMarkAll() }
+                        }
+                    }
                 }
+                .padding(.top, 8)
             }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") { dismiss() }
+                    Button("Close") { dismiss() }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     if vm.unreadCount > 0 {
                         Button("Mark All Read") {
-                            markAllHaptic.toggle()
                             Task { await vm.markAllRead() }
                         }
                         .font(.subheadline)
-                        .sensoryFeedback(.success, trigger: markAllHaptic)
                     }
                 }
             }
@@ -163,7 +216,6 @@ struct NotificationsSheet: View {
         .tint(Color.primary)
         .onChange(of: vm.actionError) { _, actionError in
             if let actionError {
-                actionErrorHaptic.toggle()
                 AccessibilityNotification.Announcement(actionError).post()
             }
         }
@@ -172,7 +224,6 @@ struct NotificationsSheet: View {
                 AccessibilityNotification.Announcement("Couldn't load more notifications. \(pageError)").post()
             }
         }
-        .sensoryFeedback(.error, trigger: actionErrorHaptic)
         .task { await vm.load() }
     }
 
@@ -190,24 +241,22 @@ struct NotificationsSheet: View {
                         .swipeActions(edge: .leading) {
                             if notif.isUnread {
                                 Button {
-                                    swipeMarkHaptic.toggle()
                                     Task { await vm.markRead(id: notif.id) }
                                 } label: {
                                     Label("Mark Read", systemImage: "checkmark")
                                 }
-                                .tint(.accentColor)
+                                .tint(Color.statusText(.blue))
                                 .accessibilityLabel("Mark as read")
                             }
                         }
                         .swipeActions(edge: .trailing) {
                             if notif.isUnread {
                                 Button {
-                                    swipeMarkHaptic.toggle()
                                     Task { await vm.markRead(id: notif.id) }
                                 } label: {
                                     Label("Mark Read", systemImage: "checkmark")
                                 }
-                                .tint(.accentColor)
+                                .tint(Color.statusText(.blue))
                                 .accessibilityLabel("Mark as read")
                             }
                         }
@@ -216,10 +265,9 @@ struct NotificationsSheet: View {
                         // distrust both.
                         .contextMenu {
                             if notif.isUnread {
-                                Button {
-                                    swipeMarkHaptic.toggle()
-                                    Task { await vm.markRead(id: notif.id) }
-                                } label: {
+                                 Button {
+                                     Task { await vm.markRead(id: notif.id) }
+                                 } label: {
                                     Label("Mark Read", systemImage: "checkmark")
                                 }
                             }
@@ -238,8 +286,7 @@ struct NotificationsSheet: View {
             }
         }
         .listStyle(.insetGrouped)
-        .refreshable { await vm.load() }
-        .sensoryFeedback(.selection, trigger: swipeMarkHaptic)
+        .refreshable { await vm.load(forceRefresh: true) }
     }
 
     @ViewBuilder

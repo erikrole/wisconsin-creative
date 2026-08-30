@@ -25,9 +25,11 @@ describe("iOS Home action queue honesty", () => {
     expect(home).toContain('return "\\(gear) more in Bookings"');
     expect(home).toContain('return "\\(gear + shifts) more in Bookings and Schedule"');
     expect(home).toContain("gear == 0 ? openSchedule : openBookings");
-    // Still a real control: 44pt, haptic, and its own combined label.
+    // Still a real control: 44pt and its own combined label. Standard button
+    // feedback owns selection haptics; the app-wide mute preference is
+    // applied only to custom feedback paths.
     expect(home).toContain("minHeight: 44");
-    expect(home).toContain("sensoryFeedback(.selection, trigger: hapticTrigger)");
+    expect(home).toContain("accessibilityLabel(label)");
   });
 
   it("only claims all-clear when the whole screen is clear", () => {

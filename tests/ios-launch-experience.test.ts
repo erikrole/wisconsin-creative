@@ -20,16 +20,16 @@ function pngDimensions(relativeFile: string) {
 }
 
 describe("iOS launch experience", () => {
-  it("brands the system launch frame with the shared background and lockup", () => {
+  it("keeps the system launch frame content-neutral before the app scene loads", () => {
     const project = source("ios/project.yml");
     const plist = source("ios/Wisconsin/Supporting/Info.plist");
 
-    expect(project).toMatch(
-      /UILaunchScreen:\n\s+UIColorName: LaunchBackground\n\s+UIImageName: LaunchLockup\n\s+UIImageRespectsSafeAreaInsets: false/,
-    );
+    expect(project).toMatch(/UILaunchScreen:\n\s+UIColorName: LaunchBackground/);
+    expect(project).not.toContain("UIImageName: LaunchLockup");
     expect(plist).toMatch(
-      /<key>UILaunchScreen<\/key>[\s\S]*?<key>UIColorName<\/key>\s*<string>LaunchBackground<\/string>[\s\S]*?<key>UIImageName<\/key>\s*<string>LaunchLockup<\/string>[\s\S]*?<key>UIImageRespectsSafeAreaInsets<\/key>\s*<false\/>/,
+      /<key>UILaunchScreen<\/key>[\s\S]*?<key>UIColorName<\/key>\s*<string>LaunchBackground<\/string>/,
     );
+    expect(plist).not.toContain("<key>UIImageName</key>");
   });
 
   it("ships native-resolution Motion W and launch-lockup assets", () => {

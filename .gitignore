@@ -10,6 +10,7 @@ tmp/
 .tmp/
 ios/~ai-*.tmp
 ios/build/
+goldie/out/
 .reports/
 .asc/
 .DS_Store

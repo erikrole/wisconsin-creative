@@ -1,0 +1,5 @@
+steps:
+  - launch: com.erikrole.Wisconsin
+  - wait: 4000
+  - await:
+      idle: true

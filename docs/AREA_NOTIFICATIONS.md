@@ -3,9 +3,9 @@
 ## Document Control
 - Area: Notifications
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-28
+- Last Updated: 2026-08-29
 - Status: Active; browser push is deployed to Production, with physical Android acceptance still open
-- Version: V1.7
+- Version: V1.8
 
 ## Direction
 Surface custody urgency and overdue situations to the right people at the right time, with zero duplicate noise and a clear escalation path.
@@ -132,7 +132,7 @@ Implementation: `src/lib/checkout-escalation-policy.ts`, `src/lib/services/notif
 - iOS: `AppDelegate.didRegisterForRemoteNotificationsWithDeviceToken` → POST hex token. Permission requested once after login (`.notDetermined` guard; existing `.authorized` silently re-registers).
 - Push fires for: checkout due/overdue escalation, staff-triggered overdue checkout nudges, `shift_gear_up`, shift schedule changes, trade lifecycle events, reservation lifecycle events, and license nag/expiry warnings when the recipient has push enabled for that category.
 - Tap handling: `UNUserNotificationCenterDelegate.didReceive` sets `AppState.pendingPushBookingId` or `AppState.pendingPushEventId`. Booking pushes open through `HomeView`; event pushes switch to Schedule and let `ScheduleView` open the matching event sheet.
-- Native Settings > Notifications is push-only for launch and exposes category toggles for checkout due reminders, checkout overdue alerts, reservation updates, license expiry reminders, schedule updates, trade updates, and gear prep nudges. Email and pause controls remain available in the server preference contract for rollout compatibility but are not exposed in the native app. In-app inbox rows remain always visible regardless of category settings.
+- Native Settings > Notifications is push-focused and exposes category toggles for checkout due reminders, checkout overdue alerts, reservation updates, license expiry reminders, schedule updates, trade updates, and gear prep nudges. It also surfaces the account-wide `pausedUntil` state with Pause 1 hour/day/week choices and a one-tap Resume action; while paused, push and email delivery are suppressed but in-app inbox rows remain visible. The delivery summary distinguishes account pause, Push alerts preference, iOS authorization, and APNs registration. The device-specific self-test is offered only when all of those delivery gates plus the current installation token are ready, and failed preference saves remain visible and recoverable.
 - Environment fallback: sends go to the primary APNs host (production in prod, sandbox in dev); tokens rejected with `BadDeviceToken`/`Unregistered` are retried on the other APNs environment before any revocation, because Xcode development builds carry sandbox tokens even against the production server. Only tokens both environments reject are revoked in DB.
 - Provider-token recovery: `ExpiredProviderToken`/`InvalidProviderToken` responses invalidate the cached JWT and retry the affected tokens once with a fresh token.
 - Deferred sends: request-path pushes go through `deferPush()` (`after()` from `next/server`, with an awaited-detach fallback outside request scope) so the serverless function can't be frozen mid-APNs-round-trip after the response is written.
@@ -385,6 +385,7 @@ installed build has not registered, and a build that receives no category
 renders a tap-only alert. Neither side needs to ship first.
 
 ## Change Log
+- 2026-08-29: **Native notification delivery truth and recovery.** Settings now surfaces the canonical account pause with its end time and Resume action, qualifies channel/category controls during a pause, distinguishes iOS permission from server APNs registration, and gates the device-specific self-test on the same preference and registration state ordinary push delivery uses. Failed preference saves render a reloadable inline error and announce it through VoiceOver while retaining the safe optimistic revert. The iPhone 16 Pro fixture capture, source-contract suites, and native build pass; authenticated APNs and physical-device acceptance remain separate gates.
 - 2026-08-28: **Android browser push is deployed.** Authenticated students can enroll the current HTTPS browser from Settings → Notifications, where the service worker receives safe same-origin notification taps and a browser-scoped test is available. `WebPushSubscription` migration `0137_web_push_subscriptions`, stable VAPID configuration, stale-endpoint cleanup, logout revocation, preference-aware normal/blast delivery, and deployment `dpl_9stXTaEbeKN1bWDuyUp9ZcSqT6X1` are complete. Physical Android Chrome permission, delivery, and tap-through acceptance remain open; iOS APNs is unchanged.
 - 2026-08-27: **Student claim reviewer alerts are Admin-only.** Initial fanout plus escalation, blocked, and auto-approved outcome notifications for both open Student-slot requests and Trade Board claims target active visible Admins. Staff have no claim-review alerts, approval permission, or queue access; students continue receiving their own request and trade lifecycle messages.
 - 2026-08-26: **Open Student-slot claims now notify active reviewers.** The canonical approval-first pickup path persists the student's `REQUESTED` assignment, then creates deduplicated durable `shift_request_review` rows for active visible Admin/Staff users and sends best-effort push through the existing schedule preference gate. The student-facing claim helper is documented under the Schedule/Event surfaces; direct-assignment email remains out of scope. Focused source contracts pass; deployment and authenticated delivery acceptance remain separate gates.

@@ -52,7 +52,13 @@ enum NativeImageProcessor {
         ).integral
 
         guard let cropped = cgImage.cropping(to: rect) else { return nil }
-        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 1024, height: 1024))
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = 1
+        format.preferredRange = .standard
+        let renderer = UIGraphicsImageRenderer(
+            size: CGSize(width: 1024, height: 1024),
+            format: format
+        )
         let output = renderer.image { _ in
             UIImage(cgImage: cropped).draw(in: CGRect(x: 0, y: 0, width: 1024, height: 1024))
         }
@@ -123,6 +129,7 @@ enum RemoteImageLoading {
 struct CachedThumbnail: View {
     let url: URL
     let size: CGFloat
+    var placeholderSystemImage: String?
 
     @Environment(\.displayScale) private var displayScale
     @State private var uiImage: UIImage?
@@ -136,6 +143,10 @@ struct CachedThumbnail: View {
                 Image(uiImage: uiImage)
                     .resizable()
                     .scaledToFill()
+            } else if let placeholderSystemImage {
+                Image(systemName: placeholderSystemImage)
+                    .font(.system(size: size * 0.36))
+                    .foregroundStyle(.secondary)
             } else {
                 Color.clear
             }
@@ -158,7 +169,10 @@ struct CachedThumbnail: View {
         }
         var request = URLRequest(url: url)
         request.cachePolicy = .returnCacheDataElseLoad
-        guard let (data, _) = try? await thumbnailSession.data(for: request),
+        guard let (data, response) = try? await thumbnailSession.data(for: request),
+              let httpResponse = response as? HTTPURLResponse,
+              (200..<300).contains(httpResponse.statusCode),
+              httpResponse.mimeType?.hasPrefix("image/") == true,
               !Task.isCancelled else { return }
         let pixels = size * scale
         guard pixels > 0,

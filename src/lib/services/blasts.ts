@@ -205,7 +205,13 @@ export async function sendBlastPush(blastId: string): Promise<void> {
         tokens.map((t) => t.token),
         // `GT_BLAST` adds the "Got it" action, which posts the same
         // idempotent acknowledgement the in-app banner button does.
-        { title: blast.title, body: blast.body, payload: { blastId }, category: "GT_BLAST" },
+        {
+          title: blast.title,
+          body: blast.body,
+          payload: { blastId },
+          category: "GT_BLAST",
+          interruptionLevel: "active",
+        },
       ));
     }
 

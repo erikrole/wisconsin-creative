@@ -356,8 +356,7 @@ private struct GuideReaderView: View {
             .frame(maxWidth: .infinity)
         }
         .background(Color(.systemBackground))
-        .toolbar(.hidden, for: .tabBar)
-        .navigationTitle("")
+        .navigationTitle(displayedGuide.title)
         .navigationBarTitleDisplayMode(.inline)
         .refreshable { await load(forceRefresh: true) }
         .task(id: guide.slug) { await load() }
@@ -441,6 +440,7 @@ private struct GuideReaderHeader: View {
                 .font(.title.weight(.bold))
                 .foregroundStyle(.primary)
                 .fixedSize(horizontal: false, vertical: true)
+                .accessibilityAddTraits(.isHeader)
 
             Text("Updated \(guide.updatedSummary) by \(guide.author.name)")
                 .font(.footnote)

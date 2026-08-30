@@ -135,19 +135,18 @@ struct CreateBookingSheet: View {
                     .overlay(alignment: .top) { Divider() }
                 }
             }
-            .confirmationDialog(
+            .alert(
                 "Couldn't create reservation",
                 isPresented: Binding(
                     get: { submitError != nil },
                     set: { if !$0 { submitError = nil } }
                 ),
-                titleVisibility: .visible
             ) {
-                Button("Try again") {
+                Button("Retry") {
                     submitError = nil
                     Task { await create() }
                 }
-                Button("OK", role: .cancel) {}
+                Button("Cancel", role: .cancel) {}
             } message: {
                 Text(submitError ?? "")
             }
@@ -236,12 +235,17 @@ struct CreateBookingSheet: View {
     @ToolbarContentBuilder
     private var toolbar: some ToolbarContent {
         ToolbarItem(placement: .cancellationAction) {
-            if step == 1 {
-                Button("Cancel") { attemptCancel() }
-                    .disabled(vm.isSubmitting)
-            } else {
-                Button("Back") { setStep(step - 1) }
-                    .disabled(vm.isSubmitting)
+            Button("Cancel") { attemptCancel() }
+                .disabled(vm.isSubmitting)
+        }
+        ToolbarItem(placement: .topBarLeading) {
+            if step > 1 {
+                Button {
+                    setStep(step - 1)
+                } label: {
+                    Label("Back", systemImage: "chevron.left")
+                }
+                .disabled(vm.isSubmitting)
             }
         }
         ToolbarItemGroup(placement: .confirmationAction) {
@@ -320,7 +324,7 @@ struct CreateBookingSheet: View {
                 FormCard {
                     BrandSectionHeader("Pickup Location")
                     if vm.isLoadingOptions {
-                        ProgressView()
+                        ProgressView("Loading pickup locations")
                             .frame(maxWidth: .infinity, minHeight: 32)
                     } else if vm.primaryPickupLocations.isEmpty {
                         Label("Pickup locations are unavailable", systemImage: "exclamationmark.triangle")
@@ -700,7 +704,8 @@ private struct QuarterHourDatePickerRow: View {
     @Binding var selection: Date
     var minimumDate: Date? = nil
 
-    private let quarterHours = Array(0..<96)
+    private let hours = Array(0..<24)
+    private let minutes = [0, 15, 30, 45]
 
     private var dateBinding: Binding<Date> {
         Binding(
@@ -721,26 +726,42 @@ private struct QuarterHourDatePickerRow: View {
         )
     }
 
-    private var quarterBinding: Binding<Int> {
+    private var hourBinding: Binding<Int> {
+        Binding(
+            get: { Calendar.current.component(.hour, from: selection) },
+            set: { updateTime(hour: $0, minute: Calendar.current.component(.minute, from: selection)) }
+        )
+    }
+
+    private var minuteBinding: Binding<Int> {
         Binding(
             get: {
-                let components = Calendar.current.dateComponents([.hour, .minute], from: selection)
-                let minutes = (components.hour ?? 0) * 60 + (components.minute ?? 0)
-                return min(95, max(0, Int((Double(minutes) / 15).rounded())))
+                let minute = Calendar.current.component(.minute, from: selection)
+                return minutes.min(by: { abs($0 - minute) < abs($1 - minute) }) ?? 0
             },
-            set: { quarter in
-                let calendar = Calendar.current
-                let day = calendar.dateComponents([.year, .month, .day], from: selection)
-                var merged = DateComponents()
-                merged.year = day.year
-                merged.month = day.month
-                merged.day = day.day
-                merged.hour = (quarter * 15) / 60
-                merged.minute = (quarter * 15) % 60
-                guard let value = calendar.date(from: merged) else { return }
-                selection = max(value, minimumDate ?? .distantPast)
-            }
+            set: { updateTime(hour: Calendar.current.component(.hour, from: selection), minute: $0) }
         )
+    }
+
+    private func updateTime(hour: Int, minute: Int) {
+        let calendar = Calendar.current
+        let day = calendar.dateComponents([.year, .month, .day], from: selection)
+        var merged = DateComponents()
+        merged.year = day.year
+        merged.month = day.month
+        merged.day = day.day
+        merged.hour = hour
+        merged.minute = minute
+        guard let value = calendar.date(from: merged) else { return }
+        selection = max(value, minimumDate ?? .distantPast)
+    }
+
+    private func timeLabel(hour: Int, minute: Int) -> String {
+        var components = Calendar.current.dateComponents([.year, .month, .day], from: selection)
+        components.hour = hour
+        components.minute = minute
+        let date = Calendar.current.date(from: components) ?? selection
+        return date.formatted(date: .omitted, time: .shortened)
     }
 
     var body: some View {
@@ -757,23 +778,26 @@ private struct QuarterHourDatePickerRow: View {
             .labelsHidden()
             .fixedSize()
 
-            Picker("\(label) time", selection: quarterBinding) {
-                ForEach(quarterHours, id: \.self) { quarter in
-                    Text(timeLabel(for: quarter)).tag(quarter)
+            HStack(spacing: 4) {
+                Picker("\(label) hour", selection: hourBinding) {
+                    ForEach(hours, id: \.self) { hour in
+                        Text(timeLabel(hour: hour, minute: minuteBinding.wrappedValue)).tag(hour)
+                    }
                 }
+                .pickerStyle(.menu)
+                .fixedSize()
+
+                Picker("\(label) minute", selection: minuteBinding) {
+                    ForEach(minutes, id: \.self) { minute in
+                        Text(timeLabel(hour: hourBinding.wrappedValue, minute: minute)).tag(minute)
+                    }
+                }
+                .pickerStyle(.menu)
+                .fixedSize()
             }
-            .pickerStyle(.menu)
-            .fixedSize()
         }
         .frame(minHeight: 44)
         .accessibilityElement(children: .contain)
-    }
-
-    private func timeLabel(for quarter: Int) -> String {
-        let calendar = Calendar.current
-        let start = calendar.startOfDay(for: .now)
-        let date = calendar.date(byAdding: .minute, value: quarter * 15, to: start) ?? start
-        return date.formatted(date: .omitted, time: .shortened)
     }
 }
 

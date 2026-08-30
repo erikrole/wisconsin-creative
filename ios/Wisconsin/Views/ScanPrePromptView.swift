@@ -23,14 +23,14 @@ struct ScanPrePromptView: View {
                 VStack(spacing: 10) {
                     Image(systemName: "barcode.viewfinder")
                         .font(.system(size: 52))
-                        .foregroundStyle(Color.accentColor)
+                        .foregroundStyle(Color.brandPrimary)
                         .symbolEffect(.bounce, options: .nonRepeating, isActive: !reduceMotion)
                         .accessibilityHidden(true)
 
                     Text("Scan to find gear fast")
                         .font(.title2.weight(.bold))
 
-                    Text("Point your camera at a barcode or QR code on a piece of gear and we'll jump straight to its record — checked-out, reserved, or available.")
+                        Text("Point your camera at a barcode or QR code on a piece of gear to open its record — checked out, reserved, or available.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -49,7 +49,7 @@ struct ScanPrePromptView: View {
                     Button {
                         Task { await requestSystemPermission() }
                     } label: {
-                        Text("Turn on camera")
+                        Text("Continue")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.glassProminent)
@@ -69,7 +69,7 @@ struct ScanPrePromptView: View {
         HStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.body)
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(Color.brandPrimary)
                 .frame(width: 28)
                 .accessibilityHidden(true)
             Text(text)
@@ -96,7 +96,7 @@ struct ScanDeniedView: View {
 
     var body: some View {
         ContentUnavailableView {
-            Label("Camera Access Off", systemImage: "camera.slash")
+            Label("Camera Access Off", systemImage: "camera.badge.exclamationmark")
         } description: {
             Text("Turn on Camera in Settings to scan, or type the sticker code instead.")
         } actions: {

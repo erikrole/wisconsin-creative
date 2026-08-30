@@ -134,7 +134,7 @@ struct BookingDetailView: View {
                 .background(Color(.systemGroupedBackground))
             }
         }
-        .navigationTitle("")
+        .navigationTitle(booking?.title ?? "Booking")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if canEditBooking {
@@ -480,8 +480,8 @@ struct EditBookingSheet: View {
                 }
             }
             .task(id: endsAt) { await checkAvailability() }
-            .sheet(isPresented: $showTransfer) {
-                TransferBookingOwnerSheet(booking: booking) { transferred in
+            .navigationDestination(isPresented: $showTransfer) {
+                TransferBookingOwnerSheet(booking: booking, wrapsInNavigationStack: false) { transferred in
                     ownerName = transferred.requester.name
                     ownerAvatarURL = transferred.requester.avatarUrl
                     didTransfer = true
@@ -564,6 +564,7 @@ struct EditBookingSheet: View {
 
 struct TransferBookingOwnerSheet: View {
     let booking: Booking
+    let wrapsInNavigationStack: Bool
     let onTransferred: (Booking) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -574,6 +575,16 @@ struct TransferBookingOwnerSheet: View {
     @State private var isSaving = false
     @State private var error: String?
 
+    init(
+        booking: Booking,
+        wrapsInNavigationStack: Bool = true,
+        onTransferred: @escaping (Booking) -> Void
+    ) {
+        self.booking = booking
+        self.wrapsInNavigationStack = wrapsInNavigationStack
+        self.onTransferred = onTransferred
+    }
+
     private var eligibleUsers: [FormUser] {
         (options?.users ?? []).filter { $0.id != booking.requester.id }
     }
@@ -583,7 +594,16 @@ struct TransferBookingOwnerSheet: View {
     }
 
     var body: some View {
-        NavigationStack {
+        if wrapsInNavigationStack {
+            NavigationStack {
+                transferContent
+            }
+        } else {
+            transferContent
+        }
+    }
+
+    private var transferContent: some View {
             ScrollView {
                 VStack(spacing: Brand.Space.md) {
                     VStack(spacing: Brand.Space.sm) {
@@ -654,7 +674,6 @@ struct TransferBookingOwnerSheet: View {
             }
             .task { await loadPeople() }
             .interactiveDismissDisabled(isSaving)
-        }
     }
 
     private func ownerRow(label: String, name: String, avatarURL: String?) -> some View {
@@ -735,8 +754,7 @@ private struct BookingDetailsSection: View {
                 }
                 Spacer(minLength: 0)
             }
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel("\(booking.title), for \(booking.requester.name), \(timingLabel(now: context.date))")
+            .accessibilityElement(children: .contain)
         }
         .brandCard()
     }

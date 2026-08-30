@@ -231,7 +231,6 @@ private struct ProfileNextUpRow: View {
         .buttonStyle(.plain)
         .frame(minHeight: 44)
         .padding(.vertical, 8)
-        .sensoryFeedback(.selection, trigger: hapticTrigger)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(title), \(detail), \(meta)")
     }

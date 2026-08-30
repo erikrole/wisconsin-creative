@@ -21,17 +21,17 @@ export function FormRow({
   );
 
   return (
-    <div className="grid grid-cols-[140px_1fr] items-start gap-1">
+    <div className="grid min-w-0 grid-cols-1 items-start gap-1.5 sm:grid-cols-[120px_minmax(0,1fr)] sm:gap-3">
       {htmlFor ? (
-        <Label htmlFor={htmlFor} className="pt-2.5 text-sm font-medium">
+        <Label htmlFor={htmlFor} className="text-sm font-medium sm:pt-2.5">
           {labelContent}
         </Label>
       ) : (
-        <span className="pt-2.5 text-sm font-medium">
+        <span className="text-sm font-medium sm:pt-2.5">
           {labelContent}
         </span>
       )}
-      <div>{children}</div>
+      <div className="min-w-0">{children}</div>
     </div>
   );
 }
@@ -55,18 +55,32 @@ export function FormRow2Col({
   );
 
   return (
-    <div className="grid grid-cols-[140px_1fr] items-start gap-1">
+    <div className="grid min-w-0 grid-cols-1 items-start gap-1.5 sm:grid-cols-[120px_minmax(0,1fr)] sm:gap-3">
       {htmlFor ? (
-        <Label htmlFor={htmlFor} className="pt-2.5 text-sm font-medium">
+        <Label htmlFor={htmlFor} className="text-sm font-medium sm:pt-2.5">
           {labelContent}
         </Label>
       ) : (
-        <span className="pt-2.5 text-sm font-medium">
+        <span className="text-sm font-medium sm:pt-2.5">
           {labelContent}
         </span>
       )}
-      <div className="grid grid-cols-2 gap-3">{children}</div>
+      <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">{children}</div>
     </div>
+  );
+}
+
+export function FormFieldError({
+  id,
+  children,
+}: {
+  id: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <p id={id} className="mt-1.5 text-sm text-destructive">
+      {children}
+    </p>
   );
 }
 

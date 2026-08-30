@@ -1562,10 +1562,21 @@ final class APIClient {
         let _: SuccessResponse = try await perform(req)
     }
 
-    func markAllNotificationsRead() async throws {
+    func markAllNotificationsRead() async throws -> [String] {
         struct Body: Encodable { let action: String }
+        struct Response: Decodable { let success: Bool; let ids: [String] }
         var req = request(path: "/api/notifications", method: "PATCH")
         req.httpBody = try JSONEncoder().encode(Body(action: "mark_all_read"))
+        let resp: Response = try await perform(req)
+        return resp.ids
+    }
+
+    func markNotificationsUnread(ids: [String]) async throws {
+        guard !ids.isEmpty else { return }
+        struct Body: Encodable { let action: String; let ids: [String] }
+        let body = Body(action: "mark_unread", ids: ids)
+        var req = request(path: "/api/notifications", method: "PATCH")
+        req.httpBody = try JSONEncoder().encode(body)
         let _: SuccessResponse = try await perform(req)
     }
 
@@ -1832,6 +1843,26 @@ final class APIClient {
         )
     }
 
+    /// Reverses or reapplies exactly one named working-copy command. The
+    /// server owns the snapshots and checks the expected version and operator
+    /// inside its serializable transaction; this is deliberately separate from
+    /// the batch discard/Revert action below.
+    func undoWorkingSchedule(shiftGroupId: String, expectedVersion: Int) async throws -> WorkingScheduleEditor {
+        try await changeWorkingScheduleHistory(
+            shiftGroupId: shiftGroupId,
+            expectedVersion: expectedVersion,
+            action: "undo"
+        )
+    }
+
+    func redoWorkingSchedule(shiftGroupId: String, expectedVersion: Int) async throws -> WorkingScheduleEditor {
+        try await changeWorkingScheduleHistory(
+            shiftGroupId: shiftGroupId,
+            expectedVersion: expectedVersion,
+            action: "redo"
+        )
+    }
+
     func discardWorkingSchedule(shiftGroupId: String, expectedVersion: Int) async throws -> WorkingScheduleEditor {
         let response: DataWrapper<WorkingScheduleEditor> = try await perform(
             request(
@@ -2014,6 +2045,21 @@ final class APIClient {
         }
         var req = request(path: "/api/shift-groups/\(shiftGroupId)/working-copy", method: "PATCH")
         req.httpBody = try JSONEncoder().encode(Body(expectedVersion: expectedVersion, command: command))
+        let response: DataWrapper<WorkingScheduleEditor> = try await perform(req)
+        return response.data
+    }
+
+    private func changeWorkingScheduleHistory(
+        shiftGroupId: String,
+        expectedVersion: Int,
+        action: String
+    ) async throws -> WorkingScheduleEditor {
+        struct Body: Encodable {
+            let expectedVersion: Int
+            let action: String
+        }
+        var req = request(path: "/api/shift-groups/\(shiftGroupId)/working-copy", method: "PATCH")
+        req.httpBody = try JSONEncoder().encode(Body(expectedVersion: expectedVersion, action: action))
         let response: DataWrapper<WorkingScheduleEditor> = try await perform(req)
         return response.data
     }

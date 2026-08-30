@@ -342,7 +342,7 @@ private struct CollaboratorPublishedScheduleView: View {
                         }
                         .buttonStyle(ScalePressStyle())
                         .contextMenu {
-                            if canFollow {
+                            if canFollow, pendingFollowId == nil {
                                 Button {
                                     Task { await setFollowing(item) }
                                 } label: {
@@ -351,7 +351,6 @@ private struct CollaboratorPublishedScheduleView: View {
                                         systemImage: item.isFollowing ? "bell.slash" : "bell"
                                     )
                                 }
-                                .disabled(pendingFollowId != nil)
                             }
                         }
                         .listRowSeparator(.hidden)
@@ -942,6 +941,41 @@ private struct InternalScheduleView: View {
         session.currentUser?.staffingType == "ST"
     }
 
+    @ViewBuilder
+    private var scheduleMoreControl: some View {
+        if canManageAvailability {
+            Menu {
+                Button {
+                    showAvailability = true
+                } label: {
+                    Label("My Availability", systemImage: "calendar.badge.clock")
+                }
+
+                Button {
+                    shiftCalendarTip.invalidate(reason: .actionPerformed)
+                    showCalendarSetup = true
+                } label: {
+                    Label("Shift Calendar", systemImage: "calendar.badge.plus")
+                }
+            } label: {
+                Label("More", systemImage: "ellipsis")
+                    .popoverTip(shiftCalendarTip, arrowEdge: .top)
+            }
+            .tint(Color.primary)
+            .accessibilityLabel("More Schedule actions")
+        } else {
+            Button {
+                shiftCalendarTip.invalidate(reason: .actionPerformed)
+                showCalendarSetup = true
+            } label: {
+                Label("Shift Calendar", systemImage: "calendar.badge.plus")
+                    .popoverTip(shiftCalendarTip, arrowEdge: .top)
+            }
+            .tint(Color.primary)
+            .accessibilityLabel("Shift Calendar")
+        }
+    }
+
     private var displayedGroups: [(date: Date, events: [ScheduleEvent])] {
         vm.groupedEvents.compactMap { group in
             var filtered = group.events
@@ -983,19 +1017,23 @@ private struct InternalScheduleView: View {
         NavigationStack(path: $navigationPath) {
             Group {
                 if vm.isLoading && vm.events.isEmpty {
-                    List {
-                        ForEach(0..<6, id: \.self) { _ in
-                            EventRowSkeleton()
-                                .listRowSeparator(.hidden)
-                                .listRowBackground(Color.clear)
-                                .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
+                    VStack(spacing: 8) {
+                        ProgressView("Loading schedule")
+                            .padding(.top, 12)
+                        List {
+                            ForEach(0..<6, id: \.self) { _ in
+                                EventRowSkeleton()
+                                    .listRowSeparator(.hidden)
+                                    .listRowBackground(Color.clear)
+                                    .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
+                            }
                         }
+                        .listStyle(.plain)
+                        .scrollContentBackground(.hidden)
+                        .background(Color(.systemGroupedBackground))
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
                     }
-                    .listStyle(.plain)
-                    .scrollContentBackground(.hidden)
-                    .background(Color(.systemGroupedBackground))
-                    .allowsHitTesting(false)
-                    .accessibilityHidden(true)
                 } else if vm.events.isEmpty, let err = vm.error {
                     // Only blank the screen when we have nothing to show.
                     ContentUnavailableView {
@@ -1084,7 +1122,6 @@ private struct InternalScheduleView: View {
                     .accessibilityLabel(activeFilterCount > 0
                         ? "Filters, \(activeFilterCount) active"
                         : "Filters")
-                    .sensoryFeedback(.selection, trigger: activeFilterCount)
                 }
 
                 // A control and two actions are different kinds of thing, so
@@ -1111,32 +1148,11 @@ private struct InternalScheduleView: View {
                         .popoverTip(scheduleOpenWorkTip, arrowEdge: .top)
                     }
                     .tint(Color.primary)
-                    .sensoryFeedback(.selection, trigger: showTradeBoard)
                     .accessibilityLabel(appState.openTradeCount > 0
                         ? "Trade Board, \(appState.openTradeCount) open"
                         : "Trade Board")
 
-                    Menu {
-                        if canManageAvailability {
-                            Button {
-                                showAvailability = true
-                            } label: {
-                                Label("My Availability", systemImage: "calendar.badge.clock")
-                            }
-                        }
-
-                        Button {
-                            shiftCalendarTip.invalidate(reason: .actionPerformed)
-                            showCalendarSetup = true
-                        } label: {
-                            Label("Shift Calendar", systemImage: "calendar.badge.plus")
-                        }
-                    } label: {
-                        Label("More", systemImage: "ellipsis")
-                            .popoverTip(shiftCalendarTip, arrowEdge: .top)
-                    }
-                    .tint(Color.primary)
-                    .accessibilityLabel("More Schedule actions")
+                    scheduleMoreControl
                 }
             }
             .task {
@@ -1321,7 +1337,6 @@ private struct InternalScheduleView: View {
         .padding(.top, Brand.Space.sm)
         .padding(.bottom, Brand.Space.xs)
         .background(Color(.systemGroupedBackground))
-        .sensoryFeedback(.selection, trigger: viewMode)
     }
 
     @ViewBuilder
@@ -1870,7 +1885,19 @@ struct ScheduleCalendarView: View {
 
     private let calendar = Calendar.current
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 0), count: 7)
-    private let weekdayLabels = ["S", "M", "T", "W", "T", "F", "S"]
+    @Environment(\.layoutDirection) private var layoutDirection
+
+    private var weekdayLabels: [String] {
+        let symbols = calendar.veryShortWeekdaySymbols
+        let first = max(0, calendar.firstWeekday - 1)
+        return (0..<7).map { symbols[(first + $0) % symbols.count] }
+    }
+
+    private var weekdayFullNames: [String] {
+        let symbols = calendar.weekdaySymbols
+        let first = max(0, calendar.firstWeekday - 1)
+        return (0..<7).map { symbols[(first + $0) % symbols.count] }
+    }
 
     private var selectedDayEvents: [ScheduleEvent] {
         filteredEvents(on: selectedDate)
@@ -1926,7 +1953,7 @@ struct ScheduleCalendarView: View {
                         }
                         .buttonStyle(.plain)
                     } else {
-                        Color.clear.frame(height: 36)
+                        Color.clear.frame(minWidth: 44, minHeight: 44)
                     }
                 }
             }
@@ -1937,7 +1964,8 @@ struct ScheduleCalendarView: View {
                     .onEnded { value in
                         let dx = value.translation.width
                         guard abs(dx) > 50 else { return }
-                        changeMonth(by: dx > 0 ? -1 : 1)
+                        let movingTowardNext = layoutDirection == .rightToLeft ? dx > 0 : dx < 0
+                        changeMonth(by: movingTowardNext ? 1 : -1)
                     }
             )
 
@@ -1951,19 +1979,15 @@ struct ScheduleCalendarView: View {
         }
     }
 
-    private var weekdayFullNames: [String] {
-        ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-    }
-
     private var dotLegend: some View {
         // Grey is the third venue colour, not an absence of one: every neutral
         // game and every non-game day draws one. Naming only home and away left
         // the most common dot on a practice-heavy month unexplained.
         HStack(spacing: 12) {
             LegendAssignmentMark(label: "My shift")
-            LegendDot(color: Color.statusText(.green), label: "Home")
-            LegendDot(color: Color.statusText(.orange), label: "Away")
-            LegendDot(color: Color.statusText(.gray), label: "Other")
+            LegendDot(color: Color.statusText(.green), systemImage: "house.fill", label: "Home")
+            LegendDot(color: Color.statusText(.orange), systemImage: "arrow.up.right", label: "Away")
+            LegendDot(color: Color.statusText(.gray), systemImage: "circle.grid.2x2.fill", label: "Other")
         }
         .frame(maxWidth: .infinity, alignment: .center)
         .accessibilityElement(children: .combine)
@@ -2001,7 +2025,7 @@ struct ScheduleCalendarView: View {
     private var monthHeader: some View {
         HStack {
             Button { changeMonth(by: -1) } label: {
-                Image(systemName: "chevron.left")
+                Image(systemName: "chevron.backward")
                     .font(.body.weight(.semibold))
                     .foregroundStyle(.secondary)
                     .frame(width: 36, height: 36)
@@ -2026,7 +2050,7 @@ struct ScheduleCalendarView: View {
             Spacer()
 
             Button { changeMonth(by: 1) } label: {
-                Image(systemName: "chevron.right")
+                Image(systemName: "chevron.forward")
                     .font(.body.weight(.semibold))
                     .foregroundStyle(.secondary)
                     .frame(width: 36, height: 36)
@@ -2106,7 +2130,8 @@ struct ScheduleCalendarView: View {
         guard let range = calendar.range(of: .day, in: .month, for: displayedMonth),
               let firstDay = calendar.date(from: calendar.dateComponents([.year, .month], from: displayedMonth))
         else { return [] }
-        let offset = calendar.component(.weekday, from: firstDay) - 1
+        let weekday = calendar.component(.weekday, from: firstDay)
+        let offset = (weekday - calendar.firstWeekday + 7) % 7
         let empties: [Date?] = Array(repeating: nil, count: offset)
         let days: [Date?] = range.compactMap { calendar.date(byAdding: .day, value: $0 - 1, to: firstDay) }
         return empties + days
@@ -2118,7 +2143,7 @@ struct ScheduleCalendarView: View {
         let visible = filteredEvents(on: date)
         return visible.prefix(3).map { event in
             let isShift = shiftsByEventId[event.id] != nil
-            return DotInfo(color: venueRailColor(for: event), isShift: isShift)
+            return DotInfo(color: venueRailColor(for: event), isShift: isShift, venue: event.venue)
         }
     }
 }
@@ -2126,17 +2151,38 @@ struct ScheduleCalendarView: View {
 struct DotInfo {
     let color: Color
     let isShift: Bool
+    let venue: ScheduleVenue
+
+    var systemImage: String {
+        switch venue {
+        case .home: return "house.fill"
+        case .away: return "arrow.up.right"
+        case .neutral: return "circle.grid.2x2.fill"
+        case .nonGame: return "minus"
+        }
+    }
+
+    var label: String {
+        switch venue {
+        case .home: return "home"
+        case .away: return "away"
+        case .neutral: return "neutral"
+        case .nonGame: return "non-game"
+        }
+    }
 }
 
 private struct LegendDot: View {
     let color: Color
+    let systemImage: String
     let label: String
 
     var body: some View {
         HStack(spacing: 4) {
-            Circle()
-                .fill(color)
-                .frame(width: 6, height: 6)
+            Image(systemName: systemImage)
+                .font(.system(size: 8, weight: .semibold))
+                .foregroundStyle(color)
+                .frame(width: 10, height: 10)
                 .accessibilityHidden(true)
             Text(label)
                 .font(.caption2)
@@ -2193,26 +2239,28 @@ private struct DayCell: View {
             }
             .frame(width: 28, height: 28)
 
-            // Venue dots retain classification color even when the day also
-            // contains personal work.
+            // Venue symbols retain classification even when color is not
+            // available; the blue assignment mark remains separate.
             HStack(spacing: 2) {
                 ForEach(dots.indices, id: \.self) { i in
-                    Circle()
-                        .fill(dots[i].color)
-                        .frame(width: 4, height: 4)
+                    Image(systemName: dots[i].systemImage)
+                        .font(.system(size: 8, weight: .semibold))
+                        .foregroundStyle(dots[i].color)
+                        .frame(width: 9, height: 9)
+                        .accessibilityHidden(true)
                 }
             }
-            .frame(height: 4)
+            .frame(height: 9)
 
             Capsule()
                 .fill(dots.contains(where: \.isShift) ? Color.statusText(.blue) : Color.clear)
                 .frame(width: 9, height: 2)
                 .accessibilityHidden(true)
         }
-        // Deliberately below Apple's 44pt guidance: a six-row month at 44pt ate
-        // over half the screen and starved the agenda beneath it. Cell content
-        // measures ~36pt and the whole cell stays tappable via contentShape.
-        .frame(minWidth: 32, minHeight: 32)
+        // Keep the day numeral compact while giving the entire calendar cell a
+        // full system-sized interaction target. The seven flexible columns
+        // retain their month-grid geometry; only the tappable envelope grows.
+        .frame(minWidth: 44, minHeight: 44)
         .contentShape(Rectangle())
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityLabel)
@@ -2230,6 +2278,16 @@ private struct DayCell: View {
             parts.append(hasMyShift ? "1 event including my shift" : "1 event")
         } else {
             parts.append(hasMyShift ? "\(eventCount) events including my shift" : "\(eventCount) events")
+        }
+        let venueCounts = Dictionary(grouping: dots, by: \.venue).mapValues(\.count)
+        let venueParts: [String] = [
+            (venueCounts[.home] ?? 0) > 0 ? "\(venueCounts[.home]!) home" : nil,
+            (venueCounts[.away] ?? 0) > 0 ? "\(venueCounts[.away]!) away" : nil,
+            (venueCounts[.neutral] ?? 0) > 0 ? "\(venueCounts[.neutral]!) neutral" : nil,
+            (venueCounts[.nonGame] ?? 0) > 0 ? "\(venueCounts[.nonGame]!) non-game" : nil
+        ].compactMap { $0 }
+        if !venueParts.isEmpty {
+            parts.append(venueParts.joined(separator: ", "))
         }
         return parts.joined(separator: ", ")
     }

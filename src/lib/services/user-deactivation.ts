@@ -7,6 +7,8 @@ import {
   type Role,
 } from "@prisma/client";
 import { createAuditEntryTx } from "@/lib/audit";
+import { hashPassword, randomHex } from "@/lib/auth";
+import { deleteImage, isBlobUrl } from "@/lib/blob";
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
 import { createShiftScheduleNotification } from "@/lib/services/notifications";
@@ -157,16 +159,43 @@ export async function deactivateUserWithCleanup(args: {
   targetUserId: string;
   actorId: string;
   actorRole: Role;
+  /**
+   * Self-service deletion erases direct identity/authentication data while
+   * retaining the tombstone row needed by custody and audit foreign keys.
+   * Administrative deactivation keeps the existing reversible lifecycle.
+   */
+  erasePersonalData?: boolean;
   audit?: {
     action: string;
     before?: Record<string, unknown>;
     after?: Record<string, unknown>;
   };
 }): Promise<UserDeactivationResult> {
-  const { targetUserId, actorId, actorRole, audit } = args;
+  const {
+    targetUserId,
+    actorId,
+    actorRole,
+    erasePersonalData = false,
+    audit,
+  } = args;
   const releasedAssignmentIds: string[] = [];
+  const erasedPasswordHash = erasePersonalData
+    ? await hashPassword(`deleted-account:${randomHex(32)}`)
+    : undefined;
+  let avatarUrlToDelete: string | null = null;
 
   const deactivationResult = await db.$transaction(async (tx) => {
+    const targetIdentity = erasePersonalData
+      ? await tx.user.findUnique({
+        where: { id: targetUserId },
+        select: { email: true, avatarUrl: true },
+      })
+      : null;
+    if (erasePersonalData && !targetIdentity) {
+      throw new HttpError(404, "User not found");
+    }
+    avatarUrlToDelete = targetIdentity?.avatarUrl ?? null;
+
     const openCheckouts = await tx.booking.count({
       where: {
         requesterUserId: targetUserId,
@@ -177,7 +206,7 @@ export async function deactivateUserWithCleanup(args: {
     if (openCheckouts > 0) {
       throw new HttpError(
         400,
-        `Cannot deactivate: user has ${openCheckouts} open checkout${openCheckouts > 1 ? "s" : ""}. Return all gear first.`
+        `Cannot ${erasePersonalData ? "delete" : "deactivate"}: user has ${openCheckouts} open checkout${openCheckouts > 1 ? "s" : ""}. Return all gear first.`
       );
     }
 
@@ -284,16 +313,135 @@ export async function deactivateUserWithCleanup(args: {
     const liveActivityStartsQueuedForEnd = await tx.liveActivityStart.count({
       where: { userId: targetUserId, endedAt: null },
     });
+    const deviceTokenPersonalCleanup = erasePersonalData
+      ? await tx.deviceToken.deleteMany({ where: { userId: targetUserId } })
+      : { count: 0 };
+    const liveActivityStartTokenPersonalCleanup = erasePersonalData
+      ? await tx.liveActivityStartToken.deleteMany({ where: { userId: targetUserId } })
+      : { count: 0 };
+    const liveActivityTokenPersonalCleanup = erasePersonalData
+      ? await tx.liveActivityToken.deleteMany({ where: { userId: targetUserId } })
+      : { count: 0 };
+    const liveActivityStartPersonalCleanup = erasePersonalData
+      ? await tx.liveActivityStart.deleteMany({ where: { userId: targetUserId } })
+      : { count: 0 };
     const passwordResetTokenCleanup = await tx.passwordResetToken.deleteMany({
       where: { userId: targetUserId },
     });
+    const passkeyCredentialCleanup = erasePersonalData
+      ? await tx.passkeyCredential.deleteMany({ where: { userId: targetUserId } })
+      : { count: 0 };
+    const passkeyChallengeCleanup = erasePersonalData
+      ? await tx.passkeyChallenge.deleteMany({ where: { userId: targetUserId } })
+      : { count: 0 };
+    const notificationCleanup = erasePersonalData
+      ? await tx.notification.deleteMany({ where: { userId: targetUserId } })
+      : { count: 0 };
+    const webPushSubscriptionCleanup = erasePersonalData
+      ? await tx.webPushSubscription.deleteMany({ where: { userId: targetUserId } })
+      : { count: 0 };
+    const appInstallationCleanup = erasePersonalData
+      ? await tx.userAppInstallation.deleteMany({ where: { userId: targetUserId } })
+      : { count: 0 };
+    const favoriteItemCleanup = erasePersonalData
+      ? await tx.favoriteItem.deleteMany({ where: { userId: targetUserId } })
+      : { count: 0 };
+    const favoriteFamilyCleanup = erasePersonalData
+      ? await tx.favoriteItemFamily.deleteMany({ where: { userId: targetUserId } })
+      : { count: 0 };
+    const scheduleFollowCleanup = erasePersonalData
+      ? await tx.scheduleEventFollow.deleteMany({ where: { userId: targetUserId } })
+      : { count: 0 };
+    const availabilityCleanup = erasePersonalData
+      ? await tx.studentAvailabilityBlock.deleteMany({ where: { userId: targetUserId } })
+      : { count: 0 };
+    const sportAssignmentCleanup = erasePersonalData
+      ? await tx.studentSportAssignment.deleteMany({ where: { userId: targetUserId } })
+      : { count: 0 };
+    const areaAssignmentCleanup = erasePersonalData
+      ? await tx.studentAreaAssignment.deleteMany({ where: { userId: targetUserId } })
+      : { count: 0 };
+    const badgeCleanup = erasePersonalData
+      ? await tx.studentBadge.deleteMany({ where: { userId: targetUserId } })
+      : { count: 0 };
+    const badgeStreakCleanup = erasePersonalData
+      ? await tx.badgeStreak.deleteMany({ where: { userId: targetUserId } })
+      : { count: 0 };
+    const badgeReceiptCleanup = erasePersonalData
+      ? await tx.badgeEventReceipt.deleteMany({ where: { userId: targetUserId } })
+      : { count: 0 };
+    const claimedInviteCleanup = erasePersonalData
+      ? await tx.allowedEmail.updateMany({
+        where: {
+          OR: [
+            { claimedById: targetUserId },
+            { email: targetIdentity?.email ?? "" },
+          ],
+        },
+        data: {
+          email: `deleted+${targetUserId}@deleted.invalid`,
+          claimedById: null,
+          claimedAt: null,
+          preloadedName: null,
+        },
+      })
+      : { count: 0 };
+    const licenseClaimCleanup = erasePersonalData
+      ? await tx.licenseCodeClaim.updateMany({
+        where: { userId: targetUserId },
+        data: { userId: null, occupantLabel: null },
+      })
+      : { count: 0 };
     const directReportCleanup = await tx.user.updateMany({
       where: { directReportId: targetUserId },
       data: { directReportId: null },
     });
     await tx.user.update({
       where: { id: targetUserId },
-      data: { active: false },
+      data: erasePersonalData
+        ? {
+          active: false,
+          name: "Deleted User",
+          email: `deleted+${targetUserId}@deleted.invalid`,
+          passwordHash: erasedPasswordHash!,
+          forcePasswordChange: false,
+          affiliation: null,
+          collaboratorProfile: null,
+          hiddenFromRoster: true,
+          phone: null,
+          personalPhone: null,
+          workPhone: null,
+          workPhoneNotApplicable: false,
+          wiscardNumber: null,
+          wiscardCardNumber: null,
+          wiscardIssueCode: null,
+          profilePromptSnoozedUntil: null,
+          slackHandle: null,
+          slackProfileUrl: null,
+          avatarUrl: null,
+          primaryArea: null,
+          locationId: null,
+          lastActiveAt: null,
+          directReportId: null,
+          directReportName: null,
+          title: null,
+          athleticsEmail: null,
+          startDate: null,
+          gradYear: null,
+          graduationTerm: null,
+          studentYearOverride: null,
+          topSizeFit: null,
+          topSize: null,
+          bottomSize: null,
+          shoeSizeSystem: null,
+          shoeSize: null,
+          birthdayMonth: null,
+          birthdayDay: null,
+          birthYear: null,
+          notificationPrefs: Prisma.JsonNull,
+          icsToken: null,
+        }
+        : { active: false },
     });
 
     const result = {
@@ -306,14 +454,40 @@ export async function deactivateUserWithCleanup(args: {
         liveActivityStartsQueuedForEnd,
         passwordResetTokens: passwordResetTokenCleanup.count,
       },
+      personalDataErased: erasePersonalData,
+      personalDataRecordsRemoved: erasePersonalData
+        ? {
+          passkeyCredentials: passkeyCredentialCleanup.count,
+          passkeyChallenges: passkeyChallengeCleanup.count,
+          deviceTokens: deviceTokenPersonalCleanup.count,
+          liveActivityStartTokens: liveActivityStartTokenPersonalCleanup.count,
+          liveActivityTokens: liveActivityTokenPersonalCleanup.count,
+          liveActivityStarts: liveActivityStartPersonalCleanup.count,
+          notifications: notificationCleanup.count,
+          webPushSubscriptions: webPushSubscriptionCleanup.count,
+          appInstallations: appInstallationCleanup.count,
+          favorites: favoriteItemCleanup.count + favoriteFamilyCleanup.count,
+          scheduleFollows: scheduleFollowCleanup.count,
+          availabilityBlocks: availabilityCleanup.count,
+          sportAssignments: sportAssignmentCleanup.count,
+          areaAssignments: areaAssignmentCleanup.count,
+          badges: badgeCleanup.count + badgeStreakCleanup.count + badgeReceiptCleanup.count,
+          claimedInvites: claimedInviteCleanup.count,
+          licenseClaims: licenseClaimCleanup.count,
+        }
+        : undefined,
     };
 
-    const cleanupAfter = {
+    const cleanupAfter: Record<string, unknown> = {
       cancelledBookingIds: result.cancelledIds,
       cancelledCount: result.cancelledIds.length,
       directReportsCleared: result.directReportsCleared,
       notificationAccessRevoked: result.notificationAccessRevoked,
     };
+    if (erasePersonalData) {
+      cleanupAfter.personalDataErased = true;
+      cleanupAfter.personalDataRecordsRemoved = result.personalDataRecordsRemoved;
+    }
     const revokedNotificationAccessCount = Object.values(
       result.notificationAccessRevoked
     ).reduce((sum, count) => sum + count, 0);
@@ -321,6 +495,7 @@ export async function deactivateUserWithCleanup(args: {
       result.cancelledIds.length > 0
       || result.directReportsCleared > 0
       || revokedNotificationAccessCount > 0
+      || erasePersonalData
     ) {
       await createAuditEntryTx(tx, {
         actorId,
@@ -350,6 +525,14 @@ export async function deactivateUserWithCleanup(args: {
     return result;
   }, { isolationLevel: "Serializable" });
 
+  if (erasePersonalData && avatarUrlToDelete && isBlobUrl(avatarUrlToDelete)) {
+    await deleteImage(avatarUrlToDelete).catch((error) => {
+      // The database no longer exposes the avatar after the transaction. A
+      // failed best-effort blob delete must not roll back the account erase.
+      console.error("[Account deletion] failed to remove profile photo", error);
+    });
+  }
+
   let companionRevocationError: unknown;
   try {
     await revokeCompanionUser(targetUserId);
@@ -370,7 +553,7 @@ export async function deactivateUserWithCleanup(args: {
   if (companionRevocationError) {
     throw new HttpError(
       503,
-      "The account was deactivated, but companion access could not be revoked. Retry the deactivation cleanup.",
+      `The account was ${erasePersonalData ? "deleted" : "deactivated"}, but companion access could not be revoked. Retry the ${erasePersonalData ? "deletion" : "deactivation"} cleanup.`,
     );
   }
   const notificationFailure = notificationResults.find(

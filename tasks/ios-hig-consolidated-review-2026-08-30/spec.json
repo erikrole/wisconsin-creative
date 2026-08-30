@@ -1,0 +1,129 @@
+{
+  "title": "Wisconsin Creative · Complete iOS HIG Remediation",
+  "eyebrow": "One consolidated review · iOS · macOS companion · kiosk",
+  "lede": "A single handoff for every actionable finding in the 2026-08-29 HIG audit: matched runtime captures where the fixture harness already produced them, a complete source-level before/after ledger for every remaining finding, and explicit boundaries for device, deployment, and policy acceptance.",
+  "stats": [
+    {
+      "k": "Audit findings",
+      "v": "75",
+      "n": "Every original unchecked source-review entry is accounted for in the ledger"
+    },
+    {
+      "k": "Source-closed",
+      "v": "74",
+      "n": "P0/P1 source blockers and actionable P2 findings closed in this checkout",
+      "tone": "good"
+    },
+    {
+      "k": "Accepted exception",
+      "v": "1",
+      "n": "P2-291 remains open under D-043 for the deliberate password fallback"
+    },
+    {
+      "k": "Regression proof",
+      "v": "142",
+      "n": "Focused native source-contract tests passed across 20 files",
+      "tone": "good"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Matched runtime captures",
+      "note": "These four pairs are the inspected exports from the deterministic iPhone 16 Pro fixture/UI-test harness. The notification pair shows the pause and recovery truth; the search pair shows the bounded result/pagination treatment. The source-only changes are documented in the complete Was/Now ledger below rather than represented by invented screenshots.",
+      "pairs": [
+        {
+          "title": "Notifications · delivery status",
+          "sub": "The first decision point now reflects account state and keeps the inbox promise visible.",
+          "before": "/Users/role/Code/wisconsin-creative/tasks/ios-notification-delivery-truth-review-2026-08-29/before-top.png",
+          "beforeCap": "Before: a paused-account fixture still says push alerts are enabled, with no visible pause state or Resume action.",
+          "after": "/Users/role/Code/wisconsin-creative/tasks/ios-notification-delivery-truth-review-2026-08-29/after-top.png",
+          "afterCap": "After: the same fixture says Paused until…, preserves the in-app inbox promise, and exposes Resume now beside the delivery recovery state."
+        },
+        {
+          "title": "Notifications · delivery controls",
+          "sub": "The self-test and notification-type controls now obey the same eligibility contract the screen explains.",
+          "before": "/Users/role/Code/wisconsin-creative/tasks/ios-notification-delivery-truth-review-2026-08-29/before-scrolled.png",
+          "beforeCap": "Before: Push alerts is an unqualified switch; a paused account gets no explanation for why a device test should not run.",
+          "after": "/Users/role/Code/wisconsin-creative/tasks/ios-notification-delivery-truth-review-2026-08-29/after-scrolled.png",
+          "afterCap": "After: the switch is qualified while paused, the test is withheld with a recovery explanation, and notification categories remain legible."
+        },
+        {
+          "title": "Search · first-page results",
+          "sub": "The global search surface keeps the native entry controls while allowing the result set to grow beyond the first page.",
+          "before": "/private/tmp/wisconsin-search-before-r5-attachments/7EC44572-9AD9-420E-8616-0C8379C55F89.png",
+          "beforeCap": "Before: the first-page fixture presents a fixed result window while the active search surface dominates the top of the screen.",
+          "after": "/private/tmp/wisconsin-search-after-r5-final-attachments/14CB7205-7958-433A-A99B-C680FA601FDA.png",
+          "afterCap": "After: the final search surface keeps the native Cancel/Scan affordances and reports the full result count without losing section structure."
+        },
+        {
+          "title": "Search · pagination affordance",
+          "sub": "Additional results are offered as a deliberate action instead of an unexplained truncation.",
+          "before": "/private/tmp/wisconsin-search-before-r5-attachments/D688FFAE-F564-417D-88AF-12D616AEE075.png",
+          "beforeCap": "Before: the scrolled result surface ends at the initial batch, so the reader cannot tell whether more matches exist.",
+          "after": "/private/tmp/wisconsin-search-after-r5-final-attachments/D8AB3031-73A3-4731-9A32-F4D06FB132B8.png",
+          "afterCap": "After: Show more items is visible at the boundary, preserving the same result context while making the next step explicit."
+        }
+      ]
+    }
+  ],
+  "changesHeading": "Complete Was / Now ledger",
+  "changesNote": "The entries below cover all 75 findings from tasks/audit-hig-ios.md. Each group states the reader-facing cost that existed and the source-level behavior now present. Where the product deliberately remains unchanged, the reason and decision are named instead of being presented as a silent pass.",
+  "changes": [
+    {
+      "h": "Navigation, modality, and keyboard · P1-210, P1-219–220, P2-282, P2-286–288, P2-292, P2-306, P2-308, P2-330–332",
+      "was": "Back competed with cancellation, modal tasks stacked or ended in lone Done buttons, recovery labels and titles varied, validation could strand keyboard focus on a disabled field, role preview looked like disclosure, scene recreation returned to Home, and Settings or the Mac companion had no standard keyboard/visibility path.",
+      "now": "Native navigation owns Back while Cancel/Close own dismissal; confirmable work is grouped by task; recovery and action-sheet language is compact; registration skips disabled fields and validates inline; the role-preview control is an immediate action; scene and destination state restore; Command-Comma reaches Settings; and the Mac menu-bar entry is user-controlled."
+    },
+    {
+      "h": "Controls, layout, and menus · P1-217–218, P1-221–224, P1-236, P2-283–285, P2-294, P2-299–305, P2-309, P2-313–314, P2-329, P2-333–334",
+      "was": "Frequent actions and calendar days fell below the 44-point target, kiosk identity rows did not scale with accessibility sizes, quarter-hour menus were unwieldy, a disabled field interrupted keyboard progression, lifecycle and copy actions were hidden behind long press, selection state was hand-drawn, a reversible license return looked destructive, color alone carried venue meaning, sliders exposed opaque numbers, and labels/haptics varied across equivalent controls.",
+      "now": "Interactive surfaces use the 44-point floor and an accessibility-size single-column kiosk roster; time selection is bounded; row lifecycle and copy actions have visible alternatives; Toggle and Picker own native selection state; calendar labels expose venue counts; crop sliders speak directionally; menus use title style and ellipses; conditional commands hide when unavailable; action-sheet titles stay compact; avatars scale from an 11-point floor; checkout says Reserve; recovery says Retry; and redundant app-authored haptics are removed."
+    },
+    {
+      "h": "Account erasure, privacy, and inclusive writing · P1-225, P2-289–290, P2-310, P2-315",
+      "was": "Delete Account only deactivated access, the sign-in barrier explained mechanics rather than benefit, passkey copy assumed Face ID or Touch ID, some prompts used implementation language or a collective we, and camera permission copy lacked a pre-alert convention.",
+      "now": "Self-delete pseudonymizes retained custody/audit attribution, removes direct identity and authentication data, deletes notification/device/preferences and passkeys, revokes companion access, and records the retention boundary; sign-in explains the person-facing benefit; passkey copy is capability-neutral; prompts stay task- and person-centered; and camera permission copy uses the explicit Continue pre-alert and purpose strings."
+    },
+    {
+      "h": "Password fallback remains deliberate · P2-291 (accepted D-043 exception)",
+      "was": "Password sign-in and recovery remain sufficient without a second factor while passkeys are additive during rollout.",
+      "now": "No unapproved MFA or recovery change was invented. D-043 keeps password fallback available while passkeys are discoverable and phishing-resistant; requiring a second factor or removing password recovery needs a separate accepted security decision."
+    },
+    {
+      "h": "Scanner, kiosk, imagery, and full-screen surfaces · P1-235, P1-237, P2-271, P2-293, P2-295–297, P2-307, P2-325–327",
+      "was": "Black camera/photo surfaces could leave system chrome unreadable, scanner-burst filtering rejected normal Paste, drag/drop, and Scribble, the dedicated kiosk had no status-bar reveal, loading/retry and failed thumbnails were unclear, full-screen photos lost context and recovery, content surfaces used the wrong material, and zoom depended on touch gestures alone.",
+      "now": "Camera and photo viewers keep readable status-bar treatment and recovery controls; native kiosk text editing accepts standard UIKit input; loading states and retry paths are named; failed thumbnails keep a recoverable surface; bundled raster artwork retains its declared scale variants with sRGB metadata; full-screen photos retain context, VoiceOver-adjustable zoom, visible zoom controls, and Reduce Motion behavior; content-layer surfaces use the app surface system; and kiosk landscape remains an explicit platform deadline rather than a hidden claim."
+    },
+    {
+      "h": "Feedback, notifications, and discovery · P2-241–246, P2-263–264, P2-316–324",
+      "was": "Custom fills could lose contrast in Dark Mode, banners moved with Reduce Motion, skeletons and toasts were silent to VoiceOver, invalid symbols could render blank, profile uploads were device-scaled, Mark All Read and crop reset were irreversible, notification prompts and interruption behavior were generic, snooze state could diverge, categories repeated the tap destination, TipKit cadence and eligibility were implicit, and chart selection marks multiplied across a series.",
+      "now": "Semantic tokens adapt to contrast; motion respects Reduce Motion; loading and transient feedback announce through accessibility; all requested symbols resolve against the installed catalog; profile uploads render at the declared 1024-pixel target; mark-all and crop reset have undo; notification prompts follow demonstrated interest, foreground delivery avoids redundant interruption, snooze reconciles with account state, categories explain hidden previews without duplicate actions, TipKit cadence and eligibility are explicit, and chart selection creates one inspection mark per selected day."
+    },
+    {
+      "h": "State, refresh, and system shell · P2-298, P2-300–302, P2-311–312, P2-328",
+      "was": "Older refresh responses could overwrite newer state, unavailable context commands stayed visible but disabled, useful identifiers were not consistently selectable, the system launch frame carried branding, accent calls bypassed the established token, and the custom month calendar assumed left-to-right ordering.",
+      "now": "Latest-request generation guards protect Home, Notifications, Event Detail, Trade Board, and Overdue refreshes; unavailable commands hide; operational text is selectable; the system launch frame is neutral while sign-in retains brand identity; accent usage routes through Wisconsin-red and semantic tokens; and calendar weekday order, first weekday, and swipe direction follow the current locale."
+    },
+    {
+      "h": "Foundational remediation slices remain in the same handoff · R2–R7",
+      "was": "Notification truth, MetricKit observability, widgets and Live Activity routing, global search result boundaries, App Shortcut/navigation routing, and Schedule working-copy history were previously separate remediation threads.",
+      "now": "They are represented as one current checkout and one review artifact: notification state is honest and recoverable; MetricKit ownership is explicit; widget and Live Activity payloads preserve identity and fallback behavior; Search exposes more results deliberately; App Shortcuts land on the right native destination; and Schedule undo/redo uses server-backed history with system UndoManager and conflict-aware recovery."
+    }
+  ],
+  "verification": [
+    "<strong>Focused source contracts:</strong> 20 files and 142 tests passed across HIG navigation, kiosk/input, notifications, recovery, request ownership, account erasure, Schedule, Search, launch, settings, and Mac companion surfaces.",
+    "<strong>Native build:</strong> Wisconsin Debug builds successfully for <code>platform=iOS Simulator,OS=26.5,name=iPhone 16 Pro</code>, with code signing disabled and the repository's resolved Swift package cache.",
+    "<strong>Repository checks:</strong> <code>npx tsc --noEmit --pretty false</code>, <code>npm run drift:ios</code>, <code>npm run audit:ios:gaps</code> (56/56), <code>npm run ios:project:check</code>, and <code>git diff --check</code> pass.",
+    "<strong>Matched capture inspection:</strong> all four notification/search before/after pairs were read before inclusion; the HTML builder embeds the PNGs into this single document so the artifact has no local image dependency.",
+    "<strong>Documentation gate:</strong> <code>npm run verify:docs</code> remains blocked by codemap drift already present in the shared dirty checkout: architecture counts 311→315 API handlers, 76→79 services, 153→155 components, and 586→587 tests, plus corresponding area/backend/data/schema map changes. Codemaps were not regenerated to avoid overwriting unrelated work.",
+    "<strong>Mac build caveat:</strong> the companion build was stopped by the local Swift macro/sandbox service (ObservationMacros malformed response and sandbox-exec denial), not a source diagnostic; Mac UI acceptance remains separate.",
+    "<strong>Not claimed:</strong> authenticated production read-back, deployment, APNs delivery, notification permission changes, VoiceOver on device, camera behavior, managed kiosk acceptance, physical-device behavior, iPad/RTL rendering, or App Store submission."
+  ],
+  "notesHeading": "Acceptance boundaries",
+  "notes": [
+    "The audit ledger in tasks/audit-hig-ios.md now has 74 source-closed entries and one intentionally open P2-291 exception under docs/DECISIONS.md D-043. The exception is visible here so policy is not mistaken for an implementation pass.",
+    "P2-307 is source-documented but still needs the managed-kiosk landscape/full-screen acceptance required by the current iOS platform contract.",
+    "This is one consolidated HTML site. The matched images are runtime evidence for the captured slices; the remaining Was/Now entries are source evidence and should not be read as screenshot proof until the corresponding fixture/UI-test capture exists.",
+    "No commit, deployment, production mutation, or App Store submission was performed."
+  ]
+}

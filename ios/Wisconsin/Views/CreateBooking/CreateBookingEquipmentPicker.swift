@@ -184,7 +184,6 @@ struct CreateBookingEquipmentPicker: View {
         Section {
             Button {
                 showCart = true
-                Haptics.tap()
             } label: {
                 HStack(spacing: 12) {
                     Image(systemName: selectedSummaryHasWarning ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
@@ -388,7 +387,6 @@ struct CreateBookingEquipmentPicker: View {
         HStack(spacing: 12) {
             Button {
                 showCart = true
-                Haptics.tap()
             } label: {
                 HStack(spacing: 10) {
                     Image(systemName: "shippingbox.fill")
@@ -498,7 +496,6 @@ struct CreateBookingEquipmentPicker: View {
 
     private func acknowledge(_ recommendation: BatteryRecommendation) {
         acknowledgedRecommendationIDs.insert(recommendation.reminderKey)
-        Haptics.tap()
     }
 
     private func noteBulkChanged(_ name: String) {
@@ -585,6 +582,8 @@ struct BulkResultRow: View {
                         .background(Color.statusBackground(.purple), in: Circle())
                 }
                 .buttonStyle(.plain)
+                .frame(width: 44, height: 44)
+                .contentShape(Circle())
                 .disabled(quantity == 0)
                 .accessibilityLabel("Remove one \(sku.name)")
 
@@ -602,6 +601,8 @@ struct BulkResultRow: View {
                         .background(Color.statusBackground(.purple), in: Circle())
                 }
                 .buttonStyle(.plain)
+                .frame(width: 44, height: 44)
+                .contentShape(Circle())
                 .disabled(atMax || !isAtPickupLocation)
                 .accessibilityLabel("Add one \(sku.name)")
             }
@@ -621,7 +622,7 @@ private struct ReservationCategoryChip: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(isOn ? Color.statusText(.purple) : Color.secondary)
                 .padding(.horizontal, 8)
-                .frame(minHeight: 34)
+                .frame(minHeight: 44)
                 .background(isOn ? Color.statusBackground(.purple) : Color(.secondarySystemGroupedBackground), in: Capsule())
                 .overlay(Capsule().strokeBorder(isOn ? Color.statusText(.purple).opacity(0.4) : Color.hairline))
                 .fixedSize(horizontal: true, vertical: false)
@@ -637,6 +638,7 @@ private struct BatteryRecommendationCard: View {
     let onDecrement: () -> Void
     let onIncrement: () -> Void
     let onDismiss: () -> Void
+    @Environment(\.colorSchemeContrast) private var accessibilityContrast
 
     private var canIncrement: Bool { quantity < recommendation.sku.availableQuantity }
 
@@ -655,6 +657,8 @@ private struct BatteryRecommendationCard: View {
                         .background(Color(.tertiarySystemFill), in: Circle())
                 }
                 .buttonStyle(.plain)
+                .frame(width: 44, height: 44)
+                .contentShape(Circle())
                 .disabled(quantity == 0)
                 .accessibilityLabel("Remove one \(recommendation.sku.name)")
                 Text("\(quantity)")
@@ -664,11 +668,13 @@ private struct BatteryRecommendationCard: View {
                 Button(action: onIncrement) {
                     Image(systemName: "plus")
                         .font(.caption.weight(.bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Color.statusControlForeground(.purple, contrast: accessibilityContrast))
                         .frame(width: 30, height: 30)
                         .background(Color.statusText(.purple), in: Circle())
                 }
                 .buttonStyle(.plain)
+                .frame(width: 44, height: 44)
+                .contentShape(Circle())
                 .disabled(!canIncrement)
                 .accessibilityLabel("Add one \(recommendation.sku.name)")
             }
@@ -678,6 +684,8 @@ private struct BatteryRecommendationCard: View {
                     .frame(width: 28, height: 28)
             }
             .buttonStyle(.plain)
+            .frame(width: 44, height: 44)
+            .contentShape(Rectangle())
             .foregroundStyle(.secondary)
             .accessibilityLabel("Dismiss battery suggestion")
         }
@@ -750,7 +758,7 @@ struct EquipmentCartSheet: View {
                             Section {
                                 Label(
                                     "\(mismatchCount) item\(mismatchCount == 1 ? " is" : "s are") at another pickup location. Remove the item or change pickup before review.",
-                                    systemImage: "mappin.slash.fill"
+                                    systemImage: "mappin.and.ellipse"
                                 )
                                 .font(.footnote)
                                 .foregroundStyle(Color.statusText(.orange))

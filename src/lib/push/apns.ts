@@ -112,6 +112,9 @@ interface SendOpts {
   priority?: 5 | 10;
 }
 
+export type APNsInterruptionLevel = "passive" | "active" | "time-sensitive";
+export const DEFAULT_APNS_INTERRUPTION_LEVEL: APNsInterruptionLevel = "passive";
+
 function sendOne(
   client: http2.ClientHttp2Session,
   jwt: string,
@@ -386,12 +389,14 @@ export async function sendPush(
      * this stays safe to send ahead of a native release.
      */
     category?: string;
+    interruptionLevel?: APNsInterruptionLevel;
   }
 ): Promise<DispatchResult> {
   const notification = {
     aps: {
       alert: { title: opts.title, body: opts.body },
       sound: "default",
+      "interruption-level": opts.interruptionLevel ?? DEFAULT_APNS_INTERRUPTION_LEVEL,
       ...(opts.category ? { category: opts.category } : {}),
     },
     ...(opts.payload ?? {}),

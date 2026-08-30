@@ -11,6 +11,7 @@ const filters = source("src/app/(app)/schedule/_components/ScheduleFilters.tsx")
 const listView = source("src/app/(app)/schedule/_components/ListView.tsx");
 const page = source("src/app/(app)/schedule/page.tsx");
 const appShell = source("src/components/AppShell.tsx");
+const timelinePosition = source("src/lib/schedule-timeline-position.ts");
 
 describe("schedule timeline", () => {
   it("reads one continuous window instead of an upcoming-only page", () => {
@@ -55,7 +56,7 @@ describe("schedule timeline", () => {
   it("holds the reading position instead of yanking it back to today", () => {
     // Background refetch and filter changes both re-run the anchor effects.
     expect(listView).toContain("readerOwnsScrollRef");
-    expect(listView).toContain("if (readerOwnsScrollRef.current || pendingArchiveScrollRef.current !== null) return;");
+    expect(listView).toContain("if (readerOwnsScrollRef.current) return;");
   });
 
   it("claims scroll ownership from input events, not the scroll event itself", () => {
@@ -114,15 +115,22 @@ describe("schedule timeline", () => {
     expect(listView).toContain("navigatingToEvent = true;");
   });
 
-  it("never lets the archive restore and the today anchor fight", () => {
-    // Asking for older history hands the position to the reader.
-    expect(listView).toContain("const onLoadArchived = useCallback(() => {");
-    expect(listView).toContain("readerOwnsScrollRef.current = true;\n    setIncludeArchived(true);");
+  it("uses a logical visible-event anchor for filters and view round trips", () => {
+    expect(hook).toContain("captureScheduleTimelinePosition");
+    expect(hook).toContain('if (viewMode === "list") captureScheduleTimelinePosition();');
+    expect(listView).toContain("readScheduleTimelinePosition");
+    expect(timelinePosition).not.toContain("sessionStorage.removeItem(TIMELINE_TRANSITION_KEY);\n  try {");
+    expect(listView).toContain("restoreScheduleTimelinePosition");
+    expect(listView).toContain("data-schedule-event-id={entry.id}");
+    expect(listView).toContain("data-schedule-day={groupDate.getTime()}");
+    expect(timelinePosition).toContain("chooseScheduleTimelineTarget");
+    expect(timelinePosition).toContain("availableEventIds.has(event.id)");
   });
 
   it("pins the header and filters so the timeline runs beneath them", () => {
     expect(page).toContain('style={{ top: "var(--schedule-sticky-top, 0px)" }}');
     expect(page).toContain('--schedule-sticky-bottom');
+    expect(page).toContain("data-schedule-sticky-frame");
     // Day headers stack below both sticky frames, and the anchor lands there too.
     expect(listView).toContain('style={{ top: "var(--schedule-sticky-bottom, 0px)" }}');
     expect(listView).toContain('scrollMarginTop: "var(--schedule-sticky-bottom, 0px)"');
@@ -155,14 +163,12 @@ describe("schedule timeline", () => {
   });
 
   it("keeps the reader in place when archived events prepend above them", () => {
-    expect(listView).toContain("pendingArchiveScrollRef");
-    expect(listView).toContain("previousTimelineMetricsRef");
-    expect(listView).toContain("if (includeArchived && !previousIncludeArchivedRef.current)");
-    expect(listView).toContain("window.scrollTo({ top: height - anchorFromBottom");
-    // A render before the older rows land must not spend the anchor.
-    expect(listView).toContain("if (height - window.scrollY <= anchorFromBottom) return;");
-    // The wider window is a new query key; the old rows stay on screen.
-    expect(hook).toContain("placeholderData: keepPreviousData");
+    expect(listView).toContain("transitionAnchorRef");
+    expect(listView).toContain("const observer = new ResizeObserver(apply);");
+    // The wider window keeps the old rows, but view and sport changes do not.
+    expect(hook).toContain("shouldKeepPreviousScheduleData(previousScope, scheduleScope)");
+    expect(timelinePosition).toContain('previous.includeArchived === false');
+    expect(timelinePosition).toContain('next.includeArchived === true');
   });
 
   it("does not delete the archive row by treating archived as a filter", () => {
@@ -183,14 +189,24 @@ describe("schedule timeline", () => {
   });
 
   it("names the archive floor and offers the way through it", () => {
-    expect(listView).toContain("Earlier events are archived");
-    expect(listView).toContain("Load archived events");
+    expect(listView).toContain("Older records are archived");
+    expect(listView).toContain("Load older records");
     expect(listView).toContain("Beginning of records");
   });
 
   it("offers a way back to today once it scrolls off", () => {
     expect(listView).toContain("Jump to today");
-    expect(listView).toContain("IntersectionObserver");
+    expect(listView).toContain("todayDirection");
+    expect(listView).toContain('window.addEventListener("scroll", schedule');
+    expect(listView).toContain("const observer = new ResizeObserver(schedule);");
+    expect(listView).toContain('[data-schedule-sticky-frame]');
+  });
+
+  it("separates ordinary past crew history from older archived records", () => {
+    expect(hook).toContain("eventArchivedAt: ev.archivedAt ?? null");
+    expect(filters).toContain("Past events are already in List view.");
+    expect(listView).toContain("entry.eventArchivedAt");
+    expect(listView).toContain("Past above · upcoming below");
   });
 
   it("does not let a coverage read failure empty the schedule", () => {

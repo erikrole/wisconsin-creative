@@ -10,8 +10,12 @@ import {
   applyWorkingScheduleCommand,
   reconcileWorkingAssignmentSources,
   summarizeWorkingScheduleChanges,
+  workingScheduleCommandLabel,
+  workingScheduleHistoryStackSchema,
+  WORKING_SCHEDULE_HISTORY_LIMIT,
   type WorkingScheduleCommand,
   type WorkingScheduleDefaultWindow,
+  type WorkingScheduleHistoryEntry,
   type WorkingSchedulePayload,
   workingSchedulePayloadSchema,
 } from "@/lib/schedule-working-copy";
@@ -70,6 +74,8 @@ const groupEditorSelect = {
       basePublishedVersion: true,
       payloadVersion: true,
       payload: true,
+      undoStack: true,
+      redoStack: true,
       autoReleaseAt: true,
       autoReleaseRunId: true,
       autoReleaseError: true,
@@ -83,6 +89,37 @@ const groupEditorSelect = {
 type EditorGroup = Prisma.ShiftGroupGetPayload<{ select: typeof groupEditorSelect }>;
 
 type WorkingScheduleAutoRelease = { at: Date; runId: string };
+
+type WorkingScheduleHistoryAction = "undo" | "redo";
+
+function parseHistoryStack(value: unknown): WorkingScheduleHistoryEntry[] {
+  const parsed = workingScheduleHistoryStackSchema.safeParse(value ?? []);
+  if (!parsed.success) {
+    throw new HttpError(409, "This schedule's undo history is unavailable. Refresh or revert the pending changes.");
+  }
+  return parsed.data;
+}
+
+function historyJson(stack: WorkingScheduleHistoryEntry[]) {
+  return stack as unknown as Prisma.InputJsonValue;
+}
+
+function historyState(
+  undoStack: WorkingScheduleHistoryEntry[],
+  redoStack: WorkingScheduleHistoryEntry[],
+  actorId?: string,
+) {
+  const undo = undoStack.at(-1);
+  const redo = redoStack.at(-1);
+  const canUse = (entry: WorkingScheduleHistoryEntry | undefined) =>
+    Boolean(entry && (!actorId || entry.actorId === actorId));
+  return {
+    canUndo: canUse(undo),
+    canRedo: canUse(redo),
+    undoLabel: canUse(undo) ? undo?.label ?? null : null,
+    redoLabel: canUse(redo) ? redo?.label ?? null : null,
+  };
+}
 
 function iso(value: Date | null) {
   return value?.toISOString() ?? null;
@@ -193,7 +230,11 @@ function parseStoredPayload(value: Prisma.JsonValue): WorkingSchedulePayload {
   return parsed.data;
 }
 
-async function editorResponse(group: EditorGroup, tx: Prisma.TransactionClient = db) {
+async function editorResponse(
+  group: EditorGroup,
+  tx: Prisma.TransactionClient = db,
+  actorId?: string,
+) {
   const published = buildWorkingSchedulePayload(group);
   const working = group.workingCopy
     ? refreshLiveAssignmentMetadata(
@@ -247,6 +288,8 @@ async function editorResponse(group: EditorGroup, tx: Prisma.TransactionClient =
   const initialPublishWorkerCount = group.publishedAt
     ? 0
     : new Set(working.slots.flatMap((slot) => slot.assignment ? [slot.assignment.userId] : [])).size;
+  const undoStack = group.workingCopy ? parseHistoryStack(group.workingCopy.undoStack) : [];
+  const redoStack = group.workingCopy ? parseHistoryStack(group.workingCopy.redoStack) : [];
   return {
     shiftGroupId: group.id,
     allDay: group.event.allDay,
@@ -273,6 +316,7 @@ async function editorResponse(group: EditorGroup, tx: Prisma.TransactionClient =
       : group.workingCopy?.autoReleaseAt?.toISOString() ?? null,
     autoReleaseRunId: group.workingCopy?.autoReleaseRunId ?? null,
     autoReleaseError: group.workingCopy?.autoReleaseError ?? null,
+    ...historyState(undoStack, redoStack, actorId),
     changes,
     affectedWorkerCount: group.publishedAt ? affectedWorkerIds.size : initialPublishWorkerCount,
     assignedUsers,
@@ -287,8 +331,8 @@ async function findEditorGroup(shiftGroupId: string, tx: Prisma.TransactionClien
   return group;
 }
 
-export async function getWorkingScheduleEditor(shiftGroupId: string) {
-  return editorResponse(await findEditorGroup(shiftGroupId));
+export async function getWorkingScheduleEditor(shiftGroupId: string, actorId?: string) {
+  return editorResponse(await findEditorGroup(shiftGroupId), db, actorId);
 }
 
 /** Read the live event boundary used to choose between release and backfill. */
@@ -345,6 +389,7 @@ export async function mutateWorkingSchedule(
         group,
       )
       : buildWorkingSchedulePayload(group);
+    const previousUndoStack = group.workingCopy ? parseHistoryStack(group.workingCopy.undoStack) : [];
     const defaultWindow = command.type === "adjustSlots" && command.delta === 1
       ? await resolveWorkingScheduleDefaultWindow(group, tx)
       : undefined;
@@ -650,12 +695,23 @@ export async function mutateWorkingSchedule(
     }
 
     const nextVersion = actualVersion + 1;
+    const historyEntry: WorkingScheduleHistoryEntry = {
+      id: randomUUID(),
+      actorId: actor.id,
+      commandType: command.type,
+      label: workingScheduleCommandLabel(command, beforePayload, afterPayload),
+      before: beforePayload,
+      after: afterPayload,
+    };
+    const nextUndoStack = [...previousUndoStack, historyEntry].slice(-WORKING_SCHEDULE_HISTORY_LIMIT);
     if (group.workingCopy) {
       const updated = await tx.shiftGroupWorkingCopy.updateMany({
         where: { shiftGroupId, version: expectedVersion },
         data: {
           version: nextVersion,
           payload: afterPayload as unknown as Prisma.InputJsonValue,
+          undoStack: historyJson(nextUndoStack),
+          redoStack: historyJson([]),
           updatedById: actor.id,
           ...(autoRelease !== undefined ? {
             autoReleaseAt: autoRelease?.at ?? null,
@@ -676,6 +732,8 @@ export async function mutateWorkingSchedule(
             basePublishedVersion: group.publishedVersion,
             payloadVersion: 2,
             payload: afterPayload as unknown as Prisma.InputJsonValue,
+            undoStack: historyJson([historyEntry]),
+            redoStack: historyJson([]),
             ...(autoRelease !== undefined ? {
               autoReleaseAt: autoRelease?.at ?? null,
               autoReleaseRunId: autoRelease?.runId ?? null,
@@ -703,7 +761,110 @@ export async function mutateWorkingSchedule(
       after: { version: nextVersion, changes: summarizeWorkingScheduleChanges(buildWorkingSchedulePayload(group), afterPayload) },
     });
 
-    return editorResponse(await findEditorGroup(shiftGroupId, tx), tx);
+    const editor = await editorResponse(await findEditorGroup(shiftGroupId, tx), tx, actor.id);
+    return {
+      ...editor,
+      historyAction: { type: "command" as const, label: historyEntry.label, version: nextVersion },
+    };
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+}
+
+/**
+ * Apply one server-owned inverse operation. The expected working version and
+ * the actor that created the top stack entry are both checked inside the same
+ * serializable transaction. A different operator can still inspect a draft,
+ * but cannot undo or redo someone else's latest command.
+ */
+export async function changeWorkingScheduleHistory(
+  shiftGroupId: string,
+  expectedVersion: number,
+  action: WorkingScheduleHistoryAction,
+  actor: { id: string; role: Role },
+  autoRelease?: WorkingScheduleAutoRelease | null,
+) {
+  return db.$transaction(async (tx) => {
+    const group = await findEditorGroup(shiftGroupId, tx);
+    const workingCopy = group.workingCopy;
+    if (!workingCopy) {
+      throw new HttpError(409, `There is nothing to ${action} for this event.`);
+    }
+    if (workingCopy.version !== expectedVersion) {
+      throw new HttpError(409, "This schedule changed in another session. Refresh before trying again.");
+    }
+
+    const undoStack = parseHistoryStack(workingCopy.undoStack);
+    const redoStack = parseHistoryStack(workingCopy.redoStack);
+    const sourceStack = action === "undo" ? undoStack : redoStack;
+    const entry = sourceStack.at(-1);
+    if (!entry) throw new HttpError(409, `There is nothing to ${action} for this event.`);
+    if (entry.actorId !== actor.id) {
+      throw new HttpError(
+        409,
+        action === "undo"
+          ? "The latest schedule change belongs to another operator. Refresh before undoing it."
+          : "The latest reverted schedule change belongs to another operator. Refresh before redoing it.",
+      );
+    }
+
+    const beforePayload = refreshLiveAssignmentMetadata(
+      reconcileWorkingAssignmentSources(parseStoredPayload(workingCopy.payload), group.shifts),
+      group,
+    );
+    const restoredPayload = refreshLiveAssignmentMetadata(
+      reconcileWorkingAssignmentSources(action === "undo" ? entry.before : entry.after, group.shifts),
+      group,
+    );
+    const nextVersion = expectedVersion + 1;
+    const nextUndoStack = action === "undo"
+      ? undoStack.slice(0, -1)
+      : [...undoStack, entry].slice(-WORKING_SCHEDULE_HISTORY_LIMIT);
+    const nextRedoStack = action === "undo"
+      ? [...redoStack, entry].slice(-WORKING_SCHEDULE_HISTORY_LIMIT)
+      : redoStack.slice(0, -1);
+
+    const updated = await tx.shiftGroupWorkingCopy.updateMany({
+      where: { shiftGroupId, version: expectedVersion },
+      data: {
+        version: nextVersion,
+        payload: restoredPayload as unknown as Prisma.InputJsonValue,
+        undoStack: historyJson(nextUndoStack),
+        redoStack: historyJson(nextRedoStack),
+        updatedById: actor.id,
+        ...(autoRelease !== undefined ? {
+          autoReleaseAt: autoRelease?.at ?? null,
+          autoReleaseRunId: autoRelease?.runId ?? null,
+          autoReleaseError: null,
+        } : {}),
+      },
+    });
+    if (updated.count !== 1) {
+      throw new HttpError(409, "This schedule changed in another session. Refresh before trying again.");
+    }
+
+    await createAuditEntryTx(tx, {
+      actorId: actor.id,
+      actorRole: actor.role,
+      entityType: "shift_group_working_copy",
+      entityId: shiftGroupId,
+      action: `working_schedule_${action}`,
+      before: {
+        version: expectedVersion,
+        label: entry.label,
+        commandType: entry.commandType,
+        changes: summarizeWorkingScheduleChanges(buildWorkingSchedulePayload(group), beforePayload),
+      },
+      after: {
+        version: nextVersion,
+        label: entry.label,
+        changes: summarizeWorkingScheduleChanges(buildWorkingSchedulePayload(group), restoredPayload),
+      },
+    });
+
+    const editor = await editorResponse(await findEditorGroup(shiftGroupId, tx), tx, actor.id);
+    return {
+      ...editor,
+      historyAction: { type: action, label: entry.label, version: nextVersion },
+    };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
 
@@ -857,6 +1018,12 @@ export async function rebaseWorkingSchedule(
         version: nextVersion,
         basePublishedVersion: group.publishedVersion,
         payload: rebased as unknown as Prisma.InputJsonValue,
+        // Rebase changes the working-copy base. A snapshot from before that
+        // boundary could restore deleted or stale live slots, so it starts a
+        // fresh per-command history while the explicit batch Revert remains
+        // available for the resulting draft.
+        undoStack: historyJson([]),
+        redoStack: historyJson([]),
         // The rebased payload carries baseShiftIds, so a payloadVersion 1 draft
         // becomes a version 2 draft the moment it is refreshed.
         payloadVersion: 2,
@@ -886,7 +1053,7 @@ export async function rebaseWorkingSchedule(
       after: { version: nextVersion, slots: rebased.slots.length, ...summary },
     });
 
-    const editor = await editorResponse(await findEditorGroup(shiftGroupId, tx), tx);
+    const editor = await editorResponse(await findEditorGroup(shiftGroupId, tx), tx, actor.id);
     return { ...editor, rebase: summary };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
@@ -922,6 +1089,6 @@ export async function discardWorkingSchedule(
       after: { version: 0 },
     });
 
-    return editorResponse(await findEditorGroup(shiftGroupId, tx), tx);
+    return editorResponse(await findEditorGroup(shiftGroupId, tx), tx, actor.id);
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }

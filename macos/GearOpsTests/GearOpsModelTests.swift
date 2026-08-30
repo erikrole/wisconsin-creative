@@ -46,6 +46,35 @@ final class GearOpsModelTests: XCTestCase {
         XCTAssertEqual(restored.snapshot?.stats.checkedOut, 11)
     }
 
+    func testRestoreRecoversKeychainIdentityWhenPreferencesCacheIsMissing() async {
+        let client = MockGearOpsClient()
+        let credentials = InMemoryCredentialStore()
+        let original = GearOpsModel(
+            client: client,
+            defaults: isolatedDefaults(),
+            bookingNotifications: NoopBookingNotifier(),
+            credentialStore: credentials,
+            autoStart: false
+        )
+        await original.signIn(email: "admin@wisc.edu", password: "password")
+
+        await client.setCheckedOut(11)
+        let restored = GearOpsModel(
+            client: client,
+            defaults: isolatedDefaults(),
+            bookingNotifications: NoopBookingNotifier(),
+            credentialStore: credentials,
+            autoStart: false
+        )
+        XCTAssertNil(restored.user, "the replacement defaults intentionally simulate the crash-lost cache")
+
+        await restored.restoreSession()
+
+        XCTAssertEqual(restored.user?.email, "admin@wisc.edu")
+        XCTAssertEqual(restored.snapshot?.stats.checkedOut, 11)
+        XCTAssertNil(restored.statusMessage)
+    }
+
     func testRefreshRenewsCredentialBeforeReadingProjection() async {
         let client = MockGearOpsClient()
         let credentials = InMemoryCredentialStore()
@@ -302,7 +331,7 @@ final class GearOpsModelTests: XCTestCase {
         )
     }
 
-    func testMissingCredentialDuringStartupPreservesCacheUntilActivationConfirmsLogout() async {
+    func testRepeatedMissingCredentialReadsNeverTurnRestartIntoLogout() async {
         let client = MockGearOpsClient()
         let defaults = isolatedDefaults()
         let original = GearOpsModel(
@@ -327,14 +356,17 @@ final class GearOpsModelTests: XCTestCase {
         XCTAssertEqual(restored.snapshot?.stats.checkedOut, 12)
         XCTAssertEqual(
             restored.statusMessage,
-            "Waiting for macOS to unlock the saved session…"
+            "Saved session is temporarily unavailable. Showing the last confirmed data."
         )
 
-        await restored.restoreSession(confirmMissingCredential: true)
+        await restored.restoreSession()
 
-        XCTAssertNil(restored.user)
-        XCTAssertNil(restored.snapshot)
-        XCTAssertEqual(restored.statusMessage, "Sign in to enable automatic updates.")
+        XCTAssertEqual(restored.user?.email, "admin@wisc.edu")
+        XCTAssertEqual(restored.snapshot?.stats.checkedOut, 12)
+        XCTAssertEqual(
+            restored.statusMessage,
+            "Saved session is temporarily unavailable. Showing the last confirmed data."
+        )
     }
 
     func testSignOutClearsLocalStateBeforeRemoteRevocationCompletes() async {
@@ -355,10 +387,12 @@ final class GearOpsModelTests: XCTestCase {
         await client.waitUntilRevocationIsPending()
 
         let storedToken = await credentials.loadToken()
+        let storedUser = await credentials.loadUser()
         XCTAssertNil(model.user)
         XCTAssertNil(model.snapshot)
         XCTAssertNil(defaults.data(forKey: "GearOpsCachedStateV1"))
         XCTAssertNil(storedToken)
+        XCTAssertNil(storedUser)
 
         await model.signIn(email: "second@wisc.edu", password: "password")
         XCTAssertNil(model.user)
@@ -824,12 +858,23 @@ private actor MockGearOpsClient: GearOpsServing {
 
 private actor InMemoryCredentialStore: CompanionCredentialStoring {
     private var token: String?
+    private var user: GearOpsUser?
     private var pending: [String] = []
 
     func loadToken() -> String? { token }
     func saveToken(_ token: String) { self.token = token }
-    func deleteToken() { token = nil }
-    func deleteToken(ifMatching token: String) { if self.token == token { self.token = nil } }
+    func loadUser() -> GearOpsUser? { user }
+    func saveUser(_ user: GearOpsUser) { self.user = user }
+    func deleteToken() {
+        token = nil
+        user = nil
+    }
+    func deleteToken(ifMatching token: String) {
+        if self.token == token {
+            self.token = nil
+            user = nil
+        }
+    }
     func stageTokenForRevocation(_ token: String) { pending.append(token) }
     func loadPendingRevocations() -> [String] { pending }
     func removePendingRevocation(_ token: String) { pending.removeAll { $0 == token } }
@@ -842,6 +887,8 @@ private enum TestCredentialError: Error {
 private actor ThrowingCredentialStore: CompanionCredentialStoring {
     func loadToken() throws -> String? { throw TestCredentialError.unavailable }
     func saveToken(_ token: String) throws {}
+    func loadUser() throws -> GearOpsUser? { throw TestCredentialError.unavailable }
+    func saveUser(_ user: GearOpsUser) throws {}
     func deleteToken() {}
     func deleteToken(ifMatching token: String) throws {}
     func stageTokenForRevocation(_ token: String) throws {}
@@ -851,10 +898,13 @@ private actor ThrowingCredentialStore: CompanionCredentialStoring {
 
 private actor DeleteFailingCredentialStore: CompanionCredentialStoring {
     private var token: String?
+    private var user: GearOpsUser?
     private var attempts = 0
 
     func loadToken() -> String? { token }
     func saveToken(_ token: String) { self.token = token }
+    func loadUser() -> GearOpsUser? { user }
+    func saveUser(_ user: GearOpsUser) { self.user = user }
     func deleteToken() throws {
         attempts += 1
         throw TestCredentialError.unavailable

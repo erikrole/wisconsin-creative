@@ -342,7 +342,7 @@ struct ScanResultSheet: View {
             Button {
                 onRetry()
             } label: {
-                Label("Try again", systemImage: "arrow.clockwise")
+                Label("Retry", systemImage: "arrow.clockwise")
             }
             .buttonStyle(.borderedProminent)
 

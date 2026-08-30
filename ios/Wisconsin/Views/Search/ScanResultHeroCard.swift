@@ -15,7 +15,11 @@ struct ScanAssetHeroCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            ScanHeroImage(imageUrl: asset.imageUrl, placeholderIcon: "bag")
+            ScanHeroImage(
+                imageUrl: asset.imageUrl,
+                placeholderIcon: "bag",
+                photoLabel: "Photo of \(asset.itemListPrimaryTitle)"
+            )
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .firstTextBaseline) {
@@ -94,7 +98,11 @@ struct ScanFamilyHeroCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            ScanHeroImage(imageUrl: family.imageUrl, placeholderIcon: "shippingbox")
+            ScanHeroImage(
+                imageUrl: family.imageUrl,
+                placeholderIcon: "shippingbox",
+                photoLabel: "Photo of \(family.name)"
+            )
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(family.name)
@@ -224,6 +232,7 @@ private struct ScanHeroUnitRoster: View {
 private struct ScanHeroImage: View {
     let imageUrl: String?
     let placeholderIcon: String
+    let photoLabel: String
     @State private var showZoom = false
 
     var body: some View {
@@ -244,7 +253,7 @@ private struct ScanHeroImage: View {
         }
         .fullScreenCover(isPresented: $showZoom) {
             if let imageUrl, let url = URL(string: imageUrl) {
-                ZoomableImageViewer(url: url)
+                ZoomableImageViewer(url: url, photoLabel: photoLabel)
             }
         }
     }

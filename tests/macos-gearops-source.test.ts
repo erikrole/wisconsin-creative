@@ -170,14 +170,19 @@ describe("GearOps macOS menu bar contracts", () => {
     expect(scene).toContain("static let crimson = Color(red: 0.769, green: 0.071, blue: 0.188)");
     expect(scene).toContain("environment(\\.colorScheme, .light)");
 
-    // Identity first, then password, matching web and iOS.
-    expect(login).toContain("case identity");
-    expect(login).toContain("case password");
-    expect(login).toContain('Button("Change", action: changeEmail)');
+    // Native password managers need the semantic username and password fields
+    // mounted together so one Universal Autofill action can populate the pair.
+    expect(login).toContain("private var credentialFields");
+    expect(login).toContain("TextField(\"you@wisc.edu\", text: $email)");
+    expect(login).toContain("SecureField(\"Enter your password\", text: $password)");
+    expect(login).toContain(".textContentType(.username)");
+    expect(login).toContain(".textContentType(.password)");
+    expect(login.indexOf("TextField(\"you@wisc.edu\", text: $email)"))
+      .toBeLessThan(login.indexOf("SecureField(\"Enter your password\", text: $password)"));
     expect(login).toContain('Text(primaryTitle)');
     expect(login).toContain('showPassword ? "eye.slash" : "eye"');
 
-    // The two-step split is local. Enrollment stays the only Neon-backed call.
+    // Enrollment stays the only Neon-backed call.
     expect(login).not.toContain("discoverAuth");
     expect(login).not.toContain("/api/");
   });
@@ -238,11 +243,12 @@ describe("GearOps macOS menu bar contracts", () => {
     expect(client).not.toContain('/api/db-diagnostics');
     expect(model).toContain("try await credentialStore.loadToken()");
     expect(model).toContain("client.companionProjection(");
-    expect(model).toContain("Waiting for macOS to unlock the saved session");
-    expect(model).toContain("confirmMissingCredential");
+    expect(model).toContain("Saved session is temporarily unavailable");
+    expect(model).toContain("repeated missing reads keep the last projection visible");
+    expect(model).not.toContain("confirmMissingCredential");
     expect(model).toContain("shouldRetryCredentialRestore");
     expect(source("macos/GearOps/MenuBarContentView.swift")).toContain(
-      "await model.restoreSession(confirmMissingCredential: true)"
+      "await model.restoreSession()"
     );
     expect(model).not.toContain("fromSource");
     expect(model).not.toContain("Task.sleep(for: .seconds(60))");
@@ -252,6 +258,20 @@ describe("GearOps macOS menu bar contracts", () => {
     expect(model).not.toContain("startPolling");
     expect(model).not.toContain('method: "PATCH"');
     expect(source("macos/GearOps/MenuBarContentView.swift")).toContain("await model.refresh()");
+  });
+
+  it("recovers the enrolled identity from Keychain when a crash loses preferences", () => {
+    const model = source("macos/GearOps/GearOpsModel.swift");
+    const credentials = source("macos/GearOps/CompanionCredentialStore.swift");
+
+    expect(credentials).toContain('private let userAccount = "projection-user"');
+    expect(credentials).toContain("func loadUser() throws -> GearOpsUser?");
+    expect(credentials).toContain("func saveUser(_ user: GearOpsUser) throws");
+    expect(credentials).toContain("kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly");
+    expect(model).toContain("let storedUser = try await credentialStore.loadUser()");
+    expect(model).toContain("if user == nil, let storedUser");
+    expect(model).toContain("try await credentialStore.saveUser(response.user)");
+    expect(model).not.toMatch(/guard user != nil else \{ return \}\s*let generation = sessionGeneration/);
   });
 
   it("renews the companion lease without waking Neon or losing the old credential", () => {
@@ -481,7 +501,7 @@ describe("GearOps macOS menu bar contracts", () => {
     expect(model).toContain("var custodyCount: Int? { snapshot?.stats.checkedOut }");
     expect(menu).toContain("model.custodyCount");
 
-    expect(login).toContain("identityError ?? model.statusMessage");
+    expect(login).toContain("if let errorMessage = model.statusMessage");
     expect(login).toContain("password = \"\"");
     expect(login).toContain("showPassword = false");
     expect(login).toContain("accessibilityAddTraits(.updatesFrequently)");

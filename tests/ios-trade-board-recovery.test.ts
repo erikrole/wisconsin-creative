@@ -11,12 +11,11 @@ describe("iOS trade board action recovery", () => {
     const sheet = source("ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift");
 
     expect(sheet).toContain("@State private var actionError: String?");
-    expect(sheet).toContain("@State private var actionErrorHaptic = 0");
     expect(sheet).toContain(".safeAreaInset(edge: .top)");
     expect(sheet).toContain("TradeBoardActionErrorBanner(");
     expect(sheet).toContain("Button(\"Refresh\", action: onRefresh)");
     expect(sheet).toContain("Task { await vm.load() }");
-    expect(sheet).toContain(".sensoryFeedback(.error, trigger: actionErrorHaptic)");
+    expect(sheet).toContain("AccessibilityNotification.Announcement(message).post()");
     expect(sheet).not.toContain(".alert(\"Error\"");
   });
 });

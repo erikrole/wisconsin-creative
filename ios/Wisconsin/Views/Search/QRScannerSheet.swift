@@ -39,6 +39,7 @@ struct QRScannerSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
     @State private var cameraAuth: AVAuthorizationStatus = AVCaptureDevice.authorizationStatus(for: .video)
     @State private var banner: ScanBanner?
@@ -60,13 +61,20 @@ struct QRScannerSheet: View {
                 bottomControls
             }
         }
-        .sheet(isPresented: $showManualEntry) {
-            ScanManualEntrySheet { code in
-                showManualEntry = false
-                Task { await lookUp(rawScan: code) }
+        .overlay {
+            if showManualEntry {
+                ScanManualEntrySheet(
+                    onSubmit: { code in
+                    showManualEntry = false
+                    Task { await lookUp(rawScan: code) }
+                    },
+                    onCancel: { showManualEntry = false }
+                )
+                .background(Color(.systemBackground))
+                .ignoresSafeArea()
+                .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
+                .zIndex(1)
             }
-            .presentationDetents([.medium])
-            .presentationDragIndicator(.visible)
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
@@ -80,6 +88,8 @@ struct QRScannerSheet: View {
             torchOn = false
             setTorch(false)
         }
+        .preferredColorScheme(cameraAuth == .authorized && !voiceOverEnabled ? .dark : nil)
+        .statusBarHidden(false)
     }
 
     // MARK: - Scanner
@@ -110,10 +120,10 @@ struct QRScannerSheet: View {
                         bannerView(banner)
                             .padding(.horizontal, 24)
                             .padding(.bottom, 108)
-                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                            .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
                     }
                 }
-                .animation(.easeInOut(duration: 0.2), value: banner)
+                .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: banner)
             } else {
                 unavailableView
                     .background(Color.black.ignoresSafeArea())
@@ -152,7 +162,6 @@ struct QRScannerSheet: View {
                     let next = !torchOn
                     torchOn = next
                     setTorch(next)
-                    Haptics.tap()
                 } label: {
                     Image(systemName: torchOn ? "bolt.fill" : "bolt.slash")
                         .font(.system(size: 16, weight: .semibold))
@@ -428,6 +437,7 @@ private struct DataScannerRepresentable: UIViewControllerRepresentable {
 /// Shared typed-code fallback used by `QRScannerSheet` and `ScannerDebuggerView`.
 struct ScanManualEntrySheet: View {
     let onSubmit: (String) -> Void
+    var onCancel: (() -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
     @State private var code = ""
     @FocusState private var focused: Bool
@@ -456,7 +466,13 @@ struct ScanManualEntrySheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button("Cancel") {
+                        if let onCancel {
+                            onCancel()
+                        } else {
+                            dismiss()
+                        }
+                    }
                 }
             }
         }

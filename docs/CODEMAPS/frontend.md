@@ -119,27 +119,27 @@
 | `src/components/ShiftDetailPanel.tsx` | 791 |
 | `src/components/ChooseImageModal.tsx` | 769 |
 | `src/components/profile-completion/ProfileCompletionWizard.tsx` | 769 |
+| `src/components/schedule/AutoAssignDialog.tsx` | 754 |
 | `src/components/booking-wizard/BookingWizard.tsx` | 721 |
 | `src/components/ui/sidebar.tsx` | 710 |
 | `src/components/BookingDetailsSheet.tsx` | 702 |
-| `src/components/schedule/AutoAssignDialog.tsx` | 642 |
+| `src/components/schedule/SportSetupWizard.tsx` | 675 |
 | `src/components/booking-wizard/WizardStep1.tsx` | 572 |
 | `src/components/BookingListPage.tsx` | 526 |
 | `src/components/ui/heatmap.tsx` | 434 |
 | `src/components/Sidebar.tsx` | 413 |
 | `src/components/booking-details/BookingHeader.tsx` | 412 |
 | `src/components/ui/chart.tsx` | 389 |
+| `src/components/FormCombobox.tsx` | 352 |
 | `src/components/booking-details/BookingInfoCard.tsx` | 344 |
 | `src/components/shift-detail/ShiftSlotCard.tsx` | 343 |
 | `src/components/booking-details/EditBookingEventsDialog.tsx` | 342 |
-| `src/components/FormCombobox.tsx` | 329 |
 | `src/components/resources/MarkdownReader.tsx` | 312 |
 | `src/components/public-showroom/showroom-blocks.tsx` | 290 |
 | `src/components/PageBreadcrumb.tsx` | 286 |
 | `src/components/booking-details/BookingSheetOverview.tsx` | 285 |
 | `src/components/booking-details/TransferOwnerDialog.tsx` | 271 |
 | `src/components/booking-wizard/WizardStep3.tsx` | 263 |
-| `src/components/shift-detail/CallWindowEditor.tsx` | 260 |
 
 ## Hooks
 
@@ -161,7 +161,7 @@
 | `src/hooks/use-mobile.ts` | 20 |
 | `src/hooks/use-operational-polling-activity.ts` | 131 |
 | `src/hooks/use-profile-completion.ts` | 65 |
-| `src/hooks/use-schedule-data.ts` | 839 |
+| `src/hooks/use-schedule-data.ts` | 970 |
 | `src/hooks/use-url-state.ts` | 166 |
 | `src/hooks/useBookingActions.ts` | 218 |
 | `src/hooks/useBookingDetail.ts` | 70 |

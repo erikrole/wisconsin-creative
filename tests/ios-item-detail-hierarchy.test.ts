@@ -30,7 +30,7 @@ describe("iOS Item Detail hierarchy", () => {
     expect(itemDetail).toContain("if dynamicTypeSize.isAccessibilitySize");
     expect(itemDetail).toContain("HStack(alignment: .center, spacing: Brand.Space.md)");
     expect(itemDetail).toContain(".font(.gothamBlack(size: 26, relativeTo: .title2))");
-    expect(itemDetail).toContain('.navigationTitle("")');
+    expect(itemDetail).toContain('.navigationTitle(asset?.itemListPrimaryTitle ?? "Item")');
     expect(itemDetail).not.toContain("AssetStatusBadge(status: asset.computedStatus)");
     expect(itemDetail).not.toContain("showZoom");
     expect(itemDetail).not.toContain('accessibilityLabel("Open item photo")');
@@ -90,7 +90,7 @@ describe("iOS Item Detail hierarchy", () => {
 
   it("uses the native overflow menu for secondary item actions", () => {
     expect(itemDetail).toContain("Menu {");
-    expect(itemDetail).toContain('Label("Edit Item", systemImage: "pencil")');
+    expect(itemDetail).toContain('Label("Edit…", systemImage: "pencil")');
     expect(itemDetail).toContain('Label("Copy QR Code", systemImage: "qrcode")');
     expect(itemDetail).toContain('Label("Open Product Link", systemImage: "arrow.up.right.square")');
     expect(itemDetail).toContain('.accessibilityLabel("More item actions")');

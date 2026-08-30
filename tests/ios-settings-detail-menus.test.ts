@@ -45,6 +45,9 @@ describe("iOS Settings detail menus", () => {
     expect(detail).toContain("Text(\"In-app notifications always show in your inbox, regardless of these settings.\")");
     expect(detail).toContain("title: \"Push alerts\"");
     expect(detail).toContain("Text(\"Notification Types\")");
+    expect(detail).toContain("Text(\"Quiet hours\")");
+    expect(detail).toContain("pauseButton(title: \"Pause 1 hour\"");
+    expect(detail).toContain("Label(\"Resume now\", systemImage: \"bell.fill\")");
 
     for (const category of [
       ".checkoutDue",
@@ -61,7 +64,8 @@ describe("iOS Settings detail menus", () => {
     expect(detail).toContain("await prefsVM.setChannel(.push, value: v)");
     expect(detail).toContain("await prefsVM.setCategory(category, value: value)");
     expect(detail).toContain(".tint(Color.statusText(.green))");
-    expect(detail).toContain(".accessibilityHint(description)");
+    expect(detail).toContain(".accessibilityHint(");
+    expect(detail).toContain(": description");
     expect(detail).toContain("Push alerts go to devices signed in to this account. The test checks this device only.");
     expect(detail).toContain("Choose which push alerts can reach you.");
     expect(detail).toContain("Text(\"Send Test Notification\")");
@@ -70,7 +74,6 @@ describe("iOS Settings detail menus", () => {
     expect(detail).not.toContain("Pause Alerts");
     expect(detail).not.toContain("Email alerts");
     expect(detail).not.toContain("currentEmail");
-    expect(detail).not.toContain("prefsVM.pause(");
     expect(detail).not.toContain("notificationToggleLabel");
   });
 
@@ -95,7 +98,8 @@ describe("iOS Settings detail menus", () => {
     expect(accountDetail).toContain("Current password");
     expect(accountDetail).toContain("New password");
     expect(accountDetail).toContain("Confirm new password");
-    expect(accountDetail).toContain("Toggle(\"Sign out other devices\", isOn: $revokeOtherSessions)");
+    expect(accountDetail).toContain("Toggle(\"Sign out other devices after changing password\", isOn: $revokeOtherSessions)");
+    expect(accountDetail).toContain('Text("Applies only to this password change.")');
     expect(accountDetail).toContain(".tint(Color.statusText(.green))");
     expect(accountDetail).toContain("showPasswords.toggle()");
     expect(accountDetail).toContain("newPassword.count >= 8");

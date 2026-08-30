@@ -4,6 +4,7 @@ import Image from "next/image";
 import { ImageIcon, Trash2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { DraftItemImage } from "@/lib/item-image-draft";
+import { FormRow } from "@/components/form-layout";
 import { FormSection } from "./FormSection";
 
 type Props = {
@@ -11,6 +12,7 @@ type Props = {
   disabled?: boolean;
   onChoose: () => void;
   onClear: () => void;
+  embedded?: boolean;
 };
 
 export function ItemImageDraftField({
@@ -18,16 +20,11 @@ export function ItemImageDraftField({
   disabled = false,
   onChoose,
   onClear,
+  embedded = false,
 }: Props) {
-  return (
-    <FormSection
-      title="Image"
-      badge="Optional"
-      badgeVariant="secondary"
-      description="Choose a product image by search, URL, or file. It will be saved after the item is created."
-    >
-      <div className="flex items-center gap-3 rounded-md border border-border/60 bg-muted/20 p-3">
-        <div className="relative flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-background">
+  const field = (
+    <div className="flex items-center gap-3 rounded-md border border-border/60 bg-muted/20 p-3">
+        <div className="relative flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-background sm:size-20">
           {image ? (
             <Image
               src={image.previewUrl}
@@ -80,6 +77,24 @@ export function ItemImageDraftField({
           </div>
         </div>
       </div>
+  );
+
+  if (embedded) {
+    return (
+      <FormRow label="Image">
+        {field}
+      </FormRow>
+    );
+  }
+
+  return (
+    <FormSection
+      title="Image"
+      badge="Optional"
+      badgeVariant="secondary"
+      description="Choose a product image by search, URL, or file. It will be saved after the item is created."
+    >
+      {field}
     </FormSection>
   );
 }

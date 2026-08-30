@@ -24,6 +24,14 @@ export function getRepeatTagBase(value: string) {
   return normalized.replace(/\s+\d+$/, "");
 }
 
+export function getNextSequentialAssetTag(value: string) {
+  const normalized = normalizeTag(value);
+  if (!normalized) return "";
+  const numbered = normalized.match(/^(.*\S)\s+(\d+)$/);
+  if (!numbered) return `${normalized} 2`;
+  return `${numbered[1]} ${Number(numbered[2]) + 1}`;
+}
+
 export function summarizeRepeatTags(value: string, assets: RepeatTagAsset[]): RepeatTagSummary | null {
   const typedBase = getRepeatTagBase(value);
   if (!typedBase) return null;

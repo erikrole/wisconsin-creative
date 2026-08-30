@@ -62,13 +62,6 @@ final class ProfileCompletionStore {
         return optimisticSession ? .app : .welcome
     }
 
-    var pushPromptEligibleUserId: String? {
-        guard let activeUserId else { return nil }
-        if bypassedForSessionUserId == activeUserId { return activeUserId }
-        guard let response, response.profile.id == activeUserId else { return nil }
-        return response.completion.shouldPrompt ? nil : activeUserId
-    }
-
     func hasIncompleteProfile(for userId: String) -> Bool {
         if let response, response.profile.id == userId {
             return !response.completion.profileComplete

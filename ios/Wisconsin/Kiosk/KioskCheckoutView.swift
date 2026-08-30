@@ -336,11 +336,7 @@ struct KioskCheckoutView: View {
             customPurpose: $customPurpose,
             dueBackAt: $dueBackAt,
             selectedEvent: selectedEvent,
-            focusedField: $focusedCheckoutField,
-            onScannerBurstRejected: {
-                store.scanner.rejectEditingBurst()
-                showFeedback(.warning("Finish editing before scanning"))
-            }
+            focusedField: $focusedCheckoutField
         )
         .frame(maxWidth: KioskCheckoutSetupLayout.maxWidth)
         .frame(maxWidth: .infinity)
@@ -1115,7 +1111,6 @@ private struct KioskCheckoutSetupPanel: View {
     @Binding var dueBackAt: Date
     let selectedEvent: KioskCheckoutEvent?
     let focusedField: Binding<KioskCheckoutFocusedField?>
-    let onScannerBurstRejected: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: KioskSpacing.lg) {
@@ -1165,8 +1160,7 @@ private struct KioskCheckoutSetupPanel: View {
             selectedEventId: $selectedEventId,
             selectedEvent: selectedEvent,
             customPurpose: $customPurpose,
-            focusedField: focusedField,
-            onScannerBurstRejected: onScannerBurstRejected
+            focusedField: focusedField
         )
     }
 
@@ -1383,7 +1377,6 @@ private struct KioskCheckoutContextWindow: View {
     let selectedEvent: KioskCheckoutEvent?
     @Binding var customPurpose: String
     let focusedField: Binding<KioskCheckoutFocusedField?>
-    let onScannerBurstRejected: () -> Void
 
     private var isFieldFocused: Bool { focusedField.wrappedValue == .customPurpose }
 
@@ -1474,8 +1467,7 @@ private struct KioskCheckoutContextWindow: View {
                 // shipped with; it made the one thing a student types the
                 // smallest text in the window.
                 fontSize: 20,
-                fontWeight: .semibold,
-                onScannerBurstRejected: onScannerBurstRejected
+                fontWeight: .semibold
             )
             .padding(.horizontal, 16)
             .frame(height: 72)

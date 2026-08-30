@@ -61,12 +61,14 @@ final class TradeBoardViewModel {
     }
     private let pageSize = 30
     private var sections = Sections()
+    private var tradeRequests = LatestRequestGeneration()
+    private var openWorkRequests = LatestRequestGeneration()
 
     /// Area filter, matching the web board. Nil means every area.
     var areaFilter: String? {
         didSet {
             guard areaFilter != oldValue else { return }
-            Task { await load() }
+            Task { await load(forceRefresh: true) }
         }
     }
     /// An Admin review queue makes the 30-row cap far likelier to bite, so the
@@ -180,36 +182,56 @@ final class TradeBoardViewModel {
         sections = next
     }
 
-    func load() async {
-        async let trades: Void = loadTrades()
-        async let openWork: Void = loadOpenWork()
+    func load(forceRefresh: Bool = false) async {
+        async let trades: Void = loadTrades(forceRefresh: forceRefresh)
+        async let openWork: Void = loadOpenWork(forceRefresh: forceRefresh)
         _ = await (trades, openWork)
     }
 
-    func loadTrades() async {
-        guard !isLoadingTrades else { return }
+    func loadTrades(forceRefresh: Bool = false) async {
+        if !forceRefresh, isLoadingTrades { return }
+        if forceRefresh {
+            // A refresh replaces an in-flight pagination request. Its stale
+            // response must not append into the new first page.
+            tradeRequests.invalidate()
+            isLoadingMore = false
+        }
+        let requestToken = tradeRequests.begin()
         isLoadingTrades = true
-        defer { isLoadingTrades = false }
+        defer {
+            if tradeRequests.owns(requestToken) {
+                isLoadingTrades = false
+            }
+        }
         do {
             let response = try await APIClient.shared.shiftTrades(area: areaFilter, limit: pageSize)
+            guard tradeRequests.owns(requestToken), !Task.isCancelled else { return }
             trades = response.data
             total = response.total
             tradeLoadError = nil
         } catch {
+            guard tradeRequests.owns(requestToken), !Task.isCancelled else { return }
             tradeLoadError = error.localizedDescription
         }
     }
 
     func loadMoreTrades() async {
         guard !isLoadingMore, !isLoadingTrades, canLoadMore else { return }
+        let requestToken = tradeRequests.begin()
+        let offset = trades.count
         isLoadingMore = true
-        defer { isLoadingMore = false }
+        defer {
+            if tradeRequests.owns(requestToken) {
+                isLoadingMore = false
+            }
+        }
         do {
             let response = try await APIClient.shared.shiftTrades(
                 area: areaFilter,
                 limit: pageSize,
-                offset: trades.count
+                offset: offset
             )
+            guard tradeRequests.owns(requestToken), !Task.isCancelled else { return }
             // Append rather than replace, and drop anything already held: a row
             // resolved between pages would otherwise shift the window and
             // duplicate a trade across them.
@@ -218,18 +240,27 @@ final class TradeBoardViewModel {
             total = response.total
             tradeLoadError = nil
         } catch {
+            guard tradeRequests.owns(requestToken), !Task.isCancelled else { return }
             tradeLoadError = error.localizedDescription
         }
     }
 
-    func loadOpenWork() async {
-        guard !isLoadingOpenWork else { return }
+    func loadOpenWork(forceRefresh: Bool = false) async {
+        if !forceRefresh, isLoadingOpenWork { return }
+        let requestToken = openWorkRequests.begin()
         isLoadingOpenWork = true
-        defer { isLoadingOpenWork = false }
+        defer {
+            if openWorkRequests.owns(requestToken) {
+                isLoadingOpenWork = false
+            }
+        }
         do {
-            openWork = try await APIClient.shared.scheduleOpenWork(area: areaFilter)
+            let response = try await APIClient.shared.scheduleOpenWork(area: areaFilter)
+            guard openWorkRequests.owns(requestToken), !Task.isCancelled else { return }
+            openWork = response
             openWorkLoadError = nil
         } catch {
+            guard openWorkRequests.owns(requestToken), !Task.isCancelled else { return }
             openWorkLoadError = error.localizedDescription
         }
     }
@@ -311,20 +342,19 @@ struct TradeBoardSheet: View {
     @State private var showHistory = false
     @State private var pendingActionId: String?
     @State private var actionError: String?
-    @State private var actionErrorHaptic = 0
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
             Group {
                 if vm.isLoading && vm.visibleCount == 0 {
-                    ProgressView()
+                    ProgressView("Loading Trade Board")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if vm.allSourcesFailed, let error = vm.error, vm.visibleCount == 0 {
                     ContentUnavailableView {
                         Label("Couldn't load the Trade Board", systemImage: "exclamationmark.triangle")
                     } description: { Text(error) } actions: {
-                        Button("Retry") { Task { await vm.load() } }
+                        Button("Retry") { Task { await vm.load(forceRefresh: true) } }
                             .buttonStyle(.borderedProminent)
                     }
                 } else {
@@ -339,15 +369,20 @@ struct TradeBoardSheet: View {
                         message: actionError,
                         onRefresh: {
                             self.actionError = nil
-                            Task { await vm.load() }
+                            Task { await vm.load(forceRefresh: true) }
                         },
                         onDismiss: { self.actionError = nil }
                     )
                 }
             }
+            .onChange(of: actionError) { _, message in
+                if let message {
+                    AccessibilityNotification.Announcement(message).post()
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") { dismiss() }
+                    Button("Close") { dismiss() }
                 }
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     Menu {
@@ -363,7 +398,7 @@ struct TradeBoardSheet: View {
                         Divider()
                         Toggle(isOn: Binding(
                             get: { mineOnly },
-                            set: { mineOnly = $0; Haptics.selection() }
+                            set: { mineOnly = $0 }
                         )) {
                             Label("My posts only", systemImage: "person.crop.circle")
                         }
@@ -390,9 +425,9 @@ struct TradeBoardSheet: View {
                 vm.currentUserRole = currentUserRole
                 await vm.load()
             }
-            .refreshable { await vm.load() }
-            .sheet(isPresented: $showPostSheet) {
-                PostTradeSheet(myShifts: myShifts) { posted in
+            .refreshable { await vm.load(forceRefresh: true) }
+            .navigationDestination(isPresented: $showPostSheet) {
+                PostTradeSheet(myShifts: myShifts, wrapsInNavigationStack: false) { posted in
                     onTradePosted?(posted.area)
                     Task { await vm.load() }
                 }
@@ -442,13 +477,11 @@ struct TradeBoardSheet: View {
             } message: {
                 Text("This removes your pending request. You will no longer be considered for this shift.")
             }
-            .sensoryFeedback(.error, trigger: actionErrorHaptic)
         }
     }
 
     private var cancelDialogTitle: String {
-        guard let trade = tradeToCancel else { return "Cancel trade?" }
-        return "Cancel \(trade.shiftAssignment.shift.area.shiftAreaLabel) trade?"
+        "Remove trade post?"
     }
 
     /// Cancelling a claimed post drops someone else's pending claim. Saying only
@@ -462,23 +495,19 @@ struct TradeBoardSheet: View {
     }
 
     private var claimDialogTitle: String {
-        guard let trade = tradeToConfirm else { return "Claim shift?" }
-        return "Claim \(trade.shiftAssignment.shift.area.shiftAreaLabel) shift from \(trade.postedBy.name)?"
+        "Claim shift?"
     }
 
     private var pickupDialogTitle: String {
-        guard let item = openShiftToPickup else { return "Claim shift?" }
-        return "Claim \(item.shift.area.shiftAreaLabel) shift?"
+        "Claim shift?"
     }
 
     private var withdrawClaimDialogTitle: String {
-        guard let trade = tradeClaimToWithdraw else { return "Withdraw claim?" }
-        return "Withdraw \(trade.shiftAssignment.shift.area.shiftAreaLabel) claim?"
+        "Withdraw claim?"
     }
 
     private var withdrawRequestDialogTitle: String {
-        guard let request = requestToWithdraw else { return "Withdraw request?" }
-        return "Withdraw \(request.shift.area.shiftAreaLabel) request?"
+        "Withdraw request?"
     }
 
     private var tradeList: some View {
@@ -493,7 +522,6 @@ struct TradeBoardSheet: View {
                     isReviewer: vm.canReview,
                     onToggleMine: {
                         mineOnly.toggle()
-                        Haptics.selection()
                     }
                 )
             }
@@ -760,7 +788,6 @@ struct TradeBoardSheet: View {
                 onTradeClaimed?(item.shift.area, when)
             } catch {
                 actionError = error.localizedDescription
-                actionErrorHaptic &+= 1
                 Haptics.warning()
             }
             openShiftToPickup = nil
@@ -780,7 +807,6 @@ struct TradeBoardSheet: View {
                 onTradeClaimed?(trade.shiftAssignment.shift.area, when)
             } catch {
                 actionError = error.localizedDescription
-                actionErrorHaptic &+= 1
                 Haptics.warning()
             }
             tradeToConfirm = nil
@@ -798,7 +824,6 @@ struct TradeBoardSheet: View {
                 Haptics.success()
             } catch {
                 actionError = error.localizedDescription
-                actionErrorHaptic &+= 1
                 Haptics.warning()
             }
         }
@@ -814,7 +839,6 @@ struct TradeBoardSheet: View {
                 Haptics.success()
             } catch {
                 actionError = error.localizedDescription
-                actionErrorHaptic &+= 1
                 Haptics.warning()
             }
             tradeToCancel = nil
@@ -832,7 +856,6 @@ struct TradeBoardSheet: View {
                 Haptics.success()
             } catch {
                 actionError = error.localizedDescription
-                actionErrorHaptic &+= 1
                 Haptics.warning()
             }
             tradeClaimToWithdraw = nil
@@ -850,7 +873,6 @@ struct TradeBoardSheet: View {
                 Haptics.success()
             } catch {
                 actionError = error.localizedDescription
-                actionErrorHaptic &+= 1
                 Haptics.warning()
             }
             requestToWithdraw = nil

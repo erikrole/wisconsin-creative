@@ -14,6 +14,10 @@ import Foundation
 struct GearWidgetSnapshot: Codable, Equatable, Sendable {
     struct Shift: Codable, Equatable, Sendable {
         let id: String
+        /// The published event id is the deep-link identity. `id` is the
+        /// person's shift assignment id and cannot be sent to Schedule's
+        /// event route.
+        let eventId: String?
         let title: String
         let area: String
         let startsAt: Date
@@ -26,6 +30,54 @@ struct GearWidgetSnapshot: Codable, Equatable, Sendable {
         /// Pre-resolved gear wording (`DashboardShift.gearLabel`), so the
         /// widget never has to know the gear status vocabulary.
         let gearLabel: String?
+
+        private enum CodingKeys: String, CodingKey {
+            case id, eventId, title, area, startsAt, endsAt, locationName, gearLabel
+        }
+
+        init(
+            id: String,
+            title: String,
+            area: String,
+            startsAt: Date,
+            endsAt: Date,
+            locationName: String?,
+            gearLabel: String?,
+            eventId: String? = nil
+        ) {
+            self.id = id
+            self.eventId = eventId
+            self.title = title
+            self.area = area
+            self.startsAt = startsAt
+            self.endsAt = endsAt
+            self.locationName = locationName
+            self.gearLabel = gearLabel
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(String.self, forKey: .id)
+            eventId = try container.decodeIfPresent(String.self, forKey: .eventId)
+            title = try container.decode(String.self, forKey: .title)
+            area = try container.decode(String.self, forKey: .area)
+            startsAt = try container.decode(Date.self, forKey: .startsAt)
+            endsAt = try container.decode(Date.self, forKey: .endsAt)
+            locationName = try container.decodeIfPresent(String.self, forKey: .locationName)
+            gearLabel = try container.decodeIfPresent(String.self, forKey: .gearLabel)
+        }
+
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(id, forKey: .id)
+            try container.encodeIfPresent(eventId, forKey: .eventId)
+            try container.encode(title, forKey: .title)
+            try container.encode(area, forKey: .area)
+            try container.encode(startsAt, forKey: .startsAt)
+            try container.encode(endsAt, forKey: .endsAt)
+            try container.encodeIfPresent(locationName, forKey: .locationName)
+            try container.encodeIfPresent(gearLabel, forKey: .gearLabel)
+        }
     }
 
     struct DueBooking: Codable, Equatable, Sendable {
@@ -40,16 +92,107 @@ struct GearWidgetSnapshot: Codable, Equatable, Sendable {
     /// asserting counts it cannot confirm.
     let generatedAt: Date
     let nextShift: Shift?
+    /// A bounded cache of upcoming assignments. `nextShift` remains in the
+    /// payload for older widget binaries; new timelines resolve this list at
+    /// each boundary so an ended shift can advance to the next one.
+    let upcomingShifts: [Shift]
     let dueBookings: [DueBooking]
     let overdueCount: Int
     let dueTodayCount: Int
+
+    private enum CodingKeys: String, CodingKey {
+        case generatedAt, nextShift, upcomingShifts, dueBookings, overdueCount, dueTodayCount
+    }
+
+    init(
+        generatedAt: Date,
+        nextShift: Shift?,
+        dueBookings: [DueBooking],
+        overdueCount: Int,
+        dueTodayCount: Int,
+        upcomingShifts: [Shift] = []
+    ) {
+        let cachedShifts = upcomingShifts.isEmpty
+            ? nextShift.map { [$0] } ?? []
+            : upcomingShifts
+        self.generatedAt = generatedAt
+        self.nextShift = nextShift ?? cachedShifts.first
+        self.upcomingShifts = cachedShifts
+        self.dueBookings = dueBookings
+        self.overdueCount = overdueCount
+        self.dueTodayCount = dueTodayCount
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        generatedAt = try container.decode(Date.self, forKey: .generatedAt)
+        let storedNextShift = try container.decodeIfPresent(Shift.self, forKey: .nextShift)
+        let storedUpcomingShifts = try container.decodeIfPresent([Shift].self, forKey: .upcomingShifts) ?? []
+        upcomingShifts = storedUpcomingShifts.isEmpty
+            ? storedNextShift.map { [$0] } ?? []
+            : storedUpcomingShifts
+        nextShift = storedNextShift ?? upcomingShifts.first
+        dueBookings = try container.decode([DueBooking].self, forKey: .dueBookings)
+        overdueCount = try container.decode(Int.self, forKey: .overdueCount)
+        dueTodayCount = try container.decode(Int.self, forKey: .dueTodayCount)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(generatedAt, forKey: .generatedAt)
+        try container.encodeIfPresent(nextShift, forKey: .nextShift)
+        try container.encode(upcomingShifts, forKey: .upcomingShifts)
+        try container.encode(dueBookings, forKey: .dueBookings)
+        try container.encode(overdueCount, forKey: .overdueCount)
+        try container.encode(dueTodayCount, forKey: .dueTodayCount)
+    }
+
+    /// Re-resolves only values that are functions of the timeline date. The
+    /// widget cannot fetch, but it can correctly move cached shifts and due
+    /// bookings across known time boundaries without preserving stale claims.
+    func resolved(at date: Date) -> GearWidgetSnapshot {
+        let shifts = upcomingShifts.isEmpty
+            ? nextShift.map { [$0] } ?? []
+            : upcomingShifts
+        let next = shifts
+            .filter { $0.endsAt > date }
+            .min { lhs, rhs in
+                if lhs.startsAt != rhs.startsAt { return lhs.startsAt < rhs.startsAt }
+                return lhs.id < rhs.id
+            }
+        let bookings = dueBookings
+            .sorted { $0.endsAt < $1.endsAt }
+            .map { booking in
+                DueBooking(
+                    id: booking.id,
+                    title: booking.title,
+                    endsAt: booking.endsAt,
+                    itemCount: booking.itemCount,
+                    isOverdue: booking.endsAt < date
+                )
+            }
+        let overdue = bookings.filter(\.isOverdue).count
+        let dueToday = bookings.filter {
+            !$0.isOverdue && Calendar.current.isDate($0.endsAt, inSameDayAs: date)
+        }.count
+
+        return GearWidgetSnapshot(
+            generatedAt: generatedAt,
+            nextShift: next,
+            dueBookings: bookings,
+            overdueCount: overdue,
+            dueTodayCount: dueToday,
+            upcomingShifts: shifts
+        )
+    }
 
     static let empty = GearWidgetSnapshot(
         generatedAt: .distantPast,
         nextShift: nil,
         dueBookings: [],
         overdueCount: 0,
-        dueTodayCount: 0
+        dueTodayCount: 0,
+        upcomingShifts: []
     )
 }
 
@@ -86,8 +229,9 @@ enum GearWidgetStore {
     }
 
     /// Cleared at every session boundary. A signed-out phone must never leave
-    /// the previous account's shift and gear sitting on the Home Screen, where
-    /// it is readable without unlocking the app.
+    /// the previous account's shift and gear sitting on the Home Screen after
+    /// the next widget refresh, even though this operational data is allowed
+    /// to remain visible on an already-unlocked or glanceable surface.
     static func clear() {
         sharedDefaults?.removeObject(forKey: snapshotKey)
     }

@@ -4,7 +4,7 @@
 - Owner: Erik Role (Wisconsin Athletics Creative)
 - Status: Shipped — iOS canonical (web kiosk deprecated 2026-04-24)
 - Created: 2026-04-07
-- Last Updated: 2026-08-26
+- Last Updated: 2026-08-30
 - Brief: `BRIEF_KIOSK.md`
 - Decision Refs: D-030, D-032, D-040
 
@@ -76,6 +76,7 @@ Files under `ios/Wisconsin/Kiosk/`:
 - Kiosk dashboard, student context, checkout management, and reservation pickup are global across staffed locations. Direct checkout records the kiosk as its booking/availability source, but checkout and pickup scans do not move an item's saved location. Check-in is the location-transfer event: it moves serialized assets to the return kiosk, and records numbered bulk return stock at that kiosk through its balance and movement ledger.
 - Direct kiosk checkout requires an event or custom purpose before completion. If a selected event is used, the booking title is the event summary and the event is linked through both `Booking.eventId` and `BookingEvent`; custom detail is saved in notes when present. If no event is selected, the typed purpose becomes the booking title.
 - Direct kiosk checkout records pickup at the actual completion time and lets staff define the return date/time. Selected events prefill the due-back time from the event end when possible. The native kiosk preflights scanned items through `/api/kiosk/checkout/availability`, and checkout completion repeats the same conflict/shortage/unavailable checks inside the transaction before creating the booking.
+- `Sony Battery` and `Football Sony Battery` are separate scanned unit families with the same kiosk policy. Direct checkout, reservation pickup, active-checkout edits, scan completion, and return use the existing numbered-unit availability and custody rules without a Football-roster gate.
 - Active kiosk checkouts can be edited from the idle detail drawer. The kiosk-authenticated checkout detail route can update title/return time, add one scanned serialized asset or numbered bulk unit, and remove one unreturned active item on any `OPEN` checkout. Mutations run in `SERIALIZABLE` transactions, re-check availability using the booking's source location when custody changes, update active allocations/bulk unit status, and write audit entries.
 - Standard checkout return remains kiosk-owned. Web can close an `OPEN` checkout without scan only through the admin-only reasoned override route when staff have physically verified every item is back; that path records override/audit evidence and is not a general app/web return flow.
 - Kiosk owns the reservation-to-custody bridge. A booked reservation can enter pickup from the operator hub before or after its scheduled start time; the schedule does not disable the handoff. Scan evidence is staged on the source reservation, confirmation creates the linked checkout custody record through `sourceReservationId`, binds exact numbered units, opens checkout custody, and marks the source reservation `COMPLETED` because the reservation was fulfilled.
@@ -121,6 +122,7 @@ Files under `ios/Wisconsin/Kiosk/`:
 
 | Date | Change |
 |------|--------|
+| 2026-08-30 | **Football Sony Battery shares normal Sony custody policy.** It remains a separate numbered family, but kiosk pre-scan, direct checkout, reservation pickup, active-checkout add, scan completion, and return do not apply a Football-roster or operator-role gate. The earlier local restriction code was removed before deployment; physical family/unit setup and scan proof remain open under GAP-74. |
 | 2026-08-26 | **Idle dashboard timing, filter affordances, and selection contrast are now explicit.** Active-checkout due pills use near-term relative wording (`Due now`, `Due in …`, `Today`, `Tomorrow`) and short dates such as `Mon, Aug 15`, with overdue age; a visible hint tells operators that the count tiles filter the list. Selected tiles use neutral high-contrast treatment while overdue counts retain semantic red. Detail and edit surfaces retain their full calendar timestamps. |
 | 2026-08-26 | **Active checkout rows now use the secondary line for custody context.** The row shows `Requester · n items`, while the checkout detail surface remains the item-manifest view. |
 | 2026-08-26 | **Removed the DEBUG moon button from the idle screen.** Standby remains server-driven and the dedicated DEBUG fixture scenario still provides repeatable sleep-mode captures, but the live kiosk no longer exposes a bottom-corner testing control. |

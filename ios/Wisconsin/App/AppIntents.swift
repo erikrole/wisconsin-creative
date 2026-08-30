@@ -50,6 +50,7 @@ struct ScanGearCodeIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
+        try await requireIntentCapability("GEAR_CATALOG_VIEW")
         GearTrackerAppIntentHandoff.shared.request(.scan)
         return .result()
     }
@@ -62,6 +63,7 @@ struct ShowMyGearIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
+        try await requireIntentCapability("MY_GEAR_VIEW")
         GearTrackerAppIntentHandoff.shared.request(.myGear)
         return .result()
     }
@@ -74,6 +76,7 @@ struct ShowTodayScheduleIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
+        try await requireIntentCapability("PUBLISHED_SCHEDULE_VIEW")
         GearTrackerAppIntentHandoff.shared.request(.todaySchedule)
         return .result()
     }
@@ -86,6 +89,7 @@ struct CreateReservationIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
+        try await requireIntentCapability("RESERVATION_CREATE")
         GearTrackerAppIntentHandoff.shared.request(.createReservation)
         return .result()
     }
@@ -109,7 +113,7 @@ struct GearTrackerShortcutsProvider: AppShortcutsProvider {
                 "Show my gear in \(.applicationName)",
                 "Open my gear in \(.applicationName)",
             ],
-            shortTitle: "My Gear",
+            shortTitle: "Show Gear",
             systemImageName: "calendar.badge.checkmark"
         )
 
@@ -119,7 +123,7 @@ struct GearTrackerShortcutsProvider: AppShortcutsProvider {
                 "Show today's schedule in \(.applicationName)",
                 "Open my schedule in \(.applicationName)",
             ],
-            shortTitle: "Schedule",
+            shortTitle: "View Schedule",
             systemImageName: "calendar"
         )
 
@@ -141,7 +145,7 @@ struct GearTrackerShortcutsProvider: AppShortcutsProvider {
                 "What's due back in \(.applicationName)",
                 "Check my gear in \(.applicationName)",
             ],
-            shortTitle: "What's Out",
+            shortTitle: "Check Gear",
             systemImageName: "backpack"
         )
 
@@ -152,7 +156,7 @@ struct GearTrackerShortcutsProvider: AppShortcutsProvider {
                 "What's my next shift in \(.applicationName)",
                 "Am I working in \(.applicationName)",
             ],
-            shortTitle: "Next Shift",
+            shortTitle: "Check Shift",
             systemImageName: "clock.badge.checkmark"
         )
     }

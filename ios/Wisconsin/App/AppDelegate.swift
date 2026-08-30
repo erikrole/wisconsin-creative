@@ -22,17 +22,17 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         return true
     }
 
-    /// Home Screen quick actions. Deliberately not read out of
-    /// `launchOptions[.shortcutItem]`, which is deprecated as of iOS 26 in
-    /// favour of the UIScene lifecycle — with no scene delegate of our own,
-    /// UIKit routes the shortcut here in both the cold and warm cases, and
-    /// `GearTrackerAppIntentHandoff` holds it until `AppTabView` appears.
+    /// SwiftUI's `WindowGroup` is scene based, so quick actions are routed by
+    /// `GearTrackerSceneDelegate` for both warm and cold launches rather than
+    /// through the UIApplicationDelegate-only callback.
     func application(
         _ application: UIApplication,
-        performActionFor shortcutItem: UIApplicationShortcutItem,
-        completionHandler: @escaping (Bool) -> Void
-    ) {
-        completionHandler(GearTrackerQuickAction.handle(shortcutItem))
+        configurationForConnecting connectingSceneSession: UISceneSession,
+        options: UIScene.ConnectionOptions
+    ) -> UISceneConfiguration {
+        let configuration = UISceneConfiguration(name: nil, sessionRole: connectingSceneSession.role)
+        configuration.delegateClass = GearTrackerSceneDelegate.self
+        return configuration
     }
 
     func application(_ application: UIApplication, supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
@@ -100,6 +100,29 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     }
 }
 
+/// Scene lifecycle owner for Home Screen quick actions. The handoff stores the
+/// destination until the SwiftUI tab shell exists, which makes cold-launch and
+/// warm-launch behavior use the same routing path.
+@MainActor
+final class GearTrackerSceneDelegate: NSObject, UIWindowSceneDelegate {
+    func windowScene(
+        _ windowScene: UIWindowScene,
+        performActionFor shortcutItem: UIApplicationShortcutItem,
+        completionHandler: @escaping (Bool) -> Void
+    ) {
+        completionHandler(GearTrackerQuickAction.handle(shortcutItem))
+    }
+
+    func scene(
+        _ scene: UIScene,
+        willConnectTo session: UISceneSession,
+        options connectionOptions: UIScene.ConnectionOptions
+    ) {
+        guard let shortcutItem = connectionOptions.shortcutItem else { return }
+        _ = GearTrackerQuickAction.handle(shortcutItem)
+    }
+}
+
 // UNUserNotificationCenterDelegate's methods aren't @MainActor in their
 // protocol declaration, but UNUserNotificationCenter always calls its
 // delegate on the main thread in practice. @preconcurrency tells the
@@ -115,7 +138,10 @@ extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
             completionHandler([])
             return
         }
-        completionHandler([.banner, .sound, .badge])
+        // A foreground banner is enough feedback while the person is already
+        // using the app; avoid repeating the full sound interruption on every
+        // inbox, booking, or schedule update.
+        completionHandler([.banner, .badge])
     }
 
     // User tapped notification (foreground or background)

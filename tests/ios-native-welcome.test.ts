@@ -28,7 +28,10 @@ describe("native iOS Welcome flow", () => {
     // The preview shell is a deliberate bypass, not an accident.
     expect(app).toContain("user.isReadOnlyRolePreview");
     expect(app).toContain("session.usedOptimisticSessionSnapshot");
-    expect(app).toContain("profileCompletion.pushPromptEligibleUserId");
+    // Push permission is an explicit Profile > Notifications action, never an
+    // automatic side effect of completing the profile or entering the shell.
+    expect(app).not.toContain("pushPromptEligibleUserId");
+    expect(source("ios/Wisconsin/Views/ProfileView.swift")).toContain("PushPrePromptView()");
   });
 
   it("keeps the routing hint free of private profile fields", () => {

@@ -47,8 +47,6 @@ targets:
         CFBundleDisplayName: "Creative"
         UILaunchScreen:
           UIColorName: LaunchBackground
-          UIImageName: LaunchLockup
-          UIImageRespectsSafeAreaInsets: false
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
           - UIInterfaceOrientationLandscapeLeft
@@ -58,7 +56,7 @@ targets:
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
           - UIInterfaceOrientationPortraitUpsideDown
-        NSCameraUsageDescription: "Scan gear barcodes and QR codes"
+        NSCameraUsageDescription: "Wisconsin Creative uses the camera to scan gear barcodes and QR codes."
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: false
         NSSupportsLiveActivities: true
@@ -87,8 +85,8 @@ targets:
         PRODUCT_NAME: Wisconsin Creative
         PRODUCT_MODULE_NAME: Wisconsin
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        MARKETING_VERSION: "1.1"
-        CURRENT_PROJECT_VERSION: "28"
+        MARKETING_VERSION: "1.2"
+        CURRENT_PROJECT_VERSION: "30"
         TARGETED_DEVICE_FAMILY: "1,2"
         SWIFT_STRICT_CONCURRENCY: complete
       configs:
@@ -128,7 +126,7 @@ targets:
         UISupportedInterfaceOrientations~ipad:
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
-        NSCameraUsageDescription: "Scan gear barcodes and QR codes"
+        NSCameraUsageDescription: "Wisconsin Creative uses the camera to scan gear barcodes and QR codes."
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: false
         UIAppFonts:
@@ -221,8 +219,8 @@ targets:
       base:
         PRODUCT_NAME: WisconsinLiveActivities
         PRODUCT_BUNDLE_IDENTIFIER: com.erikrole.Wisconsin.LiveActivities
-        MARKETING_VERSION: "1.1"
-        CURRENT_PROJECT_VERSION: "28"
+        MARKETING_VERSION: "1.2"
+        CURRENT_PROJECT_VERSION: "30"
         SKIP_INSTALL: YES
         SWIFT_STRICT_CONCURRENCY: complete
 

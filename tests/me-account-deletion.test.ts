@@ -35,7 +35,7 @@ beforeEach(() => {
 });
 
 describe("DELETE /api/me/account", () => {
-  it("reauthenticates and deactivates only the signed-in user", async () => {
+  it("reauthenticates and erases only the signed-in user", async () => {
     const response = await DELETE(request(), { params: Promise.resolve({}) });
 
     expect(response.status).toBe(200);
@@ -44,10 +44,16 @@ describe("DELETE /api/me/account", () => {
       targetUserId: "user-1",
       actorId: "user-1",
       actorRole: "STUDENT",
+      erasePersonalData: true,
       audit: {
         action: "account_self_deleted",
         before: { active: true },
-        after: { active: false },
+        after: {
+          active: false,
+          personalData: "erased",
+          authentication: "revoked",
+          retainedRecords: ["historical custody", "audit attribution"],
+        },
       },
     });
   });

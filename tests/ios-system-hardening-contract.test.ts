@@ -149,6 +149,7 @@ describe("iOS system hardening contracts", () => {
       "pendingAppIntentDestination",
       "pendingBookingsScope",
       "pendingBookingDetailId",
+      "pendingBrowseDestination",
       "resetTab",
     ]) {
       expect(reset).toContain(`${pending} = nil`);

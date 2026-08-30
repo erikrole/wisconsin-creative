@@ -7,6 +7,7 @@ import { workingScheduleCommandSchema } from "@/lib/schedule-working-copy";
 import { badges } from "@/lib/badges";
 import {
   discardWorkingSchedule,
+  changeWorkingScheduleHistory,
   getWorkingScheduleEditor,
   getWorkingScheduleEventEndsAt,
   mutateWorkingSchedule,
@@ -20,6 +21,11 @@ const mutateSchema = z.object({
   command: workingScheduleCommandSchema,
 });
 
+const historySchema = z.object({
+  expectedVersion: z.number().int().min(1),
+  action: z.enum(["undo", "redo"]),
+});
+
 const rebaseSchema = z.object({
   expectedVersion: z.number().int().min(1),
 });
@@ -30,13 +36,14 @@ const discardSchema = z.object({
 
 export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
   requirePermission(user.role, "shift", "manage");
-  return ok({ data: await getWorkingScheduleEditor(params.id) });
+  return ok({ data: await getWorkingScheduleEditor(params.id, user.id) });
 });
 
 export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
   requirePermission(user.role, "shift", "manage");
   await enforceRateLimit(`shift:working-copy:${user.id}`, { max: 120, windowMs: 60_000 });
-  const body = mutateSchema.parse(await req.json());
+  const rawBody = await req.json();
+  const body = z.union([mutateSchema, historySchema]).parse(rawBody);
   const eventHasEnded = (await getWorkingScheduleEventEndsAt(params.id)).getTime() <= Date.now();
   const autoRelease = eventHasEnded
     ? null
@@ -44,7 +51,9 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
       shiftGroupId: params.id,
       version: body.expectedVersion + 1,
     });
-  const data = await mutateWorkingSchedule(params.id, body.expectedVersion, body.command, user, autoRelease);
+  const data = "action" in body
+    ? await changeWorkingScheduleHistory(params.id, body.expectedVersion, body.action, user, autoRelease)
+    : await mutateWorkingSchedule(params.id, body.expectedVersion, body.command, user, autoRelease);
   if (eventHasEnded) {
     const publication = await publishShiftGroup(
       params.id,
@@ -56,7 +65,7 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
     await Promise.allSettled(
       publication.affectedUserIds.map((userId) => badges.onShiftsWorked({ userId }, { notify: false })),
     );
-    return ok({ data: await getWorkingScheduleEditor(params.id) });
+    return ok({ data: await getWorkingScheduleEditor(params.id, user.id) });
   }
   return ok({ data });
 });
@@ -85,7 +94,7 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
     await Promise.allSettled(
       publication.affectedUserIds.map((userId) => badges.onShiftsWorked({ userId }, { notify: false })),
     );
-    return ok({ data: await getWorkingScheduleEditor(params.id) });
+    return ok({ data: await getWorkingScheduleEditor(params.id, user.id) });
   }
   return ok({ data });
 });

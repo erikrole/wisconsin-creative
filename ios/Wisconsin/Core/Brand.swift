@@ -187,6 +187,22 @@ extension Color {
         }
     }
 
+    /// Foreground for compact controls whose fill is a status-text color. In
+    /// dark mode the status palette intentionally becomes bright so it can
+    /// read on a dark surface; white labels on that same bright fill would
+    /// then fail contrast. The high-contrast branch keeps the relationship
+    /// explicit for Increase Contrast instead of inheriting a platform guess.
+    static func statusControlForeground(_ tone: StatusTone, contrast: ColorSchemeContrast = .standard) -> Color {
+        Color(UIColor(dynamicProvider: { traits in
+            if traits.userInterfaceStyle == .dark {
+                return contrast == .increased
+                    ? UIColor.black
+                    : UIColor(white: 0.04, alpha: 1)
+            }
+            return UIColor.white
+        }))
+    }
+
     /// The personal-marker accent: favourite stars, default-traveller stars.
     /// Deliberately outside `StatusTone` — a marker says "you flagged this",
     /// not "this is in state X", so it must never be mistaken for a status.
@@ -355,7 +371,6 @@ struct ActiveControlBar: View {
                 .lineLimit(1)
             Spacer(minLength: 8)
             Button("Clear") {
-                Haptics.tap()
                 clear()
             }
             .font(.footnote.weight(.semibold))
@@ -421,9 +436,17 @@ extension BrandSectionHeader where Trailing == EmptyView {
 /// to dismiss.
 struct ZoomableImageViewer: View {
     let url: URL
+    let photoLabel: String
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var scale: CGFloat = 1
     @GestureState private var pinch: CGFloat = 1
+    @State private var retryID = UUID()
+
+    init(url: URL, photoLabel: String = "Item photo") {
+        self.url = url
+        self.photoLabel = photoLabel
+    }
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
@@ -438,26 +461,46 @@ struct ZoomableImageViewer: View {
                         .resizable()
                         .scaledToFit()
                         .scaleEffect(min(max(scale * pinch, 1), 5))
+                        .accessibilityLabel(photoLabel)
+                        .accessibilityValue(scaleDescription)
+                        .accessibilityAdjustableAction { direction in
+                            switch direction {
+                            case .increment: setScale(scale + 0.5)
+                            case .decrement: setScale(scale - 0.5)
+                            @unknown default: break
+                            }
+                        }
                         .gesture(
                             MagnificationGesture()
                                 .updating($pinch) { value, state, _ in state = value }
                                 .onEnded { value in
-                                    scale = min(max(scale * value, 1), 5)
+                                    setScale(scale * value)
                                 }
                         )
                         .onTapGesture(count: 2) {
-                            withAnimation(.spring(duration: 0.3)) {
-                                scale = scale > 1 ? 1 : 2.5
-                            }
+                            setScale(scale > 1 ? 1 : 2.5)
                         }
                 case .failure:
-                    Image(systemName: "photo.badge.exclamationmark")
-                        .font(.system(size: 44))
-                        .foregroundStyle(.secondary)
+                    VStack(spacing: 12) {
+                        Image(systemName: "photo.badge.exclamationmark")
+                            .font(.system(size: 44))
+                            .foregroundStyle(.secondary)
+                        Text("Photo unavailable")
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                        Button("Retry") { retryID = UUID() }
+                            .buttonStyle(.borderedProminent)
+                            .tint(.white)
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("\(photoLabel) unavailable")
                 default:
-                    ProgressView().tint(.white)
+                    ProgressView("Loading photo")
+                        .tint(.white)
+                        .foregroundStyle(.white)
                 }
             }
+            .id(retryID)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             Button {
@@ -466,12 +509,46 @@ struct ZoomableImageViewer: View {
                 Image(systemName: "xmark")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(.white)
-                    .frame(width: 38, height: 38)
+                    .frame(width: 44, height: 44)
                     .background(.ultraThinMaterial, in: Circle())
             }
             .accessibilityLabel("Close photo")
             .padding(.trailing, 20)
             .padding(.top, 8)
+
+            VStack {
+                Spacer()
+                HStack(spacing: 8) {
+                    Button { setScale(scale - 0.5) } label: {
+                        Label("Zoom out", systemImage: "minus")
+                    }
+                    Button { setScale(1) } label: {
+                        Label("Reset zoom", systemImage: "arrow.counterclockwise")
+                    }
+                    Button { setScale(scale + 0.5) } label: {
+                        Label("Zoom in", systemImage: "plus")
+                    }
+                }
+                .buttonStyle(.bordered)
+                .tint(.white)
+                .controlSize(.large)
+                .padding(.bottom, 24)
+            }
+        }
+        .preferredColorScheme(.dark)
+        .statusBarHidden(false)
+    }
+
+    private var scaleDescription: String {
+        "\(Int(scale * 100)) percent zoom"
+    }
+
+    private func setScale(_ next: CGFloat) {
+        let bounded = min(max(next, 1), 5)
+        if reduceMotion {
+            scale = bounded
+        } else {
+            withAnimation(.easeOut(duration: 0.2)) { scale = bounded }
         }
     }
 }

@@ -6,7 +6,7 @@ vi.mock("@/lib/auth", () => ({
 
 vi.mock("@/lib/db", () => ({
   db: {
-    notification: {
+      notification: {
       findMany: vi.fn(),
       count: vi.fn(),
       updateMany: vi.fn(),
@@ -109,6 +109,53 @@ describe("PATCH /api/notifications", () => {
       entityType: "notification",
       entityId: "cmotbr3cz0001kv8jfsrg0ank",
       action: "notification_marked_read",
+    });
+  });
+
+  it("returns the exact unread ids so the bulk action can be undone", async () => {
+    vi.mocked(db.notification.findMany).mockResolvedValue([
+      { id: "cmotbr3cz0001kv8jfsrg0ank" },
+      { id: "cmotbr3cz0002kv8jfsrg0ank" },
+    ] as never);
+    vi.mocked(db.notification.updateMany).mockResolvedValue({ count: 2 } as never);
+
+    const res = await PATCH(
+      patchRequest(JSON.stringify({ action: "mark_all_read" })),
+      routeParams(),
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body).toEqual({
+      success: true,
+      ids: ["cmotbr3cz0001kv8jfsrg0ank", "cmotbr3cz0002kv8jfsrg0ank"],
+    });
+    expect(db.notification.findMany).toHaveBeenCalledWith({
+      where: { userId: user.id, readAt: null },
+      select: { id: true },
+    });
+  });
+
+  it("supports idempotent bulk mark-unread recovery scoped to the caller", async () => {
+    vi.mocked(db.notification.updateMany).mockResolvedValue({ count: 2 } as never);
+
+    const res = await PATCH(
+      patchRequest(JSON.stringify({
+        action: "mark_unread",
+        ids: ["cmotbr3cz0001kv8jfsrg0ank", "cmotbr3cz0002kv8jfsrg0ank"],
+      })),
+      routeParams(),
+    );
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ success: true, count: 2 });
+    expect(db.notification.updateMany).toHaveBeenCalledWith({
+      where: {
+        userId: user.id,
+        id: { in: ["cmotbr3cz0001kv8jfsrg0ank", "cmotbr3cz0002kv8jfsrg0ank"] },
+        readAt: { not: null },
+      },
+      data: { readAt: null },
     });
   });
 });

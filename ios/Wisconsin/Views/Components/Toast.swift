@@ -41,12 +41,13 @@ private struct ToastModifier: ViewModifier {
                 if let toast {
                     ToastView(toast: toast)
                         .padding(.bottom, 24)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
                 }
             }
             .animation(reduceMotion ? nil : .spring(duration: 0.3), value: toast)
             .onChange(of: toast) { _, newToast in
                 guard let newToast else { return }
+                AccessibilityNotification.Announcement(newToast.message).post()
                 Task {
                     try? await Task.sleep(for: .seconds(dismissAfter))
                     if toast == newToast { toast = nil }
@@ -60,7 +61,7 @@ private struct ToastView: View {
 
     private var iconColor: Color {
         switch toast.role {
-        case .info: .accentColor
+        case .info: Color.statusText(.blue)
         case .success: Color.statusText(.green)
         case .error: Color.statusText(.red)
         }

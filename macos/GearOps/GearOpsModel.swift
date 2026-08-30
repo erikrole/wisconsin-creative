@@ -80,7 +80,6 @@ final class GearOpsModel {
     private var supplementaryTask: Task<Void, Never>?
     private var restoreInFlight = false
     private var restoreQueued = false
-    private var queuedRestoreConfirmsMissing = false
     private var awaitingCredentialUnlock = false
     private var knownBookingActivity: [String: BookingActivitySnapshot] = [:]
 
@@ -247,14 +246,12 @@ final class GearOpsModel {
     ///
     /// A login item can start while macOS is still bringing the user session
     /// back after a restart. An `AfterFirstUnlockThisDeviceOnly` Keychain item
-    /// is not a confirmed logout in that window, so the first pass preserves
-    /// the last trusted cache and waits for a session-activation retry. The
-    /// explicit confirmation path is used after activation or menu
-    /// presentation, when a second missing read is safe to treat as logout.
-    func restoreSession(confirmMissingCredential: Bool = false) async {
+    /// can temporarily read as missing in that window. Only an explicit sign
+    /// out or a server-confirmed unauthorized credential may clear trusted
+    /// local state; repeated missing reads keep the last projection visible.
+    func restoreSession() async {
         if restoreInFlight {
             restoreQueued = true
-            queuedRestoreConfirmsMissing = queuedRestoreConfirmsMissing || confirmMissingCredential
             return
         }
 
@@ -264,44 +261,45 @@ final class GearOpsModel {
             isRestoring = false
             restoreInFlight = false
             if restoreQueued {
-                let confirm = queuedRestoreConfirmsMissing
                 restoreQueued = false
-                queuedRestoreConfirmsMissing = false
                 Task { [weak self] in
-                    await self?.restoreSession(confirmMissingCredential: confirm)
+                    await self?.restoreSession()
                 }
             }
         }
 
-        guard user != nil else { return }
         let generation = sessionGeneration
         do {
+            let storedUser = try await credentialStore.loadUser()
+            if user == nil, let storedUser {
+                user = storedUser
+                persistCache()
+            }
+            guard user != nil else { return }
+
             guard let token = try await credentialStore.loadToken() else {
                 guard generation == sessionGeneration, user != nil else { return }
-                if confirmMissingCredential {
-                    sessionGeneration &+= 1
-                    clearAuthenticatedState()
-                    await clearPrivateArtifacts()
-                    statusMessage = "Sign in to enable automatic updates."
-                } else {
-                    // Keep the cached identity and projection visible while
-                    // macOS finishes unlocking the data-protection Keychain.
-                    // The activation event or the next menu presentation will
-                    // retry with an explicit missing-credential confirmation.
-                    awaitingCredentialUnlock = true
-                    statusMessage = "Waiting for macOS to unlock the saved session…"
-                }
+                // A missing read is not proof that the user signed out. Keep
+                // the cached identity and projection visible and retry on the
+                // next activation, wake, push, or menu presentation.
+                awaitingCredentialUnlock = true
+                statusMessage = "Saved session is temporarily unavailable. Showing the last confirmed data."
                 return
             }
             guard generation == sessionGeneration, user != nil else { return }
             awaitingCredentialUnlock = false
             companionToken = token
             registeredDeviceCredential = nil
+            if storedUser == nil, let user {
+                // Migrate an existing enrollment whose identity previously
+                // lived only in crash-vulnerable preferences.
+                try? await credentialStore.saveUser(user)
+            }
             await refresh()
             guard sessionIsCurrent(generation: generation, token: token) else { return }
             scheduleSupplementarySetup(expectedGeneration: generation, token: token)
         } catch {
-            guard generation == sessionGeneration, user != nil else { return }
+            guard generation == sessionGeneration else { return }
             companionToken = nil
             statusMessage = "Secure credential access is unavailable. Showing the last confirmed data."
         }
@@ -335,6 +333,7 @@ final class GearOpsModel {
             }
             try response.companionProjection.validate()
             try await credentialStore.saveToken(response.companionToken)
+            try await credentialStore.saveUser(response.user)
             guard generation == sessionGeneration else {
                 await discardIssuedCredential(response.companionToken)
                 return
@@ -544,12 +543,7 @@ final class GearOpsModel {
                 case .sessionBecameActive:
                     guard let self else { continue }
                     await self.retryPendingRevocations()
-                    // Do not let the application's first activation event race
-                    // the initial startup read. A confirmation is meaningful
-                    // only after startup has observed the pending-unlock case.
-                    await self.restoreSession(
-                        confirmMissingCredential: self.shouldRetryCredentialRestore
-                    )
+                    await self.restoreSession()
                 }
             }
         }

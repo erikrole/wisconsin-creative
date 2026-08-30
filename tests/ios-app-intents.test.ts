@@ -18,9 +18,11 @@ describe("iOS App Intents", () => {
     expect(intents.match(/static let openAppWhenRun = true/g)).toHaveLength(4);
     expect(intents).toContain("struct GearTrackerShortcutsProvider: AppShortcutsProvider");
     expect(intents).toContain('shortTitle: "Scan Code"');
-    expect(intents).toContain('shortTitle: "My Gear"');
-    expect(intents).toContain('shortTitle: "Schedule"');
+    expect(intents).toContain('shortTitle: "Show Gear"');
+    expect(intents).toContain('shortTitle: "View Schedule"');
     expect(intents).toContain('shortTitle: "Reserve Gear"');
+    expect(intents).toContain('shortTitle: "Check Gear"');
+    expect(intents).toContain('shortTitle: "Check Shift"');
   });
 
   it("keeps intent execution as app-opening handoff, not background mutation", () => {
@@ -37,6 +39,33 @@ describe("iOS App Intents", () => {
     expect(intents).not.toContain("complete");
   });
 
+  it("returns an explicit role-aware result before creating a handoff", () => {
+    const intents = source("ios/Wisconsin/App/AppIntents.swift");
+    const data = source("ios/Wisconsin/App/AppIntentsData.swift");
+
+    expect(data).toContain("func requireIntentCapability(_ capability: String) async throws");
+    expect(intents).toContain('try await requireIntentCapability("GEAR_CATALOG_VIEW")');
+    expect(intents).toContain('try await requireIntentCapability("MY_GEAR_VIEW")');
+    expect(intents).toContain('try await requireIntentCapability("PUBLISHED_SCHEDULE_VIEW")');
+    expect(intents).toContain('try await requireIntentCapability("RESERVATION_CREATE")');
+    expect(data).toContain("case unavailable");
+    expect(data).toContain("That shortcut isn't available for this account.");
+  });
+
+  it("keeps spoken results separate from compact, refreshable snippet views", () => {
+    const data = source("ios/Wisconsin/App/AppIntentsData.swift");
+
+    expect(data).toContain("struct MyCheckedOutGearSnippetIntent: SnippetIntent");
+    expect(data).toContain("struct NextShiftSnippetIntent: SnippetIntent");
+    expect(data).toContain("snippetIntent: MyCheckedOutGearSnippetIntent()");
+    expect(data).toContain("snippetIntent: NextShiftSnippetIntent()");
+    expect(data).toContain("private let maxVisibleCheckouts = 3");
+    expect(data).toContain("+\\(remainingCount) more in My Gear");
+    expect(data).toContain('Label("Open My Gear"');
+    expect(data).toContain('Label("Open Schedule"');
+    expect(data).not.toContain(".result(dialog: dialog, view:");
+  });
+
   it("routes intent destinations through one app-state handoff", () => {
     const appState = source("ios/Wisconsin/Core/AppState.swift");
     const appTab = source("ios/Wisconsin/Views/AppTabView.swift");
@@ -47,9 +76,10 @@ describe("iOS App Intents", () => {
     expect(appState).toContain("func consumeAppIntentDestination(_ destination: GearTrackerAppIntentDestination) -> Bool");
     expect(appTab).toContain("GearTrackerAppIntentHandoff.shared.consumePendingDestination()");
     expect(appTab).toContain("case .scan:");
-    expect(appTab).toContain('if hasCapability("GEAR_CATALOG_VIEW"), appState.selectedTab != 3 { appState.selectedTab = 3 }');
+    expect(appTab).toContain('guard hasCapability("GEAR_CATALOG_VIEW") else');
+    expect(appTab).toContain("rejectPendingAppIntent(message:");
     expect(appTab).toContain("case .createReservation:");
-    expect(appTab).toContain('if hasCapability("RESERVATION_CREATE"), appState.selectedTab != 1 { appState.selectedTab = 1 }');
+    expect(appTab).toContain('guard hasCapability("RESERVATION_CREATE") else');
     expect(search).toContain("if appState.consumeAppIntentDestination(.scan)");
     expect(search).toContain("showScanner = true");
     expect(bookings).toContain("if appState.consumeAppIntentDestination(.createReservation)");

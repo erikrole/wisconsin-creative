@@ -24,7 +24,7 @@
 		<false/>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>Scan gear barcodes and QR codes</string>
+	<string>Wisconsin Creative uses the camera to scan gear barcodes and QR codes.</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>Gotham-Black.ttf</string>

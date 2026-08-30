@@ -50,6 +50,22 @@ describe("iOS asynchronous request ownership", () => {
     expect(view).not.toContain("if Task.isCancelled { isLoading = false; return }");
   });
 
+  it.each([
+    ["Home", "ios/Wisconsin/Views/HomeView.swift", "loadRequests"],
+    ["Notifications", "ios/Wisconsin/Views/NotificationsSheet.swift", "loadRequests"],
+    ["Event Detail", "ios/Wisconsin/Views/EventDetailSheet.swift", "loadRequests"],
+    ["Trade Board", "ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift", "tradeRequests"],
+    ["Overdue", "ios/Wisconsin/Views/OverdueReportView.swift", "loadRequests"],
+  ])("lets an explicit refresh supersede an in-flight %s load", (_name, path, generation) => {
+    const view = source(path);
+
+    expect(view).toContain(`LatestRequestGeneration`);
+    expect(view).toContain(`let requestToken = ${generation}.begin()`);
+    expect(view).toContain(`${generation}.owns(requestToken)`);
+    expect(view).toContain("!Task.isCancelled");
+    expect(view).toMatch(/\.refreshable[\s\S]*?forceRefresh: true/);
+  });
+
   it("keys kiosk availability and completes against its own preflight response", () => {
     const checkout = source("ios/Wisconsin/Kiosk/KioskCheckoutView.swift");
 

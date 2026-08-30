@@ -4,6 +4,14 @@ import os
 
 private let homePerformanceLog = Logger(subsystem: "com.erikrole.Wisconsin", category: "Launch")
 
+private struct ProfileRoute: Hashable {
+    let initialDestination: ProfileDestination?
+
+    init(initialDestination: ProfileDestination? = nil) {
+        self.initialDestination = initialDestination
+    }
+}
+
 private func elapsedMilliseconds(since start: Date) -> Int {
     Int(Date().timeIntervalSince(start) * 1_000)
 }
@@ -26,6 +34,7 @@ final class HomeViewModel {
     /// Refresh if data is older than this. `.task` fires on every appearance,
     /// so without a freshness check we'd hammer the endpoint on every tab switch.
     private static let freshnessWindow: TimeInterval = 60
+    private var loadRequests = LatestRequestGeneration()
 
     /// Deliberately outside the freshness window and outside `load()`: a blast has
     /// to be current, and a dashboard failure must never be able to hide one.
@@ -65,7 +74,7 @@ final class HomeViewModel {
 
     func load(appState: AppState? = nil, requesterId: String? = nil, forceRefresh: Bool = false) async {
         let startedAt = Date()
-        guard !isLoading else {
+        if !forceRefresh, isLoading {
             homePerformanceLog.debug("launch.home.dashboardLoad result=skipped reason=inFlight durationMs=\(elapsedMilliseconds(since: startedAt), privacy: .public)")
             return
         }
@@ -76,9 +85,16 @@ final class HomeViewModel {
         }
         let signpost = AppPerformanceSignposts.begin("HomeDashboardLoad")
         defer { AppPerformanceSignposts.end("HomeDashboardLoad", signpost) }
+        let requestToken = loadRequests.begin()
         isLoading = true
+        defer {
+            if loadRequests.owns(requestToken) {
+                isLoading = false
+            }
+        }
         do {
             let loadedDashboard = try await APIClient.shared.dashboard()
+            guard loadRequests.owns(requestToken), !Task.isCancelled else { return }
             dashboard = loadedDashboard
             // Home is the only surface that loads the whole dashboard, so it
             // is where the Home Screen widgets get their data. Publishing here
@@ -98,7 +114,8 @@ final class HomeViewModel {
             error = nil
             lastLoadedAt = Date()
             homePerformanceLog.info("launch.home.dashboardLoad result=success durationMs=\(elapsedMilliseconds(since: startedAt), privacy: .public) checkouts=\(loadedDashboard.myCheckouts.items.count, privacy: .public) reservations=\(loadedDashboard.myReservations.count, privacy: .public) pendingPickups=\(loadedDashboard.pendingPickups.items.count, privacy: .public) eventWork=\(loadedDashboard.myEventWork.count, privacy: .public) flagged=\(loadedDashboard.flaggedItems.count, privacy: .public)")
-            Task {
+            Task { @MainActor [weak self] in
+                guard let self, self.loadRequests.owns(requestToken), !Task.isCancelled else { return }
                 await Self.refreshSecondaryLaunchState(
                     appState: appState,
                     requesterId: requesterId,
@@ -106,10 +123,10 @@ final class HomeViewModel {
                 )
             }
         } catch {
+            guard loadRequests.owns(requestToken), !Task.isCancelled else { return }
             self.error = error.localizedDescription
             homePerformanceLog.error("launch.home.dashboardLoad result=failure durationMs=\(elapsedMilliseconds(since: startedAt), privacy: .public)")
         }
-        isLoading = false
     }
 
     private static func refreshSecondaryLaunchState(
@@ -138,7 +155,6 @@ struct HomeView: View {
     @State private var vm = HomeViewModel()
     @State private var showNotifications = false
     @State private var showTrades = false
-    @State private var showProfile = false
     @State private var navigationPath = NavigationPath()
     @State private var pendingBookingId: String?
     @State private var pendingAssetId: String?
@@ -151,6 +167,10 @@ struct HomeView: View {
     /// cannot stand in: they carry no status or gear, and Post filters on
     /// both, so this loads the real list rather than fabricating one.
     @State private var tradeMyShifts: [MyShift] = []
+    @SceneStorage("WisconsinHomeSceneIdentity") private var sceneRestoreIdentity = ""
+    @SceneStorage("WisconsinHomeSceneDestination") private var sceneRestoreDestination = ""
+    @SceneStorage("WisconsinHomeSceneDestinationID") private var sceneRestoreDestinationID = ""
+    @State private var didRestoreScene = false
     @State private var firstUsefulRenderStartedAt = Date()
     @State private var firstUsefulRenderSignpost: OSSignpostIntervalState?
     @State private var didLogFirstUsefulRender = false
@@ -158,6 +178,53 @@ struct HomeView: View {
     @Environment(SessionStore.self) private var session
     @Environment(ReservationDraftStore.self) private var drafts
     @Environment(NetworkMonitor.self) private var network
+
+    private func rememberSceneDestination(_ destination: String, id: String? = nil) {
+        guard let identity = session.currentUser?.shellIdentity else { return }
+        sceneRestoreIdentity = identity
+        sceneRestoreDestination = destination
+        sceneRestoreDestinationID = id ?? ""
+    }
+
+    private func clearSceneDestination() {
+        sceneRestoreIdentity = session.currentUser?.shellIdentity ?? sceneRestoreIdentity
+        sceneRestoreDestination = ""
+        sceneRestoreDestinationID = ""
+    }
+
+    private func restoreHomeSceneIfNeeded() {
+        guard !didRestoreScene else { return }
+        didRestoreScene = true
+        guard let identity = session.currentUser?.shellIdentity else { return }
+        guard sceneRestoreIdentity == identity else {
+            sceneRestoreIdentity = identity
+            clearSceneDestination()
+            return
+        }
+
+        switch sceneRestoreDestination {
+        case "profile":
+            navigationPath.append(ProfileRoute())
+        case "profileSettings":
+            navigationPath.append(ProfileRoute(initialDestination: .settings))
+        case "booking" where !sceneRestoreDestinationID.isEmpty:
+            navigationPath.append(sceneRestoreDestinationID)
+        case "asset" where !sceneRestoreDestinationID.isEmpty:
+            navigationPath.append(AssetRouteId(id: sceneRestoreDestinationID))
+        case "user" where !sceneRestoreDestinationID.isEmpty:
+            navigationPath.append(UserRouteId(id: sceneRestoreDestinationID))
+        default:
+            break
+        }
+    }
+
+    private func routePendingSettings() {
+        guard appState.pendingSettingsRoute else { return }
+        appState.pendingSettingsRoute = false
+        navigationPath = NavigationPath()
+        rememberSceneDestination("profileSettings")
+        navigationPath.append(ProfileRoute(initialDestination: .settings))
+    }
 
     /// Rendered in every state of `mainContent` -- loading, error, and loaded. A
     /// message someone is being asked to acknowledge must not be hidden because the
@@ -176,6 +243,8 @@ struct HomeView: View {
         if vm.dashboard == nil && vm.error == nil {
             ScrollView {
                 VStack(alignment: .leading, spacing: Brand.Space.lg) {
+                    ProgressView("Loading dashboard")
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     blastStack
                     StatStripSkeleton()
                     VStack(alignment: .leading, spacing: Brand.Space.sm) {
@@ -279,7 +348,10 @@ struct HomeView: View {
                 if HomeActionQueue.hasActions(in: dash, currentUserId: session.currentUser?.id) {
                     HomeActionQueue(
                         dash: dash,
-                        openBookingSummary: { navigationPath.append($0) },
+                        openBookingSummary: { summary in
+                            rememberSceneDestination("booking", id: summary.id)
+                            navigationPath.append(summary)
+                        },
                         openEventWork: { selectedEventWork = $0 },
                         currentUserId: session.currentUser?.id,
                         openBookings: { appState.selectedTab = 1 },
@@ -330,6 +402,7 @@ struct HomeView: View {
                                 if draft.isReservation {
                                     Task { await drafts.resume(draftId: draft.id) }
                                 } else {
+                                    rememberSceneDestination("booking", id: draft.id)
                                     navigationPath.append(draft.id)
                                 }
                             } label: {
@@ -352,7 +425,8 @@ struct HomeView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
-                        showProfile = true
+                        rememberSceneDestination("profile")
+                        navigationPath.append(ProfileRoute())
                     } label: {
                         AccountAvatar(size: 32)
                             .frame(width: 44, height: 44)
@@ -409,22 +483,34 @@ struct HomeView: View {
             }
             .onChange(of: appState.pendingPushBookingId) { _, id in
                 if let id {
+                    rememberSceneDestination("booking", id: id)
                     navigationPath.append(id)
                     appState.pendingPushBookingId = nil
                 }
             }
             .onAppear {
+                restoreHomeSceneIfNeeded()
+                routePendingSettings()
                 if let id = appState.pendingPushBookingId {
+                    rememberSceneDestination("booking", id: id)
                     navigationPath.append(id)
                     appState.pendingPushBookingId = nil
+                }
+            }
+            .onChange(of: appState.pendingSettingsRoute) { _, _ in
+                routePendingSettings()
+            }
+            .onChange(of: navigationPath.count) { _, count in
+                if count == 0 {
+                    clearSceneDestination()
                 }
             }
             .onChange(of: appState.tabResetToken) { _, _ in
                 guard appState.resetTab == 0 else { return }
                 navigationPath = NavigationPath()
+                clearSceneDestination()
                 showNotifications = false
                 showTrades = false
-                showProfile = false
                 selectedEventWork = nil
             }
             .navigationDestination(for: BookingSummary.self) { summary in
@@ -439,6 +525,12 @@ struct HomeView: View {
             .navigationDestination(for: UserRouteId.self) { route in
                 UserDetailView(userId: route.id)
             }
+            .navigationDestination(for: ProfileRoute.self) { route in
+                ProfileView(
+                    wrapsInNavigationStack: false,
+                    initialDestination: route.initialDestination
+                )
+            }
             .navigationDestination(
                 isPresented: Binding(
                     get: { selectedEventWork != nil },
@@ -452,14 +544,17 @@ struct HomeView: View {
             .sheet(isPresented: $showNotifications, onDismiss: {
                 Task { await appState.refresh(forceRefresh: true) }
                 if let id = pendingBookingId {
+                    rememberSceneDestination("booking", id: id)
                     navigationPath.append(id)
                     pendingBookingId = nil
                 }
                 if let assetId = pendingAssetId {
+                    rememberSceneDestination("asset", id: assetId)
                     navigationPath.append(AssetRouteId(id: assetId))
                     pendingAssetId = nil
                 }
                 if let userId = pendingUserId {
+                    rememberSceneDestination("user", id: userId)
                     navigationPath.append(UserRouteId(id: userId))
                     pendingUserId = nil
                 }
@@ -489,10 +584,6 @@ struct HomeView: View {
                 // screen most people never open costs nothing. Browsing and
                 // claiming still work if it fails; only Post needs this list.
                 .task { await loadTradeMyShifts() }
-            }
-            .sheet(isPresented: $showProfile) {
-                ProfileView()
-                    .presentationDragIndicator(.visible)
             }
         }
     }
@@ -671,7 +762,6 @@ private struct StatRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .sensoryFeedback(.selection, trigger: hapticTrigger)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(item.label): \(item.value)")
         .accessibilityHint("Opens related work")
@@ -995,7 +1085,6 @@ private struct QueueOverflowRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .sensoryFeedback(.selection, trigger: hapticTrigger)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(label)
     }
@@ -1160,7 +1249,6 @@ private struct EventActionQueueRow: View {
         // is about, so gear and shift rows keep a shared rhythm down the card.
         .frame(minHeight: callTimeLine != nil ? 64 : 44)
         .padding(.vertical, 8)
-        .sensoryFeedback(.selection, trigger: hapticTrigger)
         .accessibilityLabel(accessibilityLabel)
     }
 
@@ -1252,7 +1340,6 @@ private struct ActionQueueRow: View {
         .buttonStyle(.plain)
         .frame(minHeight: detailLines.count > 1 ? 64 : 44)
         .padding(.vertical, 8)
-        .sensoryFeedback(.selection, trigger: hapticTrigger)
         .accessibilityLabel(accessibilityLabel)
     }
 
@@ -1333,7 +1420,6 @@ private struct AllClearEmptyState: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
             Button {
-                Haptics.tap()
                 openSearch()
             } label: {
                 Label("Search or Scan", systemImage: "magnifyingglass")

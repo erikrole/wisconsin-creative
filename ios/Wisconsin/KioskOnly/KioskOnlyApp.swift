@@ -169,24 +169,25 @@ enum APIError: LocalizedError {
 
 enum Haptics {
     @MainActor static func success() {
+        guard HapticsPreference.isEnabled else { return }
         UINotificationFeedbackGenerator().notificationOccurred(.success)
     }
 
     @MainActor static func error() {
+        guard HapticsPreference.isEnabled else { return }
         UINotificationFeedbackGenerator().notificationOccurred(.error)
     }
 
     @MainActor static func warning() {
+        guard HapticsPreference.isEnabled else { return }
         UINotificationFeedbackGenerator().notificationOccurred(.warning)
     }
 
     @MainActor static func selection() {
+        guard HapticsPreference.isEnabled else { return }
         UISelectionFeedbackGenerator().selectionChanged()
     }
 
-    @MainActor static func tap() {
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-    }
 }
 
 enum StatusTone: String, CaseIterable {

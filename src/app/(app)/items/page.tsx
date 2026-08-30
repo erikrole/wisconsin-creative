@@ -87,11 +87,17 @@ export default function ItemsPage() {
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [createSourceId, setCreateSourceId] = useState<string | null>(null);
   const [showGapWizard, setShowGapWizard] = useState(false);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [density, setDensity] = useState<Density>("comfortable");
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
+
+  function openBlankCreate() {
+    setCreateSourceId(null);
+    setShowCreate(true);
+  }
 
   useEffect(() => {
     let nextColumnVisibility: VisibilityState = {};
@@ -433,24 +439,9 @@ export default function ItemsPage() {
       case "print-label":
         router.push(`/labels?items=${asset.id}`);
         break;
-      case "duplicate":
-        busyRef.current = true;
-        setActionBusy(true);
-        try {
-          const res = await fetch(`/api/assets/${asset.id}/duplicate`, { method: "POST" });
-          if (handleAuthRedirect(res)) return;
-          if (res.ok) {
-            toast.success(`Duplicated ${asset.assetTag}`);
-            reloadItems();
-          } else {
-            toast.error(await parseErrorMessage(res, "Failed to duplicate item"));
-          }
-        } catch {
-          toast.error("Network error — could not duplicate item");
-        } finally {
-          busyRef.current = false;
-          setActionBusy(false);
-        }
+      case "add-another":
+        setCreateSourceId(asset.id);
+        setShowCreate(true);
         break;
       case "maintenance":
         busyRef.current = true;
@@ -651,7 +642,7 @@ export default function ItemsPage() {
                 Fill gaps
               </Button>
               <Button variant="outline" size="sm" className="h-10 min-w-[76px]" asChild><Link href="/import">Import</Link></Button>
-              <Button size="sm" className="h-10 min-w-[92px]" onClick={() => setShowCreate(true)} disabled={!canCreateItem}>Add item</Button>
+              <Button size="sm" className="h-10 min-w-[92px]" onClick={openBlankCreate} disabled={!canCreateItem}>Add item</Button>
             </>
           )}
         </div>
@@ -736,11 +727,15 @@ export default function ItemsPage() {
 
       <NewItemSheet
         open={showCreate}
-        onOpenChange={setShowCreate}
+        onOpenChange={(nextOpen) => {
+          setShowCreate(nextOpen);
+          if (!nextOpen) setCreateSourceId(null);
+        }}
         locations={options.locations}
         departments={options.departments}
         categories={options.categories}
         onCreated={query.reload}
+        sourceAssetId={createSourceId}
       />
 
       <GapWizardDialog
@@ -869,7 +864,7 @@ export default function ItemsPage() {
             title="No items in inventory yet"
             description={canOfferCreateItem ? "Create your first item to get started." : "No items have been added yet."}
             actionLabel={canOfferCreateItem ? "Add item" : undefined}
-            onAction={canOfferCreateItem ? () => setShowCreate(true) : undefined}
+            onAction={canOfferCreateItem ? openBlankCreate : undefined}
           />
         ) : visibleRowCount === 0 ? (
           <EmptyState

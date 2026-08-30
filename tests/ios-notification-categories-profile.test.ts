@@ -44,12 +44,19 @@ describe("iOS notification category preferences", () => {
     expect(models).toContain("try container.encodeIfPresent(categories, forKey: .categories)");
   });
 
-  it("lets native Profile edit each category without hiding pause/channel controls", () => {
+  it("lets native Notifications edit each category while exposing account pause state", () => {
     const detail = source("ios/Wisconsin/Views/NotificationSettingsView.swift");
     const preferences = source("ios/Wisconsin/Core/Preferences.swift");
 
     expect(detail).toContain("Text(\"Notification Types\")");
     expect(detail).toContain("Text(\"In-app notifications always show in your inbox, regardless of these settings.\")");
+    expect(detail).toContain("private var quietHoursSection");
+    expect(detail).toContain("pauseButton(title: \"Pause 1 hour\"");
+    expect(detail).toContain("pauseButton(title: \"Pause 1 day\"");
+    expect(detail).toContain("pauseButton(title: \"Pause 1 week\"");
+    expect(detail).toContain("Label(\"Resume now\", systemImage: \"bell.fill\")");
+    expect(detail).toContain("await prefsVM.pause(for: seconds)");
+    expect(detail).toContain("await prefsVM.resume()");
 
     for (const { key, label } of categories) {
       expect(detail).toContain(`title: "${label}"`);
@@ -62,7 +69,7 @@ describe("iOS notification category preferences", () => {
     const categoryToggle = bodyBetween(detail, "private func categoryToggle", "private var notificationSummaryText");
     expect(categoryToggle).toContain("prefsVM.categoryValue(category)");
     expect(categoryToggle).toContain("await prefsVM.setCategory(category, value: value)");
-    expect(categoryToggle).not.toContain("prefsVM.isPaused");
+    expect(categoryToggle).toContain("prefsVM.isPaused");
 
     expect(preferences).toContain("enum Category { case checkoutDue, checkoutOverdue, reservation, licenseExpiry, schedule, trade, gearPrep }");
     expect(preferences).toContain("private static let defaultCategories = NotificationPreferences.Categories(");
@@ -73,5 +80,6 @@ describe("iOS notification category preferences", () => {
     }
     expect(preferences).toContain("current.categories = categories");
     expect(preferences).toContain("await save(current, fallbackTo: prev)");
+    expect(preferences).toContain("error = nil");
   });
 });

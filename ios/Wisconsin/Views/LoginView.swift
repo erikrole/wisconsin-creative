@@ -171,6 +171,14 @@ struct LoginView: View {
                         BrandSplashLockup(subtitle: "Sign in to your account")
                             .padding(.bottom, 22)
 
+                        Text("Your account keeps schedules, reservations, and gear activity available to the right people.")
+                            .font(.subheadline)
+                            .foregroundStyle(.white.opacity(0.78))
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.horizontal, 24)
+                            .padding(.bottom, 18)
+
                         card
                             .padding(.horizontal, 20)
 

@@ -11,10 +11,10 @@ Wisconsin Creative is a Next.js App Router application with a companion native i
 |---|---:|
 | App pages | 88 |
 | App layouts | 7 |
-| API route handlers | 311 |
-| Service files | 76 |
-| Component files | 153 |
-| Test files | 586 |
+| API route handlers | 315 |
+| Service files | 79 |
+| Component files | 155 |
+| Test files | 597 |
 
 ## Oversized Source Watchlist
 
@@ -27,21 +27,21 @@ Informational only. These are the largest TypeScript and TSX files under `src/`;
 | `src/lib/services/reports.ts` | 1932 |
 | `src/components/resources/BrandAssetLibrary.tsx` | 1827 |
 | `src/components/TradeBoard.tsx` | 1795 |
-| `src/lib/services/notifications.ts` | 1662 |
+| `src/lib/services/notifications.ts` | 1675 |
+| `src/app/(app)/schedule/_components/ListView.tsx` | 1662 |
 | `src/app/(app)/items/[id]/ItemInfoTab.tsx` | 1603 |
-| `src/app/(app)/schedule/_components/ListView.tsx` | 1594 |
+| `src/app/(app)/bulk-inventory/batteries/page.tsx` | 1554 |
 | `src/app/(app)/users/[id]/UserInfoTab.tsx` | 1450 |
 | `src/app/(app)/resources/page.tsx` | 1425 |
 | `src/components/ActivityTimeline.tsx` | 1368 |
-| `src/app/(app)/bulk-inventory/batteries/page.tsx` | 1341 |
 | `src/lib/services/shift-trades.ts` | 1316 |
+| `src/app/(app)/items/new-item-sheet/SerializedItemForm.tsx` | 1272 |
 | `src/app/api/assets/route.ts` | 1227 |
+| `src/app/(app)/items/new-item-sheet.tsx` | 1222 |
 | `src/app/(app)/users/[id]/page.tsx` | 1127 |
+| `src/lib/services/schedule-working-copy.ts` | 1095 |
 | `src/app/(app)/accountability/AccountabilityClient.tsx` | 1065 |
 | `src/app/(app)/users/[id]/UserBadgesTab.tsx` | 1050 |
-| `src/lib/services/schedule-publication.ts` | 1028 |
-| `src/app/(app)/schedule/_components/WorkingCrewEditor.tsx` | 1000 |
-| `src/components/onboarding/OnboardingDialog.tsx` | 996 |
 
 ## High-Level Data Flow
 

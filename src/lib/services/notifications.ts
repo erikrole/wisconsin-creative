@@ -1,7 +1,7 @@
 import { after } from "next/server";
 import { db } from "@/lib/db";
 import { sendEmail, buildNotificationEmail } from "@/lib/email";
-import { sendPush } from "@/lib/push/apns";
+import { DEFAULT_APNS_INTERRUPTION_LEVEL, sendPush } from "@/lib/push/apns";
 import { sendWebPushToUsers } from "@/lib/push/web";
 import { ACTIVE_ASSIGNMENT_STATUSES } from "@/lib/shift-constants";
 import { loadUserPrefs, normalizePrefs, shouldDeliverEmail, shouldDeliverPush, shouldDeliverCategory, type NotificationCategory } from "@/lib/services/notification-prefs";
@@ -69,6 +69,16 @@ const APNS_ACTION_CATEGORY: Partial<Record<NotificationCategory, string>> = {
   trade: "GT_SCHEDULE",
 };
 
+const APNS_INTERRUPTION_LEVEL: Partial<Record<NotificationCategory, "passive" | "active" | "time-sensitive">> = {
+  checkoutDue: "active",
+  checkoutOverdue: "time-sensitive",
+  reservation: "active",
+  gearPrep: "passive",
+  licenseExpiry: "passive",
+  schedule: "passive",
+  trade: "active",
+};
+
 export async function sendPushToUser(
   userId: string,
   opts: { title: string; body?: string | null; payload?: Record<string, unknown>; category?: NotificationCategory }
@@ -104,6 +114,9 @@ export async function sendPushToUser(
         body: opts.body ?? "",
         payload: opts.payload,
         category: opts.category ? APNS_ACTION_CATEGORY[opts.category] : undefined,
+        interruptionLevel: opts.category
+          ? APNS_INTERRUPTION_LEVEL[opts.category] ?? DEFAULT_APNS_INTERRUPTION_LEVEL
+          : DEFAULT_APNS_INTERRUPTION_LEVEL,
       }
     );
 

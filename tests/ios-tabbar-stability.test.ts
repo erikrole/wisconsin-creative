@@ -73,8 +73,11 @@ describe("iOS tab bar stability", () => {
 
     expect(appTab).toContain("if showsSidebarDestinations {");
     expect(appTab).toContain("selectedTabIsSidebarOnly");
-    expect(appTab).toContain("!showsSidebarDestinations && selectedTabIsSidebarOnly");
-    expect(appTab).toContain("appState.selectedTab = 0");
+    expect(appTab).toContain("!showsSidebarDestinations");
+    expect(appTab).toContain("collapseSidebarDestinationIfNeeded()");
+    expect(appTab).toContain("restoreSidebarDestinationIfNeeded()");
+    expect(appTab).toContain("appState.pendingBrowseDestination = destination");
+    expect(appTab).toContain("appState.selectedTab = 2");
     expect(appTab).not.toMatch(/if isStaffOrAdmin \{[\s\S]*?Tab\("Users"/);
   });
 

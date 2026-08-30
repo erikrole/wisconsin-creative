@@ -574,7 +574,7 @@ struct WelcomeFailureView: View {
         } description: {
             Text(message)
         } actions: {
-            Button("Try again", action: onRetry)
+            Button("Retry", action: onRetry)
                 .buttonStyle(.borderedProminent)
             Button("Continue for now", action: onContinue)
                 .buttonStyle(.bordered)

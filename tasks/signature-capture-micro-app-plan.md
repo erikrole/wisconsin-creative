@@ -826,3 +826,45 @@ Local verification on 2026-08-15: focused signature tests 11/11 plus six signatu
 - Verified: focused parser/service/form contract tests pass 68/68; focused lint, codemap/docs verification, and diff checks pass.
 - Blocked: authenticated local browser proof could not run because the in-app browser rejected both local route forms and the Preview launcher could not resolve the Vercel registry wrapper.
 - Deferred: existing collections need a reviewed Preview/Apply to populate hometowns from a newly fetched source; authenticated browser proof, TypeScript, build, and production promotion remain open.
+
+## Follow-up: Official 2026-27 Men's Hockey Roster Seed — 2026-08-30
+
+### Goal
+
+- Make the official 26-player Men's Hockey fact-book roster available through the existing authenticated Signatures Preview and explicit Apply workflow before the UWBadgers 2026-27 profile roster page is published.
+
+### Source Checks
+
+- The official `2026_27_HKY_Roster.pdf` fact-book spread supplies the final player names, jersey numbers, positions, academic years, and hometowns for `MHKY / 2026-27`.
+- The current MHKY adapter targets the not-yet-published `/sports/mens-ice-hockey/roster/2026-27` page; fetching that page cannot currently produce stable profile identities.
+- Existing roster apply already preserves captures across a changed player source ID only through a unique exact normalized-name match, so deterministic seed IDs can reconcile safely when official profile IDs become available.
+
+### Stop Conditions
+
+- Do not bypass import permission, rate limiting, immutable Preview persistence, explicit Apply, collection-version checks, audit writes, or player-required semantics.
+- Do not read a local Downloads path at runtime or make the deployed application depend on the attached PDF.
+- Stop if the seed differs from the official 26-player number/name/position contract or if it changes another sport or season.
+
+### Slices
+
+- [x] Add a bounded, versioned official seed for exactly `MHKY / 2026-27` with deterministic identities and normalized official metadata.
+- [x] Route that one import through the existing snapshot response while retaining network fetches for every other sport and season.
+- [x] Add focused seed, Unicode, deterministic-hash, no-network, and non-target fallback coverage.
+- [x] Sync the Signatures area contract and close with focused tests, TypeScript, lint, app build, docs, and diff evidence.
+
+### Verification
+
+- [x] `npx vitest run tests/signature-capture.test.ts tests/signature-service.test.ts` (91/91)
+- [x] `npx tsc --noEmit --pretty false`
+- [x] Focused lint and `npm run lint -- --quiet`
+- [x] `npm run build:app` (251/251 static pages generated)
+- [x] `npm run codemap` and `npm run verify:docs`
+- [x] `git diff --check`
+
+### Review
+
+- Shipped: Local Signatures import Preview for `MHKY / 2026-27` now returns the official 26-player fact-book roster with deterministic seed identities, official number/position/year metadata, normalized hometowns, and Unicode-safe `Bruno Idžan` / `Lempäälä`, without a runtime PDF or network dependency.
+- Verified: The one seed is scope-locked, source-schema validated, deterministically hashed, and proven not to call `fetch`; every other sport/season stays on the allowlisted network adapter. Focused tests, TypeScript, focused/full lint, optimized app build, codemap/docs verification, and diff checks pass.
+- Deferred: Preview/Apply against a live database, deployment, production apply, artifact backfill, and physical iPad acceptance remain separate gates.
+- Blocked: None for the local source slice.
+- Next slice or stop: Stop locally. A staff/admin must review Preview before explicit Apply; deployment and production Apply require separate approval.

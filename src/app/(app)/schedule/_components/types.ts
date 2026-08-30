@@ -18,6 +18,7 @@ export type CalendarEvent = {
   isHome: boolean | null;
   site: "HOME" | "AWAY" | "NEUTRAL" | null;
   subtitle: string | null;
+  archivedAt?: string | null;
   location: { id: string; name: string } | null;
   source: { id: string; name: string } | null;
 };
@@ -90,9 +91,12 @@ export type SchedulePublicationState = {
 
 /** Merged entry for display */
 export type CalendarEntry = CalendarEvent & {
+  /** CalendarEvent archive state: older records hidden unless explicitly loaded. */
+  eventArchivedAt?: string | null;
   shiftGroupId: string | null;
   coverage: { total: number; filled: number; percentage: number } | null;
   shifts: Shift[];
+  /** Crew-group archive state: ended staffing work, not the older-record filter. */
   archivedAt?: string | null;
   publication?: SchedulePublicationState | null;
   hasWorkingCopy?: boolean;

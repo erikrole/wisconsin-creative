@@ -6,6 +6,13 @@ import UserNotifications
 // MARK: - Profile
 
 struct ProfileView: View {
+    /// Home pushes Profile into its existing navigation path. The default keeps
+    /// the standalone wrapper used by the performance harness and any future
+    /// callers that present Profile as a root destination.
+    var wrapsInNavigationStack = true
+    /// A scene-restored command can enter Profile and continue to the exact
+    /// Settings destination the user requested.
+    var initialDestination: ProfileDestination? = nil
     private let myAvailabilityTip = MyAvailabilityTip()
     @Environment(SessionStore.self) private var session
     @Environment(ProfileCompletionStore.self) private var profileCompletion
@@ -25,6 +32,7 @@ struct ProfileView: View {
     @State private var selectedBadge: UserBadge?
     @State private var pushedBookingId: String?
     @State private var selectedShift: MyShift?
+    @State private var pushedInitialDestination: ProfileDestination?
 
     private static let manageAccountURL = AppEnvironment.baseURL
     private static let iosSettingsURL = URL(string: UIApplication.openSettingsURLString)!
@@ -44,7 +52,16 @@ struct ProfileView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        if wrapsInNavigationStack {
+            NavigationStack {
+                profileContent
+            }
+        } else {
+            profileContent
+        }
+    }
+
+    private var profileContent: some View {
             List {
                 headerSection
                 nextUpSection
@@ -69,7 +86,7 @@ struct ProfileView: View {
                     .accessibilityLabel("Settings")
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button("Close") { dismiss() }
                 }
             }
             .navigationDestination(for: ProfileDestination.self) { dest in
@@ -81,7 +98,9 @@ struct ProfileView: View {
             .navigationDestination(item: $selectedShift) { shift in
                 EventDetailView(event: shift.asScheduleEvent, myShift: shift, eventWork: nil)
             }
-        }
+            .navigationDestination(item: $pushedInitialDestination) { destination in
+                destinationView(for: destination)
+            }
         // Settings surfaces use a neutral control tint (matching the web's
         // near-black accent) so toggles, buttons, and links don't inherit the
         // brand red and read destructive. Red here stays reserved for
@@ -105,6 +124,11 @@ struct ProfileView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 Task { await refreshPushAuth() }
+            }
+        }
+        .onAppear {
+            if pushedInitialDestination == nil {
+                pushedInitialDestination = initialDestination
             }
         }
     }

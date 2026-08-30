@@ -17,14 +17,14 @@ struct PushPrePromptView: View {
                 VStack(spacing: 10) {
                     Image(systemName: "bell.badge.fill")
                         .font(.system(size: 52))
-                        .foregroundStyle(Color.accentColor)
+                        .foregroundStyle(Color.brandPrimary)
                         .symbolEffect(.bounce, options: .nonRepeating, isActive: !reduceMotion)
                         .accessibilityHidden(true)
 
                     Text("Stay in the loop")
                         .font(.title2.weight(.bold))
 
-                    Text("We'll only ping you for things you care about — gear that's due back, shifts coming up, and trades opening on the board.")
+                    Text("Get reminders about gear that's due back, shifts coming up, and trades opening on the board.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -70,7 +70,7 @@ struct PushPrePromptView: View {
         HStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.body)
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(Color.brandPrimary)
                 .frame(width: 28)
                 .accessibilityHidden(true)
             Text(text)

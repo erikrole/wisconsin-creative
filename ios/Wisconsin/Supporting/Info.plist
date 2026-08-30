@@ -37,7 +37,7 @@
 		<false/>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>Scan gear barcodes and QR codes</string>
+	<string>Wisconsin Creative uses the camera to scan gear barcodes and QR codes.</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>UIAppFonts</key>
@@ -49,10 +49,6 @@
 	<dict>
 		<key>UIColorName</key>
 		<string>LaunchBackground</string>
-		<key>UIImageName</key>
-		<string>LaunchLockup</string>
-		<key>UIImageRespectsSafeAreaInsets</key>
-		<false/>
 	</dict>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>

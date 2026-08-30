@@ -90,11 +90,12 @@ describe("iOS native Licenses page", () => {
     expect(view).toContain("activeClaimId == nil && (code.status == .available || code.status == .partial)");
     expect(view).not.toContain('"Already claimed"');
     expect(activeButtons).toContain('Button("Copy Code")');
-    expect(activeButtons).toContain('Button("Return License", role: .destructive)');
+    expect(activeButtons).toContain('Button("Return License")');
+    expect(activeButtons).not.toContain('Button("Return License", role: .destructive)');
     expect(activeButtons).not.toContain('Label("Copy Code"');
     expect(activeButtons).not.toContain('Label("Return License"');
     expect(activeButtons).toMatch(/Button\("Copy Code"\)[\s\S]*?\.buttonStyle\(\.bordered\)[\s\S]*?\.buttonBorderShape\(\.capsule\)[\s\S]*?\.controlSize\(\.small\)[\s\S]*?\.tint\(Color\.statusText\(\.blue\)\)/);
-    expect(activeButtons).toMatch(/Button\("Return License", role: \.destructive\)[\s\S]*?\.buttonStyle\(\.bordered\)[\s\S]*?\.buttonBorderShape\(\.capsule\)[\s\S]*?\.controlSize\(\.small\)/);
+    expect(activeButtons).toMatch(/Button\("Return License"\)[\s\S]*?\.buttonStyle\(\.bordered\)[\s\S]*?\.buttonBorderShape\(\.capsule\)[\s\S]*?\.controlSize\(\.small\)/);
   });
 
   it("summarizes shared capacity and uses operational status colors", () => {

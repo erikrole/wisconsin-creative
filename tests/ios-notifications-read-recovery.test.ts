@@ -27,6 +27,8 @@ describe("iOS notifications read recovery", () => {
     expect(sheet).toContain("actionError = \"Couldn't mark all notifications read. Your inbox was restored.\"");
     expect(sheet).toContain("BannerView(");
     expect(sheet).toContain("actionLabel: \"Refresh\"");
-    expect(sheet).toContain(".sensoryFeedback(.error, trigger: actionErrorHaptic)");
+    expect(sheet).toContain("AccessibilityNotification.Announcement(actionError).post()");
+    expect(sheet).toContain("actionLabel: \"Undo\"");
+    expect(sheet).toContain("markNotificationsUnread(ids: ids)");
   });
 });

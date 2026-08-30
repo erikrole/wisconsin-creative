@@ -60,12 +60,12 @@ struct AvailabilityView: View {
                     Button {
                         editorContext = .newWeekly(day: selectedWeekday)
                     } label: {
-                        Label("Add class schedule", systemImage: "calendar.badge.clock")
+                        Label("Add Class Schedule…", systemImage: "calendar.badge.clock")
                     }
                     Button {
                         editorContext = .newException(date: .now)
                     } label: {
-                        Label("Add day away", systemImage: "calendar.badge.exclamationmark")
+                        Label("Add Day Away…", systemImage: "calendar.badge.exclamationmark")
                     }
                 } label: {
                     Label("Add availability", systemImage: "plus")
@@ -460,7 +460,7 @@ private struct AvailabilityBlockCard: View {
             .buttonStyle(.plain)
 
             Menu {
-                Button("Edit", systemImage: "pencil", action: onEdit)
+                Button("Edit…", systemImage: "pencil", action: onEdit)
                 Button("Delete", systemImage: "trash", role: .destructive, action: onDelete)
             } label: {
                 Image(systemName: "ellipsis")

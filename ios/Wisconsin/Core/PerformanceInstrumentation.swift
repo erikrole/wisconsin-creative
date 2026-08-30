@@ -58,6 +58,10 @@ enum AppRuntimeMode {
         /// credential, one bound to this device, and one never used -- the
         /// three shapes the rows have to tell apart.
         case accountSecurity
+        /// Native notification settings with a paused account preference, so
+        /// delivery truth and recovery controls can be reviewed without a
+        /// signed-in session or live APNs state.
+        case notifications
         case passwordSetup = "password-setup"
         /// The real Bookings tab as an internal Student, with the fixture
         /// changing from one own row to the shared team list when the request
@@ -134,7 +138,7 @@ enum AppRuntimeMode {
         /// view code that has to compile in Release too.
         static var searchQuery: String? {
             #if DEBUG
-            return search ? "fx3" : nil
+            return search ? "football" : nil
             #else
             return nil
             #endif
@@ -160,7 +164,7 @@ enum AppRuntimeMode {
              .studentBookings,
              .bookingDetail, .bookingExtend, .bookingEdit, .bookingCancel,
              .itemEdit, .createBookingScanner, .createBookingEvents, .search, .searchPartial,
-             .itemsList, .reports, .accountSecurity, .login:
+             .itemsList, .reports, .accountSecurity, .notifications, .login:
             return true
         default:
             return false

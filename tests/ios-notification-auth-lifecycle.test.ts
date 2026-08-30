@@ -247,6 +247,7 @@ describe("iOS notification authorization lifecycle", () => {
     expect(mocks.db.deviceToken.findMany).toHaveBeenCalledWith({
       where: {
         userId: "user-1",
+        platform: "IOS",
         revokedAt: null,
         user: { active: true },
       },

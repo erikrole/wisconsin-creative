@@ -61,10 +61,23 @@ describe("iOS quick actions", () => {
 
   it("does not read the shortcut out of deprecated launch options", () => {
     // `launchOptions[.shortcutItem]` is deprecated as of iOS 26 in favour of
-    // the UIScene lifecycle; the delegate callback covers both cases.
+    // the UIScene lifecycle. Cold launch reads connectionOptions and warm
+    // launch uses UIWindowSceneDelegate.
     expect(code(appDelegate)).not.toContain("launchOptions?[.shortcutItem]");
-    expect(appDelegate).toContain("performActionFor shortcutItem: UIApplicationShortcutItem");
+    expect(appDelegate).toContain("configurationForConnecting connectingSceneSession");
+    expect(appDelegate).toContain("configuration.delegateClass = GearTrackerSceneDelegate.self");
+    expect(appDelegate).toContain("final class GearTrackerSceneDelegate: NSObject, UIWindowSceneDelegate");
+    expect(appDelegate).toContain("windowScene: UIWindowScene");
+    expect(appDelegate).toContain("connectionOptions.shortcutItem");
     expect(appDelegate).toContain("completionHandler(GearTrackerQuickAction.handle(shortcutItem))");
+    expect(appDelegate).not.toContain("func application(\n        _ application: UIApplication,\n        performActionFor shortcutItem");
+  });
+
+  it("never leaves a denied app-intent destination parked", () => {
+    expect(tabView).toContain("private func rejectPendingAppIntent(message: String)");
+    expect(tabView).toContain("appState.pendingAppIntentDestination = nil");
+    expect(tabView).toContain("UIAccessibility.post(notification: .announcement, argument: message)");
+    expect(app).toContain("GearTrackerQuickAction.refresh(for: user)");
   });
 });
 

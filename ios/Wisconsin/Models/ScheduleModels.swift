@@ -528,6 +528,12 @@ struct WorkingScheduleDefaultWindow: Codable {
     let endsAt: Date
 }
 
+struct WorkingScheduleHistoryAction: Codable {
+    let type: String
+    let label: String
+    let version: Int
+}
+
 struct WorkingScheduleEditor: Codable, Identifiable {
     let shiftGroupId: String
     let publicationState: String
@@ -541,6 +547,14 @@ struct WorkingScheduleEditor: Codable, Identifiable {
     let autoReleaseAt: Date?
     let autoReleaseRunId: String?
     let autoReleaseError: String?
+    /// Optional for rollout tolerance with a server that predates the history
+    /// fields. The native editor still keeps its safe batch Revert in that
+    /// case, but never invents a per-command inverse operation.
+    let canUndo: Bool?
+    let canRedo: Bool?
+    let undoLabel: String?
+    let redoLabel: String?
+    let historyAction: WorkingScheduleHistoryAction?
     let changes: WorkingScheduleChanges
     let affectedWorkerCount: Int
     let assignedUsers: [WorkingScheduleUser]
@@ -549,6 +563,8 @@ struct WorkingScheduleEditor: Codable, Identifiable {
 
     var id: String { shiftGroupId }
     var hasUnpublishedChanges: Bool { hasWorkingCopy && changes.total > 0 }
+    var hasUndo: Bool { canUndo == true }
+    var hasRedo: Bool { canRedo == true }
 
     func eventShifts() -> [EventShift] {
         let users = Dictionary(uniqueKeysWithValues: assignedUsers.map { ($0.id, $0) })

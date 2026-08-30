@@ -221,6 +221,52 @@ describe("UWBadgers signature roster adapter", () => {
     expect(isAllowedUWBadgersUrl("https://example.com/roster")).toBe(false);
   });
 
+  it("uses the official 2026-27 Men's Hockey fact-book seed without a network request", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const snapshot = await fetchUWBadgersRoster("MHKY", "2026-27");
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(snapshot).toMatchObject({
+      sourceKey: "UW_BADGERS_MHKY_FACT_BOOK",
+      sourceUrl: "https://uwbadgers.com/sports/mens-ice-hockey/roster/2026-27",
+      parserVersion: "uwbadgers-mhky-factbook-2026-27-v1",
+    });
+    expect(snapshot.entries).toHaveLength(26);
+    expect(snapshot.entries.map(({ jerseyNumber, name, title }) => ({ jerseyNumber, name, title }))).toEqual([
+      { jerseyNumber: 2, name: "Luke Osburn", title: "Defenseman • Sophomore" },
+      { jerseyNumber: 3, name: "Brent Solomon", title: "Forward • Freshman" },
+      { jerseyNumber: 4, name: "Dylan Compton", title: "Defenseman • Sophomore" },
+      { jerseyNumber: 5, name: "Zach Schulz", title: "Defenseman • Senior" },
+      { jerseyNumber: 6, name: "Logan Hensler", title: "Defenseman • Junior" },
+      { jerseyNumber: 7, name: "Gavin Morrissey", title: "Forward • Junior" },
+      { jerseyNumber: 8, name: "Jack Phelan", title: "Defenseman • Junior" },
+      { jerseyNumber: 9, name: "Chase Jette", title: "Forward • Freshman" },
+      { jerseyNumber: 12, name: "Gavin Uhlenkamp", title: "Forward • Freshman" },
+      { jerseyNumber: 14, name: "Joe Palodichuk", title: "Defenseman • Senior" },
+      { jerseyNumber: 17, name: "Grady Deering", title: "Forward • Sophomore" },
+      { jerseyNumber: 18, name: "Adam Pietila", title: "Forward • Junior" },
+      { jerseyNumber: 19, name: "Zach Wooten", title: "Forward • Freshman" },
+      { jerseyNumber: 21, name: "Ryan Botterill", title: "Forward • Junior" },
+      { jerseyNumber: 23, name: "John Stout", title: "Defenseman • Freshman" },
+      { jerseyNumber: 24, name: "Talan Blanck", title: "Forward • Freshman" },
+      { jerseyNumber: 26, name: "Weston Knox", title: "Defenseman • Junior" },
+      { jerseyNumber: 27, name: "Finn Brink", title: "Forward • Sophomore" },
+      { jerseyNumber: 30, name: "Alexis Cournoyer", title: "Goaltender • Sophomore" },
+      { jerseyNumber: 31, name: "Daniel Hauser", title: "Goaltender • Sophomore" },
+      { jerseyNumber: 35, name: "Xander Miceli", title: "Goaltender • Freshman" },
+      { jerseyNumber: 55, name: "Oliver Tulk", title: "Forward • Sophomore" },
+      { jerseyNumber: 57, name: "Eetu Orpana", title: "Forward • Freshman" },
+      { jerseyNumber: 86, name: "JJ Wiebusch", title: "Forward • Junior" },
+      { jerseyNumber: 91, name: "Bruno Idžan", title: "Forward • Sophomore" },
+      { jerseyNumber: 94, name: "Vasily Zelenov", title: "Forward • Sophomore" },
+    ]);
+    expect(snapshot.entries.find((entry) => entry.name === "Bruno Idžan")?.normalizedName).toBe("bruno idžan");
+    expect(snapshot.entries.find((entry) => entry.name === "Eetu Orpana")?.hometown).toBe("Lempäälä, Finland");
+    expect(snapshot.sourceHash).toBe(normalizedRosterHash(snapshot.entries, snapshot.parserVersion));
+  });
+
   it("fetches a roster directly with manual redirect handling", async () => {
     const fetchMock = vi.fn().mockResolvedValue(rosterResponse());
     vi.stubGlobal("fetch", fetchMock);

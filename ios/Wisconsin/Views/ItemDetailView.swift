@@ -20,9 +20,10 @@ struct ItemDetailView: View {
     }
 
     private func hasMoreActions(for asset: AssetDetail) -> Bool {
+        // Copy QR is already a visible action in the hero and product links
+        // are rendered as direct Links in Details. Keep the overflow for the
+        // staff-only edit/maintenance group, where it actually groups actions.
         canEditAsset
-            || asset.qrCodeValue?.isEmpty == false
-            || asset.linkUrl.flatMap(URL.init(string:)) != nil
     }
 
     private func toggleFavorite() async {
@@ -84,7 +85,7 @@ struct ItemDetailView: View {
                 .background(Color(.systemGroupedBackground))
             }
         }
-        .navigationTitle("")
+        .navigationTitle(asset?.itemListPrimaryTitle ?? "Item")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if asset != nil {
@@ -97,14 +98,13 @@ struct ItemDetailView: View {
                             .frame(minWidth: 44, minHeight: 44)
                     }
                     .accessibilityLabel(isFavorited ? "Unfavorite" : "Favorite")
-                    .sensoryFeedback(.selection, trigger: favoriteToggleCount)
                 }
                 if let asset, hasMoreActions(for: asset) {
                     ToolbarItem(placement: .topBarTrailing) {
                         Menu {
                             if canEditAsset {
                                 Button { showEdit = true } label: {
-                                    Label("Edit Item", systemImage: "pencil")
+                                    Label("Edit…", systemImage: "pencil")
                                 }
                                 // The one lifecycle action that belongs on a
                                 // phone: gear breaks at a venue, and the person
@@ -208,7 +208,6 @@ struct ItemDetailView: View {
     /// haptic. Replaces the silent-copy behavior the hero card had inline.
     private func copyQR(_ value: String) {
         UIPasteboard.general.string = value
-        Haptics.tap()
         toast = Toast(
             message: "Copied \(value)",
             icon: "checkmark.circle.fill",
@@ -506,6 +505,7 @@ private struct ItemHeroCard: View {
                 .font(.gothamBlack(size: 26, relativeTo: .title2))
                 .tracking(-0.2)
                 .lineLimit(2)
+                .accessibilityAddTraits(.isHeader)
 
             if let sub = subtitle {
                 Text(sub)
@@ -683,10 +683,11 @@ private struct ItemDetailsCard: View {
                     .font(.subheadline)
                     .foregroundStyle(.primary)
                 Spacer()
-                Text(row.value)
-                    .font(row.mono ? .system(.subheadline, design: .monospaced) : .subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                    Text(row.value)
+                        .font(row.mono ? .system(.subheadline, design: .monospaced) : .subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .textSelection(.enabled)
             }
         }
     }

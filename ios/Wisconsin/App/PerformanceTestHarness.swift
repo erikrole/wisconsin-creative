@@ -1,5 +1,6 @@
 #if DEBUG
 import SwiftUI
+import UserNotifications
 
 @MainActor
 private final class PerformanceDraftPersistence: ReservationDraftPersistence {
@@ -85,6 +86,8 @@ struct PerformanceTestRootView: View {
             ReportsHarnessView()
         case .accountSecurity:
             AccountSecurityHarnessView()
+        case .notifications:
+            NotificationSettingsHarnessView()
         }
     }
 }
@@ -116,6 +119,60 @@ struct AccountSecurityHarnessView: View {
             AccountSecuritySettingsView(manageAccountURL: AppEnvironment.baseURL)
                 .onAppear { session.currentUser = ScheduleFixtures.staffUser }
         }
+    }
+}
+
+/// Renders the real notification settings screen with an account-wide pause
+/// already active. The view model is seeded before the child appears so its
+/// `.task` does not race the fixture setup or reach a live host.
+struct NotificationSettingsHarnessView: View {
+    @Environment(SessionStore.self) private var session
+    @Environment(AppState.self) private var appState
+    @State private var prefsVM = NotificationPrefsViewModel()
+    @State private var pushAuth: UNAuthorizationStatus = .authorized
+    @State private var seeded = false
+
+    var body: some View {
+        ZStack {
+            Color(.systemGroupedBackground).ignoresSafeArea()
+            if seeded {
+                NavigationStack {
+                    NotificationSettingsView(
+                        prefsVM: prefsVM,
+                        pushAuth: $pushAuth,
+                        iosSettingsURL: AppEnvironment.baseURL,
+                        showPushPrompt: {}
+                    )
+                }
+            }
+        }
+        .onAppear {
+            session.currentUser = ScheduleFixtures.staffUser
+            prefsVM.prefs = NotificationFixtureAPI.pausedPreferences
+            appState.pushRegistrationState = .failed
+            seeded = true
+        }
+    }
+}
+
+enum NotificationFixtureAPI {
+    static var pausedPreferences: NotificationPreferences {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return NotificationPreferences(
+            pausedUntil: formatter.string(from: Date.now.addingTimeInterval(60 * 60)),
+            channels: NotificationPreferences.Channels(email: true, push: true),
+            badges: true,
+            categories: NotificationPreferences.Categories(
+                checkoutDue: true,
+                checkoutOverdue: true,
+                reservation: true,
+                licenseExpiry: true,
+                schedule: true,
+                trade: true,
+                gearPrep: true
+            )
+        )
     }
 }
 
@@ -362,7 +419,10 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
         switch path {
         case "/api/resources": return FixtureAPI.guides
         case "/api/users":
-            return AppRuntimeMode.performanceScenario == .searchPartial ? nil : FixtureAPI.users
+            if AppRuntimeMode.performanceScenario == .searchPartial { return nil }
+            return AppRuntimeMode.performanceScenario == .search
+                ? SearchFixtureAPI.people
+                : FixtureAPI.users
         case "/api/licenses":
             return AppRuntimeMode.performanceScenario == .resourcesLicensesOpen
                 ? FixtureAPI.openLicenses
@@ -396,7 +456,7 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
         case "/api/bookings": return BookingFixtureAPI.list(for: request)
         case "/api/bookings/\(BookingFixtureAPI.bookingId)": return BookingFixtureAPI.booking
         case "/api/assets/\(AssetFixtureAPI.assetId)": return AssetFixtureAPI.asset
-        case "/api/assets": return SearchFixtureAPI.assets
+        case "/api/assets": return SearchFixtureAPI.assets(for: request)
         case "/api/reports/utilization": return ReportsFixtureAPI.utilization
         case "/api/reports/checkouts": return ReportsFixtureAPI.checkouts
         case "/api/reservations": return SearchFixtureAPI.reservations
@@ -485,6 +545,7 @@ enum ReportsFixtureAPI {
         }
         """.utf8)
     }
+
 }
 
 /// Search fans out to four endpoints at once, so a result list only looks real
@@ -496,7 +557,18 @@ enum SearchFixtureAPI {
     /// Mirrors `AppRuntimeMode.CaptureSeed.searchQuery`, which is what the
     /// view actually reads; kept here so the fixture data and the typed query
     /// stay described in one place.
-    static let query = "fx3"
+    static let query = "football"
+
+    static let people = Data("""
+    {"total":3,"limit":50,"offset":0,"data":[
+      {"id":"u-avery","name":"Avery Nakamura","email":"avery.nakamura@wisc.edu","role":"STAFF",
+       "title":"Football Video Lead","primaryArea":"VIDEO","active":true},
+      {"id":"u-priya","name":"Priya Ramachandran","email":"priya.ramachandran@wisc.edu","role":"STUDENT",
+       "title":"Football Photo","primaryArea":"PHOTO","active":true},
+      {"id":"u-marcus","name":"Marcus Webb","email":"marcus.webb@wisc.edu","role":"STUDENT",
+       "title":"Football Social","primaryArea":"SOCIAL","active":true}
+    ]}
+    """.utf8)
 
     private static func iso(_ minutes: Int) -> String {
         let formatter = ISO8601DateFormatter()
@@ -504,30 +576,68 @@ enum SearchFixtureAPI {
         return formatter.string(from: Date.now.addingTimeInterval(TimeInterval(minutes * 60)))
     }
 
-    static var assets: Data {
-        Data("""
-        {"data":[
-          {"id":"a-1","assetTag":"CAM-014","name":"A-cam body","brand":"Sony","model":"FX3",
-           "serialNumber":"FX3-88120","imageUrl":null,"computedStatus":"CHECKED_OUT",
-           "location":{"id":"loc-1","name":"Camp Randall Creative Desk"},
-           "category":{"id":"cat-1","name":"Cameras"},"department":{"id":"dep-1","name":"Video"},
-           "activeBooking":null,"purchaseDate":"2025-03-14","purchasePrice":"3899.00",
-           "residualValue":"2100.00","isFavorited":false},
-          {"id":"a-2","assetTag":"CAM-021","name":null,"brand":"Sony","model":"FX30",
-           "serialNumber":"FX30-2251","imageUrl":null,"computedStatus":"AVAILABLE",
-           "location":{"id":"loc-1","name":"Camp Randall Creative Desk"},
-           "category":{"id":"cat-1","name":"Cameras"},"department":{"id":"dep-1","name":"Video"},
-           "activeBooking":null,"purchaseDate":"2025-08-02","purchasePrice":"2199.00",
-           "residualValue":"1500.00","isFavorited":true}
-        ],
-        "bulkItems":[],"itemOrder":["a-1","a-2"],"total":2,"limit":10,"offset":0}
-        """.utf8)
+    private static func asset(
+        id: String,
+        tag: String,
+        name: String,
+        categoryId: String,
+        category: String,
+        departmentId: String,
+        department: String,
+        status: String,
+        favorited: Bool = false
+    ) -> String {
+        """
+        {"id":"\(id)","assetTag":"\(tag)","name":"\(name)","brand":"Sony","model":"FX3",
+         "serialNumber":"SERIAL-\(id)","imageUrl":null,"computedStatus":"\(status)",
+         "location":{"id":"loc-1","name":"Camp Randall Creative Desk"},
+         "category":{"id":"\(categoryId)","name":"\(category)"},"department":{"id":"\(departmentId)","name":"\(department)"},
+         "activeBooking":null,"purchaseDate":"2025-03-14","purchasePrice":"3899.00",
+         "residualValue":"2100.00","isFavorited":\(favorited ? "true" : "false")}
+        """
+    }
+
+    private static let family = """
+    {"id":"sku-football-battery","kind":"BULK","name":"Football battery family","category":"Batteries",
+     "unit":"battery","trackByNumber":true,"onHandQuantity":8,"availableQuantity":5,
+     "checkedOutQuantity":3,"lostQuantity":0,"retiredQuantity":0,"matchedUnitNumber":null,
+     "matchedUnitStatus":null,"matchedUnitHolder":null,"matchedUnitHolderAvatarUrl":null,
+     "matchedUnitDueAt":null,"matchedUnitBookingTitle":null,"matchedUnitBookingId":null,"units":null,
+     "imageUrl":null,"locationName":"Camp Randall Creative Desk","locationId":"loc-1",
+     "categoryId":"cat-batteries","departmentId":"dep-video","departmentName":"Video",
+     "binQrCodeValue":"BIN-FOOTBALL-BATTERY"}
+    """
+
+    static func assets(for request: URLRequest) -> Data {
+        let queryItems = URLComponents(url: request.url ?? URL(fileURLWithPath: "/"), resolvingAgainstBaseURL: false)?.queryItems ?? []
+        let requestedLimit = Int(queryItems.first(where: { $0.name == "limit" })?.value ?? "10") ?? 10
+        let requestedOffset = Int(queryItems.first(where: { $0.name == "offset" })?.value ?? "0") ?? 0
+        let rows: [(id: String, kind: String, payload: String)] = [
+            ("a-1", "asset", asset(id: "a-1", tag: "CAM-014", name: "A-cam body", categoryId: "cat-camera", category: "Cameras", departmentId: "dep-video", department: "Video", status: "CHECKED_OUT")),
+            ("a-2", "asset", asset(id: "a-2", tag: "CAM-015", name: "Football camera 02", categoryId: "cat-camera", category: "Cameras", departmentId: "dep-video", department: "Video", status: "AVAILABLE")),
+            ("a-3", "asset", asset(id: "a-3", tag: "CAM-016", name: "Football camera 03", categoryId: "cat-camera", category: "Cameras", departmentId: "dep-video", department: "Video", status: "AVAILABLE")),
+            ("a-4", "asset", asset(id: "a-4", tag: "CAM-017", name: "Football camera 04", categoryId: "cat-camera", category: "Cameras", departmentId: "dep-video", department: "Video", status: "AVAILABLE")),
+            ("a-5", "asset", asset(id: "a-5", tag: "LENS-032", name: "Football 70–200mm", categoryId: "cat-lens", category: "Lenses", departmentId: "dep-photo", department: "Photo", status: "AVAILABLE", favorited: true)),
+            ("a-6", "asset", asset(id: "a-6", tag: "LENS-033", name: "Football 24–70mm", categoryId: "cat-lens", category: "Lenses", departmentId: "dep-photo", department: "Photo", status: "AVAILABLE")),
+            ("a-7", "asset", asset(id: "a-7", tag: "AUD-007", name: "Football field recorder", categoryId: "cat-audio", category: "Audio", departmentId: "dep-audio", department: "Audio", status: "CHECKED_OUT")),
+            ("a-8", "asset", asset(id: "a-8", tag: "AUD-008", name: "Football wireless set", categoryId: "cat-audio", category: "Audio", departmentId: "dep-audio", department: "Audio", status: "AVAILABLE")),
+            ("a-9", "asset", asset(id: "a-9", tag: "TRI-021", name: "Football sideline tripod", categoryId: "cat-support", category: "Support", departmentId: "dep-video", department: "Video", status: "AVAILABLE")),
+            ("sku-football-battery", "family", family),
+            ("a-10", "asset", asset(id: "a-10", tag: "MON-010", name: "Football field monitor", categoryId: "cat-monitor", category: "Monitors", departmentId: "dep-video", department: "Video", status: "AVAILABLE")),
+            ("a-11", "asset", asset(id: "a-11", tag: "CAM-018", name: "Football camera 11", categoryId: "cat-camera", category: "Cameras", departmentId: "dep-video", department: "Video", status: "AVAILABLE")),
+            ("a-12", "asset", asset(id: "a-12", tag: "CAM-019", name: "Football camera 12", categoryId: "cat-camera", category: "Cameras", departmentId: "dep-video", department: "Video", status: "AVAILABLE")),
+        ]
+        let page = Array(rows.dropFirst(max(0, requestedOffset)).prefix(max(1, requestedLimit)))
+        let assets = page.filter { $0.kind == "asset" }.map(\.payload).joined(separator: ",")
+        let families = page.filter { $0.kind == "family" }.map(\.payload).joined(separator: ",")
+        let order = page.map { "\"\($0.kind == "family" ? "bulk-\($0.id)" : $0.id)\"" }.joined(separator: ",")
+        return Data("{\"data\":[\(assets)],\"bulkItems\":[\(families)],\"itemOrder\":[\(order)],\"total\":\(rows.count),\"limit\":\(requestedLimit),\"offset\":\(requestedOffset)}".utf8)
     }
 
     static var reservations: Data {
         Data("""
         {"data":[
-          {"id":"rs-1","kind":"RESERVATION","title":"FX3 for Senior Day","status":"BOOKED",
+          {"id":"rs-1","kind":"RESERVATION","title":"Football vs Ohio State — photo","status":"BOOKED",
            "startsAt":"\(iso(2880))","endsAt":"\(iso(3240))","notes":null,"refNumber":"RS-1180",
            "requester":{"id":"u-priya","name":"Priya Ramachandran","email":null,"avatarUrl":null},
            "location":{"id":"loc-1","name":"Camp Randall Creative Desk"},
@@ -540,7 +650,7 @@ enum SearchFixtureAPI {
     static var checkouts: Data {
         Data("""
         {"data":[
-          {"id":"\(BookingFixtureAPI.bookingId)","kind":"CHECKOUT","title":"Volleyball vs Nebraska",
+          {"id":"\(BookingFixtureAPI.bookingId)","kind":"CHECKOUT","title":"Football fall camp — video",
            "status":"OPEN","startsAt":"\(iso(-120))","endsAt":"\(iso(180))","notes":null,
            "refNumber":"CO-2418",
            "requester":{"id":"u-avery","name":"Avery Nakamura","email":null,"avatarUrl":null},
@@ -966,8 +1076,8 @@ enum HomeFixtureAPI {
         """
         { "id": "\(id)", "kind": "\(kind)", "title": "\(title)", "refNumber": null,
           "eventId": null, "eventIds": [], "linkedEventId": null, "sportCode": null,
-          "requesterUserId": "fixture-staff", "requesterName": "Jordan Lee",
-          "requesterInitials": "JL", "requesterAvatarUrl": null,
+          "requesterUserId": "fixture-staff", "requesterName": "Bucky Badger",
+          "requesterInitials": "BB", "requesterAvatarUrl": null,
           "locationName": "Media Ops Cage", "startsAt": "\(iso(startsIn))",
           "endsAt": "\(iso(endsIn))", "itemCount": \(items),
           "status": "\(status)", "isOverdue": \(overdue) }
@@ -994,32 +1104,35 @@ enum HomeFixtureAPI {
     }
 
     static var dashboard: Data {
-        // Four overdue: one more than the old cap, which used to drop it silently.
-        let overdue = (1...4).map {
-            booking("od\($0)", "Overdue kit \($0)", "OPEN", "CHECKOUT",
-                    startsIn: -60 * 24 * $0, endsIn: -60 * $0, items: $0 + 1, overdue: true)
-        }
-        let dueToday = (1...2).map {
-            booking("dt\($0)", "Camera package \($0)", "OPEN", "CHECKOUT",
-                    startsIn: -120, endsIn: 45 * $0, items: 3)
-        }
-        // Six upcoming: three past the per-lane cap, so the overflow row has
-        // something real to report.
-        let upcoming = (1...6).map {
-            booking("up\($0)", "Field kit \($0)", "OPEN", "CHECKOUT",
-                    startsIn: 60 * 24 * $0, endsIn: 60 * 24 * $0 + 180, items: 2)
-        }
+        let overdue = [
+            booking("od1", "Volleyball baseline kit", "OPEN", "CHECKOUT",
+                    startsIn: -300, endsIn: -60, items: 4, overdue: true),
+        ]
+        let dueToday = [
+            booking("dt1", "Football fall camp — video", "OPEN", "CHECKOUT",
+                    startsIn: -120, endsIn: 45, items: 6),
+            booking("dt2", "Women’s soccer portraits", "OPEN", "CHECKOUT",
+                    startsIn: -90, endsIn: 120, items: 3),
+        ]
+        let upcoming = [
+            booking("up1", "Ohio State photo kit", "BOOKED", "RESERVATION",
+                    startsIn: 1_440, endsIn: 1_680, items: 5),
+            booking("up2", "Hockey road audio kit", "BOOKED", "RESERVATION",
+                    startsIn: 2_880, endsIn: 3_240, items: 4),
+            booking("up3", "Kohl Center studio shoot", "BOOKED", "RESERVATION",
+                    startsIn: 4_320, endsIn: 4_500, items: 7),
+        ]
         let checkouts = (overdue + dueToday + upcoming).joined(separator: ",")
         return Data("""
         { "data": {
           "role": "STAFF",
-          "stats": { "checkedOut": 12, "overdue": 4, "reserved": 0, "dueToday": 2 },
-          "myCheckouts": { "total": 12, "overdue": 4, "items": [\(checkouts)] },
+          "stats": { "checkedOut": 3, "overdue": 1, "reserved": 3, "dueToday": 2 },
+          "myCheckouts": { "total": 6, "overdue": 1, "items": [\(checkouts)] },
           "teamCheckouts": { "total": 0, "overdue": 0, "items": [] },
           "teamReservations": { "total": 0, "items": [] },
           "pendingPickups": { "total": 0, "items": [] },
           "myReservations": [],
-          "overdueCount": 4,
+          "overdueCount": 1,
           "overdueItems": [],
           "myShifts": [],
           "upcomingEvents": [],
@@ -1381,8 +1494,8 @@ private enum PreviewChromeFixtures {
 private enum ScheduleFixtures {
     static let staffUser = CurrentUser(
         id: "fixture-staff",
-        name: "Jordan Lee",
-        email: "jordan.lee@wisc.edu",
+        name: "Bucky Badger",
+        email: "bucky.badger@wisc.edu",
         role: "STAFF",
         affiliation: nil,
         collaboratorProfile: nil,
@@ -1442,8 +1555,8 @@ enum ScheduleFixtureAPI {
     /// 401s against the real host and signs itself out mid-screenshot.
     static var me: Data {
         Data("""
-        { "user": { "id": "fixture-staff", "name": "Jordan Lee",
-                    "email": "jordan.lee@wisc.edu", "role": "STAFF",
+        { "user": { "id": "fixture-staff", "name": "Bucky Badger",
+                    "email": "bucky.badger@wisc.edu", "role": "STAFF",
                     "affiliation": null, "collaboratorProfile": null,
                     "capabilities": [], "collaboratorPolicy": null,
                     "staffingType": "ST", "avatarUrl": null,
@@ -1574,7 +1687,7 @@ enum ScheduleFixtureAPI {
                 locationId: "loc-fh", startsAt: at(0, 11), endsAt: at(0, 14),
                 callStartsAt: at(0, 9, 30),
                 shifts: [
-                    CrewSlot(area: "VIDEO", worker: "Jordan Lee"),
+                    CrewSlot(area: "VIDEO", worker: "Bucky Badger"),
                     CrewSlot(area: "VIDEO", worker: "Alex Rivera"),
                     CrewSlot(area: "PHOTO", worker: "Sam Chen"),
                     CrewSlot(area: "PHOTO", worker: nil),

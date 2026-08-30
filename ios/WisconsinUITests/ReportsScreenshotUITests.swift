@@ -349,6 +349,96 @@ final class PasswordManagerScreenshotUITests: XCTestCase {
     }
 }
 
+/// Captures Notifications against the local fixture harness. The fixture has
+/// a future account pause, so the before/after pair shows whether the screen
+/// tells the truth about suppressed delivery and offers a recovery path.
+@MainActor
+final class NotificationSettingsScreenshotUITests: XCTestCase {
+    override func setUpWithError() throws {
+        continueAfterFailure = false
+    }
+
+    func testNotificationSettingsCaptures() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "notifications"
+        app.launch()
+
+        XCTAssertTrue(app.navigationBars["Notifications"].waitForExistence(timeout: 20),
+                      "Notifications never rendered")
+        XCTAssertTrue(app.staticTexts["Push alerts"].waitForExistence(timeout: 15),
+                      "Notification preference fixture never rendered")
+
+        attach(app, name: "notifications-top")
+        app.swipeUp(velocity: .slow)
+        attach(app, name: "notifications-scrolled")
+    }
+
+    private func attach(_ app: XCUIApplication, name: String) {
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = name
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+    }
+}
+
+/// Captures the primary Search surface at the two states that matter for a
+/// large result set: the first page exposes the server total and continuation,
+/// then the same list after the next page is loaded. The fixture includes a
+/// bulk family in the first page so its visible Reserve action is reviewed in
+/// the same context as typed and scanned family results.
+@MainActor
+final class GlobalSearchScreenshotUITests: XCTestCase {
+    override func setUpWithError() throws {
+        continueAfterFailure = false
+    }
+
+    func testSearchPaginationCaptures() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "search"
+        app.launch()
+
+        XCTAssertTrue(app.staticTexts["A-cam body"].waitForExistence(timeout: 20),
+                      "Search results never rendered")
+        attach(app, name: "search-first-page")
+
+        let more = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Show more items")).firstMatch
+        if !more.isHittable {
+            app.swipeUp(velocity: .slow)
+        }
+        XCTAssertTrue(more.waitForExistence(timeout: 10),
+                      "Search never exposed its paginated continuation")
+        attach(app, name: "search-pagination")
+
+        more.tap()
+        XCTAssertTrue(app.staticTexts["Football field monitor"].waitForExistence(timeout: 15),
+                      "Search did not append the next item page")
+        attach(app, name: "search-second-page")
+    }
+
+    /// Baseline-only capture used to pair the first page against the same
+    /// viewport after the HIG repair. It deliberately does not tap the
+    /// continuation, so the pre-change implementation can be captured with
+    /// the same fixture and scroll positions.
+    func testSearchFirstPageBaselineCaptures() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "search"
+        app.launch()
+
+        XCTAssertTrue(app.staticTexts["A-cam body"].waitForExistence(timeout: 20),
+                      "Search results never rendered")
+        attach(app, name: "search-first-page-baseline")
+        app.swipeUp(velocity: .slow)
+        attach(app, name: "search-pagination-baseline")
+    }
+
+    private func attach(_ app: XCUIApplication, name: String) {
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = name
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+    }
+}
+
 /// Captures the real Student preview shell against local fixtures so the
 /// persistent mode marker can be compared without credentials or production
 /// data. The pair intentionally visits the same Guides surface as the kickoff

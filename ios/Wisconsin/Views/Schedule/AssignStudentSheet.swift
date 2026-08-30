@@ -14,7 +14,7 @@ struct AssignStudentSheet: View {
     let sportCode: String?
     let replacementWorkerType: String?
     let replacingUserName: String?
-    let onAssigned: () -> Void
+    let onAssigned: (WorkingScheduleEditor) -> Void
 
     init(
         shiftId: String,
@@ -28,7 +28,7 @@ struct AssignStudentSheet: View {
         sportCode: String?,
         replacementWorkerType: String? = nil,
         replacingUserName: String? = nil,
-        onAssigned: @escaping () -> Void
+        onAssigned: @escaping (WorkingScheduleEditor) -> Void
     ) {
         self.shiftId = shiftId
         self.workingCopyShiftGroupId = workingCopyShiftGroupId
@@ -296,17 +296,17 @@ struct AssignStudentSheet: View {
     }
 
     private var confirmationTitle: String {
-        if let user = confirmationUser, let replacingUserName {
-            return "Replace \(replacingUserName) with \(user.name)?"
-        }
-        return confirmationUser.map { "Assign \($0.name)?" } ?? "Assign person?"
+        "Confirm Assignment?"
     }
 
     private var confirmationMessage: String {
         guard let user = confirmationUser else { return "Review the scheduling warning before assigning." }
-        return recommendations[user.id]?.warningContext
+        let action = replacingUserName.map { "Replace \($0) with \(user.name)." }
+            ?? "Assign \(user.name) to this shift."
+        let warning = recommendations[user.id]?.warningContext
             ?? conflicts[user.id]
             ?? "This person has a scheduling warning. The assignment will still be checked by the server."
+        return "\(action) \(warning)"
     }
 
     private func select(_ user: AppUser) {
@@ -401,8 +401,9 @@ struct AssignStudentSheet: View {
             return
         }
         do {
+            let editor: WorkingScheduleEditor
             if let replacementWorkerType {
-                _ = try await APIClient.shared.convertAndReplaceWorkingScheduleSlot(
+                editor = try await APIClient.shared.convertAndReplaceWorkingScheduleSlot(
                     shiftGroupId: workingCopyShiftGroupId,
                     expectedVersion: expectedWorkingVersion,
                     slotKey: shiftId,
@@ -410,7 +411,7 @@ struct AssignStudentSheet: View {
                     userId: user.id
                 )
             } else {
-                _ = try await APIClient.shared.assignWorkingScheduleSlot(
+                editor = try await APIClient.shared.assignWorkingScheduleSlot(
                     shiftGroupId: workingCopyShiftGroupId,
                     expectedVersion: expectedWorkingVersion,
                     slotKey: shiftId,
@@ -418,7 +419,7 @@ struct AssignStudentSheet: View {
                 )
             }
             Haptics.success()
-            onAssigned()
+            onAssigned(editor)
             dismiss()
         } catch {
             retryUser = user

@@ -81,6 +81,8 @@ describe("iOS Home Screen widgets", () => {
     expect(publisherCode).not.toContain("dashboard.stats");
     expect(publisherCode).not.toContain("teamCheckouts");
     expect(publisherCode).toContain("let myCheckouts = dashboard.myCheckouts.items");
+    expect(publisherCode).toContain("eventId: shift.event.id");
+    expect(publisherCode).toContain("upcomingShifts: Array(upcomingShifts)");
   });
 
   it("never turns the home/away flag into a venue", () => {
@@ -97,7 +99,8 @@ describe("iOS Home Screen widgets", () => {
     expect(publisher).toContain("GearWidgetStore.clear()");
     const clearFn = publisher.slice(publisher.indexOf("static func clear()"));
     expect(clearFn).toContain("WidgetCenter.shared.reloadAllTimelines()");
-    expect(widgets).toContain(".privacySensitive()");
+    expect(widgets).not.toContain(".privacySensitive()");
+    expect(snapshot).toContain("func resolved(at date: Date) -> GearWidgetSnapshot");
   });
 
   it("refreshes from the one surface that loads the whole dashboard", () => {
@@ -112,7 +115,14 @@ describe("iOS Home Screen widgets", () => {
   it("routes widget taps through the capability-gated router", () => {
     expect(widgets).toContain('URL(string: "wisconsin://schedule")');
     expect(widgets).toContain('URL(string: "wisconsin://bookings")');
+    expect(widgets).toContain("components.host = \"schedule\"");
+    expect(widgets).toContain("components.path = \"/\\(eventId)\"");
+    expect(widgets).toContain("components.host = \"booking\"");
+    expect(widgets).toContain("components.path = \"/\\(bookingId)\"");
+    expect(widgets).toContain("bookingURL(for: entry.snapshot)");
     expect(app).toContain('case "schedule":');
+    expect(app).toContain("let eventId = url.path.trimmingCharacters");
+    expect(app).toContain("appState.pendingPushEventId = eventId");
     expect(app).toContain("appState.pendingAppIntentDestination = .todaySchedule");
     expect(app).toContain('case "bookings":');
     expect(app).toContain("appState.pendingAppIntentDestination = .myGear");
@@ -134,5 +144,18 @@ describe("iOS Home Screen widgets", () => {
     const preview = widgets.slice(widgets.indexOf("static let preview"));
     expect(preview).toContain('id: "preview"');
     expect(widgets).toContain("context.isPreview ? .preview : GearWidgetStore.read()");
+  });
+
+  it("adapts hierarchy for system rendering modes and background-removed contexts", () => {
+    expect(widgets).toContain("@Environment(\\.widgetRenderingMode)");
+    expect(widgets).toContain("@Environment(\\.showsWidgetContainerBackground)");
+    expect(widgets).toContain("widgetDisplayColor");
+    expect(widgets.match(/\.widgetAccentable\(\)/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
+    expect(widgets).toContain("backgroundRemovedBody");
+    expect(widgets).toContain("snapshot?.resolved(at: .now)");
+    expect(widgets).toContain("snapshot.upcomingShifts");
+    expect(snapshot).toContain("decodeIfPresent([Shift].self, forKey: .upcomingShifts)");
+    expect(widgets).toContain("See your next assigned shift, call window, and gear readiness.");
+    expect(widgets).toContain("Check what you have out, including overdue and due-today gear.");
   });
 });

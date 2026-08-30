@@ -179,7 +179,7 @@ function assertValidCreateEquipment(serializedAssetIds: string[], bulkItems: Bul
 async function assertNumberedPickupPlanLimit(
   tx: Prisma.TransactionClient,
   bulkItems: BulkRequest[],
-) {
+): Promise<void> {
   if (bulkItems.length === 0) return;
 
   const numberedSkus = await tx.bulkSku.findMany({

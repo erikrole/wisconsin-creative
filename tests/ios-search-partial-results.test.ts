@@ -45,7 +45,7 @@ describe("iOS search partial results", () => {
 
     // "No matches" would be false if the sources that could have matched are
     // exactly the ones that failed.
-    expect(sheet).toContain("!results.isEmpty || results.partialResultNotice != nil");
+    expect(sheet).toContain("results.hasKnownMatches || results.partialResultNotice != nil");
     expect(sheet).toContain("results.partialResultNotice");
   });
 });

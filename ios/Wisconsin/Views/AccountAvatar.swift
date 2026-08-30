@@ -11,8 +11,8 @@ struct AccountAvatar: View {
             name: session.currentUser?.name ?? "",
             avatarUrl: session.currentUser?.avatarUrl,
             size: size,
-            fallbackBackground: Color.accentColor.opacity(0.15),
-            fallbackForeground: Color.accentColor,
+            fallbackBackground: Color.brandPrimary.opacity(0.15),
+            fallbackForeground: Color.brandPrimary,
             showsBorder: false
         )
     }

@@ -124,7 +124,6 @@ struct BadgeEarnedCelebrationView: View {
                 argument: "Badge earned. \(reward.name). \(reward.description)"
             )
         }
-        .sensoryFeedback(.success, trigger: appeared)
     }
 
     private func rewardChip(_ title: String) -> some View {
@@ -196,7 +195,7 @@ enum BadgeArtwork {
         case "ArrowLeftRight": "arrow.left.arrow.right"
         case "Timer": "timer"
         case "AlarmClock": "alarm.fill"
-        case "Clapperboard": "clapperboard.fill"
+        case "Clapperboard": "movieclapper.fill"
         case "Gift": "gift.fill"
         case "Aperture": "camera.aperture"
         case "AudioLines": "waveform"

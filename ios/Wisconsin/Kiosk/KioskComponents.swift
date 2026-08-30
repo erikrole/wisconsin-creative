@@ -204,7 +204,7 @@ private struct KioskCornerBrackets: Shape {
 
 // MARK: Scan stage
 
-/// The scan surface for checkout, pickup, and return: one glass panel that *is*
+/// The scan surface for checkout, pickup, and return: one content card that *is*
 /// the scanner's state, rather than a grey glyph floating above three separate
 /// lines of chrome.
 ///
@@ -304,7 +304,7 @@ struct KioskScanStage: View {
         .padding(.horizontal, KioskSpacing.xl)
         .padding(.vertical, KioskSpacing.lg)
         .frame(maxWidth: .infinity)
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: KioskRadius.hero))
+        .kioskCard(KioskSurface.card, radius: KioskRadius.hero, stroke: KioskStroke.standard)
         .overlay(
             RoundedRectangle(cornerRadius: KioskRadius.hero)
                 .stroke(tint.opacity(0.45), lineWidth: 1)
@@ -875,7 +875,7 @@ struct KioskErrorState: View {
     var icon: String = "wifi.exclamationmark"
     let title: String
     var message: String?
-    var retryTitle: String = "Try again"
+    var retryTitle: String = "Retry"
     let onRetry: () -> Void
 
     var body: some View {
@@ -960,6 +960,7 @@ struct KioskAvatar: View {
     let initials: String
     var size: CGFloat = 42
     var placeholderFill: Color = KioskSurface.placeholder
+    @ScaledMetric(relativeTo: .caption2) private var minimumInitialsSize: CGFloat = 11
 
     var body: some View {
         Group {
@@ -985,7 +986,7 @@ struct KioskAvatar: View {
             .fill(placeholderFill)
             .overlay {
                 Text(initials)
-                    .font(.system(size: size * 0.4, weight: .bold))
+                    .font(.system(size: max(size * 0.4, minimumInitialsSize), weight: .bold))
                     .foregroundStyle(KioskText.primary)
             }
     }

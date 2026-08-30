@@ -1914,6 +1914,10 @@ Values: `DIRECT_ASSIGNED`, `REQUESTED`, `APPROVED`, `DECLINED`, `SWAPPED`
 
 Values: `MANUAL`, `RESERVATION`, `AUTO_FILL`
 
+## Enum `SportAutoAssignPolicy`
+
+Values: `FULL_CREW`, `STAFF_ONLY`, `HOLD`
+
 ## Enum `ScheduleBulkAssignmentStatus`
 
 Values: `PENDING`, `RELEASED`, `PARTIAL`, `BLOCKED`
@@ -1928,15 +1932,16 @@ Values: `OPEN`, `CLAIMED`, `APPROVED`, `COMPLETED`, `CANCELLED`
 
 ## Model `SportConfig`
 
-Fields: 8
+Fields: 9
 
-- `id               String             @id @default(cuid())`
-- `sportCode        String             @unique @map("sport_code")`
-- `active           Boolean            @default(true)`
-- `shiftStartOffset Int                @default(60) @map("shift_start_offset")`
-- `shiftEndOffset   Int                @default(60) @map("shift_end_offset")`
-- `createdAt        DateTime           @default(now()) @map("created_at")`
-- `updatedAt        DateTime           @updatedAt @map("updated_at")`
+- `id               String                @id @default(cuid())`
+- `sportCode        String                @unique @map("sport_code")`
+- `active           Boolean               @default(true)`
+- `autoAssignPolicy SportAutoAssignPolicy @default(FULL_CREW) @map("auto_assign_policy")`
+- `shiftStartOffset Int                   @default(60) @map("shift_start_offset")`
+- `shiftEndOffset   Int                   @default(60) @map("shift_end_offset")`
+- `createdAt        DateTime              @default(now()) @map("created_at")`
+- `updatedAt        DateTime              @updatedAt @map("updated_at")`
 - `shiftConfigs     SportShiftConfig[]`
 
 Indexes and constraints:
@@ -1999,13 +2004,15 @@ Indexes and constraints:
 
 ## Model `ShiftGroupWorkingCopy`
 
-Fields: 15
+Fields: 17
 
 - `shiftGroupId         String     @id @map("shift_group_id")`
 - `version              Int        @default(1)`
 - `basePublishedVersion Int        @map("base_published_version")`
 - `payloadVersion       Int        @default(1) @map("payload_version")`
 - `payload              Json`
+- `undoStack            Json       @default("[]") @map("undo_stack")`
+- `redoStack            Json       @default("[]") @map("redo_stack")`
 - `autoReleaseAt        DateTime?  @map("auto_release_at")`
 - `autoReleaseRunId     String?    @map("auto_release_run_id")`
 - `autoReleaseError     String?    @map("auto_release_error")`

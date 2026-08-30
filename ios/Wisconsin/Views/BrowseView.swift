@@ -46,11 +46,26 @@ struct BrowseView: View {
             .navigationDestination(for: BrowseDestination.self) { destination in
                 destinationView(for: destination)
             }
+            .onAppear {
+                consumePendingDestination()
+            }
+            .onChange(of: appState.pendingBrowseDestination) { _, _ in
+                consumePendingDestination()
+            }
             .onChange(of: appState.tabResetToken) { _, _ in
                 guard appState.resetTab == 2 else { return }
                 navigationPath = NavigationPath()
             }
         }
+    }
+
+    private func consumePendingDestination() {
+        guard let rawValue = appState.pendingBrowseDestination,
+              let destination = BrowseDestination(rawValue: rawValue)
+        else { return }
+        appState.pendingBrowseDestination = nil
+        navigationPath = NavigationPath()
+        navigationPath.append(destination)
     }
 
     @ViewBuilder

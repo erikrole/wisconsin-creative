@@ -41,6 +41,15 @@ struct GlobalSearchSheet: View {
             return composer
         }())
     }
+
+    private func startReservation(forFamily family: AssetFamilySearchResult) {
+        dismiss()
+        drafts.start({
+            let composer = CreateBookingViewModel()
+            composer.prefillReservation(forFamily: family)
+            return composer
+        }())
+    }
     @State private var query = ""
     @State private var results = SearchResults()
     @State private var isSearching = false
@@ -50,6 +59,9 @@ struct GlobalSearchSheet: View {
     @State private var debounceTask: Task<Void, Never>?
     @State private var navigationPath = NavigationPath()
     @State private var pendingScannerDestination: SearchDestination?
+    @State private var suppressNextQuerySearch = false
+    @State private var loadingMoreSource: SearchSource?
+    @State private var loadMoreErrors: [SearchSource: String] = [:]
 
     @State private var recentSearches = SearchRecentsStorage.load()
 
@@ -58,14 +70,10 @@ struct GlobalSearchSheet: View {
             VStack(spacing: 0) {
                 Group {
                     if trimmedQuery.isEmpty {
-                        if isCollaborator {
-                            recentsView
-                        } else {
-                            scannerEmptyState
-                        }
+                        recentsView
                     } else if isSearching && results.isEmpty {
                         searchingView
-                    } else if !results.isEmpty || results.partialResultNotice != nil {
+                    } else if results.hasKnownMatches || results.partialResultNotice != nil {
                         // Also when empty-but-partial: "no matches" would be a
                         // lie if the sources that could have matched never
                         // answered.
@@ -127,6 +135,7 @@ struct GlobalSearchSheet: View {
                 case .asset(let assetId):
                     pendingScannerDestination = .asset(assetId)
                 case .itemFamily(let family):
+                    suppressNextQuerySearch = true
                     query = family.name
                     results = SearchResults(itemFamilies: [family])
                 }
@@ -160,10 +169,6 @@ struct GlobalSearchSheet: View {
     }
 
     private func consumePendingAppIntent() {
-        if isCollaborator {
-            _ = appState.consumeAppIntentDestination(.scan)
-            return
-        }
         if appState.consumeAppIntentDestination(.scan) {
             isSearchPresented = false
             showScanner = true
@@ -202,6 +207,14 @@ struct GlobalSearchSheet: View {
                     Text(isCollaborator ? "Search reservable gear" : "Search gear, bookings, people")
                         .foregroundStyle(.secondary)
                         .font(.subheadline)
+                    if !isCollaborator {
+                        Button {
+                            presentScanner()
+                        } label: {
+                            Label("Scan a code", systemImage: "qrcode.viewfinder")
+                        }
+                        .buttonStyle(.bordered)
+                    }
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.top, 60)
@@ -269,7 +282,7 @@ struct GlobalSearchSheet: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
-            Button("Try again") {
+            Button("Retry") {
                 Task { await performSearch(query: query.trimmingCharacters(in: .whitespaces)) }
             }
             .buttonStyle(.bordered)
@@ -293,15 +306,26 @@ struct GlobalSearchSheet: View {
                 }
             }
 
-            if !results.items.isEmpty {
-                Section(header: sectionHeader("Items", count: results.items.count)) {
+            if !results.items.isEmpty || !results.itemFamilies.isEmpty {
+                Section(header: sectionHeader("Items", source: .items)) {
                     ForEach(results.items) { asset in
                         Button {
+                            rememberActiveQuery()
                             navigationPath.append(SearchDestination.asset(asset.id))
                         } label: {
                             AssetResultRow(asset: asset)
                         }
                         .buttonStyle(.plain)
+                        .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                            if let tag = asset.assetTag, !tag.isEmpty {
+                                Button {
+                                    UIPasteboard.general.string = tag
+                                } label: {
+                                    Label("Copy Asset Tag", systemImage: "doc.on.doc")
+                                }
+                                .tint(Color.statusText(.blue))
+                            }
+                        }
                         // Same menu the Items list carries, because this is the
                         // same row reached a different way — someone who
                         // learned the gesture there should not lose it here.
@@ -316,59 +340,83 @@ struct GlobalSearchSheet: View {
                             if let tag = asset.assetTag, !tag.isEmpty {
                                 Button {
                                     UIPasteboard.general.string = tag
-                                    Haptics.tap()
                                 } label: {
                                     Label("Copy Asset Tag", systemImage: "doc.on.doc")
                                 }
                             }
                         }
                     }
-                }
-            }
-
-            if !results.itemFamilies.isEmpty {
-                Section(header: sectionHeader("Item Families", count: results.itemFamilies.count)) {
                     ForEach(results.itemFamilies) { family in
-                        ItemFamilyResultRow(family: family)
+                        Button {
+                            rememberActiveQuery()
+                            startReservation(forFamily: family)
+                        } label: {
+                            ItemFamilyResultRow(family: family, showsReserveAction: true)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityHint("Starts a reservation for this item family.")
+                        .contextMenu {
+                            Button {
+                                rememberActiveQuery()
+                                startReservation(forFamily: family)
+                            } label: {
+                                Label("Reserve", systemImage: "plus.circle")
+                            }
+                        }
+                    }
+                    if results.hasMore(for: .items) {
+                        moreResultsRow(for: .items)
                     }
                 }
             }
 
             if !results.reservations.isEmpty {
-                Section(header: sectionHeader("Reservations", count: results.reservations.count)) {
+                Section(header: sectionHeader("Reservations", source: .reservations)) {
                     ForEach(results.reservations) { booking in
                         Button {
+                            rememberActiveQuery()
                             navigationPath.append(SearchDestination.booking(booking.id))
                         } label: {
                             BookingResultRow(booking: booking)
                         }
                         .buttonStyle(.plain)
+                    }
+                    if results.hasMore(for: .reservations) {
+                        moreResultsRow(for: .reservations)
                     }
                 }
             }
 
             if !results.checkouts.isEmpty {
-                Section(header: sectionHeader("Checkouts", count: results.checkouts.count)) {
+                Section(header: sectionHeader("Checkouts", source: .checkouts)) {
                     ForEach(results.checkouts) { booking in
                         Button {
+                            rememberActiveQuery()
                             navigationPath.append(SearchDestination.booking(booking.id))
                         } label: {
                             BookingResultRow(booking: booking)
                         }
                         .buttonStyle(.plain)
                     }
+                    if results.hasMore(for: .checkouts) {
+                        moreResultsRow(for: .checkouts)
+                    }
                 }
             }
 
             if !results.users.isEmpty {
-                Section(header: sectionHeader("People", count: results.users.count)) {
+                Section(header: sectionHeader("People", source: .people)) {
                     ForEach(results.users) { user in
                         Button {
+                            rememberActiveQuery()
                             navigationPath.append(SearchDestination.user(user.id))
                         } label: {
                             UserResultRow(user: user)
                         }
                         .buttonStyle(.plain)
+                    }
+                    if results.hasMore(for: .people) {
+                        moreResultsRow(for: .people)
                     }
                 }
             }
@@ -377,21 +425,60 @@ struct GlobalSearchSheet: View {
         .scrollDismissesKeyboard(.immediately)
     }
 
-    /// Section header with the result count rendered on the right — closes
-    /// the dropped "View all …" buttons (those routed nowhere; the count
-    /// gives the same "this is N rows out of 10 max per category" hint
-    /// without the false-promise CTA).
-    private func sectionHeader(_ title: String, count: Int) -> some View {
-        HStack {
+    /// Section headers show the server-backed total when the first page is
+    /// incomplete, so a list ending after ten rows is not mistaken for a
+    /// complete answer.
+    private func sectionHeader(_ title: String, source: SearchSource) -> some View {
+        let loaded = results.loadedCount(for: source)
+        let total = results.total(for: source)
+        return HStack {
             Text(title)
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
                 .textCase(.uppercase)
                 .tracking(0.3)
             Spacer()
-            Text("\(count)")
+            Text(loaded == total ? "\(total)" : "\(loaded) of \(total)")
                 .font(.caption.monospacedDigit())
                 .foregroundStyle(.tertiary)
+        }
+    }
+
+    @ViewBuilder
+    private func moreResultsRow(for source: SearchSource) -> some View {
+        if results.hasMore(for: source) {
+            VStack(spacing: 8) {
+                Button {
+                    loadMore(source)
+                } label: {
+                    HStack(spacing: 8) {
+                        if loadingMoreSource == source {
+                            ProgressView()
+                                .controlSize(.small)
+                        }
+                        Text("Show more \(source.label.lowercased())")
+                        Spacer()
+                        Image(systemName: "chevron.down")
+                            .font(.caption.weight(.semibold))
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .buttonStyle(.bordered)
+
+                if let message = loadMoreErrors[source] {
+                    Text(message)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Button("Retry") {
+                        loadMore(source)
+                    }
+                    .font(.footnote.weight(.semibold))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            .padding(.vertical, 8)
+            .listRowBackground(Color.clear)
         }
     }
 
@@ -399,10 +486,15 @@ struct GlobalSearchSheet: View {
 
     private func scheduleSearch(query: String) {
         debounceTask?.cancel()
-        let q = query.trimmingCharacters(in: .whitespaces)
+        if suppressNextQuerySearch {
+            suppressNextQuerySearch = false
+            return
+        }
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !q.isEmpty else {
             results = SearchResults()
             searchError = nil
+            loadMoreErrors.removeAll()
             return
         }
         debounceTask = Task {
@@ -413,7 +505,7 @@ struct GlobalSearchSheet: View {
     }
 
     private func commitSearch() {
-        let q = query.trimmingCharacters(in: .whitespaces)
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !q.isEmpty else { return }
         debounceTask?.cancel()
         Task { await performSearch(query: q) }
@@ -424,6 +516,7 @@ struct GlobalSearchSheet: View {
     private func performSearch(query: String) async {
         isSearching = true
         searchError = nil
+        loadMoreErrors.removeAll()
         defer { isSearching = false }
         do {
             let outcome = try await SearchService.shared.search(query: query, gearOnly: isCollaborator)
@@ -431,13 +524,40 @@ struct GlobalSearchSheet: View {
             // this request was for (user typed more characters mid-flight),
             // drop the result. Without this guard, on slow networks an older
             // "ab" response can overwrite a newer "abc" response.
-            guard self.query.trimmingCharacters(in: .whitespaces) == query else { return }
+            guard self.query.trimmingCharacters(in: .whitespacesAndNewlines) == query else { return }
             results = outcome
         } catch {
             // Same staleness guard: a stale failure doesn't blow away the
             // current results either.
-            guard self.query.trimmingCharacters(in: .whitespaces) == query else { return }
+            guard self.query.trimmingCharacters(in: .whitespacesAndNewlines) == query else { return }
             searchError = error.localizedDescription
+        }
+    }
+
+    @MainActor
+    private func loadMore(_ source: SearchSource) {
+        guard loadingMoreSource == nil else { return }
+        let q = trimmedQuery
+        guard !q.isEmpty, results.hasMore(for: source) else { return }
+
+        let offset = results.nextOffset(for: source)
+        loadingMoreSource = source
+        loadMoreErrors.removeValue(forKey: source)
+        Task { @MainActor in
+            defer { loadingMoreSource = nil }
+            do {
+                let page = try await SearchService.shared.loadMore(
+                    query: q,
+                    source: source,
+                    offset: offset,
+                    gearOnly: isCollaborator
+                )
+                guard self.query.trimmingCharacters(in: .whitespacesAndNewlines) == q else { return }
+                results.apply(page, for: source, appending: true)
+            } catch {
+                guard self.query.trimmingCharacters(in: .whitespacesAndNewlines) == q else { return }
+                loadMoreErrors[source] = error.localizedDescription
+            }
         }
     }
 
@@ -447,6 +567,12 @@ struct GlobalSearchSheet: View {
 
     private var trimmedQuery: String {
         query.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func rememberActiveQuery() {
+        let q = trimmedQuery
+        guard !q.isEmpty else { return }
+        addToRecents(q)
     }
 
     private func addToRecents(_ term: String) {

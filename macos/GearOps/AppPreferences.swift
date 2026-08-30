@@ -4,6 +4,20 @@ import ServiceManagement
 
 private struct StoredAppPreferences: Codable {
     var showsMenuBarCount: Bool
+    var showsMenuBarExtra: Bool
+
+    init(showsMenuBarCount: Bool, showsMenuBarExtra: Bool = true) {
+        self.showsMenuBarCount = showsMenuBarCount
+        self.showsMenuBarExtra = showsMenuBarExtra
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        showsMenuBarCount = try values.decodeIfPresent(Bool.self, forKey: .showsMenuBarCount) ?? true
+        // Existing installs predate the visibility control and should keep
+        // their menu-bar entry until the user chooses otherwise.
+        showsMenuBarExtra = try values.decodeIfPresent(Bool.self, forKey: .showsMenuBarExtra) ?? true
+    }
 }
 
 @MainActor
@@ -19,18 +33,30 @@ final class AppPreferencesStore {
         didSet { persist() }
     }
 
+    /// The companion is useful as a background helper, but its menu-bar item
+    /// is still optional. The setting is persisted independently of the count
+    /// preference so hiding one does not unexpectedly hide the other.
+    var showsMenuBarExtra: Bool {
+        didSet { persist() }
+    }
+
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         guard let data = defaults.data(forKey: Self.key),
               let stored = try? JSONDecoder().decode(StoredAppPreferences.self, from: data) else {
             showsMenuBarCount = true
+            showsMenuBarExtra = true
             return
         }
         showsMenuBarCount = stored.showsMenuBarCount
+        showsMenuBarExtra = stored.showsMenuBarExtra
     }
 
     private func persist() {
-        let stored = StoredAppPreferences(showsMenuBarCount: showsMenuBarCount)
+        let stored = StoredAppPreferences(
+            showsMenuBarCount: showsMenuBarCount,
+            showsMenuBarExtra: showsMenuBarExtra
+        )
         guard let data = try? JSONEncoder().encode(stored) else { return }
         defaults.set(data, forKey: Self.key)
     }

@@ -220,6 +220,8 @@ All versions shipped. Duplicate breadcrumb removed; parent-level sibling quick-j
 
 ## Change Log
 
+- 2026-08-30: **Security and system settings now state their real consequence.** Self-service account deletion pseudonymizes the retained custody/audit identity, removes direct profile/authentication and device-preference records, revokes passkeys and companion access, and records the retention boundary; reversible admin deactivation remains distinct. Native Settings now offers a standard Command-Comma route, explicit password-change session scope, capability-neutral passkey/permission copy, and user-controlled Mac menu-bar visibility. Source contracts, TypeScript, and the affected native checks pass locally. D-043 continues to make passkeys additive, so password sign-in and recovery remain available by accepted policy.
+
 - 2026-08-26: **Kiosk activation-code copy feedback now reflects browser reality.** The activation dialog only reports success after the clipboard write resolves and gives manual-copy guidance when access is unavailable. Activation-code lifecycle, device permissions, and kiosk behavior are unchanged. Focused source/behavior tests, TypeScript, and lint pass locally; the full build remains blocked by unrelated dirty Trade Board work.
 
 - 2026-08-24: **Password managers can find, fill, and update the right

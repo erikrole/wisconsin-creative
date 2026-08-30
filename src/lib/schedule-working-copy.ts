@@ -117,6 +117,79 @@ export type WorkingScheduleDefaultWindow = {
 };
 
 /**
+ * Server-owned inverse operations for the private Schedule working copy.
+ *
+ * Snapshots live with the working copy rather than in a client cache so an
+ * undo or redo cannot silently overwrite a newer operator's edit. The stack
+ * is bounded in the persistence layer to keep a long-lived draft predictable.
+ */
+export const WORKING_SCHEDULE_HISTORY_LIMIT = 50;
+
+export const workingScheduleHistoryEntrySchema = z.object({
+  id: z.string().min(1),
+  actorId: z.string().min(1),
+  commandType: z.string().min(1),
+  label: z.string().min(1).max(160),
+  before: workingSchedulePayloadSchema,
+  after: workingSchedulePayloadSchema,
+});
+
+export const workingScheduleHistoryStackSchema = z.array(workingScheduleHistoryEntrySchema)
+  .max(WORKING_SCHEDULE_HISTORY_LIMIT);
+
+export type WorkingScheduleHistoryEntry = z.infer<typeof workingScheduleHistoryEntrySchema>;
+
+function titleCaseScheduleWord(value: string) {
+  return value.charAt(0) + value.slice(1).toLowerCase();
+}
+
+function scheduleWorkerTypeLabel(workerType: string) {
+  return workerType === "FT" ? "Staff" : "Student";
+}
+
+/** A short verb-led label suitable for Undo/Redo menus and buttons. */
+export function workingScheduleCommandLabel(
+  command: WorkingScheduleCommand,
+  before: WorkingSchedulePayload,
+  after: WorkingSchedulePayload,
+) {
+  const slotFor = (slotKey: string | undefined) =>
+    after.slots.find((slot) => slot.key === slotKey)
+    ?? before.slots.find((slot) => slot.key === slotKey);
+
+  switch (command.type) {
+    case "adjustSlots":
+      return `${command.delta > 0 ? "Add" : "Remove"} ${scheduleWorkerTypeLabel(command.workerType)} ${titleCaseScheduleWord(command.area)} slot`;
+    case "convertSlot": {
+      const slot = slotFor(command.slotKey);
+      return `Convert ${slot ? titleCaseScheduleWord(slot.area) : "schedule"} slot to ${scheduleWorkerTypeLabel(command.workerType)}`;
+    }
+    case "convertAndReplace": {
+      const slot = slotFor(command.slotKey);
+      return `Replace ${slot ? titleCaseScheduleWord(slot.area) : "schedule"} worker with ${scheduleWorkerTypeLabel(command.workerType)}`;
+    }
+    case "assign": {
+      const slot = slotFor(command.slotKey);
+      return `Assign ${slot ? titleCaseScheduleWord(slot.area) : "schedule"} slot`;
+    }
+    case "unassign": {
+      const slot = slotFor(command.slotKey);
+      return `Unassign ${slot ? titleCaseScheduleWord(slot.area) : "schedule"} worker`;
+    }
+    case "removeSlot": {
+      const slot = slotFor(command.slotKey);
+      return `Remove ${slot ? titleCaseScheduleWord(slot.area) : "schedule"} shift`;
+    }
+    case "setCallWindow": {
+      const slot = slotFor(command.slotKey);
+      return `Set ${slot ? titleCaseScheduleWord(slot.area) : "student"} call window`;
+    }
+    case "setCallWindowForAll":
+      return "Set all Student call windows";
+  }
+}
+
+/**
  * Repair a same-person slot that was staged as a replacement even though the
  * live slot still holds that person. Older working copies can contain a null
  * sourceAssignmentId for this no-op replacement; treating it as new makes the

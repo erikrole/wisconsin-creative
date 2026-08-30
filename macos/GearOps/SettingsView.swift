@@ -101,10 +101,12 @@ private struct GeneralSettingsTab: View {
             Section {
                 Toggle("Show open booking count", isOn: $preferences.showsMenuBarCount)
                     .toggleStyle(.switch)
+                Toggle("Show in menu bar", isOn: $preferences.showsMenuBarExtra)
+                    .toggleStyle(.switch)
             } header: {
                 Text("Menu bar")
             } footer: {
-                Text("Turn this off to show the status symbol on its own.")
+                Text("Choose whether Wisconsin Creative stays visible in the menu bar. Command-Comma always opens Settings when the app is active.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

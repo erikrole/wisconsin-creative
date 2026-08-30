@@ -10,11 +10,14 @@ describe("Schedule interaction-detail contracts", () => {
     const page = source("src/app/(app)/schedule/page.tsx");
     const calendar = source("src/app/(app)/schedule/_components/CalendarView.tsx");
     const list = source("src/app/(app)/schedule/_components/ListView.tsx");
+    const periodNavigator = source("src/app/(app)/schedule/_components/SchedulePeriodNavigator.tsx");
     const sourceSignal = source("src/app/(app)/schedule/_components/ScheduleSourceSignal.tsx");
 
     expect(page).not.toContain("Assign shifts");
     expect(page).toContain('className="h-10" aria-label="More schedule actions"');
-    expect(calendar).toContain('className="h-10" onClick={onSwitchToList}');
+    expect(calendar).toContain("<SchedulePeriodNavigator");
+    expect(periodNavigator).toContain('className="size-10 text-muted-foreground"');
+    expect(periodNavigator).toContain('className="h-10"');
     expect(list).toContain('className="h-10" onClick={loadData}');
     expect(list).not.toContain('className="h-9 shrink-0 px-2 text-xs');
     expect(sourceSignal).toContain('className="h-10 w-fit"');
@@ -29,7 +32,8 @@ describe("Schedule interaction-detail contracts", () => {
     expect(filters).not.toContain('className="scale-[0.8] origin-center"');
     expect(calendar).toContain("flex min-h-10 w-full items-center");
     expect(calendar).not.toContain('"text-foreground hover:bg-muted/60"');
-    expect(week).toContain("transition-[background-color,opacity,scale] active:scale-[0.96]");
+    expect(week).toContain("transition-[background-color,border-color,opacity,scale]");
+    expect(week).toContain("focus-visible:ring-2 focus-visible:ring-ring");
     expect(week).toContain("flex min-h-14 w-full items-center justify-between");
   });
 

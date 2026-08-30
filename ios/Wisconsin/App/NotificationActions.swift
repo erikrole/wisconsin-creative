@@ -31,31 +31,15 @@ enum GearTrackerNotificationCategory: String, CaseIterable {
                     title: "Remind Me in 1 Hour",
                     options: []
                 ),
-                UNNotificationAction(
-                    identifier: GearTrackerNotificationAction.view.rawValue,
-                    title: "View Booking",
-                    options: [.foreground]
-                ),
             ]
         case .schedule:
-            return [
-                UNNotificationAction(
-                    identifier: GearTrackerNotificationAction.view.rawValue,
-                    title: "View Shift",
-                    options: [.foreground]
-                ),
-            ]
+            return []
         case .blast:
             return [
                 UNNotificationAction(
                     identifier: GearTrackerNotificationAction.acknowledgeBlast.rawValue,
                     title: "Got it",
                     options: []
-                ),
-                UNNotificationAction(
-                    identifier: GearTrackerNotificationAction.view.rawValue,
-                    title: "Open",
-                    options: [.foreground]
                 ),
             ]
         }
@@ -66,8 +50,17 @@ enum GearTrackerNotificationCategory: String, CaseIterable {
             identifier: rawValue,
             actions: actions,
             intentIdentifiers: [],
+            hiddenPreviewsBodyPlaceholder: hiddenPreviewPlaceholder,
             options: []
         )
+    }
+
+    private var hiddenPreviewPlaceholder: String {
+        switch self {
+        case .booking: return "Gear and reservation update"
+        case .schedule: return "Schedule update"
+        case .blast: return "Operational update"
+        }
     }
 
     /// Registered once at launch. A push whose `aps.category` names an
@@ -139,5 +132,15 @@ enum NotificationSnooze {
             trigger: UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false)
         )
         try? await UNUserNotificationCenter.current().add(request)
+    }
+
+    static func cancelPending() async {
+        let center = UNUserNotificationCenter.current()
+        let requests = await center.pendingNotificationRequests()
+        let identifiers = requests
+            .map(\.identifier)
+            .filter { $0.hasPrefix("gt-snooze-") }
+        guard !identifiers.isEmpty else { return }
+        center.removePendingNotificationRequests(withIdentifiers: identifiers)
     }
 }

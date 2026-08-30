@@ -384,7 +384,7 @@ struct KioskIdleView: View {
                 .foregroundStyle(Color.statusText(.orange))
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 1) {
-                Text("Can't reach the server")
+                Text("Can't connect right now")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(KioskText.primary)
                 if let last = lastLoadedAt {
@@ -420,7 +420,7 @@ struct KioskIdleView: View {
                 .stroke(Color.statusText(.orange).opacity(0.4), lineWidth: 1)
         )
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Can't reach the server. \(lastLoadedAt != nil ? "Showing cached data." : "No data yet.") Retry available.")
+        .accessibilityLabel("Can't connect right now. \(lastLoadedAt != nil ? "Showing cached data." : "No data yet.") Retry available.")
     }
 
     // MARK: - Roster Panel

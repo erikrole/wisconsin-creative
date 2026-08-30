@@ -2,6 +2,7 @@ import SwiftUI
 
 struct KioskOperatorHubView: View {
     @Environment(KioskStore.self) private var store
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let user: KioskUser
     @State private var context: KioskStudentContext?
     @State private var isLoading = true
@@ -61,7 +62,7 @@ struct KioskOperatorHubView: View {
                 KioskFeedbackBanner(tone: scanFeedback.tone, message: scanFeedback.message)
                     .padding(.horizontal, KioskSpacing.lg)
                     .padding(.top, KioskSpacing.sm)
-                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
             }
 
             if isLoading && context == nil {
@@ -232,7 +233,7 @@ struct KioskOperatorHubView: View {
                     }
 
                     if !hasAnyGear {
-                        Text("Nothing out and nothing reserved. Checkout Gear to grab something.")
+                        Text("Nothing out and nothing reserved. Check out gear to grab something.")
                             .font(KioskType.body)
                             .foregroundStyle(KioskText.tertiary)
                             .padding(.top, KioskSpacing.xs)
@@ -287,8 +288,8 @@ struct KioskOperatorHubView: View {
                         .font(KioskType.rowTitle)
                         .foregroundStyle(KioskText.secondary)
                     Text(shiftsFailed
-                         ? "Checkout Gear still works."
-                         : "Use Checkout Gear for anything not on the schedule.")
+                         ? "Check Out Gear still works."
+                         : "Use Check Out Gear for anything not on the schedule.")
                         .font(KioskType.chip)
                         .foregroundStyle(KioskText.muted)
                         .fixedSize(horizontal: false, vertical: true)
@@ -375,7 +376,7 @@ struct KioskOperatorHubView: View {
     /// The one thing this screen is for.
     private var checkoutHero: some View {
         ActionButton(
-            title: "Checkout Gear",
+            title: "Check Out Gear",
             subtitle: checkoutActionSubtitle,
             icon: "arrow.up.circle.fill",
             color: Color.kioskRed,
@@ -666,11 +667,19 @@ struct KioskOperatorHubView: View {
         case .error: Haptics.error()
         }
         scanFeedbackDismissTask?.cancel()
-        withAnimation { scanFeedback = feedback }
+        if reduceMotion {
+            scanFeedback = feedback
+        } else {
+            withAnimation { scanFeedback = feedback }
+        }
         scanFeedbackDismissTask = Task {
             try? await Task.sleep(nanoseconds: 3_000_000_000)
             guard !Task.isCancelled else { return }
-            withAnimation { scanFeedback = nil }
+            if reduceMotion {
+                scanFeedback = nil
+            } else {
+                withAnimation { scanFeedback = nil }
+            }
         }
     }
 
@@ -699,7 +708,7 @@ struct KioskOperatorHubView: View {
             case .networkError:
                 return apiError.errorDescription ?? "Check the kiosk network and try again."
             case .decodingError:
-                return "The server response changed. Try again after the kiosk refreshes."
+                return "The kiosk couldn't read that result. Refresh and try again."
             case .notFound:
                 return "This profile is no longer available at this kiosk."
             default:
@@ -919,7 +928,7 @@ private struct ShiftCard: View {
                 }
             }
 
-            // Secondary, not brand red. `Checkout Gear` and each booking's
+            // Secondary, not brand red. `Check Out Gear` and each booking's
             // `Return` already spend red on this screen; giving every shift a
             // full-width red button too put five of them on one canvas, which
             // is how brand red stops meaning "the action this screen is for".

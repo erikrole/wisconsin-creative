@@ -232,7 +232,6 @@ struct KioskActivationView: View {
             return
         }
         updateCode(from: trimmed, submitWhenComplete: false)
-        Haptics.tap()
         if trimmed.count == 6 {
             activate()
         } else {
@@ -357,7 +356,6 @@ private struct KioskNumPad: View {
         case "⌫":
             if !code.isEmpty {
                 code.removeLast()
-                Haptics.tap()
             }
         case "✓":
             if code.count == 6 {
@@ -366,7 +364,6 @@ private struct KioskNumPad: View {
         default:
             if code.count < 6 {
                 code.append(key)
-                Haptics.tap()
             }
             if code.count == 6 {
                 onComplete()

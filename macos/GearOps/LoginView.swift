@@ -6,15 +6,7 @@ struct GearOpsLoginView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var showPassword = false
-    @State private var step: LoginStep = .identity
-    @State private var identityError: String?
     @FocusState private var focusedField: Field?
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    private enum LoginStep: Hashable {
-        case identity
-        case password
-    }
 
     private enum Field: Hashable {
         case email
@@ -29,16 +21,8 @@ struct GearOpsLoginView: View {
         model.isSigningIn || model.isSigningOut
     }
 
-    private var canContinue: Bool {
-        trimmedEmail.contains("@") && !authBusy
-    }
-
     private var canSubmit: Bool {
-        canContinue && !password.isEmpty
-    }
-
-    private var errorMessage: String? {
-        step == .identity ? (identityError ?? model.statusMessage) : model.statusMessage
+        trimmedEmail.contains("@") && !password.isEmpty && !authBusy
     }
 
     var body: some View {
@@ -51,13 +35,9 @@ struct GearOpsLoginView: View {
 
                 BrandLoginCard {
                     VStack(alignment: .leading, spacing: 12) {
-                        if step == .identity {
-                            identityFields
-                        } else {
-                            passwordFields
-                        }
+                        credentialFields
 
-                        if let errorMessage {
+                        if let errorMessage = model.statusMessage {
                             errorBanner(errorMessage)
                         }
 
@@ -73,9 +53,6 @@ struct GearOpsLoginView: View {
         }
         .frame(width: GearOpsLayout.popoverWidth)
         .onAppear { focusedField = .email }
-        .onChange(of: step) { _, newStep in
-            focusedField = newStep == .identity ? .email : .password
-        }
         .onDisappear {
             // Menu-bar content can be torn down whenever the popover closes.
             // Never retain a password or a revealed-password state across that
@@ -86,41 +63,22 @@ struct GearOpsLoginView: View {
         }
     }
 
-    // The web and iOS logins split identity from password so a returning user
-    // confirms the account before typing a secret. This app deliberately does
-    // not call the discovery route to do it: enrollment is the only Neon-backed
-    // request the companion is allowed to make.
-    private var identityFields: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            fieldLabel("Email")
-            TextField("you@wisc.edu", text: $email)
-                .textContentType(.username)
-                .textFieldStyle(.plain)
-                .modifier(BrandFieldChrome(isFocused: focusedField == .email))
-                .focused($focusedField, equals: .email)
-                .disabled(authBusy)
-                .onSubmit(advance)
-        }
-    }
-
-    private var passwordFields: some View {
+    // Password managers identify a native credential form most reliably when
+    // the semantic username and password controls coexist in one view. Keep
+    // both standard SwiftUI fields mounted so 1Password Universal Autofill can
+    // discover and fill the pair in one action.
+    private var credentialFields: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
-                Text(trimmedEmail)
-                    .font(.callout)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                Spacer(minLength: 4)
-                Button("Change", action: changeEmail)
-                    .buttonStyle(.plain)
-                    .font(.callout.weight(.medium))
-                    .foregroundStyle(BrandPalette.accent)
+            VStack(alignment: .leading, spacing: 5) {
+                fieldLabel("Email")
+                TextField("you@wisc.edu", text: $email)
+                    .textContentType(.username)
+                    .textFieldStyle(.plain)
+                    .modifier(BrandFieldChrome(isFocused: focusedField == .email))
+                    .focused($focusedField, equals: .email)
                     .disabled(authBusy)
-                    .accessibilityHint("Return to the email step")
+                    .onSubmit { focusedField = .password }
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 7)
-            .background(Color.black.opacity(0.05), in: .rect(cornerRadius: 8))
 
             VStack(alignment: .leading, spacing: 5) {
                 fieldLabel("Password")
@@ -177,7 +135,7 @@ struct GearOpsLoginView: View {
     }
 
     private var primaryButton: some View {
-        Button(action: performPrimaryAction) {
+        Button(action: submit) {
             primaryButtonLabel
         }
         .buttonStyle(.plain)
@@ -201,22 +159,14 @@ struct GearOpsLoginView: View {
         .contentShape(.rect)
     }
 
-    private func performPrimaryAction() {
-        if step == .identity {
-            advance()
-        } else {
-            submit()
-        }
-    }
-
     private var primaryEnabled: Bool {
-        step == .identity ? canContinue : canSubmit
+        canSubmit
     }
 
     private var primaryTitle: String {
         if model.isSigningOut { return "Signing out…" }
         if model.isSigningIn { return "Signing in…" }
-        return step == .identity ? "Continue" : "Sign in"
+        return "Sign in"
     }
 
     private var footer: some View {
@@ -229,30 +179,6 @@ struct GearOpsLoginView: View {
         .buttonStyle(.plain)
         .font(.footnote)
         .foregroundStyle(.white.opacity(0.7))
-    }
-
-    private func advance() {
-        guard canContinue else { return }
-        identityError = nil
-        model.clearStatusMessage()
-        setStep(.password)
-    }
-
-    private func changeEmail() {
-        guard !authBusy else { return }
-        password = ""
-        showPassword = false
-        identityError = nil
-        model.clearStatusMessage()
-        setStep(.identity)
-    }
-
-    private func setStep(_ newStep: LoginStep) {
-        if reduceMotion {
-            step = newStep
-        } else {
-            withAnimation(.easeInOut(duration: 0.2)) { step = newStep }
-        }
     }
 
     private func submit() {

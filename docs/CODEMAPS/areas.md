@@ -153,7 +153,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/search`
 - APIs: `/api/assets/picker-search`, `/api/image-search`
 - Services: _none matched_
-- Tests: `tests/api-image-search.test.ts`, `tests/app-shell-search-source.test.ts`, `tests/image-search.test.ts`, `tests/ios-search-partial-results.test.ts`, `tests/resource-search.test.ts`, `tests/search-input-focus-stability.test.ts`, `tests/search-page-source.test.ts`, `tests/search-pages.test.ts`
+- Tests: `tests/api-image-search.test.ts`, `tests/app-shell-search-source.test.ts`, `tests/image-search.test.ts`, `tests/ios-search-hig-remediation.test.ts`, `tests/ios-search-partial-results.test.ts`, `tests/resource-search.test.ts`, `tests/search-input-focus-stability.test.ts`, `tests/search-page-source.test.ts`
 
 ## settings
 
@@ -167,7 +167,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 
 - Doc: `docs/AREA_SHIFTS.md`
 - Pages: `/schedule/assign`, `/schedule`
-- APIs: `/api/my-shifts`, `/api/schedule/automation`, `/api/schedule/bulk-assignment/apply`, `/api/schedule/bulk-assignment/preview`, `/api/schedule/export`, `/api/schedule/health`, `/api/schedule/open-work`, `/api/schedule/published/[id]/follow`, `/api/schedule/published/[id]`, `/api/schedule/published`
+- APIs: `/api/my-shifts`, `/api/schedule/automation`, `/api/schedule/bulk-assignment/apply`, `/api/schedule/bulk-assignment/batches/[id]/cancel`, `/api/schedule/bulk-assignment/batches`, `/api/schedule/bulk-assignment/preview`, `/api/schedule/export`, `/api/schedule/health`, `/api/schedule/open-work`, `/api/schedule/published/[id]/follow`
 - Services: `src/lib/services/bulk-schedule-assignment.ts`, `src/lib/services/collaborator-schedule.ts`, `src/lib/services/non-game-schedule-defaults.ts`, `src/lib/services/reservation-schedule.ts`, `src/lib/services/schedule-automation.ts`, `src/lib/services/schedule-call-time-sync.ts`, `src/lib/services/schedule-change-history.ts`, `src/lib/services/schedule-exports.ts`
 - Tests: `tests/badge-shift-breadth.test.ts`, `tests/bulk-schedule-assignment-source.test.ts`, `tests/collaborator-schedule-follow.test.ts`, `tests/ios-collaborator-published-schedule-redesign.test.ts`, `tests/ios-home-shifts-deep-link.test.ts`, `tests/ios-schedule-all-day-display.test.ts`, `tests/ios-schedule-availability-trade-redesign.test.ts`, `tests/ios-schedule-calendar-hit-targets.test.ts`
 

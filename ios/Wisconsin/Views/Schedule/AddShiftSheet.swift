@@ -7,7 +7,7 @@ struct AddShiftSheet: View {
     let eventTitle: String
     let defaultStart: Date
     let defaultEnd: Date
-    let onAdded: () -> Void
+    let onAdded: (WorkingScheduleEditor) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var area: ShiftAreaOption = .video
@@ -24,7 +24,7 @@ struct AddShiftSheet: View {
         eventTitle: String,
         defaultStart: Date,
         defaultEnd: Date,
-        onAdded: @escaping () -> Void
+        onAdded: @escaping (WorkingScheduleEditor) -> Void
     ) {
         self.shiftGroupId = shiftGroupId
         self.expectedWorkingVersion = expectedWorkingVersion
@@ -247,7 +247,7 @@ struct AddShiftSheet: View {
         error = nil
         defer { isSubmitting = false }
         do {
-            _ = try await APIClient.shared.addWorkingScheduleSlot(
+            let editor = try await APIClient.shared.addWorkingScheduleSlot(
                 shiftGroupId: shiftGroupId,
                 expectedVersion: expectedWorkingVersion,
                 area: area.rawValue,
@@ -256,7 +256,7 @@ struct AddShiftSheet: View {
                 callEndsAt: workerType == .student && customizeTimes ? endsAt : nil
             )
             Haptics.success()
-            onAdded()
+            onAdded(editor)
             dismiss()
         } catch {
             self.error = error.localizedDescription
@@ -301,11 +301,8 @@ struct ShiftDateTimeRow: View {
     let systemImage: String
     @Binding var date: Date
 
-    private var timeSlots: [Int] {
-        let components = Calendar.current.dateComponents([.hour, .minute], from: date)
-        let current = (components.hour ?? 0) * 60 + (components.minute ?? 0)
-        return Array(Set(Array(stride(from: 0, through: 23 * 60 + 45, by: 15)) + [current])).sorted()
-    }
+    private let hours = Array(0..<24)
+    private let minutes = [0, 15, 30, 45]
 
     var body: some View {
         HStack(spacing: 10) {
@@ -318,38 +315,52 @@ struct ShiftDateTimeRow: View {
             Spacer()
             DatePicker("\(label) date", selection: $date, displayedComponents: .date)
                 .labelsHidden()
-            Picker("\(label) time", selection: timeSelection) {
-                ForEach(timeSlots, id: \.self) { minutes in
-                    Text(timeLabel(minutes)).tag(minutes)
+            HStack(spacing: 4) {
+                Picker("\(label) hour", selection: hourSelection) {
+                    ForEach(hours, id: \.self) { hour in
+                        Text(timeLabel(hour: hour, minute: minuteSelection.wrappedValue)).tag(hour)
+                    }
                 }
+                .pickerStyle(.menu)
+                .fixedSize()
+
+                Picker("\(label) minute", selection: minuteSelection) {
+                    ForEach(minutes, id: \.self) { minute in
+                        Text(timeLabel(hour: hourSelection.wrappedValue, minute: minute)).tag(minute)
+                    }
+                }
+                .pickerStyle(.menu)
+                .fixedSize()
             }
-            .pickerStyle(.menu)
             .tint(Color.statusText(.purple))
         }
     }
 
-    private var timeSelection: Binding<Int> {
+    private var hourSelection: Binding<Int> {
         Binding(
-            get: {
-                let components = Calendar.current.dateComponents([.hour, .minute], from: date)
-                return (components.hour ?? 0) * 60 + (components.minute ?? 0)
-            },
-            set: { minutes in
-                let calendar = Calendar.current
-                date = calendar.date(
-                    bySettingHour: minutes / 60,
-                    minute: minutes % 60,
-                    second: 0,
-                    of: date
-                ) ?? date
-            }
+            get: { Calendar.current.component(.hour, from: date) },
+            set: { updateTime(hour: $0, minute: Calendar.current.component(.minute, from: date)) }
         )
     }
 
-    private func timeLabel(_ minutes: Int) -> String {
+    private var minuteSelection: Binding<Int> {
+        Binding(
+            get: {
+                let minute = Calendar.current.component(.minute, from: date)
+                return minutes.min(by: { abs($0 - minute) < abs($1 - minute) }) ?? 0
+            },
+            set: { updateTime(hour: Calendar.current.component(.hour, from: date), minute: $0) }
+        )
+    }
+
+    private func updateTime(hour: Int, minute: Int) {
         let calendar = Calendar.current
-        let start = calendar.startOfDay(for: .now)
-        let value = calendar.date(byAdding: .minute, value: minutes, to: start) ?? start
+        date = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: date) ?? date
+    }
+
+    private func timeLabel(hour: Int, minute: Int) -> String {
+        let calendar = Calendar.current
+        let value = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: date) ?? date
         return value.formatted(date: .omitted, time: .shortened)
     }
 }

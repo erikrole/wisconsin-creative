@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 
 const appManifestPath = path.join(process.cwd(), "ios/Wisconsin/Supporting/PrivacyInfo.xcprivacy");
 const kioskManifestPath = path.join(process.cwd(), "ios/Wisconsin/KioskOnly/PrivacyInfo.xcprivacy");
+const metricKitSourcePath = path.join(process.cwd(), "ios/Wisconsin/Core/PerformanceInstrumentation.swift");
 
 function manifestJson(manifestPath: string) {
   return parse(fs.readFileSync(manifestPath, "utf8")) as {
@@ -56,6 +57,22 @@ describe("Wisconsin privacy manifest", () => {
       "NSPrivacyCollectedDataTypePerformanceData",
     ]) {
       expect(declared.has(unsupportedType), `${unsupportedType} has no native collection SDK`).toBe(false);
+    }
+  });
+
+  it("keeps MetricKit file-timestamp access aligned with the main target manifest", () => {
+    const manifest = manifestJson(appManifestPath);
+    const source = fs.readFileSync(metricKitSourcePath, "utf8");
+    const fileTimestamp = manifest.NSPrivacyAccessedAPITypes.find(
+      (entry) => entry.NSPrivacyAccessedAPIType === "NSPrivacyAccessedAPICategoryFileTimestamp",
+    );
+    const sourceUsesFileTimestamp =
+      source.includes("includingPropertiesForKeys: [.creationDateKey]") &&
+      source.includes("resourceValues(forKeys: [.creationDateKey])");
+
+    expect(fileTimestamp !== undefined).toBe(sourceUsesFileTimestamp);
+    if (sourceUsesFileTimestamp) {
+      expect(fileTimestamp?.NSPrivacyAccessedAPITypeReasons).toEqual(["C617.1"]);
     }
   });
 

@@ -83,7 +83,7 @@ function ActionsMenu({
       triggerClassName="h-10 w-auto px-3 text-xs font-medium text-foreground"
       icon={<span>Actions</span>}
     >
-      <DropdownMenuItem disabled={disabled} onSelect={() => onAction("duplicate")}>Duplicate</DropdownMenuItem>
+      <DropdownMenuItem disabled={disabled} onSelect={() => onAction("add-another")}>Add another like this</DropdownMenuItem>
       <DropdownMenuItem disabled={disabled} onSelect={() => onAction("print-label")}>Print label</DropdownMenuItem>
       <DropdownMenuItem disabled={disabled} onSelect={() => onAction("maintenance")}>
         {asset.status === "MAINTENANCE" ? "Clear Maintenance" : "Needs Maintenance"}

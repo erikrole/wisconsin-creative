@@ -29,6 +29,7 @@ export const POST = withAuth(async (req, { user }) => {
     {
       title: "Test notification",
       body: "Push delivery is working on this device.",
+      interruptionLevel: "passive",
     }
   );
 

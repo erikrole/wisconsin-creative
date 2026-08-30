@@ -78,13 +78,21 @@ describe("iOS checkout return Live Activity source contract", () => {
     expect(widget).toContain("Open Wisconsin to confirm");
     expect(widget).toContain("liveActivityMuted");
 
-    // Paired Apple Watch gets a real small-family layout instead of a scaled
-    // lock-screen card, and always-on display drops to dimmed accents.
+    // Paired Apple Watch and CarPlay share a real small-family layout instead
+    // of a scaled lock-screen card, and always-on display drops to dimmed
+    // accents.
     expect(widget).toContain(".supplementalActivityFamilies([.small])");
     expect(widget).toContain("@Environment(\\.activityFamily)");
     expect(widget).toContain("case .small:");
     expect(widget).toContain("CheckoutReturnSmallView(context: context, now: timeline.date)");
     expect(widget).toContain("@Environment(\\.isLuminanceReduced)");
+    const smallView = widget.slice(
+      widget.indexOf("private struct CheckoutReturnSmallView"),
+      widget.indexOf("private struct ExpandedReturnStatus"),
+    );
+    expect(smallView).toContain("@Environment(\\.isLuminanceReduced)");
+    expect(smallView).toContain("isDimmed: isLuminanceReduced");
+    expect(widget).toContain("shared by Apple Watch Smart Stack and CarPlay");
     expect(widget).toContain("liveActivityRedDim");
 
     // Compact and minimal presentations carry no words of their own.

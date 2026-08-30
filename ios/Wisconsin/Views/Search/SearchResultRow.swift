@@ -60,6 +60,7 @@ struct AssetResultRow: View {
 
 struct ItemFamilyResultRow: View {
     let family: AssetFamilySearchResult
+    var showsReserveAction = false
 
     var body: some View {
         HStack(spacing: 12) {
@@ -81,12 +82,19 @@ struct ItemFamilyResultRow: View {
 
             Spacer()
 
-            Text(family.trackByNumber ? "Units" : "Quantity")
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .background(.quaternary, in: Capsule())
+            if showsReserveAction {
+                Label("Reserve", systemImage: "plus.circle")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tint)
+                    .labelStyle(.titleAndIcon)
+            } else {
+                Text(family.trackByNumber ? "Units" : "Quantity")
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(.quaternary, in: Capsule())
+            }
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .ignore)
@@ -104,7 +112,7 @@ struct SearchBulkThumbnail: View {
                 .fill(Color(.secondarySystemBackground))
                 .frame(width: size, height: size)
             if let imageUrl, let url = URL(string: imageUrl) {
-                CachedThumbnail(url: url, size: size)
+                CachedThumbnail(url: url, size: size, placeholderSystemImage: "shippingbox")
                 .frame(width: size, height: size)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
             } else {

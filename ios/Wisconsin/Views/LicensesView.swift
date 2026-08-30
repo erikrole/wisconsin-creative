@@ -208,7 +208,7 @@ struct LicensesView: View {
                 isPresented: $showReturnConfirm,
                 titleVisibility: .visible
             ) {
-                Button("Return License", role: .destructive) {
+                Button("Return License") {
                     Task { await vm.releaseActiveClaim() }
                 }
                 Button("Cancel", role: .cancel) {}
@@ -389,7 +389,7 @@ struct LicensesView: View {
             .frame(minHeight: 44)
             .tint(Color.statusText(.blue))
 
-            Button("Return License", role: .destructive) {
+            Button("Return License") {
                 showReturnConfirm = true
             }
             .buttonStyle(.bordered)
@@ -598,6 +598,17 @@ private struct LicensePoolRow: View {
                 }
             }
 
+            if canRevealUnclaimedCodes, !code.code.isEmpty {
+                Button("Copy Code", systemImage: "doc.on.doc") {
+                    UIPasteboard.general.string = code.code
+                }
+                .buttonStyle(.bordered)
+                .buttonBorderShape(.capsule)
+                .controlSize(.small)
+                .frame(minHeight: 44)
+                .tint(Color.statusText(.blue))
+            }
+
             if showsExpiry {
                 Label(expirySummary(code.expiresAt), systemImage: "calendar")
                     .font(.caption)
@@ -614,7 +625,6 @@ private struct LicensePoolRow: View {
             if canRevealCode, !code.code.isEmpty {
                 Button {
                     UIPasteboard.general.string = code.code
-                    Haptics.tap()
                 } label: {
                     Label("Copy License Code", systemImage: "doc.on.doc")
                 }

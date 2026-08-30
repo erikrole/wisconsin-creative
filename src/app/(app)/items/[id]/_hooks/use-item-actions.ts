@@ -6,7 +6,7 @@ import { useConfirm } from "@/components/ConfirmDialog";
 import { useInvalidateItemCatalog } from "@/hooks/use-item-cache-invalidation";
 import { toast } from "sonner";
 
-import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
+import { handleAuthRedirect, parseErrorMessage } from "@/lib/errors";
 import type { AssetDetail } from "../types";
 
 type UseItemActionsParams = {
@@ -83,21 +83,6 @@ export default function useItemActions({
       if (action === "print-label") {
         router.push(`/labels?items=${asset.id}`);
         return;
-      } else if (action === "duplicate") {
-        const res = await fetch(`/api/assets/${asset.id}/duplicate`, { method: "POST" });
-        if (handleAuthRedirect(res)) return;
-        if (res.ok) {
-          const json = await parseJsonSafely<{ data?: { id?: unknown } }>(res);
-          if (typeof json?.data?.id !== "string") {
-            toast.error("Duplicated item, but could not open the new copy. Refresh items and try again.");
-            return;
-          }
-          router.push(`/items/${json.data.id}`);
-          invalidateItemCatalog();
-        } else {
-          const msg = await parseErrorMessage(res, "Duplicate failed");
-          toast.error(msg);
-        }
       } else if (action === "retire") {
         const ok = await confirmDialog({
           title: "Retire item",

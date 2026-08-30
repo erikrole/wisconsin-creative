@@ -12,6 +12,7 @@ struct ProfilePhotoCropView: View {
     @State private var magnifyOrigin = 1.25
     @State private var offset = CGSize.zero
     @State private var dragOrigin = CGSize.zero
+    @State private var preResetAdjustment: CropAdjustmentState?
     @State private var isSaving = false
     @State private var error: String?
 
@@ -54,6 +55,12 @@ struct ProfilePhotoCropView: View {
                     }
 
                     Button {
+                        preResetAdjustment = CropAdjustmentState(
+                            zoom: zoom,
+                            magnifyOrigin: magnifyOrigin,
+                            offset: offset,
+                            dragOrigin: dragOrigin
+                        )
                         withAnimation(reduceMotion ? nil : .snappy(duration: 0.2)) {
                             zoom = 1.25
                             magnifyOrigin = 1.25
@@ -64,6 +71,17 @@ struct ProfilePhotoCropView: View {
                         Label("Reset crop", systemImage: "arrow.counterclockwise")
                     }
                     .buttonStyle(.borderless)
+
+                    if preResetAdjustment != nil {
+                        Button {
+                            guard let preResetAdjustment else { return }
+                            restore(preResetAdjustment)
+                            self.preResetAdjustment = nil
+                        } label: {
+                            Label("Undo Reset", systemImage: "arrow.uturn.backward")
+                        }
+                        .buttonStyle(.borderless)
+                    }
 
                     if let error {
                         Label(error, systemImage: "exclamationmark.triangle.fill")
@@ -191,6 +209,46 @@ struct ProfilePhotoCropView: View {
                 .font(.subheadline.weight(.medium))
             Slider(value: value, in: range)
                 .accessibilityLabel(title)
+                .accessibilityValue(accessibilityValue(for: title, value: value.wrappedValue))
+            HStack {
+                Text(endpointLabel(for: title, isMinimum: true))
+                Spacer()
+                Text(endpointLabel(for: title, isMinimum: false))
+            }
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+            .accessibilityHidden(true)
+        }
+    }
+
+    private func endpointLabel(for title: String, isMinimum: Bool) -> String {
+        switch title {
+        case "Zoom": return isMinimum ? "1×" : "3×"
+        case "Left or right": return isMinimum ? "Left" : "Right"
+        case "Up or down": return isMinimum ? "Up" : "Down"
+        default: return isMinimum ? "Minimum" : "Maximum"
+        }
+    }
+
+    private func accessibilityValue(for title: String, value: Double) -> String {
+        switch title {
+        case "Zoom": return "\(Int(value * 100)) percent"
+        case "Left or right":
+            if abs(value) < 0.05 { return "Centered" }
+            return value < 0 ? "Left" : "Right"
+        case "Up or down":
+            if abs(value) < 0.05 { return "Centered" }
+            return value < 0 ? "Up" : "Down"
+        default: return String(format: "%.0f", value)
+        }
+    }
+
+    private func restore(_ adjustment: CropAdjustmentState) {
+        withAnimation(reduceMotion ? nil : .snappy(duration: 0.2)) {
+            zoom = adjustment.zoom
+            magnifyOrigin = adjustment.magnifyOrigin
+            offset = adjustment.offset
+            dragOrigin = adjustment.dragOrigin
         }
     }
 
@@ -227,4 +285,11 @@ struct ProfilePhotoCropView: View {
             }
         }
     }
+}
+
+private struct CropAdjustmentState: Equatable {
+    let zoom: CGFloat
+    let magnifyOrigin: CGFloat
+    let offset: CGSize
+    let dragOrigin: CGSize
 }

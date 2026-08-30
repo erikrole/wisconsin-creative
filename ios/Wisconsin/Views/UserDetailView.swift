@@ -368,7 +368,6 @@ struct BadgeShelfCard: View {
                 }
             }
         }
-        .sensoryFeedback(.selection, trigger: tapFeedback)
     }
 
     /// Newest first. Sorted by the catalog's `sortOrder`, a badge earned this
@@ -831,7 +830,6 @@ struct BadgeGallerySheet: View {
                 }
             }
         }
-        .sensoryFeedback(.selection, trigger: tapFeedback)
         .sheet(item: $selectedBadge) { badge in
             BadgeDetailSheet(badge: badge)
                 .presentationDetents([.medium, .large])

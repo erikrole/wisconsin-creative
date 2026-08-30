@@ -6,9 +6,10 @@ struct UserAvatarView: View {
     let name: String
     let avatarUrl: String?
     var size: CGFloat = 36
-    var fallbackBackground: Color = Color.accentColor.opacity(0.12)
-    var fallbackForeground: Color = Color.accentColor
+    var fallbackBackground: Color = Color.brandPrimary.opacity(0.12)
+    var fallbackForeground: Color = Color.brandPrimary
     var showsBorder = true
+    @ScaledMetric(relativeTo: .caption2) private var minimumInitialsSize: CGFloat = 11
 
     var body: some View {
         if let urlString = avatarUrl, !urlString.isEmpty, let url = URL(string: urlString) {
@@ -37,7 +38,7 @@ struct UserAvatarView: View {
                 .fill(fallbackBackground)
                 .frame(width: size, height: size)
             Text(initials.isEmpty ? "?" : initials)
-                .font(.system(size: max(size * 0.36, 9), weight: .semibold))
+                .font(.system(size: max(size * 0.36, minimumInitialsSize), weight: .semibold))
                 .foregroundStyle(fallbackForeground)
         }
         .overlay {

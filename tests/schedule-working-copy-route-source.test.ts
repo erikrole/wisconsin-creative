@@ -18,6 +18,21 @@ describe("schedule working-copy route wiring", () => {
     expect(service).toContain("allDay: true");
   });
 
+  it("routes undo and redo through the same permissioned version boundary", () => {
+    const route = readFileSync("src/app/api/shift-groups/[id]/working-copy/route.ts", "utf8");
+    const service = readFileSync("src/lib/services/schedule-working-copy.ts", "utf8");
+
+    expect(route).toContain("const historySchema");
+    expect(route).toContain('action: z.enum(["undo", "redo"])');
+    expect(route).toContain("changeWorkingScheduleHistory");
+    expect(route).toContain('"action" in body');
+    expect(route).toContain("getWorkingScheduleEditor(params.id, user.id)");
+    expect(service).toContain("entry.actorId !== actor.id");
+    expect(service).toContain("WORKING_SCHEDULE_HISTORY_LIMIT");
+    expect(service).toContain("redoStack: historyJson([])");
+    expect(service).toContain("Prisma.TransactionIsolationLevel.Serializable");
+  });
+
   it("keeps pending edits private and starts the exact-version release timer before saving", () => {
     const route = readFileSync("src/app/api/shift-groups/[id]/working-copy/route.ts", "utf8");
     const editor = readFileSync("src/app/(app)/schedule/_components/WorkingCrewEditor.tsx", "utf8");

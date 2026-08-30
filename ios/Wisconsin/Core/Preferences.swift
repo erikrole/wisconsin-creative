@@ -73,7 +73,10 @@ final class NotificationPrefsViewModel {
         case .push:  current.channels.push  = value
         }
         prefs = current
-        await save(current, fallbackTo: prev)
+        let saved = await save(current, fallbackTo: prev)
+        if saved, channel == .push, !value {
+            await NotificationSnooze.cancelPending()
+        }
     }
 
     func categoryValue(_ category: Category) -> Bool {
@@ -105,7 +108,8 @@ final class NotificationPrefsViewModel {
         }
         current.categories = categories
         prefs = current
-        await save(current, fallbackTo: prev)
+        let saved = await save(current, fallbackTo: prev)
+        if saved { await NotificationSnooze.cancelPending() }
     }
 
     func pause(for seconds: TimeInterval) async {
@@ -114,7 +118,10 @@ final class NotificationPrefsViewModel {
         let until = Date().addingTimeInterval(seconds)
         current.pausedUntil = Self.isoWithFractional.string(from: until)
         prefs = current
-        await save(current, fallbackTo: prev)
+        let saved = await save(current, fallbackTo: prev)
+        if saved {
+            await NotificationSnooze.cancelPending()
+        }
     }
 
     func resume() async {
@@ -150,20 +157,23 @@ final class NotificationPrefsViewModel {
         gearPrep: true
     )
 
+    @discardableResult
     private func save(
         _ next: NotificationPreferences,
         fallbackTo prev: NotificationPreferences
-    ) async {
+    ) async -> Bool {
+        error = nil
         saving = true
         defer { saving = false }
         do {
             try await APIClient.shared.updateNotificationPreferences(next)
-            Haptics.selection()
+            return true
         } catch {
             // Revert UI; surface a one-shot inline error.
             prefs = prev
             self.error = (error as? APIError)?.errorDescription ?? "Couldn't save"
             Haptics.error()
+            return false
         }
     }
 }

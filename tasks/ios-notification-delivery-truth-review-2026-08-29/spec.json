@@ -1,0 +1,77 @@
+{
+  "title": "Notification Delivery Truth",
+  "eyebrow": "iOS · Wisconsin Creative · HIG remediation",
+  "lede": "The Notifications screen now tells the truth when account delivery is paused or this device is not registered, while keeping the durable in-app inbox available and giving the person a recoverable path.",
+  "stats": [
+    {
+      "k": "Delivery section shift",
+      "v": "≈214pt",
+      "n": "Measured from the matched top captures: Delivery card top moves 1308px → 1963px at the device's 3.07px/pt scale"
+    },
+    {
+      "k": "Pause recovery",
+      "v": "1 tap",
+      "n": "Resume now is visible while the account is paused"
+    },
+    {
+      "k": "Self-test gate",
+      "v": "5 checks",
+      "n": "Preference, pause, iOS permission, APNs registration, and current token"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Matched screenshots",
+      "note": "Both columns use the same local paused-account fixture, iPhone 16 Pro simulator, UI-test steps, and scroll positions. The baseline uses the pre-change screen from HEAD; the after capture uses the restored final source.",
+      "pairs": [
+        {
+          "title": "Top of Notifications",
+          "sub": "The delivery summary and account pause are the first decision points.",
+          "before": "tasks/ios-notification-delivery-truth-review-2026-08-29/before-top.png",
+          "beforeCap": "The paused fixture still reads “Push alerts are enabled,” and no account pause or Resume action is visible.",
+          "after": "tasks/ios-notification-delivery-truth-review-2026-08-29/after-top.png",
+          "afterCap": "The same account reads “Paused until …,” keeps the inbox promise visible, and offers Resume now alongside the APNs recovery state."
+        },
+        {
+          "title": "Delivery and notification types",
+          "sub": "The self-test must not bypass the same delivery policy the screen reports.",
+          "before": "tasks/ios-notification-delivery-truth-review-2026-08-29/before-scrolled.png",
+          "beforeCap": "The Push alerts switch stands alone; a paused account has no explanation for why a device self-test is unavailable.",
+          "after": "tasks/ios-notification-delivery-truth-review-2026-08-29/after-scrolled.png",
+          "afterCap": "The switch is qualified while paused, the test is withheld with a reason, and category choices explain that they apply after resume."
+        }
+      ]
+    }
+  ],
+  "changesHeading": "What changed, and why",
+  "changesNote": "This slice closes the two native notification findings that shared an existing server contract; it does not claim APNs delivery or physical-device acceptance.",
+  "changes": [
+    {
+      "h": "Account pause is now visible and reversible",
+      "was": "A future pausedUntil value was silently ignored, so the native screen could promise enabled delivery while the server suppressed push and email.",
+      "now": "Quiet hours shows the active end time, exposes Pause 1 hour/day/week when clear, and gives a one-tap Resume now action. The in-app inbox remains explicitly available."
+    },
+    {
+      "h": "The device self-test follows ordinary delivery eligibility",
+      "was": "The test button appeared whenever iOS allowed push and a token string existed, even when the account was paused, Push alerts were off, or APNs registration had failed.",
+      "now": "The test requires Push alerts on, no active pause, iOS authorization, a server-accepted registration, and the current installation token; otherwise the screen names the next recovery action."
+    },
+    {
+      "h": "Preference failures are no longer silent",
+      "was": "A failed toggle save reverted the optimistic switch and stored an error, but the loaded settings screen never rendered or announced that error.",
+      "now": "Loaded save errors render inline with Reload, announce through VoiceOver, and clear before the next save attempt while preserving the safe revert."
+    }
+  ],
+  "verification": [
+    "<strong>17 focused source-contract tests</strong> pass across the five affected iOS notification/settings suites.",
+    "<strong>Native build:</strong> Wisconsin Debug builds successfully for iPhone 16 Pro, iOS 26.5, with code signing disabled.",
+    "<strong>Matched UI capture:</strong> NotificationSettingsScreenshotUITests passes for both the HEAD baseline and final after source; each run exports the same two named screenshots.",
+    "<strong>Artifact inspection:</strong> all four exported PNGs were read before inclusion; the measured Delivery-card displacement is reported above rather than inferred from visual scale.",
+    "<strong>Environment note:</strong> the first sandboxed build stopped before compilation on a Swift Package Manager cache permission error; the same build succeeded with host Xcode/cache access."
+  ],
+  "notes": [
+    "This is deterministic fixture proof, not authenticated production proof. Real APNs delivery, notification permission changes, and physical-device acceptance remain separate gates.",
+    "The baseline and after captures were run at different wall-clock minutes, so the simulator clock differs; preference data, device, fixture, and UI actions were held constant.",
+    "Account deletion remains parked until the product accepts the historical-custody and erasure/pseudonymization contract documented in the remediation plan."
+  ]
+}

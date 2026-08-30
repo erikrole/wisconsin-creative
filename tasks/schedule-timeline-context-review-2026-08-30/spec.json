@@ -1,0 +1,129 @@
+{
+  "title": "Schedule Three-View Browsing and Crew Parity",
+  "eyebrow": "Web / Wisconsin Creative",
+  "lede": "List, Week, and Calendar now share one stable date context, complete responsive browsing, and the same safe staff crew setup and versioned editing model.",
+  "stats": [
+    {
+      "k": "Standalone period to List",
+      "v": "Sep. 21 &rarr; Today",
+      "n": "A Week or Calendar date no longer leaks into a fresh List entry",
+      "tone": "good"
+    },
+    {
+      "k": "Week orientation",
+      "v": "22 / 7 / 47",
+      "n": "Events, active days, and open slots are visible for Sep. 21&ndash;27"
+    },
+    {
+      "k": "Calendar mobile dead ends",
+      "v": "0",
+      "n": "The full 55-event September agenda works at 390px"
+    },
+    {
+      "k": "Staff crew entry points",
+      "v": "3 / 3",
+      "n": "List, Week, and Calendar now share setup and focused management",
+      "tone": "good"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Side by side",
+      "note": "Each pair uses the same authenticated Admin role, source data, period, filters, viewport, and scroll position. Production is the read-only baseline; local is the changed build.",
+      "pairs": [
+        {
+          "title": "Today is an explicit List boundary",
+          "sub": "The continuous timeline now explains the reading direction and keeps the sticky boundary stable.",
+          "before": "tasks/schedule-timeline-context-review-2026-08-30/before-production.png",
+          "beforeCap": "Today appeared as a badge with no explanation of what lived above or below it.",
+          "after": "tasks/schedule-timeline-context-review-2026-08-30/after-local.png",
+          "afterCap": "Today now names the continuous model: past above, upcoming below."
+        },
+        {
+          "title": "Past events are no longer mislabeled as archived",
+          "sub": "Normal ended crew groups remain live timeline history; only genuinely archived calendar records use archive language.",
+          "before": "tasks/schedule-timeline-context-review-2026-08-30/before-past.png",
+          "beforeCap": "Ordinary August events repeated an Archived label and the Today return did not show direction.",
+          "after": "tasks/schedule-timeline-context-review-2026-08-30/after-past.png",
+          "afterCap": "False archive labels are gone and the return control points toward Today."
+        },
+        {
+          "title": "Week is a readable staffing board",
+          "sub": "The same Sep. 21&ndash;27 week is shown at 1280 &times; 900 with all venue filters enabled.",
+          "before": "tasks/schedule-timeline-context-review-2026-08-30/before-week.png",
+          "beforeCap": "Names truncate almost immediately, day orientation is split from navigation, and staffing needs require decoding tiny dots and fractions.",
+          "after": "tasks/schedule-timeline-context-review-2026-08-30/after-week.png",
+          "afterCap": "One shared period header names the week and totals; cards expose time, venue, title, coverage, open slots, and Your shift."
+        },
+        {
+          "title": "Calendar cells carry useful detail",
+          "sub": "The same September 2026 month is shown at 1280 &times; 900 with all venue filters enabled.",
+          "before": "tasks/schedule-timeline-context-review-2026-08-30/before-calendar.png",
+          "beforeCap": "Dense single-line rows clip event identity and leave the operator to infer the day's load.",
+          "after": "tasks/schedule-timeline-context-review-2026-08-30/after-calendar.png",
+          "afterCap": "Day counts, readable time/title chips, and coverage tags make the month scannable; phone widths use a complete agenda."
+        },
+        {
+          "title": "Week can start an unconfigured crew in place",
+          "sub": "The same authenticated Admin, Sep. 7&ndash;13 period, source data, viewport, and unconfigured Women&rsquo;s Golf event are shown before and after.",
+          "before": "tasks/schedule-timeline-context-review-2026-08-30/before-week-crew-setup.jpg",
+          "beforeCap": "The unconfigured event was only a link to Event detail, so Week could not begin staffing work.",
+          "after": "tasks/schedule-timeline-context-review-2026-08-30/after-week-crew-setup.jpg",
+          "afterCap": "The event now opens a focused staff sheet with deliberate Home, Away, and empty starting points, while Event detail stays one link away."
+        },
+        {
+          "title": "Calendar uses the identical crew setup contract",
+          "sub": "The same authenticated Admin, September 2026 month, source data, viewport, and unconfigured Women&rsquo;s Golf event are shown before and after.",
+          "before": "tasks/schedule-timeline-context-review-2026-08-30/before-calendar-crew-setup.jpg",
+          "beforeCap": "The unconfigured month chip only navigated away, leaving Calendar without a staffing entry point.",
+          "after": "tasks/schedule-timeline-context-review-2026-08-30/after-calendar-crew-setup.jpg",
+          "afterCap": "The month chip now opens the same setup sheet as Week and List; the sheet becomes full-screen and remains usable at 390px."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "A stress-test week leaked into List",
+      "was": "Entering List from a standalone Week or Calendar period could land on Sep. 21 instead of the current day.",
+      "now": "Standalone period-to-List navigation clears period reading anchors and goes to Today; only a genuine List-origin round trip restores the earlier List place."
+    },
+    {
+      "h": "Rapid view toggles could rehydrate stale URL state",
+      "was": "A fast Week &rarr; Calendar &rarr; Week sequence could let an older router update replace the user's newer period choice.",
+      "now": "The active period is handed between views immediately and owned URL writes are recognized before the router round trip, with filters retained."
+    },
+    {
+      "h": "Week compressed the work into fragments",
+      "was": "Small cards truncated event identity and hid useful coverage, open-slot, venue, and personal-shift context.",
+      "now": "The shared period header, day counts, readable event cards, explicit staffing state, and expanded mobile days make Week independently useful."
+    },
+    {
+      "h": "Calendar stopped working on phones",
+      "was": "Phone widths replaced the month with a recommendation to switch views.",
+      "now": "Calendar keeps the desktop grid and adds a complete active-day mobile agenda with matching event, coverage, and open-slot semantics."
+    },
+    {
+      "h": "Scope changes could show the wrong rows",
+      "was": "A server-backed view or sport change could temporarily display prior-scope events under newly selected controls.",
+      "now": "Only compatible older-record expansion keeps existing rows; every other scope uses an honest geometry-preserving loading state."
+    },
+    {
+      "h": "Week and Calendar stopped at read-only context",
+      "was": "Configured events opened the legacy detail panel and unconfigured events navigated away, so staff could not complete the List crew workflow from either period view.",
+      "now": "All three views use one focused staff sheet backed by the existing versioned editor. Unconfigured events offer Home, Away, or empty setup; List keeps its inline multi-event workstation as well."
+    }
+  ],
+  "verification": [
+    "<strong>84 focused Schedule contracts</strong> pass across timeline restoration, three-view behavior, staff/worker boundaries, configured and unconfigured parity, URL state, and UI polish.",
+    "<strong>Full TypeScript and full ESLint</strong> pass for the shared repository state.",
+    "<strong>Production-shaped app build</strong> completes successfully across all 251 static pages.",
+    "<strong>Authenticated local browser matrices</strong> pass List focused-sheet and inline handoffs, Week/Calendar configured and unconfigured routing, Home/All filtering, view round-trips, Escape close/reopen, period retention, and 390px setup sheets without horizontal overflow.",
+    "<strong>Runtime failure found:</strong> the shared configured working editor reaches its existing endpoint, but Preview returns Prisma P2022 because the generated client expects a column missing from the Preview database. No schedule data was mutated; full editor-control runtime proof remains blocked by that environment drift."
+  ],
+  "notes": [
+    "The baselines are read-only captures of the currently deployed Schedule using the same authenticated role, data, periods, and viewports as the local after captures; no production or Preview schedule data was mutated.",
+    "Configured crew actions route to the new shared sheet in all three views. Assignment, slot, conversion, call-window, and recovery controls remain source-verified but could not be exercised locally until the Preview schema catches up with the current Prisma client.",
+    "This review proves the local implementation only. It was not committed, pushed, deployed, or production-verified."
+  ]
+}

@@ -84,7 +84,7 @@ final class KioskScannerCoordinator {
     var statusSymbol: String {
         if isEditing { return "pause.circle.fill" }
         switch connectionState {
-        case .disconnected: return "barcode.viewfinder.slash"
+        case .disconnected: return "barcode.viewfinder"
         case .reconnecting: return "arrow.triangle.2.circlepath"
         case .ready: return "barcode.viewfinder"
         }

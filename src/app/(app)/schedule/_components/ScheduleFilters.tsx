@@ -119,7 +119,7 @@ export function ScheduleFilters({ filters, entries, filteredEntries }: ScheduleF
     ...(isListView && filters.includeArchived
       ? [{
           key: "archived",
-          label: "Showing archived events",
+          label: "Showing older records",
           onRemove: () => filters.setIncludeArchived(false),
         }]
       : []),
@@ -160,6 +160,7 @@ export function ScheduleFilters({ filters, entries, filteredEntries }: ScheduleF
           <div className="flex min-h-10 items-center rounded-md border border-border bg-muted/30 p-0.5">
             <ToggleGroup
               type="single"
+              data-schedule-view-controls
               value={filters.viewMode}
               onValueChange={(value) => {
                 if (value) filters.setViewMode(value as ViewMode);
@@ -271,7 +272,7 @@ export function ScheduleFilters({ filters, entries, filteredEntries }: ScheduleF
                 <div className="flex flex-col gap-2 border-b border-border/50 pb-3">
                   <div className="flex items-center justify-between gap-2">
                     <Label htmlFor="archived-events-toggle" className="text-[13px] font-medium cursor-pointer">
-                      Archived events
+                      Older records
                     </Label>
                     <Switch
                       id="archived-events-toggle"
@@ -279,6 +280,9 @@ export function ScheduleFilters({ filters, entries, filteredEntries }: ScheduleF
                       onCheckedChange={filters.setIncludeArchived}
                     />
                   </div>
+                  <p className="text-xs leading-relaxed text-muted-foreground">
+                    Past events are already in List view. This adds records beyond the normal timeline.
+                  </p>
                 </div>
               )}
               <FilterChip

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import type {
   CalendarEvent,
@@ -29,6 +29,18 @@ import {
   type ScheduleQueue,
   type ScheduleQueueMeta,
 } from "@/lib/schedule-queues";
+import {
+  captureScheduleTimelinePosition,
+  chooseScheduleViewContextDate,
+  discardScheduleTimelineReadingPosition,
+  discardScheduleTimelinePosition,
+  readScheduleTimelinePosition,
+  readScheduleTimelineReadingPosition,
+  saveScheduleTimelinePosition,
+  scheduleTimelineSnapshotDate,
+  shouldKeepPreviousScheduleData,
+  type ScheduleQueryScope,
+} from "@/lib/schedule-timeline-position";
 
 export type ViewMode = "list" | "calendar" | "week";
 
@@ -129,6 +141,7 @@ export type UseScheduleDataResult = {
   /** A filter is narrowing which events appear, rather than how far back the window reaches. */
   hasContentFilters: boolean;
   loading: boolean;
+  refreshing: boolean;
   loadError: false | "network" | "server";
   loadData: () => Promise<void>;
   filters: ScheduleFilters;
@@ -169,6 +182,7 @@ function mergeData(events: CalendarEvent[], groups: ShiftGroup[]): CalendarEntry
     const g = groupByEventId.get(ev.id);
     return {
       ...ev,
+      eventArchivedAt: ev.archivedAt ?? null,
       shiftGroupId: g?.id ?? null,
       coverage: g?.coverage ?? null,
       shifts: g?.shifts ?? [],
@@ -427,18 +441,18 @@ export function useScheduleData(): UseScheduleDataResult {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>(() => parseScheduleViewMode(searchParams.get("view")) ?? "list");
+  const [viewMode, setViewModeRaw] = useState<ViewMode>(() => parseScheduleViewMode(searchParams.get("view")) ?? "list");
   const [calMonth, setCalMonth] = useState(() => parseScheduleMonth(searchParams.get("month")) ?? defaultScheduleMonth());
   const [expandedDay, setExpandedDay] = useState<number | null>(null);
   const [weekStart, setWeekStart] = useState(() => parseScheduleWeek(searchParams.get("week")) ?? defaultScheduleWeek());
 
   // Filters
-  const [sportFilter, setSportFilter] = useState(() => searchParams.get("sportCode") ?? "");
-  const [areaFilter, setAreaFilter] = useState(() => searchParams.get("area") ?? "");
-  const [coverageFilter, setCoverageFilter] = useState(() => parseScheduleCoverage(searchParams.get("coverage")));
-  const [homeAwayFilter, setHomeAwayFilter] = useState<HomeAwayFilter>(() => parseScheduleVenue(searchParams.get("venue")));
-  const [includeArchived, setIncludeArchived] = useState(() => searchParams.get("includeArchived") === "true");
-  const [myShiftsOnly, setMyShiftsOnly] = useState(() => searchParams.get("myShifts") === "true");
+  const [sportFilter, setSportFilterRaw] = useState(() => searchParams.get("sportCode") ?? "");
+  const [areaFilter, setAreaFilterRaw] = useState(() => searchParams.get("area") ?? "");
+  const [coverageFilter, setCoverageFilterRaw] = useState(() => parseScheduleCoverage(searchParams.get("coverage")));
+  const [homeAwayFilter, setHomeAwayFilterRaw] = useState<HomeAwayFilter>(() => parseScheduleVenue(searchParams.get("venue")));
+  const [includeArchived, setIncludeArchivedRaw] = useState(() => searchParams.get("includeArchived") === "true");
+  const [myShiftsOnly, setMyShiftsOnlyRaw] = useState(() => searchParams.get("myShifts") === "true");
 
   // UI state
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
@@ -448,6 +462,8 @@ export function useScheduleData(): UseScheduleDataResult {
   const scheduleSearchSignatureRef = useRef(searchParamsString);
   const skipNextScheduleUrlWriteRef = useRef(false);
   const initialPreferencesAppliedRef = useRef(false);
+  const listViewRoundTripRef = useRef(false);
+  const periodContextDateRef = useRef<Date | null>(null);
   const deepLink = useMemo<ScheduleDeepLink>(() => {
     const query = new URLSearchParams(searchParamsString);
     const start = query.get("startDate");
@@ -477,28 +493,123 @@ export function useScheduleData(): UseScheduleDataResult {
     skipNextScheduleUrlWriteRef.current = true;
 
     const query = new URLSearchParams(searchParamsString);
-    setViewMode(parseScheduleViewMode(query.get("view")) ?? "list");
-    setCalMonth(parseScheduleMonth(query.get("month")) ?? defaultScheduleMonth());
-    setWeekStart(parseScheduleWeek(query.get("week")) ?? defaultScheduleWeek());
-    setSportFilter(query.get("sportCode") ?? "");
-    setAreaFilter(query.get("area") ?? "");
-    setCoverageFilter(parseScheduleCoverage(query.get("coverage")));
-    setHomeAwayFilter(parseScheduleVenue(query.get("venue")));
-    setIncludeArchived(query.get("includeArchived") === "true");
-    setMyShiftsOnly(query.get("myShifts") === "true");
+    setViewModeRaw(parseScheduleViewMode(query.get("view")) ?? "list");
+    const requestedMonth = parseScheduleMonth(query.get("month"));
+    const requestedWeek = parseScheduleWeek(query.get("week"));
+    // A period parameter disappears by design when another view owns the URL.
+    // Keep the last known month/week in memory until a URL explicitly supplies
+    // a replacement; resetting both to today here makes a List round trip lose
+    // the date the reader was actually looking at.
+    if (requestedMonth) {
+      setCalMonth(requestedMonth);
+      if (parseScheduleViewMode(query.get("view")) === "calendar") {
+        periodContextDateRef.current = requestedMonth;
+      }
+    }
+    if (requestedWeek) {
+      setWeekStart(requestedWeek);
+      if (parseScheduleViewMode(query.get("view")) === "week") {
+        periodContextDateRef.current = requestedWeek;
+      }
+    }
+    setSportFilterRaw(query.get("sportCode") ?? "");
+    setAreaFilterRaw(query.get("area") ?? "");
+    setCoverageFilterRaw(parseScheduleCoverage(query.get("coverage")));
+    setHomeAwayFilterRaw(parseScheduleVenue(query.get("venue")));
+    setIncludeArchivedRaw(query.get("includeArchived") === "true");
+    setMyShiftsOnlyRaw(query.get("myShifts") === "true");
   }, [searchParamsString]);
 
+  const captureTimelineContext = useCallback(() => {
+    if (viewMode === "list") captureScheduleTimelinePosition();
+  }, [viewMode]);
+
+  const setViewMode = useCallback((next: ViewMode) => {
+    if (viewMode === next) return;
+
+    const priorSnapshot = readScheduleTimelinePosition();
+    const rememberedSnapshot = viewMode === "list"
+      ? readScheduleTimelineReadingPosition()
+      : null;
+    const capturedSnapshot = viewMode === "list" ? captureScheduleTimelinePosition() : null;
+    const listSnapshot = priorSnapshot ?? rememberedSnapshot ?? capturedSnapshot;
+    if (viewMode === "list" && listSnapshot) saveScheduleTimelinePosition(listSnapshot);
+    const contextDate = viewMode === "list"
+      ? scheduleTimelineSnapshotDate(listSnapshot) ?? new Date()
+      : periodContextDateRef.current ?? chooseScheduleViewContextDate({
+          viewMode,
+          snapshot: listViewRoundTripRef.current ? priorSnapshot : null,
+          calMonth,
+          weekStart,
+        });
+    if (viewMode === "list") listViewRoundTripRef.current = true;
+    if (next === "list") {
+      // A real List round trip restores its saved reading position. Opening
+      // List from a standalone Week/Calendar visit is a fresh timeline visit,
+      // so do not leak that period's date into List's default Today anchor.
+      if (!listViewRoundTripRef.current) {
+        discardScheduleTimelinePosition();
+        discardScheduleTimelineReadingPosition();
+      }
+      listViewRoundTripRef.current = false;
+    }
+    if (next === "calendar") {
+      setExpandedDay(null);
+      setCalMonth(new Date(contextDate.getFullYear(), contextDate.getMonth(), 1));
+      periodContextDateRef.current = contextDate;
+    } else if (next === "week") {
+      setWeekStart(getMonday(contextDate));
+      periodContextDateRef.current = contextDate;
+    }
+    setViewModeRaw(next);
+  }, [calMonth, viewMode, weekStart]);
+  const setCalendarMonth = useCallback((next: Date) => {
+    const month = new Date(next.getFullYear(), next.getMonth(), 1);
+    periodContextDateRef.current = month;
+    setCalMonth(month);
+  }, []);
+  const setScheduleWeek = useCallback((next: Date) => {
+    const monday = getMonday(next);
+    periodContextDateRef.current = monday;
+    setWeekStart(monday);
+  }, []);
+  const setSportFilter = useCallback((next: string) => {
+    captureTimelineContext();
+    setSportFilterRaw(next);
+  }, [captureTimelineContext]);
+  const setAreaFilter = useCallback((next: string) => {
+    captureTimelineContext();
+    setAreaFilterRaw(next);
+  }, [captureTimelineContext]);
+  const setCoverageFilter = useCallback((next: string) => {
+    captureTimelineContext();
+    setCoverageFilterRaw(next);
+  }, [captureTimelineContext]);
+  const setHomeAwayFilter = useCallback((next: HomeAwayFilter) => {
+    captureTimelineContext();
+    setHomeAwayFilterRaw(next);
+  }, [captureTimelineContext]);
+  const setIncludeArchived = useCallback((next: boolean) => {
+    captureTimelineContext();
+    setIncludeArchivedRaw(next);
+  }, [captureTimelineContext]);
+  const setMyShiftsOnly = useCallback((next: boolean) => {
+    captureTimelineContext();
+    setMyShiftsOnlyRaw(next);
+  }, [captureTimelineContext]);
+
   const setQueue = useCallback((queue: ScheduleQueue | null) => {
+    captureTimelineContext();
     const params = new URLSearchParams(searchParams.toString());
     if (queue) {
       params.set("queue", queue);
-      setViewMode("list");
+      setViewModeRaw("list");
     } else {
       params.delete("queue");
     }
     const query = params.toString();
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
-  }, [pathname, router, searchParams]);
+  }, [captureTimelineContext, pathname, router, searchParams]);
 
   useEffect(() => {
     if (initialPreferencesAppliedRef.current) return;
@@ -507,15 +618,15 @@ export function useScheduleData(): UseScheduleDataResult {
     const query = new URLSearchParams(searchParamsString);
     if (!query.has("view") && !deepLink.myShiftsOnly && !deepLink.dateRange) {
       const storedView = localStorage.getItem(LS_VIEW_MODE);
-      if (storedView === "calendar" || storedView === "week") setViewMode(storedView);
+      if (storedView === "calendar" || storedView === "week") setViewModeRaw(storedView);
     }
 
     if (!query.has("myShifts")) {
       const storedMyShifts = localStorage.getItem(LS_MY_SHIFTS);
-      if (storedMyShifts !== null) setMyShiftsOnly(storedMyShifts === "true");
+      if (storedMyShifts !== null) setMyShiftsOnlyRaw(storedMyShifts === "true");
     }
 
-    if (deepLink.myShiftsOnly || deepLink.dateRange) setViewMode("list");
+    if (deepLink.myShiftsOnly || deepLink.dateRange) setViewModeRaw("list");
 
     setPreferencesLoaded(true);
     setDeepLinkApplied(true);
@@ -565,7 +676,13 @@ export function useScheduleData(): UseScheduleDataResult {
     const query = params.toString();
     const nextUrl = query ? `${pathname}?${query}` : pathname;
     const currentUrl = searchParamsString ? `${pathname}?${searchParamsString}` : pathname;
-    if (nextUrl !== currentUrl) router.replace(nextUrl, { scroll: false });
+    if (nextUrl !== currentUrl) {
+      // Mark our own URL before App Router publishes it. Otherwise a fast
+      // Week -> Calendar -> Week sequence can receive the first replace after
+      // the second click and rehydrate stale view state over the newer choice.
+      scheduleSearchSignatureRef.current = query;
+      router.replace(nextUrl, { scroll: false });
+    }
   }, [
     calMonth,
     coverageFilter,
@@ -594,7 +711,7 @@ export function useScheduleData(): UseScheduleDataResult {
     if (!preferencesLoaded) return;
     const hasMyShiftsParam = searchParams.get("myShifts") !== null;
     if (meData?.role === "STUDENT" && !hasMyShiftsParam && localStorage.getItem(LS_MY_SHIFTS) === null) {
-      setMyShiftsOnly(true);
+      setMyShiftsOnlyRaw(true);
     }
   }, [meData?.role, preferencesLoaded, searchParams]);
 
@@ -640,16 +757,28 @@ export function useScheduleData(): UseScheduleDataResult {
     effectiveSportFilter,
     deepLink.dateRange,
   );
-  const scheduleQueryKey = ["schedule", eventsUrl, groupsUrl];
+  const scheduleScope: ScheduleQueryScope = {
+    viewMode: effectiveViewMode,
+    includeArchived,
+    sportFilter: effectiveSportFilter,
+    dateRangeKey: deepLink.dateRange
+      ? `${deepLink.dateRange.startDate}|${deepLink.dateRange.endDate}`
+      : "",
+  };
+  const scheduleQueryKey = ["schedule", scheduleScope, eventsUrl, groupsUrl] as const;
 
-  const { data: schedule, isLoading, error: scheduleError, refetch: refetchSchedule } = useQuery({
+  const { data: schedule, isLoading, isFetching, error: scheduleError, refetch: refetchSchedule } = useQuery({
     queryKey: scheduleQueryKey,
     queryFn: ({ signal }) => fetchSchedule(eventsUrl, groupsUrl, signal),
-    // Widening the window -- loading archived events, changing sport -- is a new
-    // query key. Without this the list would empty to a spinner and come back
-    // with the reader's position gone; keeping the previous rows on screen makes
-    // the wider window arrive as an extension of what they were already reading.
-    placeholderData: keepPreviousData,
+    // Only an older-record prepend is the same list becoming wider. A view or
+    // sport change is a different scope; showing its predecessor under the new
+    // controls briefly presents the wrong events as current truth.
+    placeholderData: (previousData, previousQuery) => {
+      const previousScope = previousQuery?.queryKey[1] as ScheduleQueryScope | undefined;
+      return shouldKeepPreviousScheduleData(previousScope, scheduleScope)
+        ? previousData
+        : undefined;
+    },
     ...SCHEDULE_FRESH_QUERY_OPTIONS,
   });
   const entries = useMemo(() => schedule?.entries ?? [], [schedule]);
@@ -772,6 +901,7 @@ export function useScheduleData(): UseScheduleDataResult {
     isTimeline,
     hasContentFilters,
     loading,
+    refreshing: preferencesLoaded && isFetching && !isLoading,
     loadError,
     loadData,
     filters: {
@@ -794,12 +924,13 @@ export function useScheduleData(): UseScheduleDataResult {
       setQueue,
       hasFilters,
       clearAll: () => {
-        setSportFilter("");
-        setAreaFilter("");
-        setCoverageFilter("");
-        setHomeAwayFilter("all");
-        setIncludeArchived(false);
-        setMyShiftsOnly(false);
+        captureTimelineContext();
+        setSportFilterRaw("");
+        setAreaFilterRaw("");
+        setCoverageFilterRaw("");
+        setHomeAwayFilterRaw("all");
+        setIncludeArchivedRaw(false);
+        setMyShiftsOnlyRaw(false);
         skipNextScheduleUrlWriteRef.current = true;
         const params = new URLSearchParams(searchParams.toString());
         params.delete("queue");
@@ -816,9 +947,9 @@ export function useScheduleData(): UseScheduleDataResult {
       },
     },
     calMonth,
-    setCalMonth,
+    setCalMonth: setCalendarMonth,
     weekStart,
-    setWeekStart,
+    setWeekStart: setScheduleWeek,
     currentUserId,
     currentUserRole,
     openTradeCount: tradeCount,

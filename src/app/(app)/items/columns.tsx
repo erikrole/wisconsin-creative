@@ -454,9 +454,9 @@ export function getColumns(meta: ColumnMeta): ColumnDef<Asset>[] {
                   <Printer className="size-4" />
                   Print label
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => meta.onRowAction?.("duplicate", asset)}>
+                <DropdownMenuItem onClick={() => meta.onRowAction?.("add-another", asset)}>
                   <Copy className="size-4" />
-                  Duplicate
+                  Add another like this
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => meta.onRowAction?.("maintenance", asset)}>

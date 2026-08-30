@@ -4,6 +4,8 @@ import UIKit
 struct KioskShellView: View {
     @Environment(KioskStore.self) private var store
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var showSystemStatus = false
+    @State private var statusRevealTask: Task<Void, Never>?
 
     /// One transition unit per logical screen. Keying by case (plus the
     /// identifying payload) means in-screen state changes never re-trigger the
@@ -107,10 +109,26 @@ struct KioskShellView: View {
                     .padding(20)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
             }
+
+            if store.screen != .activation && !showSystemStatus {
+                Button {
+                    revealSystemStatus()
+                } label: {
+                    Image(systemName: "info.circle")
+                        .font(.body.weight(.semibold))
+                        .frame(width: 44, height: 44)
+                }
+                .buttonStyle(.bordered)
+                .tint(KioskText.secondary)
+                .accessibilityLabel("Show device status")
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .padding(.leading, 20)
+                .padding(.top, 20)
+            }
         }
         .preferredColorScheme(.dark)
-        .persistentSystemOverlays(.hidden)
-        .statusBarHidden()
+        .persistentSystemOverlays(showSystemStatus ? .visible : .hidden)
+        .statusBarHidden(!showSystemStatus)
         // Restore an activated kiosk on cold launch without needing the
         // deeplink — a dedicated iPad always returns to kiosk mode.
         .task {
@@ -127,6 +145,16 @@ struct KioskShellView: View {
             reduceMotion ? .easeInOut(duration: 0.15) : .easeOut(duration: 0.28),
             value: screenKey
         )
+    }
+
+    private func revealSystemStatus() {
+        statusRevealTask?.cancel()
+        showSystemStatus = true
+        statusRevealTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 8_000_000_000)
+            guard !Task.isCancelled else { return }
+            showSystemStatus = false
+        }
     }
 }
 

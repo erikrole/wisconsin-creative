@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Items
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-27
+- Last Updated: 2026-08-30
 - Status: Active
 - Version: V1
 
@@ -29,7 +29,7 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 9. Metadata enrichment from external product URLs is not supported in V1.
 10. Camera-tied SD cards, cages, and fixed camera parts are tracked as item attachments when they should travel with the parent camera and not be individually checked out.
 11. One unit-tracked family may contain multiple interchangeable branded products. The family remains the one catalog and reservation row; product identity belongs to each numbered physical unit.
-12. Battery discovery uses four canonical item-family rows only: `Monitor Battery`, `Sony Battery`, `Gold Mount Battery`, and `FX6 Battery`. Quantity-only, model-specific, and serialized battery duplicates stay out of the active catalog.
+12. General battery discovery uses four canonical item-family rows: `Monitor Battery`, `Sony Battery`, `Gold Mount Battery`, and `FX6 Battery`. Quantity-only, model-specific, and serialized battery duplicates stay out of the active catalog. `Football Sony Battery` is the accepted second Sony family so its inventory pool stays operationally distinct, but it appears and behaves like every other unit-tracked family and shares the normal `Sony Battery` access policy.
 
 ## V1 Workflow
 
@@ -65,10 +65,15 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
    - Standard: one physical unit per record with unique identity.
    - Units: one catalog row with numbered/scannable units underneath.
    - Quantity: one catalog row with count-only stock.
-3. User enters required fields and optional advanced metadata.
-4. For a newly created Standard, Units, or Quantity record, the user can stage an optional image from product search, HTTPS URL, or file upload before saving. Quantity adjustments to an existing record keep the existing catalog image unchanged.
-5. The create mutation runs first, then the staged image saves through the created record's audited image endpoint.
-6. The shared handoff confirms record and image state, prioritizes `Add another item`, and keeps `Open item` and `Return to list` available.
+3. One compact Essentials card keeps the current tracking style's required identity fields together and reports required-field progress in the anchored action footer.
+4. Optional product, image, procurement, notes, and workflow-policy groups start collapsed and reopen automatically when validation needs one of their fields.
+5. Quantity intake makes `Create new item` versus `Add to existing` explicit. Existing-stock lookup distinguishes loading, retryable failure, and a true no-active-items result instead of presenting failed data as an empty selector.
+6. For a newly created Standard, Units, or Quantity record, the user can stage an optional image from product search, HTTPS URL, or file upload before saving. Quantity adjustments to an existing record keep the existing catalog image unchanged.
+7. The create mutation runs first, then the staged image saves through the created record's audited image endpoint.
+8. The shared handoff confirms record and image state, prioritizes the next intake action, and keeps `Open item` and `Return to list` available. Blank intake offers `Add another item`; serialized copy-forward intake offers `Add another like this` plus `Add different item`. Every handoff exit refreshes Items truth.
+9. Serialized rows and detail pages offer `Add another like this`. The normal Add Item sheet copies reusable product, taxonomy, location, image, link, and workflow-policy defaults; suggests the next sequential asset tag; generates a fresh QR code; and leaves serial, campus tag, purchase, warranty, residual, fiscal-year, and notes values for the new physical unit.
+10. Standard intake can create 1–25 physical records in one workspace. Product, organization, shipment, image, and workflow values stay shared while asset tag, serial, QR, and campus tag remain explicit per physical item. Pasted serial columns can add rows, and changing the first generated tag advances untouched later tags without overwriting manual tag edits.
+11. A Standard batch sends each physical item through the existing audited asset-create route. In-batch identity conflicts block before submit; server conflicts remain attached to the exact unfinished row. Partial success removes completed rows from the draft, preserves the original next-tag continuation and image-retry state, and never resubmits records already created.
 
 > **Picker Roadmap:** Form comboboxes (Department, Location, Category, Bulk SKU) are covered in `tasks/item-picker-roadmap.md` — see FormCombobox V1 cleanup for normalization plan.
 
@@ -187,8 +192,12 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 4. Standard attachments keep category, location, parent item, and QR code required, but the visible asset tag field may be blank. Blank attachment tags submit a generated internal tag from the parent, attachment identity, and QR code so the physical label can stay QR-only with a nearby parent number.
 5. Blank Standard brand/model values submit explicit `Unknown` placeholders until operators replace them, preserving the current non-null asset schema without blocking high-volume intake.
 6. Submit disables form controls, guards rapid duplicate submits, handles expired sessions through the shared auth redirect, and shows form-level errors for validation, permission, server, or network failures.
-7. Every successful Standard, Units, Quantity, or add-to-existing mutation shows the same explicit handoff. `Add another item` resets the full sheet to a blank Standard record; image failure after a successful create keeps the created record and offers a retry without repeating creation.
+7. Every successful Standard, Units, Quantity, or add-to-existing mutation shows the same explicit handoff. `Add another item` or `Add different item` resets the full sheet to a blank Standard record. A serialized copy-forward handoff can instead keep the current reusable product template for `Add another like this`; image failure after a successful create keeps the created record and offers a retry without repeating creation.
 8. The sheet does not persist drafts in V1. Long-lived draft recovery remains reserved for full-page wizard flows such as booking creation.
+9. Client validation associates errors with their fields, opens a collapsed optional group when necessary, and moves focus to the first repair target. Server identity conflicts return focus to asset tag, serial number, or QR code when that identity is known.
+10. Closing a changed, unsubmitted sheet requires explicit discard confirmation; an untouched sheet and a completed handoff can close directly.
+11. Standard batch intake is bounded to 25 rows and blocks blank tags, blank QR codes, duplicate tags, duplicate nonblank serials, and duplicate QR values within the draft. Serial remains optional for fast intake.
+12. Batch submission reports record and image progress. A partial result names each unfinished tag and offers `Fix remaining`; successful rows are removed before repair, while a full result can repeat the same shipment size with the next sequential tag.
 
 ## Item Detail Surface (V1)
 
@@ -207,7 +216,7 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
    - Reserve
    - Check out
 5. `Actions` button exposes secondary operations:
-   - Duplicate
+   - Add another like this
    - Retire
    - Delete
    - Needs Maintenance
@@ -368,7 +377,7 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 - [x] AC-5: Create flow enforces required fields by item kind.
 - [x] AC-6: Default `Info` tab shows both operational overview cards and the item information card.
 - [x] AC-7: Item detail exposes required tabs and role-appropriate actions.
-- [x] AC-8: `Actions` menu includes Duplicate, Retire, Delete, and Needs Maintenance with policy-safe gating.
+- [x] AC-8: `Actions` menu includes Add another like this, Retire, Delete, and Needs Maintenance with policy-safe gating.
 - [x] AC-9: Category and fiscal year fields use controlled dropdowns.
 - [x] AC-10: QR code thumbnail renders from stored text code, and missing-code flow supports generation or manual entry.
 - [x] AC-11: Empty optional fields show inline `Add ...` prompts instead of blank values.
@@ -435,6 +444,11 @@ Item families can optionally enable `trackByNumber` on the backing `BulkSku` imp
 5. Preserve audit coverage for every mutation.
 
 ## Change Log
+
+- 2026-08-30: **Standard intake now receives a serialized shipment without repeating product entry.** Operators can create up to 25 physical records in one Add Item workspace, share product, organization, shipment, image, and workflow values, and edit tag, serial, QR, and campus tag per row. Sequential tags follow the first tag while preserving manual overrides; pasted serial columns expand the workspace; in-batch identity conflicts block locally; and each record still uses the existing authenticated, permission-checked, uniqueness-enforced, audited asset-create route. Progress is explicit, a partial result retains only unfinished rows, and continuation preserves next-tag and image-retry truth so already-created records are never submitted again. No schema, migration, item-family behavior, or new mutation route was introduced.
+- 2026-08-30: **Repeated serialized intake now creates a new physical unit from safe product defaults.** `Add another like this` replaces instant duplication on serialized list rows and item detail. It opens the normal audited Add Item flow with product name, brand, model, category, department, location, link, image, and workflow policy copied forward; suggests the next sequential asset tag and a fresh QR code; and leaves serial, campus tag, purchase, warranty, residual, fiscal-year, and notes fields empty for the new unit. The post-create handoff can continue the same-product batch or start a different item without introducing a new mutation route or schema contract.
+- 2026-08-30: **Add Item now follows one short intake path without hiding recovery.** Standard keeps asset tag, category, location, and QR together above the fold; Units and Quantity use the same required-first hierarchy; optional metadata and image groups start collapsed; and the anchored footer reports completion with tracking-aware `Create item` or `Add stock` language. Validation now opens and focuses the field that needs repair, dirty sheets require discard confirmation, all successful handoff exits refresh Items, and count-stock lookup distinguishes loading, failure with Retry, and a real empty result. Authenticated local desktop and 390px browser smoke verified the layout, focus recovery, disclosure, discard guard, and failed-stock recovery state without creating production or Preview data. Real create/adjust handoff mutation proof and matched before/after review remain separate from that UI slice.
+- 2026-08-30: **Football Sony Battery stays distinct without special access treatment.** Items will show it as a normal unit-tracked family beside the normal Sony family. No roster label, disabled requester state, or family-specific access setting is part of the product; physical family and unit creation remain open under GAP-74.
 
 - 2026-08-27: **Repeated item copies now keep the latest feedback authoritative.** Link, QR-dialog, and QR/serial identity copy controls cancel the older reset timer, ignore superseded clipboard results, and clear pending timers when the control leaves the page. A second success receives its full copied-state window instead of being cleared early by the first click. Item identity, QR generation, permissions, and data contracts are unchanged. Focused tests, TypeScript, full lint, and `npm run build:app` pass locally; populated Item browser proof remains separate.
 

@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct TradePostCandidate: Identifiable {
+struct TradePostCandidate: Identifiable, Hashable {
     let id: String
     let area: String
     let eventTitle: String
@@ -38,6 +38,7 @@ struct TradePostCandidate: Identifiable {
 struct PostTradeSheet: View {
     let candidates: [TradePostCandidate]
     let initiallySelectedId: String?
+    let wrapsInNavigationStack: Bool
     let onPosted: (TradePostCandidate) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -47,7 +48,11 @@ struct PostTradeSheet: View {
     @State private var error: String?
     @State private var showDiscardConfirm = false
 
-    init(myShifts: [MyShift], onPosted: @escaping (TradePostCandidate) -> Void) {
+    init(
+        myShifts: [MyShift],
+        wrapsInNavigationStack: Bool = true,
+        onPosted: @escaping (TradePostCandidate) -> Void
+    ) {
         let now = Date()
         let candidates = myShifts
             .filter { $0.startsAt > now && $0.statusValue == .active }
@@ -55,13 +60,19 @@ struct PostTradeSheet: View {
             .sorted { $0.startsAt < $1.startsAt }
         self.candidates = candidates
         initiallySelectedId = candidates.count == 1 ? candidates.first?.id : nil
+        self.wrapsInNavigationStack = wrapsInNavigationStack
         self.onPosted = onPosted
         _selectedId = State(initialValue: initiallySelectedId)
     }
 
-    init(candidate: TradePostCandidate, onPosted: @escaping (TradePostCandidate) -> Void) {
+    init(
+        candidate: TradePostCandidate,
+        wrapsInNavigationStack: Bool = true,
+        onPosted: @escaping (TradePostCandidate) -> Void
+    ) {
         candidates = [candidate]
         initiallySelectedId = candidate.id
+        self.wrapsInNavigationStack = wrapsInNavigationStack
         self.onPosted = onPosted
         _selectedId = State(initialValue: candidate.id)
     }
@@ -75,7 +86,16 @@ struct PostTradeSheet: View {
     }
 
     var body: some View {
-        NavigationStack {
+        if wrapsInNavigationStack {
+            NavigationStack {
+                postContent
+            }
+        } else {
+            postContent
+        }
+    }
+
+    private var postContent: some View {
             ScrollView {
                 VStack(spacing: 16) {
                     if candidates.isEmpty {
@@ -143,7 +163,6 @@ struct PostTradeSheet: View {
             } message: {
                 Text("Your selection and note will be lost.")
             }
-        }
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
     }

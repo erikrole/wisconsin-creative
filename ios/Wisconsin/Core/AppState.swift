@@ -46,6 +46,13 @@ final class AppState {
     /// Booking to open in the Bookings tab. Set after a reservation is created
     /// from the app-level composer, which may outlive the screen it started on.
     var pendingBookingDetailId: String?
+    /// Compact-width fallback for a sidebar destination that cannot be a tab.
+    /// Browse consumes this once and opens the equivalent native route.
+    var pendingBrowseDestination: String?
+    /// Set by the app-wide Command-Comma shortcut. The Home shell consumes
+    /// this after the selected tab has been restored so Settings opens through
+    /// the same native Profile route as the visible gear button.
+    var pendingSettingsRoute = false
     /// Dashboard hint for landing Schedule on the viewer's own shifts. Set by
     /// the Home Shifts tile, whose count is personal, so the screen it opens
     /// should be scoped the same way. Consumed and cleared by ScheduleView.
@@ -79,6 +86,8 @@ final class AppState {
         pendingBookingsScope = nil
         pendingScheduleMyShifts = false
         pendingBookingDetailId = nil
+        pendingBrowseDestination = nil
+        pendingSettingsRoute = false
 
         selectedTab = 0
         resetTab = nil

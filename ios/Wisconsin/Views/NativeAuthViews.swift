@@ -65,7 +65,7 @@ struct NativeRegistrationView: View {
     var body: some View {
         Form {
             Section {
-                Text("Your invited email is approved. Create a password, then we’ll walk you through the details needed for work.")
+                Text("Your invited email is approved. Create a password, then add the details needed for work.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
 
@@ -73,7 +73,13 @@ struct NativeRegistrationView: View {
                     .textContentType(.name)
                     .focused($focusedField, equals: .name)
                     .submitLabel(.next)
-                    .onSubmit { focusedField = .email }
+                    .onSubmit { focusedField = emailIsLocked ? .password : .email }
+
+                if !name.isEmpty && name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Text("Enter your name.")
+                        .font(.footnote)
+                        .foregroundStyle(Color.statusText(.red))
+                }
 
                 TextField("Email", text: $email)
                     .textInputAutocapitalization(.never)
@@ -88,6 +94,12 @@ struct NativeRegistrationView: View {
                     .onSubmit { focusedField = .password }
                     .disabled(emailIsLocked)
 
+                if !email.isEmpty && !Self.isValidEmail(normalizedEmail) {
+                    Text("Use a valid email address.")
+                        .font(.footnote)
+                        .foregroundStyle(Color.statusText(.red))
+                }
+
                 AuthEmailDomainNote(email: email)
 
                 SecureField("Password", text: $password)
@@ -96,11 +108,23 @@ struct NativeRegistrationView: View {
                     .submitLabel(.next)
                     .onSubmit { focusedField = .confirmPassword }
 
+                if !password.isEmpty && password.count < 8 {
+                    Text("Use at least 8 characters.")
+                        .font(.footnote)
+                        .foregroundStyle(Color.statusText(.red))
+                }
+
                 SecureField("Confirm password", text: $confirmPassword)
                     .textContentType(.newPassword)
                     .focused($focusedField, equals: .confirmPassword)
                     .submitLabel(.done)
                     .onSubmit { submit() }
+
+                if !confirmPassword.isEmpty && password != confirmPassword {
+                    Text("Passwords do not match.")
+                        .font(.footnote)
+                        .foregroundStyle(Color.statusText(.red))
+                }
 
                 if let formError {
                     Label(formError, systemImage: "exclamationmark.triangle.fill")
@@ -168,7 +192,7 @@ struct NativeRegistrationView: View {
                 if session.currentUser != nil {
                     dismiss()
                 } else {
-                    formError = session.error ?? "We couldn't create your account. Please try again."
+                    formError = session.error ?? "Your account couldn't be created. Please try again."
                 }
             }
             return
@@ -233,7 +257,7 @@ struct NativeForgotPasswordView: View {
                 }
             } else {
                 Section {
-                    Text("Enter your account email. If password recovery is available, we’ll send a reset link.")
+                    Text("Enter your account email. If password recovery is available, a reset link will be sent.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
 

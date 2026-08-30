@@ -147,9 +147,9 @@ function RowContextMenu({
         {canMutateSerialized && (
           <>
             <ContextMenuSeparator />
-            <ContextMenuItem disabled={actionBusy} onSelect={() => onRowAction?.("duplicate", item)}>
+            <ContextMenuItem disabled={actionBusy} onSelect={() => onRowAction?.("add-another", item)}>
               <Copy />
-              Duplicate
+              Add another like this
             </ContextMenuItem>
             <ContextMenuItem disabled={actionBusy} onSelect={() => onRowAction?.("maintenance", item)}>
               <Wrench />

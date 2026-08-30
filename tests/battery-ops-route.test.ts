@@ -73,9 +73,20 @@ describe("battery ops live counts", () => {
         location: { id: "loc-1", name: "Camp Randall" },
         categoryRel: { id: "cat-1", name: "Batteries" },
         balances: [{ onHandQuantity: 99 }],
+        products: [
+          {
+            id: "product-1",
+            name: "Sony NP-FZ100",
+            brand: "Sony",
+            model: "NP-FZ100",
+            active: true,
+            _count: { units: 1 },
+          },
+        ],
         units: [
           {
             id: "unit-1",
+            productId: "product-1",
             unitNumber: 1,
             status: BulkUnitStatus.AVAILABLE,
             notes: null,
@@ -179,6 +190,7 @@ describe("battery ops live counts", () => {
     }));
     expect(body.data.skus[0].units[0]).toEqual(expect.objectContaining({
       unitNumber: 1,
+      productId: "product-1",
       labelPrintedAt: "2026-06-01T00:00:00.000Z",
       labelPrintedById: "staff-1",
       labelPrintBatchId: "batch-1",
@@ -187,6 +199,15 @@ describe("battery ops live counts", () => {
       unitNumber: 4,
       labelPrintedAt: null,
     }));
+    expect(body.data.skus[0].products).toEqual([
+      {
+        id: "product-1",
+        name: "Sony NP-FZ100",
+        brand: "Sony",
+        model: "NP-FZ100",
+        assignedUnitCount: 1,
+      },
+    ]);
     expect(body.data.compatibility[0]).toEqual(expect.objectContaining({
       ruleId: "sony-np-fz100",
       availableQuantity: 1,

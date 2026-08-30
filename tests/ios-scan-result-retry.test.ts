@@ -20,7 +20,7 @@ describe("iOS Scan result retry recovery", () => {
 
     expect(prompt).toContain('Text("Point your camera at a barcode or QR code');
     expect(prompt.match(/\.fixedSize\(horizontal: false, vertical: true\)/g)).toHaveLength(2);
-    expect(prompt).toContain('Text("Turn on camera")');
+    expect(prompt).toContain('Text("Continue")');
     expect(prompt).toContain("ScrollView {");
     expect(prompt).toContain(".scrollBounceBehavior(.basedOnSize)");
   });

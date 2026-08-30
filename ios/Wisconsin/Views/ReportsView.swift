@@ -171,7 +171,7 @@ struct ReportsView: View {
     var body: some View {
         Group {
             if !vm.hasAnyData && vm.isLoading {
-                ProgressView()
+                ProgressView("Loading reports")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let error = vm.error, !vm.hasAnyData {
                 ContentUnavailableView {
@@ -308,31 +308,33 @@ struct ReportsView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     calloutHeader(points: points)
 
-                    Chart(points) { point in
-                        AreaMark(
-                            x: .value("Day", point.day),
-                            y: .value("Checkouts", point.count)
-                        )
-                        // Mirrors web's --report-chart-active-soft.
-                        .foregroundStyle(
-                            .linearGradient(
-                                colors: [
-                                    Color.chartFill(.active).opacity(0.20),
-                                    Color.chartFill(.active).opacity(0.02),
-                                ],
-                                startPoint: .top,
-                                endPoint: .bottom
+                    Chart {
+                        ForEach(points) { point in
+                            AreaMark(
+                                x: .value("Day", point.day),
+                                y: .value("Checkouts", point.count)
                             )
-                        )
-                        .interpolationMethod(.monotone)
+                            // Mirrors web's --report-chart-active-soft.
+                            .foregroundStyle(
+                                .linearGradient(
+                                    colors: [
+                                        Color.chartFill(.active).opacity(0.20),
+                                        Color.chartFill(.active).opacity(0.02),
+                                    ],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                            .interpolationMethod(.monotone)
 
-                        LineMark(
-                            x: .value("Day", point.day),
-                            y: .value("Checkouts", point.count)
-                        )
-                        .foregroundStyle(Color.chartFill(.active))
-                        .lineStyle(StrokeStyle(lineWidth: 2))
-                        .interpolationMethod(.monotone)
+                            LineMark(
+                                x: .value("Day", point.day),
+                                y: .value("Checkouts", point.count)
+                            )
+                            .foregroundStyle(Color.chartFill(.active))
+                            .lineStyle(StrokeStyle(lineWidth: 2))
+                            .interpolationMethod(.monotone)
+                        }
 
                         if let selectedDay, let match = ReportTrendPoint.nearest(to: selectedDay, in: points) {
                             RuleMark(x: .value("Day", match.day))

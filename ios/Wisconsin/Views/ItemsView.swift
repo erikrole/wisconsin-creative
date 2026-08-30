@@ -17,7 +17,7 @@ struct AssetRouteId: Hashable {
 @MainActor
 @Observable
 final class ItemsViewModel {
-    enum SortOption: String, CaseIterable, Identifiable {
+    enum SortOption: String, CaseIterable, Identifiable, Hashable {
         case popular = "popular"
         case assetTag = "assetTag"
 
@@ -250,7 +250,6 @@ struct ItemsView: View {
                     }
                     .listControlTint(isActive: vm.favoritesOnly)
                     .accessibilityLabel(vm.favoritesOnly ? "Favorites on" : "Favorites off")
-                    .sensoryFeedback(.selection, trigger: vm.favoritesOnly)
 
                     AssetStatusFilterMenu(selected: $vm.selectedStatuses) {
                         Task { await vm.load(reset: true) }
@@ -309,19 +308,23 @@ struct ItemsView: View {
                             .buttonStyle(.borderedProminent)
                     }
                 } else if vm.rows.isEmpty && vm.isLoading {
-                    List {
-                        ForEach(0..<10, id: \.self) { _ in
-                            ItemRowSkeleton()
-                                .listRowSeparator(.hidden)
-                                .listRowBackground(Color.clear)
-                                .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
+                    VStack(spacing: 8) {
+                        ProgressView("Loading items")
+                            .padding(.top, 12)
+                        List {
+                            ForEach(0..<10, id: \.self) { _ in
+                                ItemRowSkeleton()
+                                    .listRowSeparator(.hidden)
+                                    .listRowBackground(Color.clear)
+                                    .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
+                            }
                         }
+                        .listStyle(.plain)
+                        .scrollContentBackground(.hidden)
+                        .background(Color(.systemGroupedBackground))
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)  // Placeholder shapes stay decorative.
                     }
-                    .listStyle(.plain)
-                    .scrollContentBackground(.hidden)
-                    .background(Color(.systemGroupedBackground))
-                    .allowsHitTesting(false)
-                    .accessibilityHidden(true)  // Don't pollute VO with placeholder shapes during initial load.
                 } else if vm.rows.isEmpty {
                     ContentUnavailableView {
                         Label(
@@ -368,7 +371,7 @@ struct ItemsView: View {
                             .listRowSeparator(.hidden)
                             .listRowBackground(Color.clear)
                         } else if vm.hasMore {
-                            ProgressView()
+                            ProgressView("Loading more items")
                                 .frame(maxWidth: .infinity)
                                 .listRowSeparator(.hidden)
                                 .listRowBackground(Color.clear)
@@ -413,6 +416,14 @@ struct ItemsView: View {
                 }
                 // Shared marker accent, not a status tone -- see Brand.marker.
                 .tint(Color.marker)
+                if let tag = asset.assetTag, !tag.isEmpty {
+                    Button {
+                        UIPasteboard.general.string = tag
+                    } label: {
+                        Label("Copy Asset Tag", systemImage: "doc.on.doc")
+                    }
+                    .tint(Color.statusText(.blue))
+                }
             }
             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                 if asset.computedStatus != .retired {
@@ -421,7 +432,7 @@ struct ItemsView: View {
                     } label: {
                         Label("Reserve", systemImage: "plus.circle")
                     }
-                    .tint(.accentColor)
+                    .tint(Color.brandPrimary)
                 }
             }
             .contextMenu {
@@ -461,7 +472,7 @@ struct ItemsView: View {
                     } label: {
                         Label("Reserve", systemImage: "plus.circle")
                     }
-                    .tint(.accentColor)
+                    .tint(Color.brandPrimary)
                 }
                 .contextMenu {
                     Button {
@@ -794,7 +805,7 @@ struct AssetThumbnail: View {
     var body: some View {
         Group {
             if let urlString = imageUrl, let url = URL(string: urlString) {
-                CachedThumbnail(url: url, size: size)
+                CachedThumbnail(url: url, size: size, placeholderSystemImage: "bag")
             } else {
                 placeholder
             }
@@ -856,32 +867,16 @@ struct AssetStatusFilterMenu: View {
 
     var body: some View {
         Menu {
-            Button {
+            Button("Clear Status Filters") {
                 if !selected.isEmpty {
                     selected = []
                     onSelect()
                 }
-            } label: {
-                HStack {
-                    Text("All")
-                    if selected.isEmpty { Image(systemName: "checkmark") }
-                }
             }
+            .disabled(selected.isEmpty)
             Divider()
             ForEach(statuses, id: \.self) { status in
-                Button {
-                    if selected.contains(status) {
-                        selected.remove(status)
-                    } else {
-                        selected.insert(status)
-                    }
-                    onSelect()
-                } label: {
-                    HStack {
-                        Text(status.label)
-                        if selected.contains(status) { Image(systemName: "checkmark") }
-                    }
-                }
+                Toggle(isOn: statusBinding(for: status)) { Text(status.label) }
             }
         } label: {
             Label(
@@ -896,6 +891,17 @@ struct AssetStatusFilterMenu: View {
     private var statusFilterTitle: String {
         selected.isEmpty ? "All statuses" : "\(selected.count) statuses"
     }
+
+    private func statusBinding(for status: AssetComputedStatus) -> Binding<Bool> {
+        Binding(
+            get: { selected.contains(status) },
+            set: { isSelected in
+                if isSelected { selected.insert(status) }
+                else { selected.remove(status) }
+                onSelect()
+            }
+        )
+    }
 }
 
 struct ItemSortMenu: View {
@@ -903,18 +909,9 @@ struct ItemSortMenu: View {
     let onSelect: () -> Void
 
     var body: some View {
-        Menu {
+        Picker(selection: $selected) {
             ForEach(ItemsViewModel.SortOption.allCases) { option in
-                Button {
-                    guard selected != option else { return }
-                    selected = option
-                    onSelect()
-                } label: {
-                    HStack {
-                        Text(option.label)
-                        if selected == option { Image(systemName: "checkmark") }
-                    }
-                }
+                Text(option.label).tag(option)
             }
         } label: {
             // The filled circle is the only thing that ever said this control
@@ -925,6 +922,8 @@ struct ItemSortMenu: View {
                 systemImage: isDefault ? "arrow.up.arrow.down" : "arrow.up.arrow.down.circle.fill"
             )
         }
+        .pickerStyle(.menu)
+        .onChange(of: selected) { _, _ in onSelect() }
         .listControlTint(isActive: !isDefault)
         .accessibilityLabel("Sort items by \(selected.label)")
     }

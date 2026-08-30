@@ -14,6 +14,7 @@ import {
   type SignatureMemberGroup,
   type SignatureRosterEntry,
 } from "./types";
+import { getOfficialSignatureRosterSeed } from "./official-rosters";
 
 export const UW_BADGERS_ORIGIN = "https://uwbadgers.com";
 const ALLOWED_HOSTS = new Set(["uwbadgers.com", "www.uwbadgers.com"]);
@@ -371,6 +372,14 @@ export async function fetchUWBadgersRoster(
   season: string,
 ): Promise<UWBadgersRosterSnapshot> {
   const parsed = signatureRosterImportSchema.parse({ sportCode, season });
+  const officialSeed = getOfficialSignatureRosterSeed(parsed.sportCode, parsed.season);
+  if (officialSeed) {
+    return {
+      ...officialSeed,
+      fetchedAt: new Date(),
+      sourceHash: normalizedRosterHash(officialSeed.entries, officialSeed.parserVersion),
+    };
+  }
   const source = getSignatureRosterSourceConfig(parsed.sportCode);
   const sourceUrl = buildUWBadgersRosterUrl(parsed.sportCode, parsed.season);
   const controller = new AbortController();

@@ -395,6 +395,7 @@
   - `BookingBulkUnitAllocation` links specific units to bookings with checkout/checkin timestamps.
   - Existing quantity-only SKUs can be converted to numbered tracking via a dedicated endpoint.
   - A numbered item family may contain multiple interchangeable branded products while remaining one booking line and one QR sequence. `BulkSkuProduct` stores the product identity, and each `BulkSkuUnit` may reference one product without changing its family, unit number, status, allocation, or derived QR value.
+  - Separate item families may represent independently operated pools even when they share product identity and checkout policy. The split must be explicit operational direction, not a substitute for product metadata.
 - Consequences:
   - One item-family row can display availability like `43/46 available`.
   - Loss tracking works at the individual unit level without creating catalog rows for every battery.
@@ -402,7 +403,7 @@
   - All unit operations use `createMany`/`updateMany` to batch DB calls efficiently.
   - QR-coded batteries continue to use this model when they behave like the existing Sony battery flow: one item family with unit-level tracking beneath it.
   - Product breakdowns are operational metadata beneath the family. Reservations continue to request the family quantity, while item-family detail and unit lookup can identify the exact product assigned to a scanned unit.
-  - The operational battery catalog uses four canonical unit-tracked families: `Monitor Battery`, `Sony Battery`, `Gold Mount Battery`, and `FX6 Battery`. Product or model differences stay beneath those rows instead of creating parallel quantity, serialized, or model-specific catalog entries.
+  - The general operational battery catalog uses four canonical unit-tracked families: `Monitor Battery`, `Sony Battery`, `Gold Mount Battery`, and `FX6 Battery`. `Football Sony Battery` is an accepted separate operational pool but shares the normal `Sony Battery` reservation and custody policy. Product or model differences without an accepted pool boundary stay beneath the family rows.
   - Catalog consolidation hard-deletes only history-free duplicates. Rows with booking, allocation, scan, or stock-movement history are retired or deactivated so the active catalog stays singular without erasing operational evidence.
   - Derived unit QR scans keep batteries out of top-level serialized assets while still supporting individual QR labels and custody.
   - Camera-model battery compatibility warnings are advisory at creation; they do not block checkout creation because physical battery accountability happens at kiosk pickup.
@@ -413,6 +414,7 @@
   - Unit numbers are permanent; retiring #7 does not renumber #8–40.
   - Product assignments must not be inferred from unit-number ranges. The unit-to-product relation is the source of truth.
   - Removing or archiving a product must not delete or renumber its units; assigned historical identity remains readable.
+  - A separate family name does not create authorization policy. Any future family-specific access rule requires a new accepted decision and end-to-end mutation-boundary design.
 
 ## D-023: Item Bundling via Parent-Child Accessories
 - Date: 2026-03-16
@@ -1114,6 +1116,7 @@ These are non-negotiable integrity constraints. Every feature must preserve them
   `docs/RELEASE_VERIFICATION.md`.
 
 ## Change Log
+- 2026-08-30: Amended D-022 to accept `Football Sony Battery` as a separate operational pool while keeping the normal `Sony Battery` reservation and custody policy. A family name alone does not create authorization; the earlier local requester-roster policy was walked back before migration or deployment. Physical data setup remains under GAP-74.
 - 2026-08-27: Amended D-055 so Admin is the only human reviewer for both open-slot requests and Trade Board claims. Both approval permissions, full review payloads, web/native review queues, and initial/deadline reviewer notifications are Admin-only; Staff retain ordinary scheduling tools but no claim approvals or reviewer alerts, and student lifecycle messages are unchanged.
 - 2026-08-26: Amended D-057 so event-worker backfill recognition is explicitly all-silent. Awards still persist, but no badge notification is created for any badge in the backfill recount; the worker surface contains no recipient-notification promise and finished-event adds remain immediate.
 - 2026-08-25: Released the accepted Scoreboard, event-worker, Student-read, role-preview, app-activity, and linked-event-cap slices in production deployment `dpl_9cFHwpSQA9QjsQTV3GF3uKf65QtE` from commit `c48dd43d`; authenticated role-specific and interaction proof remains tracked by the relevant area gaps.

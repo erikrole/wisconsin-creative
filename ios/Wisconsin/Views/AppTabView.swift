@@ -10,8 +10,11 @@ struct AppTabView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @AppStorage("sidebarTabCustomization") private var tabCustomization: TabViewCustomization
+    @SceneStorage("WisconsinSceneRestoreIdentity") private var sceneRestoreIdentity = ""
+    @SceneStorage("WisconsinSceneRestoreTab") private var sceneRestoreTab = 0
     @State private var draftToast: Toast?
     @State private var showDraftCloseOptions = false
+    @State private var collapsedSidebarTab: Int?
 
     private var isStaffOrAdmin: Bool {
         let role = session.currentUser?.role ?? ""
@@ -42,192 +45,312 @@ struct AppTabView: View {
         appState.selectedTab >= 5
     }
 
-    var body: some View {
-        TabView(selection: Binding(
+    private func browseDestination(for tab: Int) -> String? {
+        switch tab {
+        case 5: return "users"
+        case 6: return "guides"
+        case 7: return "licenses"
+        case 8: return "scoreboard"
+        default: return nil
+        }
+    }
+
+    private func collapseSidebarDestinationIfNeeded() {
+        guard !showsSidebarDestinations,
+              selectedTabIsSidebarOnly,
+              let destination = browseDestination(for: appState.selectedTab)
+        else { return }
+        collapsedSidebarTab = appState.selectedTab
+        appState.pendingBrowseDestination = destination
+        appState.selectedTab = 2
+    }
+
+    private func restoreSidebarDestinationIfNeeded() {
+        guard showsSidebarDestinations, let collapsedSidebarTab else { return }
+        self.collapsedSidebarTab = nil
+        guard appState.selectedTab == 2 else { return }
+        appState.selectedTab = collapsedSidebarTab
+    }
+
+    private func restoreSceneSelectionIfNeeded() {
+        guard let identity = session.currentUser?.shellIdentity else { return }
+        guard sceneRestoreIdentity == identity, isRestorableTab(sceneRestoreTab) else {
+            sceneRestoreIdentity = identity
+            sceneRestoreTab = appState.selectedTab
+            return
+        }
+        appState.selectedTab = sceneRestoreTab
+    }
+
+    private func persistSceneSelection(_ tab: Int) {
+        guard let identity = session.currentUser?.shellIdentity else { return }
+        sceneRestoreIdentity = identity
+        sceneRestoreTab = tab
+    }
+
+    private func isRestorableTab(_ tab: Int) -> Bool {
+        switch tab {
+        case 0, 2:
+            return true
+        case 1:
+            return hasCapability("MY_GEAR_VIEW")
+        case 3:
+            return hasCapability("GEAR_CATALOG_VIEW")
+        case 4:
+            return hasCapability("PUBLISHED_SCHEDULE_VIEW")
+        case 5, 6, 7:
+            return showsSidebarDestinations && !isCollaborator
+        case 8:
+            return showsSidebarDestinations
+        default:
+            return false
+        }
+    }
+
+    private func routePendingSettings() {
+        guard appState.pendingSettingsRoute else { return }
+        guard session.currentUser != nil else {
+            appState.pendingSettingsRoute = false
+            return
+        }
+        if appState.selectedTab != 0 {
+            appState.selectedTab = 0
+        }
+    }
+
+    private func recordCurrentSurface() {
+        let tab = appState.selectedTab
+        let isPreview = isReadOnlyPreview
+        AppSurface.recordView(for: tab, isReadOnlyPreview: isPreview)
+    }
+
+    private func handleAppear() {
+        restoreSceneSelectionIfNeeded()
+        collapseSidebarDestinationIfNeeded()
+        routePendingSettings()
+        consumePendingAppIntentHandoff()
+        routePendingAppIntent()
+        routePendingEventPush()
+        routePendingBookingPush()
+        recordCurrentSurface()
+    }
+
+    private var draftExpansionBinding: Binding<Bool> {
+        Binding(
+            get: { drafts.isExpanded },
+            set: { isExpanded in
+                if !isExpanded { drafts.minimize() }
+            }
+        )
+    }
+
+    private var pendingStartBinding: Binding<Bool> {
+        Binding(
+            get: { drafts.pendingStart != nil },
+            set: { isPresented in
+                if !isPresented { drafts.cancelPendingStart() }
+            }
+        )
+    }
+
+    private var selectedTabBinding: Binding<Int> {
+        Binding(
             get: { appState.selectedTab },
             set: { appState.selectTab($0) }
-        )) {
-            Tab("Home", systemImage: "house", value: 0) {
-                HomeView()
-            }
+        )
+    }
 
-            if hasCapability("PUBLISHED_SCHEDULE_VIEW") {
-                Tab("Schedule", systemImage: "calendar", value: 4) {
-                    ScheduleView()
+    @TabContentBuilder<Int>
+    private var tabItems: some TabContent<Int> {
+        Tab("Home", systemImage: "house", value: 0) {
+            HomeView()
+        }
+
+        if hasCapability("PUBLISHED_SCHEDULE_VIEW") {
+            Tab("Schedule", systemImage: "calendar", value: 4) {
+                ScheduleView()
+            }
+                .badge(appState.myShiftTodayCount)
+                .accessibilityLabel(appState.myShiftTodayCount > 0 ? "Schedule, \(appState.myShiftTodayCount) shifts today" : "Schedule")
+        }
+
+        if hasCapability("MY_GEAR_VIEW") {
+            Tab(gearTabLabel, systemImage: "calendar.badge.checkmark", value: 1) {
+                BookingsView()
+            }
+                .badge(appState.overdueCount)
+                .accessibilityLabel(appState.overdueCount > 0 ? "\(gearTabLabel), \(appState.overdueCount) overdue" : gearTabLabel)
+        }
+
+        // Browse always exists because the shared Scoreboard is available
+        // to every signed-in role, even when collaborator policy grants no
+        // directory or catalog capabilities.
+        Tab("Browse", systemImage: "square.grid.2x2", value: 2) {
+            BrowseView()
+        }
+
+        if hasCapability("GEAR_CATALOG_VIEW") {
+            Tab("Search", systemImage: "magnifyingglass", value: 3, role: .search) {
+                GlobalSearchSheet(showsCancelButton: false)
+            }
+            .tabPlacement(.pinned)
+        }
+
+        if showsSidebarDestinations {
+            TabSection("Team") {
+                Tab("Scoreboard", systemImage: "trophy", value: 8) {
+                    TeamScoreboardView()
                 }
-                    .badge(appState.myShiftTodayCount)
-                    .accessibilityLabel(appState.myShiftTodayCount > 0 ? "Schedule, \(appState.myShiftTodayCount) shifts today" : "Schedule")
+                .tabPlacement(.sidebarOnly)
+                .customizationID("team.scoreboard")
             }
+            .customizationID("team")
 
-            if hasCapability("MY_GEAR_VIEW") {
-                Tab(gearTabLabel, systemImage: "calendar.badge.checkmark", value: 1) {
-                    BookingsView()
-                }
-                    .badge(appState.overdueCount)
-                    .accessibilityLabel(appState.overdueCount > 0 ? "\(gearTabLabel), \(appState.overdueCount) overdue" : gearTabLabel)
-            }
-
-            // Browse always exists because the shared Scoreboard is available
-            // to every signed-in role, even when collaborator policy grants no
-            // directory or catalog capabilities.
-            Tab("Browse", systemImage: "square.grid.2x2", value: 2) {
-                BrowseView()
-            }
-
-            if hasCapability("GEAR_CATALOG_VIEW") {
-                Tab("Search", systemImage: "magnifyingglass", value: 3, role: .search) {
-                    GlobalSearchSheet(showsCancelButton: false)
-                }
-                .tabPlacement(.pinned)
-            }
-
-            if showsSidebarDestinations {
-                TabSection("Team") {
-                    Tab("Scoreboard", systemImage: "trophy", value: 8) {
-                        TeamScoreboardView()
+            // Scoreboard is the universal exception. Existing Resources
+            // stay internal and are not exposed to collaborators by the
+            // new regular-width sidebar.
+            if !isCollaborator {
+                TabSection("Resources") {
+                    Tab("Guides", systemImage: "book.closed", value: 6) {
+                        GuidesView()
                     }
                     .tabPlacement(.sidebarOnly)
-                    .customizationID("team.scoreboard")
-                }
-                .customizationID("team")
+                    .customizationID("resources.guides")
 
-                // Scoreboard is the universal exception. Existing Resources
-                // stay internal and are not exposed to collaborators by the
-                // new regular-width sidebar.
-                if !isCollaborator {
-                    TabSection("Resources") {
-                        Tab("Guides", systemImage: "book.closed", value: 6) {
-                            GuidesView()
-                        }
-                        .tabPlacement(.sidebarOnly)
-                        .customizationID("resources.guides")
-
-                        Tab("Licenses", systemImage: "key", value: 7) {
-                            LicensesView()
-                        }
-                        .tabPlacement(.sidebarOnly)
-                        .customizationID("resources.licenses")
-
-                        Tab("Users", systemImage: "person.2", value: 5) {
-                            UsersView()
-                        }
-                        .tabPlacement(.sidebarOnly)
-                        .customizationID("resources.users")
+                    Tab("Licenses", systemImage: "key", value: 7) {
+                        LicensesView()
                     }
-                    .customizationID("resources")
+                    .tabPlacement(.sidebarOnly)
+                    .customizationID("resources.licenses")
+
+                    Tab("Users", systemImage: "person.2", value: 5) {
+                        UsersView()
+                    }
+                    .tabPlacement(.sidebarOnly)
+                    .customizationID("resources.users")
                 }
+                .customizationID("resources")
             }
+        }
+    }
+
+    private var tabContainer: some View {
+        TabView(selection: selectedTabBinding) {
+            tabItems
         }
         .tabViewCustomization($tabCustomization)
-        .onChange(of: showsSidebarDestinations) { _, canShowSidebarDestinations in
-            if !canShowSidebarDestinations && selectedTabIsSidebarOnly {
-                appState.selectedTab = 0
+    }
+
+    private var routedTabContainer: some View {
+        tabContainer
+            .onChange(of: showsSidebarDestinations) { _, canShowSidebarDestinations in
+                if canShowSidebarDestinations {
+                    restoreSidebarDestinationIfNeeded()
+                } else {
+                    collapseSidebarDestinationIfNeeded()
+                }
             }
-        }
-        .onAppear {
-            if !showsSidebarDestinations && selectedTabIsSidebarOnly {
-                appState.selectedTab = 0
+            .onAppear(perform: handleAppear)
+            .modifier(SurfaceViewTracking(selectedTab: appState.selectedTab))
+            .onChange(of: appState.pendingAppIntentDestination) { _, _ in
+                routePendingAppIntent()
             }
-            consumePendingAppIntentHandoff()
-            routePendingAppIntent()
-            routePendingEventPush()
-            routePendingBookingPush()
-            AppSurface.recordView(for: appState.selectedTab, isReadOnlyPreview: isReadOnlyPreview)
-        }
-        .modifier(SurfaceViewTracking(selectedTab: appState.selectedTab))
-        .onChange(of: appState.pendingAppIntentDestination) { _, _ in
-            routePendingAppIntent()
-        }
-        .onChange(of: appState.pendingPushEventId) { _, _ in
-            routePendingEventPush()
-        }
-        .onChange(of: appState.pendingPushBookingId) { _, _ in
-            routePendingBookingPush()
-        }
-        .onChange(of: appState.pendingPushBlastId) { _, _ in
-            routePendingBlastPush()
-        }
-        .modifier(ScheduleVisitDonation(selectedTab: appState.selectedTab))
-        // The reservation composer lives here, above every tab, so a minimized
-        // draft survives tab switches and navigation pops.
-        .modifier(ReservationDraftAccessory(isVisible: drafts.showsCard) {
-            ReservationDraftCard(
-                title: drafts.cardTitle,
-                subtitle: drafts.cardSubtitle,
-                isBusy: drafts.isBusy,
-                onOpen: {
-                    resumeReservationTip.invalidate(reason: .actionPerformed)
-                    Task { await drafts.openCard() }
-                },
-                onClose: { showDraftCloseOptions = true }
-            )
-            .popoverTip(resumeReservationTip, arrowEdge: .bottom)
-        })
-        .sheet(isPresented: Binding(
-            get: { drafts.isExpanded },
-            // Swipe-to-dismiss parks the composer instead of ending it. Every
-            // real exit goes through the sheet's own Cancel choice.
-            set: { if !$0 { drafts.minimize() } }
-        )) {
-            if let composer = drafts.composer {
-                CreateBookingSheet(vm: composer)
+            .onChange(of: appState.pendingSettingsRoute) { _, _ in
+                routePendingSettings()
             }
-        }
-        .confirmationDialog(
-            "You already have a reservation in progress",
-            isPresented: Binding(
-                get: { drafts.pendingStart != nil },
-                set: { if !$0 { drafts.cancelPendingStart() } }
-            ),
-            titleVisibility: .visible
-        ) {
-            Button("Save Draft & Start New") {
-                Task { await drafts.resolvePendingStartBySavingCurrent() }
+            .onChange(of: appState.selectedTab) { _, newTab in
+                persistSceneSelection(newTab)
             }
-            .disabled(drafts.isBusy)
-            Button("Discard & Start New", role: .destructive) {
-                Task { await drafts.resolvePendingStartByDiscardingCurrent() }
+            .onChange(of: appState.pendingPushEventId) { _, _ in
+                routePendingEventPush()
             }
-            .disabled(drafts.isBusy)
-            Button("Keep Editing", role: .cancel) { drafts.cancelPendingStart() }
-        } message: {
-            Text("Saved drafts stay in your bookings until you finish or delete them.")
-        }
-        .confirmationDialog(
-            "Save this reservation as a draft?",
-            isPresented: $showDraftCloseOptions,
-            titleVisibility: .visible
-        ) {
-            Button("Save Draft") { Task { await drafts.saveAndClose() } }
+            .onChange(of: appState.pendingPushBookingId) { _, _ in
+                routePendingBookingPush()
+            }
+            .onChange(of: appState.pendingPushBlastId) { _, _ in
+                routePendingBlastPush()
+            }
+    }
+
+    private var draftAwareTabContainer: some View {
+        routedTabContainer
+            .modifier(ScheduleVisitDonation(selectedTab: appState.selectedTab))
+            // The reservation composer lives here, above every tab, so a minimized
+            // draft survives tab switches and navigation pops.
+            .modifier(ReservationDraftAccessory(isVisible: drafts.showsCard) {
+                ReservationDraftCard(
+                    title: drafts.cardTitle,
+                    subtitle: drafts.cardSubtitle,
+                    isBusy: drafts.isBusy,
+                    onOpen: {
+                        resumeReservationTip.invalidate(reason: .actionPerformed)
+                        Task { await drafts.openCard() }
+                    },
+                    onClose: { showDraftCloseOptions = true }
+                )
+                .popoverTip(resumeReservationTip, arrowEdge: .bottom)
+            })
+            .sheet(isPresented: draftExpansionBinding) {
+                if let composer = drafts.composer {
+                    CreateBookingSheet(vm: composer)
+                }
+            }
+            .confirmationDialog(
+                "Reservation in Progress?",
+                isPresented: pendingStartBinding,
+                titleVisibility: .visible
+            ) {
+                Button("Save Draft & Start New") {
+                    Task { await drafts.resolvePendingStartBySavingCurrent() }
+                }
                 .disabled(drafts.isBusy)
-            Button("Discard", role: .destructive) { Task { await drafts.discard() } }
+                Button("Discard & Start New", role: .destructive) {
+                    Task { await drafts.resolvePendingStartByDiscardingCurrent() }
+                }
                 .disabled(drafts.isBusy)
-            Button("Keep It", role: .cancel) {}
-        }
-        .toast($draftToast)
-        .onChange(of: drafts.statusMessage) { _, message in
-            guard let message else { return }
-            drafts.statusMessage = nil
-            draftToast = Toast(message: message, icon: "tray.and.arrow.down.fill", role: .success)
-        }
-        .onChange(of: drafts.errorMessage) { _, message in
-            guard let message else { return }
-            drafts.errorMessage = nil
-            draftToast = Toast(message: message, icon: "exclamationmark.triangle.fill", role: .error)
-        }
-        .onChange(of: drafts.createdBookingId) { _, bookingId in
-            routeCreatedReservation(bookingId)
-        }
-        .onChange(of: drafts.showsCard) { _, showsCard in
-            guard showsCard else { return }
-            Task { await ResumeReservationTip.minimizedReservation.donate() }
-        }
-        .task(id: session.currentUser?.shellIdentity) {
-            await loadDraftIfAllowed()
-        }
-        .modifier(AppTabShellStyle(usesSidebarAdaptableStyle: showsSidebarDestinations))
-        .modifier(AppTabStatusOverlays(isReadOnlyPreview: isReadOnlyPreview))
-        .animation(reduceMotion ? nil : .easeInOut, value: network.isConnected)
+                Button("Keep Editing", role: .cancel) { drafts.cancelPendingStart() }
+            } message: {
+                Text("Saved drafts stay in your bookings until you finish or delete them.")
+            }
+            .confirmationDialog(
+                "Save this reservation as a draft?",
+                isPresented: $showDraftCloseOptions,
+                titleVisibility: .visible
+            ) {
+                Button("Save Draft") { Task { await drafts.saveAndClose() } }
+                    .disabled(drafts.isBusy)
+                Button("Discard", role: .destructive) { Task { await drafts.discard() } }
+                    .disabled(drafts.isBusy)
+                Button("Keep It", role: .cancel) {}
+            }
+            .toast($draftToast)
+            .onChange(of: drafts.statusMessage) { _, message in
+                guard let message else { return }
+                drafts.statusMessage = nil
+                draftToast = Toast(message: message, icon: "tray.and.arrow.down.fill", role: .success)
+            }
+            .onChange(of: drafts.errorMessage) { _, message in
+                guard let message else { return }
+                drafts.errorMessage = nil
+                draftToast = Toast(message: message, icon: "exclamationmark.triangle.fill", role: .error)
+            }
+            .onChange(of: drafts.createdBookingId) { _, bookingId in
+                routeCreatedReservation(bookingId)
+            }
+            .onChange(of: drafts.showsCard) { _, showsCard in
+                guard showsCard else { return }
+                Task { await ResumeReservationTip.minimizedReservation.donate() }
+            }
+    }
+
+    var body: some View {
+        draftAwareTabContainer
+            .task(id: session.currentUser?.shellIdentity) {
+                await loadDraftIfAllowed()
+            }
+            .modifier(AppTabShellStyle(usesSidebarAdaptableStyle: showsSidebarDestinations))
+            .modifier(AppTabStatusOverlays(isReadOnlyPreview: isReadOnlyPreview))
+            .animation(reduceMotion ? nil : .easeInOut, value: network.isConnected)
     }
 
     private func loadDraftIfAllowed() async {
@@ -289,17 +412,52 @@ struct AppTabView: View {
 
     private func routePendingAppIntent() {
         guard let destination = appState.pendingAppIntentDestination else { return }
+        guard session.currentUser != nil else {
+            rejectPendingAppIntent(message: "Sign in to use that shortcut.")
+            return
+        }
         switch destination {
         case .scan:
-            if hasCapability("GEAR_CATALOG_VIEW"), appState.selectedTab != 3 { appState.selectedTab = 3 }
+            guard hasCapability("GEAR_CATALOG_VIEW") else {
+                rejectPendingAppIntent(message: "Scan isn't available for this account.")
+                return
+            }
+            if appState.selectedTab != 3 { appState.selectedTab = 3 }
         case .myGear:
-            if hasCapability("MY_GEAR_VIEW"), appState.selectedTab != 1 { appState.selectedTab = 1 }
+            guard hasCapability("MY_GEAR_VIEW") else {
+                rejectPendingAppIntent(message: "My Gear isn't available for this account.")
+                return
+            }
+            if appState.selectedTab != 1 { appState.selectedTab = 1 }
         case .todaySchedule:
-            if hasCapability("PUBLISHED_SCHEDULE_VIEW"), appState.selectedTab != 4 { appState.selectedTab = 4 }
+            guard hasCapability("PUBLISHED_SCHEDULE_VIEW") else {
+                rejectPendingAppIntent(message: "Schedule isn't available for this account.")
+                return
+            }
+            if appState.selectedTab != 4 { appState.selectedTab = 4 }
             appState.pendingAppIntentDestination = nil
         case .createReservation:
-            if hasCapability("RESERVATION_CREATE"), appState.selectedTab != 1 { appState.selectedTab = 1 }
+            guard hasCapability("RESERVATION_CREATE") else {
+                rejectPendingAppIntent(message: "Reservations aren't available for this account.")
+                return
+            }
+            // Most roles have the Bookings tab as the reservation home. A
+            // narrowly scoped collaborator may be allowed to reserve without
+            // browsing existing bookings, so start the composer here instead
+            // of parking the handoff on a tab that is not present.
+            if hasCapability("MY_GEAR_VIEW") {
+                if appState.selectedTab != 1 { appState.selectedTab = 1 }
+            } else {
+                appState.pendingAppIntentDestination = nil
+                drafts.start()
+            }
         }
+    }
+
+    private func rejectPendingAppIntent(message: String) {
+        appState.pendingAppIntentDestination = nil
+        draftToast = Toast(message: message, icon: "info.circle", role: .info)
+        UIAccessibility.post(notification: .announcement, argument: message)
     }
 }
 
@@ -329,15 +487,9 @@ private enum AppSurface {
     }
 }
 
-/// Hosts the minimized-reservation card in the tab bar accessory slot.
-///
-/// The accessory reserves its container for as long as the modifier is
-/// attached, so returning an empty content view leaves a blank pill floating
-/// above the tab bar. iOS 26.1 added `isEnabled:` for exactly this, which hides
-/// the slot without disturbing the view tree. On 26.0 the only way to reclaim
-/// the space is to drop the modifier, and that rebuilds the `TabView` — each
-/// tab's navigation stack resets — so 26.0 keeps the accessory attached and
-/// eats the empty pill rather than throwing away where the user was.
+/// Hosts the minimized-reservation card in the tab bar accessory slot. The
+/// slot is disabled on iOS 26.1 and omitted entirely on iOS 26.0 when no draft
+/// exists, so an inactive composer never leaves an empty pill in the shell.
 private struct ReservationDraftAccessory<Accessory: View>: ViewModifier {
     let isVisible: Bool
     @ViewBuilder let accessory: () -> Accessory
@@ -346,10 +498,12 @@ private struct ReservationDraftAccessory<Accessory: View>: ViewModifier {
     func body(content: Content) -> some View {
         if #available(iOS 26.1, *) {
             content.tabViewBottomAccessory(isEnabled: isVisible) { accessory() }
-        } else {
+        } else if isVisible {
             content.tabViewBottomAccessory {
-                if isVisible { accessory() }
+                accessory()
             }
+        } else {
+            content
         }
     }
 }

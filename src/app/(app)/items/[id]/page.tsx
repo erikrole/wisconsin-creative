@@ -25,6 +25,8 @@ import { ItemHeader } from "./_components/ItemHeader";
 import { BulkSkuDetailExperience } from "../../bulk-inventory/[id]/BulkSkuDetailExperience";
 import { BULK_ID_PREFIX } from "../lib/item-href";
 import type { AssetDetail } from "./types";
+import { NewItemSheet } from "../new-item-sheet";
+import { useInvalidateItemCatalog } from "@/hooks/use-item-cache-invalidation";
 
 /* ── Tab Definitions ──────────────────────────────────────── */
 
@@ -91,7 +93,9 @@ function SerializedItemDetailsPage({ id }: { id: string }) {
   const [activeTab, setActiveTab] = useUrlState<TabKey>("tab", parseItemDetailTab, serializeDetailTab);
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [addAnotherOpen, setAddAnotherOpen] = useState(false);
   useItemChangeSync();
+  const invalidateItemCatalog = useInvalidateItemCatalog();
 
   const {
     asset,
@@ -117,6 +121,14 @@ function SerializedItemDetailsPage({ id }: { id: string }) {
   } = useItemActions({ asset, setAsset, loadAsset });
 
   const availableTabs = useMemo(() => visibleItemTabs(currentUserRole), [currentUserRole]);
+
+  function handleHeaderAction(action: string) {
+    if (action === "add-another") {
+      setAddAnotherOpen(true);
+      return;
+    }
+    void handleAction(action);
+  }
 
   // A deep link or a remembered tab can name a tab this role cannot open.
   useEffect(() => {
@@ -251,7 +263,7 @@ function SerializedItemDetailsPage({ id }: { id: string }) {
         onRefresh={loadAsset}
         onToggleFavorite={handleToggleFavorite}
         onSaveHeaderField={saveHeaderField}
-        onAction={handleAction}
+        onAction={handleHeaderAction}
         onImageModalOpen={() => setImageModalOpen(true)}
       />
 
@@ -353,6 +365,16 @@ function SerializedItemDetailsPage({ id }: { id: string }) {
         currentImageUrl={asset.imageUrl}
         searchQuery={buildImageSearchSeed(asset)}
         onImageChanged={(newUrl) => setAsset((prev) => prev ? { ...prev, imageUrl: newUrl } : prev)}
+      />
+
+      <NewItemSheet
+        open={addAnotherOpen}
+        onOpenChange={setAddAnotherOpen}
+        locations={locations}
+        departments={departments}
+        categories={categories}
+        sourceAssetId={asset.id}
+        onCreated={invalidateItemCatalog}
       />
       </div>
     </FadeUp>

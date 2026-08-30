@@ -144,7 +144,7 @@ struct TeamScoreboardView: View {
                 } description: {
                     Text(initialError ?? "The shared team totals could not be loaded.")
                 } actions: {
-                    Button("Try Again") { Task { await load(for: filters) } }
+                    Button("Retry") { Task { await load(for: filters) } }
                         .buttonStyle(.borderedProminent)
                 }
             }

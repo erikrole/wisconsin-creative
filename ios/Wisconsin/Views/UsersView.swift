@@ -171,19 +171,23 @@ struct UsersView: View {
                     .buttonStyle(.borderedProminent)
             }
         } else if vm.users.isEmpty && vm.isLoading {
-            List {
-                ForEach(0..<10, id: \.self) { index in
-                    UserRowSkeleton(seed: index)
-                        .listRowSeparator(.hidden)
-                        .listRowBackground(Color.clear)
-                        .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
+            VStack(spacing: 8) {
+                ProgressView("Loading people")
+                    .padding(.top, 12)
+                List {
+                    ForEach(0..<10, id: \.self) { index in
+                        UserRowSkeleton(seed: index)
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
+                            .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
+                    }
                 }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .background(Color(.systemGroupedBackground))
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)  // Placeholder shapes stay decorative.
             }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .background(Color(.systemGroupedBackground))
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)  // Don't pollute VO with placeholder shapes during initial load.
         } else if vm.users.isEmpty {
             ContentUnavailableView {
                 Label(isCollaboratorDirectory ? "No people" : "No users", systemImage: "person.2")
@@ -222,7 +226,7 @@ struct UsersView: View {
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
                 } else if vm.hasMore {
-                    ProgressView()
+                    ProgressView("Loading more people")
                         .frame(maxWidth: .infinity)
                         .listRowSeparator(.hidden)
                         .listRowBackground(Color.clear)

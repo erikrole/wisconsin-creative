@@ -210,7 +210,6 @@ struct ScoreboardView: View {
         // rendered brand red from the Users side. `docs/COLOR_SYSTEM.md` keeps
         // red for custody and error meaning, so the controls here stay neutral.
         .tint(.primary)
-        .sensoryFeedback(.selection, trigger: tapFeedback)
         .task {
             // Its own surface in the usage counts: the Scoreboard is reached
             // from two places and folding it into "users" would hide both.
@@ -1121,7 +1120,7 @@ private struct ScoreboardErrorView: View {
 
     var body: some View {
         ContentUnavailableView {
-            Label("Scoreboard unavailable", systemImage: "trophy.slash")
+            Label("Scoreboard unavailable", systemImage: "trophy.fill")
         } description: {
             Text(message)
         } actions: {

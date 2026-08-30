@@ -8,9 +8,12 @@ enum GearOpsWindow {
 struct GearOpsApp: App {
     @NSApplicationDelegateAdaptor(GearOpsAppDelegate.self) private var appDelegate
     @State private var model = GearOpsModel()
+    @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
-        MenuBarExtra {
+        @Bindable var preferences = model.appPreferences
+
+        MenuBarExtra(isInserted: $preferences.showsMenuBarExtra) {
             MenuBarContentView(model: model)
         } label: {
             HStack(spacing: 4) {
@@ -35,5 +38,14 @@ struct GearOpsApp: App {
         }
         .windowResizability(.contentSize)
         .defaultPosition(.center)
+
+        .commands {
+            CommandGroup(replacing: .appSettings) {
+                Button("Settings…") {
+                    openWindow(id: GearOpsWindow.settings)
+                }
+                .keyboardShortcut(",", modifiers: .command)
+            }
+        }
     }
 }

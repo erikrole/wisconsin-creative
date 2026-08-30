@@ -249,7 +249,7 @@ describe("student field mobile contracts", () => {
     );
     expect(destructiveGroup).toContain('Label("Decline \\(assignment.user.name)"');
     expect(destructiveGroup).toContain('Label("Remove \\(assignment.user.name)"');
-    expect(destructiveGroup).toContain('Label("Delete shift", systemImage: "trash")');
+    expect(destructiveGroup).toContain('Label("Delete Shift", systemImage: "trash")');
     // ...and nothing destructive is left behind in the other groups.
     const managementGroup = sliceBetween(
       eventDetail,
@@ -287,7 +287,7 @@ describe("student field mobile contracts", () => {
     // scheduled" before the fetch lands. Reentrancy guards on its own flag --
     // guarding on isLoading would make the first load return without fetching.
     expect(eventDetail).toContain("var isLoading = true");
-    expect(eventDetail).toContain("guard !isFetching else { return }");
+    expect(eventDetail).toContain("if !forceRefresh, isFetching { return }");
     // "Your Shift" states when to report and which area, and stops there.
     // Gear left this screen entirely -- see the Event detail gear contract in
     // ios-create-booking-picker-parity.test.ts.

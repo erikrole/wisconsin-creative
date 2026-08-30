@@ -97,7 +97,7 @@ describe("iOS Schedule row restraint", () => {
 
 describe("iOS Schedule calendar chrome", () => {
   it("names grey in the dot legend it draws", () => {
-    expect(scheduleView).toContain('LegendDot(color: Color.statusText(.gray), label: "Other")');
+    expect(scheduleView).toContain('LegendDot(color: Color.statusText(.gray), systemImage: "circle.grid.2x2.fill", label: "Other")');
     expect(scheduleView).toContain('.accessibilityLabel("Legend: my shift, home, away, other")');
   });
 

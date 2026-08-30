@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Bulk Inventory Management
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-07-28
+- Last Updated: 2026-08-30
 - Status: Active
 - Version: V1
 
@@ -25,7 +25,8 @@ Operate item families backed by `BulkSku` records. Normal discovery happens in `
 12. Quantity-only available quantity derives from current `BulkStockBalance.onHandQuantity`; checkout creation, pending pickup, cancellation, and return paths move that balance through audited stock movements, so read models must not subtract active checkout quantities again.
 13. Unit-tracked active inventory totals exclude `RETIRED` records. Retired unit numbers remain visible for labels and audit history, but availability denominators, item-list summaries, exports, and picker-facing on-hand totals count only AVAILABLE, CHECKED_OUT, and LOST units.
 14. A unit-tracked family may contain multiple interchangeable branded products. `BulkSkuProduct` stores product identity and `BulkSkuUnit.productId` assigns the exact product to a permanent unit without changing the family booking line, status, allocation, or QR sequence.
-15. The active battery catalog is intentionally limited to four unit-tracked families: `Monitor Battery`, `Sony Battery`, `Gold Mount Battery`, and `FX6 Battery`. Branded and model-specific batteries belong beneath those families as products, not as additional catalog rows.
+15. The general battery catalog uses four unit-tracked families: `Monitor Battery`, `Sony Battery`, `Gold Mount Battery`, and `FX6 Battery`. Branded and model-specific batteries belong beneath those families as products, not as additional catalog rows.
+16. `Football Sony Battery` is an accepted separate unit-tracked family so the Football pool can be counted and operated independently from the normal `Sony Battery` pool. It has the same reservation, checkout, pickup, return, and custody policy as `Sony Battery`; the separate row does not imply a roster or role gate.
 
 ## Routes
 
@@ -47,13 +48,17 @@ Operate item families backed by `BulkSku` records. Normal discovery happens in `
   2. **Compatible battery lows:** camera-family battery health derived from active camera inventory and the existing compatibility rules.
   3. **Checked-out units table:** unit number, battery family, holder, booking, due date, and checked-out age.
   4. **Inventory data warnings:** stale checked-out unit flags with no active checkout allocation are listed separately while Battery Ops counts them as available; staff/admin can repair those stored flags from the warning card with an audited reason.
-  5. **Battery family cards:** per-family available/out/lost/retired counts and direct unit controls.
-  6. **Report handoff:** `/reports/bulk-losses` now owns deeper battery audit/reporting for missing units, loss rate, checkout history, and repeat missing patterns.
+  5. **Battery family workspaces:** one compact row per family leads with available/active inventory, the status breakdown, effective low-stock line, label readiness, family QR, product mix, and explicit receiving/label/metadata actions. Numbered tiles stay collapsed until requested and can be filtered by status.
+  6. **Quantity corrections:** quantity-tracked battery families stay in a separate section with an explicit audited live-count adjustment; numbered families never expose a free-form count override.
+  7. **Report handoff:** `/reports/bulk-losses` now owns deeper battery audit/reporting for missing units, loss rate, checkout history, and repeat missing patterns.
 - **Behaviors:**
   - Only active unit-tracked battery families are shown.
   - Low stock uses the existing battery rule of max(`minThreshold`, 10).
   - Compatible battery lows reuse `src/lib/battery-compatibility.ts`; no separate camera-to-battery schema exists.
   - Unit actions reuse the audited `/api/bulk-skus/[id]/units/[unitNumber]` status endpoint.
+  - Numbered-family availability is presented as derived truth: receiving adds the next permanent unit range, while corrections recover, mark missing, or retire the affected unit records.
+  - Numbered-unit receiving can assign one existing active family product to the entire new range through the existing audited unit-add endpoint; individual product reassignment remains in family detail.
+  - Metadata editing remains in the shared item-family detail flow and is one explicit action away from every Battery Ops workspace.
   - Checked-out units are read-only in this surface and must be returned through check-in before status changes.
   - Stale checked-out flag repair uses `POST /api/bulk-skus/batteries/repair-stale`; it is limited to active battery families, requires `bulk_sku.adjust`, defaults to a dry-run preview, and writes one audit entry per repaired unit only when an operator explicitly applies the repair.
 
@@ -182,6 +187,7 @@ See `AREA_ITEMS.md` 2026-04-06 entry for bulk inventory page hardening:
 - List data already uses `useFetch` hook (AbortController, 401 handling, focus refresh)
 - Item-family image replacement uses the shared image modal. When Brave image search is configured, `BulkSku` detail headers seed the search from the SKU name and save the chosen result through `/api/bulk-skus/[id]/image`, preserving the same re-host and audit path as pasted URLs.
 - Detail/Battery Ops client fetches use shared safe response parsing, ref-backed duplicate-action guards for unit/status/archive/delete actions, and stable form-control metadata for inline item-family editors.
+- Authenticated visual review uses a deterministic Battery Ops fixture only when `NODE_ENV=development` and the requesting page carries `fixture=battery-ops`; normal development, Preview, and production reads continue to use database-derived inventory.
 
 ## Acceptance Criteria
 - [x] AC-1: Staff can add bulk SKU with name, category, unit type, location
@@ -196,8 +202,11 @@ See `AREA_ITEMS.md` 2026-04-06 entry for bulk inventory page hardening:
 - [x] AC-10: Unit-tracked item-family summaries exclude retired records from active inventory totals while preserving retired unit numbers, label state, and audit visibility.
 - [x] AC-11: Staff and admins can replace a bad item-family QR with a generated or manually scanned value through a confirmed, collision-safe, audited mutation that preserves inventory and unit identity while clearly requiring label reprints.
 - [x] AC-12: A numbered item family can define multiple branded products, assign one product to each permanent unit, show product counts and identity in the unit workspace, and keep one booking line and derived QR sequence.
+- [x] AC-13: Battery Ops presents one compact family workspace with explicit unit receiving, label export, metadata handoff, product mix, derived-count guidance, and an on-demand status-filtered unit roster; quantity-tracked battery corrections remain clearly separate.
 
 ## Change Log
+- 2026-08-30: **Battery family operations became count-honest and compact.** Battery Ops now keeps all numbered tiles collapsed on load, uses one independent row per family, leads with available/active state plus threshold/label/QR/product metadata, and names `Add units`, `Export labels`, and `Edit metadata` explicitly. The on-demand roster filters by effective unit status, receiving can assign an existing active product to the new permanent range, and quantity-tracked families retain a separate audited `Adjust live count` action. A development-only authenticated fixture supports matched visual proof without mutating inventory.
+- 2026-08-30: **Football Sony Battery is a separate pool with the normal Sony policy.** The accepted product model is two unit-tracked families so Football inventory can be counted and operated independently, without a Football-roster or role gate. The earlier local eligibility schema, migration, mutation guards, and special picker/kiosk copy were removed before deployment. Physical family, QR, count, and unit creation remain open under GAP-74.
 - 2026-07-28: **Item-family images joined Add Item intake.** New Units and Quantity catalog records now use the same pre-save image chooser as Standard items, seeded from the family name and supporting Search, Paste URL, and Upload. The staged selection persists through `/api/bulk-skus/[id]/image` only after `/api/bulk-skus` returns the new family ID, preserving the existing permission, Blob re-hosting, and audit contract. Quantity add-to-existing remains a stock adjustment and does not alter the family image.
 - 2026-07-15: **Gold Mount physical-count correction.** Live inspection confirmed the two Anton Bauer Digital 150 records consolidated as Gold Mount units 9-10 do not exist physically. A guarded production transaction removed those unprinted, never-allocated units, deleted the archived Digital 150 product, reduced the Gold Mount balance from 10 to 8, and wrote both product-deletion and inventory-correction audit entries plus a `-2` adjustment movement. Gold Mount now contains exactly eight available units, all assigned to Anton/Bauer Dionic XT 150Wh. The inactive source family remains hidden because its two historical booking rows must be preserved.
 - 2026-07-15: **Canonical battery-family consolidation.** The initial consolidation produced exactly four unit-tracked families: Monitor Battery (18 records), Sony Battery (52 permanent records, including three printed retired placeholders), Gold Mount Battery (initially 10 records), and FX6 Battery (12 records). Model-specific rows moved beneath Gold Mount and FX6 as assigned products. Monitor units 15-18 retain Watson NP-F550 identity; units 1-14 remain product-unassigned until physical Watson/GVM mapping is confirmed. History-free quantity and serialized duplicates were hard-deleted with audit snapshots, while history-bearing Gold Mount and Sony rows were retired or deactivated so booking, allocation, scan, and movement evidence remains intact. The later Gold Mount physical-count correction above supersedes the initial 10-record count.

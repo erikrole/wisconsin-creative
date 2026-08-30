@@ -185,6 +185,8 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 
 ## Change Log
 
+- 2026-08-29: **Wisconsin Creative enrollment now survives a crash-lost preferences cache.** A real crash/reboot showed that 1.0.3 had lost its preferences-only user identity, and startup refused to check any surviving Keychain credential without an in-memory user. Version 1.0.4 stores the validated enrolled identity in a separate device-only data-protection Keychain item, restores it before the cache gate, refreshes only through the existing Upstash projection, migrates intact older enrollments on successful restore, and removes both identity and token on explicit sign-out. The notarized build is installed and running; one new enrollment followed by a real cold restart remains the acceptance gate.
+
 - 2026-08-24: **Profile setup now starts from a quiet Home banner.** Internal users with incomplete profiles see a compact blue Home banner with a missing-detail count and direct Finish setup handoff; the existing wizard remains available through that CTA and continues to own one-day snooze behavior. Dashboard action queues and operational data are unchanged.
 
 - 2026-08-24: **Student Home team visibility restored.** Normal web Students receive team checkout/reservation rows, counts, pending pickup, overdue, and generic Upcoming Events alongside their own work. The explicit `scope=ios-home` native payload remains personal, and Students still retain own-work and role-gated mutation boundaries. The web slice is deployed in `dpl_9cFHwpSQA9QjsQTV3GF3uKf65QtE`; authenticated Student production acceptance remains open.

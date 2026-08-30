@@ -463,19 +463,23 @@ struct BookingsView: View {
                                 .buttonStyle(.borderedProminent)
                         }
                     } else if vm.isEmpty && vm.isLoading {
-                        List {
-                            ForEach(0..<8, id: \.self) { _ in
-                                BookingRowSkeleton()
-                                    .listRowSeparator(.hidden)
-                                    .listRowBackground(Color.clear)
-                                    .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
+                        VStack(spacing: 8) {
+                            ProgressView("Loading bookings")
+                                .padding(.top, 12)
+                            List {
+                                ForEach(0..<8, id: \.self) { _ in
+                                    BookingRowSkeleton()
+                                        .listRowSeparator(.hidden)
+                                        .listRowBackground(Color.clear)
+                                        .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
+                                }
                             }
+                            .listStyle(.plain)
+                            .scrollContentBackground(.hidden)
+                            .background(Color(.systemGroupedBackground))
+                            .allowsHitTesting(false)
+                            .accessibilityHidden(true)  // Placeholder shapes stay decorative.
                         }
-                        .listStyle(.plain)
-                        .scrollContentBackground(.hidden)
-                        .background(Color(.systemGroupedBackground))
-                        .allowsHitTesting(false)
-                        .accessibilityHidden(true)  // Don't pollute VO with placeholder shapes.
                     } else if vm.isEmpty {
                         ScrollView {
                             BookingEmptyState(
@@ -534,17 +538,14 @@ struct BookingsView: View {
             .onChange(of: vm.searchText) { vm.onSearchChange() }
             .onChange(of: vm.scope) { _, scope in
                 storedScope = scope
-                Haptics.selection()
                 Task { await vm.load(reset: true, clearExistingRows: true) }
             }
             .onChange(of: vm.statusFilter) { _, filter in
                 storedStatusFilter = filter
-                Haptics.selection()
                 Task { await vm.load(reset: true, clearExistingRows: true) }
             }
             .onChange(of: vm.sortOption) { _, option in
                 storedSortOption = option
-                Haptics.selection()
                 // Re-order what is already on screen before the refetch lands,
                 // so the list responds to the tap instead of the round trip.
                 vm.applyServerOrderIfNeeded()
@@ -910,7 +911,6 @@ private struct BookingRowLink: View {
             }
             if canExtend {
                 Button {
-                    Haptics.selection()
                     onExtend()
                 } label: {
                     Label("Extend", systemImage: "clock.arrow.circlepath")
@@ -921,7 +921,6 @@ private struct BookingRowLink: View {
         .swipeActions(edge: .leading, allowsFullSwipe: false) {
             if canEdit {
                 Button {
-                    Haptics.selection()
                     onEdit()
                 } label: {
                     Label("Edit", systemImage: "pencil")
@@ -930,7 +929,6 @@ private struct BookingRowLink: View {
             }
             if canTransfer {
                 Button {
-                    Haptics.selection()
                     onTransfer()
                 } label: {
                     Label("Transfer", systemImage: "person.2")

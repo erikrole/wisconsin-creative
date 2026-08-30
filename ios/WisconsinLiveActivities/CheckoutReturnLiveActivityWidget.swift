@@ -221,8 +221,9 @@ struct CheckoutReturnLiveActivityWidget: Widget {
     }
 }
 
-/// Chooses the layout for the surface ActivityKit is rendering: the iPhone
-/// lock screen and CarPlay use `.medium`, the Apple Watch Smart Stack `.small`.
+/// Chooses the layout for the surface ActivityKit is rendering. The default
+/// lock-screen/expanded rendering uses `.medium`; the supplemental `.small`
+/// family is shared by Apple Watch Smart Stack and CarPlay.
 private struct CheckoutReturnActivityView: View {
     @Environment(\.activityFamily) private var activityFamily
     let context: ActivityViewContext<CheckoutReturnActivityAttributes>
@@ -323,6 +324,7 @@ private struct CheckoutReturnLockScreen: View {
 /// Apple Watch Smart Stack tile. Roughly one third of the lock-screen height,
 /// so it keeps only what a wrist glance is for: what is out, and how long.
 private struct CheckoutReturnSmallView: View {
+    @Environment(\.isLuminanceReduced) private var isLuminanceReduced
     let context: ActivityViewContext<CheckoutReturnActivityAttributes>
     let now: Date
 
@@ -331,7 +333,8 @@ private struct CheckoutReturnSmallView: View {
             state: context.state,
             at: now,
             isStale: context.isStale,
-            neutral: .white
+            neutral: .white,
+            isDimmed: isLuminanceReduced
         )
     }
 

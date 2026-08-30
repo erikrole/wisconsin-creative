@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import EmptyState from "@/components/EmptyState";
 import { formatTimeShort } from "@/lib/format";
@@ -11,16 +10,56 @@ import { VENUE_TONES, venueToneFromEvent } from "@/lib/venue-tone";
 import type { CalendarEntry } from "./types";
 import { ACTIVE_STATUSES, AREA_LABELS, scheduleEventTitleParts } from "./types";
 import { CoverageTag } from "./Coverage";
+import { SchedulePeriodNavigator } from "./SchedulePeriodNavigator";
 
 type CalendarViewProps = {
   entries: CalendarEntry[];
+  loading: boolean;
   calMonth: Date;
   setCalMonth: (d: Date) => void;
   expandedDay: number | null;
   setExpandedDay: (d: number | null) => void;
-  onSelectGroup: (groupId: string | null) => void;
-  onSwitchToList?: () => void;
+  canManageCrew: boolean;
+  onOpenCrew: (entry: CalendarEntry) => void;
 };
+
+function CalendarSkeleton() {
+  return (
+    <div role="status" aria-label="Loading calendar" aria-busy="true">
+      <div className="hidden overflow-hidden rounded-lg border border-border/60 md:block">
+        <div className="grid grid-cols-7 border-b border-border/60 bg-muted/25">
+          {Array.from({ length: 7 }, (_, index) => (
+            <div key={index} className="flex justify-center py-2">
+              <Skeleton className="h-3 w-8" />
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-7">
+          {Array.from({ length: 35 }, (_, index) => (
+            <div
+              key={index}
+              className={cn(
+                "min-h-[112px] border-t border-border/40 p-2",
+                index % 7 !== 0 && "border-l border-l-border/40",
+              )}
+            >
+              <Skeleton className="mb-3 size-6 rounded-full" />
+              {index % 3 === 0 && <Skeleton className="h-8 w-full rounded-sm" />}
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="overflow-hidden rounded-lg border border-border/60 md:hidden">
+        {Array.from({ length: 4 }, (_, index) => (
+          <div key={index} className="border-b border-border/50 p-3 last:border-b-0">
+            <Skeleton className="mb-3 h-4 w-24" />
+            <Skeleton className="h-16 w-full rounded-md" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function isToday(calMonth: Date, day: number) {
   const now = new Date();
@@ -73,45 +112,53 @@ function buildTooltipContent(entry: CalendarEntry): React.ReactNode {
 
 function EventChip({
   entry,
-  onSelectGroup,
+  canManageCrew,
+  onOpenCrew,
 }: {
   entry: CalendarEntry;
-  onSelectGroup: (groupId: string | null) => void;
+  canManageCrew: boolean;
+  onOpenCrew: (entry: CalendarEntry) => void;
 }) {
   const titleParts = scheduleEventTitleParts(entry);
   const venueTone = VENUE_TONES[venueToneFromEvent(entry)];
 
   const chipClass = cn(
-    "mb-px flex w-full cursor-pointer items-stretch overflow-hidden rounded-sm text-left outline-none transition-[background-color,scale] active:scale-[0.96] focus-visible:ring-2 focus-visible:ring-ring",
+    "mb-1 flex min-h-10 w-full cursor-pointer items-stretch overflow-hidden rounded-sm border border-border/30 text-left outline-none transition-[background-color,border-color,scale] hover:border-border/70 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring",
   );
 
   const inner = (
     <>
       <div className={cn("w-[2.5px] flex-shrink-0", venueTone.solidClass)} />
-      <div className={cn("flex-1 px-1 py-[2px] min-w-0", venueTone.surfaceClass)}>
-        <div className="flex items-center gap-1 min-w-0">
-          <span className="min-w-0 flex-1 truncate text-[10px] font-medium leading-[1.35]">
-            {titleParts.title}
-          </span>
-          {entry.coverage && (
+      <div className={cn("min-w-0 flex-1 px-1.5 py-1", venueTone.surfaceClass)}>
+        <div className="mb-0.5 flex items-center justify-between gap-1 text-[9px] text-muted-foreground">
+          <span className="truncate">{entry.allDay ? "All day" : formatTimeShort(entry.startsAt)}</span>
+          {entry.coverage ? (
             <CoverageTag
               percentage={entry.coverage.percentage}
               filled={entry.coverage.filled}
               total={entry.coverage.total}
             />
-          )}
+          ) : canManageCrew ? (
+            <span className="shrink-0 font-medium">Set up</span>
+          ) : null}
+        </div>
+        <div className="flex min-w-0 items-start gap-1">
+          <span className="line-clamp-2 min-w-0 flex-1 text-[10px] font-medium leading-[1.3]">
+            {titleParts.title}
+          </span>
         </div>
       </div>
     </>
   );
 
-  if (entry.shiftGroupId) {
+  if (canManageCrew) {
     return (
       <Tooltip>
         <TooltipTrigger asChild>
           <button
             className={chipClass}
-            onClick={() => onSelectGroup(entry.shiftGroupId)}
+            aria-label={`${entry.shiftGroupId ? "Manage crew for" : "Set up crew for"} ${titleParts.title}`}
+            onClick={() => onOpenCrew(entry)}
           >
             {inner}
           </button>
@@ -137,16 +184,80 @@ function EventChip({
   );
 }
 
+function MobileCalendarEvent({
+  entry,
+  canManageCrew,
+  onOpenCrew,
+}: {
+  entry: CalendarEntry;
+  canManageCrew: boolean;
+  onOpenCrew: (entry: CalendarEntry) => void;
+}) {
+  const titleParts = scheduleEventTitleParts(entry);
+  const venueTone = VENUE_TONES[venueToneFromEvent(entry)];
+  const openSlots = entry.coverage
+    ? Math.max(0, entry.coverage.total - entry.coverage.filled)
+    : 0;
+  const className = cn(
+    "flex min-h-16 w-full items-stretch overflow-hidden rounded-md border border-border/40 text-left outline-none transition-[border-color,scale] hover:border-border/80 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring",
+  );
+  const content = (
+    <>
+      <span className={cn("w-[3px] shrink-0", venueTone.solidClass)} />
+      <span className={cn("min-w-0 flex-1 px-3 py-2.5", venueTone.surfaceClass)}>
+        <span className="mb-1 flex items-center justify-between gap-2 text-[10px] text-muted-foreground">
+          <span>{entry.allDay ? formatCalendarEventAllDayLabel(entry) : formatTimeShort(entry.startsAt)}</span>
+          <span>{venueTone.label}</span>
+        </span>
+        <span className="block text-sm font-semibold leading-snug text-foreground">
+          {titleParts.title}
+        </span>
+        {titleParts.detail && (
+          <span className="mt-0.5 block truncate text-xs text-muted-foreground">{titleParts.detail}</span>
+        )}
+        {entry.coverage && (
+          <span className="mt-2 flex items-center justify-between gap-2">
+            <CoverageTag
+              percentage={entry.coverage.percentage}
+              filled={entry.coverage.filled}
+              total={entry.coverage.total}
+            />
+            {openSlots > 0 && <span className="text-[10px] text-muted-foreground">{openSlots} open</span>}
+          </span>
+        )}
+        {!entry.coverage && canManageCrew && (
+          <span className="mt-2 block text-[10px] font-medium text-muted-foreground">Set up crew</span>
+        )}
+      </span>
+    </>
+  );
+
+  return canManageCrew ? (
+    <button
+      className={className}
+      aria-label={`${entry.shiftGroupId ? "Manage crew for" : "Set up crew for"} ${titleParts.title}`}
+      onClick={() => onOpenCrew(entry)}
+    >
+      {content}
+    </button>
+  ) : (
+    <Link href={`/events/${entry.id}`} className={className}>
+      {content}
+    </Link>
+  );
+}
+
 /* ── Main CalendarView ── */
 
 export function CalendarView({
   entries,
+  loading,
   calMonth,
-  onSwitchToList,
   setCalMonth,
   expandedDay,
   setExpandedDay,
-  onSelectGroup,
+  canManageCrew,
+  onOpenCrew,
 }: CalendarViewProps) {
   const calCells = useMemo(() => {
     const year = calMonth.getFullYear();
@@ -201,56 +312,36 @@ export function CalendarView({
     const d = new Date();
     goToMonth(new Date(d.getFullYear(), d.getMonth(), 1));
   }
+  const currentMonth = isToday(calMonth, new Date().getDate());
+  const activeDayCount = calEntriesByDay.size;
+  const openSlotCount = entries.reduce((total, entry) => (
+    total + (entry.coverage ? Math.max(0, entry.coverage.total - entry.coverage.filled) : 0)
+  ), 0);
+  const monthSummary = [
+    `${entries.length} event${entries.length === 1 ? "" : "s"}`,
+    `${activeDayCount} active day${activeDayCount === 1 ? "" : "s"}`,
+    openSlotCount > 0 ? `${openSlotCount} open` : "Crew covered",
+  ].join(" · ");
 
   return (
-    <div className="mb-1">
+    <div className="mb-1" data-schedule-view="calendar">
       {/* ── Calendar Header ── */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            className="size-10 text-muted-foreground"
-            onClick={prevMonth}
-            aria-label="Previous month"
-          >
-            <ChevronLeft className="size-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            className="size-10 text-muted-foreground"
-            onClick={nextMonth}
-            aria-label="Next month"
-          >
-            <ChevronRight className="size-4" />
-          </Button>
-          <h2
-            className="text-xl! font-bold! tracking-tight uppercase"
-            style={{ fontFamily: "var(--font-heading)" }}
-          >
-            {calMonth.toLocaleDateString("en-US", {
-              month: "long",
-              year: "numeric",
-            })}
-          </h2>
-        </div>
-        <Button variant="outline" className="h-10" onClick={goCalToday}>
-          Today
-        </Button>
-      </div>
-
-      {/* ── Mobile notice ── */}
-      <div className="hidden max-md:flex flex-col items-center gap-3 py-8 px-4 text-muted-foreground text-sm border border-border/60 rounded-lg bg-muted/20 text-center">
-        <span>Calendar view is best on desktop.</span>
-        {onSwitchToList && (
-          <Button variant="outline" size="sm" className="h-10" onClick={onSwitchToList}>
-            Switch to List view
-          </Button>
-        )}
-      </div>
+      <SchedulePeriodNavigator
+        title={calMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+        summary={monthSummary}
+        isCurrent={currentMonth}
+        onPrevious={prevMonth}
+        onNext={nextMonth}
+        onToday={goCalToday}
+        previousLabel="Previous month"
+        nextLabel="Next month"
+      />
 
       {/* ── Calendar Grid ── */}
-      {entries.length === 0 ? (
-        <div className="hidden rounded-lg border border-border/60 bg-card md:block">
+      {loading ? (
+        <CalendarSkeleton />
+      ) : entries.length === 0 ? (
+        <div className="rounded-lg border border-border/60 bg-card">
           <EmptyState
             icon="calendar"
             title="No events this month"
@@ -259,7 +350,8 @@ export function CalendarView({
           />
         </div>
       ) : (
-      <div className="hidden md:block border border-border/60 rounded-lg overflow-hidden">
+      <>
+      <div className="hidden overflow-hidden rounded-lg border border-border/60 md:block">
         {/* Day-of-week headers */}
         <div className="grid grid-cols-7 border-b border-border/60 bg-muted/25">
           {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
@@ -290,7 +382,7 @@ export function CalendarView({
               <div
                 key={i}
                 className={cn(
-                  "min-h-[88px] p-1 overflow-hidden border-t border-border/40",
+                  "min-h-[112px] overflow-hidden border-t border-border/40 p-1.5",
                   i % 7 !== 0 && "border-l border-l-border/40",
                   cell.day === null ? "bg-muted/15" : "bg-card",
                   today && "bg-[var(--wi-red)]/[0.04] dark:bg-[var(--wi-red)]/[0.08]",
@@ -300,7 +392,7 @@ export function CalendarView({
                 {cell.day && (
                   <>
                     {/* Date numeral */}
-                    <div className="flex justify-center mb-1">
+                    <div className="mb-1.5 flex items-center justify-between gap-2">
                       <span
                         className={cn(
                           "inline-flex size-[26px] items-center justify-center rounded-full text-sm font-bold leading-none",
@@ -312,6 +404,11 @@ export function CalendarView({
                       >
                         {cell.day}
                       </span>
+                      {(dayEntries?.length ?? 0) > 0 && (
+                        <span className="text-[9px] font-medium tabular-nums text-muted-foreground">
+                          {dayEntries?.length} event{dayEntries?.length === 1 ? "" : "s"}
+                        </span>
+                      )}
                     </div>
 
                     {/* Events */}
@@ -319,7 +416,8 @@ export function CalendarView({
                       <EventChip
                         key={`${entry.id}-${cell.day}`}
                         entry={entry}
-                        onSelectGroup={onSelectGroup}
+                        canManageCrew={canManageCrew}
+                        onOpenCrew={onOpenCrew}
                       />
                     ))}
 
@@ -349,6 +447,44 @@ export function CalendarView({
           })}
         </div>
       </div>
+      <div className="overflow-hidden rounded-lg border border-border/60 md:hidden">
+        {[...calEntriesByDay.entries()].map(([day, dayEntries]) => {
+          const date = new Date(calMonth.getFullYear(), calMonth.getMonth(), day);
+          const today = isToday(calMonth, day);
+          return (
+            <section key={day} className="border-b border-border/50 last:border-b-0">
+              <div className={cn(
+                "flex items-center justify-between gap-3 bg-muted/15 px-3 py-2",
+                today && "bg-[var(--wi-red)]/[0.05] dark:bg-[var(--wi-red)]/[0.09]",
+              )}>
+                <div className="flex items-center gap-2">
+                  <span className={cn(
+                    "text-xs font-semibold uppercase tracking-wide",
+                    today ? "text-[var(--wi-red)]" : "text-foreground",
+                  )}>
+                    {date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                  </span>
+                  {today && <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--wi-red)]">Today</span>}
+                </div>
+                <span className="text-[11px] tabular-nums text-muted-foreground">
+                  {dayEntries.length} event{dayEntries.length === 1 ? "" : "s"}
+                </span>
+              </div>
+              <div className="flex flex-col gap-2 p-3">
+                {dayEntries.map((entry) => (
+                  <MobileCalendarEvent
+                    key={`${entry.id}-${day}`}
+                    entry={entry}
+                    canManageCrew={canManageCrew}
+                    onOpenCrew={onOpenCrew}
+                  />
+                ))}
+              </div>
+            </section>
+          );
+        })}
+      </div>
+      </>
       )}
     </div>
   );

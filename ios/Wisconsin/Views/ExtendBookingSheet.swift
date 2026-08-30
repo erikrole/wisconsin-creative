@@ -126,7 +126,6 @@ struct ExtendBookingSheet: View {
         let base = newEndsAt > currentEndsAt ? newEndsAt : currentEndsAt
         if let next = Calendar.current.date(byAdding: .day, value: days, to: base) {
             newEndsAt = next
-            Haptics.tap()
         }
     }
 

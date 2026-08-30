@@ -1,0 +1,69 @@
+{
+  "title": "Battery Ops family workspace",
+  "eyebrow": "Web · Wisconsin Creative",
+  "lede": "Battery Ops now answers the family-level questions first—what is available, what needs attention, what metadata identifies the pool—and reveals numbered units only when an operator needs to act on them.",
+  "stats": [
+    {
+      "k": "Unit tiles on load",
+      "v": "90 → 0",
+      "n": "Same four-family, 90-unit operating snapshot",
+      "tone": "good"
+    },
+    {
+      "k": "First family footprint",
+      "v": "≥397px → 303px",
+      "n": "Measured in the matched 1280×720 captures; the old card continues to the viewport edge",
+      "tone": "good"
+    },
+    {
+      "k": "Family layout",
+      "v": "2 columns → 1",
+      "n": "Independent rows remove the dead space created by unequal unit counts"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Family operations at a glance",
+      "note": "Same 1280×720 viewport and the same FX6 / Gold Mount counts, labels, category, and location. The before capture is the currently deployed page; the after capture uses a development-only fixture copied from that operating snapshot so no inventory mutation was required.",
+      "pairs": [
+        {
+          "title": "From an always-open tile wall to a family workspace",
+          "sub": "Look at the first FX6 family and where Gold Mount begins.",
+          "before": "tasks/archive/proofs/battery-ops-experience-before.png",
+          "beforeCap": "Every unit renders immediately, generic Add and Brother CSV actions compete with the name, and unequal families create a coupled two-column layout.",
+          "after": "tasks/archive/proofs/battery-ops-experience-after.png",
+          "afterCap": "Availability, status, threshold, labels, QR, and product mix lead; Add units, Export labels, Edit metadata, and Show units name the operator's next move."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "The live number was easy to misread as an editable field",
+      "was": "A dense wall of numbered tiles carried the truth but offered no concise explanation of how the count changes.",
+      "now": "The family says that numbered availability comes from unit status, then routes new physical stock through Add units and count corrections through each unit menu."
+    },
+    {
+      "h": "Receiving lost product identity",
+      "was": "Battery Ops could add the next numbered range, but could not attach an existing product to those units during receiving.",
+      "now": "The receiving dialog keeps the exact range, before/after count, and reason while adding an optional active-product assignment."
+    },
+    {
+      "h": "Metadata was hidden behind an unlabeled family link",
+      "was": "Location and category were present, while threshold, QR identity, label readiness, product mix, and the edit destination were not grouped as an operational summary.",
+      "now": "The family workspace exposes those fields together and provides an explicit Edit metadata handoff to the existing audited detail flow."
+    }
+  ],
+  "verification": [
+    "<strong>20 focused tests</strong> pass across Battery Ops reads, stale repair, unit adjustments, and the new experience source contract.",
+    "<strong>TypeScript and focused ESLint</strong> pass with no findings in the changed files.",
+    "<strong>Full app build</strong> passes with the final Battery Ops source and development fixture.",
+    "<strong>Authenticated desktop browser proof</strong> covers the collapsed family workspace, unit expansion and status filters, and product-aware receiving dialog without submitting a mutation.",
+    "<strong>Narrow viewport proof:</strong> unavailable because the connected in-app browser does not expose a viewport override; responsive source and the production build pass, but this is not a visual narrow-screen claim."
+  ],
+  "notes": [
+    "No schema, migration, custody policy, or production inventory was changed.",
+    "The normal Preview database is behind the dirty shared Prisma client, so the review uses an authenticated development-only fixture gated to NODE_ENV=development and the fixture query.",
+    "Creating the Football Sony Battery family remains separate operational work under GAP-74."
+  ]
+}

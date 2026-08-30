@@ -2,6 +2,7 @@ import SwiftUI
 
 struct KioskIdentityView: View {
     @Environment(KioskStore.self) private var store
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var users: [KioskUser] = []
     @State private var query = ""
     @State private var message: String?
@@ -115,7 +116,7 @@ struct KioskIdentityView: View {
             // It also scrolled while the idle roster had learned to fit.
             GeometryReader { proxy in
                 let labels = disambiguatedLabels(for: visibleUsers)
-                let metrics = KioskRosterMetrics.resolve(count: visibleUsers.count, in: proxy.size)
+                let metrics = rosterMetrics(for: visibleUsers.count, in: proxy.size)
                 let grid = LazyVGrid(columns: metrics.gridColumns, spacing: KioskRosterMetrics.gap) {
                     ForEach(visibleUsers) { user in
                         UserRow(
@@ -136,6 +137,22 @@ struct KioskIdentityView: View {
                 }
             }
         }
+    }
+
+    /// At accessibility text sizes the name is the point of this screen. Keep
+    /// one comfortable scrolling column instead of shrinking names into a
+    /// dense grid that makes self-identification error-prone.
+    private func rosterMetrics(for count: Int, in size: CGSize) -> KioskRosterMetrics {
+        guard !dynamicTypeSize.isAccessibilitySize else {
+            return KioskRosterMetrics(
+                columns: 1,
+                tileHeight: KioskRosterMetrics.comfortableHeight,
+                avatarSize: 40,
+                showsAvatar: true,
+                fitsOnOneScreen: false
+            )
+        }
+        return KioskRosterMetrics.resolve(count: count, in: size)
     }
 
     private func loadRoster() async {
@@ -284,7 +301,7 @@ struct KioskScannerStatusPill: View {
         Label(store.scanner.statusText, systemImage: store.scanner.statusSymbol)
             .font(KioskType.chip).foregroundStyle(tint)
             .padding(.horizontal, 13).padding(.vertical, 9)
-            .glassEffect(.regular, in: Capsule())
+            .background(KioskSurface.cardRaised, in: Capsule())
             .overlay(Capsule().stroke(tint.opacity(0.4)))
     }
 

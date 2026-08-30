@@ -84,7 +84,7 @@ private struct StepIndicator: View {
             ForEach(Array(steps.enumerated()), id: \.offset) { idx, s in
                 HStack(spacing: 0) {
                     Circle()
-                        .fill(idx <= currentIndex ? Color.accentColor : Color(.systemFill))
+                        .fill(idx <= currentIndex ? Color.brandPrimary : Color(.systemFill))
                         .frame(width: 24, height: 24)
                         .overlay {
                             if idx < currentIndex {
@@ -103,7 +103,7 @@ private struct StepIndicator: View {
                         .padding(.leading, 5)
                     if idx < steps.count - 1 {
                         Rectangle()
-                            .fill(idx < currentIndex ? Color.accentColor : Color(.systemFill))
+                        .fill(idx < currentIndex ? Color.brandPrimary : Color(.systemFill))
                             .frame(height: 2)
                             .padding(.horizontal, 8)
                     }
@@ -140,7 +140,7 @@ private struct ScanStepView: View {
                     .ignoresSafeArea(edges: .bottom)
                 } else if !authorized {
                     ContentUnavailableView("Camera Access Required",
-                        systemImage: "camera.slash",
+                        systemImage: "camera.badge.exclamationmark",
                         description: Text("Allow camera access in Settings."))
                 } else {
                     typeManuallyFallback

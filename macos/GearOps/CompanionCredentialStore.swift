@@ -4,6 +4,8 @@ import Security
 protocol CompanionCredentialStoring: Sendable {
     func loadToken() async throws -> String?
     func saveToken(_ token: String) async throws
+    func loadUser() async throws -> GearOpsUser?
+    func saveUser(_ user: GearOpsUser) async throws
     func deleteToken() async throws
     func deleteToken(ifMatching token: String) async throws
     func stageTokenForRevocation(_ token: String) async throws
@@ -14,6 +16,7 @@ protocol CompanionCredentialStoring: Sendable {
 actor CompanionCredentialStore: CompanionCredentialStoring {
     private let service = "com.erikrole.GearOps.companion"
     private let tokenAccount = "projection-token"
+    private let userAccount = "projection-user"
     private let pendingRevocationsAccount = "pending-revocations"
     private let maxPendingRevocations = 16
 
@@ -45,9 +48,30 @@ actor CompanionCredentialStore: CompanionCredentialStoring {
         try deleteItem(account: tokenAccount, dataProtection: false)
     }
 
+    func loadUser() throws -> GearOpsUser? {
+        guard let data = try loadData(account: userAccount, dataProtection: true) else {
+            return nil
+        }
+        guard let user = try? JSONDecoder().decode(GearOpsUser.self, from: data),
+              !user.id.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              !user.email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw CredentialStoreError.invalidData
+        }
+        return user
+    }
+
+    func saveUser(_ user: GearOpsUser) throws {
+        guard !user.id.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              !user.email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw CredentialStoreError.invalidData
+        }
+        try saveHardenedData(try JSONEncoder().encode(user), account: userAccount)
+    }
+
     func deleteToken() throws {
         try deleteItem(account: tokenAccount, dataProtection: true)
         try deleteItem(account: tokenAccount, dataProtection: false)
+        try deleteItem(account: userAccount, dataProtection: true)
     }
 
     func deleteToken(ifMatching token: String) throws {

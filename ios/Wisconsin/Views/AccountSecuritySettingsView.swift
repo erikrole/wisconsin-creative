@@ -53,7 +53,7 @@ struct AccountSecuritySettingsView: View {
             }
 
             Section {
-                Text("Use Face ID, Touch ID, or your device security to sign in without typing a password.")
+                Text("Use your device's built-in security to sign in without typing a password.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
 
@@ -222,9 +222,12 @@ struct AccountSecuritySettingsView: View {
                 .accessibilityValue(showPasswords ? "Passwords visible" : "Passwords hidden")
                 .disabled(isSaving)
 
-                Toggle("Sign out other devices", isOn: $revokeOtherSessions)
+                Toggle("Sign out other devices after changing password", isOn: $revokeOtherSessions)
                     .tint(Color.statusText(.green))
                     .disabled(isSaving)
+                Text("Applies only to this password change.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
 
                 if let validationMessage {
                     Text(validationMessage)
@@ -272,7 +275,7 @@ struct AccountSecuritySettingsView: View {
             } header: {
                 Text("Account Access")
             } footer: {
-                Text("Deleting your account removes access and signs out every device. Historical custody and audit records may be retained.")
+                Text("Deleting removes your profile and sign-in data, revokes every device, and signs you out. Historical custody and audit records are retained without your personal profile details.")
             }
         }
         .listStyle(.insetGrouped)
@@ -283,7 +286,7 @@ struct AccountSecuritySettingsView: View {
             DeleteAccountView()
         }
         .confirmationDialog(
-            "Remove \(passkeyToRemove?.name ?? "this passkey")?",
+            "Remove Passkey?",
             isPresented: $showPasskeyRemovalConfirmation,
             titleVisibility: .visible
         ) {
@@ -293,7 +296,7 @@ struct AccountSecuritySettingsView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This passkey will no longer sign in to Wisconsin Creative.")
+            Text("\(passkeyToRemove?.name ?? "This passkey") will no longer sign in to Wisconsin Creative.")
         }
         .task {
             await loadPasskeys()
@@ -343,6 +346,7 @@ struct AccountSecuritySettingsView: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
+                        .textSelection(.enabled)
                 }
                 Spacer(minLength: 12)
                 StatusPill.role(session.currentUser?.role ?? "")
@@ -546,8 +550,8 @@ private struct DeleteAccountView: View {
         NavigationStack {
             Form {
                 Section {
-                    Text("This immediately removes your access, cancels future reservations, and signs out every device. You must return any checked-out gear first.")
-                    Text("Historical custody, scheduling, and audit records may be retained for operational and legal accountability.")
+                    Text("Deleting removes your profile and sign-in data, cancels future reservations, and signs out every device. You must return any checked-out gear first.")
+                    Text("Historical custody and audit records are retained for operational accountability without your personal profile details.")
                 }
 
                 Section("Confirm Your Identity") {

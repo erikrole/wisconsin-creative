@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect, useLayoutEffect } from "react";
 import Link from "next/link";
-import { ArchiveIcon, CalendarDaysIcon, ChevronDownIcon, ChevronRightIcon, EyeOffIcon, UserIcon, UsersRoundIcon, XIcon } from "lucide-react";
+import { ArchiveIcon, ArrowDownIcon, ArrowUpIcon, ChevronDownIcon, ChevronRightIcon, EyeOffIcon, LoaderCircleIcon, UserIcon, UsersRoundIcon, XIcon } from "lucide-react";
 import { toast } from "sonner";
 import { SkeletonTable } from "@/components/Skeleton";
 import EmptyState from "@/components/EmptyState";
@@ -49,6 +49,13 @@ import {
 import type { CalendarEntry, Shift } from "./types";
 import { WorkingCrewEditor, type WorkingCrewEntry } from "./WorkingCrewEditor";
 import type { ScheduleQueueMeta } from "@/lib/schedule-queues";
+import {
+  discardScheduleTimelinePosition,
+  readScheduleTimelinePosition,
+  rememberScheduleTimelineReadingPosition,
+  restoreScheduleTimelinePosition,
+  type ScheduleTimelineSnapshot,
+} from "@/lib/schedule-timeline-position";
 
 import {
   ACTIVE_STATUSES,
@@ -66,6 +73,7 @@ type ListViewProps = {
   filteredEntries: CalendarEntry[];
   groupedEntries: [string, CalendarEntry[]][];
   loading: boolean;
+  refreshing: boolean;
   loadError: false | "network" | "server";
   loadData: () => void | Promise<void>;
   myShiftsOnly: boolean;
@@ -205,6 +213,11 @@ function DateGroupHeader({ date, eventCount, isToday }: { date: Date; eventCount
         {dateLabel}
       </span>
       {isToday && <Badge variant="red" size="sm">Today</Badge>}
+      {isToday && (
+        <span className="hidden text-[11px] text-muted-foreground sm:inline">
+          Past above · upcoming below
+        </span>
+      )}
       <span className="ml-auto text-xs font-medium tabular-nums text-muted-foreground">
         {eventCount === 0 ? "No events" : `${eventCount} event${eventCount === 1 ? "" : "s"}`}
       </span>
@@ -552,11 +565,11 @@ function TimelineStart({
   return (
     <div className="flex flex-col items-center gap-2 border-b border-border/50 bg-muted/10 px-3 py-4 text-center">
       <span className="text-[11px] text-muted-foreground">
-        {includeArchived ? "Beginning of records" : "Earlier events are archived"}
+        {includeArchived ? "Beginning of records" : "Older records are archived"}
       </span>
       {!includeArchived && (
         <Button variant="outline" className="h-10 text-xs" onClick={onLoadArchived}>
-          Load archived events
+          Load older records
         </Button>
       )}
     </div>
@@ -568,6 +581,7 @@ export function ListView({
   filteredEntries,
   groupedEntries,
   loading,
+  refreshing,
   loadError,
   loadData,
   myShiftsOnly,
@@ -637,7 +651,27 @@ export function ListView({
    * yank someone back to today mid-read.
    */
   const readerOwnsScrollRef = useRef(false);
+  const transitionAnchorRef = useRef<ScheduleTimelineSnapshot | null>(null);
   const [todayOffscreen, setTodayOffscreen] = useState(false);
+  const [todayDirection, setTodayDirection] = useState<"up" | "down">("up");
+
+  /**
+   * A filter or List -> other view -> List round trip is not a fresh visit.
+   * Restore the visible event (or nearest surviving day) before the ordinary
+   * Today anchor gets a chance to claim this render.
+   */
+  useLayoutEffect(() => {
+    if (!isTimeline || loading) return;
+    // Keep the snapshot in session storage while the matching URL update
+    // settles. App Router can remount this list after the first restoration;
+    // a one-shot read lets that second mount fall through to the ordinary
+    // Today anchor. The next real reader input clears the transition.
+    const pending = readScheduleTimelinePosition();
+    if (!pending) return;
+    transitionAnchorRef.current = pending;
+    didAnchorRef.current = true;
+    readerOwnsScrollRef.current = true;
+  }, [groupedEntries, isTimeline, loading]);
 
   useLayoutEffect(() => {
     if (!isTimeline || (!arrivedByHistory && !hasScheduleHistoryReturn() && !isScheduleReload())) return;
@@ -656,7 +690,11 @@ export function ListView({
     const raw = getComputedStyle(document.documentElement)
       .getPropertyValue("--schedule-sticky-bottom")
       .trim();
-    return Number.parseInt(raw, 10) || 0;
+    const publishedBottom = Number.parseInt(raw, 10) || 0;
+    const liveBottom = document
+      .querySelector<HTMLElement>("[data-schedule-sticky-frame]")
+      ?.getBoundingClientRect().bottom ?? 0;
+    return Math.max(publishedBottom, liveBottom);
   }, []);
 
   const todayGroupEl = useCallback(() => (
@@ -667,7 +705,17 @@ export function ListView({
 
   useEffect(() => {
     if (!isTimeline) return;
-    const claim = () => { readerOwnsScrollRef.current = true; };
+    const claim = (event: Event) => {
+      readerOwnsScrollRef.current = true;
+      transitionAnchorRef.current = null;
+      const target = event.target;
+      if (
+        event.type === "mousedown"
+        && target instanceof Element
+        && target.closest("[data-schedule-view-controls]")
+      ) return;
+      discardScheduleTimelinePosition();
+    };
     // Input events only. A plain `scroll` listener also fires for the anchor's
     // own programmatic scroll, which raced the settle pass below and left today
     // sitting wherever late-rendering content had pushed it.
@@ -680,8 +728,25 @@ export function ListView({
     };
   }, [isTimeline]);
 
-  /** Set while archived events are loading; see the restore effect below. */
-  const pendingArchiveScrollRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!isTimeline || loading) return;
+    let timeoutId: number | null = null;
+    const remember = () => {
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
+      // Focus management for the sticky view control can move the document a
+      // moment before its change event. Keep the last settled reading position
+      // separately so that movement cannot replace the date the reader chose.
+      timeoutId = window.setTimeout(rememberScheduleTimelineReadingPosition, 160);
+    };
+    const frameId = window.requestAnimationFrame(remember);
+    window.addEventListener("scroll", remember, { passive: true });
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.removeEventListener("scroll", remember);
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
+    };
+  }, [groupedEntries, isTimeline, loading]);
+
   /** Where a reload should land, held until the list is tall enough to get there. */
   const pendingRestoreRef = useRef<number | null>(null);
 
@@ -737,7 +802,7 @@ export function ListView({
     if (!isTimeline || !didAnchorRef.current) return;
 
     const keepAnchored = () => {
-      if (readerOwnsScrollRef.current || pendingArchiveScrollRef.current !== null) return;
+      if (readerOwnsScrollRef.current) return;
       const el = todayGroupEl();
       if (!el) return;
       if (Math.abs(el.getBoundingClientRect().top - stickyBottom()) > 2) anchorToday();
@@ -746,6 +811,8 @@ export function ListView({
     const observed = document.getElementById("main-content") ?? document.body;
     const observer = new ResizeObserver(keepAnchored);
     observer.observe(observed);
+    const stickyFrame = document.querySelector<HTMLElement>("[data-schedule-sticky-frame]");
+    if (stickyFrame) observer.observe(stickyFrame);
     const frame = requestAnimationFrame(keepAnchored);
 
     return () => {
@@ -754,77 +821,59 @@ export function ListView({
     };
   }, [isTimeline, groupedEntries, todayGroupEl, anchorToday, stickyBottom]);
 
-  const previousTimelineMetricsRef = useRef<{ height: number; scrollY: number } | null>(null);
-  const previousIncludeArchivedRef = useRef(includeArchived);
-
-  useLayoutEffect(() => {
-    if (includeArchived && !previousIncludeArchivedRef.current) {
-      const previous = previousTimelineMetricsRef.current;
-      pendingArchiveScrollRef.current = previous
-        ? previous.height - previous.scrollY
-        : document.documentElement.scrollHeight - window.scrollY;
-      readerOwnsScrollRef.current = true;
-    } else if (!includeArchived) {
-      pendingArchiveScrollRef.current = null;
-    }
-
-    previousIncludeArchivedRef.current = includeArchived;
-    previousTimelineMetricsRef.current = {
-      height: document.documentElement.scrollHeight,
-      scrollY: window.scrollY,
-    };
-  }, [includeArchived]);
-
+  // Keep a logical transition anchor active while asynchronous rows, readiness,
+  // avatars, and the sticky frame settle. The next user input releases it.
   useEffect(() => {
-    const capture = () => {
-      previousTimelineMetricsRef.current = {
-        height: document.documentElement.scrollHeight,
-        scrollY: window.scrollY,
-      };
+    if (!isTimeline || loading || !transitionAnchorRef.current) return;
+    const apply = () => {
+      const snapshot = transitionAnchorRef.current;
+      if (snapshot) restoreScheduleTimelinePosition(snapshot);
     };
-    capture();
-    const observer = new ResizeObserver(capture);
+    apply();
+    const observer = new ResizeObserver(apply);
     observer.observe(document.getElementById("main-content") ?? document.body);
-    window.addEventListener("scroll", capture, { passive: true });
+    const stickyFrame = document.querySelector<HTMLElement>("[data-schedule-sticky-frame]");
+    if (stickyFrame) observer.observe(stickyFrame);
+    const frame = requestAnimationFrame(apply);
     return () => {
       observer.disconnect();
-      window.removeEventListener("scroll", capture);
+      cancelAnimationFrame(frame);
     };
-  }, []);
+  }, [groupedEntries, isTimeline, loading]);
 
-  useLayoutEffect(() => {
-    const anchorFromBottom = pendingArchiveScrollRef.current;
-    if (anchorFromBottom === null || loading) return;
-    const height = document.documentElement.scrollHeight;
-    // Until the document actually grows, the older events have not rendered.
-    // Clearing the anchor on that render would spend it on a no-op and let the
-    // real prepend jump the page.
-    if (height - window.scrollY <= anchorFromBottom) return;
-    pendingArchiveScrollRef.current = null;
-    window.scrollTo({ top: height - anchorFromBottom, behavior: "instant" });
-  }, [groupedEntries, loading]);
-
-  // Drives the jump-back control. Both breakpoints' anchors are observed rather
-  // than whichever one matched at effect time, so a resize across the layout
-  // breakpoint cannot leave the button watching a detached element.
+  // Drives the jump-back control from the live measured sticky boundary. A
+  // fixed IntersectionObserver root margin went stale when active chips wrapped
+  // the Schedule frame onto another row.
   useEffect(() => {
-    if (!isTimeline || typeof IntersectionObserver === "undefined") return;
-    const targets = [desktopTodayGroupRef.current, mobileTodayGroupRef.current]
-      .filter((el): el is HTMLDivElement => el !== null);
-    if (targets.length === 0) return;
-
-    const visible = new Set<Element>();
-    const observer = new IntersectionObserver((observed) => {
-      for (const entry of observed) {
-        if (entry.isIntersecting) visible.add(entry.target);
-        else visible.delete(entry.target);
-      }
-      setTodayOffscreen(visible.size === 0);
-    }, { rootMargin: `-${stickyBottom()}px 0px 0px 0px` });
-
-    for (const target of targets) observer.observe(target);
-    return () => observer.disconnect();
-  }, [isTimeline, groupedEntries, stickyBottom]);
+    if (!isTimeline) return;
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const element = todayGroupEl();
+      if (!element) return;
+      const rect = element.getBoundingClientRect();
+      const boundary = stickyBottom();
+      const offscreen = rect.bottom <= boundary || rect.top >= window.innerHeight;
+      setTodayOffscreen(offscreen);
+      if (offscreen) setTodayDirection(rect.top < boundary ? "up" : "down");
+    };
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
+    const observer = new ResizeObserver(schedule);
+    observer.observe(document.getElementById("main-content") ?? document.body);
+    const stickyFrame = document.querySelector<HTMLElement>("[data-schedule-sticky-frame]");
+    if (stickyFrame) observer.observe(stickyFrame);
+    return () => {
+      window.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
+      observer.disconnect();
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, [groupedEntries, isTimeline, stickyBottom, todayGroupEl]);
 
   /**
    * Reaching for older history is the reader taking the wheel: from here the
@@ -1003,18 +1052,29 @@ export function ListView({
 
   return (
     <>
-      <div className="overflow-hidden rounded-md border border-border/60 bg-card">
+      <div className="overflow-hidden rounded-md border border-border/60 bg-card" data-schedule-view="list">
         {/* ── Header ── */}
         <div className="flex items-center justify-between border-b border-border/60 bg-muted/15 px-3 py-2.5">
           <div className="flex items-center gap-2">
             <h3 className="text-sm! font-semibold! text-foreground">
-              {myShiftsOnly ? "My Shifts" : "Schedule"}
+              {myShiftsOnly ? "My shifts timeline" : "Timeline"}
             </h3>
             <span className="text-xs font-medium tabular-nums text-muted-foreground">
               {filteredEntries.length !== entries.length
                 ? `${filteredEntries.length} of ${entries.length}`
                 : filteredEntries.length}
             </span>
+            {!myShiftsOnly && isTimeline && (
+              <span className="hidden text-[11px] text-muted-foreground sm:inline">
+                Past to future
+              </span>
+            )}
+            {refreshing && (
+              <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground" role="status">
+                <LoaderCircleIcon className="size-3 animate-spin" />
+                Refreshing
+              </span>
+            )}
           </div>
         </div>
 
@@ -1053,10 +1113,10 @@ export function ListView({
               activeQueueMeta
                 ? activeQueueMeta.emptyDescription
                 : myShiftsOnly
-                ? "You don't have any upcoming shift assignments."
+                ? "You don't have shift assignments in this timeline."
                 : hasFilters
                   ? "Try adjusting your filters."
-                  : "No upcoming events. Check Settings > Calendar Sources to add an ICS feed."
+                  : "No schedule events are available. Check Settings > Calendar Sources to add an ICS feed."
             }
             actionLabel={
               activeQueueMeta
@@ -1102,6 +1162,7 @@ export function ListView({
                   key={`${dateKey}-${groupIdx}`}
                   ref={isGroupToday ? desktopTodayGroupRef : undefined}
                   data-today={isGroupToday || undefined}
+                  data-schedule-day={groupDate.getTime()}
                   style={{ scrollMarginTop: "var(--schedule-sticky-bottom, 0px)" }}
                 >
                   <DateGroupHeader date={groupDate} eventCount={groupEntries.length} isToday={isGroupToday} />
@@ -1180,6 +1241,7 @@ export function ListView({
                   key={`${dateKey}-${groupIdx}`}
                   ref={isGroupToday ? mobileTodayGroupRef : undefined}
                   data-today={isGroupToday || undefined}
+                  data-schedule-day={groupDate.getTime()}
                   style={{ scrollMarginTop: "var(--schedule-sticky-bottom, 0px)" }}
                 >
                   <DateGroupHeader date={groupDate} eventCount={groupEntries.length} isToday={isGroupToday} />
@@ -1255,10 +1317,10 @@ export function ListView({
                     {entry.subtitle && (
                       <span className="font-medium text-primary/70">{entry.subtitle}</span>
                     )}
-                    {entry.archivedAt && (
+                    {entry.eventArchivedAt && (
                       <span className="inline-flex items-center gap-0.5 text-muted-foreground/50">
                         <ArchiveIcon className="size-3" />
-                        Archived
+                        Older record
                       </span>
                     )}
                     <CrewSummary entry={entry} compact />
@@ -1268,6 +1330,7 @@ export function ListView({
               return (
                 <div
                   key={entry.id}
+                  data-schedule-event-id={entry.id}
                   className={cn(
                     "relative border-b border-l-[3px] border-border/50 last:border-b-0",
                     venueTone.railClass,
@@ -1412,7 +1475,11 @@ export function ListView({
             onClick={scrollToToday}
             className="pointer-events-auto h-10 gap-1.5 rounded-full border border-border/60 px-4 shadow-lg"
           >
-            <CalendarDaysIcon className="size-3.5" />
+            {todayDirection === "up" ? (
+              <ArrowUpIcon className="size-3.5" />
+            ) : (
+              <ArrowDownIcon className="size-3.5" />
+            )}
             Jump to today
           </Button>
         </div>
@@ -1478,6 +1545,7 @@ function EventRows({
     <>
       {/* Parent event row */}
       <tr
+        data-schedule-event-id={entry.id}
         className={cn(
           "group/row border-l-[3px] transition-colors",
           venueTone.railClass,
@@ -1532,10 +1600,10 @@ function EventRows({
             <CrewSummary entry={entry} />
             <div className="flex min-w-0 flex-wrap items-center gap-1">
               {showShiftStatus && shiftStatus === "Pending" && <Badge variant="orange" size="sm">{shiftStatus}</Badge>}
-              {entry.archivedAt && (
+              {entry.eventArchivedAt && (
                 <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground/60">
                   <ArchiveIcon className="size-3" />
-                  Archived
+                  Older record
                 </span>
               )}
             </div>

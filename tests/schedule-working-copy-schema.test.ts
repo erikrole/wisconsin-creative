@@ -6,6 +6,10 @@ const migration = readFileSync(
   "prisma/migrations/0099_shift_group_working_copy/migration.sql",
   "utf8",
 );
+const historyMigration = readFileSync(
+  "prisma/migrations/0139_schedule_working_copy_undo_redo/migration.sql",
+  "utf8",
+);
 
 describe("schedule working-copy persistence", () => {
   it("keeps one versioned working copy per shift group", () => {
@@ -26,5 +30,14 @@ describe("schedule working-copy persistence", () => {
     expect(migration).toContain('REFERENCES "shift_groups"("id") ON DELETE CASCADE');
     expect(migration).toContain('ADD COLUMN "template_managed" BOOLEAN NOT NULL DEFAULT false');
     expect(migration).toContain('shift_group."generated_at" IS NOT NULL');
+  });
+
+  it("stores bounded per-command undo and redo stacks beside the version", () => {
+    expect(schema).toContain('undoStack            Json       @default("[]") @map("undo_stack")');
+    expect(schema).toContain('redoStack            Json       @default("[]") @map("redo_stack")');
+    expect(historyMigration).toContain('ADD COLUMN "undo_stack" JSONB NOT NULL DEFAULT \'[]\'::jsonb');
+    expect(historyMigration).toContain('ADD COLUMN "redo_stack" JSONB NOT NULL DEFAULT \'[]\'::jsonb');
+    expect(historyMigration).toContain('jsonb_typeof("undo_stack") = \'array\'');
+    expect(historyMigration).toContain('jsonb_typeof("redo_stack") = \'array\'');
   });
 });

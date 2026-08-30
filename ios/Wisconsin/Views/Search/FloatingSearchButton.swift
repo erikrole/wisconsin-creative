@@ -14,9 +14,8 @@ struct FloatingSearchButton: View {
                 .frame(width: 56, height: 56)
         }
         .buttonStyle(.glassProminent)
-        .tint(.accentColor)
+        .tint(Color.brandPrimary)
         .clipShape(Circle())
         .accessibilityLabel("Search")
-        .sensoryFeedback(.impact(flexibility: .soft, intensity: 0.8), trigger: hapticTrigger)
     }
 }

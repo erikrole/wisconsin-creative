@@ -137,7 +137,7 @@ describe("items filter options bootstrap", () => {
     expect(page).toContain('disabled={!canFillGaps}');
     expect(page).toContain('description={canOfferCreateItem ? "Create your first item to get started."');
     expect(page).toContain('actionLabel={canOfferCreateItem ? "Add item" : undefined}');
-    expect(page).toContain('onAction={canOfferCreateItem ? () => setShowCreate(true) : undefined}');
+    expect(page).toContain('onAction={canOfferCreateItem ? openBlankCreate : undefined}');
     expect(page).toContain('recoveryMode === "partial"');
     expect(page).toContain("referenceAvailability={bulkActionReferenceAvailability}");
 
