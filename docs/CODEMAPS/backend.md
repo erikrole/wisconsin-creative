@@ -180,7 +180,7 @@
 | `src/lib/rate-limit.ts` | 217 |
 | `src/lib/rbac.ts` | 59 |
 | `src/lib/remark-callouts.ts` | 73 |
-| `src/lib/request-limits.ts` | 16 |
+| `src/lib/request-limits.ts` | 17 |
 | `src/lib/resource-assets-client.ts` | 20 |
 | `src/lib/resource-assets-storage.ts` | 75 |
 | `src/lib/resource-assets.ts` | 865 |
@@ -231,6 +231,7 @@
 | `src/lib/title-normalization.ts` | 101 |
 | `src/lib/url-sync.ts` | 16 |
 | `src/lib/usage-analytics.ts` | 67 |
+| `src/lib/user-directory-query.ts` | 107 |
 | `src/lib/user-list-cache.ts` | 73 |
 | `src/lib/user-visibility.ts` | 85 |
 | `src/lib/utils.ts` | 7 |
@@ -314,6 +315,7 @@
 ### `/api/badges`
 
 - `/api/badges/award/[id]`
+- `/api/badges/award/bulk`
 - `/api/badges/award`
 - `/api/badges/events/app-open`
 - `/api/badges/recent`

@@ -31,4 +31,13 @@ describe("Badges Operations surface", () => {
     expect(client).toContain("isAdmin &&");
     expect(client).toContain("MAX_BULK_BADGE_TARGETS");
   });
+
+  it("reads the audience count from the users response envelope", () => {
+    const client = source("src/app/(app)/badges/BadgesClient.tsx");
+
+    // useFetch defaults to json.data, which is the paginated user rows. The
+    // directory totals live beside that array in json.stats.
+    expect(client).toContain('stats: json.stats as DirectoryResponse["stats"] | undefined');
+    expect(client).toContain("const targetCount = audience?.stats?.active ?? 0");
+  });
 });

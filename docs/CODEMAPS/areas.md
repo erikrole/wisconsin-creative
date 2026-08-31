@@ -6,10 +6,10 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 ## badges
 
 - Doc: `docs/AREA_BADGES.md`
-- Pages: `/reports/badges`
-- APIs: `/api/badges/award/[id]`, `/api/badges/award`, `/api/badges/events/app-open`, `/api/badges/recent`, `/api/badges`, `/api/badges/user/[userId]`, `/api/reports/badges`
+- Pages: `/badges`, `/reports/badges`
+- APIs: `/api/badges/award/[id]`, `/api/badges/award/bulk`, `/api/badges/award`, `/api/badges/events/app-open`, `/api/badges/recent`, `/api/badges`, `/api/badges/user/[userId]`, `/api/reports/badges`
 - Services: _none matched_
-- Tests: `tests/badges-award-route.test.ts`, `tests/badges-celebration-ui.test.ts`, `tests/badges-display.test.ts`, `tests/badges-flag-off.test.ts`, `tests/badges-manual-awards.test.ts`, `tests/badges-recent-route.test.ts`, `tests/badges-report-route.test.ts`, `tests/badges-review-hardening.test.ts`
+- Tests: `tests/badges-award-route.test.ts`, `tests/badges-bulk-award-route.test.ts`, `tests/badges-celebration-ui.test.ts`, `tests/badges-display.test.ts`, `tests/badges-flag-off.test.ts`, `tests/badges-manual-awards.test.ts`, `tests/badges-operations-page.test.ts`, `tests/badges-recent-route.test.ts`
 
 ## bulk-inventory
 

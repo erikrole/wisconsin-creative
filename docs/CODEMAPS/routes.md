@@ -5,6 +5,7 @@
 
 - `/accountability` -> `src/app/(app)/accountability/page.tsx`
 - `/admin/fix-today` -> `src/app/(app)/admin/fix-today/page.tsx`
+- `/badges` -> `src/app/(app)/badges/page.tsx`
 - `/blasts/[id]` -> `src/app/(app)/blasts/[id]/page.tsx`
 - `/blasts` -> `src/app/(app)/blasts/page.tsx`
 - `/bookings` -> `src/app/(app)/bookings/page.tsx`
@@ -147,6 +148,7 @@
 - `/api/auth/reset-password` -> `src/app/api/auth/reset-password/route.ts`
 - `/api/availability/check` -> `src/app/api/availability/check/route.ts`
 - `/api/badges/award/[id]` -> `src/app/api/badges/award/[id]/route.ts`
+- `/api/badges/award/bulk` -> `src/app/api/badges/award/bulk/route.ts`
 - `/api/badges/award` -> `src/app/api/badges/award/route.ts`
 - `/api/badges/events/app-open` -> `src/app/api/badges/events/app-open/route.ts`
 - `/api/badges/recent` -> `src/app/api/badges/recent/route.ts`

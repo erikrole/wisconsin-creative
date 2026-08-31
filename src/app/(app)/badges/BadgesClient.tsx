@@ -173,6 +173,9 @@ export default function BadgesClient({
     url: audienceUrl,
     returnTo: "/badges",
     keepPreviousData: true,
+    transform: (json) => ({
+      stats: json.stats as DirectoryResponse["stats"] | undefined,
+    }),
   });
 
   const targetCount = audience?.stats?.active ?? 0;

@@ -7,6 +7,7 @@
 |---|---|
 | `/accountability` | `src/app/(app)/accountability/page.tsx` |
 | `/admin/fix-today` | `src/app/(app)/admin/fix-today/page.tsx` |
+| `/badges` | `src/app/(app)/badges/page.tsx` |
 | `/blasts/[id]` | `src/app/(app)/blasts/[id]/page.tsx` |
 | `/blasts` | `src/app/(app)/blasts/page.tsx` |
 | `/bookings` | `src/app/(app)/bookings/page.tsx` |
@@ -128,7 +129,7 @@
 | `src/components/booking-wizard/WizardStep1.tsx` | 572 |
 | `src/components/ui/heatmap.tsx` | 434 |
 | `src/components/booking-details/BookingHeader.tsx` | 426 |
-| `src/components/Sidebar.tsx` | 413 |
+| `src/components/Sidebar.tsx` | 415 |
 | `src/components/ui/chart.tsx` | 389 |
 | `src/components/FormCombobox.tsx` | 352 |
 | `src/components/booking-details/BookingInfoCard.tsx` | 344 |
