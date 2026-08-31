@@ -3,9 +3,9 @@
 import { SPORT_CODES } from "@/lib/sports";
 import { FilterChip } from "@/components/FilterChip";
 import { OperationalActiveFilterChips, OperationalToolbar, type OperationalActiveFilter } from "@/components/OperationalToolbar";
+import { DebouncedSearchInput } from "@/components/DebouncedSearchInput";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { SearchIcon, XIcon } from "lucide-react";
+import { XIcon } from "lucide-react";
 import type { BookingListConfig, Location, FormUser } from "./types";
 
 export type BookingFiltersProps = {
@@ -25,6 +25,7 @@ export type BookingFiltersProps = {
   userFilter: string;
   onUserFilterChange: (v: string) => void;
   users: FormUser[];
+  onClearAll: () => void;
 };
 
 export function BookingFilters({
@@ -44,6 +45,7 @@ export function BookingFilters({
   userFilter,
   onUserFilterChange,
   users,
+  onClearAll,
 }: BookingFiltersProps) {
   const title = statusFilter
     ? config.statusOptions.find((s) => s.value === statusFilter)?.label ?? "Filtered"
@@ -96,31 +98,15 @@ export function BookingFilters({
             {title} {config.labelPlural.toLowerCase()}
           </div>
           <div className="relative min-w-0 flex-1">
-            <Input
+            <DebouncedSearchInput
               id={`${config.kind.toLowerCase()}-booking-search`}
               name={`${config.kind.toLowerCase()}-booking-search`}
-              type="text"
-              className="peer h-10 pl-9 pr-9 text-base md:text-sm"
+              className="text-base md:text-sm"
               placeholder="Search by title or requester"
               value={search}
-              onChange={(e) => onSearchChange(e.target.value)}
+              onValueChange={onSearchChange}
               aria-label="Search bookings by title or requester"
             />
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center justify-center pl-3 text-muted-foreground/80 peer-disabled:opacity-50">
-              <SearchIcon size={16} />
-            </div>
-            {search && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-xs"
-                className="absolute inset-y-0 right-0 my-auto size-10 text-muted-foreground/80 hover:text-foreground"
-                onClick={() => onSearchChange("")}
-                aria-label="Clear search"
-              >
-                <XIcon size={14} />
-              </Button>
-            )}
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-2">
             {specialFilter ? (
@@ -175,19 +161,13 @@ export function BookingFilters({
                 onClear={() => onUserFilterChange("")}
               />
             )}
-            {(statusFilter || sportFilter || locationFilter || userFilter || specialFilter) && (
+            {(search || statusFilter || sportFilter || locationFilter || userFilter || specialFilter) && (
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 className="h-10 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground"
-                onClick={() => {
-                  onStatusFilterChange("");
-                  onSportFilterChange("");
-                  onLocationFilterChange("");
-                  onUserFilterChange("");
-                  onSpecialFilterChange("");
-                }}
+                onClick={onClearAll}
               >
                 Clear all
               </Button>

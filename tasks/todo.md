@@ -1,6 +1,25 @@
 # Task Queue
 
-Last updated: 2026-08-28
+Last updated: 2026-08-30
+
+---
+## In progress: Bookings and Search quality-of-life (2026-08-30)
+
+Plan: `tasks/bookings-search-qol-plan-2026-08-30.md`.
+
+- [x] Preserve Bookings search, filters, sort, page, and view across navigation and browser Back.
+- [x] Keep `New reservation` available from every Bookings tab and time scope.
+- [x] Add explicit retry for complete and partial global Search failures without clearing trustworthy results.
+- [x] Pass focused tests, TypeScript, lint, docs, and build; record the exact blocker for matched UI review and authenticated browser proof.
+
+### Review
+
+- **Implemented locally:** URL-backed Bookings context, one permission-aware page-level reservation action, and complete/partial Search retry with same-query result retention.
+- **Verified:** 37 focused tests, TypeScript, full lint, codemap freshness, docs verification, `git diff --check`, and `npm run build:app` pass.
+- **Blocked:** Authenticated desktop/narrow-width smoke and matched capture require an isolated Playwright identity. The three required credential variables are unset and no saved authenticated storage state exists.
+- **Not performed:** Commit, push, deploy, production read-back, or production acceptance.
+
+**Boundary:** no API, schema, permission, booking lifecycle, custody, deployment, or production-data change.
 
 ---
 ## In progress: Android PWA browser notifications (2026-08-28)

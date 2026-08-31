@@ -8,7 +8,7 @@ import { buildSignatureDraft, isFreshSignatureDraft, signatureDraftKey, signatur
 import { renderSignatureArtifacts, SIGNATURE_PNG_MIN_WIDTH } from "@/lib/signatures/artifacts";
 import { buildSignatureCurve, buildSignatureSvg, resolveSignatureExportSize, resolveSignatureStrokeWidth, signaturePathData, SIGNATURE_STROKE_SCALE_MIN } from "@/lib/signatures/geometry";
 import { acceptsSignaturePointer, appendCoalescedPointerEvents } from "@/lib/signatures/pointer";
-import { captureSaveRequestSchema, DEFAULT_SIGNATURE_PEN_SETTINGS, isRequiredSignatureGroup, SIGNATURE_IMPORTED_SPORT_CODES, SIGNATURE_SPORT_REGISTRY, signatureAdHocMemberSchema, signatureCollectionTitle, signatureCollectionVersionSchema, signatureRosterEntrySchema } from "@/lib/signatures/types";
+import { captureSaveRequestSchema, DEFAULT_SIGNATURE_PEN_SETTINGS, isRequiredSignatureGroup, SIGNATURE_IMPORTED_SPORT_CODES, SIGNATURE_MAX_POINTS_PER_STROKE, SIGNATURE_MAX_STROKES, SIGNATURE_SPORT_REGISTRY, signatureAdHocMemberSchema, signatureCollectionTitle, signatureCollectionVersionSchema, signatureRosterEntrySchema } from "@/lib/signatures/types";
 import { compareSignatureRosterMembers } from "@/lib/signatures/roster";
 import { buildUWBadgersRosterUrl, fetchUWBadgersRoster, isAllowedUWBadgersUrl, normalizedRosterHash, parseUWBadgersRosterHtml } from "@/lib/signatures/uwbadgers";
 
@@ -724,6 +724,29 @@ describe("signature artifact contract", () => {
   it("rejects unbounded client stroke payloads", () => {
     expect(() => captureSaveRequestSchema.parse({ requestId: "short", expectedCaptureVersion: 0, settingsVersion: 1, strokes })).toThrow();
     expect(() => captureSaveRequestSchema.parse({ requestId: "request-123456789012", expectedCaptureVersion: 0, settingsVersion: 1, strokes: [{ points: [{ x: -1, y: 4 }] }] })).toThrow();
+  });
+
+  it("accepts deliberate printed and slow Pencil signatures within the total byte ceiling", () => {
+    const request = (boundedStrokes: Array<{ points: Array<{ x: number; y: number }> }>) => ({
+      requestId: "request-123456789012",
+      expectedCaptureVersion: 0,
+      settingsVersion: 1,
+      strokes: boundedStrokes,
+    });
+    const point = { x: 10, y: 20 };
+
+    expect(captureSaveRequestSchema.safeParse(request(
+      Array.from({ length: 33 }, () => ({ points: [point] })),
+    )).success).toBe(true);
+    expect(captureSaveRequestSchema.safeParse(request([
+      { points: Array.from({ length: 2_001 }, () => point) },
+    ])).success).toBe(true);
+    expect(captureSaveRequestSchema.safeParse(request(
+      Array.from({ length: SIGNATURE_MAX_STROKES + 1 }, () => ({ points: [point] })),
+    )).error?.issues[0]?.message).toBe("This signature has too many separate pen strokes");
+    expect(captureSaveRequestSchema.safeParse(request([
+      { points: Array.from({ length: SIGNATURE_MAX_POINTS_PER_STROKE + 1 }, () => point) },
+    ])).error?.issues[0]?.message).toBe("One continuous pen stroke is too long; lift the Pencil and continue");
   });
 });
 

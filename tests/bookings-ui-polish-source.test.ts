@@ -10,7 +10,9 @@ describe("Bookings interaction-detail contracts", () => {
 
     expect(page.match(/className="h-10 px-3 text-xs"/g)).toHaveLength(2);
     expect(page.match(/className="size-10 p-0"/g)).toHaveLength(2);
-    expect(list.match(/<Button className="h-10" onClick=\{navigateToCreate\}>/g)).toHaveLength(2);
+    expect(page).toContain('<Link href="/reservations/new">New reservation</Link>');
+    expect(page).toContain('<Button className="h-10" asChild>');
+    expect(list).not.toContain("hideNewButton");
     expect(list).toContain('className="h-10 shrink-0"');
     expect(list.match(/className=\{page.*"h-10/g)?.length).toBeGreaterThanOrEqual(2);
   });

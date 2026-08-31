@@ -10,6 +10,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 type OperationalTone = "red" | "orange" | "green" | "blue" | "purple" | "muted";
 
@@ -217,6 +218,8 @@ export function OperationalPartialResultsAlert({
   noun = "check",
   recoveryCopy = "Refresh before treating a clean result as final.",
   title = "Some checks did not load",
+  actionLabel,
+  onAction,
 }: {
   className?: string;
   failureLabel?: string;
@@ -224,6 +227,8 @@ export function OperationalPartialResultsAlert({
   noun?: string;
   recoveryCopy?: string;
   title?: string;
+  actionLabel?: string;
+  onAction?: () => void;
 }) {
   if (failures.length === 0) return null;
 
@@ -231,11 +236,18 @@ export function OperationalPartialResultsAlert({
     <Alert className={cn("border-[var(--orange)]/40 bg-[var(--orange-bg)]", className)}>
       <AlertTriangle className="size-4 text-[var(--orange-text)]" />
       <AlertTitle>{title}</AlertTitle>
-      <AlertDescription className="text-muted-foreground">
-        {pluralize(failures.length, noun)} could not finish. {recoveryCopy}
-        <span className="block pt-1 text-xs">
-          {failureLabel}: {failures.join(", ")}.
+      <AlertDescription className="flex flex-wrap items-end justify-between gap-3 text-muted-foreground">
+        <span>
+          {pluralize(failures.length, noun)} could not finish. {recoveryCopy}
+          <span className="block pt-1 text-xs">
+            {failureLabel}: {failures.join(", ")}.
+          </span>
         </span>
+        {actionLabel && onAction && (
+          <Button type="button" variant="outline" size="sm" className="h-10 shrink-0" onClick={onAction}>
+            {actionLabel}
+          </Button>
+        )}
       </AlertDescription>
     </Alert>
   );

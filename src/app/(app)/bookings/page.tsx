@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import BookingListPage, { type BookingListConfig, type BookingItem, type ContextMenuExtra } from "@/components/BookingListPage";
@@ -13,6 +14,7 @@ import { handleAuthRedirect, isAbortError, parseErrorMessage } from "@/lib/error
 import { useBookingChangeSync } from "@/hooks/use-booking-change-sync";
 import { FadeUp } from "@/components/ui/motion";
 import { PageHeader } from "@/components/PageHeader";
+import { Button } from "@/components/ui/button";
 import type { TabKey as BookingSheetSection } from "@/components/booking-details/types";
 import { useCurrentUser } from "@/hooks/use-current-user";
 
@@ -50,6 +52,9 @@ export default function BookingsPage() {
     ? (searchParams.get("tab") as "all" | "checkouts" | "reservations")
     : "checkouts";
   const requestedScope = searchParams.get("past") === "true" ? "past" : "active";
+  const requestedView = searchParams.get("view") === "table" || searchParams.get("view") === "cards"
+    ? searchParams.get("view") as "table" | "cards"
+    : null;
   const [activeTab, setActiveTab] = useState<"all" | "checkouts" | "reservations">(requestedTab);
   const [scope, setScope] = useState<"active" | "past">(requestedScope);
   const [viewMode, setViewModeRaw] = useState<"cards" | "table">("cards");
@@ -73,13 +78,18 @@ export default function BookingsPage() {
   }, [requestedScope]);
 
   useEffect(() => {
+    if (requestedView) {
+      setViewModeRaw(requestedView);
+      setPreferencesLoaded(true);
+      return;
+    }
     try {
       setViewModeRaw(localStorage.getItem("bookings-view-mode") === "table" ? "table" : "cards");
     } catch {
       setViewModeRaw("cards");
     }
     setPreferencesLoaded(true);
-  }, []);
+  }, [requestedView]);
 
   useEffect(() => {
     const id = searchParams.get("highlight") || searchParams.get("id");
@@ -96,6 +106,10 @@ export default function BookingsPage() {
   function setViewMode(mode: "cards" | "table") {
     setViewModeRaw(mode);
     try { localStorage.setItem("bookings-view-mode", mode); } catch { /* ignore */ }
+    const next = new URLSearchParams(searchParams.toString());
+    next.set("view", mode);
+    const qs = next.toString();
+    router.replace(qs ? `/bookings?${qs}` : "/bookings", { scroll: false });
   }
 
   const handleTabChange = useCallback((value: string) => {
@@ -106,6 +120,7 @@ export default function BookingsPage() {
     next.delete("highlight");
     next.delete("id");
     next.delete("sheetTab");
+    next.delete("page");
     const qs = next.toString();
     router.replace(qs ? `/bookings?${qs}` : "/bookings", { scroll: false });
   }, [router, searchParams]);
@@ -121,11 +136,15 @@ export default function BookingsPage() {
     next.delete("highlight");
     next.delete("id");
     next.delete("sheetTab");
+    next.delete("page");
     const qs = next.toString();
     router.replace(qs ? `/bookings?${qs}` : "/bookings", { scroll: false });
   }, [router, searchParams]);
 
   const isPastScope = scope === "past";
+  const canCreateReservation = currentUser != null && !currentUser.preview?.readOnly && (
+    currentUser.role !== "COLLABORATOR" || currentUser.capabilities?.includes("RESERVATION_CREATE") === true
+  );
 
   const checkoutContextMenuExtras = useMemo<ContextMenuExtra[]>(() => [
     {
@@ -320,7 +339,13 @@ export default function BookingsPage() {
 
   return (
     <FadeUp>
-      <PageHeader title="Bookings" />
+      <PageHeader title="Bookings">
+        {canCreateReservation && (
+          <Button className="h-10" asChild>
+            <Link href="/reservations/new">New reservation</Link>
+          </Button>
+        )}
+      </PageHeader>
 
       <Tabs value={activeTab} onValueChange={handleTabChange}>
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border">
@@ -385,11 +410,11 @@ export default function BookingsPage() {
         </div>
 
         <TabsContent value="all">
-          <BookingListPage key={`all-${scope}`} config={allConfig} viewMode={viewMode} hideHeader hideNewButton enableBookingChangeSync={false} initialHighlight={pendingHighlight?.tab === "all" ? pendingHighlight.id : null} initialSheetTab={pendingHighlight?.tab === "all" ? pendingHighlight.sheetTab : null} />
+          <BookingListPage key={`all-${scope}`} config={allConfig} viewMode={viewMode} hideHeader enableBookingChangeSync={false} initialHighlight={pendingHighlight?.tab === "all" ? pendingHighlight.id : null} initialSheetTab={pendingHighlight?.tab === "all" ? pendingHighlight.sheetTab : null} />
         </TabsContent>
 
         <TabsContent value="checkouts">
-          <BookingListPage key={`checkouts-${scope}`} config={checkoutConfig} viewMode={viewMode} hideHeader hideNewButton enableBookingChangeSync={false} initialHighlight={pendingHighlight?.tab === "checkouts" ? pendingHighlight.id : null} initialSheetTab={pendingHighlight?.tab === "checkouts" ? pendingHighlight.sheetTab : null} />
+          <BookingListPage key={`checkouts-${scope}`} config={checkoutConfig} viewMode={viewMode} hideHeader enableBookingChangeSync={false} initialHighlight={pendingHighlight?.tab === "checkouts" ? pendingHighlight.id : null} initialSheetTab={pendingHighlight?.tab === "checkouts" ? pendingHighlight.sheetTab : null} />
         </TabsContent>
 
         <TabsContent value="reservations">

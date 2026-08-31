@@ -10,19 +10,19 @@
 | `src/lib/services/auto-assign.ts` | 92 |
 | `src/lib/services/auto-fill-preview.ts` | 325 |
 | `src/lib/services/availability-conflict-recompute.ts` | 130 |
-| `src/lib/services/availability.ts` | 597 |
+| `src/lib/services/availability.ts` | 609 |
 | `src/lib/services/blast-targeting.ts` | 165 |
 | `src/lib/services/blasts.ts` | 358 |
 | `src/lib/services/booking-ref.ts` | 26 |
-| `src/lib/services/booking-rules.ts` | 108 |
+| `src/lib/services/booking-rules.ts` | 109 |
 | `src/lib/services/bookings-checkin.ts` | 846 |
 | `src/lib/services/bookings-helpers.ts` | 281 |
-| `src/lib/services/bookings-lifecycle.ts` | 2160 |
+| `src/lib/services/bookings-lifecycle.ts` | 2581 |
 | `src/lib/services/bookings-queries.ts` | 301 |
 | `src/lib/services/bookings.ts` | 4 |
 | `src/lib/services/bulk-assignment-batches.ts` | 252 |
 | `src/lib/services/bulk-schedule-assignment.ts` | 969 |
-| `src/lib/services/bulk-unit-scans.ts` | 617 |
+| `src/lib/services/bulk-unit-scans.ts` | 661 |
 | `src/lib/services/calendar-sync-health.ts` | 165 |
 | `src/lib/services/calendar-sync.ts` | 734 |
 | `src/lib/services/candidate-scoring.ts` | 439 |
@@ -108,7 +108,7 @@
 | `src/lib/battery-compatibility.ts` | 166 |
 | `src/lib/bhphoto-image.ts` | 67 |
 | `src/lib/blob.ts` | 160 |
-| `src/lib/booking-action-policy.ts` | 189 |
+| `src/lib/booking-action-policy.ts` | 195 |
 | `src/lib/booking-actions.ts` | 14 |
 | `src/lib/booking-availability-window.ts` | 31 |
 | `src/lib/booking-concurrency.ts` | 39 |
@@ -587,6 +587,7 @@
 - `/api/reservations/[id]/cancel`
 - `/api/reservations/[id]/convert`
 - `/api/reservations/[id]/duplicate`
+- `/api/reservations/[id]/force-checkout`
 - `/api/reservations`
 
 ### `/api/resources`

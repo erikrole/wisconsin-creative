@@ -312,6 +312,7 @@
 - `/api/reservations/[id]/cancel` -> `src/app/api/reservations/[id]/cancel/route.ts`
 - `/api/reservations/[id]/convert` -> `src/app/api/reservations/[id]/convert/route.ts`
 - `/api/reservations/[id]/duplicate` -> `src/app/api/reservations/[id]/duplicate/route.ts`
+- `/api/reservations/[id]/force-checkout` -> `src/app/api/reservations/[id]/force-checkout/route.ts`
 - `/api/reservations` -> `src/app/api/reservations/route.ts`
 - `/api/resources/[id]` -> `src/app/api/resources/[id]/route.ts`
 - `/api/resources/assets/[id]/download` -> `src/app/api/resources/assets/[id]/download/route.ts`

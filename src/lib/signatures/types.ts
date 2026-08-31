@@ -145,8 +145,11 @@ export function isStandaloneSignatureCollection(sportCode: string): boolean {
 export const SIGNATURE_SOURCE_KEY = getSignatureRosterSourceConfig(SIGNATURE_MBB_SPORT_CODE).sourceKey;
 export const SIGNATURE_PARSER_VERSION = getSignatureRosterSourceConfig(SIGNATURE_MBB_SPORT_CODE).parserVersion;
 export const SIGNATURE_MAX_PAYLOAD_BYTES = 1_000_000;
-export const SIGNATURE_MAX_STROKES = 32;
-export const SIGNATURE_MAX_POINTS_PER_STROKE = 2_000;
+// Printed names and slow Pencil input can legitimately produce many pen lifts
+// or thousands of coalesced samples. The streaming byte ceiling remains the
+// authoritative total-work bound for every capture request.
+export const SIGNATURE_MAX_STROKES = 128;
+export const SIGNATURE_MAX_POINTS_PER_STROKE = 10_000;
 export const SIGNATURE_MAX_COORDINATE = 5_000;
 
 export const SIGNATURE_MEMBER_GROUPS = [
@@ -185,7 +188,7 @@ export const signatureStrokeSchema = z.object({
   points: z
     .array(signaturePointSchema)
     .min(1)
-    .max(SIGNATURE_MAX_POINTS_PER_STROKE),
+    .max(SIGNATURE_MAX_POINTS_PER_STROKE, "One continuous pen stroke is too long; lift the Pencil and continue"),
 });
 
 export const signatureSaveRequestIdSchema = z.string().regex(/^[A-Za-z0-9_-]{16,100}$/);
@@ -194,7 +197,10 @@ export const captureSaveRequestSchema = z.object({
   requestId: signatureSaveRequestIdSchema,
   expectedCaptureVersion: z.number().int().min(0),
   settingsVersion: z.number().int().min(1),
-  strokes: z.array(signatureStrokeSchema).min(1).max(SIGNATURE_MAX_STROKES),
+  strokes: z
+    .array(signatureStrokeSchema)
+    .min(1)
+    .max(SIGNATURE_MAX_STROKES, "This signature has too many separate pen strokes"),
 });
 
 export type SignatureStroke = z.infer<typeof signatureStrokeSchema>;

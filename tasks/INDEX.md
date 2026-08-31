@@ -37,6 +37,7 @@ Audit files intentionally remain at root for now because the repo audit skills r
 
 ## Active Follow-up Ledgers
 
+- `bookings-search-qol-plan-2026-08-30.md` - preserve Bookings list context, keep reservation creation globally available on the page, and add explicit global Search recovery.
 - `schedule-timeline-context-hardening-plan-2026-08-30.md` - end-to-end List/Week/Calendar browsing hardening is complete; the active follow-up brings the shared versioned staff crew editor and Home/Away/empty setup to all three views, with authenticated parity proof, matched review captures, and final shared-tree gates still tracked.
 - `list-state-preservation-plan-2026-08-26.md` - preserve Schedule and Items filters, view state, sort, and pagination across detail navigation and browser Back.
 - `macos-companion-hardening-polish-plan.md` - installed Developer ID/notarized macOS 1.0.4 companion with crash-durable Keychain identity recovery, event-driven refresh, projection/session privacy hardening, and native interaction/accessibility polish; post-enrollment cold-restart, full smoke, and real APNs proof remain.
@@ -61,6 +62,7 @@ Audit files intentionally remain at root for now because the repo audit skills r
 - `internal-public-beta-release-cut-followup.md` - release cut work that requires a clean worktree and explicit shipping approval.
 - `repo-public-surface-plan-2026-08-15.md` - public README, GitHub About metadata, and conservative web-release posture.
 - `signature-capture-micro-app-plan.md` - Signatures execution ledger for supported team, Creative Staff, Administration, and one-off rosters; pen-only capture, private artifacts, hardening, and rollout proof.
+- `signatures-whky-save-validation-plan-2026-08-31.md` - bounded WHKY incident ledger for deliberate printed/slow Pencil input that exceeded the old signature-shape validation ceilings; local verification is complete while deployment and physical iPad acceptance remain open.
 - `software-vault-plan-2026-08-19.md` - encrypted shared software access above the existing Photo Mechanic license pool, with migration, key, and authenticated runtime rollout gates.
 - `software-photo-mechanic-first-plan-2026-08-23.md` - make Photo Mechanic the default Software landing and extract the license pool from the page shell.
 - `scoreboard-tie-result-plan-2026-08-24.md` - restore source-backed soccer tie results across Calendar sync, web/native Scoreboard contracts, and the migration/deployment proof boundary.

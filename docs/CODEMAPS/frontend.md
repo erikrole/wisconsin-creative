@@ -112,7 +112,7 @@
 |---|---:|
 | `src/components/resources/BrandAssetLibrary.tsx` | 1827 |
 | `src/components/TradeBoard.tsx` | 1795 |
-| `src/components/ActivityTimeline.tsx` | 1368 |
+| `src/components/ActivityTimeline.tsx` | 1375 |
 | `src/components/onboarding/OnboardingDialog.tsx` | 996 |
 | `src/components/EquipmentPicker.tsx` | 916 |
 | `src/components/AppShell.tsx` | 896 |
@@ -124,11 +124,11 @@
 | `src/components/ui/sidebar.tsx` | 710 |
 | `src/components/BookingDetailsSheet.tsx` | 702 |
 | `src/components/schedule/SportSetupWizard.tsx` | 675 |
+| `src/components/BookingListPage.tsx` | 605 |
 | `src/components/booking-wizard/WizardStep1.tsx` | 572 |
-| `src/components/BookingListPage.tsx` | 526 |
 | `src/components/ui/heatmap.tsx` | 434 |
+| `src/components/booking-details/BookingHeader.tsx` | 426 |
 | `src/components/Sidebar.tsx` | 413 |
-| `src/components/booking-details/BookingHeader.tsx` | 412 |
 | `src/components/ui/chart.tsx` | 389 |
 | `src/components/FormCombobox.tsx` | 352 |
 | `src/components/booking-details/BookingInfoCard.tsx` | 344 |
@@ -163,5 +163,5 @@
 | `src/hooks/use-profile-completion.ts` | 65 |
 | `src/hooks/use-schedule-data.ts` | 970 |
 | `src/hooks/use-url-state.ts` | 166 |
-| `src/hooks/useBookingActions.ts` | 218 |
+| `src/hooks/useBookingActions.ts` | 242 |
 | `src/hooks/useBookingDetail.ts` | 70 |

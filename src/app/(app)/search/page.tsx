@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/card";
 import EmptyState from "@/components/EmptyState";
 import { Badge } from "@/components/ui/badge";
 import { useUrlState } from "@/hooks/use-url-state";
-import { AlertCircleIcon, ArrowRightIcon, WifiOff } from "lucide-react";
+import { ArrowRightIcon } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { OperationalPartialResultsAlert } from "@/components/OperationalFeedback";
 import { PageHeader } from "@/components/PageHeader";
@@ -97,6 +97,8 @@ export default function SearchPage() {
   const [partialFailures, setPartialFailures] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const resultsRef = useRef<SearchResult[]>([]);
+  const resultsQueryRef = useRef("");
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -104,6 +106,8 @@ export default function SearchPage() {
 
   const resetSearchState = useCallback(() => {
     abortRef.current?.abort();
+    resultsRef.current = [];
+    resultsQueryRef.current = "";
     setResults([]);
     setLoading(false);
     setSearched(false);
@@ -134,6 +138,7 @@ export default function SearchPage() {
     setPartialFailures([]);
 
     const encoded = encodeURIComponent(trimmed);
+    const canPreserveResults = resultsQueryRef.current === trimmed && resultsRef.current.length > 0;
 
     try {
       const [itemsRes, checkoutsRes, reservationsRes, usersRes] = await Promise.allSettled([
@@ -227,10 +232,36 @@ export default function SearchPage() {
         failures.push(SEARCH_RESULT_SOURCES.users);
       }
 
+      if (canPreserveResults && failures.length > 0) {
+        const failedResultTypes = new Set<SearchResult["type"]>();
+        if (failures.includes(SEARCH_RESULT_SOURCES.items)) failedResultTypes.add("item");
+        if (failures.includes(SEARCH_RESULT_SOURCES.checkouts)) failedResultTypes.add("checkout");
+        if (failures.includes(SEARCH_RESULT_SOURCES.reservations)) failedResultTypes.add("reservation");
+        if (failures.includes(SEARCH_RESULT_SOURCES.users)) failedResultTypes.add("user");
+
+        for (const previous of resultsRef.current) {
+          if (
+            failedResultTypes.has(previous.type)
+            && !merged.some((result) => result.type === previous.type && result.id === previous.id)
+          ) {
+            merged.push(previous);
+          }
+        }
+      }
+
       if (!controller.signal.aborted) {
         if (failures.length === 4 && merged.length === 0) {
-          setSearchError("server");
+          if (canPreserveResults) {
+            setPartialFailures(Object.values(SEARCH_RESULT_SOURCES));
+          } else {
+            resultsRef.current = [];
+            resultsQueryRef.current = "";
+            setResults([]);
+            setSearchError("server");
+          }
         } else {
+          resultsRef.current = merged;
+          resultsQueryRef.current = trimmed;
           setResults(merged);
           setPartialFailures(failures);
         }
@@ -238,9 +269,15 @@ export default function SearchPage() {
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
       if (!controller.signal.aborted) {
-        setResults([]);
-        setSearchError("network");
-        setPartialFailures([]);
+        if (canPreserveResults) {
+          setPartialFailures(Object.values(SEARCH_RESULT_SOURCES));
+        } else {
+          resultsRef.current = [];
+          resultsQueryRef.current = "";
+          setResults([]);
+          setSearchError("network");
+          setPartialFailures([]);
+        }
       }
     } finally {
       if (!controller.signal.aborted) {
@@ -324,16 +361,15 @@ export default function SearchPage() {
       )}
 
       {!loading && searchError && query.trim() && (
-        <div className="flex flex-col items-center gap-2 py-12 text-center text-muted-foreground">
-          {searchError === "network"
-            ? <WifiOff className="size-8 opacity-40" />
-            : <AlertCircleIcon className="size-8 opacity-40" />}
-          <p className="text-sm">
-            {searchError === "network"
-              ? "Can\u2019t connect \u2014 check your connection and try again."
-              : "Search failed \u2014 something went wrong on our end. Try again."}
-          </p>
-        </div>
+        <EmptyState
+          icon={searchError === "network" ? "wifi-off" : "search"}
+          title={searchError === "network" ? "Can\u2019t connect" : "Search did not load"}
+          description={searchError === "network"
+            ? "Check your connection and retry this search."
+            : "Something went wrong on our end. Retry this search."}
+          actionLabel="Retry"
+          onAction={() => { void runSearch(query); }}
+        />
       )}
 
       {!loading && !searchError && partialFailures.length > 0 && results.length > 0 && (
@@ -344,6 +380,8 @@ export default function SearchPage() {
           noun="result type"
           recoveryCopy="Showing available matches. Refresh before treating this search as complete."
           title="Some result types did not load"
+          actionLabel="Retry"
+          onAction={() => { void runSearch(query); }}
         />
       )}
 

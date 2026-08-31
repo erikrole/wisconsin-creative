@@ -45,7 +45,6 @@ type BookingListPageProps = {
   config: BookingListConfig;
   viewMode?: "table" | "cards";
   hideHeader?: boolean;
-  hideNewButton?: boolean;
   enableBookingChangeSync?: boolean;
   initialHighlight?: string | null;
   initialSheetTab?: BookingSheetSection | null;
@@ -55,11 +54,21 @@ function parseBookingSheetSection(value: string | null): BookingSheetSection | n
   return value === "details" || value === "equipment" || value === "history" ? value : null;
 }
 
+function parseBookingPage(value: string | null): number {
+  const page = Number.parseInt(value ?? "", 10);
+  return Number.isFinite(page) && page > 0 ? page : 0;
+}
+
+function readBookingStatus(params: URLSearchParams, defaultStatus: string | undefined): string {
+  const status = params.get("status");
+  if (status === "all") return "";
+  return status ?? defaultStatus ?? "";
+}
+
 export default function BookingListPage({
   config,
   viewMode = "table",
   hideHeader = false,
-  hideNewButton = false,
   enableBookingChangeSync = true,
   initialHighlight,
   initialSheetTab,
@@ -70,10 +79,10 @@ export default function BookingListPage({
   useBookingChangeSync(enableBookingChangeSync);
 
   // ── Filter state ──
-  const [page, setPage] = useState(0);
+  const [page, setPageState] = useState(() => parseBookingPage(urlParams.get("page")));
   const [search, setSearch] = useState(urlParams.get("q") || "");
   const [sort, setSort] = useState(urlParams.get("sort") || "");
-  const [statusFilter, setStatusFilter] = useState(urlParams.get("status") || config.defaultStatusFilter || "");
+  const [statusFilter, setStatusFilter] = useState(() => readBookingStatus(urlParams, config.defaultStatusFilter));
   const [sportFilter, setSportFilter] = useState(urlParams.get("sport_code") || "");
   const [locationFilter, setLocationFilter] = useState(urlParams.get("location_id") || "");
   const [userFilter, setUserFilter] = useState(urlParams.get("requester_id") || "");
@@ -89,13 +98,93 @@ export default function BookingListPage({
     const nextParams = new URLSearchParams(urlSignature);
     setSearch(nextParams.get("q") || "");
     setSort(nextParams.get("sort") || "");
-    setStatusFilter(nextParams.get("status") || config.defaultStatusFilter || "");
+    setStatusFilter(readBookingStatus(nextParams, config.defaultStatusFilter));
     setSportFilter(nextParams.get("sport_code") || "");
     setLocationFilter(nextParams.get("location_id") || "");
     setUserFilter(nextParams.get("requester_id") || "");
     setSpecialFilter(nextParams.get("filter") || "");
-    setPage(0);
+    setPageState(parseBookingPage(nextParams.get("page")));
   }, [config.defaultStatusFilter, urlSignature]);
+
+  const replaceListParams = useCallback((updates: Record<string, string | null>, resetPage = true) => {
+    const params = new URLSearchParams(window.location.search);
+    for (const [key, value] of Object.entries(updates)) {
+      if (value) params.set(key, value);
+      else params.delete(key);
+    }
+    if (resetPage) params.delete("page");
+    const qs = params.toString();
+    router.replace(qs ? `/bookings?${qs}` : "/bookings", { scroll: false });
+  }, [router]);
+
+  const changePage = useCallback((nextPage: number) => {
+    const boundedPage = Math.max(0, nextPage);
+    setPageState(boundedPage);
+    replaceListParams({ page: boundedPage > 0 ? String(boundedPage) : null }, false);
+  }, [replaceListParams]);
+
+  const changeSearch = useCallback((value: string) => {
+    setSearch(value);
+    setPageState(0);
+    replaceListParams({ q: value || null });
+  }, [replaceListParams]);
+
+  const changeStatus = useCallback((value: string) => {
+    setStatusFilter(value);
+    setPageState(0);
+    replaceListParams({
+      status: value || (config.defaultStatusFilter ? "all" : null),
+    });
+  }, [config.defaultStatusFilter, replaceListParams]);
+
+  const changeSpecialFilter = useCallback((value: string) => {
+    setSpecialFilter(value);
+    setPageState(0);
+    replaceListParams({ filter: value || null });
+  }, [replaceListParams]);
+
+  const changeSport = useCallback((value: string) => {
+    setSportFilter(value);
+    setPageState(0);
+    replaceListParams({ sport_code: value || null });
+  }, [replaceListParams]);
+
+  const changeLocation = useCallback((value: string) => {
+    setLocationFilter(value);
+    setPageState(0);
+    replaceListParams({ location_id: value || null });
+  }, [replaceListParams]);
+
+  const changeRequester = useCallback((value: string) => {
+    setUserFilter(value);
+    setPageState(0);
+    replaceListParams({ requester_id: value || null, mine: null });
+  }, [replaceListParams]);
+
+  const changeSort = useCallback((value: string) => {
+    setSort(value);
+    setPageState(0);
+    replaceListParams({ sort: value || null });
+  }, [replaceListParams]);
+
+  const clearAllFilters = useCallback(() => {
+    setSearch("");
+    setStatusFilter("");
+    setSportFilter("");
+    setLocationFilter("");
+    setUserFilter("");
+    setSpecialFilter("");
+    setPageState(0);
+    replaceListParams({
+      q: null,
+      status: config.defaultStatusFilter ? "all" : null,
+      sport_code: null,
+      location_id: null,
+      requester_id: null,
+      mine: null,
+      filter: null,
+    });
+  }, [config.defaultStatusFilter, replaceListParams]);
 
   // ── List data (React Query) ──
   const queryClient = useQueryClient();
@@ -176,7 +265,6 @@ export default function BookingListPage({
   const canCreateReservation = meData != null && !meData.preview?.readOnly && (
     meData.role !== "COLLABORATOR" || currentUserCapabilities.includes("RESERVATION_CREATE")
   );
-  const canShowNewButton = config.kind !== "RESERVATION" || canCreateReservation;
   // initialRequester is now handled inside the wizard page
 
   // Apply "mine" filter from URL once user data loads
@@ -189,7 +277,7 @@ export default function BookingListPage({
 
   // ── Navigate to wizard page for creation ──
   const navigateToCreate = useCallback(() => {
-    if (config.kind === "RESERVATION" && !canCreateReservation) return;
+    if (!canCreateReservation) return;
     const nextParams = new URLSearchParams(urlSignature);
     const base = "/reservations/new";
     const params = new URLSearchParams();
@@ -213,7 +301,7 @@ export default function BookingListPage({
     if (requesterUserId) params.set("requesterUserId", requesterUserId);
     const qs = params.toString();
     router.push(qs ? `${base}?${qs}` : base);
-  }, [canCreateReservation, config.kind, router, urlSignature]);
+  }, [canCreateReservation, router, urlSignature]);
 
   // Auto-navigate to wizard if deep-link params present
   useEffect(() => {
@@ -335,18 +423,6 @@ export default function BookingListPage({
       {!hideHeader && (
         <div className="flex items-center justify-between mb-6 max-md:mb-4 max-md:flex-col max-md:items-start max-md:gap-3">
           <h1 className="text-[30px] tracking-[-0.03em] leading-none m-0 max-md:text-[22px]">{config.labelPlural}</h1>
-          {canShowNewButton && (
-            <Button className="h-10" onClick={navigateToCreate}>
-              New {config.label}
-            </Button>
-          )}
-        </div>
-      )}
-      {hideHeader && !hideNewButton && canShowNewButton && (
-        <div className="flex justify-end px-4 pt-3">
-          <Button className="h-10" onClick={navigateToCreate}>
-            New {config.label}
-          </Button>
         </div>
       )}
 
@@ -374,20 +450,21 @@ export default function BookingListPage({
         <BookingFilters
           config={config}
           search={search}
-          onSearchChange={(v) => { setSearch(v); setPage(0); }}
+          onSearchChange={changeSearch}
           statusFilter={statusFilter}
-          onStatusFilterChange={(v) => { setStatusFilter(v); setPage(0); }}
+          onStatusFilterChange={changeStatus}
           specialFilter={specialFilter}
-          onSpecialFilterChange={(v) => { setSpecialFilter(v); setPage(0); }}
+          onSpecialFilterChange={changeSpecialFilter}
           sportFilter={sportFilter}
-          onSportFilterChange={(v) => { setSportFilter(v); setPage(0); }}
+          onSportFilterChange={changeSport}
           sportCodesInUse={sportCodesInUse}
           locationFilter={locationFilter}
-          onLocationFilterChange={(v) => { setLocationFilter(v); setPage(0); }}
+          onLocationFilterChange={changeLocation}
           locations={locations}
           userFilter={userFilter}
-          onUserFilterChange={(v) => { setUserFilter(v); setPage(0); }}
+          onUserFilterChange={changeRequester}
           users={users}
+          onClearAll={clearAllFilters}
         />
 
         {/* ════════ Booking list ════════ */}
@@ -412,6 +489,8 @@ export default function BookingListPage({
               : config.pastOnly
                 ? `Completed and cancelled ${config.labelPlural.toLowerCase()} will appear here.`
                 : `${config.label.charAt(0).toUpperCase() + config.label.slice(1)}s you create will appear here.`}
+            actionLabel={hasUserFilters ? "Clear filters" : undefined}
+            onAction={hasUserFilters ? clearAllFilters : undefined}
           />
         ) : (
           <>
@@ -440,9 +519,9 @@ export default function BookingListPage({
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <SortHeader label="Name" sortKey="title" currentSort={sort} onSort={(s) => { setSort(s); setPage(0); }} />
-                        <SortHeader label={config.startLabel} sortKey="startsAt" currentSort={sort} onSort={(s) => { setSort(s); setPage(0); }} />
-                        <SortHeader label={config.endLabel} sortKey="endsAt" currentSort={sort} onSort={(s) => { setSort(s); setPage(0); }} />
+                        <SortHeader label="Name" sortKey="title" currentSort={sort} onSort={changeSort} />
+                        <SortHeader label={config.startLabel} sortKey="startsAt" currentSort={sort} onSort={changeSort} />
+                        <SortHeader label={config.endLabel} sortKey="endsAt" currentSort={sort} onSort={changeSort} />
                         <TableHead className="hidden md:table-cell">Duration</TableHead>
                         <TableHead className="hidden md:table-cell">{config.requesterLabel}</TableHead>
                         <TableHead className="hidden md:table-cell">Items</TableHead>
@@ -494,10 +573,10 @@ export default function BookingListPage({
                 <Pagination>
                   <PaginationContent>
                     <PaginationItem>
-                      <PaginationPrevious onClick={() => setPage(page - 1)} aria-disabled={page === 0} className={page === 0 ? "h-10 pointer-events-none opacity-50" : "h-10 cursor-pointer"} />
+                      <PaginationPrevious onClick={() => changePage(page - 1)} aria-disabled={page === 0} className={page === 0 ? "h-10 pointer-events-none opacity-50" : "h-10 cursor-pointer"} />
                     </PaginationItem>
                     <PaginationItem>
-                      <PaginationNext onClick={() => setPage(page + 1)} aria-disabled={page >= totalPages - 1} className={page >= totalPages - 1 ? "h-10 pointer-events-none opacity-50" : "h-10 cursor-pointer"} />
+                      <PaginationNext onClick={() => changePage(page + 1)} aria-disabled={page >= totalPages - 1} className={page >= totalPages - 1 ? "h-10 pointer-events-none opacity-50" : "h-10 cursor-pointer"} />
                     </PaginationItem>
                   </PaginationContent>
                 </Pagination>

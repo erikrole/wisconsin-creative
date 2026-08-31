@@ -1,0 +1,52 @@
+{
+  "title": "Bookings and Search Quality of Life",
+  "eyebrow": "Web · Wisconsin Creative",
+  "lede": "Operators keep their place in Bookings, can begin a reservation from every Bookings context, and can recover Search without discarding trustworthy same-query results.",
+  "stats": [
+    {
+      "k": "Bookings context",
+      "v": "9 keys",
+      "n": "Query, filters, sort, page, and view are URL-backed"
+    },
+    {
+      "k": "Create action",
+      "v": "1 home",
+      "n": "Permission-aware page action across all tabs and scopes"
+    },
+    {
+      "k": "Focused proof",
+      "v": "37 pass",
+      "n": "Bookings, Search, debounce, realtime, and mutation contracts",
+      "tone": "good"
+    }
+  ],
+  "sections": [],
+  "changes": [
+    {
+      "h": "Opening a booking lost list context",
+      "was": "Pagination lived only in component state, URL rehydration reset the page, and card/table preference was not part of browser history.",
+      "now": "The complete list context is serialized through App Router replacement navigation and rehydrates on browser Back. Clear all also clears the search query."
+    },
+    {
+      "h": "Reservation creation depended on the selected tab",
+      "was": "The action lived inside reservation-list rendering and disappeared in other Bookings contexts.",
+      "now": "One permission-aware New reservation action stays in the Bookings page header across tabs and active/past scope."
+    },
+    {
+      "h": "Search failures were a dead end",
+      "was": "Complete and partial failures explained the problem but offered no direct retry; a failed refresh could also discard a previously healthy result group.",
+      "now": "Complete and partial failure states offer Retry. Same-query rows from a failed source remain visible until that source successfully refreshes, while a new query never inherits stale rows."
+    }
+  ],
+  "verification": [
+    "<strong>Focused tests:</strong> 37 passing across six Bookings and Search contract files.",
+    "<strong>TypeScript:</strong> <code>npx tsc --noEmit --pretty false</code> passes.",
+    "<strong>Lint:</strong> <code>npm run lint</code> passes.",
+    "<strong>Docs:</strong> codemaps are current and <code>npm run verify:docs</code> passes.",
+    "<strong>Build:</strong> <code>npm run build:app</code> passes."
+  ],
+  "notes": [
+    "No before/after screenshot pair is claimed. The required isolated authenticated Playwright identity is unavailable: PLAYWRIGHT_EMAIL, PLAYWRIGHT_PASSWORD, and PLAYWRIGHT_ROLE are unset, and no saved storage state exists. This blocks honest same-account, same-data desktop and narrow-width capture.",
+    "No API, schema, permission, reservation lifecycle, custody, deployment, or production-data behavior changed."
+  ]
+}

@@ -53,4 +53,23 @@ describe("list state preservation source contracts", () => {
       expect(schedule).toContain(`params.delete("${key}")`);
     }
   });
+
+  it("keeps the complete Bookings list context in App Router history", () => {
+    const page = source("src/app/(app)/bookings/page.tsx");
+    const list = source("src/components/BookingListPage.tsx");
+    const filters = source("src/components/booking-list/BookingFilters.tsx");
+
+    for (const key of ["page", "q", "sort", "status", "sport_code", "location_id", "requester_id", "filter"]) {
+      expect(list).toContain(`get("${key}")`);
+    }
+
+    expect(list).toContain('router.replace(qs ? `/bookings?${qs}` : "/bookings", { scroll: false })');
+    expect(list).toContain('replaceListParams({ page: boundedPage > 0 ? String(boundedPage) : null }, false)');
+    expect(list).toContain('status: value || (config.defaultStatusFilter ? "all" : null)');
+    expect(list).not.toContain("window.history.replaceState");
+    expect(filters).toContain("onClick={onClearAll}");
+    expect(filters).toContain("search || statusFilter");
+    expect(page).toContain('next.set("view", mode)');
+    expect(page.match(/next\.delete\("page"\)/g)).toHaveLength(2);
+  });
 });

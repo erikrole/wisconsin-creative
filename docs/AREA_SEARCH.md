@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Search
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-29
+- Last Updated: 2026-08-30
 - Status: Active
 - Version: V1
 
@@ -46,6 +46,7 @@ Make search a fast operational jump layer. It should find records when the user 
 5. The full search page and quick palette should not disagree on destination search.
 
 ## Change Log
+- 2026-08-30: **Web Search failures have an in-place recovery path.** Complete and partial failures expose Retry without clearing the query. A failed retry for the same query keeps already loaded, trustworthy matches visible and identifies every unavailable source; a different query never inherits stale results. The existing four-source fan-out, role visibility, and result destinations are unchanged.
 - 2026-08-29: **Native global Search now returns complete, actionable result sets.** Search preserves server totals and per-source cursors, shows a clear loaded/total count, paginates each source independently, keeps successful groups visible when another source fails, and offers retry for a failed next page. Bulk-item families are now direct reservation entry points with an explicit Reserve action, scan results share the same path, and opened results record the query for role-consistent recents. The iPhone 16 Pro Simulator screenshot pair proves first-page versus expanded-result behavior; partial/offline responses, large Dynamic Type, VoiceOver, and authenticated deep-link acceptance remain runtime gates.
 - 2026-08-25: **Authenticated WebMCP progressive enhancement.** The app now registers bounded, role-aware read tools for current-page context, internal navigation, dashboard snapshot, item search, and active booking search when the browser exposes WebMCP. The `tools=(self)` Permissions Policy is explicit; unsupported browsers continue to use the normal website without a fallback dependency. Mutation/custody tools remain intentionally out of scope.
 - 2026-07-10: Native Search and Scan interaction hardening removed fixed presentation/autofocus delays, routes scan results from actual cover dismissal, keeps recovery actions independently reachable to VoiceOver, turns image zoom into a semantic Button, adds coherent result-row labels, and substitutes static/opacity feedback when Reduce Motion is enabled.
