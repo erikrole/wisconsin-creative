@@ -366,6 +366,48 @@ describe("stageKioskReservationPickupBulkUnit", () => {
     }));
     expect(tx.scanEvent.create).toHaveBeenCalled();
   });
+
+  it("does not restage a numbered unit already handed over in an earlier partial pickup", async () => {
+    const tx = makeTx();
+    tx.booking.findUnique.mockResolvedValue({
+      ...reservationBooking,
+      bulkItems: [{
+        ...reservationBooking.bulkItems[0],
+        plannedQuantity: 3,
+        checkedOutQuantity: 1,
+      }],
+      derivedCheckouts: [{
+        bulkItems: [{
+          bulkSkuId: "sku-1",
+          unitAllocations: [{
+            bulkSkuUnitId: "unit-7",
+            bulkSkuUnit: { unitNumber: 7 },
+          }],
+        }],
+      }],
+    });
+    tx.bulkSkuUnit.findUnique.mockResolvedValue({
+      id: "unit-7",
+      bulkSkuId: "sku-1",
+      unitNumber: 7,
+      status: "AVAILABLE",
+      allocations: [],
+    });
+
+    const result = await stageKioskReservationPickupBulkUnit(tx, {
+      bookingId: "reservation-1",
+      scanValue: "94e068d1-7",
+    });
+
+    expect(result).toEqual({
+      handled: true,
+      success: false,
+      error: "Sony Battery #7 already picked up",
+      errorCode: "duplicate",
+    });
+    expect(tx.scanEvent.findMany).not.toHaveBeenCalled();
+    expect(tx.scanEvent.create).not.toHaveBeenCalled();
+  });
 });
 
 describe("scanKioskCheckinBulkUnit", () => {

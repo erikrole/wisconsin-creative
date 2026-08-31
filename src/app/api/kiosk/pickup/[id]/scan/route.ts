@@ -62,6 +62,10 @@ export const POST = withKiosk<{ id: string }>(async (req, { params }) => {
     const error = `${asset.assetTag} is not in this checkout`;
     return ok({ success: false, error });
   }
+  if (activeBooking.kind === "RESERVATION" && bookingItem.allocationStatus === "picked_up") {
+    const label = asset.name || asset.assetTag;
+    return ok({ success: false, error: `${label} already picked up`, errorCode: "duplicate" });
+  }
 
   const existingScan = await db.scanEvent.findFirst({
     where: {

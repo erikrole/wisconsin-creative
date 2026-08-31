@@ -679,6 +679,15 @@ struct KioskCheckinCompleteResult: Decodable {
     let earnedBadges: [EarnedBadgeReward]?
 }
 
+/// Server response for a reservation pickup. `partial` is optional so a
+/// newer kiosk can still read a response from an older server during rollout.
+struct KioskPickupConfirmResult: Decodable {
+    let success: Bool
+    let bookingId: String
+    let partial: Bool?
+    let earnedBadges: [EarnedBadgeReward]?
+}
+
 // MARK: - Screen State
 
 enum KioskScreen: Equatable {

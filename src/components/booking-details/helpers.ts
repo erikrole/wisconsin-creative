@@ -56,6 +56,7 @@ export const actionLabels: Record<string, string> = {
   cancelled: "cancelled",
   checkin_completed: "completed check in",
   admin_force_completed_checkout: "closed checkout without scan",
+  admin_force_checkout: "force-checked out reservation",
   cancelled_by_checkout_conversion: "converted to checkout",
   "booking.items_added": "added items",
   "booking.items_removed": "removed items",

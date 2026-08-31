@@ -17,7 +17,9 @@ describe("iOS kiosk reservation pickup contract", () => {
     const models = source("ios/Wisconsin/Kiosk/KioskModels.swift");
 
     expect(studentRoute).toContain("dueReservations");
-    expect(studentRoute).toContain("pendingPickups: [...pendingPickups, ...dueReservations].map");
+    expect(studentRoute).toContain("pendingPickups: [");
+    expect(studentRoute).toContain("...pendingPickups.map");
+    expect(studentRoute).toContain("...dueReservations.map");
     expect(detailRoute).toContain('booking.kind === "RESERVATION"');
     expect(scanRoute).toContain('booking.kind === "RESERVATION" && booking.status === "BOOKED"');
     expect(confirmRoute).toContain("sourceReservationId: sourceReservation.id");
@@ -29,7 +31,8 @@ describe("iOS kiosk reservation pickup contract", () => {
     expect(operatorHub).toContain('accessibilityHint("Start pickup now")');
     expect(apiClient).toContain("func kioskCheckoutDetail(id: String)");
     expect(apiClient).toContain("func kioskPickupScan(bookingId: String, scanValue: String)");
-    expect(apiClient).toContain("func kioskPickupConfirm(bookingId: String, actorId: String)");
+    expect(apiClient).toContain("func kioskPickupConfirm(");
+    expect(apiClient).toContain("partial: Bool = false");
   });
 
   it("binds numbered bulk units atomically with checkout creation and reservation fulfillment", () => {
@@ -61,6 +64,8 @@ describe("iOS kiosk reservation pickup contract", () => {
 
     // Duplicate staged scans cannot satisfy planned quantity or double-bind.
     expect(confirmRoute).toContain("stagedUnitNumbers");
+    expect(confirmRoute).toContain("sourceReservationPickup: true");
+    expect(confirmRoute).toContain("Partial pickup is only available for reservations");
 
     // Already-done confirms read as success states, not raw status leaks.
     expect(confirmRoute).toContain("This reservation was already picked up");
@@ -75,12 +80,14 @@ describe("iOS kiosk reservation pickup contract", () => {
     expect(detailRoute).toContain('type: "bulk_quantity" as const');
     expect(detailRoute).toMatch(/if \(!bi\.bulkSku\.trackByNumber\)[\s\S]*?returned: true/);
     expect(confirmRoute).toContain("item.bulkSku.trackByNumber &&");
-    expect(confirmRoute).toContain("if (!item.bulkSku.trackByNumber) continue;");
+    expect(confirmRoute).toContain("if (!item.bulkSku.trackByNumber) {");
 
     // Native pickup already treats returned detail rows as confirmed, so one
     // aggregate quantity row can complete without inventing unit-level scans.
     expect(pickupView).toContain("for item in loaded.items where item.returned");
     expect(pickupView).toContain("confirmedIds.insert(item.id)");
     expect(pickupView).toContain("private var allConfirmed: Bool");
+    expect(pickupView).toContain("private var canConfirmPartial: Bool");
+    expect(pickupView).toContain("partial: isPartial");
   });
 });

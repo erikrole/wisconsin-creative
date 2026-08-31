@@ -9,12 +9,13 @@ import { createBooking } from "@/lib/services/bookings";
 import { parseDerivedBulkUnitQr } from "@/lib/bulk-unit-qr";
 
 /**
- * Confirm kiosk pickup: transition PENDING_PICKUP → OPEN.
- * Called after student scans their items at the kiosk.
+ * Confirm kiosk pickup: open checkout custody for a complete pickup, or for
+ * the scanned subset of a reservation when partial is requested.
+ * Called after the student scans their items at the kiosk.
  */
 export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => {
   const badgeWindowStart = new Date(Date.now() - 1);
-  const { actorId } = pickupConfirmBody.parse(await req.json());
+  const { actorId, partial } = pickupConfirmBody.parse(await req.json());
   let openedBookingId = params.id;
   let openedSourceKey = params.id;
   let openedUserId = actorId;
@@ -62,6 +63,10 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
 
       if (!booking || (booking.kind !== "CHECKOUT" && booking.kind !== "RESERVATION")) {
         throw new HttpError(404, "Checkout not found");
+      }
+
+      if (partial && booking.kind === "CHECKOUT") {
+        throw new HttpError(409, "Partial pickup is only available for reservations");
       }
 
       if (booking.kind === "RESERVATION") return;
@@ -151,6 +156,7 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
       serializedItems: {
         select: {
           assetId: true,
+          allocationStatus: true,
           asset: { select: { assetTag: true, name: true } },
         },
       },
@@ -158,6 +164,7 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
         select: {
           bulkSkuId: true,
           plannedQuantity: true,
+          checkedOutQuantity: true,
           bulkSku: {
             select: {
               id: true,
@@ -178,6 +185,22 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
           bulkSkuId: true,
           scanType: true,
           scanValue: true,
+        },
+        orderBy: { createdAt: "asc" },
+      },
+      derivedCheckouts: {
+        select: {
+          serializedItems: { select: { assetId: true } },
+          bulkItems: {
+            select: {
+              bulkSkuId: true,
+              unitAllocations: {
+                select: {
+                  bulkSkuUnit: { select: { unitNumber: true } },
+                },
+              },
+            },
+          },
         },
       },
       events: {
@@ -205,38 +228,91 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
       throw new HttpError(403, "Only the reservation requester can confirm pickup at the kiosk");
     }
 
+    const derivedCheckouts = sourceReservation.derivedCheckouts ?? [];
+    const pickedSerializedAssetIds = new Set(
+      derivedCheckouts.flatMap((checkout) => checkout.serializedItems.map((item) => item.assetId)),
+    );
+    const pickedUnitNumbersBySku = new Map<string, Set<number>>();
+    for (const checkout of derivedCheckouts) {
+      for (const item of checkout.bulkItems) {
+        const numbers = pickedUnitNumbersBySku.get(item.bulkSkuId) ?? new Set<number>();
+        for (const allocation of item.unitAllocations) {
+          numbers.add(allocation.bulkSkuUnit.unitNumber);
+        }
+        pickedUnitNumbersBySku.set(item.bulkSkuId, numbers);
+      }
+    }
+
     const scannedSerializedAssetIds = new Set(
       sourceReservation.scanEvents
         .filter((event) => event.scanType === "SERIALIZED")
         .map((event) => event.assetId)
         .filter(Boolean),
     );
-    const missingSerialized = sourceReservation.serializedItems.find(
+    const remainingSerializedItems = sourceReservation.serializedItems.filter(
+      (item) => item.allocationStatus !== "picked_up" && !pickedSerializedAssetIds.has(item.assetId),
+    );
+    const missingSerialized = remainingSerializedItems.find(
       (item) => !scannedSerializedAssetIds.has(item.assetId),
     );
-    if (missingSerialized) {
+    if (!partial && missingSerialized) {
       const label = missingSerialized.asset.name || missingSerialized.asset.assetTag;
       throw new HttpError(409, `Scan ${label} before confirming pickup`);
     }
+    const selectedSerializedAssetIds = remainingSerializedItems
+      .filter((item) => scannedSerializedAssetIds.has(item.assetId))
+      .map((item) => item.assetId);
 
+    const bulkItems: Array<{ bulkSkuId: string; quantity: number }> = [];
     const bulkUnitItems: Array<{ bulkSkuId: string; unitNumber: number }> = [];
     for (const item of sourceReservation.bulkItems) {
-      if (!item.bulkSku.trackByNumber) continue;
+      const remainingQuantity = Math.max(
+        0,
+        item.plannedQuantity - (item.checkedOutQuantity ?? 0),
+      );
+      if (!item.bulkSku.trackByNumber) {
+        // Quantity-tracked stock is an aggregate row with no physical scan
+        // step. Include the remaining quantity whenever this pickup is
+        // confirmed, including a partial pickup of serialized gear.
+        if (remainingQuantity > 0) {
+          bulkItems.push({ bulkSkuId: item.bulkSkuId, quantity: remainingQuantity });
+        }
+        continue;
+      }
 
-      const stagedUnits = sourceReservation.scanEvents
+      const pickedUnitNumbers = pickedUnitNumbersBySku.get(item.bulkSkuId) ?? new Set<number>();
+      const stagedUnitNumbers = new Set(
+        sourceReservation.scanEvents
         .filter((event) => event.scanType === "BULK_BIN" && event.bulkSkuId === item.bulkSkuId)
         .map((event) => parseDerivedBulkUnitQr(event.scanValue, [item.bulkSku]))
-        .filter((match): match is NonNullable<typeof match> => !!match);
-      // Dedupe by unit number: duplicate scan events for the same unit must
-      // not count toward planned quantity or double-bind a unit.
-      const stagedUnitNumbers = new Set(stagedUnits.map((unit) => unit.unitNumber));
-      if (stagedUnitNumbers.size < item.plannedQuantity) {
+        .filter((match): match is NonNullable<typeof match> => !!match),
+      );
+      // Dedupe by unit number and remove units already transferred by an
+      // earlier partial pickup. Both the scan event and the linked checkout
+      // are durable, so reopening this reservation cannot reset or rebind it.
+      const currentStagedUnitNumbers = [...stagedUnitNumbers]
+        .map((unit) => unit.unitNumber)
+        .filter((unitNumber) => !pickedUnitNumbers.has(unitNumber));
+      if (!partial && currentStagedUnitNumbers.length < remainingQuantity) {
         throw new HttpError(409, `Scan all ${item.bulkSku.name} units before confirming pickup`);
       }
-      bulkUnitItems.push(...[...stagedUnitNumbers].map((unitNumber) => ({
+      const selectedUnitNumbers = currentStagedUnitNumbers.slice(0, remainingQuantity);
+      if (selectedUnitNumbers.length > 0) {
+        bulkItems.push({ bulkSkuId: item.bulkSkuId, quantity: selectedUnitNumbers.length });
+      }
+      bulkUnitItems.push(...selectedUnitNumbers.map((unitNumber) => ({
         bulkSkuId: item.bulkSkuId,
         unitNumber,
       })));
+    }
+
+    if (selectedSerializedAssetIds.length === 0 && bulkItems.length === 0) {
+      throw new HttpError(
+        409,
+        partial
+          ? "Scan at least one item before choosing partial pickup"
+          : "This reservation has no remaining items to pick up",
+      );
     }
 
     const eventIds = sourceReservation.events.map((event) => event.eventId);
@@ -248,8 +324,6 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
       locationId: sourceReservation.locationId,
       startsAt: new Date(),
       endsAt: sourceReservation.endsAt,
-      serializedAssetIds: [],
-      bulkItems: [],
       notes: sourceReservation.notes ?? undefined,
       createdBy: actorId,
       sourceReservationId: sourceReservation.id,
@@ -259,6 +333,9 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
       shiftAssignmentId: sourceReservation.shiftAssignmentId ?? undefined,
       kitId: sourceReservation.kitId ?? undefined,
       pickupKioskDeviceId: kiosk.kioskId,
+      sourceReservationPickup: true,
+      serializedAssetIds: selectedSerializedAssetIds,
+      bulkItems,
       // Bound inside createBooking's transaction: a failed unit bind rolls
       // back the checkout and reservation fulfillment together.
       bulkUnitItems,
@@ -276,6 +353,7 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
         kioskDeviceId: kiosk.kioskId,
         locationName: kiosk.locationName,
         sourceReservationId: sourceReservation.id,
+        partial,
       },
     });
 
@@ -295,6 +373,7 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
   return ok({
     success: true,
     bookingId: openedBookingId,
+    ...(partial ? { partial: true } : {}),
     ...(earnedBadges.length > 0 ? { earnedBadges } : {}),
   });
 });

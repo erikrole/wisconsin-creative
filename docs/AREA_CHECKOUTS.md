@@ -19,7 +19,7 @@ Maintain the custody ledger for gear that has physically left or returned throug
 6. `PENDING_PICKUP` checkout allocations block overlapping serialized-item reservations and checkouts because custody has not transferred yet but the gear is already committed.
 7. Serialized booking windows include a 60-minute turnaround buffer before the next pickup/reservation start in both directions: a new start must follow an existing return by at least 60 minutes, and a new return must precede an existing next start by at least 60 minutes. Bulk/countable availability remains overlap-based against committed quantities.
 8. Kiosk scan preflight gives item-level feedback for conflicts, shortages, unavailable assets, and turnaround risk immediately after an item is staged; completion still performs the authoritative transactional check.
-9. Checkout creation is guarded at the shared service boundary: non-kiosk callers must not create checkout custody, kiosk/source creates require at least one equipment item, duplicate multi-event links and duplicate bulk lines are rejected, invalid windows fail before availability work, and DB overlap races return booking conflict responses.
+9. Checkout creation is guarded at the shared service boundary: non-kiosk callers must not create checkout custody, kiosk/source creates require at least one equipment item, duplicate multi-event links and duplicate bulk lines are rejected, invalid windows fail before availability work, and DB overlap races return booking conflict responses. The single exception is the admin-only reservation force-checkout path, which still requires a reason, availability checks, exact numbered-unit binding, and transactional audit evidence.
 
 ## V1 Workflow
 

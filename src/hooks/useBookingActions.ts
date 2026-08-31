@@ -174,6 +174,29 @@ export function useBookingActions(
     [bookingId, onSuccess],
   );
 
+  const forceCheckout = useCallback(
+    async (reason: string) => {
+      if (!guardStart("force-checkout")) return false;
+      try {
+        const result = await callAction(
+          `/api/reservations/${bookingId}/force-checkout`,
+          "POST",
+          { reason },
+        );
+        if (result.ok) {
+          toast.success("Reservation force-checked out");
+          onSuccess();
+        } else {
+          toast.error(result.error!);
+        }
+        return result.ok;
+      } finally {
+        guardEnd();
+      }
+    },
+    [bookingId, onSuccess],
+  );
+
   const saveField = useCallback(
     async (field: string, value: unknown): Promise<BookingDetail> => {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -212,6 +235,7 @@ export function useBookingActions(
     duplicate,
     nudge,
     forceComplete,
+    forceCheckout,
     saveField,
   };
 }

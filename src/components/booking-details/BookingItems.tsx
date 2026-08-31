@@ -71,10 +71,12 @@ export default function BookingItems({
           <CardContent className="p-0 divide-y divide-border/40">
             {filteredSerializedItems.map((item) => {
               const isReturned = item.allocationStatus === "returned";
+              const isPickedUp = booking.kind === "RESERVATION" && item.allocationStatus === "picked_up";
+              const isInactive = isReturned || isPickedUp;
               return (
                 <div
                   key={item.id}
-                  className={`flex items-center gap-3 px-3 py-2.5 ${isReturned ? "opacity-50" : ""}`}
+                  className={`flex items-center gap-3 px-3 py-2.5 ${isInactive ? "opacity-50" : ""}`}
                 >
                   <AssetImage src={item.asset.imageUrl} alt={item.asset.assetTag} size={36} />
                   <div className="min-w-0 flex-1">
@@ -89,7 +91,7 @@ export default function BookingItems({
                       {item.asset.name?.trim() || `${item.asset.brand} ${item.asset.model}`.trim()}
                     </div>
                   </div>
-                  {canCheckin && onCheckinItem && (
+                  {canCheckin && onCheckinItem && !isPickedUp && (
                     <div className="shrink-0">
                       {isReturned ? (
                         <CheckCircle2 className="size-4 text-[var(--green-text)]" />
@@ -104,6 +106,11 @@ export default function BookingItems({
                       )}
                     </div>
                   )}
+                  {isPickedUp && (
+                    <Badge variant="blue" size="sm">
+                      Picked up
+                    </Badge>
+                  )}
                   {!canCheckin && isReturned && (
                     <CheckCircle2 className="size-4 text-[var(--green-text)] shrink-0" />
                   )}
@@ -114,6 +121,13 @@ export default function BookingItems({
             {filteredBulkItems.map((item) => {
               const scannedOut = item.checkedOutQuantity;
               const scannedIn = item.checkedInQuantity;
+              const isReservation = booking.kind === "RESERVATION";
+              const pickedUpQty = isReservation
+                ? Math.min(scannedOut, item.plannedQuantity)
+                : 0;
+              const remainingQty = isReservation
+                ? Math.max(0, item.plannedQuantity - pickedUpQty)
+                : 0;
               const isCompleted = booking.status === "COMPLETED";
               const isOpen = booking.status === "OPEN";
               const allOut = scannedOut >= item.plannedQuantity;
@@ -131,6 +145,11 @@ export default function BookingItems({
                     <div className="text-sm font-semibold truncate">{item.bulkSku.name}</div>
                     <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                       <span>{item.bulkSku.category}</span>
+                      {isReservation && pickedUpQty > 0 && (
+                        <span className="text-[var(--blue-text)]">
+                          · {remainingQty > 0 ? `${pickedUpQty} picked up · ${remainingQty} remaining` : "Picked up"}
+                        </span>
+                      )}
                       {showAssignedUnits && assignedUnits.map((unitNumber) => (
                         <Badge key={unitNumber} variant="outline" size="sm" className="font-mono tabular-nums">
                           #{unitNumber}
@@ -145,6 +164,11 @@ export default function BookingItems({
                     {isOpen && booking.kind === "CHECKOUT" && scannedOut > 0 && (
                       <Badge variant={allOut ? "green" : "orange"} size="sm">
                         {scannedOut}/{item.plannedQuantity} out
+                      </Badge>
+                    )}
+                    {isReservation && pickedUpQty > 0 && (
+                      <Badge variant="blue" size="sm">
+                        {pickedUpQty}/{item.plannedQuantity} picked up
                       </Badge>
                     )}
                     {isCompleted && scannedOut > 0 && (

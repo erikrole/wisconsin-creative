@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   createAuditEntry: vi.fn(),
   findAssetByScanValue: vi.fn(),
   scanKioskPickupBulkUnit: vi.fn(),
+  stageKioskReservationPickupBulkUnit: vi.fn(),
   createBooking: vi.fn(),
   badgeOnScanResult: vi.fn(),
   badgeOnCheckoutOpened: vi.fn(),
@@ -77,7 +78,7 @@ vi.mock("@/lib/services/kiosk-scan", () => ({
 
 vi.mock("@/lib/services/bulk-unit-scans", () => ({
   scanKioskPickupBulkUnit: mocks.scanKioskPickupBulkUnit,
-  stageKioskReservationPickupBulkUnit: vi.fn(),
+  stageKioskReservationPickupBulkUnit: mocks.stageKioskReservationPickupBulkUnit,
 }));
 
 vi.mock("@/lib/services/kiosk-location", () => ({
@@ -122,6 +123,7 @@ beforeEach(() => {
   }));
   mocks.bookingUpdateMany.mockResolvedValue({ count: 1 });
   mocks.scanEventFindFirst.mockResolvedValue(null);
+  mocks.stageKioskReservationPickupBulkUnit.mockResolvedValue({ handled: false });
   mocks.createBooking.mockResolvedValue({ id: "checkout-1" });
   mocks.earnedBadgesSince.mockResolvedValue([]);
 });
@@ -183,6 +185,62 @@ describe("kiosk checkout detail bulk units", () => {
       numberedBulkCompleted: 0,
     });
     expect(json.title).toBe("Women's Soccer vs TCU");
+  });
+
+  it("rebuilds reservation battery rows from persisted scan events after reload", async () => {
+    mocks.bookingFindUnique.mockResolvedValue({
+      id: "reservation-1",
+      title: "Camera reservation",
+      refNumber: "RV-1001",
+      status: "BOOKED",
+      kind: "RESERVATION",
+      endsAt: new Date("2026-05-06T12:00:00.000Z"),
+      scanEvents: [{
+        assetId: null,
+        bulkSkuId: "sku-1",
+        scanType: "BULK_BIN",
+        scanValue: "sony-battery-7",
+      }],
+      serializedItems: [],
+      bulkItems: [{
+        id: "bulk-item-1",
+        plannedQuantity: 3,
+        checkedOutQuantity: 0,
+        checkedInQuantity: 0,
+        bulkSku: {
+          id: "sku-1",
+          name: "Sony Battery",
+          category: "Batteries",
+          binQrCodeValue: "sony-battery",
+          trackByNumber: true,
+          imageUrl: null,
+        },
+        unitAllocations: [],
+      }],
+      derivedCheckouts: [],
+    });
+
+    const res = await getKioskCheckoutDetail(new Request("http://test"), routeCtx("reservation-1"));
+    const json = await res.json();
+
+    expect(json.items[0]).toMatchObject({
+      id: "bulk-item-1:slot:1",
+      tagName: "#7",
+      name: "Sony Battery #7",
+      returned: true,
+      unitNumber: 7,
+    });
+    expect(json.items[1]).toMatchObject({
+      id: "bulk-item-1:slot:2",
+      tagName: "#2",
+      returned: false,
+      unitNumber: null,
+    });
+    expect(json.scanSummary).toEqual({
+      serializedTotal: 0,
+      numberedBulkTotal: 3,
+      numberedBulkCompleted: 1,
+    });
   });
 
   it("preserves individual numbered pickup slots at the exact checklist ceiling", async () => {
@@ -637,6 +695,40 @@ describe("kiosk pickup serialized scan guard", () => {
     expect(mocks.badgeOnScanResult).not.toHaveBeenCalled();
   });
 
+  it("returns duplicate feedback for a serialized item handed over in an earlier partial pickup", async () => {
+    mocks.bookingFindUnique.mockResolvedValue({
+      id: "reservation-1",
+      status: "BOOKED",
+      kind: "RESERVATION",
+      requesterUserId: "user-1",
+      locationId: "loc-1",
+    });
+    mocks.findAssetByScanValue.mockResolvedValue({
+      id: "asset-1",
+      assetTag: "FX3 1",
+      name: "FX3 1",
+    });
+    mocks.bookingSerializedItemFindUnique.mockResolvedValue({
+      id: "serialized-1",
+      bookingId: "reservation-1",
+      assetId: "asset-1",
+      allocationStatus: "picked_up",
+    });
+
+    const res = await scanKioskPickup(new Request("http://test", {
+      method: "POST",
+      body: JSON.stringify({ scanValue: "23723854" }),
+    }), routeCtx("reservation-1"));
+
+    expect(await res.json()).toEqual({
+      success: false,
+      error: "FX3 1 already picked up",
+      errorCode: "duplicate",
+    });
+    expect(mocks.scanEventFindFirst).not.toHaveBeenCalled();
+    expect(mocks.scanEventCreate).not.toHaveBeenCalled();
+  });
+
   it("blocks pickup confirmation until all serialized items are scanned", async () => {
     mocks.userFindUnique.mockResolvedValue({ id: "user-1", name: "User", role: "STUDENT" });
     mocks.bookingFindUnique.mockResolvedValue({
@@ -888,6 +980,71 @@ describe("kiosk reservation pickup confirmation", () => {
     });
   });
 
+  it("creates a linked checkout for only the scanned reservation items when pickup is partial", async () => {
+    mocks.userFindUnique.mockResolvedValue({ id: "user-1", name: "User", role: "STUDENT" });
+    mocks.bookingFindUnique
+      .mockResolvedValueOnce({
+        id: "reservation-1",
+        status: "BOOKED",
+        kind: "RESERVATION",
+        title: "Camera reservation",
+        serializedItems: [],
+        scanEvents: [],
+        bulkItems: [],
+      })
+      .mockResolvedValueOnce({
+        id: "reservation-1",
+        status: "BOOKED",
+        kind: "RESERVATION",
+        title: "Camera reservation",
+        requesterUserId: "user-1",
+        locationId: "loc-1",
+        startsAt: new Date("2026-06-18T16:00:00.000Z"),
+        endsAt: new Date("2026-06-18T20:00:00.000Z"),
+        notes: null,
+        eventId: null,
+        sportCode: null,
+        shiftAssignmentId: null,
+        kitId: null,
+        serializedItems: [
+          {
+            assetId: "asset-1",
+            allocationStatus: "active",
+            asset: { assetTag: "FX3 1", name: "Camera 1" },
+          },
+          {
+            assetId: "asset-2",
+            allocationStatus: "active",
+            asset: { assetTag: "FX3 2", name: "Camera 2" },
+          },
+        ],
+        bulkItems: [],
+        scanEvents: [{
+          assetId: "asset-1",
+          bulkSkuId: null,
+          scanType: "SERIALIZED",
+          scanValue: "FX3-1",
+        }],
+        derivedCheckouts: [],
+        events: [],
+      });
+
+    const res = await confirmKioskPickup(new Request("http://test", {
+      method: "POST",
+      body: JSON.stringify({ actorId: "user-1", partial: true }),
+    }), routeCtx("reservation-1"));
+    const json = await res.json();
+
+    expect(json).toEqual({ success: true, bookingId: "checkout-1", partial: true });
+    expect(mocks.createBooking).toHaveBeenCalledWith(expect.objectContaining({
+      sourceReservationId: "reservation-1",
+      sourceReservationPickup: true,
+      serializedAssetIds: ["asset-1"],
+      bulkItems: [],
+      bulkUnitItems: [],
+    }));
+  });
+
   it("creates a linked checkout for quantity-tracked stock without per-unit scans", async () => {
     mocks.userFindUnique.mockResolvedValue({ id: "user-1", name: "User", role: "STUDENT" });
     mocks.bookingFindUnique
@@ -967,9 +1124,18 @@ describe("kiosk reservation pickup confirmation", () => {
         sportCode: null,
         shiftAssignmentId: null,
         kitId: null,
-        serializedItems: [],
+        serializedItems: [{
+          assetId: "asset-1",
+          allocationStatus: "active",
+          asset: { assetTag: "FX3 1", name: "Camera" },
+        }],
         bulkItems: [],
-        scanEvents: [],
+        scanEvents: [{
+          assetId: "asset-1",
+          bulkSkuId: null,
+          scanType: "SERIALIZED",
+          scanValue: "FX3-1",
+        }],
         events: [],
       });
 
@@ -1009,9 +1175,18 @@ describe("kiosk reservation pickup confirmation", () => {
         sportCode: null,
         shiftAssignmentId: null,
         kitId: null,
-        serializedItems: [],
+        serializedItems: [{
+          assetId: "asset-1",
+          allocationStatus: "active",
+          asset: { assetTag: "FX3 1", name: "Camera" },
+        }],
         bulkItems: [],
-        scanEvents: [],
+        scanEvents: [{
+          assetId: "asset-1",
+          bulkSkuId: null,
+          scanType: "SERIALIZED",
+          scanValue: "FX3-1",
+        }],
         events: [],
       });
     mocks.createBooking.mockRejectedValue(new Error("Availability conflict"));

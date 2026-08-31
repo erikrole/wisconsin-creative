@@ -18,6 +18,7 @@ import {
 } from "@/lib/audit";
 import { checkAvailability, type BulkRequest } from "@/lib/services/availability";
 import { ACTIVE_BULK_UNIT_ALLOCATION_WHERE, CLAIMABLE_BULK_UNIT_WHERE, effectiveBulkUnitStatus } from "@/lib/bulk-unit-status";
+import { parseDerivedBulkUnitQr } from "@/lib/bulk-unit-qr";
 import { nextBookingRef } from "@/lib/services/booking-ref";
 import {
   bookingInclude,
@@ -62,7 +63,9 @@ type CreateBookingInput = {
   /** Reservation-only concurrency cap. When present, the active BOOKED count
    * is checked in the same SERIALIZABLE transaction as the insert. */
   maxConcurrentReservations?: number;
-  custodySource?: "KIOSK";
+  custodySource?: "KIOSK" | "ADMIN_OVERRIDE";
+  /** Required when an admin creates checkout custody without a kiosk scan. */
+  adminOverrideReason?: string;
   title: string;
   requesterUserId: string;
   locationId: string;
@@ -89,6 +92,10 @@ type CreateBookingInput = {
    * same transaction that opens the checkout and completes the reservation,
    * so a failed unit bind rolls the whole pickup back. CHECKOUT kind only. */
   bulkUnitItems?: Array<{ bulkSkuId: string; unitNumber: number }>;
+  /** When set with sourceReservationId, serializedAssetIds and bulkItems are
+   * the exact reservation items being picked up now. The source reservation
+   * remains BOOKED until every remaining item is picked up. */
+  sourceReservationPickup?: boolean;
 };
 
 type UpdateBookingInput = {
@@ -224,8 +231,26 @@ function assertCheckoutBulkLineChangeLimit(
 }
 
 function assertCheckoutCustodySource(input: CreateBookingInput) {
-  if (input.kind === BookingKind.CHECKOUT && input.custodySource !== "KIOSK") {
+  if (
+    input.kind === BookingKind.CHECKOUT
+    && input.custodySource !== "KIOSK"
+    && input.custodySource !== "ADMIN_OVERRIDE"
+  ) {
     throw new HttpError(403, "Direct checkout custody can only be created at a kiosk");
+  }
+
+  if (input.adminOverrideReason !== undefined && input.custodySource !== "ADMIN_OVERRIDE") {
+    throw new HttpError(400, "Admin override details require admin checkout custody");
+  }
+
+  if (input.custodySource === "ADMIN_OVERRIDE") {
+    if (input.kind !== BookingKind.CHECKOUT || !input.sourceReservationId || !input.sourceReservationPickup) {
+      throw new HttpError(400, "Admin checkout override requires a reservation pickup");
+    }
+    const reason = input.adminOverrideReason?.trim() ?? "";
+    if (reason.length < 10) {
+      throw new HttpError(400, "Reason must be at least 10 characters");
+    }
   }
 }
 
@@ -320,6 +345,12 @@ export async function createBooking(input: CreateBookingInput) {
   if (input.sourceDraftId && input.kind !== BookingKind.RESERVATION) {
     throw new HttpError(400, "sourceDraftId only applies to reservations");
   }
+  if (input.sourceReservationPickup && !input.sourceReservationId) {
+    throw new HttpError(400, "sourceReservationPickup requires sourceReservationId");
+  }
+  if (input.sourceReservationPickup && input.kind !== BookingKind.CHECKOUT) {
+    throw new HttpError(400, "sourceReservationPickup only applies to checkout custody");
+  }
 
   try {
     const booking = await withSerializationRetry(() =>
@@ -403,9 +434,20 @@ export async function createBooking(input: CreateBookingInput) {
             }
           }
 
-          // Resolve items from source reservation if provided
+          // Resolve items from source reservation if provided. A normal source
+          // conversion still falls back to the complete reservation for
+          // backwards compatibility. Kiosk pickup passes an explicit
+          // selection so a partial pickup cannot silently pull every item.
           let resolvedSerializedAssetIds = dedupeIds(input.serializedAssetIds);
           let resolvedBulkItems = input.bulkItems;
+          let sourceReservationForPickup: {
+            id: string;
+            kind: BookingKind;
+            status: BookingStatus;
+            locationId: string;
+            serializedItems: Array<{ assetId: string; allocationStatus: string }>;
+            bulkItems: Array<{ bulkSkuId: string; plannedQuantity: number; checkedOutQuantity: number }>;
+          } | null = null;
 
           if (input.sourceReservationId) {
             const sourceReservation = await tx.booking.findUnique({
@@ -426,14 +468,46 @@ export async function createBooking(input: CreateBookingInput) {
               throw new HttpError(400, "Source reservation belongs to a different location");
             }
 
-            if (resolvedSerializedAssetIds.length === 0) {
-              resolvedSerializedAssetIds = sourceReservation.serializedItems.map((item) => item.assetId);
-            }
-            if (resolvedBulkItems.length === 0) {
-              resolvedBulkItems = sourceReservation.bulkItems.map((item) => ({
-                bulkSkuId: item.bulkSkuId,
-                quantity: item.plannedQuantity
-              }));
+            if (input.sourceReservationPickup) {
+              sourceReservationForPickup = sourceReservation;
+              const remainingSerializedAssetIds = new Set(
+                sourceReservation.serializedItems
+                  .filter((item) => item.allocationStatus === "active")
+                  .map((item) => item.assetId),
+              );
+              const invalidSerializedAssetId = resolvedSerializedAssetIds.find(
+                (assetId) => !remainingSerializedAssetIds.has(assetId),
+              );
+              if (invalidSerializedAssetId) {
+                throw new HttpError(409, "One or more selected items were already picked up");
+              }
+
+              const sourceBulkBySku = new Map(
+                sourceReservation.bulkItems.map((item) => [item.bulkSkuId, item]),
+              );
+              for (const item of resolvedBulkItems) {
+                const sourceItem = sourceBulkBySku.get(item.bulkSkuId);
+                if (!sourceItem) {
+                  throw new HttpError(409, "One or more selected bulk items were not in this reservation");
+                }
+                const remainingQuantity = Math.max(
+                  0,
+                  sourceItem.plannedQuantity - (sourceItem.checkedOutQuantity ?? 0),
+                );
+                if (item.quantity > remainingQuantity) {
+                  throw new HttpError(409, "One or more selected bulk items were already picked up");
+                }
+              }
+            } else {
+              if (resolvedSerializedAssetIds.length === 0) {
+                resolvedSerializedAssetIds = sourceReservation.serializedItems.map((item) => item.assetId);
+              }
+              if (resolvedBulkItems.length === 0) {
+                resolvedBulkItems = sourceReservation.bulkItems.map((item) => ({
+                  bulkSkuId: item.bulkSkuId,
+                  quantity: item.plannedQuantity
+                }));
+              }
             }
           }
 
@@ -460,10 +534,10 @@ export async function createBooking(input: CreateBookingInput) {
             throw new HttpError(409, "Availability conflict", availability);
           }
 
-          // Reservation intent stays BOOKED until the kiosk proves the physical
-          // handoff. Every checkout admitted by this service is kiosk custody,
-          // so it opens directly instead of creating the retired staged
-          // PENDING_PICKUP checkout state.
+          // Reservation intent stays BOOKED until custody is proven. Kiosk
+          // pickup and the admin force-checkout exception both open custody
+          // directly instead of creating the retired staged PENDING_PICKUP
+          // checkout state.
           const status = input.kind === BookingKind.RESERVATION
             ? BookingStatus.BOOKED
             : BookingStatus.OPEN;
@@ -704,6 +778,9 @@ export async function createBooking(input: CreateBookingInput) {
           }
 
           const actorRole = await lookupActorRole(tx, input.createdBy);
+          if (input.custodySource === "ADMIN_OVERRIDE" && actorRole !== Role.ADMIN) {
+            throw new HttpError(403, "Only admins can force-checkout a reservation");
+          }
 
           if (reservationScheduleAssignment?.created) {
             await createAuditEntryTx(tx, {
@@ -765,30 +842,185 @@ export async function createBooking(input: CreateBookingInput) {
             });
           }
 
-          // Fulfill the source reservation atomically within the same transaction.
+          // Fulfill the source reservation atomically within the same
+          // transaction. Partial kiosk pickups mark only the selected source
+          // items as picked up and keep the reservation BOOKED for its next
+          // pickup. The linked checkout remains the custody record for the
+          // items already handed over.
           if (input.sourceReservationId) {
-            await tx.booking.update({
-              where: { id: input.sourceReservationId },
-              data: { status: BookingStatus.COMPLETED, completedAt: new Date() }
-            });
+            if (input.sourceReservationPickup && sourceReservationForPickup) {
+              const selectedSerializedAssetIds = new Set(resolvedSerializedAssetIds);
+              const selectedBulkQuantityBySku = new Map(
+                resolvedBulkItems.map((item) => [item.bulkSkuId, item.quantity]),
+              );
+              const remainingSerializedCount = sourceReservationForPickup.serializedItems.filter(
+                (item) => item.allocationStatus === "active" && !selectedSerializedAssetIds.has(item.assetId),
+              ).length;
+              const hasRemainingBulk = sourceReservationForPickup.bulkItems.some((item) => {
+                const pickedQuantity = (item.checkedOutQuantity ?? 0)
+                  + (selectedBulkQuantityBySku.get(item.bulkSkuId) ?? 0);
+                return pickedQuantity < item.plannedQuantity;
+              });
+              const sourceCompleted = remainingSerializedCount === 0 && !hasRemainingBulk;
 
-            await tx.assetAllocation.updateMany({
-              where: { bookingId: input.sourceReservationId },
-              data: { active: false }
-            });
+              if (selectedSerializedAssetIds.size > 0) {
+                await tx.bookingSerializedItem.updateMany({
+                  where: {
+                    bookingId: input.sourceReservationId,
+                    assetId: { in: [...selectedSerializedAssetIds] },
+                    allocationStatus: "active",
+                  },
+                  data: { allocationStatus: "picked_up" },
+                });
+                await tx.assetAllocation.updateMany({
+                  where: {
+                    bookingId: input.sourceReservationId,
+                    assetId: { in: [...selectedSerializedAssetIds] },
+                    active: true,
+                  },
+                  data: { active: false },
+                });
+              }
 
-            await tx.scanSession.updateMany({
-              where: { bookingId: input.sourceReservationId, status: ScanSessionStatus.OPEN },
-              data: { status: ScanSessionStatus.CANCELLED }
+              for (const item of resolvedBulkItems) {
+                await tx.bookingBulkItem.update({
+                  where: {
+                    bookingId_bulkSkuId: {
+                      bookingId: input.sourceReservationId,
+                      bulkSkuId: item.bulkSkuId,
+                    },
+                  },
+                  data: { checkedOutQuantity: { increment: item.quantity } },
+                });
+              }
+
+              if (sourceCompleted) {
+                await tx.booking.update({
+                  where: { id: input.sourceReservationId },
+                  data: { status: BookingStatus.COMPLETED, completedAt: new Date() },
+                });
+                await tx.assetAllocation.updateMany({
+                  where: { bookingId: input.sourceReservationId },
+                  data: { active: false },
+                });
+                await tx.scanSession.updateMany({
+                  where: { bookingId: input.sourceReservationId, status: ScanSessionStatus.OPEN },
+                  data: { status: ScanSessionStatus.CANCELLED },
+                });
+              } else {
+                // Touch the source reservation so clients immediately see that
+                // its remaining pickup work is still open after this handoff.
+                await tx.booking.update({
+                  where: { id: input.sourceReservationId },
+                  data: { status: BookingStatus.BOOKED },
+                });
+              }
+
+              await createAuditEntryTx(tx, {
+                actorId: input.createdBy,
+                actorRole,
+                entityType: "booking",
+                entityId: input.sourceReservationId,
+                action: input.custodySource === "ADMIN_OVERRIDE"
+                  ? "admin_force_checkout"
+                  : sourceCompleted
+                    ? "fulfilled_by_kiosk_pickup"
+                    : "partially_fulfilled_by_kiosk_pickup",
+                after: {
+                  convertedToCheckoutId: booking.id,
+                  pickedSerializedAssetIds: [...selectedSerializedAssetIds],
+                  pickedBulkItems: resolvedBulkItems,
+                  ...(input.custodySource === "ADMIN_OVERRIDE"
+                    ? { reason: input.adminOverrideReason!.trim() }
+                    : {}),
+                  remainingSerializedCount,
+                  remainingBulk: sourceReservationForPickup.bulkItems
+                    .filter((item) => {
+                      const pickedQuantity = (item.checkedOutQuantity ?? 0)
+                        + (selectedBulkQuantityBySku.get(item.bulkSkuId) ?? 0);
+                      return pickedQuantity < item.plannedQuantity;
+                    })
+                    .map((item) => ({
+                      bulkSkuId: item.bulkSkuId,
+                      quantity: item.plannedQuantity
+                        - (item.checkedOutQuantity ?? 0)
+                        - (selectedBulkQuantityBySku.get(item.bulkSkuId) ?? 0),
+                    })),
+                },
+              });
+            } else {
+              await tx.booking.update({
+                where: { id: input.sourceReservationId },
+                data: { status: BookingStatus.COMPLETED, completedAt: new Date() }
+              });
+
+              await tx.assetAllocation.updateMany({
+                where: { bookingId: input.sourceReservationId },
+                data: { active: false }
+              });
+
+              await tx.scanSession.updateMany({
+                where: { bookingId: input.sourceReservationId, status: ScanSessionStatus.OPEN },
+                data: { status: ScanSessionStatus.CANCELLED }
+              });
+
+              await createAuditEntryTx(tx, {
+                actorId: input.createdBy,
+                actorRole,
+                entityType: "booking",
+                entityId: input.sourceReservationId,
+                action: input.custodySource === "ADMIN_OVERRIDE"
+                  ? "admin_force_checkout"
+                  : "fulfilled_by_kiosk_pickup",
+                after: {
+                  convertedToCheckoutId: booking.id,
+                  ...(input.custodySource === "ADMIN_OVERRIDE"
+                    ? { reason: input.adminOverrideReason!.trim() }
+                    : {}),
+                },
+              });
+            }
+          }
+
+          if (input.custodySource === "ADMIN_OVERRIDE") {
+            const reason = input.adminOverrideReason!.trim();
+            const numberedUnits = (input.bulkUnitItems ?? []).map((unit) => ({
+              bulkSkuId: unit.bulkSkuId,
+              unitNumber: unit.unitNumber,
+            }));
+            const bulkQuantity = resolvedBulkItems.reduce((sum, item) => sum + item.quantity, 0);
+
+            await tx.overrideEvent.create({
+              data: {
+                bookingId: booking.id,
+                actorUserId: input.createdBy,
+                reason,
+                details: {
+                  type: "admin_force_checkout",
+                  refNumber: booking.refNumber,
+                  sourceReservationId: input.sourceReservationId,
+                  serializedPickedUpCount: resolvedSerializedAssetIds.length,
+                  bulkPickedUpQuantity: bulkQuantity,
+                  numberedUnits,
+                  createdAt: new Date().toISOString(),
+                },
+              },
             });
 
             await createAuditEntryTx(tx, {
               actorId: input.createdBy,
               actorRole,
               entityType: "booking",
-              entityId: input.sourceReservationId,
-              action: "fulfilled_by_kiosk_pickup",
-              after: { convertedToCheckoutId: booking.id },
+              entityId: booking.id,
+              action: "admin_force_checkout",
+              after: {
+                reason,
+                sourceReservationId: input.sourceReservationId,
+                status: BookingStatus.OPEN,
+                serializedPickedUpCount: resolvedSerializedAssetIds.length,
+                bulkPickedUpQuantity: bulkQuantity,
+                numberedUnits,
+              },
             });
           }
 
@@ -813,6 +1045,188 @@ export async function createBooking(input: CreateBookingInput) {
   } catch (error) {
     handleBookingMutationRace(error);
   }
+}
+
+/**
+ * Create checkout custody for the remaining equipment on a reservation when an
+ * admin has verified the physical handoff but kiosk scanning is unavailable.
+ *
+ * Unit selection is deliberately server-side and deterministic. Durable staged
+ * unit scans are preferred when those units are still claimable; any remainder
+ * is filled from the lowest-numbered available units. `createBooking()` then
+ * rechecks the source reservation, availability, and unit claims in its own
+ * SERIALIZABLE transaction before committing the custody record.
+ */
+export async function forceCheckoutReservation(args: {
+  reservationId: string;
+  actorUserId: string;
+  reason: string;
+}) {
+  const reason = args.reason.trim();
+  if (reason.length < 10) {
+    throw new HttpError(400, "Reason must be at least 10 characters");
+  }
+  if (reason.length > 1000) {
+    throw new HttpError(400, "Reason must be at most 1000 characters");
+  }
+
+  const source = await db.booking.findUnique({
+    where: { id: args.reservationId },
+    select: {
+      id: true,
+      kind: true,
+      status: true,
+      title: true,
+      requesterUserId: true,
+      locationId: true,
+      startsAt: true,
+      endsAt: true,
+      notes: true,
+      eventId: true,
+      sportCode: true,
+      shiftAssignmentId: true,
+      kitId: true,
+      serializedItems: {
+        select: { assetId: true, allocationStatus: true },
+      },
+      bulkItems: {
+        select: {
+          bulkSkuId: true,
+          plannedQuantity: true,
+          checkedOutQuantity: true,
+          bulkSku: {
+            select: {
+              id: true,
+              name: true,
+              trackByNumber: true,
+              binQrCodeValue: true,
+            },
+          },
+        },
+      },
+      scanEvents: {
+        where: {
+          phase: "CHECKOUT",
+          scanType: "BULK_BIN",
+          success: true,
+        },
+        orderBy: { createdAt: "asc" },
+        select: { bulkSkuId: true, scanValue: true },
+      },
+      events: {
+        orderBy: { ordinal: "asc" },
+        select: { eventId: true },
+      },
+    },
+  });
+
+  if (!source || source.kind !== BookingKind.RESERVATION) {
+    throw new HttpError(404, "Reservation not found");
+  }
+  if (source.status !== BookingStatus.BOOKED) {
+    throw new HttpError(400, `Reservation is not in BOOKED status (current: ${source.status})`);
+  }
+
+  const startsAt = new Date();
+  if (source.endsAt <= startsAt) {
+    throw new HttpError(400, "Reservation end time has passed; extend it before force checkout");
+  }
+
+  const serializedAssetIds = source.serializedItems
+    .filter((item) => item.allocationStatus === "active")
+    .map((item) => item.assetId);
+  const remainingBulkItems = source.bulkItems
+    .map((item) => ({
+      bulkSkuId: item.bulkSkuId,
+      quantity: Math.max(0, item.plannedQuantity - (item.checkedOutQuantity ?? 0)),
+    }))
+    .filter((item) => item.quantity > 0);
+
+  const numberedSourceSkus = source.bulkItems
+    .filter((item) => item.bulkSku.trackByNumber && remainingBulkItems.some((remaining) => remaining.bulkSkuId === item.bulkSkuId))
+    .map((item) => item.bulkSku);
+  const stagedUnitNumbersBySku = new Map<string, number[]>();
+  const sourceSkuCandidates = source.bulkItems.map((item) => item.bulkSku);
+  for (const event of source.scanEvents) {
+    if (!event.bulkSkuId) continue;
+    const match = parseDerivedBulkUnitQr(event.scanValue, sourceSkuCandidates);
+    if (!match || match.bulkSkuId !== event.bulkSkuId) continue;
+    const numbers = stagedUnitNumbersBySku.get(match.bulkSkuId) ?? [];
+    if (!numbers.includes(match.unitNumber)) numbers.push(match.unitNumber);
+    stagedUnitNumbersBySku.set(match.bulkSkuId, numbers);
+  }
+
+  const availableUnits = numberedSourceSkus.length > 0
+    ? await db.bulkSkuUnit.findMany({
+        where: {
+          bulkSkuId: { in: numberedSourceSkus.map((sku) => sku.id) },
+          ...CLAIMABLE_BULK_UNIT_WHERE,
+        },
+        orderBy: [{ bulkSkuId: "asc" }, { unitNumber: "asc" }],
+        select: { bulkSkuId: true, unitNumber: true },
+      })
+    : [];
+  const availableNumbersBySku = new Map<string, number[]>();
+  for (const unit of availableUnits) {
+    const numbers = availableNumbersBySku.get(unit.bulkSkuId) ?? [];
+    numbers.push(unit.unitNumber);
+    availableNumbersBySku.set(unit.bulkSkuId, numbers);
+  }
+
+  const bulkUnitItems: Array<{ bulkSkuId: string; unitNumber: number }> = [];
+  for (const item of remainingBulkItems) {
+    const sourceItem = source.bulkItems.find((candidate) => candidate.bulkSkuId === item.bulkSkuId);
+    if (!sourceItem?.bulkSku.trackByNumber) continue;
+
+    const availableNumbers = availableNumbersBySku.get(item.bulkSkuId) ?? [];
+    const availableSet = new Set(availableNumbers);
+    const preferredNumbers = (stagedUnitNumbersBySku.get(item.bulkSkuId) ?? [])
+      .filter((unitNumber) => availableSet.has(unitNumber));
+    const selectedNumbers = [...new Set([
+      ...preferredNumbers,
+      ...availableNumbers.filter((unitNumber) => !preferredNumbers.includes(unitNumber)),
+    ])].slice(0, item.quantity);
+
+    if (selectedNumbers.length !== item.quantity) {
+      throw new HttpError(
+        409,
+        `${sourceItem.bulkSku.name}: ${item.quantity} numbered units are required, but only ${selectedNumbers.length} are available for force checkout`,
+      );
+    }
+
+    bulkUnitItems.push(...selectedNumbers.map((unitNumber) => ({
+      bulkSkuId: item.bulkSkuId,
+      unitNumber,
+    })));
+  }
+
+  if (serializedAssetIds.length === 0 && remainingBulkItems.length === 0) {
+    throw new HttpError(409, "This reservation has no remaining items to force checkout");
+  }
+
+  const eventIds = source.events.map((event) => event.eventId);
+  return createBooking({
+    kind: BookingKind.CHECKOUT,
+    custodySource: "ADMIN_OVERRIDE",
+    adminOverrideReason: reason,
+    title: source.title,
+    requesterUserId: source.requesterUserId,
+    locationId: source.locationId,
+    startsAt,
+    endsAt: source.endsAt,
+    notes: source.notes ?? undefined,
+    createdBy: args.actorUserId,
+    sourceReservationId: source.id,
+    sourceReservationPickup: true,
+    eventIds: eventIds.length > 0 ? eventIds : undefined,
+    eventId: eventIds.length === 0 ? source.eventId ?? undefined : undefined,
+    sportCode: source.sportCode ?? undefined,
+    shiftAssignmentId: source.shiftAssignmentId ?? undefined,
+    kitId: source.kitId ?? undefined,
+    serializedAssetIds,
+    bulkItems: remainingBulkItems,
+    bulkUnitItems,
+  });
 }
 
 export async function updateReservation(
@@ -931,6 +1345,13 @@ export async function updateReservation(
         }));
       const updatesEquipment = updates.serializedAssetIds !== undefined || updates.bulkItems !== undefined;
       const updatesWindow = updates.startsAt !== undefined || updates.endsAt !== undefined || updates.locationId !== undefined;
+
+      const hasPickedUpEquipment =
+        existing.serializedItems.some((item) => item.allocationStatus === "picked_up")
+        || existing.bulkItems.some((item) => (item.checkedOutQuantity ?? 0) > 0);
+      if (updatesEquipment && hasPickedUpEquipment) {
+        throw new HttpError(409, "Equipment cannot be edited after a partial pickup");
+      }
 
       if (updatesEquipment) {
         await assertNumberedPickupPlanLimit(tx, bulkItems);

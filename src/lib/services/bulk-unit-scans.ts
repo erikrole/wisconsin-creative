@@ -257,6 +257,21 @@ export async function stageKioskReservationPickupBulkUnit(
     where: { id: args.bookingId },
     include: {
       bulkItems: { include: { bulkSku: true } },
+      derivedCheckouts: {
+        select: {
+          bulkItems: {
+            select: {
+              bulkSkuId: true,
+              unitAllocations: {
+                select: {
+                  bulkSkuUnitId: true,
+                  bulkSkuUnit: { select: { unitNumber: true } },
+                },
+              },
+            },
+          },
+        },
+      },
     },
   });
 
@@ -322,6 +337,25 @@ export async function stageKioskReservationPickupBulkUnit(
     return { handled: true, success: false, error: `${bulkItem.bulkSku.name} #${derived.unitNumber} does not exist`, errorCode: "not_found" };
   }
 
+  const derivedCheckouts = booking.derivedCheckouts ?? [];
+  const pickedUnitIds = new Set(
+    derivedCheckouts.flatMap((checkout) =>
+      checkout.bulkItems
+        .filter((item) => item.bulkSkuId === bulkItem.bulkSkuId)
+        .flatMap((item) => item.unitAllocations.map((allocation) => allocation.bulkSkuUnitId)),
+    ),
+  );
+  if (pickedUnitIds.has(unit.id)) {
+    return { handled: true, success: false, error: `${bulkItem.bulkSku.name} #${unit.unitNumber} already picked up`, errorCode: "duplicate" };
+  }
+  const pickedUnitNumbers = new Set(
+    derivedCheckouts.flatMap((checkout) =>
+      checkout.bulkItems
+        .filter((item) => item.bulkSkuId === bulkItem.bulkSkuId)
+        .flatMap((item) => item.unitAllocations.map((allocation) => allocation.bulkSkuUnit.unitNumber)),
+    ),
+  );
+
   const stagedScans = await tx.scanEvent.findMany({
     where: {
       bookingId: booking.id,
@@ -339,11 +373,21 @@ export async function stageKioskReservationPickupBulkUnit(
     return { handled: true, success: false, error: `${bulkItem.bulkSku.name} #${unit.unitNumber} already scanned`, errorCode: "duplicate" };
   }
 
-  if (stagedUnits.length >= bulkItem.plannedQuantity) {
+  const stagedUnitNumbers = new Set(
+    stagedUnits
+      .map((stagedUnit) => stagedUnit.unitNumber)
+      .filter((unitNumber) => !pickedUnitNumbers.has(unitNumber)),
+  );
+  const remainingQuantity = Math.max(
+    0,
+    bulkItem.plannedQuantity - (bulkItem.checkedOutQuantity ?? 0),
+  );
+  if (stagedUnitNumbers.size >= remainingQuantity) {
+    const totalPickedOrScanned = pickedUnitNumbers.size + stagedUnitNumbers.size;
     return {
       handled: true,
       success: false,
-      error: `${bulkItem.bulkSku.name} already has ${bulkItem.plannedQuantity} of ${bulkItem.plannedQuantity} units scanned`,
+      error: `${bulkItem.bulkSku.name} already has ${totalPickedOrScanned} of ${bulkItem.plannedQuantity} units picked up or scanned`,
       errorCode: "quantity_exceeded",
     };
   }
@@ -388,7 +432,7 @@ export async function stageKioskReservationPickupBulkUnit(
     handled: true,
     success: true,
     item: {
-      id: `${bulkItem.id}:slot:${stagedUnits.length + 1}`,
+      id: `${bulkItem.id}:slot:${stagedUnitNumbers.size + 1}`,
       name: unitDisplayName(bulkItem.bulkSku.name, unit.unitNumber),
       tagName: unitTagName(unit.unitNumber),
       type: bulkItem.bulkSku.category,

@@ -73,6 +73,10 @@ const bulkReservationCommitmentStatuses = [BookingStatus.BOOKED];
 const turnaroundWarningWindowMs = TURNAROUND_WARNING_WINDOW_MINUTES * 60_000;
 const recentCheckinReportWindowMs = 30 * 24 * 60 * 60 * 1000;
 
+function remainingReservationQuantity(item: { plannedQuantity: number; checkedOutQuantity?: number | null }) {
+  return Math.max(0, item.plannedQuantity - (item.checkedOutQuantity ?? 0));
+}
+
 function formatDuration(minutes: number) {
   if (minutes < 60) return `${minutes}m`;
   const hours = Math.floor(minutes / 60);
@@ -357,6 +361,7 @@ export async function checkBulkTurnaroundRisks(
     select: {
       bulkSkuId: true,
       plannedQuantity: true,
+      checkedOutQuantity: true,
       bookingId: true,
       booking: {
         select: {
@@ -397,7 +402,8 @@ export async function checkBulkTurnaroundRisks(
   for (const row of nextBySku.values()) {
     const onHand = onHandBySku.get(row.bulkSkuId);
     const requested = requestedBySku.get(row.bulkSkuId) ?? 0;
-    if (onHand === undefined || requested + row.plannedQuantity <= onHand) continue;
+    const remainingQuantity = remainingReservationQuantity(row);
+    if (onHand === undefined || remainingQuantity <= 0 || requested + remainingQuantity <= onHand) continue;
     const gapMs = row.booking.startsAt.getTime() - args.endsAt.getTime();
     if (gapMs < 0 || gapMs > turnaroundWarningWindowMs) continue;
     const gapMinutes = Math.max(0, Math.round(gapMs / 60_000));
@@ -406,13 +412,13 @@ export async function checkBulkTurnaroundRisks(
       code: "BULK_SHORT_TURNAROUND",
       severity: turnaroundSeverity(gapMinutes),
       message: gapMinutes === 0
-        ? `Next bulk booking needs ${row.plannedQuantity} now`
-        : `Next bulk booking needs ${row.plannedQuantity} in ${formatDuration(gapMinutes)}`,
+        ? `Next bulk booking needs ${remainingQuantity} now`
+        : `Next bulk booking needs ${remainingQuantity} in ${formatDuration(gapMinutes)}`,
       bookingId: row.bookingId,
       bookingTitle: row.booking.title,
       startsAt: row.booking.startsAt,
       gapMinutes,
-      plannedQuantity: row.plannedQuantity,
+      plannedQuantity: remainingQuantity,
     });
   }
 
@@ -445,8 +451,7 @@ export async function checkBulkShortages(
   });
 
   const balanceMap = new Map(balanceRows.map((row) => [row.bulkSkuId, row.onHandQuantity]));
-  const committedRows = await tx.bookingBulkItem.groupBy({
-    by: ["bulkSkuId"],
+  const committedRows = await tx.bookingBulkItem.findMany({
     where: {
       bulkSkuId: { in: args.bulkItems.map((item) => item.bulkSkuId) },
       booking: {
@@ -457,11 +462,15 @@ export async function checkBulkShortages(
         ...(args.excludeBookingId ? { id: { not: args.excludeBookingId } } : {}),
       },
     },
-    _sum: { plannedQuantity: true },
+    select: { bulkSkuId: true, plannedQuantity: true, checkedOutQuantity: true },
   });
-  const committedMap = new Map(
-    committedRows.map((row) => [row.bulkSkuId, row._sum.plannedQuantity ?? 0]),
-  );
+  const committedMap = new Map<string, number>();
+  for (const row of committedRows) {
+    committedMap.set(
+      row.bulkSkuId,
+      (committedMap.get(row.bulkSkuId) ?? 0) + remainingReservationQuantity(row),
+    );
+  }
 
   return args.bulkItems
     .map((item) => {
@@ -508,8 +517,7 @@ export async function getBulkAvailability(
   const skuIds = balances.map((b) => b.bulkSkuId);
 
   // Sum planned quantities from overlapping active bookings
-  const committedRows = await tx.bookingBulkItem.groupBy({
-    by: ["bulkSkuId"],
+  const committedRows = await tx.bookingBulkItem.findMany({
     where: {
       bulkSkuId: { in: skuIds },
       booking: {
@@ -520,12 +528,16 @@ export async function getBulkAvailability(
         ...(args.excludeBookingId ? { id: { not: args.excludeBookingId } } : {}),
       },
     },
-    _sum: { plannedQuantity: true },
+    select: { bulkSkuId: true, plannedQuantity: true, checkedOutQuantity: true },
   });
 
-  const committedMap = new Map(
-    committedRows.map((r) => [r.bulkSkuId, r._sum.plannedQuantity ?? 0])
-  );
+  const committedMap = new Map<string, number>();
+  for (const row of committedRows) {
+    committedMap.set(
+      row.bulkSkuId,
+      (committedMap.get(row.bulkSkuId) ?? 0) + remainingReservationQuantity(row),
+    );
+  }
 
   const result: Record<string, BulkAvailabilityEntry> = {};
   for (const b of balances) {

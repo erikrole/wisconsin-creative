@@ -106,6 +106,9 @@ export type ResolveKioskScanBody = z.infer<typeof resolveKioskScanBody>;
 
 export const pickupConfirmBody = z.object({
   actorId: cuidish,
+  // Reservation pickups may hand over only the items already scanned. The
+  // source reservation stays BOOKED until a later pickup finishes the rest.
+  partial: z.boolean().optional().default(false),
 });
 export type PickupConfirmBody = z.infer<typeof pickupConfirmBody>;
 

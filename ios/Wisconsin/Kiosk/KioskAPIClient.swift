@@ -331,21 +331,22 @@ struct KioskAPI {
         return try await perform(req)
     }
 
-    func kioskPickupConfirm(bookingId: String, actorId: String) async throws -> [EarnedBadgeReward] {
-        struct Body: Encodable { let actorId: String }
-        struct Response: Decodable {
-            let success: Bool
-            let bookingId: String
-            let earnedBadges: [EarnedBadgeReward]?
+    func kioskPickupConfirm(
+        bookingId: String,
+        actorId: String,
+        partial: Bool = false
+    ) async throws -> KioskPickupConfirmResult {
+        struct Body: Encodable {
+            let actorId: String
+            let partial: Bool
         }
         var req = request(path: "/api/kiosk/pickup/\(bookingId)/confirm", method: "POST")
-        req.httpBody = try JSONEncoder().encode(Body(actorId: actorId))
+        req.httpBody = try JSONEncoder().encode(Body(actorId: actorId, partial: partial))
         // Route through `perform` so 401/404/409/5xx propagate as APIError —
         // the prior `try?` swallowed every failure mode and produced phantom
         // successes (booking stayed PENDING_PICKUP server-side, kiosk showed
         // the confirmation screen).
-        let response: Response = try await perform(req)
-        return response.earnedBadges ?? []
+        return try await perform(req)
     }
 
     // MARK: - Internals

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { BookingKind, CollaboratorProfile, Prisma, Role } from "@prisma/client";
+import { BookingKind, BookingStatus, CollaboratorProfile, Prisma, Role } from "@prisma/client";
 import { expectSerializableIsolation } from "./_helpers/assert-transaction";
 import {
   MAX_BULK_SKU_LINES_PER_REQUEST,
@@ -17,13 +17,14 @@ type CreateBookingTx = {
   shiftAssignment: Record<"findMany" | "findUnique" | "updateMany" | "create", MockFn>;
   bookingEvent: Record<"createMany", MockFn>;
   scheduleEventFollow: Record<"createMany", MockFn>;
-  bookingSerializedItem: Record<"createMany", MockFn>;
-  bookingBulkItem: Record<"createMany", MockFn>;
+  bookingSerializedItem: Record<"createMany" | "updateMany", MockFn>;
+  bookingBulkItem: Record<"createMany" | "update", MockFn>;
   bulkSku: Record<"findMany", MockFn>;
   assetAllocation: Record<"createMany" | "updateMany", MockFn>;
   bulkStockBalance: Record<"findMany" | "upsert", MockFn>;
   bulkStockMovement: Record<"createMany", MockFn>;
   auditLog: Record<"create", MockFn>;
+  overrideEvent: Record<"create", MockFn>;
   scanSession: Record<"updateMany", MockFn>;
   user: Record<"findUnique", MockFn>;
   $queryRaw: MockFn;
@@ -50,13 +51,14 @@ vi.mock("@/lib/db", () => {
     shiftAssignment: { findMany: vi.fn(), findUnique: vi.fn(), updateMany: vi.fn(), create: vi.fn() },
     bookingEvent: { createMany: vi.fn() },
     scheduleEventFollow: { createMany: vi.fn() },
-    bookingSerializedItem: { createMany: vi.fn() },
-    bookingBulkItem: { createMany: vi.fn() },
+    bookingSerializedItem: { createMany: vi.fn(), updateMany: vi.fn() },
+    bookingBulkItem: { createMany: vi.fn(), update: vi.fn() },
     bulkSku: { findMany: vi.fn() },
     assetAllocation: { createMany: vi.fn(), updateMany: vi.fn() },
     bulkStockBalance: { findMany: vi.fn(), upsert: vi.fn() },
     bulkStockMovement: { createMany: vi.fn() },
     auditLog: { create: vi.fn() },
+    overrideEvent: { create: vi.fn() },
     scanSession: { updateMany: vi.fn() },
     user: { findUnique: vi.fn().mockResolvedValue({ role: "ADMIN", active: true }) },
     $queryRaw: vi.fn(),
@@ -64,6 +66,8 @@ vi.mock("@/lib/db", () => {
 
   return {
     db: {
+      booking: { findUnique: vi.fn() },
+      bulkSkuUnit: { findMany: vi.fn() },
       $transaction: vi.fn(async (fn: (tx: typeof mockTx) => Promise<unknown>, options?: unknown) => {
         transactionCalls.push({ options });
         return fn(mockTx);
@@ -91,9 +95,13 @@ vi.mock("@/lib/live-activity-workflow", () => ({
 import { db } from "@/lib/db";
 import { scheduleCheckoutReturnLiveActivity } from "@/lib/live-activity-workflow";
 import { checkAvailability } from "@/lib/services/availability";
-import { createBooking } from "@/lib/services/bookings";
+import { createBooking, forceCheckoutReservation } from "@/lib/services/bookings";
 
 const mockTx = (db as unknown as { _mockTx: CreateBookingTx })._mockTx;
+const mockDb = db as unknown as {
+  booking: { findUnique: MockFn };
+  bulkSkuUnit: { findMany: MockFn };
+};
 
 function baseInput(overrides: Record<string, unknown> = {}) {
   return {
@@ -127,6 +135,8 @@ function bulkRequests(count: number) {
 
 beforeEach(() => {
   transactionCalls.length = 0;
+  mockDb.booking.findUnique.mockResolvedValue(null);
+  mockDb.bulkSkuUnit.findMany.mockResolvedValue([]);
   mockTx.booking.create.mockResolvedValue({ id: "b-new" });
   mockTx.booking.findFirst.mockResolvedValue(null);
   mockTx.booking.delete.mockResolvedValue({});
@@ -153,13 +163,16 @@ beforeEach(() => {
   mockTx.bookingEvent.createMany.mockResolvedValue({});
   mockTx.scheduleEventFollow.createMany.mockResolvedValue({});
   mockTx.bookingSerializedItem.createMany.mockResolvedValue({});
+  mockTx.bookingSerializedItem.updateMany.mockResolvedValue({ count: 0 });
   mockTx.assetAllocation.createMany.mockResolvedValue({});
   mockTx.bookingBulkItem.createMany.mockResolvedValue({});
+  mockTx.bookingBulkItem.update.mockResolvedValue({});
   mockTx.bulkSku.findMany.mockResolvedValue([]);
   mockTx.bulkStockBalance.findMany.mockResolvedValue([]);
   mockTx.bulkStockBalance.upsert.mockResolvedValue({});
   mockTx.bulkStockMovement.createMany.mockResolvedValue({});
   mockTx.auditLog.create.mockResolvedValue({});
+  mockTx.overrideEvent.create.mockResolvedValue({});
   mockTx.user.findUnique.mockResolvedValue({
     active: true,
     role: Role.ADMIN,
@@ -539,6 +552,95 @@ describe("createBooking", () => {
     );
   });
 
+  it("records admin force-checkout evidence inside the custody transaction", async () => {
+    mockTx.booking.findUnique.mockResolvedValue({
+      id: "rv-1",
+      kind: BookingKind.RESERVATION,
+      status: BookingStatus.BOOKED,
+      locationId: "loc-1",
+      serializedItems: [{ assetId: "a-1", allocationStatus: "active" }],
+      bulkItems: [],
+    });
+
+    await createBooking(baseInput({
+      custodySource: "ADMIN_OVERRIDE",
+      adminOverrideReason: "Kiosk unavailable; admin verified the handoff.",
+      sourceReservationId: "rv-1",
+      sourceReservationPickup: true,
+      serializedAssetIds: ["a-1"],
+    }));
+
+    expect(mockTx.overrideEvent.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        bookingId: "b-new",
+        actorUserId: "user-1",
+        reason: "Kiosk unavailable; admin verified the handoff.",
+        details: expect.objectContaining({ type: "admin_force_checkout" }),
+      }),
+    }));
+    expect(mockTx.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        entityId: "b-new",
+        action: "admin_force_checkout",
+      }),
+    }));
+  });
+
+  it("force-checks out only the reservation items that remain after a partial pickup", async () => {
+    const startsAt = new Date(Date.now() - 60_000);
+    const endsAt = new Date(Date.now() + 60 * 60_000);
+    const source = {
+      id: "rv-1",
+      kind: BookingKind.RESERVATION,
+      status: BookingStatus.BOOKED,
+      title: "Reservation pickup",
+      requesterUserId: "user-1",
+      locationId: "loc-1",
+      startsAt,
+      endsAt,
+      notes: "Handle with care",
+      eventId: null,
+      sportCode: null,
+      shiftAssignmentId: null,
+      kitId: null,
+      serializedItems: [
+        { assetId: "a-picked", allocationStatus: "picked_up" },
+        { assetId: "a-remaining", allocationStatus: "active" },
+      ],
+      bulkItems: [],
+      scanEvents: [],
+      events: [],
+    };
+    mockDb.booking.findUnique.mockResolvedValue(source);
+    mockTx.booking.findUnique.mockResolvedValue(source);
+
+    const result = await forceCheckoutReservation({
+      reservationId: "rv-1",
+      actorUserId: "user-1",
+      reason: "Kiosk unavailable; admin verified the handoff.",
+    });
+
+    expect(result).toEqual({ id: "b-new", refNumber: "CO-0001" });
+    expect(mockTx.booking.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        kind: BookingKind.CHECKOUT,
+        status: BookingStatus.OPEN,
+        sourceReservationId: "rv-1",
+      }),
+    }));
+    expect(mockTx.bookingSerializedItem.createMany).toHaveBeenCalledWith({
+      data: [{
+        bookingId: "b-new",
+        assetId: "a-remaining",
+        allocationStatus: "active",
+      }],
+    });
+    expect(mockTx.booking.update).toHaveBeenCalledWith({
+      where: { id: "rv-1" },
+      data: { status: BookingStatus.COMPLETED, completedAt: expect.any(Date) },
+    });
+  });
+
   it("rejects empty non-draft bookings at the shared service boundary", async () => {
     await expect(createBooking(baseInput({
       serializedAssetIds: [],
@@ -882,6 +984,55 @@ describe("createBooking", () => {
         data: { status: "COMPLETED", completedAt: expect.any(Date) },
       })
     );
+  });
+
+  it("keeps a source reservation BOOKED when a partial pickup takes only selected items", async () => {
+    const sourceRes = {
+      id: "rv-1",
+      kind: "RESERVATION",
+      status: "BOOKED",
+      locationId: "loc-1",
+      serializedItems: [
+        { assetId: "a-1", allocationStatus: "active" },
+        { assetId: "a-2", allocationStatus: "active" },
+      ],
+      bulkItems: [{ bulkSkuId: "sku-1", plannedQuantity: 3, checkedOutQuantity: 0 }],
+    };
+    mockTx.booking.findUnique.mockResolvedValue(sourceRes);
+
+    await createBooking(baseInput({
+      sourceReservationId: "rv-1",
+      sourceReservationPickup: true,
+      serializedAssetIds: ["a-1"],
+      bulkItems: [],
+    }));
+
+    expect(mockTx.bookingSerializedItem.updateMany).toHaveBeenCalledWith({
+      where: {
+        bookingId: "rv-1",
+        assetId: { in: ["a-1"] },
+        allocationStatus: "active",
+      },
+      data: { allocationStatus: "picked_up" },
+    });
+    expect(mockTx.assetAllocation.updateMany).toHaveBeenCalledWith({
+      where: {
+        bookingId: "rv-1",
+        assetId: { in: ["a-1"] },
+        active: true,
+      },
+      data: { active: false },
+    });
+    expect(mockTx.booking.update).toHaveBeenCalledWith({
+      where: { id: "rv-1" },
+      data: { status: "BOOKED" },
+    });
+    expect(mockTx.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        entityId: "rv-1",
+        action: "partially_fulfilled_by_kiosk_pickup",
+      }),
+    }));
   });
 
   it("rejects reservation pickup above 10 distinct bulk SKUs before availability or writes", async () => {

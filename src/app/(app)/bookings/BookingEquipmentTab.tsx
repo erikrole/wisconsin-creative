@@ -97,8 +97,23 @@ export default function BookingEquipmentTab({
 }) {
   const [search, setSearch] = useState("");
   const isCheckout = booking.kind === "CHECKOUT";
+  const isReservation = booking.kind === "RESERVATION";
 
   const itemCount = booking.serializedItems.length + booking.bulkItems.length;
+
+  const pickedUpSerialized = isReservation
+    ? booking.serializedItems.filter((item) => item.allocationStatus === "picked_up").length
+    : 0;
+  const reservationTotalUnits = isReservation
+    ? booking.serializedItems.length
+      + booking.bulkItems.reduce((sum, item) => sum + item.plannedQuantity, 0)
+    : 0;
+  const reservationPickedUpUnits = isReservation
+    ? pickedUpSerialized
+      + booking.bulkItems.reduce((sum, item) => sum + Math.min(item.checkedOutQuantity, item.plannedQuantity), 0)
+    : 0;
+  const showPickupProgress = isReservation && reservationPickedUpUnits > 0;
+  const remainingReservationUnits = Math.max(0, reservationTotalUnits - reservationPickedUpUnits);
 
   // Checkin progress for checkouts
   const returnedSerialized = booking.serializedItems.filter(
@@ -128,7 +143,14 @@ export default function BookingEquipmentTab({
   const abortRef = useRef<AbortController | null>(null);
 
   const fetchConflicts = useCallback(async () => {
-    if (!isActive || (booking.serializedItems.length === 0 && booking.bulkItems.length === 0)) {
+    const availableSerializedItems = isReservation
+      ? booking.serializedItems.filter((item) => item.allocationStatus !== "picked_up")
+      : booking.serializedItems;
+    const availableBulkItems = isReservation
+      ? booking.bulkItems.filter((item) => item.checkedOutQuantity < item.plannedQuantity)
+      : booking.bulkItems;
+
+    if (!isActive || (availableSerializedItems.length === 0 && availableBulkItems.length === 0)) {
       setConflicts(new Map());
       setUpcomingCommitments(new Map());
       setTurnaroundRisks(new Map());
@@ -150,10 +172,12 @@ export default function BookingEquipmentTab({
           locationId: booking.location.id,
           startsAt: booking.startsAt,
           endsAt: booking.endsAt,
-          serializedAssetIds: booking.serializedItems.map((i) => i.asset.id),
-          bulkItems: booking.bulkItems.map((item) => ({
+          serializedAssetIds: availableSerializedItems.map((i) => i.asset.id),
+          bulkItems: availableBulkItems.map((item) => ({
             bulkSkuId: item.bulkSku.id,
-            quantity: item.plannedQuantity,
+            quantity: isReservation
+              ? Math.max(0, item.plannedQuantity - item.checkedOutQuantity)
+              : item.plannedQuantity,
           })),
           excludeBookingId: booking.id,
           kind: booking.kind === "CHECKOUT" ? "CHECKOUT" : "RESERVATION",
@@ -210,7 +234,7 @@ export default function BookingEquipmentTab({
       setAvailabilityError("Availability could not be refreshed. Showing the last known result.");
       toast.error("Failed to check equipment availability — try refreshing.");
     }
-  }, [isActive, booking.id, booking.kind, booking.location.id, booking.startsAt, booking.endsAt, booking.serializedItems, booking.bulkItems]);
+  }, [isActive, isReservation, booking.id, booking.kind, booking.location.id, booking.startsAt, booking.endsAt, booking.serializedItems, booking.bulkItems]);
 
   useEffect(() => {
     fetchConflicts();
@@ -258,6 +282,22 @@ export default function BookingEquipmentTab({
                 <span className="text-xs text-muted-foreground shrink-0">
                   {totalReturned}/{totalOut} returned
                 </span>
+              </div>
+            )}
+            {showPickupProgress && (
+              <div className="flex items-center gap-2 mt-1">
+                <Progress
+                  value={Math.round((reservationPickedUpUnits / reservationTotalUnits) * 100)}
+                  className="h-1.5 bg-muted [&>[data-slot=progress-indicator]]:bg-[var(--blue)]"
+                />
+                <span className="text-xs text-muted-foreground shrink-0">
+                  {reservationPickedUpUnits}/{reservationTotalUnits} picked up
+                </span>
+                {remainingReservationUnits > 0 && (
+                  <span className="text-xs text-[var(--blue-text)] shrink-0">
+                    {remainingReservationUnits} remaining
+                  </span>
+                )}
               </div>
             )}
           </div>
@@ -310,6 +350,7 @@ export default function BookingEquipmentTab({
                 <SerializedRow
                   item={item}
                   isCheckout={isCheckout}
+                  isReservation={isReservation}
                   conflict={conflicts.get(item.asset.id)}
                   upcoming={upcomingCommitments.get(item.asset.id)}
                   risks={turnaroundRisks.get(item.asset.id)}
@@ -323,6 +364,7 @@ export default function BookingEquipmentTab({
                 <BulkRow
                   item={item}
                   isCheckout={isCheckout}
+                  isReservation={isReservation}
                   risks={bulkTurnaroundRisks.get(item.bulkSku.id)}
                 />
               </StaggerItem>
@@ -345,6 +387,7 @@ function ItemThumbnail({ src, alt }: { src?: string | null; alt: string }) {
 function SerializedRow({
   item,
   isCheckout,
+  isReservation,
   conflict,
   upcoming,
   risks,
@@ -353,6 +396,7 @@ function SerializedRow({
 }: {
   item: SerializedItem;
   isCheckout: boolean;
+  isReservation: boolean;
   conflict?: ConflictInfo;
   upcoming?: UpcomingCommitmentInfo;
   risks?: TurnaroundRiskInfo[];
@@ -360,15 +404,17 @@ function SerializedRow({
   currentEndsAt: string;
 }) {
   const returned = item.allocationStatus === "returned";
+  const pickedUp = isReservation && item.allocationStatus === "picked_up";
+  const inactive = returned || pickedUp;
   const risk = primaryRisk(risks);
   const riskText = riskLabel(risks);
 
   return (
-    <div className={`group/row flex items-center gap-3 px-3 py-2.5 rounded-md ${returned ? "opacity-60" : "hover:bg-muted/50"}`}>
-      {/* Returned indicator */}
-      {isCheckout && returned && (
+    <div className={`group/row flex items-center gap-3 px-3 py-2.5 rounded-md ${inactive ? "opacity-60" : "hover:bg-muted/50"}`}>
+      {/* Custody indicator */}
+      {((isCheckout && returned) || pickedUp) && (
         <div className="shrink-0">
-          <div className="size-5 rounded-full bg-[var(--green-text)] text-white flex items-center justify-center">
+          <div className={`size-5 rounded-full text-white flex items-center justify-center ${pickedUp ? "bg-[var(--blue-text)]" : "bg-[var(--green-text)]"}`}>
             <Check className="size-3" />
           </div>
         </div>
@@ -391,18 +437,18 @@ function SerializedRow({
             <span className="ml-1.5 font-mono">{item.asset.serialNumber}</span>
           )}
         </div>
-        {upcoming && !conflict && !returned && (
+        {upcoming && !conflict && !inactive && (
           <div className="truncate text-[11px] text-[var(--blue-text)]">
             {upcomingCommitmentLabel(upcoming, currentEndsAt)}
             {upcoming.bookingTitle ? ` · ${upcoming.bookingTitle}` : ""}
           </div>
         )}
-        {riskText && !conflict && !returned && (
+        {riskText && !conflict && !inactive && (
           <div className={`truncate text-[11px] ${risk?.severity === "critical" ? "text-[var(--red-text)]" : "text-[var(--orange-text)]"}`}>
             {riskText}
           </div>
         )}
-        {conflict && !returned && (
+        {conflict && !inactive && (
           <div className="truncate text-[11px] text-[var(--red-text)]" title={availabilityConflictMessage(conflict, { currentStartsAt, currentEndsAt })}>
             {availabilityConflictMessage(conflict, { currentStartsAt, currentEndsAt })}
           </div>
@@ -411,7 +457,7 @@ function SerializedRow({
 
       {/* Status + row actions */}
       <div className="shrink-0 flex items-center gap-1.5">
-        {conflict && !returned && (
+        {conflict && !inactive && (
           <Badge
             variant="red"
             size="sm"
@@ -420,7 +466,7 @@ function SerializedRow({
             Conflict
           </Badge>
         )}
-        {upcoming && !conflict && !returned && (
+        {upcoming && !conflict && !inactive && (
           <Badge
             variant="blue"
             size="sm"
@@ -431,7 +477,7 @@ function SerializedRow({
             Needed next
           </Badge>
         )}
-        {risk && !conflict && !returned && (
+        {risk && !conflict && !inactive && (
           <Badge
             variant={risk.severity === "critical" ? "red" : "orange"}
             size="sm"
@@ -443,6 +489,11 @@ function SerializedRow({
         {returned && (
           <span className="text-xs font-medium text-[var(--green-text)]">
             Returned
+          </span>
+        )}
+        {pickedUp && (
+          <span className="text-xs font-medium text-[var(--blue-text)]">
+            Picked up
           </span>
         )}
         <DropdownMenu>
@@ -468,10 +519,12 @@ function SerializedRow({
 function BulkRow({
   item,
   isCheckout,
+  isReservation,
   risks,
 }: {
   item: BulkItem;
   isCheckout: boolean;
+  isReservation: boolean;
   risks?: BulkTurnaroundRiskInfo[];
 }) {
   // checkedOutQuantity is 0 (not null) until pickup — show planned quantity until
@@ -479,6 +532,14 @@ function BulkRow({
   const outQty = item.checkedOutQuantity > 0 ? item.checkedOutQuantity : item.plannedQuantity;
   const inQty = item.checkedInQuantity ?? 0;
   const allReturned = isCheckout && item.checkedOutQuantity > 0 && inQty >= outQty;
+  const pickedUpQty = isReservation
+    ? Math.min(item.checkedOutQuantity, item.plannedQuantity)
+    : 0;
+  const remainingQty = isReservation
+    ? Math.max(0, item.plannedQuantity - pickedUpQty)
+    : 0;
+  const allPickedUp = isReservation && item.plannedQuantity > 0 && remainingQty === 0;
+  const inactive = allReturned || allPickedUp;
   const riskText = riskLabel(risks);
   const risk = primaryRisk(risks);
 
@@ -490,11 +551,11 @@ function BulkRow({
   const showUnits = item.bulkSku.trackByNumber && assignedUnits.length > 0;
 
   return (
-    <div className={`group/row flex items-center gap-3 px-3 py-2.5 rounded-md ${allReturned ? "opacity-60" : "hover:bg-muted/50"}`}>
-      {/* Returned indicator */}
-      {isCheckout && allReturned && (
+    <div className={`group/row flex items-center gap-3 px-3 py-2.5 rounded-md ${inactive ? "opacity-60" : "hover:bg-muted/50"}`}>
+      {/* Custody indicator */}
+      {((isCheckout && allReturned) || allPickedUp) && (
         <div className="shrink-0">
-          <div className="size-5 rounded-full bg-[var(--green-text)] text-white flex items-center justify-center">
+          <div className={`size-5 rounded-full text-white flex items-center justify-center ${allPickedUp ? "bg-[var(--blue-text)]" : "bg-[var(--green-text)]"}`}>
             <Check className="size-3" />
           </div>
         </div>
@@ -515,11 +576,18 @@ function BulkRow({
           {item.bulkSku?.name ?? "Unknown"}
         </span>
         <div className="text-xs text-muted-foreground">
-          {isCheckout && inQty > 0
+          {isReservation && pickedUpQty > 0
+            ? pickedUpQty + " / " + item.plannedQuantity + " picked up"
+            : isCheckout && inQty > 0
             ? `${inQty} / ${outQty} returned`
             : `Qty: ${isCheckout ? outQty : item.plannedQuantity}`}{" "}
           <span className="text-muted-foreground/60">{item.bulkSku.unit}</span>
         </div>
+        {isReservation && pickedUpQty > 0 && remainingQty > 0 && (
+          <div className="text-[11px] text-[var(--blue-text)]">
+            {remainingQty} remaining
+          </div>
+        )}
         {showUnits && (
           <div className="mt-1 flex flex-wrap gap-1">
             {assignedUnits.map((n) => (
@@ -532,7 +600,7 @@ function BulkRow({
             ))}
           </div>
         )}
-        {riskText && !allReturned && (
+        {riskText && !inactive && (
           <div className="truncate text-[11px] text-[var(--orange-text)]">
             {riskText}
           </div>
@@ -541,7 +609,7 @@ function BulkRow({
 
       {/* Status */}
       <div className="shrink-0 flex items-center gap-2">
-        {risks && risks.length > 0 && !allReturned && (
+        {risks && risks.length > 0 && !inactive && (
           <Badge variant={risk?.severity === "critical" ? "red" : "orange"} size="sm" title={riskTitle(risks)}>
             {risk ? availabilityRiskBadgeLabel(risk) : "Notice"}
           </Badge>
@@ -549,6 +617,16 @@ function BulkRow({
         {allReturned && (
           <span className="text-xs font-medium text-[var(--green-text)]">
             Returned
+          </span>
+        )}
+        {allPickedUp && (
+          <span className="text-xs font-medium text-[var(--blue-text)]">
+            Picked up
+          </span>
+        )}
+        {isReservation && pickedUpQty > 0 && !allPickedUp && (
+          <span className="text-xs font-medium text-[var(--blue-text)]">
+            {pickedUpQty} picked up
           </span>
         )}
       </div>

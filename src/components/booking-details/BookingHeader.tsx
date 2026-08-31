@@ -42,6 +42,7 @@ type Props = {
   canDuplicate: boolean;
   canNudge: boolean;
   canForceComplete: boolean;
+  canForceCheckout: boolean;
   canTransferOwner: boolean;
   canEditEvents: boolean;
   countdown: string | null;
@@ -58,6 +59,7 @@ type Props = {
   onDuplicate: () => void;
   onNudge: () => void;
   onForceComplete: () => void;
+  onForceCheckout: () => void;
   onTransferOwner: () => void;
   onEditEvents: () => void;
 };
@@ -110,6 +112,7 @@ export function BookingHeader({
   canDuplicate,
   canNudge,
   canForceComplete,
+  canForceCheckout,
   canTransferOwner,
   canEditEvents,
   countdown,
@@ -126,10 +129,11 @@ export function BookingHeader({
   onDuplicate,
   onNudge,
   onForceComplete,
+  onForceCheckout,
   onTransferOwner,
   onEditEvents,
 }: Props) {
-  const hasSecondaryActions = canDuplicate || canCancel || canNudge || canForceComplete || canTransferOwner || canEditEvents;
+  const hasSecondaryActions = canDuplicate || canCancel || canNudge || canForceComplete || canForceCheckout || canTransferOwner || canEditEvents;
   const hasPrimaryActions = canEdit || canExtend;
   const displayStatus = operationalBookingStatus(booking);
 
@@ -296,6 +300,16 @@ export function BookingHeader({
                           disabled={!!actionLoading}
                         >
                           Close without scan
+                        </PendingDropdownMenuItem>
+                      )}
+                      {canForceCheckout && (
+                        <PendingDropdownMenuItem
+                          active={actionLoading === "force-checkout"}
+                          variant="destructive"
+                          onSelect={onForceCheckout}
+                          disabled={!!actionLoading}
+                        >
+                          Force checkout
                         </PendingDropdownMenuItem>
                       )}
                       {canTransferOwner && (

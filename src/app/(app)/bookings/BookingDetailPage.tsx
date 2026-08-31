@@ -82,6 +82,9 @@ export default function BookingDetailPage({
   const [forceCompleteOpen, setForceCompleteOpen] = useState(false);
   const [forceCompleteReason, setForceCompleteReason] = useState("");
   const [forceCompleteError, setForceCompleteError] = useState("");
+  const [forceCheckoutOpen, setForceCheckoutOpen] = useState(false);
+  const [forceCheckoutReason, setForceCheckoutReason] = useState("");
+  const [forceCheckoutError, setForceCheckoutError] = useState("");
 
   useEffect(() => {
     if (booking?.title) setBreadcrumbLabel(booking.title);
@@ -144,6 +147,20 @@ export default function BookingDetailPage({
     }
   }
 
+  async function handleForceCheckout() {
+    const reason = forceCheckoutReason.trim();
+    if (reason.length < 10) {
+      setForceCheckoutError("Enter a reason of at least 10 characters.");
+      return;
+    }
+    const ok = await actions.forceCheckout(reason);
+    if (ok) {
+      setForceCheckoutOpen(false);
+      setForceCheckoutReason("");
+      setForceCheckoutError("");
+    }
+  }
+
   // Derived
   const allowedActions = booking?.allowedActions ?? [];
   const canEdit = allowedActions.includes("edit");
@@ -152,6 +169,7 @@ export default function BookingDetailPage({
   const canDuplicate = kind === "RESERVATION" && allowedActions.includes("duplicate");
   const canNudge = allowedActions.includes("nudge");
   const canForceComplete = kind === "CHECKOUT" && allowedActions.includes("force-complete");
+  const canForceCheckout = kind === "RESERVATION" && allowedActions.includes("force-checkout");
   const canTransferOwner = allowedActions.includes("transfer-owner");
   const canEditEvents = canEdit;
   const isOpen = booking?.status === "OPEN";
@@ -265,6 +283,7 @@ export default function BookingDetailPage({
         canDuplicate={canDuplicate}
         canNudge={canNudge}
         canForceComplete={canForceComplete}
+        canForceCheckout={canForceCheckout}
         canTransferOwner={canTransferOwner}
         canEditEvents={canEditEvents}
         countdown={countdown}
@@ -284,6 +303,7 @@ export default function BookingDetailPage({
         onDuplicate={actions.duplicate}
         onNudge={actions.nudge}
         onForceComplete={() => setForceCompleteOpen(true)}
+        onForceCheckout={() => setForceCheckoutOpen(true)}
         onTransferOwner={() => setTransferOwnerOpen(true)}
         onEditEvents={() => setEditEventsOpen(true)}
       />
@@ -470,6 +490,63 @@ export default function BookingDetailPage({
               disabled={actions.actionLoading === "force-complete" || forceCompleteReason.trim().length < 10}
             >
               {actions.actionLoading === "force-complete" ? "Closing..." : "Close checkout"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={forceCheckoutOpen}
+        onOpenChange={(open) => {
+          if (actions.actionLoading === "force-checkout") return;
+          setForceCheckoutOpen(open);
+          if (!open) {
+            setForceCheckoutReason("");
+            setForceCheckoutError("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Force checkout reservation?</DialogTitle>
+            <DialogDescription>
+              Use this only when an admin has physically verified the handoff. This bypasses kiosk scan verification, opens checkout custody for the remaining gear, and records the exception in history.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogBody className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="force-checkout-reason">Reason</Label>
+              <Textarea
+                id="force-checkout-reason"
+                value={forceCheckoutReason}
+                onChange={(event) => {
+                  setForceCheckoutReason(event.target.value);
+                  if (forceCheckoutError) setForceCheckoutError("");
+                }}
+                placeholder="Example: Kiosk unavailable; all 21 items handed to Erik Role and verified by admin."
+                rows={4}
+                aria-invalid={forceCheckoutError ? true : undefined}
+                disabled={actions.actionLoading === "force-checkout"}
+              />
+              {forceCheckoutError && (
+                <p className="text-sm text-destructive">{forceCheckoutError}</p>
+              )}
+            </div>
+          </DialogBody>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setForceCheckoutOpen(false)}
+              disabled={actions.actionLoading === "force-checkout"}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleForceCheckout}
+              disabled={actions.actionLoading === "force-checkout" || forceCheckoutReason.trim().length < 10}
+            >
+              {actions.actionLoading === "force-checkout" ? "Forcing checkout…" : "Force checkout"}
             </Button>
           </DialogFooter>
         </DialogContent>

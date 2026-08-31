@@ -309,7 +309,9 @@ const ACTION_COLORS: Record<string, ActionColorKey> = {
   partial_bulk_checkin: "amber",
   pending_pickup_expired: "rose",
   fulfilled_by_kiosk_pickup: "green",
+  partially_fulfilled_by_kiosk_pickup: "blue",
   admin_force_completed_checkout: "purple",
+  admin_force_checkout: "purple",
   nudge_sent: "muted",
   overdue_nudge_sent: "muted",
   auto_completed_by_kiosk_checkin: "green",
@@ -361,6 +363,7 @@ const ACTION_ICONS: Record<string, LucideIcon> = {
   user_activated: UserRound,
   admin_override: ShieldAlert,
   admin_force_completed_checkout: ShieldAlert,
+  admin_force_checkout: ShieldAlert,
   nudge_sent: Bell,
   overdue_nudge_sent: Bell,
   auto_escalation: Bell,
@@ -737,8 +740,12 @@ export function describeAction(
       return "Pickup window expired";
     case "fulfilled_by_kiosk_pickup":
       return `${reportPrefix}Fulfilled by kiosk pickup`;
+    case "partially_fulfilled_by_kiosk_pickup":
+      return `${reportPrefix}Recorded partial kiosk pickup`;
     case "admin_force_completed_checkout":
       return `${reportPrefix}Closed the checkout without a scan`;
+    case "admin_force_checkout":
+      return `${reportPrefix}Force-checked out the reservation without a kiosk scan`;
     case "nudge_sent":
     case "overdue_nudge_sent":
       return `${reportPrefix}Sent a reminder`;

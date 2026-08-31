@@ -5,6 +5,7 @@ import { createAuditEntryTx } from "@/lib/audit";
 import { activeCheckoutAddItemBody, activeCheckoutRemoveItemBody, activeCheckoutUpdateBody } from "@/lib/schemas/kiosk";
 import { findAssetByScanValue } from "@/lib/services/kiosk-scan";
 import { findBulkUnitByScanValue } from "@/lib/services/bulk-unit-scans";
+import { parseDerivedBulkUnitQr } from "@/lib/bulk-unit-qr";
 import { CLAIMABLE_BULK_UNIT_WHERE } from "@/lib/bulk-unit-status";
 import { checkAvailability } from "@/lib/services/availability";
 import { upsertBulkBalancesAndMovements } from "@/lib/services/bookings-helpers";
@@ -87,10 +88,12 @@ export const GET = withKiosk<{ id: string }>(async (_req, { params }) => {
           success: true,
           phase: "CHECKOUT",
         },
+        orderBy: { createdAt: "asc" },
         select: {
           assetId: true,
           bulkSkuId: true,
           scanType: true,
+          scanValue: true,
         },
       },
       serializedItems: {
@@ -118,6 +121,7 @@ export const GET = withKiosk<{ id: string }>(async (_req, { params }) => {
               id: true,
               name: true,
               category: true,
+              binQrCodeValue: true,
               trackByNumber: true,
               imageUrl: true,
             },
@@ -133,6 +137,24 @@ export const GET = withKiosk<{ id: string }>(async (_req, { params }) => {
               },
             },
             orderBy: { checkedOutAt: "asc" },
+          },
+        },
+      },
+      // A reservation may produce several linked checkouts when pickup is
+      // partial. Their contents are the durable record of already handed-over
+      // items, separate from scans staged for the next pickup.
+      derivedCheckouts: {
+        select: {
+          serializedItems: { select: { assetId: true } },
+          bulkItems: {
+            select: {
+              bulkSkuId: true,
+              unitAllocations: {
+                select: {
+                  bulkSkuUnit: { select: { unitNumber: true } },
+                },
+              },
+            },
           },
         },
       },
@@ -152,13 +174,49 @@ export const GET = withKiosk<{ id: string }>(async (_req, { params }) => {
     (booking.kind === "CHECKOUT" && booking.status === "PENDING_PICKUP") ||
     booking.kind === "RESERVATION";
   const scanEvents = booking.scanEvents ?? [];
+  const derivedCheckouts = booking.derivedCheckouts ?? [];
+  const pickedSerializedAssetIds = new Set(
+    derivedCheckouts.flatMap((checkout) => checkout.serializedItems.map((item) => item.assetId)),
+  );
+  const pickedUnitNumbersBySku = new Map<string, Set<number>>();
+  for (const checkout of derivedCheckouts) {
+    for (const item of checkout.bulkItems) {
+      const numbers = pickedUnitNumbersBySku.get(item.bulkSkuId) ?? new Set<number>();
+      for (const allocation of item.unitAllocations) {
+        numbers.add(allocation.bulkSkuUnit.unitNumber);
+      }
+      pickedUnitNumbersBySku.set(item.bulkSkuId, numbers);
+    }
+  }
+  const stagedReservationUnitsBySku = new Map<string, Array<{ unitNumber: number }>>();
+  if (booking.kind === "RESERVATION") {
+    for (const bulkItem of booking.bulkItems) {
+      if (!bulkItem.bulkSku.trackByNumber) continue;
+      const pickedUnitNumbers = pickedUnitNumbersBySku.get(bulkItem.bulkSku.id) ?? new Set<number>();
+      const stagedUnitNumbers = new Set<number>();
+      const stagedUnits: Array<{ unitNumber: number }> = [];
+      for (const event of scanEvents) {
+        if (event.scanType !== "BULK_BIN" || event.bulkSkuId !== bulkItem.bulkSku.id) continue;
+        const match = parseDerivedBulkUnitQr(event.scanValue, [bulkItem.bulkSku]);
+        if (!match || pickedUnitNumbers.has(match.unitNumber) || stagedUnitNumbers.has(match.unitNumber)) continue;
+        stagedUnitNumbers.add(match.unitNumber);
+        stagedUnits.push({ unitNumber: match.unitNumber });
+      }
+      stagedReservationUnitsBySku.set(bulkItem.bulkSku.id, stagedUnits);
+    }
+  }
   const scannedSerializedAssetIds = new Set(
     scanEvents
       .filter((event) => event.scanType === "SERIALIZED" && event.assetId)
       .map((event) => event.assetId),
   );
 
-  const serializedItems = booking.serializedItems.map((si) => ({
+  const serializedSourceItems = booking.kind === "RESERVATION"
+    ? booking.serializedItems.filter(
+        (si) => si.allocationStatus !== "picked_up" && !pickedSerializedAssetIds.has(si.asset.id),
+      )
+    : booking.serializedItems;
+  const serializedItems = serializedSourceItems.map((si) => ({
     id: si.asset.id,
     tagName: si.asset.assetTag,
     name: si.asset.name || si.asset.assetTag,
@@ -171,7 +229,9 @@ export const GET = withKiosk<{ id: string }>(async (_req, { params }) => {
 
   const numberedBulkItems = booking.bulkItems.filter((bi) => bi.bulkSku.trackByNumber);
   const numberedPickupTotal = numberedBulkItems.reduce(
-    (sum, bi) => sum + bi.plannedQuantity,
+    (sum, bi) => sum + (booking.kind === "RESERVATION"
+      ? Math.max(0, bi.plannedQuantity - (bi.checkedOutQuantity ?? 0))
+      : bi.plannedQuantity),
     0,
   );
   if (isPickupChecklist && numberedPickupTotal > MAX_EQUIPMENT_SELECTIONS_PER_REQUEST) {
@@ -184,10 +244,14 @@ export const GET = withKiosk<{ id: string }>(async (_req, { params }) => {
   const bulkItems: KioskBulkDetailItem[] = isPickupChecklist
     ? booking.bulkItems.flatMap((bi): KioskBulkDetailItem[] => {
         if (!bi.bulkSku.trackByNumber) {
+          const remainingQuantity = booking.kind === "RESERVATION"
+            ? Math.max(0, bi.plannedQuantity - (bi.checkedOutQuantity ?? 0))
+            : bi.plannedQuantity;
+          if (remainingQuantity <= 0) return [];
           return [{
             id: `${bi.id}:bulk-quantity`,
-            tagName: `x${bi.plannedQuantity}`,
-            name: quantityLabel(bi.bulkSku.name, bi.plannedQuantity),
+            tagName: `x${remainingQuantity}`,
+            name: quantityLabel(bi.bulkSku.name, remainingQuantity),
             // Quantity-tracked stock is checked out as one aggregate ledger row,
             // so there is no physical per-unit QR scan for the native checklist.
             returned: true,
@@ -201,19 +265,27 @@ export const GET = withKiosk<{ id: string }>(async (_req, { params }) => {
         const pickedUnits = booking.kind === "CHECKOUT" && booking.status === "PENDING_PICKUP"
           ? bi.unitAllocations.filter((allocation) => !allocation.checkedInAt)
           : [];
+        const stagedUnits = booking.kind === "RESERVATION"
+          ? (stagedReservationUnitsBySku.get(bi.bulkSku.id) ?? [])
+          : [];
+        const remainingQuantity = booking.kind === "RESERVATION"
+          ? Math.max(0, bi.plannedQuantity - (bi.checkedOutQuantity ?? 0))
+          : bi.plannedQuantity;
 
-        return Array.from({ length: bi.plannedQuantity }, (_, index) => {
+        return Array.from({ length: remainingQuantity }, (_, index) => {
           const allocation = pickedUnits[index];
-          if (allocation) {
+          const stagedUnit = stagedUnits[index];
+          const unitNumber = allocation?.bulkSkuUnit.unitNumber ?? stagedUnit?.unitNumber;
+          if (unitNumber !== undefined) {
             return {
               id: `${bi.id}:slot:${index + 1}`,
-              tagName: `#${allocation.bulkSkuUnit.unitNumber}`,
-              name: `${bi.bulkSku.name} #${allocation.bulkSkuUnit.unitNumber}`,
+              tagName: `#${unitNumber}`,
+              name: `${bi.bulkSku.name} #${unitNumber}`,
               returned: true,
               type: "numbered_bulk" as const,
               bulkSkuId: bi.bulkSku.id,
               bulkSkuName: bi.bulkSku.name,
-              unitNumber: allocation.bulkSkuUnit.unitNumber,
+              unitNumber,
               imageUrl: bi.bulkSku.imageUrl,
             };
           }
@@ -261,14 +333,23 @@ export const GET = withKiosk<{ id: string }>(async (_req, { params }) => {
         ];
       });
   const numberedBulkTotal = isPickupChecklist
-    ? numberedBulkItems.reduce((sum, bi) => sum + bi.plannedQuantity, 0)
+    ? numberedBulkItems.reduce(
+        (sum, bi) => sum + (booking.kind === "RESERVATION"
+          ? Math.max(0, bi.plannedQuantity - (bi.checkedOutQuantity ?? 0))
+          : bi.plannedQuantity),
+        0,
+      )
     : numberedBulkItems.reduce((sum, bi) => sum + Math.max(bi.unitAllocations.length, bi.checkedOutQuantity), 0);
-  const scannedBulkCounts = scanEvents
-    .filter((event) => event.scanType === "BULK_BIN" && event.bulkSkuId)
-    .reduce((counts, event) => {
-      counts.set(event.bulkSkuId!, (counts.get(event.bulkSkuId!) ?? 0) + 1);
-      return counts;
-    }, new Map<string, number>());
+  const scannedBulkCounts = booking.kind === "RESERVATION"
+    ? new Map(
+        [...stagedReservationUnitsBySku.entries()].map(([bulkSkuId, units]) => [bulkSkuId, units.length]),
+      )
+    : scanEvents
+        .filter((event) => event.scanType === "BULK_BIN" && event.bulkSkuId)
+        .reduce((counts, event) => {
+          counts.set(event.bulkSkuId!, (counts.get(event.bulkSkuId!) ?? 0) + 1);
+          return counts;
+        }, new Map<string, number>());
   const numberedBulkCompleted = isPickupChecklist
     ? numberedBulkItems.reduce(
         (sum, bi) => sum + (booking.kind === "RESERVATION"

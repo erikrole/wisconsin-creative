@@ -207,6 +207,24 @@ describe("updateReservation", () => {
     expect(mockTx.assetAllocation.updateMany).not.toHaveBeenCalled();
   });
 
+  it("rejects equipment edits after a partial pickup begins", async () => {
+    mockTx.booking.findUnique.mockResolvedValue(makeExistingReservation({
+      serializedItems: [{ assetId: "a-1", allocationStatus: "picked_up" }],
+      bulkItems: [{ bulkSkuId: "sku-1", plannedQuantity: 5, checkedOutQuantity: 2 }],
+    }));
+
+    await expect(
+      updateReservation("r-1", "actor-1", { serializedAssetIds: ["a-2"] }),
+    ).rejects.toMatchObject({
+      status: 409,
+      message: "Equipment cannot be edited after a partial pickup",
+    });
+
+    expect(checkAvailability).not.toHaveBeenCalled();
+    expect(mockTx.bookingSerializedItem.deleteMany).not.toHaveBeenCalled();
+    expect(mockTx.bookingBulkItem.deleteMany).not.toHaveBeenCalled();
+  });
+
   it("checks availability with excludeBookingId when reservation timing changes", async () => {
     mockTx.booking.findUnique.mockResolvedValue(makeExistingReservation());
     const newEnd = new Date("2026-04-11T17:00:00Z");

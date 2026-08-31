@@ -34,6 +34,7 @@ import {
  * | extend   | ✗            | staff+/owner | ✗         | ✗         |
  * | cancel   | staff+/owner | staff+/owner | ✗         | ✗         |
  * | convert  | ✗            | kiosk only   | ✗         | ✗         |
+ * | force-checkout | ✗      | admin only   | ✗         | ✗         |
  * | transfer-owner | staff+/owner | staff+/owner | ✗         | ✗         |
  *
  * "staff+" = ADMIN or STAFF

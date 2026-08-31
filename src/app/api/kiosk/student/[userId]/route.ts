@@ -116,6 +116,7 @@ export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) 
         refNumber: true,
         startsAt: true,
         serializedItems: {
+          where: { allocationStatus: "active" },
           select: {
             asset: {
               select: { id: true, assetTag: true, name: true },
@@ -125,6 +126,7 @@ export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) 
         bulkItems: {
           select: {
             plannedQuantity: true,
+            checkedOutQuantity: true,
             bulkSku: { select: { name: true } },
           },
         },
@@ -170,21 +172,40 @@ export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) 
       endsAt: c.endsAt,
       isOverdue: c.endsAt < now,
     })),
-    pendingPickups: [...pendingPickups, ...dueReservations].map((p) => ({
-      id: p.id,
-      title: normalizeTeamAbbreviations(p.title),
-      refNumber: p.refNumber,
-      startsAt: p.startsAt,
-      serializedItems: p.serializedItems.map((si) => ({
-        id: si.asset.id,
-        tagName: si.asset.assetTag,
-        name: si.asset.name || si.asset.assetTag,
+    pendingPickups: [
+      ...pendingPickups.map((p) => ({
+        id: p.id,
+        title: normalizeTeamAbbreviations(p.title),
+        refNumber: p.refNumber,
+        startsAt: p.startsAt,
+        serializedItems: p.serializedItems.map((si) => ({
+          id: si.asset.id,
+          tagName: si.asset.assetTag,
+          name: si.asset.name || si.asset.assetTag,
+        })),
+        bulkItems: p.bulkItems.map((bi) => ({
+          name: bi.bulkSku.name,
+          quantity: bi.plannedQuantity,
+        })),
       })),
-      bulkItems: p.bulkItems.map((bi) => ({
-        name: bi.bulkSku.name,
-        quantity: bi.plannedQuantity,
+      ...dueReservations.map((p) => ({
+        id: p.id,
+        title: normalizeTeamAbbreviations(p.title),
+        refNumber: p.refNumber,
+        startsAt: p.startsAt,
+        serializedItems: p.serializedItems.map((si) => ({
+          id: si.asset.id,
+          tagName: si.asset.assetTag,
+          name: si.asset.name || si.asset.assetTag,
+        })),
+        bulkItems: p.bulkItems
+          .map((bi) => ({
+            name: bi.bulkSku.name,
+            quantity: Math.max(0, bi.plannedQuantity - (bi.checkedOutQuantity ?? 0)),
+          }))
+          .filter((bi) => bi.quantity > 0),
       })),
-    })),
+    ],
     reservations: reservations.map((r) => ({
       id: r.id,
       title: normalizeTeamAbbreviations(r.title),

@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Reservations
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-30
+- Last Updated: 2026-08-31
 - Status: Active — V1 Shipped (2026-03-10)
 - Version: V1
 
@@ -13,19 +13,20 @@ Make app and web reservation-first. A user who is not physically at a kiosk rese
 ## Core Rules
 1. Reservations live in Booking with lifecycle states: `BOOKED`, `COMPLETED`, `CANCELLED`; `DRAFT` exists for interrupted creation.
 2. Reservation creation typically starts as `BOOKED`.
-3. Reservations do not become custody records in the normal flow. Kiosk pickup creates or opens the linked checkout custody record and closes the source reservation as fulfilled.
+3. Reservations do not become custody records in the normal flow. Kiosk pickup creates or opens a linked checkout custody record for the scanned selection; the source reservation remains `BOOKED` until every remaining item is picked up, then closes as fulfilled.
 4. A `BOOKED` reservation enters the user-facing Pending Pickup phase when
    `startsAt` arrives. This starts the configured no-show clock without
    changing the stored reservation status or claiming custody.
 5. Cancel and archive patterns are used in V1. No hard delete.
 6. Role and ownership controls follow `AREA_USERS.md`.
-7. Availability checks treat legacy overlapping `PENDING_PICKUP` checkout allocations as committed gear and subtract overlapping `BOOKED` bulk reservation quantities from available bulk stock.
+7. Availability checks treat legacy overlapping `PENDING_PICKUP` checkout allocations as committed gear, exclude serialized items already handed over from a partially picked reservation, and subtract only the remaining quantity of overlapping `BOOKED` bulk reservations from available bulk stock.
 8. Serialized booking windows include a 60-minute turnaround buffer before the next pickup/start in both directions: a new start must follow an existing return by at least 60 minutes, and a new return must precede an existing next start by at least 60 minutes. Bulk/countable availability remains overlap-based against committed quantities.
 9. Browse-time previews check visible and selected serialized assets plus visible bulk SKUs before selection; known serialized conflicts, including the 60-minute buffer, are excluded from new selection and block review, while next-needed, transfer, condition, and close-turnaround notices remain explicit advisories and the server rechecks the final payload authoritatively.
 10. Reservation creation is guarded at the shared service boundary: creates require at least one equipment item, duplicate multi-event links and duplicate bulk lines are rejected, invalid windows fail before availability work, and DB overlap races return booking conflict responses.
 11. An event-linked reservation from an internal user also infers schedule work on the chronologically primary event: it reuses an active assignment or fills a safe slot using the requester’s staffing class and area. Explicit `shiftAssignmentId` links are validated for ownership, activity, and event scope. Reservation-managed links reconcile when events or owners change and release on cancellation, no-show expiry, or requester deactivation, while shared links, manual/auto-fill assignments, collaborator follow behavior, private working copies, and unconfigured crew setups remain protected.
 12. Internal Students can read all visible reservations and check-outs from the web and native Bookings surfaces. The native iOS Home payload remains personal, and Student edit, cancel, transfer, creation, and kiosk-custody actions remain ownership-gated.
 13. `Sony Battery` and `Football Sony Battery` are separate item-family quantities but share the same reservation policy. Requesters choose either family through the normal web/native picker with no Football-roster or role gate; availability and numbered-unit custody rules remain authoritative.
+14. Admins may force-check out a `BOOKED` reservation from web detail when a physical handoff was verified but kiosk scanning is unavailable. The action requires a reason, opens a linked `OPEN` checkout for all remaining equipment, preserves durable numbered-unit bindings, completes the source reservation, and writes an `OverrideEvent` plus audit history. It does not remove availability or custody checks.
 
 ## V1 Workflow
 
@@ -59,10 +60,18 @@ Native iOS creation mirrors the three-step reservation rhythm while staying mobi
 ### Kiosk Pickup From Reservation
 1. App/web reservation detail should show pickup guidance, not a `Start checkout` custody action.
 2. The user claims the reservation at the kiosk once the pickup window is due.
-3. The kiosk validates identity, scans required serialized assets and numbered units, rechecks availability, and creates the linked checkout custody record only after required scan evidence passes.
-4. The source reservation is marked `COMPLETED` because it was fulfilled, not cancelled.
-5. Preserve allocation linkage, `sourceReservationId`, and audit trail.
+3. The kiosk validates identity, persists scan evidence, rechecks availability at confirmation, and either scans all remaining required serialized assets and numbered units for a complete pickup or accepts a deliberate scanned subset for a partial pickup. Quantity-tracked bulk items use their remaining quantity; numbered bulk items bind the exact scanned units.
+4. A complete pickup marks the source reservation `COMPLETED`; a partial pickup creates an `OPEN` linked checkout and keeps the source `BOOKED` with the remaining gear eligible for a later pickup.
+5. Preserve allocation linkage, `sourceReservationId`, selected-item custody, remaining reservation allocation, and audit trail across reloads and later pickup attempts.
 6. Numbered-unit intent remains quantity-based on the reservation; exact unit binding happens only during kiosk pickup confirmation.
+7. Once pickup begins, reservation equipment edits are blocked so operators cannot silently replace or reintroduce gear already handed over.
+
+### Admin Force Checkout
+1. Admin-only `Force checkout` is an exception path for a physically verified handoff when kiosk scan verification cannot be completed.
+2. The action requires a reason of at least 10 characters and remains available only while the reservation is `BOOKED`.
+3. It creates an `OPEN` linked checkout for all remaining serialized and bulk equipment, prefers durable staged numbered-unit scans, and fills any remaining numbered quantity from currently claimable units.
+4. The source reservation is completed atomically with its remaining allocations released, and the linked checkout carries `sourceReservationId` for custody history.
+5. The transaction writes `OverrideEvent` and `admin_force_checkout` audit evidence. Availability conflicts and unavailable numbered units still fail the action so the override bypasses scan proof, not inventory truth.
 
 ### Cancel Reservation
 1. Allowed by role and policy.
@@ -153,9 +162,9 @@ The reservation detail page (`/reservations/[id]`) uses the shared `BookingDetai
 3. Persist user rows-per-page preference per user/session when feasible.
 
 ## State Transition Rules
-1. `BOOKED` reservation -> linked checkout custody only through kiosk pickup.
+1. `BOOKED` reservation -> linked checkout custody through kiosk pickup or the admin force-checkout exception; a partial pickup creates a child checkout while the source remains `BOOKED`.
 2. `BOOKED` -> `CANCELLED` allowed.
-3. `BOOKED` -> `COMPLETED` allowed when kiosk pickup fulfills the reservation and opens linked checkout custody.
+3. `BOOKED` -> `BOOKED` is the audited partial-pickup transition; `BOOKED` -> `COMPLETED` is allowed when kiosk pickup fulfills the remaining reservation and opens linked checkout custody.
 4. `COMPLETED` and `CANCELLED` are terminal in V1.
 
 ## Action Matrix by State
@@ -169,7 +178,7 @@ The access labels below describe state-machine actions, not list/detail reads. I
 - Access: staff+ or owner
 
 ### `BOOKED`
-- Allowed actions: Edit, Extend, Cancel, Transfer owner, view kiosk pickup guidance
+- Allowed actions: Edit, Extend, Cancel, Transfer owner, view kiosk pickup guidance; Admin: Force checkout
 - Access: staff+ or owner
 
 ### `COMPLETED`
@@ -188,7 +197,8 @@ The access labels below describe state-machine actions, not list/detail reads. I
 5. Duplicate — clones a BOOKED reservation with same items, dates, and settings
 6. Transfer owner — staff/admin or owner requester reassignment with optimistic-lock protection and `owner_transferred` audit history
 7. Edit linked events — scheduled-event link, change, or clear action using the existing `Booking.eventId` primary plus `BookingEvent` junction contract
-8. Deferred: Spotcheck creation, PDF generation
+8. Force checkout — admin-only reasoned exception that creates linked checkout custody without kiosk scan verification
+9. Deferred: Spotcheck creation, PDF generation
 
 ## Bug Traps and Mitigations
 
@@ -236,6 +246,7 @@ The access labels below describe state-machine actions, not list/detail reads. I
 - Linked scheduled event added, changed, or cleared after creation.
 - Late edits close to handoff time.
 - Reservation with mixed serialized and bulk equipment.
+- Reservation picked up in multiple kiosk visits, including a date change or kiosk reload between visits.
 - Item shows in reservation list but is now unavailable at checkout time.
 - Attachments exist but user lacks permission to download.
 - Search query returns records user can view but not edit.
@@ -243,7 +254,7 @@ The access labels below describe state-machine actions, not list/detail reads. I
 - Thumbnail image missing for one or more items in row.
 
 ## Acceptance Criteria
-- [x] AC-1: `BOOKED` reservations can be fulfilled at kiosk pickup into linked checkout custody without data loss.
+- [x] AC-1: `BOOKED` reservations can be fulfilled completely or in partial kiosk pickups into linked checkout custody without data loss. **(Focused route, lifecycle, numbered-unit, detail-replay, and native contract coverage added 2026-08-31; authenticated physical-kiosk acceptance remains separate.)**
 - [x] AC-2: Edit operations revalidate conflicts for all relevant field changes.
 - [x] AC-3: `OPEN` records cannot be canceled directly in normal flow.
 - [x] AC-4: Permission and ownership enforcement matches `AREA_USERS.md`.
@@ -264,6 +275,8 @@ The access labels below describe state-machine actions, not list/detail reads. I
 
 ## Change Log
 
+- 2026-08-31: **Reservation kiosk pickup now supports partial handoff.** A scanned subset creates an `OPEN` linked checkout for only the selected serialized assets and numbered units, leaves the source reservation `BOOKED` with remaining allocation and residual bulk quantity, and completes it only after the last pickup. Persisted reservation scan evidence and linked checkout custody now replay into kiosk detail after reload or date changes; operator detail surfaces show picked-up/remaining gear, availability checks use residual demand, and equipment edits are blocked after pickup begins. Focused local tests pass; deployment, authenticated browser, native runtime, and physical kiosk acceptance remain separate gates.
+- 2026-08-30: **Bookings keeps the operator's working context.** Search, status, special filter, sport, location, requester, sort, page, and card/table view are URL-backed so opening a booking and returning through browser Back restores the same list. Clear all now includes search, and the permission-aware `New reservation` action stays in the page header across every tab and active/past scope. Existing APIs, permissions, reservation lifecycle, and custody behavior are unchanged.
 - 2026-08-30: **Both Sony battery families use the normal reservation flow.** `Football Sony Battery` remains a separate quantity pool, but web/native selection, availability, requester changes, and ownership transfer apply the same rules as `Sony Battery`. The earlier local roster-gating work was removed before deployment; physical family creation remains open under GAP-74.
 
 - 2026-08-26: **Item conflict recovery now happens before review.** Web and native reservation pickers preflight visible items before selection, disable known serialized conflicts (including the turnaround buffer), and keep late-discovered conflicts removable while blocking review. Conflict rows state the conflicting window and the return-by or available-after recovery time. Kiosk scan feedback distinguishes conflicts, shortages, timing, transfers, and condition reports; bulk turnaround notices are emitted only when requested stock would affect the next same-location booking. Failed availability refreshes preserve the last known result and show retry instead of looking clear. Local source and build verification remain separate from authenticated browser, iPhone, and physical kiosk acceptance.

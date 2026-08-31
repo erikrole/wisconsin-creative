@@ -605,7 +605,7 @@ describe("checkBulkShortages", () => {
     tx.bulkStockBalance.findMany.mockResolvedValue([
       { bulkSkuId: "sku-1", onHandQuantity: 3 },
     ]);
-    tx.bookingBulkItem.groupBy.mockResolvedValue([]);
+    tx.bookingBulkItem.findMany.mockResolvedValue([]);
 
     const result = await checkBulkShortages(availabilityTx(tx), {
       locationId: "loc-1",
@@ -620,7 +620,7 @@ describe("checkBulkShortages", () => {
   it("treats missing balance as 0 available", async () => {
     const tx = createMockTx();
     tx.bulkStockBalance.findMany.mockResolvedValue([]);
-    tx.bookingBulkItem.groupBy.mockResolvedValue([]);
+    tx.bookingBulkItem.findMany.mockResolvedValue([]);
 
     const result = await checkBulkShortages(availabilityTx(tx), {
       locationId: "loc-1",
@@ -637,7 +637,7 @@ describe("checkBulkShortages", () => {
     tx.bulkStockBalance.findMany.mockResolvedValue([
       { bulkSkuId: "sku-1", onHandQuantity: 100 },
     ]);
-    tx.bookingBulkItem.groupBy.mockResolvedValue([]);
+    tx.bookingBulkItem.findMany.mockResolvedValue([]);
 
     const result = await checkBulkShortages(availabilityTx(tx), {
       locationId: "loc-1",
@@ -653,8 +653,8 @@ describe("checkBulkShortages", () => {
     tx.bulkStockBalance.findMany.mockResolvedValue([
       { bulkSkuId: "sku-1", onHandQuantity: 10 },
     ]);
-    tx.bookingBulkItem.groupBy.mockResolvedValue([
-      { bulkSkuId: "sku-1", _sum: { plannedQuantity: 7 } },
+    tx.bookingBulkItem.findMany.mockResolvedValue([
+      { bulkSkuId: "sku-1", plannedQuantity: 7, checkedOutQuantity: 0 },
     ]);
 
     const result = await checkBulkShortages(availabilityTx(tx), {
@@ -665,7 +665,7 @@ describe("checkBulkShortages", () => {
     });
 
     expect(result).toEqual([{ bulkSkuId: "sku-1", requested: 4, available: 3 }]);
-    expect(tx.bookingBulkItem.groupBy).toHaveBeenCalledWith(
+    expect(tx.bookingBulkItem.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
           booking: expect.objectContaining({
@@ -679,12 +679,31 @@ describe("checkBulkShortages", () => {
     );
   });
 
+  it("subtracts only the remaining quantity from a partially picked reservation", async () => {
+    const tx = createMockTx();
+    tx.bulkStockBalance.findMany.mockResolvedValue([
+      { bulkSkuId: "sku-1", onHandQuantity: 10 },
+    ]);
+    tx.bookingBulkItem.findMany.mockResolvedValue([
+      { bulkSkuId: "sku-1", plannedQuantity: 7, checkedOutQuantity: 4 },
+    ]);
+
+    const result = await checkBulkShortages(availabilityTx(tx), {
+      locationId: "loc-1",
+      bulkItems: [{ bulkSkuId: "sku-1", quantity: 6 }],
+      startsAt: new Date("2026-04-01T08:00:00Z"),
+      endsAt: new Date("2026-04-01T17:00:00Z"),
+    });
+
+    expect(result).toEqual([]);
+  });
+
   it("does not subtract adjacent bulk reservation commitments", async () => {
     const tx = createMockTx();
     tx.bulkStockBalance.findMany.mockResolvedValue([
       { bulkSkuId: "sku-1", onHandQuantity: 10 },
     ]);
-    tx.bookingBulkItem.groupBy.mockResolvedValue([]);
+    tx.bookingBulkItem.findMany.mockResolvedValue([]);
 
     const result = await checkBulkShortages(availabilityTx(tx), {
       locationId: "loc-1",
@@ -694,7 +713,7 @@ describe("checkBulkShortages", () => {
     });
 
     expect(result).toEqual([]);
-    expect(tx.bookingBulkItem.groupBy).toHaveBeenCalledWith(
+    expect(tx.bookingBulkItem.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
           booking: expect.objectContaining({
@@ -715,7 +734,6 @@ describe("checkAvailability", () => {
     const tx = createMockTx();
     tx.assetAllocation.findMany.mockResolvedValue([]);
     tx.bulkStockBalance.findMany.mockResolvedValue([]);
-    tx.bookingBulkItem.groupBy.mockResolvedValue([]);
     tx.bookingBulkItem.findMany.mockResolvedValue([]);
     tx.checkinItemReport.findMany.mockResolvedValue([]);
     tx.asset.findMany.mockResolvedValue([]);
@@ -742,7 +760,6 @@ describe("checkAvailability", () => {
     const tx = createMockTx();
     tx.assetAllocation.findMany.mockResolvedValue([]);
     tx.bulkStockBalance.findMany.mockResolvedValue([{ bulkSkuId: "sku-1", onHandQuantity: 7 }]);
-    tx.bookingBulkItem.groupBy.mockResolvedValue([]);
     tx.bookingBulkItem.findMany.mockResolvedValue([{
       bulkSkuId: "sku-1",
       plannedQuantity: 6,
@@ -770,6 +787,5 @@ describe("checkAvailability", () => {
       plannedQuantity: 6,
     })]);
     expect(tx.bookingBulkItem.findMany).toHaveBeenCalled();
-    expect(tx.bookingBulkItem.groupBy).toHaveBeenCalled();
   });
 });

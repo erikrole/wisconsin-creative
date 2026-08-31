@@ -19,6 +19,26 @@ function entry(
 }
 
 describe("ActivityTimeline kiosk item descriptions", () => {
+  it("describes a partial reservation pickup as a handoff in progress", () => {
+    expect(
+      describeAction(
+        entry("partially_fulfilled_by_kiosk_pickup"),
+        "Erik Role",
+        "booking",
+      ),
+    ).toBe("Recorded partial kiosk pickup");
+  });
+
+  it("describes an admin force checkout as a reasoned exception", () => {
+    expect(
+      describeAction(
+        entry("admin_force_checkout"),
+        "Erik Role",
+        "booking",
+      ),
+    ).toBe("Force-checked out the reservation without a kiosk scan");
+  });
+
   it("names the exact item added at a kiosk", () => {
     expect(
       describeAction(

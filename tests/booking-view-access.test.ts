@@ -47,6 +47,9 @@ describe('canPerformBookingAction("view")', () => {
     // force-complete is ADMIN-only and only in OPEN state
     expect(canPerformBookingAction(admin, booking({ status: BookingStatus.OPEN }), "force-complete").allowed).toBe(true);
     expect(canPerformBookingAction(staff, booking({ status: BookingStatus.OPEN }), "force-complete").allowed).toBe(false);
+    expect(canPerformBookingAction(admin, booking({ kind: BookingKind.RESERVATION, status: BookingStatus.BOOKED }), "force-checkout").allowed).toBe(true);
+    expect(canPerformBookingAction(staff, booking({ kind: BookingKind.RESERVATION, status: BookingStatus.BOOKED }), "force-checkout").allowed).toBe(false);
+    expect(canPerformBookingAction(admin, booking({ kind: BookingKind.RESERVATION, status: BookingStatus.COMPLETED }), "force-checkout").allowed).toBe(false);
     expect(canPerformBookingAction(owner, booking({ status: BookingStatus.COMPLETED }), "edit").allowed).toBe(false);
   });
 });

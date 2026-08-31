@@ -48,6 +48,13 @@ struct KioskPickupView: View {
     private var totalItems: Int { detail?.items.count ?? 0 }
     private var confirmedCount: Int { confirmedIds.count }
     private var allConfirmed: Bool { confirmedCount >= totalItems && totalItems > 0 }
+    /// BOOKED is the reservation pickup state. A legacy PENDING_PICKUP
+    /// checkout remains all-or-nothing; reservation custody can be opened for
+    /// the scanned subset while the source reservation stays available.
+    private var canConfirmPartial: Bool {
+        detail?.status == "BOOKED" && confirmedCount > 0 && !allConfirmed
+    }
+    private var canConfirm: Bool { allConfirmed || canConfirmPartial }
     private var batteryTotal: Int { detail?.scanSummary?.numberedBulkTotal ?? detail?.numberedBulkItems.count ?? 0 }
     private var confirmedBatteryCount: Int {
         detail?.numberedBulkItems.filter { confirmedIds.contains($0.id) }.count ?? 0
@@ -117,12 +124,18 @@ struct KioskPickupView: View {
                             accessibilityText: "\(confirmedCount) of \(totalItems) items confirmed"
                         )
                         VStack(spacing: 6) {
-                            Text(allConfirmed ? "All items confirmed" : "Scan each item to confirm pickup")
+                            Text(allConfirmed
+                                ? "All items confirmed"
+                                : canConfirmPartial
+                                    ? "Ready to pick up selected items"
+                                    : "Scan each item to confirm pickup")
                                 .font(KioskType.actionTitle)
                                 .foregroundStyle(allConfirmed ? KioskStatus.ok : KioskText.primary)
                                 .multilineTextAlignment(.center)
                             if !allConfirmed {
-                                Text("Use the hand scanner, or tap Camera to scan with the iPad.")
+                                Text(canConfirmPartial
+                                    ? "Keep scanning to add more, or pick up the confirmed items now."
+                                    : "Use the hand scanner, or tap Camera to scan with the iPad.")
                                     .font(KioskType.rowDetail)
                                     .foregroundStyle(KioskText.tertiary)
                                     .multilineTextAlignment(.center)
@@ -166,8 +179,8 @@ struct KioskPickupView: View {
     private var confirmButton: some View {
         KioskCompletionButton(
             title: confirmButtonTitle,
-            icon: allConfirmed ? "checkmark.circle.fill" : "barcode.viewfinder",
-            isEnabled: allConfirmed,
+            icon: allConfirmed || canConfirmPartial ? "checkmark.circle.fill" : "barcode.viewfinder",
+            isEnabled: canConfirm,
             isBusy: isConfirming,
             busyTitle: "Confirming...",
             accessibilityLabel: confirmAccessibilityLabel,
@@ -178,6 +191,9 @@ struct KioskPickupView: View {
     private var confirmAccessibilityLabel: String {
         if isConfirming { return "Confirming pickup" }
         if allConfirmed { return "Confirm Pickup, \(totalItems) item\(totalItems == 1 ? "" : "s")" }
+        if canConfirmPartial {
+            return "Pick up \(confirmedCount) confirmed item\(confirmedCount == 1 ? "" : "s") now, or continue scanning"
+        }
         if remainingBatteryCount > 0 {
             return "Scan \(remainingBatteryCount) more battery unit\(remainingBatteryCount == 1 ? "" : "s") before confirming"
         }
@@ -194,6 +210,9 @@ struct KioskPickupView: View {
     /// already reports the unit sub-total; the CTA's job is the whole number.
     private var confirmButtonTitle: String {
         if allConfirmed { return "Confirm Pickup" }
+        if canConfirmPartial {
+            return "Pick Up \(confirmedCount) Item\(confirmedCount == 1 ? "" : "s")"
+        }
         let remaining = max(0, totalItems - confirmedCount)
         return "Scan \(remaining) More Item\(remaining == 1 ? "" : "s")"
     }
@@ -336,20 +355,24 @@ struct KioskPickupView: View {
     }
 
     private func confirmPickup() {
-        guard allConfirmed, !isConfirming else { return }
+        guard canConfirm, !isConfirming else { return }
+        let isPartial = canConfirmPartial
         isConfirming = true
         Task {
             do {
-                let confirmationBadges = try await KioskAPI.shared.kioskPickupConfirm(
+                let confirmation = try await KioskAPI.shared.kioskPickupConfirm(
                     bookingId: bookingId,
-                    actorId: userId
+                    actorId: userId,
+                    partial: isPartial
                 )
-                earnedBadges.appendUnique(contentsOf: confirmationBadges)
+                earnedBadges.appendUnique(contentsOf: confirmation.earnedBadges ?? [])
                 Haptics.success()
                 let itemWord = confirmedCount == 1 ? "item" : "items"
                 store.screen = .success(KioskSuccessInfo(
                     kind: .pickup,
-                    message: "Pickup confirmed! \(confirmedCount) \(itemWord) checked out.",
+                    message: isPartial
+                        ? "Partial pickup confirmed! \(confirmedCount) \(itemWord) checked out. The rest is ready for a later pickup."
+                        : "Pickup confirmed! \(confirmedCount) \(itemWord) checked out.",
                     earnedBadges: earnedBadges
                 ))
                 store.clearIntent(reason: .success)
