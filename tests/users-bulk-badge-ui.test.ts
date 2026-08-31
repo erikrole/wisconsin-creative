@@ -17,7 +17,7 @@ describe("Users bulk badge award UI", () => {
     expect(page).toContain("bulkAwardTargetCount");
     expect(dialog).toContain("/api/badges/award/bulk");
     expect(dialog).toContain("Review award");
-    expect(dialog).toContain("Confirm group award");
+    expect(dialog).toContain("Confirm badge award");
     expect(dialog).toContain("Inactive users are excluded");
     expect(dialog).toContain("Already had it");
   });

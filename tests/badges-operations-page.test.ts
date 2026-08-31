@@ -16,7 +16,7 @@ describe("Badges Operations surface", () => {
     expect(sidebar.indexOf(badgesEntry)).toBeGreaterThan(operationsIndex);
   });
 
-  it("keeps the page internal and preserves admin-only awarding", () => {
+  it("keeps the page internal and exposes direct user selection", () => {
     const page = source("src/app/(app)/badges/page.tsx");
     const client = source("src/app/(app)/badges/BadgesClient.tsx");
 
@@ -24,20 +24,15 @@ describe("Badges Operations surface", () => {
     expect(page).toContain("Role.STAFF");
     expect(page).toContain("badgesEnabled()");
     expect(client).toContain('"/api/badges?manualOnly=true"');
-    expect(client).toContain("UserFilters");
-    expect(client).toContain('`/api/users?${params}`');
-    expect(client).toContain("showInactiveFilter={false}");
+    expect(client).toContain('"/api/users?limit=200&sort=name"');
+    expect(client).toContain("Checkbox");
+    expect(client).toContain("selectedUserIds");
+    expect(client).toContain("Select all visible");
     expect(client).toContain("BulkBadgeAwardDialog");
+    expect(client).toContain("userIds={selectedUserIds}");
     expect(client).toContain("isAdmin &&");
     expect(client).toContain("MAX_BULK_BADGE_TARGETS");
-  });
-
-  it("reads the audience count from the users response envelope", () => {
-    const client = source("src/app/(app)/badges/BadgesClient.tsx");
-
-    // useFetch defaults to json.data, which is the paginated user rows. The
-    // directory totals live beside that array in json.stats.
-    expect(client).toContain('stats: json.stats as DirectoryResponse["stats"] | undefined');
-    expect(client).toContain("const targetCount = audience?.stats?.active ?? 0");
+    expect(client).not.toContain("UserFilters");
+    expect(client).not.toContain("useUrlState");
   });
 });

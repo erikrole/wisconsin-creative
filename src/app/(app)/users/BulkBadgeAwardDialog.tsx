@@ -84,7 +84,8 @@ export type BulkBadgeAwardDialogProps = {
   onOpenChange: (open: boolean) => void;
   targetCount: number;
   filterSummary: string;
-  filters: UserDirectoryFilters;
+  filters?: UserDirectoryFilters;
+  userIds?: string[];
 };
 
 function countLabel(count: number) {
@@ -97,6 +98,7 @@ export default function BulkBadgeAwardDialog({
   targetCount,
   filterSummary,
   filters,
+  userIds,
 }: BulkBadgeAwardDialogProps) {
   const [definitions, setDefinitions] = useState<BadgeDefinition[]>([]);
   const [definitionsLoading, setDefinitionsLoading] = useState(false);
@@ -160,6 +162,7 @@ export default function BulkBadgeAwardDialog({
   const awardDescription = awardMode === "existing"
     ? selectedDefinition?.description ?? ""
     : customDescription.trim();
+  const explicitSelection = userIds !== undefined;
 
   function handleDialogOpenChange(nextOpen: boolean) {
     if (busy) return;
@@ -170,7 +173,7 @@ export default function BulkBadgeAwardDialog({
   function handleReview() {
     setError(null);
     if (targetCount <= 0) {
-      setError("No active users match the current filters.");
+      setError(explicitSelection ? "Select at least one user before continuing." : "No active users match the current filters.");
       return;
     }
     if (awardMode === "existing" && !selectedDefinitionId) {
@@ -194,7 +197,7 @@ export default function BulkBadgeAwardDialog({
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          filters,
+          ...(userIds !== undefined ? { userIds } : { filters: filters ?? {} }),
           definitionId: awardMode === "existing" ? selectedDefinitionId : undefined,
           customDefinition: awardMode === "custom" ? {
             name: customName.trim(),
@@ -241,7 +244,9 @@ export default function BulkBadgeAwardDialog({
               <DialogHeader>
                 <div>
                   <DialogTitle>Badge award complete</DialogTitle>
-                  <DialogDescription className="mt-1">The server rechecked the group before awarding.</DialogDescription>
+                  <DialogDescription className="mt-1">
+                    The server rechecked {explicitSelection ? "your selected users" : "the group"} before awarding.
+                  </DialogDescription>
                 </div>
               </DialogHeader>
               <DialogBody className="min-h-0 space-y-4 py-5">
@@ -276,7 +281,7 @@ export default function BulkBadgeAwardDialog({
                   </div>
                 )}
                 <p className="text-sm text-muted-foreground">
-                  {result.requested} active {result.requested === 1 ? "user was" : "users were"} in the server-side group.
+                  {result.requested} active {result.requested === 1 ? "user was" : "users were"} in the server-side {explicitSelection ? "selection" : "group"}.
                 </p>
               </DialogBody>
               <DialogFooter className="border-t pt-4">
@@ -287,7 +292,7 @@ export default function BulkBadgeAwardDialog({
             <>
               <DialogHeader>
                 <div>
-                  <DialogTitle>Award badge to matching users</DialogTitle>
+                  <DialogTitle>{explicitSelection ? "Award badge to selected users" : "Award badge to matching users"}</DialogTitle>
                   <DialogDescription className="mt-1">
                     {countLabel(targetCount)} · {filterSummary}
                   </DialogDescription>
@@ -297,7 +302,9 @@ export default function BulkBadgeAwardDialog({
                 <Alert>
                   <UsersRound className="size-4" />
                   <AlertDescription>
-                    This awards the same recognition to every active user matching the current Users filters. Inactive users are excluded.
+                    {explicitSelection
+                      ? "This awards the same recognition to exactly the people you selected. The server rechecks that each person is still active before awarding."
+                      : "This awards the same recognition to every active user matching the current Users filters. Inactive users are excluded."}
                   </AlertDescription>
                 </Alert>
 
@@ -442,9 +449,11 @@ export default function BulkBadgeAwardDialog({
       <AlertDialog open={confirmOpen} onOpenChange={(nextOpen) => { if (!busy) setConfirmOpen(nextOpen); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirm group award</AlertDialogTitle>
+            <AlertDialogTitle>Confirm badge award</AlertDialogTitle>
             <AlertDialogDescription>
-              Award <strong>{awardName || "this badge"}</strong> to {countLabel(targetCount)} matching {filterSummary.toLowerCase()}? The server will skip anyone who already has it.
+              {explicitSelection
+                ? <>Award <strong>{awardName || "this badge"}</strong> to {countLabel(targetCount)} selected by you? The server will skip anyone who already has it.</>
+                : <>Award <strong>{awardName || "this badge"}</strong> to {countLabel(targetCount)} matching {filterSummary.toLowerCase()}? The server will skip anyone who already has it.</>}
               {awardDescription ? ` ${awardDescription}` : ""}
             </AlertDialogDescription>
           </AlertDialogHeader>

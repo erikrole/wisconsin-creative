@@ -171,6 +171,32 @@ describe("POST /api/badges/award/bulk", () => {
     });
   });
 
+  it("resolves only explicitly selected active users", async () => {
+    vi.mocked(db.user.findMany).mockResolvedValue(targetRows([
+      { id: "user-2", name: "Second User" },
+    ]));
+
+    const response = await POST(makePostRequest({
+      userIds: ["user-2"],
+      definitionId,
+    }), { params: Promise.resolve({}) });
+    const body = await response.json();
+    const query = vi.mocked(db.user.findMany).mock.calls[0]?.[0];
+
+    expect(response.status).toBe(200);
+    expect(body.data).toMatchObject({ requested: 1, awarded: 1, skipped: 0, failed: 0 });
+    expect(awardBadgeManually).toHaveBeenCalledWith(expect.objectContaining({ userId: "user-2" }));
+    expect(query).toMatchObject({
+      take: 201,
+      where: {
+        AND: expect.arrayContaining([
+          { id: { in: ["user-2"] } },
+          { AND: expect.arrayContaining([{ hiddenFromRoster: false }, { active: true }]) },
+        ]),
+      },
+    });
+  });
+
   it("skips duplicate awards and continues with the rest of the group", async () => {
     vi.mocked(awardBadgeManually)
       .mockResolvedValueOnce(awardRow("user-1"))

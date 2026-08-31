@@ -14,7 +14,7 @@ import { db } from "@/lib/db";
 import { HttpError, ok } from "@/lib/http";
 import { requireRole } from "@/lib/rbac";
 import { canViewHiddenUsers } from "@/lib/user-visibility";
-import { buildUserDirectoryQuery } from "@/lib/user-directory-query";
+import { buildUserDirectoryQuery, type UserDirectoryFilters } from "@/lib/user-directory-query";
 import { MAX_BULK_BADGE_TARGETS } from "@/lib/request-limits";
 import { optionalSportCodeSchema } from "@/lib/validation";
 
@@ -36,6 +36,7 @@ const bulkFiltersSchema = z.object({
 
 const bulkAwardSchema = z.object({
   filters: bulkFiltersSchema.optional().default({}),
+  userIds: z.array(z.string().trim().min(1).max(100)).min(1).max(MAX_BULK_BADGE_TARGETS).optional(),
   definitionId: z.string().cuid().optional(),
   customDefinition: customBadgeDefinitionSchema.optional(),
   note: z.string().trim().max(500).optional(),
@@ -76,20 +77,25 @@ export const POST = withAuth(async (req, { user }) => {
   }
 
   const body = bulkAwardSchema.parse(await req.json());
-  const includeHidden = body.filters.includeHidden && canViewHiddenUsers(user);
+  const explicitUserIds = body.userIds ? Array.from(new Set(body.userIds)) : null;
+  const selectionFilters: UserDirectoryFilters = explicitUserIds ? {} : body.filters;
+  const includeHidden = selectionFilters.includeHidden && canViewHiddenUsers(user);
   const { where } = buildUserDirectoryQuery(user, {
-    q: body.filters.q,
-    role: body.filters.role,
-    locationId: body.filters.locationId,
-    year: body.filters.year,
-    sport: body.filters.sport,
-    area: body.filters.area,
+    q: selectionFilters.q,
+    role: selectionFilters.role,
+    locationId: selectionFilters.locationId,
+    year: selectionFilters.year,
+    sport: selectionFilters.sport,
+    area: selectionFilters.area,
     includeHidden,
     active: "active",
   });
+  const targetWhere = explicitUserIds
+    ? { AND: [where, { id: { in: explicitUserIds } }] }
+    : where;
 
   const targets = await db.user.findMany({
-    where,
+    where: targetWhere,
     orderBy: [{ name: "asc" }, { id: "asc" }],
     take: MAX_BULK_BADGE_TARGETS + 1,
     select: { id: true, name: true },
@@ -98,7 +104,9 @@ export const POST = withAuth(async (req, { user }) => {
   if (targets.length > MAX_BULK_BADGE_TARGETS) {
     throw new HttpError(
       422,
-      `This group has more than ${MAX_BULK_BADGE_TARGETS} active users. Add a filter before awarding a badge.`,
+      explicitUserIds
+        ? `Select no more than ${MAX_BULK_BADGE_TARGETS} users before awarding a badge.`
+        : `This group has more than ${MAX_BULK_BADGE_TARGETS} active users. Add a filter before awarding a badge.`,
     );
   }
 
