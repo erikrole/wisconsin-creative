@@ -18,7 +18,7 @@ import {
 } from "./automatic-rules";
 import { loadWorkedShiftEvidence } from "./worked-evidence";
 
-type CustomBadgeDefinitionInput = {
+export type CustomBadgeDefinitionInput = {
   name: string;
   description: string;
   icon?: string;
@@ -220,6 +220,18 @@ async function resolveManualAwardDefinition(
       active: true,
     },
   });
+}
+
+/**
+ * Resolve a custom manual badge once before a fan-out award. This prevents
+ * concurrent per-user awards from racing to create the same catalog row.
+ */
+export async function ensureManualBadgeDefinition(customDefinition: CustomBadgeDefinitionInput) {
+  const definition = await db.$transaction((tx) => resolveManualAwardDefinition(tx, { customDefinition }));
+  if (!definition || !definition.active) {
+    throw new HttpError(404, "Active badge definition not found");
+  }
+  return definition;
 }
 
 export async function getBadgePeerVisibility() {

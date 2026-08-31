@@ -36,6 +36,7 @@ import {
   ShieldAlertIcon,
   MegaphoneIcon,
   PenToolIcon,
+  AwardIcon,
   TrophyIcon,
 } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -96,6 +97,7 @@ const navGroups: NavGroup[] = [
     staffOnly: true,
     items: [
       { label: "Operations", href: "/operations", icon: WrenchIcon },
+      { label: "Badges", href: "/badges", icon: AwardIcon },
       { label: "Signatures", href: "/signatures", icon: PenToolIcon },
       { label: "Blasts", href: "/blasts", icon: MegaphoneIcon },
       { label: "Kits", href: "/kits", icon: BoxIcon },

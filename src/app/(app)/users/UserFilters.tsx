@@ -34,6 +34,7 @@ export default function UserFilters({
   onAreaChange,
   showInactive,
   onShowInactiveChange,
+  showInactiveFilter = true,
   canShowHiddenUsers = false,
   showHiddenUsers,
   onShowHiddenUsersChange,
@@ -58,6 +59,7 @@ export default function UserFilters({
   onAreaChange: (v: string) => void;
   showInactive: boolean;
   onShowInactiveChange: (v: boolean) => void;
+  showInactiveFilter?: boolean;
   canShowHiddenUsers?: boolean;
   showHiddenUsers: boolean;
   onShowHiddenUsersChange: (v: boolean) => void;
@@ -72,7 +74,7 @@ export default function UserFilters({
       !!yearFilter ||
       !!sportFilter ||
       !!areaFilter ||
-      showInactive ||
+      (showInactiveFilter && showInactive) ||
       (canShowHiddenUsers && showHiddenUsers),
   );
   const previousFilterCountRef = useRef(0);
@@ -82,7 +84,7 @@ export default function UserFilters({
     (areaFilter ? 1 : 0) +
     (yearFilter ? 1 : 0) +
     (sportFilter ? 1 : 0) +
-    (showInactive ? 1 : 0) +
+    (showInactiveFilter && showInactive ? 1 : 0) +
     (canShowHiddenUsers && showHiddenUsers ? 1 : 0);
   const hasFilters = activeFilterCount > 0;
   const locationFilterUnavailable = locationsLoading || locationsError;
@@ -122,7 +124,7 @@ export default function UserFilters({
         onRemove: () => onSportChange(""),
       }]
       : []),
-    ...(showInactive
+    ...(showInactiveFilter && showInactive
       ? [{
         key: "inactive",
         label: "Showing inactive",
@@ -281,7 +283,7 @@ export default function UserFilters({
               ))}
             </SelectContent>
           </Select>}
-          {!directoryMode && <Label htmlFor="show-inactive" className="flex h-10 cursor-pointer items-center gap-2 rounded-md border border-border/70 bg-background px-3">
+          {!directoryMode && showInactiveFilter && <Label htmlFor="show-inactive" className="flex h-10 cursor-pointer items-center gap-2 rounded-md border border-border/70 bg-background px-3">
             <Checkbox
               id="show-inactive"
               checked={showInactive}

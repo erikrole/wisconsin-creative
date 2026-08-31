@@ -2,10 +2,10 @@ import { withAuth } from "@/lib/api";
 import { db } from "@/lib/db";
 import { HttpError, ok, parsePagination } from "@/lib/http";
 import { requireRole } from "@/lib/rbac";
-import { shouldIncludeHiddenUsers, visibleUserWhere } from "@/lib/user-visibility";
-import { optionalSportCodeSchema } from "@/lib/validation";
+import { shouldIncludeHiddenUsers } from "@/lib/user-visibility";
 import { requireCollaboratorCapability } from "@/lib/collaborator-access";
 import { Prisma } from "@prisma/client";
+import { buildUserDirectoryQuery } from "@/lib/user-directory-query";
 
 export const GET = withAuth(async (req, { user }) => {
   requireRole(user.role, ["ADMIN", "STAFF", "STUDENT", "COLLABORATOR"]);
@@ -22,82 +22,18 @@ export const GET = withAuth(async (req, { user }) => {
   const locationId = searchParams.get("locationId");
   const activeParam = searchParams.get("active");
   const sort = searchParams.get("sort") || "name";
-  const yearParam = searchParams.get("year");      // FRESHMAN | SOPHOMORE | JUNIOR | SENIOR | GRAD
-  const sportParam = optionalSportCodeSchema.parse(searchParams.get("sport") ?? undefined);    // sport code (e.g. WHKY)
-  const areaParam = searchParams.get("area");      // ShiftArea enum value
   const includeHidden = isCollaboratorDirectory ? false : shouldIncludeHiddenUsers(searchParams, user);
-
-  // Build where clause
-  const conditions: Prisma.UserWhereInput[] = isCollaboratorDirectory
-    ? [{ active: true, hiddenFromRoster: false }]
-    : [visibleUserWhere(user, { includeHidden })];
-
-  if (q) {
-    conditions.push({
-      OR: isCollaboratorDirectory
-        ? [{ name: { contains: q, mode: "insensitive" as const } }]
-        : [
-            { name: { contains: q, mode: "insensitive" as const } },
-            { email: { contains: q, mode: "insensitive" as const } },
-          ],
-    });
-  }
-
-  if (roleParam && ["ADMIN", "STAFF", "STUDENT", "COLLABORATOR"].includes(roleParam)) {
-    conditions.push({ role: roleParam as Prisma.EnumRoleFilter });
-  }
-
-  if (!isCollaboratorDirectory && locationId) {
-    conditions.push({ locationId });
-  }
-
-  if (!isCollaboratorDirectory && sportParam) {
-    conditions.push({ sportAssignments: { some: { sportCode: sportParam } } });
-  }
-
-  if (!isCollaboratorDirectory && areaParam) {
-    conditions.push({
-      OR: [
-        { primaryArea: areaParam as Prisma.EnumShiftAreaFilter },
-        { areaAssignments: { some: { area: areaParam as Prisma.EnumShiftAreaFilter } } },
-      ],
-    });
-  }
-
-  // Year filter — derives an expected gradYear from a Sept→Aug academic calendar
-  // and matches either an explicit override or that derived gradYear.
-  if (!isCollaboratorDirectory && yearParam && ["FRESHMAN", "SOPHOMORE", "JUNIOR", "SENIOR", "GRAD"].includes(yearParam)) {
-    const now = new Date();
-    const acadYearEnd = now.getMonth() >= 7 ? now.getFullYear() + 1 : now.getFullYear();
-    const yearGradMap: Record<string, Prisma.UserWhereInput> = {
-      SENIOR:    { gradYear: acadYearEnd },
-      JUNIOR:    { gradYear: acadYearEnd + 1 },
-      SOPHOMORE: { gradYear: acadYearEnd + 2 },
-      FRESHMAN:  { gradYear: { gte: acadYearEnd + 3 } },
-      GRAD:      { gradYear: { lte: acadYearEnd - 1 } },
-    };
-    const derivedMatch = yearGradMap[yearParam]!; // yearParam validated by includes() above
-    conditions.push({
-      OR: [
-        { studentYearOverride: yearParam as "FRESHMAN" | "SOPHOMORE" | "JUNIOR" | "SENIOR" | "GRAD" },
-        { AND: [{ studentYearOverride: null }, derivedMatch] },
-      ],
-    });
-  }
-
-  const summaryWhere: Prisma.UserWhereInput = { AND: [...conditions] };
-
-  // Default list results to active-only, while summary counts retain inactive visibility.
-  if (isCollaboratorDirectory) {
-    // Collaborator directories never expose inactive accounts.
-  } else if (activeParam === "false") {
-    conditions.push({ active: false });
-  } else if (activeParam !== "all") {
-    conditions.push({ active: true });
-  }
-
-  const where: Prisma.UserWhereInput =
-    conditions.length > 0 ? { AND: conditions } : {};
+  const directoryQuery = buildUserDirectoryQuery(user, {
+    q,
+    role: roleParam,
+    locationId,
+    year: searchParams.get("year"),
+    sport: searchParams.get("sport"),
+    area: searchParams.get("area"),
+    includeHidden,
+    active: activeParam === "false" ? "inactive" : activeParam === "all" ? "all" : "active",
+  });
+  const { summaryWhere, where } = directoryQuery;
 
   // Build orderBy
   const orderBy: Prisma.UserOrderByWithRelationInput[] = (() => {

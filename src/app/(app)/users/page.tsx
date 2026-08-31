@@ -4,9 +4,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import EmptyState from "@/components/EmptyState";
 import type { Location, Role, SortKey, ListResponse } from "./types";
-import { AREA_LABELS, STUDENT_YEAR_OPTIONS } from "./types";
+import { AREA_LABELS, ROLE_OPTIONS, STUDENT_YEAR_OPTIONS } from "./types";
 import { UserTableRow, UserMobileCard } from "./UserRow";
 import UserFilters from "./UserFilters";
+import BulkBadgeAwardDialog from "./BulkBadgeAwardDialog";
 import OnboardingDialog from "@/components/onboarding/OnboardingDialog";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -20,7 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import Link from "next/link";
-import { ArrowDown, ArrowUp, ArrowUpDown, ClipboardList, Download, ImageOff, MoreHorizontal, Network, UserPlus, UserRoundX, WifiOff } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Award, ClipboardList, Download, ImageOff, MoreHorizontal, Network, UserPlus, UserRoundX, WifiOff } from "lucide-react";
 import { useFetch } from "@/hooks/use-fetch";
 import { PageHeader } from "@/components/PageHeader";
 import { FadeUp } from "@/components/ui/motion";
@@ -269,6 +270,7 @@ export default function UsersPage() {
 
   // UI
   const [showCreate, setShowCreate] = useState(false);
+  const [showBulkAward, setShowBulkAward] = useState(false);
   const didMountRef = useRef(false);
 
   useEffect(() => {
@@ -363,7 +365,31 @@ export default function UsersPage() {
     transform: (json) => (json as Record<string, unknown>).data as { locations: Location[] },
     refetchOnFocus: false,
   });
-  const locations = formOptions?.locations ?? [];
+  const formOptionLocations = formOptions?.locations;
+  const locations = useMemo(() => formOptionLocations ?? [], [formOptionLocations]);
+
+  const bulkAwardFilters = useMemo(() => ({
+    q: search.trim() || undefined,
+    role: roleFilter || undefined,
+    locationId: locationFilter || undefined,
+    year: yearFilter || undefined,
+    sport: sportFilter || undefined,
+    area: areaFilter || undefined,
+    includeHidden: canShowHiddenUsers && showHiddenUsers ? true : undefined,
+  }), [areaFilter, canShowHiddenUsers, locationFilter, roleFilter, search, showHiddenUsers, sportFilter, yearFilter]);
+
+  const bulkAwardTargetCount = stats?.active ?? (showInactive ? 0 : total);
+  const bulkAwardFilterSummary = useMemo(() => {
+    const parts: string[] = [];
+    if (roleFilter) parts.push(`role: ${ROLE_OPTIONS.find((option) => option.value === roleFilter)?.label ?? roleFilter}`);
+    if (locationFilter) parts.push(`location: ${locations.find((location) => location.id === locationFilter)?.name ?? locationFilter}`);
+    if (yearFilter) parts.push(`year: ${STUDENT_YEAR_OPTIONS.find((option) => option.value === yearFilter)?.label ?? yearFilter}`);
+    if (sportFilter) parts.push(`sport: ${sportFilter}`);
+    if (areaFilter) parts.push(`area: ${AREA_LABELS[areaFilter] ?? areaFilter}`);
+    if (search.trim()) parts.push(`search: “${search.trim()}”`);
+    if (canShowHiddenUsers && showHiddenUsers) parts.push("hidden included");
+    return parts.length > 0 ? parts.join(" · ") : "all active users";
+  }, [areaFilter, canShowHiddenUsers, locationFilter, locations, roleFilter, search, showHiddenUsers, sportFilter, yearFilter]);
 
   const totalPages = Math.ceil(total / LIMIT);
   const hasFilters = !!search.trim() ||
@@ -408,6 +434,11 @@ export default function UsersPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuGroup>
+                {currentUserRole === "ADMIN" && (
+                  <DropdownMenuItem onClick={() => setShowBulkAward(true)} disabled={bulkAwardTargetCount <= 0}>
+                    <Award />Award badge to matching users
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem asChild>
                   <Link href="/users/onboarding-status"><ClipboardList />Onboarding status</Link>
                 </DropdownMenuItem>
@@ -438,6 +469,14 @@ export default function UsersPage() {
         }}
         currentUserRole={currentUserRole}
         onInvitesChanged={() => reload()}
+      />
+
+      <BulkBadgeAwardDialog
+        open={showBulkAward}
+        onOpenChange={setShowBulkAward}
+        targetCount={bulkAwardTargetCount}
+        filterSummary={bulkAwardFilterSummary}
+        filters={bulkAwardFilters}
       />
 
       {/* Users List */}
