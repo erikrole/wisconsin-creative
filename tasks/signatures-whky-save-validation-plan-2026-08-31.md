@@ -27,7 +27,7 @@
 - [x] Reproduce the freshman-shaped high-stroke/high-sample request rejection in focused schema coverage.
 - [x] Raise the redundant per-stroke shape ceilings to accommodate deliberate printed/slow signatures while retaining the 1 MB total request bound and explicit validation messages.
 - [x] Verify the focused Signature suite, TypeScript, lint, app build, docs/codemap, and final scoped diff.
-- [ ] Record authenticated WHKY save and physical iPad acceptance separately from local source proof.
+- [x] Record Production deployment separately from authenticated WHKY save and physical iPad acceptance.
 
 ## Verification
 
@@ -43,7 +43,8 @@
 
 - Shipped: Local capture validation accepts deliberate printed and slow Pencil signatures up to 128 strokes and 10,000 samples in one continuous stroke; the streaming 1 MB request ceiling is unchanged.
 - Verified: 98 focused Signatures tests, TypeScript, quiet full lint, and `npm run build:app` with all 251 static pages generated.
-- Deferred: deployment and a real authenticated `WHKY / 2026-27` save/artifact readback.
-- Blocked: physical acceptance requires the target iPad and Apple Pencil; production promotion requires explicit release authorization.
+- Deployed: Commit `a0236b63` is pushed to `origin/main` and Vercel Production deployment `dpl_GhSF1w6QTzdJcCPaNU3oFrTq56it` is READY at `https://wisconsincreative.com`; build logs confirm commit `a0236b6`, 144 migrations current with none pending, and all 251 pages generated.
+- Deferred: a real authenticated `WHKY / 2026-27` save and private artifact readback.
+- Blocked: physical acceptance requires the target iPad and Apple Pencil.
 - Proof artifacts: `tests/signature-capture.test.ts` covers the former 33-stroke and 2,001-sample failures plus the retained ceilings.
-- Next slice or stop: stop locally for deployment authorization, then complete operator iPad acceptance on `WHKY / 2026-27`.
+- Next slice or stop: retry a freshman on the physical WHKY iPad, confirm the save returns to the roster, and open the committed PNG/SVG through the authenticated artifact routes.
