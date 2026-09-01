@@ -1326,11 +1326,13 @@ These are non-negotiable integrity constraints. Every feature must preserve them
 - Decision:
   - A student claiming an open Student slot creates a `REQUESTED` assignment. Several students may hold requests on one slot; an Admin chooses, and `approveRequest` declines the rest in the same transaction. A student cannot file two requests on one shift.
   - A student claiming a Trade Board post moves it to `CLAIMED` and nothing else. The poster keeps the assignment until `approveTrade` runs the swap, so a claim alone never leaves a shift uncovered.
+  - Student claim inventory and permission are scoped to the worker's primary area. Photo and Graphics are the only cross-area exception and form one symmetric claim pool; a `StudentAreaAssignment` in any other area does not widen Trade Board or Open Work eligibility.
   - Both queues resolve through `shift_trade.approve` and `shift_assignment.approve`, and both permissions are Admin-only. Staff retain ordinary Schedule/Trade Board reads, posting, cancellation, and non-review staffing tools but receive no full reviewer payload, queue action, or approve/decline authority.
   - Initial and deadline-driven reviewer notifications for both open-slot requests and Trade Board claims target active visible Admins only. Student lifecycle messages still go to the affected requester, poster, or claimer.
   - An unreviewed claim alerts its reviewer audience, then approves itself at a deadline, carried by a per-claim durable workflow (`pendingClaimReviewWorkflow`) modelled on `pendingScheduleReleaseWorkflow`. Deadlines derive from the claim's *effective* window start: escalate at T-48h, resolve at T-24h, falling back to a proportional split for a claim filed inside those leads.
 - Guardrails:
   - Auto-approval calls `approveTrade`/`approveRequest` and never bypasses their re-checks. A 4xx (conflict appeared, slot refilled, time off approved) leaves the claim for an Admin and tells the same reviewer audience why.
+  - List visibility, direct claim mutation, and approval-time revalidation use the same primary-area rule. Staff/Admin keep global operational reads, and students keep their own posts, pending claims, and history even when a later profile change would make a new claim in that area ineligible.
   - `REQUESTED` stays outside `ACTIVE_ASSIGNMENT_STATUSES`, so a pending request holds no slot, raises no conflict, stays out of My Shifts and the personal ICS feed, and never blocks staff from assigning directly.
   - A pending request sends no gear-prep nudge. Prep belongs to coverage the student actually holds.
   - Reviewer fanout runs after the claim commits, never inside the `SERIALIZABLE` claim transaction, whose read set two students racing a trade already contend over.

@@ -659,18 +659,8 @@ struct TradeBoardSheet: View {
                 }
             }
 
-            if !vm.availableOpenShifts.isEmpty || !vm.availableTrades.isEmpty {
+            if !vm.availableTrades.isEmpty {
                 Section {
-                    ForEach(vm.availableOpenShifts) { item in
-                        OpenWorkShiftRow(
-                            item: item,
-                            context: .availableNow,
-                            isActioning: pendingActionId == item.id
-                        ) {
-                            openShiftToPickup = item
-                        }
-                        .tradeBoardCardRow()
-                    }
                     ForEach(vm.availableTrades) { trade in
                         TradeRow(
                             trade: trade,
@@ -682,7 +672,30 @@ struct TradeBoardSheet: View {
                         .tradeBoardCardRow()
                     }
                 } header: {
-                    TradeSectionHeader(title: "Available Now", subtitle: "Claiming sends this to an admin for approval.")
+                    TradeSectionHeader(
+                        title: "Trade Posts",
+                        subtitle: "Shifts another student posted for coverage. Claiming sends the trade to an admin."
+                    )
+                }
+            }
+
+            if !vm.availableOpenShifts.isEmpty {
+                Section {
+                    ForEach(vm.availableOpenShifts) { item in
+                        OpenWorkShiftRow(
+                            item: item,
+                            context: .availableNow,
+                            isActioning: pendingActionId == item.id
+                        ) {
+                            openShiftToPickup = item
+                        }
+                        .tradeBoardCardRow()
+                    }
+                } header: {
+                    TradeSectionHeader(
+                        title: "Open Shifts",
+                        subtitle: "Unassigned Student slots. Claiming sends a pickup request to an admin."
+                    )
                 }
             }
 
@@ -931,7 +944,7 @@ private struct TradeBoardSummaryCard: View {
         if isReviewer {
             return "\(actionableCount) \(actionableCount == 1 ? "claim" : "claims") to review"
         }
-        return "\(actionableCount) \(actionableCount == 1 ? "shift" : "shifts") available"
+        return "\(actionableCount) \(actionableCount == 1 ? "opportunity" : "opportunities") available"
     }
 
     private var summaryDetail: String {
@@ -939,11 +952,11 @@ private struct TradeBoardSummaryCard: View {
         if !isComplete { return "Refresh the unavailable source before relying on this board" }
         if actionableCount == 0 {
             if isReviewer { return "No claims are waiting on you" }
-            return isStaff ? "Open shifts and trade posts across the team" : "Open shifts and trades you can claim now"
+            return isStaff ? "Open shifts and trade posts across the team" : "Trade posts and open shifts are listed separately below"
         }
         return isReviewer
             ? "Students are waiting on your decision"
-            : "Open shifts and trades you can claim now"
+            : "Trade posts and open shifts are listed separately below"
     }
 
     var body: some View {

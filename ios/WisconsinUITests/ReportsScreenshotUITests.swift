@@ -537,6 +537,30 @@ final class TradeBoardReviewScreenshotUITests: XCTestCase {
         attach(app, name: "trade-board-student-waiting")
     }
 
+    /// Captures the browse inventory at the student-posted trade. The same
+    /// fixture also has an unassigned open slot immediately after it, so the
+    /// screenshot proves whether those two sources read as one pool or as two
+    /// distinct sections without mutating either claim path.
+    func testStudentAvailableInventoryCaptures() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "tradeBoardStudent"
+        app.launch()
+
+        XCTAssertTrue(app.navigationBars["Trade Board"].waitForExistence(timeout: 20),
+                      "Trade Board never rendered")
+
+        let trade = app.staticTexts["football vs Michigan"]
+        for _ in 0..<5 where !trade.exists || !trade.isHittable {
+            app.swipeUp(velocity: .slow)
+        }
+        XCTAssertTrue(trade.waitForExistence(timeout: 15),
+                      "Student-posted trade never appeared")
+
+        attach(app, name: "trade-board-student-trade-posts")
+        app.swipeUp(velocity: .slow)
+        attach(app, name: "trade-board-student-open-shifts")
+    }
+
     private func attach(_ app: XCUIApplication, name: String) {
         let screenshot = XCTAttachment(screenshot: app.screenshot())
         screenshot.name = name

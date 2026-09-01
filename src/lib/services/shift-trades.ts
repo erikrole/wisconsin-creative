@@ -1,4 +1,4 @@
-import { Prisma, Role, ShiftTradeStatus, type ShiftArea, type ShiftWorkerType } from "@prisma/client";
+import { Prisma, Role, ShiftTradeStatus, type ShiftArea } from "@prisma/client";
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
 import { ACTIVE_ASSIGNMENT_STATUSES } from "@/lib/shift-constants";
@@ -16,6 +16,11 @@ import { visibleActiveUserWhere } from "@/lib/user-visibility";
 import { enqueuePendingClaimReview } from "@/lib/claim-review-workflow";
 import { createAuditEntryTx } from "@/lib/audit";
 import { claimReviewDeadlines } from "@/lib/claim-review-deadlines";
+import {
+  claimableShiftAreas,
+  shiftClaimEligibilityReason,
+  type ShiftClaimProfile,
+} from "@/lib/shift-claim-eligibility";
 
 function assertShiftNotStarted(startsAt: Date) {
   if (startsAt <= new Date()) {
@@ -106,30 +111,6 @@ async function notify(
 /** Who is performing a trade mutation. Role gates staff-on-behalf actions. */
 export type TradeActor = { id: string; role?: string | null };
 export type TradeApprovalActor = { id: string; role: Role } | null;
-
-type TradeClaimProfile = {
-  active: boolean;
-  role: Role;
-  staffingType: ShiftWorkerType;
-  primaryArea: ShiftArea | null;
-  areaAssignments?: Array<{ area: ShiftArea }>;
-};
-
-function tradeClaimEligibilityReason(
-  profile: TradeClaimProfile,
-  shift: { area: ShiftArea; workerType: ShiftWorkerType },
-): string | null {
-  if (!profile.active) return "Inactive users cannot claim shifts";
-  if (shiftWorkerTypeForProfile(profile) !== shift.workerType) {
-    return "Your scheduling class does not match this shift slot";
-  }
-  const hasAreaMembership = profile.primaryArea === shift.area
-    || (profile.areaAssignments ?? []).some((assignment) => assignment.area === shift.area);
-  if (!hasAreaMembership) {
-    return `You are not assigned to this shift's area (${shift.area})`;
-  }
-  return null;
-}
 
 type TradePushJob = {
   userId: string;
@@ -368,7 +349,7 @@ export async function claimTrade(tradeId: string, userId: string) {
     assertShiftNotStarted(window.startsAt);
     await checkTimeConflict(tx, userId, window.startsAt, window.endsAt);
 
-    // Validate claimant's primary area matches the shift area
+    // Validate the same primary-area claim rule used to shape the board.
     const claimant = await tx.user.findUnique({
       where: { id: userId },
       select: {
@@ -376,12 +357,11 @@ export async function claimTrade(tradeId: string, userId: string) {
         role: true,
         staffingType: true,
         active: true,
-        areaAssignments: { select: { area: true } },
         availabilityBlocks: { select: availabilityBlockSelect },
       },
     });
     if (!claimant) throw new HttpError(404, "User not found");
-    const eligibilityReason = tradeClaimEligibilityReason(claimant, shift);
+    const eligibilityReason = shiftClaimEligibilityReason(claimant, shift);
     if (eligibilityReason) throw new HttpError(400, eligibilityReason);
     const availabilityContext = availabilityContextFromBlocks(claimant.availabilityBlocks ?? [], window);
     if (availabilityContext?.blocking) {
@@ -968,6 +948,20 @@ export async function listTrades(filters: {
 }) {
   const where: Prisma.ShiftTradeWhereInput = {};
   const and: Prisma.ShiftTradeWhereInput[] = [];
+  const viewerRows = filters.userId
+    ? await db.user.findMany({
+      where: { id: { in: [filters.userId] } },
+      select: {
+        id: true,
+        role: true,
+        staffingType: true,
+        active: true,
+        primaryArea: true,
+        availabilityBlocks: { select: availabilityBlockSelect },
+      },
+    })
+    : [];
+  const viewer = viewerRows[0] ?? null;
   if (filters.status) where.status = filters.status;
   if (filters.area) {
     and.push({ shiftAssignment: { shift: { area: filters.area as ShiftArea } } });
@@ -981,6 +975,19 @@ export async function listTrades(filters: {
       OR: [
         { status: { notIn: actionableStatuses } },
         { shiftAssignment: futureEffectiveAssignmentWhere(now) },
+      ],
+    });
+  }
+  if (filters.userId && viewer?.role === "STUDENT") {
+    and.push({
+      OR: [
+        { status: { not: "OPEN" } },
+        { postedByUserId: filters.userId },
+        {
+          shiftAssignment: {
+            shift: { area: { in: claimableShiftAreas(viewer.primaryArea) } },
+          },
+        },
       ],
     });
   }
@@ -1031,13 +1038,12 @@ export async function listTrades(filters: {
   });
   const total = await db.shiftTrade.count({ where });
   const availabilityUserIds = new Set<string>();
-  if (filters.userId) availabilityUserIds.add(filters.userId);
   for (const trade of data) {
     if (trade.status === "CLAIMED" && trade.claimedByUserId) {
       availabilityUserIds.add(trade.claimedByUserId);
     }
   }
-  const availabilityUsers = availabilityUserIds.size > 0
+  const relatedAvailabilityUsers = availabilityUserIds.size > 0
     ? await db.user.findMany({
       where: { id: { in: [...availabilityUserIds] } },
       select: {
@@ -1046,13 +1052,12 @@ export async function listTrades(filters: {
         staffingType: true,
         active: true,
         primaryArea: true,
-        areaAssignments: { select: { area: true } },
         availabilityBlocks: { select: availabilityBlockSelect },
       },
     })
     : [];
+  const availabilityUsers = [...viewerRows, ...relatedAvailabilityUsers];
   const usersById = new Map(availabilityUsers.map((user) => [user.id, user]));
-  const viewer = filters.userId ? usersById.get(filters.userId) ?? null : null;
   const viewerBlocks = viewer?.availabilityBlocks ?? [];
 
   return {
@@ -1068,7 +1073,7 @@ export async function listTrades(filters: {
         ? availabilityContextFromBlocks(usersById.get(trade.claimedByUserId)?.availabilityBlocks ?? [], window)
         : null;
       const viewerEligibilityReason = viewer
-        ? tradeClaimEligibilityReason(viewer, trade.shiftAssignment.shift)
+        ? shiftClaimEligibilityReason(viewer as ShiftClaimProfile, trade.shiftAssignment.shift)
         : null;
       let viewerCanClaim = false;
       let viewerClaimReason: string | null = null;
@@ -1233,7 +1238,6 @@ async function executeSwap(tx: Prisma.TransactionClient, assignmentId: string, t
       role: true,
       staffingType: true,
       primaryArea: true,
-      areaAssignments: { select: { area: true } },
       availabilityBlocks: {
         select: {
           kind: true,
@@ -1254,7 +1258,7 @@ async function executeSwap(tx: Prisma.TransactionClient, assignmentId: string, t
     },
   });
   if (!claimer) throw new HttpError(404, "Claiming user not found");
-  const eligibilityReason = tradeClaimEligibilityReason(claimer, assignment.shift);
+  const eligibilityReason = shiftClaimEligibilityReason(claimer, assignment.shift);
   if (eligibilityReason) throw new HttpError(409, eligibilityReason);
   const availability = evaluateAvailabilityPreferences(claimer.availabilityBlocks, effectiveWindow);
   if (availability.blocking) throw new HttpError(409, availability.blocking.note);

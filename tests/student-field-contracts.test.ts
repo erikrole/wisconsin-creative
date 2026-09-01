@@ -299,7 +299,8 @@ describe("student field mobile contracts", () => {
     expect(tradeBoard).toContain(".accessibilityLabel(\"Post trade\")");
     expect(tradeBoard).toContain(".navigationTitle(\"Trade Board\")");
     expect(tradeBoard).toContain("APIClient.shared.scheduleOpenWork(area: areaFilter)");
-    expect(tradeBoard).toContain("Available Now");
+    expect(tradeBoard).toContain('title: "Trade Posts"');
+    expect(tradeBoard).toContain('title: "Open Shifts"');
     expect(tradeBoard).toContain("My Posts");
     expect(tradeBoard).toContain("Waiting or Blocked");
     expect(tradeBoard).toContain("Text(\"Claim shift\")");

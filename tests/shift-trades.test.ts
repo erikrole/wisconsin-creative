@@ -442,16 +442,35 @@ describe("claimTrade", () => {
   it("throws 400 when area mismatch", async () => {
     mockTx.shiftTrade.findUnique.mockResolvedValue(openTrade());
     mockTx.user.findUnique.mockResolvedValue(makeUser({ primaryArea: "Courts", areaAssignments: [] }));
-    await expect(claimTrade("trade-1", "claimer-1")).rejects.toThrow("not assigned to this shift's area");
+    await expect(claimTrade("trade-1", "claimer-1")).rejects.toThrow("cannot claim shifts in this area");
   });
 
-  it("allows a claimant whose secondary area matches the trade", async () => {
+  it("does not let a secondary area widen claim eligibility", async () => {
     const trade = openTrade();
     mockTx.shiftTrade.findUnique.mockResolvedValue(trade);
     mockTx.user.findUnique.mockResolvedValue(makeUser({
       primaryArea: "Courts",
       areaAssignments: [{ area: "Field", isPrimary: false }],
     }));
+
+    await expect(claimTrade(trade.id, "claimer-1")).rejects.toThrow(
+      "cannot claim shifts in this area",
+    );
+    expect(mockTx.shiftTrade.update).not.toHaveBeenCalled();
+  });
+
+  it("allows Photo and Graphics students to claim across the shared pair", async () => {
+    const trade = openTrade({
+      shiftAssignment: {
+        ...makeShiftAssignment(),
+        shift: {
+          ...makeShift({ area: "GRAPHICS" }),
+          shiftGroup: { event: { summary: "Wisconsin vs Iowa" } },
+        },
+      },
+    });
+    mockTx.shiftTrade.findUnique.mockResolvedValue(trade);
+    mockTx.user.findUnique.mockResolvedValue(makeUser({ primaryArea: "PHOTO" }));
     mockTx.shiftAssignment.findUnique.mockResolvedValue({ ...trade.shiftAssignment });
     mockTx.shiftTrade.update.mockResolvedValue(claimedTrade(trade));
 
@@ -462,7 +481,7 @@ describe("claimTrade", () => {
     mockTx.shiftTrade.findUnique.mockResolvedValue(openTrade());
     mockTx.user.findUnique.mockResolvedValue(makeUser({ primaryArea: null, areaAssignments: [] }));
 
-    await expect(claimTrade("trade-1", "claimer-1")).rejects.toThrow("not assigned to this shift's area");
+    await expect(claimTrade("trade-1", "claimer-1")).rejects.toThrow("cannot claim shifts in this area");
     expect(mockTx.shiftTrade.update).not.toHaveBeenCalled();
   });
 
@@ -782,7 +801,7 @@ describe("approveTrade", () => {
       primaryArea: "Courts",
       areaAssignments: [],
     }));
-    await expect(approveTrade(trade.id)).rejects.toThrow("not assigned to this shift's area");
+    await expect(approveTrade(trade.id)).rejects.toThrow("cannot claim shifts in this area");
 
     expect(mockTx.shiftTrade.update).not.toHaveBeenCalled();
     expect(mockTx.auditLog.create).not.toHaveBeenCalled();
@@ -1296,7 +1315,10 @@ describe("listTrades", () => {
     const result = await listTrades({ userId: "viewer-1", limit: 100, offset: 0 });
 
     expect(mockDb.user.findMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: { id: { in: ["viewer-1", "claimer-1"] } },
+      where: { id: { in: ["viewer-1"] } },
+    }));
+    expect(mockDb.user.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: { in: ["claimer-1"] } },
     }));
     expect(result.data[0]).toEqual(expect.objectContaining({
       viewerAvailabilityContext: expect.objectContaining({
@@ -1341,7 +1363,7 @@ describe("listTrades", () => {
 
     expect(blocked.data[0]).toEqual(expect.objectContaining({
       viewerCanClaim: false,
-      viewerClaimReason: "You are not assigned to this shift's area (VIDEO)",
+      viewerClaimReason: "You cannot claim shifts in this area (VIDEO)",
     }));
 
     mockDb.user.findMany.mockResolvedValue([{
@@ -1372,8 +1394,31 @@ describe("listTrades", () => {
 
     const secondaryArea = await listTrades({ userId: "viewer-1", limit: 100, offset: 0 });
     expect(secondaryArea.data[0]).toEqual(expect.objectContaining({
-      viewerCanClaim: true,
-      viewerClaimReason: null,
+      viewerCanClaim: false,
+      viewerClaimReason: "You cannot claim shifts in this area (VIDEO)",
+    }));
+    expect(mockDb.shiftTrade.findMany).toHaveBeenLastCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        AND: expect.arrayContaining([expect.objectContaining({
+          OR: expect.arrayContaining([{
+            shiftAssignment: { shift: { area: { in: ["PHOTO", "GRAPHICS"] } } },
+          }]),
+        })]),
+      }),
+    }));
+
+    mockDb.user.findMany.mockResolvedValue([{
+      id: "viewer-1",
+      role: "STUDENT",
+      staffingType: "ST",
+      active: true,
+      primaryArea: "GRAPHICS",
+      availabilityBlocks: [],
+    }]);
+    const photoGraphics = await listTrades({ userId: "viewer-1", limit: 100, offset: 0 });
+    expect(photoGraphics.data[0]).toEqual(expect.objectContaining({
+      viewerCanClaim: false,
+      viewerClaimReason: "You cannot claim shifts in this area (VIDEO)",
     }));
   });
 });

@@ -12,7 +12,11 @@ describe("schedule open work source contracts", () => {
     expect(tradeBoard).toContain("OpenWorkShift");
     expect(tradeBoard).toContain("Open Shifts");
     expect(tradeBoard).toContain("/api/schedule/open-work");
-    expect(tradeBoard).toContain("Available Now");
+    expect(tradeBoard).toContain('title="Trade Posts"');
+    expect(tradeBoard).toContain('title="Open Shifts"');
+    expect(tradeBoard).toContain('count={claimableTrades.length}');
+    expect(tradeBoard).toContain('count={claimableOpenShifts.length}');
+    expect(tradeBoard).not.toContain('title="Available Now"');
     expect(tradeBoard).toContain("My Posts");
     expect(tradeBoard).toContain("Waiting or Blocked");
     expect(tradeBoard).toContain("Canceling removes the post; the shift stays assigned to you.");
@@ -50,6 +54,8 @@ describe("schedule open work source contracts", () => {
     expect(service).toContain("availabilityContextFromCandidate");
     expect(service).toContain("availabilityContext,");
     expect(service).toContain('filters.role === "ADMIN"');
+    expect(service).toContain('filters.role === "STUDENT"');
+    expect(service).toContain("claimableShiftAreas(candidate?.primaryArea)");
   });
 
   it("keeps pickup mutation audited, publication-safe, and notification-policy wired", () => {
@@ -61,7 +67,8 @@ describe("schedule open work source contracts", () => {
     expect(route).toContain("shift_pickup_requested");
     expect(route).toContain("dispatchScheduleAssignmentNotifications(assignment.id, \"requested\")");
     expect(service).toContain("Draft shifts are not open for pickup");
-    expect(service).toContain("Open pickup is available for Student slots only");
+    expect(service).toContain("shiftClaimEligibilityReason(user, shift)");
+    expect(service).toContain("primaryArea: true");
     expect(service).toContain("const window = effectiveWindow(shift)");
     expect(service).toContain("if (window.startsAt <= new Date())");
     expect(service).toContain("TransactionIsolationLevel.Serializable");
@@ -107,7 +114,9 @@ describe("schedule open work source contracts", () => {
     // Area filter and paging bring the native board level with web.
     expect(sheet).toContain("func loadMoreTrades()");
     expect(sheet).toContain("shiftTrades(area: areaFilter, limit: pageSize)");
-    expect(sheet).toContain("Available Now");
+    expect(sheet).toContain('title: "Trade Posts"');
+    expect(sheet).toContain('title: "Open Shifts"');
+    expect(sheet).not.toContain('title: "Available Now"');
     expect(sheet).toContain("My Posts");
     expect(sheet).toContain("Waiting or Blocked");
     expect(sheet).toContain("An admin reviews this before you're on the schedule.");

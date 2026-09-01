@@ -112,7 +112,7 @@
 | File | Lines |
 |---|---:|
 | `src/components/resources/BrandAssetLibrary.tsx` | 1827 |
-| `src/components/TradeBoard.tsx` | 1795 |
+| `src/components/TradeBoard.tsx` | 1805 |
 | `src/components/ActivityTimeline.tsx` | 1375 |
 | `src/components/onboarding/OnboardingDialog.tsx` | 996 |
 | `src/components/EquipmentPicker.tsx` | 916 |

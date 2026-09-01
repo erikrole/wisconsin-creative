@@ -35,7 +35,7 @@ describe("native Schedule availability and Trade Board redesign", () => {
     expect(schedule).toContain("AvailabilityView(userId: session.currentUser?.id ?? \"\")");
   });
 
-  it("prioritizes actionable shifts and keeps My Posts a quiet scope", () => {
+  it("separates trade posts from open shifts and keeps My Posts a quiet scope", () => {
     const board = source("ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift");
     const models = source("ios/Wisconsin/Models/ShiftTradeModels.swift");
 
@@ -44,6 +44,11 @@ describe("native Schedule availability and Trade Board redesign", () => {
     expect(board).toContain("Show my trade posts");
     expect(board).toContain("private var availableContent");
     expect(board).toContain("private var myPostsContent");
+    expect(board).toContain('title: "Trade Posts"');
+    expect(board).toContain('title: "Open Shifts"');
+    expect(board).toContain("Shifts another student posted for coverage.");
+    expect(board).toContain("Unassigned Student slots.");
+    expect(board).not.toContain('title: "Available Now"');
     expect(board).toContain("dateTimeLine");
     expect(board).toContain("classificationColor");
     expect(board).toContain(".buttonStyle(.borderedProminent)");
@@ -68,8 +73,8 @@ describe("native Schedule availability and Trade Board redesign", () => {
     expect(board).toContain("TradeBoardActionErrorBanner(");
     expect(board).toContain("var tradeLoadError: String?");
     expect(board).toContain("var openWorkLoadError: String?");
-    expect(board).toContain("func loadTrades() async");
-    expect(board).toContain("func loadOpenWork() async");
+    expect(board).toContain("func loadTrades(forceRefresh: Bool = false) async");
+    expect(board).toContain("func loadOpenWork(forceRefresh: Bool = false) async");
     expect(board).toContain("TradeBoardSourceErrorRow(");
     expect(board).toContain("isComplete: !vm.hasSourceFailure");
   });

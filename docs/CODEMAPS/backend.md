@@ -64,16 +64,16 @@
 | `src/lib/services/schedule-notification-diff.ts` | 197 |
 | `src/lib/services/schedule-notification-flush.ts` | 175 |
 | `src/lib/services/schedule-notification-policy.ts` | 138 |
-| `src/lib/services/schedule-open-work.ts` | 545 |
+| `src/lib/services/schedule-open-work.ts` | 566 |
 | `src/lib/services/schedule-publication.ts` | 1028 |
 | `src/lib/services/schedule-template-review.ts` | 554 |
 | `src/lib/services/schedule-working-copy.ts` | 1095 |
 | `src/lib/services/scoreboard.ts` | 303 |
 | `src/lib/services/shift-assignment-conflicts.ts` | 43 |
-| `src/lib/services/shift-assignments.ts` | 676 |
+| `src/lib/services/shift-assignments.ts` | 683 |
 | `src/lib/services/shift-generation.ts` | 628 |
 | `src/lib/services/shift-trade-emails.ts` | 56 |
-| `src/lib/services/shift-trades.ts` | 1316 |
+| `src/lib/services/shift-trades.ts` | 1320 |
 | `src/lib/services/signatures.ts` | 1986 |
 | `src/lib/services/software.ts` | 271 |
 | `src/lib/services/sport-auto-assign-policies.ts` | 46 |
@@ -214,6 +214,7 @@
 | `src/lib/serialization.ts` | 47 |
 | `src/lib/shell-navigation.ts` | 11 |
 | `src/lib/shift-call-windows.ts` | 182 |
+| `src/lib/shift-claim-eligibility.ts` | 48 |
 | `src/lib/shift-constants.ts` | 8 |
 | `src/lib/shift-display.ts` | 71 |
 | `src/lib/shift-notification-workflow.ts` | 18 |

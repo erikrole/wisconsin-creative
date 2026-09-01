@@ -152,6 +152,7 @@ describe("schedule open work", () => {
             ],
           },
         ],
+        area: { in: ["VIDEO"] },
         workerType: "ST",
         assignments: { none: { status: { in: ["DIRECT_ASSIGNED", "APPROVED"] } } },
         shiftGroup: expect.objectContaining({
@@ -324,6 +325,50 @@ describe("schedule open work", () => {
         status: "REQUESTED",
       }),
     }));
+  });
+
+  it("hides other-area open shifts from Students but preserves the Photo/Graphics exception", async () => {
+    mockDb.user.findUnique.mockResolvedValue({
+      ...activeStudent(),
+      primaryArea: "PHOTO",
+      areaAssignments: [{ area: "VIDEO", isPrimary: false }],
+    });
+    mockDb.shiftAssignment.findMany.mockResolvedValue([]);
+    mockDb.shift.findMany.mockResolvedValue([]);
+
+    await getScheduleOpenWork({ userId: "student-1", role: "STUDENT", now });
+
+    expect(mockDb.shift.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ area: { in: ["PHOTO", "GRAPHICS"] } }),
+    }));
+  });
+
+  it("rejects a direct open-shift claim outside the primary area", async () => {
+    mockDb._mockTx.shift.findUnique.mockResolvedValue(baseShift());
+    mockDb._mockTx.user.findUnique.mockResolvedValue({
+      ...activeStudent(),
+      primaryArea: "PHOTO",
+      areaAssignments: [{ area: "VIDEO", isPrimary: false }],
+    });
+
+    await expect(pickupOpenShift("shift-1", "student-1")).rejects.toThrow(
+      "cannot claim shifts in this area",
+    );
+    expect(mockDb._mockTx.shiftAssignment.create).not.toHaveBeenCalled();
+  });
+
+  it("allows a Photo student to claim a Graphics open shift", async () => {
+    mockDb._mockTx.shift.findUnique.mockResolvedValue(baseShift({ area: "GRAPHICS" }));
+    mockDb._mockTx.user.findUnique.mockResolvedValue({
+      ...activeStudent(),
+      primaryArea: "PHOTO",
+    });
+    mockDb._mockTx.shiftAssignment.findFirst.mockResolvedValue(null);
+    mockDb._mockTx.shiftAssignment.create.mockResolvedValue({ id: "assignment-1", status: "REQUESTED" });
+
+    await expect(pickupOpenShift("shift-1", "student-1")).resolves.toMatchObject({
+      status: "REQUESTED",
+    });
   });
 
   it("files an open-slot claim as a pending request, holding no slot", async () => {

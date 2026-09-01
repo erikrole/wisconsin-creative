@@ -12,11 +12,15 @@ import {
 import { scoreCandidatesForShift, type CandidateScoringUser } from "@/lib/services/candidate-scoring";
 import { evaluateAvailabilityPreferences } from "@/lib/student-availability";
 import { availabilityContextFromCandidate } from "@/lib/schedule-availability-context";
-import { shiftWorkerTypeForProfile } from "@/lib/shift-display";
 import { withSerializationRetry } from "@/lib/serialization";
 import { assertNoWorkingCopy } from "@/lib/schedule-working-copy-guard";
 import { createAuditEntryTx } from "@/lib/audit";
 import { claimReviewDeadlines } from "@/lib/claim-review-deadlines";
+import {
+  claimableShiftAreas,
+  shiftClaimAreaEligibilityReason,
+  shiftClaimEligibilityReason,
+} from "@/lib/shift-claim-eligibility";
 
 const ACTIVE_STATUSES = ACTIVE_ASSIGNMENT_STATUSES as ShiftAssignmentStatus[];
 
@@ -26,6 +30,7 @@ type OpenWorkFilters = {
   area?: ShiftArea;
   now?: Date;
   limit?: number;
+  claimableAreas?: ShiftArea[] | null;
 };
 
 type OpenWorkShift = Awaited<ReturnType<typeof loadOpenShiftRows>>[number];
@@ -169,10 +174,17 @@ async function loadCurrentCandidate(userId: string, now: Date, futureEnd: Date):
 
 async function loadOpenShiftRows(filters: OpenWorkFilters) {
   const now = filters.now ?? new Date();
+  const constrainedAreas = filters.claimableAreas
+    ? filters.area
+      ? filters.claimableAreas.includes(filters.area) ? [filters.area] : []
+      : filters.claimableAreas
+    : null;
   return db.shift.findMany({
     where: {
       AND: [futureEffectiveShiftWhere(now)],
-      ...(filters.area ? { area: filters.area } : {}),
+      ...(constrainedAreas
+        ? { area: { in: constrainedAreas } }
+        : filters.area ? { area: filters.area } : {}),
       workerType: "ST",
       assignments: {
         none: { status: { in: ACTIVE_STATUSES } },
@@ -231,8 +243,14 @@ function serializeOpenShift(shift: OpenWorkShift, args: {
   const ownRequest = shift.assignments.find((assignment) => assignment.userId === args.userId) ?? null;
   const isStudentWorker = args.candidate?.staffingType === "ST";
   const availabilityContext = availabilityContextFromCandidate(recommendation);
-  const blockedReason = openShiftBlockedReason(recommendation);
-  const canAct = isStudentWorker && shift.workerType === "ST" && !recommendation?.blockingConflict;
+  const areaReason = args.candidate
+    ? shiftClaimAreaEligibilityReason(args.candidate.primaryArea, shift.area)
+    : "Your scheduling profile is unavailable";
+  const blockedReason = areaReason ?? openShiftBlockedReason(recommendation);
+  const canAct = isStudentWorker
+    && shift.workerType === "ST"
+    && !areaReason
+    && !recommendation?.blockingConflict;
   const action = !canAct || !isStudentWorker || shift.workerType !== "ST" || recommendation?.blockingConflict
     ? "none"
     : "claim";
@@ -278,9 +296,12 @@ function serializeOpenShift(shift: OpenWorkShift, args: {
 export async function getScheduleOpenWork(filters: OpenWorkFilters) {
   const now = filters.now ?? new Date();
   const futureEnd = addDays(now, 120);
-  const [candidate, shifts, pickupRequests] = await Promise.all([
-    loadCurrentCandidate(filters.userId, now, futureEnd),
-    loadOpenShiftRows({ ...filters, now }),
+  const candidate = await loadCurrentCandidate(filters.userId, now, futureEnd);
+  const studentClaimableAreas = filters.role === "STUDENT"
+    ? claimableShiftAreas(candidate?.primaryArea)
+    : null;
+  const [shifts, pickupRequests] = await Promise.all([
+    loadOpenShiftRows({ ...filters, now, claimableAreas: studentClaimableAreas }),
     // Admins see every request because they own review. Everyone else sees only
     // their own — without it, claiming a shift looks like nothing happened.
     db.shiftAssignment.findMany({
@@ -386,6 +407,7 @@ export async function pickupOpenShift(shiftId: string, userId: string) {
           role: true,
           staffingType: true,
           active: true,
+          primaryArea: true,
           availabilityBlocks: {
             select: {
               kind: true,
@@ -409,10 +431,9 @@ export async function pickupOpenShift(shiftId: string, userId: string) {
 
     if (!shift) throw new HttpError(404, "Shift not found");
     assertNoWorkingCopy(shift.shiftGroup.workingCopy);
-    if (!user || !user.active) throw new HttpError(400, "Cannot claim a shift for an inactive user");
-    if (shiftWorkerTypeForProfile(user) !== "ST" || shift.workerType !== "ST") {
-      throw new HttpError(400, "Open pickup is available for Student slots only");
-    }
+    if (!user) throw new HttpError(404, "User not found");
+    const eligibilityReason = shiftClaimEligibilityReason(user, shift);
+    if (eligibilityReason) throw new HttpError(400, eligibilityReason);
     if (!shift.shiftGroup.publishedAt) throw new HttpError(400, "Draft shifts are not open for pickup");
     if (shift.shiftGroup.archivedAt || shift.shiftGroup.event.archivedAt || shift.shiftGroup.event.isHidden || shift.shiftGroup.event.status === "CANCELLED") {
       throw new HttpError(400, "This shift is not open for pickup");

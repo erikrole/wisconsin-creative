@@ -14,6 +14,7 @@ import { assertNoWorkingCopy } from "@/lib/schedule-working-copy-guard";
 import { scheduleAssigneeWorkerType } from "@/lib/schedule-assignee";
 import { createAuditEntryTx } from "@/lib/audit";
 import { dispatchScheduleAssignmentNotifications } from "@/lib/services/notifications";
+import { shiftClaimAreaEligibilityReason } from "@/lib/shift-claim-eligibility";
 
 export type RoleSlotOutcome = {
   requestedShiftId: string;
@@ -413,6 +414,7 @@ export async function approveRequest(assignmentId: string, actor: ShiftApprovalA
             role: true,
             staffingType: true,
             active: true,
+            primaryArea: true,
             collaboratorPolicy: {
               select: {
                 status: true,
@@ -451,6 +453,11 @@ export async function approveRequest(assignmentId: string, actor: ShiftApprovalA
     if (scheduleAssigneeWorkerType(assignment.user) !== assignment.shift.workerType) {
       throw new HttpError(409, "This worker no longer matches the slot's scheduling class");
     }
+    const areaEligibilityReason = shiftClaimAreaEligibilityReason(
+      assignment.user.primaryArea,
+      assignment.shift.area,
+    );
+    if (areaEligibilityReason) throw new HttpError(409, areaEligibilityReason);
 
     // Re-check time conflicts — the user may have been assigned another shift
     // between the time they requested and the time Admin approves.

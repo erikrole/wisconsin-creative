@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Mobile Operations
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-30
+- Last Updated: 2026-08-31
 - Status: Active
 - Version: V1
 
@@ -23,7 +23,7 @@ Cheqroom mobile patterns show useful primitives but too much menu depth and too 
 5. Event sync supports booking context and prefill, but V1 mobile does not require an Upcoming Events dashboard section.
 6. Tap targets stay at 44px or larger.
 7. Native reservation equipment rows consume the server's top-level availability result before selection. Known serialized conflicts are disabled and block review; next-use, close-turnaround, transfer, and condition notices remain actionable advisories. A failed refresh preserves the last known result and blocks review until availability can be checked again.
-8. Native Schedule reads the complete selected event window through total-aware API pages; SwiftUI keeps row materialization lazy while the current past-event permission boundary remains unchanged. Native Event detail shows an approval-aware pending state for the signed-in student's own open-slot request, while claim review queues and approve/decline actions render only for Admins.
+8. Native Schedule reads the complete selected event window through total-aware API pages; SwiftUI keeps row materialization lazy while the current past-event permission boundary remains unchanged. Native Event detail shows an approval-aware pending state for the signed-in student's own open-slot request, while claim review queues and approve/decline actions render only for Admins. Student Trade Board/Open Work payloads contain claim opportunities from the viewer's primary area only, except Photo and Graphics share one claim pool.
 
 ## Mobile Navigation Contract (V1)
 1. Primary destinations:
@@ -143,6 +143,10 @@ Navigation shell versioned roadmap: `tasks/sidebar-roadmap.md` (revised 2026-03-
 - **V3 (later)**: Bottom nav badge counts via live `/api/nav-counts` polling, game-day/shift context cards
 
 ## Change Log
+
+- 2026-08-31: **Native Trade Board no longer exposes other-area claim work.** The server-owned Trade Board and Open Work reads now limit Student opportunities to the signed-in worker's primary area, with Photo and Graphics as the only cross-area exception. Personal posts, pending claims, and history remain visible, and Staff/Admin retain global operational reads. Direct claims and approval-time revalidation use the same rule, so a stale or crafted client cannot bypass what the native sheet hides.
+
+- 2026-08-31: **Native Trade Board distinguishes trade posts from open shifts.** The student browse state now gives shifts another student posted a dedicated `Trade Posts` section and gives unassigned published Student slots a separate `Open Shifts` section, each with source-specific approval copy. Personal waiting state and Admin review remain consolidated, and no API, eligibility, assignment, or approval lifecycle changed.
 
 - 2026-08-30: **The native HIG remediation pass is source-complete with explicit runtime boundaries.** Reservation and Schedule controls now preserve native cancellation/navigation semantics, meet the 44-point interaction floor, use bounded time input, and expose frequent lifecycle actions visibly. Kiosk identity and text entry preserve accessibility-size layout and UIKit Paste/drag/Scribble behavior. Scanner/photo surfaces own readable status-bar treatment, retry and zoom recovery, while thumbnails, symbols, contrast, Dynamic Type, VoiceOver, Reduce Motion, haptics, and color tokens follow the shared contracts. Notification delivery and refresh ownership now distinguish stale work from current state, and the self-delete route erases direct personal/authentication data while retaining only the documented custody/audit boundary. The mandated iPhone 16 Pro iOS 26.5 build and focused source contracts pass; authenticated runtime, APNs, VoiceOver, camera, managed-kiosk, iPad, Mac, physical-device, and deployment acceptance remain separate gates. P2-291 remains the accepted additive passkey/password fallback under D-043.
 

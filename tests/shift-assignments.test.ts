@@ -597,6 +597,7 @@ describe("approveRequest", () => {
     active: true,
     role: "STUDENT",
     staffingType: "ST",
+    primaryArea: shift.area,
     collaboratorPolicy: null,
     availabilityBlocks: [],
   };
@@ -760,6 +761,19 @@ describe("approveRequest", () => {
     });
 
     await expect(approveRequest("sa-1")).rejects.toThrow("no longer matches");
+    expect(mockTx.shiftAssignment.update).not.toHaveBeenCalled();
+  });
+
+  it("rejects approval when the requester no longer matches the claimable area", async () => {
+    mockTx.shiftAssignment.findUnique.mockResolvedValue({
+      ...makeShiftAssignment({ status: "REQUESTED" }),
+      shift,
+      user: { ...eligibleStudent, primaryArea: "PHOTO" },
+    });
+
+    await expect(approveRequest("sa-1")).rejects.toThrow(
+      "cannot claim shifts in this area",
+    );
     expect(mockTx.shiftAssignment.update).not.toHaveBeenCalled();
   });
 });

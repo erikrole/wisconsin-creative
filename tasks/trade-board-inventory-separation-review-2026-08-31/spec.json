@@ -1,0 +1,70 @@
+{
+  "title": "Trade Board Inventory Separation",
+  "eyebrow": "iOS · Wisconsin Creative",
+  "lede": "Students can now tell whether they are taking over another student's posted shift or requesting an unassigned open slot before they act.",
+  "stats": [
+    {
+      "k": "Browse sections",
+      "v": "1 → 2",
+      "n": "The same two fixture records now retain their source meaning",
+      "tone": "good"
+    },
+    {
+      "k": "Mutation paths",
+      "v": "Unchanged",
+      "n": "Trade claim and open-slot pickup still wait for Admin approval"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Student-posted trades",
+      "note": "Same iPhone 16 Pro, role, fixture data, and automated scroll target.",
+      "pairs": [
+        {
+          "title": "A named student's coverage request",
+          "sub": "The row identifies Priya as the poster and retains the trade-specific claim action.",
+          "before": "before/trade-posts.png",
+          "beforeCap": "Was: the trade sat in one mixed Available Now pool beside an unassigned slot.",
+          "after": "after/trade-posts.png",
+          "afterCap": "Now: Trade Posts establishes that this is a person-to-person coverage request."
+        }
+      ]
+    },
+    {
+      "heading": "Unassigned open shifts",
+      "note": "The open Student slot is the same fixture record in both captures.",
+      "pairs": [
+        {
+          "title": "A published slot with nobody assigned",
+          "sub": "The row keeps its open-slot claim action and separate pickup-request consequence.",
+          "before": "before/open-shifts.png",
+          "beforeCap": "Was: the open slot and trade post shared the same Available Now heading.",
+          "after": "after/open-shifts.png",
+          "afterCap": "Now: Open Shifts names the inventory and explains that claiming sends a pickup request."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Two workflows looked interchangeable",
+      "was": "Available Now merged unassigned Student slots and student-posted trades, even though they come from different records and have different human meaning.",
+      "now": "Trade Posts and Open Shifts have independent headings, counts, and consequence copy on native iOS and web."
+    },
+    {
+      "h": "The summary counted shifts, not decisions",
+      "was": "The native summary called both record types shifts available, reinforcing the idea that they were one inventory.",
+      "now": "The summary counts opportunities and points students to the two source-specific sections below."
+    }
+  ],
+  "verification": [
+    "<strong>Matched iOS UI test:</strong> source-control baseline and changed source both passed on iPhone 16 Pro, iOS 26.5, using the same deterministic fixture.",
+    "<strong>35 focused tests</strong> pass across Trade Board, Open Work, Admin review, student field, and consequence-copy contracts.",
+    "<strong>TypeScript, full ESLint, and the 253-page app build</strong> pass; iOS project integrity, drift, audit-gap, and pinned iPhone 16 Pro build checks pass.",
+    "<strong>Docs:</strong> codemaps are current and repository documentation verification passes."
+  ],
+  "notes": [
+    "The Admin review queue and the student's Waiting on Admin section intentionally remain unified because both claim types have the same review and recovery job.",
+    "No production data was read or mutated. Authenticated web rendering, deployment, TestFlight, and physical-device acceptance remain separate gates."
+  ]
+}

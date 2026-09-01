@@ -1045,7 +1045,7 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
 
       <Card elevation="flat" className="overflow-hidden border-border/60 shadow-sm">
         <CardHeader className="flex-row items-center justify-between gap-3 border-b border-border/60 px-4 py-3">
-          <CardTitle className="text-sm">Open Shifts</CardTitle>
+          <CardTitle className="text-sm">Trade Board</CardTitle>
           <span className="text-xs font-medium tabular-nums text-muted-foreground">
             {hasAnyLoadError ? "Partial data" : countLabel}
           </span>
@@ -1121,11 +1121,12 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
               </WorkSection>
             )}
 
-            <WorkSection
-              title="Available Now"
-              description="Claim these to send them to an admin for approval."
-              count={claimableOpenShifts.length + claimableTrades.length}
-            >
+            {claimableOpenShifts.length > 0 && (
+              <WorkSection
+                title="Open Shifts"
+                description="Unassigned Student slots. Claiming sends a pickup request to an admin."
+                count={claimableOpenShifts.length}
+              >
               {claimableOpenShifts.map((item) => {
               const shift = item.shift;
               const event = shift.shiftGroup.event;
@@ -1209,8 +1210,16 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
                   </div>
                 </article>
               );
-            })}
+              })}
+              </WorkSection>
+            )}
 
+            {claimableTrades.length > 0 && (
+              <WorkSection
+                title="Trade Posts"
+                description="Shifts another student posted for coverage. Claiming sends the trade to an admin."
+                count={claimableTrades.length}
+              >
               {claimableTrades.map((trade) => {
                 const shift = trade.shiftAssignment.shift;
                 const event = shift.shiftGroup.event;
@@ -1293,8 +1302,9 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
                     </div>
                   </article>
                 );
-              })}
-            </WorkSection>
+                })}
+              </WorkSection>
+            )}
 
             <WorkSection
               title="My Posts"
