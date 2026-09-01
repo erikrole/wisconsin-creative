@@ -534,6 +534,11 @@ describe("signature roster presentation", () => {
     expect(source).toContain('triggerClassName="size-11"');
     expect(source).toContain("Danger zone");
     expect(source).toContain("Creative Staff is syncing automatically");
+    expect(source).toContain('const canRemoveFromRoster = collection.status === "OPEN" && member.roleGroup === "PLAYER";');
+    expect(source).toContain('"DELETE", { expectedCollectionVersion: collection.collectionVersion }');
+    expect(source).toContain("Remove from roster");
+    expect(source).toContain("Their saved signature history will be kept.");
+    expect(source).toContain("A future roster import may add this player again.");
     expect(source).toContain("Capture on iPad");
     expect(source).toContain("Capture can only be done on an iPad with an Apple Pencil.");
     expect(source).toContain("disabled");

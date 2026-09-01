@@ -15,7 +15,9 @@ describe("native booking extend concurrency contract", () => {
 
     expect(extendMethod).toContain("updatedAt: Date?");
     expect(extendMethod).toContain('Refresh this booking before extending it.');
-    expect(extendMethod).toContain('forHTTPHeaderField: "If-Unmodified-Since"');
+    expect(extendMethod).toContain('forHTTPHeaderField: "X-Booking-Updated-At"');
+    expect(extendMethod).toContain("bookingSnapshotString(updatedAt)");
+    expect(extendMethod).not.toContain("If-Unmodified-Since");
     expect(extendMethod).toContain("let response: DataWrapper<Booking> = try await perform(req)");
     expect(extendMethod).toContain("return response.data");
     expect(extendMethod).not.toContain("authenticatedData(for: req)");

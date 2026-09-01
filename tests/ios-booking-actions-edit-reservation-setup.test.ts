@@ -44,7 +44,8 @@ describe("iOS focused booking edit and transfer", () => {
 
   it("uses the existing optimistic-lock and complete-equipment contracts", () => {
     expect(api).toContain("func transferBookingOwner(id: String, targetUserId: String, updatedAt: Date?)");
-    expect(api).toContain('forHTTPHeaderField: "If-Unmodified-Since"');
+    expect(api).toContain('forHTTPHeaderField: "X-Booking-Updated-At"');
+    expect(api).not.toContain("If-Unmodified-Since");
     expect(api).toContain('request(path: "/api/bookings/\\(id)/transfer-owner", method: "POST")');
     expect(api).toContain("func bookingAvailability(for booking: Booking, endsAt: Date)");
     expect(api).toContain("serializedAssetIds: booking.serializedItems.map(\\.assetId)");

@@ -188,6 +188,11 @@ describe("schedule timeline", () => {
     expect(listView).toContain("didAnchorRef");
   });
 
+  it("retries the Today anchor when rows arrive after loading settles", () => {
+    expect(listView).toContain("groupedEntries.length === 0");
+    expect(listView).toContain("}, [groupedEntries, isTimeline, loading, anchorToday]);");
+  });
+
   it("names the archive floor and offers the way through it", () => {
     expect(listView).toContain("Older records are archived");
     expect(listView).toContain("Load older records");

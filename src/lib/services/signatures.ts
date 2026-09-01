@@ -1329,6 +1329,88 @@ export async function updateSignatureMemberRequired(input: {
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
 
+/**
+ * Remove a player from the active roster without deleting the source member
+ * row or its private signature history. The separate Remove signature action
+ * remains the explicit artifact-erasure boundary. A later reviewed source
+ * snapshot may reactivate this member.
+ */
+export async function removeSignatureMemberFromRoster(input: {
+  actor: Actor;
+  collectionId: string;
+  memberId: string;
+  expectedCollectionVersion: number;
+}) {
+  return withSerializationRetry(() => db.$transaction(async (tx) => {
+    const collection = await tx.signatureCollection.findUnique({
+      where: { id: input.collectionId },
+      select: { id: true, status: true, collectionVersion: true },
+    });
+    if (!collection) throw new HttpError(404, "Signature collection not found");
+    if (collection.status === SignatureCollectionStatus.ARCHIVED) throw new HttpError(409, "Archived signature collections are read-only");
+    if (collection.collectionVersion !== input.expectedCollectionVersion) throw new HttpError(409, "Collection changed since this form was opened");
+
+    const member = await tx.signatureMember.findFirst({
+      where: { id: input.memberId, collectionId: input.collectionId },
+      select: {
+        id: true,
+        name: true,
+        roleGroup: true,
+        active: true,
+        capture: { select: { id: true, captureVersion: true } },
+      },
+    });
+    if (!member) throw new HttpError(404, "Signature member not found");
+    if (member.roleGroup !== SignatureMemberGroup.PLAYER) throw new HttpError(400, "Only players can be removed from a team signature roster");
+    if (!member.active) return { memberId: member.id, collectionVersion: collection.collectionVersion, removed: false };
+
+    // Mark active saves failed before fencing the capture. Existing committed
+    // artifacts stay private and intact; a later source import can restore the
+    // row and the separate Remove signature action can erase those artifacts.
+    await tx.signatureSaveOperation.updateMany({
+      where: {
+        collectionId: input.collectionId,
+        memberId: member.id,
+        status: { in: [SignatureSaveStatus.UPLOADING, SignatureSaveStatus.FINALIZING] },
+      },
+      data: { status: SignatureSaveStatus.FAILED, errorMessage: "Signature roster member was removed" },
+    });
+    await tx.signatureMember.update({ where: { id: member.id }, data: { active: false } });
+    if (member.capture) {
+      // Incrementing the capture version fences any request that was already in
+      // flight without changing the committed signature or its revision list.
+      await tx.signatureCapture.update({ where: { id: member.capture.id }, data: { captureVersion: { increment: 1 } } });
+    }
+
+    const updated = await tx.signatureCollection.update({
+      where: { id: input.collectionId },
+      data: { collectionVersion: { increment: 1 }, updatedById: input.actor.id },
+      select: { collectionVersion: true },
+    });
+    await createAuditEntryTx(tx, {
+      actorId: input.actor.id,
+      actorRole: input.actor.role,
+      entityType: "SignatureMember",
+      entityId: member.id,
+      action: "REMOVE_FROM_ROSTER",
+      before: {
+        active: true,
+        name: member.name,
+        roleGroup: member.roleGroup,
+        captureVersion: member.capture?.captureVersion ?? null,
+        collectionVersion: collection.collectionVersion,
+      },
+      after: {
+        active: false,
+        captureVersion: member.capture ? member.capture.captureVersion + 1 : null,
+        collectionVersion: updated.collectionVersion,
+        signatureHistoryPreserved: true,
+      },
+    });
+    return { memberId: member.id, collectionVersion: updated.collectionVersion, removed: true };
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }));
+}
+
 export async function archiveSignatureCollection(input: { actor: Actor; collectionId: string; expectedCollectionVersion: number }) {
   return db.$transaction(async (tx) => {
     const collection = await tx.signatureCollection.findUnique({ where: { id: input.collectionId }, select: { id: true, status: true, collectionVersion: true } });

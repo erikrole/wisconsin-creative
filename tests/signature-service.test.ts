@@ -86,7 +86,7 @@ vi.mock("@/lib/signatures/storage", () => ({
   getPrivateSignatureArtifact: vi.fn(),
 }));
 
-import { applySignatureRosterSnapshot, cleanupPendingSignatureArtifacts, createAdHocSignatureMember, createSignatureRosterPreview, deleteSignatureCollection, ensureSignatureCreativeStaffCollection, getReadySignatureArtifact, getSignatureCollection, getSignatureCollectionZip, getSignatureMemberCaptureBootstrap, listSignatureCollections, removeSignatureCapture, resetSignatureCollection, saveSignatureCapture, signatureArtifactFilename, syncSignatureCreativeStaff, updateSignatureMemberRequired } from "@/lib/services/signatures";
+import { applySignatureRosterSnapshot, cleanupPendingSignatureArtifacts, createAdHocSignatureMember, createSignatureRosterPreview, deleteSignatureCollection, ensureSignatureCreativeStaffCollection, getReadySignatureArtifact, getSignatureCollection, getSignatureCollectionZip, getSignatureMemberCaptureBootstrap, listSignatureCollections, removeSignatureCapture, removeSignatureMemberFromRoster, resetSignatureCollection, saveSignatureCapture, signatureArtifactFilename, syncSignatureCreativeStaff, updateSignatureMemberRequired } from "@/lib/services/signatures";
 import { createAuditEntryTx } from "@/lib/audit";
 import { renderSignatureArtifacts } from "@/lib/signatures/artifacts";
 import { deletePrivateSignatureArtifacts, getPrivateSignatureArtifact, uploadPrivateSignatureArtifact } from "@/lib/signatures/storage";
@@ -731,6 +731,49 @@ describe("signature collection ZIP export", () => {
 });
 
 describe("signature history erasure", () => {
+  it("soft-removes a player while preserving their signature history", async () => {
+    tx.signatureCollection.findUnique.mockResolvedValue({ id: "collection-1", status: SignatureCollectionStatus.OPEN, collectionVersion: 4 });
+    tx.signatureMember.findFirst.mockResolvedValue({
+      id: "member-1",
+      name: "Bucky Badger",
+      roleGroup: "PLAYER",
+      active: true,
+      capture: { id: "capture-1", captureVersion: 3 },
+    });
+    tx.signatureSaveOperation.updateMany.mockResolvedValue({ count: 1 });
+    tx.signatureMember.update.mockResolvedValue({ id: "member-1", active: false });
+    tx.signatureCapture.update.mockResolvedValue({ captureVersion: 4 });
+    tx.signatureCollection.update.mockResolvedValue({ collectionVersion: 5 });
+
+    await expect(removeSignatureMemberFromRoster({ actor, collectionId: "collection-1", memberId: "member-1", expectedCollectionVersion: 4 })).resolves.toEqual({
+      memberId: "member-1",
+      collectionVersion: 5,
+      removed: true,
+    });
+
+    expect(tx.signatureSaveOperation.updateMany).toHaveBeenCalledWith({
+      where: {
+        collectionId: "collection-1",
+        memberId: "member-1",
+        status: { in: [SignatureSaveStatus.UPLOADING, SignatureSaveStatus.FINALIZING] },
+      },
+      data: { status: SignatureSaveStatus.FAILED, errorMessage: "Signature roster member was removed" },
+    });
+    expect(tx.signatureMember.update).toHaveBeenCalledWith({ where: { id: "member-1" }, data: { active: false } });
+    expect(tx.signatureCapture.update).toHaveBeenCalledWith({ where: { id: "capture-1" }, data: { captureVersion: { increment: 1 } } });
+    expect(tx.signatureCollection.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: "collection-1" },
+      data: { collectionVersion: { increment: 1 }, updatedById: "staff-1" },
+    }));
+    expect(createAuditEntryTx).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      entityType: "SignatureMember",
+      entityId: "member-1",
+      action: "REMOVE_FROM_ROSTER",
+      after: expect.objectContaining({ active: false, signatureHistoryPreserved: true, collectionVersion: 5 }),
+    }));
+    expect(deletePrivateSignatureArtifacts).not.toHaveBeenCalled();
+  });
+
   it("removes every retained revision for one signer", async () => {
     tx.signatureCapture.findUnique.mockResolvedValue({
       id: "capture-1",

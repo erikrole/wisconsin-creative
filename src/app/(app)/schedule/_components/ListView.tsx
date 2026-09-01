@@ -758,7 +758,10 @@ export function ListView({
   }, [todayGroupEl]);
 
   useLayoutEffect(() => {
-    if (!isTimeline || didAnchorRef.current || loading) return;
+    // Loading can settle before the filtered rows commit their today ref. Keep
+    // the anchor retryable when the grouped timeline changes so the list cannot
+    // remain parked at the archive floor after its data arrives.
+    if (!isTimeline || didAnchorRef.current || loading || groupedEntries.length === 0) return;
     const reload = isScheduleReload();
     const fromHistory = !reload && (arrivedByHistory || hasScheduleHistoryReturn());
     const historyRestore = fromHistory ? storedHistoryScroll() : null;
@@ -783,7 +786,7 @@ export function ListView({
       return;
     }
     if (anchorToday()) didAnchorRef.current = true;
-  }, [isTimeline, loading, anchorToday]);
+  }, [groupedEntries, isTimeline, loading, anchorToday]);
 
   /**
    * Hold the anchor while the page settles.

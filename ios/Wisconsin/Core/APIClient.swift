@@ -586,7 +586,7 @@ final class APIClient {
             let endsAt: String?
         }
         var req = request(path: "/api/bookings/\(id)", method: "PATCH")
-        req.setValue(httpDateString(updatedAt), forHTTPHeaderField: "If-Unmodified-Since")
+        req.setValue(bookingSnapshotString(updatedAt), forHTTPHeaderField: "X-Booking-Updated-At")
         let iso = ISO8601DateFormatter()
         iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         req.httpBody = try JSONEncoder().encode(Body(
@@ -608,7 +608,7 @@ final class APIClient {
             let targetUserId: String
         }
         var req = request(path: "/api/bookings/\(id)/transfer-owner", method: "POST")
-        req.setValue(httpDateString(updatedAt), forHTTPHeaderField: "If-Unmodified-Since")
+        req.setValue(bookingSnapshotString(updatedAt), forHTTPHeaderField: "X-Booking-Updated-At")
         req.httpBody = try JSONEncoder().encode(Body(targetUserId: targetUserId))
         let response: DataWrapper<Booking> = try await perform(req)
         return response.data
@@ -647,7 +647,7 @@ final class APIClient {
         }
         struct Body: Encodable { let endsAt: String }
         var req = request(path: "/api/bookings/\(id)/extend", method: "POST")
-        req.setValue(httpDateString(updatedAt), forHTTPHeaderField: "If-Unmodified-Since")
+        req.setValue(bookingSnapshotString(updatedAt), forHTTPHeaderField: "X-Booking-Updated-At")
         let iso = ISO8601DateFormatter()
         iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         req.httpBody = try JSONEncoder().encode(Body(endsAt: iso.string(from: endsAt)))
@@ -2091,11 +2091,9 @@ final class APIClient {
         return req
     }
 
-    private func httpDateString(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone(secondsFromGMT: 0)
-        formatter.dateFormat = "EEE, dd MMM yyyy HH:mm:ss 'GMT'"
+    private func bookingSnapshotString(_ date: Date) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return formatter.string(from: date)
     }
 

@@ -27,7 +27,9 @@ describe("native app and web trust contracts", () => {
     const update = between(api, "func updateBooking(", "func transferBookingOwner(");
     expect(update).toContain("async throws -> Booking");
     expect(update).toContain("guard let updatedAt");
-    expect(update).toContain('forHTTPHeaderField: "If-Unmodified-Since"');
+    expect(update).toContain('forHTTPHeaderField: "X-Booking-Updated-At"');
+    expect(update).toContain("bookingSnapshotString(updatedAt)");
+    expect(update).not.toContain("If-Unmodified-Since");
     expect(update).toContain("DataWrapper<Booking>");
     expect(update).not.toContain("authenticatedData(for: req)");
 

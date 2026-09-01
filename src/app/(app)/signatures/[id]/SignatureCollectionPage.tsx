@@ -215,6 +215,19 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
     }
   }
 
+  async function removeFromRoster(member: Member) {
+    if (!collection || collection.status !== "OPEN" || member.roleGroup !== "PLAYER") return;
+    if (!window.confirm(`Remove ${member.name} from this active roster? Their saved signature history will be kept. A future roster import may add this player again.`)) return;
+    try {
+      await mutate(`/api/signatures/collections/${collection.id}/members/${member.id}`, "DELETE", { expectedCollectionVersion: collection.collectionVersion });
+      await invalidateSignatureCollectionCaches(queryClient, collection.id);
+      reload();
+      toast.success(`${member.name} was removed from this roster`);
+    } catch (requestError) {
+      toast.error(requestError instanceof Error ? requestError.message : "Player was not removed from the roster");
+    }
+  }
+
   async function toggleRequired(member: Member) {
     if (!collection) return;
     try {
@@ -361,7 +374,8 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
                      {section.members.map((member) => {
                        const priorRevisions = (member.revisions ?? []).filter((revision) => revision.id !== member.artifact?.id);
                        const canChangeRequirement = Boolean(isAdmin && collection.status === "OPEN" && member.roleGroup !== "PLAYER");
-                       const showRowActions = Boolean(member.artifact || priorRevisions.length > 0 || canChangeRequirement);
+                       const canRemoveFromRoster = collection.status === "OPEN" && member.roleGroup === "PLAYER";
+                       const showRowActions = Boolean(member.artifact || priorRevisions.length > 0 || canChangeRequirement || canRemoveFromRoster);
                        return (
                          <div
                            key={member.id}
@@ -459,6 +473,12 @@ export default function SignatureCollectionPage({ collectionId, isAdmin }: { col
                                  )}
                                  {member.artifact && collection.status === "OPEN" && <DropdownMenuItem variant="destructive" onSelect={() => remove(member)}><Trash2 />Remove signature</DropdownMenuItem>}
                                  {canChangeRequirement && <DropdownMenuItem onSelect={() => toggleRequired(member)}>{member.required ? "Exclude from readiness" : "Include in readiness"}</DropdownMenuItem>}
+                                 {canRemoveFromRoster && (
+                                   <>
+                                     {(member.artifact || priorRevisions.length > 0) && <DropdownMenuSeparator />}
+                                     <DropdownMenuItem variant="destructive" onSelect={() => removeFromRoster(member)}><Trash2 />Remove from roster</DropdownMenuItem>
+                                   </>
+                                 )}
                                </OperationalRowActions>
                              )}
                            </div>

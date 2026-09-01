@@ -2,10 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Role, SignatureCollectionStatus } from "@prisma/client";
 import { HttpError } from "@/lib/http";
 
-const { requireAuthMock, requirePermissionMock, bootstrapMock } = vi.hoisted(() => ({
+const { requireAuthMock, requirePermissionMock, bootstrapMock, removeRosterMemberMock } = vi.hoisted(() => ({
   requireAuthMock: vi.fn(),
   requirePermissionMock: vi.fn(),
   bootstrapMock: vi.fn(),
+  removeRosterMemberMock: vi.fn(),
 }));
 
 vi.mock("@/lib/auth", () => ({
@@ -18,6 +19,7 @@ vi.mock("@/lib/rbac", () => ({
 
 vi.mock("@/lib/services/signatures", () => ({
   getSignatureMemberCaptureBootstrap: bootstrapMock,
+  removeSignatureMemberFromRoster: removeRosterMemberMock,
 }));
 
 vi.mock("@/lib/services/companion-projection-publisher", () => ({
@@ -28,7 +30,7 @@ vi.mock("@sentry/nextjs", () => ({
   captureException: vi.fn(),
 }));
 
-import { GET } from "@/app/api/signatures/collections/[id]/members/[memberId]/route";
+import { DELETE, GET } from "@/app/api/signatures/collections/[id]/members/[memberId]/route";
 
 const routeContext = {
   params: Promise.resolve({ id: "collection-1", memberId: "player-1" }),
@@ -70,6 +72,7 @@ beforeEach(() => {
       artifact: { id: "revision-2" },
     },
   });
+  removeRosterMemberMock.mockResolvedValue({ memberId: "player-1", collectionVersion: 5, removed: true });
 });
 
 describe("signature member capture bootstrap route", () => {
@@ -102,5 +105,45 @@ describe("signature member capture bootstrap route", () => {
     expect(response.status).toBe(403);
     await expect(response.json()).resolves.toEqual({ error: "Permission denied" });
     expect(bootstrapMock).not.toHaveBeenCalled();
+  });
+
+  it("removes a player through the versioned roster mutation", async () => {
+    const response = await DELETE(
+      new Request("https://app.example.com/api/signatures/collections/collection-1/members/player-1", {
+        method: "DELETE",
+        headers: { Origin: "https://app.example.com", "Content-Type": "application/json" },
+        body: JSON.stringify({ expectedCollectionVersion: 4 }),
+      }),
+      routeContext,
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ memberId: "player-1", collectionVersion: 5, removed: true });
+    expect(requirePermissionMock).toHaveBeenCalledWith(Role.STAFF, "signature", "remove");
+    expect(removeRosterMemberMock).toHaveBeenCalledWith({
+      actor: expect.objectContaining({ id: "staff-1", role: Role.STAFF }),
+      collectionId: "collection-1",
+      memberId: "player-1",
+      expectedCollectionVersion: 4,
+    });
+  });
+
+  it("does not mutate a roster when removal permission is denied", async () => {
+    requirePermissionMock.mockImplementationOnce(() => {
+      throw new HttpError(403, "Permission denied");
+    });
+
+    const response = await DELETE(
+      new Request("https://app.example.com/api/signatures/collections/collection-1/members/player-1", {
+        method: "DELETE",
+        headers: { Origin: "https://app.example.com", "Content-Type": "application/json" },
+        body: JSON.stringify({ expectedCollectionVersion: 4 }),
+      }),
+      routeContext,
+    );
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toEqual({ error: "Permission denied" });
+    expect(removeRosterMemberMock).not.toHaveBeenCalled();
   });
 });

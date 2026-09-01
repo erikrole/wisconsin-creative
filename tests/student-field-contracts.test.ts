@@ -92,8 +92,9 @@ describe("student field mobile contracts", () => {
 
     expect(models).toContain("let updatedAt: Date?");
     expect(apiClient).toContain("updatedAt: Date? = nil");
-    expect(apiClient).toContain("forHTTPHeaderField: \"If-Unmodified-Since\"");
-    expect(apiClient).toContain("httpDateString(updatedAt)");
+    expect(apiClient).toContain("forHTTPHeaderField: \"X-Booking-Updated-At\"");
+    expect(apiClient).toContain("bookingSnapshotString(updatedAt)");
+    expect(apiClient).not.toContain("If-Unmodified-Since");
     expect(detail).toContain("updatedAt: booking.updatedAt");
   });
 
