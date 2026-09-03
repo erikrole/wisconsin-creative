@@ -10,7 +10,7 @@ import {
 
 type MockFn = ReturnType<typeof vi.fn>;
 type CreateBookingTx = {
-  booking: Record<"findUnique" | "findUniqueOrThrow" | "findFirst" | "findMany" | "create" | "update" | "delete" | "count", MockFn>;
+  booking: Record<"findUnique" | "findUniqueOrThrow" | "findFirst" | "create" | "update" | "delete" | "count", MockFn>;
   calendarEvent: Record<"findMany", MockFn>;
   shiftGroup: Record<"findUnique" | "update", MockFn>;
   shift: Record<"create", MockFn>;
@@ -18,7 +18,7 @@ type CreateBookingTx = {
   bookingEvent: Record<"createMany", MockFn>;
   scheduleEventFollow: Record<"createMany", MockFn>;
   bookingSerializedItem: Record<"createMany" | "updateMany", MockFn>;
-  bookingBulkItem: Record<"createMany" | "update" | "upsert", MockFn>;
+  bookingBulkItem: Record<"createMany" | "update", MockFn>;
   bulkSku: Record<"findMany", MockFn>;
   assetAllocation: Record<"createMany" | "updateMany", MockFn>;
   bulkStockBalance: Record<"findMany" | "upsert", MockFn>;
@@ -40,7 +40,6 @@ vi.mock("@/lib/db", () => {
       findUnique: vi.fn(),
       findUniqueOrThrow: vi.fn(),
       findFirst: vi.fn(),
-      findMany: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
       delete: vi.fn(),
@@ -53,7 +52,7 @@ vi.mock("@/lib/db", () => {
     bookingEvent: { createMany: vi.fn() },
     scheduleEventFollow: { createMany: vi.fn() },
     bookingSerializedItem: { createMany: vi.fn(), updateMany: vi.fn() },
-    bookingBulkItem: { createMany: vi.fn(), update: vi.fn(), upsert: vi.fn() },
+    bookingBulkItem: { createMany: vi.fn(), update: vi.fn() },
     bulkSku: { findMany: vi.fn() },
     assetAllocation: { createMany: vi.fn(), updateMany: vi.fn() },
     bulkStockBalance: { findMany: vi.fn(), upsert: vi.fn() },
@@ -140,7 +139,6 @@ beforeEach(() => {
   mockDb.bulkSkuUnit.findMany.mockResolvedValue([]);
   mockTx.booking.create.mockResolvedValue({ id: "b-new" });
   mockTx.booking.findFirst.mockResolvedValue(null);
-  mockTx.booking.findMany.mockResolvedValue([]);
   mockTx.booking.delete.mockResolvedValue({});
   mockTx.booking.count.mockResolvedValue(0);
   mockTx.$queryRaw.mockResolvedValue([{ nextval: 1n }]);
@@ -169,7 +167,6 @@ beforeEach(() => {
   mockTx.assetAllocation.createMany.mockResolvedValue({});
   mockTx.bookingBulkItem.createMany.mockResolvedValue({});
   mockTx.bookingBulkItem.update.mockResolvedValue({});
-  mockTx.bookingBulkItem.upsert.mockResolvedValue({});
   mockTx.bulkSku.findMany.mockResolvedValue([]);
   mockTx.bulkStockBalance.findMany.mockResolvedValue([]);
   mockTx.bulkStockBalance.upsert.mockResolvedValue({});
@@ -223,152 +220,6 @@ describe("createBooking", () => {
         data: expect.objectContaining({ kind: "RESERVATION", status: "BOOKED" }),
       })
     );
-  });
-
-  it("BUG: consolidates an exact event reservation into the existing gear plan", async () => {
-    const existing = {
-      id: "rv-existing",
-      title: "MBB vs Iowa",
-      notes: "Bring tripod",
-      locationId: "loc-1",
-      startsAt: new Date("2026-04-01T08:00:00Z"),
-      endsAt: new Date("2026-04-01T17:00:00Z"),
-      eventId: "event-1",
-      events: [{ eventId: "event-1" }],
-      serializedItems: [{ assetId: "a-existing", allocationStatus: "active" }],
-      bulkItems: [{ bulkSkuId: "sku-battery", plannedQuantity: 2, checkedOutQuantity: 0 }],
-    };
-    mockTx.calendarEvent.findMany.mockResolvedValue([
-      { id: "event-1", startsAt: new Date("2026-04-01T18:00:00Z") },
-    ]);
-    mockTx.booking.findMany.mockResolvedValue([existing]);
-    mockTx.booking.findUniqueOrThrow.mockResolvedValue({
-      id: "rv-existing",
-      kind: BookingKind.RESERVATION,
-      status: BookingStatus.BOOKED,
-      title: "MBB vs Iowa",
-      endsAt: new Date("2026-04-01T17:00:00Z"),
-      shiftAssignment: null,
-    });
-
-    const result = await createBooking(baseInput({
-      kind: BookingKind.RESERVATION,
-      custodySource: undefined,
-      title: "mbb VS IOWA",
-      eventId: "event-1",
-      serializedAssetIds: ["a-existing", "a-new"],
-      bulkItems: [{ bulkSkuId: "sku-battery", quantity: 3 }],
-      notes: "Pack rain cover",
-    }));
-
-    expect(result.id).toBe("rv-existing");
-    expect(result.creationDisposition).toBe("consolidated");
-    expect(mockTx.booking.create).not.toHaveBeenCalled();
-    expect(checkAvailability).toHaveBeenCalledWith(mockTx, expect.objectContaining({
-      excludeBookingId: "rv-existing",
-      serializedAssetIds: ["a-existing", "a-new"],
-      bulkItems: [{ bulkSkuId: "sku-battery", quantity: 5 }],
-    }));
-    expect(mockTx.bookingSerializedItem.createMany).toHaveBeenCalledWith({
-      data: [{ bookingId: "rv-existing", assetId: "a-new", allocationStatus: "active" }],
-    });
-    expect(mockTx.bookingBulkItem.upsert).toHaveBeenCalledWith(expect.objectContaining({
-      where: {
-        bookingId_bulkSkuId: { bookingId: "rv-existing", bulkSkuId: "sku-battery" },
-      },
-      update: { plannedQuantity: { increment: 3 } },
-    }));
-    expect(mockTx.booking.update).toHaveBeenCalledWith({
-      where: { id: "rv-existing" },
-      data: { notes: "Bring tripod\n\nAdded with consolidated gear:\nPack rain cover" },
-    });
-    expect(mockTx.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({
-        entityId: "rv-existing",
-        action: "reservation_consolidated",
-      }),
-    }));
-  });
-
-  it("does not consolidate when the exact linked-event set differs", async () => {
-    mockTx.calendarEvent.findMany.mockResolvedValue([
-      { id: "event-1", startsAt: new Date("2026-04-01T18:00:00Z") },
-      { id: "event-2", startsAt: new Date("2026-04-02T18:00:00Z") },
-    ]);
-    mockTx.booking.findMany.mockResolvedValue([{
-      id: "rv-existing",
-      title: "MBB Trip",
-      notes: null,
-      locationId: "loc-1",
-      startsAt: new Date("2026-04-01T08:00:00Z"),
-      endsAt: new Date("2026-04-01T17:00:00Z"),
-      eventId: "event-1",
-      events: [{ eventId: "event-1" }],
-      serializedItems: [],
-      bulkItems: [],
-    }]);
-
-    await createBooking(baseInput({
-      kind: BookingKind.RESERVATION,
-      custodySource: undefined,
-      title: "MBB Trip",
-      eventIds: ["event-1", "event-2"],
-    }));
-
-    expect(mockTx.booking.create).toHaveBeenCalledOnce();
-  });
-
-  it("blocks a duplicate event plan when pickup details differ", async () => {
-    mockTx.calendarEvent.findMany.mockResolvedValue([
-      { id: "event-1", startsAt: new Date("2026-04-01T18:00:00Z") },
-    ]);
-    mockTx.booking.findMany.mockResolvedValue([{
-      id: "rv-existing",
-      title: "MBB Trip",
-      notes: null,
-      locationId: "different-location",
-      startsAt: new Date("2026-04-01T15:00:00Z"),
-      endsAt: new Date("2026-04-01T22:00:00Z"),
-      eventId: "event-1",
-      events: [{ eventId: "event-1" }],
-      serializedItems: [],
-      bulkItems: [],
-    }]);
-
-    await expect(createBooking(baseInput({
-      kind: BookingKind.RESERVATION,
-      custodySource: undefined,
-      title: "MBB Trip",
-      eventId: "event-1",
-    }))).rejects.toMatchObject({ status: 409, data: { existingReservationId: "rv-existing" } });
-    expect(mockTx.booking.create).not.toHaveBeenCalled();
-  });
-
-  it("blocks a second plan when the matching reservation pickup already started", async () => {
-    mockTx.calendarEvent.findMany.mockResolvedValue([
-      { id: "event-1", startsAt: new Date("2026-04-01T18:00:00Z") },
-    ]);
-    mockTx.booking.findMany.mockResolvedValue([{
-      id: "rv-existing",
-      title: "MBB Trip",
-      notes: null,
-      locationId: "loc-1",
-      startsAt: new Date("2026-04-01T08:00:00Z"),
-      endsAt: new Date("2026-04-01T17:00:00Z"),
-      eventId: "event-1",
-      events: [{ eventId: "event-1" }],
-      serializedItems: [{ assetId: "a-existing", allocationStatus: "picked_up" }],
-      bulkItems: [],
-    }]);
-
-    await expect(createBooking(baseInput({
-      kind: BookingKind.RESERVATION,
-      custodySource: undefined,
-      title: "MBB Trip",
-      eventId: "event-1",
-    }))).rejects.toMatchObject({ status: 409, data: { existingReservationId: "rv-existing" } });
-
-    expect(mockTx.booking.create).not.toHaveBeenCalled();
   });
 
   it("consumes an owned source draft inside reservation creation", async () => {

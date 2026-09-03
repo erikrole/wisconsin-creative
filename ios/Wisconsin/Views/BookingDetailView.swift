@@ -19,7 +19,6 @@ struct BookingDetailView: View {
     @State private var availabilityRequests = LatestRequestGeneration()
     @Environment(SessionStore.self) private var session
     @Environment(AppState.self) private var appState
-    @Environment(ReservationDraftStore.self) private var drafts
 
     private func hasCapability(_ capability: String) -> Bool {
         guard let user = session.currentUser else { return false }
@@ -74,11 +73,6 @@ struct BookingDetailView: View {
             && hasCapability("RESERVATION_CANCEL_OWN")
             && (booking.status == .booked || booking.status == .pendingPickup)
         return booking.allows("cancel") ?? legacyAllowed
-    }
-
-    private var canReuseReservationGear: Bool {
-        guard let booking, booking.kind == .reservation else { return false }
-        return booking.allows("duplicate") == true
     }
 
     var body: some View {
@@ -143,36 +137,13 @@ struct BookingDetailView: View {
         .navigationTitle(booking?.title ?? "Booking")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            if canEditBooking && canReuseReservationGear {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        Button { showEdit = true } label: {
-                            Label("Edit Details", systemImage: "pencil")
-                        }
-                        Button { reuseReservationGear() } label: {
-                            Label("Reuse Gear for Another Event", systemImage: "arrow.trianglehead.2.clockwise.rotate.90")
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
-                            .frame(minWidth: 44, minHeight: 44)
-                    }
-                    .accessibilityLabel("Booking actions")
-                }
-            } else if canEditBooking {
+            if canEditBooking {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showEdit = true } label: {
                         Label("Edit Details", systemImage: "pencil")
                             .frame(minHeight: 44)
                     }
                     .accessibilityLabel("Edit booking details")
-                }
-            } else if canReuseReservationGear {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { reuseReservationGear() } label: {
-                        Label("Reuse Gear", systemImage: "arrow.trianglehead.2.clockwise.rotate.90")
-                            .frame(minHeight: 44)
-                    }
-                    .accessibilityLabel("Reuse gear for another event")
                 }
             }
         }
@@ -313,14 +284,6 @@ struct BookingDetailView: View {
             Haptics.warning()
         }
         isActioning = false
-    }
-
-    private func reuseReservationGear() {
-        guard let booking else { return }
-        let composer = CreateBookingViewModel()
-        composer.prefillGearForNewEvent(from: booking)
-        drafts.start(composer)
-        Haptics.selection()
     }
 
 }

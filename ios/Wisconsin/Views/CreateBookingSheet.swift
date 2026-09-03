@@ -18,7 +18,6 @@ struct CreateBookingSheet: View {
     @Environment(ReservationDraftStore.self) private var drafts
     @State private var submitError: String?
     @State private var committedOriginalNotice: String?
-    @State private var consolidatedBookingId: String?
     @State private var showExitOptions = false
     @State private var showScanner = false
     @State private var showNotesField = false
@@ -54,10 +53,7 @@ struct CreateBookingSheet: View {
     }
 
     private var canContinueToGear: Bool {
-        vm.isValid
-            && (setupMode == .manual || vm.linkedEventCount > 0)
-            && (!vm.isReusingGear || (setupMode == .event && vm.linkedEventCount > 0))
-            && !vm.hasInvalidReusedEventSelection
+        vm.isValid && (setupMode == .manual || vm.linkedEventCount > 0)
     }
 
     /// Cancel is the deliberate exit. With unsaved work on the table it asks
@@ -164,21 +160,6 @@ struct CreateBookingSheet: View {
                 Button("Keep Editing", role: .cancel) {}
             } message: {
                 Text(committedOriginalNotice ?? "")
-            }
-            .alert(
-                "Gear added to existing reservation",
-                isPresented: Binding(
-                    get: { consolidatedBookingId != nil },
-                    set: { if !$0 { consolidatedBookingId = nil } }
-                )
-            ) {
-                Button("Done") {
-                    guard let bookingId = consolidatedBookingId else { return }
-                    consolidatedBookingId = nil
-                    drafts.finish(bookingId: bookingId)
-                }
-            } message: {
-                Text("This gear was combined with the reservation already linked to the same event and title.")
             }
             .confirmationDialog(
                 "Save this reservation as a draft?",
@@ -304,24 +285,7 @@ struct CreateBookingSheet: View {
     private var detailsForm: some View {
         ScrollView {
             VStack(spacing: 18) {
-                if let sourceTitle = vm.reusedGearSourceTitle {
-                    FormCard {
-                        Label {
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text("Gear copied from \u{201c}\(sourceTitle)\u{201d}")
-                                    .font(.subheadline.weight(.semibold))
-                                Text("Choose a different event. Availability will be checked again before saving.")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        } icon: {
-                            Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90")
-                                .foregroundStyle(Color.statusText(.purple))
-                        }
-                    }
-                }
-
-                if canLinkEvents && !vm.isReusingGear {
+                if canLinkEvents {
                     FormCard {
                         BrandSectionHeader("Set Schedule From")
                         Picker("Schedule source", selection: setupModeBinding) {
@@ -349,12 +313,6 @@ struct CreateBookingSheet: View {
                             .transition(detailsTransition)
                         scheduleWindowCard
                             .transition(detailsTransition)
-                        if vm.hasInvalidReusedEventSelection {
-                            Label("Choose a different event when reusing gear", systemImage: "exclamationmark.triangle.fill")
-                                .font(.footnote)
-                                .foregroundStyle(Color.statusText(.orange))
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
                     }
                 } else {
                     reservationTitleCard
@@ -713,9 +671,6 @@ struct CreateBookingSheet: View {
             case .created(let bookingId):
                 Haptics.success()
                 drafts.finish(bookingId: bookingId)
-            case .consolidated(let bookingId):
-                consolidatedBookingId = bookingId
-                Haptics.success()
             case .committedOriginal(_, let preservation):
                 committedOriginalNotice = preservation.userMessage
                 Haptics.warning()

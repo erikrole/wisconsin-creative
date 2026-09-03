@@ -1369,7 +1369,7 @@ export async function notifyPublishedScheduleFollowers(shiftGroupId: string): Pr
   }));
 }
 
-type ReservationLifecycleEvent = "booked" | "updated" | "pickup_ready" | "cancelled";
+type ReservationLifecycleEvent = "booked" | "pickup_ready" | "cancelled";
 
 /**
  * Sends an in-app notification to the requester for reservation lifecycle events.
@@ -1397,11 +1397,6 @@ export async function createReservationLifecycleNotification(args: {
       type: "reservation_booked",
       title: "Reservation confirmed",
       body: `Your reservation "${bookingTitle}" has been created.`,
-    },
-    updated: {
-      type: "reservation_updated",
-      title: "Gear added to your reservation",
-      body: `Your new gear was added to the existing "${bookingTitle}" reservation.`,
     },
     pickup_ready: {
       type: "reservation_pickup_ready",

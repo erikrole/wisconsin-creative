@@ -336,7 +336,7 @@ export function BookingHeader({
                           onSelect={onDuplicate}
                           disabled={!!actionLoading}
                         >
-                          Reuse gear for another event
+                          Duplicate
                         </PendingDropdownMenuItem>
                       )}
                       {canCancel && (

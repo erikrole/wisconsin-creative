@@ -158,7 +158,7 @@ describe("booking list routes", () => {
     );
   });
 
-  it("maps the event-day queue to booked reservations starting today", async () => {
+  it("maps reservation due-today links to booked reservations ending today", async () => {
     const res = await getReservations(
       get("/api/reservations?filter=due-today"),
       { params: Promise.resolve({}) },
@@ -170,7 +170,7 @@ describe("booking list routes", () => {
       expect.any(URLSearchParams),
       expect.objectContaining({
         status: BookingStatus.BOOKED,
-        startsAt: expect.objectContaining({
+        endsAt: expect.objectContaining({
           gte: expect.any(Date),
           lt: expect.any(Date),
         }),

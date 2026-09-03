@@ -51,7 +51,7 @@ export const GET = withAuth(async (req, { user }) => {
     filterParam === "overdue"
       ? { status: BookingStatus.BOOKED, endsAt: { lt: now } }
       : filterParam === "due-today"
-        ? { status: BookingStatus.BOOKED, startsAt: { gte: todayStart, lt: todayEnd } }
+        ? { status: BookingStatus.BOOKED, endsAt: { gte: todayStart, lt: todayEnd } }
         : undefined;
 
   const collaboratorPreview = user.role === "COLLABORATOR" && user.preview?.role === "COLLABORATOR";
@@ -137,27 +137,17 @@ export const POST = withAuth(async (req, { user }) => {
   // independently and must not leave the external GearOps projection stale.
   deferCompanionProjectionRefreshForCommittedMutation(req);
 
-  const creationDisposition = "creationDisposition" in reservation
-    ? reservation.creationDisposition
-    : "replayed";
-
   await createReservationLifecycleNotification({
     bookingId: reservation.id,
     bookingTitle: reservation.title ?? body.title,
     requesterUserId: reservation.requesterUserId,
     actorUserId: user.id,
-    event: creationDisposition === "consolidated" ? "updated" : "booked",
+    event: "booked",
   });
 
   return ok({
     data: user.role === "COLLABORATOR"
-      ? { ...sanitizeCollaboratorBooking(reservation), creationDisposition }
-      : { ...reservation, creationDisposition },
-    meta: {
-      disposition: creationDisposition,
-      message: creationDisposition === "consolidated"
-        ? `Gear added to the existing ${reservation.title} reservation.`
-        : "Reservation created.",
-    },
-  }, creationDisposition === "consolidated" ? 200 : 201);
+      ? sanitizeCollaboratorBooking(reservation)
+      : reservation,
+  }, 201);
 });

@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Reservations
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-09-02
+- Last Updated: 2026-08-31
 - Status: Active — V1 Shipped (2026-03-10)
 - Version: V1
 
@@ -27,7 +27,6 @@ Make app and web reservation-first. A user who is not physically at a kiosk rese
 12. Internal Students can read all visible reservations and check-outs from the web and native Bookings surfaces. The native iOS Home payload remains personal, and Student edit, cancel, transfer, creation, and kiosk-custody actions remain ownership-gated.
 13. `Sony Battery` and `Football Sony Battery` are separate item-family quantities but share the same reservation policy. Requesters choose either family through the normal web/native picker with no Football-roster or role gate; availability and numbered-unit custody rules remain authoritative.
 14. Admins may force-check out a `BOOKED` reservation from web detail when a physical handoff was verified but kiosk scanning is unavailable. The action requires a reason, opens a linked `OPEN` checkout for all remaining equipment, preserves durable numbered-unit bindings, completes the source reservation, and writes an `OverrideEvent` plus audit history. It does not remove availability or custody checks.
-15. An event-linked reservation is one living gear plan per requester, normalized title, exact event set, pickup location, and pickup/return window. A matching create adds unique serialized items and additive bulk quantities to the existing `BOOKED` reservation inside the serializable transaction. Staff may repair matching legacy rows through previewed, audited bulk merge; different people, titles, event sets, locations, windows, terminal states, or started pickups never merge.
 
 ## V1 Workflow
 
@@ -38,7 +37,7 @@ Multi-step wizard page (replaced the old side-sheet flow as of 2026-04-09):
 **Step 2 — Equipment:** Full `EquipmentPicker` with quiet section chips, search, availability conflict markers, QR scan-to-add, and deliberate per-item selection. Equipment requirements enforced. Warning/status chrome appears only for unavailable stale selections, hard conflicts, needed-next notices, turnaround warnings, or active availability rechecks.
 **Step 3 — Confirmation:** Apple-like review panel leads with the selected window, requester, location, reserved status, linked event, and equipment count. Submit → POST `/api/reservations`. Save as `BOOKED`. Confirmation repeats selected availability warnings only when warnings exist.
 
-**Deep-link parameters:** `?title`, `?startsAt`, `?endsAt`, `?locationId`, `?newFor`, `?eventId`, `?sportCode`, `?requesterUserId`, `?draftId`, `?reuseFrom`. Reuse loads the source gear into a fresh composer and requires a different event; it does not clone the old event/window.
+**Deep-link parameters:** `?title`, `?startsAt`, `?endsAt`, `?locationId`, `?newFor`, `?eventId`, `?sportCode`, `?requesterUserId`, `?draftId`.
 
 **Draft persistence:** "Save draft & exit" persists via `/api/drafts`. Resumable via `?draftId=`. Multi-event drafts persist ordered `BookingEvent` links, return ordered `events[]` on resume, and keep `Booking.eventId` as the chronologically first linked event for legacy readers. A consumed `sourceDraftId` is a permanent actor-scoped idempotency key: if the original success response is lost, retry returns the already-committed reservation and ignores a later changed payload rather than creating a duplicate.
 
@@ -52,7 +51,6 @@ Native iOS creation mirrors the three-step reservation rhythm while staying mobi
 6. Equipment retains scan-to-add, countable bulk quantities from `/api/form-options`, SKU photos with box fallbacks, a compact selected summary, and a detailed cart editor. Counted-item result rows expose minus, selected quantity, and plus directly; quantity is never hidden behind an `x1` or row tap. Availability fractions use effective on-hand inventory as the denominator, so numbered-family unit records cannot produce impossible copy such as `46/30 available` when a stale balance is lower than the unit roster.
 7. Review counts serialized assets plus selected bulk quantities, uses year-free pickup/return language, leads with requester identity, omits routine Reserved status, renders every thumbnail-led gear row, and submits typed `bulkItems` alongside `serializedAssetIds`. Battery rows omit the routine availability/scan subtitle so the power list stays compact; other counted products retain that useful context. The anchored create action uses reservation purple and known conflicts provide a direct route back to Gear.
 8. Known serialized conflicts are visible before selection, cannot be newly selected, and block review until the item is removed or the dates change. Web and native picker rows carry the conflicting window plus return-by/available-after guidance into selected-gear review; timing, transfer, and condition notices remain advisory. Server-side availability and bulk shortage checks remain authoritative, and a structured create conflict returns to Gear with selections preserved. Other policy or concurrency conflicts remain in the submit error flow. Successful creation opens the new reservation detail from every production entry point, including Event Detail.
-9. A create response distinguishes a new plan from gear consolidated into an existing plan. Native iOS announces the consolidated result explicitly and retains the user's preferred pickup location for the next reservation. Reservation detail can also reuse only the source gear in a fresh composer; the old title, dates, and links stay behind, and the user must choose a different event before continuing.
 
 ### Edit Reservation
 1. Allowed fields depend on role, ownership, and lifecycle state.
@@ -93,11 +91,11 @@ The reservation detail page (`/reservations/[id]`) uses the shared `BookingDetai
 
 ### Reservation-Specific Behavior
 - The shared header follows the native booking hierarchy: lifecycle state and live timing lead, the requester is named beside the booking identity, and a compact operational summary keeps pickup time, pickup location, physical gear count, and linked event context visible before the denser web detail columns.
-- Web-only operator breadth remains below and beside that summary: inline editing, equipment planning, linked-event management, transfer/cancel/reuse actions, sync health, and complete activity history.
+- Web-only operator breadth remains below and beside that summary: inline editing, equipment planning, linked-event management, transfer/cancel/duplicate actions, sync health, and complete activity history.
 - Status badge shows "Confirmed" (not "BOOKED") through the shared booking status display helper.
 - Primary custody guidance points to kiosk pickup when the reservation is due; app/web does not expose `Start checkout` as a normal action.
 - Action buttons: `[Actions ▼] [Edit] [Extend]` for app-owned actions.
-- Actions dropdown contains: Reuse gear for another event, Cancel
+- Actions dropdown contains: Duplicate, Cancel
 - No checkin checkboxes or scan buttons (those are checkout-only)
 - Equipment tab shows Serial and Location columns (instead of checkout's Status column)
 - Equipment rows show hover-reveal "..." menu (View item)
@@ -151,9 +149,8 @@ The reservation detail page (`/reservations/[id]`) uses the shared `BookingDetai
 1. Row click opens reservation details.
 2. Left-edge status color cue reflects reservation state.
 3. Secondary line under name shows current state label (for example `Booked`).
-4. Staff/Admin multi-select supports previewed merge of exact duplicate plans, conflict-checked pickup-location changes, audited owner transfer, and cancellation. Each bulk operation stops at the first rejected row and reports partial progress instead of presenting an all-or-nothing false success.
-5. Event day and Past due quick filters expose the current pickup queue directly; Event day means a `BOOKED` reservation whose pickup starts today.
-6. Mobile row interactions follow `AREA_MOBILE.md`:
+4. Multi-select is allowed for future bulk actions; no bulk mutation actions in V1.
+5. Mobile row interactions follow `AREA_MOBILE.md`:
    - Primary tap opens details.
    - Secondary actions open in action sheet.
    - Overdue or urgent states remain visually prioritized.
@@ -185,10 +182,10 @@ The access labels below describe state-machine actions, not list/detail reads. I
 - Access: staff+ or owner
 
 ### `COMPLETED`
-- Allowed actions: View and reuse its gear in a new event context
+- Allowed actions: View only
 
 ### `CANCELLED`
-- Allowed actions: View and reuse its gear in a new event context
+- Allowed actions: View only
 
 **Note**: Reservations do not use the `OPEN` state in the normal flow; kiosk pickup creates or opens the linked checkout custody record via `sourceReservationId`.
 
@@ -197,7 +194,7 @@ The access labels below describe state-machine actions, not list/detail reads. I
 2. Pickup guidance — explains kiosk pickup when the reservation window is due; does not create checkout custody from app/web
 3. Extend — extends booking window (conflict-checked)
 4. Cancel reservation — soft cancel, record preserved for audit
-5. Reuse gear for another event — copies equipment into a new composer, requires a different event, and rechecks availability; the retired duplicate endpoint refuses same-context cloning
+5. Duplicate — clones a BOOKED reservation with same items, dates, and settings
 6. Transfer owner — staff/admin or owner requester reassignment with optimistic-lock protection and `owner_transferred` audit history
 7. Edit linked events — scheduled-event link, change, or clear action using the existing `Booking.eventId` primary plus `BookingEvent` junction contract
 8. Force checkout — admin-only reasoned exception that creates linked checkout custody without kiosk scan verification

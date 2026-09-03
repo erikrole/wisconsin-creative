@@ -7,7 +7,6 @@ import { ItemThumbnailStack } from "@/components/ItemThumbnailStack";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Badge } from "@/components/ui/badge";
 import { operationalBookingStatus } from "@/lib/booking-status-display";
-import { Checkbox } from "@/components/ui/checkbox";
 
 /* ───── Helpers ───── */
 
@@ -49,12 +48,9 @@ export type BookingCardProps = {
   overdueStatus: string;
   onClick: () => void;
   menuProps: Omit<BookingMenuProps, "item">;
-  selectable?: boolean;
-  selected?: boolean;
-  onSelectedChange?: (selected: boolean) => void;
 };
 
-export function BookingCard({ item, overdueStatus, onClick, menuProps, selectable, selected, onSelectedChange }: BookingCardProps) {
+export function BookingCard({ item, overdueStatus, onClick, menuProps }: BookingCardProps) {
   const now = new Date();
   const displayStatus = operationalBookingStatus(item, now);
   const isOverdue = item.status === overdueStatus && new Date(item.endsAt) < now;
@@ -75,15 +71,6 @@ export function BookingCard({ item, overdueStatus, onClick, menuProps, selectabl
           aria-label={`View booking: ${item.title}`}
           onClick={onClick}
         />
-        {selectable && (
-          <div className="absolute right-3 top-3 z-20" onClick={(event) => event.stopPropagation()}>
-            <Checkbox
-              checked={selected}
-              onCheckedChange={(checked) => onSelectedChange?.(checked === true)}
-              aria-label={`Select ${item.title}`}
-            />
-          </div>
-        )}
 
         {/* Status left-border accent */}
         <div

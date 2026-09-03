@@ -363,15 +363,7 @@ struct Booking: Codable, Identifiable, Hashable {
     }
 }
 
-struct BookingStub: Codable {
-    let id: String
-    let creationDisposition: String?
-}
-
-struct ReservationCreationReceipt: Equatable {
-    let id: String
-    let consolidated: Bool
-}
+struct BookingStub: Codable { let id: String }
 
 /// A scheduling conflict surfaced by `/api/availability/check`: another booking
 /// holds `assetId` during the requested window or its serialized turnaround

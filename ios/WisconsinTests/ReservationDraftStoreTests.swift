@@ -108,7 +108,7 @@ private final class DraftPersistenceStub: ReservationDraftPersistence {
         sourceDraftId: String?,
         serializedAssetIds: [String],
         bulkItems: [BulkReservationRequest]
-    ) async throws -> ReservationCreationReceipt {
+    ) async throws -> String {
         createCalls += 1
         createdTitles.append(title)
         createdSourceDraftIds.append(sourceDraftId)
@@ -116,18 +116,14 @@ private final class DraftPersistenceStub: ReservationDraftPersistence {
         createdBulkItems.append(bulkItems)
         operationLog.append("create")
         if !createResults.isEmpty {
-            return ReservationCreationReceipt(
-                id: try createResults.removeFirst().get(),
-                consolidated: false
-            )
+            return try createResults.removeFirst().get()
         }
         if suspendsCreate {
-            let id: String = try await withCheckedThrowingContinuation { continuation in
+            return try await withCheckedThrowingContinuation { continuation in
                 createContinuation = continuation
             }
-            return ReservationCreationReceipt(id: id, consolidated: false)
         }
-        return ReservationCreationReceipt(id: createdId, consolidated: false)
+        return createdId
     }
 
     func resumeSave() {

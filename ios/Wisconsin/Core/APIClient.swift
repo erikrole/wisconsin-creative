@@ -668,7 +668,7 @@ final class APIClient {
         sourceDraftId: String? = nil,
         serializedAssetIds: [String] = [],
         bulkItems: [BulkReservationRequest] = []
-    ) async throws -> ReservationCreationReceipt {
+    ) async throws -> String {
         struct Body: Encodable {
             let title: String
             let requesterUserId: String
@@ -701,10 +701,7 @@ final class APIClient {
             sourceDraftId: sourceDraftId
         ))
         let resp: DataWrapper<BookingStub> = try await perform(req)
-        return ReservationCreationReceipt(
-            id: resp.data.id,
-            consolidated: resp.data.creationDisposition == "consolidated"
-        )
+        return resp.data.id
     }
 
     /// Returns the top-level availability result for the given window.

@@ -37,7 +37,6 @@ Audit files intentionally remain at root for now because the repo audit skills r
 
 ## Active Follow-up Ledgers
 
-- `event-checkout-assignments-plan-2026-09-02.md` - ownerless event checkout manifests with audited serialized-item people assignments and event-shared pooled gear.
 - `bookings-search-qol-plan-2026-08-30.md` - preserve Bookings list context, keep reservation creation globally available on the page, and add explicit global Search recovery.
 - `schedule-timeline-context-hardening-plan-2026-08-30.md` - end-to-end List/Week/Calendar browsing hardening is complete; the active follow-up brings the shared versioned staff crew editor and Home/Away/empty setup to all three views, with authenticated parity proof, matched review captures, and final shared-tree gates still tracked.
 - `list-state-preservation-plan-2026-08-26.md` - preserve Schedule and Items filters, view state, sort, and pagination across detail navigation and browser Back.

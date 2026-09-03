@@ -397,7 +397,7 @@ describe("API hardening wave 11", () => {
       { params: Promise.resolve({ id: "booking-1" }) },
     );
 
-    expect(res.status).toBe(409);
+    expect(res.status).toBe(400);
     expect(createBooking).not.toHaveBeenCalled();
   });
 

@@ -94,14 +94,6 @@ export type CommandCenterData = {
     total: number;
     byStatus: { draft: number; reserved: number; pendingPickup: number; checkedOut: number; completed: number };
   };
-  gearPlans: Array<{
-    requesterUserId: string;
-    requesterName: string;
-    bookingIds: string[];
-    title: string;
-    state: "draft" | "reserved" | "ready_for_pickup" | "partially_picked_up" | "checked_out" | "returned";
-    itemCount: number;
-  }>;
   missingGear: Array<{
     userId: string;
     userName: string;
