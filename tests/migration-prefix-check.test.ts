@@ -52,6 +52,16 @@ describe("inspectMigrationDirectories", () => {
     expect(result.errors).toEqual([]);
   });
 
+  it("keeps the restored production 0139 collision allowlisted", () => {
+    const result = inspectMigrationDirectories([
+      migration("0139_football_game_day_roles"),
+      migration("0139_schedule_working_copy_undo_redo"),
+    ]);
+
+    expect(result.ok).toBe(true);
+    expect(result.errors).toEqual([]);
+  });
+
   it("fails folders missing migration.sql", () => {
     const result = inspectMigrationDirectories([
       migration("0081_add_users_index"),

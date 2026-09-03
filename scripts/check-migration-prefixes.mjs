@@ -19,6 +19,9 @@ const ALLOWED_COLLISIONS = new Set([
   '0104',
   '0105',
   '0106',
+  // Applied from the football hardening branch before its migration folder
+  // was restored to the canonical chain.
+  '0139',
 ]);
 
 export function inspectMigrationDirectories(entries, options = {}) {

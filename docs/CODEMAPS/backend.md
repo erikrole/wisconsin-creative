@@ -74,7 +74,7 @@
 | `src/lib/services/shift-generation.ts` | 628 |
 | `src/lib/services/shift-trade-emails.ts` | 56 |
 | `src/lib/services/shift-trades.ts` | 1320 |
-| `src/lib/services/signatures.ts` | 1986 |
+| `src/lib/services/signatures.ts` | 2068 |
 | `src/lib/services/software.ts` | 271 |
 | `src/lib/services/sport-auto-assign-policies.ts` | 46 |
 | `src/lib/services/sport-configs.ts` | 257 |
