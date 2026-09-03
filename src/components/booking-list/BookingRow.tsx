@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { TableRow, TableCell } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { operationalBookingStatus } from "@/lib/booking-status-display";
+import { Checkbox } from "@/components/ui/checkbox";
 
 /* ───── Desktop table row ───── */
 
@@ -17,6 +18,9 @@ export type BookingTableRowProps = {
   overdueStatus: string;
   onClick: () => void;
   menuProps: Omit<BookingMenuProps, "item">;
+  selectable?: boolean;
+  selected?: boolean;
+  onSelectedChange?: (selected: boolean) => void;
 };
 
 export function BookingTableRow({
@@ -24,6 +28,9 @@ export function BookingTableRow({
   overdueStatus,
   onClick,
   menuProps,
+  selectable,
+  selected,
+  onSelectedChange,
 }: BookingTableRowProps) {
   const now = new Date();
   const displayStatus = operationalBookingStatus(item, now);
@@ -41,6 +48,15 @@ export function BookingTableRow({
         )}
         onClick={onClick}
       >
+        {selectable && (
+          <TableCell className="w-11" onClick={(event) => event.stopPropagation()}>
+            <Checkbox
+              checked={selected}
+              onCheckedChange={(checked) => onSelectedChange?.(checked === true)}
+              aria-label={`Select ${item.title}`}
+            />
+          </TableCell>
+        )}
         <TableCell>
           <button
             type="button"
@@ -133,6 +149,9 @@ export type BookingMobileCardProps = {
   overdueStatus: string;
   onClick: () => void;
   menuProps: Omit<BookingMenuProps, "item">;
+  selectable?: boolean;
+  selected?: boolean;
+  onSelectedChange?: (selected: boolean) => void;
 };
 
 export function BookingMobileCard({
@@ -140,6 +159,9 @@ export function BookingMobileCard({
   overdueStatus,
   onClick,
   menuProps,
+  selectable,
+  selected,
+  onSelectedChange,
 }: BookingMobileCardProps) {
   const now = new Date();
   const displayStatus = operationalBookingStatus(item, now);
@@ -159,6 +181,15 @@ export function BookingMobileCard({
         aria-label={`View booking: ${item.title}`}
         onClick={onClick}
       />
+      {selectable && (
+        <div className="absolute right-14 top-4 z-30" onClick={(event) => event.stopPropagation()}>
+          <Checkbox
+            checked={selected}
+            onCheckedChange={(checked) => onSelectedChange?.(checked === true)}
+            aria-label={`Select ${item.title}`}
+          />
+        </div>
+      )}
 
       {/* Status left accent */}
       <div

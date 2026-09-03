@@ -27,6 +27,21 @@ describe("iOS booking list actions", () => {
 });
 
 describe("iOS focused booking edit and transfer", () => {
+  it("reuses reservation gear only into a different event context", () => {
+    const viewModel = readFileSync("ios/Wisconsin/Views/CreateBooking/CreateBookingViewModel.swift", "utf8");
+
+    expect(detail).toContain('booking.allows("duplicate") == true');
+    expect(detail).toContain('Label("Reuse Gear for Another Event"');
+    expect(detail).toContain("composer.prefillGearForNewEvent(from: booking)");
+    expect(viewModel).toContain("func prefillGearForNewEvent(from booking: Booking)");
+    expect(viewModel).toContain("reusedGearSourceEventIds = Set(booking.linkedEvents.map(\\.id))");
+    expect(viewModel).toContain("selectedAssetIds = Set(booking.serializedItems.map(\\.assetId))");
+    expect(viewModel).toContain("hasInvalidReusedEventSelection");
+    expect(create).toContain("!vm.isReusingGear || (setupMode == .event && vm.linkedEventCount > 0)");
+    expect(create).toContain("if canLinkEvents && !vm.isReusingGear");
+    expect(create).toContain('Label("Choose a different event when reusing gear"');
+  });
+
   it("only edits the booking name and return time", () => {
     const editor = detail.slice(
       detail.indexOf("struct EditBookingSheet"),

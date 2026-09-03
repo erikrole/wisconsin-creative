@@ -129,13 +129,7 @@ export function useBookingActions(
   const duplicate = useCallback(async () => {
     if (!guardStart("duplicate")) return;
     try {
-      const result = await callAction(`/api/reservations/${bookingId}/duplicate`);
-      if (result.ok) {
-        const newId = (result as { data?: { id?: string } }).data?.id;
-        router.push(newId ? `/reservations/${newId}` : "/reservations");
-      } else {
-        toast.error(result.error!);
-      }
+      router.push(`/reservations/new?reuseFrom=${encodeURIComponent(bookingId)}`);
     } finally {
       guardEnd();
     }

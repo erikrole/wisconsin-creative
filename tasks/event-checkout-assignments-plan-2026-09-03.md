@@ -15,8 +15,8 @@
 - [x] Keep rollback `aa19dc8b` live while preparing the repair.
 - [x] Restore exact applied migration history missing from `main`.
 - [x] Add and validate migration `0141_event_checkout_assignments` on a temporary Neon branch.
-- [ ] Commit and deploy the additive schema/migration without the application feature bundle.
-- [ ] Verify production migration health and old-code booking compatibility.
+- [x] Commit and deploy the additive schema/migration without the application feature bundle.
+- [x] Verify production migration health and old-code booking compatibility.
 - [ ] Restore, verify, commit, and deploy the reservation web/iOS feature bundle.
 - [ ] Run authenticated `/api/me`, iOS Home dashboard, and Bookings acceptance checks.
 - [ ] Preview Emma Hansen's exact records and mutate only if the shipped eligibility rules permit it.
@@ -29,7 +29,9 @@
 - Stop before Emma cleanup if requester, event set, location, window, booking kind, or lifecycle state differs.
 
 ## Proof
-- Passed locally: Prisma format/validate and client generation, migration prefix check, 15 focused migration tests, TypeScript, lint, app build, docs verification, and `git diff --check`.
+- Passed locally: Prisma format/validate and client generation, migration prefix check, 15 focused migration tests, 78 focused reservation tests, TypeScript, lint, app build, iOS drift/audit/project checks, an iPhone 16 Pro simulator build, docs verification, and `git diff --check`.
 - Temporary Neon branch: all 297 existing bookings defaulted to `PERSON`; nullable assignee fields, indexes, foreign key, and representative booking reads passed. The rehearsal branch was deleted without applying production changes.
 - Restored history: local checksums for `0139_football_game_day_roles` and `0140_varsity_season_ownership` exactly match the applied production rows.
-- Pending: production migration health, iOS build, deployment status, authenticated API/native acceptance, and merge preview.
+- Production migration: Vercel applied only `0141_event_checkout_assignments`; post-deploy health reported 147/147 applied with no pending, failed, or database-only migrations. Both the primary and App Review deployments succeeded.
+- Repository-wide test inventory: 4,205 tests passed and 29 unrelated source-contract tests failed; the focused reservation slice passed 78/78.
+- Pending: application-feature deployment, authenticated API/native acceptance, Emma merge preview, and the migration-release guard.

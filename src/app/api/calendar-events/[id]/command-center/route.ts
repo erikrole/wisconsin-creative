@@ -48,10 +48,14 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
       },
       select: {
         id: true,
+        kind: true,
         status: true,
+        title: true,
         requesterUserId: true,
         shiftAssignmentId: true,
         requester: { select: { id: true, name: true } },
+        serializedItems: { select: { allocationStatus: true } },
+        bulkItems: { select: { plannedQuantity: true, checkedOutQuantity: true } },
       },
       take: 500,
     }),
@@ -63,6 +67,7 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
       data: {
         shifts: [],
         gearSummary: { total: 0, byStatus: { draft: 0, reserved: 0, pendingPickup: 0, checkedOut: 0, completed: 0 } },
+        gearPlans: [],
         missingGear: [],
         recentChanges: changeHistory.events[eventId]?.items ?? [],
       },
@@ -82,10 +87,14 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
         },
         select: {
           id: true,
+          kind: true,
           status: true,
+          title: true,
           requesterUserId: true,
           shiftAssignmentId: true,
           requester: { select: { id: true, name: true } },
+          serializedItems: { select: { allocationStatus: true } },
+          bulkItems: { select: { plannedQuantity: true, checkedOutQuantity: true } },
         },
         take: 500,
       })
@@ -110,6 +119,39 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
 
   // Set of userIds who have any booking for this event
   const usersWithGear = new Set(allBookings.map((b) => b.requesterUserId));
+
+  const gearPlansByUser = new Map<string, typeof allBookings>();
+  for (const booking of allBookings) {
+    const existing = gearPlansByUser.get(booking.requesterUserId) ?? [];
+    existing.push(booking);
+    gearPlansByUser.set(booking.requesterUserId, existing);
+  }
+  const gearPlans = Array.from(gearPlansByUser.entries())
+    .map(([requesterUserId, userBookings]) => {
+      const hasPartialPickup = userBookings.some((booking) =>
+        booking.kind === "RESERVATION" && booking.status === "BOOKED" && (
+          booking.serializedItems.some((item) => item.allocationStatus === "picked_up")
+          || booking.bulkItems.some((item) => item.checkedOutQuantity > 0)
+        ),
+      );
+      const state = userBookings.some((booking) => booking.status === "OPEN") ? "checked_out"
+        : hasPartialPickup ? "partially_picked_up"
+        : userBookings.some((booking) => booking.status === "PENDING_PICKUP") ? "ready_for_pickup"
+        : userBookings.some((booking) => booking.status === "BOOKED") ? "reserved"
+        : userBookings.some((booking) => booking.status === "COMPLETED") ? "returned"
+        : "draft";
+      return {
+        requesterUserId,
+        requesterName: userBookings[0]?.requester.name ?? "Unknown",
+        bookingIds: userBookings.map((booking) => booking.id),
+        title: userBookings[0]?.title ?? "Gear",
+        state,
+        itemCount: userBookings.reduce((count, booking) => count
+          + booking.serializedItems.length
+          + booking.bulkItems.reduce((sum, item) => sum + item.plannedQuantity, 0), 0),
+      };
+    })
+    .sort((a, b) => a.requesterName.localeCompare(b.requesterName));
 
   // Build shifts response and collect missing gear
   const missingGear: Array<{
@@ -171,6 +213,7 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
     data: {
       shifts,
       gearSummary: { total: allBookings.length, byStatus },
+      gearPlans,
       missingGear,
       recentChanges: changeHistory.events[eventId]?.items ?? [],
     },

@@ -69,6 +69,9 @@ export const actionLabels: Record<string, string> = {
   auto_completed_by_kiosk_checkin: "completed the booking by returning at kiosk",
   auto_completed_by_bulk_checkin: "completed the booking by bulk return",
   auto_completed_by_partial_checkin: "completed the booking after partial return",
+  reservation_consolidated: "added gear to the existing reservation",
+  reservations_merged: "combined matching reservations",
+  merged_into_reservation: "combined this reservation into another gear plan",
 };
 
 /** Friendly label for an audit action, humanizing unknown codes. */

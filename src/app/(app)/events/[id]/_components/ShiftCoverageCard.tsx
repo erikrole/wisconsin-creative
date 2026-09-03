@@ -27,6 +27,14 @@ import {
 } from "@/components/shift-detail/crew-row";
 
 const AREAS = ["VIDEO", "PHOTO", "GRAPHICS", "SOCIAL", "COMMS", "LIVE_PRODUCTION"] as const;
+const GEAR_STATE: Record<CommandCenterData["gearPlans"][number]["state"], { label: string; variant: "gray" | "purple" | "orange" | "green" | "blue" }> = {
+  draft: { label: "Draft", variant: "gray" },
+  reserved: { label: "Reserved", variant: "purple" },
+  ready_for_pickup: { label: "Ready for pickup", variant: "orange" },
+  partially_picked_up: { label: "Partially picked up", variant: "orange" },
+  checked_out: { label: "Checked out", variant: "green" },
+  returned: { label: "Returned", variant: "blue" },
+};
 
 type Shift = ShiftGroupSummary["shifts"][number];
 type Assignment = Shift["assignments"][number];
@@ -300,6 +308,43 @@ export function ShiftCoverageCard({
             {commandCenter.gearSummary.byStatus.pendingPickup > 0 && <Badge variant="orange" size="sm">{commandCenter.gearSummary.byStatus.pendingPickup} pending pickup</Badge>}
             {commandCenter.gearSummary.byStatus.checkedOut > 0 && <Badge variant="green" size="sm">{commandCenter.gearSummary.byStatus.checkedOut} checked out</Badge>}
             {commandCenter.gearSummary.byStatus.completed > 0 && <Badge variant="blue" size="sm">{commandCenter.gearSummary.byStatus.completed} returned</Badge>}
+          </div>
+        )}
+
+        {commandCenter && isStaffOrAdmin && commandCenter.gearPlans.length > 0 && (
+          <div className="mb-4 overflow-hidden rounded-lg border border-border/60">
+            <div className="flex items-center justify-between bg-muted/35 px-3 py-2">
+              <h3 className="text-sm font-medium">Event gear readiness</h3>
+              <span className="text-xs text-muted-foreground">One row per person</span>
+            </div>
+            <div className="divide-y divide-border/50">
+              {commandCenter.gearPlans.map((plan) => {
+                const state = GEAR_STATE[plan.state];
+                const href = plan.bookingIds.length === 1
+                  ? `/bookings?highlight=${encodeURIComponent(plan.bookingIds[0]!)}`
+                  : `/bookings?tab=reservations&requester_id=${encodeURIComponent(plan.requesterUserId)}`;
+                return (
+                  <Link
+                    key={plan.requesterUserId}
+                    href={href}
+                    className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 transition-colors hover:bg-muted/30"
+                  >
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-medium">{plan.requesterName}</div>
+                      <div className="truncate text-xs text-muted-foreground">
+                        {plan.title} · {plan.itemCount} item{plan.itemCount === 1 ? "" : "s"}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {plan.bookingIds.length > 1 && (
+                        <Badge variant="orange" size="sm">{plan.bookingIds.length} plans · combine</Badge>
+                      )}
+                      <Badge variant={state.variant} size="sm">{state.label}</Badge>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         )}
 

@@ -53,8 +53,8 @@ const STATE_ACTIONS: Record<BookingKind, Record<BookingStatus, Set<string>>> = {
     BOOKED: new Set(["edit", "extend", "cancel", "duplicate", "force-checkout", "transfer-owner"]),
     PENDING_PICKUP: new Set(),
     OPEN: new Set(),
-    COMPLETED: new Set(),
-    CANCELLED: new Set(),
+    COMPLETED: new Set(["duplicate"]),
+    CANCELLED: new Set(["duplicate"]),
   },
 };
 

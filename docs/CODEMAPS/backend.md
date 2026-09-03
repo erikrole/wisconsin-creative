@@ -17,9 +17,9 @@
 | `src/lib/services/booking-rules.ts` | 109 |
 | `src/lib/services/bookings-checkin.ts` | 846 |
 | `src/lib/services/bookings-helpers.ts` | 281 |
-| `src/lib/services/bookings-lifecycle.ts` | 2581 |
+| `src/lib/services/bookings-lifecycle.ts` | 2805 |
 | `src/lib/services/bookings-queries.ts` | 301 |
-| `src/lib/services/bookings.ts` | 4 |
+| `src/lib/services/bookings.ts` | 5 |
 | `src/lib/services/bulk-assignment-batches.ts` | 252 |
 | `src/lib/services/bulk-schedule-assignment.ts` | 969 |
 | `src/lib/services/bulk-unit-scans.ts` | 661 |
@@ -48,10 +48,11 @@
 | `src/lib/services/manual-event-time.ts` | 303 |
 | `src/lib/services/non-game-schedule-defaults.ts` | 49 |
 | `src/lib/services/notification-prefs.ts` | 103 |
-| `src/lib/services/notifications.ts` | 1675 |
+| `src/lib/services/notifications.ts` | 1680 |
 | `src/lib/services/onboarding-lifecycle.ts` | 766 |
 | `src/lib/services/pending-pickup-expiry.ts` | 281 |
 | `src/lib/services/reports.ts` | 1932 |
+| `src/lib/services/reservation-consolidation.ts` | 250 |
 | `src/lib/services/reservation-rules.ts` | 46 |
 | `src/lib/services/reservation-schedule.ts` | 667 |
 | `src/lib/services/scans.ts` | 671 |
@@ -591,6 +592,9 @@
 - `/api/reservations/[id]/convert`
 - `/api/reservations/[id]/duplicate`
 - `/api/reservations/[id]/force-checkout`
+- `/api/reservations/candidates`
+- `/api/reservations/merge/preview`
+- `/api/reservations/merge`
 - `/api/reservations`
 
 ### `/api/resources`

@@ -109,6 +109,16 @@ export function BookingFilters({
             />
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-2">
+            {config.kind === "RESERVATION" && !specialFilter && (
+              <>
+                <Button type="button" variant="outline" size="sm" className="h-10" onClick={() => onSpecialFilterChange("due-today")}>
+                  Event day
+                </Button>
+                <Button type="button" variant="outline" size="sm" className="h-10" onClick={() => onSpecialFilterChange("overdue")}>
+                  Past due
+                </Button>
+              </>
+            )}
             {specialFilter ? (
               <Button
                 type="button"
