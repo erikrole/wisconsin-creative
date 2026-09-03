@@ -14,6 +14,7 @@
 - Other direct-checkout paths already preflight family stock; active-checkout scan-add omitted that recovery boundary.
 - Read-only production proof found Sony Battery units 21 and 26 available with no active allocation and 20 units on hand at Camp Randall. The open `VB vs Auburn` checkout is assigned to Field House, while the authenticated Video Office kiosk is assigned to Camp Randall. The route incorrectly uses `booking.locationId` for availability and checkout movement, so it reads missing Field House stock as zero despite the physical Camp Randall scan.
 - Physical kiosk replay after deployment reproduced `cannot be added: 0 available at Camp Randall`. The remaining zero comes from `checkBulkShortages()`: it subtracts overlapping `BOOKED` family commitments from the on-hand ledger even though the exact scanned numbered unit is physically present and has no active allocation.
+- A second managed-iPad replay successfully added 18 Sony units to CO-0304, then units 1, 2, and 40 again failed while Battery Ops still reported each exact unit AVAILABLE and 16 available overall. Production history shows 14 Sony flags were repaired from stale CHECKED_OUT to AVAILABLE on 2026-06-25; that repair updated unit truth without restoring `BulkStockBalance`, creating the latent aggregate deficit exhausted by this larger checkout.
 - For an active-checkout add, the exact numbered-unit scan and guarded allocation claim are authoritative. Future family reservation demand remains planning context; it must not veto custody of an individually available unit already at the counter. The stock movement still uses the authenticated kiosk ledger and must remain non-negative.
 - Active-checkout edits must remain kiosk-authenticated, location-scoped, serializable, availability-aware, and audited.
 - The current worktree contains unrelated Schedule and Event edits; this slice must not touch or stage them.
@@ -32,6 +33,8 @@
 - [x] Reproduce the deployed false shortage when on-hand stock exists but overlapping booked family commitments reduce aggregate availability to zero.
 - [x] Let an exact available numbered-unit scan proceed without the reservation-commitment shortage veto while preserving the atomic unit claim, non-negative kiosk ledger, allocation, and audit write.
 - [x] Deploy the corrected route to production.
+- [ ] Reconcile a deficient numbered-family balance from effective unit truth inside the serializable exact-scan transaction, with an adjustment movement and audit snapshot before the normal checkout decrement.
+- [ ] Make future stale-flag repairs restore the matching family balance and adjustment movement atomically.
 - [ ] Replay a real Camp Randall battery scan.
 
 ## Verification
@@ -47,7 +50,7 @@
 ## Review
 - Shipped: commit `2e97bc61` is pushed to `origin/main`. Production deployment `dpl_8r1fnvQkoTF8ZH3AJRdhHyKtwhCi` is Ready and aliased to `wisconsincreative.com`; exact available numbered-unit scans no longer run the overlapping-reservation aggregate shortage veto.
 - Verified: physical managed-iPad replay reproduced the old aggregate `0 available at Camp Randall` veto even though Battery Ops reports available numbered units. The new regression proves an exact available unit proceeds even when aggregate reservation availability reports zero, while the guarded claim, Camp Randall stock movement, allocation, and audit write remain. The two focused active-checkout tests, 20 direct-checkout numbered-unit tests, TypeScript, focused ESLint, `build:app`, migration preflight, production compile, codemap/docs verification, and whitespace checks pass. One broader source-contract test remains red on an unrelated pre-existing dashboard requester string changed by shared-checkout work.
-- Deferred: managed-iPad replay of the corrected production route.
+- Reopened: managed-iPad replay proved the exact-unit/reservation correction works for 18 scans, then exposed a historical unit-status versus balance-ledger deficit. Units 1, 2, and 40 are the physical acceptance cases for the next production correction.
 - Blocked: none.
 - Proof artifacts: reported screenshot plus local command output in this task.
 - Next slice or stop: replay one available Sony battery scan at Camp Randall and close the physical acceptance gate.

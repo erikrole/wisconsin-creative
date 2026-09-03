@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Bulk Inventory Management
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-30
+- Last Updated: 2026-09-03
 - Status: Active
 - Version: V1
 
@@ -60,7 +60,7 @@ Operate item families backed by `BulkSku` records. Normal discovery happens in `
   - Numbered-unit receiving can assign one existing active family product to the entire new range through the existing audited unit-add endpoint; individual product reassignment remains in family detail.
   - Metadata editing remains in the shared item-family detail flow and is one explicit action away from every Battery Ops workspace.
   - Checked-out units are read-only in this surface and must be returned through check-in before status changes.
-  - Stale checked-out flag repair uses `POST /api/bulk-skus/batteries/repair-stale`; it is limited to active battery families, requires `bulk_sku.adjust`, defaults to a dry-run preview, and writes one audit entry per repaired unit only when an operator explicitly applies the repair.
+  - Stale checked-out flag repair uses `POST /api/bulk-skus/batteries/repair-stale`; it is limited to active battery families, requires `bulk_sku.adjust`, defaults to a dry-run preview, and restores the family balance with an adjustment movement plus one audit entry per repaired unit only when an operator explicitly applies the repair.
 
 ### `/items/bulk-{id}` and `/bulk-inventory/{id}`
 - **Page:** `src/app/(app)/bulk-inventory/[id]/BulkSkuDetailExperience.tsx`
@@ -158,7 +158,7 @@ Operate item families backed by `BulkSku` records. Normal discovery happens in `
 - Body: `{ reason?: string, dryRun?: boolean }`
 - Repairs active battery-family units where raw `BulkSkuUnit.status = CHECKED_OUT` but no active `BookingBulkUnitAllocation` exists.
 - Defaults to `dryRun: true`; preview responses return candidate units without updating rows or writing audit logs.
-- When called with `dryRun: false`, sets those stale rows to `AVAILABLE` in a serializable transaction and writes `repair_stale_checked_out` audit entries.
+- When called with `dryRun: false`, sets those stale rows to `AVAILABLE`, restores the same per-family quantity to the home-location balance with an adjustment movement, and writes `repair_stale_checked_out` audit entries in one serializable transaction.
 - Does not alter true active checkout allocations or non-battery bulk families.
 - Requires: ADMIN/STAFF
 
@@ -205,6 +205,7 @@ See `AREA_ITEMS.md` 2026-04-06 entry for bulk inventory page hardening:
 - [x] AC-13: Battery Ops presents one compact family workspace with explicit unit receiving, label export, metadata handoff, product mix, derived-count guidance, and an on-demand status-filtered unit roster; quantity-tracked battery corrections remain clearly separate.
 
 ## Change Log
+- 2026-09-03: **Numbered battery unit truth now repairs a deficient aggregate ledger.** A large active checkout successfully scanned 18 Sony units, then exposed historical drift: a June stale-flag repair had made 14 unit records effectively available without restoring the aggregate balance, so later exact scans stopped at `0 available` while Battery Ops still showed units 1, 2, and 40 available. Active-checkout exact scans now add only a positive aggregate deficit from effective unit truth through an audited adjustment before the normal checkout decrement. Future stale-flag repairs restore the matching balance and movement atomically with the unit changes.
 - 2026-08-30: **Battery family operations became count-honest and compact.** Battery Ops now keeps all numbered tiles collapsed on load, uses one independent row per family, leads with available/active state plus threshold/label/QR/product metadata, and names `Add units`, `Export labels`, and `Edit metadata` explicitly. The on-demand roster filters by effective unit status, receiving can assign an existing active product to the new permanent range, and quantity-tracked families retain a separate audited `Adjust live count` action. A development-only authenticated fixture supports matched visual proof without mutating inventory.
 - 2026-08-30: **Football Sony Battery is a separate pool with the normal Sony policy.** The accepted product model is two unit-tracked families so Football inventory can be counted and operated independently, without a Football-roster or role gate. The earlier local eligibility schema, migration, mutation guards, and special picker/kiosk copy were removed before deployment. Physical family, QR, count, and unit creation remain open under GAP-74.
 - 2026-07-28: **Item-family images joined Add Item intake.** New Units and Quantity catalog records now use the same pre-save image chooser as Standard items, seeded from the family name and supporting Search, Paste URL, and Upload. The staged selection persists through `/api/bulk-skus/[id]/image` only after `/api/bulk-skus` returns the new family ID, preserving the existing permission, Blob re-hosting, and audit contract. Quantity add-to-existing remains a stock adjustment and does not alter the family image.

@@ -1,4 +1,4 @@
-import { BulkUnitStatus, Prisma } from "@prisma/client";
+import { BulkMovementKind, BulkUnitStatus, Prisma } from "@prisma/client";
 import { z } from "zod";
 import { withAuth } from "@/lib/api";
 import { createAuditEntriesTx } from "@/lib/audit";
@@ -41,6 +41,7 @@ export const POST = withAuth(async (req, { user }) => {
           select: {
             id: true,
             name: true,
+            locationId: true,
             category: true,
             categoryRel: { select: { name: true } },
           },
@@ -84,6 +85,41 @@ export const POST = withAuth(async (req, { user }) => {
       },
       data: { status: BulkUnitStatus.AVAILABLE },
     });
+
+    const repairedBySku = new Map<string, { locationId: string; quantity: number }>();
+    for (const unit of staleBatteryUnits) {
+      const current = repairedBySku.get(unit.bulkSkuId);
+      repairedBySku.set(unit.bulkSkuId, {
+        locationId: unit.bulkSku.locationId,
+        quantity: (current?.quantity ?? 0) + 1,
+      });
+    }
+    for (const [bulkSkuId, repair] of repairedBySku) {
+      await tx.bulkStockBalance.upsert({
+        where: {
+          bulkSkuId_locationId: {
+            bulkSkuId,
+            locationId: repair.locationId,
+          },
+        },
+        create: {
+          bulkSkuId,
+          locationId: repair.locationId,
+          onHandQuantity: repair.quantity,
+        },
+        update: { onHandQuantity: { increment: repair.quantity } },
+      });
+      await tx.bulkStockMovement.create({
+        data: {
+          bulkSkuId,
+          locationId: repair.locationId,
+          actorUserId: user.id,
+          kind: BulkMovementKind.ADJUSTMENT,
+          quantity: repair.quantity,
+          reason,
+        },
+      });
+    }
 
     await createAuditEntriesTx(tx, staleBatteryUnits.map((unit) => ({
       actorId: user.id,

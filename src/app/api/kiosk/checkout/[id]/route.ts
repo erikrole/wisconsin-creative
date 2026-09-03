@@ -9,7 +9,7 @@ import { parseDerivedBulkUnitQr } from "@/lib/bulk-unit-qr";
 import { CLAIMABLE_BULK_UNIT_WHERE } from "@/lib/bulk-unit-status";
 import { checkAvailability } from "@/lib/services/availability";
 import { upsertBulkBalancesAndMovements } from "@/lib/services/bookings-helpers";
-import { BookingCustodyScope, BookingKind, BulkMovementKind, BulkUnitStatus, Prisma } from "@prisma/client";
+import { BookingCustodyScope, BookingKind, BulkMovementKind, BulkUnitStatus, Prisma, Role } from "@prisma/client";
 import { scheduleCheckoutReturnLiveActivity } from "@/lib/live-activity-workflow";
 import { updateCheckoutReturnLiveActivities } from "@/lib/services/live-activities";
 import { normalizeBookingTitle, normalizeTeamAbbreviations } from "@/lib/title-normalization";
@@ -57,6 +57,87 @@ function activeBulkQuantity(item: { checkedOutQuantity: number; checkedInQuantit
 
 function quantityLabel(name: string, quantity: number) {
   return quantity === 1 ? name : `${name} x${quantity}`;
+}
+
+const NUMBERED_BALANCE_RECONCILIATION_REASON =
+  "Reconciled numbered-unit balance from available unit records before exact kiosk checkout";
+
+async function reconcileNumberedUnitBalanceDeficit(
+  tx: Prisma.TransactionClient,
+  args: {
+    bulkSkuId: string;
+    locationId: string;
+    bookingId: string;
+    actorId: string;
+    actorRole: Role;
+  },
+) {
+  const [remainingAvailableUnits, balances] = await Promise.all([
+    tx.bulkSkuUnit.count({
+      where: { bulkSkuId: args.bulkSkuId, ...CLAIMABLE_BULK_UNIT_WHERE },
+    }),
+    tx.bulkStockBalance.findMany({
+      where: { bulkSkuId: args.bulkSkuId },
+      select: { onHandQuantity: true },
+    }),
+  ]);
+
+  // The scanned unit has already been claimed. Add it back to the expected
+  // pre-checkout count so the normal CHECKOUT movement below leaves the
+  // aggregate ledger equal to the remaining effectively available units.
+  const expectedBeforeCheckout = remainingAvailableUnits + 1;
+  const recordedBeforeCheckout = balances.reduce(
+    (sum, balance) => sum + balance.onHandQuantity,
+    0,
+  );
+  const deficit = expectedBeforeCheckout - recordedBeforeCheckout;
+  if (deficit <= 0) return 0;
+
+  await tx.bulkStockBalance.upsert({
+    where: {
+      bulkSkuId_locationId: {
+        bulkSkuId: args.bulkSkuId,
+        locationId: args.locationId,
+      },
+    },
+    create: {
+      bulkSkuId: args.bulkSkuId,
+      locationId: args.locationId,
+      onHandQuantity: deficit,
+    },
+    update: { onHandQuantity: { increment: deficit } },
+  });
+  await tx.bulkStockMovement.create({
+    data: {
+      bulkSkuId: args.bulkSkuId,
+      locationId: args.locationId,
+      actorUserId: args.actorId,
+      kind: BulkMovementKind.ADJUSTMENT,
+      quantity: deficit,
+      reason: NUMBERED_BALANCE_RECONCILIATION_REASON,
+    },
+  });
+  await createAuditEntryTx(tx, {
+    actorId: args.actorId,
+    actorRole: args.actorRole,
+    entityType: "bulk_sku",
+    entityId: args.bulkSkuId,
+    action: "numbered_unit_balance_reconciled",
+    before: {
+      onHandQuantity: recordedBeforeCheckout,
+      availableUnitCount: expectedBeforeCheckout,
+    },
+    after: {
+      onHandQuantity: recordedBeforeCheckout + deficit,
+      availableUnitCount: expectedBeforeCheckout,
+      quantityAdded: deficit,
+      bookingId: args.bookingId,
+      locationId: args.locationId,
+      reason: NUMBERED_BALANCE_RECONCILIATION_REASON,
+    },
+  });
+
+  return deficit;
 }
 
 type KioskBulkDetailItem = {
@@ -567,6 +648,17 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
           bulkSkuUnitId: unit.id,
           checkedOutAt: now,
         },
+      });
+
+      // Unit status/allocation is the numbered-family source of truth. Repair
+      // any older aggregate deficit before writing this exact checkout
+      // movement so a valid physical scan cannot dead-end on stale balance.
+      await reconcileNumberedUnitBalanceDeficit(tx, {
+        bulkSkuId: unit.bulkSkuId,
+        locationId: kiosk.locationId,
+        bookingId: booking.id,
+        actorId,
+        actorRole: actor.role,
       });
 
       await upsertBulkBalancesAndMovements(tx, {

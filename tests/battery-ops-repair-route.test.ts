@@ -6,6 +6,12 @@ const tx = {
     findMany: vi.fn(),
     updateMany: vi.fn(),
   },
+  bulkStockBalance: {
+    upsert: vi.fn(),
+  },
+  bulkStockMovement: {
+    create: vi.fn(),
+  },
 };
 
 vi.mock("@/lib/auth", () => ({
@@ -60,6 +66,7 @@ beforeEach(() => {
       bulkSku: {
         id: "sku-battery",
         name: "Sony Battery",
+        locationId: "loc-1",
         category: "Batteries",
         categoryRel: { name: "Batteries" },
       },
@@ -72,6 +79,7 @@ beforeEach(() => {
       bulkSku: {
         id: "sku-cable",
         name: "HDMI Cable",
+        locationId: "loc-1",
         category: "Cables",
         categoryRel: { name: "Cables" },
       },
@@ -102,6 +110,8 @@ describe("POST /api/bulk-skus/batteries/repair-stale", () => {
       }),
     }));
     expect(tx.bulkSkuUnit.updateMany).not.toHaveBeenCalled();
+    expect(tx.bulkStockBalance.upsert).not.toHaveBeenCalled();
+    expect(tx.bulkStockMovement.create).not.toHaveBeenCalled();
     expect(createAuditEntriesTx).not.toHaveBeenCalled();
     expect(body.data).toEqual({
       dryRun: true,
@@ -142,6 +152,21 @@ describe("POST /api/bulk-skus/batteries/repair-stale", () => {
       }),
       data: { status: BulkUnitStatus.AVAILABLE },
     });
+    expect(tx.bulkStockBalance.upsert).toHaveBeenCalledWith({
+      where: { bulkSkuId_locationId: { bulkSkuId: "sku-battery", locationId: "loc-1" } },
+      create: { bulkSkuId: "sku-battery", locationId: "loc-1", onHandQuantity: 1 },
+      update: { onHandQuantity: { increment: 1 } },
+    });
+    expect(tx.bulkStockMovement.create).toHaveBeenCalledWith({
+      data: {
+        bulkSkuId: "sku-battery",
+        locationId: "loc-1",
+        actorUserId: "staff-1",
+        kind: "ADJUSTMENT",
+        quantity: 1,
+        reason: "Shelf count confirmed returned batteries",
+      },
+    });
     expect(createAuditEntriesTx).toHaveBeenCalledWith(tx, [
       expect.objectContaining({
         entityType: "bulk_sku_unit",
@@ -176,6 +201,8 @@ describe("POST /api/bulk-skus/batteries/repair-stale", () => {
     expect(res.status).toBe(200);
     expect(body.data).toEqual({ dryRun: true, plannedCount: 0, repairedCount: 0, units: [] });
     expect(tx.bulkSkuUnit.updateMany).not.toHaveBeenCalled();
+    expect(tx.bulkStockBalance.upsert).not.toHaveBeenCalled();
+    expect(tx.bulkStockMovement.create).not.toHaveBeenCalled();
     expect(createAuditEntriesTx).not.toHaveBeenCalled();
   });
 });

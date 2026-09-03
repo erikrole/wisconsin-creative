@@ -6,6 +6,10 @@ const mocks = vi.hoisted(() => ({
   bookingFindFirst: vi.fn(),
   bulkSkuUnitFindUnique: vi.fn(),
   bulkSkuUnitUpdateMany: vi.fn(),
+  bulkSkuUnitCount: vi.fn(),
+  bulkStockBalanceFindMany: vi.fn(),
+  bulkStockBalanceUpsert: vi.fn(),
+  bulkStockMovementCreate: vi.fn(),
   bookingBulkItemUpsert: vi.fn(),
   bookingBulkUnitAllocationCreate: vi.fn(),
   findBulkUnitByScanValue: vi.fn(),
@@ -62,7 +66,13 @@ beforeEach(() => {
     bulkSkuUnit: {
       findUnique: mocks.bulkSkuUnitFindUnique,
       updateMany: mocks.bulkSkuUnitUpdateMany,
+      count: mocks.bulkSkuUnitCount,
     },
+    bulkStockBalance: {
+      findMany: mocks.bulkStockBalanceFindMany,
+      upsert: mocks.bulkStockBalanceUpsert,
+    },
+    bulkStockMovement: { create: mocks.bulkStockMovementCreate },
     bookingBulkItem: { upsert: mocks.bookingBulkItemUpsert },
     bookingBulkUnitAllocation: { create: mocks.bookingBulkUnitAllocationCreate },
   }));
@@ -95,6 +105,8 @@ beforeEach(() => {
     },
   });
   mocks.bulkSkuUnitUpdateMany.mockResolvedValue({ count: 1 });
+  mocks.bulkSkuUnitCount.mockResolvedValue(15);
+  mocks.bulkStockBalanceFindMany.mockResolvedValue([{ onHandQuantity: 16 }]);
   mocks.bookingBulkItemUpsert.mockResolvedValue({ id: "bulk-item-1" });
   mocks.bookingBulkUnitAllocationCreate.mockResolvedValue({ id: "allocation-1" });
   mocks.checkAvailability.mockResolvedValue({
@@ -133,6 +145,49 @@ describe("kiosk active checkout add item", () => {
       items: [{ bulkSkuId: "cmnrtquja0021jp04780v9kej", quantity: 1 }],
     }));
     expect(mocks.createAuditEntryTx).toHaveBeenCalled();
+  });
+
+  it("repairs a stale numbered-unit balance before accepting an exact available scan", async () => {
+    mocks.bulkStockBalanceFindMany.mockResolvedValueOnce([{ onHandQuantity: 0 }]);
+
+    const request = new Request("http://test/api/kiosk/checkout/checkout-1", {
+      method: "POST",
+      body: JSON.stringify({ actorId: "actor-1", scanValue: "94e068d1-21" }),
+    });
+
+    const response = await addActiveCheckoutItem(request, routeContext("checkout-1"));
+
+    expect(await response.json()).toEqual({
+      success: true,
+      message: "Sony NP-FZ100 Battery #21 added",
+    });
+    expect(mocks.bulkStockBalanceUpsert).toHaveBeenCalledWith({
+      where: {
+        bulkSkuId_locationId: {
+          bulkSkuId: "cmnrtquja0021jp04780v9kej",
+          locationId: "loc-1",
+        },
+      },
+      create: {
+        bulkSkuId: "cmnrtquja0021jp04780v9kej",
+        locationId: "loc-1",
+        onHandQuantity: 16,
+      },
+      update: { onHandQuantity: { increment: 16 } },
+    });
+    expect(mocks.bulkStockMovementCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        kind: "ADJUSTMENT",
+        quantity: 16,
+        reason: expect.stringContaining("available unit records"),
+      }),
+    });
+    expect(mocks.createAuditEntryTx).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      action: "numbered_unit_balance_reconciled",
+      before: { onHandQuantity: 0, availableUnitCount: 16 },
+      after: expect.objectContaining({ onHandQuantity: 16, quantityAdded: 16 }),
+    }));
+    expect(mocks.upsertBulkBalancesAndMovements).toHaveBeenCalled();
   });
 
   it("uses the authenticated kiosk stock when the checkout originated elsewhere", async () => {
