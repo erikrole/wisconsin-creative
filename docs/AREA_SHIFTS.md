@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Shift Calendar & Scheduling
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-31
+- Last Updated: 2026-09-03
 - Status: Active — implemented V1 with ongoing hardening
 
 ## Purpose
@@ -16,7 +16,7 @@ Replace Asana-based shift scheduling with a native shift calendar in Wisconsin C
 - **ShiftWorkerType**: Internal planned staffing kind; UI and notifications must display Staff or Student, never raw enum abbreviations
 - **SportConfig**: Per-sport Staff and Student shift counts for home/away events per area
 - **Settings-owned Student call time**: Sport and Non-game offsets are the shared fallback for Student coverage. Staff and collaborator coverage retains the event window internally but exposes no call-time value or event-time substitute; all-day events retain date-only boundaries.
-- **ShiftGroup**: 1:1 with CalendarEvent, container for all shifts at an event
+- **ShiftGroup**: 1:1 with its source CalendarEvent. A combined operational event retains both source events but uses only the canonical event's ShiftGroup as the shared crew; the secondary group is archived and excluded from release.
 - **Pending schedule**: One private, versioned staff editing copy per ShiftGroup. Future edits restart a durable ten-minute quiet period and reconcile automatically; the same editor publishes an ended event synchronously as a silent backfill while worker-facing reads retain the last released schedule until that write completes. Each command keeps a bounded actor-owned before/after history, so named Undo and Redo can restore one staged change at a time through the server's version boundary; batch Revert remains the explicit all-change escape hatch.
 - **Assignment provenance**: `ShiftAssignment.source` distinguishes manual staffing, preview-approved auto-fill, and reservation-managed schedule work. Reservation lifecycle cleanup can release only the last category.
 - **Trade Board**: Area-filtered board where students post shifts they can't work; other students in the same area can claim them. A claim is a request: an Admin approves or declines it, and the poster keeps the shift until then.
@@ -75,11 +75,12 @@ Replace Asana-based shift scheduling with a native shift calendar in Wisconsin C
 - [x] Auto-fill and manual crew review: staff/admin can preview auto-fill recommendations before applying assignments through existing safety checks. Template-review UI is retired to keep Event detail focused.
 - [x] Gear readiness: Schedule health carries event and assignment gear readiness across primary event, linked-event, and shift-assignment booking paths, while detailed gear prep stays on Event detail and gear queues instead of the main Schedule list
 - [x] Personal calendar subscriptions: worker ICS feeds use the effective personal call window, preserve inherited all-day assignments as RFC 5545 date values, keep explicit Student call windows timed, include concise area-plus-matchup titles and event deep links, mark active trade-board posts, and remove swapped-away assignments when another worker takes the shift
+- [ ] Combined events: Staff/Admin receive a dismissible inline prompt and count for likely future same-day/same-family pairs; Review opens the server preview with exact kept-assignment and retired-empty-slot counts before combining one same-venue pair into one Schedule row and canonical crew. Any second live crew fails closed. An unpublished unassigned secondary draft is retained but made ineligible for queued release, and audited Undo restores that draft without publishing or scheduling it. Migration and authenticated runtime proof remain open.
 
 ## Information Architecture
 
 ### Schedule Page (`/schedule`)
-1. **Page Header** — title and a "More" overflow menu for New event, Trade Board (with open-trade count), and Export CSV; students keep a direct Trade Board button
+1. **Page Header** — title and a "More" overflow menu for New event, Combine events (with suggestion count), Trade Board (with open-trade count), and Export CSV; students keep a direct Trade Board button. Combine events is Staff/Admin-only and preview-first. A dismissible inline prompt opens a matching pair's server preview immediately; the dialog retains manual selectors and dismissible suggested pairs.
 2. **Schedule attention bar** (`ScheduleReadiness` + shared `OperationalStatusRail`) — compact strip with next call plus up to three priority-ordered clickable exceptions for the nonzero staffing, gear-gap, data-quality, conflict, request, trade, source, and personal-shift queues. Additional exceptions remain accounted for in Details, and a calm all-clear state appears only when health data is complete.
 3. **Details panel** — one collapsed-by-default expander (shared `OperationalMetricCard` grid) holding the full readiness metrics and, for staff/admin, the review-first Automation review cards: staffing, auto-fill preview, publish readiness, blockers, sources, and cleanup
 4. **Work queues** — URL-backed `queue` state for Needs staffing, Conflicts, Pending requests, Trade approval, Gear gaps, My calls today, and Stale source
@@ -119,6 +120,8 @@ Replace Asana-based shift scheduling with a native shift calendar in Wisconsin C
 - Sports code mappings (existing — `src/lib/sports.ts`)
 
 ## Change Log
+- 2026-09-03: The local Combine events dialog now discovers and chronologically suggests up to six future same-day, same-sport-family pairs that also satisfy venue, overlap, and opponent heuristics. A suggestion only pre-fills the existing preview-first controls; the server remains authoritative and nothing changes until explicit apply.
+- 2026-09-03: Added the local combined-event scheduling contract and operator QoL. A dismissible same-day/sport prompt and More-menu count lead directly to a server preview with exact kept-crew and retired-slot counts. Two overlapping source events in the same sport family and normalized venue may share one canonical Schedule row and crew. Combine and Undo are serializable and audited, reject any second published or assigned crew, and retain the unpublished secondary draft with release disabled instead of deleting it. Migration, authenticated browser proof, deployment, and the live Cross Country action remain open under GAP-75.
 
 - 2026-08-31: **Schedule List now retries its Today anchor after asynchronous rows commit.** The initial layout pass no longer permanently misses the current-day row when loading settles before the filtered timeline DOM is present, so a fresh List visit cannot remain parked at the archived-record floor. Existing URL-backed context, refresh/history restoration, and reader-owned scroll behavior are unchanged; this is a local source/test change with deployment and authenticated production acceptance still separate.
 

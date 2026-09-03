@@ -1595,6 +1595,9 @@ function EventRows({
               </Link>
               <div className="mt-0.5 flex min-w-0 items-center gap-2 text-[11px] text-muted-foreground">
                 <span className="shrink-0">{venueTone.label}</span>
+                {(entry.combinedEventCount ?? 0) > 1 && (
+                  <Badge variant="secondary" size="sm">{entry.combinedEventCount} events · shared crew</Badge>
+                )}
                 {titleParts.detail && <span className="truncate">{titleParts.detail}</span>}
                 {entry.subtitle && <span className="truncate font-medium text-primary/70">{entry.subtitle}</span>}
               </div>

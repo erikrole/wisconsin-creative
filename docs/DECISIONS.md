@@ -1459,3 +1459,27 @@ These are non-negotiable integrity constraints. Every feature must preserve them
   - The first real upload remains a separate authenticated browser read-back gate. Preview private storage is provisioned and empty, and migrations `0135`/`0136` are applied with no supplied PDF ingested; source, migration, and empty-state success alone do not prove the upload/replacement/history lifecycle.
   - The experience remains small by omitting delete, move, rename, public/external links, generated server thumbnails, and approval workflow. Browser previews, favorites, local recents, and internal authenticated links improve retrieval without changing ownership or publication policy.
 - Reference: `docs/BRIEF_BRAND_ASSET_LIBRARY_V1.md`, `tasks/brand-asset-library-plan-2026-08-26.md`, `docs/AREA_RESOURCES.md`, `src/app/(app)/resources/page.tsx`, `src/lib/blob.ts`, and `src/lib/signatures/storage.ts`.
+
+## D-060: Similar Concurrent Events Share One Canonical Operational Crew
+- Date: 2026-09-03
+- Status: Accepted; implemented locally, migration and authenticated runtime proof pending
+- Context:
+  - One meet can arrive as separate source events for related teams, such as Men's and Women's Cross Country at the same venue with overlapping windows, even though Creative covers it with one crew.
+  - Deleting or rewriting either imported event would break source identity and sync history. Publishing both shift groups would instead duplicate crew work, notifications, and operational ownership.
+- Decision:
+  - Keep every `CalendarEvent` as a distinct source record. A nullable self-relation identifies a secondary event's canonical operational parent; Schedule collapses the pair into one row spanning the earliest start through latest end and uses only the parent's ShiftGroup.
+  - Allow Staff/Admin to combine exactly two standalone events only after a server preview confirms overlapping windows, the same normalized venue, the same configured sport family, and a compatible opponent/meet identity.
+  - Choose the parent deterministically, preferring a published crew, then active assignments, then an existing group, then the earlier event. Never allow the operation to choose between two published or assigned crews.
+  - Archive an unpublished, unassigned secondary group. Retain its private working copy, increment its version, and clear its release state so an already-queued exact-version workflow is superseded rather than able to publish or silently destroy the draft.
+  - Apply the relationship, group retirement, and audit receipt in one `SERIALIZABLE` transaction guarded by the previewed parent and secondary working-copy version.
+  - Allow Staff/Admin to undo that exact relationship in a separate audited `SERIALIZABLE` transition. Restore only the retained unpublished/unassigned secondary group and draft, clear its retirement marker, and leave automatic release disabled.
+- Guardrails:
+  - Combining is explicit and preview-first; source sync never combines events automatically.
+  - Do not delete source events, live assignments, published crews, or bookings. A pair with a second live crew fails closed for manual reconciliation.
+  - Sport-family equivalence is explicit product configuration, not fuzzy title matching. Venue normalization may reconcile spelling and punctuation but does not infer a missing venue.
+  - Primary web Event detail must preserve both source identities and individual times. Native combined-row and recovery presentation still require their own verified client slice; additive API fields must remain rollout-tolerant meanwhile.
+- Consequences:
+  - Concurrent Men's/Women's meet records can read as one operational Schedule event with one crew while calendar provenance remains intact.
+  - Direct secondary Event-detail navigation resolves to the canonical primary, and the original secondary identity remains available for sync and audit history.
+  - Migration `0142_combined_schedule_events`, authenticated browser proof, deployment, and the first live Cross Country combine remain separate rollout gates.
+- Reference: `tasks/combined-schedule-events-plan-2026-09-03.md`, `docs/AREA_EVENTS.md`, `docs/AREA_SHIFTS.md`, and `src/lib/services/combined-schedule-events.ts`.

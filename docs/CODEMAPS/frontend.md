@@ -162,7 +162,7 @@
 | `src/hooks/use-mobile.ts` | 20 |
 | `src/hooks/use-operational-polling-activity.ts` | 131 |
 | `src/hooks/use-profile-completion.ts` | 65 |
-| `src/hooks/use-schedule-data.ts` | 970 |
+| `src/hooks/use-schedule-data.ts` | 976 |
 | `src/hooks/use-url-state.ts` | 166 |
 | `src/hooks/useBookingActions.ts` | 236 |
 | `src/hooks/useBookingDetail.ts` | 70 |

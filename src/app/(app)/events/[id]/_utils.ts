@@ -20,6 +20,8 @@ export type CalendarEvent = {
   locationLocked: boolean;
   location: { id: string; name: string } | null;
   source: { id: string; name: string } | null;
+  combinedInto: { id: string; summary: string } | null;
+  combinedEvents: Array<{ id: string; summary: string; startsAt: string; endsAt: string; allDay: boolean; sportCode: string | null }>;
 };
 
 export type ShiftGroupSummary = {

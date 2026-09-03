@@ -101,7 +101,19 @@ export const GET = withAuth(async (req, { user }) => {
       where,
       include: {
         location: { select: { id: true, name: true } },
-        source: { select: { id: true, name: true } }
+        source: { select: { id: true, name: true } },
+        combinedEvents: {
+          select: {
+            id: true,
+            summary: true,
+            startsAt: true,
+            endsAt: true,
+            allDay: true,
+            sportCode: true,
+            opponent: true,
+          },
+          orderBy: [{ startsAt: "asc" }, { id: "asc" }],
+        },
       },
       // Offset pagination needs a total ordering; several imported events can
       // share an exact start time, so the id tie-breaker prevents a later page

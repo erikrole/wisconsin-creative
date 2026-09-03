@@ -1,6 +1,6 @@
 # Tasks Index
 
-Last updated: 2026-08-26
+Last updated: 2026-09-03
 
 ## Start Here
 
@@ -37,6 +37,7 @@ Audit files intentionally remain at root for now because the repo audit skills r
 
 ## Active Follow-up Ledgers
 
+- `combined-schedule-events-plan-2026-09-03.md` - combine overlapping same-family source events at one venue into one operational Schedule row and canonical crew while preserving both source identities; migration, authenticated UI, native parity, deployment, and live Cross Country acceptance remain open.
 - `event-checkout-assignments-plan-2026-09-03.md` - recover the event-custody migration safely, restore the reservation quality-of-life release, prove authenticated iOS booking reads, and gate any Emma Hansen cleanup through the shipped merge preview.
 - `event-checkout-assignments-plan-2026-09-02.md` - ownerless event checkout manifests with audited serialized-item people assignments and event-shared pooled gear.
 - `bookings-search-qol-plan-2026-08-30.md` - preserve Bookings list context, keep reservation creation globally available on the page, and add explicit global Search recovery.

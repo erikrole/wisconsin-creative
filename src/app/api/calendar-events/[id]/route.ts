@@ -350,7 +350,12 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
     where: { id },
     include: {
       location: { select: { id: true, name: true } },
-      source: { select: { id: true, name: true } }
+      source: { select: { id: true, name: true } },
+      combinedInto: { select: { id: true, summary: true } },
+      combinedEvents: {
+        select: { id: true, summary: true, startsAt: true, endsAt: true, allDay: true, sportCode: true },
+        orderBy: [{ startsAt: "asc" }, { id: "asc" }],
+      },
     }
   });
 

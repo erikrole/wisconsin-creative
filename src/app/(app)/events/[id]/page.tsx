@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Calendar, Clock, MapPin, RefreshCw, WifiOff, AlertTriangle, Pencil, RotateCcw, Users, PackageCheck, Plane, History, Cloud, Sparkles } from "lucide-react";
+import { Calendar, Clock, MapPin, RefreshCw, WifiOff, AlertTriangle, Pencil, RotateCcw, Users, PackageCheck, Plane, History, Cloud, Sparkles, MergeIcon, UnlinkIcon } from "lucide-react";
 import { format } from "date-fns";
 import { classifyError, handleAuthRedirect, isAbortError, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { useFetch } from "@/hooks/use-fetch";
@@ -181,6 +181,12 @@ function compactNumber(value: number) {
   return value.toLocaleString("en-US");
 }
 
+function combinedSourceTime(event: Pick<CalendarEvent, "startsAt" | "endsAt" | "allDay">) {
+  if (event.allDay) return formatCalendarEventDateRange(event, { includeYear: true });
+  const date = new Date(event.startsAt).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  return `${date} · ${formatTimeShort(event.startsAt)} - ${formatTimeShort(event.endsAt)}`;
+}
+
 function titleCase(value: string) {
   const lower = value.toLowerCase();
   return lower.charAt(0).toUpperCase() + lower.slice(1);
@@ -188,8 +194,10 @@ function titleCase(value: string) {
 
 export default function EventDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
   const { setBreadcrumbLabel } = useBreadcrumbLabel();
   const [acting, setActing] = useState<string | null>(null);
+  const [uncombiningId, setUncombiningId] = useState<string | null>(null);
 
   // Edit modal state
   const [editOpen, setEditOpen] = useState(false);
@@ -212,6 +220,7 @@ export default function EventDetailPage() {
   const [locationsLoading, setLocationsLoading] = useState(false);
   const savingRef = useRef(false);
   const nudgeRef = useRef(false);
+  const uncombineRef = useRef(false);
 
   const {
     data: event,
@@ -257,11 +266,38 @@ export default function EventDetailPage() {
     if (event?.summary) setBreadcrumbLabel(event.summary);
   }, [event?.summary, setBreadcrumbLabel]);
 
+  useEffect(() => {
+    if (event?.combinedInto?.id) router.replace(`/events/${event.combinedInto.id}`);
+  }, [event?.combinedInto?.id, router]);
+
   const handleRefresh = useCallback(() => {
     reloadEvent();
     reloadShiftGroup();
     if (isStaffOrAdmin) reloadCommandCenter();
   }, [reloadEvent, reloadShiftGroup, reloadCommandCenter, isStaffOrAdmin]);
+
+  const handleUncombine = useCallback(async (secondaryEventId: string) => {
+    if (uncombineRef.current) return;
+    uncombineRef.current = true;
+    setUncombiningId(secondaryEventId);
+    try {
+      const response = await fetch("/api/calendar-events/combine", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ primaryEventId: id, secondaryEventId }),
+      });
+      if (handleAuthRedirect(response)) return;
+      if (!response.ok) throw new Error(await parseErrorMessage(response, "The event combination could not be undone"));
+      toast.success("Events separated. The retained crew draft was restored without publishing it.");
+      await Promise.all([reloadEvent(), reloadShiftGroup()]);
+      if (isStaffOrAdmin) await reloadCommandCenter();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "The event combination could not be undone");
+    } finally {
+      uncombineRef.current = false;
+      setUncombiningId(null);
+    }
+  }, [id, isStaffOrAdmin, reloadCommandCenter, reloadEvent, reloadShiftGroup]);
 
   function openEdit() {
     if (!event) return;
@@ -887,6 +923,51 @@ export default function EventDetailPage() {
           )}
         </div>
       </section>
+
+      {event.combinedEvents.length > 0 && (
+        <Card className="mb-6 border-orange-500/25">
+          <CardContent className="grid gap-4 p-4">
+            <div className="flex items-start gap-3">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-orange-500/10 text-[var(--orange-text)]">
+                <MergeIcon className="size-4" />
+              </div>
+              <div>
+                <p className="font-medium">Combined event</p>
+                <p className="text-sm text-muted-foreground">One shared crew covers both source events.</p>
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <div className="rounded-md border bg-muted/20 px-3 py-2">
+                <p className="text-sm font-medium">{event.summary}</p>
+                <p className="text-xs text-muted-foreground">{combinedSourceTime(event)}</p>
+              </div>
+              {event.combinedEvents.map((sourceEvent) => (
+                <div key={sourceEvent.id} className="flex flex-wrap items-center gap-3 rounded-md border bg-muted/20 px-3 py-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium">{sourceEvent.summary}</p>
+                    <p className="text-xs text-muted-foreground">{combinedSourceTime(sourceEvent)}</p>
+                  </div>
+                  {isStaffOrAdmin && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-9"
+                      disabled={uncombiningId !== null}
+                      onClick={() => void handleUncombine(sourceEvent.id)}
+                    >
+                      <UnlinkIcon data-icon="inline-start" />
+                      {uncombiningId === sourceEvent.id ? "Undoing…" : "Undo combination"}
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+            {isStaffOrAdmin && (
+              <p className="text-xs text-muted-foreground">Undo restores the retained secondary crew draft, but does not publish or release it.</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {shiftGroup ? (
         <ShiftCoverageCard

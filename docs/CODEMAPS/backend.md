@@ -10,14 +10,14 @@
 | `src/lib/services/auto-assign.ts` | 92 |
 | `src/lib/services/auto-fill-preview.ts` | 325 |
 | `src/lib/services/availability-conflict-recompute.ts` | 130 |
-| `src/lib/services/availability.ts` | 609 |
+| `src/lib/services/availability.ts` | 618 |
 | `src/lib/services/blast-targeting.ts` | 165 |
 | `src/lib/services/blasts.ts` | 358 |
 | `src/lib/services/booking-ref.ts` | 26 |
 | `src/lib/services/booking-rules.ts` | 109 |
 | `src/lib/services/bookings-checkin.ts` | 846 |
 | `src/lib/services/bookings-helpers.ts` | 281 |
-| `src/lib/services/bookings-lifecycle.ts` | 2805 |
+| `src/lib/services/bookings-lifecycle.ts` | 2813 |
 | `src/lib/services/bookings-queries.ts` | 301 |
 | `src/lib/services/bookings.ts` | 5 |
 | `src/lib/services/bulk-assignment-batches.ts` | 252 |
@@ -31,6 +31,7 @@
 | `src/lib/services/claim-review-notifications.ts` | 179 |
 | `src/lib/services/collaborator-policies.ts` | 400 |
 | `src/lib/services/collaborator-schedule.ts` | 220 |
+| `src/lib/services/combined-schedule-events.ts` | 300 |
 | `src/lib/services/companion-projection-publisher.ts` | 57 |
 | `src/lib/services/companion-projection.ts` | 196 |
 | `src/lib/services/dashboard-counts.ts` | 119 |
@@ -131,6 +132,7 @@
 | `src/lib/clipboard.ts` | 19 |
 | `src/lib/collaborator-access.ts` | 164 |
 | `src/lib/collaborator-gear.ts` | 151 |
+| `src/lib/combined-schedule-event-suggestions.ts` | 93 |
 | `src/lib/companion-projection-contract.ts` | 68 |
 | `src/lib/companion-store.ts` | 305 |
 | `src/lib/cron.ts` | 35 |
@@ -204,6 +206,7 @@
 | `src/lib/schedule-publication-types.ts` | 60 |
 | `src/lib/schedule-queues.ts` | 185 |
 | `src/lib/schedule-release.ts` | 16 |
+| `src/lib/schedule-sport-family.ts` | 27 |
 | `src/lib/schedule-template-review-types.ts` | 105 |
 | `src/lib/schedule-timeline-position.ts` | 302 |
 | `src/lib/schedule-window.ts` | 152 |
@@ -377,6 +380,7 @@
 - `/api/calendar-events/[id]/visibility`
 - `/api/calendar-events/[id]/workers/[workerId]`
 - `/api/calendar-events/[id]/workers`
+- `/api/calendar-events/combine`
 - `/api/calendar-events`
 
 ### `/api/calendar-sources`

@@ -1238,7 +1238,7 @@ Indexes and constraints:
 
 ## Model `CalendarEvent`
 
-Fields: 35
+Fields: 38
 
 - `id              String                @id @default(cuid())`
 - `sourceId        String?               @map("source_id")`
@@ -1264,6 +1264,7 @@ Fields: 35
 - `archivedAt      DateTime?             @map("archived_at")`
 - `subtitle        String?`
 - `opponent        String?`
+- `combinedIntoId  String?               @map("combined_into_id")`
 - `createdAt       DateTime              @default(now()) @map("created_at")`
 - `updatedAt       DateTime              @updatedAt @map("updated_at")`
 - `source          CalendarSource?       @relation(fields: [sourceId], references: [id], onDelete: Cascade)`
@@ -1275,6 +1276,8 @@ Fields: 35
 - `follows         ScheduleEventFollow[]`
 - `blasts          Blast[]`
 - `workers         EventWorker[]`
+- `combinedInto    CalendarEvent?        @relation("CalendarEventCombination", fields: [combinedIntoId], references: [id], onDelete: SetNull)`
+- `combinedEvents  CalendarEvent[]       @relation("CalendarEventCombination")`
 
 Indexes and constraints:
 
@@ -1282,6 +1285,7 @@ Indexes and constraints:
 - `@@index([startsAt, endsAt])`
 - `@@index([locationId])`
 - `@@index([sportCode])`
+- `@@index([combinedIntoId])`
 - `@@index([archivedAt])`
 - `@@map("calendar_events")`
 

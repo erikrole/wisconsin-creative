@@ -192,6 +192,7 @@
 - `/api/calendar-events/[id]/visibility` -> `src/app/api/calendar-events/[id]/visibility/route.ts`
 - `/api/calendar-events/[id]/workers/[workerId]` -> `src/app/api/calendar-events/[id]/workers/[workerId]/route.ts`
 - `/api/calendar-events/[id]/workers` -> `src/app/api/calendar-events/[id]/workers/route.ts`
+- `/api/calendar-events/combine` -> `src/app/api/calendar-events/combine/route.ts`
 - `/api/calendar-events` -> `src/app/api/calendar-events/route.ts`
 - `/api/calendar-sources/[id]` -> `src/app/api/calendar-sources/[id]/route.ts`
 - `/api/calendar-sources/[id]/sync` -> `src/app/api/calendar-sources/[id]/sync/route.ts`

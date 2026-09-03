@@ -1,6 +1,7 @@
 import type { BadgeProps } from "@/components/ui/badge";
 import { cleanSourceSummary, normalizeOpponentName } from "@/lib/schedule-event-identity";
 import { sportLabel } from "@/lib/sports";
+import { scheduleSportFamily } from "@/lib/schedule-sport-family";
 import { venueToneFromEvent } from "@/lib/venue-tone";
 
 /* ───── Types ───── */
@@ -21,6 +22,16 @@ export type CalendarEvent = {
   archivedAt?: string | null;
   location: { id: string; name: string } | null;
   source: { id: string; name: string } | null;
+  combinedIntoId?: string | null;
+  combinedEvents?: Array<{
+    id: string;
+    summary: string;
+    startsAt: string;
+    endsAt: string;
+    allDay: boolean;
+    sportCode: string | null;
+    opponent: string | null;
+  }>;
 };
 
 export type ShiftUser = {
@@ -100,6 +111,7 @@ export type CalendarEntry = CalendarEvent & {
   archivedAt?: string | null;
   publication?: SchedulePublicationState | null;
   hasWorkingCopy?: boolean;
+  combinedEventCount?: number;
 };
 
 /* ───── Constants ───── */
@@ -152,12 +164,21 @@ function splitTitleQualifier(value: string): { primary: string; qualifier: strin
 type ScheduleEventTitleInput = Pick<CalendarEntry, "summary" | "sportCode" | "opponent" | "isHome"> & {
   site?: CalendarEntry["site"];
   location?: CalendarEntry["location"];
+  combinedEventCount?: number;
 };
 
 export function scheduleEventTitleParts(entry: ScheduleEventTitleInput): {
   title: string;
   detail: string | null;
 } {
+  if ((entry.combinedEventCount ?? 0) > 1 && entry.sportCode && entry.opponent) {
+    const opponent = splitTitleQualifier(normalizeOpponentName(entry.opponent) ?? entry.opponent);
+    const venueTone = venueToneFromEvent(entry);
+    return {
+      title: `${scheduleSportFamily(entry.sportCode) ?? sportLabel(entry.sportCode)} ${venueTone === "away" ? "at" : "vs"} ${opponent.primary}`,
+      detail: opponent.qualifier,
+    };
+  }
   if (entry.sportCode && entry.opponent) {
     const opponent = splitTitleQualifier(normalizeOpponentName(entry.opponent) ?? entry.opponent);
     const venueTone = venueToneFromEvent(entry);

@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
-import { MoreHorizontalIcon, SparklesIcon } from "lucide-react";
+import { MergeIcon, MoreHorizontalIcon, SparklesIcon, XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -40,6 +40,14 @@ import { AutoAssignDialog } from "@/components/schedule/AutoAssignDialog";
 import type { Area } from "@/types/areas";
 import { ScheduleCrewSheet, type CrewTemplateSide } from "./_components/ScheduleCrewSheet";
 import type { CalendarEntry } from "./_components/types";
+import { CombineEventsDialog } from "./_components/CombineEventsDialog";
+import {
+  combinedScheduleSuggestionKey,
+  suggestCombinedScheduleEventPairs,
+  type CombinedScheduleEventSuggestion,
+} from "@/lib/combined-schedule-event-suggestions";
+
+const DISMISSED_COMBINE_SUGGESTIONS_KEY = "schedule-combine-dismissed-v1";
 
 const ShiftDetailPanel = dynamic(
   () => import("@/components/ShiftDetailPanel"),
@@ -79,9 +87,48 @@ function InternalSchedulePage() {
   const [hidingEventIds, setHidingEventIds] = useState<Set<string>>(() => new Set());
   const [newEventOpen, setNewEventOpen] = useState(false);
   const [autoAssignOpen, setAutoAssignOpen] = useState(false);
+  const [combineEventsOpen, setCombineEventsOpen] = useState(false);
+  const [combineInitialEventIds, setCombineInitialEventIds] = useState<readonly [string, string] | null>(null);
+  const [dismissedSuggestionKeys, setDismissedSuggestionKeys] = useState<Set<string>>(() => new Set());
   const [selectedCrewEntryId, setSelectedCrewEntryId] = useState<string | null>(null);
   const settingUpRef = useRef<Set<string>>(new Set());
   const [settingUpEventIds, setSettingUpEventIds] = useState<Set<string>>(() => new Set());
+  const combineSuggestions = useMemo(
+    () => suggestCombinedScheduleEventPairs(data.entries)
+      .filter((suggestion) => !dismissedSuggestionKeys.has(combinedScheduleSuggestionKey(suggestion))),
+    [data.entries, dismissedSuggestionKeys],
+  );
+  const leadingCombineSuggestion = combineSuggestions[0] ?? null;
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(DISMISSED_COMBINE_SUGGESTIONS_KEY);
+      const parsed: unknown = stored ? JSON.parse(stored) : null;
+      if (Array.isArray(parsed) && parsed.every((value) => typeof value === "string")) {
+        setDismissedSuggestionKeys(new Set(parsed));
+      }
+    } catch {
+      // A private or restricted browser can disable storage; suggestions still work for the session.
+    }
+  }, []);
+
+  const dismissCombineSuggestion = useCallback((suggestion: CombinedScheduleEventSuggestion<CalendarEntry>) => {
+    const key = combinedScheduleSuggestionKey(suggestion);
+    setDismissedSuggestionKeys((current) => {
+      const next = new Set(current).add(key);
+      try {
+        window.localStorage.setItem(DISMISSED_COMBINE_SUGGESTIONS_KEY, JSON.stringify([...next]));
+      } catch {
+        // Keep the dismissal for this session when persistent storage is unavailable.
+      }
+      return next;
+    });
+  }, []);
+
+  const reviewCombineSuggestion = useCallback((suggestion: CombinedScheduleEventSuggestion<CalendarEntry>) => {
+    setCombineInitialEventIds([suggestion.first.id, suggestion.second.id]);
+    setCombineEventsOpen(true);
+  }, []);
 
   const handleSetEventVisibility = useCallback(async (eventId: string, isHidden: boolean) => {
     if (hidingRef.current.has(eventId)) return;
@@ -342,6 +389,15 @@ function InternalSchedulePage() {
                   <DropdownMenuItem onSelect={() => setNewEventOpen(true)}>
                     New event
                   </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => { setCombineInitialEventIds(null); setCombineEventsOpen(true); }}>
+                    <MergeIcon className="size-4" />
+                    Combine events
+                    {combineSuggestions.length > 0 && (
+                      <Badge variant="orange" size="sm" className="ml-auto">
+                        {combineSuggestions.length}
+                      </Badge>
+                    )}
+                  </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => data.setTradeSheetOpen(true)}>
                     Trade Board
                     {data.openTradeCount > 0 && (
@@ -386,6 +442,32 @@ function InternalSchedulePage() {
           filteredEntries={data.filteredEntries}
         />
       </div>
+
+      {isStaff && leadingCombineSuggestion && (
+        <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-orange-500/25 bg-orange-500/10 px-4 py-3">
+          <SparklesIcon className="size-4 shrink-0 text-[var(--orange-text)]" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium">
+              2 related events may share a crew
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              {leadingCombineSuggestion.sportFamily}: {leadingCombineSuggestion.first.summary} + {leadingCombineSuggestion.second.summary}
+            </p>
+          </div>
+          <Button variant="outline" size="sm" className="h-10" onClick={() => reviewCombineSuggestion(leadingCombineSuggestion)}>
+            Review
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-10 text-muted-foreground"
+            aria-label={`Dismiss ${leadingCombineSuggestion.sportFamily} suggestion`}
+            onClick={() => dismissCombineSuggestion(leadingCombineSuggestion)}
+          >
+            <XIcon className="size-4" />
+          </Button>
+        </div>
+      )}
 
       <ScheduleReadiness
         entries={data.entries}
@@ -492,6 +574,21 @@ function InternalSchedulePage() {
           open={newEventOpen}
           onOpenChange={setNewEventOpen}
           onCreated={data.loadData}
+        />
+      )}
+
+      {isStaff && (
+        <CombineEventsDialog
+          open={combineEventsOpen}
+          onOpenChange={(open) => {
+            setCombineEventsOpen(open);
+            if (!open) setCombineInitialEventIds(null);
+          }}
+          entries={data.entries}
+          suggestions={combineSuggestions}
+          initialEventIds={combineInitialEventIds}
+          onDismissSuggestion={dismissCombineSuggestion}
+          onCombined={data.loadData}
         />
       )}
 

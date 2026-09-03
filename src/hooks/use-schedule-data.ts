@@ -174,14 +174,19 @@ const SCHEDULE_FRESH_QUERY_OPTIONS = {
 };
 
 /** Merge events + shift groups into unified entries */
-function mergeData(events: CalendarEvent[], groups: ShiftGroup[]): CalendarEntry[] {
+export function mergeScheduleData(events: CalendarEvent[], groups: ShiftGroup[]): CalendarEntry[] {
   const groupByEventId = new Map<string, ShiftGroup>();
   for (const g of groups) groupByEventId.set(g.eventId, g);
 
-  return events.map((ev) => {
+  const secondaryIds = new Set(events.flatMap((event) => (event.combinedEvents ?? []).map((member) => member.id)));
+  return events.filter((event) => !secondaryIds.has(event.id) && !event.combinedIntoId).map((ev) => {
     const g = groupByEventId.get(ev.id);
+    const members = [ev, ...(ev.combinedEvents ?? [])];
     return {
       ...ev,
+      startsAt: new Date(Math.min(...members.map((member) => new Date(member.startsAt).getTime()))).toISOString(),
+      endsAt: new Date(Math.max(...members.map((member) => new Date(member.endsAt).getTime()))).toISOString(),
+      allDay: members.every((member) => member.allDay),
       eventArchivedAt: ev.archivedAt ?? null,
       shiftGroupId: g?.id ?? null,
       coverage: g?.coverage ?? null,
@@ -189,6 +194,7 @@ function mergeData(events: CalendarEvent[], groups: ShiftGroup[]): CalendarEntry
       archivedAt: g?.archivedAt ?? null,
       publication: g?.publication ?? null,
       hasWorkingCopy: g?.hasWorkingCopy ?? false,
+      combinedEventCount: members.length,
     };
   });
 }
@@ -387,7 +393,7 @@ async function fetchSchedule(
   ]);
 
   return {
-    entries: mergeData(events.rows, groups.rows),
+    entries: mergeScheduleData(events.rows, groups.rows),
     truncated: events.truncated,
   };
 }

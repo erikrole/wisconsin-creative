@@ -1,6 +1,23 @@
 # Task Queue
 
-Last updated: 2026-08-30
+Last updated: 2026-09-03
+
+---
+## In progress: Combined Schedule events (2026-09-03)
+
+Plan: `tasks/combined-schedule-events-plan-2026-09-03.md`. Decision: [D-060](../docs/DECISIONS.md).
+
+- [x] Preserve both source events and add one explicit operational-parent relation.
+- [x] Add preview-first Staff/Admin combine validation, serializable apply, live-crew protection, retained-draft release supersession, and audit receipt.
+- [x] Collapse combined events into one web Schedule row and canonical crew, with secondary Event-detail navigation resolving to the parent.
+- [x] Suggest likely future same-day, same-sport-family pairs in the combine dialog while keeping server preview authoritative.
+- [x] Add focused service, projection, and source-contract coverage.
+- [ ] Apply migration `0142`, complete matched authenticated browser proof, add native combined-row parity, deploy, and explicitly combine the live Cross Country pair.
+
+### Review
+
+- **Implemented locally:** overlapping same-family events at one normalized venue can share one operational Schedule row and one canonical crew without deleting either imported event. The dialog suggests likely same-day/same-family pairs and pre-fills the review controls.
+- **Boundary:** no migration was applied, no deployment occurred, and no live Cross Country event or crew was changed.
 
 ---
 ## In progress: Bookings and Search quality-of-life (2026-08-30)

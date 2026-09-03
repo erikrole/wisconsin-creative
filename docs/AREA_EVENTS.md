@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Events
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-27
+- Last Updated: 2026-09-03
 - Status: Active
 
 ## Direction
@@ -56,6 +56,8 @@ Make athletics schedule data the operational backbone for booking and checkout w
 
 29. **Student claims are contextual and approval-aware** — Eligible open Student slots expose one shared `ClaimShiftAction` in expanded Schedule rows and the Event detail Crew table. The helper shows `Claim shift` or `Awaiting approval`/`Withdraw`, refreshes both read surfaces after the canonical pickup or withdrawal route, and never appears in the legacy `ShiftDetailPanel`. Event detail remains the deeper staffing surface: Staff/Admin use the shared working-copy crew editor, while students see the read-only crew table plus their own pending-request state. The shift-group read returns only the current viewer's `REQUESTED` request, and a submitted pickup creates durable in-app plus best-effort push review notifications for active visible Admin reviewers.
 
+30. **Combined operational events** — Staff/Admin can combine two overlapping source events from the same sport family at the same normalized venue into one Schedule row and one shared crew. Schedule proactively surfaces a dismissible suggestion and count for future standalone pairs that share the Schedule day, sport family, normalized venue, overlapping window, and compatible meet/opponent; Review opens the server preview immediately. That preview states how many assigned crew stay and how many empty secondary draft slots retire. Both `CalendarEvent` records remain source-owned and syncable; the secondary points to the canonical primary. The primary is selected deterministically in favor of an existing published or assigned crew. A second published or assigned crew blocks the operation. An unpublished, unassigned secondary setup is archived, and its private draft is retained at a superseding version with release disabled so an already-queued workflow cannot publish it. The combined row spans the earliest start through latest end. Primary Event detail names both source events with individual times and offers Staff/Admin an audited Undo that restores the retained secondary draft without publishing or releasing it; direct navigation to the secondary resolves to the primary while combined. See D-060.
+
 ## Next
 1. Schedule V2 enhancements: week view, gear readiness indicators, conflict detection — see `tasks/schedule-roadmap.md`.
 2. Multi-source event ingestion, if required.
@@ -79,6 +81,7 @@ Make athletics schedule data the operational backbone for booking and checkout w
 - [x] AC-12a: Migration `0131` is deployed with the added-worker surface.
 - [ ] AC-12b: Authenticated production proof of adding and removing a worker is complete.
 - [x] AC-13: Timed manual events and Student call windows share a forward-only 15-minute authoring contract without changing all-day or imported-event ownership.
+- [ ] AC-14: Two overlapping same-family events at one venue can be previewed and combined into one Schedule row and crew without deleting either source event or discarding a live crew; migration and authenticated runtime proof remain rollout gates.
 
 ## Edge Cases
 - Event cancellations or updates in source feed.
@@ -103,6 +106,8 @@ Make athletics schedule data the operational backbone for booking and checkout w
 4. Fallback behavior for incomplete events is implemented — treat event context as non-blocking metadata on all booking flows.
 
 ## Change Log
+- 2026-09-03: **Combine now suggests likely event pairs.** The Staff/Admin dialog surfaces up to six future standalone pairs that share the Schedule day, configured sport family, normalized venue, overlapping window, and compatible opponent, ordered chronologically. Selecting one fills both event controls but still requires the existing server preview and explicit apply; suggestion logic grants no mutation eligibility.
+- 2026-09-03: **Combined operational events implemented locally.** Schedule now has a dismissible same-day/sport suggestion prompt and count whose Review action opens the server preview with exact crew consequences. Staff/Admin can combine overlapping same-family events at one venue, then use the two-source Event detail to inspect individual times or auditably undo the combination. Source identities remain separate, the canonical crew remains live, and the secondary draft is retained release-disabled both when retired and when restored. Migration, authenticated UI proof, deployment, and the live Cross Country acceptance action remain open under GAP-75.
 - 2026-08-27: **Student claim review is Admin-only.** Only Admins receive open-slot and Trade Board review queues or approve/decline controls on Schedule and Event detail. Initial and deadline/outcome reviewer notifications for both claim paths target active visible Admins; Staff retain ordinary event staffing context and non-review tools without approval access.
 - 2026-08-26: **Ended-event Schedule edits now backfill by default.** The existing crew editor publishes past-event assignment corrections synchronously, without a cooldown, second control, recipient notification, or notification-facing copy. Scoreboard per-person event history now includes the resulting result-less worked event immediately while official record math stays W/L/T-only. Local route/workflow/Scoreboard coverage, the generic native build, 14 native Scoreboard model tests, and a matched iPhone 16 Pro iOS 26.5 Scoreboard capture pass; authenticated browser, deployment, and production read-back remain separate proof gates.
 - 2026-08-26: **Student shift claims now live in current Schedule context.** Expanded Schedule rows and the Event detail Crew table share one approval-aware claim helper with pending-request refresh and withdrawal; the legacy ShiftDetailPanel is read-only for student claims. The shift-group API returns only the viewer's pending request, while the existing pickup route creates durable in-app rows and best-effort push for the configured reviewer audience. Focused source contracts, TypeScript, ESLint, `build:app`, and the exact iPhone 16 Pro iOS 26.5 native build pass; authenticated web, deployment, and device acceptance remain separate gates. The 2026-08-27 Admin-only review boundary supersedes the original Admin/Staff recipient scope.
