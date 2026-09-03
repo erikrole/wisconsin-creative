@@ -75,6 +75,7 @@ enum ReservationSubmissionPreservation: Equatable {
 
 enum ReservationSubmissionOutcome: Equatable {
     case created(bookingId: String)
+    case consolidated(bookingId: String)
     case committedOriginal(
         bookingId: String,
         preservation: ReservationSubmissionPreservation
@@ -82,7 +83,7 @@ enum ReservationSubmissionOutcome: Equatable {
 
     var bookingId: String {
         switch self {
-        case .created(let bookingId), .committedOriginal(let bookingId, _):
+        case .created(let bookingId), .consolidated(let bookingId), .committedOriginal(let bookingId, _):
             return bookingId
         }
     }
@@ -121,6 +122,8 @@ final class CreateBookingViewModel {
 
     var prefillEventId: String?
     var prefillShiftAssignmentId: String?
+    var reusedGearSourceTitle: String?
+    private var reusedGearSourceEventIds: Set<String> = []
 
     /// Id of the `/api/drafts` row this composer is bound to, once it has been
     /// saved at least once. Subsequent saves update in place.
@@ -415,6 +418,10 @@ final class CreateBookingViewModel {
         if !selectedEventIds.isEmpty { return selectedEventIds.count }
         return prefillEventId == nil ? 0 : 1
     }
+    var hasInvalidReusedEventSelection: Bool {
+        !reusedGearSourceEventIds.isDisjoint(with: selectedEventIds)
+    }
+    var isReusingGear: Bool { reusedGearSourceTitle != nil }
     var prefillEvent: ScheduleEvent? {
         guard let prefillEventId else { return nil }
         return events.first { $0.id == prefillEventId }
@@ -1022,6 +1029,7 @@ final class CreateBookingViewModel {
         submissionConflict = nil
         userEditedLocation = true
         selectedLocationId = value
+        UserDefaults.standard.set(value, forKey: "preferredReservationPickupLocationId")
         scheduleConflictCheck()
     }
 
@@ -1097,11 +1105,39 @@ final class CreateBookingViewModel {
         }
     }
 
+    /// Starts a fresh event plan with the source booking's gear only. The
+    /// original title, dates, and event links intentionally stay behind so a
+    /// same-context copy cannot recreate the duplicate this flow replaces.
+    func prefillGearForNewEvent(from booking: Booking) {
+        usesEventLinkedSetup = true
+        reusedGearSourceTitle = booking.title
+        reusedGearSourceEventIds = Set(booking.linkedEvents.map(\.id))
+        title = ""
+        userEditedTitle = false
+        selectedEventIds = []
+        prefillEventId = nil
+        prefillShiftAssignmentId = nil
+        selectedAssetIds = Set(booking.serializedItems.map(\.assetId))
+        selectedAssetOrder = booking.serializedItems.map(\.assetId)
+        selectedBulkQuantities = Dictionary(
+            booking.bulkItems
+                .filter { $0.plannedQuantity > 0 }
+                .map { ($0.bulkSku.id, $0.plannedQuantity) },
+            uniquingKeysWith: { _, later in later }
+        )
+        Task { await loadSnapshotsForSelectedAssets(ids: Array(selectedAssetIds)) }
+    }
+
     func loadOptions() async {
         guard options == nil else { return }
         isLoadingOptions = true
         do {
             options = try await APIClient.shared.formOptions()
+            if selectedLocationId.isEmpty,
+               let preferredId = UserDefaults.standard.string(forKey: "preferredReservationPickupLocationId"),
+               options?.locations.contains(where: { $0.id == preferredId }) == true {
+                selectedLocationId = preferredId
+            }
         } catch {
             self.error = error.localizedDescription
         }
@@ -1324,7 +1360,7 @@ final class CreateBookingViewModel {
         recordsUncertainFailure: Bool
     ) async throws -> ReservationSubmissionOutcome {
         do {
-            let id = try await draftPersistence.createReservation(
+            let receipt = try await draftPersistence.createReservation(
                 title: payload.title,
                 requesterUserId: payload.requesterUserId,
                 locationId: payload.locationId,
@@ -1338,7 +1374,7 @@ final class CreateBookingViewModel {
                 serializedAssetIds: payload.serializedAssetIds,
                 bulkItems: payload.bulkItems
             )
-            return await finishCommittedSubmission(id: id, payload: payload)
+            return await finishCommittedSubmission(receipt: receipt, payload: payload)
         } catch APIError.conflict(let message) {
             submissionConflict = message
             throw APIError.conflict(message)
@@ -1368,7 +1404,7 @@ final class CreateBookingViewModel {
     }
 
     private func finishCommittedSubmission(
-        id: String,
+        receipt: ReservationCreationReceipt,
         payload: ReservationSubmissionSnapshot
     ) async -> ReservationSubmissionOutcome {
         uncertainReservationSubmission = nil
@@ -1379,14 +1415,16 @@ final class CreateBookingViewModel {
         serverDraftId = nil
 
         guard currentReservationSubmissionSnapshot() != payload else {
-            onReservationSubmitted?(id)
-            return .created(bookingId: id)
+            onReservationSubmitted?(receipt.id)
+            return receipt.consolidated
+                ? .consolidated(bookingId: receipt.id)
+                : .created(bookingId: receipt.id)
         }
 
         do {
             let draftId = try await saveDraft(allowDuringSubmission: true)
             return .committedOriginal(
-                bookingId: id,
+                bookingId: receipt.id,
                 preservation: .savedDraft(
                     id: draftId,
                     hasNewerUnsavedInput: hasUnsavedInput
@@ -1394,7 +1432,7 @@ final class CreateBookingViewModel {
             )
         } catch {
             return .committedOriginal(
-                bookingId: id,
+                bookingId: receipt.id,
                 preservation: .inMemoryOnly(errorMessage: error.localizedDescription)
             )
         }

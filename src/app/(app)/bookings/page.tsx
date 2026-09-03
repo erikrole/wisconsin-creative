@@ -195,23 +195,13 @@ export default function BookingsPage() {
   const reservationContextMenuExtras = useMemo<ContextMenuExtra[]>(() => [
     {
       action: "duplicate",
-      label: "Duplicate",
+      label: "Reuse gear for another event",
       kind: "RESERVATION",
       handler: async (bookingId) => {
         if (actionBusyRef.current) return;
         actionBusyRef.current = true;
         try {
-          const res = await fetchAction(`/api/reservations/${bookingId}/duplicate`);
-          if (res.ok) {
-            toast.success("Reservation duplicated");
-            setActiveTab("reservations"); router.push("/bookings?tab=reservations");
-          } else {
-            const msg = await parseErrorMessage(res, "Duplicate failed");
-            toast.error(msg);
-          }
-        } catch (err) {
-          if (isAbortError(err)) return;
-          toast.error("Network error \u2014 please try again.");
+          router.push(`/reservations/new?reuseFrom=${encodeURIComponent(bookingId)}`);
         } finally {
           actionBusyRef.current = false;
         }

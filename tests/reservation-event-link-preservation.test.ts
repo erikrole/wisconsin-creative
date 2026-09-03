@@ -115,43 +115,20 @@ describe("reservation convert custody boundary", () => {
   });
 });
 
-describe("reservation duplicate preserves multi-event links", () => {
-  it("clones ordered eventIds and omits legacy eventId for multi-event sources", async () => {
-    vi.mocked(db.booking.findUniqueOrThrow).mockResolvedValue(sourceReservation({
-      ...baseSource,
-      events: [{ eventId: "evt-a" }, { eventId: "evt-b" }],
-    }));
-
-    await duplicate(request(`/api/reservations/${RESERVATION_ID}/duplicate`), ctx());
-
-    const arg = vi.mocked(createBooking).mock.calls[0]![0];
-    expect(arg.eventIds).toEqual(["evt-a", "evt-b"]);
-    expect("eventId" in arg).toBe(false);
-  });
-
-  it("falls back to legacy eventId for single-event sources with no junction rows", async () => {
-    vi.mocked(db.booking.findUniqueOrThrow).mockResolvedValue(sourceReservation({
-      ...baseSource,
-      events: [],
-    }));
-
-    await duplicate(request(`/api/reservations/${RESERVATION_ID}/duplicate`), ctx());
-
-    const arg = vi.mocked(createBooking).mock.calls[0]![0];
-    expect(arg.eventId).toBe("evt-primary");
-    expect("eventIds" in arg).toBe(false);
-  });
-
-  it("rejects duplicating a non-BOOKED reservation before calling createBooking", async () => {
-    vi.mocked(db.booking.findUniqueOrThrow).mockResolvedValue(sourceReservation({
-      ...baseSource,
-      status: "CANCELLED",
-      events: [],
-    }));
-
+describe("retired reservation duplicate endpoint", () => {
+  it("directs eligible callers to reuse gear in a new event context", async () => {
     const res = await duplicate(request(`/api/reservations/${RESERVATION_ID}/duplicate`), ctx());
+    const body = await res.json();
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(409);
+    expect(body.error).toContain("Choose a new event");
+    expect(body.data.reuseUrl).toBe(`/reservations/new?reuseFrom=${RESERVATION_ID}`);
+    expect(requireBookingAction).toHaveBeenCalledWith(
+      RESERVATION_ID,
+      staffUser,
+      "duplicate",
+      "RESERVATION",
+    );
     expect(createBooking).not.toHaveBeenCalled();
   });
 });

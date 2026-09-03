@@ -33,7 +33,7 @@ protocol ReservationDraftPersistence {
         sourceDraftId: String?,
         serializedAssetIds: [String],
         bulkItems: [BulkReservationRequest]
-    ) async throws -> String
+    ) async throws -> ReservationCreationReceipt
 }
 
 /// A saved in-progress booking. Drafts are real `Booking` rows with

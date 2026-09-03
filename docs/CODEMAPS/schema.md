@@ -49,6 +49,10 @@ Values: `RESERVATION`, `CHECKOUT`
 
 Values: `DRAFT`, `BOOKED`, `PENDING_PICKUP`, `OPEN`, `COMPLETED`, `CANCELLED`
 
+## Enum `BookingCustodyScope`
+
+Values: `PERSON`, `EVENT`
+
 ## Enum `AccountabilityExclusionReason`
 
 Values: `TEST_DATA`, `IMPORTED_BAD_DATA`, `INCORRECT_TIMESTAMPS`, `DUPLICATE_RECORD`, `OTHER`
@@ -127,7 +131,7 @@ Values: `UPLOADING`, `FINALIZING`, `COMMITTED`, `FAILED`
 
 ## Model `User`
 
-Fields: 119
+Fields: 120
 
 - `id                            String                           @id @default(cuid())`
 - `name                          String`
@@ -230,6 +234,7 @@ Fields: 119
 - `signatureSaveOperations       SignatureSaveOperation[]         @relation("SignatureSaveActor")`
 - `eventWork                     EventWorker[]                    @relation("EventWorkerUser")`
 - `eventWorkersAdded             EventWorker[]                    @relation("EventWorkerAdder")`
+- `assignedBookingItems          BookingSerializedItem[]          @relation("BookingSerializedItemAssignee")`
 - `title               String?`
 - `athleticsEmail      String?         @unique @map("athletics_email")`
 - `startDate           DateTime?       @map("start_date") @db.Date`
@@ -483,7 +488,7 @@ Indexes and constraints:
 
 ## Model `Booking`
 
-Fields: 43
+Fields: 44
 
 - `id                      String                          @id @default(cuid())`
 - `kind                    BookingKind`
@@ -493,6 +498,7 @@ Fields: 43
 - `startsAt                DateTime                        @map("starts_at")`
 - `endsAt                  DateTime                        @map("ends_at")`
 - `status                  BookingStatus`
+- `custodyScope            BookingCustodyScope             @default(PERSON) @map("custody_scope")`
 - `createdBy               String                          @map("created_by")`
 - `notes                   String?`
 - `sourceReservationId     String?                         @map("source_reservation_id")`
@@ -542,6 +548,7 @@ Indexes and constraints:
 - `@@index([pickupKioskDeviceId])`
 - `@@index([kind, status, endsAt])`
 - `@@index([kind, status, requesterUserId, endsAt])`
+- `@@index([kind, custodyScope, status, endsAt])`
 - `@@index([startsAt, endsAt])`
 - `@@index([createdBy, status])`
 - `@@map("bookings")`
@@ -591,20 +598,24 @@ Indexes and constraints:
 
 ## Model `BookingSerializedItem`
 
-Fields: 7
+Fields: 10
 
-- `id               String   @id @default(cuid())`
-- `bookingId        String   @map("booking_id")`
-- `assetId          String   @map("asset_id")`
-- `allocationStatus String   @default("active") @map("allocation_status")`
-- `createdAt        DateTime @default(now()) @map("created_at")`
-- `booking          Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)`
-- `asset            Asset    @relation(fields: [assetId], references: [id], onDelete: Restrict)`
+- `id               String    @id @default(cuid())`
+- `bookingId        String    @map("booking_id")`
+- `assetId          String    @map("asset_id")`
+- `assignedUserId   String?   @map("assigned_user_id")`
+- `assignedAt       DateTime? @map("assigned_at")`
+- `allocationStatus String    @default("active") @map("allocation_status")`
+- `createdAt        DateTime  @default(now()) @map("created_at")`
+- `booking          Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)`
+- `asset            Asset     @relation(fields: [assetId], references: [id], onDelete: Restrict)`
+- `assignee         User?     @relation("BookingSerializedItemAssignee", fields: [assignedUserId], references: [id], onDelete: SetNull)`
 
 Indexes and constraints:
 
 - `@@unique([bookingId, assetId])`
 - `@@index([assetId])`
+- `@@index([assignedUserId, allocationStatus])`
 - `@@map("booking_serialized_items")`
 
 ## Model `BookingBulkItem`

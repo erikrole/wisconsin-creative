@@ -183,6 +183,37 @@ function assertValidCreateEquipment(serializedAssetIds: string[], bulkItems: Bul
   }
 }
 
+function exactEventSetMatches(
+  candidate: { eventId: string | null; events: Array<{ eventId: string }> },
+  eventIds: string[],
+) {
+  const candidateIds = candidate.events.length > 0
+    ? candidate.events.map((event) => event.eventId)
+    : candidate.eventId ? [candidate.eventId] : [];
+  if (candidateIds.length !== eventIds.length) return false;
+  const expected = new Set(eventIds);
+  return candidateIds.every((eventId) => expected.has(eventId));
+}
+
+function mergeReservationNotes(existing: string | null, incoming?: string) {
+  const current = existing?.trim() ?? "";
+  const addition = incoming?.trim() ?? "";
+  if (!addition || addition === current || current.includes(addition)) return current || null;
+  if (!current) return addition;
+  return `${current}\n\nAdded with consolidated gear:\n${addition}`;
+}
+
+function additiveBulkRequests(
+  existing: Array<{ bulkSkuId: string; plannedQuantity: number }>,
+  incoming: BulkRequest[],
+) {
+  const totals = new Map(existing.map((item) => [item.bulkSkuId, item.plannedQuantity]));
+  for (const item of incoming) {
+    totals.set(item.bulkSkuId, (totals.get(item.bulkSkuId) ?? 0) + item.quantity);
+  }
+  return [...totals].map(([bulkSkuId, quantity]) => ({ bulkSkuId, quantity }));
+}
+
 async function assertNumberedPickupPlanLimit(
   tx: Prisma.TransactionClient,
   bulkItems: BulkRequest[],
@@ -418,22 +449,6 @@ export async function createBooking(input: CreateBookingInput) {
             throw new HttpError(404, "Source draft not found");
           }
 
-          if (input.maxConcurrentReservations !== undefined) {
-            const activeCount = await tx.booking.count({
-              where: {
-                requesterUserId: input.requesterUserId,
-                kind: BookingKind.RESERVATION,
-                status: BookingStatus.BOOKED,
-              },
-            });
-            if (activeCount >= input.maxConcurrentReservations) {
-              throw new HttpError(
-                409,
-                `This user already has ${activeCount} active reservation${activeCount === 1 ? "" : "s"} (limit: ${input.maxConcurrentReservations}).`,
-              );
-            }
-          }
-
           // Resolve items from source reservation if provided. A normal source
           // conversion still falls back to the complete reservation for
           // backwards compatibility. Kiosk pickup passes an explicit
@@ -520,6 +535,225 @@ export async function createBooking(input: CreateBookingInput) {
           }
           await assertNumberedPickupPlanLimit(tx, resolvedBulkItems);
 
+          // Resolve event linking before availability so an exact event gear
+          // plan can be found and excluded from its own availability check.
+          // Sorting keeps legacy Booking.eventId and the junction rows stable.
+          const requestedEventIds = input.eventIds && input.eventIds.length > 0
+            ? input.eventIds
+            : input.eventId ? [input.eventId] : [];
+          let sortedEventIds: string[] = [];
+          if (requestedEventIds.length > 0) {
+            const events = await tx.calendarEvent.findMany({
+              where: eventLinkWhereForActor(requestedEventIds, requester),
+              select: { id: true, startsAt: true },
+            });
+            if (events.length !== requestedEventIds.length) {
+              throw new HttpError(400, "One or more eventIds do not exist");
+            }
+            sortedEventIds = [...events]
+              .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
+              .map((e) => e.id);
+          }
+          const primaryEventId = sortedEventIds[0] ?? null;
+          const title = normalizeBookingTitle(input.title);
+
+          const consolidationCandidates = input.kind === BookingKind.RESERVATION
+            && sortedEventIds.length > 0
+            && !input.sourceReservationId
+            ? await tx.booking.findMany({
+                where: {
+                  kind: BookingKind.RESERVATION,
+                  status: BookingStatus.BOOKED,
+                  requesterUserId: input.requesterUserId,
+                  eventId: primaryEventId,
+                  title: { equals: title, mode: "insensitive" },
+                  ...(sourceDraft ? { id: { not: sourceDraft.id } } : {}),
+                },
+                orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+                take: 10,
+                include: {
+                  events: { select: { eventId: true } },
+                  serializedItems: {
+                    select: { assetId: true, allocationStatus: true },
+                  },
+                  bulkItems: {
+                    select: { bulkSkuId: true, plannedQuantity: true, checkedOutQuantity: true },
+                  },
+                },
+              })
+            : [];
+          const consolidationTarget = consolidationCandidates.find((candidate) =>
+            exactEventSetMatches(candidate, sortedEventIds),
+          );
+
+          if (
+            consolidationTarget
+            && (
+              consolidationTarget.locationId !== input.locationId
+              || consolidationTarget.startsAt.getTime() !== input.startsAt.getTime()
+              || consolidationTarget.endsAt.getTime() !== input.endsAt.getTime()
+            )
+          ) {
+            throw new HttpError(
+              409,
+              "This person already has a gear plan for the same event and title with different pickup details. Open that plan before adding gear.",
+              { existingReservationId: consolidationTarget.id },
+            );
+          }
+
+          if (
+            consolidationTarget
+            && (
+              consolidationTarget.serializedItems.some((item) => item.allocationStatus !== "active")
+              || consolidationTarget.bulkItems.some((item) => item.checkedOutQuantity > 0)
+            )
+          ) {
+            throw new HttpError(
+              409,
+              "Pickup already started for the existing event gear plan. Finish that pickup before changing its gear.",
+              { existingReservationId: consolidationTarget.id },
+            );
+          }
+
+          if (consolidationTarget) {
+            const existingAssetIds = new Set(
+              consolidationTarget.serializedItems.map((item) => item.assetId),
+            );
+            const addedAssetIds = resolvedSerializedAssetIds.filter(
+              (assetId) => !existingAssetIds.has(assetId),
+            );
+            const combinedAssetIds = [...existingAssetIds, ...addedAssetIds];
+            const combinedBulkItems = additiveBulkRequests(
+              consolidationTarget.bulkItems,
+              resolvedBulkItems,
+            );
+
+            const availability = await checkAvailability(tx, {
+              locationId: input.locationId,
+              startsAt: input.startsAt,
+              endsAt: input.endsAt,
+              serializedAssetIds: combinedAssetIds,
+              bulkItems: combinedBulkItems,
+              excludeBookingId: consolidationTarget.id,
+              bookingKind: input.kind,
+            });
+            if (
+              availability.conflicts.length > 0
+              || availability.shortages.length > 0
+              || availability.unavailableAssets.length > 0
+            ) {
+              throw new HttpError(409, "Availability conflict", availability);
+            }
+
+            if (addedAssetIds.length > 0) {
+              await tx.bookingSerializedItem.createMany({
+                data: addedAssetIds.map((assetId) => ({
+                  bookingId: consolidationTarget.id,
+                  assetId,
+                  allocationStatus: "active",
+                })),
+              });
+              await tx.assetAllocation.createMany({
+                data: addedAssetIds.map((assetId) => ({
+                  bookingId: consolidationTarget.id,
+                  assetId,
+                  startsAt: input.startsAt,
+                  endsAt: input.endsAt,
+                  active: true,
+                  kind: AllocationKind.RESERVATION,
+                })),
+              });
+            }
+            for (const item of resolvedBulkItems) {
+              await tx.bookingBulkItem.upsert({
+                where: {
+                  bookingId_bulkSkuId: {
+                    bookingId: consolidationTarget.id,
+                    bulkSkuId: item.bulkSkuId,
+                  },
+                },
+                create: {
+                  bookingId: consolidationTarget.id,
+                  bulkSkuId: item.bulkSkuId,
+                  plannedQuantity: item.quantity,
+                },
+                update: { plannedQuantity: { increment: item.quantity } },
+              });
+            }
+
+            await tx.booking.update({
+              where: { id: consolidationTarget.id },
+              data: { notes: mergeReservationNotes(consolidationTarget.notes, input.notes) },
+            });
+            const actorRole = await lookupActorRole(tx, input.createdBy);
+            await createAuditEntryTx(tx, {
+              actorId: input.createdBy,
+              actorRole,
+              entityType: "booking",
+              entityId: consolidationTarget.id,
+              action: "reservation_consolidated",
+              before: {
+                serializedAssetIds: [...existingAssetIds],
+                bulkItems: consolidationTarget.bulkItems.map((item) => ({
+                  bulkSkuId: item.bulkSkuId,
+                  quantity: item.plannedQuantity,
+                })),
+              },
+              after: {
+                incomingTitle: title,
+                addedSerializedAssetIds: addedAssetIds,
+                addedBulkItems: resolvedBulkItems,
+                eventIds: sortedEventIds,
+                sourceDraftId: input.sourceDraftId ?? null,
+              },
+            });
+
+            if (sourceDraft) {
+              await tx.booking.delete({ where: { id: sourceDraft.id } });
+              await createAuditEntryTx(tx, {
+                actorId: input.createdBy,
+                actorRole,
+                entityType: "booking",
+                entityId: sourceDraft.id,
+                action: "draft_consumed",
+                before: {
+                  kind: sourceDraft.kind,
+                  title: sourceDraft.title,
+                  requesterUserId: sourceDraft.requesterUserId,
+                  locationId: sourceDraft.locationId,
+                  startsAt: sourceDraft.startsAt,
+                  endsAt: sourceDraft.endsAt,
+                },
+                after: {
+                  createdReservationId: consolidationTarget.id,
+                  consolidated: true,
+                },
+              });
+            }
+
+            const consolidatedBooking = await tx.booking.findUniqueOrThrow({
+              where: { id: consolidationTarget.id },
+              include: bookingInclude,
+            });
+            return { booking: consolidatedBooking, creationDisposition: "consolidated" as const };
+          }
+
+          if (input.maxConcurrentReservations !== undefined) {
+            const activeCount = await tx.booking.count({
+              where: {
+                requesterUserId: input.requesterUserId,
+                kind: BookingKind.RESERVATION,
+                status: BookingStatus.BOOKED,
+              },
+            });
+            if (activeCount >= input.maxConcurrentReservations) {
+              throw new HttpError(
+                409,
+                `This user already has ${activeCount} active reservation${activeCount === 1 ? "" : "s"} (limit: ${input.maxConcurrentReservations}).`,
+              );
+            }
+          }
+
           const availability = await checkAvailability(tx, {
             locationId: input.locationId,
             startsAt: input.startsAt,
@@ -542,26 +776,6 @@ export async function createBooking(input: CreateBookingInput) {
             ? BookingStatus.BOOKED
             : BookingStatus.OPEN;
 
-          // Resolve event linking: multi-event (eventIds) or legacy single (eventId).
-          // Sort chronologically so primary = first.
-          const requestedEventIds = input.eventIds && input.eventIds.length > 0
-            ? input.eventIds
-            : input.eventId ? [input.eventId] : [];
-          let sortedEventIds: string[] = [];
-          if (requestedEventIds.length > 0) {
-            const events = await tx.calendarEvent.findMany({
-              where: eventLinkWhereForActor(requestedEventIds, requester),
-              select: { id: true, startsAt: true },
-            });
-            if (events.length !== requestedEventIds.length) {
-              throw new HttpError(400, "One or more eventIds do not exist");
-            }
-            sortedEventIds = [...events]
-              .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
-              .map((e) => e.id);
-          }
-          const primaryEventId = sortedEventIds[0] ?? null;
-
           if (input.shiftAssignmentId) {
             await validateReservationScheduleAssignmentTx(tx, {
               assignmentId: input.shiftAssignmentId,
@@ -573,7 +787,6 @@ export async function createBooking(input: CreateBookingInput) {
           const prefix = input.kind === BookingKind.CHECKOUT ? "CO" : "RV";
           const refNumber = await nextBookingRef(tx, prefix);
 
-          const title = normalizeBookingTitle(input.title);
           const booking = await tx.booking.create({
             data: {
               kind: input.kind,
@@ -1024,24 +1237,35 @@ export async function createBooking(input: CreateBookingInput) {
             });
           }
 
-          return tx.booking.findUniqueOrThrow({
+          const createdBooking = await tx.booking.findUniqueOrThrow({
             where: { id: booking.id },
             include: bookingInclude
           });
+          return { booking: createdBooking, creationDisposition: "created" as const };
         },
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       ),
     );
 
-    if (booking.kind === BookingKind.CHECKOUT && booking.status === BookingStatus.OPEN) {
-      await scheduleCheckoutReturnLiveActivity({ bookingId: booking.id, endsAt: booking.endsAt });
+    const result = booking.booking;
+    if (result.kind === BookingKind.CHECKOUT && result.status === BookingStatus.OPEN) {
+      await scheduleCheckoutReturnLiveActivity({ bookingId: result.id, endsAt: result.endsAt });
     }
 
-    if (booking.kind === BookingKind.RESERVATION && booking.shiftAssignment?.source === "RESERVATION") {
-      await dispatchScheduleAssignmentNotifications(booking.shiftAssignment.id, "assigned");
+    if (
+      booking.creationDisposition === "created"
+      && result.kind === BookingKind.RESERVATION
+      && result.shiftAssignment?.source === "RESERVATION"
+    ) {
+      await dispatchScheduleAssignmentNotifications(result.shiftAssignment.id, "assigned");
     }
 
-    return booking;
+    return Object.defineProperty(result, "creationDisposition", {
+      value: booking.creationDisposition,
+      enumerable: false,
+      configurable: false,
+      writable: false,
+    }) as typeof result & { creationDisposition: typeof booking.creationDisposition };
   } catch (error) {
     handleBookingMutationRace(error);
   }

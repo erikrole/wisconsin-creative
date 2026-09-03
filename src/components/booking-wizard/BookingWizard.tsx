@@ -147,17 +147,19 @@ export function BookingWizard() {
   const initialDraftId = searchParams.get("draftId") || null;
   const initialRequesterUserId = searchParams.get("requesterUserId") || undefined;
   const initialShiftAssignmentId = searchParams.get("shiftAssignmentId") || undefined;
+  const reuseFromId = searchParams.get("reuseFrom") || null;
 
   // ── Form options ──
   const { data: formOpts, isError: formOptsError, refetch: refetchFormOpts } = useFormOptions();
-  const users: FormUser[] = formOpts?.users ?? [];
-  const locations: Location[] = formOpts?.locations ?? [];
-  const bulkSkus: BulkSkuOption[] = formOpts?.bulkSkus ?? [];
+  const users: FormUser[] = useMemo(() => formOpts?.users ?? [], [formOpts?.users]);
+  const locations: Location[] = useMemo(() => formOpts?.locations ?? [], [formOpts?.locations]);
+  const bulkSkus: BulkSkuOption[] = useMemo(() => formOpts?.bulkSkus ?? [], [formOpts?.bulkSkus]);
 
   // ── Current user ──
   const { data: meData } = useCurrentUser();
   const initialRequester = initialRequesterUserId ?? meData?.id ?? "";
   const firstLocationId = locations[0]?.id ?? "";
+  const preferredLocationLoadedRef = useRef(false);
 
   // ── Existing drafts (for resume banner) ──
   // Persist dismissal for 1 hour via sessionStorage so it doesn't reappear on every reload.
@@ -212,10 +214,19 @@ export function BookingWizard() {
   }, [initialRequester, form.requester]);
 
   useEffect(() => {
-    if (firstLocationId && !form.locationId) {
+    if (preferredLocationLoadedRef.current || locations.length === 0 || !meData?.id) return;
+    preferredLocationLoadedRef.current = true;
+    let preferred = "";
+    try {
+      preferred = localStorage.getItem(`wi:preferredPickupLocation:${meData.id}`) ?? "";
+    } catch { /* ignore unavailable storage */ }
+    const preferredExists = locations.some((location) => location.id === preferred);
+    if (!initialLocationId && (!form.locationId || form.locationId === firstLocationId) && preferredExists) {
+      dispatch({ type: "SET_LOCATION_ID", value: preferred });
+    } else if (firstLocationId && !form.locationId) {
       dispatch({ type: "SET_LOCATION_ID", value: firstLocationId });
     }
-  }, [firstLocationId, form.locationId]);
+  }, [firstLocationId, form.locationId, initialLocationId, locations, meData?.id]);
 
   // ── Equipment state ──
   const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>(initialAssetIds ?? []);
@@ -229,6 +240,27 @@ export function BookingWizard() {
     [selectedAssetDetails],
   );
   const [activeSection, setActiveSection] = useState<EquipmentSectionKey>(EQUIPMENT_SECTIONS[0]!.key);
+  const reuseAppliedRef = useRef(false);
+  const { data: reuseSource } = useQuery({
+    queryKey: ["reservationReuseSource", reuseFromId],
+    enabled: Boolean(reuseFromId),
+    queryFn: async ({ signal }) => {
+      const res = await fetch(`/api/bookings/${reuseFromId}`, { signal });
+      if (handleAuthRedirect(res)) return null;
+      if (!res.ok) throw new Error(await parseErrorMessage(res, "Could not load the source reservation."));
+      const json = await parseJsonSafely<{
+        data?: {
+          id: string;
+          kind: string;
+          title: string;
+          events?: Array<{ id: string }>;
+          serializedItems: Array<{ asset: AvailableAsset }>;
+          bulkItems: Array<{ bulkSku: { id: string }; plannedQuantity: number }>;
+        };
+      }>(res);
+      return json?.data ?? null;
+    },
+  });
 
   // ── Kit state ──
   const [kitId, setKitId] = useState<string>("");
@@ -243,6 +275,60 @@ export function BookingWizard() {
     initialEventId,
     dispatch,
   });
+
+  const candidatePayload = useMemo(() => {
+    if (
+      !form.requester
+      || !form.title.trim()
+      || !form.locationId
+      || form.selectedEvents.length === 0
+      || Number.isNaN(new Date(form.startsAt).getTime())
+      || Number.isNaN(new Date(form.endsAt).getTime())
+    ) return null;
+    return {
+      requesterUserId: form.requester,
+      title: form.title.trim(),
+      locationId: form.locationId,
+      startsAt: new Date(form.startsAt).toISOString(),
+      endsAt: new Date(form.endsAt).toISOString(),
+      eventIds: form.selectedEvents.map((event) => event.id),
+    };
+  }, [form.endsAt, form.locationId, form.requester, form.selectedEvents, form.startsAt, form.title]);
+  const { data: reservationCandidates = [] } = useQuery({
+    queryKey: ["reservationCandidates", candidatePayload],
+    enabled: candidatePayload !== null,
+    staleTime: 10_000,
+    queryFn: async ({ signal }) => {
+      const res = await fetch("/api/reservations/candidates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(candidatePayload),
+        signal,
+      });
+      if (handleAuthRedirect(res)) return [];
+      if (!res.ok) return [];
+      const json = await parseJsonSafely<{
+        data?: Array<{
+          id: string;
+          title: string;
+          refNumber: string | null;
+          serializedItemCount: number;
+          bulkQuantity: number;
+          disposition: "will_consolidate" | "review_differences" | "pickup_started";
+        }>;
+      }>(res);
+      return json?.data ?? [];
+    },
+  });
+  const exactCandidate = reservationCandidates.find(
+    (candidate) => candidate.disposition === "will_consolidate",
+  );
+  const reviewCandidate = reservationCandidates.find(
+    (candidate) => candidate.disposition === "review_differences",
+  );
+  const pickupStartedCandidate = reservationCandidates.find(
+    (candidate) => candidate.disposition === "pickup_started",
+  );
 
   // ── Draft management ──
   const [draftId, setDraftId] = useState<string | null>(initialDraftId);
@@ -264,6 +350,24 @@ export function BookingWizard() {
   const [submitting, setSubmitting] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
   const submittingRef = useRef(false);
+
+  useEffect(() => {
+    if (!reuseSource || reuseAppliedRef.current) return;
+    reuseAppliedRef.current = true;
+    if (reuseSource.kind !== "RESERVATION" && reuseSource.kind !== "CHECKOUT") {
+      setCreateError("This gear plan cannot be reused.");
+      return;
+    }
+    const snapshots = reuseSource.serializedItems.map((item) => item.asset);
+    setSelectedAssetIds(snapshots.map((asset) => asset.id));
+    setSelectedAssetDetails(snapshots);
+    setSelectedBulkItems(reuseSource.bulkItems.map((item) => ({
+      bulkSkuId: item.bulkSku.id,
+      quantity: item.plannedQuantity,
+    })));
+    dispatch({ type: "SET_TIE_TO_EVENT", value: true });
+    dispatch({ type: "SET_TITLE", value: "" });
+  }, [reuseSource]);
 
   // Clears the error banner whenever the user edits any step-1 field.
   const step1Dispatch = useCallback((action: FormAction) => {
@@ -298,6 +402,11 @@ export function BookingWizard() {
     if (!form.title.trim()) return "Give this booking a name";
     if (!form.requester) return "Select who this is for";
     if (!form.locationId) return "Choose a pickup location";
+    if (reuseFromId && form.selectedEvents.length === 0) return "Choose the new event for this gear";
+    if (
+      reuseFromId
+      && reuseSource?.events?.some((sourceEvent) => form.selectedEvents.some((event) => event.id === sourceEvent.id))
+    ) return "Choose a different event when reusing gear";
     const s = new Date(form.startsAt);
     const e = new Date(form.endsAt);
     if (isNaN(s.getTime()) || isNaN(e.getTime())) return "Invalid date. Check start and end times";
@@ -402,6 +511,7 @@ export function BookingWizard() {
 
       const json = await parseJsonSafely<{
         error?: string;
+        meta?: { disposition?: string; message?: string };
         data?: {
           id?: string;
           refNumber?: string | null;
@@ -461,14 +571,24 @@ export function BookingWizard() {
       }
 
       await deleteDraft();
+      if (meData?.id) {
+        try {
+          localStorage.setItem(`wi:preferredPickupLocation:${meData.id}`, form.locationId);
+        } catch { /* ignore unavailable storage */ }
+      }
       const created = json?.data;
       if (!created?.id) {
         setCreateError(`${config.label} was created, but the response was incomplete. Refresh the list to find it.`);
         return;
       }
       const refNumber = created.refNumber ?? undefined;
-      toast.success(`${config.label.charAt(0).toUpperCase() + config.label.slice(1)}${refNumber ? ` ${refNumber}` : ""} created`, {
-        description: "Opened Bookings with this reservation highlighted.",
+      const consolidated = json?.meta?.disposition === "consolidated";
+      toast.success(consolidated
+        ? `Gear added to ${created.refNumber ?? "the existing reservation"}`
+        : `${config.label.charAt(0).toUpperCase() + config.label.slice(1)}${refNumber ? ` ${refNumber}` : ""} created`, {
+        description: consolidated
+          ? "Everything for this event now stays in one gear plan."
+          : "Opened Bookings with this reservation highlighted.",
       });
 
       const bookingId = created.id;
@@ -606,6 +726,51 @@ export function BookingWizard() {
         <Alert variant="destructive" className="mb-5">
           <AlertCircleIcon />
           <AlertDescription>{createError}</AlertDescription>
+        </Alert>
+      )}
+
+      {reuseSource && (
+        <Alert className="mb-5 border-[var(--purple-border)] bg-[var(--purple-bg)]">
+          <AlertDescription>
+            Gear from “{reuseSource.title}” is loaded. Choose the new event and review availability before saving.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {exactCandidate && (
+        <Alert className="mb-5 border-[var(--purple-border)] bg-[var(--purple-bg)]">
+          <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+            <span>
+              This event already has {exactCandidate.serializedItemCount + exactCandidate.bulkQuantity} item{exactCandidate.serializedItemCount + exactCandidate.bulkQuantity === 1 ? "" : "s"} in {exactCandidate.refNumber ?? "an existing reservation"}. New gear will be added to that plan.
+            </span>
+            <Button variant="outline" asChild className="h-10 shrink-0">
+              <a href={`/reservations/${exactCandidate.id}`}>Review existing plan</a>
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {!exactCandidate && reviewCandidate && (
+        <Alert className="mb-5">
+          <AlertCircleIcon />
+          <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+            <span>An existing reservation has the same person, title, and event but a different pickup window or location. Review it before creating another.</span>
+            <Button variant="outline" asChild className="h-10 shrink-0">
+              <a href={`/reservations/${reviewCandidate.id}`}>Review differences</a>
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {pickupStartedCandidate && (
+        <Alert variant="destructive" className="mb-5">
+          <AlertCircleIcon />
+          <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+            <span>Pickup already started for this event’s gear plan. Finish that pickup before changing its equipment.</span>
+            <Button variant="outline" asChild className="h-10 shrink-0">
+              <a href={`/reservations/${pickupStartedCandidate.id}`}>Open existing plan</a>
+            </Button>
+          </AlertDescription>
         </Alert>
       )}
 

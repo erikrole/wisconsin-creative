@@ -32,7 +32,7 @@ private final class PerformanceDraftPersistence: ReservationDraftPersistence {
         sourceDraftId: String?,
         serializedAssetIds: [String],
         bulkItems: [BulkReservationRequest]
-    ) async throws -> String { throw CancellationError() }
+    ) async throws -> ReservationCreationReceipt { throw CancellationError() }
 }
 
 struct PerformanceTestRootView: View {
