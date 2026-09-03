@@ -127,7 +127,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 
 - Doc: `docs/AREA_RESERVATIONS.md`
 - Pages: `/bookings`, `/reservations/[id]`, `/reservations/new`, `/reservations`, `/settings/bookings`
-- APIs: `/api/bookings/[id]/audit-logs`, `/api/bookings/[id]/cancel`, `/api/bookings/[id]/events`, `/api/bookings/[id]/extend`, `/api/bookings/[id]/force-complete`, `/api/bookings/[id]/nudge`, `/api/bookings/[id]`, `/api/bookings/[id]/transfer-owner`, `/api/bookings/changes`, `/api/bookings/export`
+- APIs: `/api/bookings/[id]/audit-logs`, `/api/bookings/[id]/cancel`, `/api/bookings/[id]/custody-scope`, `/api/bookings/[id]/events`, `/api/bookings/[id]/extend`, `/api/bookings/[id]/force-complete`, `/api/bookings/[id]/nudge`, `/api/bookings/[id]`, `/api/bookings/[id]/transfer-owner`, `/api/bookings/changes`
 - Services: `src/lib/services/bookings-checkin.ts`, `src/lib/services/bookings-helpers.ts`, `src/lib/services/bookings-lifecycle.ts`, `src/lib/services/bookings-queries.ts`, `src/lib/services/bookings.ts`
 - Tests: `tests/bookings-ui-polish-source.test.ts`, `tests/ios-bookings-empty-state.test.ts`, `tests/ios-bookings-power-filters.test.ts`
 

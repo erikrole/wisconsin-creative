@@ -40,6 +40,7 @@ import {
   CalendarRangeIcon,
   ExternalLinkIcon,
   MoreHorizontalIcon,
+  PackageOpenIcon,
   TriangleAlert,
   UserRoundCogIcon,
   XCircleIcon,
@@ -426,12 +427,18 @@ export default function BookingDetailsSheet({
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 flex-1 items-start gap-3">
               {booking && (
-                <UserAvatar
-                  name={booking.requester?.name ?? "Unknown"}
-                  avatarUrl={booking.requester?.avatarUrl}
-                  size="md"
-                  className="mt-0.5 shrink-0"
-                />
+                booking.custodyScope === "SHARED" ? (
+                  <span className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                    <PackageOpenIcon className="size-5" aria-hidden="true" />
+                  </span>
+                ) : (
+                  <UserAvatar
+                    name={booking.requester?.name ?? "Unknown"}
+                    avatarUrl={booking.requester?.avatarUrl}
+                    size="md"
+                    className="mt-0.5 shrink-0"
+                  />
+                )
               )}
               <div className="min-w-0 flex-1">
                 <SheetTitle className="min-w-0 text-lg">
@@ -447,11 +454,13 @@ export default function BookingDetailsSheet({
                   ) : "Loading booking"}
                 </SheetTitle>
                 <SheetDescription className="sr-only">
-                  Booking summary with timing, requester, equipment, and a link to the full booking page.
+                  Booking summary with timing, custody, equipment, and a link to the full booking page.
                 </SheetDescription>
                 {booking && (
                   <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs leading-relaxed text-muted-foreground">
-                    <span className="font-medium text-foreground/80">{booking.requester?.name ?? "Unknown requester"}</span>
+                    <span className="font-medium text-foreground/80">
+                      {booking.custodyScope === "SHARED" ? "Shared checkout" : booking.requester?.name ?? "Unknown requester"}
+                    </span>
                     <span aria-hidden="true">·</span>
                     {booking.refNumber && <span className="font-mono">{booking.refNumber}</span>}
                     {booking.refNumber && <span aria-hidden="true">·</span>}

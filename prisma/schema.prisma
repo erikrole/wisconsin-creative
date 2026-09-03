@@ -83,7 +83,7 @@ enum BookingStatus {
 
 enum BookingCustodyScope {
   PERSON
-  EVENT
+  SHARED
 }
 
 enum AccountabilityExclusionReason {
@@ -305,6 +305,8 @@ model User {
   signatureSaveOperations       SignatureSaveOperation[]         @relation("SignatureSaveActor")
   eventWork                     EventWorker[]                    @relation("EventWorkerUser")
   eventWorkersAdded             EventWorker[]                    @relation("EventWorkerAdder")
+  /// Legacy nullable relation deployed before shared-custody direction was finalized.
+  /// No application workflow assigns shared-checkout items to individuals.
   assignedBookingItems          BookingSerializedItem[]          @relation("BookingSerializedItemAssignee")
 
   title               String?
@@ -624,6 +626,9 @@ model BookingSerializedItem {
   id               String    @id @default(cuid())
   bookingId        String    @map("booking_id")
   assetId          String    @map("asset_id")
+  /// Dormant compatibility fields from migration 0141. Shared checkouts do not
+  /// distribute manifest lines among people; personally carried gear belongs on
+  /// a separate person-scoped checkout.
   assignedUserId   String?   @map("assigned_user_id")
   assignedAt       DateTime? @map("assigned_at")
   allocationStatus String    @default("active") @map("allocation_status")

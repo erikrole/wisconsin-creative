@@ -171,6 +171,7 @@ export default function BookingDetailPage({
   const canForceComplete = kind === "CHECKOUT" && allowedActions.includes("force-complete");
   const canForceCheckout = kind === "RESERVATION" && allowedActions.includes("force-checkout");
   const canTransferOwner = allowedActions.includes("transfer-owner");
+  const canManageCustody = kind === "CHECKOUT" && allowedActions.includes("manage-custody");
   const canEditEvents = canEdit;
   const isOpen = booking?.status === "OPEN";
   const isActive = isOpen || booking?.status === "BOOKED";
@@ -285,6 +286,7 @@ export default function BookingDetailPage({
         canForceComplete={canForceComplete}
         canForceCheckout={canForceCheckout}
         canTransferOwner={canTransferOwner}
+        canManageCustody={canManageCustody}
         canEditEvents={canEditEvents}
         countdown={countdown}
         urgency={urgency}
@@ -305,6 +307,7 @@ export default function BookingDetailPage({
         onForceComplete={() => setForceCompleteOpen(true)}
         onForceCheckout={() => setForceCheckoutOpen(true)}
         onTransferOwner={() => setTransferOwnerOpen(true)}
+        onToggleCustody={() => actions.toggleCustodyScope(booking.custodyScope)}
         onEditEvents={() => setEditEventsOpen(true)}
       />
 

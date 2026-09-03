@@ -43,6 +43,7 @@ export type BookingDetail = {
   title: string;
   refNumber: string | null;
   status: string;
+  custodyScope: "PERSON" | "SHARED";
   startsAt: string;
   endsAt: string;
   notes: string | null;

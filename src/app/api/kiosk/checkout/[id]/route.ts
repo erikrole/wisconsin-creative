@@ -9,7 +9,7 @@ import { parseDerivedBulkUnitQr } from "@/lib/bulk-unit-qr";
 import { CLAIMABLE_BULK_UNIT_WHERE } from "@/lib/bulk-unit-status";
 import { checkAvailability } from "@/lib/services/availability";
 import { upsertBulkBalancesAndMovements } from "@/lib/services/bookings-helpers";
-import { BookingKind, BulkMovementKind, BulkUnitStatus, Prisma } from "@prisma/client";
+import { BookingCustodyScope, BookingKind, BulkMovementKind, BulkUnitStatus, Prisma } from "@prisma/client";
 import { scheduleCheckoutReturnLiveActivity } from "@/lib/live-activity-workflow";
 import { updateCheckoutReturnLiveActivities } from "@/lib/services/live-activities";
 import { normalizeBookingTitle, normalizeTeamAbbreviations } from "@/lib/title-normalization";
@@ -81,6 +81,7 @@ export const GET = withKiosk<{ id: string }>(async (_req, { params }) => {
       refNumber: true,
       status: true,
       kind: true,
+      custodyScope: true,
       requesterUserId: true,
       endsAt: true,
       scanEvents: {
@@ -370,7 +371,10 @@ export const GET = withKiosk<{ id: string }>(async (_req, { params }) => {
     title: normalizeTeamAbbreviations(booking.title),
     refNumber: booking.refNumber,
     status: booking.status,
-    requesterId: booking.requesterUserId,
+    requesterId: booking.custodyScope === BookingCustodyScope.SHARED
+      ? null
+      : booking.requesterUserId,
+    custodyScope: booking.custodyScope,
     endsAt: booking.endsAt,
     scanSummary: {
       serializedTotal: serializedItems.length,

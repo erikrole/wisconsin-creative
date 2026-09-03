@@ -213,7 +213,11 @@ export const GET = withAuth(async (req, { user }) => {
     isPersonalOnly
       ? Promise.resolve([])
       : db.booking.findMany({
-          where: { kind: "CHECKOUT", status: "OPEN", requesterUserId: { not: user.id } },
+          where: {
+            kind: "CHECKOUT",
+            status: "OPEN",
+            OR: [{ custodyScope: "SHARED" }, { requesterUserId: { not: user.id } }],
+          },
           orderBy: { endsAt: "asc" },
           take: 5,
           include: bookingInclude,
@@ -230,7 +234,7 @@ export const GET = withAuth(async (req, { user }) => {
     Promise.resolve([]),
     // My checkouts (booking-level summaries)
     gearHidden ? Promise.resolve([]) : db.booking.findMany({
-      where: { kind: "CHECKOUT", status: "OPEN", requesterUserId: user.id },
+      where: { kind: "CHECKOUT", status: "OPEN", custodyScope: "PERSON", requesterUserId: user.id },
       orderBy: { endsAt: "asc" },
       take: 5,
       include: bookingInclude,
@@ -322,7 +326,14 @@ export const GET = withAuth(async (req, { user }) => {
           { kind: "RESERVATION", status: "BOOKED", startsAt: { lte: now } },
           { kind: "CHECKOUT", status: "PENDING_PICKUP" },
         ],
-        ...(isPersonalOnly ? { requesterUserId: user.id } : {}),
+        ...(isPersonalOnly
+          ? {
+              AND: [
+                { requesterUserId: user.id },
+                { OR: [{ kind: "RESERVATION" }, { custodyScope: "PERSON" }] },
+              ],
+            }
+          : {}),
       },
       orderBy: { startsAt: "asc" },
       take: 5,
@@ -501,6 +512,7 @@ export const GET = withAuth(async (req, { user }) => {
       ? db.booking.findMany({
           where: {
             requesterUserId: user.id,
+            custodyScope: "PERSON",
             status: { in: ["DRAFT", "BOOKED", "PENDING_PICKUP", "OPEN"] },
             OR: [
               { eventId: { in: shiftEventIds } },

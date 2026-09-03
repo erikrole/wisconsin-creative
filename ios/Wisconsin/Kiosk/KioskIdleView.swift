@@ -567,7 +567,7 @@ struct KioskIdleView: View {
                 let itemGroups = ActiveItemGroup.groups(from: dashboard.activeItems)
                 KioskDashboardList(title: "Items Out", emptyMessage: "No items are out.", isEmpty: dashboard.activeItems.isEmpty, onClose: { toggleSummary(.itemsOut) }) {
                     ForEach(itemGroups) { group in
-                        ActiveItemRow(group: group) { openCheckout(id: group.first.checkoutId, title: group.first.checkoutTitle, requesterId: group.first.requesterId, requesterName: group.first.requesterName, requesterAvatarUrl: group.first.requesterAvatarUrl, endsAt: group.first.endsAt, isOverdue: group.first.isOverdue) }
+                        ActiveItemRow(group: group) { openCheckout(id: group.first.checkoutId, title: group.first.checkoutTitle, requesterId: group.first.requesterId, requesterName: group.first.requesterName, requesterAvatarUrl: group.first.requesterAvatarUrl, custodyScope: group.first.custodyScope ?? "PERSON", endsAt: group.first.endsAt, isOverdue: group.first.isOverdue) }
                     }
                 }
             case .checkouts:
@@ -618,6 +618,7 @@ struct KioskIdleView: View {
             requesterId: checkout.requesterId,
             requesterName: checkout.requesterName,
             requesterAvatarUrl: checkout.requesterAvatarUrl,
+            custodyScope: checkout.custodyScope,
             endsAt: checkout.endsAt,
             isOverdue: checkout.isOverdue
         ))
@@ -630,18 +631,20 @@ struct KioskIdleView: View {
             requesterId: checkout.requesterId,
             requesterName: checkout.requesterName,
             requesterAvatarUrl: checkout.requesterAvatarUrl,
+            custodyScope: checkout.custodyScope,
             endsAt: checkout.endsAt,
             isOverdue: checkout.isOverdue
         )
     }
 
-    private func openCheckout(id: String, title: String, requesterId: String?, requesterName: String, requesterAvatarUrl: String?, endsAt: Date, isOverdue: Bool) {
+    private func openCheckout(id: String, title: String, requesterId: String?, requesterName: String, requesterAvatarUrl: String?, custodyScope: String, endsAt: Date, isOverdue: Bool) {
         selectedCheckout = KioskCheckoutDrawerContext(
             checkoutId: id,
             title: title,
             requesterId: requesterId,
             requesterName: requesterName,
             requesterAvatarUrl: requesterAvatarUrl,
+            custodyScope: custodyScope,
             endsAt: endsAt,
             isOverdue: isOverdue
         )
@@ -836,6 +839,21 @@ struct KioskIdleView: View {
     }
 
     private func startReturn(for context: KioskCheckoutDrawerContext) {
+        if context.isShared {
+            store.setIntent(KioskFlowIntent(
+                action: .return,
+                source: .activeCheckout,
+                identifiedUser: nil,
+                expectedRequester: nil,
+                selectedEvent: nil,
+                targetBooking: KioskIntentBooking(id: context.checkoutId, title: context.title, startsAt: nil, endsAt: context.endsAt),
+                pendingScanValues: [],
+                createdAt: Date(),
+                ambiguity: .none
+            ))
+            store.screen = .identity
+            return
+        }
         guard let requesterId = context.requesterId else {
             identityScanFeedback = .error("This checkout is missing its requester.")
             return
@@ -1311,11 +1329,13 @@ private struct CheckoutRow: View {
     }
 
     private var holderSummary: String {
-        "\(checkout.requesterName) · \(itemCountSummary)"
+        "\(checkout.custodyScope == "SHARED" ? "Shared checkout" : checkout.requesterName) · \(itemCountSummary)"
     }
 
     private var accessibilitySummary: String {
         let dueSummary = checkout.endsAt.kioskDashboardDueStamp(isOverdue: checkout.isOverdue)
-        return "\(checkout.title), held by \(checkout.requesterName), \(itemCountSummary), \(dueSummary)"
+        return checkout.custodyScope == "SHARED"
+            ? "\(checkout.title), shared checkout, \(itemCountSummary), \(dueSummary)"
+            : "\(checkout.title), held by \(checkout.requesterName), \(itemCountSummary), \(dueSummary)"
     }
 }

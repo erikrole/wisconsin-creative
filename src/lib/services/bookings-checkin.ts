@@ -1,4 +1,5 @@
 import {
+  BookingCustodyScope,
   BookingKind,
   BookingStatus,
   BulkMovementKind,
@@ -208,18 +209,21 @@ export async function markCheckoutCompleted(bookingId: string, actorUserId: stri
     return {
       success: true,
       userId: booking.requesterUserId,
+      shouldAwardBadge: booking.custodyScope === BookingCustodyScope.PERSON,
       completedAt,
       wasOnTime: wasReturnedOnTime(booking.endsAt, completedAt),
     };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
-  await badges.onCheckoutReturned({
-    userId: result.userId,
-    bookingId,
-    completedAt: result.completedAt,
-    wasOnTime: result.wasOnTime,
-    sourceKey: bookingId,
-  });
+  if (result.shouldAwardBadge) {
+    await badges.onCheckoutReturned({
+      userId: result.userId,
+      bookingId,
+      completedAt: result.completedAt,
+      wasOnTime: result.wasOnTime,
+      sourceKey: bookingId,
+    });
+  }
   await endCheckoutReturnLiveActivities(bookingId);
 
   return { success: true };
@@ -368,18 +372,21 @@ export async function forceCompleteCheckout(args: {
 
     return {
       userId: booking.requesterUserId,
+      shouldAwardBadge: booking.custodyScope === BookingCustodyScope.PERSON,
       completedAt,
       wasOnTime: wasReturnedOnTime(booking.endsAt, completedAt),
     };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
-  await badges.onCheckoutReturned({
-    userId: result.userId,
-    bookingId: args.bookingId,
-    completedAt: result.completedAt,
-    wasOnTime: result.wasOnTime,
-    sourceKey: args.bookingId,
-  });
+  if (result.shouldAwardBadge) {
+    await badges.onCheckoutReturned({
+      userId: result.userId,
+      bookingId: args.bookingId,
+      completedAt: result.completedAt,
+      wasOnTime: result.wasOnTime,
+      sourceKey: args.bookingId,
+    });
+  }
   await endCheckoutReturnLiveActivities(args.bookingId);
 
   return { success: true };
@@ -463,7 +470,7 @@ export async function checkinItems(
         returnedAssetIds: assetIds,
         remainingActiveItems: remainingActive,
         autoCompleted: completedAt !== null,
-        badgeEvent: completedAt
+        badgeEvent: completedAt && booking.custodyScope === BookingCustodyScope.PERSON
           ? {
               userId: booking.requesterUserId,
               bookingId,
@@ -532,7 +539,7 @@ export async function kioskCheckinAsset(
 
   const booking = await tx.booking.findUnique({
     where: { id: args.bookingId },
-    select: { locationId: true, requesterUserId: true, endsAt: true },
+    select: { locationId: true, requesterUserId: true, custodyScope: true, endsAt: true },
   });
 
   const locationEvidence = args.kioskLocationId && booking
@@ -578,7 +585,7 @@ export async function kioskCheckinAsset(
     locationEvidence,
     completed: completedAt !== null,
     badgeEvent:
-      completedAt && booking
+      completedAt && booking && booking.custodyScope === BookingCustodyScope.PERSON
         ? {
             userId: booking.requesterUserId,
             bookingId: args.bookingId,
@@ -715,7 +722,7 @@ export async function kioskCompleteCheckin(args: {
         returnedItems,
         returnedItemNames,
         completed: alreadyCompleted || completedAt !== null,
-        badgeEvent: completedAt
+        badgeEvent: completedAt && booking.custodyScope === BookingCustodyScope.PERSON
           ? {
               userId: booking.requesterUserId,
               bookingId: booking.id,
@@ -817,7 +824,7 @@ export async function checkinBulkItem(
         checkedInQuantity: newCheckedIn,
         totalQuantity: outQty,
         autoCompleted: completedAt !== null,
-        badgeEvent: completedAt
+        badgeEvent: completedAt && booking.custodyScope === BookingCustodyScope.PERSON
           ? {
               userId: booking.requesterUserId,
               bookingId,

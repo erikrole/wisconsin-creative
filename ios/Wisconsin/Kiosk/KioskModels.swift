@@ -125,6 +125,7 @@ struct KioskDashboard: Decodable {
         let unitNumber: Int?
         let checkoutId: String
         let checkoutTitle: String
+        let custodyScope: String?
         let requesterId: String?
         let requesterName: String
         let requesterAvatarUrl: String?
@@ -332,6 +333,7 @@ struct KioskActiveCheckout: Decodable, Identifiable {
     let requesterId: String?
     let requesterAvatarUrl: String?
     let requesterInitials: String
+    let custodyScope: String
     let items: [CheckoutItem]
     let itemCount: Int
     let endsAt: Date
@@ -344,6 +346,7 @@ struct KioskActiveCheckout: Decodable, Identifiable {
         case requesterId
         case requesterAvatarUrl
         case requesterInitials
+        case custodyScope
         case items
         case itemCount
         case endsAt
@@ -362,6 +365,7 @@ struct KioskActiveCheckout: Decodable, Identifiable {
         requesterId = try container.decodeIfPresent(String.self, forKey: .requesterId)
         requesterAvatarUrl = try container.decodeIfPresent(String.self, forKey: .requesterAvatarUrl)
         requesterInitials = try container.decodeIfPresent(String.self, forKey: .requesterInitials) ?? Self.initials(for: requesterName)
+        custodyScope = try container.decodeIfPresent(String.self, forKey: .custodyScope) ?? "PERSON"
         items = try container.decodeIfPresent(LossyDecodableArray<CheckoutItem>.self, forKey: .items)?.elements ?? []
         itemCount = try container.decodeIfPresent(Int.self, forKey: .itemCount) ?? items.count
         endsAt = try container.decode(Date.self, forKey: .endsAt)
@@ -622,6 +626,7 @@ struct KioskCheckoutDetail: Decodable {
     let refNumber: String?
     let status: String
     let requesterId: String?
+    let custodyScope: String?
     let endsAt: Date
     let scanSummary: ScanSummary?
     let items: [ReturnItem]

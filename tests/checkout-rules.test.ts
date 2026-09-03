@@ -145,6 +145,22 @@ describe("canPerformBookingAction", () => {
       expect(canPerformBookingAction(owner, booking, "edit").allowed).toBe(true);
     });
   });
+
+  describe("shared custody", () => {
+    const booking = { ...makeCheckout("OPEN"), custodyScope: "SHARED" as const };
+
+    it("lets staff manage shared custody without exposing personal-owner actions", () => {
+      expect(canPerformBookingAction(staff, booking, "manage-custody").allowed).toBe(true);
+      expect(canPerformBookingAction(staff, booking, "edit").allowed).toBe(true);
+      expect(canPerformBookingAction(staff, booking, "transfer-owner").allowed).toBe(false);
+      expect(canPerformBookingAction(staff, booking, "nudge").allowed).toBe(false);
+    });
+
+    it("does not give the retained requester or creator shared-checkout mutation rights", () => {
+      expect(canPerformBookingAction(owner, booking, "edit").allowed).toBe(false);
+      expect(canPerformBookingAction(owner, booking, "manage-custody").allowed).toBe(false);
+    });
+  });
 });
 
 describe("getAllowedActions", () => {
@@ -156,6 +172,7 @@ describe("getAllowedActions", () => {
     expect(actions).not.toContain("cancel");
     expect(actions).not.toContain("checkin");
     expect(actions).not.toContain("open");
+    expect(actions).toContain("manage-custody");
   });
 
   it("returns correct actions for BOOKED checkout as owner", () => {

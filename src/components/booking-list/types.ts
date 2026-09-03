@@ -17,6 +17,7 @@ export type BookingItem = {
   updatedAt: string;
   status: string;
   kind: "CHECKOUT" | "RESERVATION";
+  custodyScope?: "PERSON" | "SHARED";
   sportCode: string | null;
   createdBy?: string;
   requester: { id: string; name: string; avatarUrl?: string | null };

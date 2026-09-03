@@ -51,7 +51,7 @@ Values: `DRAFT`, `BOOKED`, `PENDING_PICKUP`, `OPEN`, `COMPLETED`, `CANCELLED`
 
 ## Enum `BookingCustodyScope`
 
-Values: `PERSON`, `EVENT`
+Values: `PERSON`, `SHARED`
 
 ## Enum `AccountabilityExclusionReason`
 

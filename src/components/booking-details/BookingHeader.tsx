@@ -44,6 +44,7 @@ type Props = {
   canForceComplete: boolean;
   canForceCheckout: boolean;
   canTransferOwner: boolean;
+  canManageCustody: boolean;
   canEditEvents: boolean;
   countdown: string | null;
   urgency: string;
@@ -61,6 +62,7 @@ type Props = {
   onForceComplete: () => void;
   onForceCheckout: () => void;
   onTransferOwner: () => void;
+  onToggleCustody: () => void;
   onEditEvents: () => void;
 };
 
@@ -114,6 +116,7 @@ export function BookingHeader({
   canForceComplete,
   canForceCheckout,
   canTransferOwner,
+  canManageCustody,
   canEditEvents,
   countdown,
   urgency,
@@ -131,9 +134,10 @@ export function BookingHeader({
   onForceComplete,
   onForceCheckout,
   onTransferOwner,
+  onToggleCustody,
   onEditEvents,
 }: Props) {
-  const hasSecondaryActions = canDuplicate || canCancel || canNudge || canForceComplete || canForceCheckout || canTransferOwner || canEditEvents;
+  const hasSecondaryActions = canDuplicate || canCancel || canNudge || canForceComplete || canForceCheckout || canTransferOwner || canManageCustody || canEditEvents;
   const hasPrimaryActions = canEdit || canExtend;
   const displayStatus = operationalBookingStatus(booking);
 
@@ -184,12 +188,18 @@ export function BookingHeader({
     <DetailPageHeader
       className="mb-0"
       media={
-        <UserAvatar
-          name={booking.requester?.name ?? "Unknown"}
-          avatarUrl={booking.requester?.avatarUrl}
-          size="xl"
-          className="shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
-        />
+        booking.custodyScope === "SHARED" ? (
+          <div className="flex size-20 items-center justify-center rounded-full bg-muted text-muted-foreground shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]">
+            <PackageOpen className="size-9" aria-hidden="true" />
+          </div>
+        ) : (
+          <UserAvatar
+            name={booking.requester?.name ?? "Unknown"}
+            avatarUrl={booking.requester?.avatarUrl}
+            size="xl"
+            className="shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
+          />
+        )
       }
       status={
         <>
@@ -242,10 +252,12 @@ export function BookingHeader({
       }
       subtitle={
         <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
-          <span>Requester</span>
+          <span>{booking.custodyScope === "SHARED" ? "Shared checkout" : "Requester"}</span>
           <span aria-hidden="true" className="text-muted-foreground/40">/</span>
           <span className="font-medium text-foreground">
-            {booking.requester?.name ?? "Unknown"}
+            {booking.custodyScope === "SHARED"
+              ? "Travel case & equipment truck"
+              : booking.requester?.name ?? "Unknown"}
           </span>
         </span>
       }
@@ -319,6 +331,17 @@ export function BookingHeader({
                           disabled={!!actionLoading}
                         >
                           Transfer owner
+                        </PendingDropdownMenuItem>
+                      )}
+                      {canManageCustody && (
+                        <PendingDropdownMenuItem
+                          active={actionLoading === "manage-custody"}
+                          onSelect={onToggleCustody}
+                          disabled={!!actionLoading}
+                        >
+                          {booking.custodyScope === "SHARED"
+                            ? "Make personal checkout"
+                            : "Make shared checkout"}
                         </PendingDropdownMenuItem>
                       )}
                       {canEditEvents && (

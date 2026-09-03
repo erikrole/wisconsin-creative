@@ -369,6 +369,7 @@ export async function onCheckoutOpened(event: CheckoutOpenedBadgeEvent): Promise
       where: {
         id: { in: openedBookingIds },
         kind: BookingKind.CHECKOUT,
+        custodyScope: "PERSON",
         status: { in: [BookingStatus.OPEN, BookingStatus.COMPLETED] },
       },
       select: {
@@ -424,6 +425,7 @@ export async function onCheckoutReturned(event: CheckoutReturnedBadgeEvent): Pro
       where: {
         requesterUserId: event.userId,
         kind: BookingKind.CHECKOUT,
+        custodyScope: "PERSON",
         status: BookingStatus.COMPLETED,
         checkinReports: { none: {} },
       },
@@ -444,6 +446,7 @@ export async function onCheckoutReturned(event: CheckoutReturnedBadgeEvent): Pro
       where: {
         requesterUserId: event.userId,
         kind: BookingKind.CHECKOUT,
+        custodyScope: "PERSON",
         status: BookingStatus.COMPLETED,
       },
       select: {

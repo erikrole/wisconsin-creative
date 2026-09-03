@@ -64,6 +64,7 @@
 - D-055: Student shift claims are approval-first on both paths
 - D-056: Scoreboard metrics are shared authenticated team data
 - D-057: Event workers are recorded separately from shift scheduling
+- D-061: Shared travel-case checkouts are custodian-neutral
 
 ---
 
@@ -1462,7 +1463,7 @@ These are non-negotiable integrity constraints. Every feature must preserve them
 
 ## D-060: Similar Concurrent Events Share One Canonical Operational Crew
 - Date: 2026-09-03
-- Status: Accepted; implemented locally, migration and authenticated runtime proof pending
+- Status: Accepted; migration applied, compatible app deployment and authenticated runtime proof pending
 - Context:
   - One meet can arrive as separate source events for related teams, such as Men's and Women's Cross Country at the same venue with overlapping windows, even though Creative covers it with one crew.
   - Deleting or rewriting either imported event would break source identity and sync history. Publishing both shift groups would instead duplicate crew work, notifications, and operational ownership.
@@ -1481,5 +1482,29 @@ These are non-negotiable integrity constraints. Every feature must preserve them
 - Consequences:
   - Concurrent Men's/Women's meet records can read as one operational Schedule event with one crew while calendar provenance remains intact.
   - Direct secondary Event-detail navigation resolves to the canonical primary, and the original secondary identity remains available for sync and audit history.
-  - Migration `0142_combined_schedule_events`, authenticated browser proof, deployment, and the first live Cross Country combine remain separate rollout gates.
+  - Migration `0142_combined_schedule_events` is applied in production with matching Prisma checksum and zero initial relationships. Authenticated browser proof, compatible app deployment, and the first live Cross Country combine remain separate rollout gates.
 - Reference: `tasks/combined-schedule-events-plan-2026-09-03.md`, `docs/AREA_EVENTS.md`, `docs/AREA_SHIFTS.md`, and `src/lib/services/combined-schedule-events.ts`.
+
+## D-061: Shared Travel-Case Checkouts Are Custodian-Neutral
+- Date: 2026-09-03
+- Status: Accepted; migration applied, compatible app deployment and native/runtime proof pending
+- Context:
+  - Football travel equipment packed into one case and sent on the equipment truck is operated as one shared manifest, not personally carried by the person who happened to create or request the record.
+  - Cameras, lenses, and other gear carried separately by an individual still need personal custody and accountability.
+  - Migration `0141_event_checkout_assignments` deployed an unused `EVENT` scope and nullable item-assignee columns before this distinction was finalized; no application mutation or UI shipped for them.
+- Decision:
+  - `Booking.custodyScope=SHARED` identifies a custodian-neutral operational checkout such as `Football Travel Case`. The manifest contains everything packed in the case or on the truck, including pooled batteries and numbered bulk units.
+  - Gear taken separately by a person must be placed on that person's distinct `PERSON` checkout. A shared checkout does not distribute its lines among people.
+  - `Booking.requesterUserId` remains required compatibility and historical metadata. Shared surfaces must not present it as owner, borrower, or accountability target.
+  - Only Staff/Admin may move an active checkout between `PERSON` and `SHARED`, using a snapshot-guarded serializable mutation with audit evidence. Students and Collaborators never inherit shared-checkout mutation rights from the retained requester or creator fields.
+  - Kiosk scans, allocations, exact numbered-unit bindings, and return evidence remain authoritative. Shared custody changes identity and attribution, not lifecycle or equipment truth.
+  - The deployed nullable serialized-item assignee columns remain dormant. Removing them is a separate destructive cleanup requiring proof that production contains no assignment data.
+- Guardrails:
+  - Shared scope is not valid for reservations, drafts, completed, or cancelled records.
+  - Do not send borrower nudges or requester overdue notifications for shared custody, count it in personal accountability/badges, or show it in personal My Gear.
+  - Keep shared checkouts visible in team and operational queues, exports, reports, and kiosk return work with an explicit `Shared checkout` identity.
+- Consequences:
+  - Football travel inventory has one scannable manifest without falsely assigning the whole truck case to one person.
+  - Personal carry remains explicit and individually accountable through separate checkouts.
+  - Production migration `0143_shared_checkout_custody` renamed the unused enum value with zero `EVENT` rows, retained all 301 existing bookings as `PERSON`, and recorded the exact local migration checksum. Compatible app deployment and the first real shared checkout remain separate rollout gates.
+- Reference: `tasks/shared-travel-case-checkout-plan-2026-09-03.md`, `docs/AREA_CHECKOUTS.md`, and migration `0143_shared_checkout_custody`.

@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { BookingCustodyScope, Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { withKiosk } from "@/lib/api";
 import { HttpError, ok } from "@/lib/http";
@@ -18,19 +18,31 @@ import { endCheckoutReturnLiveActivities } from "@/lib/services/live-activities"
  */
 export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => {
   const badgeWindowStart = new Date(Date.now() - 1);
-  const { scanValue } = checkinScanBody.parse(await req.json());
+  const { scanValue, actorId } = checkinScanBody.parse(await req.json());
 
   const booking = await db.booking.findUnique({
     where: { id: params.id },
-    select: { id: true, status: true, kind: true, requesterUserId: true, locationId: true },
+    select: { id: true, status: true, kind: true, custodyScope: true, requesterUserId: true, locationId: true },
   });
 
   if (!booking || booking.kind !== "CHECKOUT" || booking.status !== "OPEN") {
     throw new HttpError(404, "Active checkout not found");
   }
   const activeBooking = booking;
+  const operationalActorId = activeBooking.custodyScope === BookingCustodyScope.SHARED
+    ? actorId
+    : activeBooking.requesterUserId;
+  if (!operationalActorId) {
+    throw new HttpError(400, "Identify the person operating this shared return");
+  }
+  const operationalActor = await db.user.findFirst({
+    where: { id: operationalActorId, active: true, hiddenFromRoster: false },
+    select: { id: true },
+  });
+  if (!operationalActor) throw new HttpError(404, "User not found");
 
   async function rewardPayload() {
+    if (activeBooking.custodyScope === BookingCustodyScope.SHARED) return {};
     const earnedBadges = await earnedBadgesSince(activeBooking.requesterUserId, badgeWindowStart);
     return earnedBadges.length > 0 ? { earnedBadges } : {};
   }
@@ -62,13 +74,13 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
       bookingId: params.id,
       assetId: asset.id,
       kioskLocationId: kiosk.locationId,
-      actorUserId: activeBooking.requesterUserId,
+      actorUserId: operationalActorId,
     });
     if (outcome.ok) {
       await tx.scanEvent.create({
         data: {
           bookingId: activeBooking.id,
-          actorUserId: activeBooking.requesterUserId,
+          actorUserId: operationalActorId,
           scanType: "SERIALIZED",
           scanValue,
           success: true,

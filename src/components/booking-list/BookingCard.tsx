@@ -8,6 +8,7 @@ import { UserAvatar } from "@/components/UserAvatar";
 import { Badge } from "@/components/ui/badge";
 import { operationalBookingStatus } from "@/lib/booking-status-display";
 import { Checkbox } from "@/components/ui/checkbox";
+import { PackageOpen } from "lucide-react";
 
 /* ───── Helpers ───── */
 
@@ -141,17 +142,23 @@ export function BookingCard({ item, overdueStatus, onClick, menuProps, selectabl
           {/* Bottom row: user + gear */}
           <div className="flex items-center justify-between pt-2.5 border-t border-border/40">
             <div className="flex items-center gap-1.5 min-w-0">
-              <UserAvatar
-                name={item.requester?.name ?? "?"}
-                avatarUrl={item.requester?.avatarUrl}
-                size="sm"
-                className="shrink-0 outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10"
-              />
+              {item.custodyScope === "SHARED" ? (
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10">
+                  <PackageOpen className="size-4" aria-hidden="true" />
+                </span>
+              ) : (
+                <UserAvatar
+                  name={item.requester?.name ?? "?"}
+                  avatarUrl={item.requester?.avatarUrl}
+                  size="sm"
+                  className="shrink-0 outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10"
+                />
+              )}
               <span
                 className="text-[12px] truncate"
                 style={{ fontFamily: "var(--font-heading)", fontWeight: 500 }}
               >
-                {item.requester?.name ?? "Unknown"}
+                {item.custodyScope === "SHARED" ? "Shared checkout" : item.requester?.name ?? "Unknown"}
               </span>
             </div>
 

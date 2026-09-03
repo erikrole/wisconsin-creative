@@ -1,5 +1,6 @@
 import {
   AccountabilityExclusionReason,
+  BookingCustodyScope,
   BookingStatus,
   Prisma,
   Role,
@@ -176,6 +177,7 @@ export async function getAccountabilityReport(
   const window = getAcademicYearWindow(filters.startYear);
   const where: Prisma.BookingWhereInput = {
     kind: "CHECKOUT",
+    custodyScope: BookingCustodyScope.PERSON,
     status: { in: [BookingStatus.OPEN, BookingStatus.COMPLETED] },
     ...(window
       ? {

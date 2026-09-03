@@ -10,6 +10,7 @@ import { TableRow, TableCell } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { operationalBookingStatus } from "@/lib/booking-status-display";
 import { Checkbox } from "@/components/ui/checkbox";
+import { PackageOpen } from "lucide-react";
 
 /* ───── Desktop table row ───── */
 
@@ -113,16 +114,22 @@ export function BookingTableRow({
         </TableCell>
         <TableCell className="hidden md:table-cell">
           <div className="flex items-center gap-2">
-            <UserAvatar
-              name={item.requester?.name ?? "Unknown"}
-              avatarUrl={item.requester?.avatarUrl}
-              className="outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10"
-            />
+            {item.custodyScope === "SHARED" ? (
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10">
+                <PackageOpen className="size-4" aria-hidden="true" />
+              </span>
+            ) : (
+              <UserAvatar
+                name={item.requester?.name ?? "Unknown"}
+                avatarUrl={item.requester?.avatarUrl}
+                className="outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10"
+              />
+            )}
             <span
               className="text-[13px]"
               style={{ fontFamily: "var(--font-heading)", fontWeight: 500 }}
             >
-              {item.requester?.name ?? "Unknown"}
+              {item.custodyScope === "SHARED" ? "Shared checkout" : item.requester?.name ?? "Unknown"}
             </span>
           </div>
         </TableCell>
@@ -229,13 +236,22 @@ export function BookingMobileCard({
       >
         <span className="tabular-nums">{formatDateShort(item.startsAt)} – {formatDateShort(item.endsAt)}</span>
         <span aria-hidden="true">·</span>
-        <UserAvatar
-          name={item.requester?.name ?? "Unknown"}
-          avatarUrl={item.requester?.avatarUrl}
-          size="sm"
-          className="outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10"
-        />
-        <span>{item.requester?.name ?? "Unknown"}</span>
+        {item.custodyScope === "SHARED" ? (
+          <span className="inline-flex items-center gap-1">
+            <PackageOpen className="size-3.5" aria-hidden="true" />
+            Shared checkout
+          </span>
+        ) : (
+          <>
+            <UserAvatar
+              name={item.requester?.name ?? "Unknown"}
+              avatarUrl={item.requester?.avatarUrl}
+              size="sm"
+              className="outline outline-1 -outline-offset-1 outline-black/10 dark:outline-white/10"
+            />
+            <span>{item.requester?.name ?? "Unknown"}</span>
+          </>
+        )}
         <span aria-hidden="true">·</span>
         <span className="tabular-nums">{formatDuration(item.startsAt, item.endsAt)}</span>
       </div>

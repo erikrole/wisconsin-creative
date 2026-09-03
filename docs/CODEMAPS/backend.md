@@ -5,7 +5,7 @@
 
 | File | Lines |
 |---|---:|
-| `src/lib/services/accountability.ts` | 491 |
+| `src/lib/services/accountability.ts` | 493 |
 | `src/lib/services/app-activity-report.ts` | 137 |
 | `src/lib/services/auto-assign.ts` | 92 |
 | `src/lib/services/auto-fill-preview.ts` | 325 |
@@ -13,13 +13,14 @@
 | `src/lib/services/availability.ts` | 618 |
 | `src/lib/services/blast-targeting.ts` | 165 |
 | `src/lib/services/blasts.ts` | 358 |
+| `src/lib/services/booking-custody.ts` | 82 |
 | `src/lib/services/booking-ref.ts` | 26 |
-| `src/lib/services/booking-rules.ts` | 109 |
-| `src/lib/services/bookings-checkin.ts` | 846 |
+| `src/lib/services/booking-rules.ts` | 110 |
+| `src/lib/services/bookings-checkin.ts` | 853 |
 | `src/lib/services/bookings-helpers.ts` | 281 |
 | `src/lib/services/bookings-lifecycle.ts` | 2813 |
 | `src/lib/services/bookings-queries.ts` | 301 |
-| `src/lib/services/bookings.ts` | 5 |
+| `src/lib/services/bookings.ts` | 6 |
 | `src/lib/services/bulk-assignment-batches.ts` | 252 |
 | `src/lib/services/bulk-schedule-assignment.ts` | 969 |
 | `src/lib/services/bulk-unit-scans.ts` | 661 |
@@ -49,7 +50,7 @@
 | `src/lib/services/manual-event-time.ts` | 303 |
 | `src/lib/services/non-game-schedule-defaults.ts` | 49 |
 | `src/lib/services/notification-prefs.ts` | 103 |
-| `src/lib/services/notifications.ts` | 1680 |
+| `src/lib/services/notifications.ts` | 1687 |
 | `src/lib/services/onboarding-lifecycle.ts` | 766 |
 | `src/lib/services/pending-pickup-expiry.ts` | 281 |
 | `src/lib/services/reports.ts` | 1932 |
@@ -110,7 +111,7 @@
 | `src/lib/battery-compatibility.ts` | 166 |
 | `src/lib/bhphoto-image.ts` | 67 |
 | `src/lib/blob.ts` | 160 |
-| `src/lib/booking-action-policy.ts` | 195 |
+| `src/lib/booking-action-policy.ts` | 209 |
 | `src/lib/booking-actions.ts` | 14 |
 | `src/lib/booking-availability-window.ts` | 31 |
 | `src/lib/booking-concurrency.ts` | 39 |
@@ -172,7 +173,7 @@
 | `src/lib/ops-checks.ts` | 176 |
 | `src/lib/passkey-client.ts` | 73 |
 | `src/lib/passkey.ts` | 371 |
-| `src/lib/permissions.ts` | 220 |
+| `src/lib/permissions.ts` | 221 |
 | `src/lib/profile-completion-events.ts` | 6 |
 | `src/lib/profile-completion.ts` | 157 |
 | `src/lib/profile-phone.ts` | 44 |
@@ -240,7 +241,7 @@
 | `src/lib/user-list-cache.ts` | 73 |
 | `src/lib/user-visibility.ts` | 85 |
 | `src/lib/utils.ts` | 7 |
-| `src/lib/validation.ts` | 803 |
+| `src/lib/validation.ts` | 807 |
 | `src/lib/venue-mapping-audit.ts` | 56 |
 | `src/lib/venue-mapping-contract.ts` | 46 |
 | `src/lib/venue-tone.ts` | 135 |
@@ -338,6 +339,7 @@
 
 - `/api/bookings/[id]/audit-logs`
 - `/api/bookings/[id]/cancel`
+- `/api/bookings/[id]/custody-scope`
 - `/api/bookings/[id]/events`
 - `/api/bookings/[id]/extend`
 - `/api/bookings/[id]/force-complete`

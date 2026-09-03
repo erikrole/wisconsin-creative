@@ -1,7 +1,7 @@
 export type BookingKind = "CHECKOUT" | "RESERVATION";
 export type BookingStatus = "DRAFT" | "BOOKED" | "PENDING_PICKUP" | "OPEN" | "COMPLETED" | "CANCELLED";
 
-export type CheckoutAction = "edit" | "extend" | "cancel" | "checkin" | "open" | "force-complete" | "nudge" | "transfer-owner";
+export type CheckoutAction = "edit" | "extend" | "cancel" | "checkin" | "open" | "force-complete" | "nudge" | "transfer-owner" | "manage-custody";
 export type ReservationAction = "edit" | "extend" | "cancel" | "convert" | "duplicate" | "force-checkout" | "transfer-owner";
 export type BookingAction = CheckoutAction | ReservationAction | "view";
 
@@ -12,6 +12,7 @@ export type BookingContext = {
   createdBy?: string;
   requester?: { id: string };
   creator?: { id: string };
+  custodyScope?: "PERSON" | "SHARED" | string;
 };
 
 export type ActorContext = {
@@ -29,8 +30,8 @@ type ActionOptions = {
   includeServerActions?: boolean;
 };
 
-const CLIENT_CHECKOUT_ACTIONS: CheckoutAction[] = ["edit", "extend", "cancel", "open", "transfer-owner"];
-const SERVER_CHECKOUT_ACTIONS: CheckoutAction[] = ["edit", "extend", "cancel", "checkin", "open", "force-complete", "nudge", "transfer-owner"];
+const CLIENT_CHECKOUT_ACTIONS: CheckoutAction[] = ["edit", "extend", "cancel", "open", "transfer-owner", "manage-custody"];
+const SERVER_CHECKOUT_ACTIONS: CheckoutAction[] = ["edit", "extend", "cancel", "checkin", "open", "force-complete", "nudge", "transfer-owner", "manage-custody"];
 const CLIENT_RESERVATION_ACTIONS: ReservationAction[] = ["edit", "extend", "cancel", "duplicate", "transfer-owner"];
 const SERVER_RESERVATION_ACTIONS: ReservationAction[] = ["edit", "extend", "cancel", "convert", "duplicate", "force-checkout", "transfer-owner"];
 const COLLABORATOR_RESERVATION_ACTION_CAPABILITIES: Partial<Record<"edit" | "extend" | "cancel", string>> = {
@@ -42,9 +43,9 @@ const COLLABORATOR_RESERVATION_ACTION_CAPABILITIES: Partial<Record<"edit" | "ext
 const STATE_ACTIONS: Record<BookingKind, Record<BookingStatus, Set<string>>> = {
   CHECKOUT: {
     DRAFT: new Set(["edit", "cancel", "transfer-owner"]),
-    BOOKED: new Set(["edit", "extend", "cancel", "open", "transfer-owner"]),
-    PENDING_PICKUP: new Set(["edit", "cancel", "transfer-owner"]),
-    OPEN: new Set(["edit", "extend", "force-complete", "nudge", "transfer-owner"]),
+    BOOKED: new Set(["edit", "extend", "cancel", "open", "transfer-owner", "manage-custody"]),
+    PENDING_PICKUP: new Set(["edit", "cancel", "transfer-owner", "manage-custody"]),
+    OPEN: new Set(["edit", "extend", "force-complete", "nudge", "transfer-owner", "manage-custody"]),
     COMPLETED: new Set(),
     CANCELLED: new Set(),
   },
@@ -63,6 +64,7 @@ function isStaffOrAbove(role: string): boolean {
 }
 
 function isOwner(actor: ActorContext, booking: BookingContext): boolean {
+  if (booking.custodyScope === "SHARED") return false;
   const requesterId = booking.requesterUserId ?? booking.requester?.id;
   const creatorId = booking.createdBy ?? booking.creator?.id;
   return actor.id === requesterId || actor.id === creatorId;
@@ -145,15 +147,27 @@ export function canPerformBookingAction(
   }
 
   if (action === "nudge") {
+    if (booking.custodyScope === "SHARED") {
+      return { allowed: false, reason: "Shared checkouts do not have a borrower to nudge" };
+    }
     return isStaffOrAbove(actor.role)
       ? { allowed: true }
       : { allowed: false, reason: "Only staff or admin can send nudge notifications" };
   }
 
   if (action === "transfer-owner") {
+    if (booking.custodyScope === "SHARED") {
+      return { allowed: false, reason: "Shared checkouts do not have a personal owner" };
+    }
     return hasAccess(actor, booking)
       ? { allowed: true }
       : { allowed: false, reason: "You do not have permission to transfer this booking" };
+  }
+
+  if (action === "manage-custody") {
+    return isStaffOrAbove(actor.role)
+      ? { allowed: true }
+      : { allowed: false, reason: "Only staff or admin can change checkout custody" };
   }
 
   if (!hasAccess(actor, booking)) {

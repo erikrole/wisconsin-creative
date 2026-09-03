@@ -53,6 +53,7 @@ export const PERMISSIONS: Record<string, Record<string, Role[]>> = {
     scan: ["ADMIN", "STAFF", "STUDENT"],
     complete: ["ADMIN", "STAFF"],
     admin_override: ["ADMIN", "STAFF"],
+    manage_custody: ["ADMIN", "STAFF"],
   },
   bulk_sku: {
     view: ["ADMIN", "STAFF", "STUDENT"],

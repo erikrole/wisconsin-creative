@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Dashboard
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-25
+- Last Updated: 2026-09-03
 - Status: Active — V3 shipped, reliability + UX polish complete
 - Version: V3
 
@@ -25,6 +25,7 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 10. Calendar sync remains backend support for event-linked reservations/checkouts.
 11. Past-due reservations are surfaced separately as stale planning work, not merged into checkout overdue custody metrics.
 12. Internal Students, Staff, and Admins can view team dashboard rows, totals, and Upcoming Events; the explicit `scope=ios-home` native payload remains personal, and collaborators remain capability-driven.
+13. Shared travel-case checkouts remain visible in team operational lanes, but never appear in personal My Gear or personal pending-pickup projections even when a retained requester ID matches the viewer.
 
 ## Information Architecture (Top to Bottom)
 1. Overdue Banner (global)
@@ -58,7 +59,7 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 - Sorting: oldest overdue first, then nearest due time.
 - Row fields:
   - Booking title
-  - Borrower
+  - Borrower, or `Shared checkout` for custodian-neutral travel-case/truck custody
   - Due time
   - Status
   - Linked event badge (if present)
@@ -95,6 +96,7 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 
 ### 4) My Gear in Custody
 - Purpose: personal accountability and due urgency.
+- Scope: `PERSON` custody only. Shared travel-case/truck manifests are team operations, not gear attributed to the retained requester.
 - Card fields:
   - `tagName` primary
   - Booking/reservation title
@@ -184,6 +186,8 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 7. Add regression tests for permissions, window filtering (7 days), and overdue consistency.
 
 ## Change Log
+
+- 2026-09-03: **Shared travel-case custody stays operational, not personal.** Team checkout lanes and counts continue to include shared case/truck manifests with `Shared checkout` identity, while My Gear, the native personal Home scope, and personal pending-pickup counts exclude them even when compatibility metadata retains a requester ID. Migration `0143_shared_checkout_custody` is applied; compatible app deployment and authenticated personal/team proof remain open.
 
 - 2026-08-29: **Wisconsin Creative enrollment now survives a crash-lost preferences cache.** A real crash/reboot showed that 1.0.3 had lost its preferences-only user identity, and startup refused to check any surviving Keychain credential without an in-memory user. Version 1.0.4 stores the validated enrolled identity in a separate device-only data-protection Keychain item, restores it before the cache gate, refreshes only through the existing Upstash projection, migrates intact older enrollments on successful restore, and removes both identity and token on explicit sign-out. The notarized build is installed and running; one new enrollment followed by a real cold restart remains the acceptance gate.
 

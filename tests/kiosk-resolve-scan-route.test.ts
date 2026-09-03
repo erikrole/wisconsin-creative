@@ -92,6 +92,23 @@ describe("POST /api/kiosk/resolve-scan", () => {
     expect(json).toMatchObject({ kind: "blocked", code: "wrong_requester", expectedRequester: requester });
   });
 
+  it("lets any identified operator return a shared checkout without exposing a requester", async () => {
+    mocks.findAsset.mockResolvedValue(asset);
+    mocks.allocationFindFirst.mockResolvedValue({
+      kind: "CHECKOUT",
+      booking: { ...reservation, kind: "CHECKOUT", status: "OPEN", custodyScope: "SHARED" },
+    });
+
+    const json = await (await request({ scanValue: "CAM-1", userId: "user-2" })).json();
+
+    expect(json).toMatchObject({
+      kind: "action",
+      action: "return",
+      booking: { id: "booking-1", custodyScope: "SHARED" },
+    });
+    expect(json).not.toHaveProperty("expectedRequester");
+  });
+
   it("routes pickup from another kiosk location", async () => {
     mocks.findAsset.mockResolvedValue(asset);
     mocks.allocationFindFirst.mockResolvedValue({

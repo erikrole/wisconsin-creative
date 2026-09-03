@@ -253,6 +253,7 @@ export const GET = withKiosk(async () => {
             id: true,
             title: true,
             endsAt: true,
+            custodyScope: true,
             requester: { select: { id: true, name: true, avatarUrl: true } },
           },
         },
@@ -293,7 +294,8 @@ export const GET = withKiosk(async () => {
                 id: true,
                 title: true,
                 endsAt: true,
-            requester: { select: { id: true, name: true, avatarUrl: true } },
+                custodyScope: true,
+                requester: { select: { id: true, name: true, avatarUrl: true } },
               },
             },
           },
@@ -312,6 +314,7 @@ export const GET = withKiosk(async () => {
         id: true,
         title: true,
         endsAt: true,
+        custodyScope: true,
         requester: {
           select: { id: true, name: true, avatarUrl: true },
         },
@@ -411,6 +414,7 @@ export const GET = withKiosk(async () => {
       id: string;
       title: string;
       endsAt: Date;
+      custodyScope: "PERSON" | "SHARED";
       requester: { id: string; name: string; avatarUrl: string | null };
       serializedItems: Array<{ asset: { assetTag: string; name: string | null } }>;
       bulkItems: Array<{
@@ -433,6 +437,7 @@ export const GET = withKiosk(async () => {
         id: string;
         title: string;
         endsAt: Date;
+        custodyScope: "PERSON" | "SHARED";
         requester: { id: string; name: string; avatarUrl: string | null };
       };
     }>,
@@ -452,6 +457,7 @@ export const GET = withKiosk(async () => {
           id: string;
           title: string;
           endsAt: Date;
+          custodyScope: "PERSON" | "SHARED";
           requester: { id: string; name: string; avatarUrl: string | null };
         };
       };
@@ -553,10 +559,11 @@ export const GET = withKiosk(async () => {
         unitNumber: null,
         checkoutId: entry.booking.id,
         checkoutTitle: normalizeTeamAbbreviations(entry.booking.title),
-        requesterId: entry.booking.requester.id,
-        requesterName: entry.booking.requester.name,
-        requesterAvatarUrl: entry.booking.requester.avatarUrl,
-        requesterInitials: getInitials(entry.booking.requester.name),
+        custodyScope: entry.booking.custodyScope,
+        requesterId: entry.booking.custodyScope === "SHARED" ? null : entry.booking.requester.id,
+        requesterName: entry.booking.custodyScope === "SHARED" ? "Shared checkout" : entry.booking.requester.name,
+        requesterAvatarUrl: entry.booking.custodyScope === "SHARED" ? null : entry.booking.requester.avatarUrl,
+        requesterInitials: entry.booking.custodyScope === "SHARED" ? "SC" : getInitials(entry.booking.requester.name),
         endsAt: entry.booking.endsAt,
         isOverdue: entry.booking.endsAt < now,
       })),
@@ -569,10 +576,11 @@ export const GET = withKiosk(async () => {
         unitNumber: entry.bulkSkuUnit.unitNumber,
         checkoutId: entry.bookingBulkItem.booking.id,
         checkoutTitle: normalizeTeamAbbreviations(entry.bookingBulkItem.booking.title),
-        requesterId: entry.bookingBulkItem.booking.requester.id,
-        requesterName: entry.bookingBulkItem.booking.requester.name,
-        requesterAvatarUrl: entry.bookingBulkItem.booking.requester.avatarUrl,
-        requesterInitials: getInitials(entry.bookingBulkItem.booking.requester.name),
+        custodyScope: entry.bookingBulkItem.booking.custodyScope,
+        requesterId: entry.bookingBulkItem.booking.custodyScope === "SHARED" ? null : entry.bookingBulkItem.booking.requester.id,
+        requesterName: entry.bookingBulkItem.booking.custodyScope === "SHARED" ? "Shared checkout" : entry.bookingBulkItem.booking.requester.name,
+        requesterAvatarUrl: entry.bookingBulkItem.booking.custodyScope === "SHARED" ? null : entry.bookingBulkItem.booking.requester.avatarUrl,
+        requesterInitials: entry.bookingBulkItem.booking.custodyScope === "SHARED" ? "SC" : getInitials(entry.bookingBulkItem.booking.requester.name),
         endsAt: entry.bookingBulkItem.booking.endsAt,
         isOverdue: entry.bookingBulkItem.booking.endsAt < now,
       })),
@@ -589,10 +597,11 @@ export const GET = withKiosk(async () => {
             unitNumber: null,
             checkoutId: checkout.id,
             checkoutTitle: normalizeTeamAbbreviations(checkout.title),
-            requesterId: checkout.requester.id,
-            requesterName: checkout.requester.name,
-            requesterAvatarUrl: checkout.requester.avatarUrl,
-            requesterInitials: getInitials(checkout.requester.name),
+            custodyScope: checkout.custodyScope,
+            requesterId: checkout.custodyScope === "SHARED" ? null : checkout.requester.id,
+            requesterName: checkout.custodyScope === "SHARED" ? "Shared checkout" : checkout.requester.name,
+            requesterAvatarUrl: checkout.custodyScope === "SHARED" ? null : checkout.requester.avatarUrl,
+            requesterInitials: checkout.custodyScope === "SHARED" ? "SC" : getInitials(checkout.requester.name),
             endsAt: checkout.endsAt,
             isOverdue: checkout.endsAt < now,
           }];
@@ -616,10 +625,11 @@ export const GET = withKiosk(async () => {
       return {
         id: c.id,
         title: normalizeTeamAbbreviations(c.title),
-        requesterName: c.requester.name,
-        requesterId: c.requester.id,
-        requesterAvatarUrl: c.requester.avatarUrl,
-        requesterInitials: getInitials(c.requester.name),
+        custodyScope: c.custodyScope,
+        requesterName: c.custodyScope === "SHARED" ? "Shared checkout" : c.requester.name,
+        requesterId: c.custodyScope === "SHARED" ? null : c.requester.id,
+        requesterAvatarUrl: c.custodyScope === "SHARED" ? null : c.requester.avatarUrl,
+        requesterInitials: c.custodyScope === "SHARED" ? "SC" : getInitials(c.requester.name),
         items: c.serializedItems.map((si) => ({
           name: si.asset.name || si.asset.assetTag,
         })).concat(bulkPreviewItems).slice(0, 3),

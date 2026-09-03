@@ -51,12 +51,12 @@
 - [ ] Matched before/after `gt-ui-review` page.
 - [ ] Authenticated browser smoke for `/schedule`, or record why unavailable.
 - [x] Focused uncombine service/API-source and Schedule/Event-detail QoL tests.
-- [ ] Live migration health and deploy only when rollout is explicitly in scope.
+- [x] Live migration health and deploy only when rollout is explicitly in scope.
 
 ## Review
-- Shipped: implemented locally only; no commit, push, migration application, deployment, or live event mutation.
+- Shipped: production migration `0142_combined_schedule_events` is applied; compatible app code remains local only, with no commit, push, app deployment, or live event mutation.
 - Verified: 44 focused tests, including deterministic suggestions, exact preview consequences, audited combine, draft-safe Undo, projection, and source contracts; Prisma format/validate and migration prefix/schema guards; TypeScript; full lint; codemaps/docs; diff hygiene; and the production-shaped app build. The QoL follow-up re-ran the focused suite, TypeScript, full lint, codemaps/docs, diff hygiene, and `build:app` successfully.
 - Deferred: native iOS combined-row and recovery presentation are tracked by D-060 and GAP-75.
-- Blocked: matched UI review and authenticated browser smoke require migration `0142` to be applied before the compatible local app can query the database; applying it and changing the live Cross Country pair are outside this implementation-only slice.
-- Proof artifacts: command evidence in this task; no matched runtime capture claimed.
-- Next slice or stop: apply migration `0142`, perform authenticated preview/apply/readback, then add native combined-row parity before production closeout.
+- Blocked: matched UI review and authenticated browser smoke require the compatible local app to run against the migrated database; app deployment and changing the live Cross Country pair remain outside this migration slice.
+- Proof artifacts: production Neon read-back shows the nullable text column, self-FK with `SET NULL`/`CASCADE`, btree index, exact local checksum `18552bb2c51c8fba351744b02f3bbf68a089179e139ab2fc63b628a682addd6b`, finished migration receipt, 148/148 unique local migration names, no unresolved failed rows, and zero combined-event rows. The guarded rehearsal branch was deleted after verification.
+- Next slice or stop: deploy compatible app code, perform authenticated preview/apply/undo readback, then add native combined-row parity before production closeout.

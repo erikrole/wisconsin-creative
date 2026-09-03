@@ -20,6 +20,7 @@ Maintain the custody ledger for gear that has physically left or returned throug
 7. Serialized booking windows include a 60-minute turnaround buffer before the next pickup/reservation start in both directions: a new start must follow an existing return by at least 60 minutes, and a new return must precede an existing next start by at least 60 minutes. The narrow exception is extending an existing `OPEN` checkout: its due time may move up to the next booking's actual start, but never through it. Bulk/countable availability remains overlap-based against committed quantities.
 8. Kiosk scan preflight gives item-level feedback for conflicts, shortages, unavailable assets, and turnaround risk immediately after an item is staged; completion still performs the authoritative transactional check.
 9. Checkout creation is guarded at the shared service boundary: non-kiosk callers must not create checkout custody, kiosk/source creates require at least one equipment item, duplicate multi-event links and duplicate bulk lines are rejected, invalid windows fail before availability work, and DB overlap races return booking conflict responses. The single exception is the admin-only reservation force-checkout path, which still requires a reason, availability checks, exact numbered-unit binding, and transactional audit evidence.
+10. Checkout custody is either `PERSON` or `SHARED`. A shared checkout such as `Football Travel Case` owns the case/truck manifest without presenting a borrower; cameras, lenses, or other gear carried separately remain on distinct personal checkouts. Pooled and numbered batteries packed with the travel case remain on the shared manifest rather than being assigned to individuals.
 
 ## V1 Workflow
 
@@ -60,6 +61,7 @@ Legacy documentation below describes the retired web wizard contract and is pres
 2. Safe metadata fields respect role and ownership and save as single-field audited patches.
 3. Active checkout equipment remains read-only on web. Item additions, removals, and exact-unit custody corrections run through the identified-student kiosk flow.
 4. Schedule mutations must preserve overlap and transaction constraints.
+5. Staff/Admin may change an active checkout between personal and shared custody. The mutation changes attribution only: requester history, gear, allocations, scans, location, event links, and lifecycle remain intact. Students and Collaborators never gain mutation rights from the retained requester/creator fields while a checkout is shared.
 
 ### Extend Checkout
 1. `OPEN` checkouts can be extended through free time before upcoming demand; the existence of a later booking does not remove Extend.
@@ -175,6 +177,7 @@ Source of truth: `src/lib/services/booking-rules.ts` — `STATE_ACTIONS[CHECKOUT
   - Edit (staff+/owner)
   - Cancel (staff+/owner)
   - Transfer owner (staff/admin-only)
+  - Change personal/shared custody (staff/admin-only)
   - Pickup at kiosk → transitions to `OPEN`
 
 ### `OPEN`
@@ -183,6 +186,7 @@ Source of truth: `src/lib/services/booking-rules.ts` — `STATE_ACTIONS[CHECKOUT
   - Edit (staff+ or owner)
   - Extend (staff+ or owner)
   - Transfer owner (staff/admin-only)
+  - Change personal/shared custody (staff/admin-only)
   - Check in at kiosk
   - Close without scan (admin-only exception with required reason)
 
@@ -215,7 +219,7 @@ The checkout detail page (`/checkouts/[id]`) uses the shared `BookingDetailPage`
 - **Old route**: `GET /api/checkouts/[id]` redirects (308) to `/api/bookings/[id]`
 
 ### Checkout-Specific Behavior
-- The shared header follows the native booking hierarchy: lifecycle state and live due/pickup timing lead, the requester is named beside the booking identity, and a compact operational summary keeps the handoff time, pickup location, physical gear count, and linked event context visible before the denser web detail columns.
+- The shared header follows the native booking hierarchy: lifecycle state and live due/pickup timing lead, a personal checkout names the requester, and a shared checkout uses package identity plus `Shared checkout` / `Travel case & equipment truck` without exposing the retained requester as owner. A compact operational summary keeps the handoff time, pickup location, physical gear count, and linked event context visible before the denser web detail columns.
 - Web-only operator breadth remains below and beside that summary: inline editing, equipment custody context, nudge/extend/transfer/admin-repair actions, sync health, and complete activity history.
 - Status badge shows display labels through the shared booking status display helper: `PENDING_PICKUP` -> "Pending Pickup", `OPEN` -> "Checked out".
 - "Due back" countdown rendered as urgency-colored Badge (red/orange/yellow/neutral)
@@ -225,6 +229,7 @@ The checkout detail page (`/checkouts/[id]`) uses the shared `BookingDetailPage`
   `OPEN` custody never exposes normal Cancel. Close without scan is admin-only,
   requires a reason, records an override event, and must not link to
   `/scan?checkout=...`.
+- Staff/Admin also receive `Make shared checkout` or `Make personal checkout` on eligible active checkouts. Shared custody removes borrower nudge and owner transfer because it has no personal custodian.
 - Equipment tab shows returned progress and item context, but standard return execution remains at the kiosk.
 - Equipment rows show hover-reveal "..." menu (View item)
 - Checkin progress bar in equipment header: `████░░░░ 12/30 returned`
@@ -291,6 +296,7 @@ The checkout detail page (`/checkouts/[id]`) uses the shared `BookingDetailPage`
 - [x] AC-7: Every mutation emits audit records with actor and diff context.
 - [x] AC-8: Non-kiosk app/web callers cannot create checkout custody or perform normal return flows; kiosk-authenticated routes own standard custody mutation, with a separate admin-only close-without-scan exception requiring reasoned override evidence.
 - [ ] AC-9: Existing `PENDING_PICKUP` records remain visible and recoverable during rollout without presenting web/app checkout creation as the forward path.
+- [ ] AC-10: Shared travel-case custody is source-complete and passes the web build with custodian-neutral web/kiosk presentation, no personal accountability/badge/My Gear attribution, and identified-operator kiosk return; migration `0143_shared_checkout_custody` is applied, while native build, compatible app deployment, authenticated visual proof, and physical kiosk acceptance remain rollout gates.
 
 ## Dependencies
 - Event normalization read model from `AREA_EVENTS.md`.
@@ -317,6 +323,8 @@ The checkout detail page (`/checkouts/[id]`) uses the shared `BookingDetailPage`
 5. Add regression coverage for race conditions, partial returns, non-kiosk custody attempts, and permission bypass attempts.
 
 ## Change Log
+
+- 2026-09-03: **Added custodian-neutral shared travel-case checkout behavior locally and applied its enum rename.** Staff/Admin can mark an eligible active checkout such as `Football Travel Case` shared without changing its manifest, lifecycle, location, event, scan, allocation, or retained requester history. Shared rows use package identity, suppress borrower/owner actions and personal My Gear/accountability/badge/requester-notification attribution, and let any identified active kiosk operator return the case while preserving actor audit evidence. Gear carried separately remains on a distinct personal checkout. Production migration `0143_shared_checkout_custody` is applied with its exact local checksum; compatible app deployment, authenticated web proof, real checkout conversion, and physical kiosk acceptance remain separate gates.
 
 - 2026-09-03: **Active checkout extensions can use the remaining pre-booking window.** An upcoming serialized booking no longer removes Extend or consumes a mandatory 60-minute buffer when the current booking is an `OPEN` checkout. The borrower or operator may choose a due time up to the next booking's actual start; true overlap and bulk shortages still block. Reservation creation/editing retain the standard turnaround buffer, while optimistic freshness, serializable mutation handling, database overlap protection, audit history, and Live Activity scheduling remain unchanged. Native Booking Detail keeps Extend visible and names the next-needed boundary before the sheet opens.
 - 2026-08-26: **Availability feedback now distinguishes blockers from advisories.** Reservation and checkout pickers surface known serialized conflicts before selection, show conflict windows with return-by/available-after recovery guidance, and block review only for actual conflicts or an unavailable availability check. Kiosk scans announce item-specific conflict, shortage, transfer, condition, and timing feedback immediately; capacity-aware bulk turnaround notices avoid warnings when on-hand stock covers both requests. Final kiosk completion and server booking writes remain authoritative.

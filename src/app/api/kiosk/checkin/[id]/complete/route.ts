@@ -1,3 +1,4 @@
+import { BookingCustodyScope } from "@prisma/client";
 import { db } from "@/lib/db";
 import { withKiosk } from "@/lib/api";
 import { HttpError, ok } from "@/lib/http";
@@ -19,11 +20,21 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
   const badgeWindowStart = new Date(Date.now() - 1);
   const { actorId } = checkinCompleteBody.parse(await req.json());
 
-  const user = await db.user.findFirst({
-    where: { id: actorId, active: true },
-    select: { id: true, role: true },
-  });
+  const [user, booking] = await Promise.all([
+    db.user.findFirst({
+      where: { id: actorId, active: true, hiddenFromRoster: false },
+      select: { id: true, role: true },
+    }),
+    db.booking.findUnique({
+      where: { id: params.id },
+      select: { requesterUserId: true, custodyScope: true },
+    }),
+  ]);
   if (!user) throw new HttpError(404, "User not found");
+  if (!booking) throw new HttpError(404, "Checkout not found");
+  if (booking.custodyScope === BookingCustodyScope.PERSON && booking.requesterUserId !== actorId) {
+    throw new HttpError(403, "This return requires the checkout requester");
+  }
 
   const result = await kioskCompleteCheckin({
     bookingId: params.id,
@@ -51,7 +62,9 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
       kioskName: kiosk.name,
     },
   });
-  const earnedBadges = await earnedBadgesSince(actorId, badgeWindowStart);
+  const earnedBadges = booking.custodyScope === BookingCustodyScope.PERSON
+    ? await earnedBadgesSince(actorId, badgeWindowStart)
+    : [];
 
   return ok({
     returnedItems: result.returnedItems,

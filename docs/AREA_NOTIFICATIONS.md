@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Notifications
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-29
+- Last Updated: 2026-09-03
 - Status: Active; browser push is deployed to Production, with physical Android acceptance still open
 - Version: V1.8
 
@@ -17,6 +17,7 @@ Surface custody urgency and overdue situations to the right people at the right 
 4. The 24h overdue trigger reaches the requester and all admins, per accepted D-009.
 5. Notification center supports mark-read and mark-all-read; read mutations must keep the inbox and bell count honest.
 6. Approval-first open Student-slot requests and Trade Board claims create reviewer notifications only for active visible Admins. Staff receive no claim-review alerts; the request holds no slot until approved.
+7. A `SHARED` checkout has no borrower notification target. Due and overdue processing skips the retained requester, but later operational responder/admin stages continue with `Shared checkout` copy so the team still recovers the case.
 
 ## Escalation Schedule (Local Candidate; Migration 0111 Pending)
 
@@ -33,6 +34,8 @@ All triggers are relative to `booking.endsAt`:
 The grace period applies only to `checkout_overdue_grace`. The due-time, +4h, and +24h offsets remain exact relative to `booking.endsAt`.
 
 Recipient and channel policy:
+
+For `PERSON` custody, the table applies as written. For `SHARED` custody, every Requester cell is suppressed; location-responder and Admin delivery still applies at its normal stage and identifies the record as a shared checkout.
 
 | Stage | Requester | Location responder | Admins |
 |---|---|---|---|
@@ -385,6 +388,7 @@ installed build has not registered, and a build that receives no category
 renders a tap-only alert. Neither side needs to ship first.
 
 ## Change Log
+- 2026-09-03: **Shared checkout escalation no longer targets a hidden borrower.** Due/overdue processing suppresses requester delivery and retained-requester exclusion for `SHARED` custody, while configured responders and Admins still receive their normal operational stages with `Shared checkout` identity. Personal checkout recipient policy is unchanged. Migration `0143_shared_checkout_custody` is applied; compatible deployment, configured-recipient, and timing proof remain open.
 - 2026-08-29: **Native notification delivery truth and recovery.** Settings now surfaces the canonical account pause with its end time and Resume action, qualifies channel/category controls during a pause, distinguishes iOS permission from server APNs registration, and gates the device-specific self-test on the same preference and registration state ordinary push delivery uses. Failed preference saves render a reloadable inline error and announce it through VoiceOver while retaining the safe optimistic revert. The iPhone 16 Pro fixture capture, source-contract suites, and native build pass; authenticated APNs and physical-device acceptance remain separate gates.
 - 2026-08-28: **Android browser push is deployed.** Authenticated students can enroll the current HTTPS browser from Settings → Notifications, where the service worker receives safe same-origin notification taps and a browser-scoped test is available. `WebPushSubscription` migration `0137_web_push_subscriptions`, stable VAPID configuration, stale-endpoint cleanup, logout revocation, preference-aware normal/blast delivery, and deployment `dpl_9stXTaEbeKN1bWDuyUp9ZcSqT6X1` are complete. Physical Android Chrome permission, delivery, and tap-through acceptance remain open; iOS APNs is unchanged.
 - 2026-08-27: **Student claim reviewer alerts are Admin-only.** Initial fanout plus escalation, blocked, and auto-approved outcome notifications for both open Student-slot requests and Trade Board claims target active visible Admins. Staff have no claim-review alerts, approval permission, or queue access; students continue receiving their own request and trade lifecycle messages.

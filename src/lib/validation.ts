@@ -1,4 +1,4 @@
-import { BlastSeverity, GraduationTerm, ResourceType, Role, ShiftArea, ShiftWorkerType, StudentYear } from "@prisma/client";
+import { BlastSeverity, BookingCustodyScope, GraduationTerm, ResourceType, Role, ShiftArea, ShiftWorkerType, StudentYear } from "@prisma/client";
 import { z } from "zod";
 import { sanitizeText } from "./sanitize";
 import { isSportCode, normalizeSportCode } from "./sports";
@@ -529,6 +529,10 @@ export const extendBookingSchema = z.object({
 export const transferBookingOwnerSchema = z.object({
   targetUserId: z.string().cuid(),
   reason: z.string().trim().max(1000).optional(),
+});
+
+export const updateBookingCustodyScopeSchema = z.object({
+  custodyScope: z.nativeEnum(BookingCustodyScope),
 });
 
 export const updateBookingEventsSchema = z.object({

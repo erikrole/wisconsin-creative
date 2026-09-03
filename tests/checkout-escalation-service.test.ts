@@ -37,13 +37,14 @@ const rules = [
   { id: "overdue-24", type: "checkout_overdue_24h", title: "1 day overdue", hoursFromDue: 24, notifyRequester: true, notifyAdmins: true, enabled: true, sortOrder: 4 },
 ];
 
-function checkout(hoursOverdue: number) {
+function checkout(hoursOverdue: number, custodyScope: "PERSON" | "SHARED" = "PERSON") {
   return {
     id: "booking-1",
     kind: "CHECKOUT",
     status: "OPEN",
     title: "Camera kit",
     requesterUserId: "student-1",
+    custodyScope,
     locationId: "location-1",
     createdBy: "staff-creator",
     endsAt: new Date(Date.now() - hoursOverdue * 3_600_000),
@@ -109,5 +110,17 @@ describe("checkout escalation repair sweep", () => {
       call[0].data.payload && (call[0].data.payload as Record<string, unknown>).recipientKind !== "requester"
     );
     expect(operationalRows).toHaveLength(1);
+  });
+
+  it("alerts operations but never the retained requester for shared custody", async () => {
+    vi.mocked(db.booking.findMany).mockResolvedValue([checkout(10, "SHARED")] as never);
+
+    const result = await processOverdueNotifications();
+
+    expect(result).toEqual({ scanned: 1, notificationsCreated: 1 });
+    const call = vi.mocked(db.notification.create).mock.calls[0]![0].data;
+    expect(call.userId).toBe("staff-responder");
+    expect(call.body).toContain('Shared checkout "Camera kit"');
+    expect(call.payload).toMatchObject({ recipientKind: "responder" });
   });
 });

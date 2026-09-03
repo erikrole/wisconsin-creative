@@ -296,6 +296,7 @@ async function getProgressByBadgeKey(userId: string, definitions: BadgeDefinitio
           where: {
             requesterUserId: userId,
             kind: BookingKind.CHECKOUT,
+            custodyScope: "PERSON",
             status: BookingStatus.COMPLETED,
           },
           select: {
@@ -351,6 +352,7 @@ async function getProgressByBadgeKey(userId: string, definitions: BadgeDefinitio
         where: {
           id: { in: openedBookingIds },
           kind: BookingKind.CHECKOUT,
+          custodyScope: "PERSON",
           status: { in: [BookingStatus.OPEN, BookingStatus.COMPLETED] },
         },
         select: {

@@ -296,7 +296,7 @@ struct KioskReturnView: View {
 
         Task {
             do {
-                let result = try await KioskAPI.shared.kioskCheckinScan(bookingId: bookingId, scanValue: value)
+                let result = try await KioskAPI.shared.kioskCheckinScan(bookingId: bookingId, actorId: userId, scanValue: value)
                 earnedBadges.appendUnique(contentsOf: result.earnedBadges ?? [])
                 if result.success, let item = result.item {
                     if returnedIds.contains(item.id) {

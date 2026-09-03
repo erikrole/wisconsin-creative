@@ -1,4 +1,4 @@
-import { BookingKind, BookingStatus } from "@prisma/client";
+import { BookingCustodyScope, BookingKind, BookingStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 import { withKiosk } from "@/lib/api";
 import { ok } from "@/lib/http";
@@ -23,6 +23,7 @@ const bookingSelect = {
   title: true,
   kind: true,
   status: true,
+  custodyScope: true,
   startsAt: true,
   endsAt: true,
   locationId: true,
@@ -35,6 +36,7 @@ type BookingCandidate = {
   title: string;
   kind: BookingKind;
   status: BookingStatus;
+  custodyScope: BookingCustodyScope;
   startsAt: Date;
   endsAt: Date;
   locationId: string;
@@ -59,6 +61,7 @@ function displayBooking(booking: BookingCandidate) {
     startsAt: booking.startsAt.toISOString(),
     endsAt: booking.endsAt.toISOString(),
     location: booking.location,
+    custodyScope: booking.custodyScope,
   };
 }
 
@@ -69,7 +72,7 @@ function blocked(code: string, message: string, item?: unknown, booking?: Bookin
     message,
     item,
     booking: booking ? displayBooking(booking) : undefined,
-    expectedRequester: booking ? displayUser(booking.requester) : undefined,
+    expectedRequester: booking && booking.custodyScope !== BookingCustodyScope.SHARED ? displayUser(booking.requester) : undefined,
   });
 }
 
@@ -83,7 +86,7 @@ function actionable(
     action,
     item,
     booking: booking ? displayBooking(booking) : undefined,
-    expectedRequester: booking ? displayUser(booking.requester) : undefined,
+    expectedRequester: booking && booking.custodyScope !== BookingCustodyScope.SHARED ? displayUser(booking.requester) : undefined,
   });
 }
 
@@ -93,7 +96,7 @@ function pending(disposition: "available" | "booked_reservation" | "active_custo
     disposition,
     item,
     booking: booking ? displayBooking(booking) : undefined,
-    expectedRequester: booking ? displayUser(booking.requester) : undefined,
+    expectedRequester: booking && booking.custodyScope !== BookingCustodyScope.SHARED ? displayUser(booking.requester) : undefined,
   });
 }
 
@@ -154,7 +157,7 @@ export const POST = withKiosk(async (req, { kiosk }) => {
     const booking = allocation?.booking as BookingCandidate | undefined;
     if (booking?.kind === BookingKind.CHECKOUT && booking.status === BookingStatus.OPEN) {
       if (!userId) return pending("active_custody", item, booking);
-      if (booking.requester.id !== userId) return blocked("wrong_requester", `This return requires ${booking.requester.name}.`, item, booking);
+      if (booking.custodyScope !== BookingCustodyScope.SHARED && booking.requester.id !== userId) return blocked("wrong_requester", `This return requires ${booking.requester.name}.`, item, booking);
       return actionable("return", item, booking);
     }
     if (booking?.kind === BookingKind.RESERVATION && booking.status === BookingStatus.BOOKED && booking.endsAt >= now) {
@@ -190,7 +193,7 @@ export const POST = withKiosk(async (req, { kiosk }) => {
   const activeBooking = activeUnitAllocation?.bookingBulkItem.booking as BookingCandidate | undefined;
   if (activeBooking?.status === BookingStatus.OPEN) {
     if (!userId) return pending("active_custody", item, activeBooking);
-    if (activeBooking.requester.id !== userId) return blocked("wrong_requester", `This return requires ${activeBooking.requester.name}.`, item, activeBooking);
+    if (activeBooking.custodyScope !== BookingCustodyScope.SHARED && activeBooking.requester.id !== userId) return blocked("wrong_requester", `This return requires ${activeBooking.requester.name}.`, item, activeBooking);
     return actionable("return", item, activeBooking);
   }
   if (numbered.status === "CHECKED_OUT") {

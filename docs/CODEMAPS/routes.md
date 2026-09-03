@@ -160,6 +160,7 @@
 - `/api/blasts` -> `src/app/api/blasts/route.ts`
 - `/api/bookings/[id]/audit-logs` -> `src/app/api/bookings/[id]/audit-logs/route.ts`
 - `/api/bookings/[id]/cancel` -> `src/app/api/bookings/[id]/cancel/route.ts`
+- `/api/bookings/[id]/custody-scope` -> `src/app/api/bookings/[id]/custody-scope/route.ts`
 - `/api/bookings/[id]/events` -> `src/app/api/bookings/[id]/events/route.ts`
 - `/api/bookings/[id]/extend` -> `src/app/api/bookings/[id]/extend/route.ts`
 - `/api/bookings/[id]/force-complete` -> `src/app/api/bookings/[id]/force-complete/route.ts`

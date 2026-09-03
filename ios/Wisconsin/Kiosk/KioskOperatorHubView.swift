@@ -519,6 +519,7 @@ struct KioskOperatorHubView: View {
             requesterId: user.id,
             requesterName: user.name,
             requesterAvatarUrl: user.avatarUrl,
+            custodyScope: "PERSON",
             endsAt: checkout.endsAt,
             isOverdue: checkout.isOverdue
         )

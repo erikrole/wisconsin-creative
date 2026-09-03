@@ -1,5 +1,7 @@
 # Event Checkout Assignments Recovery Plan - 2026-09-03
 
+> Product-direction note (2026-09-03): the migration recovery and deployment proof below remain historical truth. The proposed event-level/item-assignee behavior is superseded by `tasks/shared-travel-case-checkout-plan-2026-09-03.md`: travel-case/truck gear uses custodian-neutral shared custody, personally carried gear uses separate personal checkouts, and item-assignee columns remain dormant.
+
 ## Goal
 - Ship additive event-owned checkout persistence without taking booking APIs ahead of the production database.
 - Preserve the rollback until database compatibility and authenticated booking reads are proven.

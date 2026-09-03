@@ -178,7 +178,7 @@
 ### `BookingCustodyScope`
 
 - `PERSON`
-- `EVENT`
+- `SHARED`
 
 ### `AccountabilityExclusionReason`
 

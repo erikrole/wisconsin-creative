@@ -1,4 +1,6 @@
-# Event Checkout Assignments Plan - 2026-09-02
+# Event Checkout Assignments Plan - 2026-09-02 (Superseded)
+
+> Superseded on 2026-09-03 by `shared-travel-case-checkout-plan-2026-09-03.md`. The accepted workflow uses one custodian-neutral shared checkout for the travel case and separate personal checkouts for gear carried by individuals; it does not use per-item assignees.
 
 ## Goal
 - Let a large travel checkout belong to its linked event instead of a person.

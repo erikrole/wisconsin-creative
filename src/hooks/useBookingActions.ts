@@ -191,6 +191,42 @@ export function useBookingActions(
     [bookingId, onSuccess],
   );
 
+  const toggleCustodyScope = useCallback(
+    async (currentScope: "PERSON" | "SHARED") => {
+      const nextScope = currentScope === "SHARED" ? "PERSON" : "SHARED";
+      const makeShared = nextScope === "SHARED";
+      const confirmed = await confirm({
+        title: makeShared ? "Make this a shared checkout?" : "Make this a personal checkout?",
+        message: makeShared
+          ? "Use shared custody only for gear packed in the travel case or on the equipment truck. Anything a person carries separately needs its own checkout."
+          : "The existing requester will become the personal custodian again. Confirm that all gear on this manifest is with that person.",
+        confirmLabel: makeShared ? "Make shared" : "Make personal",
+      });
+      if (!confirmed || !guardStart("manage-custody")) return false;
+      try {
+        const headers = updatedAt
+          ? { [BOOKING_SNAPSHOT_HEADER]: new Date(updatedAt).toISOString() }
+          : undefined;
+        const result = await callAction(
+          `/api/bookings/${bookingId}/custody-scope`,
+          "POST",
+          { custodyScope: nextScope },
+          headers,
+        );
+        if (result.ok) {
+          toast.success(makeShared ? "Checkout is now shared" : "Checkout is now personal");
+          onSuccess();
+        } else {
+          toast.error(result.error!);
+        }
+        return result.ok;
+      } finally {
+        guardEnd();
+      }
+    },
+    [bookingId, confirm, onSuccess, updatedAt],
+  );
+
   const saveField = useCallback(
     async (field: string, value: unknown): Promise<BookingDetail> => {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -230,6 +266,7 @@ export function useBookingActions(
     nudge,
     forceComplete,
     forceCheckout,
+    toggleCustodyScope,
     saveField,
   };
 }

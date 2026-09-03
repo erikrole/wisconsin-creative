@@ -1,4 +1,4 @@
-import { BookingKind, BookingStatus, Role } from "@prisma/client";
+import { BookingCustodyScope, BookingKind, BookingStatus, Role } from "@prisma/client";
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
 import type { AuthUser } from "@/lib/auth";
@@ -49,6 +49,7 @@ type BookingContext = {
   status: BookingStatus;
   requesterUserId: string;
   createdBy: string;
+  custodyScope?: BookingCustodyScope;
 };
 
 type ActorContext = {

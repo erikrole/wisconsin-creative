@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { UserAvatar } from "@/components/UserAvatar";
 import { SaveableField, useSaveField, FieldGroup } from "@/components/SaveableField";
 import { InlineDateField } from "./InlineDateField";
-import { BoxesIcon, CameraIcon, LinkIcon, TriangleAlert } from "lucide-react";
+import { BoxesIcon, CameraIcon, LinkIcon, PackageOpen, TriangleAlert } from "lucide-react";
 import { formatDateTime, formatDuration } from "@/lib/format";
 import { minimumBookingEndDate } from "@/lib/quarter-hour";
 import type { BookingDetail, BookingPhoto } from "./types";
@@ -76,24 +76,38 @@ export default function BookingInfoCard({
       </FieldGroup>
 
       <FieldGroup label="People">
-        <SaveableField label="Requester">
-          <span className="inline-flex min-w-0 items-center gap-2 text-sm">
-            <UserAvatar
-              name={booking.requester?.name ?? "Unknown"}
-              avatarUrl={booking.requester?.avatarUrl}
-              size="sm"
-              className="shrink-0"
-            />
-            <span className="min-w-0">
-              <span className="block truncate">{booking.requester?.name ?? "Unknown"}</span>
-              {booking.requester?.email && (
-                <span className="block truncate text-xs text-muted-foreground">
-                  {booking.requester.email}
-                </span>
-              )}
+        {booking.custodyScope === "SHARED" ? (
+          <SaveableField label="Custody">
+            <span className="inline-flex min-w-0 items-center gap-2 text-sm">
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                <PackageOpen className="size-4" aria-hidden="true" />
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate">Shared checkout</span>
+                <span className="block text-xs text-muted-foreground">No personal custodian</span>
+              </span>
             </span>
-          </span>
-        </SaveableField>
+          </SaveableField>
+        ) : (
+          <SaveableField label="Requester">
+            <span className="inline-flex min-w-0 items-center gap-2 text-sm">
+              <UserAvatar
+                name={booking.requester?.name ?? "Unknown"}
+                avatarUrl={booking.requester?.avatarUrl}
+                size="sm"
+                className="shrink-0"
+              />
+              <span className="min-w-0">
+                <span className="block truncate">{booking.requester?.name ?? "Unknown"}</span>
+                {booking.requester?.email && (
+                  <span className="block truncate text-xs text-muted-foreground">
+                    {booking.requester.email}
+                  </span>
+                )}
+              </span>
+            </span>
+          </SaveableField>
+        )}
         {booking.creator ? (
           <SaveableField label="Created by">
             <span className="inline-flex min-w-0 items-center gap-2 text-sm">

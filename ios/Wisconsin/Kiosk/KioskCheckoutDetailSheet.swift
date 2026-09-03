@@ -14,10 +14,13 @@ struct KioskCheckoutDrawerContext: Identifiable {
     let requesterId: String?
     let requesterName: String
     let requesterAvatarUrl: String?
+    let custodyScope: String
     let endsAt: Date
     let isOverdue: Bool
 
     var id: String { checkoutId }
+
+    var isShared: Bool { custodyScope == "SHARED" }
 
     var requesterInitials: String {
         requesterName.split(separator: " ").prefix(2)

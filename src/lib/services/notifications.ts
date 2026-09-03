@@ -190,6 +190,7 @@ type EscalationCheckout = {
   status: string;
   title: string;
   requesterUserId: string;
+  custodyScope: "PERSON" | "SHARED";
   locationId: string;
   createdBy: string;
   endsAt: Date;
@@ -231,7 +232,9 @@ function requesterEscalationBody(args: {
 
 function operationalEscalationBody(checkout: EscalationCheckout, rule: EscalationRule): string {
   const timing = rule.type === "checkout_overdue_24h" ? "1 day" : "4 hours";
-  return `${checkout.requester.name}'s checkout "${checkout.title}" is ${timing} overdue.`;
+  return checkout.custodyScope === "SHARED"
+    ? `Shared checkout "${checkout.title}" is ${timing} overdue.`
+    : `${checkout.requester.name}'s checkout "${checkout.title}" is ${timing} overdue.`;
 }
 
 function existingCounts(
@@ -281,7 +284,9 @@ async function persistCheckoutEscalation(args: {
         payload: {
           bookingId: args.checkout.id,
           bookingTitle: args.checkout.title,
-          requesterName: args.checkout.requester.name,
+          requesterName: args.checkout.custodyScope === "SHARED"
+            ? "Shared checkout"
+            : args.checkout.requester.name,
           dueAt: args.checkout.endsAt.toISOString(),
           dueVersion,
           recipientKind: args.recipientKind,
@@ -337,7 +342,7 @@ async function deliverCheckoutEscalation(args: {
   const counts = existingCounts(args.existing, dueVersion);
   let created = 0;
 
-  if (args.rule.notifyRequester && counts.requester < args.config.maxRequesterNotificationsPerDueDate) {
+  if (args.checkout.custodyScope !== "SHARED" && args.rule.notifyRequester && counts.requester < args.config.maxRequesterNotificationsPerDueDate) {
     const body = requesterEscalationBody({
       type: args.rule.type,
       checkoutTitle: args.checkout.title,
@@ -364,21 +369,21 @@ async function deliverCheckoutEscalation(args: {
   let responders = args.configuredResponderIds
     .map((id) => operationsById.get(id))
     .filter((person): person is OperationsUser => Boolean(person))
-    .filter((person) => person.id !== args.checkout.requesterUserId);
+    .filter((person) => args.checkout.custodyScope === "SHARED" || person.id !== args.checkout.requesterUserId);
 
   if (responders.length === 0) {
     const creator = operationsById.get(args.checkout.createdBy);
-    responders = creator && creator.id !== args.checkout.requesterUserId ? [creator] : [];
+    responders = creator && (args.checkout.custodyScope === "SHARED" || creator.id !== args.checkout.requesterUserId) ? [creator] : [];
   }
   if (responders.length === 0) {
-    responders = admins.filter((admin) => admin.id !== args.checkout.requesterUserId);
+    responders = admins.filter((admin) => args.checkout.custodyScope === "SHARED" || admin.id !== args.checkout.requesterUserId);
   }
 
   const operationalRecipients = new Map<string, { user: OperationsUser; kind: CheckoutEscalationRecipientKind }>();
   for (const responder of responders) operationalRecipients.set(responder.id, { user: responder, kind: "responder" });
   if (args.rule.notifyAdmins) {
     for (const admin of admins) {
-      if (admin.id === args.checkout.requesterUserId || operationalRecipients.has(admin.id)) continue;
+      if ((args.checkout.custodyScope !== "SHARED" && admin.id === args.checkout.requesterUserId) || operationalRecipients.has(admin.id)) continue;
       operationalRecipients.set(admin.id, { user: admin, kind: "admin" });
     }
   }
@@ -422,7 +427,7 @@ export async function getCheckoutEscalationStageTiming(args: {
   const [booking, rules, policies] = await Promise.all([
     db.booking.findUnique({
       where: { id: args.bookingId },
-      select: { kind: true, status: true, endsAt: true },
+      select: { kind: true, status: true, custodyScope: true, endsAt: true },
     }),
     getEscalationRules(),
     loadCheckoutPolicies(),
@@ -457,6 +462,7 @@ export async function processCheckoutEscalationStage(args: {
         status: true,
         title: true,
         requesterUserId: true,
+        custodyScope: true,
         locationId: true,
         createdBy: true,
         endsAt: true,
@@ -517,6 +523,7 @@ export async function processOverdueNotifications(): Promise<{ scanned: number; 
         status: true,
         title: true,
         requesterUserId: true,
+        custodyScope: true,
         locationId: true,
         createdBy: true,
         endsAt: true,
