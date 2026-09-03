@@ -91,7 +91,7 @@ describe("schedule staff/student display source contracts", () => {
     expect(assignmentCell).not.toContain("CallWindowEditor");
 
     expect(slotCard).toContain('const isStudentSlot = workerType === "ST"');
-    expect(slotCard).toContain("const showSlotWindow = isStudentSlot && !isAssigned");
+    expect(slotCard).toContain("const showSlotWindow = studentCallTimeAllowed && isStudentSlot && !isAssigned");
     expect(slotCard).toContain('target={canEdit ? { type: "assignment", id: activeAssignment.id } : undefined}');
   });
 
@@ -107,10 +107,11 @@ describe("schedule staff/student display source contracts", () => {
     expect(myShiftsRoute).toContain('a.shift.workerType === "ST"');
     expect(dashboardColumn).toContain('s.workerType === "ST"');
     expect(dashboardColumn).toContain("studentCallWindow && !isFullDayDefault");
-    expect(notifications).toContain('dueAt: assignment.workerType === "ST"');
+    expect(notifications).toContain("const hasStudentCallTime = assignment.workerType === \"ST\"");
+    expect(notifications).toContain("dueAt: callStartsAt?.toISOString()");
     expect(notifications).toContain("Student call time:");
     expect(home).toContain('queueCallTime(workerType: shift.workerType');
-    expect(home).toContain('guard workerType == "ST" else { return nil }');
+    expect(home).toContain('guard workerType == "ST", let callStartsAt else { return nil }');
     expect(profile).toContain('if shift.workerType == "ST"');
   });
 

@@ -815,10 +815,19 @@ private func publishedScheduleDay(for event: PublishedEventSummary) -> Date {
 }
 
 private func publishedEventType(_ event: PublishedEventSummary) -> String {
+    guard let opponent = event.opponent?.trimmingCharacters(in: .whitespacesAndNewlines), !opponent.isEmpty else {
+        return "Non-game"
+    }
+    switch event.site?.uppercased() {
+    case "HOME": return "Home"
+    case "AWAY": return "Away"
+    case "NEUTRAL": return "Neutral"
+    default: break
+    }
     switch event.isHome {
-    case true: "Home"
-    case false: "Away"
-    case nil: event.opponent == nil ? "Non-game" : "Neutral"
+    case true: return "Home"
+    case false: return "Away"
+    case nil: return "Neutral"
     }
 }
 
@@ -2603,8 +2612,8 @@ struct EventRow: View {
 
     private func personalWorkText(_ shift: MyShift) -> String {
         var parts: [String] = []
-        if !event.displayAllDay && shift.workerType == "ST" {
-            parts.append("Call \(shift.startsAt.formatted(date: .omitted, time: .shortened))")
+        if !event.displayAllDay, shift.workerType == "ST", let callStartsAt = shift.callStartsAt {
+            parts.append("Call \(callStartsAt.formatted(date: .omitted, time: .shortened))")
         } else if shift.workerType == "FT" {
             parts.append("Assigned")
         }
@@ -2629,15 +2638,20 @@ struct EventRow: View {
         if event.displayAllDay {
             parts.append("All day")
         } else if let shift = myShift {
-            let callTime = shift.startsAt.formatted(.dateTime.hour().minute())
             let eventTime = event.startsAt.formatted(.dateTime.hour().minute())
-            let endTime = shift.endsAt.formatted(.dateTime.hour().minute())
-            if shift.workerType == "FT" {
-                parts.append("Event \(eventTime) to \(endTime)")
-            } else if calendarSame(shift.startsAt, event.startsAt) {
-                parts.append("Event \(eventTime) to \(endTime)")
+            let eventEndTime = event.endsAt.formatted(.dateTime.hour().minute())
+            if shift.workerType == "ST",
+               let callStartsAt = shift.callStartsAt,
+               let callEndsAt = shift.callEndsAt {
+                let callTime = callStartsAt.formatted(.dateTime.hour().minute())
+                let endTime = callEndsAt.formatted(.dateTime.hour().minute())
+                if calendarSame(callStartsAt, event.startsAt) {
+                    parts.append("Event \(eventTime) to \(endTime)")
+                } else {
+                    parts.append("Call \(callTime), event \(eventTime), end \(endTime)")
+                }
             } else {
-                parts.append("Call \(callTime), event \(eventTime), end \(endTime)")
+                parts.append("Event \(eventTime) to \(eventEndTime)")
             }
             parts.append(shift.area.shiftAreaLabel)
             parts.append(shift.gear.gearLabel)

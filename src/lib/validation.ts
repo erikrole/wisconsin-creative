@@ -158,6 +158,7 @@ export const availabilitySchema = z.object({
 });
 
 const bookingBaseShape = {
+  custodyScope: z.nativeEnum(BookingCustodyScope).default(BookingCustodyScope.PERSON),
   title: z.string().trim().min(1).max(500),
   requesterUserId: z.string().cuid(),
   locationId: z.string().cuid(),

@@ -162,7 +162,7 @@ export const POST = withKiosk(async (req, { kiosk }) => {
     }
     if (booking?.kind === BookingKind.RESERVATION && booking.status === BookingStatus.BOOKED && booking.endsAt >= now) {
       if (!userId) return pending("booked_reservation", item, booking);
-      if (booking.requester.id !== userId) return blocked("wrong_requester", `This pickup requires ${booking.requester.name}.`, item, booking);
+      if (booking.custodyScope !== BookingCustodyScope.SHARED && booking.requester.id !== userId) return blocked("wrong_requester", `This pickup requires ${booking.requester.name}.`, item, booking);
       return actionable("pickup", item, booking);
     }
     if (booking) {
@@ -205,7 +205,12 @@ export const POST = withKiosk(async (req, { kiosk }) => {
       kind: BookingKind.RESERVATION,
       status: BookingStatus.BOOKED,
       endsAt: { gte: now },
-      ...(userId ? { requesterUserId: userId } : {}),
+      ...(userId ? {
+        OR: [
+          { custodyScope: BookingCustodyScope.SHARED },
+          { requesterUserId: userId },
+        ],
+      } : {}),
       bulkItems: { some: { bulkSkuId: numbered.bulkSkuId } },
     },
     orderBy: { startsAt: "asc" },

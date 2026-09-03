@@ -153,6 +153,38 @@ describe("flushScheduleNotifications", () => {
     }));
   });
 
+  it("does not notify about a Student call-only edit for an Away event", async () => {
+    findUnique.mockResolvedValue(group({
+      event: {
+        id: "event-1",
+        summary: "Wisconsin at Iowa",
+        startsAt: new Date("2026-10-17T21:00:00.000Z"),
+        endsAt: new Date("2026-10-18T02:00:00.000Z"),
+        allDay: false,
+        opponent: "Iowa",
+        isHome: false,
+        site: "AWAY",
+      },
+      shifts: [shift(["user-1"], {
+        callStartsAt: new Date("2026-10-17T20:00:00.000Z"),
+        assignments: [{
+          id: "assignment-0",
+          userId: "user-1",
+          status: "DIRECT_ASSIGNED",
+          callStartsAt: new Date("2026-10-17T20:15:00.000Z"),
+          callEndsAt: null,
+          callNote: "Use the visitor entrance.",
+        }],
+      })],
+      lastPublishedSnapshot: markFor(["user-1"]),
+    }));
+
+    const result = await flushScheduleNotifications("group-1", { now: NOW });
+
+    expect(result).toEqual({ status: "nothing_to_tell", shiftGroupId: "group-1" });
+    expect(notifyScheduleChanges).not.toHaveBeenCalled();
+  });
+
   it("holds the high-water mark when delivery throws", async () => {
     findUnique.mockResolvedValue(group({ lastPublishedSnapshot: markFor([]) }));
     notifyScheduleChanges.mockRejectedValue(new Error("APNs unavailable"));

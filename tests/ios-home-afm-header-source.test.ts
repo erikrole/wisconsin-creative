@@ -114,11 +114,11 @@ describe("iOS Home header source contract", () => {
 
     // Staff know their event timing outside Schedule. One helper keeps linked
     // gear rows and shift rows from substituting event time as a call time.
-    expect(home).toContain("private func queueCallTime(workerType: String, at start: Date) -> String?");
-    expect(home).toContain('guard workerType == "ST" else { return nil }');
-    expect(home).toContain('return "Call time \\(start.formatted(date: .omitted, time: .shortened))"');
-    expect(home).toContain("queueCallTime(workerType: work.shift.workerType, at: work.shift.startsAt)");
-    expect(home).toContain("queueCallTime(workerType: shift.workerType, at: shift.startsAt)");
+    expect(home).toContain("private func queueCallTime(workerType: String, callStartsAt: Date?) -> String?");
+    expect(home).toContain('guard workerType == "ST", let callStartsAt else { return nil }');
+    expect(home).toContain('return "Call time \\(callStartsAt.formatted(date: .omitted, time: .shortened))"');
+    expect(home).toContain("queueCallTime(workerType: work.shift.workerType, callStartsAt: work.shift.callStartsAt)");
+    expect(home).toContain("queueCallTime(workerType: shift.workerType, callStartsAt: shift.callStartsAt)");
     expect(home).not.toContain('"Call time at \\(');
   });
 

@@ -6,6 +6,7 @@ import { buildSchedulePublicationSnapshot } from "@/lib/services/schedule-public
 import {
   affectedUserIds,
   diffScheduleForNotification,
+  redactStudentCallTimesForEvent,
 } from "@/lib/services/schedule-notification-diff";
 import { notifyScheduleChanges } from "@/lib/services/notifications";
 
@@ -23,7 +24,19 @@ const flushGroupSelect = {
   publishedVersion: true,
   lastPublishedSnapshot: true,
   notifyAfter: true,
-  event: { select: { id: true, summary: true, endsAt: true } },
+  event: {
+    select: {
+      id: true,
+      summary: true,
+      startsAt: true,
+      endsAt: true,
+      allDay: true,
+      sportCode: true,
+      opponent: true,
+      isHome: true,
+      site: true,
+    },
+  },
   shifts: {
     select: {
       id: true,
@@ -99,7 +112,9 @@ export async function flushScheduleNotifications(
   }
 
   const previous = normalizeStoredSnapshot(group.lastPublishedSnapshot);
-  const diff = diffScheduleForNotification(previous, current);
+  const notificationPrevious = redactStudentCallTimesForEvent(previous, group.event);
+  const notificationCurrent = redactStudentCallTimesForEvent(current, group.event);
+  const diff = diffScheduleForNotification(notificationPrevious, notificationCurrent ?? current);
 
   const advance = async (data: Prisma.ShiftGroupUpdateInput = {}) => {
     await db.shiftGroup.update({

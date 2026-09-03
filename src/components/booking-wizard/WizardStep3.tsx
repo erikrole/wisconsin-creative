@@ -121,7 +121,7 @@ export function WizardStep3({
             </p>
           )}
           <div className="mt-4 flex flex-col items-center gap-1 text-sm text-muted-foreground">
-            <span>{requesterName}</span>
+            <span>{form.custodyScope === "SHARED" ? "Shared travel case" : requesterName}</span>
             <span>{locationName}</span>
           </div>
 
@@ -131,6 +131,9 @@ export function WizardStep3({
                 Reserved
               </Badge>
             </SummaryRow>
+            {form.custodyScope === "SHARED" && (
+              <SummaryRow label="Custody">Shared travel case</SummaryRow>
+            )}
             {form.selectedEvents.length > 0 && (
               <SummaryRow label={form.selectedEvents.length > 1 ? "Events" : "Event"}>
                 <div className="flex flex-col items-end gap-1.5">

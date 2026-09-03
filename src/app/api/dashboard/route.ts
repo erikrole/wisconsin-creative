@@ -8,6 +8,7 @@ import { normalizeTeamAbbreviations } from "@/lib/title-normalization";
 import { readDashboardCounts, zeroDashboardCounts } from "@/lib/services/dashboard-counts";
 import { startOfDayInAppTz } from "@/lib/app-time";
 import { hasCollaboratorCapability } from "@/lib/collaborator-access";
+import { studentCallTimeAppliesToEvent } from "@/lib/shift-call-windows";
 
 const DASHBOARD_LIMIT = { max: 30, windowMs: 60_000 };
 
@@ -330,7 +331,7 @@ export const GET = withAuth(async (req, { user }) => {
           ? {
               AND: [
                 { requesterUserId: user.id },
-                { OR: [{ kind: "RESERVATION" }, { custodyScope: "PERSON" }] },
+                { custodyScope: "PERSON" },
               ],
             }
           : {}),
@@ -370,6 +371,7 @@ export const GET = withAuth(async (req, { user }) => {
                     sportCode: true,
                     opponent: true,
                     isHome: true,
+                    site: true,
                     locationId: true,
                     location: { select: { id: true, name: true } },
                   },
@@ -428,6 +430,7 @@ export const GET = withAuth(async (req, { user }) => {
     location: { id: string; name: string } | null;
     opponent: string | null;
     isHome: boolean | null;
+    site: "HOME" | "AWAY" | "NEUTRAL" | null;
     shiftGroup: {
       shifts: Array<{
         area: string;
@@ -477,6 +480,7 @@ export const GET = withAuth(async (req, { user }) => {
           sportCode: string | null;
           opponent: string | null;
           isHome: boolean | null;
+          site: "HOME" | "AWAY" | "NEUTRAL" | null;
           locationId: string | null;
           location: { id: string; name: string } | null;
         };
@@ -641,10 +645,16 @@ export const GET = withAuth(async (req, { user }) => {
       locationId: e.location?.id ?? null,
       opponent: e.opponent ? normalizeTeamAbbreviations(e.opponent) : null,
       isHome: e.isHome ?? null,
+      site: e.site ?? null,
       coverage,
       // An all-day event has no call time; its shifts inherit the event's own
       // UTC-midnight boundary, which would surface as "Call 7:00 PM".
-      callTime: e.isHome === true && !e.allDay && earliestShift ? earliestShift.toISOString() : null,
+      callTime: e.isHome === true
+        && !e.allDay
+        && studentCallTimeAppliesToEvent(e)
+        && earliestShift
+        ? earliestShift.toISOString()
+        : null,
       totalShiftSlots,
       filledShiftSlots,
       assignedUsers,
@@ -703,13 +713,15 @@ export const GET = withAuth(async (req, { user }) => {
       endsAt: a.shift.endsAt.toISOString(),
       // An all-day event has no call time; its shift window is the event's own
       // encoded UTC-midnight boundary, which reads as 7:00 PM the day before.
-      callStartsAt: a.shift.workerType === "ST" && !ev.allDay
+      callStartsAt: a.shift.workerType === "ST" && !ev.allDay && studentCallTimeAppliesToEvent(ev)
         ? (a.callStartsAt ?? a.shift.callStartsAt ?? a.shift.startsAt).toISOString()
         : null,
-      callEndsAt: a.shift.workerType === "ST" && !ev.allDay
+      callEndsAt: a.shift.workerType === "ST" && !ev.allDay && studentCallTimeAppliesToEvent(ev)
         ? (a.callEndsAt ?? a.shift.callEndsAt ?? a.shift.endsAt).toISOString()
         : null,
-      callNote: a.callNote,
+      callNote: a.shift.workerType === "ST" && !ev.allDay && studentCallTimeAppliesToEvent(ev)
+        ? a.callNote
+        : null,
       event: {
         id: ev.id,
         summary: normalizeTeamAbbreviations(ev.summary),
@@ -719,6 +731,7 @@ export const GET = withAuth(async (req, { user }) => {
         sportCode: ev.sportCode,
         opponent: ev.opponent ? normalizeTeamAbbreviations(ev.opponent) : null,
         isHome: ev.isHome,
+        site: ev.site,
         locationId: ev.locationId,
         locationName: ev.location?.name ?? null,
       },
@@ -743,15 +756,16 @@ export const GET = withAuth(async (req, { user }) => {
     const primaryGear = gearBookings[0] ?? null;
     return {
       id: ev.id,
-          event: {
-            id: ev.id,
-            summary: normalizeTeamAbbreviations(ev.summary),
-            startsAt: ev.startsAt.toISOString(),
-            endsAt: ev.endsAt.toISOString(),
-            allDay: ev.allDay,
-            sportCode: ev.sportCode,
-            opponent: ev.opponent ? normalizeTeamAbbreviations(ev.opponent) : null,
-            isHome: ev.isHome,
+      event: {
+        id: ev.id,
+        summary: normalizeTeamAbbreviations(ev.summary),
+        startsAt: ev.startsAt.toISOString(),
+        endsAt: ev.endsAt.toISOString(),
+        allDay: ev.allDay,
+        sportCode: ev.sportCode,
+        opponent: ev.opponent ? normalizeTeamAbbreviations(ev.opponent) : null,
+        isHome: ev.isHome,
+        site: ev.site,
         locationId: ev.locationId,
         locationName: ev.location?.name ?? null,
       },
@@ -763,13 +777,15 @@ export const GET = withAuth(async (req, { user }) => {
         startsAt: a.shift.startsAt.toISOString(),
         endsAt: a.shift.endsAt.toISOString(),
         // All-day events carry no call time -- see the myShifts note above.
-        callStartsAt: a.shift.workerType === "ST" && !ev.allDay
+        callStartsAt: a.shift.workerType === "ST" && !ev.allDay && studentCallTimeAppliesToEvent(ev)
           ? (a.callStartsAt ?? a.shift.callStartsAt ?? a.shift.startsAt).toISOString()
           : null,
-        callEndsAt: a.shift.workerType === "ST" && !ev.allDay
+        callEndsAt: a.shift.workerType === "ST" && !ev.allDay && studentCallTimeAppliesToEvent(ev)
           ? (a.callEndsAt ?? a.shift.callEndsAt ?? a.shift.endsAt).toISOString()
           : null,
-        callNote: a.callNote,
+        callNote: a.shift.workerType === "ST" && !ev.allDay && studentCallTimeAppliesToEvent(ev)
+          ? a.callNote
+          : null,
       },
       gearStatus: primaryGear ? gearStatusForBooking(primaryGear.status) : "none",
       gearBookings,

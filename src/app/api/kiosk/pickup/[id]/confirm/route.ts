@@ -1,4 +1,4 @@
-import { BookingKind, Prisma, type Role } from "@prisma/client";
+import { BookingCustodyScope, BookingKind, Prisma, type Role } from "@prisma/client";
 import { db } from "@/lib/db";
 import { withKiosk } from "@/lib/api";
 import { HttpError, ok } from "@/lib/http";
@@ -18,16 +18,17 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
   const { actorId, partial } = pickupConfirmBody.parse(await req.json());
   let openedBookingId = params.id;
   let openedSourceKey = params.id;
-  let openedUserId = actorId;
+  let openedPersonalUserId: string | null = actorId;
   let actorRole: Role = "STUDENT";
 
   await db.$transaction(
     async (tx) => {
       const user = await tx.user.findUnique({
         where: { id: actorId },
-        select: { id: true, name: true, role: true },
+        select: { id: true, name: true, role: true, active: true, hiddenFromRoster: true },
       });
       if (!user) throw new HttpError(404, "User not found");
+      if (user.active === false || user.hiddenFromRoster === true) throw new HttpError(403, "This user cannot operate kiosk custody");
       actorRole = user.role;
 
       const booking = await tx.booking.findUnique({
@@ -38,6 +39,7 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
           kind: true,
           title: true,
           requesterUserId: true,
+          custodyScope: true,
           serializedItems: {
             select: {
               assetId: true,
@@ -71,7 +73,7 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
 
       if (booking.kind === "RESERVATION") return;
 
-      if (booking.requesterUserId !== actorId) {
+      if (booking.custodyScope !== BookingCustodyScope.SHARED && booking.requesterUserId !== actorId) {
         throw new HttpError(403, "Only the current checkout owner can confirm pickup at the kiosk");
       }
 
@@ -145,6 +147,7 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
       status: true,
       title: true,
       requesterUserId: true,
+      custodyScope: true,
       locationId: true,
       startsAt: true,
       endsAt: true,
@@ -211,7 +214,9 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
   });
 
   if (sourceReservation?.kind === "CHECKOUT") {
-    openedUserId = sourceReservation.requesterUserId;
+    openedPersonalUserId = sourceReservation.custodyScope !== BookingCustodyScope.SHARED
+      ? sourceReservation.requesterUserId
+      : null;
   }
 
   if (sourceReservation?.kind === "RESERVATION") {
@@ -224,7 +229,7 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
       }
       throw new HttpError(409, `Cannot confirm pickup — booking is in ${sourceReservation.status} state`);
     }
-    if (sourceReservation.requesterUserId !== actorId) {
+    if (sourceReservation.custodyScope !== BookingCustodyScope.SHARED && sourceReservation.requesterUserId !== actorId) {
       throw new HttpError(403, "Only the reservation requester can confirm pickup at the kiosk");
     }
 
@@ -318,6 +323,7 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
     const eventIds = sourceReservation.events.map((event) => event.eventId);
     const checkout = await createBooking({
       kind: BookingKind.CHECKOUT,
+      custodyScope: sourceReservation.custodyScope,
       custodySource: "KIOSK",
       title: sourceReservation.title,
       requesterUserId: sourceReservation.requesterUserId,
@@ -330,7 +336,9 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
       eventIds: eventIds.length > 0 ? eventIds : undefined,
       eventId: eventIds.length === 0 ? sourceReservation.eventId ?? undefined : undefined,
       sportCode: sourceReservation.sportCode ?? undefined,
-      shiftAssignmentId: sourceReservation.shiftAssignmentId ?? undefined,
+      shiftAssignmentId: sourceReservation.custodyScope !== BookingCustodyScope.SHARED
+        ? sourceReservation.shiftAssignmentId ?? undefined
+        : undefined,
       kitId: sourceReservation.kitId ?? undefined,
       pickupKioskDeviceId: kiosk.kioskId,
       sourceReservationPickup: true,
@@ -359,16 +367,22 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
 
     openedBookingId = checkout.id;
     openedSourceKey = sourceReservation.id;
-    openedUserId = sourceReservation.requesterUserId;
+    openedPersonalUserId = sourceReservation.custodyScope !== BookingCustodyScope.SHARED
+      ? sourceReservation.requesterUserId
+      : null;
   }
 
-  await badges.onCheckoutOpened({
-    userId: openedUserId,
-    bookingId: openedBookingId,
-    source: "kiosk_pickup",
-    sourceKey: openedSourceKey,
-  });
-  const earnedBadges = await earnedBadgesSince(openedUserId, badgeWindowStart);
+  if (openedPersonalUserId) {
+    await badges.onCheckoutOpened({
+      userId: openedPersonalUserId,
+      bookingId: openedBookingId,
+      source: "kiosk_pickup",
+      sourceKey: openedSourceKey,
+    });
+  }
+  const earnedBadges = openedPersonalUserId
+    ? await earnedBadgesSince(openedPersonalUserId, badgeWindowStart)
+    : [];
 
   return ok({
     success: true,

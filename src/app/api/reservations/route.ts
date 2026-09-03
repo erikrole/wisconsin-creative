@@ -1,8 +1,8 @@
-import { BookingKind, BookingStatus, Prisma } from "@prisma/client";
+import { BookingCustodyScope, BookingKind, BookingStatus, Prisma } from "@prisma/client";
 import { withAuth } from "@/lib/api";
 import { db } from "@/lib/db";
 import { HttpError, ok } from "@/lib/http";
-import { requirePermissionOrCollaboratorCapability } from "@/lib/rbac";
+import { requirePermission, requirePermissionOrCollaboratorCapability } from "@/lib/rbac";
 import { createBooking, listBookings } from "@/lib/services/bookings";
 import { bookingInclude } from "@/lib/services/bookings-helpers";
 import { parseDateRange } from "@/lib/time";
@@ -76,6 +76,11 @@ export const POST = withAuth(async (req, { user }) => {
     throw new HttpError(400, "Request body must be valid JSON");
   }
   const body = sanitizeBookingFields(createReservationSchema.parse(rawBody));
+  if (body.custodyScope === BookingCustodyScope.SHARED) {
+    requirePermission(user.role, "checkout", "manage_custody");
+    body.requesterUserId = user.id;
+    body.shiftAssignmentId = undefined;
+  }
   // Students may only create reservations for themselves.
   if (user.role === "STUDENT" || user.role === "COLLABORATOR") {
     body.requesterUserId = user.id;
@@ -100,6 +105,7 @@ export const POST = withAuth(async (req, { user }) => {
     reservation = await createBooking({
       kind: BookingKind.RESERVATION,
       maxConcurrentReservations: rules.maxConcurrentReservations ?? undefined,
+      custodyScope: body.custodyScope,
       title: body.title,
       requesterUserId: body.requesterUserId,
       locationId: body.locationId,
@@ -141,13 +147,15 @@ export const POST = withAuth(async (req, { user }) => {
     ? reservation.creationDisposition
     : "replayed";
 
-  await createReservationLifecycleNotification({
-    bookingId: reservation.id,
-    bookingTitle: reservation.title ?? body.title,
-    requesterUserId: reservation.requesterUserId,
-    actorUserId: user.id,
-    event: creationDisposition === "consolidated" ? "updated" : "booked",
-  });
+  if (reservation.custodyScope !== BookingCustodyScope.SHARED) {
+    await createReservationLifecycleNotification({
+      bookingId: reservation.id,
+      bookingTitle: reservation.title ?? body.title,
+      requesterUserId: reservation.requesterUserId,
+      actorUserId: user.id,
+      event: creationDisposition === "consolidated" ? "updated" : "booked",
+    });
+  }
 
   return ok({
     data: user.role === "COLLABORATOR"

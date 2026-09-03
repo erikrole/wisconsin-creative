@@ -2,6 +2,7 @@ import type {
   SchedulePublicationSnapshot,
   SchedulePublicationSnapshotItem,
 } from "@/lib/schedule-publication-types";
+import { studentCallTimeAppliesToEvent } from "@/lib/shift-call-windows";
 
 /** Staff coverage keeps the event window internally and exposes no call time. */
 const STAFF_WORKER_TYPE = "FT";
@@ -45,20 +46,61 @@ export type ScheduleNotificationDiff = {
   byUser: Map<string, ScheduleWorkerChange[]>;
 };
 
+/**
+ * Remove Student call-window data from the worker-facing comparison for an
+ * Away or Neutral event. The persisted publication snapshot stays raw so
+ * conflict, readiness, and staff reconciliation can continue to use it.
+ */
+export function redactStudentCallTimesForEvent(
+  snapshot: SchedulePublicationSnapshot | null,
+  event: {
+    startsAt: string | Date;
+    endsAt: string | Date;
+    allDay?: boolean | null;
+    isHome?: boolean | null;
+    site?: "HOME" | "AWAY" | "NEUTRAL" | null;
+    opponent?: string | null;
+    summary?: string | null;
+  },
+): SchedulePublicationSnapshot | null {
+  if (!snapshot || (!event.allDay && studentCallTimeAppliesToEvent(event))) return snapshot;
+  const startsAt = event.startsAt instanceof Date ? event.startsAt.toISOString() : event.startsAt;
+  const endsAt = event.endsAt instanceof Date ? event.endsAt.toISOString() : event.endsAt;
+  return {
+    shifts: snapshot.shifts.map((shift) => shift.workerType !== "ST"
+      ? shift
+      : {
+          ...shift,
+          startsAt,
+          endsAt,
+          callStartsAt: null,
+          callEndsAt: null,
+          callTimeSuppressed: true,
+          assignments: shift.assignments.map((assignment) => ({
+            ...assignment,
+            callStartsAt: null,
+            callEndsAt: null,
+            callNote: null,
+          })),
+        }),
+  };
+}
+
 function factsFor(
   shift: SchedulePublicationSnapshotItem,
   assignment: SnapshotAssignment,
 ): WorkerShiftFacts {
   const staff = shift.workerType === STAFF_WORKER_TYPE;
+  const callTimeSuppressed = shift.callTimeSuppressed === true;
   return {
     shiftId: shift.shiftId,
     area: shift.area,
     workerType: shift.workerType,
     startsAt: shift.startsAt,
     endsAt: shift.endsAt,
-    callStartsAt: staff ? null : assignment.callStartsAt ?? shift.callStartsAt ?? shift.startsAt,
-    callEndsAt: staff ? null : assignment.callEndsAt ?? shift.callEndsAt ?? shift.endsAt,
-    callNote: assignment.callNote ?? null,
+    callStartsAt: staff || callTimeSuppressed ? null : assignment.callStartsAt ?? shift.callStartsAt ?? shift.startsAt,
+    callEndsAt: staff || callTimeSuppressed ? null : assignment.callEndsAt ?? shift.callEndsAt ?? shift.endsAt,
+    callNote: staff || callTimeSuppressed ? null : assignment.callNote ?? null,
   };
 }
 

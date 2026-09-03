@@ -345,6 +345,12 @@ struct EventDetailView: View {
         (session.currentUser?.role ?? "") == "STUDENT"
     }
 
+    /// Staff can still inspect and edit the stored Student call window. For a
+    /// student-facing detail sheet, only Home and non-game events expose it.
+    private var studentCallTimeAllowed: Bool {
+        canManageShifts || event.venue == .home || event.venue == .nonGame
+    }
+
     private var eventContent: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: Brand.Space.md) {
@@ -849,7 +855,7 @@ struct EventDetailView: View {
 
     private var callTime: Date? {
         if event.displayAllDay || myShift?.workerType == "FT" { return nil }
-        return eventWork?.shift.startsAt ?? myShift?.startsAt
+        return eventWork?.shift.callStartsAt ?? myShift?.callStartsAt
     }
 
     private var eventHasEnded: Bool { event.timeState == .past }
@@ -1155,7 +1161,7 @@ struct EventDetailView: View {
     /// Student row and printed once per row, in the leftmost column, three or
     /// four times down the screen.
     private var sharedStudentCallWindow: (start: Date, end: Date)? {
-        guard !event.displayAllDay, let first = studentShifts.first else { return nil }
+        guard studentCallTimeAllowed, !event.displayAllDay, let first = studentShifts.first else { return nil }
         let start = first.effectiveStartsAt
         let end = first.effectiveEndsAt
         let uniform = studentShifts.allSatisfy {
@@ -1167,7 +1173,7 @@ struct EventDetailView: View {
     /// True once the call window is stated once for the whole crew, which is
     /// what lets the rows drop their call column.
     private var callWindowIsHoisted: Bool {
-        !event.displayAllDay && !studentShifts.isEmpty
+        studentCallTimeAllowed && !event.displayAllDay && !studentShifts.isEmpty && sharedStudentCallWindow != nil
     }
 
     private var callWindowSummary: String {
@@ -1711,7 +1717,8 @@ struct EventDetailView: View {
                             assignment: assignment,
                             shift: shift,
                             eventTitle: scheduleEventDisplayTitle(event),
-                            currentUserId: session.currentUser?.id
+                            currentUserId: session.currentUser?.id,
+                            event: event
                         )
                     },
                     onCancelTrade: { assignment in confirmation = .cancelTrade(assignment) },
@@ -1732,7 +1739,8 @@ struct EventDetailView: View {
                         }
                     },
                     hidesShiftTimes: event.displayAllDay,
-                    callWindowIsHoisted: callWindowIsHoisted
+                    callWindowIsHoisted: callWindowIsHoisted,
+                    studentCallTimeAllowed: studentCallTimeAllowed
                 )
             }
         }
@@ -1765,6 +1773,7 @@ struct AreaBlock: View {
     /// event, which is the normal case. The rows then drop their call column
     /// instead of reprinting one identical time per row.
     var callWindowIsHoisted = false
+    var studentCallTimeAllowed = true
 
     var body: some View {
         // Tight: the heading names the card directly under it. `crewList`
@@ -1789,6 +1798,7 @@ struct AreaBlock: View {
                         isStudent: isStudent,
                         hidesShiftTimes: hidesShiftTimes,
                         showsCallColumn: showsCallColumn,
+                        studentCallTimeAllowed: studentCallTimeAllowed,
                         showsWorkerType: true,
                         onAssign: onAssign,
                         onConvertAndReplace: onConvertAndReplace,
@@ -1834,7 +1844,10 @@ struct AreaBlock: View {
     /// The column disappears entirely once the header states the window — at
     /// that point it held one repeated time and a column of em dashes.
     private var showsCallColumn: Bool {
-        !hidesShiftTimes && !callWindowIsHoisted && shifts.contains { $0.workerType == "ST" }
+        studentCallTimeAllowed
+            && !hidesShiftTimes
+            && !callWindowIsHoisted
+            && shifts.contains { $0.workerType == "ST" }
     }
 
     private func isMyShift(_ shift: EventShift) -> Bool {
@@ -1857,6 +1870,7 @@ struct ShiftRow: View {
     /// Every row in the block agrees, so the crew-type, name, and action columns
     /// share a left edge even though only Student slots carry a call time.
     var showsCallColumn: Bool = false
+    var studentCallTimeAllowed = true
     /// Per-row Student/Staff badge. Suppressed when the whole area block is one
     /// worker type (it's shown once on the area header instead), so an all-staff
     /// crew isn't a column of identical "Staff" pills.
@@ -1924,7 +1938,7 @@ struct ShiftRow: View {
                 // nothing is clipped or hyphenated.
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        if !hidesShiftTimes && isStudentSlot {
+                        if studentCallTimeAllowed && !hidesShiftTimes && isStudentSlot {
                             callWindowText
                         }
                         if showsWorkerType {
@@ -1984,7 +1998,7 @@ struct ShiftRow: View {
     /// rather than leaving a silent gap where the times sit on every row above.
     @ViewBuilder
     private var callTimeColumn: some View {
-        if isStudentSlot {
+        if studentCallTimeAllowed && isStudentSlot {
             VStack(alignment: .trailing, spacing: 2) {
                 Text(shift.effectiveStartsAt.formatted(.dateTime.hour().minute()))
                     .font(.caption.monospacedDigit().weight(.medium))
@@ -2009,7 +2023,7 @@ struct ShiftRow: View {
         var parts: [String] = []
         if isHighlighted { parts.append("Your shift") }
         parts.append("\(workerTypeLabel) shift")
-        if !hidesShiftTimes && isStudentSlot {
+        if studentCallTimeAllowed && !hidesShiftTimes && isStudentSlot {
             let timeRange = "\(shift.effectiveStartsAt.formatted(.dateTime.hour().minute())) to \(shift.effectiveEndsAt.formatted(.dateTime.hour().minute()))"
             parts.append(timeRange)
         } else if showsCallColumn {
@@ -2058,7 +2072,7 @@ struct ShiftRow: View {
         Menu {
             if canManageShifts {
                 Section("Shift") {
-                    if isStudentSlot, let onEditTimes {
+                    if studentCallTimeAllowed, isStudentSlot, let onEditTimes {
                         Button { onEditTimes(shift) } label: {
                             Label("Change Call Time", systemImage: "clock.badge.checkmark")
                         }
@@ -2216,7 +2230,7 @@ struct ShiftRow: View {
     @ViewBuilder
     private var shiftManagementMenuActions: some View {
         if canManageShifts {
-            if isStudentSlot, let onEditTimes {
+            if studentCallTimeAllowed, isStudentSlot, let onEditTimes {
                 Button { onEditTimes(shift) } label: {
                     Label("Change Call Time", systemImage: "clock.badge.checkmark")
                 }

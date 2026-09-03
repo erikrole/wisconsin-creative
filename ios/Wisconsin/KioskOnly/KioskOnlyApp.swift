@@ -167,6 +167,18 @@ enum APIError: LocalizedError {
     }
 }
 
+/// Kiosk-target counterpart to the main app preference. The kiosk target keeps
+/// its support shims local so it does not pull the main app's Core layer (and a
+/// duplicate `Haptics` type) into the dedicated executable.
+enum HapticsPreference {
+    static let key = "WisconsinHapticsEnabled"
+
+    static var isEnabled: Bool {
+        guard UserDefaults.standard.object(forKey: key) != nil else { return true }
+        return UserDefaults.standard.bool(forKey: key)
+    }
+}
+
 enum Haptics {
     @MainActor static func success() {
         guard HapticsPreference.isEnabled else { return }

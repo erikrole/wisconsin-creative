@@ -252,7 +252,7 @@ export function BookingHeader({
       }
       subtitle={
         <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
-          <span>{booking.custodyScope === "SHARED" ? "Shared checkout" : "Requester"}</span>
+          <span>{booking.custodyScope === "SHARED" ? (kind === "RESERVATION" ? "Shared reservation" : "Shared checkout") : "Requester"}</span>
           <span aria-hidden="true" className="text-muted-foreground/40">/</span>
           <span className="font-medium text-foreground">
             {booking.custodyScope === "SHARED"

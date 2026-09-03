@@ -121,6 +121,7 @@ Files under `ios/Wisconsin/Kiosk/`:
 - Badge reward presentation has generic iOS Simulator compile proof, but the iPad-only target excludes the standard iPhone 16 Pro simulator destination and the reward state has not yet been rendered on the managed landscape iPad. Custody remains complete even if reward lookup fails.
 
 ## Change Log
+| 2026-09-03 | **Shared travel-case pickup is operator-attributed, not person-owned.** An identified active operator may scan and confirm a `SHARED` reservation, every serialized and numbered-unit scan records that operator, the linked checkout inherits shared custody, and no personal checkout badge is awarded. Personal reservation pickup remains requester-locked; deployment and managed-iPad proof remain open. |
 | 2026-09-03 | **Shared travel-case return is operator-attributed, not person-owned.** Dashboard and checkout detail payloads label `SHARED` custody without exposing the retained requester. Starting a return asks who is operating the kiosk, allows that active visible person to scan and complete the manifest, records that actor on return evidence, and suppresses personal badge credit. Personal returns remain requester-locked. Migration `0143_shared_checkout_custody` is applied; compatible deployment, simulator build, and managed-iPad acceptance remain open. |
 
 | Date | Change |

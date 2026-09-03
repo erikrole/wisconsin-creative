@@ -57,6 +57,7 @@ export function useDraftManagement({
         if (typeof d.endsAt === "string") draft.endsAt = toLocalDateTimeValue(new Date(d.endsAt));
         if (typeof d.sportCode === "string") draft.sport = d.sportCode;
         if (typeof d.notes === "string") draft.notes = d.notes;
+        if (d.custodyScope === "PERSON" || d.custodyScope === "SHARED") draft.custodyScope = d.custodyScope;
         if (Array.isArray(d.events) && d.events.length) {
           draft.tieToEvent = true;
           draft.selectedEvents = d.events as CalendarEvent[];
@@ -89,6 +90,7 @@ export function useDraftManagement({
         endsAt: new Date(form.endsAt).toISOString(),
         serializedAssetIds: selectedAssetIds,
         bulkItems: selectedBulkItems,
+        custodyScope: form.custodyScope,
       };
       if (draftId) payload.id = draftId;
       if (form.requester) payload.requesterUserId = form.requester;

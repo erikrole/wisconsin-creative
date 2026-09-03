@@ -38,6 +38,21 @@ function cuid(index: number) {
 }
 
 describe("booking create validation", () => {
+  it("defaults reservations to personal custody and accepts an explicit shared travel case", () => {
+    const personal = createReservationSchema.parse({
+      ...basePayload,
+      serializedAssetIds: [ids.asset],
+    });
+    const shared = createReservationSchema.parse({
+      ...basePayload,
+      custodyScope: "SHARED",
+      serializedAssetIds: [ids.asset],
+    });
+
+    expect(personal.custodyScope).toBe("PERSON");
+    expect(shared.custodyScope).toBe("SHARED");
+  });
+
   it("requires reservation creation to include equipment", () => {
     expect(() => createReservationSchema.parse(basePayload)).toThrow("Add at least one piece of equipment");
   });

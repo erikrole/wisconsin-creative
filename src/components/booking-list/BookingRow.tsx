@@ -129,7 +129,7 @@ export function BookingTableRow({
               className="text-[13px]"
               style={{ fontFamily: "var(--font-heading)", fontWeight: 500 }}
             >
-              {item.custodyScope === "SHARED" ? "Shared checkout" : item.requester?.name ?? "Unknown"}
+              {item.custodyScope === "SHARED" ? (item.kind === "RESERVATION" ? "Shared travel case" : "Shared checkout") : item.requester?.name ?? "Unknown"}
             </span>
           </div>
         </TableCell>
@@ -239,7 +239,7 @@ export function BookingMobileCard({
         {item.custodyScope === "SHARED" ? (
           <span className="inline-flex items-center gap-1">
             <PackageOpen className="size-3.5" aria-hidden="true" />
-            Shared checkout
+            {item.kind === "RESERVATION" ? "Shared travel case" : "Shared checkout"}
           </span>
         ) : (
           <>

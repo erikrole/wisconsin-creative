@@ -1014,6 +1014,7 @@ export async function listTrades(filters: {
                       sportCode: true,
                       opponent: true,
                       isHome: true,
+                      site: true,
                     },
                   },
                 },

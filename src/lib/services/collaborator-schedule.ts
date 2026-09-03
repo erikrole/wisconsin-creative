@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
 import type { SchedulePublicationSnapshot } from "@/lib/schedule-publication-types";
 import { createAuditEntryTx } from "@/lib/audit";
+import { studentCallTimeAppliesToEvent } from "@/lib/shift-call-windows";
 
 const publishedScheduleSelect = {
   id: true,
@@ -18,6 +19,7 @@ const publishedScheduleSelect = {
       sportCode: true,
       opponent: true,
       isHome: true,
+      site: true,
       location: { select: { id: true, name: true } },
       follows: {
         select: { mutedAt: true },
@@ -89,6 +91,7 @@ async function hydratePublishedGroups(groups: PublishedGroup[]) {
         sportCode: group.event.sportCode,
         opponent: group.event.opponent,
         isHome: group.event.isHome,
+        site: group.event.site,
         venue: group.event.location,
       },
       crew: snapshot.shifts.flatMap((shift) =>
@@ -106,12 +109,16 @@ async function hydratePublishedGroups(groups: PublishedGroup[]) {
             // An all-day event has no call time. Without this the fallback
             // reaches the event's own UTC-midnight boundary and published crew
             // reads "Call 7:00 PM - 7:00 PM" on both web and iOS.
-            callStartsAt: group.event.allDay
-              ? null
-              : assignment.callStartsAt ?? shift.callStartsAt ?? shift.startsAt,
-            callEndsAt: group.event.allDay
-              ? null
-              : assignment.callEndsAt ?? shift.callEndsAt ?? shift.endsAt,
+            callStartsAt: shift.workerType === "ST"
+              && !group.event.allDay
+              && studentCallTimeAppliesToEvent(group.event)
+              ? assignment.callStartsAt ?? shift.callStartsAt ?? shift.startsAt
+              : null,
+            callEndsAt: shift.workerType === "ST"
+              && !group.event.allDay
+              && studentCallTimeAppliesToEvent(group.event)
+              ? assignment.callEndsAt ?? shift.callEndsAt ?? shift.endsAt
+              : null,
           }];
         }),
       ),

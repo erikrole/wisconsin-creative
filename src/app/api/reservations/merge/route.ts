@@ -6,6 +6,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { mergeReservations } from "@/lib/services/bookings";
 import { createReservationLifecycleNotification } from "@/lib/services/notifications";
 import { deferCompanionProjectionRefreshForCommittedMutation } from "@/lib/services/companion-projection-publisher";
+import { BookingCustodyScope } from "@prisma/client";
 
 const schema = z.object({
   ids: z.array(z.string().cuid()).min(2).max(25),
@@ -26,13 +27,15 @@ export const POST = withAuth(async (req, { user }) => {
     actorRole: user.role,
   });
   deferCompanionProjectionRefreshForCommittedMutation(req);
-  await createReservationLifecycleNotification({
-    bookingId: reservation.id,
-    bookingTitle: reservation.title,
-    requesterUserId: reservation.requesterUserId,
-    actorUserId: user.id,
-    event: "updated",
-  });
+  if (reservation.custodyScope !== BookingCustodyScope.SHARED) {
+    await createReservationLifecycleNotification({
+      bookingId: reservation.id,
+      bookingTitle: reservation.title,
+      requesterUserId: reservation.requesterUserId,
+      actorUserId: user.id,
+      event: "updated",
+    });
+  }
 
   return ok({
     data: reservation,

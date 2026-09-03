@@ -23,20 +23,27 @@ describe("all-day events carry no call time", () => {
 
     // The flag has to be selected before it can gate anything.
     expect(myShifts).toContain("allDay: true,");
-    expect(myShifts).toContain('a.shift.workerType === "ST" && !event.allDay');
+    expect(myShifts).toContain('const studentCallTimeVisible = a.shift.workerType === "ST"');
+    expect(myShifts).toContain("&& !event.allDay");
+    expect(myShifts).toContain("&& studentCallTimeAppliesToEvent(event)");
     expect(myShifts).toContain("allDay: event.allDay,");
 
     // Personal shift rows and event-work rows, each guarding start and end,
     // plus the today-event call chip.
-    expect(dashboard.match(/a\.shift\.workerType === "ST" && !ev\.allDay/g)?.length).toBe(4);
-    expect(dashboard).toContain("e.isHome === true && !e.allDay && earliestShift");
+    expect(dashboard.match(/a\.shift\.workerType === "ST" && !ev\.allDay/g)?.length).toBe(6);
+    expect(dashboard).toContain("e.isHome === true");
+    expect(dashboard).toContain("&& !e.allDay");
+    expect(dashboard).toContain("&& studentCallTimeAppliesToEvent(e)");
+    expect(dashboard).toContain("&& earliestShift");
 
     // The kiosk route already nulled these; keep it that way.
     expect(kiosk).toContain("callStartsAt: allDay ? null : callStartsAt");
 
     // Published collaborator crew, read by both web and iOS.
-    expect(published).toContain("callStartsAt: group.event.allDay");
-    expect(published).toContain("callEndsAt: group.event.allDay");
+    expect(published).toContain("!group.event.allDay");
+    expect(published).toContain("studentCallTimeAppliesToEvent(group.event)");
+    expect(published).toContain("callStartsAt: shift.workerType === \"ST\"");
+    expect(published).toContain("callEndsAt: shift.workerType === \"ST\"");
   });
 
   it("refuses to write a call window onto an all-day event", () => {

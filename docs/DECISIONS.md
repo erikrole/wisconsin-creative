@@ -1485,7 +1485,7 @@ These are non-negotiable integrity constraints. Every feature must preserve them
   - Migration `0142_combined_schedule_events` is applied in production with matching Prisma checksum and zero initial relationships. Authenticated browser proof, compatible app deployment, and the first live Cross Country combine remain separate rollout gates.
 - Reference: `tasks/combined-schedule-events-plan-2026-09-03.md`, `docs/AREA_EVENTS.md`, `docs/AREA_SHIFTS.md`, and `src/lib/services/combined-schedule-events.ts`.
 
-## D-061: Shared Travel-Case Checkouts Are Custodian-Neutral
+## D-061: Shared Travel-Case Reservations and Checkouts Are Custodian-Neutral
 - Date: 2026-09-03
 - Status: Accepted; migration applied, compatible app deployment and native/runtime proof pending
 - Context:
@@ -1493,18 +1493,18 @@ These are non-negotiable integrity constraints. Every feature must preserve them
   - Cameras, lenses, and other gear carried separately by an individual still need personal custody and accountability.
   - Migration `0141_event_checkout_assignments` deployed an unused `EVENT` scope and nullable item-assignee columns before this distinction was finalized; no application mutation or UI shipped for them.
 - Decision:
-  - `Booking.custodyScope=SHARED` identifies a custodian-neutral operational checkout such as `Football Travel Case`. The manifest contains everything packed in the case or on the truck, including pooled batteries and numbered bulk units.
+  - `Booking.custodyScope=SHARED` identifies a custodian-neutral reservation and its linked checkout, such as `Football Travel Case`. The manifest contains everything packed in the case or on the truck, including pooled batteries and numbered bulk units.
   - Gear taken separately by a person must be placed on that person's distinct `PERSON` checkout. A shared checkout does not distribute its lines among people.
   - `Booking.requesterUserId` remains required compatibility and historical metadata. Shared surfaces must not present it as owner, borrower, or accountability target.
-  - Only Staff/Admin may move an active checkout between `PERSON` and `SHARED`, using a snapshot-guarded serializable mutation with audit evidence. Students and Collaborators never inherit shared-checkout mutation rights from the retained requester or creator fields.
+  - Only Staff/Admin may create a shared reservation or move an active checkout between `PERSON` and `SHARED`. Reservation creation stores the creator as required compatibility metadata, suppresses personal schedule/notification attribution, and carries the scope into kiosk or force-checkout custody. Students and Collaborators never inherit shared-booking mutation rights from the retained requester or creator fields.
   - Kiosk scans, allocations, exact numbered-unit bindings, and return evidence remain authoritative. Shared custody changes identity and attribution, not lifecycle or equipment truth.
   - The deployed nullable serialized-item assignee columns remain dormant. Removing them is a separate destructive cleanup requiring proof that production contains no assignment data.
 - Guardrails:
-  - Shared scope is not valid for reservations, drafts, completed, or cancelled records.
+  - Shared scope is valid for Staff/Admin reservation drafts, active reservations, and active linked checkouts; it is not mutable on completed or cancelled records.
   - Do not send borrower nudges or requester overdue notifications for shared custody, count it in personal accountability/badges, or show it in personal My Gear.
-  - Keep shared checkouts visible in team and operational queues, exports, reports, and kiosk return work with an explicit `Shared checkout` identity.
+  - Keep shared reservations and checkouts visible in team and operational queues, exports, reports, kiosk pickup, and kiosk return work with explicit shared identity.
 - Consequences:
-  - Football travel inventory has one scannable manifest without falsely assigning the whole truck case to one person.
+  - Football travel inventory can be planned and picked up as one scannable manifest without ever falsely assigning the whole truck case to one person.
   - Personal carry remains explicit and individually accountable through separate checkouts.
   - Production migration `0143_shared_checkout_custody` renamed the unused enum value with zero `EVENT` rows, retained all 301 existing bookings as `PERSON`, and recorded the exact local migration checksum. Compatible app deployment and the first real shared checkout remain separate rollout gates.
 - Reference: `tasks/shared-travel-case-checkout-plan-2026-09-03.md`, `docs/AREA_CHECKOUTS.md`, and migration `0143_shared_checkout_custody`.

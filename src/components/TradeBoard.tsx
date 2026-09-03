@@ -31,6 +31,7 @@ import { AREA_LABELS } from "@/types/areas";
 import { formatCalendarEventAllDayLabel } from "@/lib/calendar-event-dates";
 import { formatDateShort, formatTimeShort } from "@/lib/format";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
+import { studentCallTimeAppliesToEvent } from "@/lib/shift-call-windows";
 import { cn } from "@/lib/utils";
 
 type TradeEvent = {
@@ -42,6 +43,7 @@ type TradeEvent = {
   sportCode: string | null;
   opponent?: string | null;
   isHome?: boolean | null;
+  site?: "HOME" | "AWAY" | "NEUTRAL" | null;
 };
 
 type TradeShift = {
@@ -225,22 +227,26 @@ function isTradeStatus(value: string): value is typeof TRADE_STATUSES[number] {
   return (TRADE_STATUSES as readonly string[]).includes(value);
 }
 
-function formatShiftWindow(shift: Pick<TradeShift, "startsAt" | "endsAt" | "shiftGroup">) {
+function formatShiftWindow(shift: Pick<TradeShift, "startsAt" | "endsAt" | "workerType" | "shiftGroup">) {
   // An all-day event's shift inherits the event's own UTC-midnight boundary,
   // so reading a clock off it prints 7:00 PM the evening before. Such a shift
   // has no call time to state -- it is the whole day.
   if (shift.shiftGroup?.event.allDay) {
     return formatCalendarEventAllDayLabel(shift.shiftGroup.event) || "All day";
   }
-  const starts = new Date(shift.startsAt);
-  const ends = new Date(shift.endsAt);
+  const useEventWindow = shift.workerType === "ST"
+    && !studentCallTimeAppliesToEvent(shift.shiftGroup.event);
+  const startsAt = useEventWindow ? shift.shiftGroup.event.startsAt : shift.startsAt;
+  const endsAt = useEventWindow ? shift.shiftGroup.event.endsAt : shift.endsAt;
+  const starts = new Date(startsAt);
+  const ends = new Date(endsAt);
   const sameDay = starts.toDateString() === ends.toDateString();
-  const date = formatDateShort(shift.startsAt);
-  const startTime = formatTimeShort(shift.startsAt);
-  const endTime = formatTimeShort(shift.endsAt);
+  const date = formatDateShort(startsAt);
+  const startTime = formatTimeShort(startsAt);
+  const endTime = formatTimeShort(endsAt);
 
   if (sameDay) return `${date}, ${startTime} - ${endTime}`;
-  return `${date}, ${startTime} - ${formatDateShort(shift.endsAt)}, ${endTime}`;
+  return `${date}, ${startTime} - ${formatDateShort(endsAt)}, ${endTime}`;
 }
 
 function openShiftActionCopy(item: OpenWorkShift) {
@@ -268,7 +274,7 @@ function tradeCancelContext(trade: Trade) {
   return shiftActionContext(trade.shiftAssignment.shift);
 }
 
-function shiftActionContext(shift: Pick<TradeShift, "startsAt" | "endsAt" | "shiftGroup">) {
+function shiftActionContext(shift: Pick<TradeShift, "startsAt" | "endsAt" | "workerType" | "shiftGroup">) {
   const event = shift.shiftGroup.event;
   const titleParts = scheduleEventTitleParts({
     summary: event.summary,

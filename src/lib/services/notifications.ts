@@ -8,6 +8,7 @@ import { loadUserPrefs, normalizePrefs, shouldDeliverEmail, shouldDeliverPush, s
 import { loadCheckoutPolicies } from "@/lib/services/checkout-policies";
 import { shiftWorkerLabel } from "@/lib/shift-display";
 import { formatAppDateTime } from "@/lib/app-time";
+import { studentCallTimeAppliesToEvent } from "@/lib/shift-call-windows";
 import { primaryChange, type ScheduleWorkerChange } from "@/lib/services/schedule-notification-diff";
 import { scheduleChangeCopy } from "@/lib/services/schedule-notification-copy";
 import {
@@ -703,16 +704,19 @@ function shiftScheduleNotificationCopy(args: {
   eventTitle: string;
   area: string;
   workerType: string;
-  callStartsAt: Date;
-  callEndsAt: Date;
+  callStartsAt: Date | null;
+  callEndsAt: Date | null;
   callNote: string | null;
 }) {
   const role = shiftWorkerLabel(args.workerType);
-  const callWindow = args.callStartsAt.getTime() === args.callEndsAt.getTime()
-    ? formatShiftNotifyTime(args.callStartsAt)
-    : `${formatShiftNotifyTime(args.callStartsAt)} - ${formatShiftNotifyTime(args.callEndsAt)}`;
-  const note = args.callNote ? ` ${args.callNote}` : "";
-  const timing = args.workerType === "ST" ? ` Call time: ${callWindow}.` : "";
+  const hasCallWindow = args.workerType === "ST" && args.callStartsAt && args.callEndsAt;
+  const callWindow = hasCallWindow
+    ? args.callStartsAt!.getTime() === args.callEndsAt!.getTime()
+      ? formatShiftNotifyTime(args.callStartsAt!)
+      : `${formatShiftNotifyTime(args.callStartsAt!)} - ${formatShiftNotifyTime(args.callEndsAt!)}`
+    : null;
+  const note = hasCallWindow && args.callNote ? ` ${args.callNote}` : "";
+  const timing = callWindow ? ` Call time: ${callWindow}.` : "";
 
   switch (args.event) {
     case "requested":
@@ -745,7 +749,7 @@ function shiftScheduleNotificationCopy(args: {
       return {
         type: "shift_time_changed",
         title: "Shift time updated",
-        body: args.workerType === "ST"
+        body: callWindow
           ? `Your ${args.area} ${role} slot for ${args.eventTitle} has an updated call time: ${callWindow}.${note}`
           : `The event time changed for your ${args.area} ${role} slot for ${args.eventTitle}.${note}`,
       };
@@ -753,7 +757,9 @@ function shiftScheduleNotificationCopy(args: {
       return {
         type: "shift_personal_call_time_changed",
         title: "Your call time changed",
-        body: `Your call time for the ${args.area} ${role} slot for ${args.eventTitle} is now ${callWindow}.${note}`,
+        body: callWindow
+          ? `Your call time for the ${args.area} ${role} slot for ${args.eventTitle} is now ${callWindow}.${note}`
+          : `Your schedule for the ${args.area} ${role} slot for ${args.eventTitle} was updated.`,
       };
     default:
       return {
@@ -781,16 +787,19 @@ export type ShiftScheduleNotificationSnapshot = {
   area: string;
   workerType: string;
   shiftStartsAt: Date;
-  callStartsAt: Date;
-  callEndsAt: Date;
+  callStartsAt: Date | null;
+  callEndsAt: Date | null;
   callNote: string | null;
   calendarEvent: {
     id: string;
     summary: string;
     startsAt: Date;
+    endsAt: Date;
+    allDay: boolean;
     sportCode: string | null;
     opponent: string | null;
     isHome: boolean | null;
+    site: "HOME" | "AWAY" | "NEUTRAL" | null;
     locationId: string | null;
   };
 };
@@ -812,9 +821,12 @@ export async function createShiftScheduleNotification(
                   id: true,
                   summary: true,
                   startsAt: true,
+                  endsAt: true,
+                  allDay: true,
                   sportCode: true,
                   opponent: true,
                   isHome: true,
+                  site: true,
                   locationId: true,
                 },
               },
@@ -858,8 +870,11 @@ export async function createShiftScheduleNotificationFromSnapshot(
   const eventTitle = calendarEvent.opponent
     ? `${calendarEvent.isHome === false ? "at" : "vs"} ${calendarEvent.opponent}`
     : calendarEvent.summary;
-  const callStartsAt = assignment.callStartsAt;
-  const callEndsAt = assignment.callEndsAt;
+  const hasStudentCallTime = assignment.workerType === "ST"
+    && !calendarEvent.allDay
+    && studentCallTimeAppliesToEvent(calendarEvent);
+  const callStartsAt = hasStudentCallTime ? assignment.callStartsAt : null;
+  const callEndsAt = hasStudentCallTime ? assignment.callEndsAt : null;
   const copy = shiftScheduleNotificationCopy({
     event,
     eventTitle,
@@ -869,7 +884,7 @@ export async function createShiftScheduleNotificationFromSnapshot(
     callEndsAt,
     callNote: assignment.callNote,
   });
-  const dedupeKey = `shift:${assignmentId}:${copy.type}:${callStartsAt.toISOString()}:${callEndsAt.toISOString()}:${assignment.callNote ?? ""}`;
+  const dedupeKey = `shift:${assignmentId}:${copy.type}:${callStartsAt?.toISOString() ?? ""}:${callEndsAt?.toISOString() ?? ""}:${hasStudentCallTime ? assignment.callNote ?? "" : ""}`;
   const pushPayload = scheduleNotificationPayload({
     assignmentId: assignment.assignmentId,
     shiftId: assignment.shiftId,
@@ -892,8 +907,8 @@ export async function createShiftScheduleNotificationFromSnapshot(
           eventSummary: calendarEvent.summary,
           area: assignment.area,
           workerType: shiftWorkerLabel(assignment.workerType),
-          startsAt: assignment.shiftStartsAt.toISOString(),
-          ...(assignment.workerType === "ST" ? {
+          startsAt: callStartsAt?.toISOString() ?? (assignment.workerType === "ST" ? calendarEvent.startsAt.toISOString() : assignment.shiftStartsAt.toISOString()),
+          ...(callStartsAt && callEndsAt ? {
             callStartsAt: callStartsAt.toISOString(),
             callEndsAt: callEndsAt.toISOString(),
           } : {}),
@@ -921,7 +936,7 @@ export async function createShiftScheduleNotificationFromSnapshot(
           title: copy.title,
           body: copy.body,
           bookingTitle: calendarEvent.summary,
-          dueAt: assignment.workerType === "ST" ? callStartsAt.toISOString() : undefined,
+          dueAt: callStartsAt?.toISOString(),
         }),
       }, category);
     }
@@ -1014,7 +1029,19 @@ export async function createPublishedShiftGroupNotifications(shiftGroupId: strin
     select: {
       publishedAt: true,
       publishedVersion: true,
-      event: { select: { id: true, summary: true, startsAt: true } },
+      event: {
+        select: {
+          id: true,
+          summary: true,
+          startsAt: true,
+          endsAt: true,
+          allDay: true,
+          sportCode: true,
+          opponent: true,
+          isHome: true,
+          site: true,
+        },
+      },
       shifts: {
         select: {
           workerType: true,
@@ -1044,6 +1071,8 @@ export async function createPublishedShiftGroupNotifications(shiftGroupId: strin
       count: (current?.count ?? 0) + 1,
       email: assignment.user.email,
       studentCallStartsAt: shift.workerType === "ST"
+        && !group.event.allDay
+        && studentCallTimeAppliesToEvent(group.event)
         ? [current?.studentCallStartsAt, assignment.callStartsAt ?? shift.callStartsAt ?? shift.startsAt]
             .filter((value): value is Date => Boolean(value))
             .sort((a, b) => a.getTime() - b.getTime())[0] ?? null
@@ -1222,7 +1251,19 @@ export async function notifyPublishedShiftGroupWorkers(
       select: {
         publishedAt: true,
         publishedVersion: true,
-        event: { select: { id: true, summary: true, startsAt: true } },
+        event: {
+          select: {
+            id: true,
+            summary: true,
+            startsAt: true,
+            endsAt: true,
+            allDay: true,
+            sportCode: true,
+            opponent: true,
+            isHome: true,
+            site: true,
+          },
+        },
         shifts: {
           select: {
             workerType: true,
@@ -1252,6 +1293,8 @@ export async function notifyPublishedShiftGroupWorkers(
     assignmentsByUser.set(assignment.userId, {
       count: (current?.count ?? 0) + 1,
       studentCallStartsAt: shift.workerType === "ST"
+        && !group.event.allDay
+        && studentCallTimeAppliesToEvent(group.event)
         ? [current?.studentCallStartsAt, assignment.callStartsAt ?? shift.callStartsAt ?? shift.startsAt]
             .filter((value): value is Date => Boolean(value))
             .sort((a, b) => a.getTime() - b.getTime())[0] ?? null

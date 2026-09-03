@@ -1,10 +1,11 @@
-import { Prisma } from "@prisma/client";
+import { BookingCustodyScope, Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { withKiosk } from "@/lib/api";
 import { HttpError, ok } from "@/lib/http";
 import { findAssetByScanValue } from "@/lib/services/kiosk-scan";
 import { pickupScanBody } from "@/lib/schemas/kiosk";
 import { scanKioskPickupBulkUnit, stageKioskReservationPickupBulkUnit } from "@/lib/services/bulk-unit-scans";
+import { kioskRosterUserWhere } from "@/lib/user-visibility";
 
 /**
  * Scan an item for kiosk pickup flow.
@@ -12,11 +13,11 @@ import { scanKioskPickupBulkUnit, stageKioskReservationPickupBulkUnit } from "@/
  * due BOOKED reservation.
  */
 export const POST = withKiosk<{ id: string }>(async (req, { params }) => {
-  const { scanValue } = pickupScanBody.parse(await req.json());
+  const { scanValue, actorId } = pickupScanBody.parse(await req.json());
 
   const booking = await db.booking.findUnique({
     where: { id: params.id },
-    select: { id: true, status: true, kind: true, requesterUserId: true, locationId: true },
+    select: { id: true, status: true, kind: true, requesterUserId: true, custodyScope: true, locationId: true },
   });
 
   if (
@@ -29,12 +30,24 @@ export const POST = withKiosk<{ id: string }>(async (req, { params }) => {
     throw new HttpError(404, "Pending pickup not found");
   }
   const activeBooking = booking;
+  if (activeBooking.custodyScope === BookingCustodyScope.SHARED) {
+    if (!actorId) throw new HttpError(400, "Choose an operator before scanning shared gear");
+    const actor = await db.user.findFirst({
+      where: { id: actorId, ...kioskRosterUserWhere() },
+      select: { id: true },
+    });
+    if (!actor) throw new HttpError(403, "This user cannot operate kiosk custody");
+  }
+  const scanActorId = activeBooking.custodyScope === BookingCustodyScope.SHARED
+    ? actorId!
+    : activeBooking.requesterUserId;
 
   const bulkResult = await db.$transaction(
     (tx) => activeBooking.kind === "RESERVATION"
       ? stageKioskReservationPickupBulkUnit(tx, {
           bookingId: params.id,
           scanValue,
+          actorUserId: scanActorId,
           deviceContext: req.headers.get("user-agent") ?? "kiosk",
         })
       : scanKioskPickupBulkUnit(tx, { bookingId: params.id, scanValue }),
@@ -85,7 +98,7 @@ export const POST = withKiosk<{ id: string }>(async (req, { params }) => {
     await tx.scanEvent.create({
       data: {
         bookingId: activeBooking.id,
-        actorUserId: activeBooking.requesterUserId,
+        actorUserId: scanActorId,
         scanType: "SERIALIZED",
         scanValue,
         success: true,

@@ -39,7 +39,7 @@ import { cn } from "@/lib/utils";
 import { handleAuthRedirect, parseErrorMessage } from "@/lib/errors";
 import { VENUE_TONES, venueToneFromEvent } from "@/lib/venue-tone";
 import { shiftWorkerLabel, shiftWorkerLabelForProfile, shiftWorkerSlotLabel, type ShiftWorkerKind } from "@/lib/shift-display";
-import { callWindowKey, effectiveCallWindow, formatCallWindowLabel, isInheritedFullDayCallWindow } from "@/lib/shift-call-windows";
+import { callWindowKey, effectiveCallWindow, formatCallWindowLabel, isInheritedFullDayCallWindow, studentCallTimeAppliesToEvent } from "@/lib/shift-call-windows";
 import {
   CREW_ROW_GROUP,
   CrewAreaDot,
@@ -226,7 +226,7 @@ function DateGroupHeader({ date, eventCount, isToday }: { date: Date; eventCount
 }
 
 function commonCallWindow(entry: CalendarEntry) {
-  if (entry.allDay) return null;
+  if (entry.allDay || !studentCallTimeAppliesToEvent(entry)) return null;
 
   const counts = new Map<string, { count: number; window: ReturnType<typeof effectiveCallWindow> }>();
   for (const shift of entry.shifts) {
@@ -332,7 +332,7 @@ function ShiftRowList({
         const slotWindow = effectiveCallWindow(shift);
         const assignmentWindow = activeAssignment ? effectiveCallWindow(shift, activeAssignment) : null;
         const visibleWindow = assignmentWindow ?? slotWindow;
-        const showCallWindows = !entry.allDay && workerType === "ST";
+        const showCallWindows = !entry.allDay && workerType === "ST" && studentCallTimeAppliesToEvent(entry);
         const callMatchesCommon = Boolean(commonCall && callWindowKey(visibleWindow) === commonCall.key);
         const callCell = showCallWindows && !isInheritedFullDayCallWindow(visibleWindow) && !callMatchesCommon ? (
           <CallWindowEditor effectiveWindow={visibleWindow} compact variant="bare" />

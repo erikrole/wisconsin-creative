@@ -1,3 +1,5 @@
+import { venueToneFromEvent, type CalendarEventSiteValue } from "@/lib/venue-tone";
+
 export type CallWindowSource = "assignment" | "slot" | "default";
 
 type ShiftWindowLike = {
@@ -17,6 +19,22 @@ export type EffectiveCallWindow = {
   endsAt: string;
   source: CallWindowSource;
 };
+
+/**
+ * Student call times are a Home/non-game convention. Away and neutral games
+ * retain their stored windows for scheduling and conflict logic, but those
+ * windows are not worker-facing call times.
+ */
+export function studentCallTimeAppliesToEvent(event: {
+  isHome?: boolean | null;
+  site?: CalendarEventSiteValue | null;
+  opponent?: string | null;
+  summary?: string | null;
+  rawSummary?: string | null;
+}): boolean {
+  const tone = venueToneFromEvent(event);
+  return tone === "home" || tone === "non-game";
+}
 
 function iso(value: string | Date): string {
   return value instanceof Date ? value.toISOString() : value;

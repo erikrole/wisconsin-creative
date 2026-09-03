@@ -6,6 +6,7 @@ import {
   isFullDayBoundaryWindow,
   isInheritedFullDayCallWindow,
   summarizeEffectiveCallWindows,
+  studentCallTimeAppliesToEvent,
   toDateTimeLocalValue,
   dateTimeLocalToIso,
 } from "@/lib/shift-call-windows";
@@ -127,6 +128,18 @@ describe("shift call-window helpers", () => {
     const localValue = toDateTimeLocalValue("2026-07-07T14:15:00.000Z");
     expect(localValue).toMatch(/^2026-07-07T\d{2}:15$/);
     expect(dateTimeLocalToIso(localValue)).toMatch(/2026-07-07T/);
+  });
+
+  it("allows call times only for Home and opponent-free non-game events", () => {
+    expect(studentCallTimeAppliesToEvent({ site: "HOME", opponent: "Iowa" })).toBe(true);
+    expect(studentCallTimeAppliesToEvent({ site: "AWAY", opponent: "Iowa" })).toBe(false);
+    expect(studentCallTimeAppliesToEvent({ site: "NEUTRAL", opponent: "Iowa" })).toBe(false);
+    expect(studentCallTimeAppliesToEvent({ site: null, isHome: false, opponent: null })).toBe(true);
+  });
+
+  it("uses the canonical site when legacy isHome disagrees", () => {
+    expect(studentCallTimeAppliesToEvent({ site: "AWAY", isHome: true, opponent: "Iowa" })).toBe(false);
+    expect(studentCallTimeAppliesToEvent({ site: "HOME", isHome: false, opponent: "Iowa" })).toBe(true);
   });
 });
 

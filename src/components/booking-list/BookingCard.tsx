@@ -158,7 +158,7 @@ export function BookingCard({ item, overdueStatus, onClick, menuProps, selectabl
                 className="text-[12px] truncate"
                 style={{ fontFamily: "var(--font-heading)", fontWeight: 500 }}
               >
-                {item.custodyScope === "SHARED" ? "Shared checkout" : item.requester?.name ?? "Unknown"}
+                {item.custodyScope === "SHARED" ? (item.kind === "RESERVATION" ? "Shared travel case" : "Shared checkout") : item.requester?.name ?? "Unknown"}
               </span>
             </div>
 

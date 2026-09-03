@@ -83,7 +83,7 @@ export default function BookingInfoCard({
                 <PackageOpen className="size-4" aria-hidden="true" />
               </span>
               <span className="min-w-0">
-                <span className="block truncate">Shared checkout</span>
+                <span className="block truncate">{isReservation ? "Shared travel case" : "Shared checkout"}</span>
                 <span className="block text-xs text-muted-foreground">No personal custodian</span>
               </span>
             </span>

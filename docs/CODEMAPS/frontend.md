@@ -112,35 +112,35 @@
 | File | Lines |
 |---|---:|
 | `src/components/resources/BrandAssetLibrary.tsx` | 1827 |
-| `src/components/TradeBoard.tsx` | 1805 |
+| `src/components/TradeBoard.tsx` | 1811 |
 | `src/components/ActivityTimeline.tsx` | 1375 |
 | `src/components/onboarding/OnboardingDialog.tsx` | 996 |
 | `src/components/EquipmentPicker.tsx` | 916 |
 | `src/components/AppShell.tsx` | 896 |
-| `src/components/booking-wizard/BookingWizard.tsx` | 886 |
+| `src/components/booking-wizard/BookingWizard.tsx` | 895 |
 | `src/components/BookingListPage.tsx` | 801 |
-| `src/components/ShiftDetailPanel.tsx` | 791 |
+| `src/components/ShiftDetailPanel.tsx` | 795 |
 | `src/components/ChooseImageModal.tsx` | 769 |
 | `src/components/profile-completion/ProfileCompletionWizard.tsx` | 769 |
 | `src/components/schedule/AutoAssignDialog.tsx` | 754 |
 | `src/components/BookingDetailsSheet.tsx` | 711 |
 | `src/components/ui/sidebar.tsx` | 710 |
 | `src/components/schedule/SportSetupWizard.tsx` | 675 |
-| `src/components/booking-wizard/WizardStep1.tsx` | 572 |
+| `src/components/booking-wizard/WizardStep1.tsx` | 598 |
 | `src/components/booking-details/BookingHeader.tsx` | 449 |
 | `src/components/ui/heatmap.tsx` | 434 |
 | `src/components/Sidebar.tsx` | 415 |
 | `src/components/ui/chart.tsx` | 389 |
 | `src/components/booking-details/BookingInfoCard.tsx` | 358 |
 | `src/components/FormCombobox.tsx` | 352 |
-| `src/components/shift-detail/ShiftSlotCard.tsx` | 343 |
+| `src/components/shift-detail/ShiftSlotCard.tsx` | 345 |
 | `src/components/booking-details/EditBookingEventsDialog.tsx` | 342 |
 | `src/components/resources/MarkdownReader.tsx` | 312 |
 | `src/components/public-showroom/showroom-blocks.tsx` | 290 |
 | `src/components/PageBreadcrumb.tsx` | 286 |
 | `src/components/booking-details/BookingSheetOverview.tsx` | 285 |
 | `src/components/booking-details/TransferOwnerDialog.tsx` | 271 |
-| `src/components/booking-wizard/WizardStep3.tsx` | 263 |
+| `src/components/booking-wizard/WizardStep3.tsx` | 266 |
 
 ## Hooks
 

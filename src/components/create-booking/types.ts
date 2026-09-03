@@ -5,6 +5,7 @@ import type { CalendarEvent } from "../booking-list/types";
 /* ───── Form reducer types (shared across hooks & sub-components) ───── */
 
 export type FormState = {
+  custodyScope: "PERSON" | "SHARED";
   tieToEvent: boolean;
   sport: string;
   /** Linked events, sorted by startsAt ascending. First = primary. Max 3. */
@@ -18,6 +19,7 @@ export type FormState = {
 };
 
 export type FormAction =
+  | { type: "SET_CUSTODY_SCOPE"; value: "PERSON" | "SHARED" }
   | { type: "SET_TIE_TO_EVENT"; value: boolean }
   | { type: "SET_SPORT"; value: string }
   /** Set the full selected-events list (already sorted chronologically by caller).

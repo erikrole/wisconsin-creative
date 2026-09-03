@@ -56,6 +56,7 @@ type Props = {
   callStartsAt?: string | null;
   callEndsAt?: string | null;
   eventAllDay?: boolean;
+  studentCallTimeAllowed?: boolean;
   activeAssignment: ShiftAssignment | null;
   pendingRequests: ShiftAssignment[];
   isStaff: boolean;
@@ -90,6 +91,7 @@ export function ShiftSlotCard({
   callStartsAt,
   callEndsAt,
   eventAllDay = false,
+  studentCallTimeAllowed = true,
   activeAssignment,
   pendingRequests,
   isStaff,
@@ -118,9 +120,9 @@ export function ShiftSlotCard({
   const slotWindow = effectiveCallWindow(shiftWindow);
   const assignmentWindow = activeAssignment ? effectiveCallWindow(shiftWindow, activeAssignment) : null;
   const isStudentSlot = workerType === "ST";
-  const showSlotWindow = isStudentSlot && !isAssigned && !eventAllDay && !isInheritedFullDayCallWindow(slotWindow);
+  const showSlotWindow = studentCallTimeAllowed && isStudentSlot && !isAssigned && !eventAllDay && !isInheritedFullDayCallWindow(slotWindow);
   const showAssignmentWindow = Boolean(
-    isStudentSlot && assignmentWindow && !eventAllDay && !isInheritedFullDayCallWindow(assignmentWindow),
+    studentCallTimeAllowed && isStudentSlot && assignmentWindow && !eventAllDay && !isInheritedFullDayCallWindow(assignmentWindow),
   );
   const roleBadgeLabel = activeAssignment
     ? shiftWorkerLabelForProfile(activeAssignment.user) ?? "Assigned"

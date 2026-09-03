@@ -4,6 +4,7 @@ import {
   affectedUserIds,
   diffScheduleForNotification,
   primaryChange,
+  redactStudentCallTimesForEvent,
   reportableWindow,
   type ScheduleWorkerChange,
 } from "@/lib/services/schedule-notification-diff";
@@ -184,6 +185,57 @@ describe("diffScheduleForNotification", () => {
     expect(diff.byUser.get("user-1")?.[0]?.kind).toBe("removed");
     expect(diff.byUser.get("user-2")?.[0]?.kind).toBe("added");
     expect(affectedUserIds(diff)).toEqual(["user-1", "user-2"]);
+  });
+
+  it("ignores Student call-window edits for an Away event", () => {
+    const event = {
+      startsAt: "2026-10-12T21:00:00.000Z",
+      endsAt: "2026-10-13T02:00:00.000Z",
+      allDay: false,
+      opponent: "Iowa",
+      site: "AWAY" as const,
+    };
+    const before = redactStudentCallTimesForEvent(snapshot([
+      {
+        shiftId: "shift-1",
+        callStartsAt: "2026-10-12T20:00:00.000Z",
+        assignments: [{ userId: "user-1", callStartsAt: "2026-10-12T20:15:00.000Z" }],
+      },
+    ]), event);
+    const after = redactStudentCallTimesForEvent(snapshot([
+      {
+        shiftId: "shift-1",
+        callStartsAt: "2026-10-12T19:00:00.000Z",
+        assignments: [{ userId: "user-1", callStartsAt: "2026-10-12T19:15:00.000Z" }],
+      },
+    ]), event);
+
+    expect(after?.shifts[0]?.callStartsAt).toBeNull();
+    expect(after?.shifts[0]?.assignments[0]?.callStartsAt).toBeNull();
+    expect(diffScheduleForNotification(before, after!).changed).toBe(false);
+  });
+
+  it("does not turn a suppressed Away window into an event-time call", () => {
+    const event = {
+      startsAt: "2026-10-12T21:00:00.000Z",
+      endsAt: "2026-10-13T02:00:00.000Z",
+      allDay: false,
+      opponent: "Iowa",
+      site: "AWAY" as const,
+    };
+    const redacted = redactStudentCallTimesForEvent(snapshot([
+      {
+        shiftId: "shift-1",
+        callStartsAt: "2026-10-12T20:00:00.000Z",
+        assignments: [{ userId: "user-1", callStartsAt: "2026-10-12T20:15:00.000Z" }],
+      },
+    ]), event)!;
+
+    const change = diffScheduleForNotification(null, redacted).byUser.get("user-1")?.[0];
+    expect(change).toMatchObject({
+      kind: "added",
+      after: { callStartsAt: null, callEndsAt: null },
+    });
   });
 });
 

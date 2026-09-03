@@ -47,6 +47,7 @@ type WizardConfig = {
 type Props = {
   form: FormState;
   dispatch: Dispatch<FormAction>;
+  canManageSharedCustody: boolean;
   config: WizardConfig;
   users: FormUser[];
   locations: Location[];
@@ -114,6 +115,7 @@ function Field({
 export function WizardStep1({
   form,
   dispatch,
+  canManageSharedCustody,
   config,
   users,
   locations,
@@ -448,9 +450,32 @@ export function WizardStep1({
             </Field>
           )}
 
+          {canManageSharedCustody && (
+            <div className="flex items-start justify-between gap-4 rounded-lg border border-border/60 bg-muted/25 p-3">
+              <div className="min-w-0">
+                <Label htmlFor="booking-shared-custody" className="cursor-pointer text-sm font-medium">
+                  Shared travel case
+                </Label>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                  For gear packed in the travel case or on the equipment truck. No person is shown as the owner.
+                </p>
+              </div>
+              <Switch
+                id="booking-shared-custody"
+                aria-label="Shared travel case"
+                checked={form.custodyScope === "SHARED"}
+                onCheckedChange={(checked) => dispatch({
+                  type: "SET_CUSTODY_SCOPE",
+                  value: checked ? "SHARED" : "PERSON",
+                })}
+              />
+            </div>
+          )}
+
           {/* Requester + Location (2-col on sm+) */}
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field label={config.requesterLabel} required htmlFor="booking-requester-trigger">
+          <div className={cn("grid gap-3", form.custodyScope === "PERSON" && "sm:grid-cols-2")}>
+            {form.custodyScope === "PERSON" && (
+              <Field label={config.requesterLabel} required htmlFor="booking-requester-trigger">
               <Select
                 name="booking-requester"
                 value={form.requester}
@@ -469,7 +494,8 @@ export function WizardStep1({
                   ))}
                 </SelectContent>
               </Select>
-            </Field>
+              </Field>
+            )}
 
             <Field label="Location" required htmlFor="booking-location-trigger">
               <Select

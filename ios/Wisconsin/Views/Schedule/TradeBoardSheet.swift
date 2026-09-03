@@ -1521,15 +1521,15 @@ private struct ShiftAvailabilityContextNote: View {
 
 private extension ShiftTradeShift {
     var timeRange: String {
-        "\(effectiveStartsAt.formatted(date: .abbreviated, time: .shortened)) - \(effectiveEndsAt.formatted(date: .omitted, time: .shortened))"
+        "\(displayStartsAt.formatted(date: .abbreviated, time: .shortened)) - \(displayEndsAt.formatted(date: .omitted, time: .shortened))"
     }
     var displayTitle: String {
         shiftGroup?.event?.compactTitle ?? "Open Shift"
     }
     var dateTimeLine: String {
-        let day = effectiveStartsAt.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
-        let start = effectiveStartsAt.formatted(date: .omitted, time: .shortened)
-        let end = effectiveEndsAt.formatted(date: .omitted, time: .shortened)
+        let day = displayStartsAt.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
+        let start = displayStartsAt.formatted(date: .omitted, time: .shortened)
+        let end = displayEndsAt.formatted(date: .omitted, time: .shortened)
         return "\(day) · \(start) to \(end)"
     }
     var classificationLabel: String {

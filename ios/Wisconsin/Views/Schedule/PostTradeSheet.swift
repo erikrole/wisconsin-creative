@@ -13,8 +13,14 @@ struct TradePostCandidate: Identifiable, Hashable {
         id = shift.id
         area = shift.area
         eventTitle = shift.event.summary
-        startsAt = shift.startsAt
-        endsAt = shift.endsAt
+        let event = shift.asScheduleEvent
+        if shift.workerType == "ST", event.venue == .away || event.venue == .neutral {
+            startsAt = event.startsAt
+            endsAt = event.endsAt
+        } else {
+            startsAt = shift.callStartsAt ?? shift.startsAt
+            endsAt = shift.callEndsAt ?? shift.endsAt
+        }
         ownerName = "You"
         isCurrentUser = true
     }
@@ -23,13 +29,20 @@ struct TradePostCandidate: Identifiable, Hashable {
         assignment: ShiftAssignmentRecord,
         shift: EventShift,
         eventTitle: String,
-        currentUserId: String?
+        currentUserId: String?,
+        event: ScheduleEvent? = nil
     ) {
         id = assignment.id
         area = shift.area
         self.eventTitle = eventTitle
-        startsAt = shift.startsAt
-        endsAt = shift.endsAt
+        if shift.workerType == "ST", let event, event.venue == .away || event.venue == .neutral,
+           shift.callStartsAt == nil {
+            startsAt = event.startsAt
+            endsAt = event.endsAt
+        } else {
+            startsAt = shift.callStartsAt ?? shift.startsAt
+            endsAt = shift.callEndsAt ?? shift.endsAt
+        }
         ownerName = assignment.user.name
         isCurrentUser = assignment.user.id == currentUserId
     }

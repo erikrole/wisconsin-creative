@@ -14,7 +14,7 @@ Wisconsin Creative is a Next.js App Router application with a companion native i
 | API route handlers | 322 |
 | Service files | 82 |
 | Component files | 155 |
-| Test files | 612 |
+| Test files | 613 |
 
 ## Oversized Source Watchlist
 
@@ -22,26 +22,26 @@ Informational only. These are the largest TypeScript and TSX files under `src/`;
 
 | File | Lines |
 |---|---:|
-| `src/lib/services/bookings-lifecycle.ts` | 2813 |
+| `src/lib/services/bookings-lifecycle.ts` | 2850 |
 | `src/lib/services/signatures.ts` | 2068 |
 | `src/lib/services/reports.ts` | 1932 |
 | `src/components/resources/BrandAssetLibrary.tsx` | 1827 |
-| `src/components/TradeBoard.tsx` | 1805 |
-| `src/lib/services/notifications.ts` | 1687 |
+| `src/components/TradeBoard.tsx` | 1811 |
+| `src/lib/services/notifications.ts` | 1730 |
 | `src/app/(app)/schedule/_components/ListView.tsx` | 1668 |
 | `src/app/(app)/items/[id]/ItemInfoTab.tsx` | 1603 |
 | `src/app/(app)/bulk-inventory/batteries/page.tsx` | 1554 |
 | `src/app/(app)/users/[id]/UserInfoTab.tsx` | 1450 |
 | `src/app/(app)/resources/page.tsx` | 1425 |
 | `src/components/ActivityTimeline.tsx` | 1375 |
-| `src/lib/services/shift-trades.ts` | 1320 |
+| `src/lib/services/shift-trades.ts` | 1321 |
 | `src/app/(app)/items/new-item-sheet/SerializedItemForm.tsx` | 1272 |
 | `src/app/api/assets/route.ts` | 1227 |
 | `src/app/(app)/items/new-item-sheet.tsx` | 1222 |
 | `src/app/(app)/users/[id]/page.tsx` | 1127 |
 | `src/lib/services/schedule-working-copy.ts` | 1095 |
 | `src/app/(app)/accountability/AccountabilityClient.tsx` | 1065 |
-| `src/app/(app)/events/[id]/page.tsx` | 1060 |
+| `src/app/(app)/events/[id]/page.tsx` | 1062 |
 
 ## High-Level Data Flow
 

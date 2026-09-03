@@ -829,7 +829,7 @@ private struct HomeActionQueue: View {
 
     private func eventDetailLines(for summary: BookingSummary) -> [QueueDetailLine] {
         var lines = [QueueDetailLine(text: gearInstruction(for: summary), tone: queueGearTone(for: summary))]
-        if let shift = shiftLinked(to: summary), let callTime = queueCallTime(workerType: shift.workerType, at: shift.startsAt) {
+        if let shift = shiftLinked(to: summary), let callTime = queueCallTime(workerType: shift.workerType, callStartsAt: shift.callStartsAt) {
             lines.append(QueueDetailLine(text: callTime, tone: .blue))
         }
         return lines
@@ -1119,9 +1119,9 @@ private func queueVenueTone(for event: DashboardEventWorkEvent) -> StatusTone {
 
 /// Students are told when to report. Staff assignments deliberately carry no
 /// call-time line because their timing is established outside Schedule.
-private func queueCallTime(workerType: String, at start: Date) -> String? {
-    guard workerType == "ST" else { return nil }
-    return "Call time \(start.formatted(date: .omitted, time: .shortened))"
+private func queueCallTime(workerType: String, callStartsAt: Date?) -> String? {
+    guard workerType == "ST", let callStartsAt else { return nil }
+    return "Call time \(callStartsAt.formatted(date: .omitted, time: .shortened))"
 }
 
 /// Next Up titles are the Bookings list's titles: same Gotham face, same size.
@@ -1205,7 +1205,7 @@ private struct EventActionQueueRow: View {
     /// Student assignments have an explicit report time. Staff do not.
     private var callTimeLine: String? {
         guard !isAllDayEvent else { return nil }
-        return queueCallTime(workerType: work.shift.workerType, at: work.shift.startsAt)
+        return queueCallTime(workerType: work.shift.workerType, callStartsAt: work.shift.callStartsAt)
     }
 
     /// When the event itself starts. The gear a shift needs is stated on its

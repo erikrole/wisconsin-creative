@@ -1,9 +1,9 @@
-import { BookingKind, BookingStatus } from "@prisma/client";
+import { BookingCustodyScope, BookingKind, BookingStatus } from "@prisma/client";
 import { z } from "zod";
 import { withAuth } from "@/lib/api";
 import { db } from "@/lib/db";
 import { HttpError, ok } from "@/lib/http";
-import { requirePermissionOrCollaboratorCapability } from "@/lib/rbac";
+import { requirePermission, requirePermissionOrCollaboratorCapability } from "@/lib/rbac";
 import { normalizeBookingTitle } from "@/lib/title-normalization";
 import { MAX_LINKED_EVENTS_PER_BOOKING } from "@/lib/request-limits";
 
@@ -14,6 +14,7 @@ const schema = z.object({
   startsAt: z.string().datetime(),
   endsAt: z.string().datetime(),
   eventIds: z.array(z.string().cuid()).min(1).max(MAX_LINKED_EVENTS_PER_BOOKING),
+  custodyScope: z.nativeEnum(BookingCustodyScope).default(BookingCustodyScope.PERSON),
 }).strict();
 
 function exactSet(left: string[], right: string[]) {
@@ -25,6 +26,10 @@ function exactSet(left: string[], right: string[]) {
 export const POST = withAuth(async (req, { user }) => {
   requirePermissionOrCollaboratorCapability(user, "booking", "view", "MY_GEAR_VIEW");
   const body = schema.parse(await req.json());
+  if (body.custodyScope === BookingCustodyScope.SHARED) {
+    requirePermission(user.role, "checkout", "manage_custody");
+    body.requesterUserId = user.id;
+  }
   if (
     (user.role === "STUDENT" || user.role === "COLLABORATOR")
     && body.requesterUserId !== user.id
@@ -39,6 +44,7 @@ export const POST = withAuth(async (req, { user }) => {
       kind: BookingKind.RESERVATION,
       status: BookingStatus.BOOKED,
       requesterUserId: body.requesterUserId,
+      custodyScope: body.custodyScope,
       eventId: primaryEventId,
       title: { equals: normalizedTitle, mode: "insensitive" },
     },

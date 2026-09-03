@@ -304,7 +304,7 @@ struct KioskPickupView: View {
 
         Task {
             do {
-                let result = try await KioskAPI.shared.kioskPickupScan(bookingId: bookingId, scanValue: value)
+                let result = try await KioskAPI.shared.kioskPickupScan(bookingId: bookingId, actorId: userId, scanValue: value)
                 earnedBadges.appendUnique(contentsOf: result.earnedBadges ?? [])
                 if result.success, let item = result.item {
                     if confirmedIds.contains(item.id) {

@@ -73,6 +73,7 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
     data: {
       id: draft.id,
       kind: draft.kind,
+      custodyScope: draft.custodyScope,
       title: draft.title,
       requesterUserId: draft.requesterUserId,
       locationId: draft.locationId,

@@ -35,7 +35,7 @@ import { EventSkeleton } from "./_components/EventSkeleton";
 import { ShiftCoverageCard } from "./_components/ShiftCoverageCard";
 import { EventTravelCard } from "./_components/EventTravelCard";
 import { EventWorkersCard } from "./_components/EventWorkersCard";
-import { effectiveCallWindow, summarizeEffectiveCallWindows } from "@/lib/shift-call-windows";
+import { effectiveCallWindow, studentCallTimeAppliesToEvent, summarizeEffectiveCallWindows } from "@/lib/shift-call-windows";
 import { QUARTER_HOUR_MINUTES, roundUpToQuarterHour } from "@/lib/quarter-hour";
 
 type LocationOption = { id: string; name: string };
@@ -492,9 +492,10 @@ export default function EventDetailPage() {
   const locationParam = event.location?.id ? `&locationId=${event.location.id}` : "";
   const eventParam = `&eventId=${id}`;
 
-  const callSummary = shiftGroup?.shifts.length
+  const studentCallTimeVisible = isStaffOrAdmin || studentCallTimeAppliesToEvent(event);
+  const callSummary = shiftGroup?.shifts.length && studentCallTimeVisible
     ? summarizeEffectiveCallWindows(
-        shiftGroup.shifts.map((shift) => {
+        shiftGroup.shifts.filter((shift) => shift.workerType === "ST").map((shift) => {
           const activeAssignment = shift.assignments.find(
             (assignment) => assignment.status === "DIRECT_ASSIGNED" || assignment.status === "APPROVED",
           );
@@ -979,6 +980,7 @@ export default function EventDetailPage() {
           linkParams={{ titleParam, dateParam, endParam, locationParam, eventParam }}
           eventAllDay={event.allDay}
           eventEndsAt={event.endsAt}
+          studentCallTimeAllowed={studentCallTimeVisible}
           onUpdated={() => {
             reloadShiftGroup();
             if (isStaffOrAdmin) reloadCommandCenter();

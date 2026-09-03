@@ -1,5 +1,6 @@
 import {
   AllocationKind,
+  BookingCustodyScope,
   BookingKind,
   BookingStatus,
   BulkMovementKind,
@@ -60,6 +61,7 @@ import { assertBookingSnapshot } from "@/lib/booking-concurrency";
 
 type CreateBookingInput = {
   kind: BookingKind;
+  custodyScope?: BookingCustodyScope;
   /** Reservation-only concurrency cap. When present, the active BOOKED count
    * is checked in the same SERIALIZABLE transaction as the insert. */
   maxConcurrentReservations?: number;
@@ -387,6 +389,7 @@ export async function createBooking(input: CreateBookingInput) {
     const booking = await withSerializationRetry(() =>
       db.$transaction(
         async (tx) => {
+          let resolvedCustodyScope = input.custodyScope ?? BookingCustodyScope.PERSON;
           // A missing requester would otherwise surface as an FK 500; an inactive
           // one would silently hold gear they can no longer account for.
           const requester = await tx.user.findUnique({
@@ -437,6 +440,7 @@ export async function createBooking(input: CreateBookingInput) {
                 select: {
                   id: true,
                   kind: true,
+                  custodyScope: true,
                   title: true,
                   requesterUserId: true,
                   locationId: true,
@@ -447,6 +451,9 @@ export async function createBooking(input: CreateBookingInput) {
             : null;
           if (input.sourceDraftId && !sourceDraft) {
             throw new HttpError(404, "Source draft not found");
+          }
+          if (sourceDraft) {
+            resolvedCustodyScope = sourceDraft.custodyScope;
           }
 
           // Resolve items from source reservation if provided. A normal source
@@ -460,6 +467,7 @@ export async function createBooking(input: CreateBookingInput) {
             kind: BookingKind;
             status: BookingStatus;
             locationId: string;
+            custodyScope: BookingCustodyScope;
             serializedItems: Array<{ assetId: string; allocationStatus: string }>;
             bulkItems: Array<{ bulkSkuId: string; plannedQuantity: number; checkedOutQuantity: number }>;
           } | null = null;
@@ -482,6 +490,7 @@ export async function createBooking(input: CreateBookingInput) {
             if (sourceReservation.locationId !== input.locationId) {
               throw new HttpError(400, "Source reservation belongs to a different location");
             }
+            resolvedCustodyScope = sourceReservation.custodyScope;
 
             if (input.sourceReservationPickup) {
               sourceReservationForPickup = sourceReservation;
@@ -565,6 +574,7 @@ export async function createBooking(input: CreateBookingInput) {
                   kind: BookingKind.RESERVATION,
                   status: BookingStatus.BOOKED,
                   requesterUserId: input.requesterUserId,
+                  custodyScope: resolvedCustodyScope,
                   eventId: primaryEventId,
                   title: { equals: title, mode: "insensitive" },
                   ...(sourceDraft ? { id: { not: sourceDraft.id } } : {}),
@@ -596,7 +606,9 @@ export async function createBooking(input: CreateBookingInput) {
           ) {
             throw new HttpError(
               409,
-              "This person already has a gear plan for the same event and title with different pickup details. Open that plan before adding gear.",
+              resolvedCustodyScope === BookingCustodyScope.SHARED
+                ? "A shared travel-case plan already exists for the same event and title with different pickup details. Open that plan before adding gear."
+                : "This person already has a gear plan for the same event and title with different pickup details. Open that plan before adding gear.",
               { existingReservationId: consolidationTarget.id },
             );
           }
@@ -738,7 +750,7 @@ export async function createBooking(input: CreateBookingInput) {
             return { booking: consolidatedBooking, creationDisposition: "consolidated" as const };
           }
 
-          if (input.maxConcurrentReservations !== undefined) {
+          if (input.maxConcurrentReservations !== undefined && resolvedCustodyScope === BookingCustodyScope.PERSON) {
             const activeCount = await tx.booking.count({
               where: {
                 requesterUserId: input.requesterUserId,
@@ -776,7 +788,7 @@ export async function createBooking(input: CreateBookingInput) {
             ? BookingStatus.BOOKED
             : BookingStatus.OPEN;
 
-          if (input.shiftAssignmentId) {
+          if (input.shiftAssignmentId && resolvedCustodyScope === BookingCustodyScope.PERSON) {
             await validateReservationScheduleAssignmentTx(tx, {
               assignmentId: input.shiftAssignmentId,
               requesterUserId: input.requesterUserId,
@@ -790,6 +802,7 @@ export async function createBooking(input: CreateBookingInput) {
           const booking = await tx.booking.create({
             data: {
               kind: input.kind,
+              custodyScope: resolvedCustodyScope,
               title,
               refNumber,
               requesterUserId: input.requesterUserId,
@@ -802,7 +815,7 @@ export async function createBooking(input: CreateBookingInput) {
               sourceReservationId: input.sourceReservationId ?? null,
               eventId: primaryEventId,
               sportCode: input.sportCode ?? null,
-              shiftAssignmentId: input.shiftAssignmentId ?? null,
+              shiftAssignmentId: resolvedCustodyScope === BookingCustodyScope.PERSON ? input.shiftAssignmentId ?? null : null,
               kitId: input.kitId ?? null,
               pickupKioskDeviceId: input.pickupKioskDeviceId ?? null
             }
@@ -819,6 +832,7 @@ export async function createBooking(input: CreateBookingInput) {
             });
             if (
               input.kind === BookingKind.RESERVATION &&
+              resolvedCustodyScope === BookingCustodyScope.PERSON &&
               hasCollaboratorCapability(requester, "SCHEDULE_FOLLOW")
             ) {
               await tx.scheduleEventFollow.createMany({
@@ -833,6 +847,7 @@ export async function createBooking(input: CreateBookingInput) {
 
             if (
               input.kind === BookingKind.RESERVATION
+              && resolvedCustodyScope === BookingCustodyScope.PERSON
               && primaryEventId
               && !input.shiftAssignmentId
             ) {
@@ -1300,6 +1315,7 @@ export async function forceCheckoutReservation(args: {
       id: true,
       kind: true,
       status: true,
+      custodyScope: true,
       title: true,
       requesterUserId: true,
       locationId: true,
@@ -1431,6 +1447,7 @@ export async function forceCheckoutReservation(args: {
   const eventIds = source.events.map((event) => event.eventId);
   return createBooking({
     kind: BookingKind.CHECKOUT,
+    custodyScope: source.custodyScope,
     custodySource: "ADMIN_OVERRIDE",
     adminOverrideReason: reason,
     title: source.title,
@@ -1514,6 +1531,13 @@ export async function updateReservation(
 
       if (existing.status === BookingStatus.CANCELLED || existing.status === BookingStatus.COMPLETED) {
         throw new HttpError(400, "Cannot edit a cancelled or completed reservation");
+      }
+      if (
+        existing.custodyScope === BookingCustodyScope.SHARED
+        && updates.requesterUserId
+        && updates.requesterUserId !== existing.requesterUserId
+      ) {
+        throw new HttpError(400, "Shared travel-case reservations do not have a personal owner");
       }
 
       let nextRequester: ReservationScheduleRequester | null = existing.requester ?? null;
@@ -1707,9 +1731,12 @@ export async function updateReservation(
       }
 
       const shouldReconcileSchedule = Boolean(
-        existing.eventId
-        || existing.shiftAssignmentId
-        || (updates.requesterUserId !== undefined && existing.eventId),
+        existing.custodyScope === BookingCustodyScope.PERSON
+        && (
+          existing.eventId
+          || existing.shiftAssignmentId
+          || (updates.requesterUserId !== undefined && existing.eventId)
+        ),
       );
       if (shouldReconcileSchedule) {
         const scheduleOutcome = await reconcileReservationScheduleTx(tx, {
@@ -1806,6 +1833,7 @@ export async function updateBookingEvents(
             eventId: true,
             requesterUserId: true,
             shiftAssignmentId: true,
+            custodyScope: true,
             requester: {
               select: {
                 role: true,
@@ -1912,7 +1940,12 @@ export async function updateBookingEvents(
         }
 
         let reservationScheduleAssignment: ReservationScheduleAssignment | null = null;
-        if (existing.kind === BookingKind.RESERVATION && existing.requesterUserId && existing.requester) {
+        if (
+          existing.kind === BookingKind.RESERVATION
+          && existing.custodyScope === BookingCustodyScope.PERSON
+          && existing.requesterUserId
+          && existing.requester
+        ) {
           const scheduleOutcome = await reconcileReservationScheduleTx(tx, {
             bookingId,
             requesterUserId: existing.requesterUserId,
@@ -2383,6 +2416,7 @@ export async function transferBookingOwner(
             status: true,
             updatedAt: true,
             requesterUserId: true,
+            custodyScope: true,
             eventId: true,
             shiftAssignmentId: true,
             createdBy: true,
@@ -2398,6 +2432,9 @@ export async function transferBookingOwner(
 
         if (!OWNER_TRANSFER_STATUSES.has(existing.status)) {
           throw new HttpError(400, "Cannot transfer ownership for a completed or cancelled booking");
+        }
+        if (existing.custodyScope === BookingCustodyScope.SHARED) {
+          throw new HttpError(400, "Shared travel-case bookings do not have a personal owner");
         }
 
         const actor = await tx.user.findUnique({

@@ -261,6 +261,8 @@ struct MyShift: Codable, Identifiable, Hashable {
     let workerType: String
     let startsAt: Date
     let endsAt: Date
+    let callStartsAt: Date?
+    let callEndsAt: Date?
     let status: String
     let event: MyShiftEvent
     let gear: ShiftGear
@@ -271,9 +273,11 @@ struct MyShiftEvent: Codable {
     let summary: String
     let startsAt: Date
     let endsAt: Date
+    let allDay: Bool?
     let sportCode: String?
     let isHome: Bool?
     let opponent: String?
+    let site: String?
     /// `/api/my-shifts` sends both halves of the mapped pickup location. The id
     /// is decoded so `asScheduleEvent` can rebuild a real `EventLocation`
     /// instead of dropping the venue on the floor.
@@ -307,19 +311,19 @@ extension MyShift {
     /// the Schedule tab and lost it from Profile. `DashboardEventWork` does this
     /// correctly and is the reference.
     ///
-    /// `allDay` and `status` stay hardcoded because `MyShiftEvent` carries
-    /// neither; fixing those needs `/api/my-shifts` to send them.
+    /// `status` stays hardcoded because `MyShiftEvent` carries no event status.
     var asScheduleEvent: ScheduleEvent {
         ScheduleEvent(
             id: event.id,
             summary: event.summary,
             startsAt: event.startsAt,
             endsAt: event.endsAt,
-            allDay: false,
+            allDay: event.allDay ?? false,
             status: "CONFIRMED",
             sportCode: event.sportCode,
             opponent: event.opponent,
             isHome: event.isHome,
+            site: event.site,
             location: event.locationId.map { EventLocation(id: $0, name: event.locationName ?? "") }
         )
     }
@@ -348,9 +352,11 @@ struct ShiftGroupEvent: Codable, Identifiable {
     let summary: String
     let startsAt: Date
     let endsAt: Date
+    let allDay: Bool?
     let sportCode: String?
     let isHome: Bool?
     let opponent: String?
+    let site: String?
     let locationId: String?
 }
 
@@ -788,6 +794,7 @@ struct PublishedEventSummary: Codable {
     let sportCode: String?
     let opponent: String?
     let isHome: Bool?
+    let site: String?
     let venue: EventLocation?
 }
 

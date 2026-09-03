@@ -97,6 +97,7 @@ export type EventSummary = {
   locationId: string | null;
   opponent: string | null;
   isHome: boolean | null;
+  site: "HOME" | "AWAY" | "NEUTRAL" | null;
   coverage: { total: number; filled: number; percentage: number } | null;
   callTime: string | null;
   totalShiftSlots: number;
@@ -144,6 +145,7 @@ export type MyShift = {
     sportCode: string | null;
     opponent: string | null;
     isHome: boolean | null;
+    site: "HOME" | "AWAY" | "NEUTRAL" | null;
     locationId: string | null;
     locationName: string | null;
   };
@@ -163,6 +165,7 @@ export type MyEventWork = {
     sportCode: string | null;
     opponent: string | null;
     isHome: boolean | null;
+    site: "HOME" | "AWAY" | "NEUTRAL" | null;
     locationId: string | null;
     locationName: string | null;
   };

@@ -28,14 +28,14 @@ describe("iOS Schedule all-day display", () => {
     expect(eventDetail).toContain("hidesShiftTimes: event.displayAllDay");
     // The stacked crew row layout (large Dynamic Type) and the row's
     // accessibility label gate call-time chrome directly on the flag.
-    expect(eventDetail.match(/if !hidesShiftTimes && isStudentSlot \{/g)?.length).toBe(2);
+    expect(eventDetail.match(/if studentCallTimeAllowed && !hidesShiftTimes && isStudentSlot \{/g)?.length).toBe(2);
     // The compact layout gates on the area-wide column instead, so Staff rows
     // keep their columns aligned with the Student rows above them. That flag
     // still carries `hidesShiftTimes`, so an all-day event renders no call
     // column at all -- not an em-dash column. It also carries the hoist, so a
     // uniform call window is stated once in the header rather than per row.
     expect(eventDetail).toContain(
-      "!hidesShiftTimes && !callWindowIsHoisted && shifts.contains { $0.workerType == \"ST\" }",
+      "studentCallTimeAllowed\n            && !hidesShiftTimes\n            && !callWindowIsHoisted\n            && shifts.contains { $0.workerType == \"ST\" }",
     );
     // The hoisted header line is itself all-day aware -- an all-day event has no
     // call window to state, so neither the line nor the column appears.

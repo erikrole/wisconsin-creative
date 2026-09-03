@@ -5,6 +5,7 @@ import { env } from "@/lib/env";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { cleanSourceSummary, normalizeOpponentName } from "@/lib/schedule-event-identity";
 import { AREA_LABELS } from "@/types/areas";
+import { studentCallTimeAppliesToEvent } from "@/lib/shift-call-windows";
 
 export const dynamic = "force-dynamic";
 
@@ -134,6 +135,7 @@ export const GET = withHandler<{ token: string }>(async (req, { params }) => {
                   sportCode: true,
                   opponent: true,
                   isHome: true,
+                  site: true,
                   locationId: true,
                   updatedAt: true,
                   location: { select: { name: true } },
@@ -169,10 +171,11 @@ export const GET = withHandler<{ token: string }>(async (req, { params }) => {
     const event = shift.shiftGroup.event;
     const location = event.location?.name;
     const activeTrade = a.trades[0];
-    const startsAt = shift.workerType === "ST"
+    const studentCallTimeVisible = user.role !== "STUDENT" || studentCallTimeAppliesToEvent(event);
+    const startsAt = shift.workerType === "ST" && studentCallTimeVisible
       ? a.callStartsAt ?? shift.callStartsAt ?? shift.startsAt
       : event.startsAt;
-    const endsAt = shift.workerType === "ST"
+    const endsAt = shift.workerType === "ST" && studentCallTimeVisible
       ? a.callEndsAt ?? shift.callEndsAt ?? shift.endsAt
       : event.endsAt;
     const isInheritedAllDayWindow = event.allDay

@@ -6,6 +6,7 @@ import { requirePermission } from "@/lib/rbac";
 import { updateShiftGroupSchema } from "@/lib/validation";
 import { createAuditEntry } from "@/lib/audit";
 import { getSchedulePublicationState } from "@/lib/services/schedule-publication";
+import { studentCallTimeAppliesToEvent } from "@/lib/shift-call-windows";
 
 export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
   requirePermission(user.role, "shift", "view");
@@ -34,6 +35,24 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
   if (!group) throw new HttpError(404, "Shift group not found");
   const { workingCopy, ...groupData } = group;
   const staffCanSeeWorkingState = user.role === "ADMIN" || user.role === "STAFF";
+  const studentCallTimeVisible = user.role !== "STUDENT"
+    || (!group.event.allDay && studentCallTimeAppliesToEvent(group.event));
+  const responseGroup = user.role === "STUDENT"
+    ? {
+        ...groupData,
+        shifts: groupData.shifts.map((shift) => ({
+          ...shift,
+          callStartsAt: shift.workerType === "ST" && studentCallTimeVisible ? shift.callStartsAt : null,
+          callEndsAt: shift.workerType === "ST" && studentCallTimeVisible ? shift.callEndsAt : null,
+          assignments: shift.assignments.map((assignment) => ({
+            ...assignment,
+            callStartsAt: shift.workerType === "ST" && studentCallTimeVisible ? assignment.callStartsAt : null,
+            callEndsAt: shift.workerType === "ST" && studentCallTimeVisible ? assignment.callEndsAt : null,
+            callNote: shift.workerType === "ST" && studentCallTimeVisible ? assignment.callNote : null,
+          })),
+        })),
+      }
+    : groupData;
   const pendingRelease = staffCanSeeWorkingState && workingCopy
     ? {
         autoReleaseAt: workingCopy.autoReleaseAt?.toISOString() ?? null,
@@ -42,7 +61,7 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
     : null;
   return ok({
     data: {
-      ...groupData,
+      ...responseGroup,
       hasWorkingCopy: staffCanSeeWorkingState ? Boolean(workingCopy) : undefined,
       autoReleaseAt: pendingRelease?.autoReleaseAt,
       autoReleaseError: pendingRelease?.autoReleaseError,

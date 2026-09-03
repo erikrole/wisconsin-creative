@@ -74,9 +74,11 @@ struct DashboardShiftEvent: Codable {
     let id: String
     let summary: String
     let startsAt: Date
+    let allDay: Bool?
     let sportCode: String?
     let opponent: String?
     let isHome: Bool?
+    let site: String?
     let locationName: String?
 }
 
@@ -86,6 +88,8 @@ struct DashboardShift: Codable, Identifiable {
     let workerType: String
     let startsAt: Date
     let endsAt: Date
+    let callStartsAt: Date?
+    let callEndsAt: Date?
     let event: DashboardShiftEvent
     let gearStatus: String
     let gearItemCount: Int
@@ -111,6 +115,7 @@ struct DashboardEventWorkEvent: Codable {
     let sportCode: String?
     let opponent: String?
     let isHome: Bool?
+    let site: String?
     let locationId: String?
     let locationName: String?
 }
@@ -121,6 +126,8 @@ struct DashboardEventWorkShift: Codable, Identifiable {
     let workerType: String
     let startsAt: Date
     let endsAt: Date
+    let callStartsAt: Date?
+    let callEndsAt: Date?
 }
 
 struct DashboardEventWork: Codable, Identifiable {
@@ -146,6 +153,7 @@ struct DashboardUpcomingEvent: Codable, Identifiable {
     let locationId: String?
     let opponent: String?
     let isHome: Bool?
+    let site: String?
     let totalShiftSlots: Int
     let filledShiftSlots: Int
 
@@ -265,6 +273,7 @@ extension DashboardUpcomingEvent {
             sportCode: sportCode,
             opponent: opponent,
             isHome: isHome,
+            site: site,
             location: locationId.map { EventLocation(id: $0, name: location ?? "") }
         )
     }
@@ -284,11 +293,12 @@ extension DashboardShift {
             summary: event.summary,
             startsAt: event.startsAt,
             endsAt: endsAt,
-            allDay: false,
+            allDay: event.allDay ?? false,
             status: "CONFIRMED",
             sportCode: event.sportCode,
             opponent: event.opponent,
             isHome: event.isHome,
+            site: event.site,
             location: nil
         )
         scheduleEvent.rawLocationText = event.locationName
@@ -309,6 +319,7 @@ extension DashboardEventWork {
             sportCode: event.sportCode,
             opponent: event.opponent,
             isHome: event.isHome,
+            site: event.site,
             location: event.locationId.map { EventLocation(id: $0, name: event.locationName ?? "") }
         )
     }

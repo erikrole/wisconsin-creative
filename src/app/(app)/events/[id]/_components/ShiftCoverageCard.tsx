@@ -54,6 +54,7 @@ type Props = {
   };
   eventAllDay?: boolean;
   eventEndsAt: string;
+  studentCallTimeAllowed?: boolean;
   onNudge: (assignmentId: string, userName: string) => void;
   onUpdated?: () => void;
 };
@@ -67,6 +68,7 @@ export function ShiftCoverageCard({
   linkParams,
   eventAllDay = false,
   eventEndsAt,
+  studentCallTimeAllowed = true,
   onNudge,
   onUpdated,
 }: Props) {
@@ -134,7 +136,7 @@ export function ShiftCoverageCard({
   }
 
   function shouldShowCallWindow(window: EffectiveCallWindow): boolean {
-    return !eventAllDay && !isInheritedFullDayCallWindow(window);
+    return studentCallTimeAllowed && !eventAllDay && !isInheritedFullDayCallWindow(window);
   }
 
   function changeTimeLabel(iso: string) {
@@ -176,7 +178,7 @@ export function ShiftCoverageCard({
     <Table>
       <TableHeader>
         <TableRow striped={false}>
-          <TableHead className="w-28">Call</TableHead>
+          {studentCallTimeAllowed && <TableHead className="w-28">Call</TableHead>}
           <TableHead className="w-24">Type</TableHead>
           <TableHead>Person</TableHead>
           <TableHead className="w-32">Status</TableHead>
@@ -194,7 +196,7 @@ export function ShiftCoverageCard({
           return [
             // Area sub-header
             <TableRow key={`header-${area}`} striped={false} className="border-b-0 bg-transparent hover:bg-transparent">
-              <TableCell colSpan={isStaffOrAdmin ? 4 : 5} className="pt-5 pb-1.5">
+              <TableCell colSpan={(isStaffOrAdmin ? 4 : 5) - (studentCallTimeAllowed ? 0 : 1)} className="pt-5 pb-1.5">
                 <CrewAreaHeading
                   area={area}
                   filled={filledInArea}
@@ -216,17 +218,19 @@ export function ShiftCoverageCard({
                 : shiftWorkerLabel(shift.workerType);
               return (
                 <TableRow key={shift.id} striped={false} className={cn(CREW_ROW_GROUP, "border-border/40")}>
-                  <TableCell className="py-2.5 text-muted-foreground">
-                    {shift.workerType === "ST" && shouldShowCallWindow(rowCallWindow) ? (
-                      <CallWindowEditor
-                        effectiveWindow={rowCallWindow}
-                        compact
-                        variant="bare"
-                      />
-                    ) : (
-                      <span className="pl-0.5">-</span>
-                    )}
-                  </TableCell>
+                  {studentCallTimeAllowed && (
+                    <TableCell className="py-2.5 text-muted-foreground">
+                      {shift.workerType === "ST" && shouldShowCallWindow(rowCallWindow) ? (
+                        <CallWindowEditor
+                          effectiveWindow={rowCallWindow}
+                          compact
+                          variant="bare"
+                        />
+                      ) : (
+                        <span className="pl-0.5">-</span>
+                      )}
+                    </TableCell>
+                  )}
                   <TableCell className="py-2.5">
                     <CrewTypeLabel label={rowClassLabel} />
                   </TableCell>

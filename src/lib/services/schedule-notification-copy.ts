@@ -29,8 +29,22 @@ function windowPhrase(facts: WorkerShiftFacts): string {
   return formatAppWindow(window.startsAt, window.endsAt);
 }
 
+function hasCallWindow(facts: WorkerShiftFacts): boolean {
+  return facts.workerType === "ST"
+    && facts.callStartsAt !== null
+    && facts.callEndsAt !== null;
+}
+
+function scheduleTiming(facts: WorkerShiftFacts): string {
+  if (hasCallWindow(facts)) return ` Call ${windowPhrase(facts)}.`;
+  // Staff still need the operational shift window. It is not a Student call
+  // time, so keep it in the existing notification without labeling it "Call".
+  if (facts.workerType === "FT") return ` Shift ${windowPhrase(facts)}.`;
+  return "";
+}
+
 function withNote(body: string, facts: WorkerShiftFacts): string {
-  return facts.callNote ? `${body} ${facts.callNote}` : body;
+  return hasCallWindow(facts) && facts.callNote ? `${body} ${facts.callNote}` : body;
 }
 
 /**
@@ -54,10 +68,11 @@ export function scheduleChangeCopy(args: {
   switch (change.kind) {
     case "added": {
       const area = areaLabel(change.after.area);
+      const timing = scheduleTiming(change.after);
       return {
         type: "shift_assigned",
         title: eventTitle,
-        body: withNote(`You're on ${area}. Call ${windowPhrase(change.after)}.`, change.after) + also,
+        body: withNote(`You're on ${area}.${timing}`, change.after) + also,
       };
     }
     case "removed": {
@@ -75,13 +90,23 @@ export function scheduleChangeCopy(args: {
       const lead = change.areaChanged
         ? `Moved from ${from} to ${to}.`
         : "Your slot changed.";
+      const timing = scheduleTiming(change.after);
       return {
         type: "shift_assigned",
         title: eventTitle,
-        body: withNote(`${lead} Call ${windowPhrase(change.after)}.`, change.after) + also,
+        body: withNote(`${lead}${timing}`, change.after) + also,
       };
     }
     case "updated": {
+      if (!hasCallWindow(change.after)) {
+        return {
+          type: "shift_time_changed",
+          title: eventTitle,
+          body: change.after.workerType === "FT"
+            ? `${areaLabel(change.after.area)} shift is now ${windowPhrase(change.after)}.` + also
+            : `${areaLabel(change.after.area)} schedule updated.` + also,
+        };
+      }
       if (!change.windowChanged && change.noteChanged) {
         return {
           type: "shift_time_changed",

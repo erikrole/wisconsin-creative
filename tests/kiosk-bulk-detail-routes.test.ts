@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   scanEventCreate: vi.fn(),
   transaction: vi.fn(),
   userFindUnique: vi.fn(),
+  userFindFirst: vi.fn(),
   createAuditEntryTx: vi.fn(),
   createAuditEntry: vi.fn(),
   findAssetByScanValue: vi.fn(),
@@ -37,6 +38,7 @@ vi.mock("@/lib/db", () => ({
     },
     user: {
       findUnique: mocks.userFindUnique,
+      findFirst: mocks.userFindFirst,
     },
     $transaction: mocks.transaction,
   },
@@ -609,6 +611,42 @@ describe("kiosk checkout detail bulk units", () => {
 });
 
 describe("kiosk pickup serialized scan guard", () => {
+  it("attributes a shared reservation scan to the identified operator", async () => {
+    mocks.bookingFindUnique.mockResolvedValue({
+      id: "reservation-1",
+      status: "BOOKED",
+      kind: "RESERVATION",
+      custodyScope: "SHARED",
+      requesterUserId: "creator-1",
+      locationId: "loc-1",
+    });
+    mocks.userFindFirst.mockResolvedValue({ id: "operator-1" });
+    mocks.findAssetByScanValue.mockResolvedValue({
+      id: "asset-1",
+      assetTag: "FB FX3 1",
+      name: "FB FX3 1",
+    });
+    mocks.bookingSerializedItemFindUnique.mockResolvedValue({
+      id: "serialized-1",
+      bookingId: "reservation-1",
+      assetId: "asset-1",
+      allocationStatus: "active",
+    });
+
+    const res = await scanKioskPickup(new Request("http://test", {
+      method: "POST",
+      body: JSON.stringify({ actorId: "operator-1", scanValue: "FB-FX3-1" }),
+    }), routeCtx("reservation-1"));
+
+    expect(res.status).toBe(200);
+    expect(mocks.scanEventCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        bookingId: "reservation-1",
+        actorUserId: "operator-1",
+      }),
+    });
+  });
+
   it("records successful serialized pickup scans before confirmation", async () => {
     mocks.scanKioskPickupBulkUnit.mockResolvedValue({ handled: false });
     mocks.bookingFindUnique.mockResolvedValue({
@@ -906,6 +944,75 @@ describe("kiosk pickup confirm bulk guard", () => {
 });
 
 describe("kiosk reservation pickup confirmation", () => {
+  it("opens a shared reservation for a different identified operator without badge ownership", async () => {
+    mocks.userFindUnique.mockResolvedValue({
+      id: "operator-1",
+      name: "Operator",
+      role: "STAFF",
+      active: true,
+      hiddenFromRoster: false,
+    });
+    mocks.bookingFindUnique
+      .mockResolvedValueOnce({
+        id: "reservation-1",
+        status: "BOOKED",
+        kind: "RESERVATION",
+        custodyScope: "SHARED",
+        title: "Football Travel Case",
+        requesterUserId: "creator-1",
+        serializedItems: [],
+        scanEvents: [],
+        bulkItems: [],
+      })
+      .mockResolvedValueOnce({
+        id: "reservation-1",
+        status: "BOOKED",
+        kind: "RESERVATION",
+        custodyScope: "SHARED",
+        title: "Football Travel Case",
+        requesterUserId: "creator-1",
+        locationId: "loc-1",
+        startsAt: new Date("2026-09-03T21:00:00.000Z"),
+        endsAt: new Date("2026-09-07T21:00:00.000Z"),
+        notes: null,
+        eventId: "event-1",
+        sportCode: "FB",
+        shiftAssignmentId: null,
+        kitId: null,
+        serializedItems: [{
+          assetId: "asset-1",
+          allocationStatus: "active",
+          asset: { assetTag: "FB FX3 1", name: "FB FX3 1" },
+        }],
+        bulkItems: [],
+        scanEvents: [{
+          assetId: "asset-1",
+          bulkSkuId: null,
+          scanType: "SERIALIZED",
+          scanValue: "FB-FX3-1",
+        }],
+        derivedCheckouts: [],
+        events: [{ eventId: "event-1" }],
+      });
+
+    const res = await confirmKioskPickup(new Request("http://test", {
+      method: "POST",
+      body: JSON.stringify({ actorId: "operator-1" }),
+    }), routeCtx("reservation-1"));
+
+    expect(res.status).toBe(200);
+    expect(mocks.createBooking).toHaveBeenCalledWith(expect.objectContaining({
+      custodyScope: "SHARED",
+      requesterUserId: "creator-1",
+      createdBy: "operator-1",
+    }));
+    expect(mocks.createAuditEntry).toHaveBeenCalledWith(expect.objectContaining({
+      actorId: "operator-1",
+    }));
+    expect(mocks.badgeOnCheckoutOpened).not.toHaveBeenCalled();
+    expect(mocks.earnedBadgesSince).not.toHaveBeenCalled();
+  });
+
   it("creates a linked open checkout after all reservation scans are staged", async () => {
     mocks.userFindUnique.mockResolvedValue({ id: "user-1", name: "User", role: "STUDENT" });
     mocks.bookingFindUnique

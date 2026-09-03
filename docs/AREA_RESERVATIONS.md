@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Reservations
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-09-02
+- Last Updated: 2026-09-03
 - Status: Active — V1 Shipped (2026-03-10)
 - Version: V1
 
@@ -28,15 +28,16 @@ Make app and web reservation-first. A user who is not physically at a kiosk rese
 13. `Sony Battery` and `Football Sony Battery` are separate item-family quantities but share the same reservation policy. Requesters choose either family through the normal web/native picker with no Football-roster or role gate; availability and numbered-unit custody rules remain authoritative.
 14. Admins may force-check out a `BOOKED` reservation from web detail when a physical handoff was verified but kiosk scanning is unavailable. The action requires a reason, opens a linked `OPEN` checkout for all remaining equipment, preserves durable numbered-unit bindings, completes the source reservation, and writes an `OverrideEvent` plus audit history. It does not remove availability or custody checks.
 15. An event-linked reservation is one living gear plan per requester, normalized title, exact event set, pickup location, and pickup/return window. A matching create adds unique serialized items and additive bulk quantities to the existing `BOOKED` reservation inside the serializable transaction. Staff may repair matching legacy rows through previewed, audited bulk merge; different people, titles, event sets, locations, windows, terminal states, or started pickups never merge.
+16. Staff/Admin may designate a reservation as `Shared travel case` at creation. The required requester ID remains hidden compatibility metadata, while the reservation and its linked checkout stay custodian-neutral. Shared reservations do not create personal schedule assignments, follows, lifecycle notifications, dashboard gear, accountability, or badge credit. Gear carried outside the case remains a separate personal reservation/checkout.
 
 ## V1 Workflow
 
 ### Create Reservation (Wizard — `/reservations/new`)
 Multi-step wizard page (replaced the old side-sheet flow as of 2026-04-09):
 
-**Step 1 — Context & Details:** Event tie-in (optional), title, requester, location, kit, start/end dates. Event picker uses the next 30 days and supports up to 5 linked events. The page title uses the selected event/booking title once available, while the reservation badge carries the booking kind. Manual date edits preserve duration when the Start value changes, matching the native calendar-app behavior. Web start/end controls use 15-minute choices; return suggestions round forward and the earliest end is the first valid quarter-hour after both the reservation start and now.
+**Step 1 — Context & Details:** Event tie-in (optional), title, requester, location, kit, start/end dates. Staff/Admin may instead select `Shared travel case`, which removes the requester field from presentation and explains that the manifest is for case/truck gear with no personal owner. Event picker uses the next 30 days and supports up to 5 linked events. The page title uses the selected event/booking title once available, while the reservation badge carries the booking kind. Manual date edits preserve duration when the Start value changes, matching the native calendar-app behavior. Web start/end controls use 15-minute choices; return suggestions round forward and the earliest end is the first valid quarter-hour after both the reservation start and now.
 **Step 2 — Equipment:** Full `EquipmentPicker` with quiet section chips, search, availability conflict markers, QR scan-to-add, and deliberate per-item selection. Equipment requirements enforced. Warning/status chrome appears only for unavailable stale selections, hard conflicts, needed-next notices, turnaround warnings, or active availability rechecks.
-**Step 3 — Confirmation:** Apple-like review panel leads with the selected window, requester, location, reserved status, linked event, and equipment count. Submit → POST `/api/reservations`. Save as `BOOKED`. Confirmation repeats selected availability warnings only when warnings exist.
+**Step 3 — Confirmation:** Apple-like review panel leads with the selected window, personal requester or `Shared travel case` identity, location, reserved status, linked event, and equipment count. Submit → POST `/api/reservations`. Save as `BOOKED`. Confirmation repeats selected availability warnings only when warnings exist.
 
 **Deep-link parameters:** `?title`, `?startsAt`, `?endsAt`, `?locationId`, `?newFor`, `?eventId`, `?sportCode`, `?requesterUserId`, `?draftId`, `?reuseFrom`. Reuse loads the source gear into a fresh composer and requires a different event; it does not clone the old event/window.
 
@@ -67,6 +68,7 @@ Native iOS creation mirrors the three-step reservation rhythm while staying mobi
 5. Preserve allocation linkage, `sourceReservationId`, selected-item custody, remaining reservation allocation, and audit trail across reloads and later pickup attempts.
 6. Numbered-unit intent remains quantity-based on the reservation; exact unit binding happens only during kiosk pickup confirmation.
 7. Once pickup begins, reservation equipment edits are blocked so operators cannot silently replace or reintroduce gear already handed over.
+8. A shared reservation may be scanned and confirmed by any identified active kiosk operator. Scan and handoff evidence names that operator without turning them into the owner; the linked checkout retains `SHARED` custody and produces no personal badge credit.
 
 ### Admin Force Checkout
 1. Admin-only `Force checkout` is an exception path for a physically verified handoff when kiosk scan verification cannot be completed.
@@ -278,6 +280,7 @@ The access labels below describe state-machine actions, not list/detail reads. I
 
 ## Change Log
 
+- 2026-09-03: **Added ownerless Football travel-case reservation creation locally.** Staff/Admin can select `Shared travel case` in the web reservation wizard; requester presentation disappears, review and detail use package identity, and the server retains only creator compatibility metadata. Shared scope survives drafts, duplicate-plan matching, kiosk pickup, partial pickup, and admin force checkout; it suppresses personal schedule/follow/notification/dashboard/badge attribution while kiosk scan and confirmation audit the identified operator. No production reservation was created, and deployment/authenticated visual/physical kiosk proof remain open.
 - 2026-08-31: **Reservation kiosk pickup now supports partial handoff.** A scanned subset creates an `OPEN` linked checkout for only the selected serialized assets and numbered units, leaves the source reservation `BOOKED` with remaining allocation and residual bulk quantity, and completes it only after the last pickup. Persisted reservation scan evidence and linked checkout custody now replay into kiosk detail after reload or date changes; operator detail surfaces show picked-up/remaining gear, availability checks use residual demand, and equipment edits are blocked after pickup begins. Focused local tests pass; deployment, authenticated browser, native runtime, and physical kiosk acceptance remain separate gates.
 - 2026-08-30: **Bookings keeps the operator's working context.** Search, status, special filter, sport, location, requester, sort, page, and card/table view are URL-backed so opening a booking and returning through browser Back restores the same list. Clear all now includes search, and the permission-aware `New reservation` action stays in the page header across every tab and active/past scope. Existing APIs, permissions, reservation lifecycle, and custody behavior are unchanged.
 - 2026-08-30: **Both Sony battery families use the normal reservation flow.** `Football Sony Battery` remains a separate quantity pool, but web/native selection, availability, requester changes, and ownership transfer apply the same rules as `Sony Battery`. The earlier local roster-gating work was removed before deployment; physical family creation remains open under GAP-74.

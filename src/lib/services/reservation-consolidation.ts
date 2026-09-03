@@ -51,6 +51,9 @@ function validateMergeCandidates(bookings: MergeCandidate[], requestedIds: strin
     if (booking.requesterUserId !== canonical.requesterUserId) {
       throw new HttpError(409, "Reservations for different people cannot be merged");
     }
+    if (booking.custodyScope !== canonical.custodyScope) {
+      throw new HttpError(409, "Personal and shared travel-case reservations cannot be merged");
+    }
     if (normalizeBookingTitle(booking.title).toLocaleLowerCase() !== expectedTitle) {
       throw new HttpError(409, "Reservation titles must match before merging");
     }

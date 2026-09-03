@@ -1,7 +1,7 @@
 import { withAuth } from "@/lib/api";
 import { db } from "@/lib/db";
 import { cancelReservation } from "@/lib/services/bookings";
-import { BookingKind } from "@prisma/client";
+import { BookingCustodyScope, BookingKind } from "@prisma/client";
 import { requireBookingAction } from "@/lib/services/booking-rules";
 import { ok } from "@/lib/http";
 import { createReservationLifecycleNotification } from "@/lib/services/notifications";
@@ -18,7 +18,7 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
 
   const booking = await db.booking.findUniqueOrThrow({
     where: { id },
-    select: { requesterUserId: true, title: true },
+    select: { requesterUserId: true, title: true, custodyScope: true },
   });
 
   // cancelReservation writes the canonical `cancelled` audit entry inside
@@ -26,13 +26,15 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
   const result = await cancelReservation(id, user.id);
   deferCompanionProjectionRefreshForCommittedMutation(req);
 
-  await createReservationLifecycleNotification({
-    bookingId: id,
-    bookingTitle: booking.title ?? id,
-    requesterUserId: booking.requesterUserId,
-    actorUserId: user.id,
-    event: "cancelled",
-  });
+  if (booking.custodyScope !== BookingCustodyScope.SHARED) {
+    await createReservationLifecycleNotification({
+      bookingId: id,
+      bookingTitle: booking.title ?? id,
+      requesterUserId: booking.requesterUserId,
+      actorUserId: user.id,
+      event: "cancelled",
+    });
+  }
 
   return ok(result);
 });

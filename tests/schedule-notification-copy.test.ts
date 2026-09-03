@@ -117,6 +117,19 @@ describe("scheduleChangeCopy", () => {
     expect(copy.body).toContain("Sat, Oct 17, 5:00 PM");
   });
 
+  it("does not add a call time or call note when Student timing is suppressed", () => {
+    const copy = scheduleChangeCopy({
+      eventTitle: EVENT,
+      change: {
+        kind: "added",
+        after: facts({ callStartsAt: null, callEndsAt: null, callNote: "Use the visitor entrance." }),
+      },
+    });
+    expect(copy.body).toBe("You're on Video.");
+    expect(copy.body).not.toContain("Call");
+    expect(copy.body).not.toContain("visitor entrance");
+  });
+
   it("folds extra changes into a count rather than a second message", () => {
     const copy = scheduleChangeCopy({
       eventTitle: EVENT,

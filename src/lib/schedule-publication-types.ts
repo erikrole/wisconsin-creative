@@ -8,6 +8,8 @@ export type SchedulePublicationSnapshotItem = {
   endsAt: string;
   callStartsAt: string | null;
   callEndsAt: string | null;
+  /** Internal comparison marker; never persisted in publication snapshots. */
+  callTimeSuppressed?: boolean;
   assignments: Array<{
     id: string;
     userId: string;

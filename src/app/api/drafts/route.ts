@@ -1,4 +1,4 @@
-import { BookingKind, Prisma, Role } from "@prisma/client";
+import { BookingCustodyScope, BookingKind, Prisma, Role } from "@prisma/client";
 import { withAuth } from "@/lib/api";
 import { createAuditEntryTx } from "@/lib/audit";
 import { db } from "@/lib/db";
@@ -17,6 +17,7 @@ import {
 const saveDraftSchema = z.object({
   id: z.string().cuid().optional(),
   kind: z.enum(["CHECKOUT", "RESERVATION"]),
+  custodyScope: z.nativeEnum(BookingCustodyScope).default(BookingCustodyScope.PERSON),
   title: z.string().max(200).default(""),
   requesterUserId: z.string().cuid().optional(),
   locationId: z.string().cuid().optional(),
@@ -134,6 +135,10 @@ export const POST = withAuth(async (req, { user }) => {
   } else {
     requirePermission(user.role, "checkout", "create");
   }
+  if (body.custodyScope === BookingCustodyScope.SHARED) {
+    requirePermission(user.role, "checkout", "manage_custody");
+    body.requesterUserId = user.id;
+  }
 
   if (user.role === Role.STUDENT || user.role === Role.COLLABORATOR) {
     body.requesterUserId = user.id;
@@ -147,6 +152,7 @@ export const POST = withAuth(async (req, { user }) => {
 
   const bookingData = {
     kind: body.kind as "CHECKOUT" | "RESERVATION",
+    custodyScope: body.custodyScope,
     title: normalizeBookingTitle(body.title || "Untitled draft"),
     status: "DRAFT" as const,
     requesterUserId: body.requesterUserId ?? user.id,
@@ -168,6 +174,7 @@ export const POST = withAuth(async (req, { user }) => {
         select: {
           id: true,
           kind: true,
+          custodyScope: true,
           title: true,
           requesterUserId: true,
           locationId: true,
@@ -229,6 +236,7 @@ export const POST = withAuth(async (req, { user }) => {
         action: "draft_updated",
         before: {
           kind: existing.kind,
+          custodyScope: existing.custodyScope,
           title: existing.title,
           requesterUserId: existing.requesterUserId,
           locationId: existing.locationId,
@@ -246,6 +254,7 @@ export const POST = withAuth(async (req, { user }) => {
         },
         after: {
           kind: body.kind,
+          custodyScope: bookingData.custodyScope,
           title: bookingData.title,
           requesterUserId: bookingData.requesterUserId,
           locationId: bookingData.locationId,
@@ -298,6 +307,7 @@ export const POST = withAuth(async (req, { user }) => {
       action: "draft_created",
       after: {
         kind: body.kind,
+        custodyScope: bookingData.custodyScope,
         title: bookingData.title,
         requesterUserId: bookingData.requesterUserId,
         locationId: bookingData.locationId,

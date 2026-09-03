@@ -30,7 +30,8 @@ describe("iOS kiosk reservation pickup contract", () => {
     expect(operatorHub).toContain("source: .reservation");
     expect(operatorHub).toContain('accessibilityHint("Start pickup now")');
     expect(apiClient).toContain("func kioskCheckoutDetail(id: String)");
-    expect(apiClient).toContain("func kioskPickupScan(bookingId: String, scanValue: String)");
+    expect(apiClient).toContain("func kioskPickupScan(bookingId: String, actorId: String, scanValue: String)");
+    expect(apiClient).toContain("Body(actorId: actorId, scanValue: scanValue)");
     expect(apiClient).toContain("func kioskPickupConfirm(");
     expect(apiClient).toContain("partial: Bool = false");
   });

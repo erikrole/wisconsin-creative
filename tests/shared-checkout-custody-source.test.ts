@@ -5,6 +5,29 @@ import { describe, expect, it } from "vitest";
 const source = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
 
 describe("shared checkout custody contracts", () => {
+  it("lets staff designate an ownerless travel-case reservation at creation", () => {
+    const wizard = source("src/components/booking-wizard/BookingWizard.tsx");
+    const step = source("src/components/booking-wizard/WizardStep1.tsx");
+    const route = source("src/app/api/reservations/route.ts");
+
+    expect(step).toContain("Shared travel case");
+    expect(step).toContain("canManageSharedCustody");
+    expect(wizard).toContain('effectiveRole === "ADMIN" || effectiveRole === "STAFF"');
+    expect(route).toContain('requirePermission(user.role, "checkout", "manage_custody")');
+    expect(route).toContain("body.requesterUserId = user.id");
+  });
+
+  it("carries shared reservation custody through kiosk and force checkout", () => {
+    const lifecycle = source("src/lib/services/bookings-lifecycle.ts");
+    const pickup = source("src/app/api/kiosk/pickup/[id]/confirm/route.ts");
+    const scan = source("src/app/api/kiosk/pickup/[id]/scan/route.ts");
+
+    expect(lifecycle).toContain("resolvedCustodyScope = sourceReservation.custodyScope");
+    expect(lifecycle).toContain("custodyScope: source.custodyScope");
+    expect(pickup).toContain("custodyScope: sourceReservation.custodyScope");
+    expect(scan).toContain("Choose an operator before scanning shared gear");
+  });
+
   it("keeps the mutation serializable, snapshot-guarded, and audited", () => {
     const service = source("src/lib/services/booking-custody.ts");
     expect(service).toContain("Prisma.TransactionIsolationLevel.Serializable");

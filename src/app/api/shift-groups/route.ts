@@ -10,6 +10,7 @@ import { sportDefaultShiftWindow } from "@/lib/schedule-defaults";
 import { optionalSportCodeSchema } from "@/lib/validation";
 import { createAuditEntryTx } from "@/lib/audit";
 import { Prisma } from "@prisma/client";
+import { studentCallTimeAppliesToEvent } from "@/lib/shift-call-windows";
 
 function applyEventWindowFilter(
   eventWhere: Prisma.CalendarEventWhereInput,
@@ -65,9 +66,11 @@ export const GET = withAuth(async (req, { user }) => {
           summary: true,
           startsAt: true,
           endsAt: true,
+          allDay: true,
           sportCode: true,
           isHome: true,
           opponent: true,
+          site: true,
           locationId: true,
         },
       },
@@ -134,6 +137,8 @@ export const GET = withAuth(async (req, { user }) => {
 
     const publication = getSchedulePublicationState(g);
     const staffCanSeeWorkingState = user.role === "ADMIN" || user.role === "STAFF";
+    const studentCallTimeVisible = user.role !== "STUDENT"
+      || (!g.event.allDay && studentCallTimeAppliesToEvent(g.event));
     const pendingRelease = staffCanSeeWorkingState && g.workingCopy
       ? {
           autoReleaseAt: g.workingCopy.autoReleaseAt?.toISOString() ?? null,
@@ -145,9 +150,14 @@ export const GET = withAuth(async (req, { user }) => {
       workingCopy: undefined,
       shifts: g.shifts.map((s) => ({
         ...s,
+        callStartsAt: s.workerType === "ST" && studentCallTimeVisible ? s.callStartsAt : null,
+        callEndsAt: s.workerType === "ST" && studentCallTimeVisible ? s.callEndsAt : null,
         viewerRequest: viewerRequestByShiftId.get(s.id) ?? null,
         assignments: s.assignments.map((a) => ({
           ...a,
+          callStartsAt: s.workerType === "ST" && studentCallTimeVisible ? a.callStartsAt : null,
+          callEndsAt: s.workerType === "ST" && studentCallTimeVisible ? a.callEndsAt : null,
+          callNote: s.workerType === "ST" && studentCallTimeVisible ? a.callNote : null,
           activeTrade: tradeByAssignmentId.get(a.id) ?? null,
         })),
       })),
@@ -265,9 +275,11 @@ export const POST = withAuth(async (req, { user }) => {
               summary: true,
               startsAt: true,
               endsAt: true,
+              allDay: true,
               sportCode: true,
               isHome: true,
               opponent: true,
+              site: true,
               locationId: true,
             },
           },

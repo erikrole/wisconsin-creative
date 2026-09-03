@@ -5,6 +5,7 @@ import { requireInternalActor } from "@/lib/rbac";
 import { shiftWorkerLabel } from "@/lib/shift-display";
 import { startOfTodayInAppTz } from "@/lib/app-time";
 import { isShiftAssignmentAcknowledged } from "@/lib/schedule-publication-types";
+import { studentCallTimeAppliesToEvent } from "@/lib/shift-call-windows";
 
 function gearStatusForBooking(status: string) {
   if (status === "OPEN") return "checked_out";
@@ -101,6 +102,7 @@ export const GET = withAuth(async (req, { user }) => {
                     sportCode: true,
                     isHome: true,
                     opponent: true,
+                    site: true,
                     locationId: true,
                     location: { select: { id: true, name: true } },
                   },
@@ -176,6 +178,9 @@ export const GET = withAuth(async (req, { user }) => {
     const event = a.shift.shiftGroup.event;
     const eventBookings = bookingsByEvent.get(event.id) || [];
     const gearStatus = eventBookings[0] ? gearStatusForBooking(eventBookings[0].status) : "none";
+    const studentCallTimeVisible = a.shift.workerType === "ST"
+      && !event.allDay
+      && studentCallTimeAppliesToEvent(event);
 
     return {
       id: a.id,
@@ -188,13 +193,13 @@ export const GET = withAuth(async (req, { user }) => {
       // An all-day event has no call time. Its shift window is the event's own
       // encoded UTC-midnight boundary, so falling back to it here would hand
       // clients a meaningless instant that renders as 7:00 PM the day before.
-      callStartsAt: a.shift.workerType === "ST" && !event.allDay
+      callStartsAt: studentCallTimeVisible
         ? (a.callStartsAt ?? a.shift.callStartsAt ?? a.shift.startsAt).toISOString()
         : null,
-      callEndsAt: a.shift.workerType === "ST" && !event.allDay
+      callEndsAt: studentCallTimeVisible
         ? (a.callEndsAt ?? a.shift.callEndsAt ?? a.shift.endsAt).toISOString()
         : null,
-      callNote: a.callNote,
+      callNote: studentCallTimeVisible ? a.callNote : null,
       status: a.status,
       acknowledgedAt: a.acknowledgedAt?.toISOString() ?? null,
       acknowledgedById: a.acknowledgedById,
@@ -212,6 +217,7 @@ export const GET = withAuth(async (req, { user }) => {
         sportCode: event.sportCode,
         isHome: event.isHome,
         opponent: event.opponent,
+        site: event.site,
         locationId: event.locationId,
         locationName: event.location?.name ?? null,
       },

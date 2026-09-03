@@ -32,6 +32,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ScheduleReleaseNotice } from "@/components/ScheduleReleaseNotice";
 import { formatRoleSlotAssignmentOutcome, shiftWorkerLabel, shiftWorkerSlotLabel, type RoleSlotOutcomeLike } from "@/lib/shift-display";
 import type { AutoFillPreviewResponse } from "@/lib/auto-fill-preview-types";
+import { studentCallTimeAppliesToEvent } from "@/lib/shift-call-windows";
 
 /* ───── Types ───── */
 
@@ -100,6 +101,7 @@ type ShiftGroupDetail = {
     sportCode: string | null;
     isHome: boolean | null;
     opponent: string | null;
+    site: "HOME" | "AWAY" | "NEUTRAL" | null;
   };
   shifts: Shift[];
 };
@@ -165,6 +167,7 @@ export default function ShiftDetailPanel({
   const [userSearch, setUserSearch] = useState("");
 
   const isStaff = currentUserRole === "ADMIN" || currentUserRole === "STAFF";
+  const studentCallTimeAllowed = isStaff || Boolean(group && studentCallTimeAppliesToEvent(group.event));
   const canReviewClaims = currentUserRole === "ADMIN";
   // Schedule is the only staffing authoring surface. Keeping this detail panel
   // read-only prevents direct mutations from bypassing the 10-minute buffer.
@@ -600,6 +603,7 @@ export default function ShiftDetailPanel({
                   area={area}
                   shifts={shifts}
                   eventAllDay={group.event.allDay}
+                  studentCallTimeAllowed={studentCallTimeAllowed}
                   isStaff={isStaff}
                   canReviewClaims={canReviewClaims}
                   canEdit={canEditPublishedSchedule}

@@ -60,12 +60,53 @@ struct ShiftTradeEvent: Codable {
     let sportCode: String?
     let opponent: String?
     let isHome: Bool?
+    let allDay: Bool?
+    let startsAt: Date?
+    let endsAt: Date?
+    let site: String?
+
+    var studentCallTimeAllowed: Bool {
+        guard let opponent,
+              !opponent.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return true
+        }
+        switch site?.uppercased() {
+        case "HOME": return true
+        case "AWAY", "NEUTRAL": return false
+        default: return isHome == true
+        }
+    }
 
     var compactTitle: String {
         if let sportCode, let opponent, !sportCode.isEmpty, !opponent.isEmpty {
             return "\(sportCode) \(isHome == false ? "at" : "vs") \(opponent)"
         }
         return summary ?? "Shift"
+    }
+}
+
+extension ShiftTradeShift {
+    /// Away and neutral Student rows show the event window. The effective call
+    /// window stays available for ordering and review urgency; these properties
+    /// are display-only.
+    var displayStartsAt: Date {
+        if workerType == "ST",
+           let event = shiftGroup?.event,
+           !event.studentCallTimeAllowed,
+           let startsAt = event.startsAt {
+            return startsAt
+        }
+        return effectiveStartsAt
+    }
+
+    var displayEndsAt: Date {
+        if workerType == "ST",
+           let event = shiftGroup?.event,
+           !event.studentCallTimeAllowed,
+           let endsAt = event.endsAt {
+            return endsAt
+        }
+        return effectiveEndsAt
     }
 }
 

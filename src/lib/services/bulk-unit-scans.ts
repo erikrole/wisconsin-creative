@@ -251,7 +251,7 @@ export async function scanKioskPickupBulkUnit(
 
 export async function stageKioskReservationPickupBulkUnit(
   tx: TxClient,
-  args: { bookingId: string; scanValue: string; deviceContext?: string | null },
+  args: { bookingId: string; scanValue: string; actorUserId?: string; deviceContext?: string | null },
 ): Promise<KioskUnitScanResult> {
   const booking = await tx.booking.findUnique({
     where: { id: args.bookingId },
@@ -417,7 +417,7 @@ export async function stageKioskReservationPickupBulkUnit(
   await tx.scanEvent.create({
     data: {
       bookingId: booking.id,
-      actorUserId: booking.requesterUserId,
+      actorUserId: args.actorUserId ?? booking.requesterUserId,
       scanType: "BULK_BIN",
       scanValue: args.scanValue,
       success: true,

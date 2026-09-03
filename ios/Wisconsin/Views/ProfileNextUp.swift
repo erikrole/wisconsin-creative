@@ -154,8 +154,8 @@ struct ProfileNextUpCard: View {
     /// not substitute the event time into the call-time position.
     private func shiftDetail(_ shift: MyShift) -> String {
         var parts = [shift.event.startsAt.formatted(.dateTime.weekday(.wide).month(.wide).day())]
-        if shift.workerType == "ST" {
-            parts.append("Call time \(shift.startsAt.formatted(date: .omitted, time: .shortened))")
+        if shift.workerType == "ST", let callStartsAt = shift.callStartsAt {
+            parts.append("Call time \(callStartsAt.formatted(date: .omitted, time: .shortened))")
         }
         return parts.joined(separator: " · ")
     }

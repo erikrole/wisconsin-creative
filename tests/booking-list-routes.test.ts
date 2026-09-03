@@ -140,6 +140,65 @@ beforeEach(() => {
 });
 
 describe("booking list routes", () => {
+  it("creates a staff shared travel-case reservation without personal notification attribution", async () => {
+    vi.mocked(createBooking).mockResolvedValueOnce({
+      id: "booking-shared",
+      title: "Football Travel Case",
+      requesterUserId: adminUser.id,
+      custodyScope: "SHARED",
+      bulkItems: [],
+    } as never);
+    const startsAt = new Date(Date.now() + 3_600_000);
+    const endsAt = new Date(startsAt.getTime() + 3_600_000);
+
+    const res = await postReservations(
+      post("/api/reservations", {
+        title: "Football Travel Case",
+        requesterUserId: "cm000000000000000000000001",
+        custodyScope: "SHARED",
+        locationId: "cm000000000000000000000002",
+        startsAt: startsAt.toISOString(),
+        endsAt: endsAt.toISOString(),
+        serializedAssetIds: ["cm000000000000000000000003"],
+        bulkItems: [],
+        shiftAssignmentId: "cm000000000000000000000004",
+      }),
+      { params: Promise.resolve({}) },
+    );
+
+    expect(res.status).toBe(201);
+    expect(createBooking).toHaveBeenCalledWith(expect.objectContaining({
+      kind: BookingKind.RESERVATION,
+      custodyScope: "SHARED",
+      requesterUserId: adminUser.id,
+      shiftAssignmentId: undefined,
+    }));
+    expect(createReservationLifecycleNotification).not.toHaveBeenCalled();
+  });
+
+  it("rejects a student attempt to create shared custody", async () => {
+    vi.mocked(requireAuth).mockResolvedValueOnce(studentUser);
+    const startsAt = new Date(Date.now() + 3_600_000);
+    const endsAt = new Date(startsAt.getTime() + 3_600_000);
+
+    const res = await postReservations(
+      post("/api/reservations", {
+        title: "Football Travel Case",
+        requesterUserId: "cm000000000000000000000001",
+        custodyScope: "SHARED",
+        locationId: "cm000000000000000000000002",
+        startsAt: startsAt.toISOString(),
+        endsAt: endsAt.toISOString(),
+        serializedAssetIds: ["cm000000000000000000000003"],
+        bulkItems: [],
+      }),
+      { params: Promise.resolve({}) },
+    );
+
+    expect(res.status).toBe(403);
+    expect(createBooking).not.toHaveBeenCalled();
+  });
+
   it("maps reservation overdue links to booked reservations past their end time", async () => {
     const res = await getReservations(
       get("/api/reservations?filter=overdue"),

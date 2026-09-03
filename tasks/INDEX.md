@@ -41,6 +41,7 @@ Audit files intentionally remain at root for now because the repo audit skills r
 - `event-checkout-assignments-plan-2026-09-03.md` - recover the event-custody migration safely, restore the reservation quality-of-life release, prove authenticated iOS booking reads, and gate any Emma Hansen cleanup through the shipped merge preview.
 - `event-checkout-assignments-plan-2026-09-02.md` - superseded event-assignee proposal retained for history.
 - `shared-travel-case-checkout-plan-2026-09-03.md` - custodian-neutral travel case/truck checkout with personally carried gear kept on separate personal checkouts.
+- `student-away-neutral-call-times-plan-2026-09-03.md` - suppress Student call-time projections for Away/road and Neutral events while retaining raw windows for staff and scheduling integrity; local source/native evidence passes, while authenticated/render/deployment gates remain.
 - `bookings-search-qol-plan-2026-08-30.md` - preserve Bookings list context, keep reservation creation globally available on the page, and add explicit global Search recovery.
 - `schedule-timeline-context-hardening-plan-2026-08-30.md` - end-to-end List/Week/Calendar browsing hardening is complete; the active follow-up brings the shared versioned staff crew editor and Home/Away/empty setup to all three views, with authenticated parity proof, matched review captures, and final shared-tree gates still tracked.
 - `list-state-preservation-plan-2026-08-26.md` - preserve Schedule and Items filters, view state, sort, and pagination across detail navigation and browser Back.

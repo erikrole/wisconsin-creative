@@ -459,7 +459,7 @@ export default function BookingDetailsSheet({
                 {booking && (
                   <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs leading-relaxed text-muted-foreground">
                     <span className="font-medium text-foreground/80">
-                      {booking.custodyScope === "SHARED" ? "Shared checkout" : booking.requester?.name ?? "Unknown requester"}
+                      {booking.custodyScope === "SHARED" ? (booking.kind === "RESERVATION" ? "Shared travel case" : "Shared checkout") : booking.requester?.name ?? "Unknown requester"}
                     </span>
                     <span aria-hidden="true">·</span>
                     {booking.refNumber && <span className="font-mono">{booking.refNumber}</span>}

@@ -85,6 +85,8 @@ const EMPTY_PICKER_SELECTION_STATE: EquipmentPickerSelectionState = {
 
 function formReducer(state: FormState, action: FormAction): FormState {
   switch (action.type) {
+    case "SET_CUSTODY_SCOPE":
+      return { ...state, custodyScope: action.value };
     case "SET_TIE_TO_EVENT":
       return { ...state, tieToEvent: action.value, selectedEvents: [] };
     case "SET_SPORT":
@@ -112,6 +114,7 @@ function formReducer(state: FormState, action: FormAction): FormState {
       return { ...state, notes: action.value };
     case "RESET":
       return {
+        custodyScope: action.defaults.custodyScope ?? "PERSON",
         tieToEvent: action.defaults.tieToEvent ?? true,
         sport: "",
         selectedEvents: [],
@@ -157,6 +160,8 @@ export function BookingWizard() {
 
   // ── Current user ──
   const { data: meData } = useCurrentUser();
+  const effectiveRole = meData?.preview?.role ?? meData?.role;
+  const canManageSharedCustody = effectiveRole === "ADMIN" || effectiveRole === "STAFF";
   const initialRequester = initialRequesterUserId ?? meData?.id ?? "";
   const firstLocationId = locations[0]?.id ?? "";
   const preferredLocationLoadedRef = useRef(false);
@@ -196,6 +201,7 @@ export function BookingWizard() {
 
   // ── Form state ──
   const [form, dispatch] = useReducer(formReducer, {
+    custodyScope: "PERSON",
     tieToEvent: config.defaultTieToEvent || !!initialSportCode,
     sport: initialSportCode || "",
     selectedEvents: [],
@@ -278,7 +284,7 @@ export function BookingWizard() {
 
   const candidatePayload = useMemo(() => {
     if (
-      !form.requester
+      (!form.requester && form.custodyScope === "PERSON")
       || !form.title.trim()
       || !form.locationId
       || form.selectedEvents.length === 0
@@ -286,14 +292,15 @@ export function BookingWizard() {
       || Number.isNaN(new Date(form.endsAt).getTime())
     ) return null;
     return {
-      requesterUserId: form.requester,
+      requesterUserId: form.requester || meData?.id || "",
+      custodyScope: form.custodyScope,
       title: form.title.trim(),
       locationId: form.locationId,
       startsAt: new Date(form.startsAt).toISOString(),
       endsAt: new Date(form.endsAt).toISOString(),
       eventIds: form.selectedEvents.map((event) => event.id),
     };
-  }, [form.endsAt, form.locationId, form.requester, form.selectedEvents, form.startsAt, form.title]);
+  }, [form.custodyScope, form.endsAt, form.locationId, form.requester, form.selectedEvents, form.startsAt, form.title, meData?.id]);
   const { data: reservationCandidates = [] } = useQuery({
     queryKey: ["reservationCandidates", candidatePayload],
     enabled: candidatePayload !== null,
@@ -400,7 +407,7 @@ export function BookingWizard() {
   // ── Step 1 validation ──
   function validateStep1(): string | null {
     if (!form.title.trim()) return "Give this booking a name";
-    if (!form.requester) return "Select who this is for";
+    if (form.custodyScope === "PERSON" && !form.requester) return "Select who this is for";
     if (!form.locationId) return "Choose a pickup location";
     if (reuseFromId && form.selectedEvents.length === 0) return "Choose the new event for this gear";
     if (
@@ -478,7 +485,8 @@ export function BookingWizard() {
 
     const payload: Record<string, unknown> = {
       title: form.title.trim(),
-      requesterUserId: form.requester,
+      requesterUserId: form.requester || meData?.id,
+      custodyScope: form.custodyScope,
       locationId: form.locationId,
       startsAt: new Date(form.startsAt).toISOString(),
       endsAt: new Date(form.endsAt).toISOString(),
@@ -488,7 +496,7 @@ export function BookingWizard() {
 
     if (kitId) payload.kitId = kitId;
     if (form.notes.trim()) payload.notes = form.notes.trim();
-    if (initialShiftAssignmentId) payload.shiftAssignmentId = initialShiftAssignmentId;
+    if (initialShiftAssignmentId && form.custodyScope === "PERSON") payload.shiftAssignmentId = initialShiftAssignmentId;
     if (form.selectedEvents.length > 0) {
       // Multi-event contract (D-031): client always sends `eventIds[]` sorted chronologically.
       // Server picks ordinal 0 as the canonical Booking.eventId and writes a BookingEvent
@@ -754,7 +762,7 @@ export function BookingWizard() {
         <Alert className="mb-5">
           <AlertCircleIcon />
           <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
-            <span>An existing reservation has the same person, title, and event but a different pickup window or location. Review it before creating another.</span>
+            <span>{form.custodyScope === "SHARED" ? "A shared travel-case reservation" : "An existing reservation for the same person"} has the same title and event but a different pickup window or location. Review it before creating another.</span>
             <Button variant="outline" asChild className="h-10 shrink-0">
               <a href={`/reservations/${reviewCandidate.id}`}>Review differences</a>
             </Button>
@@ -779,6 +787,7 @@ export function BookingWizard() {
         <WizardStep1
           form={form}
           dispatch={step1Dispatch}
+          canManageSharedCustody={canManageSharedCustody}
           config={config}
           users={users}
           locations={locations}
