@@ -112,27 +112,27 @@ beforeEach(() => {
 });
 
 describe("kiosk active checkout add item", () => {
-  it("returns an actionable family and location shortage before claiming a numbered unit", async () => {
+  it("lets an exact available unit scan override aggregate reservation commitments", async () => {
     const request = new Request("http://test/api/kiosk/checkout/checkout-1", {
       method: "POST",
       body: JSON.stringify({ actorId: "actor-1", scanValue: "94e068d1-21" }),
     });
 
     const response = await addActiveCheckoutItem(request, routeContext("checkout-1"));
-    const json = await response.json();
-
-    expect(json).toEqual({
-      success: false,
-      error: "Sony NP-FZ100 Battery #21 cannot be added: 0 available at Camp Randall Video Office. Check Battery Ops stock before retrying.",
+    expect(await response.json()).toEqual({
+      success: true,
+      message: "Sony NP-FZ100 Battery #21 added",
     });
-    expect(mocks.checkAvailability).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
-      locationId: "loc-1",
-      bulkItems: [{ bulkSkuId: "cmnrtquja0021jp04780v9kej", quantity: 1 }],
-      excludeBookingId: "checkout-1",
+    expect(mocks.checkAvailability).not.toHaveBeenCalled();
+    expect(mocks.bulkSkuUnitUpdateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ id: "unit-21" }),
     }));
-    expect(mocks.bulkSkuUnitUpdateMany).not.toHaveBeenCalled();
-    expect(mocks.upsertBulkBalancesAndMovements).not.toHaveBeenCalled();
-    expect(mocks.createAuditEntryTx).not.toHaveBeenCalled();
+    expect(mocks.upsertBulkBalancesAndMovements).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      locationId: "loc-1",
+      bookingId: "checkout-1",
+      items: [{ bulkSkuId: "cmnrtquja0021jp04780v9kej", quantity: 1 }],
+    }));
+    expect(mocks.createAuditEntryTx).toHaveBeenCalled();
   });
 
   it("uses the authenticated kiosk stock when the checkout originated elsewhere", async () => {
@@ -156,10 +156,7 @@ describe("kiosk active checkout add item", () => {
       success: true,
       message: "Sony NP-FZ100 Battery #21 added",
     });
-    expect(mocks.checkAvailability).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
-      locationId: "loc-1",
-      excludeBookingId: "checkout-1",
-    }));
+    expect(mocks.checkAvailability).not.toHaveBeenCalled();
     expect(mocks.upsertBulkBalancesAndMovements).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       locationId: "loc-1",
       bookingId: "checkout-1",

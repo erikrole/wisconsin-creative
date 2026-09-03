@@ -528,28 +528,11 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
         return { success: false, error: "Battery unit not found" };
       }
 
-      const availability = await checkAvailability(tx, {
-        // The scan proves this numbered unit is physically at the authenticated
-        // kiosk. An open checkout may have originated at another location, but
-        // the stock being handed over comes from the current kiosk's ledger.
-        locationId: kiosk.locationId,
-        startsAt: now,
-        endsAt: booking.endsAt,
-        serializedAssetIds: [],
-        bulkItems: [{ bulkSkuId: unit.bulkSkuId, quantity: 1 }],
-        bookingKind: BookingKind.CHECKOUT,
-        excludeBookingId: booking.id,
-      });
-      const shortage = availability.shortages.find((item) => item.bulkSkuId === unit.bulkSkuId);
-      if (shortage) {
-        return {
-          success: false,
-          error: `${unit.bulkSku.name} #${unit.unitNumber} cannot be added: ${shortage.available} available at ${kiosk.locationName}. Check Battery Ops stock before retrying.`,
-        };
-      }
-
       // Claim on effective availability: orphaned CHECKED_OUT flags with no
-      // active allocation self-heal here instead of failing the add.
+      // active allocation self-heal here instead of failing the add. This exact
+      // physical scan is stronger custody evidence than aggregate reservation
+      // demand, so overlapping BOOKED family quantities do not veto the unit.
+      // The kiosk stock movement below still enforces a non-negative ledger.
       const updatedUnit = await tx.bulkSkuUnit.updateMany({
         where: { id: unit.id, ...CLAIMABLE_BULK_UNIT_WHERE },
         data: { status: BulkUnitStatus.CHECKED_OUT },
