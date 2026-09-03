@@ -31,7 +31,8 @@
 - [x] Prove a Field House checkout can add an available unit from the Camp Randall kiosk balance without touching Field House stock.
 - [x] Reproduce the deployed false shortage when on-hand stock exists but overlapping booked family commitments reduce aggregate availability to zero.
 - [x] Let an exact available numbered-unit scan proceed without the reservation-commitment shortage veto while preserving the atomic unit claim, non-negative kiosk ledger, allocation, and audit write.
-- [ ] Deploy the corrected route and replay a real Camp Randall battery scan.
+- [x] Deploy the corrected route to production.
+- [ ] Replay a real Camp Randall battery scan.
 
 ## Verification
 - [x] Focused kiosk route and scan tests.
@@ -40,13 +41,13 @@
 - [x] `npm run codemap` and `npm run verify:docs` if owned maps or docs change.
 - [x] `git diff --check`.
 - [x] `npm run build:app`.
-- [ ] Corrected production deployment is Ready and aliased to `wisconsincreative.com`.
+- [x] Corrected production deployment is Ready and aliased to `wisconsincreative.com`.
 - [ ] Simulator or physical-kiosk runtime proof, or an explicit blocker.
 
 ## Review
-- Shipped: deployment `dpl_GghJV9fQZgnvtGziSafCNWEUVnNV` corrected the checkout-location mismatch but did not close the incident. The exact-unit follow-up is implemented locally and not yet shipped.
-- Verified: physical managed-iPad replay reproduced the aggregate `0 available at Camp Randall` veto even though Battery Ops reports available numbered units. The new regression proves an exact available unit proceeds even when aggregate reservation availability reports zero, while the guarded claim, Camp Randall stock movement, allocation, and audit write remain. The two focused active-checkout tests, 20 direct-checkout numbered-unit tests, TypeScript, focused ESLint, `build:app`, codemap/docs verification, and whitespace checks pass. One broader source-contract test remains red on an unrelated pre-existing dashboard requester string changed by shared-checkout work.
-- Deferred: production deployment completion and managed-iPad replay remain after the authorized commit and push.
-- Blocked: none; the user explicitly authorized shipping the hotfix.
+- Shipped: commit `2e97bc61` is pushed to `origin/main`. Production deployment `dpl_8r1fnvQkoTF8ZH3AJRdhHyKtwhCi` is Ready and aliased to `wisconsincreative.com`; exact available numbered-unit scans no longer run the overlapping-reservation aggregate shortage veto.
+- Verified: physical managed-iPad replay reproduced the old aggregate `0 available at Camp Randall` veto even though Battery Ops reports available numbered units. The new regression proves an exact available unit proceeds even when aggregate reservation availability reports zero, while the guarded claim, Camp Randall stock movement, allocation, and audit write remain. The two focused active-checkout tests, 20 direct-checkout numbered-unit tests, TypeScript, focused ESLint, `build:app`, migration preflight, production compile, codemap/docs verification, and whitespace checks pass. One broader source-contract test remains red on an unrelated pre-existing dashboard requester string changed by shared-checkout work.
+- Deferred: managed-iPad replay of the corrected production route.
+- Blocked: none.
 - Proof artifacts: reported screenshot plus local command output in this task.
-- Next slice or stop: commit and push the exact-unit correction, verify the production deployment, then replay one available Sony battery scan at Camp Randall.
+- Next slice or stop: replay one available Sony battery scan at Camp Randall and close the physical acceptance gate.
