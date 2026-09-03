@@ -481,7 +481,10 @@ describe("updateCheckout", () => {
 
     expect(checkAvailability).toHaveBeenCalledWith(
       mockTx,
-      expect.objectContaining({ excludeBookingId: "c-1" })
+      expect.objectContaining({
+        excludeBookingId: "c-1",
+        enforceSerializedTurnaroundBuffer: false,
+      })
     );
     expect(mockTx.assetAllocation.updateMany).toHaveBeenCalledWith({
       where: { bookingId: "c-1" },
@@ -490,6 +493,18 @@ describe("updateCheckout", () => {
         endsAt: newEnd,
       },
     });
+  });
+
+  it("keeps the turnaround buffer when an open checkout due time moves earlier", async () => {
+    mockTx.booking.findUnique.mockResolvedValue(makeExistingCheckout());
+    const earlierEnd = new Date("2026-04-10T16:00:00Z");
+
+    await updateCheckout("c-1", "actor-1", { endsAt: earlierEnd });
+
+    expect(checkAvailability).toHaveBeenCalledWith(
+      mockTx,
+      expect.objectContaining({ enforceSerializedTurnaroundBuffer: true }),
+    );
   });
 
   it("throws 409 on availability conflict", async () => {

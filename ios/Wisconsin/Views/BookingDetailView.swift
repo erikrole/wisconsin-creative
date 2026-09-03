@@ -64,8 +64,7 @@ struct BookingDetailView: View {
         let legacyAllowed = legacyCanAct(on: booking)
             && hasCapability("RESERVATION_EXTEND_OWN")
             && (booking.status == .booked || booking.status == .open)
-        return (booking.allows("extend") ?? legacyAllowed)
-            && !(booking.status == .open && returnInsight.hasUpcomingNeed)
+        return booking.allows("extend") ?? legacyAllowed
     }
 
     private var canCancelBooking: Bool {
@@ -880,7 +879,7 @@ private struct BookingOverviewSection: View {
                     Text(detailDate(booking.endsAt))
                         .font(.subheadline.weight(.medium))
                     if returnInsight.hasUpcomingNeed {
-                        Text(returnInsight.nextNeedAt.map { "Needed again \($0.gearShort). Extension unavailable." } ?? "Needed again soon. Extension unavailable.")
+                        Text(returnInsight.nextNeedAt.map { "Needed again \($0.gearShort). Extend only to a return time by then." } ?? "Needed again soon. Choose an earlier return time when extending.")
                             .font(.caption)
                             .foregroundStyle(Color.statusText(.orange))
                             .fixedSize(horizontal: false, vertical: true)

@@ -95,7 +95,7 @@ export function normalizeSignatureStrokes(
   strokes: SignatureStroke[],
 ): SignatureStroke[] {
   if (strokes.length < 1 || strokes.length > SIGNATURE_MAX_STROKES) {
-    throw new Error("Signature must contain between 1 and 32 strokes");
+    throw new Error(`Signature must contain between 1 and ${SIGNATURE_MAX_STROKES} strokes`);
   }
 
   return strokes.map((stroke) => {

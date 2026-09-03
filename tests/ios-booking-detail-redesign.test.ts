@@ -45,6 +45,14 @@ describe("iOS Booking Detail Item Detail alignment", () => {
     expect(detail).toContain('Label("Cancel Booking", systemImage: "xmark.circle")');
   });
 
+  it("keeps Extend available when later demand exists and explains the safe boundary", () => {
+    const extendPolicy = sliceBetween(detail, "private var canExtendBooking", "private var canCancelBooking");
+    expect(extendPolicy).toContain('booking.allows("extend") ?? legacyAllowed');
+    expect(extendPolicy).not.toContain("returnInsight.hasUpcomingNeed");
+    expect(detail).toContain("Extend only to a return time by then.");
+    expect(detail).not.toContain("Extension unavailable.");
+  });
+
   it("keeps operational details compact and removes duplicate identity and location", () => {
     const overview = sliceBetween(detail, "private struct BookingOverviewSection", "private struct EquipmentSection");
 
@@ -70,7 +78,7 @@ describe("iOS Booking Detail Item Detail alignment", () => {
     expect(overview).toContain(".font(.subheadline.weight(.medium))");
     expect(overview).toContain(".frame(width: 30, height: 30)");
     expect(overview).toContain(".padding(.vertical, 9)");
-    expect(detail).toContain('"Needed again soon. Extension unavailable."');
+    expect(detail).toContain('"Needed again soon. Choose an earlier return time when extending."');
     expect(detail).toContain('"Recorded when gear is picked up"');
   });
 

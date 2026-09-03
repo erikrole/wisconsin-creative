@@ -17,10 +17,10 @@
 - [x] Add and validate migration `0141_event_checkout_assignments` on a temporary Neon branch.
 - [x] Commit and deploy the additive schema/migration without the application feature bundle.
 - [x] Verify production migration health and old-code booking compatibility.
-- [ ] Restore, verify, commit, and deploy the reservation web/iOS feature bundle.
+- [x] Restore, verify, commit, and deploy the reservation web/iOS feature bundle.
 - [ ] Run authenticated `/api/me`, iOS Home dashboard, and Bookings acceptance checks.
-- [ ] Preview Emma Hansen's exact records and mutate only if the shipped eligibility rules permit it.
-- [ ] Add a release guard for physical schema changes without migration SQL.
+- [x] Preview Emma Hansen's exact records and mutate only if the shipped eligibility rules permit it.
+- [x] Add a release guard for physical schema changes without migration SQL.
 
 ## Stop Conditions
 - Stop if live migration history and local migration folders cannot be reconciled exactly.
@@ -33,5 +33,9 @@
 - Temporary Neon branch: all 297 existing bookings defaulted to `PERSON`; nullable assignee fields, indexes, foreign key, and representative booking reads passed. The rehearsal branch was deleted without applying production changes.
 - Restored history: local checksums for `0139_football_game_day_roles` and `0140_varsity_season_ownership` exactly match the applied production rows.
 - Production migration: Vercel applied only `0141_event_checkout_assignments`; post-deploy health reported 147/147 applied with no pending, failed, or database-only migrations. Both the primary and App Review deployments succeeded.
+- Application deployment: commit `482ff29b` is Ready in primary deployment `dpl_5jVRPtbcMRyqxfQM44qbYFTJy7HD` and App Review deployment `dpl_CmjWMpjBaJx15eT6hd6bNFYqfDYr`.
+- Authenticated production browser: Dashboard and Bookings rendered as the admin user with live booking rows and no console errors. Direct raw JSON route navigation was blocked by the browser surface, so exact `/api/me` and native iOS Home acceptance remain open.
+- Emma Hansen: the two Florida records are completed checkouts with different normalized titles, pickup locations, and time windows. The merge stop conditions apply, so no production record was mutated.
+- Release guard: CI now performs an offline Prisma schema diff against the base commit and requires migration SQL only when the diff contains physical DDL; 11 focused guard/prefix tests, TypeScript, and lint pass.
 - Repository-wide test inventory: 4,205 tests passed and 29 unrelated source-contract tests failed; the focused reservation slice passed 78/78.
-- Pending: application-feature deployment, authenticated API/native acceptance, Emma merge preview, and the migration-release guard.
+- Pending: direct authenticated `/api/me` and native iOS Home acceptance on a signed-in app/device.

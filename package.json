@@ -67,6 +67,7 @@
     "db:migrate:health": "node scripts/prisma-migrate-health.mjs",
     "db:bootstrap:empty": "node scripts/bootstrap-empty-database.mjs",
     "db:migrate:check": "node scripts/check-migration-prefixes.mjs",
+    "db:migrate:guard": "node scripts/check-schema-migration-pair.mjs",
     "db:check:dupe-allocations": "node --env-file=.env scripts/check-dupe-allocations.mjs",
     "db:setup": "node --env-file=.env scripts/setup-db.mjs",
     "db:seed": "node prisma/seed.mjs",

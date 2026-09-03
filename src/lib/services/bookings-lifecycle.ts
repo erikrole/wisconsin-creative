@@ -2148,6 +2148,9 @@ export async function updateCheckout(
       }
 
       if (updatesEquipment || updatesWindow) {
+        const extendsOpenCheckout = existing.status === BookingStatus.OPEN
+          && updates.endsAt !== undefined
+          && nextEndsAt > existing.endsAt;
         const availability = await checkAvailability(tx, {
           locationId: nextLocationId,
           startsAt: nextStartsAt,
@@ -2156,6 +2159,7 @@ export async function updateCheckout(
           bulkItems,
           excludeBookingId: bookingId,
           bookingKind: "CHECKOUT",
+          enforceSerializedTurnaroundBuffer: !extendsOpenCheckout,
         });
 
         if (availability.conflicts.length > 0 || availability.shortages.length > 0 || availability.unavailableAssets.length > 0) {
@@ -2588,6 +2592,10 @@ export async function extendBooking(
         bulkItems,
         excludeBookingId: bookingId,
         bookingKind: existing.kind,
+        enforceSerializedTurnaroundBuffer: !(
+          existing.kind === BookingKind.CHECKOUT
+          && existing.status === BookingStatus.OPEN
+        ),
       });
 
       // Shortages matter here too: extending bulk gear over a window where

@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Checkouts
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-26
+- Last Updated: 2026-09-03
 - Status: Active — V1 Shipped
 - Version: V1
 
@@ -17,7 +17,7 @@ Maintain the custody ledger for gear that has physically left or returned throug
 4. Status and availability logic remain derived from allocations, never authoritative stored status.
 5. Role and ownership controls follow `AREA_USERS.md`.
 6. `PENDING_PICKUP` checkout allocations block overlapping serialized-item reservations and checkouts because custody has not transferred yet but the gear is already committed.
-7. Serialized booking windows include a 60-minute turnaround buffer before the next pickup/reservation start in both directions: a new start must follow an existing return by at least 60 minutes, and a new return must precede an existing next start by at least 60 minutes. Bulk/countable availability remains overlap-based against committed quantities.
+7. Serialized booking windows include a 60-minute turnaround buffer before the next pickup/reservation start in both directions: a new start must follow an existing return by at least 60 minutes, and a new return must precede an existing next start by at least 60 minutes. The narrow exception is extending an existing `OPEN` checkout: its due time may move up to the next booking's actual start, but never through it. Bulk/countable availability remains overlap-based against committed quantities.
 8. Kiosk scan preflight gives item-level feedback for conflicts, shortages, unavailable assets, and turnaround risk immediately after an item is staged; completion still performs the authoritative transactional check.
 9. Checkout creation is guarded at the shared service boundary: non-kiosk callers must not create checkout custody, kiosk/source creates require at least one equipment item, duplicate multi-event links and duplicate bulk lines are rejected, invalid windows fail before availability work, and DB overlap races return booking conflict responses. The single exception is the admin-only reservation force-checkout path, which still requires a reason, availability checks, exact numbered-unit binding, and transactional audit evidence.
 
@@ -62,9 +62,10 @@ Legacy documentation below describes the retired web wizard contract and is pres
 4. Schedule mutations must preserve overlap and transaction constraints.
 
 ### Extend Checkout
-1. `OPEN` checkouts can be extended if no conflicts exist.
-2. Conflict must show blocking item and conflicting booking window.
+1. `OPEN` checkouts can be extended through free time before upcoming demand; the existence of a later booking does not remove Extend.
+2. The new due time may equal the next booking's start. Any true overlap still blocks and must show the blocking item and conflicting booking window.
 3. Web due-back and Extend controls use forward-only 15-minute steps. Extend opens at the first valid quarter-hour after both the stored due time and now; an untouched stored timestamp is never rewritten merely by opening a detail surface.
+4. Reservation creation and editing continue to enforce the standard 60-minute serialized turnaround buffer. Bulk shortages continue to block extensions, and extension writes retain serializable isolation, optimistic freshness, database overlap protection, audit history, and Live Activity refresh.
 
 ### Check In
 1. Partial check-in allowed for multi-item allocations.
@@ -317,6 +318,7 @@ The checkout detail page (`/checkouts/[id]`) uses the shared `BookingDetailPage`
 
 ## Change Log
 
+- 2026-09-03: **Active checkout extensions can use the remaining pre-booking window.** An upcoming serialized booking no longer removes Extend or consumes a mandatory 60-minute buffer when the current booking is an `OPEN` checkout. The borrower or operator may choose a due time up to the next booking's actual start; true overlap and bulk shortages still block. Reservation creation/editing retain the standard turnaround buffer, while optimistic freshness, serializable mutation handling, database overlap protection, audit history, and Live Activity scheduling remain unchanged. Native Booking Detail keeps Extend visible and names the next-needed boundary before the sheet opens.
 - 2026-08-26: **Availability feedback now distinguishes blockers from advisories.** Reservation and checkout pickers surface known serialized conflicts before selection, show conflict windows with return-by/available-after recovery guidance, and block review only for actual conflicts or an unavailable availability check. Kiosk scans announce item-specific conflict, shortage, transfer, condition, and timing feedback immediately; capacity-aware bulk turnaround notices avoid warnings when on-hand stock covers both requests. Final kiosk completion and server booking writes remain authoritative.
 - 2026-08-26: **Web due-back edits now match the kiosk's forward-only quarter-hour contract.** Shared booking detail, quick-view, legacy edit, and Extend controls continue to offer `00/15/30/45`, but off-grid values now round forward across hour/day boundaries instead of rounding backward or producing an invalid `:60` selection. Active checkout minimums start at the first valid quarter-hour after both checkout start and now, and Extend opens on the next valid step after the later of the stored due time or now. Existing timestamps remain unchanged until an operator confirms an edit. API, permission, audit, availability, and kiosk custody contracts are unchanged. Focused tests, TypeScript, full lint, and the app build pass; authenticated isolated-browser proof is unavailable in this workspace.
 - 2026-08-25: **Kiosk scans now explain item conflicts immediately.** A staged item receives item-specific feedback for unavailable status, serialized booking conflict, bulk shortage, or tight turnaround instead of only an unconditional success receipt; the cart remains editable and completion-time transactional availability enforcement is unchanged. Next-needed web rows now state the needed-at and return-by times, with a critical advisory for handoffs within two hours. The shared serialized buffer is enforced on both sides of a new booking window.

@@ -753,6 +753,17 @@ describe("signature artifact contract", () => {
       { points: Array.from({ length: SIGNATURE_MAX_POINTS_PER_STROKE + 1 }, () => point) },
     ])).error?.issues[0]?.message).toBe("One continuous pen stroke is too long; lift the Pencil and continue");
   });
+
+  it("keeps the artifact renderer's stroke-limit error aligned with the shared limit", () => {
+    const point = { x: 10, y: 20 };
+    const overLimit = Array.from(
+      { length: SIGNATURE_MAX_STROKES + 1 },
+      () => ({ points: [point] }),
+    );
+
+    expect(() => buildSignatureSvg(overLimit, DEFAULT_SIGNATURE_PEN_SETTINGS))
+      .toThrow(`Signature must contain between 1 and ${SIGNATURE_MAX_STROKES} strokes`);
+  });
 });
 
 describe("signature artifact importer contract", () => {

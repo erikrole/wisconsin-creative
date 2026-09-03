@@ -674,6 +674,56 @@ final class BookingsFilterScreenshotUITests: XCTestCase {
     }
 }
 
+/// Captures an open checkout whose camera is booked again later. This is the
+/// policy edge where Booking Detail used to remove Extend entirely even though
+/// there is still time available before the next booking starts.
+@MainActor
+final class BookingExtensionScreenshotUITests: XCTestCase {
+    override func setUpWithError() throws {
+        continueAfterFailure = false
+    }
+
+    func testUpcomingNeedExtensionCaptures() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "booking-detail"
+        app.launch()
+
+        XCTAssertTrue(app.staticTexts["Volleyball vs Nebraska"].waitForExistence(timeout: 20),
+                      "Booking Detail never rendered")
+        XCTAssertTrue(app.staticTexts.matching(
+            NSPredicate(format: "label BEGINSWITH %@", "Needed again")
+        ).firstMatch.waitForExistence(timeout: 15),
+                      "Upcoming commitment guidance never rendered")
+        XCTAssertTrue(app.buttons["Extend Return Date"].waitForExistence(timeout: 10),
+                      "Upcoming demand removed the eligible Extend action")
+
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "booking-extension-upcoming-need"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+    }
+
+    /// Baseline-only capture for the same fixture and viewport. Kept separate
+    /// because the old policy intentionally has no Extend action to assert.
+    func testUpcomingNeedExtensionBaselineCaptures() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "booking-detail"
+        app.launch()
+
+        XCTAssertTrue(app.staticTexts["Volleyball vs Nebraska"].waitForExistence(timeout: 20),
+                      "Booking Detail never rendered")
+        XCTAssertTrue(app.staticTexts.matching(
+            NSPredicate(format: "label BEGINSWITH %@", "Needed again")
+        ).firstMatch.waitForExistence(timeout: 15),
+                      "Upcoming commitment guidance never rendered")
+
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "booking-extension-upcoming-need-baseline"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+    }
+}
+
 /// Captures the Item detail overflow menu, where Needs Maintenance was added.
 ///
 /// Reuses the `item-edit` scenario because its harness already signs in a STAFF

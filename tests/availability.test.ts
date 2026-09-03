@@ -135,6 +135,30 @@ describe("checkSerializedConflicts", () => {
     }]);
   });
 
+  it("can check actual overlap without the turnaround buffer for active-checkout extensions", async () => {
+    const tx = createMockTx();
+    tx.assetAllocation.findMany.mockResolvedValue([]);
+
+    const startsAt = new Date("2026-04-01T08:00:00Z");
+    const endsAt = new Date("2026-04-01T12:00:00Z");
+    const result = await checkSerializedConflicts(availabilityTx(tx), {
+      serializedAssetIds: ["a-1"],
+      startsAt,
+      endsAt,
+      enforceTurnaroundBuffer: false,
+    });
+
+    expect(result).toEqual([]);
+    expect(tx.assetAllocation.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          startsAt: { lt: endsAt },
+          endsAt: { gt: startsAt },
+        }),
+      }),
+    );
+  });
+
   it("blocks reuse when an earlier booking runs past the next pickup time", async () => {
     const tx = createMockTx();
     tx.assetAllocation.findMany.mockResolvedValue([{

@@ -91,14 +91,20 @@ export async function checkSerializedConflicts(
     startsAt: Date;
     endsAt: Date;
     excludeBookingId?: string;
+    enforceTurnaroundBuffer?: boolean;
   }
 ): Promise<AvailabilityResult["conflicts"]> {
   if (args.serializedAssetIds.length === 0) {
     return [];
   }
 
-  const bufferedStartsAt = subtractSerializedTurnaroundBuffer(args.startsAt);
-  const bufferedEndsAt = addSerializedTurnaroundBuffer(args.endsAt);
+  const enforceTurnaroundBuffer = args.enforceTurnaroundBuffer !== false;
+  const conflictStartsAt = enforceTurnaroundBuffer
+    ? subtractSerializedTurnaroundBuffer(args.startsAt)
+    : args.startsAt;
+  const conflictEndsAt = enforceTurnaroundBuffer
+    ? addSerializedTurnaroundBuffer(args.endsAt)
+    : args.endsAt;
 
   const conflicts = await tx.assetAllocation.findMany({
     where: {
@@ -107,11 +113,12 @@ export async function checkSerializedConflicts(
       booking: {
         status: { in: serializedBlockingStatuses }
       },
-      // Apply the turnaround buffer in both directions: a new booking must
-      // start at least 60m after an existing booking ends, and it must end at
-      // least 60m before an existing next booking starts.
-      startsAt: { lt: bufferedEndsAt },
-      endsAt: { gt: bufferedStartsAt },
+      // Creation and reservation edits keep the turnaround buffer in both
+      // directions. Active-checkout extensions can opt into overlap-only
+      // checks so later demand informs the due time without categorically
+      // preventing an extension that still ends before that demand starts.
+      startsAt: { lt: conflictEndsAt },
+      endsAt: { gt: conflictStartsAt },
       ...(args.excludeBookingId ? { bookingId: { not: args.excludeBookingId } } : {})
     },
     select: {
@@ -563,6 +570,7 @@ export async function checkAvailability(
     excludeBookingId?: string;
     bookingKind?: BookingKind;
     includeBulkTurnaroundRisks?: boolean;
+    enforceSerializedTurnaroundBuffer?: boolean;
   }
 ): Promise<AvailabilityResult> {
   const [conflicts, shortages, unavailableAssets, upcomingCommitments, bulkTurnaroundRisks] = await Promise.all([
@@ -570,7 +578,8 @@ export async function checkAvailability(
       serializedAssetIds: args.serializedAssetIds,
       startsAt: args.startsAt,
       endsAt: args.endsAt,
-      excludeBookingId: args.excludeBookingId
+      excludeBookingId: args.excludeBookingId,
+      enforceTurnaroundBuffer: args.enforceSerializedTurnaroundBuffer,
     }),
     checkBulkShortages(tx, {
       locationId: args.locationId,

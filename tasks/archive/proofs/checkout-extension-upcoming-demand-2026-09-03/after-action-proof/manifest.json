@@ -1,0 +1,17 @@
+[
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "2865136C-3A9F-4CDC-B019-269F1A2E2AC2",
+        "deviceName" : "iPhone 16 Pro",
+        "exportedFileName" : "A1B8F167-3D29-471F-A58D-AFC87D61FD06.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "booking-extension-upcoming-need_0_17DC1600-14EB-4419-9FA4-EDC2AC166D95.png",
+        "timestamp" : 1788456518.859
+      }
+    ],
+    "testIdentifier" : "BookingExtensionScreenshotUITests/testUpcomingNeedExtensionCaptures()",
+    "testIdentifierURL" : "test://com.apple.xcode/Wisconsin/WisconsinUITests/BookingExtensionScreenshotUITests/testUpcomingNeedExtensionCaptures"
+  }
+]

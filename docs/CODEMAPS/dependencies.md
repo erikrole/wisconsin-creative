@@ -90,6 +90,7 @@
 - `db:check:dupe-allocations`: `node --env-file=.env scripts/check-dupe-allocations.mjs`
 - `db:migrate:check`: `node scripts/check-migration-prefixes.mjs`
 - `db:migrate:deploy`: `node scripts/prisma-migrate-deploy.mjs`
+- `db:migrate:guard`: `node scripts/check-schema-migration-pair.mjs`
 - `db:migrate:health`: `node scripts/prisma-migrate-health.mjs`
 - `db:migrate:new`: `prisma migrate dev`
 - `db:migrate:raw`: `prisma migrate dev --create-only`

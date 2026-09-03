@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Mobile Operations
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-31
+- Last Updated: 2026-09-03
 - Status: Active
 - Version: V1
 
@@ -24,6 +24,7 @@ Cheqroom mobile patterns show useful primitives but too much menu depth and too 
 6. Tap targets stay at 44px or larger.
 7. Native reservation equipment rows consume the server's top-level availability result before selection. Known serialized conflicts are disabled and block review; next-use, close-turnaround, transfer, and condition notices remain actionable advisories. A failed refresh preserves the last known result and blocks review until availability can be checked again.
 8. Native Schedule reads the complete selected event window through total-aware API pages; SwiftUI keeps row materialization lazy while the current past-event permission boundary remains unchanged. Native Event detail shows an approval-aware pending state for the signed-in student's own open-slot request, while claim review queues and approve/decline actions render only for Admins. Student Trade Board/Open Work payloads contain claim opportunities from the viewer's primary area only, except Photo and Graphics share one claim pool.
+9. Native Booking Detail keeps Extend available for an eligible `OPEN` checkout even when the gear is needed later. It names the next-needed boundary, while the server blocks any selected due time that would truly overlap that booking.
 
 ## Mobile Navigation Contract (V1)
 1. Primary destinations:
@@ -143,6 +144,8 @@ Navigation shell versioned roadmap: `tasks/sidebar-roadmap.md` (revised 2026-03-
 - **V3 (later)**: Bottom nav badge counts via live `/api/nav-counts` polling, game-day/shift context cards
 
 ## Change Log
+
+- 2026-09-03: **Upcoming demand now bounds checkout extension instead of hiding it.** Eligible open checkouts keep their persistent Extend action when gear has a later booking. Booking Detail names the next-needed boundary, and the authoritative mutation accepts the free window up to that booking's actual start while still rejecting true overlaps and bulk shortages. Reservation planning keeps its 60-minute serialized buffer; freshness snapshots, permission gates, serializable writes, audit evidence, and kiosk custody are unchanged.
 
 - 2026-08-31: **Native Trade Board no longer exposes other-area claim work.** The server-owned Trade Board and Open Work reads now limit Student opportunities to the signed-in worker's primary area, with Photo and Graphics as the only cross-area exception. Personal posts, pending claims, and history remain visible, and Staff/Admin retain global operational reads. Direct claims and approval-time revalidation use the same rule, so a stale or crafted client cannot bypass what the native sheet hides.
 

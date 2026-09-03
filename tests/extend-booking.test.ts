@@ -223,12 +223,20 @@ describe("extendBooking", () => {
 
     expect(checkAvailability).toHaveBeenCalledWith(
       mockTx,
-      expect.objectContaining({ excludeBookingId: "b-1" })
+      expect.objectContaining({
+        excludeBookingId: "b-1",
+        enforceSerializedTurnaroundBuffer: false,
+      })
     );
   });
 
-  it("works with BOOKED status", async () => {
+  it("keeps the turnaround buffer for BOOKED reservations", async () => {
     mockTx.booking.findUnique.mockResolvedValue(openBooking({ status: "BOOKED" }));
     await expect(extendBooking("b-1", "actor-1", newEnd)).resolves.toBeDefined();
+
+    expect(checkAvailability).toHaveBeenCalledWith(
+      mockTx,
+      expect.objectContaining({ enforceSerializedTurnaroundBuffer: true }),
+    );
   });
 });

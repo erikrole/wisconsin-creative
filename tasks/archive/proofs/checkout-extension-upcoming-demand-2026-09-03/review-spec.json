@@ -1,0 +1,60 @@
+{
+  "title": "Upcoming demand bounds Extend",
+  "eyebrow": "iOS · Wisconsin Creative",
+  "lede": "Booking Detail now keeps the checkout extension path available when gear is booked later, while making the next booking's start the explicit return boundary.",
+  "stats": [
+    {
+      "k": "Recovered window",
+      "v": "+60 min",
+      "n": "The reservation turnaround buffer no longer consumes otherwise free time for an already-open checkout.",
+      "tone": "good"
+    },
+    {
+      "k": "Upcoming need",
+      "v": "1 → 1",
+      "n": "The same future booking remains visible in both captures."
+    },
+    {
+      "k": "True overlaps allowed",
+      "v": "0",
+      "n": "The server still rejects any due time after the next booking starts."
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Matched iPhone 16 Pro capture",
+      "note": "Same iOS 26.5 simulator, fixture booking, equipment, upcoming reservation, and viewport. Only the extension policy and its explanatory copy differ.",
+      "pairs": [
+        {
+          "title": "Open checkout with a later reservation",
+          "sub": "The camera is due at 3:29 PM and booked again at 5:29 PM.",
+          "before": "/Users/role/Code/wisconsin-creative/tasks/archive/proofs/checkout-extension-upcoming-demand-2026-09-03/before-corrected/C4FBBC92-4631-40EE-B6DE-F2F4651CB7D5.png",
+          "beforeCap": "Upcoming demand declared the entire extension path unavailable.",
+          "after": "/Users/role/Code/wisconsin-creative/tasks/archive/proofs/checkout-extension-upcoming-demand-2026-09-03/after-action-proof/A1B8F167-3D29-471F-A58D-AFC87D61FD06.png",
+          "afterCap": "The next-needed time remains prominent, and Extend stays fixed at the bottom with that time as its hard boundary."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Upcoming demand was treated as a categorical stop",
+      "was": "Any future serialized booking hid Extend for an open checkout, even when hours of conflict-free time remained.",
+      "now": "Upcoming demand constrains the selected return time. The checkout can extend up to the next booking's actual start."
+    },
+    {
+      "h": "The safety boundary remains authoritative",
+      "was": "The shared 60-minute serialized buffer blocked the extension before a real overlap existed.",
+      "now": "Only this open-checkout extension path uses overlap-only serialized checks. Bulk shortages, true overlaps, optimistic freshness, serializable writes, audit history, and database overlap protection remain enforced."
+    }
+  ],
+  "verification": [
+    "<strong>94 focused Vitest checks</strong> pass across availability, extend/edit services, native source policy, and concurrency headers.",
+    "<strong>iPhone 16 Pro UI proof:</strong> the final XCTest asserts both upcoming-demand guidance and the visible <code>Extend Return Date</code> action.",
+    "<strong>Matched baseline:</strong> the same lowercase server-action fixture and iOS 26.5 destination reproduce the prior hidden-action behavior."
+  ],
+  "notes": [
+    "Reservation creation and reservation editing still require the standard 60-minute serialized turnaround buffer.",
+    "The captures use deterministic local fixtures; authenticated production and deployed behavior are separate release gates."
+  ]
+}

@@ -455,6 +455,7 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
         case "/api/my-shifts": return ScheduleFixtureAPI.myShifts
         case "/api/bookings": return BookingFixtureAPI.list(for: request)
         case "/api/bookings/\(BookingFixtureAPI.bookingId)": return BookingFixtureAPI.booking
+        case "/api/availability/check": return BookingFixtureAPI.availability
         case "/api/assets/\(AssetFixtureAPI.assetId)": return AssetFixtureAPI.asset
         case "/api/assets": return SearchFixtureAPI.assets(for: request)
         case "/api/reports/utilization": return ReportsFixtureAPI.utilization
@@ -740,10 +741,29 @@ enum BookingFixtureAPI {
                    "opponent":"Nebraska","isHome":true},
           "events":[{"id":"ev-1","summary":"Volleyball vs Nebraska","sportCode":"VB",
                      "opponent":"Nebraska","isHome":true}],
-          "allowedActions":["EXTEND","EDIT","CANCEL"],
+          "allowedActions":["extend","edit","cancel"],
           "updatedAt":"\(iso(-30))",
           "pickupKioskDevice":null
         }}
+        """.utf8)
+    }
+
+    /// An upcoming booking for one checked-out camera. It begins two hours
+    /// after the current due time, leaving useful extension room while still
+    /// giving Booking Detail a concrete next-use boundary to explain.
+    static var availability: Data {
+        Data("""
+        {
+          "conflicts":[],"shortages":[],"unavailableAssets":[],
+          "upcomingCommitments":[
+            {"assetId":"a-1","bookingId":"bk-next","bookingTitle":"Football vs Ohio State",
+             "bookingKind":"RESERVATION","status":"BOOKED",
+             "startsAt":"\(iso(300))","endsAt":"\(iso(480))",
+             "requesterName":"Jordan Lee","locationId":"loc-1",
+             "locationName":"Camp Randall Creative Desk"}
+          ],
+          "turnaroundRisks":[],"bulkTurnaroundRisks":[]
+        }
         """.utf8)
     }
 
