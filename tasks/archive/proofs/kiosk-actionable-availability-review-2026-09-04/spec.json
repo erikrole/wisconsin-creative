@@ -1,0 +1,59 @@
+{
+  "title": "Kiosk blocked-item recovery",
+  "eyebrow": "iOS · Wisconsin Creative · Kiosk",
+  "lede": "A blocked scan now explains the next safe move instead of leaving the operator at a dead end.",
+  "stats": [
+    {
+      "k": "Recovery choices",
+      "v": "3",
+      "n": "Three choices on a timing-resolvable conflict row",
+      "tone": "good"
+    },
+    {
+      "k": "Staged cart",
+      "v": "4",
+      "n": "Scanned items remain staged while the operator recovers",
+      "tone": "good"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Blocked checkout scan stage",
+      "note": "Same availability-conflicts DEBUG fixture, same four-item cart, and the same iPad Air 11-inch (M4) simulator viewport. The before capture is the inspected pre-recovery state from the preceding availability-status slice.",
+      "pairs": [
+        {
+          "title": "When the camera is already reserved",
+          "sub": "Look beneath each blocked cart row for the operator's next move.",
+          "before": "before/checkout.png",
+          "beforeCap": "The row identifies the reservation and still has a small remove control, but changing the return time or trying another item is left to operator inference.",
+          "after": "after/checkout.png",
+          "afterCap": "Each blocking row now has a dedicated What now? band with Remove item, Change return time, and Scan another item; the blocked row remains staged until the operator chooses.",
+          "focus": "recovery actions"
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "A blocked scan now has an explicit recovery path",
+      "was": "After understanding who held the item and when it was due back, the operator still had to decide how to recover from the blocked add.",
+      "now": "A timing-resolvable conflict row presents three direct choices: remove the staged item, edit the return time, or re-arm scanning for another item/unit; other blocking states show the applicable safe subset."
+    },
+    {
+      "h": "Changing the return time keeps availability trustworthy",
+      "was": "A populated cart could return from checkout details without a clearly documented fresh availability check for the new due time.",
+      "now": "The cart is preserved while details reopen, and returning to scanning refreshes availability against the edited return time before completion can proceed."
+    }
+  ],
+  "verification": [
+    "<strong>Focused source contracts:</strong> 10/10 passing across the actionable-availability, availability-status, reservation-battery-list, numbered-battery-rendering, and reservation-pickup suites.",
+    "<strong>Native gates:</strong> WisconsinKiosk Debug and Release builds pass for the iPad Air 11-inch (M4), iOS 26.5 simulator; project parity, drift, and iOS gap audits pass.",
+    "<strong>Visual:</strong> the matched before/after captures were inspected after installing the fresh Debug build; the after capture shows the new controls on both blocked rows.",
+    "<strong>Repository docs:</strong> <code>npm run verify:docs</code> remains blocked by pre-existing generated codemap drift in dirty parallel files, which was preserved rather than regenerated."
+  ],
+  "notes": [
+    "This is local source/build/simulator proof only. Physical managed-iPad interaction with the real scanner/camera and production deployment remain open gates.",
+    "The before image is the previously captured, inspected availability-status result for the same availability-conflicts fixture and viewport, reused as the exact pre-recovery baseline rather than reconstructed by hand.",
+    "Scan another item/unit intentionally leaves the blocked row staged; Remove item is the explicit action that removes it. No API, schema, permission, allocation, audit, or transactional completion contract changed."
+  ]
+}

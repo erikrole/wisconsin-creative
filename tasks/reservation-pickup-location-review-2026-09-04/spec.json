@@ -1,0 +1,61 @@
+{
+  "title": "Reservation Pickup Location Cleanup",
+  "eyebrow": "Web reservations - Wisconsin Creative",
+  "lede": "The reservation flow now answers one operational question clearly: where will this gear be picked up? Only the two active counters remain selectable while event venues stay intact as schedule context.",
+  "stats": [
+    {
+      "k": "Pickup choices",
+      "v": "3 to 2",
+      "n": "Field House is removed from the reservation selector; Camp Randall and Kohl Center remain",
+      "tone": "good"
+    },
+    {
+      "k": "Event venue",
+      "v": "Separate",
+      "n": "Selecting a Field House event no longer overwrites the pickup counter"
+    },
+    {
+      "k": "Focused tests",
+      "v": "70 pass",
+      "n": "Allowlist, create/edit/draft routes, event defaults, and reservation UI contracts",
+      "tone": "good"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Matched selector capture",
+      "note": "Fixture capture at the same viewport and scroll position; the only intended visual difference is the removed Field House option.",
+      "pairs": [
+        {
+          "title": "Reservation Step 1 pickup menu",
+          "sub": "The menu is open so the available pickup counters are directly comparable; 92,878 of 490,000 pixels changed (18.95%), beginning at the removed row and expected downstream reflow.",
+          "before": "tasks/reservation-pickup-location-review-2026-09-04/before/pickup.png",
+          "beforeCap": "Source-control baseline: Camp Randall Stadium, Kohl Center, and UW Field House were offered.",
+          "after": "tasks/reservation-pickup-location-review-2026-09-04/after/pickup.png",
+          "afterCap": "Current behavior: only Camp Randall Stadium and Kohl Center are offered."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "The reservation menu exposed an unsupported counter",
+      "was": "The shared location catalog flowed directly into the web reservation picker, so UW Field House could be selected as a pickup location.",
+      "now": "A reservation-scoped allowlist keeps Camp Randall and Kohl Center in the picker and bulk reservation control. Server checks reject unsupported or inactive reservation locations across create, edit, candidate, and draft paths."
+    },
+    {
+      "h": "Event selection could silently choose the pickup counter",
+      "was": "Selecting an event copied its mapped venue into the reservation location, even when that venue was not an operational pickup counter.",
+      "now": "Event selection still derives title and timing, but pickup remains an explicit counter choice. Existing event venues and historical Field House records are preserved."
+    }
+  ],
+  "verification": [
+    "<strong>Focused tests:</strong> 70 passing across pickup allowlist, reservation create/edit/draft routes, event defaults, and booking UI contracts.",
+    "<strong>Web gates:</strong> <code>npx tsc --noEmit --pretty false</code>, <code>npm run lint</code>, and <code>npm run build:app</code> pass.",
+    "<strong>Review capture:</strong> matched before/after fixture screenshots were captured at 700x700; 92,878 of 490,000 pixels changed (18.95%), with the difference bounded to the removed option row and expected content reflow below it."
+  ],
+  "notes": [
+    "The global location catalog was not deleted or filtered: Field House remains available for event venue mapping, inventory context, and historical records.",
+    "No database rows were changed, no migration was needed, and no deployment or authenticated production acceptance was performed."
+  ]
+}

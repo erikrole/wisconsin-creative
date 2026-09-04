@@ -1,0 +1,59 @@
+{
+  "title": "Checkout Merge Repair",
+  "eyebrow": "Web · Wisconsin Creative",
+  "lede": "Staff and admins can now select compatible open event checkouts and consolidate them into one auditable custody record when a duplicate checkout splits an event's gear.",
+  "stats": [
+    {
+      "k": "Selection",
+      "v": "2–25",
+      "n": "Explicit merge scope on the Checkouts list"
+    },
+    {
+      "k": "Mutation",
+      "v": "1 tx",
+      "n": "Serializable custody and history reparenting"
+    },
+    {
+      "k": "Kiosk",
+      "v": "No change",
+      "n": "Kiosk remains the checkout creation and scan surface"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Capture status",
+      "note": "A matched before/after screenshot pair is intentionally not included. The local protected Checkouts route reached the app but could not render because this checkout has no DATABASE_URL or DIRECT_URL; production was not changed. The pair must be captured against a controlled authenticated fixture after deployment.",
+      "pairs": []
+    }
+  ],
+  "changesHeading": "What changed, and why",
+  "changes": [
+    {
+      "h": "Duplicate checkouts were stranded as separate list records",
+      "was": "The Checkouts list had no way to select two same-event open checkouts for repair, so a duplicate battery checkout remained split from the original custody record.",
+      "now": "Staff/admin users can select compatible open checkouts and choose <code>Merge matching checkouts</code>; the oldest checkout survives and the other records become cancelled history."
+    },
+    {
+      "h": "A visible merge could lose physical custody history",
+      "was": "Reparenting only the visible item lines would risk leaving scan sessions, stock movements, numbered-unit allocations, photos, reports, and return activity attached to the cancelled source.",
+      "now": "One serializable transaction moves custody-linked rows, numbered battery units, bulk quantities, and live-activity references, then writes before/after audit receipts for the target and each source."
+    },
+    {
+      "h": "Same event is necessary but not sufficient",
+      "was": "A broad same-title or same-person merge could combine different event windows, locations, people, or started/returned custody.",
+      "now": "Preview and mutation require exact event set, title, requester metadata, custody scope, location, time window, and source reservation compatibility, and reject partial, completed, excluded, duplicate, or already-returned custody."
+    }
+  ],
+  "verification": [
+    "<strong>Focused checkout suite:</strong> 11 tests pass across service, route, and UI/source contracts.",
+    "<strong>TypeScript:</strong> <code>npx tsc --noEmit --pretty false --incremental false</code> passes.",
+    "<strong>Lint/build:</strong> targeted ESLint, full ESLint, and <code>npm run build:app</code> pass; codemaps are current and <code>git diff --check</code> passes.",
+    "<strong>Full repository suite:</strong> 589 files pass, but 33 existing worktree failures remain in unrelated iOS, schedule, availability, reservation, and system-hardening areas; the new checkout suite is green.",
+    "<strong>Runtime:</strong> local route verification is blocked by the missing database connection environment; authenticated browser proof, deployment, and a controlled live-data merge remain open."
+  ],
+  "notes": [
+    "This is an explicit repair action, not automatic deduplication. The UI only offers it for staff/admin users and compatible OPEN checkouts.",
+    "Do not run it against Ryan's records until the two checkout rows are confirmed to represent the same event, person/custody scope, location, and window, with no returned items.",
+    "The implementation is local only; no production data was modified and no deployment was performed."
+  ]
+}

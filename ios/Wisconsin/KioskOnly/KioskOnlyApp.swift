@@ -1,4 +1,5 @@
 import Foundation
+import AVFoundation
 import SwiftUI
 import UIKit
 
@@ -83,6 +84,24 @@ struct WisconsinKioskApp: App {
                 targetBooking: nil, pendingScanValues: [], createdAt: Date(), ambiguity: .none
             ))
             kioskStore.screen = .checkout(user: kioskUser)
+        case .availabilityConflicts:
+            kioskStore.setCart(KioskFixtures.availabilityConflictCart, for: kioskUser.id)
+            kioskStore.setIntent(KioskFlowIntent(
+                action: .checkout, source: .person, identifiedUser: kioskUser,
+                expectedRequester: nil,
+                selectedEvent: nil,
+                targetBooking: nil, pendingScanValues: [], createdAt: Date(), ambiguity: .none
+            ))
+            kioskStore.screen = .checkout(user: kioskUser)
+        case .availabilityRejected:
+            kioskStore.setCart(Array(KioskFixtures.availabilityConflictCart.dropFirst(2)), for: kioskUser.id)
+            kioskStore.setIntent(KioskFlowIntent(
+                action: .checkout, source: .person, identifiedUser: kioskUser,
+                expectedRequester: nil,
+                selectedEvent: nil,
+                targetBooking: nil, pendingScanValues: [], createdAt: Date(), ambiguity: .none
+            ))
+            kioskStore.screen = .checkout(user: kioskUser)
         case .badge:
             kioskStore.screen = .success(KioskSuccessInfo(
                 kind: .checkout,
@@ -96,6 +115,8 @@ struct WisconsinKioskApp: App {
             kioskStore.screen = .idle
         case .pickup:
             kioskStore.screen = .pickup(bookingId: "co-1", userId: kioskUser.id)
+        case .reservationBatteryPickup:
+            kioskStore.screen = .pickup(bookingId: "rs-1", userId: kioskUser.id)
         case .returnFlow, .returnAccepted:
             kioskStore.screen = .return(bookingId: "co-1", userId: kioskUser.id)
         case .identity:
@@ -200,6 +221,80 @@ enum Haptics {
         UISelectionFeedbackGenerator().selectionChanged()
     }
 
+}
+
+/// A short local failure cue for the shared kiosk scanner surfaces. The sound
+/// is generated as PCM so the kiosk target needs no bundled media asset or
+/// project-file registration; visual, haptic, and VoiceOver feedback remain
+/// authoritative if audio is unavailable or muted.
+@MainActor
+enum KioskScanFeedbackSound {
+    private static var player: AVAudioPlayer?
+
+    static func playFailure() {
+        do {
+            let session = AVAudioSession.sharedInstance()
+            try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
+            try session.setActive(true)
+
+            let next = try AVAudioPlayer(data: failureWave)
+            next.volume = 0.72
+            next.prepareToPlay()
+            player = next
+            player?.play()
+        } catch {
+            // Audio is additive feedback; a session/audio-route failure must
+            // never block the visual, haptic, or spoken rejection signal.
+        }
+    }
+
+    private static let failureWave: Data = {
+        let sampleRate: UInt32 = 44_100
+        let channels: UInt16 = 1
+        let bitsPerSample: UInt16 = 16
+        let duration = 0.18
+        let sampleCount = Int(Double(sampleRate) * duration)
+        let bytesPerSample = bitsPerSample / 8
+        let byteRate = sampleRate * UInt32(channels) * UInt32(bytesPerSample)
+        let blockAlign = channels * bytesPerSample
+
+        var pcm = Data(capacity: sampleCount * Int(bytesPerSample))
+        for index in 0..<sampleCount {
+            let progress = Double(index) / Double(sampleCount)
+            let frequency = progress < 0.52 ? 620.0 : 360.0
+            let phase = 2.0 * Double.pi * frequency * Double(index) / Double(sampleRate)
+            let attack = min(1.0, Double(index) / 600.0)
+            let release = max(0.0, 1.0 - progress)
+            let amplitude = 0.24 * attack * release
+            var sample = Int16(sin(phase) * amplitude * Double(Int16.max))
+            withUnsafeBytes(of: &sample) { pcm.append(contentsOf: $0) }
+        }
+
+        var wave = Data()
+        func appendASCII(_ value: String) {
+            wave.append(contentsOf: value.utf8)
+        }
+        func appendLittleEndian<T: FixedWidthInteger>(_ value: T) {
+            var littleEndian = value.littleEndian
+            withUnsafeBytes(of: &littleEndian) { wave.append(contentsOf: $0) }
+        }
+
+        appendASCII("RIFF")
+        appendLittleEndian(UInt32(36 + pcm.count))
+        appendASCII("WAVE")
+        appendASCII("fmt ")
+        appendLittleEndian(UInt32(16))
+        appendLittleEndian(UInt16(1))
+        appendLittleEndian(channels)
+        appendLittleEndian(sampleRate)
+        appendLittleEndian(byteRate)
+        appendLittleEndian(blockAlign)
+        appendLittleEndian(bitsPerSample)
+        appendASCII("data")
+        appendLittleEndian(UInt32(pcm.count))
+        wave.append(pcm)
+        return wave
+    }()
 }
 
 enum StatusTone: String, CaseIterable {
@@ -329,6 +424,11 @@ enum KioskFixtureScenario: String {
     case checkoutDetailsLinked = "checkout-details-linked"
     /// Step 2 of checkout — the scan stage, with a part-filled cart.
     case scanning = "scanning"
+    /// The scan stage with one reserved and one checked-out item conflict.
+    case availabilityConflicts = "availability-conflicts"
+    /// The scan stage after a conflicted candidate was rejected before cart
+    /// insertion; accepted items remain visible and the rejection is audible.
+    case availabilityRejected = "availability-rejected"
     /// The scan stage in the moment right after a scan lands.
     case scanAccepted = "scan-accepted"
     /// The terminal success screen with an earned badge.
@@ -339,6 +439,8 @@ enum KioskFixtureScenario: String {
     case sleep = "sleep"
     /// Reservation pickup checklist.
     case pickup = "pickup"
+    /// Reservation pickup checklist with a quantity of numbered batteries.
+    case reservationBatteryPickup = "reservation-battery-pickup"
     /// Return checklist.
     case returnFlow = "return"
     /// The return checklist in the moment right after a scan lands.
@@ -532,6 +634,42 @@ enum KioskFixtures {
                       imageUrl: nil, bulkSkuId: "sku-bat", unitNumber: 4),
     ]
 
+    static let availabilityConflictCart: [KioskCartItem] = [
+        KioskCartItem(id: "it-1", name: "FX3 2", tagName: "CAM-014", type: "serialized",
+                      imageUrl: nil, bulkSkuId: nil, unitNumber: nil),
+        KioskCartItem(id: "it-2", name: "Sennheiser MKE 600", tagName: "AUD-007", type: "serialized",
+                      imageUrl: nil, bulkSkuId: nil, unitNumber: nil),
+        KioskCartItem(id: "it-3", name: "Manfrotto 504X Tripod", tagName: "SUP-031", type: "serialized",
+                      imageUrl: nil, bulkSkuId: nil, unitNumber: nil),
+        KioskCartItem(id: "it-4", name: "V-Mount Battery #4", tagName: "BAT-004", type: "numbered_bulk",
+                      imageUrl: nil, bulkSkuId: "sku-bat", unitNumber: 4),
+    ]
+
+    static let availabilityConflicts = KioskCheckoutAvailabilityResult(
+        conflicts: [
+            KioskCheckoutAvailabilityResult.SerializedConflict(
+                assetId: "it-1",
+                conflictingBookingId: "reservation-1",
+                conflictingBookingTitle: "Football Practice",
+                conflictingBookingRequesterName: "Erik Role",
+                conflictingBookingKind: "RESERVATION",
+                conflictingBookingStatus: "BOOKED",
+                startsAt: at(8, 15),
+                endsAt: at(8, 16, 30)
+            ),
+            KioskCheckoutAvailabilityResult.SerializedConflict(
+                assetId: "it-2",
+                conflictingBookingId: "checkout-2",
+                conflictingBookingTitle: "Volleyball Media",
+                conflictingBookingRequesterName: "Maya Fitzgerald",
+                conflictingBookingKind: "CHECKOUT",
+                conflictingBookingStatus: "OPEN",
+                startsAt: hours(1),
+                endsAt: hours(4)
+            ),
+        ]
+    )
+
     static let badge = EarnedBadgeReward(
         id: "eb-1",
         definitionId: "bd-1",
@@ -654,7 +792,11 @@ enum KioskFixtures {
     // MARK: Checkout detail
 
     static func checkoutDetailJSON(id: String) -> String {
-        """
+        if KioskFixtureScenario.active == .reservationBatteryPickup {
+            return reservationBatteryPickupDetailJSON(id: id)
+        }
+
+        return """
         {"id":"\(id)","title":"Volleyball vs Minnesota","refNumber":"CO-1043","status":"OPEN",
          "requesterId":"\(primaryUser.id)","endsAt":"\(iso(hours(6)))",
          "scanSummary":{"serializedTotal":3,"numberedBulkTotal":1,"numberedBulkCompleted":0},
@@ -668,6 +810,28 @@ enum KioskFixtures {
            {"id":"it-4","tagName":"BAT-004","name":"V-Mount Battery #4","returned":false,
             "type":"numbered_bulk","bulkSkuId":"sku-bat","bulkSkuName":"V-Mount Battery",
             "unitNumber":4,"imageUrl":null}
+         ]}
+        """
+    }
+
+    static func reservationBatteryPickupDetailJSON(id: String) -> String {
+        let batteryItems = (1...10).map { index in
+            """
+            {"id":"bulk-battery:slot:\(index)","tagName":"#\(index)",
+             "name":"V-Mount Battery \(index)","returned":false,
+             "type":"numbered_bulk","bulkSkuId":"sku-bat",
+             "bulkSkuName":"V-Mount Battery","unitNumber":null,"imageUrl":null}
+            """
+        }.joined(separator: ",")
+
+        return """
+        {"id":"\(id)","title":"Volleyball vs Minnesota","refNumber":"RS-2204","status":"BOOKED",
+         "requesterId":"\(primaryUser.id)","endsAt":"\(iso(hours(6)))",
+         "scanSummary":{"serializedTotal":1,"numberedBulkTotal":10,"numberedBulkCompleted":0},
+         "items":[
+           {"id":"asset-1","tagName":"CAM-014","name":"Sony FX3","returned":false,
+            "type":"serialized","bulkSkuId":null,"bulkSkuName":null,"unitNumber":null,"imageUrl":null},
+           \(batteryItems)
          ]}
         """
     }

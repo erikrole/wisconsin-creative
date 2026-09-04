@@ -64,6 +64,59 @@ describe("checkSerializedConflicts", () => {
     expect(result[0]!.conflictingBookingId).toBe("b-other");
   });
 
+  it("returns booking kind and status so clients can name the conflict", async () => {
+    const tx = createMockTx();
+    tx.assetAllocation.findMany.mockResolvedValue([
+      {
+        assetId: "a-reserved",
+        bookingId: "b-reserved",
+        startsAt: new Date("2026-04-01T08:00:00Z"),
+        endsAt: new Date("2026-04-01T17:00:00Z"),
+        booking: { title: "Football Practice", kind: "RESERVATION", status: "BOOKED", requester: { name: "Erik Role" } },
+      },
+      {
+        assetId: "a-checked-out",
+        bookingId: "b-checked-out",
+        startsAt: new Date("2026-04-01T08:00:00Z"),
+        endsAt: new Date("2026-04-01T17:00:00Z"),
+        booking: { title: "Volleyball Media", kind: "CHECKOUT", status: "OPEN", requester: { name: "Maya Fitzgerald" } },
+      },
+    ]);
+
+    const result = await checkSerializedConflicts(availabilityTx(tx), {
+      serializedAssetIds: ["a-reserved", "a-checked-out"],
+      startsAt: new Date("2026-04-01T10:00:00Z"),
+      endsAt: new Date("2026-04-01T12:00:00Z"),
+    });
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        assetId: "a-reserved",
+        conflictingBookingRequesterName: "Erik Role",
+        conflictingBookingKind: "RESERVATION",
+        conflictingBookingStatus: "BOOKED",
+      }),
+      expect.objectContaining({
+        assetId: "a-checked-out",
+        conflictingBookingRequesterName: "Maya Fitzgerald",
+        conflictingBookingKind: "CHECKOUT",
+        conflictingBookingStatus: "OPEN",
+      }),
+    ]);
+    expect(tx.assetAllocation.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      select: expect.objectContaining({
+        booking: {
+          select: {
+            title: true,
+            kind: true,
+            status: true,
+            requester: { select: { name: true } },
+          },
+        },
+      }),
+    }));
+  });
+
   it("allows reuse when an earlier booking ends exactly at the serialized turnaround buffer", async () => {
     const tx = createMockTx();
     tx.assetAllocation.findMany.mockResolvedValue([]);

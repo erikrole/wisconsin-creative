@@ -11,6 +11,7 @@ import { createReservationLifecycleNotification } from "@/lib/services/notificat
 import { loadReservationRules } from "@/lib/services/reservation-rules";
 import { sanitizeCollaboratorBooking } from "@/lib/collaborator-gear";
 import { deferCompanionProjectionRefreshForCommittedMutation } from "@/lib/services/companion-projection-publisher";
+import { assertSupportedReservationPickupLocation } from "@/lib/services/reservation-pickup-location";
 
 async function replayConsumedDraftReservation(sourceDraftId: string, actorUserId: string) {
   const consumption = await db.auditLog.findFirst({
@@ -76,6 +77,7 @@ export const POST = withAuth(async (req, { user }) => {
     throw new HttpError(400, "Request body must be valid JSON");
   }
   const body = sanitizeBookingFields(createReservationSchema.parse(rawBody));
+  await assertSupportedReservationPickupLocation(body.locationId);
   if (body.custodyScope === BookingCustodyScope.SHARED) {
     requirePermission(user.role, "checkout", "manage_custody");
     body.requesterUserId = user.id;

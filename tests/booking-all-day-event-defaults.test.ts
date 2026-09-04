@@ -25,7 +25,7 @@ describe("booking defaults from linked all-day events", () => {
     expect(result.title).toBe("Football Media Day Shoot");
     expect(result.startsAt).toBe("2026-07-07T00:00");
     expect(result.endsAt).toBe("2026-07-09T00:00");
-    expect(result.locationId).toBe("loc-1");
+    expect("locationId" in result).toBe(false);
   });
 
   it("keeps non-game event summaries even when sport metadata exists", () => {

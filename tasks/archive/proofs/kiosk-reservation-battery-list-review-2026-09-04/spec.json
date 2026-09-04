@@ -1,0 +1,58 @@
+{
+  "title": "Kiosk reservation battery checklist",
+  "eyebrow": "iOS · Wisconsin Creative · Kiosk",
+  "lede": "A reservation for ten batteries is now presented as one quantity to fulfill, while actual unit numbers remain visible only after the physical batteries are scanned.",
+  "stats": [
+    {
+      "k": "Checklist rows",
+      "v": "10 → 1",
+      "n": "Ten misleading numbered placeholders become one quantity row",
+      "tone": "good"
+    },
+    {
+      "k": "Custody truth",
+      "v": "unchanged",
+      "n": "Actual scanned unit numbers remain recorded and visible",
+      "tone": "good"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Reservation pickup",
+      "note": "Same reservation-battery fixture, same cart, same iPad Air 11-inch (M4), iOS 26.5 simulator viewport.",
+      "pairs": [
+        {
+          "title": "What the operator scans",
+          "sub": "Read the right-hand checklist and the battery guidance above the action.",
+          "before": "before/pickup.png",
+          "beforeCap": "The source checklist expanded a quantity of ten into Battery 1 through Battery 10, which suggested those exact units were required.",
+          "after": "after/pickup.png",
+          "afterCap": "The checklist now says 10 × V-Mount Battery and ANY UNITS; the physical unit number is shown after a successful scan rather than treated as a required list number."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Quantity was presented as identity",
+      "was": "Unscanned reservation slots were shown as #1, #2, and so on, even though the pickup scan service accepts any available unit from the reserved family.",
+      "now": "Numbered placeholders are grouped into one quantity row. The slot IDs still drive confirmation, while actual scanned unit tags remain visible for custody."
+    },
+    {
+      "h": "Battery guidance now answers the likely question",
+      "was": "The list did not explain whether the printed number had to match.",
+      "now": "The Kiosk explicitly says to scan any available units and that printed unit numbers do not need to match the list."
+    }
+  ],
+  "verification": [
+    "<strong>Focused native source-contract tests:</strong> 6/6 passing across reservation pickup, grouped battery presentation, and safe unit-chip rendering.",
+    "<strong>Native:</strong> WisconsinKiosk Debug and Release builds pass; project parity, drift, and iOS gap audits pass.",
+    "<strong>Visual:</strong> matched baseline/final captures inspected on the available iPad Air 11-inch (M4), iOS 26.5 simulator.",
+    "<strong>Docs:</strong> <code>npm run verify:docs</code> remains blocked by pre-existing generated codemap drift in architecture, backend, and areas; dirty codemaps were preserved."
+  ],
+  "notes": [
+    "This changes presentation only. The pickup scan and confirmation APIs remain unchanged, and exact physical unit allocation/audit semantics remain authoritative.",
+    "The Kiosk target has no dedicated UI-test target in the current project; the repeatable DEBUG fixture was launched with simctl after native compilation. No live credentials or production data were used.",
+    "Physical managed-iPad/scanner acceptance and deployment remain open."
+  ]
+}

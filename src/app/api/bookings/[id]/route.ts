@@ -15,6 +15,7 @@ import {
   parseBookingSnapshotHeader,
   staleBookingError,
 } from "@/lib/booking-concurrency";
+import { assertSupportedReservationPickupLocation } from "@/lib/services/reservation-pickup-location";
 
 type BookingPatchBody = z.infer<typeof updateBookingSchema>;
 
@@ -107,6 +108,9 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
   const detail = await getBookingDetail(id);
   if (user.role === "COLLABORATOR" && detail.kind !== "RESERVATION") {
     throw new HttpError(403, "Collaborators cannot edit checkouts");
+  }
+  if (detail.kind === "RESERVATION" && body.locationId !== undefined) {
+    await assertSupportedReservationPickupLocation(body.locationId);
   }
 
   // Optimistic locking: every edit client must send the snapshot it edited.

@@ -35,7 +35,6 @@ export function deriveFromPrimary(events: CalendarEvent[], sport: string) {
     title,
     startsAt: toLocalDateTimeValue(start),
     endsAt: toLocalDateTimeValue(end),
-    locationId: primary.location?.id,
   };
 }
 

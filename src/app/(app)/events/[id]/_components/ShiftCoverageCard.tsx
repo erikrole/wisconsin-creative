@@ -260,7 +260,7 @@ export function ShiftCoverageCard({
             // Empty area placeholder
             ...(shifts.length === 0 ? [
               <TableRow key={`empty-${area}`} striped={false} className="border-border/40">
-                  <TableCell colSpan={isStaffOrAdmin ? 4 : 5} className="py-3 text-sm text-muted-foreground">
+                <TableCell colSpan={(isStaffOrAdmin ? 4 : 5) - (studentCallTimeAllowed ? 0 : 1)} className="py-3 text-sm text-muted-foreground">
                   No {areaLabel(area).toLowerCase()} slots yet.
                 </TableCell>
               </TableRow>

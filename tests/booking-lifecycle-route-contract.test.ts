@@ -11,6 +11,12 @@ vi.mock("@/lib/services/bookings", () => ({
   updateCheckout: vi.fn(),
 }));
 
+vi.mock("@/lib/db", () => ({
+  db: {
+    location: { findUnique: vi.fn() },
+  },
+}));
+
 vi.mock("@/lib/services/booking-rules", () => ({
   getAllowedBookingActions: vi.fn(() => ["edit"]),
   requireBookingAction: vi.fn(),
@@ -25,6 +31,7 @@ vi.mock("@sentry/nextjs", () => ({
 }));
 
 import { requireAuth } from "@/lib/auth";
+import { db } from "@/lib/db";
 import { createAuditEntry } from "@/lib/audit";
 import { getBookingDetail, updateCheckout, updateReservation } from "@/lib/services/bookings";
 import { requireBookingAction } from "@/lib/services/booking-rules";
@@ -89,6 +96,7 @@ beforeEach(() => {
   vi.mocked(requireBookingAction).mockResolvedValue(bookingActionResult(baseDetail));
   vi.mocked(updateCheckout).mockResolvedValue(checkoutUpdateResult(baseDetail));
   vi.mocked(updateReservation).mockResolvedValue(reservationUpdateResult({ ...baseDetail, kind: "RESERVATION" }));
+  vi.mocked(db.location.findUnique).mockResolvedValue({ active: true, name: "Camp Randall" } as never);
 });
 
 describe("booking lifecycle route contract", () => {
@@ -239,5 +247,21 @@ describe("booking lifecycle route contract", () => {
       notes: undefined,
     }, new Date("2026-06-01T09:00:00.000Z"));
     expect(updateCheckout).not.toHaveBeenCalled();
+  });
+
+  it("rejects Field House as a reservation pickup location before dispatching the update", async () => {
+    vi.mocked(getBookingDetail).mockResolvedValue(bookingDetail({ ...baseDetail, kind: "RESERVATION" }));
+    vi.mocked(db.location.findUnique).mockResolvedValue({ active: true, name: "UW Field House" } as never);
+
+    const res = await PATCH(
+      request(
+        { locationId: "cm000000000000000000000007" },
+        { "if-unmodified-since": "Mon, 01 Jun 2026 09:00:00 GMT" },
+      ),
+      { params: Promise.resolve({ id: baseDetail.id }) },
+    );
+
+    expect(res.status).toBe(400);
+    expect(updateReservation).not.toHaveBeenCalled();
   });
 });

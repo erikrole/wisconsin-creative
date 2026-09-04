@@ -15,6 +15,10 @@ const mocks = vi.hoisted(() => ({
   findBulkUnitByScanValue: vi.fn(),
   findAssetByScanValue: vi.fn(),
   checkAvailability: vi.fn(),
+  bookingSerializedItemFindUnique: vi.fn(),
+  bookingSerializedItemCreate: vi.fn(),
+  bookingSerializedItemUpdate: vi.fn(),
+  assetAllocationCreate: vi.fn(),
   upsertBulkBalancesAndMovements: vi.fn(),
   createAuditEntryTx: vi.fn(),
 }));
@@ -75,6 +79,12 @@ beforeEach(() => {
     bulkStockMovement: { create: mocks.bulkStockMovementCreate },
     bookingBulkItem: { upsert: mocks.bookingBulkItemUpsert },
     bookingBulkUnitAllocation: { create: mocks.bookingBulkUnitAllocationCreate },
+    bookingSerializedItem: {
+      findUnique: mocks.bookingSerializedItemFindUnique,
+      create: mocks.bookingSerializedItemCreate,
+      update: mocks.bookingSerializedItemUpdate,
+    },
+    assetAllocation: { create: mocks.assetAllocationCreate },
   }));
   mocks.userFindFirst.mockResolvedValue({ id: "actor-1", role: "STAFF" });
   mocks.bookingFindFirst.mockResolvedValue({
@@ -121,6 +131,8 @@ beforeEach(() => {
     turnaroundRisks: [],
     bulkTurnaroundRisks: [],
   });
+  mocks.findAssetByScanValue.mockResolvedValue(null);
+  mocks.bookingSerializedItemFindUnique.mockResolvedValue(null);
 });
 
 describe("kiosk active checkout add item", () => {
@@ -220,5 +232,47 @@ describe("kiosk active checkout add item", () => {
     expect(mocks.upsertBulkBalancesAndMovements).not.toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       locationId: "loc-field-house",
     }));
+  });
+
+  it("names the person, item, and deadline when a reservation blocks a serialized add", async () => {
+    mocks.findBulkUnitByScanValue.mockResolvedValue(null);
+    mocks.findAssetByScanValue.mockResolvedValue({
+      id: "asset-fx3-2",
+      assetTag: "CAM-014",
+      name: "FX3 2",
+      imageUrl: null,
+      status: "AVAILABLE",
+      category: { name: "Camera" },
+    });
+    mocks.checkAvailability.mockResolvedValue({
+      conflicts: [{
+        assetId: "asset-fx3-2",
+        conflictingBookingId: "reservation-1",
+        conflictingBookingTitle: "Football Practice",
+        conflictingBookingRequesterName: "Erik Role",
+        conflictingBookingKind: "RESERVATION",
+        conflictingBookingStatus: "BOOKED",
+        startsAt: new Date("2026-09-12T19:00:00.000Z"),
+        endsAt: new Date("2026-09-12T21:30:00.000Z"),
+      }],
+      shortages: [],
+      unavailableAssets: [],
+      upcomingCommitments: [],
+      turnaroundRisks: [],
+      bulkTurnaroundRisks: [],
+    });
+
+    const request = new Request("http://test/api/kiosk/checkout/checkout-1", {
+      method: "POST",
+      body: JSON.stringify({ actorId: "actor-1", scanValue: "fx3-2" }),
+    });
+
+    const response = await addActiveCheckoutItem(request, routeContext("checkout-1"));
+    expect(await response.json()).toEqual({
+      success: false,
+      error: "Erik Role has reserved the FX3 2 until Sep 12 at 4:30 PM",
+    });
+    expect(mocks.bookingSerializedItemCreate).not.toHaveBeenCalled();
+    expect(mocks.assetAllocationCreate).not.toHaveBeenCalled();
   });
 });

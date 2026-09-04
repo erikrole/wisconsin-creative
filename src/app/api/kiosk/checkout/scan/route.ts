@@ -4,6 +4,7 @@ import { ok } from "@/lib/http";
 import { findAssetByScanValue } from "@/lib/services/kiosk-scan";
 import { findBulkUnitByScanValue } from "@/lib/services/bulk-unit-scans";
 import { checkoutScanBody } from "@/lib/schemas/kiosk";
+import { formatAvailabilityDeadline } from "@/lib/availability-copy";
 
 /**
  * Scan an item for kiosk checkout.
@@ -69,6 +70,7 @@ export const POST = withKiosk(async (req) => {
       kind: "CHECKOUT",
     },
     select: {
+      endsAt: true,
       booking: {
         select: {
           requester: { select: { name: true } },
@@ -78,7 +80,8 @@ export const POST = withKiosk(async (req) => {
   });
 
   if (activeAllocation) {
-    const error = `${asset.assetTag} is checked out by ${activeAllocation.booking.requester.name}`;
+    const itemName = asset.name || asset.assetTag;
+    const error = `${activeAllocation.booking.requester.name} has checked out the ${itemName} until ${formatAvailabilityDeadline(activeAllocation.endsAt)}`;
     return ok({ success: false, error });
   }
 

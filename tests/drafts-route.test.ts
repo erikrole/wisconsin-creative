@@ -21,7 +21,7 @@ vi.mock("@/lib/db", () => ({
       findFirst: vi.fn(),
       findMany: vi.fn(),
     },
-    location: { findFirst: vi.fn() },
+    location: { findFirst: vi.fn(), findUnique: vi.fn() },
   },
 }));
 
@@ -108,6 +108,11 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(requireAuth).mockResolvedValue(user);
   vi.mocked(db.location.findFirst).mockResolvedValue(location({ id: "cm000000000000000000000002" }));
+  vi.mocked(db.location.findUnique).mockResolvedValue(location({
+    id: "cm000000000000000000000002",
+    active: true,
+    name: "Camp Randall",
+  }));
   mockTx.auditLog.create.mockResolvedValue({});
 });
 
@@ -447,6 +452,27 @@ describe("POST /api/drafts", () => {
 
     expect(res.status).toBe(400);
     expect(db.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("rejects Field House reservation drafts before saving", async () => {
+    vi.mocked(db.location.findUnique).mockResolvedValue(location({
+      id: "cm000000000000000000000003",
+      active: true,
+      name: "UW Field House",
+    }));
+
+    const res = await POST(
+      makePostRequest({
+        kind: "RESERVATION",
+        title: "Field House draft",
+        locationId: "cm000000000000000000000003",
+      }),
+      noParams,
+    );
+
+    expect(res.status).toBe(400);
+    expect(db.$transaction).not.toHaveBeenCalled();
+    expect(mockTx.booking.create).not.toHaveBeenCalled();
   });
 });
 

@@ -68,6 +68,8 @@ struct KioskCheckoutView: View {
     @State private var showEditContextConfirm = false
     @State private var lastScanAt: Date?
     @State private var pendingScanIdentities: Set<String> = []
+    @State private var queuedScanValues: [String] = []
+    @State private var isProcessingScan = false
     /// The item the last successful scan added, held while its confirmation is
     /// on the stage. Cleared on the same timer as the feedback banner.
     @State private var lastAccepted: KioskAcceptedScan?
@@ -194,6 +196,35 @@ struct KioskCheckoutView: View {
             // Capture hook: the scan stage is only reachable after the details
             // step is satisfied, which no fixture can express through the API.
             if KioskFixtureScenario.active == .scanning { checkoutContextReady = true }
+            if KioskFixtureScenario.active == .availabilityConflicts {
+                isLinkedToEvent = false
+                selectedEventId = nil
+                customPurpose = "Volleyball vs Minnesota"
+                checkoutContextReady = true
+                availabilityResult = KioskFixtures.availabilityConflicts
+                hasVerifiedAvailability = true
+                if let conflict = KioskFixtures.availabilityConflicts.conflicts.first,
+                   let item = KioskFixtures.availabilityConflictCart.first(where: { $0.id == conflict.assetId }) {
+                    lastResult = .error(KioskAvailabilityCopy.conflictMessage(for: conflict, itemTitle: item.name))
+                }
+            }
+            if KioskFixtureScenario.active == .availabilityRejected {
+                isLinkedToEvent = false
+                selectedEventId = nil
+                customPurpose = "Volleyball vs Minnesota"
+                checkoutContextReady = true
+                availabilityResult = KioskCheckoutAvailabilityResult()
+                availabilityError = nil
+                hasVerifiedAvailability = true
+                if let conflict = KioskFixtures.availabilityConflicts.conflicts.first,
+                   let item = KioskFixtures.availabilityConflictCart.first(where: { $0.id == conflict.assetId }) {
+                    lastResult = .error(
+                        KioskAvailabilityCopy.rejectedScan(
+                            KioskAvailabilityCopy.conflictMessage(for: conflict, itemTitle: item.name)
+                        )
+                    )
+                }
+            }
             if KioskFixtureScenario.active == .scanAccepted {
                 checkoutContextReady = true
                 // The confirmation only exists in the seconds after a real
@@ -483,10 +514,17 @@ struct KioskCheckoutView: View {
                     ScrollView {
                         LazyVStack(spacing: 0) {
                             ForEach(Array(groupedScannedItems.enumerated()), id: \.element.id) { index, group in
+                                let issue = availabilityIssue(for: group)
                                 KioskCartGroupRow(
                                     group: group,
-                                    availabilityIssue: availabilityIssue(for: group),
-                                    onRemove: { removeGroup(group) }
+                                    availabilityIssue: issue,
+                                    onRemove: { removeGroup(group) },
+                                    onChangeReturnTime: issue?.canChangeReturnTime == true
+                                        ? { editReturnTime() }
+                                        : nil,
+                                    onScanAnother: issue?.isBlocking == true
+                                        ? { prepareForNextScan(after: group) }
+                                        : nil
                                 )
                                 .id(group.id)
                                 .background(group.contains(scannedItems.last) ? KioskSurface.sunken : Color.clear)
@@ -624,49 +662,90 @@ struct KioskCheckoutView: View {
             return
         }
         pendingScanIdentities.insert(normalizedScan)
+        queuedScanValues.append(value)
+        processNextScanIfNeeded()
+    }
+
+    /// Keep rapid scanner input ordered. Availability must be checked against
+    /// the current cart before a candidate becomes visible as accepted; doing
+    /// that serially prevents two out-of-order responses from bypassing the
+    /// candidate preflight or losing a valid scan.
+    private func processNextScanIfNeeded() {
+        guard !isProcessingScan, let value = queuedScanValues.first else { return }
+        isProcessingScan = true
+        let normalizedScan = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
 
         Task {
-            defer { pendingScanIdentities.remove(normalizedScan) }
+            defer {
+                pendingScanIdentities.remove(normalizedScan)
+                if !queuedScanValues.isEmpty { queuedScanValues.removeFirst() }
+                isProcessingScan = false
+                processNextScanIfNeeded()
+            }
+
             do {
                 let result = try await KioskAPI.shared.kioskCheckoutScan(actorId: userId, scanValue: value)
+                guard result.success, let item = result.item else {
+                    showFeedback(.error(KioskAvailabilityCopy.rejectedScan(result.error ?? "Could not add item")))
+                    return
+                }
+
+                let cartItem = KioskCartItem(
+                    id: item.id,
+                    name: item.name,
+                    tagName: item.tagName,
+                    type: item.type,
+                    imageUrl: item.imageUrl,
+                    bulkSkuId: item.bulkSkuId,
+                    unitNumber: item.unitNumber
+                )
+                var updated = store.cart(for: userId)
+                guard !updated.contains(where: { $0.id == cartItem.id }) else {
+                    showFeedback(.duplicate("Already scanned"))
+                    return
+                }
+
+                // Preflight the candidate before putting it in the visible
+                // cart. A reservation conflict is a rejected scan, not an
+                // accepted item that happens to make completion impossible.
+                let candidateCart = updated + [cartItem]
+                guard let preflight = await refreshAvailability(for: candidateCart, applyResult: false) else {
+                    showFeedback(.error(
+                        "Scan rejected; \(cartItem.itemListPrimaryTitle) was not added because availability could not be verified."
+                    ))
+                    return
+                }
+                let candidateGroup = KioskCartDisplayGroup(id: cartItem.id, items: [cartItem])
+                if let candidateIssue = availabilityIssue(for: candidateGroup, result: preflight), candidateIssue.isBlocking {
+                    let feedback = scanAvailabilityFeedback(for: cartItem, result: preflight)
+                        ?? .error("Scan rejected; \(cartItem.itemListPrimaryTitle) was not added because it is unavailable.")
+                    showFeedback(feedback)
+                    return
+                }
+
+                // The scan queue is serial, but the cart can still be changed
+                // by an explicit remove action while the preflight is in flight.
+                // Re-read it before admitting the candidate.
+                updated = store.cart(for: userId)
+                guard !updated.contains(where: { $0.id == cartItem.id }) else {
+                    showFeedback(.duplicate("Already scanned"))
+                    return
+                }
+                updated.append(cartItem)
+                store.setCart(updated, for: userId)
+                applyAvailabilityResult(preflight)
                 earnedBadges.appendUnique(contentsOf: result.earnedBadges ?? [])
-                if result.success, let item = result.item {
-                    // Merge into current MainActor state, not the cart snapshot
-                    // captured before this request. Parallel scans may complete
-                    // in either order and must never overwrite one another.
-                    var updated = store.cart(for: userId)
-                    if !updated.contains(where: { $0.id == item.id }) {
-                        let cartItem = KioskCartItem(
-                            id: item.id,
-                            name: item.name,
-                            tagName: item.tagName,
-                            type: item.type,
-                            imageUrl: item.imageUrl,
-                            bulkSkuId: item.bulkSkuId,
-                            unitNumber: item.unitNumber
-                        )
-                        updated.append(cartItem)
-                        store.setCart(updated, for: userId)
-                        let preflight = await refreshAvailability(for: updated)
-                        lastAccepted = KioskAcceptedScan(
-                            title: cartItem.itemListPrimaryTitle,
-                            subtitle: cartItem.itemListSecondaryTitle,
-                            progress: "\(updated.count) item\(updated.count == 1 ? "" : "s") scanned"
-                        )
-                        if let scanIssue = preflight.flatMap({ scanAvailabilityFeedback(for: cartItem, result: $0) }) {
-                            showFeedback(scanIssue)
-                        } else if result.locationMismatch == true {
-                            showFeedback(.warning(result.locationMessage ?? "\(item.name) added, location checked"))
-                        } else if preflight == nil {
-                            showFeedback(.warning("\(cartItem.itemListPrimaryTitle) added, but availability could not be verified. Check before checkout."))
-                        } else {
-                            showFeedback(.success(result.locationMessage ?? item.name))
-                        }
-                    } else {
-                        showFeedback(.duplicate("Already scanned"))
-                    }
+                lastAccepted = KioskAcceptedScan(
+                    title: cartItem.itemListPrimaryTitle,
+                    subtitle: cartItem.itemListSecondaryTitle,
+                    progress: "\(updated.count) item\(updated.count == 1 ? "" : "s") scanned"
+                )
+                if let scanIssue = scanAvailabilityFeedback(for: cartItem, result: preflight) {
+                    showFeedback(scanIssue)
+                } else if result.locationMismatch == true {
+                    showFeedback(.warning(result.locationMessage ?? "\(item.name) added, location checked"))
                 } else {
-                    showFeedback(.error(result.error ?? "Could not add item"))
+                    showFeedback(.success(result.locationMessage ?? item.name))
                 }
             } catch {
                 let message = (error as? APIError)?.errorDescription ?? "Scan failed"
@@ -698,12 +777,23 @@ struct KioskCheckoutView: View {
 
     private func showFeedback(_ feedback: ScanFeedback) {
         withAnimation { lastResult = feedback }
+        switch feedback {
+        case .error, .duplicate:
+            lastAccepted = nil
+        case .success, .warning:
+            break
+        }
         // Tactile + spoken signal so the staffer doesn't need to read the
         // banner — ankle-deep in a noisy floor environment.
         switch feedback {
         case .success: Haptics.success()
-        case .duplicate, .warning: Haptics.warning()
-        case .error: Haptics.error()
+        case .warning: Haptics.warning()
+        case .duplicate:
+            Haptics.warning()
+            KioskScanFeedbackSound.playFailure()
+        case .error:
+            Haptics.error()
+            KioskScanFeedbackSound.playFailure()
         }
         UIAccessibility.post(notification: .announcement, argument: feedback.message)
         // Cancel any prior dismiss timer — otherwise two scans within 3s race:
@@ -727,6 +817,46 @@ struct KioskCheckoutView: View {
         checkoutContextReady = true
         store.resetInactivity()
         Haptics.success()
+        let cart = store.cart(for: userId)
+        if !cart.isEmpty {
+            Task { await refreshAvailability(for: cart, endsAt: dueBackAt) }
+        }
+        DispatchQueue.main.async {
+            HIDScannerFocusGate.allowScannerFocusNow()
+            scannerCaptureEnabled = true
+        }
+    }
+
+    /// Open the existing details step without discarding the scan cart. This
+    /// is the direct recovery path for a conflict whose reservation window can
+    /// be avoided by choosing an earlier return time.
+    private func editReturnTime() {
+        feedbackDismissTask?.cancel()
+        lastAccepted = nil
+        withAnimation { lastResult = nil }
+        scannerCaptureEnabled = false
+        focusedCheckoutField = nil
+        checkoutContextReady = false
+        store.resetInactivity()
+        Haptics.selection()
+        UIAccessibility.post(
+            notification: .announcement,
+            argument: "Edit the return date and time. Scanned items will stay in the cart."
+        )
+    }
+
+    /// Restore the scan target after an operator has read a blocked-item
+    /// message. The item remains visible in the cart so the operator can still
+    /// remove it explicitly; this action only makes the next scan immediate.
+    private func prepareForNextScan(after group: KioskCartDisplayGroup) {
+        feedbackDismissTask?.cancel()
+        lastAccepted = nil
+        withAnimation { lastResult = nil }
+        scannerCaptureEnabled = false
+        store.resetInactivity()
+        Haptics.selection()
+        let itemLabel = group.isBulkGroup ? "another unit" : "another item"
+        UIAccessibility.post(notification: .announcement, argument: "Ready to scan \(itemLabel).")
         DispatchQueue.main.async {
             HIDScannerFocusGate.allowScannerFocusNow()
             scannerCaptureEnabled = true
@@ -868,28 +998,35 @@ struct KioskCheckoutView: View {
     @discardableResult
     private func refreshAvailability(
         for cart: [KioskCartItem],
-        endsAt requestedEndsAt: Date? = nil
+        endsAt requestedEndsAt: Date? = nil,
+        applyResult: Bool = true
     ) async -> KioskCheckoutAvailabilityResult? {
         let requestToken = availabilityRequests.begin()
         guard let locationId = store.info?.locationId, !cart.isEmpty else {
-            availabilityResult = KioskCheckoutAvailabilityResult()
-            availabilityError = nil
-            hasVerifiedAvailability = false
+            if applyResult {
+                availabilityResult = KioskCheckoutAvailabilityResult()
+                availabilityError = nil
+                hasVerifiedAvailability = false
+            }
             isCheckingAvailability = false
             return nil
         }
         let endsAt = requestedEndsAt ?? dueBackAt
         guard endsAt > Date().addingTimeInterval(60) else {
-            availabilityResult = KioskCheckoutAvailabilityResult()
-            availabilityError = "Choose a return time later than pickup"
-            hasVerifiedAvailability = false
+            if applyResult {
+                availabilityResult = KioskCheckoutAvailabilityResult()
+                availabilityError = "Choose a return time later than pickup"
+                hasVerifiedAvailability = false
+            }
             isCheckingAvailability = false
             return nil
         }
 
         isCheckingAvailability = true
-        hasVerifiedAvailability = false
-        availabilityError = nil
+        if applyResult {
+            hasVerifiedAvailability = false
+            availabilityError = nil
+        }
         defer {
             if availabilityRequests.owns(requestToken) { isCheckingAvailability = false }
         }
@@ -901,8 +1038,9 @@ struct KioskCheckoutView: View {
                 endsAt: endsAt
             )
             guard availabilityRequests.owns(requestToken) else { return nil }
-            availabilityResult = result
-            hasVerifiedAvailability = true
+            if applyResult {
+                applyAvailabilityResult(result)
+            }
             return result
         } catch {
             guard availabilityRequests.owns(requestToken) else { return nil }
@@ -912,34 +1050,58 @@ struct KioskCheckoutView: View {
         }
     }
 
-    private func availabilityIssue(for group: KioskCartDisplayGroup) -> KioskCartAvailabilityIssue? {
+    private func applyAvailabilityResult(_ result: KioskCheckoutAvailabilityResult) {
+        availabilityResult = result
+        availabilityError = nil
+        hasVerifiedAvailability = true
+    }
+
+    private func availabilityIssue(
+        for group: KioskCartDisplayGroup,
+        result: KioskCheckoutAvailabilityResult? = nil
+    ) -> KioskCartAvailabilityIssue? {
+        let availability = result ?? availabilityResult
         let ids = Set(group.items.map(\.id))
         let bulkSkuIds = Set(group.items.compactMap(\.bulkSkuId))
 
-        if availabilityResult.unavailableAssets.contains(where: { ids.contains($0.assetId) }) {
-            return KioskCartAvailabilityIssue(tone: .error, message: "Unavailable")
+        if let unavailable = availability.unavailableAssets.first(where: { ids.contains($0.assetId) }) {
+            return KioskCartAvailabilityIssue(
+                tone: KioskAvailabilityCopy.unavailableTone(for: unavailable.status),
+                message: KioskAvailabilityCopy.unavailableLabel(for: unavailable.status),
+                isBlocking: true
+            )
         }
-        if availabilityResult.conflicts.contains(where: { ids.contains($0.assetId) }) {
-            return KioskCartAvailabilityIssue(tone: .error, message: "Conflict")
+        if let conflict = availability.conflicts.first(where: { ids.contains($0.assetId) }) {
+            let state = KioskAvailabilityCopy.conflictState(for: conflict)
+            return KioskCartAvailabilityIssue(
+                tone: state.tone,
+                message: state.label,
+                isBlocking: true,
+                canChangeReturnTime: true
+            )
         }
-        if availabilityResult.shortages.contains(where: { bulkSkuIds.contains($0.bulkSkuId) }) {
-            return KioskCartAvailabilityIssue(tone: .error, message: "Short")
+        if availability.shortages.contains(where: { bulkSkuIds.contains($0.bulkSkuId) }) {
+            return KioskCartAvailabilityIssue(tone: .error, message: "Short", isBlocking: true)
         }
-        let serializedRisks = availabilityResult.turnaroundRisks.filter { ids.contains($0.assetId) }
-        let bulkRisks = availabilityResult.bulkTurnaroundRisks.filter { bulkSkuIds.contains($0.bulkSkuId) }
+        let serializedRisks = availability.turnaroundRisks.filter { ids.contains($0.assetId) }
+        let bulkRisks = availability.bulkTurnaroundRisks.filter { bulkSkuIds.contains($0.bulkSkuId) }
         if serializedRisks.contains(where: { $0.code == "RECENT_CHECKIN_REPORT" && $0.reportType == "LOST" }) {
-            return KioskCartAvailabilityIssue(tone: .warning, message: "Lost report")
+            return KioskCartAvailabilityIssue(tone: .warning, message: "Lost report", isBlocking: false)
         }
         if serializedRisks.contains(where: { $0.code == "RECENT_CHECKIN_REPORT" }) {
-            return KioskCartAvailabilityIssue(tone: .warning, message: "Condition")
+            return KioskCartAvailabilityIssue(tone: .warning, message: "Condition", isBlocking: false)
         }
         if serializedRisks.contains(where: { $0.code == "LOCATION_TRANSFER" }) {
-            return KioskCartAvailabilityIssue(tone: .warning, message: "Transfer")
+            return KioskCartAvailabilityIssue(tone: .warning, message: "Transfer", isBlocking: false)
         }
         if !serializedRisks.isEmpty || !bulkRisks.isEmpty {
             let hasCritical = serializedRisks.contains { $0.severity.caseInsensitiveCompare("critical") == .orderedSame }
                 || bulkRisks.contains { $0.severity.caseInsensitiveCompare("critical") == .orderedSame }
-            return KioskCartAvailabilityIssue(tone: .warning, message: hasCritical ? "Very tight timing" : "Tight timing")
+            return KioskCartAvailabilityIssue(
+                tone: .warning,
+                message: hasCritical ? "Very tight timing" : "Tight timing",
+                isBlocking: false
+            )
         }
         return nil
     }
@@ -951,20 +1113,21 @@ struct KioskCheckoutView: View {
         let title = item.itemListPrimaryTitle
 
         if let unavailable = result.unavailableAssets.first(where: { $0.assetId == item.id }) {
-            let status = unavailable.status.replacingOccurrences(of: "_", with: " ").lowercased()
-            return .error("\(title) is \(status). Remove it before checkout.")
+            let status = KioskAvailabilityCopy.unavailableMessageStatus(for: unavailable.status)
+            return .error(KioskAvailabilityCopy.rejectedScan("\(title) is \(status)"))
         }
 
         if let conflict = result.conflicts.first(where: { $0.assetId == item.id }) {
-            let booking = conflict.conflictingBookingTitle ?? "another booking"
-            let startsAt = conflict.startsAt.formatted(date: .abbreviated, time: .shortened)
-            let endsAt = conflict.endsAt.formatted(date: .abbreviated, time: .shortened)
-            return .error("\(title) conflicts with \(booking) (\(startsAt)–\(endsAt)). Remove it or change the return time before checkout.")
+            return .error(KioskAvailabilityCopy.rejectedScan(
+                KioskAvailabilityCopy.conflictMessage(for: conflict, itemTitle: title)
+            ))
         }
 
         if let bulkSkuId = item.bulkSkuId,
            let shortage = result.shortages.first(where: { $0.bulkSkuId == bulkSkuId }) {
-            return .error("\(title) needs \(shortage.requested), but only \(shortage.available) are available. Remove it before checkout.")
+            return .error(KioskAvailabilityCopy.rejectedScan(
+                "\(title) needs \(shortage.requested), but only \(shortage.available) are available"
+            ))
         }
 
         if let risk = result.turnaroundRisks.first(where: { $0.assetId == item.id }) {
@@ -989,8 +1152,134 @@ struct KioskCheckoutView: View {
     }
 }
 
+fileprivate enum KioskAvailabilityTone: Equatable {
+    case warning
+    case error
+    case reserved
+    case checkedOut
+}
+
+fileprivate enum KioskAvailabilityState: Equatable, Hashable {
+    case reserved
+    case checkedOut
+    case pendingPickup
+    case conflict
+
+    var label: String {
+        switch self {
+        case .reserved: return "Reserved"
+        case .checkedOut: return "Checked Out"
+        case .pendingPickup: return "Pending Pickup"
+        case .conflict: return "Conflict"
+        }
+    }
+
+    var tone: KioskAvailabilityTone {
+        switch self {
+        case .reserved: return .reserved
+        case .checkedOut: return .checkedOut
+        case .pendingPickup: return .warning
+        case .conflict: return .error
+        }
+    }
+}
+
 private enum KioskAvailabilityCopy {
     private static let serializedTurnaroundBuffer: TimeInterval = 60 * 60
+
+    static func rejectedScan(_ message: String) -> String {
+        let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
+        let needsPeriod = !trimmed.hasSuffix(".") && !trimmed.hasSuffix("!") && !trimmed.hasSuffix("?")
+        return "\(trimmed)\(needsPeriod ? "." : "") Scan rejected; it was not added."
+    }
+
+    static func conflictState(for conflict: KioskCheckoutAvailabilityResult.SerializedConflict) -> KioskAvailabilityState {
+        let kind = conflict.conflictingBookingKind?.uppercased()
+        let status = conflict.conflictingBookingStatus?.uppercased()
+
+        // An explicit status is stronger than kind during a mixed-version rollout.
+        if status == "OPEN" { return .checkedOut }
+        if status == "PENDING_PICKUP" { return .pendingPickup }
+        if kind == "CHECKOUT" { return .checkedOut }
+        if status == "BOOKED" || kind == "RESERVATION" { return .reserved }
+        return .conflict
+    }
+
+    static func unavailableLabel(for status: String) -> String {
+        switch status.uppercased() {
+        case "RESERVED", "BOOKED": return "Reserved"
+        case "CHECKED_OUT", "OPEN": return "Checked Out"
+        case "PENDING_PICKUP": return "Pending Pickup"
+        case "MAINTENANCE": return "Maintenance"
+        case "RETIRED": return "Retired"
+        case "NOT_FOUND": return "Not Found"
+        case "NOT_AVAILABLE_FOR_CHECKOUT": return "Checkout Disabled"
+        case "NOT_AVAILABLE_FOR_RESERVATION": return "Reservation Disabled"
+        default: return "Unavailable"
+        }
+    }
+
+    static func unavailableTone(for status: String) -> KioskAvailabilityTone {
+        switch status.uppercased() {
+        case "RESERVED", "BOOKED": return .reserved
+        case "CHECKED_OUT", "OPEN": return .checkedOut
+        case "PENDING_PICKUP": return .warning
+        default: return .error
+        }
+    }
+
+    static func unavailableMessageStatus(for status: String) -> String {
+        switch status.uppercased() {
+        case "RESERVED", "BOOKED": return "already reserved"
+        case "CHECKED_OUT", "OPEN": return "already checked out"
+        case "PENDING_PICKUP": return "pending pickup"
+        case "MAINTENANCE": return "in maintenance"
+        case "RETIRED": return "retired"
+        case "NOT_FOUND": return "not found"
+        case "NOT_AVAILABLE_FOR_CHECKOUT": return "not enabled for checkout"
+        case "NOT_AVAILABLE_FOR_RESERVATION": return "not enabled for reservations"
+        default: return "unavailable"
+        }
+    }
+
+    static func conflictMessage(
+        for conflict: KioskCheckoutAvailabilityResult.SerializedConflict,
+        itemTitle: String
+    ) -> String {
+        let booking = conflict.conflictingBookingTitle ?? "another booking"
+        let startsAt = conflict.startsAt.formatted(date: .abbreviated, time: .shortened)
+        let endsAt = conflict.endsAt.formatted(date: .abbreviated, time: .shortened)
+        let window = "(\(startsAt)–\(endsAt))"
+
+        switch conflictState(for: conflict) {
+        case .reserved:
+            if let requester = conflict.conflictingBookingRequesterName?.nonBlankText {
+                return "\(requester) has reserved the \(itemTitle) until \(conflict.endsAt.formatted(.dateTime.month(.abbreviated).day().hour().minute()))"
+            }
+            return "\(itemTitle) is already reserved for \(booking) \(window). Remove it or change the return time before checkout."
+        case .checkedOut:
+            if let requester = conflict.conflictingBookingRequesterName?.nonBlankText {
+                return "\(requester) has checked out the \(itemTitle) until \(conflict.endsAt.formatted(.dateTime.month(.abbreviated).day().hour().minute()))"
+            }
+            return "\(itemTitle) is already checked out for \(booking) \(window). Remove it or change the return time before checkout."
+        case .pendingPickup:
+            if let requester = conflict.conflictingBookingRequesterName?.nonBlankText {
+                return "\(requester) has a pending pickup for the \(itemTitle) until \(conflict.endsAt.formatted(.dateTime.month(.abbreviated).day().hour().minute()))"
+            }
+            return "\(itemTitle) is pending pickup for \(booking) \(window). Remove it or change the return time before checkout."
+        case .conflict:
+            return "\(itemTitle) conflicts with \(booking) \(window). Remove it or change the return time before checkout."
+        }
+    }
+
+    static func blockingTitle(for result: KioskCheckoutAvailabilityResult) -> String {
+        let states = Set(result.conflicts.map { conflictState(for: $0) })
+        if states.contains(.reserved) && states.contains(.checkedOut) { return "Reserved or checked out" }
+        if states.contains(.reserved) { return "Reserved item" }
+        if states.contains(.checkedOut) { return "Checked out item" }
+        if states.contains(.pendingPickup) { return "Pickup pending" }
+        return "Conflict found"
+    }
 
     static func riskMessage(_ risk: KioskCheckoutAvailabilityResult.TurnaroundRisk) -> String {
         switch risk.code {
@@ -1083,18 +1372,17 @@ private struct KioskCartDisplayGroup: Identifiable, Equatable {
 }
 
 private struct KioskCartAvailabilityIssue: Equatable {
-    enum Tone {
-        case warning
-        case error
-    }
-
-    let tone: Tone
+    let tone: KioskAvailabilityTone
     let message: String
+    let isBlocking: Bool
+    var canChangeReturnTime: Bool = false
 
     var color: Color {
         switch tone {
-        case .warning: Color.statusText(.orange)
-        case .error: Color.statusText(.red)
+        case .warning: KioskStatus.attention
+        case .error: KioskStatus.problem
+        case .reserved: KioskStatus.scheduled
+        case .checkedOut: KioskStatus.active
         }
     }
 }
@@ -1971,7 +2259,7 @@ private struct KioskCheckoutAvailabilityBanner: View {
     private var title: String {
         if isChecking { return "Checking availability" }
         if errorMessage != nil { return "Availability unavailable" }
-        if result.hasBlockingIssue { return "Conflict found" }
+        if result.hasBlockingIssue { return KioskAvailabilityCopy.blockingTitle(for: result) }
         if hasLostReport { return "Lost report" }
         if hasConditionReport { return "Condition check" }
         if hasTransferRisk { return "Transfer timing" }
@@ -2026,69 +2314,145 @@ private struct KioskCartGroupRow: View {
     let group: KioskCartDisplayGroup
     let availabilityIssue: KioskCartAvailabilityIssue?
     let onRemove: (() -> Void)?
+    let onChangeReturnTime: (() -> Void)?
+    let onScanAnother: (() -> Void)?
 
     var body: some View {
-        HStack(spacing: 14) {
-            KioskCheckoutThumbnail(item: group.first)
+        VStack(alignment: .leading, spacing: availabilityIssue?.isBlocking == true ? 12 : 0) {
+            HStack(spacing: 14) {
+                KioskCheckoutThumbnail(item: group.first)
 
-            VStack(alignment: .leading, spacing: 5) {
-                HStack(spacing: 6) {
-                    Text(group.primaryTitle)
-                        .font(.gothamBold(size: 16))
-                        .foregroundStyle(KioskText.primary)
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(spacing: 6) {
+                        Text(group.primaryTitle)
+                            .font(.gothamBold(size: 16))
+                            .foregroundStyle(KioskText.primary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.82)
+                        if group.count > 1 {
+                            Text("x\(group.count)")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(Color.kioskRed)
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 3)
+                                .background(Color.kioskRed.opacity(0.16), in: Capsule())
+                        }
+                        if let availabilityIssue {
+                            Text(availabilityIssue.message)
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(availabilityIssue.color)
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 3)
+                                .background(availabilityIssue.color.opacity(0.16), in: Capsule())
+                        }
+                    }
+
+                    Text(group.subtitle)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(KioskText.secondary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.82)
-                    if group.count > 1 {
-                        Text("x\(group.count)")
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(Color.kioskRed)
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 3)
-                            .background(Color.kioskRed.opacity(0.16), in: Capsule())
-                    }
-                    if let availabilityIssue {
-                        Text(availabilityIssue.message)
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(availabilityIssue.color)
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 3)
-                            .background(availabilityIssue.color.opacity(0.16), in: Capsule())
-                    }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-                Text(group.subtitle)
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(KioskText.secondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.82)
+                Spacer()
+                if availabilityIssue?.isBlocking != true, let onRemove {
+                    Button(action: onRemove) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title3)
+                            .foregroundStyle(KioskText.muted)
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Remove \(group.primaryTitle)")
+                }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(accessibilityLabel)
+            .accessibilityAction(named: "Remove") { onRemove?() }
 
-            Spacer()
-            if let onRemove {
-                Button(action: onRemove) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.title3)
-                        .foregroundStyle(KioskText.muted)
-                        .frame(width: 44, height: 44)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Remove \(group.primaryTitle)")
+            if availabilityIssue?.isBlocking == true {
+                recoveryActions
             }
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(accessibilityLabel)
-        .accessibilityAction(named: "Remove") { onRemove?() }
+        .accessibilityElement(children: .contain)
+    }
+
+    @ViewBuilder
+    private var recoveryActions: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("What now?")
+                .font(KioskType.overline)
+                .tracking(1.2)
+                .foregroundStyle(KioskText.muted)
+
+            ViewThatFits(in: .horizontal) {
+                actionButtons
+                VStack(alignment: .leading, spacing: 8) {
+                    actionButtons
+                }
+            }
+        }
+    }
+
+    private var actionButtons: some View {
+        HStack(spacing: 8) {
+            if let onRemove {
+                recoveryButton(
+                    title: group.count == 1 ? "Remove item" : "Remove \(group.count) units",
+                    systemImage: "trash",
+                    role: .destructive,
+                    accessibilityHint: "Removes this staged item group from the cart.",
+                    action: onRemove
+                )
+            }
+            if let onChangeReturnTime {
+                recoveryButton(
+                    title: "Change return time",
+                    systemImage: "clock.arrow.circlepath",
+                    role: .secondary,
+                    accessibilityHint: "Opens checkout details without clearing your scans.",
+                    action: onChangeReturnTime
+                )
+            }
+            if let onScanAnother {
+                recoveryButton(
+                    title: group.isBulkGroup ? "Scan another unit" : "Scan another item",
+                    systemImage: "barcode.viewfinder",
+                    role: .secondary,
+                    accessibilityHint: "Keeps this item staged and re-arms the scanner for another scan.",
+                    action: onScanAnother
+                )
+            }
+        }
+    }
+
+    private func recoveryButton(
+        title: String,
+        systemImage: String,
+        role: KioskButtonRole,
+        accessibilityHint: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: systemImage)
+                .font(KioskType.micro)
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+                .frame(minHeight: 44)
+        }
+        .kioskButtonRole(role)
+        .controlSize(.small)
+        .accessibilityLabel(title)
+        .accessibilityHint(accessibilityHint)
     }
 
     private var accessibilityLabel: String {
-        if group.isBulkGroup {
-            return "\(group.primaryTitle), \(group.subtitle)"
-        }
-        return "\(group.primaryTitle), \(group.subtitle)"
+        let status = availabilityIssue.map { ", \($0.message)" } ?? ""
+        return "\(group.primaryTitle), \(group.subtitle)\(status)"
     }
 }
 

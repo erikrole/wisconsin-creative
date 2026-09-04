@@ -7,14 +7,19 @@ import {
 
 function makeTx(overrides: Partial<Record<string, unknown>> = {}) {
   const tx = {
-    booking: { findUnique: vi.fn() },
+    booking: { findUnique: vi.fn(), update: vi.fn() },
     bulkSku: { findMany: vi.fn() },
     bulkSkuUnit: { findUnique: vi.fn(), update: vi.fn() },
     bookingBulkUnitAllocation: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
-    bookingBulkItem: { update: vi.fn() },
+    bookingBulkItem: { update: vi.fn(), findMany: vi.fn() },
+    bookingSerializedItem: { count: vi.fn().mockResolvedValue(0) },
+    assetAllocation: { updateMany: vi.fn() },
     bulkStockBalance: { findMany: vi.fn().mockResolvedValue([]), upsert: vi.fn() },
-    bulkStockMovement: { createMany: vi.fn() },
+    bulkStockMovement: { createMany: vi.fn(), groupBy: vi.fn().mockResolvedValue([]) },
+    scanSession: { updateMany: vi.fn() },
     scanEvent: { findMany: vi.fn(), create: vi.fn() },
+    user: { findUnique: vi.fn().mockResolvedValue(null) },
+    auditLog: { create: vi.fn() },
     ...overrides,
   };
   return tx as typeof tx & Parameters<typeof scanKioskPickupBulkUnit>[0];
@@ -416,6 +421,8 @@ describe("scanKioskCheckinBulkUnit", () => {
     tx.booking.findUnique.mockResolvedValue({
       ...pickupBooking,
       status: "OPEN",
+      locationId: "loc-1",
+      requesterUserId: "user-1",
       bulkItems: [{
         ...pickupBooking.bulkItems[0],
         checkedOutQuantity: 5,
@@ -433,17 +440,24 @@ describe("scanKioskCheckinBulkUnit", () => {
       checkedOutAt: new Date(),
       checkedInAt: null,
     });
+    // Four of five units are still outstanding — maybeAutoComplete must not complete the booking.
+    tx.bookingBulkItem.findMany.mockResolvedValue([
+      { checkedInQuantity: 1, checkedOutQuantity: 5, plannedQuantity: 5 },
+    ]);
 
     const result = await scanKioskCheckinBulkUnit(tx, {
       bookingId: "booking-1",
       scanValue: "94e068d1-7",
       kioskLocationId: "loc-return",
+      actorUserId: "user-1",
     });
 
     expect(result).toEqual(expect.objectContaining({
       handled: true,
       success: true,
       item: expect.objectContaining({ tagName: "#7", unitNumber: 7 }),
+      completed: false,
+      badgeEvent: null,
     }));
     expect(tx.bookingBulkUnitAllocation.update).toHaveBeenCalledWith({
       where: { id: "allocation-1" },
@@ -461,6 +475,82 @@ describe("scanKioskCheckinBulkUnit", () => {
     expect(tx.bookingBulkItem.update).toHaveBeenCalledWith({
       where: { id: "bulk-item-1" },
       data: { checkedInQuantity: { increment: 1 } },
+    });
+    expect(tx.booking.update).not.toHaveBeenCalled();
+  });
+
+  it("auto-completes the checkout when this scan returns the last outstanding battery", async () => {
+    // Regression: a dropped kiosk session between the last battery scan and
+    // the explicit "Complete Return" tap must not leave the booking stuck
+    // OPEN once every item shows returned — mirrors kioskCheckinAsset.
+    const tx = makeTx();
+    tx.booking.findUnique.mockResolvedValue({
+      ...pickupBooking,
+      status: "OPEN",
+      locationId: "loc-1",
+      requesterUserId: "user-1",
+      custodyScope: "PERSON",
+      endsAt: new Date("2026-05-06T12:00:00.000Z"),
+      bulkItems: [{
+        ...pickupBooking.bulkItems[0],
+        checkedOutQuantity: 1,
+        checkedInQuantity: 0,
+      }],
+    });
+    tx.bulkSkuUnit.findUnique.mockResolvedValue({
+      id: "unit-7",
+      bulkSkuId: "sku-1",
+      unitNumber: 7,
+      status: "CHECKED_OUT",
+    });
+    tx.bookingBulkUnitAllocation.findUnique.mockResolvedValue({
+      id: "allocation-1",
+      checkedOutAt: new Date(),
+      checkedInAt: null,
+    });
+    // Fresh read inside maybeAutoComplete sees the just-incremented quantity: fully returned.
+    tx.bookingBulkItem.findMany.mockResolvedValue([
+      { checkedInQuantity: 1, checkedOutQuantity: 1, plannedQuantity: 1 },
+    ]);
+
+    const result = await scanKioskCheckinBulkUnit(tx, {
+      bookingId: "booking-1",
+      scanValue: "94e068d1-7",
+      kioskLocationId: "loc-return",
+      actorUserId: "user-1",
+    });
+
+    expect(result).toEqual(expect.objectContaining({
+      handled: true,
+      success: true,
+      completed: true,
+      badgeEvent: expect.objectContaining({
+        userId: "user-1",
+        bookingId: "booking-1",
+        completedAt: expect.any(Date),
+        wasOnTime: expect.any(Boolean),
+        sourceKey: "booking-1",
+      }),
+    }));
+    expect(tx.booking.update).toHaveBeenCalledWith({
+      where: { id: "booking-1" },
+      data: expect.objectContaining({ status: "COMPLETED" }),
+    });
+    expect(tx.assetAllocation.updateMany).toHaveBeenCalledWith({
+      where: { bookingId: "booking-1", active: true },
+      data: { active: false },
+    });
+    expect(tx.scanSession.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ bookingId: "booking-1", phase: "CHECKIN", status: "OPEN" }),
+      data: expect.objectContaining({ status: "COMPLETED" }),
+    }));
+    expect(tx.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        actorUserId: "user-1",
+        entityType: "booking",
+        entityId: "booking-1",
+        action: "auto_completed_by_kiosk_checkin",
+      }),
     });
   });
 
@@ -490,6 +580,7 @@ describe("scanKioskCheckinBulkUnit", () => {
       bookingId: "booking-1",
       scanValue: "canon-battery-4",
       kioskLocationId: "loc-return",
+      actorUserId: "user-1",
     });
 
     expect(result).toEqual({
@@ -531,6 +622,7 @@ describe("scanKioskCheckinBulkUnit", () => {
       bookingId: "booking-1",
       scanValue: "94e068d1-7",
       kioskLocationId: "loc-return",
+      actorUserId: "user-1",
     });
 
     expect(result).toEqual({
@@ -565,6 +657,7 @@ describe("scanKioskCheckinBulkUnit", () => {
       bookingId: "booking-1",
       scanValue: "94e068d1-7",
       kioskLocationId: "loc-return",
+      actorUserId: "user-1",
     });
 
     expect(result).toEqual({
@@ -605,6 +698,7 @@ describe("scanKioskCheckinBulkUnit", () => {
       bookingId: "booking-1",
       scanValue: "94e068d1-7",
       kioskLocationId: "loc-return",
+      actorUserId: "user-1",
     });
 
     expect(result).toEqual({

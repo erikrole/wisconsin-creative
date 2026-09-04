@@ -497,7 +497,7 @@ export function WizardStep1({
               </Field>
             )}
 
-            <Field label="Location" required htmlFor="booking-location-trigger">
+            <Field label="Pickup location" required htmlFor="booking-location-trigger">
               <Select
                 name="booking-location"
                 value={form.locationId}

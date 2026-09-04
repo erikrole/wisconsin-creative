@@ -326,8 +326,12 @@ struct KioskReturnView: View {
         if case .success = feedback {} else { lastAccepted = nil }
         switch feedback {
         case .success:        Haptics.success()
-        case .alreadyReturned: Haptics.warning()
-        case .error:          Haptics.error()
+        case .alreadyReturned:
+            Haptics.warning()
+            KioskScanFeedbackSound.playFailure()
+        case .error:
+            Haptics.error()
+            KioskScanFeedbackSound.playFailure()
         }
         UIAccessibility.post(notification: .announcement, argument: feedback.message)
         // Cancel any prior dismiss timer — otherwise two scans within 3s race:

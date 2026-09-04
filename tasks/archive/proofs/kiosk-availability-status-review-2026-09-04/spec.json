@@ -1,0 +1,58 @@
+{
+  "title": "Kiosk blocked-item status",
+  "eyebrow": "iOS · Wisconsin Creative · Kiosk",
+  "lede": "When a scanned item cannot be added, the counter operator can now see who has it, what kind of hold it is, and when it is due back.",
+  "stats": [
+    {
+      "k": "Blocked states",
+      "v": "2",
+      "n": "Reserved and Checked Out are distinct from generic conflicts",
+      "tone": "good"
+    },
+    {
+      "k": "Feedback detail",
+      "v": "3/3",
+      "n": "Person, item, and local due-back time",
+      "tone": "good"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Checkout scan stage",
+      "note": "Same availability-conflicts fixture, same cart, same iPad Air 11-inch (M4) simulator viewport.",
+      "pairs": [
+        {
+          "title": "When adding the item is blocked",
+          "sub": "Read the banner and the first two cart rows.",
+          "before": "before/checkout.png",
+          "beforeCap": "The source baseline collapsed both reservation and active checkout into generic Conflict labels, with no owner or deadline in the scan feedback.",
+          "after": "after/checkout.png",
+          "afterCap": "The rejected-add feedback says “Erik Role has reserved the FX3 2 until Sep 12 at 4:30 PM”; the cart also distinguishes Reserved from Checked Out."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "“Unavailable” hid the person and deadline",
+      "was": "A blocked serialized item surfaced only generic unavailable/conflict copy, so the operator could not tell who had the camera or when it would return.",
+      "now": "The server includes optional requester, booking-kind, and status metadata; the Kiosk turns that into a direct person/item/deadline message and preserves a safe fallback for older responses."
+    },
+    {
+      "h": "Reservation and active custody now read differently",
+      "was": "A reservation and an open checkout looked the same in the scan cart.",
+      "now": "Reserved, Checked Out, and Pending Pickup use state-specific labels, semantic status colors, and matching VoiceOver/accessibility text."
+    }
+  ],
+  "verification": [
+    "<strong>Focused behavior and source-contract tests:</strong> 48/48 passing, including reservation and active-checkout copy.",
+    "<strong>Web gates:</strong> TypeScript, ESLint, and <code>npm run build:app</code> pass.",
+    "<strong>Native gates:</strong> WisconsinKiosk Debug and Release simulator builds pass; iOS project parity, drift, and gap audits pass.",
+    "<strong>Visual:</strong> matched baseline and final captures were inspected on the available iPad Air 11-inch (M4), iOS 26.5 simulator."
+  ],
+  "notes": [
+    "This is local source/build proof only. The production deployment and authenticated managed-iPad/scanner acceptance gate remain open.",
+    "The Kiosk target has no dedicated UI-test target in the current project, so the repeatable DEBUG fixture was launched with simctl after native compilation; no live credentials or production data were used.",
+    "Repository docs verification still reports generated codemap drift. The pre-existing dirty codemap was preserved rather than regenerated over parallel work."
+  ]
+}

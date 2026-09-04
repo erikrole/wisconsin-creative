@@ -6,6 +6,7 @@ import { HttpError, ok } from "@/lib/http";
 import { requirePermission, requirePermissionOrCollaboratorCapability } from "@/lib/rbac";
 import { normalizeBookingTitle } from "@/lib/title-normalization";
 import { MAX_LINKED_EVENTS_PER_BOOKING } from "@/lib/request-limits";
+import { assertSupportedReservationPickupLocation } from "@/lib/services/reservation-pickup-location";
 
 const schema = z.object({
   requesterUserId: z.string().cuid(),
@@ -26,6 +27,7 @@ function exactSet(left: string[], right: string[]) {
 export const POST = withAuth(async (req, { user }) => {
   requirePermissionOrCollaboratorCapability(user, "booking", "view", "MY_GEAR_VIEW");
   const body = schema.parse(await req.json());
+  await assertSupportedReservationPickupLocation(body.locationId);
   if (body.custodyScope === BookingCustodyScope.SHARED) {
     requirePermission(user.role, "checkout", "manage_custody");
     body.requesterUserId = user.id;

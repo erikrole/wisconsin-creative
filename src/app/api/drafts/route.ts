@@ -8,6 +8,10 @@ import { z } from "zod";
 import { optionalSportCodeSchema } from "@/lib/validation";
 import { normalizeBookingTitle } from "@/lib/title-normalization";
 import {
+  assertSupportedReservationPickupLocation,
+  defaultReservationPickupLocationId,
+} from "@/lib/services/reservation-pickup-location";
+import {
   MAX_BULK_QUANTITY_PER_LINE,
   MAX_BULK_SKU_LINES_PER_REQUEST,
   MAX_EQUIPMENT_SELECTIONS_PER_REQUEST,
@@ -150,13 +154,22 @@ export const POST = withAuth(async (req, { user }) => {
   const startsAt = body.startsAt ? new Date(body.startsAt) : now;
   const endsAt = body.endsAt ? new Date(body.endsAt) : fourHoursLater;
 
+  const locationId = body.locationId ?? (
+    body.kind === BookingKind.RESERVATION
+      ? await defaultReservationPickupLocationId()
+      : await defaultLocationId()
+  );
+  if (body.kind === BookingKind.RESERVATION) {
+    await assertSupportedReservationPickupLocation(locationId);
+  }
+
   const bookingData = {
     kind: body.kind as "CHECKOUT" | "RESERVATION",
     custodyScope: body.custodyScope,
     title: normalizeBookingTitle(body.title || "Untitled draft"),
     status: "DRAFT" as const,
     requesterUserId: body.requesterUserId ?? user.id,
-    locationId: body.locationId ?? (await defaultLocationId()),
+    locationId,
     startsAt,
     endsAt,
     createdBy: user.id,

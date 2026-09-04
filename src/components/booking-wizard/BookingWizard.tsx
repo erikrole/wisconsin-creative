@@ -19,6 +19,7 @@ import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/er
 import { cn } from "@/lib/utils";
 import { EQUIPMENT_SECTIONS, classifyAssetType } from "@/lib/equipment-sections";
 import { getUnsatisfiedRequirements } from "@/lib/equipment-guidance";
+import { filterSupportedReservationPickupLocations } from "@/lib/reservation-pickup-locations";
 import type { EquipmentSectionKey } from "@/lib/equipment-sections";
 import type { BulkSelection, EquipmentPickerSelectionState } from "@/components/EquipmentPicker";
 import {
@@ -98,7 +99,6 @@ function formReducer(state: FormState, action: FormAction): FormState {
         title: action.title ?? state.title,
         startsAt: action.startsAt ?? state.startsAt,
         endsAt: action.endsAt ?? state.endsAt,
-        locationId: action.locationId ?? state.locationId,
       };
     case "SET_TITLE":
       return { ...state, title: action.value };
@@ -155,7 +155,10 @@ export function BookingWizard() {
   // ── Form options ──
   const { data: formOpts, isError: formOptsError, refetch: refetchFormOpts } = useFormOptions();
   const users: FormUser[] = useMemo(() => formOpts?.users ?? [], [formOpts?.users]);
-  const locations: Location[] = useMemo(() => formOpts?.locations ?? [], [formOpts?.locations]);
+  const locations: Location[] = useMemo(
+    () => filterSupportedReservationPickupLocations(formOpts?.locations ?? []),
+    [formOpts?.locations],
+  );
   const bulkSkus: BulkSkuOption[] = useMemo(() => formOpts?.bulkSkus ?? [], [formOpts?.bulkSkus]);
 
   // ── Current user ──
@@ -227,12 +230,32 @@ export function BookingWizard() {
       preferred = localStorage.getItem(`wi:preferredPickupLocation:${meData.id}`) ?? "";
     } catch { /* ignore unavailable storage */ }
     const preferredExists = locations.some((location) => location.id === preferred);
-    if (!initialLocationId && (!form.locationId || form.locationId === firstLocationId) && preferredExists) {
+    const selectedLocationIsSupported = locations.some((location) => location.id === form.locationId);
+    const locationNeedsReplacement = Boolean(form.locationId && !selectedLocationIsSupported);
+    if (
+      (!initialLocationId || locationNeedsReplacement)
+      && (!form.locationId || form.locationId === firstLocationId || locationNeedsReplacement)
+      && preferredExists
+    ) {
       dispatch({ type: "SET_LOCATION_ID", value: preferred });
-    } else if (firstLocationId && !form.locationId) {
+    } else if (firstLocationId && (!form.locationId || locationNeedsReplacement)) {
       dispatch({ type: "SET_LOCATION_ID", value: firstLocationId });
     }
   }, [firstLocationId, form.locationId, initialLocationId, locations, meData?.id]);
+
+  // A legacy or resumed draft may still carry a location that is no longer a
+  // valid reservation pickup. Keep the draft editable instead of submitting a
+  // hidden Select value that has no corresponding option.
+  useEffect(() => {
+    if (
+      !preferredLocationLoadedRef.current
+      || !form.locationId
+      || locations.length === 0
+      || locations.some((location) => location.id === form.locationId)
+      || !firstLocationId
+    ) return;
+    dispatch({ type: "SET_LOCATION_ID", value: firstLocationId });
+  }, [firstLocationId, form.locationId, locations]);
 
   // ── Equipment state ──
   const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>(initialAssetIds ?? []);
@@ -408,7 +431,9 @@ export function BookingWizard() {
   function validateStep1(): string | null {
     if (!form.title.trim()) return "Give this booking a name";
     if (form.custodyScope === "PERSON" && !form.requester) return "Select who this is for";
-    if (!form.locationId) return "Choose a pickup location";
+    if (!form.locationId || !locations.some((location) => location.id === form.locationId)) {
+      return "Choose a pickup location";
+    }
     if (reuseFromId && form.selectedEvents.length === 0) return "Choose the new event for this gear";
     if (
       reuseFromId

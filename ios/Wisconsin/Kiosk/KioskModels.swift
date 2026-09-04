@@ -256,6 +256,9 @@ struct KioskCheckoutAvailabilityResult: Decodable, Equatable {
         let assetId: String
         let conflictingBookingId: String
         let conflictingBookingTitle: String?
+        let conflictingBookingRequesterName: String?
+        let conflictingBookingKind: String?
+        let conflictingBookingStatus: String?
         let startsAt: Date
         let endsAt: Date
     }

@@ -4,9 +4,6 @@ import type {
 } from "@/lib/schedule-publication-types";
 import { studentCallTimeAppliesToEvent } from "@/lib/shift-call-windows";
 
-/** Staff coverage keeps the event window internally and exposes no call time. */
-const STAFF_WORKER_TYPE = "FT";
-
 type SnapshotAssignment = SchedulePublicationSnapshotItem["assignments"][number];
 
 /** Everything a worker-facing message needs about one person's slot at one event. */
@@ -16,7 +13,7 @@ export type WorkerShiftFacts = {
   workerType: string;
   startsAt: string;
   endsAt: string;
-  /** Null for Staff, who never see a call time; the effective window for Students. */
+  /** Null for non-Student workers; the effective window for Students. */
   callStartsAt: string | null;
   callEndsAt: string | null;
   callNote: string | null;
@@ -90,7 +87,7 @@ function factsFor(
   shift: SchedulePublicationSnapshotItem,
   assignment: SnapshotAssignment,
 ): WorkerShiftFacts {
-  const staff = shift.workerType === STAFF_WORKER_TYPE;
+  const student = shift.workerType === "ST";
   const callTimeSuppressed = shift.callTimeSuppressed === true;
   return {
     shiftId: shift.shiftId,
@@ -98,20 +95,20 @@ function factsFor(
     workerType: shift.workerType,
     startsAt: shift.startsAt,
     endsAt: shift.endsAt,
-    callStartsAt: staff || callTimeSuppressed ? null : assignment.callStartsAt ?? shift.callStartsAt ?? shift.startsAt,
-    callEndsAt: staff || callTimeSuppressed ? null : assignment.callEndsAt ?? shift.callEndsAt ?? shift.endsAt,
-    callNote: staff || callTimeSuppressed ? null : assignment.callNote ?? null,
+    callStartsAt: !student || callTimeSuppressed ? null : assignment.callStartsAt ?? shift.callStartsAt ?? shift.startsAt,
+    callEndsAt: !student || callTimeSuppressed ? null : assignment.callEndsAt ?? shift.callEndsAt ?? shift.endsAt,
+    callNote: !student || callTimeSuppressed ? null : assignment.callNote ?? null,
   };
 }
 
-/** The window this worker actually reads: the call window, or the shift for Staff. */
+/** The window this worker actually reads: a Student call window when present, otherwise the shift window. */
 export function reportableWindow(facts: WorkerShiftFacts) {
-  return facts.workerType === STAFF_WORKER_TYPE
-    ? { startsAt: facts.startsAt, endsAt: facts.endsAt }
-    : {
+  return facts.workerType === "ST" && facts.callStartsAt && facts.callEndsAt
+    ? {
       startsAt: facts.callStartsAt ?? facts.startsAt,
       endsAt: facts.callEndsAt ?? facts.endsAt,
-    };
+    }
+    : { startsAt: facts.startsAt, endsAt: facts.endsAt };
 }
 
 function windowMoved(before: WorkerShiftFacts, after: WorkerShiftFacts) {

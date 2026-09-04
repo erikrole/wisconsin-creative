@@ -4,6 +4,7 @@ import {
   TURNAROUND_WARNING_WINDOW_MINUTES,
   serializedTurnaroundBufferMs,
 } from "@/lib/booking-availability-window";
+import { env } from "@/lib/env";
 
 type UpcomingCommitment = {
   startsAt: string;
@@ -12,6 +13,9 @@ type UpcomingCommitment = {
 
 export type AvailabilityConflictLike = {
   conflictingBookingTitle?: string | null;
+  conflictingBookingRequesterName?: string | null;
+  conflictingBookingKind?: string | null;
+  conflictingBookingStatus?: string | null;
   startsAt: string | Date;
   endsAt: string | Date;
 };
@@ -39,6 +43,23 @@ function dateTimeFormatter() {
 
 export function formatAvailabilityDateTime(value: string | Date) {
   return dateTimeFormatter().format(value instanceof Date ? value : new Date(value));
+}
+
+export function formatAvailabilityDeadline(value: string | Date) {
+  const date = validDate(value);
+  if (!date) return "the scheduled end time";
+
+  const dateLabel = new Intl.DateTimeFormat("en-US", {
+    timeZone: env.appTimezone,
+    month: "short",
+    day: "numeric",
+  }).format(date);
+  const timeLabel = new Intl.DateTimeFormat("en-US", {
+    timeZone: env.appTimezone,
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+  return `${dateLabel} at ${timeLabel}`;
 }
 
 export function formatAvailabilityDuration(minutes: number) {
@@ -86,6 +107,28 @@ export function availabilityConflictMessage(
     return `${prefix} (${conflictWindow}); available after ${formatAvailabilityDateTime(availableAfter)}.`;
   }
   return `${prefix} (${conflictWindow}); choose another item or change the dates.`;
+}
+
+/**
+ * Copy for the kiosk's rejected add-item action. A scan is blocked by the
+ * booking that owns the overlapping allocation, so name that person and the
+ * allocation's end time instead of making the operator infer what "unavailable"
+ * means from a generic error.
+ */
+export function availabilityBlockedItemMessage(
+  conflict: AvailabilityConflictLike,
+  itemName: string,
+) {
+  const requester = conflict.conflictingBookingRequesterName?.trim();
+  const item = itemName.trim() || "this item";
+  const endsAt = validDate(conflict.endsAt);
+  if (!requester || !endsAt) return availabilityConflictMessage(conflict);
+
+  const status = conflict.conflictingBookingStatus?.toUpperCase();
+  const kind = conflict.conflictingBookingKind?.toUpperCase();
+  const isCheckedOut = status === "OPEN" || (kind === "CHECKOUT" && status !== "PENDING_PICKUP");
+  const verb = isCheckedOut ? "has checked out" : "has reserved";
+  return `${requester} ${verb} the ${item} until ${formatAvailabilityDeadline(endsAt)}`;
 }
 
 /**

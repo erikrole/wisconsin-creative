@@ -54,6 +54,7 @@ export const PERMISSIONS: Record<string, Record<string, Role[]>> = {
     complete: ["ADMIN", "STAFF"],
     admin_override: ["ADMIN", "STAFF"],
     manage_custody: ["ADMIN", "STAFF"],
+    merge: ["ADMIN", "STAFF"],
   },
   bulk_sku: {
     view: ["ADMIN", "STAFF", "STUDENT"],

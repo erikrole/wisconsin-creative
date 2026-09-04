@@ -52,11 +52,20 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
       bookingId: params.id,
       scanValue,
       kioskLocationId: kiosk.locationId,
+      actorUserId: operationalActorId,
     }),
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
   );
   if (bulkResult.handled) {
-    return ok({ ...bulkResult, ...await rewardPayload() });
+    if (bulkResult.success && bulkResult.completed && bulkResult.badgeEvent) {
+      await badges.onCheckoutReturned(bulkResult.badgeEvent);
+      await endCheckoutReturnLiveActivities(params.id);
+    }
+
+    if (bulkResult.success) {
+      return ok({ success: true, ...await rewardPayload(), item: bulkResult.item });
+    }
+    return ok({ success: false, error: bulkResult.error, ...await rewardPayload() });
   }
 
   const asset = await findAssetByScanValue(scanValue, {

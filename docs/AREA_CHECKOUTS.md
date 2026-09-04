@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Checkouts
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-09-03
+- Last Updated: 2026-09-04
 - Status: Active — V1 Shipped
 - Version: V1
 
@@ -22,6 +22,7 @@ Maintain the custody ledger for gear that has physically left or returned throug
 9. Checkout creation is guarded at the shared service boundary: non-kiosk callers must not create checkout custody, kiosk/source creates require at least one equipment item, duplicate multi-event links and duplicate bulk lines are rejected, invalid windows fail before availability work, and DB overlap races return booking conflict responses. The single exception is the admin-only reservation force-checkout path, which still requires a reason, availability checks, exact numbered-unit binding, and transactional audit evidence.
 10. Checkout custody is either `PERSON` or `SHARED`. A shared checkout such as `Football Travel Case` owns the case/truck manifest without presenting a borrower; cameras, lenses, or other gear carried separately remain on distinct personal checkouts. Pooled and numbered batteries packed with the travel case remain on the shared manifest rather than being assigned to individuals.
 11. A shared checkout created from reservation pickup or admin force checkout inherits `SHARED` from its source reservation. The identified kiosk/admin operator is audit provenance only and never becomes the owner or badge recipient.
+12. Staff/Admin may explicitly preview and merge 2–25 compatible `OPEN` event-linked checkouts from the Checkouts list. The records must match on event set, title, requester compatibility metadata, custody scope, location, pickup/return window, and source reservation. The oldest checkout survives; custody-linked item, stock, scan, report, photo, and return-notification rows move inside one serializable transaction, while partially returned, staged, completed, excluded, duplicate-item, and otherwise incompatible records are blocked. Checkout creation is never auto-merged.
 
 ## V1 Workflow
 
@@ -207,6 +208,7 @@ Source of truth: `src/lib/services/booking-rules.ts` — `STATE_ACTIONS[CHECKOUT
 5. Mobile uses the same overflow action behavior.
 6. Event badge is informational only and must not block operations if source event changes.
 7. Mobile list cards and quick actions follow `AREA_MOBILE.md`.
+8. Staff/Admin can select compatible `OPEN` event-linked checkouts and use an explicit `Merge matching checkouts` repair action. The confirmation names the surviving checkout and total gear; the source records remain visible in audit history as cancelled merge sources.
 
 ## Checkout Detail Page (Unified with Reservations)
 
@@ -279,6 +281,12 @@ The checkout detail page (`/checkouts/[id]`) uses the shared `BookingDetailPage`
   - Server-side ownership enforcement on every mutation.
   - Audit denied attempts.
 
+### Trap: Accidental duplicate event checkout splits custody across records
+- Mitigation:
+  - Keep repair explicit and staff/admin-only from the Checkouts list.
+  - Require exact event, requester metadata, custody, location, source-reservation, title, and window compatibility.
+  - Rehome custody and history rows transactionally; block partial returns, duplicate physical items, accountability exclusions, and completed checkouts.
+
 ## Edge Cases
 - No events in next 30 days for selected sport.
 - Event missing opponent, venue, or end time.
@@ -298,6 +306,7 @@ The checkout detail page (`/checkouts/[id]`) uses the shared `BookingDetailPage`
 - [x] AC-8: Non-kiosk app/web callers cannot create checkout custody or perform normal return flows; kiosk-authenticated routes own standard custody mutation, with a separate admin-only close-without-scan exception requiring reasoned override evidence.
 - [ ] AC-9: Existing `PENDING_PICKUP` records remain visible and recoverable during rollout without presenting web/app checkout creation as the forward path.
 - [ ] AC-10: Shared travel-case custody is source-complete and passes the web build with custodian-neutral web/kiosk presentation, no personal accountability/badge/My Gear attribution, and identified-operator kiosk return; migration `0143_shared_checkout_custody` is applied, while native build, compatible app deployment, authenticated visual proof, and physical kiosk acceptance remain rollout gates.
+- [ ] AC-11: Staff/Admin can explicitly preview and merge compatible `OPEN` event-linked checkouts while preserving custody and audit history; local source/tests are complete, while deployment and authenticated UI proof remain tracked under GAP-77.
 
 ## Dependencies
 - Event normalization read model from `AREA_EVENTS.md`.
@@ -325,6 +334,7 @@ The checkout detail page (`/checkouts/[id]`) uses the shared `BookingDetailPage`
 
 ## Change Log
 
+- 2026-09-04: **Added explicit duplicate-checkout repair locally.** Staff/Admin can select 2–25 compatible `OPEN` event-linked checkouts and merge them into the oldest record. The service preserves custody, numbered units, stock movements, scan/history rows, and return-notification bookkeeping in one serializable transaction, cancels only emptied sources with audit receipts, and blocks partial returns, completed rows, mismatched event/person/location/window/source context, duplicate physical items, and accountability exclusions. No automatic merge or kiosk-flow change was added; deployment and authenticated browser proof remain open under GAP-77.
 - 2026-09-03: **Shared travel-case custody now begins at reservation creation locally.** Normal and partial kiosk pickup plus admin force checkout inherit the source reservation's `SHARED` scope. Kiosk scans and confirmation require an identified active operator for audit, while shared handoff remains excluded from personal badge and owner attribution.
 - 2026-09-03: **Added custodian-neutral shared travel-case checkout behavior locally and applied its enum rename.** Staff/Admin can mark an eligible active checkout such as `Football Travel Case` shared without changing its manifest, lifecycle, location, event, scan, allocation, or retained requester history. Shared rows use package identity, suppress borrower/owner actions and personal My Gear/accountability/badge/requester-notification attribution, and let any identified active kiosk operator return the case while preserving actor audit evidence. Gear carried separately remains on a distinct personal checkout. Production migration `0143_shared_checkout_custody` is applied with its exact local checksum; compatible app deployment, authenticated web proof, real checkout conversion, and physical kiosk acceptance remain separate gates.
 

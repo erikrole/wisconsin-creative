@@ -151,12 +151,12 @@ struct KioskPickupView: View {
 
                     if hasBatteryScanStep {
                         KioskBatteryScanStatus(
-                            title: "Battery Units",
+                            title: "Battery quantity",
                             count: confirmedBatteryCount,
                             total: batteryTotal,
-                            pendingCopy: "Scan each battery unit QR before confirming pickup.",
-                            completeCopy: "All \(batteryTotal) units scanned",
-                            progressCopy: "\(confirmedBatteryCount) of \(batteryTotal) units scanned",
+                            pendingCopy: "This pickup needs \(batteryTotal) batteries. Scan any available units; printed numbers do not need to match this list.",
+                            completeCopy: "All \(batteryTotal) batteries scanned",
+                            progressCopy: "\(confirmedBatteryCount) of \(batteryTotal) batteries scanned",
                             unitsHeader: "Scanned units",
                             scannedUnits: scannedBatteryUnits.map { KioskScannedUnit(id: $0.id, tag: $0.tagName) }
                         )
@@ -238,37 +238,35 @@ struct KioskPickupView: View {
                         complete: allConfirmed
                     )
                 }
+                if hasNumberedBatteryChecklist {
+                    Text("Battery rows show the quantity needed, not specific unit numbers. Scan any available units; their printed numbers appear after scanning.")
+                        .font(.caption2)
+                        .foregroundStyle(KioskText.tertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             .padding(20)
 
             Divider().background(KioskStroke.divider)
 
-            if let items = detail?.items {
+            if detail?.items != nil {
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(spacing: 0) {
-                            ForEach(items) { item in
-                                KioskChecklistRow(
-                                    name: confirmedItemOverrides[item.id]?.itemListSecondaryTitle
-                                        ?? item.itemListSecondaryTitle
-                                        ?? item.name,
-                                    tag: confirmedItemOverrides[item.id]?.itemListPrimaryTitle
-                                        ?? item.itemListPrimaryTitle,
-                                    isDone: confirmedIds.contains(item.id),
-                                    isBattery: item.isNumberedBulk
-                                )
-                                    .id(item.id)
+                            ForEach(checklistEntries) { entry in
+                                checklistEntryView(entry)
                                 Divider().background(KioskStroke.hairline)
                             }
                         }
                     }
                     .onChange(of: lastConfirmedId) { _, newId in
                         guard let newId else { return }
+                        let targetId = checklistScrollTarget(for: newId)
                         if reduceMotion {
-                            proxy.scrollTo(newId, anchor: .center)
+                            proxy.scrollTo(targetId, anchor: .center)
                         } else {
                             withAnimation(.easeOut(duration: 0.25)) {
-                                proxy.scrollTo(newId, anchor: .center)
+                                proxy.scrollTo(targetId, anchor: .center)
                             }
                         }
                     }
@@ -284,6 +282,93 @@ struct KioskPickupView: View {
                     .padding()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+        }
+    }
+
+    private var hasNumberedBatteryChecklist: Bool {
+        checklistEntries.contains { entry in
+            if case .battery = entry { return true }
+            return false
+        }
+    }
+
+    /// Pickup detail payloads use one placeholder row per requested
+    /// numbered unit. Those placeholders are slot IDs for the scan/confirm
+    /// contract, not a list of required physical unit numbers, so the pickup
+    /// rail presents them as one quantity group.
+    private var checklistEntries: [KioskPickupChecklistEntry] {
+        guard let items = detail?.items else { return [] }
+
+        var entries: [KioskPickupChecklistEntry] = []
+        var batteryEntryIndex: [String: Int] = [:]
+
+        for item in items {
+            guard item.isNumberedBulk else {
+                entries.append(.item(item))
+                continue
+            }
+
+            let familyName = batteryFamilyName(for: item)
+            let familyKey = item.bulkSkuId ?? "name:\(familyName)"
+            if let index = batteryEntryIndex[familyKey], case .battery(let group) = entries[index] {
+                var updatedGroup = group
+                updatedGroup.items.append(item)
+                entries[index] = .battery(updatedGroup)
+            } else {
+                batteryEntryIndex[familyKey] = entries.count
+                entries.append(.battery(KioskPickupBatteryChecklistGroup(
+                    id: "battery:\(familyKey)",
+                    name: familyName,
+                    items: [item]
+                )))
+            }
+        }
+
+        return entries
+    }
+
+    private func batteryFamilyName(for item: KioskCheckoutDetail.ReturnItem) -> String {
+        if let name = item.bulkSkuName?.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty {
+            return name
+        }
+        return item.name
+    }
+
+    private func checklistScrollTarget(for itemId: String) -> String {
+        for entry in checklistEntries {
+            switch entry {
+            case .item(let item) where item.id == itemId:
+                return entry.id
+            case .battery(let group) where group.items.contains(where: { $0.id == itemId }):
+                return entry.id
+            default:
+                continue
+            }
+        }
+        return itemId
+    }
+
+    @ViewBuilder
+    private func checklistEntryView(_ entry: KioskPickupChecklistEntry) -> some View {
+        switch entry {
+        case .item(let item):
+            KioskChecklistRow(
+                name: confirmedItemOverrides[item.id]?.itemListSecondaryTitle
+                    ?? item.itemListSecondaryTitle
+                    ?? item.name,
+                tag: confirmedItemOverrides[item.id]?.itemListPrimaryTitle
+                    ?? item.itemListPrimaryTitle,
+                isDone: confirmedIds.contains(item.id)
+            )
+                .id(entry.id)
+        case .battery(let group):
+            KioskPickupBatteryChecklistRow(
+                name: group.name,
+                total: group.items.count,
+                confirmedCount: group.items.filter { confirmedIds.contains($0.id) }.count,
+                scannedTags: group.items.compactMap { confirmedItemOverrides[$0.id]?.itemListPrimaryTitle }
+            )
+                .id(entry.id)
         }
     }
 
@@ -336,8 +421,12 @@ struct KioskPickupView: View {
         if case .success = feedback {} else { lastAccepted = nil }
         switch feedback {
         case .success:          Haptics.success()
-        case .alreadyConfirmed: Haptics.warning()
-        case .error:            Haptics.error()
+        case .alreadyConfirmed:
+            Haptics.warning()
+            KioskScanFeedbackSound.playFailure()
+        case .error:
+            Haptics.error()
+            KioskScanFeedbackSound.playFailure()
         }
         UIAccessibility.post(notification: .announcement, argument: feedback.message)
         // Cancel any prior dismiss timer — otherwise two scans within 3s race:
@@ -425,5 +514,93 @@ struct KioskPickupView: View {
     private func backToPerson() {
         if let user = store.pendingIntent?.identifiedUser { store.screen = .operatorHub(user) }
         else { store.screen = .idle }
+    }
+}
+
+private struct KioskPickupBatteryChecklistGroup {
+    let id: String
+    let name: String
+    var items: [KioskCheckoutDetail.ReturnItem]
+}
+
+private enum KioskPickupChecklistEntry: Identifiable {
+    case item(KioskCheckoutDetail.ReturnItem)
+    case battery(KioskPickupBatteryChecklistGroup)
+
+    var id: String {
+        switch self {
+        case .item(let item): return item.id
+        case .battery(let group): return group.id
+        }
+    }
+}
+
+private struct KioskPickupBatteryChecklistRow: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    let name: String
+    let total: Int
+    let confirmedCount: Int
+    let scannedTags: [String]
+
+    private var isComplete: Bool { total > 0 && confirmedCount >= total }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: isComplete ? "checkmark.circle.fill" : "battery.100percent")
+                .foregroundStyle(isComplete ? Color.statusText(.green) : Color.statusText(.orange))
+                .font(.title3)
+                .frame(width: 28)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text("\(total) × \(name)")
+                        .font(.gothamBold(size: 16))
+                        .foregroundStyle(isComplete ? KioskText.tertiary : KioskText.primary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                    Text("ANY UNITS")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(Color.statusText(.orange))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(Color.statusText(.orange).opacity(0.12), in: Capsule())
+                }
+
+                Text(isComplete
+                    ? "All \(total) battery units scanned"
+                    : "\(confirmedCount) of \(total) battery units scanned")
+                    .font(.caption.weight(.semibold).monospacedDigit())
+                    .foregroundStyle(KioskText.secondary)
+
+                if !isComplete {
+                    Text("Scan any available unit. Printed numbers do not need to match this list.")
+                        .font(.caption2)
+                        .foregroundStyle(KioskText.tertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                if !scannedTags.isEmpty {
+                    Text("Scanned: \(scannedTags.joined(separator: " · "))")
+                        .font(.caption2.monospaced().weight(.semibold))
+                        .foregroundStyle(Color.statusText(.green))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
+        .animation(reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 1), value: confirmedCount)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityText)
+    }
+
+    private var accessibilityText: String {
+        let progress = isComplete
+            ? "all \(total) battery units scanned"
+            : "\(confirmedCount) of \(total) battery units scanned"
+        let scanned = scannedTags.isEmpty ? "" : ", scanned \(scannedTags.joined(separator: ", "))"
+        return "\(total) \(name), \(progress). Scan any available units; printed numbers do not need to match this list\(scanned)."
     }
 }

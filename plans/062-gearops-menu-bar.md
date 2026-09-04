@@ -12,7 +12,7 @@
 - **Depends on**: none
 - **Category**: native macOS operations
 - **Planned at**: commit `32134418`, 2026-08-08
-- **Execution**: IMPLEMENTED LOCALLY; no-wake companion transport added, production deployment and APNs delivery proof pending
+- **Execution**: IMPLEMENTED LOCALLY; installed app repaired on 2026-09-03, production deployment and APNs delivery proof pending
 
 ## Why this matters
 
@@ -114,7 +114,7 @@ Staff currently open the web control room to answer two frequent questions: how 
 - [x] Automatic launch, restore, APNs handling, and manual refresh use only external-cache routes.
 - [x] Projection failures stay visible without zeroing trusted counts.
 - [x] Permission-denied kiosk health is represented as restricted.
-- [ ] macOS unit tests, source contracts, build, docs, and whitespace gates pass. Source contracts, Swift parsing, build-for-testing, and whitespace pass in the 2026-08-20 follow-up; testmanagerd execution and docs verification remain open.
+- [x] macOS unit tests, source contracts, build, docs, and whitespace gates pass. The 2026-09-03 run passed 63 native tests, 29 source/security contracts, `npm run verify:docs`, and `git diff --check`.
 - [x] Authenticated runtime proof is either completed against an isolated target or retained as an explicit gap.
 
 ## Execution result
@@ -162,3 +162,12 @@ Staff currently open the web control room to answer two frequent questions: how 
 - Sign-out and identity-removal paths clear local booking notifications and avatar caches. Remote revocation and optional APNs/notification setup are generation-fenced and do not block projection installation or sign-in completion.
 - Centralized custody count and companion/kiosk severity, represented failed/restricted kiosk access honestly, fixed settings focus theft, exposed login lifecycle errors and password scrubbing, made pending login approval honest, refreshed System Settings state on activation, and added reduced-motion/focus/accessibility polish. Avatar fetches require HTTPS image responses and a 2 MB byte cap.
 - Proof: `xcrun swiftc -parse macos/GearOps/*.swift` and `macos/GearOpsTests/*.swift` pass; unsigned Debug test compilation, unsigned Release build, and `xcodebuild build-for-testing` pass with `OTHER_SWIFT_FLAGS=-disable-sandbox` in this restricted environment; 27 focused macOS Vitest source/security contracts pass. `xcodebuild test` cannot establish `testmanagerd` communication under the sandbox, and clean Release signing, APNs, installed-app smoke, and matched `gt-ui-review` captures remain open.
+
+## Follow-up execution: 2026-09-03 local menu-bar install repair
+
+- Reproduced the reported failure against `/Users/role/Applications/Wisconsin Creative.app`: the installed 1.0.4 build 5 executable failed `codesign --verify --deep --strict` with `code or signature have been modified`, despite the older release record describing a notarized copy.
+- Built a clean Release replacement from the current source with the local `Developer ID Application: Erik Role (T26T3G8C7Q)` identity and the matching `Wisconsin Creative GearOps Developer ID 2026` profile. The bundle is valid on disk, hardened-runtime signed, carries the production APNs entitlement, has no `get-task-allow`, and includes `Assets.car` plus `AppIcon.icns`.
+- Moved the invalid bundle to `/private/tmp/wisconsin-creative-broken-app-backup-20260903-2215/Wisconsin Creative.app`, installed the replacement at the original path, launched it, and confirmed exactly one process remained from the repaired installed bundle. The old bundle is recoverable from the backup path.
+- Added `script/build_and_run.sh` plus `.codex/environments/environment.toml` so the macOS project has a repeatable kill/build/run/verify path. `./script/build_and_run.sh --verify` passes.
+- Current proof: `xcodebuild ... test` reports 63 passed native tests; the macOS source/security contracts report 29 passed tests; `npm run verify:docs`, `bash -n script/build_and_run.sh`, and `git diff --check` pass.
+- Remaining gates: the local replacement is Developer ID signed but not notarized or stapled (`spctl` reports `source=Unnotarized Developer ID`); authenticated projection data, real APNs delivery, and direct visual status-item interaction were not manufactured or claimed.

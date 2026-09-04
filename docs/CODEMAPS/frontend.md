@@ -115,10 +115,10 @@
 | `src/components/TradeBoard.tsx` | 1811 |
 | `src/components/ActivityTimeline.tsx` | 1375 |
 | `src/components/onboarding/OnboardingDialog.tsx` | 996 |
+| `src/components/booking-wizard/BookingWizard.tsx` | 920 |
 | `src/components/EquipmentPicker.tsx` | 916 |
 | `src/components/AppShell.tsx` | 896 |
-| `src/components/booking-wizard/BookingWizard.tsx` | 895 |
-| `src/components/BookingListPage.tsx` | 801 |
+| `src/components/BookingListPage.tsx` | 847 |
 | `src/components/ShiftDetailPanel.tsx` | 795 |
 | `src/components/ChooseImageModal.tsx` | 769 |
 | `src/components/profile-completion/ProfileCompletionWizard.tsx` | 769 |

@@ -26,6 +26,9 @@ vi.mock("@/lib/db", () => ({
     bulkSku: {
       findMany: vi.fn(),
     },
+    location: {
+      findUnique: vi.fn(),
+    },
   },
 }));
 
@@ -131,6 +134,7 @@ beforeEach(() => {
   vi.mocked(db.booking.count).mockResolvedValue(0);
   vi.mocked(db.booking.findFirst).mockResolvedValue(null);
   vi.mocked(db.auditLog.findFirst).mockResolvedValue(null);
+  vi.mocked(db.location.findUnique).mockResolvedValue({ active: true, name: "Camp Randall" } as never);
   vi.mocked(createBooking).mockResolvedValue({
     id: "booking-1",
     title: "Event kit",
@@ -174,6 +178,28 @@ describe("booking list routes", () => {
       shiftAssignmentId: undefined,
     }));
     expect(createReservationLifecycleNotification).not.toHaveBeenCalled();
+  });
+
+  it("rejects Field House reservation creation before calling the booking service", async () => {
+    vi.mocked(db.location.findUnique).mockResolvedValue({ active: true, name: "UW Field House" } as never);
+    const startsAt = new Date(Date.now() + 3_600_000);
+    const endsAt = new Date(startsAt.getTime() + 3_600_000);
+
+    const res = await postReservations(
+      post("/api/reservations", {
+        title: "Field House reservation",
+        requesterUserId: "cm000000000000000000000001",
+        locationId: "cm000000000000000000000002",
+        startsAt: startsAt.toISOString(),
+        endsAt: endsAt.toISOString(),
+        serializedAssetIds: ["cm000000000000000000000003"],
+        bulkItems: [],
+      }),
+      { params: Promise.resolve({}) },
+    );
+
+    expect(res.status).toBe(400);
+    expect(createBooking).not.toHaveBeenCalled();
   });
 
   it("rejects a student attempt to create shared custody", async () => {

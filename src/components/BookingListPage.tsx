@@ -15,6 +15,7 @@ import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components
 import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
 import { BOOKING_SNAPSHOT_HEADER } from "@/lib/booking-concurrency";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
+import { filterSupportedReservationPickupLocations } from "@/lib/reservation-pickup-locations";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useFormOptions } from "@/hooks/use-form-options";
 import { useBookingChangeSync } from "@/hooks/use-booking-change-sync";
@@ -257,7 +258,11 @@ export default function BookingListPage({
   // ── Form options (React Query, shared cache) ──
   const { data: formOpts, isError: formOptionsError, refetch: refetchFormOptions } = useFormOptions();
   const users: FormUser[] = formOpts?.users ?? [];
-  const locations: Location[] = formOpts?.locations ?? [];
+  const locations: Location[] = useMemo(() => formOpts?.locations ?? [], [formOpts?.locations]);
+  const pickupLocations = useMemo(
+    () => filterSupportedReservationPickupLocations(locations),
+    [locations],
+  );
 
   // ── Current user (React Query, shared cache) ──
   const { data: meData } = useCurrentUser();
@@ -266,13 +271,23 @@ export default function BookingListPage({
   // row menus do not offer actions that the server will reject.
   const currentUserRole = meData?.preview?.readOnly ? "ROLE_PREVIEW" : meData?.role ?? "";
   const currentUserCapabilities = meData?.preview?.readOnly ? [] : meData?.capabilities ?? [];
-  const canMergeReservations = config.kind === "RESERVATION" && !config.pastOnly
+  const canMergeBookings = (config.kind === "RESERVATION" || config.kind === "CHECKOUT") && !config.pastOnly
     && (currentUserRole === "ADMIN" || currentUserRole === "STAFF");
-  const [selectedReservationIds, setSelectedReservationIds] = useState<string[]>([]);
-  const [mergingReservations, setMergingReservations] = useState(false);
+  const mergeableKind = config.kind === "CHECKOUT" ? "CHECKOUT" : config.kind === "RESERVATION" ? "RESERVATION" : null;
+  const mergeableStatus = config.kind === "CHECKOUT" ? "OPEN" : "BOOKED";
+  const isMergeSelectable = (item: BookingItem) => canMergeBookings
+    && item.kind === mergeableKind
+    && item.status === mergeableStatus;
+  const [selectedBookingIds, setSelectedBookingIds] = useState<string[]>([]);
+  const [mergingBookings, setMergingBookings] = useState(false);
   const [bulkActionBusy, setBulkActionBusy] = useState(false);
   const [bulkLocationId, setBulkLocationId] = useState("");
   const [bulkRequesterId, setBulkRequesterId] = useState("");
+  useEffect(() => {
+    if (bulkLocationId && !pickupLocations.some((location) => location.id === bulkLocationId)) {
+      setBulkLocationId("");
+    }
+  }, [bulkLocationId, pickupLocations]);
   const canCreateReservation = meData != null && !meData.preview?.readOnly && (
     meData.role !== "COLLABORATOR" || currentUserCapabilities.includes("RESERVATION_CREATE")
   );
@@ -379,67 +394,90 @@ export default function BookingListPage({
   }, [items, config.overdueStatus]);
 
   useEffect(() => {
-    setSelectedReservationIds((selected) => selected.filter((id) => items.some((item) => item.id === id)));
+    setSelectedBookingIds((selected) => selected.filter((id) => items.some((item) => item.id === id)));
   }, [items]);
 
-  const toggleReservationSelection = useCallback((id: string, selected: boolean) => {
-    setSelectedReservationIds((current) => selected
+  const toggleBookingSelection = useCallback((id: string, selected: boolean) => {
+    setSelectedBookingIds((current) => selected
       ? [...new Set([...current, id])]
       : current.filter((currentId) => currentId !== id));
   }, []);
 
-  async function mergeSelectedReservations() {
-    if (selectedReservationIds.length < 2 || mergingReservations) return;
-    setMergingReservations(true);
+  async function mergeSelectedBookings() {
+    if (selectedBookingIds.length < 2 || mergingBookings) return;
+    const isCheckoutMerge = config.kind === "CHECKOUT";
+    const bookingLabel = isCheckoutMerge ? "checkouts" : "reservations";
+    const previewPath = isCheckoutMerge ? "/api/checkouts/merge/preview" : "/api/reservations/merge/preview";
+    const mergePath = isCheckoutMerge ? "/api/checkouts/merge" : "/api/reservations/merge";
+    setMergingBookings(true);
     try {
-      const previewResponse = await fetchWithTimeout("/api/reservations/merge/preview", {
+      const previewResponse = await fetchWithTimeout(previewPath, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: selectedReservationIds }),
+        body: JSON.stringify({ ids: selectedBookingIds }),
       });
       if (handleAuthRedirect(previewResponse)) return;
       if (!previewResponse.ok) {
-        toast.error(await parseErrorMessage(previewResponse, "These reservations cannot be combined."));
+        toast.error(await parseErrorMessage(previewResponse, `These ${bookingLabel} cannot be merged.`));
         return;
       }
       const preview = await parseJsonSafely<{
-        data?: { title: string; sourceReservationIds: string[]; serializedItemCount: number; bulkQuantity: number };
+        data?: {
+          title: string;
+          sourceReservationIds?: string[];
+          sourceCheckoutIds?: string[];
+          serializedItemCount: number;
+          bulkQuantity: number;
+        };
       }>(previewResponse);
       if (!preview?.data) {
         toast.error("The merge preview did not load.");
         return;
       }
-      const requesterName = items.find((item) => selectedReservationIds.includes(item.id))?.requester.name ?? "this person";
+      const sourceIds = isCheckoutMerge
+        ? preview.data.sourceCheckoutIds ?? []
+        : preview.data.sourceReservationIds ?? [];
+      if (sourceIds.length === 0) {
+        toast.error("The merge preview did not identify the source records.");
+        return;
+      }
+      const selectedItem = items.find((item) => selectedBookingIds.includes(item.id));
+      const requesterName = selectedItem?.custodyScope === "SHARED"
+        ? "this shared event checkout"
+        : selectedItem?.requester.name ?? "this person";
+      const totalItems = preview.data.serializedItemCount + preview.data.bulkQuantity;
       const approved = await confirm({
-        title: "Combine reservations",
-        message: `Combine ${preview.data.sourceReservationIds.length + 1} matching reservations for ${requesterName} into one “${preview.data.title}” plan with ${preview.data.serializedItemCount + preview.data.bulkQuantity} total items? The original history will be preserved.`,
-        confirmLabel: "Combine reservations",
+        title: isCheckoutMerge ? "Merge checkouts" : "Combine reservations",
+        message: isCheckoutMerge
+          ? `Merge ${sourceIds.length + 1} matching open checkouts for ${requesterName} into one “${preview.data.title}” checkout with ${totalItems} total items? Physical custody and the original history will be preserved.`
+          : `Combine ${sourceIds.length + 1} matching reservations for ${requesterName} into one “${preview.data.title}” plan with ${totalItems} total items? The original history will be preserved.`,
+        confirmLabel: isCheckoutMerge ? "Merge checkouts" : "Combine reservations",
       });
       if (!approved) return;
-      const mergeResponse = await fetchWithTimeout("/api/reservations/merge", {
+      const mergeResponse = await fetchWithTimeout(mergePath, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: selectedReservationIds }),
+        body: JSON.stringify({ ids: selectedBookingIds }),
       });
       if (handleAuthRedirect(mergeResponse)) return;
       if (!mergeResponse.ok) {
-        toast.error(await parseErrorMessage(mergeResponse, "The reservations were not combined."));
+        toast.error(await parseErrorMessage(mergeResponse, `The ${bookingLabel} were not merged.`));
         return;
       }
-      toast.success("Reservations combined into one gear plan");
-      setSelectedReservationIds([]);
+      toast.success(isCheckoutMerge ? "Checkouts merged into one active checkout" : "Reservations combined into one gear plan");
+      setSelectedBookingIds([]);
       await reload();
     } catch {
-      toast.error("Could not reach the server. The reservations were not combined.");
+      toast.error(`Could not reach the server. The ${bookingLabel} were not merged.`);
     } finally {
-      setMergingReservations(false);
+      setMergingBookings(false);
     }
   }
 
   async function runBulkReservationAction(action: "cancel" | "location" | "requester") {
-    if (selectedReservationIds.length === 0 || bulkActionBusy) return;
+    if (selectedBookingIds.length === 0 || bulkActionBusy) return;
     const targetName = action === "location"
-      ? locations.find((location) => location.id === bulkLocationId)?.name
+      ? pickupLocations.find((location) => location.id === bulkLocationId)?.name
       : action === "requester"
         ? users.find((person) => person.id === bulkRequesterId)?.name
         : null;
@@ -447,8 +485,8 @@ export default function BookingListPage({
     const approved = await confirm({
       title: action === "cancel" ? "Cancel selected reservations" : action === "location" ? "Change pickup location" : "Transfer selected reservations",
       message: action === "cancel"
-        ? `Cancel ${selectedReservationIds.length} selected reservation${selectedReservationIds.length === 1 ? "" : "s"} and release their held gear?`
-        : `${action === "location" ? "Move" : "Transfer"} ${selectedReservationIds.length} selected reservation${selectedReservationIds.length === 1 ? "" : "s"} ${action === "location" ? `to ${targetName}` : `to ${targetName}`}? Each reservation will still be checked for conflicts.`,
+        ? `Cancel ${selectedBookingIds.length} selected reservation${selectedBookingIds.length === 1 ? "" : "s"} and release their held gear?`
+        : `${action === "location" ? "Move" : "Transfer"} ${selectedBookingIds.length} selected reservation${selectedBookingIds.length === 1 ? "" : "s"} ${action === "location" ? `to ${targetName}` : `to ${targetName}`}? Each reservation will still be checked for conflicts.`,
       confirmLabel: action === "cancel" ? "Cancel reservations" : "Apply to selected",
       variant: action === "cancel" ? "danger" : "default",
     });
@@ -456,7 +494,7 @@ export default function BookingListPage({
     setBulkActionBusy(true);
     let completed = 0;
     try {
-      for (const id of selectedReservationIds) {
+      for (const id of selectedBookingIds) {
         const item = items.find((booking) => booking.id === id);
         if (!item) continue;
         const response = action === "cancel"
@@ -487,7 +525,7 @@ export default function BookingListPage({
         completed += 1;
       }
       toast.success(`${completed} reservation${completed === 1 ? "" : "s"} updated`);
-      setSelectedReservationIds([]);
+      setSelectedBookingIds([]);
       await reload();
     } catch {
       toast.error(`${completed} updated before the connection failed. Refresh before retrying.`);
@@ -595,46 +633,54 @@ export default function BookingListPage({
           users={users}
           onClearAll={clearAllFilters}
         />
-        {canMergeReservations && selectedReservationIds.length > 0 && (
+        {canMergeBookings && selectedBookingIds.length > 0 && (
           <div className="flex flex-wrap items-center gap-3 border-t border-border bg-muted/35 px-4 py-3">
-            <span className="mr-auto text-sm font-medium">{selectedReservationIds.length} selected</span>
+            <span className="mr-auto text-sm font-medium">{selectedBookingIds.length} selected</span>
             <div className="flex flex-wrap items-center gap-2">
-              <Select value={bulkLocationId} onValueChange={setBulkLocationId} disabled={bulkActionBusy}>
-                <SelectTrigger className="h-9 w-[180px] bg-background" aria-label="Pickup location for selected reservations">
-                  <SelectValue placeholder="Pickup location" />
-                </SelectTrigger>
-                <SelectContent>
-                  {locations.map((location) => <SelectItem key={location.id} value={location.id}>{location.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Button type="button" variant="outline" size="sm" disabled={!bulkLocationId || bulkActionBusy} onClick={() => { void runBulkReservationAction("location"); }}>
-                Apply location
-              </Button>
-              <Select value={bulkRequesterId} onValueChange={setBulkRequesterId} disabled={bulkActionBusy}>
-                <SelectTrigger className="h-9 w-[180px] bg-background" aria-label="Requester for selected reservations">
-                  <SelectValue placeholder="Transfer to…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {users.map((person) => <SelectItem key={person.id} value={person.id}>{person.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Button type="button" variant="outline" size="sm" disabled={!bulkRequesterId || bulkActionBusy} onClick={() => { void runBulkReservationAction("requester"); }}>
-                Transfer
-              </Button>
-              <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedReservationIds([])}>
+              {config.kind === "RESERVATION" && (
+                <>
+                  <Select value={bulkLocationId} onValueChange={setBulkLocationId} disabled={bulkActionBusy}>
+                    <SelectTrigger className="h-9 w-[180px] bg-background" aria-label="Pickup location for selected reservations">
+                      <SelectValue placeholder="Pickup location" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {pickupLocations.map((location) => <SelectItem key={location.id} value={location.id}>{location.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Button type="button" variant="outline" size="sm" disabled={!bulkLocationId || bulkActionBusy} onClick={() => { void runBulkReservationAction("location"); }}>
+                    Apply location
+                  </Button>
+                  <Select value={bulkRequesterId} onValueChange={setBulkRequesterId} disabled={bulkActionBusy}>
+                    <SelectTrigger className="h-9 w-[180px] bg-background" aria-label="Requester for selected reservations">
+                      <SelectValue placeholder="Transfer to…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {users.map((person) => <SelectItem key={person.id} value={person.id}>{person.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Button type="button" variant="outline" size="sm" disabled={!bulkRequesterId || bulkActionBusy} onClick={() => { void runBulkReservationAction("requester"); }}>
+                    Transfer
+                  </Button>
+                </>
+              )}
+              <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedBookingIds([])}>
                 Clear
               </Button>
               <Button
                 type="button"
                 size="sm"
-                disabled={selectedReservationIds.length < 2 || mergingReservations}
-                onClick={() => { void mergeSelectedReservations(); }}
+                disabled={selectedBookingIds.length < 2 || mergingBookings}
+                onClick={() => { void mergeSelectedBookings(); }}
               >
-                {mergingReservations ? "Combining…" : "Combine matching reservations"}
+                {mergingBookings
+                  ? config.kind === "CHECKOUT" ? "Merging…" : "Combining…"
+                  : config.kind === "CHECKOUT" ? "Merge matching checkouts" : "Combine matching reservations"}
               </Button>
-              <Button type="button" variant="destructive" size="sm" disabled={bulkActionBusy} onClick={() => { void runBulkReservationAction("cancel"); }}>
-                Cancel selected
-              </Button>
+              {config.kind === "RESERVATION" && (
+                <Button type="button" variant="destructive" size="sm" disabled={bulkActionBusy} onClick={() => { void runBulkReservationAction("cancel"); }}>
+                  Cancel selected
+                </Button>
+              )}
             </div>
           </div>
         )}
@@ -675,9 +721,9 @@ export default function BookingListPage({
                     item={item}
                     overdueStatus={config.overdueStatus}
                     onClick={() => openBookingDetails(item.id)}
-                    selectable={canMergeReservations && item.kind === "RESERVATION" && item.status === "BOOKED"}
-                    selected={selectedReservationIds.includes(item.id)}
-                    onSelectedChange={(selected) => toggleReservationSelection(item.id, selected)}
+                    selectable={isMergeSelectable(item)}
+                    selected={selectedBookingIds.includes(item.id)}
+                    onSelectedChange={(selected) => toggleBookingSelection(item.id, selected)}
                     menuProps={{
                       currentUserId, currentUserRole, currentUserCapabilities, config, extendingId,
                       onViewDetails: openBookingDetails,
@@ -694,18 +740,18 @@ export default function BookingListPage({
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        {canMergeReservations && (
+                        {canMergeBookings && (
                           <TableHead className="w-11">
                             <Checkbox
-                              checked={sortedItems.length > 0 && sortedItems
-                                .filter((item) => item.kind === "RESERVATION" && item.status === "BOOKED")
-                                .every((item) => selectedReservationIds.includes(item.id))}
-                              onCheckedChange={(checked) => setSelectedReservationIds(
+                              checked={sortedItems.some(isMergeSelectable) && sortedItems
+                                .filter(isMergeSelectable)
+                                .every((item) => selectedBookingIds.includes(item.id))}
+                              onCheckedChange={(checked) => setSelectedBookingIds(
                                 checked === true
-                                  ? sortedItems.filter((item) => item.kind === "RESERVATION" && item.status === "BOOKED").map((item) => item.id)
+                                  ? sortedItems.filter(isMergeSelectable).map((item) => item.id)
                                   : [],
                               )}
-                              aria-label="Select all reservations on this page"
+                              aria-label={`Select all ${config.kind === "CHECKOUT" ? "checkouts" : "reservations"} on this page`}
                             />
                           </TableHead>
                         )}
@@ -725,9 +771,9 @@ export default function BookingListPage({
                           item={item}
                           overdueStatus={config.overdueStatus}
                           onClick={() => openBookingDetails(item.id)}
-                          selectable={canMergeReservations && item.kind === "RESERVATION" && item.status === "BOOKED"}
-                          selected={selectedReservationIds.includes(item.id)}
-                          onSelectedChange={(selected) => toggleReservationSelection(item.id, selected)}
+                          selectable={isMergeSelectable(item)}
+                          selected={selectedBookingIds.includes(item.id)}
+                          onSelectedChange={(selected) => toggleBookingSelection(item.id, selected)}
                           menuProps={{
                             currentUserId, currentUserRole, currentUserCapabilities, config, extendingId,
                             onViewDetails: openBookingDetails,
@@ -748,9 +794,9 @@ export default function BookingListPage({
                       item={item}
                       overdueStatus={config.overdueStatus}
                       onClick={() => openBookingDetails(item.id)}
-                      selectable={canMergeReservations && item.kind === "RESERVATION" && item.status === "BOOKED"}
-                      selected={selectedReservationIds.includes(item.id)}
-                      onSelectedChange={(selected) => toggleReservationSelection(item.id, selected)}
+                      selectable={isMergeSelectable(item)}
+                      selected={selectedBookingIds.includes(item.id)}
+                      onSelectedChange={(selected) => toggleBookingSelection(item.id, selected)}
                       menuProps={{
                         currentUserId, currentUserRole, currentUserCapabilities, config, extendingId,
                         onViewDetails: openBookingDetails,

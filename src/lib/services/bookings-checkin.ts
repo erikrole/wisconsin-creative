@@ -16,16 +16,17 @@ import { settleBulkLedgerAtCompletion, upsertBulkBalancesAndMovements } from "./
 import { assetLocationEvidence, reconcileAssetLocationToKiosk, type KioskLocationEvidence } from "./kiosk-location";
 import { endCheckoutReturnLiveActivities } from "./live-activities";
 
-function wasReturnedOnTime(endsAt: Date, completedAt: Date) {
+export function wasReturnedOnTime(endsAt: Date, completedAt: Date) {
   return completedAt.getTime() <= endsAt.getTime() + 15 * 60 * 1000;
 }
 
 /**
- * Shared auto-complete check for checkinItems and checkinBulkItem.
- * Completes the booking if all serialized items are returned and all bulk items
- * are fully checked in. Returns the completion timestamp if booking was completed.
+ * Shared auto-complete check for checkinItems, checkinBulkItem, kioskCheckinAsset,
+ * and scanKioskCheckinBulkUnit. Completes the booking if all serialized items are
+ * returned and all bulk items are fully checked in. Returns the completion
+ * timestamp if booking was completed.
  */
-async function maybeAutoComplete(
+export async function maybeAutoComplete(
   tx: Prisma.TransactionClient,
   bookingId: string,
   locationId: string,

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  availabilityBlockedItemMessage,
   availabilityConflictMessage,
   availabilityRiskBadgeLabel,
   availabilityRiskMessage,
@@ -48,6 +49,24 @@ describe("availability copy", () => {
     expect(message).toContain("Conflict with Next shoot");
     expect(message).toContain("return by");
     expect(message).toContain("Next shoot");
+  });
+
+  it("names the person, item, and local deadline when a kiosk add is blocked", () => {
+    expect(availabilityBlockedItemMessage({
+      conflictingBookingRequesterName: "Erik Role",
+      conflictingBookingKind: "RESERVATION",
+      conflictingBookingStatus: "BOOKED",
+      startsAt: "2026-09-12T19:00:00.000Z",
+      endsAt: "2026-09-12T21:30:00.000Z",
+    }, "FX3 2")).toBe("Erik Role has reserved the FX3 2 until Sep 12 at 4:30 PM");
+
+    expect(availabilityBlockedItemMessage({
+      conflictingBookingRequesterName: "Maya Fitzgerald",
+      conflictingBookingKind: "CHECKOUT",
+      conflictingBookingStatus: "OPEN",
+      startsAt: "2026-09-12T19:00:00.000Z",
+      endsAt: "2026-09-12T21:30:00.000Z",
+    }, "FX3 2")).toBe("Maya Fitzgerald has checked out the FX3 2 until Sep 12 at 4:30 PM");
   });
 
   it("keeps timing, transfer, and condition notices distinct", () => {

@@ -8,6 +8,7 @@ import { findBulkUnitByScanValue } from "@/lib/services/bulk-unit-scans";
 import { parseDerivedBulkUnitQr } from "@/lib/bulk-unit-qr";
 import { CLAIMABLE_BULK_UNIT_WHERE } from "@/lib/bulk-unit-status";
 import { checkAvailability } from "@/lib/services/availability";
+import { availabilityBlockedItemMessage } from "@/lib/availability-copy";
 import { upsertBulkBalancesAndMovements } from "@/lib/services/bookings-helpers";
 import { BookingCustodyScope, BookingKind, BulkMovementKind, BulkUnitStatus, Prisma, Role } from "@prisma/client";
 import { scheduleCheckoutReturnLiveActivity } from "@/lib/live-activity-workflow";
@@ -718,7 +719,13 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
       excludeBookingId: booking.id,
     });
     if (hasBlockingAvailabilityIssue(availability)) {
-      return { success: false, error: "Item is not available for this checkout" };
+      const conflict = availability.conflicts.find((item) => item.assetId === asset.id);
+      return {
+        success: false,
+        error: conflict
+          ? availabilityBlockedItemMessage(conflict, asset.name || asset.assetTag)
+          : "Item is not available for this checkout",
+      };
     }
 
     if (existingInBooking) {

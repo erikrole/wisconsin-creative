@@ -16,6 +16,9 @@ export type AvailabilityResult = {
     assetId: string;
     conflictingBookingId: string;
     conflictingBookingTitle?: string;
+    conflictingBookingRequesterName?: string;
+    conflictingBookingKind?: BookingKind;
+    conflictingBookingStatus?: BookingStatus;
     startsAt: Date;
     endsAt: Date;
   }>;
@@ -126,7 +129,14 @@ export async function checkSerializedConflicts(
       bookingId: true,
       startsAt: true,
       endsAt: true,
-      booking: { select: { title: true } }
+      booking: {
+        select: {
+          title: true,
+          kind: true,
+          status: true,
+          requester: { select: { name: true } },
+        },
+      }
     }
   });
 
@@ -134,6 +144,9 @@ export async function checkSerializedConflicts(
     assetId: item.assetId,
     conflictingBookingId: item.bookingId,
     conflictingBookingTitle: item.booking.title,
+    ...(item.booking.requester?.name ? { conflictingBookingRequesterName: item.booking.requester.name } : {}),
+    ...(item.booking.kind ? { conflictingBookingKind: item.booking.kind } : {}),
+    ...(item.booking.status ? { conflictingBookingStatus: item.booking.status } : {}),
     startsAt: item.startsAt,
     endsAt: item.endsAt
   }));

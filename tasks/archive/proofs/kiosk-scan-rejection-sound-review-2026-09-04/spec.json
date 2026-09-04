@@ -1,0 +1,59 @@
+{
+  "title": "Kiosk scan rejection",
+  "eyebrow": "iOS · Wisconsin Creative · Kiosk",
+  "lede": "A blocked candidate is rejected at scan time, so the visible cart remains a trustworthy count of accepted items.",
+  "stats": [
+    {
+      "k": "Admitted items",
+      "v": "2",
+      "n": "Only items that pass the candidate availability check enter the cart/count",
+      "tone": "good"
+    },
+    {
+      "k": "Rejected outcome",
+      "v": "Clear",
+      "n": "The holder, item, deadline, and not-added result are visible together",
+      "tone": "good"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Checkout scan stage",
+      "note": "Same conflicted candidate and iPad Air 11-inch (M4) simulator viewport. Before is the inspected pre-rejection state from the existing availability-conflicts capture; after is the fresh post-rejection fixture state from the verified Debug build.",
+      "pairs": [
+        {
+          "title": "When the FX3 is already reserved",
+          "sub": "The cart count should describe accepted items, not every barcode that passed through the scanner.",
+          "before": "before/checkout.png",
+          "beforeCap": "The reserved FX3 is already staged, so the cart says 4 items even though the availability banner says checkout is blocked.",
+          "after": "after/checkout.png",
+          "afterCap": "The FX3 is absent, the cart says 2 items, and the rejection banner keeps Erik Role, the deadline, and the explicit not-added outcome together.",
+          "focus": "accepted count and rejection message"
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "A blocking scan no longer looks accepted",
+      "was": "The scan endpoint could succeed and the client staged the item before the future reservation conflict was known, leaving a misleading cart count and a blocked completion step.",
+      "now": "Checkout serializes candidates and preflights the candidate cart before insertion; a blocking reservation, checkout, unavailable-asset, or bulk-shortage result is rejected and never increments the visible count."
+    },
+    {
+      "h": "Failure feedback works in the assembly line",
+      "was": "The operator had to notice a visual error banner or haptic while continuing through a rapid scan sequence.",
+      "now": "Rejected, failed, and duplicate feedback retains the visual, haptic, and VoiceOver announcement and adds a short procedural failure cue; successful scans and non-blocking warnings stay quiet."
+    }
+  ],
+  "verification": [
+    "<strong>Focused source contracts:</strong> 17/17 passing across the new rejection/sound suite and the existing Kiosk availability, recovery, numbered-battery, and pickup contracts.",
+    "<strong>Native gates:</strong> WisconsinKiosk Debug and Release builds pass for the iPad Air 11-inch (M4), iOS 26.5 simulator; project parity, drift, iOS gap audits, and diff checks pass.",
+    "<strong>Visual:</strong> both PNGs were inspected after installing the fresh Debug build; the post-rejection capture shows only admitted items in the cart and the named rejection message.",
+    "<strong>Audio boundary:</strong> the procedural cue is compile-wired and failure-only by source contract; actual speaker loudness and scanner-floor audibility remain a physical-iPad gate."
+  ],
+  "notes": [
+    "This is local source/build/simulator proof only. The final server availability check and transactional completion guard remain authoritative, and no API, schema, permission, allocation, audit, or custody semantics changed.",
+    "The before image is the previously captured, inspected pre-rejection output for the same availability-conflict candidate and viewport. The after image uses the dedicated post-rejection fixture state so the expected absence from the cart is directly visible rather than reconstructed by hand.",
+    "Deployment and managed-iPad speaker/scanner replay are still open; the simulator cannot prove a physical sounder output."
+  ]
+}

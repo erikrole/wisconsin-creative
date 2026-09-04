@@ -1,9 +1,10 @@
-import { BookingKind, BookingStatus, BulkMovementKind, BulkUnitStatus, Prisma } from "@prisma/client";
+import { BookingCustodyScope, BookingKind, BookingStatus, BulkMovementKind, BulkUnitStatus, Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { upsertBulkBalancesAndMovements } from "@/lib/services/bookings-helpers";
 import { effectiveBulkUnitStatus } from "@/lib/bulk-unit-status";
 import { parseDerivedBulkUnitQr } from "@/lib/bulk-unit-qr";
 import { HttpError } from "@/lib/http";
+import { maybeAutoComplete, wasReturnedOnTime } from "@/lib/services/bookings-checkin";
 
 type TxClient = Prisma.TransactionClient;
 
@@ -43,9 +44,17 @@ type BulkUnitScanItem = {
   bulkSkuId: string;
 };
 
-type KioskUnitScanResult =
+type CheckoutReturnedBadgeEvent = {
+  userId: string;
+  bookingId: string;
+  completedAt: Date;
+  wasOnTime: boolean;
+  sourceKey: string;
+};
+
+type KioskUnitScanResult<TExtra extends object = object> =
   | { handled: false }
-  | { handled: true; success: true; item: BulkUnitScanItem }
+  | ({ handled: true; success: true; item: BulkUnitScanItem } & TExtra)
   | { handled: true; success: false; error: string; errorCode: KioskScanErrorCode };
 
 function unitDisplayName(skuName: string, unitNumber: number) {
@@ -442,10 +451,15 @@ export async function stageKioskReservationPickupBulkUnit(
   };
 }
 
+/**
+ * Auto-completes the checkout when this scan returns the last outstanding
+ * item, so a dropped kiosk session cannot leave a fully returned checkout
+ * stuck OPEN before the explicit "Complete Return" tap.
+ */
 export async function scanKioskCheckinBulkUnit(
   tx: TxClient,
-  args: { bookingId: string; scanValue: string; kioskLocationId: string },
-): Promise<KioskUnitScanResult> {
+  args: { bookingId: string; scanValue: string; kioskLocationId: string; actorUserId: string },
+): Promise<KioskUnitScanResult<{ completed: boolean; badgeEvent: CheckoutReturnedBadgeEvent | null }>> {
   const booking = await tx.booking.findUnique({
     where: { id: args.bookingId },
     include: {
@@ -575,6 +589,10 @@ export async function scanKioskCheckinBulkUnit(
     items: [{ bulkSkuId: bulkItem.bulkSkuId, quantity: 1 }],
   });
 
+  const completedAt = await maybeAutoComplete(tx, booking.id, booking.locationId, args.actorUserId, {
+    auditAction: "auto_completed_by_kiosk_checkin",
+  });
+
   return {
     handled: true,
     success: true,
@@ -586,6 +604,17 @@ export async function scanKioskCheckinBulkUnit(
       unitNumber: unit.unitNumber,
       bulkSkuId: bulkItem.bulkSkuId,
     },
+    completed: completedAt !== null,
+    badgeEvent:
+      completedAt && booking.custodyScope === BookingCustodyScope.PERSON
+        ? {
+            userId: booking.requesterUserId,
+            bookingId: booking.id,
+            completedAt,
+            wasOnTime: wasReturnedOnTime(booking.endsAt, completedAt),
+            sourceKey: booking.id,
+          }
+        : null,
   };
 }
 

@@ -10,24 +10,25 @@
 | `src/lib/services/auto-assign.ts` | 92 |
 | `src/lib/services/auto-fill-preview.ts` | 325 |
 | `src/lib/services/availability-conflict-recompute.ts` | 130 |
-| `src/lib/services/availability.ts` | 618 |
+| `src/lib/services/availability.ts` | 631 |
 | `src/lib/services/blast-targeting.ts` | 165 |
 | `src/lib/services/blasts.ts` | 358 |
 | `src/lib/services/booking-custody.ts` | 82 |
 | `src/lib/services/booking-ref.ts` | 26 |
 | `src/lib/services/booking-rules.ts` | 110 |
-| `src/lib/services/bookings-checkin.ts` | 853 |
+| `src/lib/services/bookings-checkin.ts` | 854 |
 | `src/lib/services/bookings-helpers.ts` | 281 |
 | `src/lib/services/bookings-lifecycle.ts` | 2850 |
 | `src/lib/services/bookings-queries.ts` | 301 |
-| `src/lib/services/bookings.ts` | 6 |
+| `src/lib/services/bookings.ts` | 7 |
 | `src/lib/services/bulk-assignment-batches.ts` | 252 |
 | `src/lib/services/bulk-schedule-assignment.ts` | 969 |
-| `src/lib/services/bulk-unit-scans.ts` | 661 |
+| `src/lib/services/bulk-unit-scans.ts` | 690 |
 | `src/lib/services/calendar-sync-health.ts` | 165 |
 | `src/lib/services/calendar-sync.ts` | 734 |
 | `src/lib/services/candidate-scoring.ts` | 439 |
 | `src/lib/services/category-mutations.ts` | 168 |
+| `src/lib/services/checkout-consolidation.ts` | 404 |
 | `src/lib/services/checkout-policies.ts` | 40 |
 | `src/lib/services/claim-review-notifications.ts` | 179 |
 | `src/lib/services/collaborator-policies.ts` | 400 |
@@ -55,6 +56,7 @@
 | `src/lib/services/pending-pickup-expiry.ts` | 281 |
 | `src/lib/services/reports.ts` | 1932 |
 | `src/lib/services/reservation-consolidation.ts` | 253 |
+| `src/lib/services/reservation-pickup-location.ts` | 34 |
 | `src/lib/services/reservation-rules.ts` | 46 |
 | `src/lib/services/reservation-schedule.ts` | 667 |
 | `src/lib/services/scans.ts` | 671 |
@@ -64,7 +66,7 @@
 | `src/lib/services/schedule-exports.ts` | 522 |
 | `src/lib/services/schedule-health.ts` | 382 |
 | `src/lib/services/schedule-notification-copy.ts` | 127 |
-| `src/lib/services/schedule-notification-diff.ts` | 239 |
+| `src/lib/services/schedule-notification-diff.ts` | 236 |
 | `src/lib/services/schedule-notification-flush.ts` | 190 |
 | `src/lib/services/schedule-notification-policy.ts` | 138 |
 | `src/lib/services/schedule-open-work.ts` | 566 |
@@ -106,7 +108,7 @@
 | `src/lib/auth-email-guidance.ts` | 7 |
 | `src/lib/auth.ts` | 361 |
 | `src/lib/auto-fill-preview-types.ts` | 61 |
-| `src/lib/availability-copy.ts` | 190 |
+| `src/lib/availability-copy.ts` | 233 |
 | `src/lib/avatar.ts` | 44 |
 | `src/lib/battery-compatibility.ts` | 166 |
 | `src/lib/bhphoto-image.ts` | 67 |
@@ -173,7 +175,7 @@
 | `src/lib/ops-checks.ts` | 176 |
 | `src/lib/passkey-client.ts` | 73 |
 | `src/lib/passkey.ts` | 371 |
-| `src/lib/permissions.ts` | 221 |
+| `src/lib/permissions.ts` | 222 |
 | `src/lib/profile-completion-events.ts` | 6 |
 | `src/lib/profile-completion.ts` | 157 |
 | `src/lib/profile-phone.ts` | 44 |
@@ -185,6 +187,7 @@
 | `src/lib/rbac.ts` | 59 |
 | `src/lib/remark-callouts.ts` | 73 |
 | `src/lib/request-limits.ts` | 17 |
+| `src/lib/reservation-pickup-locations.ts` | 38 |
 | `src/lib/resource-assets-client.ts` | 20 |
 | `src/lib/resource-assets-storage.ts` | 75 |
 | `src/lib/resource-assets.ts` | 865 |
@@ -409,6 +412,8 @@
 - `/api/checkouts/[id]/scan-status`
 - `/api/checkouts/[id]/scan`
 - `/api/checkouts/[id]/start-scan-session`
+- `/api/checkouts/merge/preview`
+- `/api/checkouts/merge`
 - `/api/checkouts`
 
 ### `/api/collaborator-affiliations`
