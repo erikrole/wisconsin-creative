@@ -23,6 +23,11 @@ import { applyBookingItemsUpdate } from "@/components/booking-list/list-recovery
 import { Checkbox } from "@/components/ui/checkbox";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  CheckoutMergeDialog,
+  type CheckoutMergeDecision,
+  type CheckoutMergePreview,
+} from "@/components/CheckoutMergeDialog";
 
 import {
   SortHeader,
@@ -52,6 +57,24 @@ type BookingListPageProps = {
   enableBookingChangeSync?: boolean;
   initialHighlight?: string | null;
   initialSheetTab?: BookingSheetSection | null;
+};
+
+type MergePreviewData = {
+  title: string;
+  sourceReservationIds?: string[];
+  sourceCheckoutIds?: string[];
+  serializedItemCount: number;
+  bulkQuantity: number;
+  targetCheckout?: CheckoutMergePreview["targetCheckout"];
+  returnWindowOptions?: CheckoutMergePreview["returnWindowOptions"];
+  sourceReservationOptions?: CheckoutMergePreview["sourceReservationOptions"];
+  conflicts?: CheckoutMergePreview["conflicts"];
+};
+
+type CheckoutMergeDialogState = {
+  preview: CheckoutMergePreview;
+  requesterName: string;
+  totalItems: number;
 };
 
 function parseBookingSheetSection(value: string | null): BookingSheetSection | null {
@@ -280,6 +303,8 @@ export default function BookingListPage({
     && item.status === mergeableStatus;
   const [selectedBookingIds, setSelectedBookingIds] = useState<string[]>([]);
   const [mergingBookings, setMergingBookings] = useState(false);
+  const [checkoutMergeDialog, setCheckoutMergeDialog] = useState<CheckoutMergeDialogState | null>(null);
+  const checkoutMergeDialogResolver = useRef<((decision: CheckoutMergeDecision | null) => void) | null>(null);
   const [bulkActionBusy, setBulkActionBusy] = useState(false);
   const [bulkLocationId, setBulkLocationId] = useState("");
   const [bulkRequesterId, setBulkRequesterId] = useState("");
@@ -403,6 +428,22 @@ export default function BookingListPage({
       : current.filter((currentId) => currentId !== id));
   }, []);
 
+  const resolveCheckoutMergeDialog = useCallback((decision: CheckoutMergeDecision | null) => {
+    setCheckoutMergeDialog(null);
+    const resolve = checkoutMergeDialogResolver.current;
+    checkoutMergeDialogResolver.current = null;
+    resolve?.(decision);
+  }, []);
+
+  const requestCheckoutMergeDecision = useCallback((
+    preview: CheckoutMergePreview,
+    requesterName: string,
+    totalItems: number,
+  ) => new Promise<CheckoutMergeDecision | null>((resolve) => {
+    checkoutMergeDialogResolver.current = resolve;
+    setCheckoutMergeDialog({ preview, requesterName, totalItems });
+  }), []);
+
   async function mergeSelectedBookings() {
     if (selectedBookingIds.length < 2 || mergingBookings) return;
     const isCheckoutMerge = config.kind === "CHECKOUT";
@@ -422,13 +463,7 @@ export default function BookingListPage({
         return;
       }
       const preview = await parseJsonSafely<{
-        data?: {
-          title: string;
-          sourceReservationIds?: string[];
-          sourceCheckoutIds?: string[];
-          serializedItemCount: number;
-          bulkQuantity: number;
-        };
+        data?: MergePreviewData;
       }>(previewResponse);
       if (!preview?.data) {
         toast.error("The merge preview did not load.");
@@ -446,18 +481,40 @@ export default function BookingListPage({
         ? "this shared event checkout"
         : selectedItem?.requester.name ?? "this person";
       const totalItems = preview.data.serializedItemCount + preview.data.bulkQuantity;
-      const approved = await confirm({
-        title: isCheckoutMerge ? "Merge checkouts" : "Combine reservations",
-        message: isCheckoutMerge
-          ? `Merge ${sourceIds.length + 1} matching open checkouts for ${requesterName} into one “${preview.data.title}” checkout with ${totalItems} total items? Physical custody and the original history will be preserved.`
-          : `Combine ${sourceIds.length + 1} matching reservations for ${requesterName} into one “${preview.data.title}” plan with ${totalItems} total items? The original history will be preserved.`,
-        confirmLabel: isCheckoutMerge ? "Merge checkouts" : "Combine reservations",
-      });
-      if (!approved) return;
+      let mergeBody: {
+        ids: string[];
+        endsAt?: string;
+        sourceReservationId?: string | null;
+        allowContextOverrides?: true;
+      } = { ids: selectedBookingIds };
+
+      if (isCheckoutMerge) {
+        const checkoutPreview = preview.data as CheckoutMergePreview;
+        if (
+          !checkoutPreview.targetCheckout
+          || !checkoutPreview.returnWindowOptions
+          || !checkoutPreview.sourceReservationOptions
+          || !checkoutPreview.conflicts
+        ) {
+          toast.error("The checkout merge review did not load. Refresh and try again.");
+          return;
+        }
+        const decision = await requestCheckoutMergeDecision(checkoutPreview, requesterName, totalItems);
+        if (!decision) return;
+        mergeBody = { ids: selectedBookingIds, ...decision };
+      } else {
+        const approved = await confirm({
+          title: "Combine reservations",
+          message: `Combine ${sourceIds.length + 1} matching reservations for ${requesterName} into one “${preview.data.title}” plan with ${totalItems} total items? The original history will be preserved.`,
+          confirmLabel: "Combine reservations",
+        });
+        if (!approved) return;
+      }
+
       const mergeResponse = await fetchWithTimeout(mergePath, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: selectedBookingIds }),
+        body: JSON.stringify(mergeBody),
       });
       if (handleAuthRedirect(mergeResponse)) return;
       if (!mergeResponse.ok) {
@@ -827,6 +884,15 @@ export default function BookingListPage({
           </>
         )}
       </Card>
+
+      <CheckoutMergeDialog
+        open={checkoutMergeDialog !== null}
+        preview={checkoutMergeDialog?.preview ?? null}
+        requesterName={checkoutMergeDialog?.requesterName ?? ""}
+        totalItems={checkoutMergeDialog?.totalItems ?? 0}
+        onCancel={() => resolveCheckoutMergeDialog(null)}
+        onConfirm={resolveCheckoutMergeDialog}
+      />
 
       {/* ════════ Booking details sheet ════════ */}
       {selectedBookingId && (

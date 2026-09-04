@@ -11,5 +11,8 @@ const schema = z.object({
 export const POST = withAuth(async (req, { user }) => {
   requirePermission(user.role, "checkout", "merge");
   const body = schema.parse(await req.json());
-  return ok({ data: await previewCheckoutMerge(body.ids) });
+  // The preview is intentionally conflict-aware. Staff still get hard
+  // custody/context guards, but return-window and source-reservation
+  // differences need to reach the modal so they can make an explicit choice.
+  return ok({ data: await previewCheckoutMerge(body.ids, { allowContextOverrides: true }) });
 });

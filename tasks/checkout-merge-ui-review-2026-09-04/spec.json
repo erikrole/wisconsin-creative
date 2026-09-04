@@ -1,7 +1,7 @@
 {
   "title": "Checkout Merge Repair",
   "eyebrow": "Web · Wisconsin Creative",
-  "lede": "Staff and admins can now select compatible open event checkouts and consolidate them into one auditable custody record when a duplicate checkout splits an event's gear.",
+  "lede": "Staff and admins can now review and consolidate duplicate open event checkouts into one auditable custody record, including an explicit choice when return times or reservation links differ.",
   "stats": [
     {
       "k": "Selection",
@@ -41,11 +41,16 @@
     {
       "h": "Same event is necessary but not sufficient",
       "was": "A broad same-title or same-person merge could combine different event windows, locations, people, or started/returned custody.",
-      "now": "Preview and mutation require exact event set, title, requester metadata, custody scope, location, time window, and source reservation compatibility, and reject partial, completed, excluded, duplicate, or already-returned custody."
+      "now": "Preview and mutation require exact event set, title, requester metadata, custody scope, and location; the modal resolves return-time and reservation-link differences explicitly, while partial, completed, excluded, duplicate, or already-returned custody remains blocked."
+    },
+    {
+      "h": "Return/source mismatches stopped the repair before review",
+      "was": "The merge endpoint rejected checkouts as soon as their return windows or source reservation IDs differed, so an operator could not decide which context should survive.",
+      "now": "A dedicated modal lists the available return times, accepts an adjusted due-back, and lets staff choose the surviving reservation link. The selected time is checked against combined availability and recorded in due-date and merge audit history."
     }
   ],
   "verification": [
-    "<strong>Focused checkout suite:</strong> 12 tests pass across service, route, and merge UI/source contracts; the booking UI polish contracts add 5 passing layout/accessibility checks.",
+    "<strong>Focused checkout suite:</strong> 15 tests pass across service, route, and merge UI/source contracts; the booking UI polish contracts add 5 passing layout/accessibility checks.",
     "<strong>TypeScript:</strong> <code>npx tsc --noEmit --pretty false --incremental false</code> passes.",
     "<strong>Lint/build:</strong> targeted ESLint, full ESLint, and <code>npm run build:app</code> pass; codemaps are current and <code>git diff --check</code> passes.",
     "<strong>Full repository suite:</strong> 589 files pass, but 33 existing worktree failures remain in unrelated iOS, schedule, availability, reservation, and system-hardening areas; the new checkout suite is green.",
@@ -53,7 +58,7 @@
   ],
   "notes": [
     "This is an explicit repair action, not automatic deduplication. The UI only offers it for staff/admin users and compatible OPEN checkouts.",
-    "Do not run it against Ryan's records until the two checkout rows are confirmed to represent the same event, person/custody scope, location, and window, with no returned items.",
+    "After compatible code is deployed, use the modal for Usman's selected rows and confirm the return time before committing the repair. Keep the same event, person/custody scope, location, and active-item checks in view.",
     "The implementation is local only; no production data was modified and no deployment was performed."
   ]
 }

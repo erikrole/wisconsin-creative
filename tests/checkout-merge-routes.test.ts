@@ -45,14 +45,14 @@ const adminUser = {
   avatarUrl: null,
 };
 
-function post(path: string) {
+function post(path: string, body: Record<string, unknown> = { ids }) {
   return new Request(`https://app.example.com${path}`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
       origin: "https://app.example.com",
     },
-    body: JSON.stringify({ ids }),
+    body: JSON.stringify(body),
   });
 }
 
@@ -85,7 +85,7 @@ describe("checkout merge routes", () => {
     });
 
     expect(response.status).toBe(200);
-    expect(previewCheckoutMerge).toHaveBeenCalledWith(ids);
+    expect(previewCheckoutMerge).toHaveBeenCalledWith(ids, { allowContextOverrides: true });
   });
 
   it("merges through the service and refreshes the surviving return activity", async () => {
@@ -109,6 +109,35 @@ describe("checkout merge routes", () => {
       endsAt: new Date("2026-09-05T04:00:00.000Z"),
     });
     expect(body.meta.mergedCheckoutIds).toEqual([ids[1]]);
+  });
+
+  it("passes the modal's explicit return and reservation choices to the merge service", async () => {
+    const selectedEndsAt = "2026-09-05T06:00:00.000Z";
+    const sourceReservationId = "cm000000000000000000000009";
+    vi.mocked(mergeCheckouts).mockResolvedValue({
+      id: ids[0]!,
+      status: "OPEN",
+      title: "Volleyball Photo",
+      endsAt: new Date(selectedEndsAt),
+    } as never);
+
+    const req = post("/api/checkouts/merge", {
+      ids,
+      endsAt: selectedEndsAt,
+      sourceReservationId,
+      allowContextOverrides: true,
+    });
+    const response = await postCheckoutMerge(req, { params: Promise.resolve({}) });
+
+    expect(response.status).toBe(200);
+    expect(mergeCheckouts).toHaveBeenCalledWith({
+      ids,
+      actorUserId: adminUser.id,
+      actorRole: Role.ADMIN,
+      endsAt: new Date(selectedEndsAt),
+      sourceReservationId,
+      allowContextOverrides: true,
+    });
   });
 
   it("denies merge preview to non-staff actors", async () => {

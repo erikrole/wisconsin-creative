@@ -90,7 +90,7 @@
   <header>
     <p class="eyebrow">Web · Wisconsin Creative</p>
     <h1>Checkout Merge Repair</h1>
-    <p class="lede">Staff and admins can now select compatible open event checkouts and consolidate them into one auditable custody record when a duplicate checkout splits an event's gear.</p>
+    <p class="lede">Staff and admins can now review and consolidate duplicate open event checkouts into one auditable custody record, including an explicit choice when return times or reservation links differ.</p>
     <hr class="rule">
   </header>
   <div class="stats">
@@ -132,9 +132,16 @@
     <h3>Same event is necessary but not sufficient</h3>
     <div class="ba">
       <div><span class="lbl lbl-b">Was</span><p>A broad same-title or same-person merge could combine different event windows, locations, people, or started/returned custody.</p></div>
-      <div><span class="lbl lbl-a">Now</span><p>Preview and mutation require exact event set, title, requester metadata, custody scope, location, time window, and source reservation compatibility, and reject partial, completed, excluded, duplicate, or already-returned custody.</p></div>
+      <div><span class="lbl lbl-a">Now</span><p>Preview and mutation require exact event set, title, requester metadata, custody scope, and location; the modal resolves return-time and reservation-link differences explicitly, while partial, completed, excluded, duplicate, or already-returned custody remains blocked.</p></div>
     </div>
   </div>
-  <h2>Verification</h2><div class="panel"><ul><li><strong>Focused checkout suite:</strong> 12 tests pass across service, route, and merge UI/source contracts; the booking UI polish contracts add 5 passing layout/accessibility checks.</li><li><strong>TypeScript:</strong> <code>npx tsc --noEmit --pretty false --incremental false</code> passes.</li><li><strong>Lint/build:</strong> targeted ESLint, full ESLint, and <code>npm run build:app</code> pass; codemaps are current and <code>git diff --check</code> passes.</li><li><strong>Full repository suite:</strong> 589 files pass, but 33 existing worktree failures remain in unrelated iOS, schedule, availability, reservation, and system-hardening areas; the new checkout suite is green.</li><li><strong>Runtime:</strong> local route verification is blocked by the missing database connection environment; authenticated browser proof, deployment, and a controlled live-data merge remain open.</li></ul></div>
-  <h2>Things to know</h2><div class="panel flag"><ul><li>This is an explicit repair action, not automatic deduplication. The UI only offers it for staff/admin users and compatible OPEN checkouts.</li><li>Do not run it against Ryan's records until the two checkout rows are confirmed to represent the same event, person/custody scope, location, and window, with no returned items.</li><li>The implementation is local only; no production data was modified and no deployment was performed.</li></ul></div>
+  <div class="change">
+    <h3>Return/source mismatches stopped the repair before review</h3>
+    <div class="ba">
+      <div><span class="lbl lbl-b">Was</span><p>The merge endpoint rejected checkouts as soon as their return windows or source reservation IDs differed, so an operator could not decide which context should survive.</p></div>
+      <div><span class="lbl lbl-a">Now</span><p>A dedicated modal lists the available return times, accepts an adjusted due-back, and lets staff choose the surviving reservation link. The selected time is checked against combined availability and recorded in due-date and merge audit history.</p></div>
+    </div>
+  </div>
+  <h2>Verification</h2><div class="panel"><ul><li><strong>Focused checkout suite:</strong> 15 tests pass across service, route, and merge UI/source contracts; the booking UI polish contracts add 5 passing layout/accessibility checks.</li><li><strong>TypeScript:</strong> <code>npx tsc --noEmit --pretty false --incremental false</code> passes.</li><li><strong>Lint/build:</strong> targeted ESLint, full ESLint, and <code>npm run build:app</code> pass; codemaps are current and <code>git diff --check</code> passes.</li><li><strong>Full repository suite:</strong> 589 files pass, but 33 existing worktree failures remain in unrelated iOS, schedule, availability, reservation, and system-hardening areas; the new checkout suite is green.</li><li><strong>Runtime:</strong> local route verification is blocked by the missing database connection environment; authenticated browser proof, deployment, and a controlled live-data merge remain open.</li></ul></div>
+  <h2>Things to know</h2><div class="panel flag"><ul><li>This is an explicit repair action, not automatic deduplication. The UI only offers it for staff/admin users and compatible OPEN checkouts.</li><li>After compatible code is deployed, use the modal for Usman's selected rows and confirm the return time before committing the repair. Keep the same event, person/custody scope, location, and active-item checks in view.</li><li>The implementation is local only; no production data was modified and no deployment was performed.</li></ul></div>
 </div>

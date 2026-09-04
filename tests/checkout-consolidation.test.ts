@@ -12,7 +12,13 @@ vi.mock("@/lib/db", () => ({
 
 vi.mock("@/lib/audit", () => ({ createAuditEntryTx: vi.fn() }));
 
+vi.mock("@/lib/services/availability", () => ({
+  checkAvailability: vi.fn(),
+}));
+
 import { db } from "@/lib/db";
+import { createAuditEntryTx } from "@/lib/audit";
+import { checkAvailability } from "@/lib/services/availability";
 import { mergeCheckouts, previewCheckoutMerge } from "@/lib/services/checkout-consolidation";
 
 const ids = ["cm000000000000000000000001", "cm000000000000000000000002"];
@@ -20,6 +26,8 @@ const eventId = "cm000000000000000000000003";
 const requesterId = "cm000000000000000000000004";
 const locationId = "cm000000000000000000000005";
 const batterySkuId = "cm000000000000000000000006";
+const reservationA = "cm000000000000000000000009";
+const reservationB = "cm000000000000000000000010";
 
 function checkout(id: string, overrides: Record<string, unknown> = {}) {
   const assetId = `${id}-asset`;
@@ -82,7 +90,7 @@ function transactionClient() {
     bookingPhoto: { updateMany: vi.fn() },
     checkinItemReport: { updateMany: vi.fn() },
     liveActivityToken: { updateMany: vi.fn() },
-    bookingDueDateChange: { updateMany: vi.fn() },
+    bookingDueDateChange: { updateMany: vi.fn(), create: vi.fn() },
     liveActivityStart: {
       findMany: vi.fn().mockResolvedValue([]),
       updateMany: vi.fn(),
@@ -90,7 +98,17 @@ function transactionClient() {
   };
 }
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.mocked(checkAvailability).mockResolvedValue({
+    conflicts: [],
+    shortages: [],
+    unavailableAssets: [],
+    upcomingCommitments: [],
+    turnaroundRisks: [],
+    bulkTurnaroundRisks: [],
+  });
+});
 
 describe("checkout consolidation", () => {
   it("previews an older event checkout with additive battery totals", async () => {
@@ -99,7 +117,7 @@ describe("checkout consolidation", () => {
       checkout(ids[0]!),
     ] as never);
 
-    await expect(previewCheckoutMerge(ids)).resolves.toEqual({
+    await expect(previewCheckoutMerge(ids)).resolves.toMatchObject({
       targetCheckoutId: ids[0],
       sourceCheckoutIds: [ids[1]],
       title: "Volleyball Photo",
@@ -108,7 +126,45 @@ describe("checkout consolidation", () => {
       eventIds: [eventId],
       serializedItemCount: 2,
       bulkQuantity: 3,
+      targetCheckout: {
+        id: ids[0],
+        refNumber: "CO-1001",
+        startsAt: "2026-09-04T15:00:00.000Z",
+        latestPickupAt: "2026-09-04T15:07:00.000Z",
+        endsAt: "2026-09-05T04:00:00.000Z",
+        sourceReservationId: null,
+      },
+      returnWindowOptions: [{
+        endsAt: "2026-09-05T04:00:00.000Z",
+        checkoutIds: ids,
+        checkoutRefs: ["CO-1001", "CO-1002"],
+      }],
+      sourceReservationOptions: [{
+        sourceReservationId: null,
+        checkoutIds: ids,
+        checkoutRefs: ["CO-1001", "CO-1002"],
+      }],
+      conflicts: { returnWindow: false, sourceReservation: false },
     });
+  });
+
+  it("previews return and reservation conflicts for the explicit merge modal", async () => {
+    vi.mocked(db.booking.findMany).mockResolvedValue([
+      checkout(ids[0]!, { sourceReservationId: reservationA }),
+      checkout(ids[1]!, {
+        endsAt: new Date("2026-09-05T05:00:00.000Z"),
+        sourceReservationId: reservationB,
+      }),
+    ] as never);
+
+    const preview = await previewCheckoutMerge(ids, { allowContextOverrides: true });
+
+    expect(preview.conflicts).toEqual({ returnWindow: true, sourceReservation: true });
+    expect(preview.returnWindowOptions).toHaveLength(2);
+    expect(preview.sourceReservationOptions).toEqual([
+      { sourceReservationId: reservationA, checkoutIds: [ids[0]], checkoutRefs: ["CO-1001"] },
+      { sourceReservationId: reservationB, checkoutIds: [ids[1]], checkoutRefs: ["CO-1002"] },
+    ]);
   });
 
   it("rejects a returned checkout or a different event context", async () => {
@@ -198,6 +254,66 @@ describe("checkout consolidation", () => {
     expect(tx.bookingBulkItem.delete).toHaveBeenCalledWith({
       where: { id: `${ids[1]}-bulk-item` },
     });
+  });
+
+  it("applies an explicit return and reservation choice with due-date audit history", async () => {
+    const tx = transactionClient();
+    const canonical = checkout(ids[0]!, { sourceReservationId: reservationA });
+    const source = checkout(ids[1]!, {
+      endsAt: new Date("2026-09-05T05:00:00.000Z"),
+      sourceReservationId: reservationB,
+    });
+    const selectedEndsAt = new Date("2026-09-05T06:00:00.000Z");
+    vi.mocked(db.$transaction).mockImplementation(async (callback) => {
+      tx.booking.findMany.mockResolvedValue([source, canonical]);
+      tx.booking.findUniqueOrThrow.mockResolvedValue({ id: canonical.id, status: BookingStatus.OPEN } as never);
+      return callback(tx as never);
+    });
+
+    await mergeCheckouts({
+      ids,
+      actorUserId: "cm000000000000000000000008",
+      actorRole: Role.STAFF,
+      allowContextOverrides: true,
+      endsAt: selectedEndsAt,
+      sourceReservationId: reservationB,
+    });
+
+    expect(checkAvailability).toHaveBeenCalledWith(tx, expect.objectContaining({
+      endsAt: selectedEndsAt,
+      excludeBookingId: ids[0],
+      bookingKind: BookingKind.CHECKOUT,
+      enforceSerializedTurnaroundBuffer: false,
+    }));
+    expect(tx.booking.update).toHaveBeenCalledWith({
+      where: { id: ids[0] },
+      data: expect.objectContaining({
+        notes: null,
+        endsAt: selectedEndsAt,
+        sourceReservationId: reservationB,
+      }),
+    });
+    expect(tx.assetAllocation.updateMany).toHaveBeenCalledWith({
+      where: { bookingId: ids[0], active: true },
+      data: { endsAt: selectedEndsAt },
+    });
+    expect(tx.bookingDueDateChange.create).toHaveBeenCalledWith({
+      data: {
+        bookingId: ids[0],
+        actorUserId: "cm000000000000000000000008",
+        previousEndsAt: canonical.endsAt,
+        nextEndsAt: selectedEndsAt,
+      },
+    });
+    expect(createAuditEntryTx).toHaveBeenCalledWith(tx, expect.objectContaining({
+      action: "checkouts_merged",
+      after: expect.objectContaining({
+        contextResolution: expect.objectContaining({
+          selectedEndsAt: selectedEndsAt.toISOString(),
+          selectedSourceReservationId: reservationB,
+        }),
+      }),
+    }));
   });
 
   it("keeps merge repair staff-only", async () => {

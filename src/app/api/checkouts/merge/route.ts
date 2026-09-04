@@ -10,6 +10,9 @@ import { updateCheckoutReturnLiveActivities } from "@/lib/services/live-activiti
 
 const schema = z.object({
   ids: z.array(z.string().cuid()).min(2).max(25),
+  endsAt: z.string().datetime({ offset: true }).optional(),
+  sourceReservationId: z.string().cuid().nullable().optional(),
+  allowContextOverrides: z.boolean().optional(),
 }).strict();
 
 export const POST = withAuth(async (req, { user }) => {
@@ -25,6 +28,9 @@ export const POST = withAuth(async (req, { user }) => {
     ids: body.ids,
     actorUserId: user.id,
     actorRole: user.role,
+    ...(body.endsAt !== undefined ? { endsAt: new Date(body.endsAt) } : {}),
+    ...(body.sourceReservationId !== undefined ? { sourceReservationId: body.sourceReservationId } : {}),
+    ...(body.allowContextOverrides !== undefined ? { allowContextOverrides: body.allowContextOverrides } : {}),
   });
   deferCompanionProjectionRefreshForCommittedMutation(req);
 

@@ -28,7 +28,7 @@
 | `src/lib/services/calendar-sync.ts` | 734 |
 | `src/lib/services/candidate-scoring.ts` | 439 |
 | `src/lib/services/category-mutations.ts` | 168 |
-| `src/lib/services/checkout-consolidation.ts` | 404 |
+| `src/lib/services/checkout-consolidation.ts` | 610 |
 | `src/lib/services/checkout-policies.ts` | 40 |
 | `src/lib/services/claim-review-notifications.ts` | 179 |
 | `src/lib/services/collaborator-policies.ts` | 400 |

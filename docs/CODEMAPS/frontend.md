@@ -117,8 +117,8 @@
 | `src/components/onboarding/OnboardingDialog.tsx` | 996 |
 | `src/components/booking-wizard/BookingWizard.tsx` | 920 |
 | `src/components/EquipmentPicker.tsx` | 916 |
+| `src/components/BookingListPage.tsx` | 913 |
 | `src/components/AppShell.tsx` | 896 |
-| `src/components/BookingListPage.tsx` | 847 |
 | `src/components/ShiftDetailPanel.tsx` | 795 |
 | `src/components/ChooseImageModal.tsx` | 769 |
 | `src/components/profile-completion/ProfileCompletionWizard.tsx` | 769 |
@@ -137,10 +137,10 @@
 | `src/components/booking-details/EditBookingEventsDialog.tsx` | 342 |
 | `src/components/resources/MarkdownReader.tsx` | 312 |
 | `src/components/public-showroom/showroom-blocks.tsx` | 290 |
+| `src/components/CheckoutMergeDialog.tsx` | 286 |
 | `src/components/PageBreadcrumb.tsx` | 286 |
 | `src/components/booking-details/BookingSheetOverview.tsx` | 285 |
 | `src/components/booking-details/TransferOwnerDialog.tsx` | 271 |
-| `src/components/booking-wizard/WizardStep3.tsx` | 266 |
 
 ## Hooks
 

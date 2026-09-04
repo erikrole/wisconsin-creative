@@ -4,6 +4,7 @@ import { HttpError } from "@/lib/http";
 import { createAuditEntryTx } from "@/lib/audit";
 import { withSerializationRetry } from "@/lib/serialization";
 import { normalizeBookingTitle } from "@/lib/title-normalization";
+import { checkAvailability } from "@/lib/services/availability";
 import { bookingInclude } from "./bookings-helpers";
 
 const mergeInclude = {
@@ -39,6 +40,13 @@ type CheckoutMergeCandidate = Prisma.BookingGetPayload<{
   include: typeof mergeInclude;
 }>;
 
+type CheckoutMergeOptions = {
+  allowContextOverrides?: boolean;
+  deferReturnWindowValidation?: boolean;
+  endsAt?: Date;
+  sourceReservationId?: string | null;
+};
+
 function eventIdsFor(booking: CheckoutMergeCandidate) {
   return (booking.events.length > 0
     ? booking.events.map((event) => event.eventId)
@@ -53,6 +61,10 @@ function sameStrings(left: string[], right: string[]) {
 function combinedNotes(bookings: CheckoutMergeCandidate[]) {
   const notes = [...new Set(bookings.map((booking) => booking.notes?.trim()).filter(Boolean))];
   return notes.length > 0 ? notes.join("\n\n") : null;
+}
+
+function sourceReservationKey(sourceReservationId: string | null) {
+  return sourceReservationId ?? "__direct_event_checkout__";
 }
 
 function checkoutSnapshot(booking: CheckoutMergeCandidate) {
@@ -82,6 +94,7 @@ function checkoutSnapshot(booking: CheckoutMergeCandidate) {
 function validateMergeCandidates(
   bookings: CheckoutMergeCandidate[],
   requestedIds: string[],
+  options: CheckoutMergeOptions = {},
 ) {
   if (bookings.length !== requestedIds.length) {
     throw new HttpError(404, "One or more checkouts were not found");
@@ -101,6 +114,39 @@ function validateMergeCandidates(
   const expectedTitle = normalizeBookingTitle(canonical.title).toLocaleLowerCase();
   const seenAssetIds = new Set<string>();
   const seenUnitIds = new Set<string>();
+  const allowContextOverrides = options.allowContextOverrides === true;
+  const effectiveEndsAt = options.endsAt ?? canonical.endsAt;
+  const effectiveSourceReservationId = options.sourceReservationId !== undefined
+    ? options.sourceReservationId
+    : canonical.sourceReservationId;
+
+  if (Number.isNaN(effectiveEndsAt.getTime())) {
+    throw new HttpError(400, "The merged checkout return time is invalid");
+  }
+  const latestPickup = ordered.reduce(
+    (latest, booking) => booking.startsAt > latest ? booking.startsAt : latest,
+    canonical.startsAt,
+  );
+  // An interactive preview may need to surface an older due time so the
+  // operator can choose a later source window in the modal. The mutation
+  // always supplies an explicit endsAt and therefore still gets this guard.
+  if (!options.deferReturnWindowValidation && effectiveEndsAt <= latestPickup) {
+    throw new HttpError(400, "The merged checkout return time must be after every pickup time");
+  }
+
+  const availableSourceReservationIds = new Set(
+    ordered.map((booking) => booking.sourceReservationId),
+  );
+  if (!availableSourceReservationIds.has(effectiveSourceReservationId)) {
+    throw new HttpError(400, "Choose reservation history from one of the selected checkouts");
+  }
+
+  const returnWindowConflict = ordered.some(
+    (booking) => booking.endsAt.getTime() !== canonical.endsAt.getTime(),
+  );
+  const sourceReservationConflict = ordered.some(
+    (booking) => booking.sourceReservationId !== canonical.sourceReservationId,
+  );
 
   for (const booking of ordered) {
     if (booking.kind !== BookingKind.CHECKOUT || booking.status !== BookingStatus.OPEN) {
@@ -120,11 +166,12 @@ function validateMergeCandidates(
     }
     // Direct kiosk checkout startsAt is the physical handoff timestamp, so two
     // duplicate checkouts created minutes apart naturally have different starts.
-    // Keep the return window exact so a merge cannot silently change the due time.
-    if (booking.endsAt.getTime() !== canonical.endsAt.getTime()) {
+    // A different return window can be reconciled only through the explicit
+    // staff/admin modal, which records the selected due time in audit history.
+    if (booking.endsAt.getTime() !== effectiveEndsAt.getTime() && !allowContextOverrides) {
       throw new HttpError(409, "Checkout return windows must match before merging");
     }
-    if (booking.sourceReservationId !== canonical.sourceReservationId) {
+    if (booking.sourceReservationId !== effectiveSourceReservationId && !allowContextOverrides) {
       throw new HttpError(409, "Checkouts must come from the same reservation or both be direct event checkouts");
     }
     if (!sameStrings(eventIdsFor(booking), expectedEvents)) {
@@ -169,11 +216,35 @@ function validateMergeCandidates(
     }
   }
 
-  return { ordered, canonical, eventIds: expectedEvents };
+  return {
+    ordered,
+    canonical,
+    eventIds: expectedEvents,
+    effectiveEndsAt,
+    effectiveSourceReservationId,
+    returnWindowConflict,
+    sourceReservationConflict,
+    returnWindowChanged: effectiveEndsAt.getTime() !== canonical.endsAt.getTime(),
+    sourceReservationChanged: effectiveSourceReservationId !== canonical.sourceReservationId,
+  };
 }
 
-function mergeSummary(bookings: CheckoutMergeCandidate[], requestedIds: string[]) {
-  const { ordered, canonical, eventIds } = validateMergeCandidates(bookings, requestedIds);
+function mergeSummary(
+  bookings: CheckoutMergeCandidate[],
+  requestedIds: string[],
+  options: CheckoutMergeOptions = {},
+) {
+  const {
+    ordered,
+    canonical,
+    eventIds,
+    effectiveEndsAt,
+    effectiveSourceReservationId,
+    returnWindowConflict,
+    sourceReservationConflict,
+    returnWindowChanged,
+    sourceReservationChanged,
+  } = validateMergeCandidates(bookings, requestedIds, options);
   const serializedAssetIds = ordered.flatMap((booking) =>
     booking.serializedItems.map((item) => item.assetId),
   );
@@ -190,6 +261,12 @@ function mergeSummary(bookings: CheckoutMergeCandidate[], requestedIds: string[]
     bulkItems,
     sourceIds: ordered.slice(1).map((booking) => booking.id),
     notes: combinedNotes(ordered),
+    effectiveEndsAt,
+    effectiveSourceReservationId,
+    returnWindowConflict,
+    sourceReservationConflict,
+    returnWindowChanged,
+    sourceReservationChanged,
   };
 }
 
@@ -230,7 +307,10 @@ async function moveLiveActivityStarts(
   }
 }
 
-export async function previewCheckoutMerge(ids: string[]) {
+export async function previewCheckoutMerge(
+  ids: string[],
+  options: Pick<CheckoutMergeOptions, "allowContextOverrides"> = {},
+) {
   const uniqueIds = [...new Set(ids)];
   if (uniqueIds.length < 2 || uniqueIds.length > 25) {
     throw new HttpError(400, "Select between 2 and 25 checkouts to merge");
@@ -239,7 +319,50 @@ export async function previewCheckoutMerge(ids: string[]) {
     where: { id: { in: uniqueIds } },
     include: mergeInclude,
   });
-  const summary = mergeSummary(bookings, uniqueIds);
+  const summary = mergeSummary(bookings, uniqueIds, {
+    ...options,
+    deferReturnWindowValidation: options.allowContextOverrides === true,
+  });
+  const returnWindowOptions = new Map<string, {
+    endsAt: string;
+    checkoutIds: string[];
+    checkoutRefs: Array<string | null>;
+  }>();
+  for (const booking of summary.ordered) {
+    const key = booking.endsAt.toISOString();
+    const existing = returnWindowOptions.get(key);
+    if (existing) {
+      existing.checkoutIds.push(booking.id);
+      existing.checkoutRefs.push(booking.refNumber);
+    } else {
+      returnWindowOptions.set(key, {
+        endsAt: booking.endsAt.toISOString(),
+        checkoutIds: [booking.id],
+        checkoutRefs: [booking.refNumber],
+      });
+    }
+  }
+
+  const sourceReservationOptions = new Map<string, {
+    sourceReservationId: string | null;
+    checkoutIds: string[];
+    checkoutRefs: Array<string | null>;
+  }>();
+  for (const booking of summary.ordered) {
+    const key = sourceReservationKey(booking.sourceReservationId);
+    const existing = sourceReservationOptions.get(key);
+    if (existing) {
+      existing.checkoutIds.push(booking.id);
+      existing.checkoutRefs.push(booking.refNumber);
+    } else {
+      sourceReservationOptions.set(key, {
+        sourceReservationId: booking.sourceReservationId,
+        checkoutIds: [booking.id],
+        checkoutRefs: [booking.refNumber],
+      });
+    }
+  }
+
   return {
     targetCheckoutId: summary.canonical.id,
     sourceCheckoutIds: summary.sourceIds,
@@ -249,6 +372,23 @@ export async function previewCheckoutMerge(ids: string[]) {
     eventIds: summary.eventIds,
     serializedItemCount: summary.serializedAssetIds.length,
     bulkQuantity: summary.bulkItems.reduce((total, item) => total + item.quantity, 0),
+    targetCheckout: {
+      id: summary.canonical.id,
+      refNumber: summary.canonical.refNumber,
+      startsAt: summary.canonical.startsAt.toISOString(),
+      latestPickupAt: summary.ordered.reduce(
+        (latest, booking) => booking.startsAt > latest ? booking.startsAt : latest,
+        summary.canonical.startsAt,
+      ).toISOString(),
+      endsAt: summary.canonical.endsAt.toISOString(),
+      sourceReservationId: summary.canonical.sourceReservationId,
+    },
+    returnWindowOptions: [...returnWindowOptions.values()],
+    sourceReservationOptions: [...sourceReservationOptions.values()],
+    conflicts: {
+      returnWindow: summary.returnWindowConflict,
+      sourceReservation: summary.sourceReservationConflict,
+    },
   };
 }
 
@@ -256,6 +396,9 @@ export async function mergeCheckouts(args: {
   ids: string[];
   actorUserId: string;
   actorRole: Role;
+  allowContextOverrides?: boolean;
+  endsAt?: Date;
+  sourceReservationId?: string | null;
 }) {
   if (args.actorRole !== Role.ADMIN && args.actorRole !== Role.STAFF) {
     throw new HttpError(403, "Only staff can merge checkouts");
@@ -270,7 +413,11 @@ export async function mergeCheckouts(args: {
       where: { id: { in: uniqueIds } },
       include: mergeInclude,
     });
-    const summary = mergeSummary(bookings, uniqueIds);
+    const summary = mergeSummary(bookings, uniqueIds, {
+      allowContextOverrides: args.allowContextOverrides,
+      endsAt: args.endsAt,
+      sourceReservationId: args.sourceReservationId,
+    });
     const sourceSnapshots = summary.ordered.slice(1).map(checkoutSnapshot);
 
     await tx.bookingSerializedItem.updateMany({
@@ -348,16 +495,59 @@ export async function mergeCheckouts(args: {
     ]);
     await moveLiveActivityStarts(tx, summary.canonical.id, summary.sourceIds);
 
-    await tx.booking.update({
-      where: { id: summary.canonical.id },
-      data: { notes: summary.notes },
-    });
     for (const source of summary.ordered.slice(1)) {
       await tx.booking.update({
         where: { id: source.id },
         data: {
           status: BookingStatus.CANCELLED,
           notes: mergeSourceNote(source, summary.canonical),
+        },
+      });
+    }
+
+    const canonicalData: Prisma.BookingUncheckedUpdateInput = {
+      notes: summary.notes,
+    };
+    if (summary.returnWindowChanged) {
+      canonicalData.endsAt = summary.effectiveEndsAt;
+    }
+    if (summary.sourceReservationChanged) {
+      canonicalData.sourceReservationId = summary.effectiveSourceReservationId;
+    }
+    await tx.booking.update({
+      where: { id: summary.canonical.id },
+      data: canonicalData,
+    });
+
+    if (summary.returnWindowChanged) {
+      await tx.assetAllocation.updateMany({
+        where: { bookingId: summary.canonical.id, active: true },
+        data: { endsAt: summary.effectiveEndsAt },
+      });
+
+      const availability = await checkAvailability(tx, {
+        locationId: summary.canonical.locationId,
+        startsAt: summary.canonical.startsAt,
+        endsAt: summary.effectiveEndsAt,
+        serializedAssetIds: summary.serializedAssetIds,
+        bulkItems: summary.bulkItems,
+        excludeBookingId: summary.canonical.id,
+        bookingKind: BookingKind.CHECKOUT,
+        // An active checkout may be extended up to a later booking's actual
+        // start. The overlap check still prevents the chosen return time from
+        // running through another booking's custody window.
+        enforceSerializedTurnaroundBuffer: false,
+      });
+      if (availability.conflicts.length > 0 || availability.shortages.length > 0) {
+        throw new HttpError(409, "The selected return time conflicts with another booking", availability);
+      }
+
+      await tx.bookingDueDateChange.create({
+        data: {
+          bookingId: summary.canonical.id,
+          actorUserId: args.actorUserId,
+          previousEndsAt: summary.canonical.endsAt,
+          nextEndsAt: summary.effectiveEndsAt,
         },
       });
     }
@@ -371,10 +561,26 @@ export async function mergeCheckouts(args: {
       before: {
         sourceCheckoutIds: summary.sourceIds,
         sourceCheckouts: sourceSnapshots,
+        targetCheckout: {
+          id: summary.canonical.id,
+          endsAt: summary.canonical.endsAt.toISOString(),
+          sourceReservationId: summary.canonical.sourceReservationId,
+        },
       },
       after: {
         targetCheckoutId: summary.canonical.id,
         status: BookingStatus.OPEN,
+        targetCheckout: {
+          id: summary.canonical.id,
+          endsAt: summary.effectiveEndsAt.toISOString(),
+          sourceReservationId: summary.effectiveSourceReservationId,
+        },
+        contextResolution: {
+          returnWindowConflict: summary.returnWindowConflict,
+          sourceReservationConflict: summary.sourceReservationConflict,
+          selectedEndsAt: summary.effectiveEndsAt.toISOString(),
+          selectedSourceReservationId: summary.effectiveSourceReservationId,
+        },
         serializedAssetIds: summary.serializedAssetIds,
         bulkItems: summary.bulkItems,
         eventIds: summary.eventIds,
