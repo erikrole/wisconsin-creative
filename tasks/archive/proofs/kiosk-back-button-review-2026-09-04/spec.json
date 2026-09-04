@@ -1,0 +1,58 @@
+{
+  "title": "Kiosk back-button ownership",
+  "eyebrow": "iOS · Wisconsin Creative · Kiosk",
+  "lede": "The flow header now owns the top-left navigation target without a shell status control sitting on top of it.",
+  "stats": [
+    {
+      "k": "Top-left owners",
+      "v": "1",
+      "n": "The flow header is the only visible and tappable navigation control there",
+      "tone": "good"
+    },
+    {
+      "k": "Affected flows",
+      "v": "5",
+      "n": "Hub, identity, checkout, pickup, and return keep their navigation clear",
+      "tone": "good"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Checkout scan header",
+      "note": "Same availability-rejected DEBUG fixture and iPad Air 11-inch (M4) simulator viewport. The only changed behavior in the pair is the shell-level device-status button's top-left ownership rule.",
+      "pairs": [
+        {
+          "title": "Back should be the only top-left action",
+          "sub": "Look at the header corner and the shape of the Back hit target.",
+          "before": "before/checkout.png",
+          "beforeCap": "The shell's info button is layered over the flow header, producing two overlapping capsules and an ambiguous tap target.",
+          "after": "after/checkout.png",
+          "afterCap": "Only the chevron-and-Back control remains in the corner; device status is still available from idle and success screens.",
+          "focus": "top-left control ownership"
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "The shell no longer intercepts flow navigation",
+      "was": "A global device-status button was positioned at top-leading for every active screen, directly underneath the flow header's Back/Cancel control.",
+      "now": "The status reveal is rendered only for idle and success; operator hub, identity, checkout, pickup, and return leave the top-left target to their own flow navigation."
+    },
+    {
+      "h": "The status affordance remains available where it is safe",
+      "was": "Removing the collision could have hidden a useful kiosk diagnostic affordance entirely.",
+      "now": "Idle and success retain the existing Show device status control, while flow screens avoid a second action in a navigation-critical corner."
+    }
+  ],
+  "verification": [
+    "<strong>Focused source contracts:</strong> 19/19 passing across the back-button regression, scan rejection/sound, availability, recovery, numbered-battery, and pickup contracts.",
+    "<strong>Native gates:</strong> WisconsinKiosk Debug and Release builds pass for the iPad Air 11-inch (M4), iOS 26.5 simulator; project parity, drift, iOS gap audits, and diff checks pass.",
+    "<strong>Visual:</strong> the same fixture and viewport were captured before and after the fix, and both PNGs were inspected; the final capture shows one clean Back capsule.",
+    "<strong>Repository docs:</strong> `npm run verify:docs` passes with current codemaps."
+  ],
+  "notes": [
+    "This is local source/build/simulator proof only. The shell status reveal remains intentionally available on idle and success; no custody, API, schema, permission, or scanner semantics changed.",
+    "Managed-iPad interaction and deployment remain separate release gates."
+  ]
+}

@@ -31,7 +31,7 @@
     {
       "h": "Duplicate checkouts were stranded as separate list records",
       "was": "The Checkouts list had no way to select two same-event open checkouts for repair, so a duplicate battery checkout remained split from the original custody record.",
-      "now": "Staff/admin users can select compatible open checkouts and choose <code>Merge matching checkouts</code>; the oldest checkout survives and the other records become cancelled history."
+      "now": "Staff/admin users can select compatible open checkouts and choose <code>Merge matching checkouts</code>; separate kiosk handoff timestamps no longer block the repair, the checkbox and three-dot action sit in a shared top-right rail in card view, the oldest checkout survives, and the other records become cancelled history."
     },
     {
       "h": "A visible merge could lose physical custody history",
@@ -45,7 +45,7 @@
     }
   ],
   "verification": [
-    "<strong>Focused checkout suite:</strong> 11 tests pass across service, route, and UI/source contracts.",
+    "<strong>Focused checkout suite:</strong> 12 tests pass across service, route, and merge UI/source contracts; the booking UI polish contracts add 5 passing layout/accessibility checks.",
     "<strong>TypeScript:</strong> <code>npx tsc --noEmit --pretty false --incremental false</code> passes.",
     "<strong>Lint/build:</strong> targeted ESLint, full ESLint, and <code>npm run build:app</code> pass; codemaps are current and <code>git diff --check</code> passes.",
     "<strong>Full repository suite:</strong> 589 files pass, but 33 existing worktree failures remain in unrelated iOS, schedule, availability, reservation, and system-hardening areas; the new checkout suite is green.",

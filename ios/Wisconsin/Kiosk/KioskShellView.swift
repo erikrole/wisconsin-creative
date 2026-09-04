@@ -36,6 +36,19 @@ struct KioskShellView: View {
             )
     }
 
+    /// Flow screens own the top-left navigation affordance. The shell's
+    /// device-status reveal lives there only on screens without a Back or
+    /// Cancel control; otherwise its hit target sits over the flow header and
+    /// makes the user's back tap ambiguous.
+    private var showsSystemStatusButton: Bool {
+        switch store.screen {
+        case .idle, .success:
+            return !showSystemStatus
+        case .activation, .operatorHub, .identity, .checkout, .pickup, .return:
+            return false
+        }
+    }
+
     /// What this person actually loses if the kiosk resets, in their words.
     ///
     /// The warning used to say "Tap to keep your scans" everywhere it appeared,
@@ -110,7 +123,7 @@ struct KioskShellView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
             }
 
-            if store.screen != .activation && !showSystemStatus {
+            if showsSystemStatusButton {
                 Button {
                     revealSystemStatus()
                 } label: {

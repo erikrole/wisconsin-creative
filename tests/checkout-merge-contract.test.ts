@@ -15,6 +15,7 @@ describe("checkout merge source contracts", () => {
     expect(service).toContain('action: "checkouts_merged"');
     expect(service).toContain('action: "merged_into_checkout"');
     expect(service).toContain("Only event-linked checkouts can be merged");
+    expect(service).toContain("Checkout return windows must match before merging");
     expect(service).toContain("A checkout with returned or staged numbered units cannot be merged");
   });
 

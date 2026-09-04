@@ -76,15 +76,21 @@ export function BookingCard({ item, overdueStatus, onClick, menuProps, selectabl
           aria-label={`View booking: ${item.title}`}
           onClick={onClick}
         />
-        {selectable && (
-          <div className="absolute right-3 top-3 z-20" onClick={(event) => event.stopPropagation()}>
+        <div
+          className="absolute right-3 top-3 z-20 flex items-center gap-1"
+          onClick={(event) => event.stopPropagation()}
+        >
+          {selectable && (
             <Checkbox
               checked={selected}
               onCheckedChange={(checked) => onSelectedChange?.(checked === true)}
               aria-label={`Select ${item.title}`}
             />
+          )}
+          <div className="opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 [@media(hover:none)]:opacity-100">
+            <BookingOverflowMenu item={item} {...menuProps} />
           </div>
-        )}
+        </div>
 
         {/* Status left-border accent */}
         <div
@@ -95,7 +101,7 @@ export function BookingCard({ item, overdueStatus, onClick, menuProps, selectabl
 
         <div className="relative z-0 p-4 pl-5">
           {/* Top row: status badge + ref number + duration */}
-          <div className="flex items-center justify-between gap-2 mb-2.5 pr-10">
+          <div className="flex items-center justify-between gap-2 mb-2.5 pr-20">
             <div className="flex min-w-0 items-center gap-2">
               <Badge variant={sv.variant} size="sm">{sv.label}</Badge>
               {item.refNumber && (
@@ -169,13 +175,6 @@ export function BookingCard({ item, overdueStatus, onClick, menuProps, selectabl
           </div>
         </div>
 
-        {/* Overflow menu — top-right, always visible on touch, reveal on hover for pointer devices */}
-        <div
-          className="absolute top-3 right-3 z-20 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 [@media(hover:none)]:opacity-100"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <BookingOverflowMenu item={item} {...menuProps} />
-        </div>
       </div>
     </BookingContextMenuWrapper>
   );

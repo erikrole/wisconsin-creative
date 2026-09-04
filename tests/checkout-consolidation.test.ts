@@ -95,7 +95,7 @@ beforeEach(() => vi.clearAllMocks());
 describe("checkout consolidation", () => {
   it("previews an older event checkout with additive battery totals", async () => {
     vi.mocked(db.booking.findMany).mockResolvedValue([
-      checkout(ids[1]!),
+      checkout(ids[1]!, { startsAt: new Date("2026-09-04T15:07:00.000Z") }),
       checkout(ids[0]!),
     ] as never);
 
@@ -141,6 +141,15 @@ describe("checkout consolidation", () => {
     vi.mocked(db.booking.findMany).mockResolvedValue([
       checkout(ids[0]!),
       staged,
+    ] as never);
+
+    await expect(previewCheckoutMerge(ids)).rejects.toMatchObject({ status: 409 });
+  });
+
+  it("still requires the return windows to match", async () => {
+    vi.mocked(db.booking.findMany).mockResolvedValue([
+      checkout(ids[0]!),
+      checkout(ids[1]!, { endsAt: new Date("2026-09-05T05:00:00.000Z") }),
     ] as never);
 
     await expect(previewCheckoutMerge(ids)).rejects.toMatchObject({ status: 409 });

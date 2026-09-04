@@ -118,11 +118,11 @@ function validateMergeCandidates(
     if (booking.locationId !== canonical.locationId) {
       throw new HttpError(409, "Checkouts at different locations cannot be merged");
     }
-    if (
-      booking.startsAt.getTime() !== canonical.startsAt.getTime()
-      || booking.endsAt.getTime() !== canonical.endsAt.getTime()
-    ) {
-      throw new HttpError(409, "Checkout pickup and return windows must match before merging");
+    // Direct kiosk checkout startsAt is the physical handoff timestamp, so two
+    // duplicate checkouts created minutes apart naturally have different starts.
+    // Keep the return window exact so a merge cannot silently change the due time.
+    if (booking.endsAt.getTime() !== canonical.endsAt.getTime()) {
+      throw new HttpError(409, "Checkout return windows must match before merging");
     }
     if (booking.sourceReservationId !== canonical.sourceReservationId) {
       throw new HttpError(409, "Checkouts must come from the same reservation or both be direct event checkouts");
