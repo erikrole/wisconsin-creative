@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { MergeIcon, MoreHorizontalIcon, SparklesIcon, XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -83,6 +84,9 @@ function InternalSchedulePage() {
   const canReviewClaims = data.currentUserRole === "ADMIN";
   const { loadData, setExpandedRowId, setTradeSheetOpen } = data;
   const { queue, setQueue } = data.filters;
+  const queueUnavailable = data.healthUnavailable && queue !== null
+    && !["my-calls-today", "stale-source", "trade-approval"].includes(queue);
+  const canDisplaySchedule = !data.loadError && !queueUnavailable;
   const hidingRef = useRef<Set<string>>(new Set());
   const [hidingEventIds, setHidingEventIds] = useState<Set<string>>(() => new Set());
   const [newEventOpen, setNewEventOpen] = useState(false);
@@ -469,7 +473,31 @@ function InternalSchedulePage() {
         </div>
       )}
 
-      <ScheduleReadiness
+      {(data.loadError || data.refreshError || data.healthUnavailable) && !data.loading && (
+        <Alert className="my-4" role="alert">
+          <AlertTitle>{data.loadError ? "Schedule could not be loaded" : data.refreshError ? "Schedule may be out of date" : "Schedule checks are unavailable"}</AlertTitle>
+          <AlertDescription>
+            <p>{data.loadError
+              ? "Events and crew information could not both be confirmed. Retry to see your schedule."
+              : data.refreshError
+                ? "Showing the last complete schedule. Recent assignments or changes may be missing. Retry before relying on it."
+                : "Staffing, requests, conflicts, and gear checks could not all be confirmed. A missing check does not mean there are no issues."}</p>
+            <Button variant="outline" size="sm" className="mt-2 h-10" disabled={data.refreshing} onClick={() => void data.loadData()}>Retry schedule</Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {isStaff && canDisplaySchedule && data.filteredEntries.filter((entry) => entry.autoReleaseError && !entry.archivedAt && !entry.eventArchivedAt).map((entry) => (
+        <Alert key={entry.id} variant="destructive" className="my-3" role="alert">
+          <AlertTitle>{entry.summary}: changes have not been released</AlertTitle>
+          <AlertDescription>
+            <p>{entry.autoReleaseError}</p>
+            <Button variant="outline" size="sm" className="mt-2 h-10" onClick={() => openCrewSheet(entry)}>Review pending crew</Button>
+          </AlertDescription>
+        </Alert>
+      ))}
+
+      {!data.loading && !data.loadError && !data.refreshError && !data.healthUnavailable && <ScheduleReadiness
         entries={data.entries}
         filteredEntries={data.filteredEntries}
         currentUserId={data.currentUserId}
@@ -481,10 +509,10 @@ function InternalSchedulePage() {
         canReviewClaims={canReviewClaims}
         onShowQueue={showQueue}
         onOpenTradeBoard={openTradeBoard}
-      />
+      />}
 
       {/* Calendar View */}
-      {data.filters.viewMode === "calendar" && (
+      {canDisplaySchedule && data.filters.viewMode === "calendar" && (
         <CalendarView
           entries={data.filteredEntries}
           loading={data.loading}
@@ -498,7 +526,7 @@ function InternalSchedulePage() {
       )}
 
       {/* Week View */}
-      {data.filters.viewMode === "week" && (
+      {canDisplaySchedule && data.filters.viewMode === "week" && (
         <WeekView
           entries={data.filteredEntries}
           weekStart={data.weekStart}
@@ -512,7 +540,7 @@ function InternalSchedulePage() {
       )}
 
       {/* List View */}
-      {data.filters.viewMode === "list" && (
+      {canDisplaySchedule && data.filters.viewMode === "list" && (
         <ListView
           entries={data.entries}
           filteredEntries={data.filteredEntries}
@@ -624,6 +652,7 @@ function InternalSchedulePage() {
           <SheetBody>
             {data.tradeSheetOpen && (
               <TradeBoard
+                onChanged={data.loadData}
                 currentUserId={data.currentUserId}
                 currentUserRole={data.currentUserRole}
                 initialStatusFilter={canReviewClaims && data.filters.queue === "trade-approval" ? "CLAIMED" : undefined}

@@ -14,13 +14,14 @@
 | `src/lib/services/blast-targeting.ts` | 165 |
 | `src/lib/services/blasts.ts` | 358 |
 | `src/lib/services/booking-custody.ts` | 82 |
+| `src/lib/services/booking-item-holder.ts` | 174 |
 | `src/lib/services/booking-ref.ts` | 26 |
 | `src/lib/services/booking-rules.ts` | 110 |
 | `src/lib/services/bookings-checkin.ts` | 854 |
 | `src/lib/services/bookings-helpers.ts` | 281 |
 | `src/lib/services/bookings-lifecycle.ts` | 2850 |
-| `src/lib/services/bookings-queries.ts` | 301 |
-| `src/lib/services/bookings.ts` | 7 |
+| `src/lib/services/bookings-queries.ts` | 306 |
+| `src/lib/services/bookings.ts` | 8 |
 | `src/lib/services/bulk-assignment-batches.ts` | 252 |
 | `src/lib/services/bulk-schedule-assignment.ts` | 969 |
 | `src/lib/services/bulk-unit-scans.ts` | 690 |
@@ -69,7 +70,7 @@
 | `src/lib/services/schedule-notification-diff.ts` | 236 |
 | `src/lib/services/schedule-notification-flush.ts` | 190 |
 | `src/lib/services/schedule-notification-policy.ts` | 138 |
-| `src/lib/services/schedule-open-work.ts` | 566 |
+| `src/lib/services/schedule-open-work.ts` | 569 |
 | `src/lib/services/schedule-publication.ts` | 1028 |
 | `src/lib/services/schedule-template-review.ts` | 554 |
 | `src/lib/services/schedule-working-copy.ts` | 1095 |
@@ -214,7 +215,7 @@
 | `src/lib/schedule-template-review-types.ts` | 105 |
 | `src/lib/schedule-timeline-position.ts` | 302 |
 | `src/lib/schedule-window.ts` | 152 |
-| `src/lib/schedule-working-copy-guard.ts` | 20 |
+| `src/lib/schedule-working-copy-guard.ts` | 24 |
 | `src/lib/schedule-working-copy.ts` | 497 |
 | `src/lib/scoreboard-digest.ts` | 172 |
 | `src/lib/search-pages.ts` | 78 |
@@ -244,7 +245,7 @@
 | `src/lib/user-list-cache.ts` | 73 |
 | `src/lib/user-visibility.ts` | 85 |
 | `src/lib/utils.ts` | 7 |
-| `src/lib/validation.ts` | 808 |
+| `src/lib/validation.ts` | 813 |
 | `src/lib/venue-mapping-audit.ts` | 56 |
 | `src/lib/venue-mapping-contract.ts` | 46 |
 | `src/lib/venue-tone.ts` | 135 |
@@ -348,6 +349,7 @@
 - `/api/bookings/[id]/force-complete`
 - `/api/bookings/[id]/nudge`
 - `/api/bookings/[id]`
+- `/api/bookings/[id]/serialized-items/[itemId]/holder`
 - `/api/bookings/[id]/transfer-owner`
 - `/api/bookings/changes`
 - `/api/bookings/export`

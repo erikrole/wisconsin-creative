@@ -37,6 +37,7 @@ Audit files intentionally remain at root for now because the repo audit skills r
 
 ## Active Follow-up Ledgers
 
+- `schedule-stabilization-plan-2026-09-04.md` - incident-driven first-use fixes for incomplete reads, pending-release visibility, lost edits, and uncertain mutations; tracks isolated role-specific proof and remaining native/timer/delivery acceptance.
 - `combined-schedule-events-plan-2026-09-03.md` - combine overlapping same-family source events at one venue into one operational Schedule row and canonical crew while preserving both source identities; migration, authenticated UI, native parity, deployment, and live Cross Country acceptance remain open.
 - `event-checkout-assignments-plan-2026-09-03.md` - recover the event-custody migration safely, restore the reservation quality-of-life release, prove authenticated iOS booking reads, and gate any Emma Hansen cleanup through the shipped merge preview.
 - `event-checkout-assignments-plan-2026-09-02.md` - superseded event-assignee proposal retained for history.
@@ -83,6 +84,8 @@ Audit files intentionally remain at root for now because the repo audit skills r
 - `past-event-assignment-backfill-plan-2026-08-26.md` - make the existing Schedule crew editor automatically publish ended-event assignment corrections silently and immediately; local route, Scoreboard, and generic iOS build gates pass, while authenticated UI, simulator runtime, deployment, and production proof remain open.
 - `brand-asset-library-plan-2026-08-26.md` - add the authenticated Resources Brand assets library with user-created folders, private Vercel Blob client uploads, immutable replacement history, and explicit private-store/browser proof gates.
 - `claim-surfaces-ios-schedule-window-plan-2026-08-26.md` - centralize Student open-slot claims in expanded Schedule rows and Event detail, carry viewer-private pending state, and make native Schedule read all total-aware event and personal-shift pages; local and authenticated-preview gates pass while deployment, push delivery, and device proof remain open.
+
+- `checkout-item-holder-transfer-plan-2026-09-07.md` - move serialized item custody and its active allocation to the actual owner’s personal checkout, preserving scan evidence and canonical My Gear/accountability/return ownership; local implementation and fixture proof, deployment and real-custody acceptance tracked under GAP-78.
 
 ## Archive Buckets
 

@@ -146,7 +146,7 @@ describe("schedule source-of-truth and browser smoke contracts", () => {
     const tradeBoard = source("src/components/TradeBoard.tsx");
 
     expect(editor).toContain("formatScheduleReleaseCountdown");
-    expect(release).toContain("notified in");
+    expect(release).toContain("Release scheduled in");
     expect(editor).not.toContain("Pending changes");
     expect(editor).not.toContain("Releases at");
     expect(editor).toContain("Revert changes");

@@ -1,6 +1,14 @@
 export type SerializedItem = {
   id: string;
   allocationStatus?: string;
+  assignedUserId?: string | null;
+  assignedAt?: string | null;
+  assignee?: {
+    id: string;
+    name: string;
+    email: string;
+    avatarUrl?: string | null;
+  } | null;
   asset: {
     id: string;
     assetTag: string;

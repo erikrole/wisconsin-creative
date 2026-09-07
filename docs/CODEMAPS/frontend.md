@@ -111,8 +111,8 @@
 
 | File | Lines |
 |---|---:|
+| `src/components/TradeBoard.tsx` | 1853 |
 | `src/components/resources/BrandAssetLibrary.tsx` | 1827 |
-| `src/components/TradeBoard.tsx` | 1811 |
 | `src/components/ActivityTimeline.tsx` | 1375 |
 | `src/components/onboarding/OnboardingDialog.tsx` | 996 |
 | `src/components/booking-wizard/BookingWizard.tsx` | 920 |
@@ -140,7 +140,7 @@
 | `src/components/CheckoutMergeDialog.tsx` | 286 |
 | `src/components/PageBreadcrumb.tsx` | 286 |
 | `src/components/booking-details/BookingSheetOverview.tsx` | 285 |
-| `src/components/booking-details/TransferOwnerDialog.tsx` | 271 |
+| `src/components/booking-details/AssignItemHolderDialog.tsx` | 277 |
 
 ## Hooks
 
@@ -162,7 +162,7 @@
 | `src/hooks/use-mobile.ts` | 20 |
 | `src/hooks/use-operational-polling-activity.ts` | 131 |
 | `src/hooks/use-profile-completion.ts` | 65 |
-| `src/hooks/use-schedule-data.ts` | 976 |
+| `src/hooks/use-schedule-data.ts` | 986 |
 | `src/hooks/use-url-state.ts` | 166 |
 | `src/hooks/useBookingActions.ts` | 273 |
 | `src/hooks/useBookingDetail.ts` | 70 |

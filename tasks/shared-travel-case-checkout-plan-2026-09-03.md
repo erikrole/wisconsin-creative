@@ -1,5 +1,7 @@
 # Shared Travel Case Checkout Plan - 2026-09-03
 
+> Product-direction update (2026-09-07): `tasks/checkout-item-holder-transfer-plan-2026-09-07.md` supersedes this plan's blanket prohibition on per-item assignees. Shared manifests remain custodian-neutral by default; Staff/Admin now move personally carried serialized items and their active allocations to the actual owner’s personal checkout, preserving original evidence and linked audit history.
+
 ## Goal
 - Let Staff/Admin designate a reservation such as `Football Travel Case` as shared operational custody at creation time, with no person presented as its owner, and carry that identity into the checkout created at kiosk pickup.
 - Keep the existing active-checkout custody correction for Staff/Admin.

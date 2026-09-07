@@ -358,7 +358,7 @@ export default function BookingDetailPage({
       {/* ── Two-column layout: Equipment + Info ── */}
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_420px]">
         {/* Left: Equipment manifest */}
-        <BookingEquipmentTab booking={booking} />
+        <BookingEquipmentTab booking={booking} onBookingUpdated={patchLocal} />
 
         {/* Right: Info card */}
         <BookingInfoCard

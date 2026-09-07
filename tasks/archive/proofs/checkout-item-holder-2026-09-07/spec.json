@@ -1,0 +1,74 @@
+{
+  "title": "Checkout Item Holder Correction",
+  "eyebrow": "Checkouts · Wisconsin Creative",
+  "lede": "Staff can now record who actually has each serialized item after a sideline or travel handoff, without splitting the checkout or rewriting its scan history.",
+  "stats": [
+    {
+      "k": "Custody records moved",
+      "v": "0",
+      "n": "The serialized line remains on its original checkout",
+      "tone": "good"
+    },
+    {
+      "k": "Eligible surface",
+      "v": "Open only",
+      "n": "Returned items and closed checkouts stay immutable"
+    },
+    {
+      "k": "Bulk attribution",
+      "v": "Shared",
+      "n": "Batteries and pooled quantities remain checkout-level custody"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Same checkout, corrected holder",
+      "note": "Same deterministic fixture, asset, checkout, and viewport. Only the committed item-holder assignment changes.",
+      "pairs": [
+        {
+          "title": "Desktop equipment row",
+          "sub": "The explicit holder appears below the asset identity with the canonical avatar treatment.",
+          "before": "tasks/archive/proofs/checkout-item-holder-2026-09-07/desktop-chromium-row-before.png",
+          "beforeCap": "The shared manifest carried CAM-104 with no explicit person attached.",
+          "after": "tasks/archive/proofs/checkout-item-holder-2026-09-07/desktop-chromium-row-after.png",
+          "afterCap": "Jordan Lee is visibly recorded as the person holding CAM-104."
+        },
+        {
+          "title": "Narrow equipment row",
+          "sub": "The same attribution remains readable at the 390px authenticated mobile-web viewport.",
+          "before": "tasks/archive/proofs/checkout-item-holder-2026-09-07/narrow-mobile-chromium-row-before.png",
+          "beforeCap": "The item inherited shared checkout custody.",
+          "after": "tasks/archive/proofs/checkout-item-holder-2026-09-07/narrow-mobile-chromium-row-after.png",
+          "afterCap": "The explicit holder wraps below the item metadata without hiding row actions."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Real handoffs were invisible",
+      "was": "A whole checkout could transfer owners, but a camera or lens swapped between people still appeared under the original manifest with no correction path.",
+      "now": "Staff/Admin can use Assign holder or Change holder on one active serialized row and optionally record handoff context."
+    },
+    {
+      "h": "Correction could not weaken checkout truth",
+      "was": "Moving equipment between checkouts would risk fragmenting scan, allocation, event, and return history.",
+      "now": "The mutation changes only assignedUserId/assignedAt, advances the booking snapshot, and writes an audit entry in one serializable transaction."
+    },
+    {
+      "h": "Shared remains the safe default",
+      "was": "The travel-case workflow deliberately avoided falsely assigning pooled gear to a person.",
+      "now": "A blank holder still inherits personal-owner or shared-manifest custody; only serialized exceptions are attributed, while bulk gear stays pooled."
+    }
+  ],
+  "verification": [
+    "<strong>18 focused Vitest checks pass</strong> across service, route, stale retry, response shape, UI source, booking freshness, and kiosk-custody boundaries.",
+    "<strong>Authenticated Playwright passes at desktop and 390px</strong> against an isolated Preview-backed local server with deterministic route fixtures and no live booking mutation.",
+    "<strong>TypeScript and ESLint pass</strong> for the current working tree."
+  ],
+  "notes": [
+    "The assignment dialog was also captured at desktop and narrow widths in this proof folder and visually inspected.",
+    "No Notre Dame production checkout was changed, and this source has not been committed, pushed, or deployed.",
+    "My Gear, accountability, reports, native iOS, and kiosk presentation do not yet treat explicit item holders as their primary attribution; that is the next bounded slice under GAP-78."
+  ]
+}

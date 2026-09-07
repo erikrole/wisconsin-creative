@@ -42,7 +42,7 @@ describe("schedule working-copy route wiring", () => {
     expect(editor).toContain("/working-copy");
     expect(editor).not.toContain("/publish");
     expect(editor).toContain("formatScheduleReleaseCountdown");
-    expect(release).toContain("notified in");
+    expect(release).toContain("Release scheduled in");
     expect(route).toContain("enqueuePendingScheduleRelease");
     expect(route).toContain("getWorkingScheduleEventEndsAt");
     expect(route).toContain("const eventHasEnded");

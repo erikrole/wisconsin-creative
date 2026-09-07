@@ -885,6 +885,7 @@ These are non-negotiable integrity constraints. Every feature must preserve them
   - Keep server-side enforcement at the mutation boundary. UI removal alone is insufficient.
   - Preserve `sourceReservationId` and audit entries when a reservation is fulfilled into checkout custody.
   - Do not reintroduce app/web scan completion paths outside kiosk APIs.
+- 2026-09-07 amendment: Staff/Admin may transfer already-active serialized custody between checkouts under D-061. This may create a receiving personal checkout with the original context; it must move the existing item/allocation atomically, preserve original handoff evidence, and audit both records. It cannot take available gear out or record a return. A source with no outstanding custody may close as a cancelled transfer, preserving its history without return rewards.
 - 2026-08-03 amendment: The signed-in web app no longer exposes a standalone `/scan` lookup route or browser camera scanner controls. Native iOS owns item lookup, kiosk owns physical custody scans, and web retains text-first search plus scan-history reporting.
 
 ## D-041: External Collaborators Use Default-Deny Affiliation Policies
@@ -1485,26 +1486,28 @@ These are non-negotiable integrity constraints. Every feature must preserve them
   - Migration `0142_combined_schedule_events` is applied in production with matching Prisma checksum and zero initial relationships. Authenticated browser proof, compatible app deployment, and the first live Cross Country combine remain separate rollout gates.
 - Reference: `tasks/combined-schedule-events-plan-2026-09-03.md`, `docs/AREA_EVENTS.md`, `docs/AREA_SHIFTS.md`, and `src/lib/services/combined-schedule-events.ts`.
 
-## D-061: Shared Travel-Case Reservations and Checkouts Are Custodian-Neutral
+## D-061: Shared Travel-Case Reservations and Checkouts Are Custodian-Neutral by Default
 - Date: 2026-09-03
 - Status: Accepted; migration applied, compatible app deployment and native/runtime proof pending
 - Context:
   - Football travel equipment packed into one case and sent on the equipment truck is operated as one shared manifest, not personally carried by the person who happened to create or request the record.
   - Cameras, lenses, and other gear carried separately by an individual still need personal custody and accountability.
-  - Migration `0141_event_checkout_assignments` deployed an unused `EVENT` scope and nullable item-assignee columns before this distinction was finalized; no application mutation or UI shipped for them.
+  - Migration `0141_event_checkout_assignments` deployed an unused `EVENT` scope and nullable item-assignee columns before this distinction was finalized. The shared-scope correction shipped first; later field experience showed that serialized items can still change hands within one event manifest.
 - Decision:
   - `Booking.custodyScope=SHARED` identifies a custodian-neutral reservation and its linked checkout, such as `Football Travel Case`. The manifest contains everything packed in the case or on the truck, including pooled batteries and numbered bulk units.
-  - Gear taken separately by a person must be placed on that person's distinct `PERSON` checkout. A shared checkout does not distribute its lines among people.
+  - Shared serialized gear inherits the manifest's neutral custody by default. Per user direction on 2026-09-07, Staff/Admin transfer an active serialized item to its actual holder's personal checkout when a real handoff differs. Booking ownership is the single custody authority; an inline holder label is insufficient.
   - `Booking.requesterUserId` remains required compatibility and historical metadata. Shared surfaces must not present it as owner, borrower, or accountability target.
   - Only Staff/Admin may create a shared reservation or move an active checkout between `PERSON` and `SHARED`. Reservation creation stores the creator as required compatibility metadata, suppresses personal schedule/notification attribution, and carries the scope into kiosk or force-checkout custody. Students and Collaborators never inherit shared-booking mutation rights from the retained requester or creator fields.
   - Kiosk scans, allocations, exact numbered-unit bindings, and return evidence remain authoritative. Shared custody changes identity and attribution, not lifecycle or equipment truth.
-  - The deployed nullable serialized-item assignee columns remain dormant. Removing them is a separate destructive cleanup requiring proof that production contains no assignment data.
+  - Transfer moves the existing `BookingSerializedItem` and active `AssetAllocation` to a compatible personal checkout in one serializable transaction, clearing legacy assignee overrides. Reuse requires matching event set, purpose, location, due date, and source reservation; otherwise create a personal checkout with the source context. Preserve allocation dates, original scans/photos, and handoff evidence; write linked audit entries on both checkouts. Bulk custody remains pooled. A source with no outstanding custody is retained as cancelled by transfer, without a fabricated return or return reward.
 - Guardrails:
   - Shared scope is valid for Staff/Admin reservation drafts, active reservations, and active linked checkouts; it is not mutable on completed or cancelled records.
   - Do not send borrower nudges or requester overdue notifications for shared custody, count it in personal accountability/badges, or show it in personal My Gear.
   - Keep shared reservations and checkouts visible in team and operational queues, exports, reports, kiosk pickup, and kiosk return work with explicit shared identity.
+  - Only Staff/Admin may transfer an active serialized item on an `OPEN` checkout; targets must be active and roster-visible. Snapshot checks, exact active allocation integrity, accountability exclusions, and in-progress return sessions guard the transaction.
 - Consequences:
   - Football travel inventory can be planned and picked up as one scannable manifest without ever falsely assigning the whole truck case to one person.
   - Personal carry remains explicit and individually accountable through separate checkouts.
+  - My Gear, accountability, notifications, overdue handling, and returns follow the receiving checkout requester through their existing canonical reads. Schedule the receiving checkout reminders after commit. Original evidence remains linked through the source checkout and two-sided transfer audit; do not rewrite who scanned or opened the original custody episode.
   - Production migration `0143_shared_checkout_custody` renamed the unused enum value with zero `EVENT` rows, retained all 301 existing bookings as `PERSON`, and recorded the exact local migration checksum. Compatible app deployment and the first real shared checkout remain separate rollout gates.
-- Reference: `tasks/shared-travel-case-checkout-plan-2026-09-03.md`, `docs/AREA_CHECKOUTS.md`, and migration `0143_shared_checkout_custody`.
+- Reference: `tasks/shared-travel-case-checkout-plan-2026-09-03.md`, `tasks/checkout-item-holder-transfer-plan-2026-09-07.md`, `docs/AREA_CHECKOUTS.md`, migration `0141_event_checkout_assignments`, and migration `0143_shared_checkout_custody`.

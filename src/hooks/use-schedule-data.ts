@@ -143,6 +143,8 @@ export type UseScheduleDataResult = {
   loading: boolean;
   refreshing: boolean;
   loadError: false | "network" | "server";
+  refreshError: boolean;
+  healthUnavailable: boolean;
   loadData: () => Promise<void>;
   filters: ScheduleFilters;
   calMonth: Date;
@@ -194,6 +196,8 @@ export function mergeScheduleData(events: CalendarEvent[], groups: ShiftGroup[])
       archivedAt: g?.archivedAt ?? null,
       publication: g?.publication ?? null,
       hasWorkingCopy: g?.hasWorkingCopy ?? false,
+      autoReleaseAt: g?.autoReleaseAt ?? null,
+      autoReleaseError: g?.autoReleaseError ?? null,
       combinedEventCount: members.length,
     };
   });
@@ -380,17 +384,18 @@ async function fetchAllPages<T extends { id: string }>(
   return { rows, truncated };
 }
 
-async function fetchSchedule(
+export async function fetchSchedule(
   eventsUrl: string,
   groupsUrl: string,
   signal?: AbortSignal,
 ): Promise<{ entries: CalendarEntry[]; truncated: boolean }> {
   const [events, groups] = await Promise.all([
     fetchAllPages<CalendarEvent>(eventsUrl, signal),
-    // Coverage is supporting detail: a shift-group read that fails leaves the
-    // events listed without crew counts rather than emptying the schedule.
-    fetchAllPages<ShiftGroup>(groupsUrl, signal).catch(() => ({ rows: [], truncated: false })),
+    // Crew data determines personal assignments and whether setup is offered.
+    // Reject incomplete snapshots so Query retains the last complete result.
+    fetchAllPages<ShiftGroup>(groupsUrl, signal),
   ]);
+  if (groups.truncated) throw new Error("Crew information is incomplete. Narrow the schedule window and retry.");
 
   return {
     entries: mergeScheduleData(events.rows, groups.rows),
@@ -789,12 +794,14 @@ export function useScheduleData(): UseScheduleDataResult {
   });
   const entries = useMemo(() => schedule?.entries ?? [], [schedule]);
   const timelineTruncated = schedule?.truncated ?? false;
-  const { data: scheduleHealth = null, refetch: refetchScheduleHealth } = useQuery({
+  const { data: healthData = null, error: healthError, refetch: refetchScheduleHealth } = useQuery({
     queryKey: ["schedule-health", healthUrl],
     queryFn: ({ signal }) => fetchScheduleHealth(healthUrl, signal),
     enabled: canViewScheduleHealth,
     ...SCHEDULE_FRESH_QUERY_OPTIONS,
   });
+  const healthUnavailable = canViewScheduleHealth && (!healthData || Boolean(healthError) || healthData.partialFailures.length > 0);
+  const scheduleHealth = healthUnavailable ? null : healthData;
   const { data: scheduleAutomation = null, refetch: refetchScheduleAutomation } = useQuery({
     queryKey: ["schedule-automation", automationUrl],
     queryFn: ({ signal }) => fetchScheduleAutomation(automationUrl, signal),
@@ -812,6 +819,7 @@ export function useScheduleData(): UseScheduleDataResult {
     preferencesLoaded && scheduleError && visibleEntries.length === 0
       ? (scheduleError as Error).name === "TypeError" ? "network" : "server"
       : false;
+  const refreshError = Boolean(preferencesLoaded && scheduleError && visibleEntries.length > 0);
 
   // Client-side filtering
   const filteredEntries = useMemo(() => {
@@ -909,6 +917,8 @@ export function useScheduleData(): UseScheduleDataResult {
     loading,
     refreshing: preferencesLoaded && isFetching && !isLoading,
     loadError,
+    refreshError,
+    healthUnavailable,
     loadData,
     filters: {
       viewMode,

@@ -23,11 +23,11 @@ describe("schedule release notification notice", () => {
     const now = Date.parse("2026-08-18T15:00:00.000Z");
 
     expect(formatScheduleReleaseCountdown("2026-08-18T15:09:01.000Z", now, "Affected users"))
-      .toBe("Affected users notified in 10 minutes");
+      .toBe("Release scheduled in 10 minutes. Affected users are notified after release");
     expect(formatScheduleReleaseCountdown("2026-08-18T15:00:00.000Z", now, "Affected users"))
-      .toBe("Affected users notified now");
+      .toBe("Release time reached. Waiting for confirmation");
     expect(formatScheduleReleaseCountdown(null, now, "Affected users"))
-      .toBe("Affected users notified after this change is released");
+      .toBe("Release not scheduled. Review this crew before relying on these changes");
   });
 
   it("is reused by Event detail Crew and the read-only shift detail panel", () => {

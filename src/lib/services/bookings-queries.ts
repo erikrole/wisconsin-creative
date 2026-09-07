@@ -152,7 +152,12 @@ export async function getBookingDetail(bookingId: string) {
     include: {
       ...bookingInclude,
       creator: { select: { id: true, name: true, email: true, avatarUrl: true } },
-      serializedItems: { include: { asset: { include: { location: { select: { id: true, name: true } } } } } },
+      serializedItems: {
+        include: {
+          asset: { include: { location: { select: { id: true, name: true } } } },
+          assignee: { select: { id: true, name: true, email: true, avatarUrl: true } },
+        },
+      },
       bulkItems: {
         include: {
           bulkSku: { select: { id: true, name: true, category: true, unit: true, imageUrl: true, trackByNumber: true } },

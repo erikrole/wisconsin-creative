@@ -130,25 +130,32 @@ function CallWindowEditor({
   slot,
   disabled,
   onSave,
+  onReview,
 }: {
   slot: WorkingSchedulePayload["slots"][number];
   disabled: boolean;
-  onSave: (callStartsAt: string | null, callEndsAt: string | null) => void;
+  onSave: (callStartsAt: string | null, callEndsAt: string | null) => Promise<boolean>;
+  onReview: () => Promise<void>;
 }) {
   const defaultStartsAt = slot.assignment?.callStartsAt ?? slot.callStartsAt ?? slot.startsAt;
   const defaultEndsAt = slot.assignment?.callEndsAt ?? slot.callEndsAt ?? slot.endsAt;
   const resetLabel = slot.assignment ? "Use slot time" : "Use shift time";
   const [open, setOpen] = useState(false);
+  const [saveError, setSaveError] = useState(false);
   const [startsAt, setStartsAt] = useState(() => toLocalDateTimeValue(defaultStartsAt));
   const [endsAt, setEndsAt] = useState(() => toLocalDateTimeValue(defaultEndsAt));
   const inputId = slot.key.replace(/[^a-zA-Z0-9_-]/g, "-");
 
   useEffect(() => {
+    if (open) return;
+    setSaveError(false);
     setStartsAt(toLocalDateTimeValue(defaultStartsAt));
     setEndsAt(toLocalDateTimeValue(defaultEndsAt));
-  }, [defaultEndsAt, defaultStartsAt]);
+  }, [defaultEndsAt, defaultStartsAt, open]);
 
-  function save() {
+  async function save() {
+    if (disabled) return;
+    setSaveError(false);
     const nextStartsAt = roundUpToQuarterHour(new Date(startsAt));
     const nextEndsAt = roundUpToQuarterHour(new Date(endsAt));
     if (!startsAt || !endsAt || Number.isNaN(nextStartsAt.getTime()) || Number.isNaN(nextEndsAt.getTime())) {
@@ -159,8 +166,9 @@ function CallWindowEditor({
       toast.error("Release time must be after call time.");
       return;
     }
-    onSave(nextStartsAt.toISOString(), nextEndsAt.toISOString());
-    setOpen(false);
+    const saved = await onSave(nextStartsAt.toISOString(), nextEndsAt.toISOString());
+    if (saved) setOpen(false);
+    else setSaveError(true);
   }
 
   return (
@@ -179,7 +187,7 @@ function CallWindowEditor({
       <PopoverContent className="w-80 max-w-[calc(100vw-2rem)] space-y-3 p-3" align="start">
         <div>
           <p className="text-sm font-medium">Call window</p>
-          <p className="text-xs text-muted-foreground">The ten-minute release timer restarts when you save.</p>
+          <p className="text-xs text-muted-foreground">Future changes release after ten minutes without another edit. Past corrections apply immediately.</p>
         </div>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <label className="space-y-1 text-xs" htmlFor={`${inputId}-call-start`}>
@@ -203,19 +211,21 @@ function CallWindowEditor({
             />
           </label>
         </div>
+        {saveError && <div className="space-y-2"><p role="alert" className="text-xs text-destructive">Save was not confirmed. Your entered times are still here. Review the latest crew before trying again.</p><Button type="button" variant="outline" className="h-10" onClick={() => void onReview()}>Review latest crew</Button></div>}
         <div className="flex flex-wrap items-center justify-between gap-2">
           <Button
             type="button"
             variant="ghost"
             className="h-10 text-xs"
-            onClick={() => {
-              onSave(null, null);
-              setOpen(false);
+            disabled={disabled}
+            onClick={async () => {
+              if (await onSave(null, null)) setOpen(false);
+              else setSaveError(true);
             }}
           >
             {resetLabel}
           </Button>
-          <Button type="button" className="h-10 text-xs" onClick={save}>Save call time</Button>
+          <Button type="button" className="h-10 text-xs" disabled={disabled} onClick={() => void save()}>Save call time</Button>
         </div>
       </PopoverContent>
     </Popover>
@@ -226,21 +236,28 @@ function SetAllCallTimesEditor({
   data,
   disabled,
   onSave,
+  onReview,
 }: {
   data: Pick<EditorData, "defaultWindow" | "schedule">;
   disabled: boolean;
-  onSave: (callStartsAt: string, callEndsAt: string) => void;
+  onSave: (callStartsAt: string, callEndsAt: string) => Promise<boolean>;
+  onReview: () => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
+  const [saveError, setSaveError] = useState(false);
   const [startsAt, setStartsAt] = useState(() => toLocalDateTimeValue(data.defaultWindow.startsAt));
   const [endsAt, setEndsAt] = useState(() => toLocalDateTimeValue(data.defaultWindow.endsAt));
 
   useEffect(() => {
+    if (open) return;
+    setSaveError(false);
     setStartsAt(toLocalDateTimeValue(data.defaultWindow.startsAt));
     setEndsAt(toLocalDateTimeValue(data.defaultWindow.endsAt));
-  }, [data.defaultWindow.endsAt, data.defaultWindow.startsAt]);
+  }, [data.defaultWindow.endsAt, data.defaultWindow.startsAt, open]);
 
-  function save() {
+  async function save() {
+    if (disabled) return;
+    setSaveError(false);
     const nextStartsAt = roundUpToQuarterHour(new Date(startsAt));
     const nextEndsAt = roundUpToQuarterHour(new Date(endsAt));
     if (!startsAt || !endsAt || Number.isNaN(nextStartsAt.getTime()) || Number.isNaN(nextEndsAt.getTime())) {
@@ -251,8 +268,9 @@ function SetAllCallTimesEditor({
       toast.error("Release time must be after call time.");
       return;
     }
-    onSave(nextStartsAt.toISOString(), nextEndsAt.toISOString());
-    setOpen(false);
+    const saved = await onSave(nextStartsAt.toISOString(), nextEndsAt.toISOString());
+    if (saved) setOpen(false);
+    else setSaveError(true);
   }
 
   return (
@@ -299,9 +317,10 @@ function SetAllCallTimesEditor({
               />
             </label>
           </div>
+          {saveError && <div className="space-y-2 px-6"><p role="alert" className="text-xs text-destructive">Save was not confirmed. Your entered times are still here. Review the latest crew before trying again.</p><Button type="button" variant="outline" className="h-10" onClick={() => void onReview()}>Review latest crew</Button></div>}
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button type="button" onClick={save}>Apply to Students</Button>
+            <Button type="button" variant="outline" disabled={disabled} onClick={() => setOpen(false)}>Cancel</Button>
+            <Button type="button" disabled={disabled} onClick={() => void save()}>Apply to Students</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -342,6 +361,8 @@ export function WorkingCrewEditor({
   const [userSearch, setUserSearch] = useState("");
   const [usersLoadError, setUsersLoadError] = useState<LoadError>(false);
   const [revertOpen, setRevertOpen] = useState(false);
+  const [mutationUncertain, setMutationUncertain] = useState(false);
+  const actionsDisabled = Boolean(actingKey) || mutationUncertain;
 
   const loadUsers = useCallback(async (force = false) => {
     if (usersLoadedRef.current && !force) return;
@@ -421,6 +442,7 @@ export function WorkingCrewEditor({
         return null;
       }
       const json = await parseJsonSafely<{ data?: EditorData }>(response);
+      if (controller.signal.aborted) return null;
       if (json?.data) {
         setData(json.data);
         setEditorLoadError(false);
@@ -514,9 +536,10 @@ export function WorkingCrewEditor({
   }, [assignedUserIds, filteredUsers]);
 
   const mutate = useCallback(async (command: WorkingScheduleCommand, key: string) => {
-    if (!shiftGroupId || !data || actingRef.current) return false;
+    if (!shiftGroupId || !data || actingRef.current || mutationUncertain) return false;
     actingRef.current = true;
     setActingKey(key);
+    editorAbortRef.current?.abort();
     try {
       const response = await fetch(`/api/shift-groups/${shiftGroupId}/working-copy`, {
         method: "PATCH",
@@ -526,29 +549,39 @@ export function WorkingCrewEditor({
       if (handleAuthRedirect(response)) return false;
       if (!response.ok) {
         toast.error(await parseErrorMessage(response, "Failed to update working schedule"));
-        if (response.status === 409) void loadEditor();
+        if (response.status >= 500) setMutationUncertain(true);
+        if (response.status === 409 || response.status >= 500) await loadEditor();
         return false;
       }
       const json = await parseJsonSafely<{ data?: EditorData }>(response);
       if (!json?.data) {
-        toast.error("Working schedule response was incomplete. Refresh and try again.");
+        setMutationUncertain(true);
+        await loadEditor();
+        toast.error("The save response was incomplete. Review the latest crew before another change.");
         return false;
       }
       setData(json.data);
-      onPublished();
+      void Promise.resolve().then(onPublished).catch(() => toast.error("Crew saved; refresh the schedule to confirm its display."));
       setUserSearch("");
       return true;
     } catch {
-      toast.error("Network error - could not update working schedule");
+      setMutationUncertain(true);
+      await loadEditor();
+      toast.error("The save response was lost. Review the latest crew before another change.");
       return false;
     } finally {
       actingRef.current = false;
       setActingKey(null);
     }
-  }, [data, loadEditor, onPublished, shiftGroupId]);
+  }, [data, loadEditor, mutationUncertain, onPublished, shiftGroupId]);
+
+  const reviewLatestCrew = useCallback(async () => {
+    if (actingRef.current) return;
+    if (await loadEditor()) setMutationUncertain(false);
+  }, [loadEditor]);
 
   const discard = useCallback(async () => {
-    if (!shiftGroupId || !data?.hasWorkingCopy || actingRef.current) return;
+    if (!shiftGroupId || !data?.hasWorkingCopy || actingRef.current || mutationUncertain) return;
     actingRef.current = true;
     setActingKey("discard");
     try {
@@ -572,10 +605,10 @@ export function WorkingCrewEditor({
       actingRef.current = false;
       setActingKey(null);
     }
-  }, [data, loadEditor, onPublished, shiftGroupId]);
+  }, [data, loadEditor, mutationUncertain, onPublished, shiftGroupId]);
 
   const refreshFromLive = useCallback(async (sourceData: EditorData | null = data, silent = false) => {
-    if (!shiftGroupId || !sourceData?.hasWorkingCopy || actingRef.current) return;
+    if (!shiftGroupId || !sourceData?.hasWorkingCopy || actingRef.current || mutationUncertain) return;
     actingRef.current = true;
     setActingKey("refresh");
     try {
@@ -599,7 +632,7 @@ export function WorkingCrewEditor({
       actingRef.current = false;
       setActingKey(null);
     }
-  }, [data, loadEditor, shiftGroupId]);
+  }, [data, loadEditor, mutationUncertain, shiftGroupId]);
 
   useEffect(() => {
     if (!data?.hasWorkingCopy || !data.autoReleaseAt) return;
@@ -615,6 +648,7 @@ export function WorkingCrewEditor({
   useEffect(() => {
     if (!data?.hasWorkingCopy) return;
     const timer = window.setInterval(async () => {
+      if (actingRef.current) return;
       const latest = await loadEditor();
       if (latest?.hasWorkingCopy && latest.basePublishedVersion < latest.publishedVersion) {
         await refreshFromLive(latest, true);
@@ -659,6 +693,12 @@ export function WorkingCrewEditor({
 
   return (
     <div className="flex flex-col gap-2">
+      {mutationUncertain && (
+        <Alert role="alert">
+          <AlertDescription>The last save could not be confirmed. Check the latest crew before making another change.</AlertDescription>
+          <Button variant="outline" className="mt-2 h-10" disabled={loading} onClick={() => void reviewLatestCrew()}>Review latest crew</Button>
+        </Alert>
+      )}
       {(data.hasWorkingCopy
         || (showReleaseCountdown && data.autoReleaseError)
         || compact
@@ -668,7 +708,7 @@ export function WorkingCrewEditor({
             <span className="text-xs text-muted-foreground">{formatNotificationCountdown(data.autoReleaseAt, clock)}</span>
           )}
           {showReleaseCountdown && !eventHasEnded && data.hasWorkingCopy && !data.autoReleaseAt && !data.autoReleaseError && (
-            <span className="text-xs text-muted-foreground">Assignees notified after this change is released</span>
+            <span className="text-xs text-muted-foreground">{formatScheduleReleaseCountdown(null, clock)}</span>
           )}
           {showReleaseCountdown && !eventHasEnded && data.autoReleaseError && (
             <span className="text-xs text-destructive">Release needs attention: {data.autoReleaseError}</span>
@@ -677,8 +717,9 @@ export function WorkingCrewEditor({
             {!data.allDay && data.schedule.slots.some((slot) => slot.workerType === "ST") && (
               <SetAllCallTimesEditor
                 data={data}
-                disabled={Boolean(actingKey)}
-                onSave={(callStartsAt, callEndsAt) => void mutate(
+                onReview={reviewLatestCrew}
+                disabled={actionsDisabled}
+                onSave={(callStartsAt, callEndsAt) => mutate(
                   { type: "setCallWindowForAll", callStartsAt, callEndsAt },
                   "all-call-window",
                 )}
@@ -691,7 +732,7 @@ export function WorkingCrewEditor({
                 size="sm"
                 className="h-10 px-2 text-xs text-muted-foreground"
                 loading={actingKey === "discard"}
-                disabled={Boolean(actingKey)}
+                disabled={actionsDisabled}
                 onClick={() => setRevertOpen(true)}
               >
                 Revert changes
@@ -718,7 +759,7 @@ export function WorkingCrewEditor({
                 action={
                   <AddSlotMenu
                     area={area}
-                    disabled={Boolean(actingKey)}
+                    disabled={actionsDisabled}
                     onAdd={(workerType) => void mutate(
                       { type: "adjustSlots", area, workerType, delta: 1 },
                       `${area}-${workerType}-add`,
@@ -739,8 +780,9 @@ export function WorkingCrewEditor({
                       {showCallWindow ? (
                         <CallWindowEditor
                           slot={slot}
-                          disabled={Boolean(actingKey)}
-                          onSave={(callStartsAt, callEndsAt) => void mutate(
+                          onReview={reviewLatestCrew}
+                          disabled={actionsDisabled}
+                          onSave={(callStartsAt, callEndsAt) => mutate(
                             { type: "setCallWindow", slotKey: slot.key, callStartsAt, callEndsAt },
                             `${slot.key}-call-window`,
                           )}
@@ -758,7 +800,7 @@ export function WorkingCrewEditor({
                             variant="ghost"
                             className={cn("size-10 text-muted-foreground", CREW_ROW_REVEAL)}
                             aria-label={`Actions for ${user?.name ?? "assigned worker"}`}
-                            disabled={Boolean(actingKey)}
+                            disabled={actionsDisabled}
                           >
                             <MoreHorizontalIcon className="size-4" />
                           </Button>
@@ -794,8 +836,9 @@ export function WorkingCrewEditor({
                       {showCallWindow ? (
                         <CallWindowEditor
                           slot={slot}
-                          disabled={Boolean(actingKey)}
-                          onSave={(callStartsAt, callEndsAt) => void mutate(
+                          onReview={reviewLatestCrew}
+                          disabled={actionsDisabled}
+                          onSave={(callStartsAt, callEndsAt) => mutate(
                             { type: "setCallWindow", slotKey: slot.key, callStartsAt, callEndsAt },
                             `${slot.key}-call-window`,
                           )}
@@ -812,7 +855,7 @@ export function WorkingCrewEditor({
                       }}>
                         <PopoverTrigger asChild>
                           <AssignSlotButton
-                            disabled={Boolean(actingKey)}
+                            disabled={actionsDisabled}
                             aria-label={`Assign ${roleLabel.toLowerCase()} slot`}
                           />
                         </PopoverTrigger>
@@ -825,7 +868,7 @@ export function WorkingCrewEditor({
                             search={userSearch}
                             onSearchChange={setUserSearch}
                             onSelect={(userId) => void mutate({ type: "assign", slotKey: slot.key, userId }, `${slot.key}-assign`)}
-                            disabled={Boolean(actingKey)}
+                            disabled={actionsDisabled}
                             slotWorkerType={slot.workerType}
                             candidateScores={candidateScoreState?.slotKey === slot.key ? candidateScoreState.scores : undefined}
                             scoresLoading={scoresLoadingKey === slot.key}
@@ -840,7 +883,7 @@ export function WorkingCrewEditor({
                               type="button"
                               variant="ghost"
                               className={cn("col-start-4 size-10 text-muted-foreground", CREW_ROW_REVEAL)}
-                              disabled={Boolean(actingKey)}
+                              disabled={actionsDisabled}
                               aria-label={`Actions for open ${roleLabel} slot`}
                             >
                               <MoreHorizontalIcon className="size-4" />
@@ -895,7 +938,7 @@ export function WorkingCrewEditor({
                           variant="ghost"
                           size="sm"
                           className="h-10 px-2 text-xs"
-                          disabled={Boolean(actingKey)}
+                          disabled={actionsDisabled}
                           onClick={() => void mutate(
                             { type: "adjustSlots", area, workerType, delta: 1 },
                             `${area}-${workerType}-add`,
@@ -957,7 +1000,7 @@ export function WorkingCrewEditor({
                     closePicker();
                   });
                 }}
-                disabled={Boolean(actingKey)}
+                disabled={actionsDisabled}
                 slotWorkerType={replacementTarget.workerType}
                 candidateScores={candidateScoreState?.slotKey === replacementTarget.slotKey ? candidateScoreState.scores : undefined}
                 scoresLoading={scoresLoadingKey === replacementTarget.slotKey}
@@ -979,10 +1022,10 @@ export function WorkingCrewEditor({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={Boolean(actingKey)}>Keep changes</AlertDialogCancel>
+            <AlertDialogCancel disabled={actionsDisabled}>Keep changes</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
-              disabled={Boolean(actingKey)}
+              disabled={actionsDisabled}
               onClick={() => {
                 setRevertOpen(false);
                 void discard();

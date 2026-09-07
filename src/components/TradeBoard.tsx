@@ -93,6 +93,7 @@ type Props = {
   currentUserId: string;
   currentUserRole: string;
   initialStatusFilter?: string;
+  onChanged?: () => void | Promise<void>;
 };
 
 type OpenWorkShift = {
@@ -179,39 +180,39 @@ const STATUS_META: Record<string, { label: string; variant: BadgeProps["variant"
 const TRADE_OUTCOME_COPY = {
   claimTrade: {
     server: "Could not claim the trade. Refresh the Trade Board and try again.",
-    network: "Could not reach the server. The trade was not claimed.",
+    network: "The response was lost. Check the refreshed work before trying again.",
   },
   approveTrade: {
     server: "Could not approve the trade. The shift assignment was not changed.",
-    network: "Could not reach the server. The trade was not approved.",
+    network: "The response was lost. Check the refreshed work before trying again.",
   },
   declineTrade: {
     server: "Could not decline the trade. The claim stayed in review.",
-    network: "Could not reach the server. The trade was not declined.",
+    network: "The response was lost. Check the refreshed work before trying again.",
   },
   approveRequest: {
     server: "Could not approve the request. Nobody was added to the shift.",
-    network: "Could not reach the server. The request was not approved.",
+    network: "The response was lost. Check the refreshed work before trying again.",
   },
   declineRequest: {
     server: "Could not decline the request. It stayed in review.",
-    network: "Could not reach the server. The request was not declined.",
+    network: "The response was lost. Check the refreshed work before trying again.",
   },
   cancelTrade: {
     server: "Could not cancel the trade. The shift stays assigned to the poster.",
-    network: "Could not reach the server. The trade was not cancelled.",
+    network: "The response was lost. Check the refreshed work before trying again.",
   },
   withdrawClaim: {
     server: "Could not withdraw the claim. Refresh the Trade Board and try again.",
-    network: "Could not reach the server. The claim was not withdrawn.",
+    network: "The response was lost. Check the refreshed work before trying again.",
   },
   withdrawRequest: {
     server: "Could not withdraw the request. Refresh the Trade Board and try again.",
-    network: "Could not reach the server. The request was not withdrawn.",
+    network: "The response was lost. Check the refreshed work before trying again.",
   },
   claimShift: {
     server: "Could not claim the shift. Refresh the Trade Board and try again.",
-    network: "Could not reach the server. The shift was not claimed.",
+    network: "The response was lost. Check the refreshed work before trying again.",
   },
 } as const;
 
@@ -396,7 +397,7 @@ function AvailabilityContextNote({ context }: { context?: AvailabilityContext | 
   );
 }
 
-export default function TradeBoard({ currentUserId, currentUserRole, initialStatusFilter = "" }: Props) {
+export default function TradeBoard({ currentUserId, currentUserRole, initialStatusFilter = "", onChanged }: Props) {
   const confirm = useConfirm();
   const [trades, setTrades] = useState<Trade[]>([]);
   const [openWork, setOpenWork] = useState<OpenWorkResponse>({ openShifts: [], pickupRequests: [] });
@@ -404,6 +405,8 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
   const [openWorkLoading, setOpenWorkLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [openWorkError, setOpenWorkError] = useState(false);
+  const [needsReview, setNeedsReview] = useState(false);
+  const uncertainRef = useRef(false);
   const [acting, setActing] = useState<string | null>(null);
   const actingRef = useRef<string | null>(null);
   const loadSeqRef = useRef(0);
@@ -430,26 +433,29 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
       if (areaFilter) params.set("area", areaFilter);
       if (isTradeStatus(statusFilter)) params.set("status", statusFilter);
 
-      const res = await fetch(`/api/shift-trades?${params}`);
-      if (handleAuthRedirect(res)) return;
-      if (requestId !== loadSeqRef.current) return;
+      const res = await fetch(`/api/shift-trades?${params}`, { cache: "no-store" });
+      if (handleAuthRedirect(res)) return false;
+      if (requestId !== loadSeqRef.current) return false;
 
       if (res.ok) {
         const json = await parseJsonSafely<{ data?: Trade[] }>(res);
         if (!Array.isArray(json?.data)) {
           setLoadError(true);
-          return;
+          return false;
         }
         setTrades(json.data ?? []);
         setLoadError(false);
+        return true;
       } else {
         setLoadError(true);
       }
     } catch {
       if (requestId === loadSeqRef.current) setLoadError(true);
+      return false;
     } finally {
       if (requestId === loadSeqRef.current) setLoading(false);
     }
+    return false;
   }, [areaFilter, statusFilter]);
 
   const loadOpenWork = useCallback(async () => {
@@ -461,26 +467,29 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
       const params = new URLSearchParams();
       if (areaFilter) params.set("area", areaFilter);
 
-      const res = await fetch(`/api/schedule/open-work?${params}`);
-      if (handleAuthRedirect(res)) return;
-      if (requestId !== openWorkSeqRef.current) return;
+      const res = await fetch(`/api/schedule/open-work?${params}`, { cache: "no-store" });
+      if (handleAuthRedirect(res)) return false;
+      if (requestId !== openWorkSeqRef.current) return false;
 
       if (res.ok) {
         const json = await parseJsonSafely<{ data?: OpenWorkResponse }>(res);
         if (!Array.isArray(json?.data?.openShifts) || !Array.isArray(json?.data?.pickupRequests)) {
           setOpenWorkError(true);
-          return;
+          return false;
         }
         setOpenWork(json.data);
         setOpenWorkError(false);
+        return true;
       } else {
         setOpenWorkError(true);
       }
     } catch {
       if (requestId === openWorkSeqRef.current) setOpenWorkError(true);
+      return false;
     } finally {
       if (requestId === openWorkSeqRef.current) setOpenWorkLoading(false);
     }
+    return false;
   }, [areaFilter]);
 
   useEffect(() => {
@@ -518,25 +527,33 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
   }, [myTradesOnly, openWork.openShifts, statusFilter]);
 
   const reloadWork = useCallback(async () => {
-    await Promise.all([loadTrades(), loadOpenWork()]);
-  }, [loadOpenWork, loadTrades]);
+    const results = await Promise.all([loadTrades(), loadOpenWork()]);
+    void Promise.resolve().then(onChanged).catch(() => toast.error("Work refreshed; refresh Schedule to confirm its display."));
+    return results.every(Boolean);
+  }, [loadOpenWork, loadTrades, onChanged]);
+
+  const recoverUncertainAction = useCallback(async () => {
+    uncertainRef.current = true;
+    setNeedsReview(true);
+    await reloadWork();
+  }, [reloadWork]);
 
   /**
    * A lost race (someone else claimed it first, or the shift was pulled) means
    * the row on screen is stale, so the board has to refresh or the student is
    * left staring at a Claim button that can only fail again. Rate-limit and
-   * network failures are left alone — nothing changed server-side, and
-   * reloading would just add load to a request the user should simply retry.
+   * network failures have an unknown outcome. Refresh without resubmitting,
+   * then require review before another action.
    */
   const isStaleWorkResponse = (status: number) =>
     status === 404 || status === 409 || status === 410;
 
   const beginAction = useCallback((tradeId: string) => {
-    if (actingRef.current) return false;
+    if (actingRef.current || uncertainRef.current || loadError || openWorkError) return false;
     actingRef.current = tradeId;
     setActing(tradeId);
     return true;
-  }, []);
+  }, [loadError, openWorkError]);
 
   const endAction = useCallback((tradeId: string) => {
     if (actingRef.current !== tradeId) return;
@@ -557,6 +574,7 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
     try {
       const res = await fetch(`/api/shift-trades/${tradeId}/claim`, { method: "POST" });
       if (handleAuthRedirect(res)) return;
+      if (res.status >= 500) throw new Error("Mutation outcome unavailable");
       if (res.ok) {
         toast.success("Claim sent for Admin approval");
         await reloadWork();
@@ -566,11 +584,12 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
         if (isStaleWorkResponse(res.status)) await reloadWork();
       }
     } catch {
+      await recoverUncertainAction();
       toast.error(TRADE_OUTCOME_COPY.claimTrade.network);
     } finally {
       endAction(tradeId);
     }
-  }, [beginAction, confirm, endAction, reloadWork]);
+  }, [beginAction, confirm, endAction, recoverUncertainAction, reloadWork]);
 
   const handleCancel = useCallback(async (trade: Trade) => {
     const tradeId = trade.id;
@@ -592,6 +611,7 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
     try {
       const res = await fetch(`/api/shift-trades/${tradeId}/cancel`, { method: "PATCH" });
       if (handleAuthRedirect(res)) return;
+      if (res.status >= 500) throw new Error("Mutation outcome unavailable");
       if (res.ok) {
         toast.success(`Trade cancelled for ${eventLabel}`);
         await reloadWork();
@@ -601,11 +621,12 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
         if (isStaleWorkResponse(res.status)) await reloadWork();
       }
     } catch {
+      await recoverUncertainAction();
       toast.error(TRADE_OUTCOME_COPY.cancelTrade.network);
     } finally {
       endAction(tradeId);
     }
-  }, [beginAction, confirm, endAction, reloadWork]);
+  }, [beginAction, confirm, endAction, recoverUncertainAction, reloadWork]);
 
   const handleReviewTrade = useCallback(async (tradeId: string, decision: "approve" | "decline") => {
     const actionId = `${decision}:${tradeId}`;
@@ -613,6 +634,7 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
     try {
       const res = await fetch(`/api/shift-trades/${tradeId}/${decision}`, { method: "PATCH" });
       if (handleAuthRedirect(res)) return;
+      if (res.status >= 500) throw new Error("Mutation outcome unavailable");
       if (res.ok) {
         toast.success(decision === "approve" ? "Trade approved" : "Claim declined");
         await reloadWork();
@@ -624,13 +646,14 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
         if (isStaleWorkResponse(res.status)) await reloadWork();
       }
     } catch {
+      await recoverUncertainAction();
       toast.error(decision === "approve"
         ? TRADE_OUTCOME_COPY.approveTrade.network
         : TRADE_OUTCOME_COPY.declineTrade.network);
     } finally {
       endAction(actionId);
     }
-  }, [beginAction, endAction, reloadWork]);
+  }, [beginAction, endAction, recoverUncertainAction, reloadWork]);
 
   const handleReviewRequest = useCallback(async (request: PickupRequest, decision: "approve" | "decline") => {
     const actionId = `${decision}:${request.id}`;
@@ -638,6 +661,7 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
     try {
       const res = await fetch(`/api/shift-assignments/${request.id}/${decision}`, { method: "PATCH" });
       if (handleAuthRedirect(res)) return;
+      if (res.status >= 500) throw new Error("Mutation outcome unavailable");
       if (res.ok) {
         toast.success(decision === "approve"
           ? `${request.user.name} is on the schedule`
@@ -651,13 +675,14 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
         if (isStaleWorkResponse(res.status)) await reloadWork();
       }
     } catch {
+      await recoverUncertainAction();
       toast.error(decision === "approve"
         ? TRADE_OUTCOME_COPY.approveRequest.network
         : TRADE_OUTCOME_COPY.declineRequest.network);
     } finally {
       endAction(actionId);
     }
-  }, [beginAction, endAction, reloadWork]);
+  }, [beginAction, endAction, recoverUncertainAction, reloadWork]);
 
   const handleWithdrawClaim = useCallback(async (trade: Trade) => {
     const actionId = `withdraw-claim:${trade.id}`;
@@ -674,6 +699,7 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
     try {
       const res = await fetch(`/api/shift-trades/${trade.id}/withdraw`, { method: "PATCH" });
       if (handleAuthRedirect(res)) return;
+      if (res.status >= 500) throw new Error("Mutation outcome unavailable");
       if (res.ok) {
         toast.success("Claim withdrawn; the trade is back on the board");
         await reloadWork();
@@ -683,11 +709,12 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
         if (isStaleWorkResponse(res.status)) await reloadWork();
       }
     } catch {
+      await recoverUncertainAction();
       toast.error(TRADE_OUTCOME_COPY.withdrawClaim.network);
     } finally {
       endAction(actionId);
     }
-  }, [beginAction, confirm, endAction, reloadWork]);
+  }, [beginAction, confirm, endAction, recoverUncertainAction, reloadWork]);
 
   const handleWithdrawRequest = useCallback(async (request: PickupRequest) => {
     const actionId = `withdraw-request:${request.id}`;
@@ -704,6 +731,7 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
     try {
       const res = await fetch(`/api/shift-assignments/${request.id}/withdraw`, { method: "PATCH" });
       if (handleAuthRedirect(res)) return;
+      if (res.status >= 500) throw new Error("Mutation outcome unavailable");
       if (res.ok) {
         toast.success("Request withdrawn");
         await reloadWork();
@@ -713,11 +741,12 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
         if (isStaleWorkResponse(res.status)) await reloadWork();
       }
     } catch {
+      await recoverUncertainAction();
       toast.error(TRADE_OUTCOME_COPY.withdrawRequest.network);
     } finally {
       endAction(actionId);
     }
-  }, [beginAction, confirm, endAction, reloadWork]);
+  }, [beginAction, confirm, endAction, recoverUncertainAction, reloadWork]);
 
   const handlePickup = useCallback(async (shift: OpenWorkShift) => {
     const { eventLabel, windowLabel } = shiftActionContext(shift.shift);
@@ -736,6 +765,7 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
         body: JSON.stringify({ shiftId: shift.id }),
       });
       if (handleAuthRedirect(res)) return;
+      if (res.status >= 500) throw new Error("Mutation outcome unavailable");
       if (res.ok) {
         toast.success("Request sent for Admin approval");
         await reloadWork();
@@ -745,11 +775,12 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
         if (isStaleWorkResponse(res.status)) await reloadWork();
       }
     } catch {
+      await recoverUncertainAction();
       toast.error(TRADE_OUTCOME_COPY.claimShift.network);
     } finally {
       endAction(actionId);
     }
-  }, [beginAction, confirm, endAction, reloadWork]);
+  }, [beginAction, confirm, endAction, recoverUncertainAction, reloadWork]);
 
   const hasFilters = !!(areaFilter || statusFilter || myTradesOnly);
   const activeFilters: OperationalActiveFilter[] = [
@@ -901,14 +932,14 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
             <div className="flex flex-wrap gap-2">
               <Button className="h-10"
                 onClick={() => void handleReviewRequest(request, "approve")}
-                disabled={Boolean(acting)}
+                disabled={Boolean(acting) || needsReview || loadError || openWorkError}
               >
                 {isApproving ? "Approving…" : "Approve"}
               </Button>
               <Button className="h-10"
                 variant="outline"
                 onClick={() => void handleReviewRequest(request, "decline")}
-                disabled={Boolean(acting)}
+                disabled={Boolean(acting) || needsReview || loadError || openWorkError}
               >
                 {isDeclining ? "Declining…" : "Decline"}
               </Button>
@@ -976,14 +1007,14 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
             <div className="flex flex-wrap gap-2">
               <Button className="h-10"
                 onClick={() => void handleReviewTrade(trade.id, "approve")}
-                disabled={Boolean(acting)}
+                disabled={Boolean(acting) || needsReview || loadError || openWorkError}
               >
                 {isApproving ? "Approving…" : "Approve trade"}
               </Button>
               <Button className="h-10"
                 variant="outline"
                 onClick={() => void handleReviewTrade(trade.id, "decline")}
-                disabled={Boolean(acting)}
+                disabled={Boolean(acting) || needsReview || loadError || openWorkError}
               >
                 {isDeclining ? "Declining…" : "Decline"}
               </Button>
@@ -996,6 +1027,17 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
 
   return (
     <div className="flex flex-col gap-3">
+      {needsReview && (
+        <div role="alert" className="rounded-md border border-border bg-muted/30 p-3 text-sm">
+          <p>The last action could not be confirmed. It may already have completed. Review the refreshed work before another action.</p>
+          <Button variant="outline" className="mt-2 h-10" disabled={loading || openWorkLoading} onClick={async () => {
+            if (await reloadWork()) {
+              uncertainRef.current = false;
+              setNeedsReview(false);
+            }
+          }}>Review latest work</Button>
+        </div>
+      )}
       {!isStaff && (
         <div className="flex items-start gap-2.5 rounded-md border border-border/60 bg-muted/50 px-3 py-2.5 text-sm">
           <CalendarDaysIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
@@ -1201,7 +1243,7 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
                         <Button
                           className="h-10 gap-1.5"
                           onClick={() => void handlePickup(item)}
-                          disabled={acting !== null || !item.canAct}
+                          disabled={acting !== null || needsReview || loadError || openWorkError || !item.canAct}
                         >
                           <CheckIcon className="size-3.5" />
                           {isBusy ? "Claiming..." : "Claim shift"}
@@ -1298,7 +1340,7 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
                           <Button
                             className="h-10 gap-1.5"
                             onClick={() => void handleClaim(trade)}
-                            disabled={acting !== null}
+                            disabled={acting !== null || needsReview || loadError || openWorkError}
                           >
                             <CheckIcon className="size-3.5" />
                             {isBusy ? "Claiming..." : "Claim"}
@@ -1403,7 +1445,7 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
                           >
                             <DropdownMenuItem
                               variant="destructive"
-                              disabled={acting !== null}
+                              disabled={acting !== null || needsReview || loadError || openWorkError}
                               onSelect={() => void handleCancel(trade)}
                             >
                               <XIcon className="size-4" />
@@ -1475,7 +1517,7 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
                               variant="outline"
                               className="h-10"
                               onClick={() => void handleWithdrawRequest(request)}
-                              disabled={acting !== null}
+                              disabled={acting !== null || needsReview || loadError || openWorkError}
                             >
                               {isBusy ? "Withdrawing…" : "Withdraw request"}
                             </Button>
@@ -1537,7 +1579,7 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
                               variant="outline"
                               className="h-10"
                               onClick={() => void handleWithdrawClaim(trade)}
-                              disabled={acting !== null}
+                              disabled={acting !== null || needsReview || loadError || openWorkError}
                             >
                               {isBusy ? "Withdrawing…" : "Withdraw claim"}
                             </Button>
@@ -1565,7 +1607,7 @@ export default function TradeBoard({ currentUserId, currentUserRole, initialStat
                   isHome: event.isHome ?? null,
                 });
                 const areaLabel = AREA_LABELS[shift.area] ?? shift.area;
-                const primaryWarning = item.advisoryConflictNote ?? item.warnings[0]?.label ?? item.reason;
+                const primaryWarning = item.reason || item.advisoryConflictNote || item.warnings[0]?.label;
 
                 return (
                   <article

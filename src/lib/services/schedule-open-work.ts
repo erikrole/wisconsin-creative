@@ -13,7 +13,7 @@ import { scoreCandidatesForShift, type CandidateScoringUser } from "@/lib/servic
 import { evaluateAvailabilityPreferences } from "@/lib/student-availability";
 import { availabilityContextFromCandidate } from "@/lib/schedule-availability-context";
 import { withSerializationRetry } from "@/lib/serialization";
-import { assertNoWorkingCopy } from "@/lib/schedule-working-copy-guard";
+import { assertNoWorkingCopy, SCHEDULE_CLAIM_PAUSED_MESSAGE } from "@/lib/schedule-working-copy-guard";
 import { createAuditEntryTx } from "@/lib/audit";
 import { claimReviewDeadlines } from "@/lib/claim-review-deadlines";
 import {
@@ -80,6 +80,7 @@ function openShiftSelect() {
       select: {
         id: true,
         publishedAt: true,
+        workingCopy: { select: { version: true } },
         event: {
           select: {
             id: true,
@@ -246,8 +247,10 @@ function serializeOpenShift(shift: OpenWorkShift, args: {
   const areaReason = args.candidate
     ? shiftClaimAreaEligibilityReason(args.candidate.primaryArea, shift.area)
     : "Your scheduling profile is unavailable";
-  const blockedReason = areaReason ?? openShiftBlockedReason(recommendation);
+  const pendingCrew = Boolean(shift.shiftGroup.workingCopy);
+  const blockedReason = pendingCrew ? SCHEDULE_CLAIM_PAUSED_MESSAGE : areaReason ?? openShiftBlockedReason(recommendation);
   const canAct = isStudentWorker
+    && !pendingCrew
     && shift.workerType === "ST"
     && !areaReason
     && !recommendation?.blockingConflict;
@@ -430,7 +433,7 @@ export async function pickupOpenShift(shiftId: string, userId: string) {
     ]);
 
     if (!shift) throw new HttpError(404, "Shift not found");
-    assertNoWorkingCopy(shift.shiftGroup.workingCopy);
+    assertNoWorkingCopy(shift.shiftGroup.workingCopy, SCHEDULE_CLAIM_PAUSED_MESSAGE);
     if (!user) throw new HttpError(404, "User not found");
     const eligibilityReason = shiftClaimEligibilityReason(user, shift);
     if (eligibilityReason) throw new HttpError(400, eligibilityReason);
@@ -539,7 +542,7 @@ export async function withdrawPickupRequest(
       },
     });
     if (!assignment) throw new HttpError(404, "Assignment not found");
-    assertNoWorkingCopy(assignment.shift?.shiftGroup?.workingCopy);
+    assertNoWorkingCopy(assignment.shift?.shiftGroup?.workingCopy, SCHEDULE_CLAIM_PAUSED_MESSAGE);
     if (assignment.userId !== actor.id) {
       throw new HttpError(403, "You can only withdraw your own shift request");
     }

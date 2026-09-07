@@ -166,6 +166,7 @@
 - `/api/bookings/[id]/force-complete` -> `src/app/api/bookings/[id]/force-complete/route.ts`
 - `/api/bookings/[id]/nudge` -> `src/app/api/bookings/[id]/nudge/route.ts`
 - `/api/bookings/[id]` -> `src/app/api/bookings/[id]/route.ts`
+- `/api/bookings/[id]/serialized-items/[itemId]/holder` -> `src/app/api/bookings/[id]/serialized-items/[itemId]/holder/route.ts`
 - `/api/bookings/[id]/transfer-owner` -> `src/app/api/bookings/[id]/transfer-owner/route.ts`
 - `/api/bookings/changes` -> `src/app/api/bookings/changes/route.ts`
 - `/api/bookings/export` -> `src/app/api/bookings/export/route.ts`

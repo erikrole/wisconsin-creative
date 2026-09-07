@@ -1,0 +1,5 @@
+
+> creative-ops@2026.04.08.1 db:migrate:check
+> node scripts/check-migration-prefixes.mjs
+
+OK: 149 migrations, no prefix collisions or malformed folders

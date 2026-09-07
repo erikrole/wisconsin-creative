@@ -130,6 +130,15 @@ beforeEach(() => {
 });
 
 describe("schedule open work", () => {
+  it("explains pending staff edits instead of offering a claim that cannot succeed", async () => {
+    mockDb.user.findUnique.mockResolvedValue(activeStudent());
+    mockDb.shiftAssignment.findMany.mockResolvedValue([]);
+    const shift = baseShift();
+    mockDb.shift.findMany.mockResolvedValue([{ ...shift, shiftGroup: { ...shift.shiftGroup, workingCopy: { version: 2 } } }]);
+    const result = await getScheduleOpenWork({ userId: "student-1", role: "STUDENT", now });
+    expect(result.openShifts[0]).toMatchObject({ canAct: false, action: "none", reason: expect.stringContaining("Staff are updating this crew") });
+    expect(JSON.stringify(result)).not.toContain('"workingCopy"');
+  });
   it("returns published open Student shifts with candidate eligibility", async () => {
     mockDb.user.findUnique.mockResolvedValue(activeStudent());
     mockDb.shiftAssignment.findMany.mockResolvedValue([]);

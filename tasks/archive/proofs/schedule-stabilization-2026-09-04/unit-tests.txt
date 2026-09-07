@@ -1,0 +1,296 @@
+
+ RUN  v3.2.6 /Users/role/Code/wisconsin-creative
+
+stderr | tests/schedule-notification-debounce.test.ts > scheduleNotificationFlush > keeps the edit when the timer cannot start, since the change is already live
+[Schedule] failed to start notification flush {
+  shiftGroupId: 'group-1',
+  error: Error: workflow unavailable
+      at /Users/role/Code/wisconsin-creative/tests/schedule-notification-debounce.test.ts:41:33
+      at file:///Users/role/Code/wisconsin-creative/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11
+      at file:///Users/role/Code/wisconsin-creative/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26
+      at file:///Users/role/Code/wisconsin-creative/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20
+      at new Promise (<anonymous>)
+      at runWithTimeout (file:///Users/role/Code/wisconsin-creative/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)
+      at runTest (file:///Users/role/Code/wisconsin-creative/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)
+      at processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at runSuite (file:///Users/role/Code/wisconsin-creative/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)
+      at runSuite (file:///Users/role/Code/wisconsin-creative/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)
+}
+
+ ✓ tests/schedule-notification-debounce.test.ts (3 tests) 6ms
+ ✓ tests/shift-call-windows.test.ts (15 tests) 15ms
+ ✓ tests/schedule-event-where.test.ts (4 tests) 12ms
+ ✓ tests/schedule-assignment-window.test.ts (9 tests) 23ms
+ ✓ tests/schedule-notification-copy.test.ts (13 tests) 12ms
+ ✓ tests/schedule-change-history.test.ts (4 tests) 13ms
+ ✓ tests/schedule-health-service.test.ts (6 tests) 18ms
+ ✓ tests/schedule-call-time-sync.test.ts (6 tests) 18ms
+ ✓ tests/schedule-ui-polish-source.test.ts (7 tests) 4ms
+ ✓ tests/schedule-release-notice-source.test.ts (4 tests) 3ms
+ ✓ tests/schedule-source-truth-smoke-contract.test.ts (8 tests) 6ms
+ ✓ tests/schedule-template-review.test.ts (3 tests) 13ms
+ ✓ tests/shift-assignments.test.ts (47 tests) 22ms
+ ✓ tests/schedule-working-copy-rebase.test.ts (16 tests) 12ms
+ ✓ tests/schedule-working-copy-call-window-validation.test.ts (6 tests) 26ms
+ ✓ tests/schedule-open-work.test.ts (20 tests) 20ms
+ ✓ tests/schedule-working-copy.test.ts (20 tests) 6ms
+ ✓ tests/schedule-working-copy-route-source.test.ts (5 tests) 2ms
+ ✓ tests/shift-ics-feed.test.ts (9 tests) 10ms
+ ✓ tests/schedule-automation.test.ts (1 test) 14ms
+ ✓ tests/schedule-role-display-source.test.ts (6 tests) 6ms
+ ✓ tests/schedule-open-work-source.test.ts (5 tests) 5ms
+ ✓ tests/schedule-publication.test.ts (25 tests) 25ms
+ ✓ tests/schedule-read-integrity.test.ts (2 tests) 11ms
+ ✓ tests/schedule-exports.test.ts (6 tests) 10ms
+ ✓ tests/trade-board-review-surface.test.ts (9 tests) 6ms
+ ✓ tests/schedule-export-route.test.ts (4 tests) 18ms
+ ✓ tests/shift-groups-route.test.ts (3 tests) 14ms
+stderr | tests/schedule-notification-flush.test.ts > flushScheduleNotifications > holds the high-water mark when delivery throws
+[Schedule] notification flush failed {
+  shiftGroupId: 'group-1',
+  error: Error: APNs unavailable
+      at /Users/role/Code/wisconsin-creative/tests/schedule-notification-flush.test.ts:190:45
+      at file:///Users/role/Code/wisconsin-creative/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11
+      at file:///Users/role/Code/wisconsin-creative/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26
+      at file:///Users/role/Code/wisconsin-creative/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20
+      at new Promise (<anonymous>)
+      at runWithTimeout (file:///Users/role/Code/wisconsin-creative/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)
+      at runTest (file:///Users/role/Code/wisconsin-creative/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)
+      at processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at runSuite (file:///Users/role/Code/wisconsin-creative/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)
+      at runSuite (file:///Users/role/Code/wisconsin-creative/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)
+}
+
+ ✓ tests/schedule-notification-flush.test.ts (13 tests) 11ms
+ ✓ tests/schedule-working-copy-backfill-route.test.ts (3 tests) 14ms
+ ✓ tests/schedule-notification-policy.test.ts (6 tests) 5ms
+ ✓ tests/schedule-working-copy-mutation-guard.test.ts (12 tests) 3ms
+ ✓ tests/schedule-working-copy-history.test.ts (4 tests) 9ms
+ ✓ tests/schedule-timeline-position.test.ts (10 tests) 2ms
+ ✓ tests/schedule-notification-diff.test.ts (16 tests) 6ms
+ ✓ tests/schedule-event-identity.test.ts (29 tests) 6ms
+stderr | tests/shift-trades.test.ts > claimTrade > uses SERIALIZABLE isolation to prevent double-claim
+[Schedule] failed to enqueue claim review {
+  kind: 'trade',
+  claimId: 'test-65',
+  error: WorkflowRuntimeError: 'start' received an invalid workflow function. Ensure the Workflow SDK is configured correctly and the function includes a 'use workflow' directive.
+  
+  Learn more: https://useworkflow.dev/err/start-invalid-workflow-function
+      at file:///Users/role/Code/wisconsin-creative/node_modules/@workflow/core/src/runtime/start.ts:126:13
+      at waitedUntil (file:///Users/role/Code/wisconsin-creative/node_modules/@workflow/core/src/runtime/wait-until.ts:41:18)
+      at start (file:///Users/role/Code/wisconsin-creative/node_modules/@workflow/core/src/runtime/start.ts:121:16)
+      at enqueuePendingClaimReview (/Users/role/Code/wisconsin-creative/src/lib/claim-review-workflow.ts:25:23)
+      at Module.claimTrade (/Users/role/Code/wisconsin-creative/src/lib/services/shift-trades.ts:482:9)
+      at processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at /Users/role/Code/wisconsin-creative/tests/shift-trades.test.ts:345:5
+      at file:///Users/role/Code/wisconsin-creative/node_modules/@vitest/runner/dist/chunk-hooks.js:752:20 {
+    cause: undefined
+  }
+}
+
+stderr | tests/shift-trades.test.ts > claimTrade > retries once on a serialization conflict without double-sending notifications
+[Schedule] failed to enqueue claim review {
+  kind: 'trade',
+  claimId: 'test-73',
+  error: WorkflowRuntimeError: 'start' received an invalid workflow function. Ensure the Workflow SDK is configured correctly and the function includes a 'use workflow' directive.
+  
+  Learn more: https://useworkflow.dev/err/start-invalid-workflow-function
+      at file:///Users/role/Code/wisconsin-creative/node_modules/@workflow/core/src/runtime/start.ts:126:13
+      at waitedUntil (file:///Users/role/Code/wisconsin-creative/node_modules/@workflow/core/src/runtime/wait-until.ts:41:18)
+      at start (file:///Users/role/Code/wisconsin-creative/node_modules/@workflow/core/src/runtime/start.ts:121:16)
+      at enqueuePendingClaimReview (/Users/role/Code/wisconsin-creative/src/lib/claim-review-workflow.ts:25:23)
+      at Module.claimTrade (/Users/role/Code/wisconsin-creative/src/lib/services/shift-trades.ts:482:9)
+      at processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at /Users/role/Code/wisconsin-creative/tests/shift-trades.test.ts:366:5
+      at file:///Users/role/Code/wisconsin-creative/node_modules/@vitest/runner/dist/chunk-hooks.js:752:20 {
+    cause: undefined
+  }
+}
+
+stderr | tests/shift-trades.test.ts > claimTrade > keeps email delivery best-effort when push delivery rejects after commit
+[Schedule] failed to enqueue claim review {
+  kind: 'trade',
+  claimId: 'test-81',
+  error: WorkflowRuntimeError: 'start' received an invalid workflow function. Ensure the Workflow SDK is configured correctly and the function includes a 'use workflow' directive.
+  
+  Learn more: https://useworkflow.dev/err/start-invalid-workflow-function
+      at file:///Users/role/Code/wisconsin-creative/node_modules/@workflow/core/src/runtime/start.ts:126:13
+      at waitedUntil (file:///Users/role/Code/wisconsin-creative/node_modules/@workflow/core/src/runtime/wait-until.ts:41:18)
+      at start (file:///Users/role/Code/wisconsin-creative/node_modules/@workflow/core/src/runtime/start.ts:121:16)
+      at enqueuePendingClaimReview (/Users/role/Code/wisconsin-creative/src/lib/claim-review-workflow.ts:25:23)
+      at Module.claimTrade (/Users/role/Code/wisconsin-creative/src/lib/services/shift-trades.ts:482:9)
+      at processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at /Users/role/Code/wisconsin-creative/tests/shift-trades.test.ts:388:5
+      at file:///Users/role/Code/wisconsin-creative/node_modules/@vitest/runner/dist/chunk-hooks.js:752:20 {
+    cause: undefined
+  }
+}
+
+stderr | tests/shift-trades.test.ts > claimTrade > checks conflicts against the effective assignment call window
+[Schedule] failed to enqueue claim review {
+  kind: 'trade',
+  claimId: 'test-108',
+  error: WorkflowRuntimeError: 'start' received an invalid workflow function. Ensure the Workflow SDK is configured correctly and the function includes a 'use workflow' directive.
+  
+  Learn more: https://useworkflow.dev/err/start-invalid-workflow-function
+      at file:///Users/role/Code/wisconsin-creative/node_modules/@workflow/core/src/runtime/start.ts:126:13
+      at waitedUntil (file:///Users/role/Code/wisconsin-creative/node_modules/@workflow/core/src/runtime/wait-until.ts:41:18)
+      at start (file:///Users/role/Code/wisconsin-creative/node_modules/@workflow/core/src/runtime/start.ts:121:16)
+      at enqueuePendingClaimReview (/Users/role/Code/wisconsin-creative/src/lib/claim-review-workflow.ts:25:23)
+      at Module.claimTrade (/Users/role/Code/wisconsin-creative/src/lib/services/shift-trades.ts:482:9)
+      at processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at /Users/role/Code/wisconsin-creative/tests/shift-trades.test.ts:435:5
+      at file:///Users/role/Code/wisconsin-creative/node_modules/@vitest/runner/dist/chunk-hooks.js:752:20 {
+    cause: undefined
+  }
+}
+
+stderr | tests/shift-trades.test.ts > claimTrade > allows Photo and Graphics students to claim across the shared pair
+[Schedule] failed to enqueue claim review {
+  kind: 'trade',
+  claimId: 'test-137',
+  error: WorkflowRuntimeError: 'start' received an invalid workflow function. Ensure the Workflow SDK is configured correctly and the function includes a 'use workflow' directive.
+  
+  Learn more: https://useworkflow.dev/err/start-invalid-workflow-function
+      at file:///Users/role/Code/wisconsin-creative/node_modules/@workflow/core/src/runtime/start.ts:126:13
+      at waitedUntil (file:///Users/role/Code/wisconsin-creative/node_modules/@workflow/core/src/runtime/wait-until.ts:41:18)
+      at start (file:///Users/role/Code/wisconsin-creative/node_modules/@workflow/core/src/runtime/start.ts:121:16)
+      at enqueuePendingClaimReview (/Users/role/Code/wisconsin-creative/src/lib/claim-review-workflow.ts:25:23)
+      at Module.claimTrade (/Users/role/Code/wisconsin-creative/src/lib/services/shift-trades.ts:482:9)
+      at processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at /Users/role/Code/wisconsin-creative/tests/shift-trades.test.ts:477:5
+      at file:///Users/role/Code/wisconsin-creative/node_modules/@vitest/runner/dist/chunk-hooks.js:752:20 {
+    cause: undefined
+  }
+}
+
+ ✓ tests/shift-generation.test.ts (4 tests) 9ms
+stderr | tests/shift-trades.test.ts > claimTrade > holds a claim for staff review instead of swapping
+[Schedule] failed to enqueue claim review {
+  kind: 'trade',
+  claimId: 'test-209',
+  error: WorkflowRuntimeError: 'start' received an invalid workflow function. Ensure the Workflow SDK is configured correctly and the function includes a 'use workflow' directive.
+  
+  Learn more: https://useworkflow.dev/err/start-invalid-workflow-function
+      at file:///Users/role/Code/wisconsin-creative/node_modules/@workflow/core/src/runtime/start.ts:126:13
+      at waitedUntil (file:///Users/role/Code/wisconsin-creative/node_modules/@workflow/core/src/runtime/wait-until.ts:41:18)
+      at start (file:///Users/role/Code/wisconsin-creative/node_modules/@workflow/core/src/runtime/start.ts:121:16)
+      at enqueuePendingClaimReview (/Users/role/Code/wisconsin-creative/src/lib/claim-review-workflow.ts:25:23)
+      at Module.claimTrade (/Users/role/Code/wisconsin-creative/src/lib/services/shift-trades.ts:482:9)
+      at processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at /Users/role/Code/wisconsin-creative/tests/shift-trades.test.ts:597:5
+      at file:///Users/role/Code/wisconsin-creative/node_modules/@vitest/runner/dist/chunk-hooks.js:752:20 {
+    cause: undefined
+  }
+}
+
+stderr | tests/shift-trades.test.ts > claimTrade > tells the poster they are still scheduled until the trade is approved
+[Schedule] failed to enqueue claim review {
+  kind: 'trade',
+  claimId: 'test-217',
+  error: WorkflowRuntimeError: 'start' received an invalid workflow function. Ensure the Workflow SDK is configured correctly and the function includes a 'use workflow' directive.
+  
+  Learn more: https://useworkflow.dev/err/start-invalid-workflow-function
+      at file:///Users/role/Code/wisconsin-creative/node_modules/@workflow/core/src/runtime/start.ts:126:13
+      at waitedUntil (file:///Users/role/Code/wisconsin-creative/node_modules/@workflow/core/src/runtime/wait-until.ts:41:18)
+      at start (file:///Users/role/Code/wisconsin-creative/node_modules/@workflow/core/src/runtime/start.ts:121:16)
+      at enqueuePendingClaimReview (/Users/role/Code/wisconsin-creative/src/lib/claim-review-workflow.ts:25:23)
+      at Module.claimTrade (/Users/role/Code/wisconsin-creative/src/lib/services/shift-trades.ts:482:9)
+      at processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at /Users/role/Code/wisconsin-creative/tests/shift-trades.test.ts:628:5
+      at file:///Users/role/Code/wisconsin-creative/node_modules/@vitest/runner/dist/chunk-hooks.js:752:20 {
+    cause: undefined
+  }
+}
+
+stderr | tests/shift-trades.test.ts > claimTrade > notifies staff that a claim is waiting on them
+[Schedule] failed to enqueue claim review {
+  kind: 'trade',
+  claimId: 'test-225',
+  error: WorkflowRuntimeError: 'start' received an invalid workflow function. Ensure the Workflow SDK is configured correctly and the function includes a 'use workflow' directive.
+  
+  Learn more: https://useworkflow.dev/err/start-invalid-workflow-function
+      at file:///Users/role/Code/wisconsin-creative/node_modules/@workflow/core/src/runtime/start.ts:126:13
+      at waitedUntil (file:///Users/role/Code/wisconsin-creative/node_modules/@workflow/core/src/runtime/wait-until.ts:41:18)
+      at start (file:///Users/role/Code/wisconsin-creative/node_modules/@workflow/core/src/runtime/start.ts:121:16)
+      at enqueuePendingClaimReview (/Users/role/Code/wisconsin-creative/src/lib/claim-review-workflow.ts:25:23)
+      at Module.claimTrade (/Users/role/Code/wisconsin-creative/src/lib/services/shift-trades.ts:482:9)
+      at processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at /Users/role/Code/wisconsin-creative/tests/shift-trades.test.ts:651:5
+      at file:///Users/role/Code/wisconsin-creative/node_modules/@vitest/runner/dist/chunk-hooks.js:752:20 {
+    cause: undefined
+  }
+}
+
+stderr | tests/shift-trades.test.ts > claimTrade > looks up reviewers only after the claim commits
+[Schedule] failed to enqueue claim review {
+  kind: 'trade',
+  claimId: 'test-233',
+  error: WorkflowRuntimeError: 'start' received an invalid workflow function. Ensure the Workflow SDK is configured correctly and the function includes a 'use workflow' directive.
+  
+  Learn more: https://useworkflow.dev/err/start-invalid-workflow-function
+      at file:///Users/role/Code/wisconsin-creative/node_modules/@workflow/core/src/runtime/start.ts:126:13
+      at waitedUntil (file:///Users/role/Code/wisconsin-creative/node_modules/@workflow/core/src/runtime/wait-until.ts:41:18)
+      at start (file:///Users/role/Code/wisconsin-creative/node_modules/@workflow/core/src/runtime/start.ts:121:16)
+      at enqueuePendingClaimReview (/Users/role/Code/wisconsin-creative/src/lib/claim-review-workflow.ts:25:23)
+      at Module.claimTrade (/Users/role/Code/wisconsin-creative/src/lib/services/shift-trades.ts:482:9)
+      at processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at /Users/role/Code/wisconsin-creative/tests/shift-trades.test.ts:672:5
+      at file:///Users/role/Code/wisconsin-creative/node_modules/@vitest/runner/dist/chunk-hooks.js:752:20 {
+    cause: undefined
+  }
+}
+
+ ✓ tests/shift-trades.test.ts (60 tests) 39ms
+ ✓ tests/schedule-queues.test.ts (7 tests) 5ms
+ ✓ tests/shift-delete-routes.test.ts (3 tests) 5ms
+ ✓ tests/shift-call-window-routes.test.ts (3 tests) 6ms
+ ✓ tests/shift-notification-workflow.test.ts (3 tests) 4ms
+ ✓ tests/schedule-ui-review-fixes.test.ts (11 tests) 2ms
+ ✓ tests/schedule-instant-pickup-source.test.ts (5 tests) 3ms
+ ✓ tests/schedule-assign-source.test.ts (5 tests) 3ms
+ ✓ tests/shift-trades-route.test.ts (3 tests) 5ms
+stderr | tests/schedule-auto-release.test.ts > schedule automatic release > rejects the edit when the durable timer cannot start
+[Schedule] failed to enqueue pending release {
+  shiftGroupId: 'group-1',
+  version: 3,
+  error: Error: workflow unavailable
+      at /Users/role/Code/wisconsin-creative/tests/schedule-auto-release.test.ts:30:33
+      at file:///Users/role/Code/wisconsin-creative/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11
+      at file:///Users/role/Code/wisconsin-creative/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26
+      at file:///Users/role/Code/wisconsin-creative/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20
+      at new Promise (<anonymous>)
+      at runWithTimeout (file:///Users/role/Code/wisconsin-creative/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)
+      at runTest (file:///Users/role/Code/wisconsin-creative/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)
+      at processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at runSuite (file:///Users/role/Code/wisconsin-creative/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)
+      at runSuite (file:///Users/role/Code/wisconsin-creative/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)
+}
+
+ ✓ tests/schedule-auto-release.test.ts (2 tests) 5ms
+ ✓ tests/schedule-automation-source.test.ts (3 tests) 2ms
+ ✓ tests/schedule-timeline-source.test.ts (25 tests) 3ms
+ ✓ tests/shift-assignment-conflicts.test.ts (3 tests) 3ms
+ ✓ tests/schedule-event-title-parts.test.ts (6 tests) 3ms
+ ✓ tests/schedule-date-validation.test.ts (6 tests) 7ms
+ ✓ tests/schedule-export-source.test.ts (2 tests) 2ms
+ ✓ tests/schedule-template-review-source.test.ts (1 test) 2ms
+ ✓ tests/shift-trade-withdrawal-contract.test.ts (3 tests) 3ms
+ ✓ tests/schedule-working-copy-editor.test.ts (2 tests) 5ms
+ ✓ tests/schedule-queue-source-contract.test.ts (3 tests) 3ms
+ ✓ tests/schedule-crew-parity.test.ts (6 tests) 3ms
+ ✓ tests/schedule-window.test.ts (6 tests) 5ms
+ ✓ tests/schedule-data-quality.test.ts (7 tests) 2ms
+ ✓ tests/shift-display.test.ts (6 tests) 2ms
+ ✓ tests/schedule-three-view-polish.test.ts (8 tests) 2ms
+ ✓ tests/shift-claim-eligibility.test.ts (3 tests) 2ms
+ ✓ tests/schedule-freshness-source.test.ts (2 tests) 4ms
+ ✓ tests/schedule-working-copy-schema.test.ts (3 tests) 2ms
+ ✓ tests/schedule-defaults.test.ts (2 tests) 2ms
+ ✓ tests/schedule-gear-readiness-source.test.ts (4 tests) 2ms
+
+ Test Files  67 passed (67)
+      Tests  566 passed (566)
+   Start at  18:36:43
+   Duration  1.49s (transform 2.55s, setup 681ms, collect 11.59s, tests 550ms, environment 5ms, prepare 2.65s)
+

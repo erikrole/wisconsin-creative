@@ -6,11 +6,15 @@ export const WORKING_COPY_MUTATION_MESSAGE =
 export const LIVE_SCHEDULE_MUTATION_RETIRED_MESSAGE =
   "Live schedule edits are retired. Open the Event and use its private working schedule editor.";
 
+export const SCHEDULE_CLAIM_PAUSED_MESSAGE =
+  "Staff are updating this crew. Try again after the changes are released. If this continues, contact staff.";
+
 export function assertNoWorkingCopy(
   workingCopy: { version: number } | null | undefined,
+  message = WORKING_COPY_MUTATION_MESSAGE,
 ): void {
   if (workingCopy) {
-    throw new HttpError(409, WORKING_COPY_MUTATION_MESSAGE);
+    throw new HttpError(409, message);
   }
 }
 

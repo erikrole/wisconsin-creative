@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Shift Calendar & Scheduling
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-09-03
+- Last Updated: 2026-09-04
 - Status: Active — implemented V1 with ongoing hardening
 
 ## Purpose
@@ -121,6 +121,7 @@ Replace Asana-based shift scheduling with a native shift calendar in Wisconsin C
 - Sports code mappings (existing — `src/lib/sports.ts`)
 
 ## Change Log
+- 2026-09-04: **First-use stabilization is implemented locally.** Schedule now rejects incomplete event/crew snapshots, retains the last complete snapshot with an explicit stale warning, and suppresses all-clear readiness and health-dependent empty queues when checks fail. Open Work respects the existing private-edit claim blocker without returning private working payloads. Call-time forms retain entered values after rejected saves; uncertain crew and Trade Board mutations read current state before enabling a reviewed retry and never automatically resubmit. Release copy distinguishes a scheduled timer, elapsed timer awaiting confirmation, and a missing timer; staff see failed releases on the main Schedule. The read-only production snapshot identified one overdue future Hockey crew with a recorded assignment conflict; that record remains unchanged and its conflict cause is not yet classified. Local tests and authenticated isolated web proof are tracked in `tasks/schedule-stabilization-plan-2026-09-04.md`. Required iPhone 16 Pro fixture rendering passes; authenticated native mutation, exact-version workflow timing, delivery, deployment, and physical-device acceptance remain open under GAP-60. Exports and scheduling policy are unchanged.
 - 2026-09-03: **Student road/neutral call times are suppressed across worker-facing projections.** Home and Non-game Students retain call windows; Away/road and Neutral Students receive event timing without a call-time field or label in web, native, published crew, Trade Board, ICS, exports, and schedule notifications. Stored Student shift and assignment windows remain intact for conflict/readiness and staff operations.
 - 2026-09-03: The local Combine events dialog now discovers and chronologically suggests up to six future same-day, same-sport-family pairs that also satisfy venue, overlap, and opponent heuristics. A suggestion only pre-fills the existing preview-first controls; the server remains authoritative and nothing changes until explicit apply.
 - 2026-09-03: Added the combined-event scheduling contract and operator QoL, and applied production migration `0142_combined_schedule_events` with matching Prisma checksum and no existing relationships. A dismissible same-day/sport prompt and More-menu count lead directly to a server preview with exact kept-crew and retired-slot counts. Two overlapping source events in the same sport family and normalized venue may share one canonical Schedule row and crew. Combine and Undo are serializable and audited, reject any second published or assigned crew, and retain the unpublished secondary draft with release disabled instead of deleting it. Authenticated browser proof, compatible app deployment, and the live Cross Country action remain open under GAP-75.

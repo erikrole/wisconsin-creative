@@ -84,6 +84,8 @@ export type ShiftGroup = {
   archivedAt?: string | null;
   publication?: SchedulePublicationState | null;
   hasWorkingCopy?: boolean;
+  autoReleaseAt?: string | null;
+  autoReleaseError?: string | null;
   event: { id: string; startsAt: string };
   shifts: Shift[];
   coverage: { total: number; filled: number; percentage: number };
@@ -112,6 +114,8 @@ export type CalendarEntry = CalendarEvent & {
   publication?: SchedulePublicationState | null;
   hasWorkingCopy?: boolean;
   combinedEventCount?: number;
+  autoReleaseAt?: string | null;
+  autoReleaseError?: string | null;
 };
 
 /* ───── Constants ───── */

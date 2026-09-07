@@ -214,7 +214,7 @@ describe("schedule timeline", () => {
     expect(listView).toContain("Past above · upcoming below");
   });
 
-  it("does not let a coverage read failure empty the schedule", () => {
-    expect(hook).toContain(".catch(() => ({ rows: [], truncated: false }))");
+  it("does not replace unavailable coverage with an empty crew", () => {
+    expect(hook).not.toContain(".catch(() => ({ rows: [], truncated: false }))");
   });
 });

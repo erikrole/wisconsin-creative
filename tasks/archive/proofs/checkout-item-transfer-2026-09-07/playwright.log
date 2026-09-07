@@ -1,0 +1,16 @@
+
+Running 5 tests using 2 workers
+
+(node:83881) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [auth-setup] › tests/e2e/auth.setup.ts:19:6 › authenticate through the normal sign-in flow (10.5s)
+(node:84029) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:84028) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  3 [desktop-chromium] › tests/e2e/booking-item-holder.spec.ts:121:5 › staff transfers item ownership from SHARED custody without mutating live data (16.1s)
+  ✓  2 [narrow-mobile-chromium] › tests/e2e/booking-item-holder.spec.ts:121:5 › staff transfers item ownership from SHARED custody without mutating live data (16.2s)
+  ✓  5 [narrow-mobile-chromium] › tests/e2e/booking-item-holder.spec.ts:121:5 › staff transfers item ownership from PERSON custody without mutating live data (11.9s)
+  ✓  4 [desktop-chromium] › tests/e2e/booking-item-holder.spec.ts:121:5 › staff transfers item ownership from PERSON custody without mutating live data (12.1s)
+
+  5 passed (39.7s)

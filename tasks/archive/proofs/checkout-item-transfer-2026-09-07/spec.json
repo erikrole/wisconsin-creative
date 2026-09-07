@@ -1,0 +1,79 @@
+{
+  "title": "Transfer item ownership",
+  "eyebrow": "Checkouts \u00b7 local implementation review",
+  "lede": "A serialized item now moves into the actual owner\u2019s checkout. The checkout requester remains the shared source for personal gear, accountability, reminders, overdue handling, and returns.",
+  "stats": [
+    {
+      "k": "Source equipment rows",
+      "v": "2 \u2192 1",
+      "n": "The camera leaves; pooled batteries remain. Verified by browser assertions."
+    },
+    {
+      "k": "Custody writes",
+      "v": "Atomic",
+      "n": "Existing item and active allocation move in one serializable transaction."
+    },
+    {
+      "k": "Rendered cases",
+      "v": "4 passed",
+      "n": "Personal/shared source \u00d7 desktop/390px."
+    }
+  ],
+  "sections": [
+    {
+      "heading": "The camera leaves the old checkout",
+      "note": "Same deterministic shared checkout, recipient, action, and desktop viewport. Baseline is the pre-change working-tree implementation saved alongside this review; it was uncommitted at task start. The API responses are fixtures, so this proves client rendering, not a live database transfer.",
+      "pairs": [
+        {
+          "title": "After assigning or transferring CAM-104",
+          "sub": "The previous implementation left the camera inline under the shared checkout; the new implementation removes it from that checkout.",
+          "before": "tasks/archive/proofs/checkout-item-transfer-2026-09-07/desktop-chromium-shared-baseline-after.png",
+          "beforeCap": "2 rows: camera with an inline holder label, plus pooled batteries.",
+          "after": "tasks/archive/proofs/checkout-item-transfer-2026-09-07/desktop-chromium-shared-transfer-after.png",
+          "afterCap": "1 row: pooled batteries. CAM-104 is on the receiving owner\u2019s checkout."
+        }
+      ]
+    },
+    {
+      "heading": "The confirmation names the ownership change",
+      "note": "Same shared checkout and 390px viewport before choosing a recipient. Both dialogs were opened by the same repeatable Playwright test.",
+      "pairs": [
+        {
+          "title": "Narrow-screen transfer dialog",
+          "before": "tasks/archive/proofs/checkout-item-transfer-2026-09-07/narrow-mobile-chromium-shared-baseline-assignment-dialog.png",
+          "beforeCap": "The old dialog explicitly promised that the item would stay on this checkout.",
+          "after": "tasks/archive/proofs/checkout-item-transfer-2026-09-07/narrow-mobile-chromium-shared-transfer-assignment-dialog.png",
+          "afterCap": "The new dialog explains receiving-checkout reuse or creation, the unchanged deadline, and preserved scan history."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Ownership follows custody",
+      "was": "Only assignedUserId changed; the original checkout still owned gear and downstream actions.",
+      "now": "The original item and active allocation move to a compatible personal checkout, or one created with the original context. Legacy assignee metadata is cleared."
+    },
+    {
+      "h": "Handoff history stays traceable",
+      "was": "Inline assignment did not change the custody ledger.",
+      "now": "Original scans, photos, allocation IDs/dates, and source reservation remain intact. Both checkouts receive audit entries linking the item, allocation, original evidence, recipient, and reason."
+    },
+    {
+      "h": "Empty sources stop requesting returns",
+      "was": "The old checkout remained the source for return work.",
+      "now": "A checkout with no remaining actual custody is retained as a cancelled transfer, without a fabricated return or return badge. Receiving-owner reminders are scheduled after commit."
+    }
+  ],
+  "verification": [
+    "64 focused Vitest tests pass across transfer, stale/retry/integrity guards, accountability, reminders, kiosk returns and mutation freshness. Database calls are mocked; this is not PostgreSQL rollback or concurrent-session runtime proof.",
+    "Authenticated Playwright: 4 transfer cases plus sign-in pass; the baseline run also passes. Booking and mutation responses use deterministic isolated fixtures, without live gear changes.",
+    "TypeScript, ESLint, app-only production build, docs/codemaps, migration-prefix check and git diff --check pass. No database migration is required.",
+    "Initial browser launch was blocked by the macOS sandbox; approved execution outside that sandbox resolved it. A cold server compile exceeded the default 30-second sign-in timeout; the warm run with a 120-second budget passed."
+  ],
+  "notes": [
+    "Local source and local review only. Nothing committed, pushed, deployed, or corrected in production.",
+    "A real database transfer/read-back, real recipient notification delivery, and physical kiosk return still need rollout acceptance.",
+    "Original evidence stays attached to its historical checkout; audit entries on both sides link the transfer. Pooled bulk gear is not distributed among recipients."
+  ]
+}

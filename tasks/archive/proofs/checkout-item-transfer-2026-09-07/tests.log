@@ -1,0 +1,17 @@
+
+ RUN  v3.2.6 /Users/role/Code/wisconsin-creative
+
+ ✓ tests/booking-item-holder-source.test.ts (3 tests) 4ms
+ ✓ tests/checkout-notification-workflow-source.test.ts (2 tests) 4ms
+ ✓ tests/booking-detail-custody-contract.test.ts (3 tests) 5ms
+ ✓ tests/booking-item-holder-route.test.ts (6 tests) 22ms
+ ✓ tests/booking-item-holder.test.ts (26 tests) 16ms
+ ✓ tests/accountability-service.test.ts (7 tests) 28ms
+ ✓ tests/booking-detail-mutation-freshness.test.ts (4 tests) 13ms
+ ✓ tests/kiosk-checkin-routes.test.ts (13 tests) 23ms
+
+ Test Files  8 passed (8)
+      Tests  64 passed (64)
+   Start at  11:31:20
+   Duration  1.16s (transform 803ms, setup 156ms, collect 3.13s, tests 115ms, environment 1ms, prepare 729ms)
+

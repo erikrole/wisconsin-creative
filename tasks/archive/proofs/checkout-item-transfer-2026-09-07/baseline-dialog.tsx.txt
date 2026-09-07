@@ -1,0 +1,282 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowRight, PackageCheck } from "lucide-react";
+import { toast } from "sonner";
+import { UserAvatar } from "@/components/UserAvatar";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
+import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { BOOKING_CHANGE_SYNC_EVENT } from "@/hooks/use-booking-change-sync";
+import { BOOKING_SNAPSHOT_HEADER } from "@/lib/booking-concurrency";
+import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
+import { BOOKING_MUTATION_TIMEOUT_MS, fetchWithTimeout } from "@/lib/fetch-with-timeout";
+import type { BookingDetail, SerializedItem } from "./types";
+
+const INHERITED_HOLDER = "__inherited_checkout_holder__";
+
+type PickerUser = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  avatarUrl?: string | null;
+  active: boolean;
+  hiddenFromRoster?: boolean;
+};
+
+type ApiEnvelope<T> = {
+  data?: T;
+  error?: string;
+};
+
+type Props = {
+  open: boolean;
+  booking: BookingDetail;
+  item: SerializedItem | null;
+  onOpenChange: (open: boolean) => void;
+  onUpdated: (booking: BookingDetail) => void;
+};
+
+export function AssignItemHolderDialog({
+  open,
+  booking,
+  item,
+  onOpenChange,
+  onUpdated,
+}: Props) {
+  const [users, setUsers] = useState<PickerUser[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [usersError, setUsersError] = useState(false);
+  const [targetValue, setTargetValue] = useState(INHERITED_HOLDER);
+  const [reason, setReason] = useState("");
+  const [saving, setSaving] = useState(false);
+  const busyRef = useRef(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setTargetValue(item?.assignedUserId ?? INHERITED_HOLDER);
+
+    const controller = new AbortController();
+    setLoadingUsers(true);
+    setUsersError(false);
+
+    fetchWithTimeout("/api/users?limit=200&active=true&sort=name", {
+      signal: controller.signal,
+    })
+      .then(async (res) => {
+        if (handleAuthRedirect(res)) return;
+        if (!res.ok) {
+          setUsersError(true);
+          return;
+        }
+        const json = await parseJsonSafely<ApiEnvelope<PickerUser[]>>(res);
+        setUsers((json?.data ?? []).filter((user) => user.active && !user.hiddenFromRoster));
+      })
+      .catch((error) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setUsersError(true);
+      })
+      .finally(() => setLoadingUsers(false));
+
+    return () => controller.abort();
+  }, [item?.assignedUserId, open]);
+
+  useEffect(() => {
+    if (!open) {
+      setTargetValue(INHERITED_HOLDER);
+      setReason("");
+      setUsersError(false);
+      setSaving(false);
+      busyRef.current = false;
+    }
+  }, [open]);
+
+  const inheritedLabel = booking.custodyScope === "SHARED"
+    ? "Shared checkout"
+    : `${booking.requester.name} (checkout owner)`;
+  const currentValue = item?.assignedUserId ?? INHERITED_HOLDER;
+  const selectedUser = users.find((user) => user.id === targetValue);
+  const options = useMemo<ComboboxOption[]>(() => [
+    {
+      value: INHERITED_HOLDER,
+      label: inheritedLabel,
+      keywords: ["shared", "checkout", "owner", booking.requester.name],
+    },
+    ...users.map((user) => ({
+      value: user.id,
+      label: user.name,
+      keywords: [user.name, user.email, user.role],
+    })),
+  ], [booking.requester.name, inheritedLabel, users]);
+
+  async function handleSave() {
+    if (!item || targetValue === currentValue || busyRef.current) return;
+    busyRef.current = true;
+    setSaving(true);
+
+    let updated: BookingDetail;
+    try {
+      const res = await fetchWithTimeout(
+        `/api/bookings/${booking.id}/serialized-items/${item.id}/holder`,
+        {
+          method: "POST",
+          timeoutMs: BOOKING_MUTATION_TIMEOUT_MS,
+          headers: {
+            "Content-Type": "application/json",
+            [BOOKING_SNAPSHOT_HEADER]: new Date(booking.updatedAt).toISOString(),
+          },
+          body: JSON.stringify({
+            targetUserId: targetValue === INHERITED_HOLDER ? null : targetValue,
+            reason: reason.trim() || undefined,
+          }),
+        },
+      );
+
+      if (handleAuthRedirect(res)) return;
+      if (!res.ok) {
+        const message = await parseErrorMessage(res, "Could not change this item holder. Refresh and try again.");
+        toast.error(message);
+        return;
+      }
+
+      const json = await parseJsonSafely<ApiEnvelope<BookingDetail>>(res);
+      if (!json?.data) {
+        toast.error("The holder changed, but the refreshed checkout did not load.");
+        return;
+      }
+      updated = json.data;
+    } catch {
+      toast.error("Could not reach the server. The item holder was not changed.");
+      return;
+    } finally {
+      busyRef.current = false;
+      setSaving(false);
+    }
+
+    const nextLabel = targetValue === INHERITED_HOLDER ? inheritedLabel : selectedUser?.name ?? "the selected person";
+    toast.success(`${item.asset.assetTag} is now with ${nextLabel}`);
+    window.dispatchEvent(new CustomEvent(BOOKING_CHANGE_SYNC_EVENT, {
+      detail: { changedBookingIds: [booking.id] },
+    }));
+    onUpdated(updated);
+    onOpenChange(false);
+  }
+
+  const currentHolderName = item?.assignee?.name ?? inheritedLabel;
+  const currentHolderAvatar = item?.assignee?.avatarUrl
+    ?? (booking.custodyScope === "PERSON" ? booking.requester.avatarUrl : null);
+  const nextHolderName = targetValue === INHERITED_HOLDER ? inheritedLabel : selectedUser?.name ?? "Select a person";
+  const nextHolderAvatar = targetValue === INHERITED_HOLDER
+    ? (booking.custodyScope === "PERSON" ? booking.requester.avatarUrl : null)
+    : selectedUser?.avatarUrl;
+
+  return (
+    <Dialog open={open} onOpenChange={(nextOpen) => {
+      if (saving) return;
+      onOpenChange(nextOpen);
+    }}>
+      <DialogContent>
+        <DialogHeader>
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-md bg-muted">
+              <PackageCheck className="size-4 text-muted-foreground" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <DialogTitle>Assign item holder</DialogTitle>
+              <DialogDescription>
+                Record who physically has {item?.asset.assetTag ?? "this item"}. The item stays on this checkout and keeps its scan history.
+              </DialogDescription>
+            </div>
+          </div>
+        </DialogHeader>
+        <DialogBody className="flex flex-col gap-4">
+          <div className="flex items-center gap-3 rounded-md border bg-muted/30 p-3">
+            <UserAvatar name={currentHolderName} avatarUrl={currentHolderAvatar} size="sm" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium">{currentHolderName}</p>
+              <p className="truncate text-xs text-muted-foreground">Current holder</p>
+            </div>
+            <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
+            <UserAvatar name={nextHolderName} avatarUrl={nextHolderAvatar} size="sm" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium">{nextHolderName}</p>
+              <p className="truncate text-xs text-muted-foreground">New holder</p>
+            </div>
+          </div>
+
+          {usersError && (
+            <Alert variant="destructive">
+              <AlertDescription>Users could not load. Retry before changing the holder.</AlertDescription>
+            </Alert>
+          )}
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="booking-item-holder">Holder</Label>
+            <Combobox
+              id="booking-item-holder"
+              value={targetValue}
+              onValueChange={setTargetValue}
+              options={options}
+              placeholder={loadingUsers ? "Loading users..." : "Select a holder"}
+              searchPlaceholder="Search users"
+              emptyMessage={loadingUsers ? "Loading users..." : "No active user found."}
+              disabled={saving || loadingUsers || usersError}
+              renderOption={(option) => {
+                if (option.value === INHERITED_HOLDER) {
+                  return <span>{inheritedLabel}</span>;
+                }
+                const user = users.find((candidate) => candidate.id === option.value);
+                return user ? (
+                  <span className="flex min-w-0 items-center gap-2">
+                    <UserAvatar name={user.name} avatarUrl={user.avatarUrl} size="xs" />
+                    <span className="min-w-0">
+                      <span className="block truncate">{user.name}</span>
+                      <span className="block truncate text-xs text-muted-foreground">{user.email}</span>
+                    </span>
+                  </span>
+                ) : option.label;
+              }}
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="booking-item-holder-reason">Note</Label>
+            <Textarea
+              id="booking-item-holder-reason"
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+              maxLength={1000}
+              rows={3}
+              placeholder="Optional handoff context"
+              disabled={saving}
+            />
+          </div>
+        </DialogBody>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={!item || targetValue === currentValue || saving || usersError}
+            loading={saving}
+          >
+            Save holder
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

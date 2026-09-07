@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { AssetImage } from "@/components/AssetImage";
+import { AssignItemHolderDialog } from "@/components/booking-details/AssignItemHolderDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -92,12 +93,18 @@ function riskTitle(risks: Array<{ message: string; severity: "warning" | "critic
 
 export default function BookingEquipmentTab({
   booking,
+  onBookingUpdated,
 }: {
   booking: BookingDetail;
+  onBookingUpdated: (booking: BookingDetail) => void;
 }) {
   const [search, setSearch] = useState("");
+  const [holderItem, setHolderItem] = useState<SerializedItem | null>(null);
   const isCheckout = booking.kind === "CHECKOUT";
   const isReservation = booking.kind === "RESERVATION";
+  const canAssignItemHolders = isCheckout
+    && booking.status === "OPEN"
+    && (booking.allowedActions ?? []).includes("manage-custody");
 
   const itemCount = booking.serializedItems.length + booking.bulkItems.length;
 
@@ -356,6 +363,8 @@ export default function BookingEquipmentTab({
                   risks={turnaroundRisks.get(item.asset.id)}
                   currentStartsAt={booking.startsAt}
                   currentEndsAt={booking.endsAt}
+                  canAssignHolder={canAssignItemHolders}
+                  onAssignHolder={() => setHolderItem(item)}
                 />
               </StaggerItem>
             ))}
@@ -372,6 +381,19 @@ export default function BookingEquipmentTab({
           </StaggerList>
         )}
       </div>
+
+      <AssignItemHolderDialog
+        open={holderItem !== null}
+        booking={booking}
+        item={holderItem}
+        onOpenChange={(open) => {
+          if (!open) setHolderItem(null);
+        }}
+        onUpdated={(updated) => {
+          onBookingUpdated(updated);
+          setHolderItem(null);
+        }}
+      />
     </Card>
   );
 }
@@ -393,6 +415,8 @@ function SerializedRow({
   risks,
   currentStartsAt,
   currentEndsAt,
+  canAssignHolder,
+  onAssignHolder,
 }: {
   item: SerializedItem;
   isCheckout: boolean;
@@ -402,6 +426,8 @@ function SerializedRow({
   risks?: TurnaroundRiskInfo[];
   currentStartsAt: string;
   currentEndsAt: string;
+  canAssignHolder: boolean;
+  onAssignHolder: () => void;
 }) {
   const returned = item.allocationStatus === "returned";
   const pickedUp = isReservation && item.allocationStatus === "picked_up";
@@ -410,7 +436,10 @@ function SerializedRow({
   const riskText = riskLabel(risks);
 
   return (
-    <div className={`group/row flex items-center gap-3 px-3 py-2.5 rounded-md ${inactive ? "opacity-60" : "hover:bg-muted/50"}`}>
+    <div
+      data-testid={`serialized-item-${item.id}`}
+      className={`group/row flex items-center gap-3 px-3 py-2.5 rounded-md ${inactive ? "opacity-60" : "hover:bg-muted/50"}`}
+    >
       {/* Custody indicator */}
       {((isCheckout && returned) || pickedUp) && (
         <div className="shrink-0">
@@ -504,6 +533,11 @@ function SerializedRow({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            {canAssignHolder && item.allocationStatus === "active" && (
+              <DropdownMenuItem onSelect={onAssignHolder}>
+                Transfer item ownership
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem asChild>
               <Link href={`/items/${item.asset.id}`}>View item</Link>
             </DropdownMenuItem>

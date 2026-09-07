@@ -19,6 +19,7 @@ setup.skip(
 setup("authenticate through the normal sign-in flow", async ({ page }) => {
   await page.goto("/login");
   await page.getByLabel("Email").fill(email!);
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
   await page.getByLabel("Password", { exact: true }).fill(password!);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
 

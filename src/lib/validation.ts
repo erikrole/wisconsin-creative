@@ -536,6 +536,11 @@ export const updateBookingCustodyScopeSchema = z.object({
   custodyScope: z.nativeEnum(BookingCustodyScope),
 });
 
+export const updateBookingItemHolderSchema = z.object({
+  targetUserId: z.string().cuid().nullable(),
+  reason: z.string().trim().max(1000).optional(),
+});
+
 export const updateBookingEventsSchema = z.object({
   eventIds: eventIdsListSchema,
 });

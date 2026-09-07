@@ -1,0 +1,69 @@
+{
+  "title": "Scheduling: make uncertainty visible",
+  "eyebrow": "Wisconsin Creative \u00b7 Local stabilization \u00b7 September 4, 2026",
+  "lede": "A failed crew read must not look like an empty, fully covered schedule. This first stabilization slice also preserves call-time edits and checks uncertain mutation outcomes before a reviewed retry.",
+  "stats": [
+    {
+      "k": "Misleading signals in this fixture",
+      "v": "3 \u2192 0",
+      "n": "\u201cNothing needs attention\u201d, \u201cCrew covered\u201d, and \u201cSet up crew\u201d are present before and absent after. Verified from the rendered page, not a density estimate.",
+      "tone": "good"
+    },
+    {
+      "k": "Focused regression suite",
+      "v": "566 passing",
+      "n": "67 Schedule, Shift and Trade test files."
+    },
+    {
+      "k": "Acceptance boundary",
+      "v": "Local only",
+      "n": "Production release, notification delivery and physical-device behavior remain unverified."
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Crew read fails, while the event read succeeds",
+      "note": "Matched authenticated Admin session, fixture event, 503 crew/health responses, week, scroll position and 1440\u00d71000 viewport. Before uses the exact HEAD page and hook; after uses this change. Both captures inspected.",
+      "pairs": [
+        {
+          "title": "The missing crew is now an explicit loading failure",
+          "sub": "Staff get a retry action instead of an invitation to set up an existing crew.",
+          "before": "/Users/role/Code/wisconsin-creative/tasks/archive/proofs/schedule-stabilization-2026-09-04/before.png",
+          "after": "/Users/role/Code/wisconsin-creative/tasks/archive/proofs/schedule-stabilization-2026-09-04/after.png",
+          "beforeCap": "A crew 503 becomes an empty crew, an all-clear summary and a setup action.",
+          "afterCap": "The incomplete snapshot is rejected. Schedule explains what could not be confirmed and offers Retry."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Incomplete and stale reads",
+      "was": "Failed crew reads became empty arrays; cached reads hid refresh failures and health could imply no issues.",
+      "now": "Require complete event and crew reads, retain the last complete snapshot after refresh failures, and show unavailable checks explicitly."
+    },
+    {
+      "h": "Failed and uncertain saves",
+      "was": "Call-time dialogs closed before the save response. A lost claim response said the action did not happen.",
+      "now": "Keep entered times, refresh authoritative reads without resubmitting, and require review before another action. Call-time review stays inside the open form."
+    },
+    {
+      "h": "Eligibility and release language",
+      "was": "Open Work offered Claim during pending staff edits. An elapsed countdown asserted that assignees were notified.",
+      "now": "Use the existing server blocker in Open Work and distinguish scheduled, elapsed-unconfirmed and blocked releases."
+    }
+  ],
+  "verification": [
+    "<strong>566 focused tests pass.</strong> Reproduced crew-read failure, blocked claimability, dialog dismissal, and lost mutation response before fixes. One old source test demanded the faulty swallowed-error behavior and was corrected.",
+    "<strong>Authenticated isolated web:</strong> 8 Admin, 8 Staff and 2 Student scenario/viewport runs passed; rejected-save checks were repeated after the final recovery refinement. Scheduling responses are intercepted, while authentication and role gates are real.",
+    "<strong>iPhone 16 Pro, iOS 26.5:</strong> native build and two Schedule/Trade Board UI fixture tests passed; captures inspected. This is not authenticated native mutation proof.",
+    "<strong>Source/build gates:</strong> TypeScript, full ESLint, app-only production build, 149 migration-prefix checks, generated codemaps and docs verification passed. No schema or migration change."
+  ],
+  "notes": [
+    "The production read-only snapshot found one overdue future Hockey crew with a recorded assignment conflict. Its validity has not been established; no live repair was performed.",
+    "Next: classify that blocked release, then complete contextual web/native claim and withdrawal recovery and exact-version timer acceptance.",
+    "The isolated Neon test branch is retained. No commit, push, deployment or production business mutation occurred.",
+    "Native timing, notification receipt/delivery and physical-device acceptance are separate open gates.",
+    "Artifact publishing is unavailable in this session; this self-contained review page is delivered locally."
+  ]
+}
