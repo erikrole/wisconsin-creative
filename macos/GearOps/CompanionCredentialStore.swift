@@ -14,11 +14,15 @@ protocol CompanionCredentialStoring: Sendable {
 }
 
 actor CompanionCredentialStore: CompanionCredentialStoring {
-    private let service = "com.erikrole.GearOps.companion"
+    private let service: String
     private let tokenAccount = "projection-token"
     private let userAccount = "projection-user"
     private let pendingRevocationsAccount = "pending-revocations"
     private let maxPendingRevocations = 16
+
+    init(service: String = "com.erikrole.GearOps.companion") {
+        self.service = service
+    }
 
     func loadToken() throws -> String? {
         if let data = try loadData(account: tokenAccount, dataProtection: true) {
@@ -38,14 +42,18 @@ actor CompanionCredentialStore: CompanionCredentialStoring {
         // Keep a valid legacy credential usable even if migration is delayed
         // by a transient Keychain or entitlement problem. The next restore
         // retries the hardened copy and cleanup.
-        try? saveHardenedData(legacyData, account: tokenAccount)
-        try? deleteItem(account: tokenAccount, dataProtection: false)
+        do {
+            try saveHardenedData(legacyData, account: tokenAccount)
+            try? deleteItem(account: tokenAccount, dataProtection: false)
+        } catch {
+            // The legacy item is the only durable copy until migration succeeds.
+        }
         return token
     }
 
     func saveToken(_ token: String) throws {
         try saveHardenedData(Data(token.utf8), account: tokenAccount)
-        try deleteItem(account: tokenAccount, dataProtection: false)
+        try? deleteItem(account: tokenAccount, dataProtection: false)
     }
 
     func loadUser() throws -> GearOpsUser? {
@@ -130,9 +138,9 @@ actor CompanionCredentialStore: CompanionCredentialStoring {
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
         ]
-        if dataProtection {
-            query[kSecUseDataProtectionKeychain as String] = true
-        }
+        // Omission does not isolate the legacy store: on macOS a delete
+        // without this key can remove the protected item we just saved.
+        query[kSecUseDataProtectionKeychain as String] = dataProtection
         return query
     }
 

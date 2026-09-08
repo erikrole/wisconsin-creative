@@ -26,6 +26,12 @@ final class CompanionPushBridge: Sendable {
 
 @MainActor
 final class GearOpsAppDelegate: NSObject, NSApplicationDelegate {
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        // The Settings Window scene otherwise gives this accessory app a
+        // last-window lifetime. Dismissing sign-in must not quit the helper.
+        false
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApplication.shared.registerForRemoteNotifications()
         NSWorkspace.shared.notificationCenter.addObserver(

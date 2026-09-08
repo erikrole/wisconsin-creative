@@ -62,9 +62,11 @@ describe("GearOps macOS security contracts", () => {
     expect(store).toContain("JSONEncoder().encode(tokens)");
     expect(store).toContain("Array(pending.suffix(maxPendingRevocations))");
     expect(store).toContain("kSecUseDataProtectionKeychain as String");
+    expect(store).toContain("query[kSecUseDataProtectionKeychain as String] = dataProtection");
+    expect(store).not.toContain("if dataProtection {");
     expect(store).toContain("kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly");
     expect(store).toContain("loadData(account: tokenAccount, dataProtection: false)");
-    expect(store).toContain("try? saveHardenedData(legacyData, account: tokenAccount)");
+    expect(store).toMatch(/do \{\s+try saveHardenedData\(legacyData, account: tokenAccount\)\s+try\? deleteItem\(account: tokenAccount, dataProtection: false\)\s+\} catch/);
     expect(store).toContain("try? deleteItem(account: tokenAccount, dataProtection: false)");
     expect(store).not.toContain("kSecAttrAccessibleAlways");
   });

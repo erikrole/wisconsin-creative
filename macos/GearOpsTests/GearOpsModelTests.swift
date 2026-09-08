@@ -75,6 +75,25 @@ final class GearOpsModelTests: XCTestCase {
         XCTAssertNil(restored.statusMessage)
     }
 
+    func testDelayedIdentityRestoreCannotUndoSignOut() async {
+        let credentials = InMemoryCredentialStore()
+        await credentials.saveUser(GearOpsUser(id: "user-1", name: "Test", email: "test@wisc.edu", role: "ADMIN"))
+        await credentials.suspendNextUserRead()
+        let defaults = isolatedDefaults()
+        let model = GearOpsModel(
+            client: MockGearOpsClient(), defaults: defaults,
+            bookingNotifications: NoopBookingNotifier(),
+            credentialStore: credentials, autoStart: false
+        )
+        let restore = Task { await model.restoreSession() }
+        await credentials.waitForUserRead()
+        await model.signOut()
+        await credentials.finishUserRead()
+        await restore.value
+        XCTAssertNil(model.user)
+        XCTAssertNil(defaults.data(forKey: "GearOpsCachedStateV1"))
+    }
+
     func testRefreshRenewsCredentialBeforeReadingProjection() async {
         let client = MockGearOpsClient()
         let credentials = InMemoryCredentialStore()
@@ -96,6 +115,27 @@ final class GearOpsModelTests: XCTestCase {
         XCTAssertEqual(revokedCredentials, ["credential-admin@wisc.edu"])
         XCTAssertEqual(model.user?.email, "admin@wisc.edu")
         XCTAssertEqual(model.snapshot?.stats.checkedOut, 12)
+    }
+
+    func testManualRefreshRecoversCredentialThatWasTemporarilyMissing() async {
+        let client = MockGearOpsClient()
+        let defaults = isolatedDefaults()
+        let original = GearOpsModel(client: client, defaults: defaults,
+            bookingNotifications: NoopBookingNotifier(),
+            credentialStore: InMemoryCredentialStore(), autoStart: false)
+        await original.signIn(email: "admin@wisc.edu", password: "password")
+        let credentials = InMemoryCredentialStore()
+        let restored = GearOpsModel(client: client, defaults: defaults,
+            bookingNotifications: NoopBookingNotifier(),
+            credentialStore: credentials, autoStart: false)
+        await restored.restoreSession()
+        XCTAssertTrue(restored.shouldRetryCredentialRestore)
+        await credentials.saveToken("credential-admin@wisc.edu")
+        await client.setCheckedOut(3)
+        await restored.refresh()
+        XCTAssertEqual(restored.snapshot?.stats.checkedOut, 3)
+        XCTAssertFalse(restored.shouldRetryCredentialRestore)
+        XCTAssertNil(restored.statusMessage)
     }
 
     func testCountPartialFailureDoesNotInstallFallbackZeroes() async {
@@ -329,6 +369,7 @@ final class GearOpsModelTests: XCTestCase {
             restored.statusMessage,
             "Secure credential access is unavailable. Showing the last confirmed data."
         )
+        XCTAssertTrue(restored.shouldRetryCredentialRestore)
     }
 
     func testRepeatedMissingCredentialReadsNeverTurnRestartIntoLogout() async {
@@ -402,6 +443,46 @@ final class GearOpsModelTests: XCTestCase {
 
         await model.signIn(email: "second@wisc.edu", password: "password")
         XCTAssertEqual(model.user?.email, "second@wisc.edu")
+    }
+
+    func testCachedOnlySignOutRemovesIdentityAndStaysSignedOutAfterRelaunch() async {
+        let credentials = InMemoryCredentialStore()
+        let defaults = isolatedDefaults()
+        let model = GearOpsModel(client: MockGearOpsClient(), defaults: defaults,
+            bookingNotifications: NoopBookingNotifier(), credentialStore: credentials, autoStart: false)
+        await model.signIn(email: "admin@wisc.edu", password: "password")
+        await credentials.removeTokenKeepingUser()
+        let cached = GearOpsModel(client: MockGearOpsClient(), defaults: defaults,
+            bookingNotifications: NoopBookingNotifier(), credentialStore: credentials, autoStart: false)
+        await cached.restoreSession()
+        XCTAssertNotNil(cached.user)
+        await cached.signOut()
+        let storedUser = await credentials.loadUser()
+        XCTAssertNil(storedUser)
+        let relaunched = GearOpsModel(client: MockGearOpsClient(), defaults: defaults,
+            bookingNotifications: NoopBookingNotifier(), credentialStore: credentials, autoStart: false)
+        await relaunched.restoreSession()
+        XCTAssertNil(relaunched.user)
+        XCTAssertNil(relaunched.snapshot)
+        XCTAssertFalse(relaunched.isRestoring)
+        await relaunched.signIn(email: "admin@wisc.edu", password: "password")
+        XCTAssertNotNil(relaunched.user)
+        XCTAssertFalse(defaults.bool(forKey: "GearOpsExplicitlySignedOutV1"))
+    }
+
+    func testSignOutBarrierBlocksSurvivingKeychainIdentityAfterDeletionFailure() async {
+        let credentials = DeleteFailingCredentialStore()
+        let defaults = isolatedDefaults()
+        let model = GearOpsModel(client: MockGearOpsClient(), defaults: defaults,
+            bookingNotifications: NoopBookingNotifier(), credentialStore: credentials, autoStart: false)
+        await model.signIn(email: "admin@wisc.edu", password: "password")
+        await model.signOut()
+        let relaunched = GearOpsModel(client: MockGearOpsClient(), defaults: defaults,
+            bookingNotifications: NoopBookingNotifier(), credentialStore: credentials, autoStart: false)
+        await relaunched.restoreSession()
+        XCTAssertNil(relaunched.user)
+        XCTAssertNil(relaunched.snapshot)
+        XCTAssertFalse(relaunched.isRestoring)
     }
 
     func testSignOutSurfacesPersistentKeychainDeletionFailure() async {
@@ -860,10 +941,29 @@ private actor InMemoryCredentialStore: CompanionCredentialStoring {
     private var token: String?
     private var user: GearOpsUser?
     private var pending: [String] = []
+    private var suspendUserRead = false
+    private var userReadContinuation: CheckedContinuation<Void, Never>?
+
+    func suspendNextUserRead() { suspendUserRead = true }
+    func waitForUserRead() async {
+        while userReadContinuation == nil { await Task.yield() }
+    }
+    func finishUserRead() {
+        userReadContinuation?.resume()
+        userReadContinuation = nil
+    }
 
     func loadToken() -> String? { token }
+    func removeTokenKeepingUser() { token = nil }
     func saveToken(_ token: String) { self.token = token }
-    func loadUser() -> GearOpsUser? { user }
+    func loadUser() async -> GearOpsUser? {
+        let capturedUser = user
+        if suspendUserRead {
+            suspendUserRead = false
+            await withCheckedContinuation { userReadContinuation = $0 }
+        }
+        return capturedUser
+    }
     func saveUser(_ user: GearOpsUser) { self.user = user }
     func deleteToken() {
         token = nil

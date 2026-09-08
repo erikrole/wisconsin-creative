@@ -62,6 +62,7 @@ private struct GearOpsCachedState: Codable {
 @Observable
 final class GearOpsModel {
     private static let cacheKey = "GearOpsCachedStateV1"
+    private static let signedOutKey = "GearOpsExplicitlySignedOutV1"
 
     private let client: any GearOpsServing
     private let defaults: UserDefaults
@@ -114,7 +115,8 @@ final class GearOpsModel {
         self.notificationSettings = notificationSettings ?? NotificationSettingsStore(defaults: defaults)
         self.appPreferences = appPreferences ?? AppPreferencesStore(defaults: defaults)
 
-        if let data = defaults.data(forKey: Self.cacheKey),
+        if !defaults.bool(forKey: Self.signedOutKey),
+           let data = defaults.data(forKey: Self.cacheKey),
            let cached = try? JSONDecoder().decode(GearOpsCachedState.self, from: data),
            cached.isTrustworthy {
             user = cached.user
@@ -250,6 +252,11 @@ final class GearOpsModel {
     /// out or a server-confirmed unauthorized credential may clear trusted
     /// local state; repeated missing reads keep the last projection visible.
     func restoreSession() async {
+        guard !defaults.bool(forKey: Self.signedOutKey) else {
+            isRestoring = false
+            return
+        }
+        guard !isSigningIn, !isSigningOut else { return }
         if restoreInFlight {
             restoreQueued = true
             return
@@ -271,6 +278,7 @@ final class GearOpsModel {
         let generation = sessionGeneration
         do {
             let storedUser = try await credentialStore.loadUser()
+            guard generation == sessionGeneration, !isSigningIn, !isSigningOut else { return }
             if user == nil, let storedUser {
                 user = storedUser
                 persistCache()
@@ -301,6 +309,7 @@ final class GearOpsModel {
         } catch {
             guard generation == sessionGeneration else { return }
             companionToken = nil
+            awaitingCredentialUnlock = true
             statusMessage = "Secure credential access is unavailable. Showing the last confirmed data."
         }
     }
@@ -339,6 +348,7 @@ final class GearOpsModel {
                 return
             }
             user = response.user
+            defaults.removeObject(forKey: Self.signedOutKey)
             companionToken = response.companionToken
             registeredDeviceCredential = nil
             await install(
@@ -362,7 +372,10 @@ final class GearOpsModel {
 
     func signOut(message: String? = nil) async {
         guard !isSigningOut else { return }
-        let tokenToRevoke = companionToken
+        var tokenToRevoke = companionToken
+        // Explicit sign-out must survive relaunch even when Keychain cleanup
+        // is unavailable. Only a successful new enrollment lifts this barrier.
+        defaults.set(true, forKey: Self.signedOutKey)
         sessionGeneration &+= 1
         isSigningOut = true
         isSigningIn = false
@@ -373,6 +386,17 @@ final class GearOpsModel {
         statusMessage = message
         var credentialRemovalFailed = false
         var serverCleanupPending = false
+        if tokenToRevoke == nil {
+            do {
+                tokenToRevoke = try await credentialStore.loadToken()
+                if tokenToRevoke == nil {
+                    // A cached-only session can still have a durable identity.
+                    try await credentialStore.deleteToken()
+                }
+            } catch {
+                credentialRemovalFailed = true
+            }
+        }
         if let tokenToRevoke {
             let staged = (try? await credentialStore.stageTokenForRevocation(tokenToRevoke)) != nil
             if staged {
@@ -411,7 +435,13 @@ final class GearOpsModel {
     /// Every post-enrollment refresh reads only the external Upstash projection.
     /// Failure preserves the last trusted local snapshot.
     func refresh() async {
-        guard user != nil, let companionToken else { return }
+        guard user != nil else { return }
+        guard let companionToken else {
+            // Manual refresh must retry secure storage, rather than silently
+            // doing nothing while a cached account is visible.
+            await restoreSession()
+            return
+        }
         if isRefreshing {
             refreshQueued = true
             return
@@ -554,6 +584,13 @@ final class GearOpsModel {
     /// deliberately contains no timer or polling loop.
     private func startAutomaticRefresh() {
         startupTask = Task { [weak self] in
+            // Explicit local recovery for an inaccessible menu or stale session.
+            // This uses the same cleanup path as the account menu.
+            if ProcessInfo.processInfo.arguments.contains("--sign-out") {
+                await self?.signOut()
+                self?.isRestoring = false
+                return
+            }
             await self?.retryPendingRevocations()
             await self?.restoreSession()
         }
