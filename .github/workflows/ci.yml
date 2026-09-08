@@ -7,6 +7,36 @@ on:
     branches: [main]
 
 jobs:
+  postgres-integrity:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: ci-only
+          POSTGRES_DB: wc_integrity_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      POSTGRES_TEST_URL: "postgresql://postgres:ci-only@127.0.0.1:5432/wc_integrity_test"
+      MIGRATION_BASE_REF: "${{ github.event.pull_request.base.sha || github.event.before }}"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm install --global npm@11.17.0
+      - run: npm ci
+      - run: node scripts/check-postgres-integrity.mjs
+
   validate:
     runs-on: ubuntu-latest
     env:

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { neon } from "@neondatabase/serverless";
@@ -29,12 +30,26 @@ async function main() {
   const localMigrations = readLocalMigrations();
   const sql = neon(connectionString);
   const migrationRows = await sql`
-    SELECT migration_name, finished_at, rolled_back_at, applied_steps_count
+    SELECT migration_name, checksum, finished_at, rolled_back_at, applied_steps_count
     FROM _prisma_migrations
     ORDER BY migration_name ASC, started_at ASC
   `;
 
-  const health = evaluateMigrationHealth(localMigrations, migrationRows);
+  const checksums = Object.fromEntries(localMigrations.map((name) => [
+    name,
+    createHash("sha256").update(readFileSync(join(migrationsDir, name, "migration.sql"))).digest("hex"),
+  ]));
+  const health = evaluateMigrationHealth(localMigrations, migrationRows, checksums);
+  const allocationGuards = await sql`
+    SELECT pg_get_constraintdef(c.oid) AS definition,
+      c.convalidated AND i.indisvalid AND i.indisready AS valid
+    FROM pg_constraint c
+    JOIN pg_index i ON i.indexrelid = c.conindid
+    WHERE c.conrelid = to_regclass('public.asset_allocations')
+      AND c.conname = 'asset_allocations_no_overlap' AND c.contype = 'x'
+  `;
+  health.problems.push(...evaluateAllocationProtection(allocationGuards));
+  health.ok = health.problems.length === 0;
   printHealthReport(health);
 
   if (!health.ok) {
@@ -53,10 +68,12 @@ function readLocalMigrations() {
     .sort();
 }
 
-export function evaluateMigrationHealth(localMigrations, migrationRows) {
+export function evaluateMigrationHealth(localMigrations, migrationRows, localChecksums = {}) {
   const appliedNames = new Set();
   const unresolvedFailed = [];
   const rolledBack = [];
+  const checksumMismatches = new Set();
+  const unverifiedChecksums = new Set();
 
   for (const row of migrationRows) {
     const migrationName = row.migration_name;
@@ -67,6 +84,13 @@ export function evaluateMigrationHealth(localMigrations, migrationRows) {
 
     if (row.finished_at) {
       appliedNames.add(migrationName);
+      if (localMigrations.includes(migrationName)) {
+        if (!/^[a-f0-9]{64}$/i.test(row.checksum ?? "") || !localChecksums[migrationName]) {
+          unverifiedChecksums.add(migrationName);
+        } else if (row.checksum.toLowerCase() !== localChecksums[migrationName].toLowerCase()) {
+          checksumMismatches.add(migrationName);
+        }
+      }
       continue;
     }
 
@@ -87,6 +111,8 @@ export function evaluateMigrationHealth(localMigrations, migrationRows) {
   if (unresolvedFailed.length > 0) problems.push(`${unresolvedFailed.length} unresolved failed migration row(s)`);
   if (appliedDbOnly.length > 0) problems.push(`${appliedDbOnly.length} applied DB migration(s) missing locally`);
   if (!newestLocalApplied) problems.push(`newest local migration is not applied: ${newestLocal}`);
+  if (checksumMismatches.size > 0) problems.push(`${checksumMismatches.size} applied migration checksum mismatch(es)`);
+  if (unverifiedChecksums.size > 0) problems.push(`${unverifiedChecksums.size} applied migration checksum(s) unverified`);
 
   return {
     ok: problems.length === 0,
@@ -97,6 +123,8 @@ export function evaluateMigrationHealth(localMigrations, migrationRows) {
     pending,
     unresolvedFailed,
     rolledBack,
+    checksumMismatches: [...checksumMismatches].sort(),
+    unverifiedChecksums: [...unverifiedChecksums].sort(),
     newestLocal,
     newestLocalApplied,
   };
@@ -114,13 +142,22 @@ function printHealthReport(health) {
   printList("Unresolved failed rows", health.unresolvedFailed);
   printList("Applied DB-only migrations", health.appliedDbOnly);
   printList("Rolled-back rows", health.rolledBack);
+  printList("Applied SQL checksum mismatches", health.checksumMismatches);
+  printList("Unverified applied SQL checksums", health.unverifiedChecksums);
 
   if (health.ok) {
-    console.log("OK: local Prisma migrations match Neon migration history.");
+    console.log("OK: local SQL matches Neon migration history and asset overlap protection is present.");
     return;
   }
 
   console.error(`FAIL: ${health.problems.join("; ")}.`);
+}
+
+export function evaluateAllocationProtection(rows) {
+  const expected = "EXCLUDE USING gist (asset_id WITH =, tsrange(starts_at, ends_at, '[)'::text) WITH &&) WHERE ((active = true))";
+  return rows.length === 1 && rows[0].valid === true && rows[0].definition === expected
+    ? []
+    : ["asset_allocations_no_overlap is missing, invalid, or has an unexpected definition"];
 }
 
 function printList(label, values) {
