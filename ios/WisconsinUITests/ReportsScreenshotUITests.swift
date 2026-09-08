@@ -58,6 +58,7 @@ final class ScheduleScreenshotUITests: XCTestCase {
     func testScheduleListCaptures() throws {
         let app = XCUIApplication()
         app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "schedule"
+        app.launchArguments += ["-WisconsinThemeChoice", "light"]
         app.launch()
 
         let title = app.navigationBars["Schedule"]
@@ -84,6 +85,24 @@ final class ScheduleScreenshotUITests: XCTestCase {
         }
     }
 
+    func testScheduleAccessibilityCaptures() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "schedule"
+        app.launchArguments += [
+            "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityL",
+            "-WisconsinThemeChoice", "dark"
+        ]
+        app.launch()
+        let event = app.staticTexts["Volleyball vs Nebraska"]
+        XCTAssertTrue(event.waitForExistence(timeout: 20))
+        attach(app, name: "schedule-accessibility")
+        event.tap()
+        XCTAssertTrue(app.staticTexts["Bucky Badger"].waitForExistence(timeout: 15))
+        attach(app, name: "event-detail-accessibility")
+        app.swipeUp(velocity: .slow)
+        attach(app, name: "event-crew-accessibility")
+    }
+
     private func attach(_ app: XCUIApplication, name: String) {
         let screenshot = XCTAttachment(screenshot: app.screenshot())
         screenshot.name = name
@@ -104,6 +123,7 @@ final class EventDetailScreenshotUITests: XCTestCase {
     func testEventDetailCaptures() throws {
         let app = XCUIApplication()
         app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "schedule"
+        app.launchArguments += ["-WisconsinThemeChoice", "light"]
         app.launch()
 
         XCTAssertTrue(app.navigationBars["Schedule"].waitForExistence(timeout: 20),
@@ -128,7 +148,8 @@ final class EventDetailScreenshotUITests: XCTestCase {
     }
 
     private func openEvent(_ app: XCUIApplication, titled title: String) {
-        let row = app.staticTexts[title]
+        // Multi-day events appear once under each day in the agenda.
+        let row = app.staticTexts.matching(identifier: title).firstMatch
         if !row.waitForExistence(timeout: 15) || !row.isHittable {
             // Later fixture days sit below the fold.
             for _ in 0..<6 where !row.exists || !row.isHittable {
@@ -184,6 +205,22 @@ final class HomeScreenshotUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Hockey B-roll kit"].waitForExistence(timeout: 20),
                       "Staff draft never rendered")
         attach(app, name: "home-all-clear")
+    }
+
+    func testHomeAccessibilityCaptures() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "home"
+        app.launchArguments = [
+            "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityL",
+            "-WisconsinThemeChoice", "dark"
+        ]
+        app.launch()
+
+        XCTAssertTrue(app.staticTexts["Overdue"].waitForExistence(timeout: 20),
+                      "Home never loaded at accessibility size")
+        attach(app, name: "home-accessibility-top")
+        app.swipeUp(velocity: .slow)
+        attach(app, name: "home-accessibility-queue")
     }
 
     private func attach(_ app: XCUIApplication, name: String) {
@@ -826,5 +863,63 @@ final class LongPressMenuScreenshotUITests: XCTestCase {
         screenshot.name = name
         screenshot.lifetime = .keepAlways
         add(screenshot)
+    }
+}
+
+/// Failure paths use the fixture protocol's unmapped mutation responses; no
+/// credentials or real booking/crew records are used.
+@MainActor
+final class ActionErrorRecoveryUITests: XCTestCase {
+    override func setUpWithError() throws { continueAfterFailure = false }
+
+    func testExtensionFailureStaysVisibleAndKeepsChanges() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "booking-extend"
+        app.launchArguments += ["-WisconsinThemeChoice", "light"]
+        app.launch()
+        XCTAssertTrue(app.navigationBars["Extend Booking"].waitForExistence(timeout: 20))
+        let preset = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Extend by 1 day")).firstMatch
+        XCTAssertTrue(preset.waitForExistence(timeout: 10))
+        preset.tap()
+        app.buttons["Extend booking"].tap()
+        XCTAssertTrue(app.staticTexts["The requested item could not be found."].waitForExistence(timeout: 10))
+        attach(app, name: "extension-error")
+        let dismiss = app.buttons["Dismiss"]
+        XCTAssertTrue(dismiss.isHittable, "Failure recovery must be visible without scrolling")
+        dismiss.tap()
+        XCTAssertTrue(app.navigationBars["Extend Booking"].exists)
+        XCTAssertTrue(app.buttons["Extend booking"].isEnabled, "Selected extension must survive dismissal")
+        app.buttons["Extend booking"].tap()
+        XCTAssertTrue(app.buttons["Dismiss"].waitForExistence(timeout: 10), "Repeated failure must be presented again")
+    }
+
+    func testEventFailureAfterConfirmationStaysVisible() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "schedule"
+        app.launchArguments += ["-WisconsinThemeChoice", "light"]
+        app.launch()
+        let event = app.staticTexts["Volleyball vs Nebraska"]
+        XCTAssertTrue(event.waitForExistence(timeout: 20))
+        event.tap()
+        let actions = app.buttons["Actions for Student shift"].firstMatch
+        for _ in 0..<4 where !actions.exists || !actions.isHittable { app.swipeUp() }
+        XCTAssertTrue(actions.waitForExistence(timeout: 10))
+        actions.tap()
+        app.buttons["Remove Bucky Badger"].tap()
+        let confirm = app.buttons["Remove assignment"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5))
+        confirm.tap()
+        XCTAssertTrue(app.staticTexts["Couldn't remove assignment"].waitForExistence(timeout: 10))
+        attach(app, name: "event-action-error")
+        XCTAssertTrue(app.buttons["Dismiss"].isHittable)
+        XCTAssertTrue(app.buttons["Refresh"].isHittable)
+        XCTAssertFalse(app.alerts.firstMatch.exists, "Action failures must not compete with confirmation dialogs")
+    }
+
+    private func attach(_ app: XCUIApplication, name: String) {
+        let capture = XCTAttachment(screenshot: app.screenshot())
+        capture.name = name
+        capture.lifetime = .keepAlways
+        add(capture)
     }
 }
