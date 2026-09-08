@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Monitor, Moon, Sun, Type } from "lucide-react";
+import { Check, Monitor, Moon, Sun, Type } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -97,7 +97,7 @@ export default function AppearancePage() {
             <CardTitle className="text-base">Theme</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-3 gap-3 max-sm:grid-cols-1">
+            <div role="group" aria-label="Theme" className="grid grid-cols-3 gap-3 max-sm:grid-cols-1">
               <ChoiceCard
                 icon={<Sun className="size-5" />}
                 label="Light"
@@ -131,7 +131,7 @@ export default function AppearancePage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <div className="grid grid-cols-4 gap-2 max-sm:grid-cols-2">
+            <div role="group" aria-label="Text size" className="grid grid-cols-4 gap-2 max-sm:grid-cols-2">
               {SCALE_CHOICES.map((c) => {
                 const isActive = mounted && Math.abs(scale - c.value) < 0.001;
                 return (
@@ -140,11 +140,13 @@ export default function AppearancePage() {
                     type="button"
                     onClick={() => pickScale(c.value)}
                     aria-pressed={isActive}
-                    className={`flex flex-col items-center gap-1 rounded-lg border px-3 py-3 transition-colors hover:bg-muted/50 ${
+                    aria-label={`Text size: ${c.label}`}
+                    className={`relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col items-center gap-1 rounded-lg border px-3 py-3 transition-colors hover:bg-muted/50 ${
                       isActive ? "border-[var(--wi-red)] bg-muted/40" : "border-border"
                     }`}
                   >
-                    <span style={{ fontSize: `${14 * c.value}px` }} className="font-semibold">
+                    {isActive && <Check aria-hidden="true" className="absolute right-2 top-2 size-3" />}
+                    <span aria-hidden="true" style={{ fontSize: `${14 * c.value}px` }} className="font-semibold">
                       Aa
                     </span>
                     <span className="text-xs text-muted-foreground">{c.label}</span>
@@ -199,7 +201,7 @@ function ChoiceCard({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`flex flex-col items-start gap-2 rounded-lg border p-4 text-left transition-colors hover:bg-muted/50 ${
+      className={`relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col items-start gap-2 rounded-lg border p-4 text-left transition-colors hover:bg-muted/50 ${
         active ? "border-[var(--wi-red)] bg-muted/40" : "border-border"
       }`}
     >
