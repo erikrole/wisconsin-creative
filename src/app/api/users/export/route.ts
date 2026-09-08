@@ -4,12 +4,14 @@ import { HttpError } from "@/lib/http";
 import { requireRole } from "@/lib/rbac";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { db } from "@/lib/db";
-import { Prisma, type StudentYear } from "@prisma/client";
+import { type StudentYear } from "@prisma/client";
 import { sportLabel } from "@/lib/sports";
 import { csvField } from "@/lib/csv";
-import { optionalSportCodeSchema } from "@/lib/validation";
-import { shouldIncludeHiddenUsers, visibleUserWhere } from "@/lib/user-visibility";
+import { shouldIncludeHiddenUsers } from "@/lib/user-visibility";
 
+import { buildUserDirectoryQuery } from "@/lib/user-directory-query";
+
+const MAX_EXPORT_ROWS = 5000;
 const EXPORT_LIMIT = { max: 5, windowMs: 60_000 };
 
 function canExportSensitiveContact(actorRole: string, targetRole: string): boolean {
@@ -46,59 +48,21 @@ export const GET = withAuth(async (req, { user }) => {
   const locationId = searchParams.get("locationId");
   const activeParam = searchParams.get("active");
   const yearParam = searchParams.get("year");
-  const sportParam = optionalSportCodeSchema.parse(searchParams.get("sport") ?? undefined);
-  const areaParam = searchParams.get("area");
-  const includeHidden = shouldIncludeHiddenUsers(searchParams, user);
+  const { where } = buildUserDirectoryQuery(user, {
+    q,
+    role: roleParam,
+    locationId,
+    year: yearParam,
+    sport: searchParams.get("sport"),
+    area: searchParams.get("area"),
+    includeHidden: shouldIncludeHiddenUsers(searchParams, user),
+    active: activeParam === "false" ? "inactive" : activeParam === "all" ? "all" : "active",
+  });
 
-  const conditions: Prisma.UserWhereInput[] = [visibleUserWhere(user, { includeHidden })];
-
-  if (activeParam === "false") conditions.push({ active: false });
-  else if (activeParam !== "all") conditions.push({ active: true });
-
-  if (q) {
-    conditions.push({
-      OR: [
-        { name: { contains: q, mode: "insensitive" as const } },
-        { email: { contains: q, mode: "insensitive" as const } },
-      ],
-    });
-  }
-  if (roleParam && ["ADMIN", "STAFF", "STUDENT"].includes(roleParam)) {
-    conditions.push({ role: roleParam as Prisma.EnumRoleFilter });
-  }
-  if (locationId) conditions.push({ locationId });
-  if (sportParam) conditions.push({ sportAssignments: { some: { sportCode: sportParam } } });
-  if (areaParam) {
-    conditions.push({
-      OR: [
-        { primaryArea: areaParam as Prisma.EnumShiftAreaFilter },
-        { areaAssignments: { some: { area: areaParam as Prisma.EnumShiftAreaFilter } } },
-      ],
-    });
-  }
-  if (yearParam && ["FRESHMAN", "SOPHOMORE", "JUNIOR", "SENIOR", "GRAD"].includes(yearParam)) {
-    const now = new Date();
-    const acadYearEnd = now.getMonth() >= 7 ? now.getFullYear() + 1 : now.getFullYear();
-    const yearGradMap: Record<string, Prisma.UserWhereInput> = {
-      SENIOR:    { gradYear: acadYearEnd },
-      JUNIOR:    { gradYear: acadYearEnd + 1 },
-      SOPHOMORE: { gradYear: acadYearEnd + 2 },
-      FRESHMAN:  { gradYear: { gte: acadYearEnd + 3 } },
-      GRAD:      { gradYear: { lte: acadYearEnd - 1 } },
-    };
-    conditions.push({
-      OR: [
-        { studentYearOverride: yearParam as StudentYear },
-        { AND: [{ studentYearOverride: null }, yearGradMap[yearParam]!] }, // yearParam validated by includes() above
-      ],
-    });
-  }
-
-  const where: Prisma.UserWhereInput = conditions.length > 0 ? { AND: conditions } : {};
-
-  const users = await db.user.findMany({
+  const matchedUsers = await db.user.findMany({
     where,
-    orderBy: [{ role: "asc" }, { name: "asc" }],
+    orderBy: [{ role: "asc" }, { name: "asc" }, { id: "asc" }],
+    take: MAX_EXPORT_ROWS + 1,
     include: {
       location: { select: { name: true } },
       sportAssignments: { select: { sportCode: true } },
@@ -107,6 +71,8 @@ export const GET = withAuth(async (req, { user }) => {
     },
   });
 
+  const truncated = matchedUsers.length > MAX_EXPORT_ROWS;
+  const users = matchedUsers.slice(0, MAX_EXPORT_ROWS);
   const now = new Date();
   const header = [
     "name", "role", "campus_email", "athletics_email", "phone",
@@ -118,6 +84,11 @@ export const GET = withAuth(async (req, { user }) => {
   ].join(",");
 
   const rows = users.map((u) => {
+    // Match the collaborator profile read boundary: Staff see basic identity only.
+    if (u.role === "COLLABORATOR" && user.role !== "ADMIN" && user.id !== u.id) {
+      return [u.name, u.role, null, null, null, u.title, ...Array(13).fill(null)]
+        .map(csvField).join(",");
+    }
     const year = u.role === "STUDENT" ? deriveYear(u.gradYear, u.studentYearOverride, now) : null;
     const areas = u.areaAssignments
       .map((a) => `${a.area}${a.isPrimary ? "*" : ""}`)
@@ -153,6 +124,9 @@ export const GET = withAuth(async (req, { user }) => {
   return new NextResponse(body, {
     status: 200,
     headers: {
+      "Cache-Control": "private, no-store",
+      "X-Exported-Count": String(users.length),
+      ...(truncated ? { "X-Truncated": "true" } : {}),
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": `attachment; filename="${filename}"`,
     },

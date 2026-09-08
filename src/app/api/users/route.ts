@@ -70,7 +70,7 @@ export const GET = withAuth(async (req, { user }) => {
   const [data, total, active, inactive, missingPhotos, roleGroups] = await Promise.all([
     db.user.findMany({
       where,
-      orderBy,
+      orderBy: [...orderBy, { id: "asc" }],
       take: limit,
       skip: offset,
       include: {

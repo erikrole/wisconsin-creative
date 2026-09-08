@@ -1,7 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { withAuth } from "@/lib/api";
 import { db } from "@/lib/db";
-import { HttpError, ok } from "@/lib/http";
+import { HttpError, ok, parsePagination } from "@/lib/http";
 import { requirePermission, requirePermissionOrCollaboratorCapability } from "@/lib/rbac";
 import { createBulkSkuSchema } from "@/lib/validation";
 import { createAuditEntry } from "@/lib/audit";
@@ -14,8 +14,7 @@ export const GET = withAuth(async (req, { user }) => {
   const { searchParams } = new URL(req.url);
   const locationId = searchParams.get("location_id");
   const includeArchived = user.role !== "COLLABORATOR" && searchParams.get("archived") === "true";
-  const limit = Math.min(Math.max(Number(searchParams.get("limit")) || 50, 1), 200);
-  const offset = Math.max(Number(searchParams.get("offset")) || 0, 0);
+  const { limit, offset } = parsePagination(searchParams);
 
   const where: Prisma.BulkSkuWhereInput = {
     ...(locationId ? { locationId } : {}),

@@ -71,7 +71,7 @@ export const GET = withAuth(async (req, { user }) => {
           },
         },
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       take: EXPORT_LIMIT,
     }),
     db.booking.count({ where }),
@@ -111,6 +111,7 @@ export const GET = withAuth(async (req, { user }) => {
 
   return new NextResponse(csv, {
     headers: {
+      "Cache-Control": "private, no-store",
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": `attachment; filename="bookings-export-${date}.csv"`,
       ...(truncated ? { "X-Total-Count": String(totalCount), "X-Truncated": "true" } : {}),

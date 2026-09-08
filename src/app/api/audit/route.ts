@@ -1,11 +1,10 @@
 import { withAuth } from "@/lib/api";
 import { db } from "@/lib/db";
-import { HttpError, ok } from "@/lib/http";
+import { HttpError, ok, parsePagination } from "@/lib/http";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { AUDIT_RETENTION_DAYS } from "@/lib/audit";
 import type { Prisma } from "@prisma/client";
 
-const PAGE_SIZE = 50;
 const MAX_PAGE_SIZE = 100;
 
 type AuditCursor = { createdAt: string; id: string };
@@ -17,7 +16,11 @@ function encodeCursor(row: { createdAt: Date; id: string }): string {
 function decodeCursor(raw: string): AuditCursor | null {
   try {
     const parsed = JSON.parse(Buffer.from(raw, "base64url").toString("utf8"));
-    if (typeof parsed.createdAt === "string" && typeof parsed.id === "string") return parsed as AuditCursor;
+    if (
+      parsed && typeof parsed.createdAt === "string" &&
+      Number.isFinite(new Date(parsed.createdAt).getTime()) &&
+      typeof parsed.id === "string" && parsed.id.trim().length > 0
+    ) return parsed as AuditCursor;
     return null;
   } catch {
     return null;
@@ -50,7 +53,21 @@ export const GET = withAuth(async (req, { user }) => {
   const action = searchParams.get("action") || null;
   const from = searchParams.get("from") || null;
   const to = searchParams.get("to") || null;
-  const limitParam = Math.min(parseInt(searchParams.get("limit") ?? String(PAGE_SIZE), 10) || PAGE_SIZE, MAX_PAGE_SIZE);
+  const limitParam = Math.min(parsePagination(new URLSearchParams({
+    ...(searchParams.has("limit") ? { limit: searchParams.get("limit")! } : {}),
+  })).limit, MAX_PAGE_SIZE);
+  const fromDate = from ? new Date(from) : null;
+  const toDate = to ? new Date(to) : null;
+  if ((fromDate && !Number.isFinite(fromDate.getTime())) ||
+      (toDate && !Number.isFinite(toDate.getTime()))) {
+    throw new HttpError(400, "Invalid audit date filter");
+  }
+  if (fromDate && toDate && fromDate > toDate) {
+    throw new HttpError(400, "from must be before or equal to to");
+  }
+  if (cursorParam && afterParam) {
+    throw new HttpError(400, "Use either cursor or after, not both");
+  }
 
   const where: Prisma.AuditLogWhereInput = {};
 
@@ -59,14 +76,15 @@ export const GET = withAuth(async (req, { user }) => {
   if (action) where.action = { contains: action, mode: "insensitive" };
   if (from || to) {
     where.createdAt = {
-      ...(from ? { gte: new Date(from) } : {}),
-      ...(to ? { lte: new Date(to) } : {}),
+      ...(fromDate ? { gte: fromDate } : {}),
+      ...(toDate ? { lte: toDate } : {}),
     };
   }
 
   // Keyset pagination — "before" cursor (older pages)
   if (cursorParam) {
     const cursor = decodeCursor(cursorParam);
+    if (!cursor) throw new HttpError(400, "Invalid audit cursor");
     if (cursor) {
       const createdAt = new Date(cursor.createdAt);
       where.OR = [
@@ -79,6 +97,7 @@ export const GET = withAuth(async (req, { user }) => {
   // "After" cursor — live-tail polling for rows newer than the newest seen
   if (afterParam) {
     const cursor = decodeCursor(afterParam);
+    if (!cursor) throw new HttpError(400, "Invalid audit after cursor");
     if (cursor) {
       const createdAt = new Date(cursor.createdAt);
       where.OR = [

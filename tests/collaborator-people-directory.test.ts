@@ -94,7 +94,7 @@ describe("collaborator People directory", () => {
           { OR: [{ name: { contains: "Taylor", mode: "insensitive" } }] },
         ]),
       }),
-      orderBy: [{ name: "asc" }],
+      orderBy: [{ name: "asc" }, { id: "asc" }],
     }));
     expect(body.data[0]).toMatchObject({
       id: "user-1",

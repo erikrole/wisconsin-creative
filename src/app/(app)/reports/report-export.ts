@@ -2,7 +2,7 @@ export type CsvValue = boolean | Date | null | number | string | undefined;
 
 export function escapeReportCsvValue(value: CsvValue) {
   const raw = value instanceof Date ? value.toISOString() : value == null ? "" : String(value);
-  const formulaSafe = /^[=+\-@\t\r]/.test(raw) ? `'${raw}` : raw;
+  const formulaSafe = /^(?:\s*[=+\-@]|[\t\r])/.test(raw) ? `'${raw}` : raw;
   return `"${formulaSafe.replace(/"/g, '""')}"`;
 }
 
@@ -64,10 +64,10 @@ export function getReportExportCompletionToast({
   total?: string | null;
   truncated?: boolean;
 }): ReportExportToast {
-  if (truncated && total) {
+  if (truncated) {
     return {
       variant: "warning",
-      message: `${reportLabel} CSV capped at ${rowCount.toLocaleString()} ${scopeLabel}; ${total} total. Narrow filters to export fewer rows.`,
+      message: `${reportLabel} CSV capped at ${rowCount.toLocaleString()} ${scopeLabel}${total ? `; ${total} total` : ""}. Narrow filters to export fewer rows.`,
     };
   }
 
@@ -84,6 +84,7 @@ export async function readReportExportFailureMessage(res: Response, reportLabel:
 
   try {
     const parsed = JSON.parse(body) as { error?: unknown; message?: unknown };
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return fallback;
     const message = typeof parsed.error === "string"
       ? parsed.error
       : typeof parsed.message === "string"

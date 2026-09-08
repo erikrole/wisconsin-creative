@@ -80,7 +80,7 @@ export function FacetedFilter({
       </PopoverTrigger>
       <PopoverContent className="w-[200px] p-0" align="start">
         <Command>
-          <CommandInput placeholder={title} />
+          <CommandInput placeholder={title} aria-label={`Search ${title} filters`} />
           <CommandList>
             <CommandEmpty>No results.</CommandEmpty>
             <CommandGroup>
@@ -89,6 +89,10 @@ export function FacetedFilter({
                 return (
                   <CommandItem
                     key={option.value}
+                    value={option.value}
+                    keywords={[option.label]}
+                    aria-label={`${option.label}, ${isSelected ? "included" : "not included"}`}
+                    className="min-h-10"
                     onSelect={() => toggle(option.value)}
                   >
                     <div
@@ -112,7 +116,7 @@ export function FacetedFilter({
                 <CommandGroup>
                   <CommandItem
                     onSelect={() => onSelectionChange(new Set())}
-                    className="justify-center text-center"
+                    className="min-h-10 justify-center text-center"
                   >
                     Clear filters
                   </CommandItem>

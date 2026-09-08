@@ -11,5 +11,5 @@ export function syncUrl(params: Record<string, string | number>) {
     if (v === "" || v === 0) url.searchParams.delete(k);
     else url.searchParams.set(k, String(v));
   }
-  window.history.replaceState(null, "", url.toString());
+  window.history.replaceState(window.history.state, "", url.toString());
 }

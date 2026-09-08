@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { csvField } from "@/lib/csv";
+import { parseOptionalDate, assertDateOrder } from "@/lib/api-dates";
 
 const EXPORT_LIMIT = 5000;
 
@@ -16,8 +17,9 @@ export const GET = withAuth(async (req, { user }) => {
   const toParam = searchParams.get("to");
   const entityTypeParam = searchParams.get("entity_type");
 
-  const from = fromParam ? new Date(fromParam) : undefined;
-  const to = toParam ? new Date(toParam) : undefined;
+  const from = parseOptionalDate(fromParam, "from");
+  const to = parseOptionalDate(toParam, "to");
+  assertDateOrder(from, to, "to must be on or after from");
 
   const where = {
     ...(entityTypeParam ? { entityType: entityTypeParam } : {}),
@@ -33,7 +35,7 @@ export const GET = withAuth(async (req, { user }) => {
     db.auditLog.findMany({
       where,
       include: { actor: { select: { name: true, email: true } } },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       take: EXPORT_LIMIT,
     }),
     db.auditLog.count({ where }),
@@ -62,6 +64,7 @@ export const GET = withAuth(async (req, { user }) => {
 
   return new NextResponse(csv, {
     headers: {
+      "Cache-Control": "private, no-store",
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": `attachment; filename="audit-export-${date}.csv"`,
       ...(truncated ? { "X-Total-Count": String(totalCount), "X-Truncated": "true" } : {}),

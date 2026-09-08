@@ -30,6 +30,10 @@ vi.mock("@/lib/auth", () => ({
   requireKiosk: vi.fn(),
 }));
 vi.mock("@/lib/db", () => ({ db: dbMock }));
+vi.mock("@/lib/role-preview", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/lib/role-preview")>(),
+  readRolePreviewCookie: vi.fn(async () => null),
+}));
 vi.mock("@/lib/rate-limit", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true }),
 }));

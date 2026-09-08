@@ -65,11 +65,18 @@ export function getRecentEntities(section: string): RecentEntity[] {
 export function saveRecentEntity(entity: RecentEntity) {
   try {
     const raw = localStorage.getItem(RECENT_STORAGE_KEY);
-    const parsed: unknown = raw ? JSON.parse(raw) : [];
+    let parsed: unknown = [];
+    try {
+      parsed = raw ? JSON.parse(raw) : [];
+    } catch {
+      // A corrupt cache must not disable all future recent-history writes.
+    }
     const all = Array.isArray(parsed) ? parsed.filter(isRecentEntity) : [];
-    if (all[0]?.href === entity.href) return;
+    const normalized = { ...entity, label: entity.label.slice(0, MAX_RECENT_LABEL_LENGTH) };
+    if (all[0]?.href === normalized.href && all[0]?.label === normalized.label &&
+        all[0]?.section === normalized.section) return;
     const filtered = all.filter((e) => e.href !== entity.href);
-    filtered.unshift({ ...entity, label: entity.label.slice(0, MAX_RECENT_LABEL_LENGTH) });
+    filtered.unshift(normalized);
     localStorage.setItem(RECENT_STORAGE_KEY, JSON.stringify(filtered.slice(0, MAX_RECENT_TOTAL)));
   } catch {
     // localStorage unavailable

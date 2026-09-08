@@ -18,14 +18,30 @@ const PRESETS_KEY = "gear-tracker:filter-presets";
 function loadPresets(): FilterPreset[] {
   try {
     const raw = localStorage.getItem(PRESETS_KEY);
-    return raw ? JSON.parse(raw) : [];
+    const parsed: unknown = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(parsed)) return [];
+    const ids = new Set<string>();
+    return parsed.filter((entry): entry is FilterPreset => {
+      if (!entry || typeof entry !== "object"
+        || typeof entry.id !== "string" || !entry.id || ids.has(entry.id)
+        || typeof entry.label !== "string" || !entry.label.trim()
+        || !(entry.sport === null || typeof entry.sport === "string")
+        || !(entry.location === null || typeof entry.location === "string")) return false;
+      ids.add(entry.id);
+      return true;
+    });
   } catch {
     return [];
   }
 }
 
 function savePresets(presets: FilterPreset[]) {
-  localStorage.setItem(PRESETS_KEY, JSON.stringify(presets));
+  try {
+    localStorage.setItem(PRESETS_KEY, JSON.stringify(presets));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function presetLabel(sport: string | null, location: string | null): string {
@@ -54,6 +70,7 @@ export function FilterChips({
   clearFilters,
   hasActiveFilter,
 }: Props) {
+  const [storageError, setStorageError] = useState<string | null>(null);
   const [presets, setPresets] = useState<FilterPreset[]>([]);
 
   // Load presets from localStorage on mount
@@ -74,13 +91,21 @@ export function FilterChips({
       location: activeLocation,
     };
     const updated = [...existing, preset];
-    savePresets(updated);
+    if (!savePresets(updated)) {
+      setStorageError("Could not save your views on this device. Check browser storage and try again.");
+      return;
+    }
+    setStorageError(null);
     setPresets(updated);
   }, [activeSport, activeLocation]);
 
   const handleDeletePreset = useCallback((id: string) => {
     const updated = loadPresets().filter((p) => p.id !== id);
-    savePresets(updated);
+    if (!savePresets(updated)) {
+      setStorageError("Could not save your views on this device. Check browser storage and try again.");
+      return;
+    }
+    setStorageError(null);
     setPresets(updated);
   }, []);
 
@@ -101,16 +126,17 @@ export function FilterChips({
     : "Filter";
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex min-w-0 max-w-full items-center gap-1">
       <Popover>
         <PopoverTrigger asChild>
-          <Button variant={hasActiveFilter ? "default" : "outline"} size="sm" className="h-10 gap-1.5">
-            <FilterIcon className="size-3.5" />
-            {triggerLabel}
+          <Button variant={hasActiveFilter ? "default" : "outline"} size="sm" className="h-10 min-w-0 max-w-full shrink gap-1.5" title={triggerLabel}>
+            <FilterIcon className="size-3.5 shrink-0" />
+            <span className="truncate">{triggerLabel}</span>
           </Button>
         </PopoverTrigger>
         <PopoverContent align="end" className="w-64 p-3">
           <div className="flex flex-col gap-3">
+            {storageError && <p role="alert" className="text-sm text-destructive">{storageError}</p>}
             {/* Sport filters */}
             {availableSports.length > 1 && (
               <div>
@@ -120,8 +146,9 @@ export function FilterChips({
                     <Button
                       key={`sport-${code}`}
                       variant={activeSport === code ? "default" : "outline"}
+                      aria-pressed={activeSport === code}
                       size="sm"
-                      className="h-10 px-3 text-xs"
+                      className="h-auto min-h-10 min-w-0 max-w-full shrink whitespace-normal break-words px-3 text-xs"
                       onClick={() => setActiveSport(activeSport === code ? null : code)}
                     >
                       {code}
@@ -140,8 +167,9 @@ export function FilterChips({
                     <Button
                       key={`loc-${name}`}
                       variant={activeLocation === name ? "default" : "outline"}
+                      aria-pressed={activeLocation === name}
                       size="sm"
-                      className="h-10 px-3 text-xs"
+                      className="h-auto min-h-10 min-w-0 max-w-full shrink whitespace-normal break-words px-3 text-xs"
                       onClick={() => setActiveLocation(activeLocation === name ? null : name)}
                     >
                       {name}
@@ -193,11 +221,12 @@ export function FilterChips({
                   {presets.map((preset) => {
                     const isActive = preset.sport === activeSport && preset.location === activeLocation;
                     return (
-                      <div key={preset.id} className="flex items-center gap-0.5">
+                      <div key={preset.id} className="flex min-w-0 max-w-full items-center gap-0.5">
                         <Button
                           variant={isActive ? "default" : "outline"}
+                          aria-pressed={isActive}
                           size="sm"
-                          className="h-10 px-3 text-xs"
+                          className="h-auto min-h-10 min-w-0 max-w-full shrink whitespace-normal break-words px-3 text-xs"
                           onClick={() => {
                             if (isActive) {
                               clearFilters();
@@ -210,7 +239,7 @@ export function FilterChips({
                         </Button>
                         <Button
                           variant="ghost"
-                          className="size-10 text-muted-foreground"
+                          className="size-10 shrink-0 text-muted-foreground"
                           onClick={() => handleDeletePreset(preset.id)}
                           aria-label={`Delete saved filter "${preset.label}"`}
                         >
@@ -228,7 +257,7 @@ export function FilterChips({
       {hasActiveFilter && (
         <Button
           variant="ghost"
-          className="size-10 text-muted-foreground"
+          className="size-10 shrink-0 text-muted-foreground"
           onClick={clearFilters}
           aria-label="Clear dashboard filters"
         >

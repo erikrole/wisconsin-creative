@@ -47,10 +47,10 @@ export function BookingFilters({
   users,
   onClearAll,
 }: BookingFiltersProps) {
-  const title = statusFilter
-    ? config.statusOptions.find((s) => s.value === statusFilter)?.label ?? "Filtered"
-    : specialFilter
-      ? specialFilter === "overdue" ? "Overdue" : "Due today"
+  const title = specialFilter
+    ? specialFilter === "overdue" ? "Overdue" : "Due today"
+    : statusFilter
+      ? config.statusOptions.find((s) => s.value === statusFilter)?.label ?? "Filtered"
       : config.scopeLabel ?? "All";
   const activeFilters: OperationalActiveFilter[] = [
     ...(specialFilter
@@ -142,7 +142,7 @@ export function BookingFilters({
                 onClear={() => onStatusFilterChange("")}
               />
             )}
-            {config.hasSportFilter && sportCodesInUse.length > 0 && (
+            {config.hasSportFilter && (sportCodesInUse.length > 0 || !!sportFilter) && (
               <FilterChip
                 label="Sport"
                 value={sportFilter}

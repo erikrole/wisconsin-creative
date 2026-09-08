@@ -30,8 +30,9 @@ function buildCheckoutReportCsv(rows: Awaited<ReturnType<typeof getCheckoutRepor
 export const GET = withAuth(async (req, { user }) => {
   requirePermission(user.role, "report", "view");
   const { searchParams } = new URL(req.url);
-  const days = parseInt(searchParams.get("days") || String(DEFAULT_DAYS), 10);
-  if (!Number.isFinite(days) || days < 1 || days > MAX_DAYS) {
+  const rawDays = searchParams.get("days") || String(DEFAULT_DAYS);
+  const days = Number(rawDays);
+  if (!/^\d+$/.test(rawDays) || !Number.isSafeInteger(days) || days < 1 || days > MAX_DAYS) {
     throw new HttpError(400, `days must be between 1 and ${MAX_DAYS}`);
   }
 

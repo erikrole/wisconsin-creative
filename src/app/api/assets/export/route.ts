@@ -189,6 +189,7 @@ export const GET = withAuth(async (req, { user }) => {
 
   return new NextResponse(csv, {
     headers: {
+      "Cache-Control": "private, no-store",
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": `attachment; filename="items-export-${new Date().toISOString().slice(0, 10)}.csv"`,
       ...(truncated ? {

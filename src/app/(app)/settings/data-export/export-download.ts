@@ -23,10 +23,10 @@ export function getExportFilename(contentDisposition: string | null, fallback: s
 }
 
 export function getExportCompletionToast(label: string, truncated: boolean, total: string | null): ExportToast {
-  if (truncated && total) {
+  if (truncated) {
     return {
       variant: "warning",
-      message: `${label} export capped at 5,000 rows; ${total} total. Use filters to narrow the range.`,
+      message: `${label} export capped at 5,000 rows${total ? `; ${total} total` : ""}. Use filters to narrow the range.`,
     };
   }
 
@@ -43,6 +43,7 @@ export async function readExportFailureMessage(res: Response, label: string) {
 
   try {
     const parsed = JSON.parse(body) as { error?: unknown; message?: unknown };
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return fallback;
     const message = typeof parsed.error === "string"
       ? parsed.error
       : typeof parsed.message === "string"

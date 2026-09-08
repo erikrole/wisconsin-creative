@@ -48,6 +48,7 @@ export const DebouncedSearchInput = forwardRef<HTMLInputElement, DebouncedSearch
     const inputRef = useRef<HTMLInputElement>(null);
     useImperativeHandle(forwardedRef, () => inputRef.current as HTMLInputElement);
 
+    const composingRef = useRef(false);
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const lastCommittedRef = useRef(value);
     const onValueChangeRef = useRef(onValueChange);
@@ -62,6 +63,7 @@ export const DebouncedSearchInput = forwardRef<HTMLInputElement, DebouncedSearch
 
     const commit = (next: string) => {
       cancelPending();
+      if (inputProps.disabled || inputProps.readOnly) return;
       if (lastCommittedRef.current === next) return;
       lastCommittedRef.current = next;
       onValueChangeRef.current(next);
@@ -77,10 +79,14 @@ export const DebouncedSearchInput = forwardRef<HTMLInputElement, DebouncedSearch
     }, [value]);
 
     useEffect(() => cancelPending, []);
+    useEffect(() => {
+      if (inputProps.disabled || inputProps.readOnly) cancelPending();
+    }, [inputProps.disabled, inputProps.readOnly]);
 
     const handleChange = (next: string) => {
       setText(next);
       cancelPending();
+      if (composingRef.current) return;
       if (next === "") {
         // Clearing should feel instant, not debounced.
         commit(next);
@@ -90,6 +96,7 @@ export const DebouncedSearchInput = forwardRef<HTMLInputElement, DebouncedSearch
     };
 
     const handleClear = () => {
+      if (inputProps.disabled || inputProps.readOnly) return;
       setText("");
       commit("");
       inputRef.current?.focus();
@@ -104,8 +111,21 @@ export const DebouncedSearchInput = forwardRef<HTMLInputElement, DebouncedSearch
           className={cn("peer h-10 pl-9 pr-9", className)}
           value={text}
           onChange={(e) => handleChange(e.target.value)}
+          onCompositionStart={(e) => {
+            composingRef.current = true;
+            cancelPending();
+            inputProps.onCompositionStart?.(e);
+          }}
+          onCompositionEnd={(e) => {
+            composingRef.current = false;
+            handleChange(e.currentTarget.value);
+            inputProps.onCompositionEnd?.(e);
+          }}
           onKeyDown={(e) => {
+            inputProps.onKeyDown?.(e);
+            if (e.defaultPrevented || composingRef.current || e.nativeEvent.isComposing) return;
             if (e.key === "Enter") {
+              e.preventDefault();
               commit(text);
             } else if (e.key === "Escape" && text) {
               // Clear before any page-level Escape handler blurs the field so
@@ -113,7 +133,6 @@ export const DebouncedSearchInput = forwardRef<HTMLInputElement, DebouncedSearch
               e.stopPropagation();
               handleClear();
             }
-            inputProps.onKeyDown?.(e);
           }}
         />
         <div className="text-muted-foreground/80 pointer-events-none absolute inset-y-0 left-0 flex items-center justify-center pl-3 peer-disabled:opacity-50">
@@ -125,6 +144,7 @@ export const DebouncedSearchInput = forwardRef<HTMLInputElement, DebouncedSearch
             variant="ghost"
             size="icon"
             className="absolute inset-y-0 right-0 my-auto size-10 text-muted-foreground/80 hover:text-foreground"
+            disabled={inputProps.disabled || inputProps.readOnly}
             onClick={handleClear}
             aria-label="Clear search"
           >
