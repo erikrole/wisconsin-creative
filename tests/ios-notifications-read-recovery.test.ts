@@ -16,19 +16,30 @@ describe("iOS notifications read recovery", () => {
     expect(apiClient).toContain("private struct SuccessResponse: Decodable");
   });
 
-  it("restores optimistic notification state and shows recovery UI", () => {
+  it("serializes read actions and reconciles uncertain responses", () => {
     const sheet = source("ios/Wisconsin/Views/NotificationsSheet.swift");
-
-    expect(sheet).toContain("var actionError: String?");
-    expect(sheet).toContain("let previous = notifications[idx]");
-    expect(sheet).toContain("let previousUnreadCount = unreadCount");
-    expect(sheet).toContain("notifications[restoreIdx] = previous");
-    expect(sheet).toContain("notifications = previousNotifications");
-    expect(sheet).toContain("actionError = \"Couldn't mark all notifications read. Your inbox was restored.\"");
-    expect(sheet).toContain("BannerView(");
-    expect(sheet).toContain("actionLabel: \"Refresh\"");
+    expect(sheet).toContain("var isMutating = false");
+    expect(sheet).toContain("guard !isMutating, !isLoading");
+    expect(sheet).toContain("await reconcileReadFailure()");
+    expect(sheet).toContain("await load(forceRefresh: true)");
+    expect(sheet).not.toContain("notifications = previousNotifications");
+    expect(sheet).not.toContain("unreadCount = previousUnreadCount");
+    expect(sheet).toContain("authSessionBoundary.owns(sessionBoundary)");
+    expect(sheet).toContain("await sharedAppState?.refreshUnread()");
+    expect(sheet).toContain('actionLabel: "Refresh"');
     expect(sheet).toContain("AccessibilityNotification.Announcement(actionError).post()");
-    expect(sheet).toContain("actionLabel: \"Undo\"");
-    expect(sheet).toContain("markNotificationsUnread(ids: ids)");
+    expect(sheet).toContain('actionLabel: "Undo"');
+    expect(sheet).toContain("stride(from: 0, to: ids.count, by: 500)");
+  });
+
+  it("preserves cached rows with visible failures and independent paging offsets", () => {
+    const sheet = source("ios/Wisconsin/Views/NotificationsSheet.swift");
+    expect(sheet).toContain("if vm.error != nil, !vm.notifications.isEmpty");
+    expect(sheet).toContain("Showing the last loaded inbox.");
+    expect(sheet).toContain("let offset = nextOffset");
+    expect(sheet).toContain("!existingIDs.contains($0.id)");
+    expect(sheet).toContain("nextOffset = offset + resp.data.count");
+    expect(sheet).toContain(".safeAreaInset(edge: .top");
+    expect(sheet).toContain("sharedAppState?.pendingPushBlastId = blastId");
   });
 });

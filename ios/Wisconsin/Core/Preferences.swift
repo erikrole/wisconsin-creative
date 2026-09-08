@@ -53,20 +53,24 @@ final class NotificationPrefsViewModel {
     }()
 
     func load() async {
-        if loading { return }
+        if loading || saving { return }
+        let sessionBoundary = authSessionBoundary.capture()
         loading = true
         error = nil
         defer { loading = false }
         do {
-            prefs = try await APIClient.shared.notificationPreferences()
+            let loaded = try await APIClient.shared.notificationPreferences()
+            guard authSessionBoundary.owns(sessionBoundary) else { return }
+            prefs = loaded
         } catch {
+            guard authSessionBoundary.owns(sessionBoundary) else { return }
             self.error = (error as? APIError)?.errorDescription ?? "Couldn't load preferences"
         }
     }
 
     /// Toggle a single channel; reverts on save failure.
     func setChannel(_ channel: Channel, value: Bool) async {
-        guard var current = prefs else { return }
+        guard !saving, !loading, var current = prefs else { return }
         let prev = current
         switch channel {
         case .email: current.channels.email = value
@@ -94,7 +98,7 @@ final class NotificationPrefsViewModel {
 
     /// Toggle a single notification type; reverts on save failure.
     func setCategory(_ category: Category, value: Bool) async {
-        guard var current = prefs else { return }
+        guard !saving, !loading, var current = prefs else { return }
         let prev = current
         var categories = current.categories ?? Self.defaultCategories
         switch category {
@@ -113,7 +117,7 @@ final class NotificationPrefsViewModel {
     }
 
     func pause(for seconds: TimeInterval) async {
-        guard var current = prefs else { return }
+        guard !saving, !loading, var current = prefs else { return }
         let prev = current
         let until = Date().addingTimeInterval(seconds)
         current.pausedUntil = Self.isoWithFractional.string(from: until)
@@ -125,7 +129,7 @@ final class NotificationPrefsViewModel {
     }
 
     func resume() async {
-        guard var current = prefs else { return }
+        guard !saving, !loading, var current = prefs else { return }
         let prev = current
         current.pausedUntil = nil
         prefs = current
@@ -162,15 +166,21 @@ final class NotificationPrefsViewModel {
         _ next: NotificationPreferences,
         fallbackTo prev: NotificationPreferences
     ) async -> Bool {
+        let sessionBoundary = authSessionBoundary.capture()
         error = nil
         saving = true
         defer { saving = false }
         do {
             try await APIClient.shared.updateNotificationPreferences(next)
+            guard authSessionBoundary.owns(sessionBoundary) else { return false }
             return true
         } catch {
-            // Revert UI; surface a one-shot inline error.
-            prefs = prev
+            guard authSessionBoundary.owns(sessionBoundary) else { return false }
+            // The server may have committed before the response was lost.
+            // Prefer an authoritative read; retain the prior display only if offline.
+            let confirmed = try? await APIClient.shared.notificationPreferences()
+            guard authSessionBoundary.owns(sessionBoundary) else { return false }
+            prefs = confirmed ?? prev
             self.error = (error as? APIError)?.errorDescription ?? "Couldn't save"
             Haptics.error()
             return false

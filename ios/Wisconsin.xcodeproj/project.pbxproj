@@ -151,6 +151,7 @@
 		CE860A32B56D88E0802D8EFE /* DashboardModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB8C14E1F7005B408A6A4CCD /* DashboardModels.swift */; };
 		D00E7601CEFE39E880ADF85B /* WisconsinPerformanceUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9128816C8E1A251912BD38AB /* WisconsinPerformanceUITests.swift */; };
 		D0BEAE453503EBBEDD922745 /* KioskDateFormatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = E37E6A8082FFD84EC009BC21 /* KioskDateFormatting.swift */; };
+		D1B46EF364FBA2F815B27704 /* NotificationInboxTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059964A4433E68C24BA3469A /* NotificationInboxTests.swift */; };
 		D1BE91AB2F76BE372F49B448 /* CheckoutReturnLiveActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2228C8C2447924ED80ABD8C4 /* CheckoutReturnLiveActivityManager.swift */; };
 		D24677599DC4E06E3E093A81 /* PushPrePromptView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A2DFDC7A0C7BD6C018D43D2 /* PushPrePromptView.swift */; };
 		D26919265FC80896DFC0085F /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5932CB2D580EFEB5EA22D828 /* AppEnvironment.swift */; };
@@ -226,6 +227,7 @@
 		02B29E7150D396D5C8236398 /* KioskModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskModels.swift; sourceTree = "<group>"; };
 		046675A42DFADB1133461EDD /* KioskNativeTextField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskNativeTextField.swift; sourceTree = "<group>"; };
 		050BCD6259A4475915E97169 /* NativeAuthViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeAuthViews.swift; sourceTree = "<group>"; };
+		059964A4433E68C24BA3469A /* NotificationInboxTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationInboxTests.swift; sourceTree = "<group>"; };
 		06C085E7CDEC3CCE6DFDD630 /* KioskBarcodeCameraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskBarcodeCameraView.swift; sourceTree = "<group>"; };
 		07116906C1A1FF6F5D10BFA1 /* KioskDesign.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskDesign.swift; sourceTree = "<group>"; };
 		073F98039DAC37B5AC72487C /* AccountAvatar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountAvatar.swift; sourceTree = "<group>"; };
@@ -752,6 +754,7 @@
 				6FDEEC500E8732A76AA01E90 /* GuideMarkdownTests.swift */,
 				F7E2243115099DA4F3973F11 /* LatestRequestGenerationTests.swift */,
 				68542663977099AEC90AAFE5 /* LicenseExpiryTests.swift */,
+				059964A4433E68C24BA3469A /* NotificationInboxTests.swift */,
 				DDD21416289B346FEE851FB9 /* ProfileCompletionModelsTests.swift */,
 				841B755DD26E463F2B624373 /* ReportModelsTests.swift */,
 				4461DC62BDB05085191DB129 /* ReservationDraftStoreTests.swift */,
@@ -980,6 +983,7 @@
 				0E3E3B49635A5FE7B0C6DE71 /* GuideMarkdownTests.swift in Sources */,
 				D90FDB80F8FFF8F2921E26A5 /* LatestRequestGenerationTests.swift in Sources */,
 				C102925440D4EB154CF681D1 /* LicenseExpiryTests.swift in Sources */,
+				D1B46EF364FBA2F815B27704 /* NotificationInboxTests.swift in Sources */,
 				4F357F478EDC77FFABCE13B7 /* ProfileCompletionModelsTests.swift in Sources */,
 				17D60243EEB5E89A81363B3B /* ReportModelsTests.swift in Sources */,
 				FBCE9485C52357F314061D25 /* ReservationDraftStoreTests.swift in Sources */,

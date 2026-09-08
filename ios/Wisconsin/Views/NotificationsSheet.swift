@@ -1,6 +1,16 @@
 import SwiftUI
 
 @MainActor
+protocol NotificationInboxAPI {
+    func notifications(unreadOnly: Bool, limit: Int, offset: Int) async throws -> NotificationsResponse
+    func markNotificationRead(id: String) async throws
+    func markAllNotificationsRead() async throws -> [String]
+    func markNotificationsUnread(ids: [String]) async throws
+}
+
+extension APIClient: NotificationInboxAPI {}
+
+@MainActor
 @Observable
 final class NotificationsViewModel {
     var notifications: [AppNotification] = []
@@ -10,14 +20,26 @@ final class NotificationsViewModel {
     var error: String?
     var pageError: String?
     var actionError: String?
+    var isMutating = false
+    private var nextOffset = 0
+    private let sessionBoundary = authSessionBoundary.capture()
+    private let api: any NotificationInboxAPI
+    private let refreshUnread: () async -> Void
     private let pageSize = 20
     private var lastMarkedUnreadIDs: [String] = []
     private var undoTask: Task<Void, Never>?
     private var loadRequests = LatestRequestGeneration()
 
+    init(api: any NotificationInboxAPI = APIClient.shared,
+         refreshUnread: @escaping () async -> Void = { await sharedAppState?.refreshUnread() }) {
+        self.api = api
+        self.refreshUnread = refreshUnread
+    }
+
     var canUndoMarkAll: Bool { !lastMarkedUnreadIDs.isEmpty }
 
     func load(forceRefresh: Bool = false) async {
+        guard !isMutating, authSessionBoundary.owns(sessionBoundary) else { return }
         if !forceRefresh, isLoading { return }
         let requestToken = loadRequests.begin()
         isLoading = true
@@ -30,21 +52,22 @@ final class NotificationsViewModel {
             }
         }
         do {
-            let resp = try await APIClient.shared.notifications(limit: pageSize, offset: 0)
-            guard loadRequests.owns(requestToken), !Task.isCancelled else { return }
+            let resp = try await api.notifications(unreadOnly: false, limit: pageSize, offset: 0)
+            guard loadRequests.owns(requestToken), authSessionBoundary.owns(sessionBoundary), !Task.isCancelled else { return }
             notifications = resp.data
             total = resp.total
+            nextOffset = resp.data.count
             unreadCount = resp.unreadCount
         } catch {
-            guard loadRequests.owns(requestToken), !Task.isCancelled else { return }
+            guard loadRequests.owns(requestToken), authSessionBoundary.owns(sessionBoundary), !Task.isCancelled else { return }
             self.error = error.localizedDescription
         }
     }
 
     func loadMore() async {
-        guard !isLoading, notifications.count < total else { return }
+        guard !isLoading, !isMutating, authSessionBoundary.owns(sessionBoundary), nextOffset < total else { return }
         let requestToken = loadRequests.begin()
-        let offset = notifications.count
+        let offset = nextOffset
         isLoading = true
         pageError = nil
         defer {
@@ -53,11 +76,15 @@ final class NotificationsViewModel {
             }
         }
         do {
-            let resp = try await APIClient.shared.notifications(limit: pageSize, offset: offset)
-            guard loadRequests.owns(requestToken), !Task.isCancelled else { return }
-            notifications.append(contentsOf: resp.data)
+            let resp = try await api.notifications(unreadOnly: false, limit: pageSize, offset: offset)
+            guard loadRequests.owns(requestToken), authSessionBoundary.owns(sessionBoundary), !Task.isCancelled else { return }
+            let existingIDs = Set(notifications.map(\.id))
+            notifications.append(contentsOf: resp.data.filter { !existingIDs.contains($0.id) })
+            nextOffset = offset + resp.data.count
+            total = resp.data.isEmpty ? nextOffset : resp.total
+            unreadCount = resp.unreadCount
         } catch {
-            guard loadRequests.owns(requestToken), !Task.isCancelled else { return }
+            guard loadRequests.owns(requestToken), authSessionBoundary.owns(sessionBoundary), !Task.isCancelled else { return }
             // Surface page errors so a Retry affordance can render in the
             // sentinel row — silent `try?` left users staring at an
             // unchanging list with no signal.
@@ -65,55 +92,76 @@ final class NotificationsViewModel {
         }
     }
 
+    var hasMore: Bool { nextOffset < total }
+    var paginationOffset: Int { nextOffset }
+
     func markRead(id: String) async {
-        guard let idx = notifications.firstIndex(where: { $0.id == id }),
-              notifications[idx].isUnread else { return }
-        let previous = notifications[idx]
-        let previousUnreadCount = unreadCount
-        notifications[idx] = notifications[idx].asRead
+        guard !isMutating, !isLoading, authSessionBoundary.owns(sessionBoundary),
+              notifications.contains(where: { $0.id == id && $0.isUnread }) else { return }
+        isMutating = true
         actionError = nil
-        if unreadCount > 0 { unreadCount -= 1 }
+        defer { isMutating = false }
         do {
-            try await APIClient.shared.markNotificationRead(id: id)
+            try await api.markNotificationRead(id: id)
+            guard authSessionBoundary.owns(sessionBoundary) else { return }
+            notifications = notifications.map { $0.id == id ? $0.asRead : $0 }
+            unreadCount = max(0, unreadCount - 1)
+            await refreshUnread()
         } catch {
-            if let restoreIdx = notifications.firstIndex(where: { $0.id == id }) {
-                notifications[restoreIdx] = previous
-            }
-            unreadCount = previousUnreadCount
-            actionError = "Couldn't mark that notification read. Your inbox was restored."
+            await reconcileReadFailure()
         }
     }
 
     func markAllRead() async {
-        let previousNotifications = notifications
-        let previousUnreadCount = unreadCount
-        notifications = notifications.map { $0.asRead }
-        unreadCount = 0
+        guard !isMutating, !isLoading, authSessionBoundary.owns(sessionBoundary), unreadCount > 0 else { return }
+        isMutating = true
         actionError = nil
+        defer { isMutating = false }
         do {
-            lastMarkedUnreadIDs = try await APIClient.shared.markAllNotificationsRead()
+            let ids = try await api.markAllNotificationsRead()
+            guard authSessionBoundary.owns(sessionBoundary) else { return }
+            lastMarkedUnreadIDs = ids
+            notifications = notifications.map { $0.asRead }
+            unreadCount = 0
             scheduleUndoExpiry()
+            await refreshUnread()
         } catch {
-            notifications = previousNotifications
-            unreadCount = previousUnreadCount
-            actionError = "Couldn't mark all notifications read. Your inbox was restored."
+            await reconcileReadFailure()
         }
     }
 
     func undoLastMarkAll() async {
+        guard !isMutating, !isLoading, authSessionBoundary.owns(sessionBoundary) else { return }
         let ids = lastMarkedUnreadIDs
         guard !ids.isEmpty else { return }
+        isMutating = true
         lastMarkedUnreadIDs = []
         undoTask?.cancel()
-
+        defer { isMutating = false }
         do {
-            try await APIClient.shared.markNotificationsUnread(ids: ids)
-            // Reload so notifications that arrived while the undo banner was
-            // visible and unread counts outside the first page remain truthful.
-            await load()
+            // The API bounds each request to 500 IDs; large inboxes need batches.
+            for offset in stride(from: 0, to: ids.count, by: 500) {
+                guard authSessionBoundary.owns(sessionBoundary) else { return }
+                try await api.markNotificationsUnread(ids: Array(ids[offset..<min(offset + 500, ids.count)]))
+            }
+            isMutating = false
+            await load(forceRefresh: true)
+            await refreshUnread()
         } catch {
-            actionError = "Couldn't undo that change. Refresh to check your inbox."
+            await reconcileReadFailure()
         }
+    }
+
+    private func reconcileReadFailure() async {
+        guard authSessionBoundary.owns(sessionBoundary) else { return }
+        // A failed response may follow a committed write. Re-read before making
+        // any claim about which notifications are read; never restore old counts.
+        isMutating = false
+        await load(forceRefresh: true)
+        await refreshUnread()
+        actionError = error == nil
+            ? "Couldn't confirm the action. Your inbox now shows its latest status."
+            : "Couldn't confirm the action or refresh your inbox. Pull to refresh before trying again."
     }
 
     private func scheduleUndoExpiry() {
@@ -140,8 +188,9 @@ struct NotificationsSheet: View {
     var onSelectUser: ((String) -> Void)?
     var onSelectEvent: ((String) -> Void)?
 
-    @State private var vm = NotificationsViewModel()
+    @State var vm = NotificationsViewModel()
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         NavigationStack {
@@ -170,13 +219,19 @@ struct NotificationsSheet: View {
             }
             .navigationTitle("Notifications")
             .navigationBarTitleDisplayMode(.inline)
-            .overlay(alignment: .top) {
+            .safeAreaInset(edge: .top, spacing: 0) {
                 VStack(spacing: 8) {
+                    if vm.error != nil, !vm.notifications.isEmpty {
+                        BannerView(severity: .warning, message: "Couldn't refresh notifications. Showing the last loaded inbox.", systemImage: "wifi.exclamationmark", messageLineLimit: nil, actionLabel: "Retry") {
+                            Task { await vm.load(forceRefresh: true) }
+                        }
+                    }
                     if let actionError = vm.actionError {
                         BannerView(
                             severity: .error,
                             message: actionError,
                             systemImage: "wifi.exclamationmark",
+                            messageLineLimit: nil,
                             actionLabel: "Refresh"
                         ) {
                             Task { await vm.load() }
@@ -187,6 +242,7 @@ struct NotificationsSheet: View {
                             severity: .info,
                             message: "Notifications marked read.",
                             systemImage: "checkmark.circle",
+                            messageLineLimit: nil,
                             actionLabel: "Undo"
                         ) {
                             Task { await vm.undoLastMarkAll() }
@@ -201,10 +257,14 @@ struct NotificationsSheet: View {
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     if vm.unreadCount > 0 {
-                        Button("Mark All Read") {
+                        Button {
                             Task { await vm.markAllRead() }
+                        } label: {
+                            Label("Mark All Read", systemImage: "checkmark.circle")
                         }
-                        .font(.subheadline)
+                        .labelStyle(.iconOnly)
+                        .accessibilityLabel("Mark all notifications read")
+                        .disabled(vm.isMutating || vm.isLoading)
                     }
                 }
             }
@@ -225,6 +285,9 @@ struct NotificationsSheet: View {
             }
         }
         .task { await vm.load() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { Task { await vm.load(forceRefresh: true) } }
+        }
     }
 
     private var notificationList: some View {
@@ -239,7 +302,7 @@ struct NotificationsSheet: View {
                         }
                         .buttonStyle(.plain)
                         .swipeActions(edge: .leading) {
-                            if notif.isUnread {
+                            if notif.isUnread && !vm.isMutating && !vm.isLoading {
                                 Button {
                                     Task { await vm.markRead(id: notif.id) }
                                 } label: {
@@ -250,7 +313,7 @@ struct NotificationsSheet: View {
                             }
                         }
                         .swipeActions(edge: .trailing) {
-                            if notif.isUnread {
+                            if notif.isUnread && !vm.isMutating && !vm.isLoading {
                                 Button {
                                     Task { await vm.markRead(id: notif.id) }
                                 } label: {
@@ -264,7 +327,7 @@ struct NotificationsSheet: View {
                         // an action one way and not the other trains people to
                         // distrust both.
                         .contextMenu {
-                            if notif.isUnread {
+                            if notif.isUnread && !vm.isMutating && !vm.isLoading {
                                  Button {
                                      Task { await vm.markRead(id: notif.id) }
                                  } label: {
@@ -278,7 +341,7 @@ struct NotificationsSheet: View {
             // Infinite-scroll sentinel row — fires `loadMore` on appear,
             // surfaces a Retry button on `pageError`. Matches items + bookings
             // list pagination pattern.
-            if vm.notifications.count < vm.total || vm.pageError != nil {
+            if vm.hasMore || vm.pageError != nil {
                 Section {
                     paginationSentinel
                 }
@@ -296,7 +359,7 @@ struct NotificationsSheet: View {
                 Text(pageError)
                     .font(.footnote)
                     .foregroundStyle(Color.statusText(.red))
-                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
                 Spacer()
                 Button("Retry") {
                     Task { await vm.loadMore() }
@@ -312,11 +375,11 @@ struct NotificationsSheet: View {
                 Spacer()
             }
             .padding(.vertical, 8)
-            .task(id: vm.notifications.count) {
+            .task(id: vm.paginationOffset) {
                 // Auto-load the next page when this row appears AND we
                 // haven't already loaded it. The id-keyed task re-fires on
                 // every page boundary so subsequent pages chain.
-                if vm.notifications.count < vm.total && vm.pageError == nil {
+                if vm.hasMore && vm.pageError == nil {
                     await vm.loadMore()
                 }
             }
@@ -325,6 +388,14 @@ struct NotificationsSheet: View {
 
     private func handleTap(_ notif: AppNotification) {
         Task { await vm.markRead(id: notif.id) }
+
+        if let blastId = notif.payload?.blastId {
+            // Reading the archive copy is not acknowledgment. Return to the
+            // authoritative Home banner, where Got it remains deliberate.
+            sharedAppState?.pendingPushBlastId = blastId
+            dismiss()
+            return
+        }
 
         // Booking-related types → booking detail (covers checkout_due/overdue,
         // reservation_*, trade_* with bookingId in payload).
@@ -398,7 +469,7 @@ struct NotificationsSheet: View {
         return [
             ("Today", today),
             ("Yesterday", yesterday),
-            ("This Week", thisWeek),
+            ("Previous 7 Days", thisWeek),
             ("Older", older),
         ].filter { !$0.1.isEmpty }
     }
@@ -429,12 +500,12 @@ private struct NotificationRow: View {
                 Text(notification.title)
                     .font(.subheadline.weight(notification.isUnread ? .semibold : .regular))
                     .foregroundStyle(.primary)
-                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
                 if let body = notification.body {
                     Text(body)
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 Text(notification.createdAt.relativeLabel)
                     .font(.caption2)

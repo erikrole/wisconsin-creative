@@ -76,7 +76,9 @@ describe("iOS notification long-press actions", () => {
     expect(snooze).not.toContain("APIClient");
     // Derived from the original request id, so a second snooze replaces rather
     // than stacks another copy of the same alert.
-    expect(snooze).toContain('identifier: "gt-snooze-\\(payload.identifier)"');
+    expect(snooze).toContain('identifier: reminderIdentifier(for: payload.identifier)');
+    expect(snooze).toContain('while original.hasPrefix("gt-snooze-")');
+    expect(snooze).toContain('authSessionBoundary.owns(sessionBoundary)');
   });
 
   /**
@@ -86,7 +88,8 @@ describe("iOS notification long-press actions", () => {
    */
   it("carries only Sendable routing keys across the isolation boundary", () => {
     expect(actions).toContain("struct Payload: Sendable");
-    expect(actions).toContain('static let routingKeys = ["bookingId", "eventId", "blastId"]');
+    expect(actions).toContain('static let routingKeys = ["bookingId", "checkoutId", "eventId", "blastId"');
+    expect(actions).toContain('content.threadIdentifier = payload.threadIdentifier');
     expect(actions).toContain("let routing: [String: String]");
     expect(delegate).toContain("NotificationSnooze.Payload(notification: response.notification)");
   });

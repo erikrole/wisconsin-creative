@@ -94,13 +94,14 @@ enum NotificationSnooze {
     /// which also means the reminder can only ever route somewhere the original
     /// could.
     struct Payload: Sendable {
-        static let routingKeys = ["bookingId", "eventId", "blastId"]
+        static let routingKeys = ["bookingId", "checkoutId", "eventId", "blastId", "assignmentId", "shiftId", "tradeId", "type", "href"]
 
         let identifier: String
         let title: String
         let body: String
         let categoryIdentifier: String
         let routing: [String: String]
+        let threadIdentifier: String
 
         init(notification: UNNotification) {
             let content = notification.request.content
@@ -108,30 +109,46 @@ enum NotificationSnooze {
             title = content.title
             body = content.body
             categoryIdentifier = content.categoryIdentifier
+            threadIdentifier = content.threadIdentifier
             routing = Self.routingKeys.reduce(into: [:]) { result, key in
                 if let value = content.userInfo[key] as? String { result[key] = value }
             }
         }
     }
 
-    static func schedule(_ payload: Payload) async {
+    static func reminderIdentifier(for identifier: String) -> String {
+        var original = identifier
+        while original.hasPrefix("gt-snooze-") { original.removeFirst("gt-snooze-".count) }
+        return "gt-snooze-\(original)"
+    }
+
+    @MainActor
+    static func schedule(_ payload: Payload, sessionBoundary: UUID) async {
+        guard PushTokenStorage.registrationAllowed,
+              authSessionBoundary.owns(sessionBoundary) else { return }
         let content = UNMutableNotificationContent()
         content.title = payload.title
         content.body = payload.body
         content.sound = .default
         content.userInfo = payload.routing
         content.categoryIdentifier = payload.categoryIdentifier
+        content.threadIdentifier = payload.threadIdentifier
         // Marks the copy so the reminder is identifiable in Notification
         // Center, and so a second snooze replaces rather than stacks: the
         // request identifier below is derived from the original.
         content.subtitle = "Reminder"
 
         let request = UNNotificationRequest(
-            identifier: "gt-snooze-\(payload.identifier)",
+            identifier: reminderIdentifier(for: payload.identifier),
             content: content,
             trigger: UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false)
         )
-        try? await UNUserNotificationCenter.current().add(request)
+        let center = UNUserNotificationCenter.current()
+        try? await center.add(request)
+        // Logout may clear pending requests while add is suspended.
+        if !PushTokenStorage.registrationAllowed || !authSessionBoundary.owns(sessionBoundary) {
+            center.removePendingNotificationRequests(withIdentifiers: [request.identifier])
+        }
     }
 
     static func cancelPending() async {

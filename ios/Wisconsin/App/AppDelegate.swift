@@ -172,7 +172,7 @@ extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
             // actor, because `UNNotification` cannot cross into the task.
             let snooze = NotificationSnooze.Payload(notification: response.notification)
             Task {
-                await NotificationSnooze.schedule(snooze)
+                await NotificationSnooze.schedule(snooze, sessionBoundary: notificationBoundary)
                 completionHandler()
             }
             return

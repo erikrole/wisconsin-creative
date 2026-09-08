@@ -13,6 +13,7 @@ struct AppNotification: Codable, Identifiable {
 }
 
 struct NotificationPayload: Codable {
+    let blastId: String?
     let bookingId: String?
     let checkoutId: String?
     let assignmentId: String?

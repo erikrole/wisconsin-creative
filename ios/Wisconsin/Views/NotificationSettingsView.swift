@@ -3,6 +3,7 @@ import UserNotifications
 
 struct NotificationSettingsView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.scenePhase) private var scenePhase
     let prefsVM: NotificationPrefsViewModel
     @Binding var pushAuth: UNAuthorizationStatus
     let iosSettingsURL: URL
@@ -59,7 +60,7 @@ struct NotificationSettingsView: View {
                 Section {
                     channelToggle(
                         title: "Push alerts",
-                        description: "Send push notifications to this device.",
+                        description: "Send push notifications to devices signed in to your account.",
                         isOn: prefs.channels.push,
                         onChange: { v in Task { await prefsVM.setChannel(.push, value: v) } }
                     )
@@ -163,6 +164,14 @@ struct NotificationSettingsView: View {
             }
             await refreshPushAuth()
         }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                Task {
+                    await refreshPushAuth()
+                    await prefsVM.load()
+                }
+            }
+        }
         .onChange(of: testPushMessage) { _, message in
             if let message {
                 AccessibilityNotification.Announcement(message).post()
@@ -204,7 +213,7 @@ struct NotificationSettingsView: View {
                 pauseButton(title: "Pause 1 week", seconds: 7 * 24 * 60 * 60)
             }
         } header: {
-            Text("Quiet hours")
+            Text("Pause alerts")
         } footer: {
             Text("Pausing mutes push and email alerts until the selected time. In-app notifications remain available.")
         }
@@ -337,7 +346,11 @@ struct NotificationSettingsView: View {
                     Spacer()
                 }
             }
-        default:
+        case .authorized, .provisional, .ephemeral:
+            Link(destination: iosSettingsURL) {
+                Label("Alert styles and sounds", systemImage: "arrow.up.right.square")
+            }
+        @unknown default:
             EmptyView()
         }
     }
@@ -410,7 +423,9 @@ struct NotificationSettingsView: View {
         }
         switch appState.pushRegistrationState {
         case .registered where deviceRegistrationReady:
-            return "Push is on and this device is registered."
+            return pushAuth == .provisional
+                ? "Notifications arrive quietly in Notification Center. Change alert styles in iOS Settings."
+                : "Push is on and this device is registered."
         case .registering:
             return "Push is on; this device is registering."
         case .failed:
@@ -438,7 +453,7 @@ struct NotificationSettingsView: View {
             switch appState.pushRegistrationState {
             case .unknown: return "Not registered"
             case .registering: return "Registering"
-            case .registered where deviceRegistrationReady: return "Ready"
+            case .registered where deviceRegistrationReady: return pushAuth == .provisional ? "Quiet delivery" : "Registered"
             case .registered, .failed: return "Needs attention"
             }
         case .denied:
@@ -525,7 +540,7 @@ struct NotificationSettingsView: View {
             let result = try await APIClient.shared.sendTestPush(deviceToken: currentPushToken)
             if result.delivered > 0 {
                 testPushSucceeded = true
-                testPushMessage = "Test notification sent to this device."
+                testPushMessage = "Test accepted by Apple. Check this device for the notification."
                 Haptics.success()
             } else if result.devices == 0 {
                 testPushSucceeded = false
@@ -533,7 +548,7 @@ struct NotificationSettingsView: View {
                 Haptics.warning()
             } else {
                 testPushSucceeded = false
-                testPushMessage = "The test notification was not delivered. Retry registration and try again."
+                testPushMessage = "Apple did not accept the test. Retry registration and try again."
                 Haptics.warning()
             }
         } catch {

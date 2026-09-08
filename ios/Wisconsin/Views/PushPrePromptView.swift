@@ -24,7 +24,7 @@ struct PushPrePromptView: View {
                     Text("Stay in the loop")
                         .font(.title2.weight(.bold))
 
-                    Text("Get reminders about gear that's due back, shifts coming up, and trades opening on the board.")
+                    Text("Get gear return reminders, published schedule changes, and updates about your shift trades.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -34,8 +34,8 @@ struct PushPrePromptView: View {
 
                 VStack(spacing: 10) {
                     bullet("calendar.badge.clock", "Reminders before your gear is due")
-                    bullet("person.fill.checkmark", "Your shift is tomorrow")
-                    bullet("arrow.triangle.2.circlepath", "Trade-board posts you can claim")
+                    bullet("person.fill.checkmark", "Published shifts and call-time changes")
+                    bullet("arrow.triangle.2.circlepath", "Updates about your shift trades")
                 }
                 .padding(.horizontal, 24)
 
