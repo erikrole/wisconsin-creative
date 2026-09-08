@@ -116,6 +116,7 @@
     "@upstash/redis": "^1.38.0",
     "@vercel/analytics": "1.6.1",
     "@vercel/blob": "^2.4.1",
+    "@vercel/speed-insights": "2.0.0",
     "barcode-detector": "^3.2.0",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
