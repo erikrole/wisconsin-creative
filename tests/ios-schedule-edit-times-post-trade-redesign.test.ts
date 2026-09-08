@@ -6,7 +6,7 @@ const source = (path: string) => readFileSync(path, "utf8");
 describe("native Schedule edit times and post trade redesign", () => {
   it("makes the shift call window event-aware and quarter-hour based", () => {
     const detail = source("ios/Wisconsin/Views/EventDetailSheet.swift");
-    const addShift = source("ios/Wisconsin/Views/Schedule/AddShiftSheet.swift");
+    const availability = source("ios/Wisconsin/Views/AvailabilityView.swift");
 
     expect(detail).toContain("eventTitle: scheduleEventDisplayTitle(event)");
     expect(detail).toContain('scope == .allAssigned ? "Set Student Call Time" : "Edit Call Window"');
@@ -16,9 +16,10 @@ describe("native Schedule edit times and post trade redesign", () => {
     expect(detail).toContain('scope == .allAssigned ? "Apply to Students" : "Save Call Window"');
     expect(detail).toContain("guard !isSaving, hasChanges, hasValidWindow else { return }");
     expect(detail).toContain('Label("End time must be after call time."');
-    expect(detail).toContain('Button("Retry") { Task { await save() } }');
-    expect(addShift).toContain("stride(from: 0, through: 23 * 60 + 45, by: 15)");
-    expect(addShift).toContain("Array(Set(");
+    expect(detail).toContain('onDismiss: { self.saveError = nil }');
+    expect(detail).toContain('ActionErrorBanner(');
+    expect(availability).toContain("stride(from: 0, through: 23 * 60 + 45, by: 15)");
+    expect(availability).toContain("Array(Set(");
   });
 
   it("uses one contextual Trade Board posting sheet from both entry points", () => {
@@ -27,13 +28,13 @@ describe("native Schedule edit times and post trade redesign", () => {
     const postTrade = source("ios/Wisconsin/Views/Schedule/PostTradeSheet.swift");
 
     expect(detail).toContain("@State private var postTradeTarget: TradePostCandidate?");
-    expect(detail).toContain("PostTradeSheet(candidate: candidate)");
+    expect(detail).toContain("PostTradeSheet(candidate: candidate, wrapsInNavigationStack: false)");
     expect(detail).toContain("TradePostCandidate(");
     expect(detail).not.toContain("postTradeDialogTitle");
-    expect(tradeBoard).toContain("PostTradeSheet(myShifts: myShifts)");
+    expect(tradeBoard).toContain("PostTradeSheet(myShifts: myShifts, wrapsInNavigationStack: false)");
     expect(postTrade).toContain("struct TradePostCandidate: Identifiable");
-    expect(postTrade).toContain("init(myShifts: [MyShift]");
-    expect(postTrade).toContain("init(candidate: TradePostCandidate");
+    expect(postTrade).toContain("myShifts: [MyShift]");
+    expect(postTrade).toContain("candidate: TradePostCandidate");
   });
 
   it("keeps trade ownership consequences, notes, and recovery explicit", () => {

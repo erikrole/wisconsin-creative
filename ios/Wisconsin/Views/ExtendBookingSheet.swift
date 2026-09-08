@@ -70,11 +70,11 @@ struct ExtendBookingSheet: View {
                     .disabled(isLoading)
                 }
 
+            }
+            .safeAreaInset(edge: .top) {
                 if let error {
-                    Section {
-                        Text(error)
-                            .foregroundStyle(Color.statusText(.red))
-                            .font(.footnote)
+                    ActionErrorBanner(title: "Couldn't extend booking", message: error) {
+                        self.error = nil
                     }
                 }
             }

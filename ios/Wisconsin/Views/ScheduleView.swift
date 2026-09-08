@@ -2333,30 +2333,22 @@ private struct ScheduleDateHeader: View {
     }
 
     var body: some View {
-        // One line, not two: the day and its date never needed a stacked pair,
-        // and the row it cost was repeated for every group on the screen.
-        HStack(alignment: .firstTextBaseline, spacing: 6) {
-            Text(primaryLabel)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(isToday ? Color.brandPrimary : .primary)
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                dayLabel.fixedSize()
+                Text("·").font(.subheadline).foregroundStyle(.tertiary)
+                Text(dateLabel).font(.subheadline).foregroundStyle(.secondary).fixedSize()
+                Spacer(minLength: 8)
+                countLabel.fixedSize()
+            }
 
-            Text("·")
-                .font(.subheadline)
-                .foregroundStyle(.tertiary)
-
-            Text(dateLabel)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-
-            Spacer(minLength: 8)
-
-            // Already computed for VoiceOver; showing it costs nothing and
-            // answers "how heavy is this day" before the day is scrolled.
-            Text(eventCount == 1 ? "1 event" : "\(eventCount) events")
-                .font(.caption.monospacedDigit())
-                .foregroundStyle(.tertiary)
+            VStack(alignment: .leading, spacing: 2) {
+                dayLabel
+                Text(dateLabel).font(.subheadline).foregroundStyle(.secondary)
+                countLabel
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .lineLimit(1)
         .padding(.horizontal, 16)
         .padding(.top, Brand.Space.sm)
         .padding(.bottom, 5)
@@ -2364,6 +2356,18 @@ private struct ScheduleDateHeader: View {
         .accessibilityElement(children: .ignore)
         .accessibilityAddTraits(.isHeader)
         .accessibilityLabel(headerAccessibilityLabel)
+    }
+
+    private var dayLabel: some View {
+        Text(primaryLabel)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(isToday ? Color.brandPrimary : .primary)
+    }
+
+    private var countLabel: some View {
+        Text(eventCount == 1 ? "1 event" : "\(eventCount) events")
+            .font(.caption.monospacedDigit())
+            .foregroundStyle(.secondary)
     }
 
     private var headerAccessibilityLabel: String {
@@ -2401,6 +2405,10 @@ struct EventRow: View {
     /// Same treatment as `CrewTypeLabel`'s name column.
     @ScaledMetric(relativeTo: .subheadline) private var gutterScale: CGFloat = 1
 
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    private var usesStackedLayout: Bool { dynamicTypeSize >= .xxLarge }
+
     /// When this row represents one day of a multi-day event, its 1-based
     /// position and the total span length.
     private var segment: (index: Int, total: Int)? {
@@ -2416,29 +2424,36 @@ struct EventRow: View {
         HStack(alignment: .top, spacing: 10) {
             // Time leads the row so a day of work reads down a single column
             // instead of being re-found inside each card.
-            timeGutter
+            if !usesStackedLayout {
+                timeGutter
+            }
 
             StatusRail(color: barColor)
                 .frame(maxHeight: .infinity)
 
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 5) {
+                if usesStackedLayout {
+                    Text(stackedTimeText)
+                        .font(.subheadline.weight(.semibold).monospacedDigit())
+                        .foregroundStyle(timeState == .live ? Color.brandPrimary : Color.primary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
                 Text(eventDisplayTitle)
                     .font(.body.weight(.semibold))
-                    .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
 
-                // Coverage rides the meta line, not the title line. Sharing the
-                // title's row costs it about 90pt, which wrapped most titles to
-                // two lines and dropped the screen from seven events to five --
-                // more card, less schedule. Dropping the inner rail already
-                // widened this line enough to stop the venue truncating.
-                HStack(spacing: 8) {
-                    if !metaParts.isEmpty {
-                        metaLine
+                // Keep a compact metadata row when it fits. A long venue gets
+                // its own line rather than shrinking around the crew ratio.
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 8) {
+                        metaLine.fixedSize(horizontal: true, vertical: false)
+                        Spacer(minLength: 0)
+                        rowCoverage
                     }
-                    Spacer(minLength: 0)
-                    if showsCrewCoverage, let cov = event.coverage, cov.total > 0 {
-                        coverageChip(cov)
+                    VStack(alignment: .leading, spacing: 4) {
+                        metaLine
+                        rowCoverage
                     }
                 }
 
@@ -2530,36 +2545,38 @@ struct EventRow: View {
         .accessibilityHidden(true)
     }
 
-    /// A single, quiet secondary line: home/away · venue · multi-day. Time moved
-    /// to the leading gutter, which freed this line to absorb the venue row and
-    /// take a whole line back off every card.
-    private var metaParts: [String] {
-        var parts: [String] = []
-        if let eventTypeLabel { parts.append(eventTypeLabel) }
-        if let venueName { parts.append(venueName) }
-        return parts
+    private var stackedTimeText: String {
+        let lines = gutterLines
+        let separator = segment == nil ? " – " : " · "
+        let time = lines.primary + (lines.secondary.map { separator + $0 } ?? "")
+        return timeState == .live ? time + " · Now" : time
+    }
+
+    @ViewBuilder
+    private var rowCoverage: some View {
+        if showsCrewCoverage, let cov = event.coverage, cov.total > 0 {
+            coverageChip(cov)
+        }
     }
 
     private var metaLine: some View {
-        HStack(spacing: 4) {
+        HStack(alignment: .firstTextBaseline, spacing: 4) {
             if let eventTypeLabel {
                 Text(eventTypeLabel)
-                // The separator belongs between two parts, not after one. An
-                // away or neutral game with no mapped venue printed a dangling
-                // "Away ·" with nothing following it.
+                    .fixedSize(horizontal: true, vertical: false)
                 if venueName != nil { metaDot }
             }
             if let venueName {
                 Image(systemName: "mappin.and.ellipse")
                     .font(.caption2)
                     .imageScale(.small)
+                    .accessibilityHidden(true)
                 Text(venueName)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
         .font(.subheadline)
         .foregroundStyle(.secondary)
-        .lineLimit(1)
-        .minimumScaleFactor(0.8)
     }
 
     private var metaDot: some View {
@@ -2598,13 +2615,12 @@ struct EventRow: View {
     }
 
     private func personalWorkLine(_ shift: MyShift) -> some View {
-        HStack(spacing: 5) {
+        HStack(alignment: .firstTextBaseline, spacing: 5) {
             Image(systemName: "person.fill.checkmark")
                 .font(.caption2.weight(.semibold))
                 .accessibilityHidden(true)
             Text(personalWorkText(shift))
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .font(.footnote.weight(.semibold))
         .foregroundStyle(Color.statusText(.blue))

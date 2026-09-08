@@ -321,7 +321,6 @@ struct EventDetailView: View {
     @State private var isDiscarding = false
     @State private var actionError: String?
     @State private var actionErrorTitle = "Couldn't update event"
-    @State private var actionRetry: (() -> Void)?
     @State private var undoCoordinator = ScheduleWorkingCopyUndoCoordinator()
     @State private var seededSystemUndo = false
 
@@ -376,18 +375,6 @@ struct EventDetailView: View {
         Binding(
             get: { confirmation != nil },
             set: { if !$0 { confirmation = nil } }
-        )
-    }
-
-    private var actionErrorPresentedBinding: Binding<Bool> {
-        Binding(
-            get: { actionError != nil },
-            set: {
-                if !$0 {
-                    actionError = nil
-                    actionRetry = nil
-                }
-            }
         )
     }
 
@@ -479,8 +466,8 @@ struct EventDetailView: View {
             // One dialog for every confirmable action. This was five separate
             // `confirmationDialog`s, each bound through a hand-rolled
             // `Binding(get:set:)` against its own `@State` target, each repeating
-            // the same nil-out-on-dismiss dance. The action-error alert below stays
-            // separate — it reports a failure rather than confirming an intent.
+            // the same nil-out-on-dismiss dance. Failures stay in the screen
+            // below without requesting another modal presentation.
             .confirmationDialog(
                 confirmation?.title ?? "",
                 isPresented: confirmationPresentedBinding,
@@ -495,13 +482,19 @@ struct EventDetailView: View {
 
     private var eventErrorView: some View {
         eventConfirmedView
-            .alert(
-                actionErrorTitle,
-                isPresented: actionErrorPresentedBinding
-            ) {
-                actionErrorActions
-            } message: {
-                Text(actionError ?? "")
+            .safeAreaInset(edge: .top) {
+                if let actionError {
+                    ActionErrorBanner(
+                        title: actionErrorTitle,
+                        message: actionError,
+                        actionLabel: "Refresh",
+                        action: {
+                            self.actionError = nil
+                            Task { await vm.load(forceRefresh: true) }
+                        },
+                        onDismiss: { self.actionError = nil }
+                    )
+                }
             }
     }
 
@@ -518,14 +511,6 @@ struct EventDetailView: View {
         if let message = message(for: pending) {
             Text(message)
         }
-    }
-
-    @ViewBuilder
-    private var actionErrorActions: some View {
-        if let retry = actionRetry {
-            Button("Retry") { retry() }
-        }
-        Button("Cancel", role: .cancel) {}
     }
 
     var body: some View {
@@ -681,12 +666,10 @@ struct EventDetailView: View {
 
     private func presentActionError(
         title: String,
-        error: Error,
-        retry: @escaping () async -> Void
+        error: Error
     ) {
         actionErrorTitle = title
         actionError = error.localizedDescription
-        actionRetry = { Task { await retry() } }
         Haptics.error()
     }
 
@@ -697,9 +680,7 @@ struct EventDetailView: View {
             Haptics.success()
             await vm.load()
         } catch {
-            presentActionError(title: "Couldn't remove trade post", error: error) {
-                await removeTradeFromBoard(assignment)
-            }
+            presentActionError(title: "Couldn't remove trade post", error: error)
         }
     }
 
@@ -709,9 +690,7 @@ struct EventDetailView: View {
             Haptics.success()
             await vm.load()
         } catch {
-            presentActionError(title: "Couldn't claim shift", error: error) {
-                await claimShift(shift)
-            }
+            presentActionError(title: "Couldn't claim shift", error: error)
         }
     }
 
@@ -729,9 +708,7 @@ struct EventDetailView: View {
             Haptics.success()
             acceptWorkingScheduleEditor(editor)
         } catch {
-            presentActionError(title: "Couldn't remove assignment", error: error) {
-                await unassign(assignment)
-            }
+            presentActionError(title: "Couldn't remove assignment", error: error)
         }
     }
 
@@ -741,9 +718,7 @@ struct EventDetailView: View {
             Haptics.success()
             await vm.load()
         } catch {
-            presentActionError(title: "Couldn't approve request", error: error) {
-                await approveRequest(assignment)
-            }
+            presentActionError(title: "Couldn't approve request", error: error)
         }
     }
 
@@ -753,9 +728,7 @@ struct EventDetailView: View {
             Haptics.success()
             await vm.load()
         } catch {
-            presentActionError(title: "Couldn't decline request", error: error) {
-                await declineRequest(assignment)
-            }
+            presentActionError(title: "Couldn't decline request", error: error)
         }
     }
 
@@ -770,9 +743,7 @@ struct EventDetailView: View {
             Haptics.success()
             acceptWorkingScheduleEditor(editor)
         } catch {
-            presentActionError(title: "Couldn't delete shift", error: error) {
-                await deleteShift(shift)
-            }
+            presentActionError(title: "Couldn't delete shift", error: error)
         }
     }
 
@@ -827,9 +798,7 @@ struct EventDetailView: View {
             Haptics.success()
             acceptWorkingScheduleEditor(editor)
         } catch {
-            presentActionError(title: "Couldn't duplicate shift", error: error) {
-                await duplicateShift(shift)
-            }
+            presentActionError(title: "Couldn't duplicate shift", error: error)
         }
     }
 
@@ -847,9 +816,7 @@ struct EventDetailView: View {
             Haptics.success()
             acceptWorkingScheduleEditor(editor)
         } catch {
-            presentActionError(title: "Couldn't revert schedule changes", error: error) {
-                await self.discardWorkingSchedule()
-            }
+            presentActionError(title: "Couldn't revert schedule changes", error: error)
         }
     }
 
@@ -1021,6 +988,7 @@ struct EventDetailView: View {
             } label: {
                 Label("Add Shift", systemImage: "plus")
             }
+            .tint(Color.primary)
             .accessibilityLabel("Add shift")
         }
     }
@@ -1066,6 +1034,7 @@ struct EventDetailView: View {
         } label: {
             Label("More", systemImage: "ellipsis.circle")
         }
+        .tint(Color.primary)
         .accessibilityLabel("More event actions")
     }
 
@@ -1342,17 +1311,29 @@ struct EventDetailView: View {
     @ViewBuilder
     private var readinessLine: some View {
         if !vm.isLoading, !eventIsCancelled {
-            HStack(spacing: 8) {
-                if let coverage = vm.shiftGroup?.coverage, coverage.total > 0 {
-                    CoverageChip(coverage: coverage, showsLabel: true)
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) {
+                    readinessContent
                 }
-                Text(crewReadinessSummary(vm.shiftGroup?.coverage))
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                .fixedSize(horizontal: true, vertical: false)
+                VStack(alignment: .leading, spacing: 4) {
+                    readinessContent
+                }
             }
             .padding(.top, 2)
             .accessibilityElement(children: .combine)
         }
+    }
+
+    @ViewBuilder
+    private var readinessContent: some View {
+        if let coverage = vm.shiftGroup?.coverage, coverage.total > 0 {
+            CoverageChip(coverage: coverage, showsLabel: true)
+        }
+        Text(crewReadinessSummary(vm.shiftGroup?.coverage))
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     private var eventRailColor: Color {
@@ -1434,20 +1415,14 @@ struct EventDetailView: View {
                 }
 
                 Text(scheduleEventDisplayTitle(event))
-                    .font(.gothamBlack(size: 26))
+                    .font(.gothamBold(size: 24))
                     .foregroundStyle(.primary)
-                    .lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)
 
                 VStack(alignment: .leading, spacing: 6) {
                     Label {
-                        HStack(spacing: 6) {
-                            Text(eventDateText)
-                            if let countdown = eventCountdownText {
-                                Text("·").foregroundStyle(.tertiary)
-                                Text(countdown).foregroundStyle(.secondary)
-                            }
-                        }
+                        Text(eventDateText + (eventCountdownText.map { " · " + $0 } ?? ""))
+                            .fixedSize(horizontal: false, vertical: true)
                     } icon: {
                         Image(systemName: event.isMultiDay ? "calendar.day.timeline.left" : "calendar")
                     }
@@ -1466,6 +1441,7 @@ struct EventDetailView: View {
                         Label(eventVenueName, systemImage: "mappin.and.ellipse")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
 
                     readinessLine
@@ -1683,9 +1659,7 @@ struct EventDetailView: View {
             vm.shiftGroup = try await APIClient.shared.createShiftGroup(eventId: event.id)
             Haptics.success()
         } catch {
-            presentActionError(title: "Couldn't set up crew", error: error) {
-                await createShiftGroup()
-            }
+            presentActionError(title: "Couldn't set up crew", error: error)
         }
     }
 
@@ -2131,11 +2105,13 @@ struct ShiftRow: View {
                 }
             }
         } label: {
-            Image(systemName: "ellipsis.circle")
-                .font(.title3)
+            Image(systemName: "ellipsis")
+                .font(.body.weight(.semibold))
+                .foregroundStyle(.secondary)
                 .frame(minWidth: 44, minHeight: 44)
                 .contentShape(Circle())
         }
+        .tint(Color.secondary)
         .accessibilityLabel("Actions for \(workerTypeLabel) shift")
         .accessibilityHint("Shows shift, trade board, and removal actions")
     }
@@ -2300,13 +2276,17 @@ struct ShiftRow: View {
         HStack(alignment: .top, spacing: 8) {
             UserAvatarView(name: assignment.user.name, avatarUrl: assignment.user.avatarUrl, size: 28)
             VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 4) {
+                let nameLayout = dynamicTypeSize.isAccessibilitySize
+                    ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4))
+                    : AnyLayout(HStackLayout(spacing: 4))
+                nameLayout {
                     // Everyone reads at full strength — secondary text made
                     // the rest of the crew look disabled. The "You" chip
                     // already distinguishes the signed-in user.
                     Text(assignment.user.name)
                         .font(.subheadline)
                         .foregroundStyle(.primary)
+                        .fixedSize(horizontal: false, vertical: true)
                     if isMe {
                         Text("You")
                             .font(.caption2.weight(.semibold))
@@ -2446,14 +2426,20 @@ struct EditShiftTimesSheet: View {
                     contextCard
                     callWindowCard
 
-                    if let saveError {
-                        saveErrorCard(message: saveError)
-                    }
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
             }
             .background(Color(.systemGroupedBackground))
+            .safeAreaInset(edge: .top) {
+                if let saveError {
+                    ActionErrorBanner(
+                        title: scope == .allAssigned ? "Couldn't update call times" : "Couldn't save call window",
+                        message: saveError,
+                        onDismiss: { self.saveError = nil }
+                    )
+                }
+            }
             .navigationTitle(scope == .allAssigned ? "Set Student Call Time" : "Edit Call Window")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -2560,26 +2546,6 @@ struct EditShiftTimesSheet: View {
         }
         .padding(16)
         .background(Color.cardSurface, in: RoundedRectangle(cornerRadius: Brand.Radius.lg, style: .continuous))
-    }
-
-    private func saveErrorCard(message: String) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundStyle(Color.statusText(.red))
-            VStack(alignment: .leading, spacing: 4) {
-                Text(scope == .allAssigned ? "Couldn't update call times" : "Couldn't save call window")
-                    .font(.subheadline.weight(.semibold))
-                Text(message)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
-            Button("Retry") { Task { await save() } }
-                .font(.caption.weight(.semibold))
-                .disabled(isSaving || !hasValidWindow)
-        }
-        .padding(14)
-        .background(Color.statusBackground(.red), in: RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous))
     }
 
     private var workerClassLabel: String {

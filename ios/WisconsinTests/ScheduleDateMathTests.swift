@@ -238,11 +238,11 @@ struct ScheduleVenueNameTests {
     @Test func myShiftCarriesItsVenueIntoTheDetailEvent() {
         let shift = MyShift(
             id: "s1", area: "VIDEO", workerType: "ST",
-            startsAt: .now, endsAt: .now, status: "ASSIGNED",
+            startsAt: .now, endsAt: .now, callStartsAt: nil, callEndsAt: nil, status: "ASSIGNED",
             event: MyShiftEvent(
                 id: "e1", summary: "Women's Soccer vs BYU",
-                startsAt: .now, endsAt: .now,
-                sportCode: "WSOC", isHome: true, opponent: "BYU",
+                startsAt: .now, endsAt: .now, allDay: false,
+                sportCode: "WSOC", isHome: true, opponent: "BYU", site: nil,
                 locationId: "loc-1", locationName: "McClimon Track/Soccer Complex"
             ),
             gear: ShiftGear(status: "none", bookings: [])
@@ -255,11 +255,11 @@ struct ScheduleVenueNameTests {
     @Test func myShiftWithoutALocationIdHasNoVenueRatherThanACrash() {
         let shift = MyShift(
             id: "s2", area: "PHOTO", workerType: "ST",
-            startsAt: .now, endsAt: .now, status: "ASSIGNED",
+            startsAt: .now, endsAt: .now, callStartsAt: nil, callEndsAt: nil, status: "ASSIGNED",
             event: MyShiftEvent(
                 id: "e2", summary: "Practice",
-                startsAt: .now, endsAt: .now,
-                sportCode: nil, isHome: nil, opponent: nil,
+                startsAt: .now, endsAt: .now, allDay: false,
+                sportCode: nil, isHome: nil, opponent: nil, site: nil,
                 locationId: nil, locationName: nil
             ),
             gear: ShiftGear(status: "none", bookings: [])
