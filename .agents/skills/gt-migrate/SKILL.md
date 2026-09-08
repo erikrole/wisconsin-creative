@@ -1,66 +1,28 @@
 ---
 name: gt-migrate
-description: Canonical Wisconsin Creative Prisma and Neon migration workflow. Use when the user runs /gt-migrate, changes Prisma schema, designs a schema slice, generates migrations, investigates migration drift, works with Neon, or needs database deploy recovery. Supersedes prisma-migrate-safely.
+description: "Design, generate, diagnose, or deploy a Wisconsin Creative Prisma/Neon migration using the repository direct-connection wrappers. Distinguish offline schema work from isolated development and live mutation."
 ---
 
-# /gt-migrate
+# GT Migrate
 
-Use the repo's current Prisma and Neon path. Do not fall back to generic Prisma advice or raw Prisma status assumptions.
+Use [the repository runbook](../../../docs/PRISMA_NEON_RUNBOOK.md), current `package.json`, `prisma.config.ts`, and migration wrapper source. Identify the mode: schema design, generation, history diagnosis, or authorized deployment. Shared rules live in `AGENTS.md`.
 
-## Required Reads
+## Establish the contract
 
-1. `AGENTS.md`
-2. `docs/NORTH_STAR.md`
-3. `tasks/INDEX.md`
-4. `tasks/todo.md`
-5. Active plan or follow-up ledger for the slice
-6. `prisma/schema.prisma` end-to-end
-7. `prisma.config.ts` when present
-8. `package.json` scripts
-9. `docs/PRISMA_NEON_RUNBOOK.md` when present
-10. Relevant `docs/AREA_*.md` and `docs/BRIEF_*.md`
-11. `docs/DECISIONS.md`
-12. `docs/GAPS_AND_RISKS.md`
-13. Existing migrations under `prisma/migrations`
-14. `scripts/prisma-migrate-deploy.mjs`
-15. `scripts/prisma-migrate-health.mjs`
+Before editing, read the schema in full and relevant owner contracts. Record touched models/enums, indexes, unique/exclusion constraints, mappings, nullability/defaults, cascade behavior, and affected callers. Inspect relevant migration history; do not require reading every historical SQL file.
 
-## Workflow
+`DATABASE_URL` is pooled runtime access. DDL and live health require the supported direct resolver (`DIRECT_URL`, then `DATABASE_URL_UNPOOLED`). Never use a pooled URL or `[SENSITIVE]` placeholder as a workaround, print credentials, or downgrade sensitive variables.
 
-1. Confirm whether this is schema design, migration generation, deploy recovery, or drift diagnosis.
-2. For schema work, complete the pre-implementation audit before editing: list touched models/enums, field names, indexes, cascade rules, decisions, gaps, and the owning AREA/BRIEF contract.
-3. Write or update the active task plan before implementation. Keep schema/migration, API/service, UI/iOS, tests, docs, and deploy verification as independently testable slices.
-4. Apply one coherent schema edit. Confirm cascade rules, `@map`, indexes, nullability, defaults, and `onDelete` policies match sibling models.
-5. Generate migration with the repo's current supported path. If migration generation fails, stop and report instead of retrying with a different name.
-6. Never edit an already-applied migration SQL file.
-7. Use the wrapper-backed deploy and health scripts for Neon truth.
-8. Avoid long-running data backfills inside migration deploy. Use a separate bounded script when data work can exceed Vercel function limits.
-9. Update area docs, gaps, codemaps, and task ledgers in the same slice when behavior ships.
+## Choose safe commands
 
-## Commands
+- Schema-only: inspect current config, then `npx prisma format`, `npx prisma validate`, and client generation as needed. Read the complete resulting diff.
+- Generation: `db:migrate:new` currently invokes `prisma migrate dev`, which can change a database and use a shadow database. Use an identified isolated development target. `db:migrate:raw` uses `--create-only` but still requires safe database/shadow configuration; it is not an offline command. Never accept a reset of shared data.
+- Local checks: `npm run db:migrate:check` and the relevant schema/migration-pair guard after reviewing its base-ref behavior.
+- Live history: `npm run db:migrate:health`/`status` via repository wrappers. Missing direct access means live history is unverified, not clean.
+- Deployment: `npm run db:migrate:deploy` only for the authorized target. `npm run build` also deploys migrations; `build:app` is compile-only with its own dev-server guard.
 
-- Format schema: `npx prisma format`
-- Validate schema: `npx prisma validate`
-- Generate local migration: `npm run db:migrate:new -- --name <feature>_<short_change>` or the repo-supported equivalent confirmed from `package.json`
-- Check migration folder prefixes: `npm run db:migrate:check`
-- Check live migration health: `npm run db:migrate:health`
-- Deploy migrations: `npm run db:migrate:deploy` when live migration mutation is explicitly in scope and approved
-- Regenerate codemaps when source/schema/docs maps changed: `npm run codemap`
-- Verify docs/codemaps: `npm run verify:docs`
-- App compile build: `npm run build:app`
-- Full deploy-shaped build: `npm run build` when migration deploy preflight is safe and approved
+Never edit applied migration SQL or manually rewrite `_prisma_migrations` to force success. Use the reviewed wrapper fallback for the known blank schema-engine error. Reconcile pending/failed/DB-only history before another attempt; do not retry under a different migration name.
 
-## Stop Conditions
+Keep long backfills separate and bounded. The empty-database bootstrap is only for a verified empty isolated environment, never production or a repair shortcut.
 
-- Prisma reports a blank schema-engine error and the wrapper path has not been checked.
-- Live Neon history disagrees with local migration folders.
-- A migration would do long-running data backfill inside Vercel deploy time limits.
-- Two migration attempts fail.
-- Approval or network policy blocks a command that can mutate the shared database.
-- Schema shape contradicts the active plan, decision record, or AREA/BRIEF contract.
-
-## Closeout
-
-- Record which migration was generated or deployed, whether live health was checked, and any pending deploy blocker.
-- Update the active task ledger with shipped, verified, deferred, blocked, proof artifacts, and next-slice/stop notes.
-- Use `gt-ship` for staging, commit, and push unless the user explicitly asked this skill to complete shipping.
+Finish independent source/SQL review when live access is blocked. Report generated, locally checked, applied, live-health verified, and deployed states separately, with the remaining target-specific gate. Existing authorization is reusable; ask only for missing authority or an unresolved destructive change.

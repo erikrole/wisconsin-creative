@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "aliases": {
+    "audit-page-web": "gt-audit-web",
+    "audit-page-ios": "gt-audit-ios",
+    "page-ownership-pass": "gt-page",
+    "prisma-migrate-safely": "gt-migrate",
+    "make-interfaces-feel-better": "gt-page"
+  }
+}

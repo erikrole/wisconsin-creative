@@ -1,37 +1,23 @@
 ---
 name: gt-api-hardening
-description: Canonical Wisconsin Creative API hardening workflow. Use when the user runs /gt-api-hardening or asks to audit or improve route authentication, authorization, validation, transactions, concurrency, audit entries, query efficiency, public or kiosk boundaries, cron behavior, exports, bulk work, or Vercel runtime safety.
+description: "Audit or fix a Wisconsin Creative API route family for authorization, validation, concurrency, auditability, bounded work, and client recovery. Audit-only requests stay read-only."
 ---
 
 # GT API Hardening
 
-Harden one route family from current contracts and source. Do not apply generic security prescriptions without proving they fit the route.
+Work on the requested route family and actual actor boundary. `AGENTS.md` owns shared rules. Inspect route wrappers, services, schema, callers, and focused tests; read only relevant owner decisions and risks.
 
-## Orient
+Record actor (user, kiosk device, cron, intentional public), permissions, input/response envelopes, mutation effects, concurrent invariants, and runtime constraints.
 
-1. Read `AGENTS.md`, the owning area and brief docs, decisions, gaps, active ledger, and relevant lessons.
-2. Read target routes, wrappers, services, schema models, tests, callers, and client response handling completely.
-3. Inspect `git status --short` and preserve unrelated work.
-4. Record the route inventory, actor types, trust boundary, mutation effects, response envelopes, and runtime constraints.
+Check applicable contracts:
+- Correct authentication wrapper and server-side permission for each protected action.
+- Schema-boundary normalization/validation and safe non-JSON error handling.
+- Atomic writes, required transaction isolation, uniqueness constraints, friendly conflicts, and useful before/after audit evidence.
+- Stale/versioned writes and idempotency where retries are possible; callers retain input and reconcile uncertain outcomes.
+- Resource bounds for public, bulk, upload, export, and external calls. Rate limits need a demonstrated threat and supported infrastructure.
+- Query count/payload size and bounded pagination. Parallelize only independent reads; preserve ordering, atomicity, rate limits, and partial-result contracts.
+- Actual native/web decoding and backward-compatible rollout.
 
-## Check
+Audit-only: return evidenced findings, paths/lines, severity, confidence, and a bounded fix order. Audit-and-fix: implement the authorized fixes without another approval gate; do not restrict work to P0/P1 if the user selected other findings.
 
-- Authentication wrapper matches the actor: user, kiosk device, cron, or intentional public caller.
-- Every protected mutation enforces server-side permission and writes a useful audit entry when product state changes.
-- Params, query, body, and external data are normalized and validated at the correct boundary.
-- Atomic multi-write work uses a transaction; logically concurrent invariants use the isolation or conflict strategy required by the contract.
-- Database constraints own uniqueness and conflicts return actionable responses.
-- Public, export, upload, and bulk routes have evidence-based abuse and resource bounds. Add rate limiting only where the threat and infrastructure support it.
-- Query shape avoids proven N+1 or unbounded work. Use parallel or partial-result behavior only when the product contract allows partial success.
-- Error handling preserves status, never assumes JSON, and does not leak sensitive internals.
-- Client and native models match the actual response envelope and rollout order.
-
-## Execute
-
-Use `gt-plan` for a non-trivial route family. Implement P0/P1 fixes as independently testable service, route, client, test, and documentation slices. Stop on contract, schema, live-data, or permission mismatches instead of improvising.
-
-## Verify
-
-Select proof from the `AGENTS.md` verification matrix. Add focused route/service tests for authorization, validation, concurrency, audit behavior, and failure responses. Use deploy-shaped proof only when deployment behavior is in scope and safe.
-
-Use `area-doc-sync` when behavior ships. Do not commit, push, or open a PR unless explicitly requested.
+Use focused negative authorization, concurrency, validation, audit, and failure-response tests where the changed contract warrants them. Apply the repository proof matrix; full deploy-shaped builds only in a controlled migration-safe environment. Report local versus runtime/deployed evidence accurately.

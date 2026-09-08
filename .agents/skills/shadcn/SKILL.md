@@ -29,7 +29,7 @@ Use the project's package runner and official shadcn CLI only when adding or upd
 
 1. Inspect `npx shadcn@latest info` and official component docs when network access is available.
 2. Preview updates with `--dry-run` and `--diff`.
-3. Never overwrite a locally modified primitive without explicit approval.
+3. Review the diff and preserve unrelated local modifications. Existing authorization to change the primitive covers the scoped edit; ask only if an unresolved ownership conflict remains.
 4. Read every generated or changed file. Reconcile imports, icon library, variants, tokens, accessibility, and local product conventions.
 5. Do not initialize a new preset or switch component bases without explicit product and migration approval.
 

@@ -1,49 +1,29 @@
 ---
 name: gt-page
-description: Canonical Wisconsin Creative web page execution workflow. Use when the user runs /gt-page or asks to take a web route or tightly scoped page surface end to end through UX, UI, consistency, hardening, implementation, verification, and documentation. Use gt-audit-web instead for findings only.
+description: "Implement or improve a Wisconsin Creative web route, workflow, or focused UI polish. Use for requested changes; use gt-audit-web for findings only and gt-incident for an actual record problem."
 ---
 
 # GT Page
 
-Own one web route or one tightly scoped route surface through verified implementation. Keep the work operational, evidence-driven, and consistent with the best shipped peer pages.
+Own the requested web outcome. Use `AGENTS.md` for shared rules and verification. Inspect the route and direct consumers, its owner area/brief, and relevant design-language sections; read files fully before editing.
 
-## Orient
+## Choose scope
 
-1. Read `AGENTS.md`, `docs/NORTH_STAR.md`, and `docs/DESIGN_LANGUAGE.md`.
-2. Read the owning `docs/AREA_*.md`, relevant `docs/BRIEF_*.md`, decisions, gaps, active task ledger, and prior audits.
-3. Read the target page and affected siblings completely. Trace referenced components, hooks, API routes, services, tests, and Prisma models.
-4. Inspect `git status --short`. Preserve unrelated work.
-5. Compare at least two shipped pages with the same workflow shape. Record the patterns worth reusing and any intentional difference.
+- **Focused fix/polish:** preserve the route's purpose and behavior. Reuse its current components/tokens; compare a relevant peer only when the pattern is unclear. Do not turn spacing/copy work into a full page audit.
+- **Workflow/page pass:** map the role-specific action, data owner, lifecycle, failure recovery, and directly affected siblings. Use a bounded plan and existing owner ledger when substantial.
 
-## Own the surface
+## Implement
 
-- Structure: route hierarchy, primary action, command bar, tabs, filters, scanability.
-- UX: role-specific golden paths; loading, empty, filtered-empty, error, success, stale, slow-network, and expired-session states.
-- UI: installed shadcn primitives, Wisconsin Creative operational components, 40px targets, restrained motion, wrapping, and semantic status colors.
-- Consistency: reuse local patterns before adding abstractions. Record propagation candidates when this page establishes a better shared pattern.
-- Hardening: server-side authorization, schema-boundary validation, concurrency, auditability, bounded bulk/export work, and useful failure recovery.
+Prioritize trustworthy status/actions, useful hierarchy, recovery, accessibility, then visual finish. Reuse installed shadcn primitives and operational components (`PageHeader`, toolbar, status rail, feedback, `EmptyState`) when they own the behavior. Preserve semantic status colors, visible focus, product hit-target standards, and restrained functional motion.
 
-## Execute
+Check loading, empty versus filtered-empty, failure, stale data, pending actions, success, and expired-session paths relevant to the change. Preserve form state and reconcile uncertain mutation responses. Trace API envelopes, permissions, and concurrency when the behavior depends on them; use `gt-api-hardening` only for a distinct hardening requirement.
 
-1. Use `gt-plan` for a non-trivial pass. Update the existing owner plan when one already exists.
-2. Implement the smallest coherent slice that does not leave a broken midpoint.
-3. Keep schema/migration, API/service, UI wiring, tests, and docs independently reviewable when the change is substantial.
-4. Update the task review after each slice with shipped, verified, deferred, blocked, proof, and next-slice/stop notes.
-5. Use `area-doc-sync` before closeout when shipped behavior changed.
+For polish details read [references/polish.md](references/polish.md). Shared changes require an explicit consumer/propagation scope. Fix only evidenced problems within the request.
 
-## Verify
+## Verify and close
 
-Select the minimum proof from the `AGENTS.md` verification matrix. Add:
+Run the affected `AGENTS.md` gates. Capture a trustworthy baseline before editing when possible and use `gt-ui-review` for the required local review page. Authenticated browser checks cover the changed action, console/network, keyboard/focus, and relevant desktop/tablet width; phone-width web is smoke coverage when the actual phone workflow is native.
 
-- Focused route/service tests for changed behavior.
-- Authenticated browser proof for visible work, including console, network, the changed interaction, and relevant desktop/tablet widths.
-- A recorded blocker when runtime proof is unavailable. Do not substitute build success for browser behavior.
+Inspect the guard in `scripts/guard-next-build.mjs` before a build; coordinate stopping the relevant dev server rather than killing shared processes. Use the existing authenticated preview path when needed; do not print credentials.
 
-## Stop
-
-- Current source, API response, schema, permissions, or live data contradicts the plan.
-- Peer patterns disagree and accepted product direction does not resolve ownership.
-- The selected slice requires behavior outside its approved scope.
-- The same approach or verification failure occurs twice without new evidence.
-
-Close with the user-facing outcome, exact proof, remaining risk, and the next bounded slice or stop recommendation. Do not commit, push, or open a PR unless explicitly requested.
+Report the outcome, changed scope, actual proof and blockers. Reconcile owner documentation with `area-doc-sync` only when affected. Do not call local source work shipped to production.

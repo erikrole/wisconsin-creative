@@ -92,7 +92,9 @@
     "ios:xcode:verify": "bash scripts/ios-xcode-verify.sh",
     "ios:xcode:verify:kiosk": "IOS_SCHEME=WisconsinKiosk bash scripts/ios-xcode-verify.sh",
     "audit:ios": "bash scripts/ios-audit-inventory.sh",
-    "audit:ios:gaps": "bash scripts/ios-audit-inventory.sh --gaps"
+    "audit:ios:gaps": "bash scripts/ios-audit-inventory.sh --gaps",
+    "verify:skills": "python3 -B scripts/verify-skills.py",
+    "eval:skills": "python3 -B scripts/evaluate-skills.py"
   },
   "dependencies": {
     "@fontsource/barlow": "^5.2.8",

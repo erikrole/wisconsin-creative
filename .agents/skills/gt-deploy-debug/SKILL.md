@@ -27,7 +27,7 @@ Use wrapper-backed migration health before diagnosing database drift. Use `build
 
 ## Stop
 
-- Required live access or logs are unavailable.
+- Required live access or logs are unavailable: stop the dependent live operation, state the missing evidence, and continue independent source diagnosis.
 - A fix would require destructive or unapproved shared-database changes.
 - Live migration history disagrees with local folders.
 - The same repair attempt fails twice without new evidence.
@@ -36,4 +36,4 @@ Use wrapper-backed migration health before diagnosing database drift. Use `build
 
 Select final proof from the `AGENTS.md` verification matrix. Include deployment logs or redeploy proof when available. Update docs and gaps only when behavior or operating guidance changed. Report root cause, fix, proof, and any remaining external blocker.
 
-Do not redeploy, mutate production data, commit, push, or open a PR unless explicitly requested.
+Redeployment, production repair, and source-control actions follow existing authorization. Prepare the supported fix first; ask only when a required action remains outside that scope.

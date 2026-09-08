@@ -1,11 +1,11 @@
 ---
 name: improve
-description: Wisconsin Creative repository-wide read-only advisory workflow. Use when the user invokes /improve or asks for a broad codebase audit, cleanup opportunities, technical debt, security, performance, test coverage, developer experience, roadmap options, or prioritized implementation candidates. Diagnose and prioritize first; use gt-plan for selected implementation work.
+description: Wisconsin Creative repository-wide read-only advisory workflow. Use when the user invokes /improve or asks for a broad codebase audit, cleanup opportunities, technical debt, security, performance, test coverage, developer experience, roadmap options, or prioritized implementation candidates. Diagnose first; continue selected or in-scope fixes when the same request authorizes them.
 ---
 
 # Improve Wisconsin Creative
 
-Survey the current repository as a senior advisor. Produce a short, evidence-backed priority list. Do not modify source during the audit.
+Survey the current repository as a senior advisor. Produce a short, evidence-backed priority list. Keep evidence gathering read-only; continue implementation when the same request asks to clean up, fix, or improve the evidenced issues.
 
 ## Establish current truth
 
@@ -42,9 +42,9 @@ Reject speculative, duplicate, historical, or low-leverage findings. Present pro
 - For planning only, route selected findings through `gt-plan` and the current task-root contract.
 - Update an existing active ledger before creating a new plan.
 - Create a batch under `plans/` only when the user explicitly requests an improve-plan batch; register its active status and routing in `tasks/INDEX.md` and `tasks/todo.md`.
-- Execute only when the user explicitly asks to implement or execute selected findings.
+- Execute when the current request already asks to implement, fix, or clean up the in-scope findings; diagnosis is not an extra permission checkpoint.
 - Use the canonical domain skill for implementation: `gt-page`, `gt-api-hardening`, `gt-ios-slice`, `gt-migrate`, or another current owner.
-- Do not create branches, worktrees, subagents, commits, issues, PRs, pushes, or merges unless the user explicitly requests that action.
+- Use reversible isolation when needed to preserve user work. Delegation follows active agent instructions. Commits, issues, PRs, pushes, and merges require existing user authorization.
 
 ## Explicit variants
 

@@ -1,36 +1,24 @@
 ---
 name: gt-ship
-description: Canonical Wisconsin Creative closeout and shipping workflow. Use when the user runs /gt-ship or explicitly asks to verify and close out a completed slice, stage and commit it, push it, prepare a PR, or perform another named shipping action. Never sweep unrelated dirty work or infer permission for later shipping steps.
+description: "Verify and perform the explicitly requested Wisconsin Creative commit, push, PR, deployment, or release for a bounded slice. Preserve unrelated dirty work and report each completed publication step."
 ---
 
 # GT Ship
 
-Close out only the authorized slice. Treat stage, commit, push, PR, deployment, upload, and release as separate permissions unless the user explicitly groups them.
+Inspect the request, current branch/status, in-scope diff, and owner ledger. Reuse the authorization already supplied for a named shipping workflow. A request to verify or commit does not automatically authorize push, deployment, or release; do not ask separately for steps already included.
 
-## Establish scope
+## Prepare
 
-1. Read `AGENTS.md`, `git status --short`, `git diff --name-only HEAD`, the active ledger, relevant area docs, and gaps.
-2. Identify in-scope tracked and untracked files from the user request and ledger.
-3. Inspect the final diff and leave unrelated files unstaged.
-4. Use `area-doc-sync` when shipped behavior or accepted contracts changed.
+Identify intentional tracked and untracked paths; never sweep unrelated dirty work. Review the final diff and affected contracts. Use `area-doc-sync` only for relevant documentation. Verify the applicable `AGENTS.md` matrix, including runtime/device/migration evidence when required. A blocked external gate must remain visible; unrelated failures require evidence before exclusion.
 
-## Verify
+## Perform the authorized action
 
-Select the complete minimum proof from the `AGENTS.md` verification matrix for every affected platform and behavior. Add:
+- Verify-only: report readiness; do not stage files.
+- Commit: stage explicit paths, inspect staged content and staged file list, and create a specific conventional outcome-oriented commit. Preserve unrelated staged changes; use an isolated approach if scope cannot be separated safely.
+- Push/PR: confirm branch, remote, target, and exact commit; push or update the requested PR, then read back its state. Account for automatic deployment associated with the target.
+- Deployment: identify environment and source SHA, use safe migration preflight where relevant, and verify the affected deployed surface. A pushed commit is not deployment proof.
+- Release: inspect `scripts/release.sh` before invocation. It updates package versions, commits, creates a CalVer tag, and pushes branch/tag; it is not a compile/test-only command. Preview with its dry-run on a suitable clean checkout and run the mutating path only when release is authorized. A GitHub release is distinct from App Store/TestFlight distribution.
 
-- Focused tests for the changed contract.
-- Authenticated browser proof for visible web workflows, or the recorded blocker.
-- Relevant iOS project, drift, source-contract, build, and runtime proof for native work.
-- Controlled migration health and deploy-shaped proof for schema or deployment work.
+Never stash or delete unrelated work to satisfy a clean-tree requirement. Do not make a standalone generated-artifact or tsbuildinfo commit.
 
-Do not treat an existing failure as harmless until evidence shows it is unrelated to the slice.
-
-## Ship only what was requested
-
-1. Stage only in-scope files, including intentional untracked files.
-2. Recheck the staged diff and staged file list.
-3. Commit only when requested, using `feat:`, `fix:`, or `chore:` and a user-facing outcome.
-4. Push, open or update a PR, deploy, upload, or release only when each action is explicitly requested or already part of the named workflow.
-5. Record resulting commit, branch, PR, deployment, or release evidence in the active ledger when created.
-
-Never create a standalone generated-artifact or tsbuildinfo commit. Close with shipped scope, proof, external blockers, and exact remaining actions.
+Report scope, tests/runtime proof, commit, remote SHA/PR, deployment, release/distribution, and unresolved gates only where applicable. Keep local completion distinct from shipped production state.

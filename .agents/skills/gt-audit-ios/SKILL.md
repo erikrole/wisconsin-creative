@@ -1,15 +1,15 @@
 ---
 name: gt-audit-ios
-description: Canonical read-only Wisconsin Creative iOS readiness audit. Use when the user runs /gt-audit-ios, asks to audit a Wisconsin SwiftUI screen or native workflow, asks whether an iOS surface is ready, or wants prioritized native findings before deciding what to fix. Do not implement during the audit.
+description: Canonical read-only Wisconsin Creative iOS readiness audit. Use when the user runs /gt-audit-ios, asks to audit a Wisconsin SwiftUI screen or native workflow, asks whether an iOS surface is ready, or wants prioritized native findings before deciding what to fix. Findings-only unless the same request also asks for fixes.
 ---
 
 # GT Audit iOS
 
-Audit one native screen or tightly related workflow from current source, API contracts, and simulator or build evidence. Do not fix findings during the audit.
+Audit one native screen or tightly related workflow from current source, API contracts, and simulator or build evidence. Keep diagnosis read-only. If the same request asks to fix or implement findings, finish diagnosis and continue into the implementation workflow without requesting the same authorization again.
 
 ## Orient
 
-1. Read `AGENTS.md`, `docs/NORTH_STAR.md`, `docs/AREA_MOBILE.md`, the feature area doc, decisions, gaps, active ledger, and prior audit.
+1. Use the already-read `AGENTS.md` and `docs/NORTH_STAR.md`; inspect relevant sections of `docs/AREA_MOBILE.md`, the feature area doc, decisions, gaps, active ledger, and prior audit.
 2. Read the target view completely. Trace dependent views, stores, models, API clients, services, app lifecycle, project membership, source-contract tests, and the server routes that provide its data.
 3. Inspect `git status --short` and distinguish shipped source from unrelated or active dirty work.
 4. Confirm the affected target and deployment baseline from the current Xcode project and mobile area doc. Do not rely on historical project-memory files.
@@ -47,4 +47,4 @@ Create or update `tasks/audit-<screen>-ios.md` when the user requests a durable 
 
 Lead chat with the verdict and record path, then list findings by severity. End with a recommended bounded fix order. Ask for fix, defer, or skip decisions only when the user requested diagnosis rather than implementation.
 
-Do not commit, push, open a PR, or implement findings unless the user separately authorizes that work.
+Implementation and shipping follow the user’s existing authorization. For audit-only requests, do not modify product code or publish changes.

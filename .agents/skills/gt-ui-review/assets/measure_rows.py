@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 """Measure card/row heights in an iOS screenshot, for honest density claims.
 
-    python3 measure_rows.py before.png after.png [--width-pt 393] [--from-y 1150]
+    python3 measure_rows.py before.png after.png --width-pt ACTUAL_VIEWPORT_WIDTH [--from-y 0] [--ground 242,242,247]
 
 Classifies each pixel row by how much of the card's width is non-ground, which
 is robust where sampling a single column is not: one column hits text, chips,
 and rounded corners and returns noise.
 
-No PIL on these machines, so the PNG decoder is inline. Handles 8-bit
+Uses a dependency-free PNG decoder. Handles 8-bit
 non-interlaced RGB/RGBA, which is what simctl and XCTest produce.
 """
+import argparse
 import struct
 import sys
 import zlib
@@ -18,7 +19,10 @@ GROUND = (242, 242, 247)   # UIColor.systemGroupedBackground, light
 
 
 def read_png(path):
-    data = open(path, "rb").read()
+    with open(path, "rb") as stream:
+        data = stream.read()
+    if not data.startswith(b"\x89PNG\r\n\x1a\n"):
+        raise ValueError("expected PNG signature")
     pos, idat = 8, b""
     w = h = ct = None
     while pos < len(data):
@@ -27,21 +31,27 @@ def read_png(path):
         chunk = data[pos + 8:pos + 8 + ln]
         if typ == b"IHDR":
             w, h, bd, ct, _, _, il = struct.unpack(">IIBBBBB", chunk)
-            if bd != 8 or il != 0:
-                raise SystemExit("expected 8-bit non-interlaced PNG")
+            if bd != 8 or il != 0 or ct not in (2, 6):
+                raise ValueError("expected 8-bit non-interlaced RGB/RGBA PNG")
         elif typ == b"IDAT":
             idat += chunk
         elif typ == b"IEND":
             break
         pos += 12 + ln
+    if not w or not h or ct not in (2, 6):
+        raise ValueError("missing or unsupported PNG header")
     raw = zlib.decompress(idat)
     ch = {0: 1, 2: 3, 3: 1, 4: 2, 6: 4}[ct]
     stride = w * ch
+    if len(raw) != (stride + 1) * h:
+        raise ValueError("invalid PNG scanline length")
     out = bytearray(stride * h)
     prev = bytearray(stride)
     p = 0
     for y in range(h):
         f = raw[p]; p += 1
+        if f not in range(5):
+            raise ValueError("unsupported PNG filter")
         line = bytearray(raw[p:p + stride]); p += stride
         if f == 1:
             for i in range(ch, stride):
@@ -66,7 +76,9 @@ def read_png(path):
     return w, h, ch, bytes(out)
 
 
-def measure(path, width_pt, from_y):
+def measure(path, width_pt, from_y, ground=GROUND):
+    if width_pt <= 0 or from_y < 0:
+        raise ValueError("width must be positive and from-y non-negative")
     w, h, ch, px = read_png(path)
     stride = w * ch
     scale = w / width_pt
@@ -76,29 +88,38 @@ def measure(path, width_pt, from_y):
         n = 0
         for x in range(lo, hi, 6):
             i = y * stride + x * ch
-            if (abs(px[i] - GROUND[0]) > 3 or abs(px[i + 1] - GROUND[1]) > 3
-                    or abs(px[i + 2] - GROUND[2]) > 3):
+            if (abs(px[i] - ground[0]) > 3 or abs(px[i + 1] - ground[1]) > 3
+                    or abs(px[i + 2] - ground[2]) > 3):
                 n += 1
-        inside = n > (hi - lo) // 6 * 0.85
+        inside = n > len(range(lo, hi, 6)) * 0.85
         if inside and start is None:
             start = y
         elif not inside and start is not None:
-            if y - start > 60 and start > from_y:
+            if y - start > 60 and start >= from_y:
                 runs.append(round((y - start) / scale))
             start = None
+    if start is not None and h - start > 60 and start >= from_y:
+        runs.append(round((h - start) / scale))
     return runs
 
 
 def main():
-    args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    opts = {a.split("=")[0]: a.split("=")[1]
-            for a in sys.argv[1:] if a.startswith("--") and "=" in a}
-    if not args:
-        raise SystemExit(__doc__)
-    width_pt = float(opts.get("--width-pt", 393))
-    from_y = int(opts.get("--from-y", 1150))
-    for path in args:
-        runs = measure(path, width_pt, from_y)
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("images", nargs="+")
+    parser.add_argument("--width-pt", type=float, required=True)
+    parser.add_argument("--from-y", type=int, default=0)
+    parser.add_argument("--ground", default="242,242,247", help="background R,G,B")
+    args = parser.parse_args()
+    try:
+        ground = tuple(int(value) for value in args.ground.split(","))
+        if len(ground) != 3 or any(v < 0 or v > 255 for v in ground):
+            raise ValueError()
+        if args.width_pt <= 0 or args.from_y < 0:
+            raise ValueError()
+    except ValueError:
+        parser.error("use positive --width-pt, non-negative --from-y, and three RGB values from 0 to 255")
+    for path in args.images:
+        runs = measure(path, args.width_pt, args.from_y, ground)
         label = path.split("/")[-1]
         if runs:
             print(f"{label:28s} cards={len(runs):2d}  heights(pt)={runs}  "

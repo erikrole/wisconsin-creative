@@ -25,7 +25,7 @@ Use `rg` to prove consumers before deleting anything. Keep intentional parallel 
 
 ## Verify
 
-Select proof from the `AGENTS.md` verification matrix for every affected platform. Add focused tests or builds that prove removed symbols and retained behavior. Inspect the final diff for unrelated reversions.
+Select proof from the `AGENTS.md` verification matrix for every affected platform. Use existing focused tests and affected builds to prove retained behavior; add a regression test only when an uncovered behavioral risk warrants it. Inspect the final diff for unrelated reversions.
 
 Stop when ownership is ambiguous, cleanup would revert unrelated work, or the same cleanup approach fails twice. Report the conflict and the smallest safe reconciliation step.
 

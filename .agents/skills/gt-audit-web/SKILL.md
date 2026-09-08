@@ -1,16 +1,16 @@
 ---
 name: gt-audit-web
-description: Canonical read-only Wisconsin Creative web readiness audit. Use when the user runs /gt-audit-web, asks to audit a route or page, asks whether a web surface is ready to ship, or wants prioritized findings before deciding what to fix. Do not implement during the audit.
+description: Canonical read-only Wisconsin Creative web readiness audit. Use when the user runs /gt-audit-web, asks to audit a route or page, asks whether a web surface is ready to ship, or wants prioritized findings before deciding what to fix. Findings-only unless the same request also asks for fixes.
 ---
 
 # GT Audit Web
 
-Audit one route or tightly related route family from current source and runtime evidence. Do not fix findings during the audit.
+Audit one route or tightly related route family from current source and runtime evidence. Keep diagnosis read-only. If the same request asks to fix or implement findings, finish diagnosis and continue into the implementation workflow without requesting the same authorization again.
 
 ## Orient
 
-1. Read `AGENTS.md`, `docs/NORTH_STAR.md`, `docs/DESIGN_LANGUAGE.md`, the owning area and brief docs, decisions, gaps, active ledger, and prior audit.
-2. Read the target route and affected siblings completely. Trace every referenced component, hook, API route, service, test, and Prisma model needed to evaluate behavior.
+1. Use the already-read `AGENTS.md` and `docs/NORTH_STAR.md`; inspect relevant sections of `docs/DESIGN_LANGUAGE.md`, the owning area and brief docs, decisions, gaps, active ledger, and prior audit.
+2. Read the target route and trace direct consumers/dependencies needed to evaluate the requested workflow. Expand only when evidence points beyond that boundary.
 3. Inspect `git status --short` and distinguish shipped source from unrelated or active dirty work.
 4. Map routes to their real owner area. A route name does not need a same-named `AREA_*.md`; flag missing documentation only when no accepted owner exists.
 
@@ -25,7 +25,7 @@ Audit one route or tightly related route family from current source and runtime 
 
 ## Evidence and severity
 
-- P0: security boundary failure, data loss, broken required workflow, common crash/500, or no accepted product owner for a shipping surface.
+- P0: security boundary failure, data loss, broken required workflow, common crash/500.
 - P1: material trust, recovery, accessibility, or visible workflow defect that should be fixed before the stated release.
 - P2: worthwhile non-blocking improvement.
 
@@ -45,4 +45,4 @@ Create or update `tasks/audit-<route>-web.md` when the user requests a durable a
 
 Lead chat with the verdict and record path, then list findings by severity. End with a recommended bounded fix order. Ask for fix, defer, or skip decisions only when the user requested diagnosis rather than implementation.
 
-Do not commit, push, open a PR, or implement findings unless the user separately authorizes that work.
+Implementation and shipping follow the user’s existing authorization. For audit-only requests, do not modify product code or publish changes.

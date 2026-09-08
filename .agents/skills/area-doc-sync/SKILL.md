@@ -16,7 +16,7 @@ Make durable documentation match verified shipped reality.
 
 ## Reconcile
 
-- AREA docs: add a dated user-facing outcome and update acceptance state only when evidence proves it shipped.
+- AREA docs: record the dated outcome and its actual state (local, committed, deployed, runtime-verified). Advance acceptance only when the required evidence exists.
 - Gaps: resolve or add entries with the current state and date.
 - Decisions: record durable architectural or product choices, not routine implementation detail.
 - Ledgers: record shipped, verified, deferred, blocked, proof artifacts, and next-slice/stop notes.

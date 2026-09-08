@@ -2,43 +2,66 @@
 """Build a Wisconsin Creative UI review page from a spec JSON.
 
     python3 build_review_page.py spec.json out.html
-    python3 build_review_page.py --example        # print a complete spec
+    python3 build_review_page.py --example        # print a spec template
+    python3 build_review_page.py --record-capture image.png metadata.json evidence.json
 
-Images are resized and embedded as data URIs, so the page is self-contained and
-publishes as an Artifact without external requests.
+PNG images are preserved and embedded as data URIs, so the page is self-contained and
+opens locally without external requests. Only safe inline text formatting is accepted.
 """
 import base64
 import html
 import json
-import subprocess
 import sys
-import tempfile
+from html.parser import HTMLParser
 from pathlib import Path
 
 PAIR_WIDTH = 620
 WIDE_WIDTH = 900
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from capture_evidence import png_dimensions, record_capture, validate_pair
 
 
 def embed(path, width):
     src = Path(path).expanduser()
     if not src.is_file():
         raise SystemExit(f"image not found: {src}")
-    with tempfile.TemporaryDirectory() as tmp:
-        copy = Path(tmp) / src.name
-        copy.write_bytes(src.read_bytes())
-        subprocess.run(["sips", "-Z", str(width), str(copy)],
-                       capture_output=True, check=False)
-        data = copy.read_bytes()
+    png_dimensions(src)
+    # Preserve source pixels; CSS controls display size on every platform.
+    data = src.read_bytes()
     return "data:image/png;base64," + base64.b64encode(data).decode()
 
 
 def esc(text):
-    return html.escape(str(text), quote=False)
+    return html.escape(str(text), quote=True)
+
+
+class InlineText(HTMLParser):
+    """Keep formatting only; no attributes, links, scripts, or network requests."""
+    allowed = {"code", "strong", "em", "br"}
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.parts = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag in self.allowed:
+            self.parts.append(f"<{tag}>")
+        else:
+            self.parts.append(esc(self.get_starttag_text()))
+
+    def handle_endtag(self, tag):
+        self.parts.append(f"</{tag}>" if tag in self.allowed and tag != "br" else esc(f"</{tag}>"))
+
+    def handle_data(self, data):
+        self.parts.append(esc(data))
 
 
 def rich(text):
-    """Spec text may carry inline <code>/<strong>/<em>; leave those alone."""
-    return str(text)
+    parser = InlineText()
+    parser.feed(str(text))
+    parser.close()
+    return "".join(parser.parts)
 
 
 def stat_block(s):
@@ -52,6 +75,8 @@ def stat_block(s):
 
 
 def pair_block(p):
+    evidence = validate_pair(p)
+    evidence_html = esc(json.dumps(evidence, indent=2))
     wide = p.get("wide")
     width = WIDE_WIDTH if wide else PAIR_WIDTH
     return f"""
@@ -72,6 +97,7 @@ def pair_block(p):
             <figcaption>{rich(p.get('afterCap', ''))}</figcaption>
           </figure>
         </div>
+        <details><summary>Capture provenance and matching settings</summary><pre>{evidence_html}</pre></details>
       </section>"""
 
 
@@ -189,17 +215,15 @@ EXAMPLE = {
     "title": "Schedule Row Rework",
     "eyebrow": "iOS · Wisconsin Creative",
     "lede": "One sentence on who reads this screen and what it must answer.",
-    "stats": [
-        {"k": "Standard row", "v": "&minus;26%", "n": "84pt &rarr; 62pt, measured off the captures", "tone": "good"},
-        {"k": "Rows per screen", "v": "5 &rarr; 7", "n": "Same viewport, same fixture data"},
-    ],
+    "stats": [],  # Add measured results only, never sample statistics.
     "sections": [
         {"heading": "Side by side",
-         "note": "Same build, same fixture data, same scroll positions.",
+         "note": "Recorded source baseline; matched device, fixture data, and scroll positions.",
          "pairs": [
              {"title": "Top of list", "sub": "Today and Tomorrow.",
               "before": "before/top.png", "beforeCap": "What the reader had to do.",
-              "after": "after/top.png", "afterCap": "What they do now."},
+              "after": "after/top.png", "afterCap": "What they do now.",
+              "beforeEvidence": "before/top.capture.json", "afterEvidence": "after/top.capture.json"},
          ]},
     ],
     "changes": [
@@ -207,10 +231,7 @@ EXAMPLE = {
          "was": "Where it sat, and what that cost the reader.",
          "now": "What replaced it, and why that answers the question faster."},
     ],
-    "verification": [
-        "<strong>45 Swift unit tests</strong> pass.",
-        "<strong>Full web suite:</strong> 3406 passing, 3 failing; the 3 reproduce on a clean checkout of <code>HEAD</code>.",
-    ],
+    "verification": [],  # Fill with actual check results.
     "notes": [
         "Anything you did not do, and what it would take to finish it.",
     ],
@@ -234,11 +255,11 @@ def build(spec):
     notes_html = (f'<h2>{esc(spec.get("notesHeading", "Things to know"))}</h2>'
                   + panel(notes, flag=True)) if notes else ""
 
-    return f"""<title>{esc(spec['title'])}</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@600;700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
-<style>{CSS}</style>
+    return f"""<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{esc(spec['title'])}</title>
+<style>{CSS}</style></head><body>
 
 <div class="wrap">
   <header>
@@ -253,6 +274,7 @@ def build(spec):
   {verif_html}
   {notes_html}
 </div>
+</body></html>
 """
 
 
@@ -260,13 +282,29 @@ def main():
     args = sys.argv[1:]
     if not args or args[0] in ("-h", "--help"):
         raise SystemExit(__doc__)
+    if args[0] == "--record-capture":
+        if len(args) != 4:
+            raise SystemExit("usage: --record-capture image.png metadata.json evidence.json")
+        record_capture(args[1], args[2], args[3])
+        print(f"recorded {args[3]}")
+        return
     if args[0] == "--example":
         print(json.dumps(EXAMPLE, indent=2))
         return
     if len(args) != 2:
         raise SystemExit(__doc__)
-    spec = json.loads(Path(args[0]).read_text())
+    spec_path = Path(args[0]).resolve()
+    spec = json.loads(spec_path.read_text())
+    for section in spec.get("sections", []):
+        for pair in section.get("pairs", []):
+            for key in ("before", "after", "beforeEvidence", "afterEvidence"):
+                if key not in pair:
+                    raise ValueError(f"pair missing {key}")
+                image = Path(pair[key]).expanduser()
+                if not image.is_absolute():
+                    pair[key] = str(spec_path.parent / image)
     out = Path(args[1])
+    out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(build(spec))
     print(f"wrote {out} ({out.stat().st_size // 1024} KB)")
 

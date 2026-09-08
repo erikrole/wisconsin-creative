@@ -12,12 +12,12 @@ When guidance conflicts, use this order:
 4. Durable lessons in `tasks/lessons.md`.
 5. Historical plans and archived session notes.
 
-If a conflict could change behavior, stop and reconcile the source of truth in the appropriate document before implementing.
+If a conflict could change behavior, reconcile it using the current request and evidence before the dependent edit. Ask only when a material product decision remains unresolved; continue independent work.
 
 ## Working rules
 
 - Inspect the real repository state before making claims or edits.
-- For a non-trivial task, write a bounded plan, identify the files and contracts involved, and verify the plan against the current source before editing.
+- For a non-trivial task, write a bounded plan, identify the files and contracts involved, and verify it against current source before editing. An inline plan is sufficient for a bounded task; use an owner ledger for durable multi-step work.
 - Read each file in full before editing it. Plan all edits to a file first, then make one coherent edit.
 - Preserve unrelated user and parallel-agent work. Never use broad staging such as `git add -A` when unrelated changes are present.
 - Do not stage, commit, push, merge, or delete user work unless the user explicitly asks for that action.
@@ -26,8 +26,8 @@ If a conflict could change behavior, stop and reconcile the source of truth in t
 
 ## Execution flow
 
-1. Establish scope: inspect `git status`, read `docs/NORTH_STAR.md`, then inspect the relevant route/view/service, schema, and current docs.
-2. Audit contracts: read the relevant `docs/BRIEF_*`, `docs/AREA_*`, `docs/DECISIONS.md`, and `docs/GAPS_AND_RISKS.md` material. For schema work, inspect `prisma/schema.prisma` and migration state.
+1. Establish scope: inspect `git status`, read `docs/NORTH_STAR.md` once per task, then inspect the relevant route/view/service, schema when needed, and current docs. Choose one primary workflow from `.agents/skills/README.md`; add another only for a distinct dependency.
+2. Audit contracts: read the relevant `docs/BRIEF_*`, `docs/AREA_*`, `docs/DECISIONS.md`, and `docs/GAPS_AND_RISKS.md` material. Search for the owning sections rather than rereading every document. Audit-only requests stay diagnostic; a request to audit and fix already authorizes in-scope implementation. For schema work, inspect `prisma/schema.prisma` and migration state.
 3. Implement the smallest independently verifiable slice. Keep schema/migration, service/API, UI wiring, tests, and hardening separable when the change is substantial.
 4. Verify behavior at the layer that can fail. Tests and builds do not replace authenticated browser proof for web runtime work, and TypeScript checks do not replace an Xcode build for Swift changes.
 5. Sync shipped reality: update the relevant area docs, risks, task ledger, and plan lifecycle when the change changes product behavior.
@@ -84,7 +84,7 @@ If a conflict could change behavior, stop and reconcile the source of truth in t
 | API or schema | service/route tests, migration checks, `npm run build:app`, and full deploy-shaped build only in a controlled migration-safe environment |
 | Native iOS | `xcodebuild` for the affected target, plus affected source-contract tests and any required generic-device build |
 | Authenticated UI flow | local authenticated browser proof for the changed route or an explicit statement of why that proof is unavailable |
-| User-facing UI change | a `gt-ui-review` review page: matched before/after captures where the two columns differ only by the change, the measured difference, and the verification above |
+| User-facing UI change | a `gt-ui-review` review page: matched before/after captures where the two columns differ only by the change, measured differences when claimed, and the verification above. Local HTML is sufficient; external publishing requires existing authorization. If a trustworthy baseline is unavailable, label after-only evidence and the missing comparison rather than inventing a before |
 
 Use the full `npm run build` when shipping or validating deploy-shaped behavior, especially schema and migration work. It may run database deployment steps, so do not use it casually against an uncontrolled environment.
 
