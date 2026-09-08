@@ -1,0 +1,104 @@
+{
+  "date": "2026-09-07",
+  "projectId": "prj_cEFq9iZQ5KrMz20wOQMFnhFMEcZ9",
+  "productionDeploymentUnchanged": true,
+  "previewBranch": "br-morning-surf-aiuyphxx",
+  "previewCompute": "ep-winter-leaf-ai0eekhl",
+  "previewComputeCU": [
+    0.25,
+    1
+  ],
+  "previewAutosuspendSeconds": 300,
+  "removedOverrides": 7,
+  "retainedBranchOverrides": [
+    {
+      "branch": "advisor/051-brother-battery-label-csv",
+      "ahead_by": 1,
+      "behind_by": 500,
+      "status": "diverged"
+    },
+    {
+      "branch": "advisor/051-brother-battery-label-csv-v2",
+      "ahead_by": 1,
+      "behind_by": 500,
+      "status": "diverged"
+    },
+    {
+      "branch": "codex/audit-autoassign-implementation",
+      "keep": "open PR"
+    },
+    {
+      "branch": "codex/macos-companion-v1.0.0",
+      "ahead_by": 0,
+      "behind_by": 75,
+      "status": "behind"
+    },
+    {
+      "branch": "codex/reservation-auto-schedule-production",
+      "ahead_by": 2,
+      "behind_by": 167,
+      "status": "diverged"
+    },
+    {
+      "branch": "codex/review-shared-crew-editor",
+      "ahead_by": 1,
+      "behind_by": 112,
+      "status": "diverged"
+    },
+    {
+      "branch": "dependabot/npm_and_yarn/development-dependencies-90994392ba",
+      "keep": "open PR"
+    },
+    {
+      "branch": "dependabot/npm_and_yarn/production-dependencies-81ef192049",
+      "keep": "open PR"
+    },
+    {
+      "branch": "feat/approval-first-shift-claims",
+      "ahead_by": 0,
+      "behind_by": 70,
+      "status": "behind"
+    },
+    {
+      "branch": "recovery/gear-tracker-build26-2026-08-14",
+      "ahead_by": 1,
+      "behind_by": 131,
+      "status": "diverged"
+    }
+  ],
+  "productionOnlyKeys": [
+    "DIRECT_URL",
+    "APNS_KEY_ID",
+    "APNS_TEAM_ID",
+    "APNS_BUNDLE_ID",
+    "APNS_P8_KEY",
+    "KV_URL",
+    "KV_REST_API_URL",
+    "KV_REST_API_READ_ONLY_TOKEN",
+    "REDIS_URL",
+    "KV_REST_API_TOKEN",
+    "BLOB_READ_WRITE_TOKEN",
+    "SIGNATURE_BLOB_READ_WRITE_TOKEN",
+    "RESOURCE_ASSET_BLOB_READ_WRITE_TOKEN",
+    "WEB_PUSH_VAPID_PRIVATE_KEY"
+  ],
+  "previewSessionSecretSeparate": true,
+  "speedInsightsVersion": "2.0.0",
+  "deploymentPerformed": false,
+  "limitations": [
+    "Existing deployments retain their environment snapshots.",
+    "Preview clone contains production data; not sanitized.",
+    "Preview push and uploads require separate test credentials. Redis-dependent companion features fail closed without test Redis.",
+    "Speed Insights browser ingestion unverified until deployment.",
+    "Prior migration provenance reconciliation remains unresolved."
+  ],
+  "localVerification": {
+    "standardNpmCi": "passed (--ignore-scripts), followed by prisma generate",
+    "typescript": "passed",
+    "lint": "passed",
+    "focusedTests": "15 passed",
+    "buildApp": "passed",
+    "docs": "passed",
+    "diffCheck": "passed"
+  }
+}

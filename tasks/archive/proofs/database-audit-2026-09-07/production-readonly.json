@@ -1,0 +1,1163 @@
+{
+  "target": {
+    "project_id": "flat-night-29913432",
+    "branch_id": "br-gentle-sky-aisuwcsf",
+    "database_name": "gear-tracker"
+  },
+  "capturedDate": "2026-09-07",
+  "migrationRows": [
+    {
+      "migration_name": "0001_manual_constraints",
+      "checksum": "",
+      "finished_at": "2026-03-10T16:27:23.681Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0002_source_reservation_id",
+      "checksum": "",
+      "finished_at": "2026-03-10T16:27:23.681Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0003_phase1_models",
+      "checksum": "",
+      "finished_at": "2026-03-10T16:27:23.681Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0004_event_booking_linkage",
+      "checksum": "",
+      "finished_at": "2026-03-10T16:27:23.681Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0005_add_categories",
+      "checksum": "",
+      "finished_at": "2026-03-10T16:27:23.681Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0006_asset_policy_toggles",
+      "checksum": "",
+      "finished_at": "2026-03-10T16:27:23.681Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0007_numbered_bulk_unit_tracking",
+      "checksum": "",
+      "finished_at": "2026-04-08T11:51:50.556Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0008_escalation_config",
+      "checksum": "",
+      "finished_at": "2026-04-08T11:51:50.683Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0009_item_bundling",
+      "checksum": "",
+      "finished_at": "2026-04-08T11:51:50.828Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0009_shift_calendar",
+      "checksum": "manual",
+      "finished_at": "2026-03-16T16:17:57.951Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 0
+    },
+    {
+      "migration_name": "0010_favorite_items",
+      "checksum": "",
+      "finished_at": "2026-04-08T11:51:50.948Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0011_booking_ref_number",
+      "checksum": "",
+      "finished_at": "2026-04-08T11:51:51.065Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0012_add_password_reset_token",
+      "checksum": "",
+      "finished_at": "2026-04-08T11:51:51.184Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0013_shift_assignment_booking_link",
+      "checksum": "",
+      "finished_at": "2026-04-08T11:51:51.301Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0014_add_user_avatar_url",
+      "checksum": "",
+      "finished_at": "2026-04-08T11:51:51.420Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0015_make_serial_number_optional",
+      "checksum": "",
+      "finished_at": "2026-04-08T11:51:51.454Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0016_add_user_active_field",
+      "checksum": "",
+      "finished_at": "2026-04-08T11:51:51.699Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0017_add_source_payload",
+      "checksum": "",
+      "finished_at": "2026-04-08T11:51:51.824Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0018_add_booking_kit_id",
+      "checksum": "",
+      "finished_at": "2026-04-08T11:51:51.948Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0019_add_location_is_home_venue",
+      "checksum": "",
+      "finished_at": "2026-04-08T11:51:52.066Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0020_add_performance_indexes",
+      "checksum": "",
+      "finished_at": "2026-04-08T11:51:52.222Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0021_add_trigram_search_indexes",
+      "checksum": "",
+      "finished_at": "2026-04-08T11:52:16.622Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0022_add_booking_photos",
+      "checksum": "",
+      "finished_at": "2026-04-08T11:52:16.803Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0023_add_checkin_item_reports",
+      "checksum": "",
+      "finished_at": "2026-04-08T11:52:16.920Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0024_add_calendar_event_is_hidden",
+      "checksum": "",
+      "finished_at": "2026-04-08T11:52:17.037Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0025_consolidate_departments",
+      "checksum": "",
+      "finished_at": "2026-04-08T11:52:17.067Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0026_add_allowed_emails",
+      "checksum": "",
+      "finished_at": "2026-04-08T11:52:17.324Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0027_seed_allowed_emails",
+      "checksum": "",
+      "finished_at": "2026-04-08T11:52:17.354Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0028_add_bulk_sku_images_and_kit_bulk_members",
+      "checksum": "",
+      "finished_at": "2026-04-08T11:52:17.647Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0029_add_kiosk_devices",
+      "checksum": "",
+      "finished_at": "2026-04-08T11:52:17.768Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0030_add_sport_call_times",
+      "checksum": "",
+      "finished_at": "2026-04-08T11:52:17.891Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0031_add_bulk_stock_balance_location_index",
+      "checksum": "1b3f13945e26be257d186376230c97b96810cf5d9c9dc387a1b7d233f396d544",
+      "finished_at": "2026-04-24T17:50:22.734Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 0
+    },
+    {
+      "migration_name": "0032_add_guides",
+      "checksum": "70682496557c320f6aa120f48bc2bcf9e14689dfc2387ae7b9ac7f83242a2f55",
+      "finished_at": "2026-04-27T12:50:19.519Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 0
+    },
+    {
+      "migration_name": "0032_add_guides",
+      "checksum": "70682496557c320f6aa120f48bc2bcf9e14689dfc2387ae7b9ac7f83242a2f55",
+      "finished_at": "2026-04-27T12:50:19.519Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 0
+    },
+    {
+      "migration_name": "0033_harden_bulk_item_quantities",
+      "checksum": "b082c64f5d2c2bac4977253e62a9fa95237a5f8fe4a0ebcbe29729fd4d89573e",
+      "finished_at": "2026-04-27T12:53:20.026Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0034_add_student_availability",
+      "checksum": "7ae3e17b99a010fc5f2ff1e154a840d9f40e50e873ac685bfab953e397a9f62b",
+      "finished_at": "2026-04-27T12:53:20.026Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 0
+    },
+    {
+      "migration_name": "0035_add_shift_assignment_conflict",
+      "checksum": "",
+      "finished_at": "2026-04-27T12:53:20.056Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0036_add_travel_roster",
+      "checksum": "",
+      "finished_at": "2026-04-27T12:53:20.056Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0037_add_shift_archiving",
+      "checksum": "",
+      "finished_at": "2026-04-27T12:53:20.056Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0038_add_bulk_sku_fields",
+      "checksum": "",
+      "finished_at": "2026-04-27T12:53:20.056Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0039_add_pending_pickup_status",
+      "checksum": "manual",
+      "finished_at": "2026-04-27T12:53:20.026Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0040_add_device_tokens",
+      "checksum": "",
+      "finished_at": "2026-04-27T12:53:20.056Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0041_reseed_escalation_rules",
+      "checksum": "",
+      "finished_at": "2026-04-27T12:53:20.056Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0042_booking_events",
+      "checksum": "65a2e50962d8f2736df421bef54d585dabe58a8b4754dc86925b9ff11175bcdc",
+      "finished_at": "2026-04-27T12:53:20.026Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 7
+    },
+    {
+      "migration_name": "0043_license_codes",
+      "checksum": "manual",
+      "finished_at": "2026-04-27T12:53:20.026Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0044_license_claim_user_set_null",
+      "checksum": "",
+      "finished_at": "2026-04-27T12:53:20.056Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0045_drop_guide_order",
+      "checksum": "",
+      "finished_at": "2026-04-27T12:53:20.056Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0046_user_notification_prefs",
+      "checksum": "",
+      "finished_at": "2026-04-27T12:53:20.056Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0047_user_ics_token",
+      "checksum": "987db98009d815cd38bdc41aeac56afe1ed97de003552074271d17dd4de5071f",
+      "finished_at": "2026-04-27T20:29:10.109Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0048_user_profile_fields",
+      "checksum": "manual-neon-editor",
+      "finished_at": "2026-05-01T01:43:38.348Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0049_add_operational_indexes",
+      "checksum": "775acd5a7d09ebf0758fdb3d11aacc01e83a6d6eceff5f5607dc328cbd8237fc",
+      "finished_at": "2026-05-01T02:38:07.193Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0050_audit_log_created_at_index",
+      "checksum": "91539e812ac1b967b94d391d0338f164d54870009d89cb73ea5bf6ab643f4eea",
+      "finished_at": "2026-05-01T12:30:55.028Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0051_checkin_report_image_url",
+      "checksum": "09cfbe97d3a52e29e3419d40959d6a546af53922c3838895a4647c66fcc33271",
+      "finished_at": "2026-05-07T15:53:23.159Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0052_calendar_source_sync_lease",
+      "checksum": "08934c5299773963aa49664bef3daaaf02fed7ddd5328002d08dfd6ecbe9deb0",
+      "finished_at": null,
+      "rolled_back_at": "2026-05-08T20:01:58.377Z",
+      "applied_steps_count": 0
+    },
+    {
+      "migration_name": "0052_calendar_source_sync_lease",
+      "checksum": "fe71cc50d08beb4c3c347585f9543357f93b6da76a2a39738c3f028dafd1dd09",
+      "finished_at": "2026-05-08T20:03:54.070Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0053_user_force_password_change",
+      "checksum": "489a84699d23ac8e193892218879712356e72547b59daec4b025c1f70e972773",
+      "finished_at": "2026-05-08T20:03:54.086Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0054_booking_search_trigram_indexes",
+      "checksum": "54c7ab5713577ec08d6bd936f1ab353cfb0e8c6c837955e34faf3fcaf1a749a7",
+      "finished_at": "2026-05-08T20:03:54.102Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0055_add_badges",
+      "checksum": "eeb39af1ff42100430571333ffd6303050f9cab02a43c6a7f2ff8fe54d7ce03e",
+      "finished_at": "2026-05-10T00:39:28.559Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0056_add_scan_badge_counter_type",
+      "checksum": "e4e34c3346a56e364038bb70ee93c02095249f5c075963a04f42955c0eb4f519",
+      "finished_at": "2026-05-10T00:39:28.574Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0057_add_guide_markdown",
+      "checksum": "1016d2ccaae5cbe96797e0d36278d577031dceefac622185e7d656d3d66cf5af",
+      "finished_at": "2026-05-11T02:48:51.786Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0058_guide_personalization",
+      "checksum": "839936fdc404b2f5fdcb84547e3ba02af038288e410dd0950ba7f00e6356584a",
+      "finished_at": "2026-05-11T02:48:51.803Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0059_add_user_slack_handle",
+      "checksum": "09754782dc787bf39e54e79370bbb5a77aa01d385fc80ad232b2339467efcd38",
+      "finished_at": "2026-05-10T15:38:30.248Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0060_add_user_slack_profile_url",
+      "checksum": "81e045504cf3d8bcda4ae9aed8b651b123d7ac602a2e0346de0855cac5cbc21c",
+      "finished_at": "2026-05-10T16:00:14.707Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0061_add_guide_freshness",
+      "checksum": "2094241b8c57caf886169dea11e137037056b663f6ef43d2d851ac02428be5fb",
+      "finished_at": "2026-05-10T17:45:46.402Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0062_kiosk_session_expires_at",
+      "checksum": "af0c01964c3d67797e5366f6fbbd15dd12845be6906fde62fcce2d71d380e525",
+      "finished_at": null,
+      "rolled_back_at": "2026-05-12T20:14:55.486Z",
+      "applied_steps_count": 0
+    },
+    {
+      "migration_name": "0062_kiosk_session_expires_at",
+      "checksum": "6b81f04045e09874b4a67a33c3bf05dfe49057c580804853fedcc2594d0532fa",
+      "finished_at": "2026-05-12T20:15:45.949Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0063_allow_manual_calendar_events_source_null",
+      "checksum": "8e33aae62500ff76baebc0ad4bb424dba3f119d27524e756fa7d40ad254aeea3",
+      "finished_at": "2026-05-12T15:16:23.465Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0064_seed_badge_definitions",
+      "checksum": "e681e5aece854ecd7fadf216cf340d20fbb0d02d8a15b3aa0291fbb22a6a5c86",
+      "finished_at": "2026-05-12T20:24:35.954Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0065_add_booking_completed_at",
+      "checksum": "e1911c80655eb6507e45782ba2ef384768a25f960dabcd5f2b97b5faf4198d8e",
+      "finished_at": "2026-05-12T23:51:36.664Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0066_retire_shift_badges",
+      "checksum": "8894336411f6626a7805124c18753814611ecd590e1b78b4e8934b62a128c605",
+      "finished_at": "2026-05-13T18:35:16.796Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0067_add_user_last_active",
+      "checksum": "bbe074a2bb4fde30921f6ae85fec554776e8cff182dab76db304bb42040b2560",
+      "finished_at": "2026-05-13T18:35:16.858Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0068_rename_guides_to_resources",
+      "checksum": "6e793bb57739a65a8eca79810638b571b5e78e66ad9a0a61729ab66af231884d",
+      "finished_at": "2026-05-20T01:34:07.116Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 9
+    },
+    {
+      "migration_name": "0069_add_asset_image_rehost_attempts",
+      "checksum": "e71ff611dc18b73c256f5faf13dc50f88a1674f2478e61836cb2d660c7242d5e",
+      "finished_at": "2026-05-20T10:44:37.315Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0070_add_event_edit_locks_and_archive",
+      "checksum": "34fbbd4fa38817fb8b3340f9d7ee6e79d354e37ac7133019bd89aed8caeaa0cf",
+      "finished_at": "2026-05-21T12:39:12.675Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 2
+    },
+    {
+      "migration_name": "0071_add_event_subtitle",
+      "checksum": "26d4d9be54891bed92b12d4c7c06a6d6a52d15ac86af9306439e16a401c239bf",
+      "finished_at": "2026-05-21T13:09:49.940Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0072_add_event_location_locked",
+      "checksum": "c8364f9b454b7d96a42dcfef70352e8fbae8c01dc7eb393697509205d07645e7",
+      "finished_at": "2026-05-21T13:19:54.638Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0073_shift_staffing_mvp",
+      "checksum": "c48f99943750b29403b2f3efff7a34fc4c11343f45d967edc684ba8264545152",
+      "finished_at": "2026-05-21T14:48:13.673Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0074_student_availability_ad_hoc",
+      "checksum": "33c45dcec12b53a91ff987cb108407ff6b4849c7c1b703a41b540a481bc4d513",
+      "finished_at": "2026-06-03T15:10:40.317Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0075_add_firmware_watch_targets",
+      "checksum": "55557308ea3aa381aa4309958e28daffb3864bf8dab01881ed775804197d6a04",
+      "finished_at": "2026-06-10T16:05:05.449Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 5
+    },
+    {
+      "migration_name": "0076_add_firmware_watch_support_mode",
+      "checksum": "84eda9afef652d75f3d126a77cc8b2fd1a6060634fb53860dcdc3e41fe968fa0",
+      "finished_at": "2026-06-10T16:24:05.905Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0077_add_bulk_sku_image_rehost_attempts",
+      "checksum": "4ae0c19bc2e387fc6af50170fdf85a86146f44a3fc4320cd7b75fb9c54406b3c",
+      "finished_at": "2026-06-11T01:42:39.393Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0077_add_bulk_sku_unit_label_tracking",
+      "checksum": "3f93c7f3356c2283d56a35a8a7e43327049aa11eeb023576cfb3913c8bc6211a",
+      "finished_at": null,
+      "rolled_back_at": "2026-08-15T15:37:26.883Z",
+      "applied_steps_count": 0
+    },
+    {
+      "migration_name": "0077_bulk_unit_label_tracking",
+      "checksum": "10cbdec06d9dcaa765c64bc9bda1255fa70e0dc5e44c40ef2de629147e775318",
+      "finished_at": "2026-06-11T16:35:03.427Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0078_fix_scan_events_phase_enum",
+      "checksum": "4da8abf23396b73813fbc4bf0e97115ee3bbfb8bdf567ec796dec26147626b10",
+      "finished_at": "2026-06-12T20:03:49.712Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0079_user_wiscard_and_scan_location_evidence",
+      "checksum": "6a99c40dd477bd5b99ca8ef1dc9e8f240b788d8630181fbd347da79c863fa965",
+      "finished_at": "2026-06-15T03:01:12.263Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0080_schedule_publish_ack_contract",
+      "checksum": "d7ab86b8809183c72c4ea5ca283cce8b1a8b53a739ab0c9030afba6f365498aa",
+      "finished_at": "2026-06-18T10:49:10.398Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0081_schedule_preferences_time_off",
+      "checksum": "898b07879dcd7b586abdec0cfbd5f50fe4ec925c6a32eae823337da5d945e3fa",
+      "finished_at": "2026-06-18T10:49:10.450Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0082_user_staffing_type",
+      "checksum": "ad981e76412b6611884cdb2c7b4635e168ea7919d6a9dda4aa6614107703b3e3",
+      "finished_at": "2026-06-20T17:23:10.830Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0083_hide_smoke_users",
+      "checksum": "dad9ba8bee9b22547c1bc9cc84158b43365f1cd19dbba39a9742a0699836a0f1",
+      "finished_at": "2026-06-24T13:20:36.489Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0084_unique_active_bulk_unit_allocation",
+      "checksum": "7329a3760e62393a582d3ee72dad7f69e16e11eb0d8110b61abc22a2853b2c1c",
+      "finished_at": "2026-06-26T00:36:21.291Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0085_item_family_favorites",
+      "checksum": "0db122645ce49f3a38c5682851a5e2200a41abb901def22639bd703817371dae",
+      "finished_at": "2026-06-26T23:19:45.601Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0086_booking_pickup_kiosk",
+      "checksum": "4063b299b6666e05c580b0b21a535df649537b150c59381a7f19d0d67fb9ee96",
+      "finished_at": "2026-06-26T23:19:45.632Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0087_resource_type",
+      "checksum": "50787b6eaca6cf50c69a6c786d96700c1400a740dcb7f8c7f361260a8f2706a7",
+      "finished_at": "2026-06-28T19:23:33.230Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0088_checkout_live_activity_tokens",
+      "checksum": "e51c7a35eb57932f5de5745f21469f9a5747f0876fe6c9ac58a1270cac3dd3f7",
+      "finished_at": "2026-06-29T13:53:25.276Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0089_kiosk_activation_code_expiry",
+      "checksum": "9613b433e591e193ff0427ff6cecd06f4e730be42dfead3958b8cbe61d85114f",
+      "finished_at": "2026-07-02T00:28:27.535Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0090_drop_premier_event_columns",
+      "checksum": "c41f36142add54793073f83119b8d64dbceb1b06bb255dae33cd367dc757a046",
+      "finished_at": "2026-07-02T15:48:06.723Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0091_checkout_live_activity_push_to_start",
+      "checksum": "40c5fe293eb9726f0fd06469091f124ce16532e26364bf5960cf24bb5e08a7ad",
+      "finished_at": "2026-07-03T12:19:21.577Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0092_profile_completion_fields",
+      "checksum": "d598c291bb8da8a6958d38b5ebd3a48a85e2b4ef3313546719872274f2779bd0",
+      "finished_at": "2026-07-15T20:20:41.166Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0093_item_family_products",
+      "checksum": "e4fac90e6bb933eb68a8e28b712fa9dd784b857518138360ea4a919460732493",
+      "finished_at": "2026-07-15T20:20:41.236Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0094_user_birthday_and_live_production",
+      "checksum": "e838a8434dd44a356108b213efb5bdf04e3d353caa84965fe7ba9418d21b8e7e",
+      "finished_at": "2026-07-16T02:00:22.954Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 3
+    },
+    {
+      "migration_name": "0095_btn_collaborator_enums",
+      "checksum": "d248acd1146d14f6cc78a33f118cdae96da8aa473d5eb85110309f3985611f01",
+      "finished_at": "2026-07-16T21:50:41.140Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 4
+    },
+    {
+      "migration_name": "0096_btn_collaborator_access",
+      "checksum": "d543eef130da16216a9cbfc798515bb1eda1aa9c97afba04b121bc9afcbfe699",
+      "finished_at": "2026-07-16T21:50:41.640Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 11
+    },
+    {
+      "migration_name": "0097_student_graduation_term",
+      "checksum": "eb514f5bf1fce6bbf0470b12c6958b7839b58f04af28e4252a024d20a5df301e",
+      "finished_at": "2026-07-16T21:50:41.734Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 2
+    },
+    {
+      "migration_name": "0098_affiliation_policy_editor",
+      "checksum": "d46e3ae42254221f52b2e56a4de8a684e51f28b0ec81b73a10ec375c63ad02f6",
+      "finished_at": "2026-07-16T21:50:42.678Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 29
+    },
+    {
+      "migration_name": "0099_shift_group_working_copy",
+      "checksum": "d5e5ac8baeacb4ac065eb203ef3f281b2e97f4229a0ec067d59363e82923d7af",
+      "finished_at": "2026-07-22T01:09:39.516Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 9
+    },
+    {
+      "migration_name": "0100_badge_catalog_rebalance",
+      "checksum": "389646a8070ed7eff3852d0588588eecb15128f991cdcafd391be80b169aaf55",
+      "finished_at": "2026-07-22T19:30:39.759Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0101_accountability_exclusions",
+      "checksum": "7e4e0815d6f880835b89dcd5a8a8f3647cc8ab3baf0a263ae07b5312fea309c9",
+      "finished_at": "2026-07-23T11:26:31.458Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 9
+    },
+    {
+      "migration_name": "0102_booking_due_date_history",
+      "checksum": "c537c34fab3c8ba41ef3d7949d1999e0b5eafe1a5e22c5096d8f9f4af810f934",
+      "finished_at": "2026-07-23T14:55:08.245Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 7
+    },
+    {
+      "migration_name": "0103_collaborator_people_directory",
+      "checksum": "f8019aec38a40c705ffe43ff6f2da7be875d9822958f2974f4b94ad5be977363",
+      "finished_at": "2026-07-23T15:29:22.686Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0104_kiosk_build_identity",
+      "checksum": "86c720da6de1c27452d7684b49bc7d42959a62374cf826e7349ee2f6a5c0bc18",
+      "finished_at": "2026-07-28T15:57:37.138Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0104_license_claim_history_integrity",
+      "checksum": "aee54d72405cab369cf52f973036975f6ac84267bdb7f62a6103589035358faa",
+      "finished_at": "2026-07-23T16:29:16.623Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 17
+    },
+    {
+      "migration_name": "0105_blast_notifications",
+      "checksum": "31fbf8ed1e8c87b5d2494dd5968cf115e23b6c013f556521be0fb9e36a422fc1",
+      "finished_at": "2026-07-28T18:04:45.487Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0105_license_expiry_timestamp_parity",
+      "checksum": "f1b3e3a5edbb4e25ceeef332989d3c5708eafd5484a89391809760580960dd12",
+      "finished_at": "2026-07-23T16:34:08.764Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0106_calendar_event_results",
+      "checksum": "9ccf08506142b668908fd940048a3574f46c1300bc6a93a58c30aa53f021b395",
+      "finished_at": "2026-07-23T21:32:57.543Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0106_passkey_auth",
+      "checksum": "f679200260d22a289c3f4744693ca6c46c854237e649831756f52c9ca64a2317",
+      "finished_at": "2026-07-31T15:08:55.502Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 11
+    },
+    {
+      "migration_name": "0107_shift_assignment_source",
+      "checksum": "41adbbc7e2861b3f909b8f7abcea4bad724876d2b555b40035ee32e7e4a00c2c",
+      "finished_at": "2026-08-04T14:39:36.413Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0108_social_pending_invite_profile",
+      "checksum": "3cfc2c5e1bfaa83bc19a70cd40a4403e9dbf27c7b8617983a11d309ac6e77ed0",
+      "finished_at": "2026-08-06T15:38:52.829Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 2
+    },
+    {
+      "migration_name": "0109_schedule_timed_release",
+      "checksum": "90e9ef079b5599fac90317c4779d95be50bc7ffea2768dc2e3680d3cd5e1d0cd",
+      "finished_at": "2026-08-07T18:43:39.122Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 2
+    },
+    {
+      "migration_name": "0110_badge_rewards",
+      "checksum": "4bf8b69b677a88e2d257f7b97eb9652639fb0dc839a334c0ed4969168679dabb",
+      "finished_at": "2026-08-10T15:07:40.744Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0111_checkout_overdue_notification_policy",
+      "checksum": "03f9c56f0674f417b8b74da7971c3f32185cb3dd2705c33a3d7ef9cf71dc4799",
+      "finished_at": "2026-08-10T15:07:40.776Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0112_private_usage_analytics",
+      "checksum": "1f317a831264586571f4bbc981fa61fa44692715fc087ca1f0ee4518c03bf75e",
+      "finished_at": "2026-08-14T23:53:35.563Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0113_signature_capture",
+      "checksum": "ac01f5ff34548e731d62f9f94c88760d8e063cd05b3a1a108ec1be58279b6449",
+      "finished_at": "2026-08-15T17:28:44.773Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 50
+    },
+    {
+      "migration_name": "0114_signature_creative_staff",
+      "checksum": "5aedd9ee8633e5ac8774d7c2828e02b233dfd927c3a6ee3f49179e5cce606c82",
+      "finished_at": "2026-08-15T21:02:29.237Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 2
+    },
+    {
+      "migration_name": "0115_signature_athlete_profiles",
+      "checksum": "c63966a6943c0f78136c594f195ac85c0dda099fe246265f1119bd47ef27b9ef",
+      "finished_at": "2026-08-17T01:52:00.331Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0116_bulk_schedule_assignment",
+      "checksum": "571e3efeb18fd613868ae480b2634e16b439ca56ec0a4ce1ad8a705a00301d6d",
+      "finished_at": "2026-08-18T15:04:12.399Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0117_badge_shift_breadth",
+      "checksum": "8d4316460a643b2092608eea8538d2f91c2fdf11ce506f7074495258d9d386eb",
+      "finished_at": "2026-08-19T12:28:04.067Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 2
+    },
+    {
+      "migration_name": "0118_badge_checkout_breadth",
+      "checksum": "7a94567031f71adea58dfe9d8b885bea33e584ce0086a9c5d0c6cd64cad8053d",
+      "finished_at": "2026-08-19T12:28:04.067Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 2
+    },
+    {
+      "migration_name": "0119_badge_return_moment",
+      "checksum": "56c911f55e8d2c87ec8d9ff8de884f1d196174a58a25d0722656a122b5e6bac1",
+      "finished_at": "2026-08-19T12:28:04.067Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 2
+    },
+    {
+      "migration_name": "0120_badge_app_open_eggs",
+      "checksum": "535f8dc2aeb2269b8a1c6d3c652055f78279a8e6a6eec546ecd03bc249784723",
+      "finished_at": "2026-08-19T12:28:04.067Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0121_calendar_event_results_backfill",
+      "checksum": "4b7f77f24a37607055f9ea132235c2c7f3c5696e7be49fc6005f5b82158fb8ed",
+      "finished_at": "2026-08-19T12:28:04.067Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0122_badge_short_notice",
+      "checksum": "dc567c881e8d35ca8b81889e115a3e9a68adeb85adc08b22943af361c64e59fd",
+      "finished_at": "2026-08-19T12:28:04.067Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 2
+    },
+    {
+      "migration_name": "0123_calendar_event_summary_reclean",
+      "checksum": "31996426d86bab653348103ae9ff2e2f3e387935ca0cbdc59e7ae3c7e4572335",
+      "finished_at": "2026-08-19T12:28:04.067Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0124_calendar_event_site",
+      "checksum": "e071b66bc2b1418c4b6a451120454ce73b891a4483e28ef189b3bf4336bfebe9",
+      "finished_at": "2026-08-19T12:28:04.067Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 2
+    },
+    {
+      "migration_name": "0125_software_credentials",
+      "checksum": "b8debcbf66333da3b82f1eebac391c53b64df1d18e34a95f515864621d112f82",
+      "finished_at": "2026-08-19T12:37:55.028Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 3
+    },
+    {
+      "migration_name": "0126_software_credential_visibility",
+      "checksum": "9a53d2962330acade5d053f7942ca9da49a71337dfd620a616d67e1792862a0d",
+      "finished_at": "2026-08-19T12:55:53.108Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 2
+    },
+    {
+      "migration_name": "0127_badge_catalog_expansion",
+      "checksum": "7c21075f56ecb0401b633dae314ea3665f65db7b81f19b13110ff4cdf7b16161",
+      "finished_at": "2026-08-21T12:38:09.021Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0128_student_availability_date_ranges",
+      "checksum": "9ffe9ef330ec2663471714cb39cd87562295430581b3ed924aec703ebfc772b8",
+      "finished_at": "2026-08-21T12:38:09.075Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0129_app_activity_report",
+      "checksum": "53becd0581149068fcc8c5b9b68ee4e6cbf5fa876376608ec9f8f7df4db9b906",
+      "finished_at": "2026-08-21T12:38:09.142Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0130_schedule_notification_debounce",
+      "checksum": "f1823f471455775ccdcd1c06317daf6714dfc7025a53d18a2bfa45da7a92368a",
+      "finished_at": "2026-08-21T18:58:05.166Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0131_event_credits",
+      "checksum": "37d9949b84378648e213ef38d6fec220f75f77df44e411cd32c64e8634c79063",
+      "finished_at": "2026-08-24T03:41:59.549Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0132_calendar_event_ties",
+      "checksum": "91fd34e2f9a6a542a810cd727a42fa0eba00aae163763319964683cee229c2ad",
+      "finished_at": "2026-08-24T11:58:31.824Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0133_calendar_event_ties_backfill",
+      "checksum": "d533203b25ffe86d21e9bb7083cd7fce19e30bedbc5239bc66a643a94113f663",
+      "finished_at": "2026-08-24T11:58:31.900Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0134_event_workers_rename",
+      "checksum": "e4bba3dec18534edd61a3bd5d93a56170ecbaf1dc4ea79eae029a36f5967ad68",
+      "finished_at": "2026-08-24T20:06:04.329Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0135_brand_asset_library",
+      "checksum": "14b39d375fc682abcc73114fe36ebf9dfac6255f16054a4e200be0174abc57bc",
+      "finished_at": "2026-08-27T00:39:30.433Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 24
+    },
+    {
+      "migration_name": "0136_brand_asset_experience",
+      "checksum": "225db52908c09a08493deb14a2b5d6ac1a545b07af63579dc3e82a0da7a8eb98",
+      "finished_at": "2026-08-27T01:22:55.033Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 7
+    },
+    {
+      "migration_name": "0137_web_push_subscriptions",
+      "checksum": "b51c7941c12cdf345f543fc39c8a62182bf04cb78f2e95deff7c81ec899355b1",
+      "finished_at": "2026-08-28T18:56:18.239Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 4
+    },
+    {
+      "migration_name": "0138_sport_auto_assign_policy",
+      "checksum": "b6a5e1d48ada7569c446cf4c27a0fe8ac8cae4c88fc88527cec3ef6d039d958e",
+      "finished_at": "2026-08-28T21:46:43.012Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0139_football_game_day_roles",
+      "checksum": "ec77981a44cbfeacf4f2b91dc14c3ad49d6e012fca94f6fe078fbdc91be1f8f9",
+      "finished_at": "2026-08-29T18:50:20.674Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0139_schedule_working_copy_undo_redo",
+      "checksum": "cbea9491be98908451d3f0fdaeba450d58aa1f4ae111c33649509dd0e4d8984a",
+      "finished_at": "2026-08-30T16:45:50.782Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0140_varsity_season_ownership",
+      "checksum": "5f2579cf902f283a94e93d0854000e4668e1697d83eb4b921a2e9dbd4f87b6fe",
+      "finished_at": "2026-08-29T18:50:20.796Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0141_event_checkout_assignments",
+      "checksum": "0d745163af401be8526f709eb9fec523147ac262844fee9b14fee72fbc40df90",
+      "finished_at": "2026-09-03T14:46:46.209Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0142_combined_schedule_events",
+      "checksum": "18552bb2c51c8fba351744b02f3bbf68a089179e139ab2fc63b628a682addd6b",
+      "finished_at": "2026-09-03T19:42:50.555Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "migration_name": "0143_shared_checkout_custody",
+      "checksum": "a874fa8562484a9cf4ac8ae25e92ee6b1376aad19ea88fd84f09f812e70d42a2",
+      "finished_at": "2026-09-03T20:35:13.087Z",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    }
+  ],
+  "health": [
+    {
+      "current_database": "gear-tracker",
+      "database_size": "34 MB",
+      "other_active_queries": "0",
+      "blocked_connections": "0",
+      "invalid_indexes": "0",
+      "unvalidated_constraints": "0"
+    }
+  ],
+  "integrity": [
+    {
+      "check_name": "duplicate_active_asset_booking",
+      "count": "0"
+    },
+    {
+      "check_name": "overlapping_active_asset_allocations",
+      "count": "0"
+    },
+    {
+      "check_name": "duplicate_checked_out_bulk_units",
+      "count": "0"
+    },
+    {
+      "check_name": "active_allocations_on_terminal_bookings",
+      "count": "0"
+    }
+  ],
+  "allocationIndexes": [
+    {
+      "indexname": "asset_allocations_asset_id_active_idx",
+      "indexdef": "CREATE INDEX asset_allocations_asset_id_active_idx ON public.asset_allocations USING btree (asset_id, active)"
+    },
+    {
+      "indexname": "asset_allocations_asset_id_active_starts_at_ends_at_idx",
+      "indexdef": "CREATE INDEX asset_allocations_asset_id_active_starts_at_ends_at_idx ON public.asset_allocations USING btree (asset_id, active, starts_at, ends_at)"
+    },
+    {
+      "indexname": "asset_allocations_booking_id_idx",
+      "indexdef": "CREATE INDEX asset_allocations_booking_id_idx ON public.asset_allocations USING btree (booking_id)"
+    },
+    {
+      "indexname": "asset_allocations_pkey",
+      "indexdef": "CREATE UNIQUE INDEX asset_allocations_pkey ON public.asset_allocations USING btree (id)"
+    },
+    {
+      "indexname": "booking_bulk_unit_allocations_booking_bulk_item_id_bulk_sku_u_k",
+      "indexdef": "CREATE UNIQUE INDEX booking_bulk_unit_allocations_booking_bulk_item_id_bulk_sku_u_k ON public.booking_bulk_unit_allocations USING btree (booking_bulk_item_id, bulk_sku_unit_id)"
+    },
+    {
+      "indexname": "booking_bulk_unit_allocations_bulk_sku_unit_id_idx",
+      "indexdef": "CREATE INDEX booking_bulk_unit_allocations_bulk_sku_unit_id_idx ON public.booking_bulk_unit_allocations USING btree (bulk_sku_unit_id)"
+    },
+    {
+      "indexname": "booking_bulk_unit_allocations_one_active_unit_key",
+      "indexdef": "CREATE UNIQUE INDEX booking_bulk_unit_allocations_one_active_unit_key ON public.booking_bulk_unit_allocations USING btree (bulk_sku_unit_id) WHERE ((checked_out_at IS NOT NULL) AND (checked_in_at IS NULL))"
+    },
+    {
+      "indexname": "booking_bulk_unit_allocations_pkey",
+      "indexdef": "CREATE UNIQUE INDEX booking_bulk_unit_allocations_pkey ON public.booking_bulk_unit_allocations USING btree (id)"
+    },
+    {
+      "indexname": "shift_assignments_acknowledged_by_id_idx",
+      "indexdef": "CREATE INDEX shift_assignments_acknowledged_by_id_idx ON public.shift_assignments USING btree (acknowledged_by_id)"
+    },
+    {
+      "indexname": "shift_assignments_pkey",
+      "indexdef": "CREATE UNIQUE INDEX shift_assignments_pkey ON public.shift_assignments USING btree (id)"
+    },
+    {
+      "indexname": "shift_assignments_shift_id_status_idx",
+      "indexdef": "CREATE INDEX shift_assignments_shift_id_status_idx ON public.shift_assignments USING btree (shift_id, status)"
+    },
+    {
+      "indexname": "shift_assignments_user_id_status_acknowledged_at_idx",
+      "indexdef": "CREATE INDEX shift_assignments_user_id_status_acknowledged_at_idx ON public.shift_assignments USING btree (user_id, status, acknowledged_at)"
+    },
+    {
+      "indexname": "shift_assignments_user_id_status_idx",
+      "indexdef": "CREATE INDEX shift_assignments_user_id_status_idx ON public.shift_assignments USING btree (user_id, status)"
+    }
+  ]
+}

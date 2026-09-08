@@ -1,0 +1,59 @@
+{
+  "title": "Why the Hockey crew has not released",
+  "eyebrow": "Wisconsin Creative \u00b7 Scheduling stabilization \u00b7 September 7, 2026",
+  "lede": "The conflict is real under the stored all-day windows. Staff can now identify the other event and review its timing without releasing or discarding the pending crew.",
+  "stats": [
+    {
+      "k": "Confirmed blocker",
+      "v": "October 3",
+      "n": "Hockey and Football use the same all-day window."
+    },
+    {
+      "k": "Release state",
+      "v": "Still blocked",
+      "n": "No production correction or forced release."
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Staff crew review",
+      "note": "Matched Admin session, actual isolated records, September 28\u2013October 4 week, 1440\u00d71000 viewport. Baseline route comes from HEAD; the current route adds a read-only preflight. No scheduling responses were mocked.",
+      "pairs": [
+        {
+          "title": "Identify the assignment that needs review",
+          "sub": "The message now includes the conflicting event, date, and next step. This is a qualitative content comparison, not a density improvement claim.",
+          "before": "before.png",
+          "after": "after.png",
+          "beforeCap": "PHOTO conflict gives no event or date.",
+          "afterCap": "Football vs Michigan State\u2013Homecoming, October 3 (all day), with guidance to review assignment or timing."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Blocked release lacked usable context",
+      "was": "The recorded error identified a person and area but not the conflicting event.",
+      "now": "Staff-only preflight includes the effective event window. Generic worker errors do not disclose event identity."
+    },
+    {
+      "h": "Old errors could mislead later review",
+      "was": "Editor reads returned only the saved historical failure.",
+      "now": "Failed scheduled drafts receive current diagnostics. Changed versions request refresh; cleared blockers remain an unconfirmed previous failure. Reads never retry release."
+    }
+  ],
+  "verification": [
+    "583 focused tests passed in 70 files; separate actual-record isolated replay also passed. Regression tests failed before the corresponding fixes.",
+    "Actual isolated replay: publish returns 409; selected published and draft state is unchanged; superseded timer remains inert.",
+    "Authenticated Admin and Staff render the new explanation. Student editor returns 403 and published group reads omit private release fields.",
+    "iPhone 16 Pro / iOS 26.5 Xcode Event detail fixture test passed. Screenshots were inspected: live and ended fixtures show a retained published-crew warning after editor 404; authenticated native diagnostic rendering is not verified.",
+    "TypeScript, full ESLint, app-only production build, migration-prefix check (149 migrations), docs verification, and final diff check passed. Build ran from an isolated temporary source copy; changed runtime files match this checkout byte for byte.",
+    "First baseline capture was interrupted by concurrent shared build-cache activity; capture was repeated successfully from an isolated temporary source copy."
+  ],
+  "notes": [
+    "Local implementation only: not committed, deployed, or production-released. No notification delivery or physical-device acceptance.",
+    "Event detail and main list notices still use historical stored errors; current details are available through Review pending crew. Full surface parity remains open.",
+    "Actual game times or a different staffing choice require staff resolution. No policy bypass is proposed.",
+    "Next slice: authoritative outcome verification and eligibility for contextual Claim/Withdraw on web and native."
+  ]
+}

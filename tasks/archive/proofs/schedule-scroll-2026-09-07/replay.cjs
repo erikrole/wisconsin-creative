@@ -1,0 +1,40 @@
+const {chromium}=require(process.cwd()+'/node_modules/@playwright/test');
+const fs=require('fs');
+(async()=>{
+const b=await chromium.launch({headless:true});
+const c=await b.newContext({storageState:'/tmp/wc-schedule-sep7-auth.json',viewport:{width:1440,height:1000},locale:'en-US',timezoneId:'America/Chicago',colorScheme:'light',reducedMotion:'reduce'});
+const p=await c.newPage(); const errors=[];p.on('pageerror',e=>errors.push(e.message));
+await p.addInitScript(()=>{window.scrollCalls=[];const original=Element.prototype.scrollIntoView;Element.prototype.scrollIntoView=function(options){window.scrollCalls.push({today:!!this.dataset.today,options});return original.call(this,options)}});
+await p.route('**/api/me/profile-completion',r=>r.fulfill({status:503,json:{error:'Excluded from Schedule verification'}}));
+let release;const gate=new Promise(resolve=>release=resolve);
+await p.route('**/api/calendar-events?*',async r=>{await gate;await r.continue()});
+await p.goto('http://127.0.0.1:3000/schedule?view=list');
+await p.locator('[data-schedule-view="list"]').waitFor({timeout:90000});
+await p.mouse.move(800,600);await p.mouse.wheel(0,450);await p.waitForTimeout(150);release();
+await p.locator('tr[data-schedule-event-id]').first().waitFor({timeout:90000});
+await p.waitForTimeout(1000);
+const result={errors,callsAfterLoading:await p.evaluate(()=>window.scrollCalls),scrollAfterLoading:await p.evaluate(()=>scrollY)};
+await p.screenshot({path:`${process.cwd()}/tasks/archive/proofs/schedule-scroll-2026-09-07/${process.argv[2]}.png`});
+if(process.argv[2]==='after') {
+  if(result.callsAfterLoading.length) throw new Error('Late Today anchor stole scroll');
+  await p.addInitScript(()=>sessionStorage.setItem('schedule:timeline-scroll','150000'));
+  await p.reload();await p.locator('tr[data-schedule-event-id]').first().waitFor({timeout:90000});await p.waitForTimeout(800);
+  await p.mouse.move(850,650);await p.mouse.wheel(0,-650);await p.waitForTimeout(250);
+  const beforeResize=await p.evaluate(()=>scrollY);
+  await p.evaluate(()=>{const spacer=document.createElement('div');spacer.id='scroll-proof-spacer';spacer.style.height='500px';document.querySelector('#main-content').append(spacer)});
+  await p.waitForTimeout(400);const afterResize=await p.evaluate(()=>scrollY);
+  result.interruptedRestore={beforeResize,afterResize};
+  if(Math.abs(afterResize-beforeResize)>2) throw new Error('Pending restore overrode wheel after resize');
+  await p.evaluate(()=>document.getElementById('scroll-proof-spacer').remove());
+  await p.getByRole('button',{name:'Jump to today',exact:true}).click();await p.waitForTimeout(300);
+  result.todayMotion=await p.evaluate(()=>window.scrollCalls.at(-1)?.options.behavior);
+  if(result.todayMotion!=='instant') throw new Error('Reduced motion ignored');
+  const link=p.locator('tr[data-schedule-event-id] a[href^="/events/"]').first();
+  await link.dispatchEvent('click',{metaKey:true,button:0});
+  await p.mouse.wheel(0,200);await p.waitForTimeout(350);
+  result.modifiedClickStorage=await p.evaluate(()=>({stored:Number(sessionStorage.getItem('schedule:timeline-scroll')),actual:Math.round(scrollY)}));
+  if(result.modifiedClickStorage.stored!==result.modifiedClickStorage.actual) throw new Error('Modified click froze persistence');
+  await p.screenshot({path:process.cwd()+'/tasks/archive/proofs/schedule-scroll-2026-09-07/after-interactions.png'});
+}
+console.log(JSON.stringify(result,null,2));await b.close();
+})().catch(e=>{console.error(e);process.exitCode=1});

@@ -1,0 +1,74 @@
+{
+  "node": "v24.20.0",
+  "baselineCommit": "1f2af2aa",
+  "timezone": "America/Chicago",
+  "parityCases": 17520,
+  "blocksPerPopulatedCase": 19,
+  "iterationsPerSample": 2000,
+  "samples": {
+    "before": [
+      {
+        "ms": 119.28125,
+        "conflicts": 5176
+      },
+      {
+        "ms": 110.68883300000016,
+        "conflicts": 5176
+      },
+      {
+        "ms": 128.59458400000017,
+        "conflicts": 5176
+      },
+      {
+        "ms": 113.99558400000001,
+        "conflicts": 5176
+      },
+      {
+        "ms": 102.89241700000002,
+        "conflicts": 5176
+      },
+      {
+        "ms": 99.65745799999968,
+        "conflicts": 5176
+      },
+      {
+        "ms": 102.20600000000013,
+        "conflicts": 5176
+      }
+    ],
+    "after": [
+      {
+        "ms": 13.348208000000113,
+        "conflicts": 5176
+      },
+      {
+        "ms": 16.351042000000007,
+        "conflicts": 5176
+      },
+      {
+        "ms": 29.733666000000085,
+        "conflicts": 5176
+      },
+      {
+        "ms": 11.689165999999886,
+        "conflicts": 5176
+      },
+      {
+        "ms": 14.923416999999972,
+        "conflicts": 5176
+      },
+      {
+        "ms": 13.574583000000075,
+        "conflicts": 5176
+      },
+      {
+        "ms": 16.448665999999776,
+        "conflicts": 5176
+      }
+    ]
+  },
+  "beforeMedianMs": 110.68883300000016,
+  "afterMedianMs": 14.923416999999972,
+  "speedup": 7.417123906676357,
+  "boundary": "Local evaluator CPU benchmark; excludes database, network, browser, and production latency."
+}

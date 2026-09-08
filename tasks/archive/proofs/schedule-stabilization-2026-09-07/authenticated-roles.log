@@ -1,0 +1,2 @@
+staff: authenticated API and scheduling render passed; private editor status 200
+student: authenticated API and scheduling render passed; private editor status 403

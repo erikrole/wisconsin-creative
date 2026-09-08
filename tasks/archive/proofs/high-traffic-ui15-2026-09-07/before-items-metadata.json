@@ -1,0 +1,23 @@
+{
+  "sourceRevision": "1f2af2aa8bd4e533aad8471a54d35bfd785c2ae3",
+  "sourcePatchSha256": "027cacf2947756ea6ef5ddeabf9b24e1aa08df0f5986d5fa7054d59b8f124f33",
+  "settings": {
+    "device": "Chromium headless, deviceScaleFactor 1",
+    "viewport": [
+      1100,
+      1000
+    ],
+    "fixture": "high-traffic-ui15 fixture.mjs; search camera, FB/Camp Randall, category a, overdue + OPEN + FB bookings",
+    "role": "Staff component fixture, no authentication",
+    "route": "/workflow-fixture; items",
+    "appearance": "light",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "2026-09-07T12:00:00Z",
+    "scroll": [
+      0,
+      0
+    ]
+  }
+}

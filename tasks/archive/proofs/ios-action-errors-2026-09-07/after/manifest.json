@@ -1,0 +1,32 @@
+[
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE",
+        "deviceName" : "iPhone 16 Pro (27.0)",
+        "exportedFileName" : "53A2D959-5F07-4180-BD51-0EFBDB4FD319.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "event-action-error_0_8371C264-BAEA-4A0D-A487-EDAE5F7967FF.png",
+        "timestamp" : 1788812057.366
+      }
+    ],
+    "testIdentifier" : "ActionErrorRecoveryUITests/testEventFailureAfterConfirmationStaysVisible()",
+    "testIdentifierURL" : "test://com.apple.xcode/Wisconsin/WisconsinUITests/ActionErrorRecoveryUITests/testEventFailureAfterConfirmationStaysVisible"
+  },
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE",
+        "deviceName" : "iPhone 16 Pro (27.0)",
+        "exportedFileName" : "635CB8FA-7F1B-4BBC-B8F3-57296584872F.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "extension-error_0_88C47066-D6EF-4368-8DEF-B22497844C1C.png",
+        "timestamp" : 1788812068.215
+      }
+    ],
+    "testIdentifier" : "ActionErrorRecoveryUITests/testExtensionFailureStaysVisibleAndKeepsChanges()",
+    "testIdentifierURL" : "test://com.apple.xcode/Wisconsin/WisconsinUITests/ActionErrorRecoveryUITests/testExtensionFailureStaysVisibleAndKeepsChanges"
+  }
+]

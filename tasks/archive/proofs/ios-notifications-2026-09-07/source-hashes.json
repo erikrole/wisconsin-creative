@@ -1,0 +1,11 @@
+{
+  "ios/Wisconsin/Views/NotificationsSheet.swift": "c899c7a79e41a9123111d4fff390c2adb02e32ec2737b861dd47e50ad0de6c82",
+  "ios/Wisconsin/Views/NotificationSettingsView.swift": "4c502f8584f1934b1d823dd55266d337703f25e815ad99e2db8ffb5664014020",
+  "ios/Wisconsin/Views/PushPrePromptView.swift": "d75d53e019996d82292ed086605a2f61d70e87bfbba595317b731bdc7d72d43d",
+  "ios/Wisconsin/Models/NotificationModels.swift": "369a04d1a3b4f92007c5e72bfacbd3f53a33ad6a87235030c2c644a57af809df",
+  "ios/Wisconsin/Core/Preferences.swift": "c98edeaaf5a254e01aabf19e6f7c1566482616eb5523e4542bfe24678358b5d1",
+  "ios/Wisconsin/App/NotificationActions.swift": "d5a0297a55fdd89dc107034e68c6db4ec14c1f017c9549b920b834e6c5f8b8cb",
+  "ios/Wisconsin/App/AppDelegate.swift": "f516306befc7c3b937e7a3eca1a2cb1ba1522b6d73ef5e42758d7247ba8bad7e",
+  "ios/Wisconsin/Views/Components/BannerView.swift": "9fb6bebff9e0d3b50f9e37a0857311e7e100628c4df18d9f84db8e553e9df63f",
+  "ios/WisconsinTests/NotificationInboxTests.swift": "aa9de2b5b0d6d109e254d86e119b62b5cc7924bf2a32688ebb381fe782c60834"
+}

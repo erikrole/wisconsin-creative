@@ -1,0 +1,115 @@
+{
+  "title": "15 native iOS fixes",
+  "eyebrow": "Wisconsin Creative \u00b7 Items and Bookings \u00b7 September 7, 2026",
+  "lede": "Small reliability and accessibility improvements in everyday gear workflows. Implemented locally; simulator fixture evidence is separate from live service verification.",
+  "stats": [
+    {
+      "k": "Fixes",
+      "v": "15"
+    },
+    {
+      "k": "Source checks",
+      "v": "33"
+    },
+    {
+      "k": "Native tests",
+      "v": "22"
+    },
+    {
+      "k": "UI tests",
+      "v": "2"
+    }
+  ],
+  "sections": [],
+  "changes": [
+    {
+      "h": "1. Refresh failure recovery",
+      "was": "A failed refresh retained rows without an in-list explanation.",
+      "now": "Show a warning above retained items with Retry."
+    },
+    {
+      "h": "2. Refresh progress",
+      "was": "Existing rows gave no in-list indication of refresh work.",
+      "now": "Show Updating items while keeping rows visible."
+    },
+    {
+      "h": "3. Pagination cursor recovery",
+      "was": "Reset changed the cursor before the request succeeded.",
+      "now": "Commit the new cursor only on success; block pagination after a failed reset."
+    },
+    {
+      "h": "4. Empty-page termination",
+      "was": "An empty page with a larger reported total could keep the spinner alive.",
+      "now": "Stop pagination when a page returns no rows."
+    },
+    {
+      "h": "5. Accurate empty-state titles",
+      "was": "Filtered Favorites could imply the entire favorites collection was empty.",
+      "now": "Say No matching items when search or status filters are active."
+    },
+    {
+      "h": "6. Empty-state filter recovery",
+      "was": "A status-filtered empty list offered no direct reset action.",
+      "now": "Offer Reset filters in the empty state."
+    },
+    {
+      "h": "7. Single search-clear refresh",
+      "was": "Clear search started a direct request and a debounced request.",
+      "now": "Use the existing debounced search path once."
+    },
+    {
+      "h": "8. Empty asset tags",
+      "was": "The context menu offered copying an empty tag.",
+      "now": "Only offer Copy Asset Tag for a nonempty tag."
+    },
+    {
+      "h": "9. Favorite request serialization",
+      "was": "Rapid taps could overlap optimistic writes for one item.",
+      "now": "Allow one favorite request per asset at a time."
+    },
+    {
+      "h": "10. Unavailable family color",
+      "was": "Zero available items still used the available-green tone.",
+      "now": "Use neutral gray for zero availability."
+    },
+    {
+      "h": "11. Precise item accessibility dates",
+      "was": "VoiceOver rounded due times into days.",
+      "now": "Announce the actual due date and time."
+    },
+    {
+      "h": "12. Stable booking search",
+      "was": "Refresh could remove the empty search field while rows remained.",
+      "now": "Keep search mounted whenever the retained list qualifies."
+    },
+    {
+      "h": "13. Stable explicit booking order",
+      "was": "Installing an updated booking restored operational sorting.",
+      "now": "Preserve the explicitly selected server ordering."
+    },
+    {
+      "h": "14. Consistent booking accessibility",
+      "was": "VoiceOver could call a pending pickup a return due date.",
+      "now": "Use the same pickup/due timing text as the visible row."
+    },
+    {
+      "h": "15. Bulk item counts",
+      "was": "Each bulk SKU counted as one item regardless of quantity.",
+      "now": "Sum planned bulk quantities plus serialized items."
+    }
+  ],
+  "verification": [
+    "WisconsinPerformance simulator build-for-testing succeeded on iPhone 16 Pro, iOS 26.5.",
+    "33 source-contract tests passed across 10 files.",
+    "4 BookingModels XCTest tests and 18 ScheduleVenueName Swift Testing tests passed. Two stale Schedule fixture initializers were updated to compile against current models.",
+    "Items long-press and Bookings filter/swipe interaction tests passed on iPhone 16 Pro.",
+    "An 8-second fixture delay reproduced Updating items with retained rows; the captured image was visually inspected.",
+    "Repository docs verification and git diff --check passed."
+  ],
+  "notes": [
+    "After-only transition evidence: normal before captures are retained alongside this report, but there is no matched pre-change delayed-refresh capture. Normal Bookings captures are byte-identical and do not demonstrate the edge-case fixes. No visual improvement measurement is claimed.",
+    "Screenshots use the existing local DEBUG fixture API on iPhone 16 Pro iOS 26.5, 402 \u00d7 874 logical points, light appearance, with a 9:41 status-bar override. They do not demonstrate an authenticated production session.",
+    "Failure responses, empty/filter-specific payloads, concurrent favorite writes, zero-availability family data, bulk quantities, and VoiceOver playback were not all exercised end to end. Source checks and native tests cover a subset; these runtime gates remain open.",
+    "Source snapshots for the two production files are retained before and after. Existing unrelated checkout changes were preserved. No commit, push, TestFlight upload, or production release was performed."
+  ]
+}

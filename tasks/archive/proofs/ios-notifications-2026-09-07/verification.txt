@@ -1,0 +1,35 @@
+Test Case '-[WisconsinTests.NotificationInboxTests testOverlappingPagesKeepUniqueRowsAndAdvanceServerOffset]' started.
+Test Case '-[WisconsinTests.NotificationInboxTests testOverlappingPagesKeepUniqueRowsAndAdvanceServerOffset]' passed (0.001 seconds).
+Test Case '-[WisconsinTests.NotificationInboxTests testFailedRefreshRetainsRowsAndReportsFailure]' started.
+Test Case '-[WisconsinTests.NotificationInboxTests testFailedRefreshRetainsRowsAndReportsFailure]' passed (0.003 seconds).
+Test Case '-[WisconsinTests.NotificationInboxTests testInboxRecoveryCapture]' started.
+Test Case '-[WisconsinTests.NotificationInboxTests testInboxRecoveryCapture]' passed (0.544 seconds).
+Test Case '-[WisconsinTests.NotificationInboxTests testLostMutationResponseRereadsCommittedState]' started.
+Test Case '-[WisconsinTests.NotificationInboxTests testLostMutationResponseRereadsCommittedState]' passed (0.006 seconds).
+Test Case '-[WisconsinTests.NotificationInboxTests testLargeInboxUndoRespectsAPIRequestLimit]' started.
+Test Case '-[WisconsinTests.NotificationInboxTests testLargeInboxUndoRespectsAPIRequestLimit]' passed (0.001 seconds).
+Test Case '-[WisconsinTests.NotificationInboxTests testBlastPayloadDecodesWithoutLosingItsDestination]' started.
+Test Case '-[WisconsinTests.NotificationInboxTests testBlastPayloadDecodesWithoutLosingItsDestination]' passed (0.001 seconds).
+Test Case '-[WisconsinTests.NotificationInboxTests testRepeatedSnoozeHasOneStableIdentifier]' started.
+Test Case '-[WisconsinTests.NotificationInboxTests testRepeatedSnoozeHasOneStableIdentifier]' passed (0.000 seconds).
+Test Case '-[WisconsinTests.NotificationInboxTests testDuplicateMutationAndRefreshCannotOvertakePendingWrite]' started.
+Test Case '-[WisconsinTests.NotificationInboxTests testDuplicateMutationAndRefreshCannotOvertakePendingWrite]' passed (0.001 seconds).
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.558 (0.560) seconds
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.558 (0.560) seconds
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.558 (0.561) seconds
+** TEST SUCCEEDED **
+ 19 passed (19)
+      Tests  120 passed (120)
+   Start at  17:03:29
+   Duration  694ms (transform 897ms, setup 175ms, collect 2.16s, tests 133ms, environment 2ms, prepare 821ms)
+
+
+
+> creative-ops@2026.04.08.1 verify:docs
+> npm run codemap:check
+
+
+> creative-ops@2026.04.08.1 codemap:check
+> node scripts/generate-codemaps.mjs --check
+
+Codemaps are current.

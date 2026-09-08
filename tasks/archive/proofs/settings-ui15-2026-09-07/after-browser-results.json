@@ -1,0 +1,41 @@
+{
+  "phase": "after",
+  "checks": [
+    "rules: unload protection",
+    "rules: reset",
+    "rules: clean refresh adopts current values",
+    "rules: successful refresh preserves draft",
+    "rules: stable pending label",
+    "rules: Enter saves",
+    "rules: invalid focus",
+    "rules: persistent save error",
+    "rules: failed refresh preserves draft",
+    "rules: refresh retry recovers without losing draft",
+    "rules: targets and descriptions",
+    "policies: unload protection",
+    "policies: reset",
+    "policies: clean refresh adopts current values",
+    "policies: successful refresh preserves draft",
+    "policies: stable pending label",
+    "policies: Enter saves",
+    "policies: invalid focus",
+    "policies: persistent save error",
+    "policies: failed refresh preserves draft",
+    "policies: refresh retry recovers without losing draft",
+    "policies: targets and descriptions",
+    "policies: blank grace rejected",
+    "appearance: labelled groups and non-color selection",
+    "appearance: visible keyboard focus ring",
+    "rules: mobile has no horizontal overflow",
+    "policies: mobile has no horizontal overflow",
+    "appearance: mobile has no horizontal overflow"
+  ],
+  "viewport": {
+    "width": 1100,
+    "height": 1000
+  },
+  "deviceScaleFactor": 1,
+  "colorScheme": "light",
+  "reducedMotion": "reduce",
+  "proof": "Actual components with isolated Admin fixture; not authenticated application proof"
+}

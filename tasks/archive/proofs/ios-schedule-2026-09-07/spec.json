@@ -1,0 +1,65 @@
+{
+  "title": "Schedule, with room to read",
+  "eyebrow": "Wisconsin Creative \u00b7 iOS \u00b7 Local review",
+  "lede": "Clearer event rows and a calmer Event detail screen, shown at standard text size.",
+  "stats": [
+    {
+      "k": "Event headline",
+      "v": "26 pt \u2192 24 pt",
+      "n": "Gotham Black becomes Gotham Bold. Dates, location, and crew stay directly below.",
+      "tone": "good"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Schedule and Event detail",
+      "note": "Matched iPhone 16 Pro / iOS 26.5 captures with the same fixture data, light appearance, standard text size, and top scroll position. CSS excludes the changing status-bar clock; original screenshots are preserved.",
+      "pairs": [
+        {
+          "title": "Schedule: venue and coverage get breathing room",
+          "before": "/Users/role/Code/wisconsin-creative/tasks/archive/proofs/ios-schedule-2026-09-07/schedule-before.png",
+          "after": "/Users/role/Code/wisconsin-creative/tasks/archive/proofs/ios-schedule-2026-09-07/schedule-after.png",
+          "beforeCap": "Venue text shrinks to share a line with crew coverage.",
+          "afterCap": "Long venues keep their text size; coverage moves below when needed."
+        },
+        {
+          "title": "Event detail: identity first, quieter controls",
+          "before": "/Users/role/Code/wisconsin-creative/tasks/archive/proofs/ios-schedule-2026-09-07/detail-before.png",
+          "after": "/Users/role/Code/wisconsin-creative/tasks/archive/proofs/ios-schedule-2026-09-07/detail-after.png",
+          "beforeCap": "Heavy headline and repeated red outlined crew menus.",
+          "afterCap": "Lighter headline, neutral toolbar actions, and simple gray crew menus."
+        },
+        {
+          "title": "Multi-day event: one readable date range",
+          "before": "/Users/role/Code/wisconsin-creative/tasks/archive/proofs/ios-schedule-2026-09-07/all-day-before.png",
+          "after": "/Users/role/Code/wisconsin-creative/tasks/archive/proofs/ios-schedule-2026-09-07/all-day-after.png",
+          "beforeCap": "The date and countdown are separate competing text elements.",
+          "afterCap": "A wrapping date line keeps the full event span together."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Secondary details can wrap",
+      "was": "Titles, venues, and personal-work text had tight line limits or shrinking.",
+      "now": "Rows grow where needed, keeping the same time, venue classification, crew counts, and personal assignment context."
+    },
+    {
+      "h": "Less repeated chrome",
+      "was": "Each assigned crew member had a red outlined overflow icon.",
+      "now": "A quiet ellipsis keeps the same menu and 44 pt touch target. The event\u2019s main action retains its prominent treatment."
+    }
+  ],
+  "verification": [
+    "34 focused Schedule source-contract tests pass.",
+    "Wisconsin builds and standard Schedule/Event detail screenshot tests pass on iPhone 16 Pro. List, Calendar, ended, live, and all-day detail screens are captured.",
+    "Xcode project consistency, iOS drift, audit coverage, docs verification, and diff checks pass.",
+    "One broader temporal-state test has a pre-existing literal assertion for the old working-copy assignment expression; committed HEAD uses the guarded intermediate value."
+  ],
+  "notes": [
+    "Local UI implementation only; no commit, push, or TestFlight release.",
+    "The published-crew warning is an existing fixture fallback caused by an unmapped working-copy request. The same state is present in both columns; this is not a production incident.",
+    "Availability, Trade Board, and staff editing screens are outside this pass."
+  ]
+}

@@ -1,0 +1,213 @@
+diff --git a/ios/Wisconsin/App/PerformanceTestHarness.swift b/ios/Wisconsin/App/PerformanceTestHarness.swift
+index d1ff0d50..ebb33aa6 100644
+--- a/ios/Wisconsin/App/PerformanceTestHarness.swift
++++ b/ios/Wisconsin/App/PerformanceTestHarness.swift
+@@ -1083,10 +1083,15 @@ struct ScoreboardHarnessView: View {
+ /// queue's per-lane caps show, so truncation is visible, and a staff draft with
+ /// an otherwise-empty personal queue, so the all-clear contradiction reproduces.
+ enum HomeFixtureAPI {
++    // Keep paired captures stable within the hour, matching the Bookings
++    // fixture. Normal launches still follow the current day rather than an
++    // authored date that eventually becomes historical data.
++    private static let referenceDate = Calendar.current.dateInterval(of: .hour, for: .now)?.start ?? .now
++
+     private static func iso(_ minutes: Int) -> String {
+         let formatter = ISO8601DateFormatter()
+         formatter.formatOptions = [.withInternetDateTime]
+-        return formatter.string(from: Date.now.addingTimeInterval(TimeInterval(minutes * 60)))
++        return formatter.string(from: referenceDate.addingTimeInterval(TimeInterval(minutes * 60)))
+     }
+
+     private static func booking(
+diff --git a/ios/Wisconsin/Views/Components/BannerView.swift b/ios/Wisconsin/Views/Components/BannerView.swift
+index 25d140e5..bcec8b18 100644
+--- a/ios/Wisconsin/Views/Components/BannerView.swift
++++ b/ios/Wisconsin/Views/Components/BannerView.swift
+@@ -54,3 +54,47 @@ struct BannerView: View {
+         .transition(.move(edge: .top).combined(with: .opacity))
+     }
+ }
++
++/// Persistent action feedback mounted outside scrolling form content. It does
++/// not compete with a confirmation dialog for a modal presentation slot.
++struct ActionErrorBanner: View {
++    let title: String
++    let message: String
++    var actionLabel: String? = nil
++    var action: (() -> Void)? = nil
++    let onDismiss: () -> Void
++
++    var body: some View {
++        VStack(alignment: .leading, spacing: 6) {
++            Label(title, systemImage: "exclamationmark.triangle.fill")
++                .font(.subheadline.weight(.semibold))
++            Text(message)
++                .font(.footnote)
++                .fixedSize(horizontal: false, vertical: true)
++            HStack {
++                if let actionLabel, let action {
++                    Button(actionLabel, action: action)
++                        .frame(minHeight: 44)
++                }
++                Spacer()
++                Button("Dismiss", action: onDismiss)
++                    .frame(minHeight: 44)
++            }
++            .font(.footnote.weight(.semibold))
++        }
++        .foregroundStyle(Color.statusText(.red))
++        .padding(12)
++        .frame(maxWidth: .infinity, alignment: .leading)
++        .background(Color.statusBackground(.red), in: RoundedRectangle(cornerRadius: 12))
++        .padding(.horizontal, 16)
++        .padding(.vertical, 8)
++        .background(.bar)
++        .accessibilityElement(children: .contain)
++        .onAppear { announce() }
++        .onChange(of: message) { _, _ in announce() }
++    }
++
++    private func announce() {
++        AccessibilityNotification.Announcement("\(title). \(message)").post()
++    }
++}
+diff --git a/ios/WisconsinUITests/ReportsScreenshotUITests.swift b/ios/WisconsinUITests/ReportsScreenshotUITests.swift
+index 381ed838..92c50607 100644
+--- a/ios/WisconsinUITests/ReportsScreenshotUITests.swift
++++ b/ios/WisconsinUITests/ReportsScreenshotUITests.swift
+@@ -58,6 +58,7 @@ final class ScheduleScreenshotUITests: XCTestCase {
+     func testScheduleListCaptures() throws {
+         let app = XCUIApplication()
+         app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "schedule"
++        app.launchArguments += ["-WisconsinThemeChoice", "light"]
+         app.launch()
+
+         let title = app.navigationBars["Schedule"]
+@@ -84,6 +85,24 @@ final class ScheduleScreenshotUITests: XCTestCase {
+         }
+     }
+
++    func testScheduleAccessibilityCaptures() throws {
++        let app = XCUIApplication()
++        app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "schedule"
++        app.launchArguments += [
++            "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityL",
++            "-WisconsinThemeChoice", "dark"
++        ]
++        app.launch()
++        let event = app.staticTexts["Volleyball vs Nebraska"]
++        XCTAssertTrue(event.waitForExistence(timeout: 20))
++        attach(app, name: "schedule-accessibility")
++        event.tap()
++        XCTAssertTrue(app.staticTexts["Bucky Badger"].waitForExistence(timeout: 15))
++        attach(app, name: "event-detail-accessibility")
++        app.swipeUp(velocity: .slow)
++        attach(app, name: "event-crew-accessibility")
++    }
++
+     private func attach(_ app: XCUIApplication, name: String) {
+         let screenshot = XCTAttachment(screenshot: app.screenshot())
+         screenshot.name = name
+@@ -104,6 +123,7 @@ final class EventDetailScreenshotUITests: XCTestCase {
+     func testEventDetailCaptures() throws {
+         let app = XCUIApplication()
+         app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "schedule"
++        app.launchArguments += ["-WisconsinThemeChoice", "light"]
+         app.launch()
+
+         XCTAssertTrue(app.navigationBars["Schedule"].waitForExistence(timeout: 20),
+@@ -128,7 +148,8 @@ final class EventDetailScreenshotUITests: XCTestCase {
+     }
+
+     private func openEvent(_ app: XCUIApplication, titled title: String) {
+-        let row = app.staticTexts[title]
++        // Multi-day events appear once under each day in the agenda.
++        let row = app.staticTexts.matching(identifier: title).firstMatch
+         if !row.waitForExistence(timeout: 15) || !row.isHittable {
+             // Later fixture days sit below the fold.
+             for _ in 0..<6 where !row.exists || !row.isHittable {
+@@ -186,6 +207,22 @@ final class HomeScreenshotUITests: XCTestCase {
+         attach(app, name: "home-all-clear")
+     }
+
++    func testHomeAccessibilityCaptures() throws {
++        let app = XCUIApplication()
++        app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "home"
++        app.launchArguments = [
++            "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityL",
++            "-WisconsinThemeChoice", "dark"
++        ]
++        app.launch()
++
++        XCTAssertTrue(app.staticTexts["Overdue"].waitForExistence(timeout: 20),
++                      "Home never loaded at accessibility size")
++        attach(app, name: "home-accessibility-top")
++        app.swipeUp(velocity: .slow)
++        attach(app, name: "home-accessibility-queue")
++    }
++
+     private func attach(_ app: XCUIApplication, name: String) {
+         let screenshot = XCTAttachment(screenshot: app.screenshot())
+         screenshot.name = name
+@@ -828,3 +865,61 @@ final class LongPressMenuScreenshotUITests: XCTestCase {
+         add(screenshot)
+     }
+ }
++
++/// Failure paths use the fixture protocol's unmapped mutation responses; no
++/// credentials or real booking/crew records are used.
++@MainActor
++final class ActionErrorRecoveryUITests: XCTestCase {
++    override func setUpWithError() throws { continueAfterFailure = false }
++
++    func testExtensionFailureStaysVisibleAndKeepsChanges() throws {
++        let app = XCUIApplication()
++        app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "booking-extend"
++        app.launchArguments += ["-WisconsinThemeChoice", "light"]
++        app.launch()
++        XCTAssertTrue(app.navigationBars["Extend Booking"].waitForExistence(timeout: 20))
++        let preset = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Extend by 1 day")).firstMatch
++        XCTAssertTrue(preset.waitForExistence(timeout: 10))
++        preset.tap()
++        app.buttons["Extend booking"].tap()
++        XCTAssertTrue(app.staticTexts["The requested item could not be found."].waitForExistence(timeout: 10))
++        attach(app, name: "extension-error")
++        let dismiss = app.buttons["Dismiss"]
++        XCTAssertTrue(dismiss.isHittable, "Failure recovery must be visible without scrolling")
++        dismiss.tap()
++        XCTAssertTrue(app.navigationBars["Extend Booking"].exists)
++        XCTAssertTrue(app.buttons["Extend booking"].isEnabled, "Selected extension must survive dismissal")
++        app.buttons["Extend booking"].tap()
++        XCTAssertTrue(app.buttons["Dismiss"].waitForExistence(timeout: 10), "Repeated failure must be presented again")
++    }
++
++    func testEventFailureAfterConfirmationStaysVisible() throws {
++        let app = XCUIApplication()
++        app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "schedule"
++        app.launchArguments += ["-WisconsinThemeChoice", "light"]
++        app.launch()
++        let event = app.staticTexts["Volleyball vs Nebraska"]
++        XCTAssertTrue(event.waitForExistence(timeout: 20))
++        event.tap()
++        let actions = app.buttons["Actions for Student shift"].firstMatch
++        for _ in 0..<4 where !actions.exists || !actions.isHittable { app.swipeUp() }
++        XCTAssertTrue(actions.waitForExistence(timeout: 10))
++        actions.tap()
++        app.buttons["Remove Bucky Badger"].tap()
++        let confirm = app.buttons["Remove assignment"]
++        XCTAssertTrue(confirm.waitForExistence(timeout: 5))
++        confirm.tap()
++        XCTAssertTrue(app.staticTexts["Couldn't remove assignment"].waitForExistence(timeout: 10))
++        attach(app, name: "event-action-error")
++        XCTAssertTrue(app.buttons["Dismiss"].isHittable)
++        XCTAssertTrue(app.buttons["Refresh"].isHittable)
++        XCTAssertFalse(app.alerts.firstMatch.exists, "Action failures must not compete with confirmation dialogs")
++    }
++
++    private func attach(_ app: XCUIApplication, name: String) {
++        let capture = XCTAttachment(screenshot: app.screenshot())
++        capture.name = name
++        capture.lifetime = .keepAlways
++        add(capture)
++    }
++}

@@ -1,0 +1,40 @@
+{
+  "title": "Schedule list scrolling",
+  "eyebrow": "Web \u00b7 local verified behavior",
+  "lede": "The compact event rows and avatar groups stay in place. Reader input now takes priority over unfinished automatic positioning.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "After-only evidence",
+      "note": "Authenticated local Admin preview, existing isolated test database; Chromium at 1440 \u00d7 1000, light appearance, reduced motion. Captures were not made against a frozen clock and data snapshot, so no matched visual comparison is claimed.",
+      "pairs": []
+    }
+  ],
+  "changes": [
+    {
+      "h": "Delayed loading yields to the reader",
+      "was": "Wheel input during loading was followed by a Today jump to offset 5,933.",
+      "now": "The identical delayed-load scenario made no automatic Today scroll."
+    },
+    {
+      "h": "Interrupted restoration stays cancelled",
+      "was": "Pending restoration remained active after input and could pull the page down when its height changed.",
+      "now": "After wheel input, offset 29,787 remained 29,787 when another 500 px of content arrived."
+    },
+    {
+      "h": "Navigation preserves the reading position",
+      "was": "A modified event click froze position recording; queued writes could outlive the list.",
+      "now": "Modified-click recording matches offset 6,145. Ordinary reload and Back both restore offset 6,633 exactly. Crew expansion/collapse and tablet overflow checks pass."
+    }
+  ],
+  "verification": [
+    "37 timeline tests pass.",
+    "TypeScript, scoped ESLint and diff checks pass.",
+    "Authenticated isolated browser replay: no page exceptions; reduced-motion Today uses instant positioning.",
+    "Application build (npm run build:app), docs verification and final diff check pass."
+  ],
+  "notes": [
+    "After-only capture: after-interactions.png. Replay evidence: interactions.json and return-navigation.json.",
+    "No API/native changes, assignment mutations, deployment, commit or push in this scrolling slice."
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "title": "iOS notification polish",
+  "eyebrow": "Wisconsin Creative \u00b7 Local review \u00b7 September 7, 2026",
+  "lede": "Clearer delivery settings, readable messages, and reliable recovery when the connection fails.",
+  "sections": [
+    {
+      "heading": "After-only simulator evidence",
+      "note": "iPhone 16 Pro, iOS 26.5. The inbox uses XXX Large text and a simulated failed refresh. Settings uses the existing paused-account fixture; its missing preference endpoint deliberately remains visible as a reloadable error. No matched comparison is claimed: the existing fixture clock changes between captures, and the inbox fixture was added during this pass."
+    }
+  ],
+  "changes": [
+    {
+      "h": "Read status survives uncertain responses",
+      "was": "Concurrent actions could restore stale snapshots after a failed response.",
+      "now": "Writes serialize, update after success, and reread the server after uncertainty. Large-inbox Undo respects the API request limit."
+    },
+    {
+      "h": "Messages and recovery stay readable",
+      "was": "Bodies stopped after two lines, banners covered rows, and large text truncated the title.",
+      "now": "Full messages wrap, feedback reserves space, and the labeled bulk-read icon preserves the title."
+    },
+    {
+      "h": "Delivery language describes what is known",
+      "was": "Registration read Ready, the test implied delivery, and the primer promised unsupported broadcasts.",
+      "now": "Settings identifies quiet delivery and registration separately. Test success means Apple accepted the push. Primer copy matches implemented producers."
+    },
+    {
+      "h": "Reminders and broadcasts retain their destination",
+      "was": "Repeated snooze identifiers nested, scheduling could race sign-out, and blast inbox payloads lost their destination.",
+      "now": "Reminders retain routing context and stable identifiers with session cleanup. Blast archive taps return to the Home acknowledgment banner."
+    }
+  ],
+  "verification": [
+    "120 notification and transport contract tests passed across 19 files.",
+    "Eight native notification tests passed on the required iPhone 16 Pro in an isolated copy, including committed-write/lost-response recovery, duplicate action protection, paging overlap, 1,001-item undo, snooze identity, blast decoding and rendered recovery.",
+    "Wisconsin app compiled for the simulator; existing notification-settings UI test passed. TypeScript, focused lint, documentation verification and diff whitespace checks passed."
+  ],
+  "notes": [
+    "The normal native test bundle is blocked by pre-existing ScheduleDateMathTests fixture initializer errors. Focused tests used an isolated copy with only NotificationInboxTests in the test target; product notification sources are unchanged between that copy and this checkout.",
+    "No real push was sent. Physical lock-screen delivery, permission changes, snooze execution, blast acknowledgment, authenticated lifecycle and VoiceOver acceptance remain unverified. No commit, deployment or distribution was performed."
+  ]
+}

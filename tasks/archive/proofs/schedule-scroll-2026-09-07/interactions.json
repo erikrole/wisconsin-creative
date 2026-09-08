@@ -1,0 +1,14 @@
+{
+  "errors": [],
+  "callsAfterLoading": [],
+  "scrollAfterLoading": 0,
+  "interruptedRestore": {
+    "beforeResize": 29787,
+    "afterResize": 29787
+  },
+  "todayMotion": "instant",
+  "modifiedClickStorage": {
+    "stored": 6145,
+    "actual": 6145
+  }
+}

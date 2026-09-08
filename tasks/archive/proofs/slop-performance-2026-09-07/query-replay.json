@@ -1,0 +1,14 @@
+{
+  "baselineCommit": "1f2af2aa",
+  "kitCases": 128,
+  "usageCases": 6,
+  "kits": {
+    "beforeQueries": 5,
+    "afterQueries": 3
+  },
+  "usage": {
+    "beforeQueries": 6,
+    "afterQueries": 5
+  },
+  "boundary": "Full-output fixture replay of real service code with an in-memory database stub. Not a live database or latency benchmark."
+}

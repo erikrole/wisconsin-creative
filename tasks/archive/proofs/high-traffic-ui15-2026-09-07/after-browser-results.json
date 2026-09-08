@@ -1,0 +1,21 @@
+{
+  "checks": [
+    "Duplicate item labels select independently and remain searchable",
+    "Item selection announced; rows >=40px and search labelled",
+    "Bookings special-filter heading and active Sport recovery",
+    "Enter commits once without submitting enclosing form",
+    "IME composition waits until confirmed",
+    "Disabled search clear is disabled",
+    "Read-only search resists clear and Escape",
+    "Disabled search cancels pending callback",
+    "Read-only transition cancels pending callback",
+    "Dashboard toggle state exposed",
+    "Storage failure preserves Save view and shows inline error",
+    "Saved views still save and delete successfully",
+    "Malformed preset object recovers",
+    "Malformed preset entries recover",
+    "Long dashboard labels fit phone width",
+    "No browser runtime errors"
+  ],
+  "errors": []
+}

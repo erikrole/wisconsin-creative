@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "1f2af2aa8bd4e533aad8471a54d35bfd785c2ae3",
+  "sourcePatchSha256": "47bf67f6e50c4e84bd57c1a066d5d49519241d839aa28c796a1ad0aa01ed1d2d",
+  "settings": {
+    "device": "Chromium headless desktop, deviceScaleFactor 1",
+    "viewport": [
+      1100,
+      1000
+    ],
+    "fixture": "settings-ui15 fixture.mjs: rules 30/48/5, policies 3/2/10, system theme, default scale",
+    "role": "Admin component fixture (no authentication)",
+    "route": "/settings/appearance?page=appearance",
+    "appearance": "light",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "2026-09-07T12:00:00Z",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "imageSha256": "0382629316216c6f311dafde52520b8f8192f323eda9c66c44afc95ac87c534b",
+  "dimensions": [
+    1100,
+    1000
+  ]
+}

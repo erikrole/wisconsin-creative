@@ -1,0 +1,157 @@
+{
+  "title": "15 everyday workflow UI fixes",
+  "eyebrow": "Wisconsin Creative \u00b7 Dashboard, Items, Bookings and Search",
+  "lede": "Safer everyday search, dependable dashboard saved views, and clearer item and booking filters.",
+  "stats": [
+    {
+      "k": "UI fixes",
+      "v": "15"
+    },
+    {
+      "k": "Focused tests passed",
+      "v": "28"
+    },
+    {
+      "k": "Browser checks passed",
+      "v": "16"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Matched component comparisons",
+      "note": "Original dirty source snapshots and final components rendered with identical fixture layout, shared compiled CSS, viewport, data, clock and appearance. No live records are involved. These prove component behavior, not authenticated route or production behavior.",
+      "pairs": [
+        {
+          "title": "Everyday filters",
+          "before": "before-overview.png",
+          "after": "after-overview.png",
+          "beforeEvidence": "before-overview-evidence.json",
+          "afterEvidence": "after-overview-evidence.json",
+          "beforeCap": "Open heading conflicts with the Overdue filter; active Sport control is absent.",
+          "afterCap": "Heading says Overdue and the active Sport filter remains editable."
+        },
+        {
+          "title": "Dashboard location filters",
+          "before": "before-dashboard.png",
+          "after": "after-dashboard.png",
+          "beforeEvidence": "before-dashboard-evidence.json",
+          "afterEvidence": "after-dashboard-evidence.json",
+          "beforeCap": "The long location label escapes the popover.",
+          "afterCap": "The location wraps inside the menu."
+        },
+        {
+          "title": "Item categories",
+          "before": "before-items.png",
+          "after": "after-items.png",
+          "beforeEvidence": "before-items-evidence.json",
+          "afterEvidence": "after-items-evidence.json",
+          "beforeCap": "Compact rows and ambiguous duplicate-label identities.",
+          "afterCap": "40px rows with stable option IDs and explicit inclusion names."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "1. Do not publish partial IME composition as a search.",
+      "was": "Source-confirmed interaction, recovery or accessibility gap.",
+      "now": "Do not publish partial IME composition as a search."
+    },
+    {
+      "h": "2. Enter commits search without submitting an enclosing form.",
+      "was": "Source-confirmed interaction, recovery or accessibility gap.",
+      "now": "Enter commits search without submitting an enclosing form."
+    },
+    {
+      "h": "3. Disabled search cannot be cleared through its still-active clear button.",
+      "was": "Source-confirmed interaction, recovery or accessibility gap.",
+      "now": "Disabled search cannot be cleared through its still-active clear button."
+    },
+    {
+      "h": "4. Read-only search cannot be cleared through its clear button or Escape.",
+      "was": "Source-confirmed interaction, recovery or accessibility gap.",
+      "now": "Read-only search cannot be cleared through its clear button or Escape."
+    },
+    {
+      "h": "5. Pending search callbacks stop when the field becomes disabled/read-only.",
+      "was": "Source-confirmed interaction, recovery or accessibility gap.",
+      "now": "Pending search callbacks stop when the field becomes disabled/read-only."
+    },
+    {
+      "h": "6. Malformed saved-view storage cannot crash Dashboard filters.",
+      "was": "Source-confirmed interaction, recovery or accessibility gap.",
+      "now": "Malformed saved-view storage cannot crash Dashboard filters."
+    },
+    {
+      "h": "7. Failed saved-view writes show a persistent error and preserve the current state.",
+      "was": "Source-confirmed interaction, recovery or accessibility gap.",
+      "now": "Failed saved-view writes show a persistent error and preserve the current state."
+    },
+    {
+      "h": "8. Dashboard sport/location/preset toggles expose their pressed state.",
+      "was": "Source-confirmed interaction, recovery or accessibility gap.",
+      "now": "Dashboard sport/location/preset toggles expose their pressed state."
+    },
+    {
+      "h": "9. Long Dashboard filter trigger text stays within available width.",
+      "was": "Source-confirmed interaction, recovery or accessibility gap.",
+      "now": "Long Dashboard filter trigger text stays within available width."
+    },
+    {
+      "h": "10. Long Dashboard location/preset labels wrap without overflowing their popover.",
+      "was": "Source-confirmed interaction, recovery or accessibility gap.",
+      "now": "Long Dashboard location/preset labels wrap without overflowing their popover."
+    },
+    {
+      "h": "11. Booking heading follows the special filter that actually takes precedence in the request.",
+      "was": "Source-confirmed interaction, recovery or accessibility gap.",
+      "now": "Booking heading follows the special filter that actually takes precedence in the request."
+    },
+    {
+      "h": "12. Active booking Sport control stays available when the current results contain no sport codes.",
+      "was": "Source-confirmed interaction, recovery or accessibility gap.",
+      "now": "Active booking Sport control stays available when the current results contain no sport codes."
+    },
+    {
+      "h": "13. Item facet options use stable IDs so duplicate labels remain independently selectable.",
+      "was": "Source-confirmed interaction, recovery or accessibility gap.",
+      "now": "Item facet options use stable IDs so duplicate labels remain independently selectable."
+    },
+    {
+      "h": "14. Item facet search has a specific accessible label and selected options announce inclusion.",
+      "was": "Source-confirmed interaction, recovery or accessibility gap.",
+      "now": "Item facet search has a specific accessible label and selected options announce inclusion."
+    },
+    {
+      "h": "15. Item facet option/clear rows meet the 40px target floor.",
+      "was": "Source-confirmed interaction, recovery or accessibility gap.",
+      "now": "Item facet option/clear rows meet the 40px target floor."
+    }
+  ],
+  "verification": [
+    "28 focused tests passed.",
+    "TypeScript, lint, production app build, docs/codemap and diff checks passed.",
+    "Duplicate item labels select independently and remain searchable",
+    "Item selection announced; rows >=40px and search labelled",
+    "Bookings special-filter heading and active Sport recovery",
+    "Enter commits once without submitting enclosing form",
+    "IME composition waits until confirmed",
+    "Disabled search clear is disabled",
+    "Read-only search resists clear and Escape",
+    "Disabled search cancels pending callback",
+    "Read-only transition cancels pending callback",
+    "Dashboard toggle state exposed",
+    "Storage failure preserves Save view and shows inline error",
+    "Saved views still save and delete successfully",
+    "Malformed preset object recovers",
+    "Malformed preset entries recover",
+    "Long dashboard labels fit phone width",
+    "No browser runtime errors"
+  ],
+  "notes": [
+    "Local and uncommitted. No live records, permissions, custody rules, API contracts or production settings changed.",
+    "Browser evidence uses isolated real components; no signed-in application session was established, so authenticated full-route and deployment verification remain open.",
+    "Shared search propagation: Items, Bookings, Kits, global Search, Labels, Resources. Schedule was inspected as a candidate but is not changed by this batch.",
+    "Supplemental after-only images: after-storage-error.png and after-mobile.png in this directory."
+  ]
+}

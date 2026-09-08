@@ -1,0 +1,24 @@
+{
+  "verificationDate": "2026-09-07",
+  "restoration": {
+    "tables": 91,
+    "differences": []
+  },
+  "originalBranch": "br-gentle-sky-aisuwcsf",
+  "originalEndpoint": "ep-flat-firefly-ai889avp",
+  "snapshot": "snap-shiny-dust-airv1n4i",
+  "historyRetentionSeconds": 604800,
+  "schedule": [
+    {
+      "frequency": "daily",
+      "hour": 7,
+      "retention_seconds": 604800
+    }
+  ],
+  "migrationsApplied": false,
+  "tests": 46,
+  "typecheck": "passed",
+  "lint": "passed",
+  "build": "passed; 259 pages",
+  "localPostgres": "fresh and base-commit paths passed"
+}

@@ -1,0 +1,65 @@
+{
+  "title": "iOS action error recovery",
+  "eyebrow": "Wisconsin Creative \u00b7 Local simulator proof",
+  "lede": "Failed actions remain visible in the active screen, with entered dates preserved.",
+  "stats": [
+    {
+      "k": "Failure journeys",
+      "v": "2 passed",
+      "n": "Extension failure and event failure after confirmation",
+      "tone": "good"
+    },
+    {
+      "k": "Focused source checks",
+      "v": "6 passed",
+      "n": "Error placement, accessibility, and booking snapshot contracts"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Failure presentation",
+      "note": "Same iPhone 16 Pro, theme, fixture scenarios, and scripted actions. Baseline uses the exact pre-task working files. Clock and relative booking timestamps differ by one minute; no pixel-density claim is made. The extension baseline is a frame from the UI-test recording because its off-screen error failed the visibility assertion.",
+      "pairs": [
+        {
+          "title": "Booking extension",
+          "sub": "A rejected extension must not look like an ignored tap.",
+          "before": "/Users/role/Code/wisconsin-creative/tasks/archive/proofs/ios-action-errors-2026-09-07/before/extension-error.png",
+          "beforeCap": "The error is below the graphical date picker and outside the viewport.",
+          "after": "/Users/role/Code/wisconsin-creative/tasks/archive/proofs/ios-action-errors-2026-09-07/after/635CB8FA-7F1B-4BBC-B8F3-57296584872F.png",
+          "afterCap": "Full error stays above the form; dismissing it retains the selected date."
+        },
+        {
+          "title": "Event actions after confirmation",
+          "sub": "Assignment removal exercises the same failure presenter used by shift claims.",
+          "before": "/Users/role/Code/wisconsin-creative/tasks/archive/proofs/ios-action-errors-2026-09-07/before/95C3A7D4-E602-491D-A162-D8EB22DC02AA.png",
+          "beforeCap": "A second modal alert offers direct mutation retry. This baseline did display the alert; suppression was not reproduced.",
+          "after": "/Users/role/Code/wisconsin-creative/tasks/archive/proofs/ios-action-errors-2026-09-07/after/53A2D959-5F07-4180-BD51-0EFBDB4FD319.png",
+          "afterCap": "A persistent banner offers authoritative Refresh and Dismiss without another modal."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Failure visibility",
+      "was": "Extension and call-window errors lived within scrolling form content.",
+      "now": "Both pin a full, VoiceOver-announced error above the form and preserve input."
+    },
+    {
+      "h": "Event recovery",
+      "was": "Event actions attempted an error alert after confirmation and offered replay.",
+      "now": "A pinned recovery banner refreshes the latest crew state before another attempt."
+    }
+  ],
+  "verification": [
+    "Wisconsin iPhone 16 Pro build passed.",
+    "Two isolated UI tests passed; extension dismissal preserves the changed date and a repeated rejection is shown again.",
+    "Six focused regression checks passed; project consistency, iOS drift, and audit-gap checks passed.",
+    "Broader related source contracts have existing failures in version, Schedule authoring, picker, and dashboard expectations; see the plan."
+  ],
+  "notes": [
+    "Local source and fixture proof only. No production booking or shift was mutated; no commit, upload, or deployment occurred.",
+    "Student claim backend rejection causes and physical-device VoiceOver behavior remain unverified.",
+    "Call-window error placement is source/build checked; this page does not claim a call-window runtime capture."
+  ]
+}

@@ -1,0 +1,1910 @@
+{
+  "capturedDate": "2026-09-07",
+  "target": {
+    "project_id": "flat-night-29913432",
+    "branch_id": "br-gentle-sky-aisuwcsf",
+    "database_name": "gear-tracker"
+  },
+  "snapshotSchedule": {
+    "schedule": []
+  },
+  "snapshots": [
+    {
+      "id": "snap-silent-dream-ai2wk8ca",
+      "name": "production at 2026-05-01 12:17:26 UTC (manual)",
+      "source_branch_id": "br-gentle-sky-aisuwcsf",
+      "created_at": "2026-05-01T12:17:27Z",
+      "manual": true,
+      "full_size": 46694400
+    }
+  ],
+  "liveIndexes": [
+    {
+      "tablename": "_prisma_migrations",
+      "indexname": "_prisma_migrations_pkey",
+      "indexdef": "CREATE UNIQUE INDEX _prisma_migrations_pkey ON public._prisma_migrations USING btree (id)"
+    },
+    {
+      "tablename": "allowed_emails",
+      "indexname": "allowed_emails_collaborator_policy_id_idx",
+      "indexdef": "CREATE INDEX allowed_emails_collaborator_policy_id_idx ON public.allowed_emails USING btree (collaborator_policy_id)"
+    },
+    {
+      "tablename": "allowed_emails",
+      "indexname": "allowed_emails_created_by_id_idx",
+      "indexdef": "CREATE INDEX allowed_emails_created_by_id_idx ON public.allowed_emails USING btree (created_by_id)"
+    },
+    {
+      "tablename": "allowed_emails",
+      "indexname": "allowed_emails_email_key",
+      "indexdef": "CREATE UNIQUE INDEX allowed_emails_email_key ON public.allowed_emails USING btree (email)"
+    },
+    {
+      "tablename": "allowed_emails",
+      "indexname": "allowed_emails_pkey",
+      "indexdef": "CREATE UNIQUE INDEX allowed_emails_pkey ON public.allowed_emails USING btree (id)"
+    },
+    {
+      "tablename": "allowed_emails",
+      "indexname": "allowed_emails_role_affiliation_idx",
+      "indexdef": "CREATE INDEX allowed_emails_role_affiliation_idx ON public.allowed_emails USING btree (role, affiliation)"
+    },
+    {
+      "tablename": "asset_allocations",
+      "indexname": "asset_allocations_asset_id_active_idx",
+      "indexdef": "CREATE INDEX asset_allocations_asset_id_active_idx ON public.asset_allocations USING btree (asset_id, active)"
+    },
+    {
+      "tablename": "asset_allocations",
+      "indexname": "asset_allocations_asset_id_active_starts_at_ends_at_idx",
+      "indexdef": "CREATE INDEX asset_allocations_asset_id_active_starts_at_ends_at_idx ON public.asset_allocations USING btree (asset_id, active, starts_at, ends_at)"
+    },
+    {
+      "tablename": "asset_allocations",
+      "indexname": "asset_allocations_booking_id_idx",
+      "indexdef": "CREATE INDEX asset_allocations_booking_id_idx ON public.asset_allocations USING btree (booking_id)"
+    },
+    {
+      "tablename": "asset_allocations",
+      "indexname": "asset_allocations_pkey",
+      "indexdef": "CREATE UNIQUE INDEX asset_allocations_pkey ON public.asset_allocations USING btree (id)"
+    },
+    {
+      "tablename": "assets",
+      "indexname": "assets_asset_tag_key",
+      "indexdef": "CREATE UNIQUE INDEX assets_asset_tag_key ON public.assets USING btree (asset_tag)"
+    },
+    {
+      "tablename": "assets",
+      "indexname": "assets_asset_tag_trgm_idx",
+      "indexdef": "CREATE INDEX assets_asset_tag_trgm_idx ON public.assets USING gin (asset_tag gin_trgm_ops)"
+    },
+    {
+      "tablename": "assets",
+      "indexname": "assets_brand_model_idx",
+      "indexdef": "CREATE INDEX assets_brand_model_idx ON public.assets USING btree (brand, model)"
+    },
+    {
+      "tablename": "assets",
+      "indexname": "assets_brand_trgm_idx",
+      "indexdef": "CREATE INDEX assets_brand_trgm_idx ON public.assets USING gin (brand gin_trgm_ops)"
+    },
+    {
+      "tablename": "assets",
+      "indexname": "assets_category_id_idx",
+      "indexdef": "CREATE INDEX assets_category_id_idx ON public.assets USING btree (category_id)"
+    },
+    {
+      "tablename": "assets",
+      "indexname": "assets_department_id_idx",
+      "indexdef": "CREATE INDEX assets_department_id_idx ON public.assets USING btree (department_id)"
+    },
+    {
+      "tablename": "assets",
+      "indexname": "assets_location_id_idx",
+      "indexdef": "CREATE INDEX assets_location_id_idx ON public.assets USING btree (location_id)"
+    },
+    {
+      "tablename": "assets",
+      "indexname": "assets_model_trgm_idx",
+      "indexdef": "CREATE INDEX assets_model_trgm_idx ON public.assets USING gin (model gin_trgm_ops)"
+    },
+    {
+      "tablename": "assets",
+      "indexname": "assets_name_trgm_idx",
+      "indexdef": "CREATE INDEX assets_name_trgm_idx ON public.assets USING gin (name gin_trgm_ops)"
+    },
+    {
+      "tablename": "assets",
+      "indexname": "assets_parent_asset_id_idx",
+      "indexdef": "CREATE INDEX assets_parent_asset_id_idx ON public.assets USING btree (parent_asset_id)"
+    },
+    {
+      "tablename": "assets",
+      "indexname": "assets_pkey",
+      "indexdef": "CREATE UNIQUE INDEX assets_pkey ON public.assets USING btree (id)"
+    },
+    {
+      "tablename": "assets",
+      "indexname": "assets_primary_scan_code_key",
+      "indexdef": "CREATE UNIQUE INDEX assets_primary_scan_code_key ON public.assets USING btree (primary_scan_code)"
+    },
+    {
+      "tablename": "assets",
+      "indexname": "assets_qr_code_value_key",
+      "indexdef": "CREATE UNIQUE INDEX assets_qr_code_value_key ON public.assets USING btree (qr_code_value)"
+    },
+    {
+      "tablename": "assets",
+      "indexname": "assets_serial_number_key",
+      "indexdef": "CREATE UNIQUE INDEX assets_serial_number_key ON public.assets USING btree (serial_number)"
+    },
+    {
+      "tablename": "assets",
+      "indexname": "assets_status_idx",
+      "indexdef": "CREATE INDEX assets_status_idx ON public.assets USING btree (status)"
+    },
+    {
+      "tablename": "audit_logs",
+      "indexname": "audit_logs_created_at_idx",
+      "indexdef": "CREATE INDEX audit_logs_created_at_idx ON public.audit_logs USING btree (created_at)"
+    },
+    {
+      "tablename": "audit_logs",
+      "indexname": "audit_logs_entity_type_entity_id_created_at_idx",
+      "indexdef": "CREATE INDEX audit_logs_entity_type_entity_id_created_at_idx ON public.audit_logs USING btree (entity_type, entity_id, created_at)"
+    },
+    {
+      "tablename": "audit_logs",
+      "indexname": "audit_logs_pkey",
+      "indexdef": "CREATE UNIQUE INDEX audit_logs_pkey ON public.audit_logs USING btree (id)"
+    },
+    {
+      "tablename": "badge_definitions",
+      "indexname": "badge_definitions_active_sort_order_idx",
+      "indexdef": "CREATE INDEX badge_definitions_active_sort_order_idx ON public.badge_definitions USING btree (active, sort_order)"
+    },
+    {
+      "tablename": "badge_definitions",
+      "indexname": "badge_definitions_category_sort_order_idx",
+      "indexdef": "CREATE INDEX badge_definitions_category_sort_order_idx ON public.badge_definitions USING btree (category, sort_order)"
+    },
+    {
+      "tablename": "badge_definitions",
+      "indexname": "badge_definitions_key_key",
+      "indexdef": "CREATE UNIQUE INDEX badge_definitions_key_key ON public.badge_definitions USING btree (key)"
+    },
+    {
+      "tablename": "badge_definitions",
+      "indexname": "badge_definitions_pkey",
+      "indexdef": "CREATE UNIQUE INDEX badge_definitions_pkey ON public.badge_definitions USING btree (id)"
+    },
+    {
+      "tablename": "badge_event_receipts",
+      "indexname": "badge_event_receipts_pkey",
+      "indexdef": "CREATE UNIQUE INDEX badge_event_receipts_pkey ON public.badge_event_receipts USING btree (id)"
+    },
+    {
+      "tablename": "badge_event_receipts",
+      "indexname": "badge_event_receipts_received_at_idx",
+      "indexdef": "CREATE INDEX badge_event_receipts_received_at_idx ON public.badge_event_receipts USING btree (received_at)"
+    },
+    {
+      "tablename": "badge_event_receipts",
+      "indexname": "badge_event_receipts_user_id_event_type_source_key_key",
+      "indexdef": "CREATE UNIQUE INDEX badge_event_receipts_user_id_event_type_source_key_key ON public.badge_event_receipts USING btree (user_id, event_type, source_key)"
+    },
+    {
+      "tablename": "badge_streaks",
+      "indexname": "badge_streaks_pkey",
+      "indexdef": "CREATE UNIQUE INDEX badge_streaks_pkey ON public.badge_streaks USING btree (id)"
+    },
+    {
+      "tablename": "badge_streaks",
+      "indexname": "badge_streaks_user_id_idx",
+      "indexdef": "CREATE INDEX badge_streaks_user_id_idx ON public.badge_streaks USING btree (user_id)"
+    },
+    {
+      "tablename": "badge_streaks",
+      "indexname": "badge_streaks_user_id_streak_type_key",
+      "indexdef": "CREATE UNIQUE INDEX badge_streaks_user_id_streak_type_key ON public.badge_streaks USING btree (user_id, streak_type)"
+    },
+    {
+      "tablename": "blast_recipients",
+      "indexname": "blast_recipients_blast_id_acknowledged_at_idx",
+      "indexdef": "CREATE INDEX blast_recipients_blast_id_acknowledged_at_idx ON public.blast_recipients USING btree (blast_id, acknowledged_at)"
+    },
+    {
+      "tablename": "blast_recipients",
+      "indexname": "blast_recipients_blast_id_user_id_key",
+      "indexdef": "CREATE UNIQUE INDEX blast_recipients_blast_id_user_id_key ON public.blast_recipients USING btree (blast_id, user_id)"
+    },
+    {
+      "tablename": "blast_recipients",
+      "indexname": "blast_recipients_pkey",
+      "indexdef": "CREATE UNIQUE INDEX blast_recipients_pkey ON public.blast_recipients USING btree (id)"
+    },
+    {
+      "tablename": "blast_recipients",
+      "indexname": "blast_recipients_user_id_acknowledged_at_idx",
+      "indexdef": "CREATE INDEX blast_recipients_user_id_acknowledged_at_idx ON public.blast_recipients USING btree (user_id, acknowledged_at)"
+    },
+    {
+      "tablename": "blasts",
+      "indexname": "blasts_cancelled_by_id_idx",
+      "indexdef": "CREATE INDEX blasts_cancelled_by_id_idx ON public.blasts USING btree (cancelled_by_id)"
+    },
+    {
+      "tablename": "blasts",
+      "indexname": "blasts_created_by_id_created_at_idx",
+      "indexdef": "CREATE INDEX blasts_created_by_id_created_at_idx ON public.blasts USING btree (created_by_id, created_at)"
+    },
+    {
+      "tablename": "blasts",
+      "indexname": "blasts_event_id_idx",
+      "indexdef": "CREATE INDEX blasts_event_id_idx ON public.blasts USING btree (event_id)"
+    },
+    {
+      "tablename": "blasts",
+      "indexname": "blasts_pkey",
+      "indexdef": "CREATE UNIQUE INDEX blasts_pkey ON public.blasts USING btree (id)"
+    },
+    {
+      "tablename": "blasts",
+      "indexname": "blasts_status_sent_at_idx",
+      "indexdef": "CREATE INDEX blasts_status_sent_at_idx ON public.blasts USING btree (status, sent_at)"
+    },
+    {
+      "tablename": "booking_accountability_exclusions",
+      "indexname": "booking_accountability_exclusions_booking_id_key",
+      "indexdef": "CREATE UNIQUE INDEX booking_accountability_exclusions_booking_id_key ON public.booking_accountability_exclusions USING btree (booking_id)"
+    },
+    {
+      "tablename": "booking_accountability_exclusions",
+      "indexname": "booking_accountability_exclusions_excluded_by_user_id_idx",
+      "indexdef": "CREATE INDEX booking_accountability_exclusions_excluded_by_user_id_idx ON public.booking_accountability_exclusions USING btree (excluded_by_user_id)"
+    },
+    {
+      "tablename": "booking_accountability_exclusions",
+      "indexname": "booking_accountability_exclusions_pkey",
+      "indexdef": "CREATE UNIQUE INDEX booking_accountability_exclusions_pkey ON public.booking_accountability_exclusions USING btree (id)"
+    },
+    {
+      "tablename": "booking_accountability_exclusions",
+      "indexname": "booking_accountability_exclusions_restored_at_excluded_at_idx",
+      "indexdef": "CREATE INDEX booking_accountability_exclusions_restored_at_excluded_at_idx ON public.booking_accountability_exclusions USING btree (restored_at, excluded_at)"
+    },
+    {
+      "tablename": "booking_accountability_exclusions",
+      "indexname": "booking_accountability_exclusions_restored_by_user_id_idx",
+      "indexdef": "CREATE INDEX booking_accountability_exclusions_restored_by_user_id_idx ON public.booking_accountability_exclusions USING btree (restored_by_user_id)"
+    },
+    {
+      "tablename": "booking_bulk_items",
+      "indexname": "booking_bulk_items_booking_id_bulk_sku_id_key",
+      "indexdef": "CREATE UNIQUE INDEX booking_bulk_items_booking_id_bulk_sku_id_key ON public.booking_bulk_items USING btree (booking_id, bulk_sku_id)"
+    },
+    {
+      "tablename": "booking_bulk_items",
+      "indexname": "booking_bulk_items_bulk_sku_id_idx",
+      "indexdef": "CREATE INDEX booking_bulk_items_bulk_sku_id_idx ON public.booking_bulk_items USING btree (bulk_sku_id)"
+    },
+    {
+      "tablename": "booking_bulk_items",
+      "indexname": "booking_bulk_items_pkey",
+      "indexdef": "CREATE UNIQUE INDEX booking_bulk_items_pkey ON public.booking_bulk_items USING btree (id)"
+    },
+    {
+      "tablename": "booking_bulk_unit_allocations",
+      "indexname": "booking_bulk_unit_allocations_booking_bulk_item_id_bulk_sku_u_k",
+      "indexdef": "CREATE UNIQUE INDEX booking_bulk_unit_allocations_booking_bulk_item_id_bulk_sku_u_k ON public.booking_bulk_unit_allocations USING btree (booking_bulk_item_id, bulk_sku_unit_id)"
+    },
+    {
+      "tablename": "booking_bulk_unit_allocations",
+      "indexname": "booking_bulk_unit_allocations_bulk_sku_unit_id_idx",
+      "indexdef": "CREATE INDEX booking_bulk_unit_allocations_bulk_sku_unit_id_idx ON public.booking_bulk_unit_allocations USING btree (bulk_sku_unit_id)"
+    },
+    {
+      "tablename": "booking_bulk_unit_allocations",
+      "indexname": "booking_bulk_unit_allocations_one_active_unit_key",
+      "indexdef": "CREATE UNIQUE INDEX booking_bulk_unit_allocations_one_active_unit_key ON public.booking_bulk_unit_allocations USING btree (bulk_sku_unit_id) WHERE ((checked_out_at IS NOT NULL) AND (checked_in_at IS NULL))"
+    },
+    {
+      "tablename": "booking_bulk_unit_allocations",
+      "indexname": "booking_bulk_unit_allocations_pkey",
+      "indexdef": "CREATE UNIQUE INDEX booking_bulk_unit_allocations_pkey ON public.booking_bulk_unit_allocations USING btree (id)"
+    },
+    {
+      "tablename": "booking_due_date_changes",
+      "indexname": "booking_due_date_changes_actor_user_id_idx",
+      "indexdef": "CREATE INDEX booking_due_date_changes_actor_user_id_idx ON public.booking_due_date_changes USING btree (actor_user_id)"
+    },
+    {
+      "tablename": "booking_due_date_changes",
+      "indexname": "booking_due_date_changes_booking_id_changed_at_idx",
+      "indexdef": "CREATE INDEX booking_due_date_changes_booking_id_changed_at_idx ON public.booking_due_date_changes USING btree (booking_id, changed_at)"
+    },
+    {
+      "tablename": "booking_due_date_changes",
+      "indexname": "booking_due_date_changes_changed_at_idx",
+      "indexdef": "CREATE INDEX booking_due_date_changes_changed_at_idx ON public.booking_due_date_changes USING btree (changed_at)"
+    },
+    {
+      "tablename": "booking_due_date_changes",
+      "indexname": "booking_due_date_changes_pkey",
+      "indexdef": "CREATE UNIQUE INDEX booking_due_date_changes_pkey ON public.booking_due_date_changes USING btree (id)"
+    },
+    {
+      "tablename": "booking_events",
+      "indexname": "booking_events_booking_id_event_id_key",
+      "indexdef": "CREATE UNIQUE INDEX booking_events_booking_id_event_id_key ON public.booking_events USING btree (booking_id, event_id)"
+    },
+    {
+      "tablename": "booking_events",
+      "indexname": "booking_events_booking_id_ordinal_idx",
+      "indexdef": "CREATE INDEX booking_events_booking_id_ordinal_idx ON public.booking_events USING btree (booking_id, ordinal)"
+    },
+    {
+      "tablename": "booking_events",
+      "indexname": "booking_events_event_id_idx",
+      "indexdef": "CREATE INDEX booking_events_event_id_idx ON public.booking_events USING btree (event_id)"
+    },
+    {
+      "tablename": "booking_events",
+      "indexname": "booking_events_pkey",
+      "indexdef": "CREATE UNIQUE INDEX booking_events_pkey ON public.booking_events USING btree (id)"
+    },
+    {
+      "tablename": "booking_photos",
+      "indexname": "booking_photos_booking_id_phase_idx",
+      "indexdef": "CREATE INDEX booking_photos_booking_id_phase_idx ON public.booking_photos USING btree (booking_id, phase)"
+    },
+    {
+      "tablename": "booking_photos",
+      "indexname": "booking_photos_pkey",
+      "indexdef": "CREATE UNIQUE INDEX booking_photos_pkey ON public.booking_photos USING btree (id)"
+    },
+    {
+      "tablename": "booking_serialized_items",
+      "indexname": "booking_serialized_items_asset_id_idx",
+      "indexdef": "CREATE INDEX booking_serialized_items_asset_id_idx ON public.booking_serialized_items USING btree (asset_id)"
+    },
+    {
+      "tablename": "booking_serialized_items",
+      "indexname": "booking_serialized_items_assigned_user_id_allocation_status_idx",
+      "indexdef": "CREATE INDEX booking_serialized_items_assigned_user_id_allocation_status_idx ON public.booking_serialized_items USING btree (assigned_user_id, allocation_status)"
+    },
+    {
+      "tablename": "booking_serialized_items",
+      "indexname": "booking_serialized_items_booking_id_asset_id_key",
+      "indexdef": "CREATE UNIQUE INDEX booking_serialized_items_booking_id_asset_id_key ON public.booking_serialized_items USING btree (booking_id, asset_id)"
+    },
+    {
+      "tablename": "booking_serialized_items",
+      "indexname": "booking_serialized_items_pkey",
+      "indexdef": "CREATE UNIQUE INDEX booking_serialized_items_pkey ON public.booking_serialized_items USING btree (id)"
+    },
+    {
+      "tablename": "bookings",
+      "indexname": "bookings_created_by_status_idx",
+      "indexdef": "CREATE INDEX bookings_created_by_status_idx ON public.bookings USING btree (created_by, status)"
+    },
+    {
+      "tablename": "bookings",
+      "indexname": "bookings_event_id_idx",
+      "indexdef": "CREATE INDEX bookings_event_id_idx ON public.bookings USING btree (event_id)"
+    },
+    {
+      "tablename": "bookings",
+      "indexname": "bookings_kind_custody_scope_status_ends_at_idx",
+      "indexdef": "CREATE INDEX bookings_kind_custody_scope_status_ends_at_idx ON public.bookings USING btree (kind, custody_scope, status, ends_at)"
+    },
+    {
+      "tablename": "bookings",
+      "indexname": "bookings_kind_status_ends_at_idx",
+      "indexdef": "CREATE INDEX bookings_kind_status_ends_at_idx ON public.bookings USING btree (kind, status, ends_at)"
+    },
+    {
+      "tablename": "bookings",
+      "indexname": "bookings_kind_status_requester_user_id_ends_at_idx",
+      "indexdef": "CREATE INDEX bookings_kind_status_requester_user_id_ends_at_idx ON public.bookings USING btree (kind, status, requester_user_id, ends_at)"
+    },
+    {
+      "tablename": "bookings",
+      "indexname": "bookings_kit_id_idx",
+      "indexdef": "CREATE INDEX bookings_kit_id_idx ON public.bookings USING btree (kit_id)"
+    },
+    {
+      "tablename": "bookings",
+      "indexname": "bookings_location_id_starts_at_ends_at_idx",
+      "indexdef": "CREATE INDEX bookings_location_id_starts_at_ends_at_idx ON public.bookings USING btree (location_id, starts_at, ends_at)"
+    },
+    {
+      "tablename": "bookings",
+      "indexname": "bookings_pickup_kiosk_device_id_idx",
+      "indexdef": "CREATE INDEX bookings_pickup_kiosk_device_id_idx ON public.bookings USING btree (pickup_kiosk_device_id)"
+    },
+    {
+      "tablename": "bookings",
+      "indexname": "bookings_pkey",
+      "indexdef": "CREATE UNIQUE INDEX bookings_pkey ON public.bookings USING btree (id)"
+    },
+    {
+      "tablename": "bookings",
+      "indexname": "bookings_ref_number_key",
+      "indexdef": "CREATE UNIQUE INDEX bookings_ref_number_key ON public.bookings USING btree (ref_number)"
+    },
+    {
+      "tablename": "bookings",
+      "indexname": "bookings_ref_number_trgm_idx",
+      "indexdef": "CREATE INDEX bookings_ref_number_trgm_idx ON public.bookings USING gin (ref_number gin_trgm_ops)"
+    },
+    {
+      "tablename": "bookings",
+      "indexname": "bookings_shift_assignment_id_idx",
+      "indexdef": "CREATE INDEX bookings_shift_assignment_id_idx ON public.bookings USING btree (shift_assignment_id)"
+    },
+    {
+      "tablename": "bookings",
+      "indexname": "bookings_source_reservation_id_idx",
+      "indexdef": "CREATE INDEX bookings_source_reservation_id_idx ON public.bookings USING btree (source_reservation_id)"
+    },
+    {
+      "tablename": "bookings",
+      "indexname": "bookings_sport_code_idx",
+      "indexdef": "CREATE INDEX bookings_sport_code_idx ON public.bookings USING btree (sport_code)"
+    },
+    {
+      "tablename": "bookings",
+      "indexname": "bookings_starts_at_ends_at_idx",
+      "indexdef": "CREATE INDEX bookings_starts_at_ends_at_idx ON public.bookings USING btree (starts_at, ends_at)"
+    },
+    {
+      "tablename": "bookings",
+      "indexname": "bookings_status_kind_idx",
+      "indexdef": "CREATE INDEX bookings_status_kind_idx ON public.bookings USING btree (status, kind)"
+    },
+    {
+      "tablename": "bookings",
+      "indexname": "bookings_title_trgm_idx",
+      "indexdef": "CREATE INDEX bookings_title_trgm_idx ON public.bookings USING gin (title gin_trgm_ops)"
+    },
+    {
+      "tablename": "bulk_sku_products",
+      "indexname": "bulk_sku_products_bulk_sku_id_active_idx",
+      "indexdef": "CREATE INDEX bulk_sku_products_bulk_sku_id_active_idx ON public.bulk_sku_products USING btree (bulk_sku_id, active)"
+    },
+    {
+      "tablename": "bulk_sku_products",
+      "indexname": "bulk_sku_products_bulk_sku_id_normalized_name_key",
+      "indexdef": "CREATE UNIQUE INDEX bulk_sku_products_bulk_sku_id_normalized_name_key ON public.bulk_sku_products USING btree (bulk_sku_id, normalized_name)"
+    },
+    {
+      "tablename": "bulk_sku_products",
+      "indexname": "bulk_sku_products_pkey",
+      "indexdef": "CREATE UNIQUE INDEX bulk_sku_products_pkey ON public.bulk_sku_products USING btree (id)"
+    },
+    {
+      "tablename": "bulk_sku_units",
+      "indexname": "bulk_sku_units_bulk_sku_id_label_printed_at_idx",
+      "indexdef": "CREATE INDEX bulk_sku_units_bulk_sku_id_label_printed_at_idx ON public.bulk_sku_units USING btree (bulk_sku_id, label_printed_at)"
+    },
+    {
+      "tablename": "bulk_sku_units",
+      "indexname": "bulk_sku_units_bulk_sku_id_status_idx",
+      "indexdef": "CREATE INDEX bulk_sku_units_bulk_sku_id_status_idx ON public.bulk_sku_units USING btree (bulk_sku_id, status)"
+    },
+    {
+      "tablename": "bulk_sku_units",
+      "indexname": "bulk_sku_units_bulk_sku_id_unit_number_key",
+      "indexdef": "CREATE UNIQUE INDEX bulk_sku_units_bulk_sku_id_unit_number_key ON public.bulk_sku_units USING btree (bulk_sku_id, unit_number)"
+    },
+    {
+      "tablename": "bulk_sku_units",
+      "indexname": "bulk_sku_units_label_printed_by_id_idx",
+      "indexdef": "CREATE INDEX bulk_sku_units_label_printed_by_id_idx ON public.bulk_sku_units USING btree (label_printed_by_id)"
+    },
+    {
+      "tablename": "bulk_sku_units",
+      "indexname": "bulk_sku_units_pkey",
+      "indexdef": "CREATE UNIQUE INDEX bulk_sku_units_pkey ON public.bulk_sku_units USING btree (id)"
+    },
+    {
+      "tablename": "bulk_sku_units",
+      "indexname": "bulk_sku_units_product_id_idx",
+      "indexdef": "CREATE INDEX bulk_sku_units_product_id_idx ON public.bulk_sku_units USING btree (product_id)"
+    },
+    {
+      "tablename": "bulk_skus",
+      "indexname": "bulk_skus_category_id_idx",
+      "indexdef": "CREATE INDEX bulk_skus_category_id_idx ON public.bulk_skus USING btree (category_id)"
+    },
+    {
+      "tablename": "bulk_skus",
+      "indexname": "bulk_skus_department_id_idx",
+      "indexdef": "CREATE INDEX bulk_skus_department_id_idx ON public.bulk_skus USING btree (department_id)"
+    },
+    {
+      "tablename": "bulk_skus",
+      "indexname": "bulk_skus_location_id_active_idx",
+      "indexdef": "CREATE INDEX bulk_skus_location_id_active_idx ON public.bulk_skus USING btree (location_id, active)"
+    },
+    {
+      "tablename": "bulk_skus",
+      "indexname": "bulk_skus_location_id_bin_qr_code_value_key",
+      "indexdef": "CREATE UNIQUE INDEX bulk_skus_location_id_bin_qr_code_value_key ON public.bulk_skus USING btree (location_id, bin_qr_code_value)"
+    },
+    {
+      "tablename": "bulk_skus",
+      "indexname": "bulk_skus_pkey",
+      "indexdef": "CREATE UNIQUE INDEX bulk_skus_pkey ON public.bulk_skus USING btree (id)"
+    },
+    {
+      "tablename": "bulk_stock_balances",
+      "indexname": "bulk_stock_balances_bulk_sku_id_idx",
+      "indexdef": "CREATE INDEX bulk_stock_balances_bulk_sku_id_idx ON public.bulk_stock_balances USING btree (bulk_sku_id)"
+    },
+    {
+      "tablename": "bulk_stock_balances",
+      "indexname": "bulk_stock_balances_bulk_sku_id_location_id_key",
+      "indexdef": "CREATE UNIQUE INDEX bulk_stock_balances_bulk_sku_id_location_id_key ON public.bulk_stock_balances USING btree (bulk_sku_id, location_id)"
+    },
+    {
+      "tablename": "bulk_stock_balances",
+      "indexname": "bulk_stock_balances_location_id_idx",
+      "indexdef": "CREATE INDEX bulk_stock_balances_location_id_idx ON public.bulk_stock_balances USING btree (location_id)"
+    },
+    {
+      "tablename": "bulk_stock_balances",
+      "indexname": "bulk_stock_balances_pkey",
+      "indexdef": "CREATE UNIQUE INDEX bulk_stock_balances_pkey ON public.bulk_stock_balances USING btree (id)"
+    },
+    {
+      "tablename": "bulk_stock_movements",
+      "indexname": "bulk_stock_movements_booking_id_idx",
+      "indexdef": "CREATE INDEX bulk_stock_movements_booking_id_idx ON public.bulk_stock_movements USING btree (booking_id)"
+    },
+    {
+      "tablename": "bulk_stock_movements",
+      "indexname": "bulk_stock_movements_bulk_sku_id_created_at_idx",
+      "indexdef": "CREATE INDEX bulk_stock_movements_bulk_sku_id_created_at_idx ON public.bulk_stock_movements USING btree (bulk_sku_id, created_at)"
+    },
+    {
+      "tablename": "bulk_stock_movements",
+      "indexname": "bulk_stock_movements_pkey",
+      "indexdef": "CREATE UNIQUE INDEX bulk_stock_movements_pkey ON public.bulk_stock_movements USING btree (id)"
+    },
+    {
+      "tablename": "calendar_events",
+      "indexname": "calendar_events_archived_at_idx",
+      "indexdef": "CREATE INDEX calendar_events_archived_at_idx ON public.calendar_events USING btree (archived_at)"
+    },
+    {
+      "tablename": "calendar_events",
+      "indexname": "calendar_events_combined_into_id_idx",
+      "indexdef": "CREATE INDEX calendar_events_combined_into_id_idx ON public.calendar_events USING btree (combined_into_id)"
+    },
+    {
+      "tablename": "calendar_events",
+      "indexname": "calendar_events_location_id_idx",
+      "indexdef": "CREATE INDEX calendar_events_location_id_idx ON public.calendar_events USING btree (location_id)"
+    },
+    {
+      "tablename": "calendar_events",
+      "indexname": "calendar_events_pkey",
+      "indexdef": "CREATE UNIQUE INDEX calendar_events_pkey ON public.calendar_events USING btree (id)"
+    },
+    {
+      "tablename": "calendar_events",
+      "indexname": "calendar_events_source_id_external_id_key",
+      "indexdef": "CREATE UNIQUE INDEX calendar_events_source_id_external_id_key ON public.calendar_events USING btree (source_id, external_id)"
+    },
+    {
+      "tablename": "calendar_events",
+      "indexname": "calendar_events_sport_code_idx",
+      "indexdef": "CREATE INDEX calendar_events_sport_code_idx ON public.calendar_events USING btree (sport_code)"
+    },
+    {
+      "tablename": "calendar_events",
+      "indexname": "calendar_events_starts_at_ends_at_idx",
+      "indexdef": "CREATE INDEX calendar_events_starts_at_ends_at_idx ON public.calendar_events USING btree (starts_at, ends_at)"
+    },
+    {
+      "tablename": "calendar_sources",
+      "indexname": "calendar_sources_pkey",
+      "indexdef": "CREATE UNIQUE INDEX calendar_sources_pkey ON public.calendar_sources USING btree (id)"
+    },
+    {
+      "tablename": "calendar_sources",
+      "indexname": "calendar_sources_sync_lease_until_idx",
+      "indexdef": "CREATE INDEX calendar_sources_sync_lease_until_idx ON public.calendar_sources USING btree (sync_lease_until)"
+    },
+    {
+      "tablename": "categories",
+      "indexname": "categories_name_parent_id_key",
+      "indexdef": "CREATE UNIQUE INDEX categories_name_parent_id_key ON public.categories USING btree (name, parent_id)"
+    },
+    {
+      "tablename": "categories",
+      "indexname": "categories_parent_id_idx",
+      "indexdef": "CREATE INDEX categories_parent_id_idx ON public.categories USING btree (parent_id)"
+    },
+    {
+      "tablename": "categories",
+      "indexname": "categories_pkey",
+      "indexdef": "CREATE UNIQUE INDEX categories_pkey ON public.categories USING btree (id)"
+    },
+    {
+      "tablename": "checkin_item_reports",
+      "indexname": "checkin_item_reports_booking_id_asset_id_key",
+      "indexdef": "CREATE UNIQUE INDEX checkin_item_reports_booking_id_asset_id_key ON public.checkin_item_reports USING btree (booking_id, asset_id)"
+    },
+    {
+      "tablename": "checkin_item_reports",
+      "indexname": "checkin_item_reports_booking_id_idx",
+      "indexdef": "CREATE INDEX checkin_item_reports_booking_id_idx ON public.checkin_item_reports USING btree (booking_id)"
+    },
+    {
+      "tablename": "checkin_item_reports",
+      "indexname": "checkin_item_reports_pkey",
+      "indexdef": "CREATE UNIQUE INDEX checkin_item_reports_pkey ON public.checkin_item_reports USING btree (id)"
+    },
+    {
+      "tablename": "collaborator_affiliations",
+      "indexname": "collaborator_affiliations_archived_at_idx",
+      "indexdef": "CREATE INDEX collaborator_affiliations_archived_at_idx ON public.collaborator_affiliations USING btree (archived_at)"
+    },
+    {
+      "tablename": "collaborator_affiliations",
+      "indexname": "collaborator_affiliations_key_key",
+      "indexdef": "CREATE UNIQUE INDEX collaborator_affiliations_key_key ON public.collaborator_affiliations USING btree (key)"
+    },
+    {
+      "tablename": "collaborator_affiliations",
+      "indexname": "collaborator_affiliations_pkey",
+      "indexdef": "CREATE UNIQUE INDEX collaborator_affiliations_pkey ON public.collaborator_affiliations USING btree (id)"
+    },
+    {
+      "tablename": "collaborator_policies",
+      "indexname": "collaborator_policies_affiliation_id_key",
+      "indexdef": "CREATE UNIQUE INDEX collaborator_policies_affiliation_id_key ON public.collaborator_policies USING btree (affiliation_id)"
+    },
+    {
+      "tablename": "collaborator_policies",
+      "indexname": "collaborator_policies_pkey",
+      "indexdef": "CREATE UNIQUE INDEX collaborator_policies_pkey ON public.collaborator_policies USING btree (id)"
+    },
+    {
+      "tablename": "collaborator_policies",
+      "indexname": "collaborator_policies_status_idx",
+      "indexdef": "CREATE INDEX collaborator_policies_status_idx ON public.collaborator_policies USING btree (status)"
+    },
+    {
+      "tablename": "collaborator_policy_grants",
+      "indexname": "collaborator_policy_grants_capability_key_policy_id_idx",
+      "indexdef": "CREATE INDEX collaborator_policy_grants_capability_key_policy_id_idx ON public.collaborator_policy_grants USING btree (capability_key, policy_id)"
+    },
+    {
+      "tablename": "collaborator_policy_grants",
+      "indexname": "collaborator_policy_grants_pkey",
+      "indexdef": "CREATE UNIQUE INDEX collaborator_policy_grants_pkey ON public.collaborator_policy_grants USING btree (id)"
+    },
+    {
+      "tablename": "collaborator_policy_grants",
+      "indexname": "collaborator_policy_grants_policy_id_capability_key_key",
+      "indexdef": "CREATE UNIQUE INDEX collaborator_policy_grants_policy_id_capability_key_key ON public.collaborator_policy_grants USING btree (policy_id, capability_key)"
+    },
+    {
+      "tablename": "collaborator_policy_revisions",
+      "indexname": "collaborator_policy_revisions_actor_user_id_created_at_idx",
+      "indexdef": "CREATE INDEX collaborator_policy_revisions_actor_user_id_created_at_idx ON public.collaborator_policy_revisions USING btree (actor_user_id, created_at)"
+    },
+    {
+      "tablename": "collaborator_policy_revisions",
+      "indexname": "collaborator_policy_revisions_pkey",
+      "indexdef": "CREATE UNIQUE INDEX collaborator_policy_revisions_pkey ON public.collaborator_policy_revisions USING btree (id)"
+    },
+    {
+      "tablename": "collaborator_policy_revisions",
+      "indexname": "collaborator_policy_revisions_policy_id_version_key",
+      "indexdef": "CREATE UNIQUE INDEX collaborator_policy_revisions_policy_id_version_key ON public.collaborator_policy_revisions USING btree (policy_id, version)"
+    },
+    {
+      "tablename": "departments",
+      "indexname": "departments_name_key",
+      "indexdef": "CREATE UNIQUE INDEX departments_name_key ON public.departments USING btree (name)"
+    },
+    {
+      "tablename": "departments",
+      "indexname": "departments_pkey",
+      "indexdef": "CREATE UNIQUE INDEX departments_pkey ON public.departments USING btree (id)"
+    },
+    {
+      "tablename": "device_tokens",
+      "indexname": "device_tokens_pkey",
+      "indexdef": "CREATE UNIQUE INDEX device_tokens_pkey ON public.device_tokens USING btree (id)"
+    },
+    {
+      "tablename": "device_tokens",
+      "indexname": "device_tokens_token_key",
+      "indexdef": "CREATE UNIQUE INDEX device_tokens_token_key ON public.device_tokens USING btree (token)"
+    },
+    {
+      "tablename": "device_tokens",
+      "indexname": "device_tokens_user_id_revoked_at_idx",
+      "indexdef": "CREATE INDEX device_tokens_user_id_revoked_at_idx ON public.device_tokens USING btree (user_id, revoked_at)"
+    },
+    {
+      "tablename": "escalation_rules",
+      "indexname": "escalation_rules_pkey",
+      "indexdef": "CREATE UNIQUE INDEX escalation_rules_pkey ON public.escalation_rules USING btree (id)"
+    },
+    {
+      "tablename": "escalation_rules",
+      "indexname": "escalation_rules_type_key",
+      "indexdef": "CREATE UNIQUE INDEX escalation_rules_type_key ON public.escalation_rules USING btree (type)"
+    },
+    {
+      "tablename": "event_travel_members",
+      "indexname": "event_travel_members_event_id_idx",
+      "indexdef": "CREATE INDEX event_travel_members_event_id_idx ON public.event_travel_members USING btree (event_id)"
+    },
+    {
+      "tablename": "event_travel_members",
+      "indexname": "event_travel_members_event_id_user_id_key",
+      "indexdef": "CREATE UNIQUE INDEX event_travel_members_event_id_user_id_key ON public.event_travel_members USING btree (event_id, user_id)"
+    },
+    {
+      "tablename": "event_travel_members",
+      "indexname": "event_travel_members_pkey",
+      "indexdef": "CREATE UNIQUE INDEX event_travel_members_pkey ON public.event_travel_members USING btree (id)"
+    },
+    {
+      "tablename": "event_workers",
+      "indexname": "event_workers_event_id_idx",
+      "indexdef": "CREATE INDEX event_workers_event_id_idx ON public.event_workers USING btree (event_id)"
+    },
+    {
+      "tablename": "event_workers",
+      "indexname": "event_workers_event_id_user_id_key",
+      "indexdef": "CREATE UNIQUE INDEX event_workers_event_id_user_id_key ON public.event_workers USING btree (event_id, user_id)"
+    },
+    {
+      "tablename": "event_workers",
+      "indexname": "event_workers_pkey",
+      "indexdef": "CREATE UNIQUE INDEX event_workers_pkey ON public.event_workers USING btree (id)"
+    },
+    {
+      "tablename": "event_workers",
+      "indexname": "event_workers_user_id_idx",
+      "indexdef": "CREATE INDEX event_workers_user_id_idx ON public.event_workers USING btree (user_id)"
+    },
+    {
+      "tablename": "favorite_item_families",
+      "indexname": "favorite_item_families_bulk_sku_id_idx",
+      "indexdef": "CREATE INDEX favorite_item_families_bulk_sku_id_idx ON public.favorite_item_families USING btree (bulk_sku_id)"
+    },
+    {
+      "tablename": "favorite_item_families",
+      "indexname": "favorite_item_families_pkey",
+      "indexdef": "CREATE UNIQUE INDEX favorite_item_families_pkey ON public.favorite_item_families USING btree (id)"
+    },
+    {
+      "tablename": "favorite_item_families",
+      "indexname": "favorite_item_families_user_id_bulk_sku_id_key",
+      "indexdef": "CREATE UNIQUE INDEX favorite_item_families_user_id_bulk_sku_id_key ON public.favorite_item_families USING btree (user_id, bulk_sku_id)"
+    },
+    {
+      "tablename": "favorite_item_families",
+      "indexname": "favorite_item_families_user_id_idx",
+      "indexdef": "CREATE INDEX favorite_item_families_user_id_idx ON public.favorite_item_families USING btree (user_id)"
+    },
+    {
+      "tablename": "favorite_items",
+      "indexname": "favorite_items_pkey",
+      "indexdef": "CREATE UNIQUE INDEX favorite_items_pkey ON public.favorite_items USING btree (id)"
+    },
+    {
+      "tablename": "favorite_items",
+      "indexname": "favorite_items_user_id_asset_id_key",
+      "indexdef": "CREATE UNIQUE INDEX favorite_items_user_id_asset_id_key ON public.favorite_items USING btree (user_id, asset_id)"
+    },
+    {
+      "tablename": "favorite_items",
+      "indexname": "favorite_items_user_id_idx",
+      "indexdef": "CREATE INDEX favorite_items_user_id_idx ON public.favorite_items USING btree (user_id)"
+    },
+    {
+      "tablename": "firmware_watch_targets",
+      "indexname": "firmware_watch_targets_brand_model_idx",
+      "indexdef": "CREATE INDEX firmware_watch_targets_brand_model_idx ON public.firmware_watch_targets USING btree (brand, model)"
+    },
+    {
+      "tablename": "firmware_watch_targets",
+      "indexname": "firmware_watch_targets_enabled_source_type_idx",
+      "indexdef": "CREATE INDEX firmware_watch_targets_enabled_source_type_idx ON public.firmware_watch_targets USING btree (enabled, source_type)"
+    },
+    {
+      "tablename": "firmware_watch_targets",
+      "indexname": "firmware_watch_targets_pkey",
+      "indexdef": "CREATE UNIQUE INDEX firmware_watch_targets_pkey ON public.firmware_watch_targets USING btree (id)"
+    },
+    {
+      "tablename": "firmware_watch_targets",
+      "indexname": "firmware_watch_targets_source_url_key",
+      "indexdef": "CREATE UNIQUE INDEX firmware_watch_targets_source_url_key ON public.firmware_watch_targets USING btree (source_url)"
+    },
+    {
+      "tablename": "kiosk_devices",
+      "indexname": "kiosk_devices_activation_code_key",
+      "indexdef": "CREATE UNIQUE INDEX kiosk_devices_activation_code_key ON public.kiosk_devices USING btree (activation_code)"
+    },
+    {
+      "tablename": "kiosk_devices",
+      "indexname": "kiosk_devices_location_id_idx",
+      "indexdef": "CREATE INDEX kiosk_devices_location_id_idx ON public.kiosk_devices USING btree (location_id)"
+    },
+    {
+      "tablename": "kiosk_devices",
+      "indexname": "kiosk_devices_pkey",
+      "indexdef": "CREATE UNIQUE INDEX kiosk_devices_pkey ON public.kiosk_devices USING btree (id)"
+    },
+    {
+      "tablename": "kiosk_devices",
+      "indexname": "kiosk_devices_session_expires_at_idx",
+      "indexdef": "CREATE INDEX kiosk_devices_session_expires_at_idx ON public.kiosk_devices USING btree (session_expires_at)"
+    },
+    {
+      "tablename": "kiosk_devices",
+      "indexname": "kiosk_devices_session_token_key",
+      "indexdef": "CREATE UNIQUE INDEX kiosk_devices_session_token_key ON public.kiosk_devices USING btree (session_token)"
+    },
+    {
+      "tablename": "kit_bulk_memberships",
+      "indexname": "kit_bulk_memberships_bulk_sku_id_idx",
+      "indexdef": "CREATE INDEX kit_bulk_memberships_bulk_sku_id_idx ON public.kit_bulk_memberships USING btree (bulk_sku_id)"
+    },
+    {
+      "tablename": "kit_bulk_memberships",
+      "indexname": "kit_bulk_memberships_kit_id_bulk_sku_id_key",
+      "indexdef": "CREATE UNIQUE INDEX kit_bulk_memberships_kit_id_bulk_sku_id_key ON public.kit_bulk_memberships USING btree (kit_id, bulk_sku_id)"
+    },
+    {
+      "tablename": "kit_bulk_memberships",
+      "indexname": "kit_bulk_memberships_pkey",
+      "indexdef": "CREATE UNIQUE INDEX kit_bulk_memberships_pkey ON public.kit_bulk_memberships USING btree (id)"
+    },
+    {
+      "tablename": "kit_memberships",
+      "indexname": "kit_memberships_kit_id_asset_id_key",
+      "indexdef": "CREATE UNIQUE INDEX kit_memberships_kit_id_asset_id_key ON public.kit_memberships USING btree (kit_id, asset_id)"
+    },
+    {
+      "tablename": "kit_memberships",
+      "indexname": "kit_memberships_pkey",
+      "indexdef": "CREATE UNIQUE INDEX kit_memberships_pkey ON public.kit_memberships USING btree (id)"
+    },
+    {
+      "tablename": "kits",
+      "indexname": "kits_name_location_id_key",
+      "indexdef": "CREATE UNIQUE INDEX kits_name_location_id_key ON public.kits USING btree (name, location_id)"
+    },
+    {
+      "tablename": "kits",
+      "indexname": "kits_pkey",
+      "indexdef": "CREATE UNIQUE INDEX kits_pkey ON public.kits USING btree (id)"
+    },
+    {
+      "tablename": "license_code_claims",
+      "indexname": "idx_lcc_active",
+      "indexdef": "CREATE INDEX idx_lcc_active ON public.license_code_claims USING btree (license_code_id) WHERE (released_at IS NULL)"
+    },
+    {
+      "tablename": "license_code_claims",
+      "indexname": "license_code_claims_license_code_id_idx",
+      "indexdef": "CREATE INDEX license_code_claims_license_code_id_idx ON public.license_code_claims USING btree (license_code_id)"
+    },
+    {
+      "tablename": "license_code_claims",
+      "indexname": "license_code_claims_one_active_per_user",
+      "indexdef": "CREATE UNIQUE INDEX license_code_claims_one_active_per_user ON public.license_code_claims USING btree (user_id) WHERE ((released_at IS NULL) AND (user_id IS NOT NULL))"
+    },
+    {
+      "tablename": "license_code_claims",
+      "indexname": "license_code_claims_pkey",
+      "indexdef": "CREATE UNIQUE INDEX license_code_claims_pkey ON public.license_code_claims USING btree (id)"
+    },
+    {
+      "tablename": "license_code_claims",
+      "indexname": "license_code_claims_released_by_id_idx",
+      "indexdef": "CREATE INDEX license_code_claims_released_by_id_idx ON public.license_code_claims USING btree (released_by_id)"
+    },
+    {
+      "tablename": "license_code_claims",
+      "indexname": "license_code_claims_user_id_released_at_idx",
+      "indexdef": "CREATE INDEX license_code_claims_user_id_released_at_idx ON public.license_code_claims USING btree (user_id, released_at)"
+    },
+    {
+      "tablename": "license_codes",
+      "indexname": "idx_lc_expires",
+      "indexdef": "CREATE INDEX idx_lc_expires ON public.license_codes USING btree (expires_at) WHERE (expires_at IS NOT NULL)"
+    },
+    {
+      "tablename": "license_codes",
+      "indexname": "license_codes_claimed_by_id_idx",
+      "indexdef": "CREATE INDEX license_codes_claimed_by_id_idx ON public.license_codes USING btree (claimed_by_id)"
+    },
+    {
+      "tablename": "license_codes",
+      "indexname": "license_codes_code_key",
+      "indexdef": "CREATE UNIQUE INDEX license_codes_code_key ON public.license_codes USING btree (code)"
+    },
+    {
+      "tablename": "license_codes",
+      "indexname": "license_codes_expires_at_idx",
+      "indexdef": "CREATE INDEX license_codes_expires_at_idx ON public.license_codes USING btree (expires_at)"
+    },
+    {
+      "tablename": "license_codes",
+      "indexname": "license_codes_pkey",
+      "indexdef": "CREATE UNIQUE INDEX license_codes_pkey ON public.license_codes USING btree (id)"
+    },
+    {
+      "tablename": "license_codes",
+      "indexname": "license_codes_status_idx",
+      "indexdef": "CREATE INDEX license_codes_status_idx ON public.license_codes USING btree (status)"
+    },
+    {
+      "tablename": "live_activity_start_tokens",
+      "indexname": "live_activity_start_tokens_pkey",
+      "indexdef": "CREATE UNIQUE INDEX live_activity_start_tokens_pkey ON public.live_activity_start_tokens USING btree (id)"
+    },
+    {
+      "tablename": "live_activity_start_tokens",
+      "indexname": "live_activity_start_tokens_token_key",
+      "indexdef": "CREATE UNIQUE INDEX live_activity_start_tokens_token_key ON public.live_activity_start_tokens USING btree (token)"
+    },
+    {
+      "tablename": "live_activity_start_tokens",
+      "indexname": "live_activity_start_tokens_user_id_activity_revoked_at_idx",
+      "indexdef": "CREATE INDEX live_activity_start_tokens_user_id_activity_revoked_at_idx ON public.live_activity_start_tokens USING btree (user_id, activity, revoked_at)"
+    },
+    {
+      "tablename": "live_activity_starts",
+      "indexname": "live_activity_starts_booking_id_activity_ended_at_idx",
+      "indexdef": "CREATE INDEX live_activity_starts_booking_id_activity_ended_at_idx ON public.live_activity_starts USING btree (booking_id, activity, ended_at)"
+    },
+    {
+      "tablename": "live_activity_starts",
+      "indexname": "live_activity_starts_pkey",
+      "indexdef": "CREATE UNIQUE INDEX live_activity_starts_pkey ON public.live_activity_starts USING btree (id)"
+    },
+    {
+      "tablename": "live_activity_starts",
+      "indexname": "live_activity_starts_user_id_activity_ended_at_idx",
+      "indexdef": "CREATE INDEX live_activity_starts_user_id_activity_ended_at_idx ON public.live_activity_starts USING btree (user_id, activity, ended_at)"
+    },
+    {
+      "tablename": "live_activity_starts",
+      "indexname": "live_activity_starts_user_id_booking_id_activity_key",
+      "indexdef": "CREATE UNIQUE INDEX live_activity_starts_user_id_booking_id_activity_key ON public.live_activity_starts USING btree (user_id, booking_id, activity)"
+    },
+    {
+      "tablename": "live_activity_tokens",
+      "indexname": "live_activity_tokens_booking_id_ended_at_idx",
+      "indexdef": "CREATE INDEX live_activity_tokens_booking_id_ended_at_idx ON public.live_activity_tokens USING btree (booking_id, ended_at)"
+    },
+    {
+      "tablename": "live_activity_tokens",
+      "indexname": "live_activity_tokens_pkey",
+      "indexdef": "CREATE UNIQUE INDEX live_activity_tokens_pkey ON public.live_activity_tokens USING btree (id)"
+    },
+    {
+      "tablename": "live_activity_tokens",
+      "indexname": "live_activity_tokens_token_key",
+      "indexdef": "CREATE UNIQUE INDEX live_activity_tokens_token_key ON public.live_activity_tokens USING btree (token)"
+    },
+    {
+      "tablename": "live_activity_tokens",
+      "indexname": "live_activity_tokens_user_id_activity_ended_at_idx",
+      "indexdef": "CREATE INDEX live_activity_tokens_user_id_activity_ended_at_idx ON public.live_activity_tokens USING btree (user_id, activity, ended_at)"
+    },
+    {
+      "tablename": "location_mappings",
+      "indexname": "location_mappings_pkey",
+      "indexdef": "CREATE UNIQUE INDEX location_mappings_pkey ON public.location_mappings USING btree (id)"
+    },
+    {
+      "tablename": "locations",
+      "indexname": "locations_name_key",
+      "indexdef": "CREATE UNIQUE INDEX locations_name_key ON public.locations USING btree (name)"
+    },
+    {
+      "tablename": "locations",
+      "indexname": "locations_pkey",
+      "indexdef": "CREATE UNIQUE INDEX locations_pkey ON public.locations USING btree (id)"
+    },
+    {
+      "tablename": "notifications",
+      "indexname": "notifications_dedupe_key_key",
+      "indexdef": "CREATE UNIQUE INDEX notifications_dedupe_key_key ON public.notifications USING btree (dedupe_key)"
+    },
+    {
+      "tablename": "notifications",
+      "indexname": "notifications_pkey",
+      "indexdef": "CREATE UNIQUE INDEX notifications_pkey ON public.notifications USING btree (id)"
+    },
+    {
+      "tablename": "notifications",
+      "indexname": "notifications_sent_at_idx",
+      "indexdef": "CREATE INDEX notifications_sent_at_idx ON public.notifications USING btree (sent_at)"
+    },
+    {
+      "tablename": "notifications",
+      "indexname": "notifications_type_created_at_idx",
+      "indexdef": "CREATE INDEX notifications_type_created_at_idx ON public.notifications USING btree (type, created_at)"
+    },
+    {
+      "tablename": "notifications",
+      "indexname": "notifications_user_id_read_at_idx",
+      "indexdef": "CREATE INDEX notifications_user_id_read_at_idx ON public.notifications USING btree (user_id, read_at)"
+    },
+    {
+      "tablename": "override_events",
+      "indexname": "override_events_booking_id_created_at_idx",
+      "indexdef": "CREATE INDEX override_events_booking_id_created_at_idx ON public.override_events USING btree (booking_id, created_at)"
+    },
+    {
+      "tablename": "override_events",
+      "indexname": "override_events_created_at_idx",
+      "indexdef": "CREATE INDEX override_events_created_at_idx ON public.override_events USING btree (created_at)"
+    },
+    {
+      "tablename": "override_events",
+      "indexname": "override_events_pkey",
+      "indexdef": "CREATE UNIQUE INDEX override_events_pkey ON public.override_events USING btree (id)"
+    },
+    {
+      "tablename": "passkey_challenges",
+      "indexname": "passkey_challenges_ceremony_token_hash_key",
+      "indexdef": "CREATE UNIQUE INDEX passkey_challenges_ceremony_token_hash_key ON public.passkey_challenges USING btree (ceremony_token_hash)"
+    },
+    {
+      "tablename": "passkey_challenges",
+      "indexname": "passkey_challenges_challenge_key",
+      "indexdef": "CREATE UNIQUE INDEX passkey_challenges_challenge_key ON public.passkey_challenges USING btree (challenge)"
+    },
+    {
+      "tablename": "passkey_challenges",
+      "indexname": "passkey_challenges_expires_at_idx",
+      "indexdef": "CREATE INDEX passkey_challenges_expires_at_idx ON public.passkey_challenges USING btree (expires_at)"
+    },
+    {
+      "tablename": "passkey_challenges",
+      "indexname": "passkey_challenges_pkey",
+      "indexdef": "CREATE UNIQUE INDEX passkey_challenges_pkey ON public.passkey_challenges USING btree (id)"
+    },
+    {
+      "tablename": "passkey_challenges",
+      "indexname": "passkey_challenges_user_id_type_idx",
+      "indexdef": "CREATE INDEX passkey_challenges_user_id_type_idx ON public.passkey_challenges USING btree (user_id, type)"
+    },
+    {
+      "tablename": "passkey_credentials",
+      "indexname": "passkey_credentials_credential_id_key",
+      "indexdef": "CREATE UNIQUE INDEX passkey_credentials_credential_id_key ON public.passkey_credentials USING btree (credential_id)"
+    },
+    {
+      "tablename": "passkey_credentials",
+      "indexname": "passkey_credentials_pkey",
+      "indexdef": "CREATE UNIQUE INDEX passkey_credentials_pkey ON public.passkey_credentials USING btree (id)"
+    },
+    {
+      "tablename": "passkey_credentials",
+      "indexname": "passkey_credentials_user_id_idx",
+      "indexdef": "CREATE INDEX passkey_credentials_user_id_idx ON public.passkey_credentials USING btree (user_id)"
+    },
+    {
+      "tablename": "password_reset_tokens",
+      "indexname": "password_reset_tokens_pkey",
+      "indexdef": "CREATE UNIQUE INDEX password_reset_tokens_pkey ON public.password_reset_tokens USING btree (id)"
+    },
+    {
+      "tablename": "password_reset_tokens",
+      "indexname": "password_reset_tokens_token_hash_key",
+      "indexdef": "CREATE UNIQUE INDEX password_reset_tokens_token_hash_key ON public.password_reset_tokens USING btree (token_hash)"
+    },
+    {
+      "tablename": "password_reset_tokens",
+      "indexname": "password_reset_tokens_user_id_idx",
+      "indexdef": "CREATE INDEX password_reset_tokens_user_id_idx ON public.password_reset_tokens USING btree (user_id)"
+    },
+    {
+      "tablename": "product_events",
+      "indexname": "product_events_actor_hash_occurred_at_idx",
+      "indexdef": "CREATE INDEX product_events_actor_hash_occurred_at_idx ON public.product_events USING btree (actor_hash, occurred_at)"
+    },
+    {
+      "tablename": "product_events",
+      "indexname": "product_events_event_name_occurred_at_idx",
+      "indexdef": "CREATE INDEX product_events_event_name_occurred_at_idx ON public.product_events USING btree (event_name, occurred_at)"
+    },
+    {
+      "tablename": "product_events",
+      "indexname": "product_events_occurred_at_idx",
+      "indexdef": "CREATE INDEX product_events_occurred_at_idx ON public.product_events USING btree (occurred_at)"
+    },
+    {
+      "tablename": "product_events",
+      "indexname": "product_events_pkey",
+      "indexdef": "CREATE UNIQUE INDEX product_events_pkey ON public.product_events USING btree (id)"
+    },
+    {
+      "tablename": "product_events",
+      "indexname": "product_events_platform_occurred_at_idx",
+      "indexdef": "CREATE INDEX product_events_platform_occurred_at_idx ON public.product_events USING btree (platform, occurred_at)"
+    },
+    {
+      "tablename": "product_events",
+      "indexname": "product_events_surface_occurred_at_idx",
+      "indexdef": "CREATE INDEX product_events_surface_occurred_at_idx ON public.product_events USING btree (surface, occurred_at)"
+    },
+    {
+      "tablename": "resource_asset_favorites",
+      "indexname": "resource_asset_favorites_asset_id_idx",
+      "indexdef": "CREATE INDEX resource_asset_favorites_asset_id_idx ON public.resource_asset_favorites USING btree (asset_id)"
+    },
+    {
+      "tablename": "resource_asset_favorites",
+      "indexname": "resource_asset_favorites_pkey",
+      "indexdef": "CREATE UNIQUE INDEX resource_asset_favorites_pkey ON public.resource_asset_favorites USING btree (id)"
+    },
+    {
+      "tablename": "resource_asset_favorites",
+      "indexname": "resource_asset_favorites_user_id_asset_id_key",
+      "indexdef": "CREATE UNIQUE INDEX resource_asset_favorites_user_id_asset_id_key ON public.resource_asset_favorites USING btree (user_id, asset_id)"
+    },
+    {
+      "tablename": "resource_asset_favorites",
+      "indexname": "resource_asset_favorites_user_id_created_at_idx",
+      "indexdef": "CREATE INDEX resource_asset_favorites_user_id_created_at_idx ON public.resource_asset_favorites USING btree (user_id, created_at)"
+    },
+    {
+      "tablename": "resource_asset_folders",
+      "indexname": "resource_asset_folders_parent_id_idx",
+      "indexdef": "CREATE INDEX resource_asset_folders_parent_id_idx ON public.resource_asset_folders USING btree (parent_id)"
+    },
+    {
+      "tablename": "resource_asset_folders",
+      "indexname": "resource_asset_folders_path_key",
+      "indexdef": "CREATE UNIQUE INDEX resource_asset_folders_path_key ON public.resource_asset_folders USING btree (path)"
+    },
+    {
+      "tablename": "resource_asset_folders",
+      "indexname": "resource_asset_folders_pkey",
+      "indexdef": "CREATE UNIQUE INDEX resource_asset_folders_pkey ON public.resource_asset_folders USING btree (id)"
+    },
+    {
+      "tablename": "resource_asset_uploads",
+      "indexname": "resource_asset_uploads_actor_id_status_idx",
+      "indexdef": "CREATE INDEX resource_asset_uploads_actor_id_status_idx ON public.resource_asset_uploads USING btree (actor_id, status)"
+    },
+    {
+      "tablename": "resource_asset_uploads",
+      "indexname": "resource_asset_uploads_asset_id_version_number_idx",
+      "indexdef": "CREATE INDEX resource_asset_uploads_asset_id_version_number_idx ON public.resource_asset_uploads USING btree (asset_id, version_number)"
+    },
+    {
+      "tablename": "resource_asset_uploads",
+      "indexname": "resource_asset_uploads_expires_at_status_idx",
+      "indexdef": "CREATE INDEX resource_asset_uploads_expires_at_status_idx ON public.resource_asset_uploads USING btree (expires_at, status)"
+    },
+    {
+      "tablename": "resource_asset_uploads",
+      "indexname": "resource_asset_uploads_pkey",
+      "indexdef": "CREATE UNIQUE INDEX resource_asset_uploads_pkey ON public.resource_asset_uploads USING btree (id)"
+    },
+    {
+      "tablename": "resource_asset_uploads",
+      "indexname": "resource_asset_uploads_storage_path_key",
+      "indexdef": "CREATE UNIQUE INDEX resource_asset_uploads_storage_path_key ON public.resource_asset_uploads USING btree (storage_path)"
+    },
+    {
+      "tablename": "resource_asset_versions",
+      "indexname": "resource_asset_versions_asset_id_version_number_idx",
+      "indexdef": "CREATE INDEX resource_asset_versions_asset_id_version_number_idx ON public.resource_asset_versions USING btree (asset_id, version_number)"
+    },
+    {
+      "tablename": "resource_asset_versions",
+      "indexname": "resource_asset_versions_asset_id_version_number_key",
+      "indexdef": "CREATE UNIQUE INDEX resource_asset_versions_asset_id_version_number_key ON public.resource_asset_versions USING btree (asset_id, version_number)"
+    },
+    {
+      "tablename": "resource_asset_versions",
+      "indexname": "resource_asset_versions_pkey",
+      "indexdef": "CREATE UNIQUE INDEX resource_asset_versions_pkey ON public.resource_asset_versions USING btree (id)"
+    },
+    {
+      "tablename": "resource_asset_versions",
+      "indexname": "resource_asset_versions_storage_path_key",
+      "indexdef": "CREATE UNIQUE INDEX resource_asset_versions_storage_path_key ON public.resource_asset_versions USING btree (storage_path)"
+    },
+    {
+      "tablename": "resource_assets",
+      "indexname": "resource_assets_current_version_id_key",
+      "indexdef": "CREATE UNIQUE INDEX resource_assets_current_version_id_key ON public.resource_assets USING btree (current_version_id)"
+    },
+    {
+      "tablename": "resource_assets",
+      "indexname": "resource_assets_folder_id_name_idx",
+      "indexdef": "CREATE INDEX resource_assets_folder_id_name_idx ON public.resource_assets USING btree (folder_id, name)"
+    },
+    {
+      "tablename": "resource_assets",
+      "indexname": "resource_assets_folder_id_normalized_name_key",
+      "indexdef": "CREATE UNIQUE INDEX resource_assets_folder_id_normalized_name_key ON public.resource_assets USING btree (folder_id, normalized_name)"
+    },
+    {
+      "tablename": "resource_assets",
+      "indexname": "resource_assets_pkey",
+      "indexdef": "CREATE UNIQUE INDEX resource_assets_pkey ON public.resource_assets USING btree (id)"
+    },
+    {
+      "tablename": "resources",
+      "indexname": "guides_pkey",
+      "indexdef": "CREATE UNIQUE INDEX guides_pkey ON public.resources USING btree (id)"
+    },
+    {
+      "tablename": "resources",
+      "indexname": "resources_category_idx",
+      "indexdef": "CREATE INDEX resources_category_idx ON public.resources USING btree (category)"
+    },
+    {
+      "tablename": "resources",
+      "indexname": "resources_featured_featured_rank_idx",
+      "indexdef": "CREATE INDEX resources_featured_featured_rank_idx ON public.resources USING btree (featured, featured_rank)"
+    },
+    {
+      "tablename": "resources",
+      "indexname": "resources_last_verified_at_idx",
+      "indexdef": "CREATE INDEX resources_last_verified_at_idx ON public.resources USING btree (last_verified_at)"
+    },
+    {
+      "tablename": "resources",
+      "indexname": "resources_last_verified_by_id_idx",
+      "indexdef": "CREATE INDEX resources_last_verified_by_id_idx ON public.resources USING btree (last_verified_by_id)"
+    },
+    {
+      "tablename": "resources",
+      "indexname": "resources_published_idx",
+      "indexdef": "CREATE INDEX resources_published_idx ON public.resources USING btree (published)"
+    },
+    {
+      "tablename": "resources",
+      "indexname": "resources_slug_key",
+      "indexdef": "CREATE UNIQUE INDEX resources_slug_key ON public.resources USING btree (slug)"
+    },
+    {
+      "tablename": "resources",
+      "indexname": "resources_type_idx",
+      "indexdef": "CREATE INDEX resources_type_idx ON public.resources USING btree (type)"
+    },
+    {
+      "tablename": "scan_events",
+      "indexname": "scan_events_booking_id_phase_idx",
+      "indexdef": "CREATE INDEX scan_events_booking_id_phase_idx ON public.scan_events USING btree (booking_id, phase)"
+    },
+    {
+      "tablename": "scan_events",
+      "indexname": "scan_events_location_mismatch_idx",
+      "indexdef": "CREATE INDEX scan_events_location_mismatch_idx ON public.scan_events USING btree (location_mismatch)"
+    },
+    {
+      "tablename": "scan_events",
+      "indexname": "scan_events_pkey",
+      "indexdef": "CREATE UNIQUE INDEX scan_events_pkey ON public.scan_events USING btree (id)"
+    },
+    {
+      "tablename": "scan_events",
+      "indexname": "scan_events_scan_value_idx",
+      "indexdef": "CREATE INDEX scan_events_scan_value_idx ON public.scan_events USING btree (scan_value)"
+    },
+    {
+      "tablename": "scan_sessions",
+      "indexname": "scan_sessions_booking_id_phase_status_idx",
+      "indexdef": "CREATE INDEX scan_sessions_booking_id_phase_status_idx ON public.scan_sessions USING btree (booking_id, phase, status)"
+    },
+    {
+      "tablename": "scan_sessions",
+      "indexname": "scan_sessions_pkey",
+      "indexdef": "CREATE UNIQUE INDEX scan_sessions_pkey ON public.scan_sessions USING btree (id)"
+    },
+    {
+      "tablename": "schedule_bulk_assignment_items",
+      "indexname": "schedule_bulk_assignment_items_bulk_assignment_id_shift_group_i",
+      "indexdef": "CREATE UNIQUE INDEX schedule_bulk_assignment_items_bulk_assignment_id_shift_group_i ON public.schedule_bulk_assignment_items USING btree (bulk_assignment_id, shift_group_id)"
+    },
+    {
+      "tablename": "schedule_bulk_assignment_items",
+      "indexname": "schedule_bulk_assignment_items_pkey",
+      "indexdef": "CREATE UNIQUE INDEX schedule_bulk_assignment_items_pkey ON public.schedule_bulk_assignment_items USING btree (id)"
+    },
+    {
+      "tablename": "schedule_bulk_assignment_items",
+      "indexname": "schedule_bulk_assignment_items_shift_group_id_status_idx",
+      "indexdef": "CREATE INDEX schedule_bulk_assignment_items_shift_group_id_status_idx ON public.schedule_bulk_assignment_items USING btree (shift_group_id, status)"
+    },
+    {
+      "tablename": "schedule_bulk_assignments",
+      "indexname": "schedule_bulk_assignments_created_by_id_created_at_idx",
+      "indexdef": "CREATE INDEX schedule_bulk_assignments_created_by_id_created_at_idx ON public.schedule_bulk_assignments USING btree (created_by_id, created_at)"
+    },
+    {
+      "tablename": "schedule_bulk_assignments",
+      "indexname": "schedule_bulk_assignments_pkey",
+      "indexdef": "CREATE UNIQUE INDEX schedule_bulk_assignments_pkey ON public.schedule_bulk_assignments USING btree (id)"
+    },
+    {
+      "tablename": "schedule_bulk_assignments",
+      "indexname": "schedule_bulk_assignments_status_release_at_idx",
+      "indexdef": "CREATE INDEX schedule_bulk_assignments_status_release_at_idx ON public.schedule_bulk_assignments USING btree (status, release_at)"
+    },
+    {
+      "tablename": "schedule_event_follows",
+      "indexname": "schedule_event_follows_event_id_muted_at_idx",
+      "indexdef": "CREATE INDEX schedule_event_follows_event_id_muted_at_idx ON public.schedule_event_follows USING btree (event_id, muted_at)"
+    },
+    {
+      "tablename": "schedule_event_follows",
+      "indexname": "schedule_event_follows_pkey",
+      "indexdef": "CREATE UNIQUE INDEX schedule_event_follows_pkey ON public.schedule_event_follows USING btree (id)"
+    },
+    {
+      "tablename": "schedule_event_follows",
+      "indexname": "schedule_event_follows_user_id_event_id_key",
+      "indexdef": "CREATE UNIQUE INDEX schedule_event_follows_user_id_event_id_key ON public.schedule_event_follows USING btree (user_id, event_id)"
+    },
+    {
+      "tablename": "sessions",
+      "indexname": "sessions_pkey",
+      "indexdef": "CREATE UNIQUE INDEX sessions_pkey ON public.sessions USING btree (id)"
+    },
+    {
+      "tablename": "sessions",
+      "indexname": "sessions_token_hash_key",
+      "indexdef": "CREATE UNIQUE INDEX sessions_token_hash_key ON public.sessions USING btree (token_hash)"
+    },
+    {
+      "tablename": "sessions",
+      "indexname": "sessions_user_id_idx",
+      "indexdef": "CREATE INDEX sessions_user_id_idx ON public.sessions USING btree (user_id)"
+    },
+    {
+      "tablename": "shift_assignments",
+      "indexname": "shift_assignments_acknowledged_by_id_idx",
+      "indexdef": "CREATE INDEX shift_assignments_acknowledged_by_id_idx ON public.shift_assignments USING btree (acknowledged_by_id)"
+    },
+    {
+      "tablename": "shift_assignments",
+      "indexname": "shift_assignments_pkey",
+      "indexdef": "CREATE UNIQUE INDEX shift_assignments_pkey ON public.shift_assignments USING btree (id)"
+    },
+    {
+      "tablename": "shift_assignments",
+      "indexname": "shift_assignments_shift_id_status_idx",
+      "indexdef": "CREATE INDEX shift_assignments_shift_id_status_idx ON public.shift_assignments USING btree (shift_id, status)"
+    },
+    {
+      "tablename": "shift_assignments",
+      "indexname": "shift_assignments_user_id_status_acknowledged_at_idx",
+      "indexdef": "CREATE INDEX shift_assignments_user_id_status_acknowledged_at_idx ON public.shift_assignments USING btree (user_id, status, acknowledged_at)"
+    },
+    {
+      "tablename": "shift_assignments",
+      "indexname": "shift_assignments_user_id_status_idx",
+      "indexdef": "CREATE INDEX shift_assignments_user_id_status_idx ON public.shift_assignments USING btree (user_id, status)"
+    },
+    {
+      "tablename": "shift_group_working_copies",
+      "indexname": "shift_group_working_copies_auto_release_at_idx",
+      "indexdef": "CREATE INDEX shift_group_working_copies_auto_release_at_idx ON public.shift_group_working_copies USING btree (auto_release_at)"
+    },
+    {
+      "tablename": "shift_group_working_copies",
+      "indexname": "shift_group_working_copies_pkey",
+      "indexdef": "CREATE UNIQUE INDEX shift_group_working_copies_pkey ON public.shift_group_working_copies USING btree (shift_group_id)"
+    },
+    {
+      "tablename": "shift_group_working_copies",
+      "indexname": "shift_group_working_copies_updated_by_id_updated_at_idx",
+      "indexdef": "CREATE INDEX shift_group_working_copies_updated_by_id_updated_at_idx ON public.shift_group_working_copies USING btree (updated_by_id, updated_at)"
+    },
+    {
+      "tablename": "shift_groups",
+      "indexname": "shift_groups_event_id_key",
+      "indexdef": "CREATE UNIQUE INDEX shift_groups_event_id_key ON public.shift_groups USING btree (event_id)"
+    },
+    {
+      "tablename": "shift_groups",
+      "indexname": "shift_groups_notify_after_idx",
+      "indexdef": "CREATE INDEX shift_groups_notify_after_idx ON public.shift_groups USING btree (notify_after)"
+    },
+    {
+      "tablename": "shift_groups",
+      "indexname": "shift_groups_pkey",
+      "indexdef": "CREATE UNIQUE INDEX shift_groups_pkey ON public.shift_groups USING btree (id)"
+    },
+    {
+      "tablename": "shift_groups",
+      "indexname": "shift_groups_published_at_idx",
+      "indexdef": "CREATE INDEX shift_groups_published_at_idx ON public.shift_groups USING btree (published_at)"
+    },
+    {
+      "tablename": "shift_groups",
+      "indexname": "shift_groups_published_by_id_idx",
+      "indexdef": "CREATE INDEX shift_groups_published_by_id_idx ON public.shift_groups USING btree (published_by_id)"
+    },
+    {
+      "tablename": "shift_trades",
+      "indexname": "shift_trades_claimed_by_user_id_idx",
+      "indexdef": "CREATE INDEX shift_trades_claimed_by_user_id_idx ON public.shift_trades USING btree (claimed_by_user_id)"
+    },
+    {
+      "tablename": "shift_trades",
+      "indexname": "shift_trades_pkey",
+      "indexdef": "CREATE UNIQUE INDEX shift_trades_pkey ON public.shift_trades USING btree (id)"
+    },
+    {
+      "tablename": "shift_trades",
+      "indexname": "shift_trades_posted_by_user_id_idx",
+      "indexdef": "CREATE INDEX shift_trades_posted_by_user_id_idx ON public.shift_trades USING btree (posted_by_user_id)"
+    },
+    {
+      "tablename": "shift_trades",
+      "indexname": "shift_trades_status_idx",
+      "indexdef": "CREATE INDEX shift_trades_status_idx ON public.shift_trades USING btree (status)"
+    },
+    {
+      "tablename": "shifts",
+      "indexname": "shifts_area_worker_type_idx",
+      "indexdef": "CREATE INDEX shifts_area_worker_type_idx ON public.shifts USING btree (area, worker_type)"
+    },
+    {
+      "tablename": "shifts",
+      "indexname": "shifts_pkey",
+      "indexdef": "CREATE UNIQUE INDEX shifts_pkey ON public.shifts USING btree (id)"
+    },
+    {
+      "tablename": "shifts",
+      "indexname": "shifts_shift_group_id_idx",
+      "indexdef": "CREATE INDEX shifts_shift_group_id_idx ON public.shifts USING btree (shift_group_id)"
+    },
+    {
+      "tablename": "shifts",
+      "indexname": "shifts_starts_at_ends_at_idx",
+      "indexdef": "CREATE INDEX shifts_starts_at_ends_at_idx ON public.shifts USING btree (starts_at, ends_at)"
+    },
+    {
+      "tablename": "signature_artifact_revisions",
+      "indexname": "signature_artifact_revisions_capture_id_revision_key",
+      "indexdef": "CREATE UNIQUE INDEX signature_artifact_revisions_capture_id_revision_key ON public.signature_artifact_revisions USING btree (capture_id, revision)"
+    },
+    {
+      "tablename": "signature_artifact_revisions",
+      "indexname": "signature_artifact_revisions_capture_id_state_idx",
+      "indexdef": "CREATE INDEX signature_artifact_revisions_capture_id_state_idx ON public.signature_artifact_revisions USING btree (capture_id, state)"
+    },
+    {
+      "tablename": "signature_artifact_revisions",
+      "indexname": "signature_artifact_revisions_pkey",
+      "indexdef": "CREATE UNIQUE INDEX signature_artifact_revisions_pkey ON public.signature_artifact_revisions USING btree (id)"
+    },
+    {
+      "tablename": "signature_artifact_revisions",
+      "indexname": "signature_artifact_revisions_state_created_at_idx",
+      "indexdef": "CREATE INDEX signature_artifact_revisions_state_created_at_idx ON public.signature_artifact_revisions USING btree (state, created_at)"
+    },
+    {
+      "tablename": "signature_captures",
+      "indexname": "signature_captures_collection_id_capture_version_idx",
+      "indexdef": "CREATE INDEX signature_captures_collection_id_capture_version_idx ON public.signature_captures USING btree (collection_id, capture_version)"
+    },
+    {
+      "tablename": "signature_captures",
+      "indexname": "signature_captures_collection_id_updated_at_idx",
+      "indexdef": "CREATE INDEX signature_captures_collection_id_updated_at_idx ON public.signature_captures USING btree (collection_id, updated_at)"
+    },
+    {
+      "tablename": "signature_captures",
+      "indexname": "signature_captures_current_revision_id_key",
+      "indexdef": "CREATE UNIQUE INDEX signature_captures_current_revision_id_key ON public.signature_captures USING btree (current_revision_id)"
+    },
+    {
+      "tablename": "signature_captures",
+      "indexname": "signature_captures_member_id_key",
+      "indexdef": "CREATE UNIQUE INDEX signature_captures_member_id_key ON public.signature_captures USING btree (member_id)"
+    },
+    {
+      "tablename": "signature_captures",
+      "indexname": "signature_captures_pkey",
+      "indexdef": "CREATE UNIQUE INDEX signature_captures_pkey ON public.signature_captures USING btree (id)"
+    },
+    {
+      "tablename": "signature_collections",
+      "indexname": "signature_collections_pkey",
+      "indexdef": "CREATE UNIQUE INDEX signature_collections_pkey ON public.signature_collections USING btree (id)"
+    },
+    {
+      "tablename": "signature_collections",
+      "indexname": "signature_collections_sport_code_season_idx",
+      "indexdef": "CREATE INDEX signature_collections_sport_code_season_idx ON public.signature_collections USING btree (sport_code, season)"
+    },
+    {
+      "tablename": "signature_collections",
+      "indexname": "signature_collections_sport_code_season_key",
+      "indexdef": "CREATE UNIQUE INDEX signature_collections_sport_code_season_key ON public.signature_collections USING btree (sport_code, season)"
+    },
+    {
+      "tablename": "signature_collections",
+      "indexname": "signature_collections_status_updated_at_idx",
+      "indexdef": "CREATE INDEX signature_collections_status_updated_at_idx ON public.signature_collections USING btree (status, updated_at)"
+    },
+    {
+      "tablename": "signature_members",
+      "indexname": "signature_members_collection_id_active_required_idx",
+      "indexdef": "CREATE INDEX signature_members_collection_id_active_required_idx ON public.signature_members USING btree (collection_id, active, required)"
+    },
+    {
+      "tablename": "signature_members",
+      "indexname": "signature_members_collection_id_role_group_active_idx",
+      "indexdef": "CREATE INDEX signature_members_collection_id_role_group_active_idx ON public.signature_members USING btree (collection_id, role_group, active)"
+    },
+    {
+      "tablename": "signature_members",
+      "indexname": "signature_members_collection_id_source_external_id_key",
+      "indexdef": "CREATE UNIQUE INDEX signature_members_collection_id_source_external_id_key ON public.signature_members USING btree (collection_id, source_external_id)"
+    },
+    {
+      "tablename": "signature_members",
+      "indexname": "signature_members_linked_user_id_idx",
+      "indexdef": "CREATE INDEX signature_members_linked_user_id_idx ON public.signature_members USING btree (linked_user_id)"
+    },
+    {
+      "tablename": "signature_members",
+      "indexname": "signature_members_pkey",
+      "indexdef": "CREATE UNIQUE INDEX signature_members_pkey ON public.signature_members USING btree (id)"
+    },
+    {
+      "tablename": "signature_roster_snapshots",
+      "indexname": "signature_roster_snapshots_collection_id_created_at_idx",
+      "indexdef": "CREATE INDEX signature_roster_snapshots_collection_id_created_at_idx ON public.signature_roster_snapshots USING btree (collection_id, created_at)"
+    },
+    {
+      "tablename": "signature_roster_snapshots",
+      "indexname": "signature_roster_snapshots_collection_id_source_hash_key",
+      "indexdef": "CREATE UNIQUE INDEX signature_roster_snapshots_collection_id_source_hash_key ON public.signature_roster_snapshots USING btree (collection_id, source_hash)"
+    },
+    {
+      "tablename": "signature_roster_snapshots",
+      "indexname": "signature_roster_snapshots_collection_id_status_idx",
+      "indexdef": "CREATE INDEX signature_roster_snapshots_collection_id_status_idx ON public.signature_roster_snapshots USING btree (collection_id, status)"
+    },
+    {
+      "tablename": "signature_roster_snapshots",
+      "indexname": "signature_roster_snapshots_pkey",
+      "indexdef": "CREATE UNIQUE INDEX signature_roster_snapshots_pkey ON public.signature_roster_snapshots USING btree (id)"
+    },
+    {
+      "tablename": "signature_save_operations",
+      "indexname": "signature_save_operations_collection_id_member_id_created_at_id",
+      "indexdef": "CREATE INDEX signature_save_operations_collection_id_member_id_created_at_id ON public.signature_save_operations USING btree (collection_id, member_id, created_at)"
+    },
+    {
+      "tablename": "signature_save_operations",
+      "indexname": "signature_save_operations_pkey",
+      "indexdef": "CREATE UNIQUE INDEX signature_save_operations_pkey ON public.signature_save_operations USING btree (id)"
+    },
+    {
+      "tablename": "signature_save_operations",
+      "indexname": "signature_save_operations_request_id_key",
+      "indexdef": "CREATE UNIQUE INDEX signature_save_operations_request_id_key ON public.signature_save_operations USING btree (request_id)"
+    },
+    {
+      "tablename": "signature_save_operations",
+      "indexname": "signature_save_operations_revision_id_idx",
+      "indexdef": "CREATE INDEX signature_save_operations_revision_id_idx ON public.signature_save_operations USING btree (revision_id)"
+    },
+    {
+      "tablename": "signature_save_operations",
+      "indexname": "signature_save_operations_status_updated_at_idx",
+      "indexdef": "CREATE INDEX signature_save_operations_status_updated_at_idx ON public.signature_save_operations USING btree (status, updated_at)"
+    },
+    {
+      "tablename": "software_credentials",
+      "indexname": "software_credentials_archived_at_idx",
+      "indexdef": "CREATE INDEX software_credentials_archived_at_idx ON public.software_credentials USING btree (archived_at)"
+    },
+    {
+      "tablename": "software_credentials",
+      "indexname": "software_credentials_name_key",
+      "indexdef": "CREATE UNIQUE INDEX software_credentials_name_key ON public.software_credentials USING btree (name)"
+    },
+    {
+      "tablename": "software_credentials",
+      "indexname": "software_credentials_pkey",
+      "indexdef": "CREATE UNIQUE INDEX software_credentials_pkey ON public.software_credentials USING btree (id)"
+    },
+    {
+      "tablename": "sport_configs",
+      "indexname": "sport_configs_pkey",
+      "indexdef": "CREATE UNIQUE INDEX sport_configs_pkey ON public.sport_configs USING btree (id)"
+    },
+    {
+      "tablename": "sport_configs",
+      "indexname": "sport_configs_sport_code_key",
+      "indexdef": "CREATE UNIQUE INDEX sport_configs_sport_code_key ON public.sport_configs USING btree (sport_code)"
+    },
+    {
+      "tablename": "sport_shift_configs",
+      "indexname": "sport_shift_configs_pkey",
+      "indexdef": "CREATE UNIQUE INDEX sport_shift_configs_pkey ON public.sport_shift_configs USING btree (id)"
+    },
+    {
+      "tablename": "sport_shift_configs",
+      "indexname": "sport_shift_configs_sport_config_id_area_key",
+      "indexdef": "CREATE UNIQUE INDEX sport_shift_configs_sport_config_id_area_key ON public.sport_shift_configs USING btree (sport_config_id, area)"
+    },
+    {
+      "tablename": "student_area_assignments",
+      "indexname": "student_area_assignments_area_idx",
+      "indexdef": "CREATE INDEX student_area_assignments_area_idx ON public.student_area_assignments USING btree (area)"
+    },
+    {
+      "tablename": "student_area_assignments",
+      "indexname": "student_area_assignments_pkey",
+      "indexdef": "CREATE UNIQUE INDEX student_area_assignments_pkey ON public.student_area_assignments USING btree (id)"
+    },
+    {
+      "tablename": "student_area_assignments",
+      "indexname": "student_area_assignments_user_id_area_key",
+      "indexdef": "CREATE UNIQUE INDEX student_area_assignments_user_id_area_key ON public.student_area_assignments USING btree (user_id, area)"
+    },
+    {
+      "tablename": "student_availability_blocks",
+      "indexname": "student_availability_blocks_intent_status_idx",
+      "indexdef": "CREATE INDEX student_availability_blocks_intent_status_idx ON public.student_availability_blocks USING btree (intent, status)"
+    },
+    {
+      "tablename": "student_availability_blocks",
+      "indexname": "student_availability_blocks_kind_date_date_ends_on_idx",
+      "indexdef": "CREATE INDEX student_availability_blocks_kind_date_date_ends_on_idx ON public.student_availability_blocks USING btree (kind, date, date_ends_on)"
+    },
+    {
+      "tablename": "student_availability_blocks",
+      "indexname": "student_availability_blocks_kind_date_idx",
+      "indexdef": "CREATE INDEX student_availability_blocks_kind_date_idx ON public.student_availability_blocks USING btree (kind, date)"
+    },
+    {
+      "tablename": "student_availability_blocks",
+      "indexname": "student_availability_blocks_pkey",
+      "indexdef": "CREATE UNIQUE INDEX student_availability_blocks_pkey ON public.student_availability_blocks USING btree (id)"
+    },
+    {
+      "tablename": "student_availability_blocks",
+      "indexname": "student_availability_blocks_reviewed_by_id_idx",
+      "indexdef": "CREATE INDEX student_availability_blocks_reviewed_by_id_idx ON public.student_availability_blocks USING btree (reviewed_by_id)"
+    },
+    {
+      "tablename": "student_availability_blocks",
+      "indexname": "student_availability_blocks_user_id_idx",
+      "indexdef": "CREATE INDEX student_availability_blocks_user_id_idx ON public.student_availability_blocks USING btree (user_id)"
+    },
+    {
+      "tablename": "student_availability_blocks",
+      "indexname": "student_availability_blocks_user_id_kind_idx",
+      "indexdef": "CREATE INDEX student_availability_blocks_user_id_kind_idx ON public.student_availability_blocks USING btree (user_id, kind)"
+    },
+    {
+      "tablename": "student_badges",
+      "indexname": "student_badges_awarded_by_id_idx",
+      "indexdef": "CREATE INDEX student_badges_awarded_by_id_idx ON public.student_badges USING btree (awarded_by_id)"
+    },
+    {
+      "tablename": "student_badges",
+      "indexname": "student_badges_definition_id_awarded_at_idx",
+      "indexdef": "CREATE INDEX student_badges_definition_id_awarded_at_idx ON public.student_badges USING btree (definition_id, awarded_at DESC)"
+    },
+    {
+      "tablename": "student_badges",
+      "indexname": "student_badges_pkey",
+      "indexdef": "CREATE UNIQUE INDEX student_badges_pkey ON public.student_badges USING btree (id)"
+    },
+    {
+      "tablename": "student_badges",
+      "indexname": "student_badges_user_id_awarded_at_idx",
+      "indexdef": "CREATE INDEX student_badges_user_id_awarded_at_idx ON public.student_badges USING btree (user_id, awarded_at DESC)"
+    },
+    {
+      "tablename": "student_badges",
+      "indexname": "student_badges_user_id_definition_id_key",
+      "indexdef": "CREATE UNIQUE INDEX student_badges_user_id_definition_id_key ON public.student_badges USING btree (user_id, definition_id)"
+    },
+    {
+      "tablename": "student_sport_assignments",
+      "indexname": "student_sport_assignments_pkey",
+      "indexdef": "CREATE UNIQUE INDEX student_sport_assignments_pkey ON public.student_sport_assignments USING btree (id)"
+    },
+    {
+      "tablename": "student_sport_assignments",
+      "indexname": "student_sport_assignments_sport_code_idx",
+      "indexdef": "CREATE INDEX student_sport_assignments_sport_code_idx ON public.student_sport_assignments USING btree (sport_code)"
+    },
+    {
+      "tablename": "student_sport_assignments",
+      "indexname": "student_sport_assignments_user_id_sport_code_key",
+      "indexdef": "CREATE UNIQUE INDEX student_sport_assignments_user_id_sport_code_key ON public.student_sport_assignments USING btree (user_id, sport_code)"
+    },
+    {
+      "tablename": "system_config",
+      "indexname": "system_config_pkey",
+      "indexdef": "CREATE UNIQUE INDEX system_config_pkey ON public.system_config USING btree (key)"
+    },
+    {
+      "tablename": "user_app_installations",
+      "indexname": "user_app_installations_pkey",
+      "indexdef": "CREATE UNIQUE INDEX user_app_installations_pkey ON public.user_app_installations USING btree (id)"
+    },
+    {
+      "tablename": "user_app_installations",
+      "indexname": "user_app_installations_platform_last_seen_at_idx",
+      "indexdef": "CREATE INDEX user_app_installations_platform_last_seen_at_idx ON public.user_app_installations USING btree (platform, last_seen_at)"
+    },
+    {
+      "tablename": "user_app_installations",
+      "indexname": "user_app_installations_user_id_installation_hash_platform_key",
+      "indexdef": "CREATE UNIQUE INDEX user_app_installations_user_id_installation_hash_platform_key ON public.user_app_installations USING btree (user_id, installation_hash, platform)"
+    },
+    {
+      "tablename": "user_app_installations",
+      "indexname": "user_app_installations_user_id_last_seen_at_idx",
+      "indexdef": "CREATE INDEX user_app_installations_user_id_last_seen_at_idx ON public.user_app_installations USING btree (user_id, last_seen_at)"
+    },
+    {
+      "tablename": "users",
+      "indexname": "users_active_hidden_from_roster_idx",
+      "indexdef": "CREATE INDEX users_active_hidden_from_roster_idx ON public.users USING btree (active, hidden_from_roster)"
+    },
+    {
+      "tablename": "users",
+      "indexname": "users_athletics_email_key",
+      "indexdef": "CREATE UNIQUE INDEX users_athletics_email_key ON public.users USING btree (athletics_email)"
+    },
+    {
+      "tablename": "users",
+      "indexname": "users_collaborator_policy_id_idx",
+      "indexdef": "CREATE INDEX users_collaborator_policy_id_idx ON public.users USING btree (collaborator_policy_id)"
+    },
+    {
+      "tablename": "users",
+      "indexname": "users_direct_report_id_idx",
+      "indexdef": "CREATE INDEX users_direct_report_id_idx ON public.users USING btree (direct_report_id)"
+    },
+    {
+      "tablename": "users",
+      "indexname": "users_email_key",
+      "indexdef": "CREATE UNIQUE INDEX users_email_key ON public.users USING btree (email)"
+    },
+    {
+      "tablename": "users",
+      "indexname": "users_ics_token_key",
+      "indexdef": "CREATE UNIQUE INDEX users_ics_token_key ON public.users USING btree (ics_token)"
+    },
+    {
+      "tablename": "users",
+      "indexname": "users_name_trgm_idx",
+      "indexdef": "CREATE INDEX users_name_trgm_idx ON public.users USING gin (name gin_trgm_ops)"
+    },
+    {
+      "tablename": "users",
+      "indexname": "users_pkey",
+      "indexdef": "CREATE UNIQUE INDEX users_pkey ON public.users USING btree (id)"
+    },
+    {
+      "tablename": "users",
+      "indexname": "users_role_affiliation_idx",
+      "indexdef": "CREATE INDEX users_role_affiliation_idx ON public.users USING btree (role, affiliation)"
+    },
+    {
+      "tablename": "users",
+      "indexname": "users_wiscard_card_number_key",
+      "indexdef": "CREATE UNIQUE INDEX users_wiscard_card_number_key ON public.users USING btree (wiscard_card_number)"
+    },
+    {
+      "tablename": "users",
+      "indexname": "users_wiscard_number_key",
+      "indexdef": "CREATE UNIQUE INDEX users_wiscard_number_key ON public.users USING btree (wiscard_number)"
+    },
+    {
+      "tablename": "varsity_season_owners",
+      "indexname": "varsity_season_owners_pkey",
+      "indexdef": "CREATE UNIQUE INDEX varsity_season_owners_pkey ON public.varsity_season_owners USING btree (id)"
+    },
+    {
+      "tablename": "varsity_season_owners",
+      "indexname": "varsity_season_owners_sport_code_area_starts_on_ends_on_idx",
+      "indexdef": "CREATE INDEX varsity_season_owners_sport_code_area_starts_on_ends_on_idx ON public.varsity_season_owners USING btree (sport_code, area, starts_on, ends_on)"
+    },
+    {
+      "tablename": "varsity_season_owners",
+      "indexname": "varsity_season_owners_sport_code_area_user_id_starts_on_key",
+      "indexdef": "CREATE UNIQUE INDEX varsity_season_owners_sport_code_area_user_id_starts_on_key ON public.varsity_season_owners USING btree (sport_code, area, user_id, starts_on)"
+    },
+    {
+      "tablename": "varsity_season_owners",
+      "indexname": "varsity_season_owners_user_id_starts_on_ends_on_idx",
+      "indexdef": "CREATE INDEX varsity_season_owners_user_id_starts_on_ends_on_idx ON public.varsity_season_owners USING btree (user_id, starts_on, ends_on)"
+    },
+    {
+      "tablename": "web_push_subscriptions",
+      "indexname": "web_push_subscriptions_endpoint_key",
+      "indexdef": "CREATE UNIQUE INDEX web_push_subscriptions_endpoint_key ON public.web_push_subscriptions USING btree (endpoint)"
+    },
+    {
+      "tablename": "web_push_subscriptions",
+      "indexname": "web_push_subscriptions_pkey",
+      "indexdef": "CREATE UNIQUE INDEX web_push_subscriptions_pkey ON public.web_push_subscriptions USING btree (id)"
+    },
+    {
+      "tablename": "web_push_subscriptions",
+      "indexname": "web_push_subscriptions_user_id_revoked_at_idx",
+      "indexdef": "CREATE INDEX web_push_subscriptions_user_id_revoked_at_idx ON public.web_push_subscriptions USING btree (user_id, revoked_at)"
+    }
+  ],
+  "nameOnlyMissing": [
+    {
+      "name": "bookings_requester_user_id_idx",
+      "table": "bookings",
+      "sql": "CREATE INDEX \"bookings_requester_user_id_idx\" ON \"bookings\"(\"requester_user_id\");"
+    },
+    {
+      "name": "bulk_stock_movements_actor_user_id_idx",
+      "table": "bulk_stock_movements",
+      "sql": "CREATE INDEX \"bulk_stock_movements_actor_user_id_idx\" ON \"bulk_stock_movements\"(\"actor_user_id\");"
+    },
+    {
+      "name": "booking_bulk_unit_allocations_booking_bulk_item_id_bulk_sku_key",
+      "table": "booking_bulk_unit_allocations",
+      "sql": "CREATE UNIQUE INDEX \"booking_bulk_unit_allocations_booking_bulk_item_id_bulk_sku_key\" ON \"booking_bulk_unit_allocations\"(\"booking_bulk_item_id\", \"bulk_sku_unit_id\");"
+    },
+    {
+      "name": "scan_events_actor_user_id_idx",
+      "table": "scan_events",
+      "sql": "CREATE INDEX \"scan_events_actor_user_id_idx\" ON \"scan_events\"(\"actor_user_id\");"
+    },
+    {
+      "name": "override_events_actor_user_id_idx",
+      "table": "override_events",
+      "sql": "CREATE INDEX \"override_events_actor_user_id_idx\" ON \"override_events\"(\"actor_user_id\");"
+    },
+    {
+      "name": "audit_logs_actor_user_id_created_at_idx",
+      "table": "audit_logs",
+      "sql": "CREATE INDEX \"audit_logs_actor_user_id_created_at_idx\" ON \"audit_logs\"(\"actor_user_id\", \"created_at\");"
+    },
+    {
+      "name": "signature_save_operations_collection_id_member_id_created_a_idx",
+      "table": "signature_save_operations",
+      "sql": "CREATE INDEX \"signature_save_operations_collection_id_member_id_created_a_idx\" ON \"signature_save_operations\"(\"collection_id\", \"member_id\", \"created_at\");"
+    },
+    {
+      "name": "notifications_user_id_created_at_idx",
+      "table": "notifications",
+      "sql": "CREATE INDEX \"notifications_user_id_created_at_idx\" ON \"notifications\"(\"user_id\", \"created_at\");"
+    },
+    {
+      "name": "schedule_bulk_assignment_items_bulk_assignment_id_shift_gro_key",
+      "table": "schedule_bulk_assignment_items",
+      "sql": "CREATE UNIQUE INDEX \"schedule_bulk_assignment_items_bulk_assignment_id_shift_gro_key\" ON \"schedule_bulk_assignment_items\"(\"bulk_assignment_id\", \"shift_group_id\");"
+    }
+  ]
+}

@@ -1,0 +1,102 @@
+{
+  "title": "15 additional small fixes",
+  "eyebrow": "Wisconsin Creative \u00b7 local implementation review",
+  "lede": "Read-path correctness, safer exports, and navigation recovery. No layout redesign, schema migration, or production mutation.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "Evidence boundaries",
+      "note": "Behavioral review only. No authenticated product screenshot or matched visual baseline was captured. Regression tests exercise real route wrappers with mocked identity/database boundaries and real helper functions; they do not prove a deployed browser session.",
+      "pairs": []
+    }
+  ],
+  "changes": [
+    {
+      "h": "1. Audit export date windows",
+      "was": "Malformed dates reached Prisma; reversed windows looked like empty exports.",
+      "now": "Return 400 before reading audit data."
+    },
+    {
+      "h": "2. Private CSV responses",
+      "was": "Audit, bookings, items and users downloads lacked an explicit no-store policy.",
+      "now": "All four CSV responses are private, no-store."
+    },
+    {
+      "h": "3. Collaborator export filter",
+      "was": "The Collaborator role was missing from the export filter allowlist.",
+      "now": "Exports use the same role predicate as the directory."
+    },
+    {
+      "h": "4. Area filter validation",
+      "was": "Unknown area values reached Prisma enum filters.",
+      "now": "Use the directory\u2019s validated area predicate."
+    },
+    {
+      "h": "5. Location filter normalization",
+      "was": "Whitespace in location ids produced a different result from the directory.",
+      "now": "Trim location ids through the shared query builder."
+    },
+    {
+      "h": "6. Bounded roster exports",
+      "was": "The route loaded every matching user synchronously.",
+      "now": "Read at most 5,001 rows, export 5,000, and mark truncation."
+    },
+    {
+      "h": "7. Collaborator profile privacy",
+      "was": "Staff CSVs included fields hidden by the collaborator profile API.",
+      "now": "Staff CSVs retain name, role and title; private columns remain blank. Admin exports remain complete."
+    },
+    {
+      "h": "8. Stable directory pages",
+      "was": "Equal sort values had no unique tiebreaker.",
+      "now": "Append id ordering to every directory sort."
+    },
+    {
+      "h": "9. Stable capped history exports",
+      "was": "Rows with equal timestamps could change order around the 5,000-row boundary.",
+      "now": "Audit and booking exports use createdAt plus id ordering."
+    },
+    {
+      "h": "10. Spreadsheet escaping",
+      "was": "Leading whitespace bypassed client report formula protection.",
+      "now": "Protect whitespace-prefixed formula values."
+    },
+    {
+      "h": "11. Truncated download feedback",
+      "was": "A missing total-count header turned incomplete downloads into success messages.",
+      "now": "Both helpers retain warning severity without a total."
+    },
+    {
+      "h": "12. Unusable JSON errors",
+      "was": "JSON null leaked into failure copy as literal null.",
+      "now": "Null, arrays and primitives use the normal status-based fallback."
+    },
+    {
+      "h": "13. Renamed recent records",
+      "was": "Renaming the most recent item left the previous label stored.",
+      "now": "Update the label even when its URL is already first."
+    },
+    {
+      "h": "14. Corrupt recent storage",
+      "was": "Malformed JSON blocked every future recent-history write.",
+      "now": "The next visit rebuilds a valid cache."
+    },
+    {
+      "h": "15. Browser history metadata",
+      "was": "Filter synchronization replaced router/history metadata with null.",
+      "now": "Preserve the current history state while updating the URL."
+    }
+  ],
+  "verification": [
+    "132 focused tests pass across 12 files, including 35 new regression cases.",
+    "Nine helper regression cases failed against the original source and pass after the fixes.",
+    "TypeScript, lint, application build, codemap/docs verification and git diff --check pass.",
+    "No records were created, changed, exported from production, or deleted.",
+    "Headless Chromium passed four checks using the bundled source helpers: corrupt-storage recovery, first-entry rename, history-state preservation, and truncated-warning severity. The review page was rendered and inspected. This is isolated browser-helper evidence, not authenticated app proof."
+  ],
+  "notes": [
+    "Authenticated browser interaction and production deployment remain unverified. No visual layout improvement is claimed.",
+    "The hidden-user test suite required a test-only no-preview cookie mock so kiosk visibility assertions could run without Next request context.",
+    "The source changes remain local and uncommitted."
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "phase": "before",
+  "checks": [],
+  "viewport": {
+    "width": 1100,
+    "height": 1000
+  },
+  "deviceScaleFactor": 1,
+  "colorScheme": "light",
+  "reducedMotion": "reduce",
+  "proof": "Actual components with isolated Admin fixture; not authenticated application proof"
+}

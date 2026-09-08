@@ -1,0 +1,88 @@
+{
+  "title": "A clearer dashboard",
+  "eyebrow": "Wisconsin Creative \u00b7 iOS \u00b7 Local review",
+  "lede": "A compact dashboard header, followed by booking titles you can read in full.",
+  "stats": [
+    {
+      "k": "Complete booking titles",
+      "v": "1 of 6 \u2192 6 of 6",
+      "n": "Counted in the matched standard-size fixture captures. Rows grow to show their content.",
+      "tone": "good"
+    },
+    {
+      "k": "Next Up position",
+      "v": "96 pt higher",
+      "n": "Busy fixture at standard text size. Card edge: y=1119 \u2192 830 px, divided by the 3\u00d7 capture scale.",
+      "tone": "good"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Readable booking rows",
+      "note": "The baseline includes the first header cleanup. Both builds use the same hour-anchored fixture data, device, appearance, text size, and top scroll position. CSS shows matching queue regions and excludes the status-bar clock.",
+      "pairs": [
+        {
+          "title": "Standard text: full identity before timing",
+          "before": "/Users/role/Code/wisconsin-creative/tasks/archive/proofs/ios-dashboard-2026-09-07/titles-before.png",
+          "after": "/Users/role/Code/wisconsin-creative/tasks/archive/proofs/ios-dashboard-2026-09-07/titles-after.png",
+          "beforeCap": "Five of six titles lose identifying words to a trailing time column.",
+          "afterCap": "All six titles are complete. Timing and location are directly underneath."
+        },
+        {
+          "title": "Accessibility Large: the content can grow",
+          "before": "/Users/role/Code/wisconsin-creative/tasks/archive/proofs/ios-dashboard-2026-09-07/titles-large-before.png",
+          "after": "/Users/role/Code/wisconsin-creative/tasks/archive/proofs/ios-dashboard-2026-09-07/titles-large-after.png",
+          "beforeCap": "Titles and pickup context truncate even as text grows.",
+          "afterCap": "Titles, times, and pickup context wrap. Fewer rows fit, but each visible row can be read."
+        }
+      ]
+    },
+    {
+      "heading": "Greeting and summary",
+      "note": "Same iPhone 16 Pro, fixture identity and counts, text size, and top scroll position. Views below are clipped in CSS to the changed header region; originals remain unmodified. Time-relative booking rows and status-bar clocks are excluded.",
+      "pairs": [
+        {
+          "title": "Upcoming work takes priority",
+          "before": "/Users/role/Code/wisconsin-creative/tasks/archive/proofs/ios-dashboard-2026-09-07/before.png",
+          "after": "/Users/role/Code/wisconsin-creative/tasks/archive/proofs/ios-dashboard-2026-09-07/after.png",
+          "beforeCap": "Large split greeting, stacked metrics, and explanatory subtitle.",
+          "afterCap": "Wrapping greeting, two summary columns, and a concise Next Up heading."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Booking identity gets the width it needs",
+      "was": "A single-line title competed with the trailing due time.",
+      "now": "The title wraps across the content column, followed by status-colored timing and supporting context. Row actions and urgency order are preserved."
+    },
+    {
+      "h": "A quieter greeting",
+      "was": "The name occupied a separate red line at 30 pt.",
+      "now": "Greeting and name share wrapping 24 pt Gotham Bold text; urgency owns the strong color."
+    },
+    {
+      "h": "Compact active summaries",
+      "was": "Each count occupied a full-width row.",
+      "now": "Two columns at standard text sizes, one at accessibility sizes. Existing status colors, labels, counts, and tap destinations remain."
+    },
+    {
+      "h": "A direct section heading",
+      "was": "Next Up repeated the list contents in an explanatory sentence.",
+      "now": "The heading lets the actual work describe the section."
+    }
+  ],
+  "verification": [
+    "Wisconsin target builds on iPhone 16 Pro. All three Home screenshot tests pass before and after the row change: standard, empty personal queue with staff draft, and Dark / Accessibility Large.",
+    "30 focused Home source-contract tests pass. iOS project generation check, drift check, and gap audit pass.",
+    "Dark / Accessibility Large is now a repeatable UI test. Matched queue screenshots visually confirm full wrapping text; the original first-pass direct capture remains archived.",
+    "Existing Trade Board test expects an obsolete PostTradeSheet call; the committed HEAD source also has the newer initializer. Unrelated to this UI diff.",
+    "Docs verification stops at existing architecture/backend codemap drift. Generated maps were not rewritten during concurrent Schedule work."
+  ],
+  "notes": [
+    "Local fixture proof only; no signed-in production acceptance, commit, upload, or release.",
+    "Event/shift rows retain their existing layout. Booking rows use more vertical space when text needs it; no maximum text size or shrinking is applied.",
+    "No Artifact publishing tool is available in this session; the self-contained review is available locally."
+  ]
+}
