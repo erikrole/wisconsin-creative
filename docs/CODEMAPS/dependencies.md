@@ -24,6 +24,7 @@
 | `@upstash/redis` | `^1.38.0` |
 | `@vercel/analytics` | `1.6.1` |
 | `@vercel/blob` | `^2.4.1` |
+| `@vercel/speed-insights` | `2.0.0` |
 | `barcode-detector` | `^3.2.0` |
 | `bcryptjs` | `^3.0.3` |
 | `class-variance-authority` | `^0.7.1` |
@@ -103,6 +104,7 @@
 - `dev:preview`: `npx --yes vercel@latest env run -e preview --project wisconsin-creative --scope erikrole -- node scripts/start-preview-dev.mjs`
 - `drift:ios`: `bash scripts/ios-drift-check.sh`
 - `drift:ios:warn`: `bash scripts/ios-drift-check.sh --warn`
+- `eval:skills`: `python3 -B scripts/evaluate-skills.py`
 - `import:cheqroom`: `node scripts/import-cheqroom-items.mjs`
 - `ios:project:check`: `node scripts/check-ios-project.mjs`
 - `ios:xcode:build:device`: `xcodebuild -project ios/Wisconsin.xcodeproj -scheme Wisconsin -destination 'generic/platform=iOS' -configuration Debug build`
@@ -125,6 +127,7 @@
 - `test:e2e:smoke`: `playwright test`
 - `test:watch`: `vitest`
 - `verify:docs`: `npm run codemap:check`
+- `verify:skills`: `python3 -B scripts/verify-skills.py`
 
 ## Environment Variables From `.env.example`
 

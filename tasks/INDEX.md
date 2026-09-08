@@ -37,6 +37,11 @@ Audit files intentionally remain at root for now because the repo audit skills r
 
 ## Active Follow-up Ledgers
 
+- `ios-notifications-polish-plan-2026-09-07.md` - native inbox, reminder and settings polish; local tests and visual evidence tracked separately from APNs/device acceptance.
+
+- `database-audit-plan-2026-09-07.md` - production integrity and migration-checksum audit, local overlap-guard repair, and remaining historical reconciliation/application gates.
+- `ios-schedule-hierarchy-plan-2026-09-07.md` - readable native Schedule rows and calmer Event detail hierarchy, with matched iPhone 16 Pro fixture review; local acceptance and release tracked separately.
+- `ios-dashboard-hierarchy-plan-2026-09-07.md` - compact native Home greeting and actionable summaries, with iPhone 16 Pro fixture proof and a local visual review; release and signed-in acceptance remain separate.
 - `schedule-stabilization-plan-2026-09-04.md` - incident-driven first-use fixes for incomplete reads, pending-release visibility, lost edits, and uncertain mutations; tracks isolated role-specific proof and remaining native/timer/delivery acceptance.
 - `combined-schedule-events-plan-2026-09-03.md` - combine overlapping same-family source events at one venue into one operational Schedule row and canonical crew while preserving both source identities; migration, authenticated UI, native parity, deployment, and live Cross Country acceptance remain open.
 - `event-checkout-assignments-plan-2026-09-03.md` - recover the event-custody migration safely, restore the reservation quality-of-life release, prove authenticated iOS booking reads, and gate any Emma Hansen cleanup through the shipped merge preview.

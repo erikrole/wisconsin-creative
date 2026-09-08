@@ -46,7 +46,7 @@
 | `src/lib/services/kiosk-checkout-complete.ts` | 90 |
 | `src/lib/services/kiosk-location.ts` | 72 |
 | `src/lib/services/kiosk-scan.ts` | 36 |
-| `src/lib/services/kits.ts` | 327 |
+| `src/lib/services/kits.ts` | 329 |
 | `src/lib/services/licenses.ts` | 554 |
 | `src/lib/services/live-activities.ts` | 632 |
 | `src/lib/services/manual-event-time.ts` | 303 |
@@ -71,12 +71,12 @@
 | `src/lib/services/schedule-notification-flush.ts` | 190 |
 | `src/lib/services/schedule-notification-policy.ts` | 138 |
 | `src/lib/services/schedule-open-work.ts` | 569 |
-| `src/lib/services/schedule-publication.ts` | 1028 |
+| `src/lib/services/schedule-publication.ts` | 1031 |
 | `src/lib/services/schedule-template-review.ts` | 554 |
 | `src/lib/services/schedule-working-copy.ts` | 1095 |
 | `src/lib/services/scoreboard.ts` | 303 |
 | `src/lib/services/shift-assignment-conflicts.ts` | 43 |
-| `src/lib/services/shift-assignments.ts` | 683 |
+| `src/lib/services/shift-assignments.ts` | 708 |
 | `src/lib/services/shift-generation.ts` | 628 |
 | `src/lib/services/shift-trade-emails.ts` | 56 |
 | `src/lib/services/shift-trades.ts` | 1321 |
@@ -88,7 +88,7 @@
 | `src/lib/services/sport-setup.ts` | 210 |
 | `src/lib/services/status.ts` | 444 |
 | `src/lib/services/team-scoreboard.ts` | 613 |
-| `src/lib/services/usage-analytics-report.ts` | 33 |
+| `src/lib/services/usage-analytics-report.ts` | 32 |
 | `src/lib/services/user-deactivation.ts` | 569 |
 
 ## Key Library Files
@@ -111,7 +111,7 @@
 | `src/lib/auto-fill-preview-types.ts` | 61 |
 | `src/lib/availability-copy.ts` | 233 |
 | `src/lib/avatar.ts` | 44 |
-| `src/lib/battery-compatibility.ts` | 166 |
+| `src/lib/battery-compatibility.ts` | 145 |
 | `src/lib/bhphoto-image.ts` | 67 |
 | `src/lib/blob.ts` | 160 |
 | `src/lib/booking-action-policy.ts` | 209 |
@@ -120,7 +120,7 @@
 | `src/lib/booking-concurrency.ts` | 39 |
 | `src/lib/booking-status-display.ts` | 142 |
 | `src/lib/booking-statuses.ts` | 9 |
-| `src/lib/breadcrumbs.ts` | 146 |
+| `src/lib/breadcrumbs.ts` | 153 |
 | `src/lib/bulk-batteries.ts` | 28 |
 | `src/lib/bulk-schedule-assignment-types.ts` | 213 |
 | `src/lib/bulk-unit-qr.ts` | 111 |
@@ -148,14 +148,13 @@
 | `src/lib/env.ts` | 122 |
 | `src/lib/equipment-guidance.ts` | 133 |
 | `src/lib/equipment-section-filters.ts` | 87 |
-| `src/lib/equipment-sections.ts` | 200 |
+| `src/lib/equipment-sections.ts` | 155 |
 | `src/lib/errors.ts` | 80 |
 | `src/lib/fetch-with-timeout.ts` | 25 |
 | `src/lib/firmware-watch-targets.ts` | 124 |
-| `src/lib/format.ts` | 302 |
+| `src/lib/format.ts` | 283 |
 | `src/lib/guide-categories.ts` | 140 |
-| `src/lib/guide-content.ts` | 262 |
-| `src/lib/guide-freshness.ts` | 81 |
+| `src/lib/guide-content.ts` | 255 |
 | `src/lib/guide-ranking.ts` | 80 |
 | `src/lib/guides.ts` | 354 |
 | `src/lib/http.ts` | 115 |
@@ -172,7 +171,7 @@
 | `src/lib/nav-sections.ts` | 279 |
 | `src/lib/notification-count-sync.ts` | 9 |
 | `src/lib/observability.ts` | 19 |
-| `src/lib/operational-health.ts` | 50 |
+| `src/lib/operational-health.ts` | 2 |
 | `src/lib/ops-checks.ts` | 176 |
 | `src/lib/passkey-client.ts` | 73 |
 | `src/lib/passkey.ts` | 371 |
@@ -234,7 +233,7 @@
 | `src/lib/sports.ts` | 78 |
 | `src/lib/status-colors.ts` | 49 |
 | `src/lib/status-styles.ts` | 46 |
-| `src/lib/student-availability.ts` | 206 |
+| `src/lib/student-availability.ts` | 209 |
 | `src/lib/student-profile.ts` | 56 |
 | `src/lib/theme.ts` | 145 |
 | `src/lib/time.ts` | 28 |

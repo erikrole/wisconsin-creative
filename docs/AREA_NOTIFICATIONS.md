@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Notifications
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-09-03
+- Last Updated: 2026-09-07
 - Status: Active; browser push is deployed to Production, with physical Android acceptance still open
 - Version: V1.8
 
@@ -362,10 +362,10 @@ the notification's existing preference category:
 
 | Preference category | APNs category | Actions |
 | --- | --- | --- |
-| `checkoutDue`, `checkoutOverdue`, `reservation`, `gearPrep` | `GT_BOOKING` | Remind Me in 1 Hour, View Booking |
-| `schedule`, `trade` | `GT_SCHEDULE` | View Shift |
+| `checkoutDue`, `checkoutOverdue`, `reservation`, `gearPrep` | `GT_BOOKING` | Remind Me in 1 Hour |
+| `schedule`, `trade` | `GT_SCHEDULE` | None; tap opens the event |
 | `licenseExpiry` | *(none)* | tap only |
-| Blasts (`src/lib/services/blasts.ts`) | `GT_BLAST` | Got it, Open |
+| Blasts (`src/lib/services/blasts.ts`) | `GT_BLAST` | Got it |
 
 Rules that bound the action list:
 
@@ -387,7 +387,21 @@ Rollout is additive in both directions: iOS ignores a category identifier the
 installed build has not registered, and a build that receives no category
 renders a tap-only alert. Neither side needs to ship first.
 
+## Native notification polish acceptance (local, 2026-09-07)
+
+- Inbox read actions serialize with loading and only change read state after server success. Lost responses trigger an authoritative reload; cached rows remain visible with a retry banner if refresh also fails. Paging uses server offsets and suppresses overlapping IDs. Mark-all undo batches at the API's 500-ID limit.
+- Blast inbox taps retain `blastId` and return to the Home acknowledgment banner; archive-read remains separate from acknowledgment.
+- Full notification titles and bodies remain readable at larger text sizes. Recovery banners reserve space above the list. The rolling date section says Previous 7 Days.
+- Settings distinguishes provisional quiet delivery from registration and reports test APNs acceptance without claiming observed device delivery. Alert styles and sounds opens system settings. Account-wide push and pause controls retain their existing policy.
+- Preference writes reject overlapping saves/loads and reconcile uncertain failures. Reminder requests retain routing and thread context, reuse a stable identifier, and remove a late-added request after a session boundary change.
+- Permission copy describes implemented gear reminders, published schedule changes, and personal trade updates.
+- Source/build, isolated native behavior tests, fixture captures, and physical-device delivery are separate gates. See `tasks/ios-notifications-polish-plan-2026-09-07.md` for evidence and limitations.
+
 ## Change Log
+
+- 2026-09-07: **Native notification audit and polish, local candidate.** Hardened read/pagination/preference recovery, session-safe reminder scheduling, full-message readability, and permission/delivery copy. Existing category, recipient, publication, and APNs transport policies remain unchanged. Physical delivery and distribution are not claimed.
+
+- 2026-09-07: **Expired APNs token handling, local candidate.** HTTP 410 `ExpiredToken` now follows the existing invalid-device-token path. Revocation still requires rejection by both environments; alternate-host success preserves the token, and transient failures do not revoke it. Four HTTP/2 transport regression tests cover expiry, alternate success, inconclusive fallback, and provider-token refresh. Deployment and physical delivery remain separate gates.
 - 2026-09-03: **Shared checkout escalation no longer targets a hidden borrower.** Due/overdue processing suppresses requester delivery and retained-requester exclusion for `SHARED` custody, while configured responders and Admins still receive their normal operational stages with `Shared checkout` identity. Personal checkout recipient policy is unchanged. Migration `0143_shared_checkout_custody` is applied; compatible deployment, configured-recipient, and timing proof remain open.
 - 2026-08-29: **Native notification delivery truth and recovery.** Settings now surfaces the canonical account pause with its end time and Resume action, qualifies channel/category controls during a pause, distinguishes iOS permission from server APNs registration, and gates the device-specific self-test on the same preference and registration state ordinary push delivery uses. Failed preference saves render a reloadable inline error and announce it through VoiceOver while retaining the safe optimistic revert. The iPhone 16 Pro fixture capture, source-contract suites, and native build pass; authenticated APNs and physical-device acceptance remain separate gates.
 - 2026-08-28: **Android browser push is deployed.** Authenticated students can enroll the current HTTPS browser from Settings → Notifications, where the service worker receives safe same-origin notification taps and a browser-scoped test is available. `WebPushSubscription` migration `0137_web_push_subscriptions`, stable VAPID configuration, stale-endpoint cleanup, logout revocation, preference-aware normal/blast delivery, and deployment `dpl_9stXTaEbeKN1bWDuyUp9ZcSqT6X1` are complete. Physical Android Chrome permission, delivery, and tap-through acceptance remain open; iOS APNs is unchanged.

@@ -81,7 +81,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/kits/[id]`, `/kits`
 - APIs: `/api/kits/[id]/bulk-members`, `/api/kits/[id]/members/[membershipId]`, `/api/kits/[id]/members`, `/api/kits/[id]`, `/api/kits`
 - Services: `src/lib/services/kits.ts`
-- Tests: `tests/kits-location-load-state.test.ts`
+- Tests: `tests/kits-list.test.ts`, `tests/kits-location-load-state.test.ts`
 
 ## licenses
 
@@ -97,7 +97,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/settings/kiosk-devices`
 - APIs: `/api/kiosk-devices/[id]/regenerate-code`, `/api/kiosk-devices/[id]`, `/api/kiosk-devices`, `/api/kiosk/activate`, `/api/kiosk/checkin/[id]/complete`, `/api/kiosk/checkin/[id]/scan`, `/api/kiosk/checkout/[id]`, `/api/kiosk/checkout/availability`, `/api/kiosk/checkout/complete`, `/api/kiosk/checkout/scan`
 - Services: `src/lib/services/kiosk-checkout-complete.ts`, `src/lib/services/kiosk-location.ts`, `src/lib/services/kiosk-scan.ts`
-- Tests: `tests/bulk-unit-kiosk-scans.test.ts`, `tests/ios-accessibility-layout-hardening.test.ts`, `tests/ios-all-day-calendar-date.test.ts`, `tests/ios-api-contract.test.ts`, `tests/ios-app-intents.test.ts`, `tests/ios-app-web-trust-contract.test.ts`, `tests/ios-appstate-refresh.test.ts`, `tests/ios-async-request-ownership.test.ts`
+- Tests: `tests/bulk-unit-kiosk-scans.test.ts`, `tests/ios-accessibility-layout-hardening.test.ts`, `tests/ios-action-error-recovery.test.ts`, `tests/ios-all-day-calendar-date.test.ts`, `tests/ios-api-contract.test.ts`, `tests/ios-app-intents.test.ts`, `tests/ios-app-web-trust-contract.test.ts`, `tests/ios-appstate-refresh.test.ts`
 
 ## notifications
 

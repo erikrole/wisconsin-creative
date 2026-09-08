@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Dashboard
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-09-03
+- Last Updated: 2026-09-07
 - Status: Active — V3 shipped, reliability + UX polish complete
 - Version: V3
 
@@ -186,6 +186,18 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 7. Add regression tests for permissions, window filtering (7 days), and overdue consistency.
 
 ## Change Log
+
+- 2026-09-07: **Companion survives sign-in popover dismissal.** A captured termination stack identified AppKit's last-window-close policy as the cause of the disappearing icon. The delegate now keeps the accessory process running when its last window closes, while explicit Quit retains its normal behavior. The signed local app remains running and native/source suites pass; the user's next sign-in is the remaining live acceptance check.
+
+- 2026-09-07: **Higher-traffic UI reliability (local).** Existing saved-filter controls now tolerate malformed local storage, preserve their prior state and show inline feedback when saving/deleting a view fails, expose pressed states, and contain long trigger/location/preset labels. This hardens the existing source behavior; historical V1 deferral copy does not describe the current filter component. Acceptance: focused tests and component browser proof; authenticated application and deployment remain unverified. Evidence: `tasks/archive/proofs/high-traffic-ui15-2026-09-07/review.html`.
+
+- 2026-09-07: **Fixed the companion credential-loss root cause.** The intended legacy Keychain cleanup omitted the store-selection flag and deleted the newly saved protected token on this Mac. Queries now explicitly set the flag to either true or false. Real dummy-item testing of the production credential-store code verifies save, repeated reads, persistence across two signed processes, and explicit removal. The signed local app is installed; renewed user sign-in and live post-relaunch refresh remain the final acceptance gate.
+
+- 2026-09-07: **Companion sign-out survives missing credentials and relaunch.** Cached-only sessions now remove the secure identity even when the token is missing. An explicit persisted sign-out barrier prevents restore from reviving leftover identity after cleanup failure; only successful enrollment clears it. The signed local repair completed sign-out, removed the actual stale cache, and stayed signed out after process restart. Fresh authenticated data still requires in-app sign-in.
+
+- 2026-09-07: **Companion Refresh recovers a temporarily missing credential.** Manual Refresh now retries Keychain restoration instead of silently returning when a cached account is visible without its token. A real stale-data report showed a September 2 snapshot and missing token in both Keychain stores; reauthentication is required if the token does not return. The recovery regression passes with the 65-test native suite; live refreshed data remains pending in-app sign-in.
+
+- 2026-09-07: **Local companion credential and launch hardening.** Failed legacy Keychain migration now retains its durable source credential, and legacy cleanup cannot turn a successful hardened save into a failed enrollment. Keychain access errors enable menu restore retries; delayed identity reads cannot undo sign-out. The local Run action builds and validates a Developer ID-signed Release before stopping the prior process, with debugger access limited to explicit debug mode. Installed locally with 64 passing native tests and 30 source/no-database contracts. Menu interaction, authenticated projection, cold restart, APNs delivery, and notarization of this build remain unverified; UI automation timed out.
 
 - 2026-09-03: **Shared travel-case custody stays operational, not personal.** Team checkout lanes and counts continue to include shared case/truck manifests with `Shared checkout` identity, while My Gear, the native personal Home scope, and personal pending-pickup counts exclude them even when compatibility metadata retains a requester ID. Migration `0143_shared_checkout_custody` is applied; compatible app deployment and authenticated personal/team proof remain open.
 

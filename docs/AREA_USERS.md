@@ -130,6 +130,7 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 6. Ensure audit logs include actor role, target owner, and exception metadata.
 
 ## Change Log
+- 2026-09-07: Roster CSV now shares directory predicates (including Collaborator, validated area, and trimmed location), caps output at 5,000 with truncation metadata, and preserves the admin-only collaborator private-profile boundary. Directory pagination uses an id tiebreaker. Acceptance: route regressions pass locally; authenticated browser and deployment proof remain open.
 
 - 2026-08-30: **Self-service account deletion now performs real personal-data cleanup.** After current-password reauthentication and explicit confirmation, the authenticated delete route keeps only the minimum pseudonymized user row needed to preserve custody and audit history, removes direct profile and authentication data, deletes notification/device/app-preference records and passkeys, revokes companion access, and writes an exact retention-boundary audit entry. Admin deactivation remains a separate reversible lifecycle. Local service, route, and source-contract tests pass; authenticated production read-back remains a rollout gate.
 

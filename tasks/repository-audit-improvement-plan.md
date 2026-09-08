@@ -1,5 +1,51 @@
 # Repository Audit and Improvement Plan - 2026-08-10
 
+## Continued slop and query-efficiency pass - 2026-09-07
+
+- User requested continued investigation and implementation. Preserve the prior pass plus active Schedule/native changes.
+- [x] Kits: replace three total/active/archived counts with one `groupBy(active)` in `src/lib/services/kits.ts`, reducing list queries from five to three. `Kit.active` is non-null; keep search/location, archived visibility, empty-membership count, sorting, pagination, and response envelope unchanged. Add focused service regression coverage.
+- [x] Usage report: derive total from the complete non-null platform aggregate in `src/lib/services/usage-analytics-report.ts`, reducing six queries to five. Keep the owner allowlist, 7/30/90-day window, active-user calculation, breakdowns, and version cap unchanged. Strengthen the existing route test to cover populated output and assert zero reads for unauthorized callers.
+- [x] Remove `guide-freshness.ts` and its four tests: every export/type has zero product consumers; AREA_RESOURCES AC-12 explicitly preserves verification metadata without freshness badges. Retain stored verification and Mark verified behavior.
+- [x] Remove unused `summarizeOperationalHealth` and `OperationalHealthSummary`, plus the source test that merely asserts the unused helper exists. Preserve `OperationalHealthState`, which Operations imports.
+- [x] Remove unused `formatPickupLabel` and `uniqueHeadingId` after repository-wide reference checks. Retain the live date-formatting and line-based Markdown heading helpers.
+- [x] Remove the unused battery-alert projection wrapper; move its useful battery threshold/model fixtures to the live `getBatteryCompatibilitySummaries` API, including explicit `isLow` assertions.
+- Verification: focused tests and before/after query-count/output fixture replay; TypeScript, lint, migration-prefix check, regenerated codemaps/docs, full isolated app build, removed-symbol/reference sweep, final diff. Stop if output equivalence or current accepted contracts disagree. No API shape, UI, schema, mutation, native, or deployment change is planned.
+- Proof boundary: count database operations at the service boundary; do not infer production latency from mock timings. Build in a temporary copy because the shared checkout has an active dev server.
+
+### Continued-pass results
+
+- Completed all six selected slices. Net 142 additional source/test lines removed, including the new 60-line kit regression suite. No response, UI, schema, permission, or mutation behavior changed.
+- Before/after replay: complete output equality for 128 kit combinations (archived visibility, name/description search, location, page size, offset) and six usage fixtures (7/30/90 days, populated/empty), using real baseline/current service code with an in-memory database stub. Kits: 5 → 3 database calls; usage report: 6 → 5. This verifies operation counts and fixture behavior, not live SQL latency. [Replay](archive/proofs/slop-performance-2026-09-07/query-replay.mjs), [results](archive/proofs/slop-performance-2026-09-07/query-replay.json).
+- Passed: 50 tests across 10 relevant suites; TypeScript; full lint; 149-migration prefix check; codemap regeneration/docs check; reference sweep; final diff whitespace check. The five removed tests exercised obsolete code; four battery fixtures were retained and redirected to the live summary function.
+- Isolated optimized app build passed with exit 0, including lint/type validation, page data, prerendering, tracing, and route output. All 10 retained source/test files match the isolated build snapshot byte-for-byte. [Build log](archive/proofs/slop-performance-2026-09-07/second-build.log). Temporary build copy removed after saving evidence; active dev server left running.
+- Investigated but not changed: low-stock/license notification loops, dormant Schedule/workflow exports, and other single-reference functions need runtime-discovery and delivery-contract checks; an export count alone is not sufficient evidence for deleting them. No new behavior was shipped, so area acceptance and gap states remain unchanged.
+- Local only: no commit, push, deployment, production-data access, or measured production latency. Existing native and Schedule work is preserved.
+
+## Slop and performance follow-up - 2026-09-07
+
+Current authorization: audit and implement bounded cleanup/performance fixes locally. The August evidence below is historical, not a claim about this checkout.
+
+- Scope: `src/lib/equipment-sections.ts`, `tests/equipment-sections.test.ts`, and `src/lib/student-availability.ts`.
+- Confirmed cleanup: `groupAssetsBySection`, `sectionIndex`, and the always-true `isSectionReachable` have no product consumers; six tests exercise these dead exports or the forwarding-only `classifyBulkCategory`. Inline the latter's sole product call into `groupBulkBySection` and retain the live classifier/grouping tests.
+- Confirmed performance candidate: `evaluateAvailabilityPreferences` constructs two identical `Intl.DateTimeFormat` objects per call; candidate scoring calls it per candidate. Hoist the fixed-timezone formatter and retain all conversion options and conflict logic.
+- Contracts checked: D-016 code-defined equipment classification; Student Availability V1 weekly/ad hoc, preference, and approved-time-off semantics; current caller in `candidate-scoring.ts`. No schema, API shape, UI behavior, permission, or lifecycle changes.
+- Preserve active Schedule publication and iOS dashboard changes, including their tests and ledgers. Stop if another edit overlaps these selected files or output parity fails.
+- Verification plan: baseline focused tests; before/after evaluator comparison over dated fixtures including DST transitions; alternating warm benchmark samples with complete-output parity; focused tests, TypeScript, lint, app-only build, codemap/docs checks, final reference and diff checks.
+- Proof boundaries: benchmark measures local evaluator CPU only; no production latency claim. No visual review is required for dead exports and identical pure-function outputs; no native source changes.
+- [x] Remove dead helpers and tests: three unused exports, one forwarding wrapper, six tests; net 130 source/test lines removed across the slice.
+- [x] Reuse formatter and verify output parity/performance: 17,520 complete-output comparisons across every 2026 hour, with empty and 19-block inputs, including Central DST transitions. Seven alternating warmed samples of 2,000 evaluations: median 110.69 ms before, 14.92 ms after (7.42x local CPU speedup).
+- [x] Finish repository gates and record results here. This bounded local slice is complete; production latency and rollout remain unclaimed.
+
+### September review and proof
+
+- Passed: baseline 37 tests; final 62 tests across equipment sections, student availability conflicts/routes, candidate scoring, auto-fill preview, and the related API hardening suite; `npx tsc --noEmit --pretty false`; `npm run lint`; `npm run verify:docs` after `npm run codemap`; `git diff --check`; zero remaining source/test references to removed exports.
+- Benchmark source and raw samples: [benchmark.mjs](archive/proofs/slop-performance-2026-09-07/benchmark.mjs), [benchmark.json](archive/proofs/slop-performance-2026-09-07/benchmark.json). Run from the repository root with `node tasks/archive/proofs/slop-performance-2026-09-07/benchmark.mjs`; baseline source is read from commit `1f2af2aa`.
+- Build: the shared `npm run build:app` compiled and passed type/lint checks, then failed page-data collection with missing Items pages. Read-only process inspection found an existing `next dev` on port 3000; the sandboxed port guard had not detected it, and the shared manifest no longer contained those pages. The equivalent app-only build **passed** in an isolated temporary source copy with its own `.next`, using `node node_modules/next/dist/bin/next build` (without the shared-directory guard). All three changed source/test files matched that copy byte-for-byte. [Build log](archive/proofs/slop-performance-2026-09-07/build.log). The active dev server was left running; authenticated dev-server recovery was not exercised.
+- Generated codemaps also reflect the already-active Schedule service line counts and three pre-existing added test files. Their source edits were preserved.
+- Surveyed candidates: equipment helpers/tests, availability conversion and its candidate-scoring caller, dashboard aggregates, report loops, kit queries, and app-time/availability-copy formatting. This was a bounded source survey, not an exhaustive native, security, or production performance audit.
+- Rejected broad cuts: source-contract tests remain intentional repository contracts; short named helpers are not inherently wasteful; dashboard counts already use one aggregate; earlier DESLOPPIFY items are completed historical work. Other formatter and query candidates need their own caller/output/performance evidence before editing.
+- No product behavior or acceptance contract changed, no gap closed, and no area changelog is required. No commit, push, deployment, native build, or production latency measurement was performed.
+
 ## Goal
 
 - Audit the current Wisconsin Creative repository end to end, reject stale or unsupported concerns, and implement the highest-value confirmed repairs without disturbing unrelated work.
