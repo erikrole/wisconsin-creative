@@ -138,9 +138,9 @@ function persistScheduleTimelineSnapshot(
 
 function readScheduleTimelineSnapshot(key: string): ScheduleTimelineSnapshot | null {
   if (typeof sessionStorage === "undefined") return null;
-  const raw = sessionStorage.getItem(key);
-  if (raw === null) return null;
   try {
+    const raw = sessionStorage.getItem(key);
+    if (raw === null) return null;
     const parsed: unknown = JSON.parse(raw);
     return isSnapshot(parsed) ? parsed : null;
   } catch {
@@ -255,12 +255,12 @@ export function readScheduleTimelineReadingPosition(): ScheduleTimelineSnapshot 
 
 export function discardScheduleTimelinePosition(): void {
   if (typeof sessionStorage === "undefined") return;
-  sessionStorage.removeItem(TIMELINE_TRANSITION_KEY);
+  try { sessionStorage.removeItem(TIMELINE_TRANSITION_KEY); } catch { /* Storage is optional. */ }
 }
 
 export function discardScheduleTimelineReadingPosition(): void {
   if (typeof sessionStorage === "undefined") return;
-  sessionStorage.removeItem(TIMELINE_READING_KEY);
+  try { sessionStorage.removeItem(TIMELINE_READING_KEY); } catch { /* Storage is optional. */ }
 }
 
 export function restoreScheduleTimelinePosition(snapshot: ScheduleTimelineSnapshot): boolean {

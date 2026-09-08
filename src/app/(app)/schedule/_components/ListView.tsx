@@ -475,7 +475,7 @@ if (typeof window !== "undefined") {
   window.addEventListener("popstate", () => {
     if (window.location.pathname !== "/schedule") return;
     arrivedByHistory = true;
-    sessionStorage.setItem(HISTORY_RETURN_KEY, "1");
+    try { sessionStorage.setItem(HISTORY_RETURN_KEY, "1"); } catch { /* Storage is optional. */ }
   });
 }
 
@@ -509,10 +509,14 @@ function isScheduleReload(): boolean {
 // refreshed up there straight to today.
 function storedScroll(): number | null {
   if (typeof sessionStorage === "undefined") return null;
-  const stored = sessionStorage.getItem(SCROLL_KEY);
-  if (stored === null) return null;
-  const raw = Number.parseInt(stored, 10);
-  return Number.isFinite(raw) && raw >= 0 ? raw : null;
+  try {
+    const stored = sessionStorage.getItem(SCROLL_KEY);
+    if (stored === null) return null;
+    const raw = Number(stored);
+    return stored.trim() !== "" && Number.isFinite(raw) && raw >= 0 ? raw : null;
+  } catch {
+    return null;
+  }
 }
 
 function storedHistoryScroll(): number | null {
@@ -522,8 +526,12 @@ function storedHistoryScroll(): number | null {
 }
 
 function hasScheduleHistoryReturn(): boolean {
-  return typeof sessionStorage !== "undefined"
-    && sessionStorage.getItem(HISTORY_RETURN_KEY) === "1";
+  try {
+    return typeof sessionStorage !== "undefined"
+      && sessionStorage.getItem(HISTORY_RETURN_KEY) === "1";
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -707,6 +715,8 @@ export function ListView({
     if (!isTimeline) return;
     const claim = (event: Event) => {
       readerOwnsScrollRef.current = true;
+      didAnchorRef.current = true;
+      pendingRestoreRef.current = null;
       transitionAnchorRef.current = null;
       const target = event.target;
       if (
@@ -762,11 +772,12 @@ export function ListView({
     // the anchor retryable when the grouped timeline changes so the list cannot
     // remain parked at the archive floor after its data arrives.
     if (!isTimeline || didAnchorRef.current || loading || groupedEntries.length === 0) return;
+    if (readerOwnsScrollRef.current) return;
     const reload = isScheduleReload();
     const fromHistory = !reload && (arrivedByHistory || hasScheduleHistoryReturn());
     const historyRestore = fromHistory ? storedHistoryScroll() : null;
     arrivedByHistory = false;
-    sessionStorage.removeItem(HISTORY_RETURN_KEY);
+    try { sessionStorage.removeItem(HISTORY_RETURN_KEY); } catch { /* Storage is optional. */ }
     const restore = reload
       ? storedScroll()
       : fromHistory
@@ -890,32 +901,38 @@ export function ListView({
   // Throttled to one write per frame: this runs on every scroll event.
   useEffect(() => {
     if (!isTimeline || typeof sessionStorage === "undefined") return;
-    let queued = false;
+    let frame: number | null = null;
     let navigatingToEvent = false;
     const write = () => {
-      sessionStorage.setItem(SCROLL_KEY, String(Math.round(window.scrollY)));
+      if (navigatingToEvent) return;
+      try {
+        sessionStorage.setItem(SCROLL_KEY, String(Math.round(window.scrollY)));
+      } catch { /* A blocked/full store must not break scrolling. */ }
     };
     const record = () => {
-      if (queued || navigatingToEvent) return;
-      queued = true;
-      requestAnimationFrame(() => {
-        queued = false;
+      if (frame !== null || navigatingToEvent) return;
+      frame = requestAnimationFrame(() => {
+        frame = null;
         if (navigatingToEvent) return;
         write();
       });
     };
     const captureEventNavigation = (event: MouseEvent) => {
+      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
       const target = event.target instanceof Element ? event.target : null;
-      if (!target?.closest('a[href^="/events/"]')) return;
+      const link = target?.closest<HTMLAnchorElement>('a[href^="/events/"]');
+      if (!link || link.hasAttribute("download") || (link.target && link.target !== "_self")) return;
       // Next replaces the route before this component unmounts and can emit an
       // outgoing scroll while the Schedule DOM collapses. Freeze the reader's
       // click position on both storage and this history entry before that
       // transition can overwrite it.
       write();
-      window.history.replaceState(
-        { ...(window.history.state ?? {}), [HISTORY_SCROLL_KEY]: Math.round(window.scrollY) },
-        "",
-      );
+      try {
+        window.history.replaceState(
+          { ...(window.history.state ?? {}), [HISTORY_SCROLL_KEY]: Math.round(window.scrollY) },
+          "",
+        );
+      } catch { /* Session storage remains the fallback if history is unavailable. */ }
       navigatingToEvent = true;
     };
     window.addEventListener("scroll", record, { passive: true });
@@ -924,6 +941,7 @@ export function ListView({
     // is the last reliable synchronous chance to persist the visible offset.
     window.addEventListener("pagehide", write);
     return () => {
+      if (frame !== null) cancelAnimationFrame(frame);
       window.removeEventListener("scroll", record);
       document.removeEventListener("click", captureEventNavigation, true);
       window.removeEventListener("pagehide", write);
@@ -960,7 +978,13 @@ export function ListView({
   }, [groupedEntries, loading]);
 
   const scrollToToday = useCallback(() => {
-    todayGroupEl()?.scrollIntoView({ block: "start", behavior: "smooth" });
+    readerOwnsScrollRef.current = true;
+    didAnchorRef.current = true;
+    pendingRestoreRef.current = null;
+    transitionAnchorRef.current = null;
+    discardScheduleTimelinePosition();
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    todayGroupEl()?.scrollIntoView({ block: "start", behavior: reducedMotion ? "instant" : "smooth" });
   }, [todayGroupEl]);
 
   const [postingTradeId, setPostingTradeId] = useState<string | null>(null);
@@ -1155,14 +1179,14 @@ export function ListView({
                   onLoadArchived={onLoadArchived}
                 />
               )}
-              {groupedEntries.map(([dateKey, groupEntries], groupIdx) => {
+              {groupedEntries.map(([dateKey, groupEntries]) => {
                 const groupDate = new Date(dateKey);
                 const isGroupToday =
                   groupDate.toDateString() === new Date().toDateString();
 
               return (
                 <div
-                  key={`${dateKey}-${groupIdx}`}
+                  key={dateKey}
                   ref={isGroupToday ? desktopTodayGroupRef : undefined}
                   data-today={isGroupToday || undefined}
                   data-schedule-day={groupDate.getTime()}
@@ -1235,13 +1259,13 @@ export function ListView({
                 onLoadArchived={onLoadArchived}
               />
             )}
-            {groupedEntries.map(([dateKey, groupEntries], groupIdx) => {
+            {groupedEntries.map(([dateKey, groupEntries]) => {
               const groupDate = new Date(dateKey);
               const isGroupToday = groupDate.toDateString() === new Date().toDateString();
 
               return (
                 <div
-                  key={`${dateKey}-${groupIdx}`}
+                  key={dateKey}
                   ref={isGroupToday ? mobileTodayGroupRef : undefined}
                   data-today={isGroupToday || undefined}
                   data-schedule-day={groupDate.getTime()}
