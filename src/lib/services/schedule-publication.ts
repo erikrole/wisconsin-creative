@@ -511,6 +511,7 @@ export async function collectPublishBlockers(
         candidate.startsAt,
         candidate.endsAt,
         candidate.excludeAssignmentId,
+        "staff-release",
       );
       if (conflict) add("time_conflict", `${user.name}: ${conflict}`, candidate.slot, user.id);
       if (candidate.slot.workerType === "ST") {
@@ -531,10 +532,12 @@ export async function collectPublishBlockers(
 /** Read-only preflight for the editor, so blockers surface before Publish. */
 export async function getPublishPreflight(shiftGroupId: string) {
   const group = await findGroupForPublication(shiftGroupId);
-  if (!group.workingCopy) return { staleness: null, blockers: [] as PublishBlocker[] };
+  const workingVersion = group.workingCopy?.version ?? null;
+  if (!group.workingCopy) return { workingVersion, staleness: null, blockers: [] as PublishBlocker[] };
   const parsed = workingSchedulePayloadSchema.safeParse(group.workingCopy.payload);
   if (!parsed.success) {
     return {
+      workingVersion,
       staleness: {
         code: "invalid_payload" as const,
         message: "This working schedule is invalid and cannot be published.",
@@ -542,11 +545,11 @@ export async function getPublishPreflight(shiftGroupId: string) {
       blockers: [] as PublishBlocker[],
     };
   }
-  return collectPublishBlockers(
+  return { workingVersion, ...await collectPublishBlockers(
     db,
     group,
     reconcileWorkingAssignmentSources(parsed.data, group.shifts),
-  );
+  ) };
 }
 
 export async function publishShiftGroup(

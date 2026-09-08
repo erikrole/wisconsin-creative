@@ -15,6 +15,7 @@ import { scheduleAssigneeWorkerType } from "@/lib/schedule-assignee";
 import { createAuditEntryTx } from "@/lib/audit";
 import { dispatchScheduleAssignmentNotifications } from "@/lib/services/notifications";
 import { shiftClaimAreaEligibilityReason } from "@/lib/shift-claim-eligibility";
+import { formatAllDayDate, formatAppDateTime } from "@/lib/app-time";
 
 export type RoleSlotOutcome = {
   requestedShiftId: string;
@@ -164,6 +165,7 @@ export async function findTimeConflict(
   startsAt: Date,
   endsAt: Date,
   excludeAssignmentId?: string,
+  details?: "staff-release",
 ): Promise<string | null> {
   const requestedWindow = { startsAt, endsAt };
   // No row cap: the where clause is a raw-window prefilter, and a capped read
@@ -175,11 +177,34 @@ export async function findTimeConflict(
       window: requestedWindow,
       excludeAssignmentId,
     }),
-    include: { shift: { select: assignableShiftSelect } },
+    include: { shift: { select: {
+      ...assignableShiftSelect,
+      shiftGroup: { select: { event: { select: {
+        startsAt: true, endsAt: true, allDay: true, summary: true,
+      } } } },
+    } } },
   });
   for (const conflict of conflicts) {
-    if (!scheduleWindowsOverlap(requestedWindow, effectiveAssignmentWindow(conflict))) continue;
-    return `User already has a shift during this time (${conflict.shift.area})`;
+    const window = effectiveAssignmentWindow(conflict);
+    if (!scheduleWindowsOverlap(requestedWindow, window)) continue;
+    const message = `User already has a shift during this time (${conflict.shift.area})`;
+    // Only the staff release preflight opts in. Worker-facing claim/approval
+    // callers retain the generic message and cannot disclose another event.
+    if (details !== "staff-release") return message;
+    const event = conflict.shift.shiftGroup?.event;
+    if (!event?.summary) return message;
+    const inheritedAllDay = event.allDay
+      && !(conflict.callStartsAt && conflict.callEndsAt)
+      && !(conflict.shift.callStartsAt && conflict.shift.callEndsAt);
+    let timing: string;
+    if (inheritedAllDay) {
+      const firstDay = formatAllDayDate(window.startsAt);
+      const lastDay = formatAllDayDate(new Date(window.endsAt.getTime() - 1));
+      timing = `${firstDay === lastDay ? firstDay : `${firstDay} – ${lastDay}`} (all day)`;
+    } else {
+      timing = `${formatAppDateTime(window.startsAt)} – ${formatAppDateTime(window.endsAt)}`;
+    }
+    return `${message}: ${event.summary}, ${timing}. Review that assignment or this crew's timing before release.`;
   }
   return null;
 }

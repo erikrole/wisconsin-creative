@@ -13,7 +13,7 @@ import {
   mutateWorkingSchedule,
   rebaseWorkingSchedule,
 } from "@/lib/services/schedule-working-copy";
-import { publishShiftGroup } from "@/lib/services/schedule-publication";
+import { getPublishPreflight, publishShiftGroup } from "@/lib/services/schedule-publication";
 import { enqueuePendingScheduleRelease } from "@/lib/schedule-auto-release";
 
 const mutateSchema = z.object({
@@ -36,7 +36,20 @@ const discardSchema = z.object({
 
 export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
   requirePermission(user.role, "shift", "manage");
-  return ok({ data: await getWorkingScheduleEditor(params.id, user.id) });
+  const data = await getWorkingScheduleEditor(params.id, user.id);
+  // Historical release failures need current context. Keep ordinary polling
+  // cheap, and never clear the failed-release state merely because a blocker
+  // disappeared: a read does not enqueue or complete a release.
+  if (data.hasWorkingCopy && data.autoReleaseAt && data.autoReleaseError) {
+    const preflight = await getPublishPreflight(params.id);
+    data.autoReleaseError = preflight.workingVersion !== data.workingVersion
+      ? "The crew changed while release checks were loading. Refresh to review the latest changes."
+      : preflight.staleness?.message
+        ?? (preflight.blockers.length > 0
+          ? preflight.blockers.map((blocker) => blocker.message).join(" ")
+          : "Previous release failed. No current blockers were found. Review and save the crew to schedule another release.");
+  }
+  return ok({ data });
 });
 
 export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {

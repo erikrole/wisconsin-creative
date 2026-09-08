@@ -1,3 +1,4 @@
+import { ACTIVE_ASSIGNMENT_STATUSES } from "@/lib/shift-constants";
 import { withAuth } from "@/lib/api";
 import { db } from "@/lib/db";
 import { HttpError, ok, parsePagination } from "@/lib/http";
@@ -128,7 +129,8 @@ export const GET = withAuth(async (req, { user }) => {
   // Attach crew coverage so list surfaces (e.g. iOS Schedule) can show
   // filled/total without drilling into each event. One batched query keyed by
   // the unique eventId index — no N+1. `coverage` is null for events with no
-  // (non-archived) shift group. `filled` = shifts with at least one assignment,
+  // (non-archived) shift group. Pending requests never fill a slot; count only
+  // direct or approved assignments from the current relational crew,
   // matching the shift-groups route's coverage semantics.
   const eventIds = data.map((e) => e.id);
   const groups = eventIds.length
@@ -136,7 +138,15 @@ export const GET = withAuth(async (req, { user }) => {
         where: { eventId: { in: eventIds }, archivedAt: null },
         select: {
           eventId: true,
-          shifts: { select: { _count: { select: { assignments: true } } } },
+          shifts: {
+            select: {
+              _count: {
+                select: {
+                  assignments: { where: { status: { in: ACTIVE_ASSIGNMENT_STATUSES } } },
+                },
+              },
+            },
+          },
         },
       })
     : [];
@@ -183,6 +193,9 @@ export const POST = withAuth(async (req, { user }) => {
   // instead of the local-midnight encoding the form historically sent.
   const start = isAllDay ? normalizeAllDayToUtcMidnight(rawStart) : rawStart;
   const end = isAllDay ? normalizeAllDayToUtcMidnight(rawEnd) : rawEnd;
+  // Validate the persisted date range too: normalization can collapse two
+  // distinct timestamps onto the same all-day boundary.
+  assertDateOrder(start, end, "End must be after start", { allowEqual: false });
   const isNonGame = body.eventType === "non-game";
   const isHome = isHomeFromVenueTone(body.eventType);
   const site = siteFromVenueTone(body.eventType);

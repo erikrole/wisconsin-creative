@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { HttpError } from "@/lib/http";
 
 const mocks = vi.hoisted(() => ({
@@ -41,6 +41,8 @@ import { releasePendingScheduleVersion } from "@/workflows/pending-schedule-rele
 describe("pending schedule release step", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-08-15T12:00:00Z"));
     mocks.findUnique.mockResolvedValue({
       version: 4,
       updatedById: "staff-1",
@@ -48,6 +50,7 @@ describe("pending schedule release step", () => {
       shiftGroup: { event: { endsAt: new Date("2026-09-01T20:00:00.000Z") } },
     });
   });
+  afterEach(() => vi.useRealTimers());
 
   it("does nothing when a newer edit superseded the sleeping version", async () => {
     await expect(releasePendingScheduleVersion("group-1", 3)).resolves.toEqual({

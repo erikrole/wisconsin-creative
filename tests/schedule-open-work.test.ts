@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { expectSerializableIsolation } from "./_helpers/assert-transaction";
 
 const transactionCalls: Array<{ options: unknown }> = [];
@@ -111,6 +111,8 @@ function activeStudent() {
 }
 
 beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(now);
   transactionCalls.length = 0;
   mockDb.user.findUnique.mockReset();
   mockDb.shift.findMany.mockReset();
@@ -128,6 +130,7 @@ beforeEach(() => {
   mockDb._mockTx.auditLog.create.mockResolvedValue({});
   mockDb._mockTx.shiftAssignment.updateMany.mockResolvedValue({ count: 0 });
 });
+afterEach(() => vi.useRealTimers());
 
 describe("schedule open work", () => {
   it("explains pending staff edits instead of offering a claim that cannot succeed", async () => {
