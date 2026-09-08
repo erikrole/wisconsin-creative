@@ -632,14 +632,10 @@ private struct DashboardHero: View {
                 .foregroundStyle(.secondary)
                 .textCase(.uppercase)
                 .tracking(0.6)
-            Text(firstName.isEmpty ? greeting : "\(greeting),")
-                .font(.gothamBlack(size: 30))
+            Text(accessibilityGreeting)
+                .font(.gothamBold(size: 24))
                 .foregroundStyle(.primary)
-            if !firstName.isEmpty {
-                Text(firstName)
-                    .font(.gothamBlack(size: 30))
-                    .foregroundStyle(Color.brandPrimary)
-            }
+                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.top, Brand.Space.xs)
@@ -651,6 +647,7 @@ private struct DashboardHero: View {
 // MARK: - Stat Strip
 
 private struct StatStrip: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let stats: DashboardStats
     let pendingPickupCount: Int
     let shiftCount: Int
@@ -696,18 +693,10 @@ private struct StatStrip: View {
                 .foregroundStyle(.secondary)
                 .accessibilityElement(children: .combine)
             } else {
-                VStack(spacing: 0) {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), alignment: .leading), count: dynamicTypeSize.isAccessibilitySize ? 1 : 2), spacing: Brand.Space.sm) {
                     ForEach(activeItems) { item in
                         StatRow(item: item)
-                        if item.id != activeItems.last?.id {
-                            Divider().padding(.leading, 58)
-                        }
                     }
-                }
-                .background(Color.cardSurface, in: RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous)
-                        .strokeBorder(Color.hairline, lineWidth: 0.5)
                 }
             }
         }
@@ -742,15 +731,18 @@ private struct StatRow: View {
                 }
                 .frame(width: 36, height: 36)
 
-                Text(item.label)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.primary)
-                Spacer(minLength: 8)
-                Text("\(item.value)")
-                    .font(.headline.weight(.semibold))
-                    .monospacedDigit()
-                    .foregroundStyle(Color.statusText(item.tone))
-                    .contentTransition(.numericText())
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(item.value)")
+                        .font(.headline.weight(.semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(Color.statusText(item.tone))
+                        .contentTransition(.numericText())
+                    Text(item.label)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.primary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.tertiary)
@@ -760,6 +752,7 @@ private struct StatRow: View {
             .padding(.vertical, Brand.Space.sm)
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
+            .background(Color.cardSurface, in: RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous))
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
@@ -769,22 +762,24 @@ private struct StatRow: View {
 }
 
 private struct StatStripSkeleton: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     var body: some View {
-        VStack(spacing: 0) {
-            ForEach(0..<2, id: \.self) { index in
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), alignment: .leading), count: dynamicTypeSize.isAccessibilitySize ? 1 : 2), spacing: Brand.Space.sm) {
+            ForEach(0..<2, id: \.self) { _ in
                 HStack(spacing: Brand.Space.sm) {
                     Skeleton(cornerRadius: Brand.Radius.sm).frame(width: 36, height: 36)
-                    Skeleton().frame(width: 88, height: 14)
-                    Spacer(minLength: 8)
-                    Skeleton().frame(width: 24, height: 18)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Skeleton().frame(width: 24, height: 18)
+                        Skeleton().frame(height: 14)
+                    }
                 }
                 .padding(.horizontal, Brand.Space.md)
                 .padding(.vertical, Brand.Space.sm)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                if index == 0 { Divider().padding(.leading, 58) }
+                .background(Color.cardSurface, in: RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous))
             }
         }
-        .background(Color.cardSurface, in: RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous))
         .accessibilityHidden(true)  // Don't pollute VO with placeholder shapes during initial load.
     }
 }
@@ -1031,10 +1026,7 @@ private struct HomeActionQueue: View {
     }
 
     private var header: some View {
-        BrandSectionHeader(
-            "Next Up",
-            subtitle: "Upcoming pickups, reservations, shifts, and due work."
-        )
+        BrandSectionHeader("Next Up")
     }
 }
 
@@ -1129,14 +1121,19 @@ private func queueCallTime(workerType: String, callStartsAt: Date?) -> String? {
 /// way from Home to Bookings.
 private struct QueueRowTitle: View {
     let text: String
+    let wraps: Bool
 
-    init(_ text: String) { self.text = text }
+    init(_ text: String, wraps: Bool = false) {
+        self.text = text
+        self.wraps = wraps
+    }
 
     var body: some View {
         Text(text)
             .font(.gothamBold(size: 16))
             .foregroundStyle(.primary)
-            .lineLimit(1)
+            .lineLimit(wraps ? nil : 1)
+            .fixedSize(horizontal: false, vertical: true)
     }
 }
 
@@ -1268,6 +1265,7 @@ private struct QueueDetailText: View {
     let text: String
     let tone: StatusTone
     let showsBullet: Bool
+    var wraps = false
 
     private var isUrgent: Bool { tone == .red }
 
@@ -1282,7 +1280,8 @@ private struct QueueDetailText: View {
             Text(text)
                 .font(.caption)
                 .foregroundStyle(isUrgent ? AnyShapeStyle(Color.statusText(tone)) : AnyShapeStyle(.secondary))
-                .lineLimit(1)
+                .lineLimit(wraps ? nil : 1)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }
@@ -1307,34 +1306,34 @@ private struct ActionQueueRow: View {
                 QueueKindGlyph(systemImage: systemImage, tone: tone)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    QueueRowTitle(title)
+                    QueueRowTitle(title, wraps: true)
+                    Text(meta)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(Color.statusText(tone))
+                        .fixedSize(horizontal: false, vertical: true)
                     if detailLines.isEmpty, let subtitle {
                         Text(subtitle)
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                            .lineLimit(1)
+                            .fixedSize(horizontal: false, vertical: true)
                     } else {
                         VStack(alignment: .leading, spacing: 4) {
                             ForEach(detailLines, id: \.text) { line in
                                 QueueDetailText(
                                     text: line.text,
                                     tone: line.tone,
-                                    showsBullet: detailLines.count > 1
+                                    showsBullet: detailLines.count > 1,
+                                    wraps: true
                                 )
                             }
                         }
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-                Spacer(minLength: 8)
-
-                Text(meta)
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(Color.statusText(tone))
-                    .multilineTextAlignment(.trailing)
-                    .lineLimit(2)
                 QueueDisclosureChevron()
             }
+            .multilineTextAlignment(.leading)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

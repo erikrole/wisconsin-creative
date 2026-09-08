@@ -1083,10 +1083,15 @@ struct ScoreboardHarnessView: View {
 /// queue's per-lane caps show, so truncation is visible, and a staff draft with
 /// an otherwise-empty personal queue, so the all-clear contradiction reproduces.
 enum HomeFixtureAPI {
+    // Keep paired captures stable within the hour, matching the Bookings
+    // fixture. Normal launches still follow the current day rather than an
+    // authored date that eventually becomes historical data.
+    private static let referenceDate = Calendar.current.dateInterval(of: .hour, for: .now)?.start ?? .now
+
     private static func iso(_ minutes: Int) -> String {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime]
-        return formatter.string(from: Date.now.addingTimeInterval(TimeInterval(minutes * 60)))
+        return formatter.string(from: referenceDate.addingTimeInterval(TimeInterval(minutes * 60)))
     }
 
     private static func booking(
