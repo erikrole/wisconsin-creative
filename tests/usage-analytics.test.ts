@@ -4,7 +4,6 @@ import { Role } from "@prisma/client";
 const dbMock = vi.hoisted(() => ({
   productEvent: {
     create: vi.fn(),
-    count: vi.fn(),
     groupBy: vi.fn(),
   },
   userAppInstallation: {
@@ -45,7 +44,6 @@ beforeEach(() => {
   process.env.USAGE_ANALYTICS_HASH_SECRET = "a-private-test-secret-with-more-than-32-characters";
   vi.mocked(requireAuth).mockResolvedValue(owner);
   dbMock.productEvent.create.mockResolvedValue({ id: "event-1" });
-  dbMock.productEvent.count.mockResolvedValue(0);
   dbMock.productEvent.groupBy.mockResolvedValue([]);
   dbMock.userAppInstallation.upsert.mockResolvedValue({ id: "installation-1" });
 });
@@ -56,13 +54,42 @@ describe("private usage analytics", () => {
     expect(canViewUsageAnalytics(owner)).toBe(false);
     const response = await getUsageReport(request("/api/reports/usage"), { params: Promise.resolve({}) });
     expect(response.status).toBe(403);
-    expect(dbMock.productEvent.count).not.toHaveBeenCalled();
+    expect(dbMock.productEvent.groupBy).not.toHaveBeenCalled();
   });
 
   it("allows only an explicitly configured owner", async () => {
     expect(canViewUsageAnalytics(owner)).toBe(true);
     const response = await getUsageReport(request("/api/reports/usage?days=7"), { params: Promise.resolve({}) });
     expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ days: 7, totalEvents: 0, activeUsers: 0, platforms: [], surfaces: [], events: [], versions: [] });
+  });
+
+  it("returns populated aggregates with five reads and one consistent period", async () => {
+    dbMock.productEvent.groupBy.mockImplementation(async ({ by }: { by: string[] }) => {
+      switch (by.join(",")) {
+        case "actorHash": return [{ actorHash: "hash-a" }, { actorHash: "hash-b" }];
+        case "platform": return [{ platform: "web", _count: { _all: 4 } }, { platform: "ios", _count: { _all: 6 } }];
+        case "surface": return [{ surface: "schedule", _count: { _all: 10 } }];
+        case "eventName": return [{ eventName: "surface_viewed", _count: { _all: 10 } }];
+        case "platform,appVersion": return [{ platform: "ios", appVersion: "1.0", _count: { _all: 6 } }];
+        default: throw new Error(`Unexpected aggregate: ${by}`);
+      }
+    });
+    const earliestBoundary = Date.now() - 90 * 86_400_000;
+    const response = await getUsageReport(request("/api/reports/usage?days=90"), { params: Promise.resolve({}) });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      days: 90, totalEvents: 10, activeUsers: 2,
+      platforms: [{ name: "web", count: 4 }, { name: "ios", count: 6 }],
+      surfaces: [{ name: "schedule", count: 10 }],
+      events: [{ name: "surface_viewed", count: 10 }],
+      versions: [{ platform: "ios", version: "1.0", count: 6 }],
+    });
+    expect(dbMock.productEvent.groupBy).toHaveBeenCalledTimes(5);
+    const boundaries = dbMock.productEvent.groupBy.mock.calls.map(([args]) => args.where.occurredAt.gte.getTime());
+    expect(new Set(boundaries).size).toBe(1);
+    expect(boundaries[0]).toBeGreaterThanOrEqual(earliestBoundary);
+    expect(boundaries[0]).toBeLessThanOrEqual(Date.now() - 90 * 86_400_000);
   });
 
   it("stores only allowlisted, pseudonymous event fields", async () => {

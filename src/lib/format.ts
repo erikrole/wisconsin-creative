@@ -234,25 +234,6 @@ export function formatDueLabel(endsAt: string, now: Date): string {
   return `Due ${formatDateShort(endsAt)}`;
 }
 
-/** Pickup label for PENDING_PICKUP bookings:
- *  past start → "30m late" / "2h late" / "3d late"
- *  today      → "Today, 3:00 PM"
- *  upcoming   → "Mar 24, 9:00 AM" */
-export function formatPickupLabel(startsAt: string, now: Date): string {
-  const start = new Date(startsAt);
-  const diff = now.getTime() - start.getTime();
-  if (diff > 0) {
-    const minutes = Math.floor(diff / 60_000);
-    if (minutes < 60) return `${Math.max(minutes, 1)}m late`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h late`;
-    const days = Math.floor(hours / 24);
-    return `${days}d late`;
-  }
-  if (isStartingToday(startsAt, now)) return `Today, ${formatTimeShort(startsAt)}`;
-  return `${formatDateShort(startsAt)}, ${formatTimeShort(startsAt)}`;
-}
-
 /** Human-readable duration: "2 days", "5 hours", "30 minutes" */
 export function formatDuration(startsAt: string, endsAt: string): string {
   const diff = new Date(endsAt).getTime() - new Date(startsAt).getTime();

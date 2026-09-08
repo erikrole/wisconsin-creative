@@ -302,7 +302,7 @@ export async function listKits(params: ListKitsParams) {
         ? [{ updatedAt: sortOrder }, { name: "asc" }]
         : { name: sortOrder };
 
-  const [data, total, active, archived, empty] = await Promise.all([
+  const [data, statusCounts, empty] = await Promise.all([
     db.kit.findMany({
       where,
       include: kitListInclude,
@@ -310,9 +310,7 @@ export async function listKits(params: ListKitsParams) {
       take: params.limit,
       skip: params.offset,
     }),
-    db.kit.count({ where }),
-    db.kit.count({ where: { ...baseWhere, active: true } }),
-    db.kit.count({ where: { ...baseWhere, active: false } }),
+    db.kit.groupBy({ by: ["active"], where: baseWhere, _count: { _all: true } }),
     db.kit.count({
       where: {
         ...where,
@@ -321,6 +319,10 @@ export async function listKits(params: ListKitsParams) {
       },
     }),
   ]);
+
+  const active = statusCounts.find((group) => group.active)?._count._all ?? 0;
+  const archived = statusCounts.find((group) => !group.active)?._count._all ?? 0;
+  const total = params.includeArchived ? active + archived : active;
 
   return { data, total, summary: { total, active, archived, empty } };
 }

@@ -103,27 +103,6 @@ function thresholdForSkus(skus: BatterySkuLike[]) {
   );
 }
 
-export function getBatteryAvailabilityAlerts(args: {
-  selectedAssets: BatteryCameraLike[];
-  bulkSkus: BatterySkuLike[];
-  rules?: BatteryCompatibilityRule[];
-}): BatteryAvailabilityAlert[] {
-  return getBatteryCompatibilitySummaries({
-    cameraAssets: args.selectedAssets,
-    bulkSkus: args.bulkSkus,
-    rules: args.rules,
-  })
-    .filter((summary) => summary.isLow)
-    .map((summary) => ({
-      ruleId: summary.ruleId,
-      label: summary.label,
-      cameraModels: summary.cameraModels,
-      batterySkuIds: summary.batterySkuIds,
-      availableQuantity: summary.availableQuantity,
-      threshold: summary.threshold,
-    }));
-}
-
 export function getBatteryCompatibilitySummaries(args: {
   cameraAssets: BatteryCameraLike[];
   bulkSkus: BatterySkuLike[];

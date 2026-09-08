@@ -52,17 +52,20 @@ const WEEKDAY_MAP: Record<string, number> = {
   Sat: 6,
 };
 
+// The institution timezone is fixed for this module; reuse ICU setup across candidates.
+const localPartsFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: TZ,
+  hourCycle: "h23",
+  weekday: "short",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
 function toLocalParts(dt: Date): { dayOfWeek: number; date: string; hhmm: string } {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: TZ,
-    hourCycle: "h23",
-    weekday: "short",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).formatToParts(dt);
+  const parts = localPartsFormatter.formatToParts(dt);
 
   const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((p) => p.type === type)?.value ?? "";
   const weekday = get("weekday");

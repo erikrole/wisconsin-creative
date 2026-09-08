@@ -127,39 +127,6 @@ export function classifyAssetType(type: string, categoryName?: string | null): E
   return "other";
 }
 
-/**
- * Classify a bulk SKU category string into an equipment section.
- */
-export function classifyBulkCategory(category: string, categoryName?: string | null): EquipmentSectionKey {
-  return classifyAssetType(category, categoryName);
-}
-
-type AssetLike = { id: string; type: string; [k: string]: unknown };
-
-/**
- * Group individual assets by equipment section.
- */
-export function groupAssetsBySection<T extends AssetLike>(
-  assets: T[]
-): Record<EquipmentSectionKey, T[]> {
-  const groups: Record<EquipmentSectionKey, T[]> = {
-    cameras: [],
-    lenses: [],
-    batteries: [],
-    audio: [],
-    tripods: [],
-    lighting: [],
-    other: [],
-  };
-
-  for (const asset of assets) {
-    const section = classifyAssetType(asset.type);
-    groups[section].push(asset);
-  }
-
-  return groups;
-}
-
 type BulkSkuLike = { id: string; category: string; categoryName?: string | null; [k: string]: unknown };
 
 /**
@@ -179,21 +146,9 @@ export function groupBulkBySection<T extends BulkSkuLike>(
   };
 
   for (const sku of skus) {
-    const section = classifyBulkCategory(sku.category, sku.categoryName);
+    const section = classifyAssetType(sku.category, sku.categoryName);
     groups[section].push(sku);
   }
 
   return groups;
-}
-
-/** Return the 0-based index of a section in EQUIPMENT_SECTIONS. */
-export function sectionIndex(key: EquipmentSectionKey): number {
-  return EQUIPMENT_SECTIONS.findIndex((s) => s.key === key);
-}
-
-/** All sections are always reachable (tabs are never gated). */
-export function isSectionReachable(key: EquipmentSectionKey, from: EquipmentSectionKey): boolean {
-  void key;
-  void from;
-  return true;
 }

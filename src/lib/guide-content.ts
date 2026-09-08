@@ -252,10 +252,3 @@ export function markdownHeadingId(text: string, line: number | undefined, counts
   if ((counts.get(base) ?? 0) <= 1) return base;
   return line ? `${base}-${line}` : base;
 }
-
-export function uniqueHeadingId(text: string, seen: Map<string, number>): string {
-  const base = headingId(text) || "section";
-  const count = seen.get(base) ?? 0;
-  seen.set(base, count + 1);
-  return count === 0 ? base : `${base}-${count + 1}`;
-}

@@ -10,8 +10,7 @@ export function parseUsageAnalyticsPeriod(value: string | null | undefined): num
 export async function getUsageAnalyticsReport(days: number) {
   const since = new Date(Date.now() - days * 86_400_000);
   const where = { occurredAt: { gte: since } };
-  const [totalEvents, activeUsers, platforms, surfaces, events, versions] = await Promise.all([
-    db.productEvent.count({ where }),
+  const [activeUsers, platforms, surfaces, events, versions] = await Promise.all([
     db.productEvent.groupBy({ by: ["actorHash"], where }),
     db.productEvent.groupBy({ by: ["platform"], where, _count: { _all: true }, orderBy: { _count: { platform: "desc" } } }),
     db.productEvent.groupBy({ by: ["surface"], where, _count: { _all: true }, orderBy: { _count: { surface: "desc" } } }),
@@ -21,7 +20,7 @@ export async function getUsageAnalyticsReport(days: number) {
 
   return {
     days,
-    totalEvents,
+    totalEvents: platforms.reduce((total, row) => total + row._count._all, 0),
     activeUsers: activeUsers.length,
     platforms: platforms.map((row) => ({ name: row.platform, count: row._count._all })),
     surfaces: surfaces.map((row) => ({ name: row.surface, count: row._count._all })),

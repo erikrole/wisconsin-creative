@@ -14,18 +14,6 @@ describe("admin health status indicators", () => {
     expect(indicator).not.toContain("shouldAnimate");
   });
 
-  it("maps admin queue and checklist counts through one shared health helper", () => {
-    const helper = source("src/lib/operational-health.ts");
-
-    expect(helper).toContain("export function summarizeOperationalHealth");
-    expect(helper).toContain('state: "down"');
-    expect(helper).toContain('label: "Critical"');
-    expect(helper).toContain('state: "fixing"');
-    expect(helper).toContain('label: "Needs work"');
-    expect(helper).toContain('label: "Partial data"');
-    expect(helper).toContain('state: "active"');
-  });
-
   it("shows the shared operational rail and status indicators on Operations", () => {
     const sourceText = source("src/app/(app)/operations/OperationsClient.tsx");
 

@@ -1,13 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
   classifyAssetType,
-  classifyBulkCategory,
-  groupAssetsBySection,
   groupBulkBySection,
   EQUIPMENT_SECTIONS,
-  sectionIndex,
-  isSectionReachable,
-  type EquipmentSectionKey,
 } from "@/lib/equipment-sections";
 
 /* ───── classifyAssetType ───── */
@@ -97,61 +92,6 @@ describe("classifyAssetType", () => {
   });
 });
 
-/* ───── classifyBulkCategory ───── */
-
-describe("classifyBulkCategory", () => {
-  it("uses same logic as asset type classification", () => {
-    expect(classifyBulkCategory("Battery")).toBe("batteries");
-    expect(classifyBulkCategory("Cable")).toBe("other");
-    expect(classifyBulkCategory("Lens")).toBe("lenses");
-    expect(classifyBulkCategory("Microphone")).toBe("audio");
-    expect(classifyBulkCategory("Tripod")).toBe("tripods");
-  });
-});
-
-/* ───── groupAssetsBySection ───── */
-
-describe("groupAssetsBySection", () => {
-  const assets = [
-    { id: "a1", type: "Camera", assetTag: "CAM-001" },
-    { id: "a2", type: "Lens", assetTag: "LNS-001" },
-    { id: "a3", type: "Battery", assetTag: "BAT-001" },
-    { id: "a4", type: "Microphone", assetTag: "MIC-001" },
-    { id: "a5", type: "Tripod", assetTag: "TRP-001" },
-    { id: "a6", type: "LED Panel", assetTag: "LGT-001" },
-    { id: "a7", type: "Cable", assetTag: "CBL-001" },
-    { id: "a8", type: "Camera", assetTag: "CAM-002" },
-  ];
-
-  it("groups assets into correct sections", () => {
-    const groups = groupAssetsBySection(assets);
-    expect(groups.cameras.map((a) => a.id)).toEqual(["a1", "a8"]);
-    expect(groups.lenses.map((a) => a.id)).toEqual(["a2"]);
-    expect(groups.batteries.map((a) => a.id)).toEqual(["a3"]);
-    expect(groups.audio.map((a) => a.id)).toEqual(["a4"]);
-    expect(groups.tripods.map((a) => a.id)).toEqual(["a5"]);
-    expect(groups.lighting.map((a) => a.id)).toEqual(["a6"]);
-    expect(groups.other.map((a) => a.id)).toEqual(["a7"]);
-  });
-
-  it("returns empty arrays for sections with no items", () => {
-    const groups = groupAssetsBySection([{ id: "x", type: "Camera" }]);
-    expect(groups.lenses).toEqual([]);
-    expect(groups.batteries).toEqual([]);
-    expect(groups.audio).toEqual([]);
-    expect(groups.tripods).toEqual([]);
-    expect(groups.lighting).toEqual([]);
-    expect(groups.other).toEqual([]);
-  });
-
-  it("handles empty input", () => {
-    const groups = groupAssetsBySection([]);
-    for (const key of Object.keys(groups) as EquipmentSectionKey[]) {
-      expect(groups[key]).toEqual([]);
-    }
-  });
-});
-
 /* ───── groupBulkBySection ───── */
 
 describe("groupBulkBySection", () => {
@@ -184,34 +124,6 @@ describe("EQUIPMENT_SECTIONS", () => {
       expect(sec.label).toBeTruthy();
       expect(sec.description).toBeTruthy();
     }
-  });
-});
-
-/* ───── sectionIndex ───── */
-
-describe("sectionIndex", () => {
-  it("returns correct indices for all sections", () => {
-    expect(sectionIndex("cameras")).toBe(0);
-    expect(sectionIndex("lenses")).toBe(1);
-    expect(sectionIndex("batteries")).toBe(2);
-    expect(sectionIndex("audio")).toBe(3);
-    expect(sectionIndex("tripods")).toBe(4);
-    expect(sectionIndex("lighting")).toBe(5);
-    expect(sectionIndex("other")).toBe(6);
-  });
-});
-
-/* ───── isSectionReachable (all tabs always reachable) ───── */
-
-describe("isSectionReachable", () => {
-  it("all sections are always reachable", () => {
-    expect(isSectionReachable("cameras", "cameras")).toBe(true);
-    expect(isSectionReachable("lenses", "cameras")).toBe(true);
-    expect(isSectionReachable("batteries", "cameras")).toBe(true);
-    expect(isSectionReachable("audio", "cameras")).toBe(true);
-    expect(isSectionReachable("tripods", "cameras")).toBe(true);
-    expect(isSectionReachable("lighting", "cameras")).toBe(true);
-    expect(isSectionReachable("other", "cameras")).toBe(true);
   });
 });
 

@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { getBatteryAvailabilityAlerts, getBatteryCompatibilitySummaries } from "@/lib/battery-compatibility";
+import { getBatteryCompatibilitySummaries } from "@/lib/battery-compatibility";
 
-describe("getBatteryAvailabilityAlerts", () => {
+describe("getBatteryCompatibilitySummaries", () => {
   it("warns when selected camera model has fewer compatible batteries than threshold", () => {
-    const alerts = getBatteryAvailabilityAlerts({
-      selectedAssets: [
+    const alerts = getBatteryCompatibilitySummaries({
+      cameraAssets: [
         { brand: "Sony", model: "FX3", type: "Camera Body", categoryName: "Cameras" },
       ],
       bulkSkus: [
@@ -23,14 +23,15 @@ describe("getBatteryAvailabilityAlerts", () => {
         ruleId: "sony-np-fz100",
         availableQuantity: 7,
         threshold: 10,
+        isLow: true,
         batterySkuIds: ["sony-battery"],
       }),
     ]);
   });
 
   it("does not warn when compatible available quantity meets threshold", () => {
-    const alerts = getBatteryAvailabilityAlerts({
-      selectedAssets: [
+    const alerts = getBatteryCompatibilitySummaries({
+      cameraAssets: [
         { brand: "Sony", model: "FX3", type: "Camera Body", categoryName: "Cameras" },
       ],
       bulkSkus: [
@@ -43,12 +44,12 @@ describe("getBatteryAvailabilityAlerts", () => {
       ],
     });
 
-    expect(alerts).toEqual([]);
+    expect(alerts).toEqual([expect.objectContaining({ availableQuantity: 12, isLow: false })]);
   });
 
   it("uses a higher SKU threshold when configured", () => {
-    const alerts = getBatteryAvailabilityAlerts({
-      selectedAssets: [
+    const alerts = getBatteryCompatibilitySummaries({
+      cameraAssets: [
         { brand: "Canon", model: "C70", type: "Cinema Camera", categoryName: "Cameras" },
       ],
       bulkSkus: [
@@ -65,13 +66,14 @@ describe("getBatteryAvailabilityAlerts", () => {
     expect(alerts[0]).toEqual(expect.objectContaining({
       ruleId: "canon-lp-e6",
       threshold: 15,
+      isLow: true,
       availableQuantity: 12,
     }));
   });
 
   it("maps imported Sony FX6 camera models to BP-U batteries", () => {
-    const alerts = getBatteryAvailabilityAlerts({
-      selectedAssets: [
+    const alerts = getBatteryCompatibilitySummaries({
+      cameraAssets: [
         { brand: "Sony", model: "ILME-FX6V", type: "Cameras/Bodies", categoryName: "Cameras" },
       ],
       bulkSkus: [
@@ -95,6 +97,7 @@ describe("getBatteryAvailabilityAlerts", () => {
       batterySkuIds: ["sony-bp-u35", "sony-bp-u70"],
       availableQuantity: 7,
       threshold: 10,
+      isLow: true,
     }));
   });
 
