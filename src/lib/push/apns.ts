@@ -100,7 +100,7 @@ function connectApns(host: string, budget: DispatchBudget): http2.ClientHttp2Ses
 
 type TokenOutcome =
   | "ok"
-  // BadDeviceToken / Unregistered — token invalid for the host it was sent to
+  // BadDeviceToken / Unregistered / ExpiredToken — invalid on this host
   | "badToken"
   // ExpiredProviderToken / InvalidProviderToken — our JWT, not the device
   | "authError"
@@ -176,7 +176,8 @@ function sendOne(
       if (status === 200) return settle("ok");
       try {
         const { reason } = JSON.parse(body) as { reason?: string };
-        if (reason === "BadDeviceToken" || reason === "Unregistered") {
+        if (reason === "BadDeviceToken" || reason === "Unregistered" ||
+            (status === 410 && reason === "ExpiredToken")) {
           settle("badToken");
         } else if (reason === "ExpiredProviderToken" || reason === "InvalidProviderToken") {
           console.error(`[APNS] provider token rejected (${reason})`);
