@@ -48,9 +48,7 @@ describe("iOS booking pending-pickup row", () => {
       'return ("Pickup was due \\(booking.startsAt.operationalDateTimeLabel(now: now, capitalizesRelativeDay: false))", false)',
     );
     expect(row).toContain('parts.append("Pending pickup")');
-    expect(row).toContain(
-      'parts.append("Pickup was due \\(booking.startsAt.operationalDateTimeLabel(now: now, capitalizesRelativeDay: false))")',
-    );
+    expect(row).toContain("parts.append(timing(now: now).text)");
     expect(row).not.toContain('StatusPill(label: "Pending Pickup"');
   });
 });

@@ -23,14 +23,36 @@ final class BookingModelsTests: XCTestCase {
         XCTAssertNil(booking.allows("edit"))
     }
 
-    private func decodeBooking(extraFields: String) throws -> Booking {
+    @MainActor
+    func testInstallingBookingPreservesExplicitTitleOrder() throws {
+        let early = try decodeBooking(extraFields: "", id: "early", title: "Zulu", startsAt: "2026-08-10T10:00:00Z")
+        let later = try decodeBooking(extraFields: "", id: "later", title: "Alpha", startsAt: "2026-08-10T15:00:00Z")
+        let vm = BookingsViewModel()
+        vm.sortOption = .titleAZ
+        vm.bookings = [later, early]
+        vm.applyServerOrderIfNeeded()
+        vm.install(later)
+        XCTAssertEqual(vm.sortedBookings.map(\.id), ["later", "early"])
+    }
+
+    @MainActor
+    func testInstallingBookingKeepsOperationalOrderingByDefault() throws {
+        let early = try decodeBooking(extraFields: "", id: "early", title: "Zulu", startsAt: "2026-08-10T10:00:00Z")
+        let later = try decodeBooking(extraFields: "", id: "later", title: "Alpha", startsAt: "2026-08-10T15:00:00Z")
+        let vm = BookingsViewModel()
+        vm.bookings = [later, early]
+        vm.install(later)
+        XCTAssertEqual(vm.sortedBookings.map(\.id), ["early", "later"])
+    }
+
+    private func decodeBooking(extraFields: String, id: String = "booking-1", title: String = "Tournament kit", startsAt: String = "2026-08-10T15:00:00Z") throws -> Booking {
         let json = """
         {
-          "id": "booking-1",
+          "id": "\(id)",
           "kind": "RESERVATION",
-          "title": "Tournament kit",
+          "title": "\(title)",
           "status": "BOOKED",
-          "startsAt": "2026-08-10T15:00:00Z",
+          "startsAt": "\(startsAt)",
           "endsAt": "2026-08-10T20:00:00Z",
           "notes": null,
           "refNumber": "R-100",

@@ -33,6 +33,7 @@ final class ItemsViewModel {
 
     var rows: [ItemListRow] = []
     var isLoading = false
+    var isRefreshing = false
     var error: String?
     var pageError: String?
     var searchText = ""
@@ -65,6 +66,7 @@ final class ItemsViewModel {
         return parts.joined(separator: " · ")
     }
 
+    private var updatingFavoriteIds: Set<String> = []
     private var offset = 0
     private let limit = 30
     private var searchTask: Task<Void, Never>?
@@ -75,7 +77,7 @@ final class ItemsViewModel {
         if reset {
             // Filter / search change: cancel in-flight load so the new query wins.
             loadTask?.cancel()
-        } else if isLoading {
+        } else if isLoading || error != nil {
             return
         }
         let requestToken = loadRequests.begin()
@@ -85,15 +87,18 @@ final class ItemsViewModel {
     }
 
     private func performLoad(reset: Bool, requestToken: UUID) async {
+        let requestOffset = reset ? 0 : offset
         if reset {
-            offset = 0
-            hasMore = true
             pageError = nil
         }
         isLoading = true
+        isRefreshing = reset && !rows.isEmpty
         if reset { error = nil }
         defer {
-            if loadRequests.owns(requestToken) { isLoading = false }
+            if loadRequests.owns(requestToken) {
+                isLoading = false
+                isRefreshing = false
+            }
         }
         do {
             let result = try await APIClient.shared.assets(
@@ -102,13 +107,13 @@ final class ItemsViewModel {
                 sort: sortOption.rawValue,
                 favoritesOnly: favoritesOnly,
                 limit: limit,
-                offset: offset
+                offset: requestOffset
             )
             guard loadRequests.owns(requestToken), !Task.isCancelled else { return }
             let resultRows = result.orderedRows
             if reset { rows = resultRows } else { rows += resultRows }
-            offset += resultRows.count
-            hasMore = offset < result.total
+            offset = requestOffset + resultRows.count
+            hasMore = !resultRows.isEmpty && offset < result.total
             pageError = nil
             if reset && offset == resultRows.count && searchText.isEmpty && selectedStatuses.isEmpty && !favoritesOnly {
                 GearStore.shared.seedAssets(result.data)
@@ -165,9 +170,12 @@ final class ItemsViewModel {
         error = nil
         pageError = nil
         isLoading = false
+        isRefreshing = false
     }
 
     func toggleFavorite(_ asset: Asset) async throws {
+        guard updatingFavoriteIds.insert(asset.id).inserted else { return }
+        defer { updatingFavoriteIds.remove(asset.id) }
         let optimistic = !asset.isFavorited
         applyFavorite(assetId: asset.id, value: optimistic)
         do {
@@ -328,18 +336,37 @@ struct ItemsView: View {
                 } else if vm.rows.isEmpty {
                     ContentUnavailableView {
                         Label(
-                            vm.favoritesOnly ? "No Favorites" : "No Items",
+                            !vm.searchText.isEmpty || !vm.selectedStatuses.isEmpty
+                                ? "No matching items"
+                                : (vm.favoritesOnly ? "No Favorites" : "No Items"),
                             systemImage: vm.favoritesOnly ? "star" : "archivebox"
                         )
                     } description: {
                         Text(vm.searchText.isEmpty
-                            ? (vm.favoritesOnly ? "Star items to add them here." : "No gear found.")
+                            ? (!vm.selectedStatuses.isEmpty ? "No items match the selected status filters." : (vm.favoritesOnly ? "Star items to add them here." : "No gear found."))
                             : "No results for \"\(vm.searchText)\".")
                     } actions: {
                         emptyStateActions
                     }
                 } else {
                     List {
+                        if let error = vm.error {
+                            BannerView(
+                                severity: .warning,
+                                message: "Showing previously loaded items. " + error,
+                                systemImage: "exclamationmark.triangle",
+                                messageLineLimit: nil,
+                                actionLabel: "Retry",
+                                action: { Task { await vm.load(reset: true) } }
+                            )
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
+                        } else if vm.isRefreshing {
+                            ProgressView("Updating items")
+                                .frame(maxWidth: .infinity)
+                                .listRowSeparator(.hidden)
+                                .listRowBackground(Color.clear)
+                        }
                         // Rides in the list rather than a top safe-area inset:
                         // an inset that appears and disappears makes the
                         // navigation bar drop the large "Items" title, and
@@ -370,13 +397,13 @@ struct ItemsView: View {
                             .padding(.vertical, 8)
                             .listRowSeparator(.hidden)
                             .listRowBackground(Color.clear)
-                        } else if vm.hasMore {
+                        } else if vm.hasMore && vm.error == nil {
                             ProgressView("Loading more items")
                                 .frame(maxWidth: .infinity)
                                 .listRowSeparator(.hidden)
                                 .listRowBackground(Color.clear)
                                 .task(id: vm.rows.count) { await vm.load() }
-                        } else if vm.rows.count > 10 {
+                        } else if !vm.hasMore && vm.error == nil && vm.rows.count > 10 {
                             Text("End of list")
                                 .font(.caption2)
                                 .foregroundStyle(.tertiary)
@@ -453,7 +480,7 @@ struct ItemsView: View {
                     }
                 }
 
-                if let tag = asset.assetTag {
+                if let tag = asset.assetTag, !tag.isEmpty {
                     Button {
                         UIPasteboard.general.string = tag
                     } label: {
@@ -497,9 +524,16 @@ struct ItemsView: View {
         if !vm.searchText.isEmpty {
             Button {
                 vm.searchText = ""
-                Task { await vm.load(reset: true) }
             } label: {
                 Label("Clear search", systemImage: "xmark.circle")
+            }
+            .buttonStyle(.borderedProminent)
+        } else if !vm.selectedStatuses.isEmpty {
+            Button {
+                vm.resetFilters()
+                Task { await vm.load(reset: true) }
+            } label: {
+                Label("Reset filters", systemImage: "line.3.horizontal.decrease.circle")
             }
             .buttonStyle(.borderedProminent)
         } else if vm.favoritesOnly {
@@ -632,15 +666,8 @@ struct AssetRow: View {
 
         // Due/overdue label, if active checkout has one.
         if asset.computedStatus == .checkedOut, let booking = asset.activeBooking {
-            let days = Int((booking.endsAt.timeIntervalSinceNow / 86_400).rounded())
-            if booking.isOverdue {
-                let n = max(1, abs(days))
-                parts.append("\(n) day\(n == 1 ? "" : "s") overdue")
-            } else if days <= 0 {
-                parts.append("due today")
-            } else if days < 14 {
-                parts.append("due in \(days) day\(days == 1 ? "" : "s")")
-            }
+            let due = booking.endsAt.operationalDateTimeLabel(capitalizesRelativeDay: false)
+            parts.append(booking.isOverdue ? "Was due \(due)" : "Due \(due)")
         }
         return parts.joined(separator: ", ")
     }
@@ -660,7 +687,7 @@ struct ItemFamilyListRow: View {
     }
 
     var body: some View {
-        let tone: StatusTone = .green
+        let tone: StatusTone = family.availableQuantity > 0 ? .green : .gray
 
         Group {
             if dynamicTypeSize.isAccessibilitySize {

@@ -316,6 +316,7 @@ final class BookingsViewModel {
 
     func install(_ booking: Booking) {
         bookings = bookings.map { $0.id == booking.id ? booking : $0 }
+        applyServerOrderIfNeeded()
     }
 
     func onSearchChange() {
@@ -444,7 +445,7 @@ struct BookingsView: View {
     private var showsSearch: Bool {
         if !vm.searchText.isEmpty { return true }
         let visibleCount = vm.bookings.count
-        return !vm.isLoading && visibleCount > 0 && (visibleCount > 4 || vm.hasMore)
+        return visibleCount > 0 && (visibleCount > 4 || vm.hasMore)
     }
 
     var body: some View {
@@ -998,7 +999,7 @@ struct BookingRow: View {
     }
 
     private var itemCount: Int {
-        booking.serializedItems.count + booking.bulkItems.count
+        booking.serializedItems.count + booking.bulkItems.reduce(0) { $0 + $1.plannedQuantity }
     }
 
     /// The rail and timing color carry the state on their own: blue rail plus
@@ -1164,13 +1165,7 @@ struct BookingRow: View {
         if showsStatusBadge(now: now) {
             parts.append(StatusBadge.label(for: booking.status, kind: booking.kind, isOverdue: isOverdue(now: now)))
         }
-        if booking.kind == .checkout {
-            parts.append("Due \(booking.endsAt.operationalDateTimeLabel(now: now, capitalizesRelativeDay: false))")
-        } else if isPendingPickup(now: now) {
-            parts.append("Pickup was due \(booking.startsAt.operationalDateTimeLabel(now: now, capitalizesRelativeDay: false))")
-        } else {
-            parts.append("Pickup \(booking.startsAt.operationalDateTimeLabel(now: now, capitalizesRelativeDay: false))")
-        }
+        parts.append(timing(now: now).text)
         return parts.joined(separator: ", ")
     }
 }
