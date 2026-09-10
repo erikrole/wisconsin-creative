@@ -43,16 +43,19 @@ describe("schedule assign source wiring", () => {
     expect(shiftDetail).toContain("Nothing changes until you apply.");
   });
 
-  it("retires manual release while preserving the audited reconciliation service", () => {
+  it("keeps publish-now behind the Admin-only publication permission", () => {
     const publishRoute = readFileSync("src/app/api/shift-groups/[id]/publish/route.ts", "utf8");
     const acknowledgeRoute = readFileSync("src/app/api/shift-assignments/[id]/acknowledge/route.ts", "utf8");
 
-    expect(publishRoute).toContain('requirePermission(user.role, "shift", "manage")');
-    expect(publishRoute).toContain("new HttpError(410");
-    expect(publishRoute).not.toContain("publishShiftGroup(");
+    expect(publishRoute).toContain('requirePermission(user.role, "shift", "publish_now")');
+    expect(publishRoute).toContain("publishShiftGroup(");
+    expect(publishRoute).toContain("expectedVersion");
+    expect(publishRoute).toContain("requireWorkingCopy: true");
+    expect(publishRoute).toContain("createPublishedShiftGroupNotifications");
     const publicationService = readFileSync("src/lib/services/schedule-publication.ts", "utf8");
     expect(publicationService).toContain("createAuditEntryTx(tx");
     expect(publicationService).toContain('"shift_group_republished"');
+    expect(publicationService).toContain('"shift_group_republished_now"');
     expect(publicationService).toContain('"shift_group_published"');
 
     expect(acknowledgeRoute).toContain("acknowledgeShiftAssignment(params.id");

@@ -763,6 +763,68 @@ export const updateGuideSchema = z.object({
   expectedUpdatedAt: z.string().datetime().optional(),
 });
 
+const resourceImportKeySchema = z.string()
+  .trim()
+  .min(1, "Import key is required")
+  .max(300)
+  .regex(/^[A-Za-z0-9][A-Za-z0-9:._/-]*$/, "Import key contains unsupported characters");
+
+const resourceImportImageSchema = z.object({
+  key: z.string()
+    .trim()
+    .min(1)
+    .max(80)
+    .regex(/^[A-Za-z0-9][A-Za-z0-9_-]*$/, "Image key contains unsupported characters"),
+  alt: z.string().trim().min(1).max(300),
+  /** Optional when the matching image:<key> multipart part supplies the file. */
+  url: z.string().trim().url().max(2_000).refine((value) => {
+    try {
+      const parsed = new URL(value);
+      return parsed.protocol === "http:" || parsed.protocol === "https:";
+    } catch {
+      return false;
+    }
+  }, "Image URL must use http or https").optional(),
+}).strict();
+
+/**
+ * Backend-first resource authoring contract. Markdown is canonical; image
+ * placeholders are replaced with public Blob URLs during a committed import.
+ * A multipart caller can attach `image:<key>` files, while a JSON caller can
+ * provide a URL for the server-side rehosting path.
+ */
+export const resourceImportManifestSchema = z.object({
+  importKey: resourceImportKeySchema,
+  sourceLabel: z.string().trim().max(200).optional(),
+  title: z.string().trim().min(1, "Title is required").max(200),
+  type: z.nativeEnum(ResourceType).default(ResourceType.GENERAL),
+  category: z.string().trim().min(1, "Category is required").max(100),
+  markdown: z.string().trim().min(1, "Markdown is required").max(200_000),
+  images: z.array(resourceImportImageSchema).max(20).default([]),
+  targetRoles: z.array(z.nativeEnum(Role)).max(3).default([]),
+  targetAreas: z.array(z.nativeEnum(ShiftArea)).max(4).default([]),
+  featured: z.boolean().default(false),
+  featuredRank: z.number().int().min(1).max(999).nullable().optional(),
+  published: z.boolean().default(false),
+}).strict().superRefine((manifest, ctx) => {
+  const seen = new Set<string>();
+  manifest.images.forEach((image, index) => {
+    if (seen.has(image.key)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["images", index, "key"],
+        message: "Image keys must be unique",
+      });
+    }
+    seen.add(image.key);
+  });
+});
+
+export const resourceImportRequestSchema = z.object({
+  dryRun: z.boolean().default(false),
+  manifest: resourceImportManifestSchema,
+}).strict();
+
 // ── Blasts ──────────────────────────────────────────────
 
 /** One blast may not name more people than a sender could plausibly have picked. */

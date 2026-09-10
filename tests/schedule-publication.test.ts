@@ -237,6 +237,25 @@ describe("schedule publication state", () => {
 });
 
 describe("publishShiftGroup", () => {
+  it("requires a pending working copy for the manual publish-now path", async () => {
+    mockTx.shiftGroup.findUnique.mockResolvedValue({
+      id: "group-1",
+      publishedAt: new Date("2026-10-01T12:00:00.000Z"),
+      publishedById: "staff-1",
+      publishedVersion: 2,
+      lastPublishedSnapshot: null,
+      shifts: [shift()],
+    });
+
+    await expect(
+      publishShiftGroup("group-1", "admin-1", 3, "ADMIN", {
+        manualPublish: true,
+        requireWorkingCopy: true,
+      }),
+    ).rejects.toMatchObject({ status: 409 });
+    expect(mockTx.shiftGroup.update).not.toHaveBeenCalled();
+  });
+
   it("stores the current snapshot in a serializable transaction", async () => {
     const group = {
       id: "group-1",

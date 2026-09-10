@@ -2240,6 +2240,7 @@ model Resource {
   category         String
   content          Json
   markdown         String?      @db.Text
+  importKey        String?      @unique @map("import_key")
   targetRoles      Role[]       @default([]) @map("target_roles")
   targetAreas      ShiftArea[]  @default([]) @map("target_areas")
   featured         Boolean      @default(false)

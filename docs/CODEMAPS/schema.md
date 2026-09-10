@@ -2338,7 +2338,7 @@ Values: `PENDING`, `COMPLETED`
 
 ## Model `Resource`
 
-Fields: 19
+Fields: 20
 
 - `id               String       @id @default(cuid())`
 - `title            String`
@@ -2347,6 +2347,7 @@ Fields: 19
 - `category         String`
 - `content          Json`
 - `markdown         String?      @db.Text`
+- `importKey        String?      @unique @map("import_key")`
 - `targetRoles      Role[]       @default([]) @map("target_roles")`
 - `targetAreas      ShiftArea[]  @default([]) @map("target_areas")`
 - `featured         Boolean      @default(false)`

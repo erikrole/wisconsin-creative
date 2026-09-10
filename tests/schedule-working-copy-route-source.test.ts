@@ -40,7 +40,8 @@ describe("schedule working-copy route wiring", () => {
     const release = readFileSync("src/lib/schedule-release.ts", "utf8");
 
     expect(editor).toContain("/working-copy");
-    expect(editor).not.toContain("/publish");
+    expect(editor).toContain("/publish");
+    expect(editor).toContain("Publish now");
     expect(editor).toContain("formatScheduleReleaseCountdown");
     expect(release).toContain("Release scheduled in");
     expect(route).toContain("enqueuePendingScheduleRelease");

@@ -84,7 +84,7 @@ describe("working-copy mutation guard", () => {
     expect(editor).not.toContain("Refresh from live");
   });
 
-  it("retires the manual release endpoint and leaves reconciliation to the timer workflow", () => {
+  it("keeps the Admin publish-now override on the audited reconciliation path", () => {
     const service = readFileSync("src/lib/services/schedule-publication.ts", "utf8");
     const route = readFileSync("src/app/api/shift-groups/[id]/publish/route.ts", "utf8");
     const editor = readFileSync("src/app/(app)/schedule/_components/WorkingCrewEditor.tsx", "utf8");
@@ -93,11 +93,22 @@ describe("working-copy mutation guard", () => {
     expect(service).toContain("export async function collectPublishBlockers");
     expect(service).toContain("problems block publishing this schedule");
     expect(service).toContain("findTimeConflict(");
-    expect(route).toContain("export const GET");
-    expect(route).toContain("new HttpError(410");
-    expect(route).not.toContain("publishShiftGroup(");
-    expect(editor).not.toContain("/publish");
+    expect(route).toContain('requirePermission(user.role, "shift", "publish_now")');
+    expect(route).toContain("publishShiftGroup(");
+    expect(route).toContain("requireWorkingCopy: true");
+    expect(editor).toContain("/publish");
     expect(workflow).toContain("publishShiftGroup(");
     expect(workflow).toContain("autoReleaseError");
+  });
+
+  it("keeps new position creation Admin-only while preserving other working-copy edits", () => {
+    const route = readFileSync("src/app/api/shift-groups/[id]/working-copy/route.ts", "utf8");
+    const editor = readFileSync("src/app/(app)/schedule/_components/WorkingCrewEditor.tsx", "utf8");
+    const crewRow = readFileSync("src/components/shift-detail/crew-row.tsx", "utf8");
+
+    expect(route).toContain('requirePermission(user.role, "shift", "manage_positions")');
+    expect(route).toContain('body.command.type === "adjustSlots" && body.command.delta === 1');
+    expect(editor).toContain('currentUser?.role === "ADMIN"');
+    expect(crewRow).toContain("New position");
   });
 });

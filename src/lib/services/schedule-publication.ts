@@ -566,12 +566,19 @@ export async function publishShiftGroup(
   options: {
     advanceNotificationMark?: boolean;
     clearNotificationPending?: boolean;
+    manualPublish?: boolean;
+    requireWorkingCopy?: boolean;
   } = {},
 ) {
   const advanceNotificationMark = options.advanceNotificationMark ?? true;
   const clearNotificationPending = options.clearNotificationPending ?? false;
+  const manualPublish = options.manualPublish ?? false;
+  const requireWorkingCopy = options.requireWorkingCopy ?? false;
   return withSerializationRetry(() => db.$transaction(async (tx) => {
     let group = await findGroupForPublication(shiftGroupId, tx);
+    if (requireWorkingCopy && !group.workingCopy) {
+      throw new HttpError(409, "There are no pending schedule changes to publish.");
+    }
     const before = getSchedulePublicationState(group);
     const workingVersion = group.workingCopy?.version ?? null;
     const affectedUserIds = new Set<string>();
@@ -950,7 +957,9 @@ export async function publishShiftGroup(
         actorRole,
         entityType: "shift_group",
         entityId: shiftGroupId,
-        action: before.publishedAt ? "shift_group_republished" : "shift_group_published",
+        action: manualPublish
+          ? before.publishedAt ? "shift_group_republished_now" : "shift_group_published_now"
+          : before.publishedAt ? "shift_group_republished" : "shift_group_published",
         before,
         after,
       });

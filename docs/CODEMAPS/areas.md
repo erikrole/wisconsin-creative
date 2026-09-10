@@ -55,9 +55,9 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 
 - Doc: `docs/AREA_IMPORTER.md`
 - Pages: `/import`
-- APIs: `/api/assets/import`, `/api/signatures/import/apply`, `/api/signatures/import/preview`
+- APIs: `/api/assets/import`, `/api/resources/import`, `/api/signatures/import/apply`, `/api/signatures/import/preview`
 - Services: _none matched_
-- Tests: `tests/import-route.test.ts`
+- Tests: `tests/import-route.test.ts`, `tests/resource-import.test.ts`
 
 ## items
 
@@ -135,7 +135,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 
 - Doc: `docs/AREA_RESOURCES.md`
 - Pages: `/resources/[slug]/edit`, `/resources/[slug]`, `/resources/new`, `/resources`
-- APIs: `/api/resources/[id]`, `/api/resources/assets/[id]/download`, `/api/resources/assets/[id]/favorite`, `/api/resources/assets/[id]/restore`, `/api/resources/assets/[id]`, `/api/resources/assets/complete`, `/api/resources/assets/folders`, `/api/resources/assets`, `/api/resources/assets/upload-token`, `/api/resources`
+- APIs: `/api/resources/[id]`, `/api/resources/assets/[id]/download`, `/api/resources/assets/[id]/favorite`, `/api/resources/assets/[id]/restore`, `/api/resources/assets/[id]`, `/api/resources/assets/complete`, `/api/resources/assets/folders`, `/api/resources/assets`, `/api/resources/assets/upload-token`, `/api/resources/import`
 - Services: _none matched_
 - Tests: `tests/ios-resources-area-consistency.test.ts`, `tests/resources-filters.test.ts`, `tests/resources-ui-ownership-contract.test.ts`, `tests/resources-ui-polish-source.test.ts`
 

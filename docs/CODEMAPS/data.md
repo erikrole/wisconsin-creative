@@ -93,7 +93,7 @@
 | `BookingPhoto` | 8 | 2 |
 | `CheckinItemReport` | 11 | 3 |
 | `KioskDevice` | 19 | 3 |
-| `Resource` | 19 | 7 |
+| `Resource` | 20 | 7 |
 | `ResourceAssetFolder` | 12 | 2 |
 | `ResourceAsset` | 18 | 3 |
 | `ResourceAssetVersion` | 14 | 3 |

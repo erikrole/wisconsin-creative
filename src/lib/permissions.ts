@@ -119,6 +119,8 @@ export const PERMISSIONS: Record<string, Record<string, Role[]>> = {
     edit: ["ADMIN", "STAFF"],
     delete: ["ADMIN", "STAFF"],
     manage: ["ADMIN", "STAFF"],
+    manage_positions: ["ADMIN"],
+    publish_now: ["ADMIN"],
   },
   shift_assignment: {
     view: ["ADMIN", "STAFF", "STUDENT"],
@@ -178,6 +180,7 @@ export const PERMISSIONS: Record<string, Record<string, Role[]>> = {
     view: ["ADMIN", "STAFF", "STUDENT"],
     favorite: ["ADMIN", "STAFF", "STUDENT"],
     create: ["ADMIN", "STAFF"],
+    import: ["ADMIN", "STAFF"],
     edit: ["ADMIN", "STAFF"],
     delete: ["ADMIN"],
   },

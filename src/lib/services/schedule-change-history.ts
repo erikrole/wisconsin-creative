@@ -53,7 +53,9 @@ type BookingLookup = {
 
 const REVIEW_ACTION_EXCEPTIONS = new Set([
   "shift_group_published",
+  "shift_group_published_now",
   "shift_group_republished",
+  "shift_group_republished_now",
   "shift_acknowledged",
 ]);
 
@@ -189,8 +191,12 @@ function actionMeta(row: AuditRow, lookup: {
       return { kind: "shift_updated", label: "Updated schedule settings", detail: null };
     case "shift_group_published":
       return { kind: "published", label: "Published schedule", detail: null };
+    case "shift_group_published_now":
+      return { kind: "published", label: "Published schedule now", detail: null };
     case "shift_group_republished":
       return { kind: "republished", label: "Republished schedule", detail: null };
+    case "shift_group_republished_now":
+      return { kind: "republished", label: "Republished schedule now", detail: null };
     case "shift_group_copy_forward_applied": {
       const assigned = numberValue(after.assigned);
       return { kind: "copy_forward_applied", label: "Copied crew forward", detail: assigned !== null ? `${assigned} assigned` : null };

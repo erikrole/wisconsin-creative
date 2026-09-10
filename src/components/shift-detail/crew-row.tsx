@@ -234,15 +234,15 @@ export function AddSlotMenu({
           size="sm"
           className="h-10 gap-1 px-2 text-xs font-normal text-muted-foreground hover:text-foreground"
           disabled={disabled}
-          aria-label={`Add ${areaLabel(area)} staff or student slot`}
+          aria-label={`New ${areaLabel(area)} staff or student position`}
         >
           <PlusIcon className="size-3" />
-          Add slot
+          New position
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-40">
-        <DropdownMenuItem onSelect={() => onAdd("FT")}>Add Staff slot</DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => onAdd("ST")}>Add Student slot</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => onAdd("FT")}>New Staff position</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => onAdd("ST")}>New Student position</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

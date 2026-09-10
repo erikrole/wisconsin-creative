@@ -38,6 +38,7 @@ import { handleAuthRedirect, isAbortError, parseErrorMessage, parseJsonSafely } 
 import { formatTimeShort } from "@/lib/format";
 import { formatScheduleReleaseCountdown } from "@/lib/schedule-release";
 import { QUARTER_HOUR_MINUTES, roundUpToQuarterHour } from "@/lib/quarter-hour";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import type { WorkingScheduleCommand, WorkingSchedulePayload } from "@/lib/schedule-working-copy";
 import type { CandidateRecommendation } from "@/lib/candidate-scoring-types";
 import { cn } from "@/lib/utils";
@@ -336,6 +337,8 @@ export function WorkingCrewEditor({
   eventDetailHref,
 }: Props) {
   const shiftGroupId = entry.shiftGroupId;
+  const { data: currentUser } = useCurrentUser();
+  const isAdmin = currentUser?.role === "ADMIN";
   const [data, setData] = useState<EditorData | null>(null);
   const [loading, setLoading] = useState(true);
   const [editorLoadError, setEditorLoadError] = useState<LoadError>(false);
@@ -361,6 +364,7 @@ export function WorkingCrewEditor({
   const [userSearch, setUserSearch] = useState("");
   const [usersLoadError, setUsersLoadError] = useState<LoadError>(false);
   const [revertOpen, setRevertOpen] = useState(false);
+  const [publishNowOpen, setPublishNowOpen] = useState(false);
   const [mutationUncertain, setMutationUncertain] = useState(false);
   const actionsDisabled = Boolean(actingKey) || mutationUncertain;
 
@@ -634,6 +638,44 @@ export function WorkingCrewEditor({
     }
   }, [data, loadEditor, mutationUncertain, shiftGroupId]);
 
+  const publishNow = useCallback(async () => {
+    if (!shiftGroupId || !data?.hasWorkingCopy || actingRef.current || mutationUncertain) return;
+    actingRef.current = true;
+    setActingKey("publish-now");
+    try {
+      const response = await fetch(`/api/shift-groups/${shiftGroupId}/publish`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ expectedVersion: data.workingVersion }),
+      });
+      if (handleAuthRedirect(response)) return;
+      if (!response.ok) {
+        toast.error(await parseErrorMessage(response, "Failed to publish schedule now"));
+        if (response.status === 409 || response.status >= 500) await loadEditor();
+        if (response.status >= 500) setMutationUncertain(true);
+        return;
+      }
+      const json = await parseJsonSafely<{ data?: EditorData }>(response);
+      if (!json?.data) {
+        setMutationUncertain(true);
+        await loadEditor();
+        toast.error("The publish response was incomplete. Review the latest schedule before continuing.");
+        return;
+      }
+      setData(json.data);
+      setMutationUncertain(false);
+      void Promise.resolve().then(onPublished).catch(() => toast.error("Schedule published; refresh the schedule to confirm its display."));
+      toast.success("Schedule published now");
+    } catch {
+      setMutationUncertain(true);
+      await loadEditor();
+      toast.error("The publish response was lost. Review the latest schedule before trying again.");
+    } finally {
+      actingRef.current = false;
+      setActingKey(null);
+    }
+  }, [data, loadEditor, mutationUncertain, onPublished, shiftGroupId]);
+
   useEffect(() => {
     if (!data?.hasWorkingCopy || !data.autoReleaseAt) return;
     const timer = window.setInterval(() => setClock(Date.now()), 15_000);
@@ -725,6 +767,18 @@ export function WorkingCrewEditor({
                 )}
               />
             )}
+            {isAdmin && !eventHasEnded && data.hasWorkingCopy && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-10 px-2 text-xs"
+                disabled={actionsDisabled}
+                onClick={() => setPublishNowOpen(true)}
+              >
+                Publish now
+              </Button>
+            )}
             {data.hasWorkingCopy && (
               <Button
                 type="button"
@@ -756,7 +810,7 @@ export function WorkingCrewEditor({
                 area={area}
                 filled={slots.filter((slot) => slot.assignment).length}
                 total={slots.length}
-                action={
+                action={isAdmin ? (
                   <AddSlotMenu
                     area={area}
                     disabled={actionsDisabled}
@@ -765,7 +819,7 @@ export function WorkingCrewEditor({
                       `${area}-${workerType}-add`,
                     )}
                   />
-                }
+                ) : undefined}
               />
               <div className="space-y-0.5">
                 {slots.map((slot) => {
@@ -916,7 +970,7 @@ export function WorkingCrewEditor({
             </section>
           );
         })}
-        {emptyAreas.length > 0 && (
+        {isAdmin && emptyAreas.length > 0 && (
           <div className={cn("flex items-center", compact ? "py-1" : "py-1.5")}>
             <Popover>
               <PopoverTrigger asChild>
@@ -1032,6 +1086,29 @@ export function WorkingCrewEditor({
               }}
             >
               Revert changes
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={publishNowOpen} onOpenChange={setPublishNowOpen}>
+        <AlertDialogContent className="w-[calc(100vw-2rem)] sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Publish schedule now?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This sends the pending schedule to worker-facing views immediately and may notify affected workers. It bypasses the normal ten-minute release timer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={actionsDisabled}>Keep waiting</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={actionsDisabled}
+              onClick={() => {
+                setPublishNowOpen(false);
+                void publishNow();
+              }}
+            >
+              {actingKey === "publish-now" ? "Publishing…" : "Publish now"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

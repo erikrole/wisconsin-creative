@@ -51,6 +51,13 @@ describe("requirePermission", () => {
     expect(() => requirePermission(Role.STAFF, "shift", "manage")).not.toThrow();
   });
 
+  it("keeps new positions and publish-now Admin-only", () => {
+    expect(() => requirePermission(Role.ADMIN, "shift", "manage_positions")).not.toThrow();
+    expect(() => requirePermission(Role.ADMIN, "shift", "publish_now")).not.toThrow();
+    expect(() => requirePermission(Role.STAFF, "shift", "manage_positions")).toThrow("Forbidden");
+    expect(() => requirePermission(Role.STAFF, "shift", "publish_now")).toThrow("Forbidden");
+  });
+
   it("throws 403 for STUDENT on shift.manage", () => {
     expect(() => requirePermission(Role.STUDENT, "shift", "manage")).toThrow("Forbidden");
   });

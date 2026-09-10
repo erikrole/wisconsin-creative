@@ -63,7 +63,7 @@
 | `src/lib/services/scans.ts` | 671 |
 | `src/lib/services/schedule-automation.ts` | 336 |
 | `src/lib/services/schedule-call-time-sync.ts` | 469 |
-| `src/lib/services/schedule-change-history.ts` | 425 |
+| `src/lib/services/schedule-change-history.ts` | 431 |
 | `src/lib/services/schedule-exports.ts` | 522 |
 | `src/lib/services/schedule-health.ts` | 382 |
 | `src/lib/services/schedule-notification-copy.ts` | 127 |
@@ -71,7 +71,7 @@
 | `src/lib/services/schedule-notification-flush.ts` | 190 |
 | `src/lib/services/schedule-notification-policy.ts` | 138 |
 | `src/lib/services/schedule-open-work.ts` | 569 |
-| `src/lib/services/schedule-publication.ts` | 1031 |
+| `src/lib/services/schedule-publication.ts` | 1040 |
 | `src/lib/services/schedule-template-review.ts` | 554 |
 | `src/lib/services/schedule-working-copy.ts` | 1095 |
 | `src/lib/services/scoreboard.ts` | 303 |
@@ -175,7 +175,7 @@
 | `src/lib/ops-checks.ts` | 176 |
 | `src/lib/passkey-client.ts` | 73 |
 | `src/lib/passkey.ts` | 371 |
-| `src/lib/permissions.ts` | 222 |
+| `src/lib/permissions.ts` | 225 |
 | `src/lib/profile-completion-events.ts` | 6 |
 | `src/lib/profile-completion.ts` | 157 |
 | `src/lib/profile-phone.ts` | 44 |
@@ -191,6 +191,7 @@
 | `src/lib/resource-assets-client.ts` | 20 |
 | `src/lib/resource-assets-storage.ts` | 75 |
 | `src/lib/resource-assets.ts` | 865 |
+| `src/lib/resource-import.ts` | 469 |
 | `src/lib/resource-search.ts` | 124 |
 | `src/lib/role-preview.ts` | 226 |
 | `src/lib/sanitize.ts` | 40 |
@@ -244,7 +245,7 @@
 | `src/lib/user-list-cache.ts` | 73 |
 | `src/lib/user-visibility.ts` | 85 |
 | `src/lib/utils.ts` | 7 |
-| `src/lib/validation.ts` | 813 |
+| `src/lib/validation.ts` | 875 |
 | `src/lib/venue-mapping-audit.ts` | 56 |
 | `src/lib/venue-mapping-contract.ts` | 46 |
 | `src/lib/venue-tone.ts` | 135 |
@@ -620,6 +621,7 @@
 - `/api/resources/assets/folders`
 - `/api/resources/assets`
 - `/api/resources/assets/upload-token`
+- `/api/resources/import`
 - `/api/resources`
 - `/api/resources/upload-image`
 

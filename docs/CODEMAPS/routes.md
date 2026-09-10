@@ -333,6 +333,7 @@
 - `/api/resources/assets/folders` -> `src/app/api/resources/assets/folders/route.ts`
 - `/api/resources/assets` -> `src/app/api/resources/assets/route.ts`
 - `/api/resources/assets/upload-token` -> `src/app/api/resources/assets/upload-token/route.ts`
+- `/api/resources/import` -> `src/app/api/resources/import/route.ts`
 - `/api/resources` -> `src/app/api/resources/route.ts`
 - `/api/resources/upload-image` -> `src/app/api/resources/upload-image/route.ts`
 - `/api/schedule/automation` -> `src/app/api/schedule/automation/route.ts`

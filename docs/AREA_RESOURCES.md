@@ -6,13 +6,13 @@
 - Owner: Erik Role (Wisconsin Athletics Creative)
 - Status: Shipped
 - Created: 2026-04-14
-- Last Updated: 2026-08-27
+- Last Updated: 2026-09-10
 - Brief: `tasks/guides-plan.md` (archived)
 
 ## Description
 In-app Markdown Guide library for Wisconsin Athletics Creative operational reference: contact numbers, building numbers, Media Drive context, server paths, SOPs, how-to guides, account notes, troubleshooting steps, event operations, and general information. Staff break broad reference material into focused Guides in a Markdown WYSIWYG editor; students read published Guides in-app. The landing page is guide-first: search/filter toolbar, cards/list browsing, compact server-path copy utility, and supporting Contacts plus Sport assignments references stay below the Guide results instead of competing with them.
 
-The same `/resources` surface also contains a separate Brand assets tab for authenticated file storage. It uses Vercel Blob for private binary storage and Prisma/Neon for folders, stable logical files, immutable versions, and short-lived upload intents; it does not change the Markdown Guide contract.
+The same `/resources` surface also contains a separate Brand assets tab for authenticated file storage. It uses Vercel Blob for private binary storage and Prisma/Neon for folders, stable logical files, immutable versions, and short-lived upload intents; it does not change the Markdown Guide contract. Guide creation also has a backend-first import path so an assistant or other trusted client can submit polished Markdown and images without driving the editor UI.
 
 ## Components
 - `/resources` — first-class Guide library landing page with a top operational toolbar for search, guide focus, sort, and cards/list layout. A ⌘K/Ctrl+K command palette (`ResourceCommandPalette`) provides instant client-side search across every loaded guide (title, category, typed focus, author, and a bounded body excerpt) plus quick jumps to the Contacts and Sport assignments reference views; it opens to a Recently-updated shortlist when empty. When admins mark guides featured, the home hub leads with an opt-in "Featured" section (`featuredRank`-ordered); the block is hidden entirely when nothing is featured, so a clean library is unchanged. It puts Guide results first, keeps a compact copyable Media Drive server path in the header, and shows Contacts plus Sport assignments as supporting references. URL-backed via `filter`, `category`, `q`, `sort`, and `layout` params while preserving legacy `view` and `area` compatibility.
@@ -33,9 +33,10 @@ The same `/resources` surface also contains a separate Brand assets tab for auth
 - `lastVerifiedAt`, `lastVerifiedById` → `User` (nullable freshness signal for living knowledge-base entries)
 - `content` (Json — legacy BlockNote `Block[]` array retained for backwards-compatible conversion)
 - `published` (boolean, default false)
+- `importKey` (nullable unique source identity used for idempotent backend imports)
 - `authorId` → `User` (Restrict on delete)
 
-Migrations: `prisma/migrations/0032_add_guides/migration.sql`, `prisma/migrations/0045_drop_guide_order/migration.sql` (drops unused `order` column), `prisma/migrations/0057_add_guide_markdown/migration.sql`, `prisma/migrations/0058_guide_personalization/migration.sql`, `prisma/migrations/0061_add_guide_freshness/migration.sql`, `prisma/migrations/0068_rename_guides_to_resources/migration.sql`, `prisma/migrations/0087_resource_type/migration.sql`
+Migrations: `prisma/migrations/0032_add_guides/migration.sql`, `prisma/migrations/0045_drop_guide_order/migration.sql` (drops unused `order` column), `prisma/migrations/0057_add_guide_markdown/migration.sql`, `prisma/migrations/0058_guide_personalization/migration.sql`, `prisma/migrations/0061_add_guide_freshness/migration.sql`, `prisma/migrations/0068_rename_guides_to_resources/migration.sql`, `prisma/migrations/0087_resource_type/migration.sql`, `prisma/migrations/0146_resource_import_key/migration.sql`
 
 Brand assets are additive models in `prisma/schema.prisma`:
 - `ResourceAssetFolder` — hierarchical folder name/path records. The migration creates only the empty technical `Brand assets` root; no PDF, asset, or category folders are seeded.
@@ -52,6 +53,7 @@ Migrations: `prisma/migrations/0135_brand_asset_library/migration.sql` and `pris
 | Read published guides | All (STUDENT, STAFF, ADMIN) |
 | Read draft guides | STAFF, ADMIN |
 | Create | STAFF, ADMIN |
+| Backend import/upsert | STAFF, ADMIN |
 | Edit | STAFF (own only), ADMIN (any) |
 | Delete | ADMIN only |
 | Browse Brand assets, current versions, History, and authenticated downloads | STUDENT, STAFF, ADMIN |
@@ -70,6 +72,10 @@ All mutations use `createAuditEntry` per D-007.
 - `updateGuide(id, patch, editorRole, editorId)` — STAFF restricted to own guides; regenerates slug only if title changed
 - `deleteGuide(id)`
 
+`src/lib/resource-import.ts` owns the assistant-first import contract. Markdown is submitted as the canonical body, `{{image:key}}` placeholders are replaced with durable public Blob URLs from multipart files or safely rehosted http(s) image URLs, and a required `importKey` makes repeat imports update the same resource instead of creating `-2` copies. Dry runs validate the manifest and report the create/update target without writing Prisma or Blob state.
+
+JSON callers submit `{ "dryRun": true, "manifest": { "importKey": "provider:document:section", "title": "...", "category": "...", "markdown": "...", "images": [] } }`; multipart callers send the same manifest as a `manifest` field plus files named `image:<key>`. A normal guide handoff only needs the source document and any desired audience/publication direction; the assistant can produce the manifest and use the dry-run result before committing it.
+
 `src/lib/resource-assets.ts` owns folder listing, logical-file/version reads, upload-intent validation/finalization, folder creation, and audit snapshots. `src/lib/resource-assets-storage.ts` wraps the dedicated private Vercel Blob token; raw Blob URLs are not returned to clients.
 
 ## API Endpoints
@@ -77,6 +83,7 @@ All mutations use `createAuditEntry` per D-007.
 |--------|------|------|-------------|
 | GET | `/api/resources` | All | List resources; STUDENT sees published only |
 | POST | `/api/resources` | STAFF/ADMIN | Create resource |
+| POST | `/api/resources/import` | STAFF/ADMIN | Dry-run or commit a Markdown/image resource import; commits are idempotent by `importKey` and audit-logged |
 | GET | `/api/resources/[id]` | All | Single resource by ID or slug |
 | PATCH | `/api/resources/[id]` | STAFF/ADMIN | Update resource |
 | DELETE | `/api/resources/[id]` | ADMIN | Delete resource |
@@ -125,6 +132,9 @@ All mutations use `createAuditEntry` per D-007.
 | AC-28 | Favorites persist per user, recent shortcuts remain device-local, and internal links reopen the selected asset without a raw Blob URL | ✅ Preview migration plus source/type/build gates; authenticated populated-data proof pending |
 
 ## Change Log
+- 2026-09-10: Added the backend-first `POST /api/resources/import` path. Trusted clients can dry-run or commit a validated Markdown manifest with `{{image:key}}` placeholders, multipart image files or safe remote-image rehosting, and a required idempotent `importKey`; committed creates/updates use serializable persistence and resource audit entries. The existing editor and single-image upload flow remain available as UI fallbacks.
+- 2026-09-10: Added the published **Football Clip Naming Guide** as a first-class How-to resource in the Naming Guides category, targeted to Video and open to every role. Imported the Football tab from the shared Creative Guides document, including the naming-format graphic, glossary, duplicate-name guidance, suffix and coach rules, and tips. Authenticated production reader and Resources-index verification confirmed the published entry, rendered headings/lists, and image; the pre-existing base-slug draft was left untouched.
+
 - 2026-08-27: **Rapid repeat copies in the Guide reader now receive a complete feedback window.** A newer table or code-reference copy cancels the older reset timer, ignores superseded clipboard results, and cleans up pending timers when the control leaves the page. Authenticated local timing proof kept Copied visible 650 ms after a second click made 900 ms after the first, then reset normally with no browser warnings or errors. Guide content, rendering, and permissions are unchanged; focused tests, TypeScript, full lint, and `npm run build:app` pass locally.
 
 - 2026-08-26: **Guide reference copy controls now recover when clipboard access is unavailable.** Code-block and table copy buttons only show Copied after a successful browser write and otherwise keep the reference visible with manual-copy guidance. Guide content, rendering, and read-only permissions are unchanged. Focused source/behavior tests, TypeScript, and lint pass locally; the full build remains blocked by unrelated dirty Trade Board work.

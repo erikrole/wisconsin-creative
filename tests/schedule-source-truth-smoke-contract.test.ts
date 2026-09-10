@@ -150,9 +150,11 @@ describe("schedule source-of-truth and browser smoke contracts", () => {
     expect(editor).not.toContain("Pending changes");
     expect(editor).not.toContain("Releases at");
     expect(editor).toContain("Revert changes");
-    expect(editor).not.toContain("/publish");
+    expect(editor).toContain("/publish");
+    expect(editor).toContain("Publish now");
     expect(eventCrew).not.toContain("/acknowledge");
-    expect(releaseRoute).toContain("new HttpError(410");
+    expect(releaseRoute).toContain('requirePermission(user.role, "shift", "publish_now")');
+    expect(releaseRoute).toContain("requireWorkingCopy: true");
 
     expect(tradeBoard).toContain("OpenWorkShift");
     expect(tradeBoard).toContain("/api/schedule/open-work");

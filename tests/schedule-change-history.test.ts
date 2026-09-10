@@ -185,6 +185,43 @@ describe("getScheduleChangeHistory", () => {
     expect(history.events["event-1"]?.items).toEqual([]);
   });
 
+  it("recognizes immediate publication audit actions as published schedule history", async () => {
+    const publishedAt = new Date("2026-07-01T12:00:00Z");
+    dbMock.shiftGroup.findMany.mockResolvedValue([
+      {
+        id: "group-1",
+        eventId: "event-1",
+        publishedAt,
+        shifts: [],
+      },
+    ]);
+    dbMock.auditLog.findMany.mockResolvedValue([
+      {
+        id: "audit-publish-now",
+        actorUserId: "admin-1",
+        entityType: "shift_group",
+        entityId: "group-1",
+        action: "shift_group_republished_now",
+        beforeJson: null,
+        afterJson: null,
+        createdAt: new Date("2026-07-02T10:00:00Z"),
+        actor: { id: "admin-1", name: "Admin User", role: "ADMIN" },
+      },
+    ]);
+
+    const history = await getScheduleChangeHistory({
+      eventIds: ["event-1"],
+      limitPerEvent: 5,
+    });
+
+    expect(history.events["event-1"]?.items[0]).toEqual(expect.objectContaining({
+      kind: "republished",
+      label: "Republished schedule now",
+      afterPublication: true,
+      needsReview: false,
+    }));
+  });
+
   it("includes private working-copy assignment edits only when the caller opts in", async () => {
     dbMock.shiftGroup.findMany.mockResolvedValue([
       {
