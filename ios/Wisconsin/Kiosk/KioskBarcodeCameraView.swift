@@ -56,7 +56,6 @@ struct KioskBarcodeCameraView: View {
                     .overlay(alignment: .top) { header }
                     .overlay(alignment: .bottom) {
                         VStack(spacing: 12) {
-                            feedbackOverlay
                             manualEntry
                         }
                         .padding(.bottom, 32)
@@ -69,6 +68,9 @@ struct KioskBarcodeCameraView: View {
             case .unsupported:
                 unsupportedView
             }
+        }
+        .overlay(alignment: .top) {
+            feedbackOverlay.padding(.top, permissionState == .authorized ? 80 : 16)
         }
         .task { await checkPermission() }
     }
@@ -205,7 +207,6 @@ struct KioskBarcodeCameraView: View {
     private func submitManualCode() {
         let value = manualCode.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !value.isEmpty else { return }
-        manualCode = ""
         Haptics.warning()
         onScan(value)
     }

@@ -1,6 +1,6 @@
 ---
 name: page-ownership-pass
-description: "Explicit-only compatibility alias for Wisconsin Creative gt-page. Use when the user invokes page-ownership-pass; the canonical workflow owns all guidance."
+description: "Explicit alias for the Wisconsin Creative gt-page implementation workflow."
 ---
 
 # Compatibility alias

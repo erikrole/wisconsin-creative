@@ -68,6 +68,7 @@ function openCheckout(bulkItems: unknown[] = []) {
   return {
     id: "b-1",
     kind: "CHECKOUT",
+    custodyScope: "PERSON",
     status: "OPEN",
     locationId: "loc-1",
     requesterUserId: "user-1",

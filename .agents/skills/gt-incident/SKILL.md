@@ -1,6 +1,6 @@
 ---
 name: gt-incident
-description: "Investigate and resolve an actual Wisconsin Creative Schedule, reservation, checkout, battery, or kiosk incident using exact records and operator evidence. Use for incorrect state, blocked actions, lost edits, or uncertain saves."
+description: "Resolve an actual Wisconsin Creative Schedule, reservation, checkout, battery, or kiosk state incident from exact records."
 ---
 
 # GT Incident

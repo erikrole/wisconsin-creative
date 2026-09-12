@@ -3,6 +3,40 @@ import GameController
 import Observation
 import OSLog
 
+/// Ordered input owned until its server response settles. Different spellings
+/// are still checked against server item identity; identical pending scans are
+/// rejected before another request starts.
+@Observable @MainActor
+final class KioskScanQueue {
+    struct Entry: Equatable { let id = UUID(); let value: String }
+    private(set) var entries: [Entry] = []
+    private(set) var active: Entry?
+    var isEmpty: Bool { entries.isEmpty }
+    var count: Int { entries.count }
+
+    @discardableResult func enqueue(_ value: String) -> Bool {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty,
+              !entries.contains(where: { $0.value.caseInsensitiveCompare(trimmed) == .orderedSame }) else { return false }
+        entries.append(Entry(value: trimmed))
+        return true
+    }
+
+    func next() -> Entry? {
+        guard active == nil, let first = entries.first else { return nil }
+        active = first
+        return first
+    }
+
+    func finish(_ entry: Entry) {
+        guard active?.id == entry.id else { return }
+        entries.removeAll { $0.id == entry.id }
+        active = nil
+    }
+
+    func reset() { entries.removeAll(); active = nil }
+}
+
 enum KioskFlowAction: String, Codable, CaseIterable { case checkout, pickup, `return`, manage }
 enum KioskFlowSource: String, Codable, CaseIterable { case scan, event, person, reservation, activeCheckout }
 

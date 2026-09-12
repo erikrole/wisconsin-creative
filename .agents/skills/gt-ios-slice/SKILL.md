@@ -1,6 +1,6 @@
 ---
 name: gt-ios-slice
-description: "Implement a Wisconsin Creative native iOS or WisconsinKiosk slice with API-contract, recovery, target-membership, and runtime verification. Use for native changes, not a general iOS audit."
+description: "Implement a Wisconsin Creative native iOS or WisconsinKiosk change with API, lifecycle, and target verification."
 ---
 
 # GT iOS Slice

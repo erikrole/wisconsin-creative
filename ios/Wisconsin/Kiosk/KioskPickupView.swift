@@ -22,8 +22,8 @@ struct KioskPickupView: View {
     @State private var scannerHasFocus = false
     @State private var lastScanAt: Date?
     @State private var confirmedItemOverrides: [String: KioskScanResult.ScannedItem] = [:]
-    @State private var queuedScanValues: [String] = []
     @State private var earnedBadges: [EarnedBadgeReward] = []
+    @State private var scanQueue = KioskScanQueue()
 
     enum ScanFeedback: Equatable {
         case success(String)
@@ -54,7 +54,7 @@ struct KioskPickupView: View {
     private var canConfirmPartial: Bool {
         detail?.status == "BOOKED" && confirmedCount > 0 && !allConfirmed
     }
-    private var canConfirm: Bool { allConfirmed || canConfirmPartial }
+    private var canConfirm: Bool { scanQueue.isEmpty && (allConfirmed || canConfirmPartial) }
     private var batteryTotal: Int { detail?.scanSummary?.numberedBulkTotal ?? detail?.numberedBulkItems.count ?? 0 }
     private var confirmedBatteryCount: Int {
         detail?.numberedBulkItems.filter { confirmedIds.contains($0.id) }.count ?? 0
@@ -84,7 +84,7 @@ struct KioskPickupView: View {
             await loadDetail()
             replayPendingIntentScan()
         }
-        .onDisappear { store.scanner.release(.pickup) }
+        .onDisappear { scanQueue.reset(); store.scanner.release(.pickup) }
         .sheet(isPresented: $showCamera) {
             KioskBarcodeCameraView(
                 feedbackMessage: lastResult?.message,
@@ -148,6 +148,12 @@ struct KioskPickupView: View {
                         lastScanAt: lastScanAt,
                         isHardwareConnected: store.scanner.hardwareConnected
                     )
+
+                    if !scanQueue.isEmpty {
+                        Label("Saving \(scanQueue.count) scan\(scanQueue.count == 1 ? "" : "s")…", systemImage: "arrow.triangle.2.circlepath")
+                            .font(KioskType.chip)
+                            .foregroundStyle(KioskStatus.active)
+                    }
 
                     if hasBatteryScanStep {
                         KioskBatteryScanStatus(
@@ -382,14 +388,24 @@ struct KioskPickupView: View {
 
         store.resetInactivity()
         lastScanAt = Date()
-        guard let items = detail?.items else {
-            queuedScanValues.append(value)
+        guard scanQueue.enqueue(value) else {
+            showFeedback(.alreadyConfirmed("Already waiting for that scan"))
             return
         }
+        processNextScanIfNeeded()
+    }
 
+    private func processNextScanIfNeeded() {
+        guard let items = detail?.items, let entry = scanQueue.next() else { return }
+        let flow = store.flowGeneration
         Task {
+            defer {
+                scanQueue.finish(entry)
+                if store.ownsFlow(flow) { processNextScanIfNeeded() }
+            }
             do {
-                let result = try await KioskAPI.shared.kioskPickupScan(bookingId: bookingId, actorId: userId, scanValue: value)
+                let result = try await KioskAPI.shared.kioskPickupScan(bookingId: bookingId, actorId: userId, scanValue: entry.value)
+                guard store.ownsFlow(flow) else { return }
                 earnedBadges.appendUnique(contentsOf: result.earnedBadges ?? [])
                 if result.success, let item = result.item {
                     if confirmedIds.contains(item.id) {
@@ -406,10 +422,11 @@ struct KioskPickupView: View {
                         showFeedback(.success(result.locationMessage ?? item.name))
                     }
                 } else {
-                    let isInBooking = items.contains { $0.tagName.lowercased() == value.lowercased() || $0.id == value }
+                    let isInBooking = items.contains { $0.tagName.lowercased() == entry.value.lowercased() || $0.id == entry.value }
                     showFeedback(.error(result.error ?? (isInBooking ? "Already confirmed" : "Not in this pickup")))
                 }
             } catch {
+                guard store.ownsFlow(flow) else { return }
                 let message = (error as? APIError)?.errorDescription ?? "Scan failed"
                 showFeedback(.error(message))
             }
@@ -446,22 +463,26 @@ struct KioskPickupView: View {
     private func confirmPickup() {
         guard canConfirm, !isConfirming else { return }
         let isPartial = canConfirmPartial
+        guard let flow = store.beginHandoff() else { return }
         isConfirming = true
         Task {
+            defer { store.endHandoff(flow); isConfirming = false }
             do {
                 let confirmation = try await KioskAPI.shared.kioskPickupConfirm(
                     bookingId: bookingId,
                     actorId: userId,
                     partial: isPartial
                 )
+                guard store.ownsFlow(flow) else { return }
                 earnedBadges.appendUnique(contentsOf: confirmation.earnedBadges ?? [])
                 Haptics.success()
-                let itemWord = confirmedCount == 1 ? "item" : "items"
+                let count = confirmation.itemCount
+                let summary = count.map { "\($0) item\($0 == 1 ? "" : "s") checked out." } ?? "Your pickup is recorded."
                 store.screen = .success(KioskSuccessInfo(
                     kind: .pickup,
-                    message: isPartial
-                        ? "Partial pickup confirmed! \(confirmedCount) \(itemWord) checked out. The rest is ready for a later pickup."
-                        : "Pickup confirmed! \(confirmedCount) \(itemWord) checked out.",
+                    message: (confirmation.partial ?? isPartial)
+                        ? "\(summary) The remaining items are reserved for a later pickup."
+                        : summary,
                     earnedBadges: earnedBadges
                 ))
                 store.clearIntent(reason: .success)
@@ -479,6 +500,7 @@ struct KioskPickupView: View {
         error = nil
         do {
             let loaded = try await KioskAPI.shared.kioskCheckoutDetail(id: bookingId)
+            guard !Task.isCancelled else { return }
             confirmedIds = []
             confirmedItemOverrides = [:]
             for item in loaded.items where item.returned {
@@ -494,9 +516,7 @@ struct KioskPickupView: View {
                 )
             }
             detail = loaded
-            let queued = queuedScanValues
-            queuedScanValues.removeAll()
-            for scan in queued { handleScan(scan) }
+            processNextScanIfNeeded()
         } catch {
             self.error = (error as? APIError)?.errorDescription ?? "Could not load pickup details."
         }

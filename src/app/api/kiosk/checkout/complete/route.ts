@@ -1,3 +1,4 @@
+import { rejectKioskOperation, kioskOperationContext, readKioskOperationReceipt, claimKioskOperationReceiptTx, finishKioskOperationReceiptTx } from "@/lib/services/kiosk-operation-receipts";
 import { BookingKind, BookingStatus, BulkMovementKind, BulkUnitStatus, CalendarEventStatus, Prisma } from "@prisma/client";
 import { after } from "next/server";
 import { db } from "@/lib/db";
@@ -82,6 +83,10 @@ export const POST = withKiosk(async (req, { kiosk }) => {
   const { assetIds, bulkUnitItems } = normalizeCheckoutCompleteItems(body.items);
   const customPurpose = body.customPurpose?.trim();
 
+  const receipt = kioskOperationContext({ requestId: body.requestId, kioskId: kiosk.kioskId, actorId, operation: "checkout", payload: { ...body, locationId } });
+  const replay = await readKioskOperationReceipt(db, receipt);
+  if (replay) return ok(replay);
+
   const now = new Date();
   const eventWindowEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
@@ -94,8 +99,9 @@ export const POST = withKiosk(async (req, { kiosk }) => {
         });
         if (!transactionalUser) throw new HttpError(404, "User not found");
 
-        // Generate ref-number inside the transaction so the advisory lock
-        // (held by `nextBookingRef`) serializes concurrent kiosk completions.
+        await claimKioskOperationReceiptTx(tx, receipt);
+
+        // References come from the database sequence; the receipt key owns replay.
         const refNumber = await nextBookingRef(tx, "CO");
 
         const policyRow = await tx.systemConfig.findUnique({
@@ -355,6 +361,7 @@ export const POST = withKiosk(async (req, { kiosk }) => {
           },
         });
 
+        await finishKioskOperationReceiptTx(tx, receipt, { bookingId: b.id, refNumber, itemCount: assetIds.length + bulkUnitItems.length, endsAt: b.endsAt });
         return { booking: b, refNumber };
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
@@ -387,6 +394,10 @@ export const POST = withKiosk(async (req, { kiosk }) => {
       ...(earnedBadges.length > 0 ? { earnedBadges } : {}),
     });
   } catch (error) {
+    const replay = await readKioskOperationReceipt(db, receipt);
+    if (replay) return ok(replay);
+    const rejected = await rejectKioskOperation(db, receipt, error);
+    if (rejected) return ok(rejected);
     if (isSerializationConflict(error)) {
       throw new HttpError(409, "Checkout changed while it was being created. Please retry");
     }

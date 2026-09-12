@@ -23,7 +23,7 @@ Audits are findings-only unless the same request also authorizes fixes. “Audit
 
 ## Start small
 
-Read `AGENTS.md` and `docs/NORTH_STAR.md` once per task. Inspect the actual working state and owning source/contracts. Search decisions, gaps, and lessons for relevant terms; do not reread every document or trace every dependency for a small edit. Read each file fully before editing it. A plan may be a short in-chat plan for a bounded task; create/update an owner ledger when the work needs durable tracking. Do not modify someone else's active plan.
+Read `AGENTS.md`; consult `docs/NORTH_STAR.md` when product direction is relevant. Inspect the actual working state and owning source/contracts. Search decisions, gaps, and lessons for relevant terms; do not reread every document or trace every dependency for a small edit. Inspect enough surrounding context and consumers to make a coherent edit; read the whole file when ownership or behavior requires it. A plan may be a short in-chat plan for a bounded task; create/update an owner ledger when the work needs durable tracking. Do not modify someone else's active plan.
 
 Student/staff trust and correct physical custody outrank speculative feature expansion. Status is derived from real allocations; working Schedule edits are not published crew truth. Reconcile uncertain saves before retrying and preserve entered data.
 

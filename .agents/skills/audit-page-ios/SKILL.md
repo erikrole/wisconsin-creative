@@ -1,6 +1,6 @@
 ---
 name: audit-page-ios
-description: "Explicit-only compatibility alias for Wisconsin Creative gt-audit-ios. Use when the user invokes audit-page-ios; the canonical workflow owns all guidance."
+description: "Explicit alias for the Wisconsin Creative gt-audit-ios readiness audit."
 ---
 
 # Compatibility alias

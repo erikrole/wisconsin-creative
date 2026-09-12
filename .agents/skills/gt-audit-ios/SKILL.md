@@ -1,6 +1,6 @@
 ---
 name: gt-audit-ios
-description: Canonical read-only Wisconsin Creative iOS readiness audit. Use when the user runs /gt-audit-ios, asks to audit a Wisconsin SwiftUI screen or native workflow, asks whether an iOS surface is ready, or wants prioritized native findings before deciding what to fix. Findings-only unless the same request also asks for fixes.
+description: "Audit Wisconsin Creative native workflow readiness using current source, API contracts, and build/runtime evidence."
 ---
 
 # GT Audit iOS
@@ -9,8 +9,8 @@ Audit one native screen or tightly related workflow from current source, API con
 
 ## Orient
 
-1. Use the already-read `AGENTS.md` and `docs/NORTH_STAR.md`; inspect relevant sections of `docs/AREA_MOBILE.md`, the feature area doc, decisions, gaps, active ledger, and prior audit.
-2. Read the target view completely. Trace dependent views, stores, models, API clients, services, app lifecycle, project membership, source-contract tests, and the server routes that provide its data.
+1. Use `AGENTS.md`; consult `docs/NORTH_STAR.md` when product direction is relevant. Inspect the owning sections of `docs/AREA_MOBILE.md`, the feature area doc, decisions, gaps, active ledger, and prior audit.
+2. Inspect the target view and the dependencies needed to evaluate the requested flow: stores, models, API clients, lifecycle, target membership, and server envelopes as relevant. Expand only when evidence points beyond that boundary.
 3. Inspect `git status --short` and distinguish shipped source from unrelated or active dirty work.
 4. Confirm the affected target and deployment baseline from the current Xcode project and mobile area doc. Do not rely on historical project-memory files.
 

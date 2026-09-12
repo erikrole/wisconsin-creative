@@ -22,6 +22,7 @@ struct KioskReturnView: View {
     @State private var scannerHasFocus = false
     @State private var lastScanAt: Date?
     @State private var earnedBadges: [EarnedBadgeReward] = []
+    @State private var scanQueue = KioskScanQueue()
 
     enum ScanFeedback: Equatable {
         case success(String)
@@ -87,7 +88,7 @@ struct KioskReturnView: View {
             }
             #endif
         }
-        .onDisappear { store.scanner.release(.return) }
+        .onDisappear { scanQueue.reset(); store.scanner.release(.return) }
         .sheet(isPresented: $showCamera) {
             KioskBarcodeCameraView(
                 feedbackMessage: lastResult?.message,
@@ -154,6 +155,12 @@ struct KioskReturnView: View {
                         isHardwareConnected: store.scanner.hardwareConnected
                     )
 
+                    if !scanQueue.isEmpty {
+                        Label("Saving \(scanQueue.count) scan\(scanQueue.count == 1 ? "" : "s")…", systemImage: "arrow.triangle.2.circlepath")
+                            .font(KioskType.chip)
+                            .foregroundStyle(KioskStatus.active)
+                    }
+
                     if hasBatteryScanStep {
                         KioskBatteryScanStatus(
                             title: "Battery Units",
@@ -185,7 +192,7 @@ struct KioskReturnView: View {
         KioskCompletionButton(
             title: returnLabel,
             icon: hasReturned ? "checkmark.circle.fill" : "barcode.viewfinder",
-            isEnabled: hasReturned,
+            isEnabled: hasReturned && scanQueue.isEmpty,
             isBusy: isCompleting,
             accessibilityLabel: completeAccessibilityLabel,
             action: completeReturn
@@ -204,7 +211,7 @@ struct KioskReturnView: View {
     private var returnLabel: String {
         if allReturned { return "Complete Return" }
         if !hasReturned { return "Scan Items to Return" }
-        return "Return \(returnedCount) of \(totalItems) Items"
+        return "Finish for Now · \(max(0, totalItems - returnedCount)) Still Out"
     }
 
     private var completeAccessibilityLabel: String {
@@ -294,9 +301,24 @@ struct KioskReturnView: View {
         store.resetInactivity()
         lastScanAt = Date()
 
+        guard scanQueue.enqueue(value) else {
+            showFeedback(.alreadyReturned("Already waiting for that scan"))
+            return
+        }
+        processNextScanIfNeeded()
+    }
+
+    private func processNextScanIfNeeded() {
+        guard detail != nil, let entry = scanQueue.next() else { return }
+        let flow = store.flowGeneration
         Task {
+            defer {
+                scanQueue.finish(entry)
+                if store.ownsFlow(flow) { processNextScanIfNeeded() }
+            }
             do {
-                let result = try await KioskAPI.shared.kioskCheckinScan(bookingId: bookingId, actorId: userId, scanValue: value)
+                let result = try await KioskAPI.shared.kioskCheckinScan(bookingId: bookingId, actorId: userId, scanValue: entry.value)
+                guard store.ownsFlow(flow) else { return }
                 earnedBadges.appendUnique(contentsOf: result.earnedBadges ?? [])
                 if result.success, let item = result.item {
                     if returnedIds.contains(item.id) {
@@ -315,6 +337,7 @@ struct KioskReturnView: View {
                     showFeedback(.error(result.error ?? "Item not in this checkout"))
                 }
             } catch {
+                guard store.ownsFlow(flow) else { return }
                 let message = (error as? APIError)?.errorDescription ?? "Scan failed"
                 showFeedback(.error(message))
             }
@@ -349,11 +372,14 @@ struct KioskReturnView: View {
     }
 
     private func completeReturn() {
-        guard hasReturned, !isCompleting else { return }
+        guard hasReturned, !isCompleting, scanQueue.isEmpty,
+              let flow = store.beginHandoff() else { return }
         isCompleting = true
         Task {
+            defer { store.endHandoff(flow); isCompleting = false }
             do {
                 let result = try await KioskAPI.shared.kioskCheckinComplete(bookingId: bookingId, actorId: userId)
+                guard store.ownsFlow(flow) else { return }
                 earnedBadges.appendUnique(contentsOf: result.earnedBadges ?? [])
                 Haptics.success()
                 store.clearIntent(reason: .success)
@@ -386,11 +412,11 @@ struct KioskReturnView: View {
         loadError = nil
         do {
             let loaded = try await KioskAPI.shared.kioskCheckoutDetail(id: bookingId)
+            guard !Task.isCancelled else { return }
             detail = loaded
             // Pre-populate already-returned items (mid-session resume).
-            for item in loaded.items where item.returned {
-                returnedIds.insert(item.id)
-            }
+            returnedIds = Set(loaded.items.filter(\.returned).map(\.id))
+            processNextScanIfNeeded()
         } catch {
             self.loadError = (error as? APIError)?.errorDescription ?? "Could not load return details."
         }

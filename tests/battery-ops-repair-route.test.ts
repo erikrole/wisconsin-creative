@@ -5,9 +5,11 @@ const tx = {
   bulkSkuUnit: {
     findMany: vi.fn(),
     updateMany: vi.fn(),
+    groupBy: vi.fn(),
   },
   bulkStockBalance: {
     upsert: vi.fn(),
+    groupBy: vi.fn(),
   },
   bulkStockMovement: {
     create: vi.fn(),
@@ -86,10 +88,58 @@ beforeEach(() => {
     },
   ]);
   tx.bulkSkuUnit.updateMany.mockResolvedValue({ count: 1 });
+  tx.bulkSkuUnit.groupBy.mockResolvedValue([{ bulkSkuId: "sku-battery", _count: { _all: 8 } }]);
+  tx.bulkStockBalance.groupBy.mockResolvedValue([{ bulkSkuId: "sku-battery", _sum: { onHandQuantity: 7 } }]);
   vi.mocked(createAuditEntriesTx).mockResolvedValue(undefined);
 });
 
 describe("POST /api/bulk-skus/batteries/repair-stale", () => {
+  it.each([8, 12])("does not add stock already represented in the ledger (%i available)", async (onHand) => {
+    tx.bulkStockBalance.groupBy.mockResolvedValue([{ bulkSkuId: "sku-battery", _sum: { onHandQuantity: onHand } }]);
+    const res = await repairStaleBatteryFlags(request({ dryRun: false }), { params: Promise.resolve({}) });
+    expect(res.status).toBe(200);
+    expect((await res.json()).data.repairedCount).toBe(1);
+    expect(tx.bulkStockBalance.upsert).not.toHaveBeenCalled();
+    expect(tx.bulkStockMovement.create).not.toHaveBeenCalled();
+    expect(createAuditEntriesTx).toHaveBeenCalledWith(tx, [expect.objectContaining({ action: "repair_stale_checked_out" })]);
+  });
+
+  it("caps a larger historical deficit at the number of flags repaired", async () => {
+    tx.bulkStockBalance.groupBy.mockResolvedValue([]);
+    const res = await repairStaleBatteryFlags(request({ dryRun: false }), { params: Promise.resolve({}) });
+    expect(res.status).toBe(200);
+    expect(tx.bulkStockBalance.upsert).toHaveBeenCalledWith(expect.objectContaining({ update: { onHandQuantity: { increment: 1 } } }));
+    expect(createAuditEntriesTx).toHaveBeenCalledWith(tx, expect.arrayContaining([expect.objectContaining({
+      action: "numbered_unit_balance_reconciled",
+      before: { onHandQuantity: 0, availableUnitCount: 8 },
+      after: expect.objectContaining({ onHandQuantity: 1, quantityAdded: 1 }),
+    })]));
+  });
+
+  it("aborts a changed candidate set before any balance or audit writes", async () => {
+    tx.bulkSkuUnit.updateMany.mockResolvedValueOnce({ count: 0 });
+    const res = await repairStaleBatteryFlags(request({ dryRun: false }), { params: Promise.resolve({}) });
+    expect(res.status).toBe(409);
+    expect(tx.bulkStockBalance.upsert).not.toHaveBeenCalled();
+    expect(tx.bulkStockMovement.create).not.toHaveBeenCalled();
+    expect(createAuditEntriesTx).not.toHaveBeenCalled();
+  });
+
+  it("rejects malformed JSON instead of reporting a successful preview", async () => {
+    const req = request();
+    const invalid = new Request(req, { body: "{" });
+    const res = await repairStaleBatteryFlags(invalid, { params: Promise.resolve({}) });
+    expect(res.status).toBe(400);
+    expect(tx.bulkSkuUnit.findMany).not.toHaveBeenCalled();
+  });
+
+  it.each([Role.STUDENT, Role.COLLABORATOR])("rejects repair by %s before inventory reads", async (role) => {
+    vi.mocked(requireAuth).mockResolvedValue({ id: "student-1", name: "Student", email: "s@example.com", role, avatarUrl: null });
+    const res = await repairStaleBatteryFlags(request({ dryRun: false }), { params: Promise.resolve({}) });
+    expect(res.status).toBe(403);
+    expect(tx.bulkSkuUnit.findMany).not.toHaveBeenCalled();
+  });
+
   it("defaults to dry-run and skips writes for stale checked-out battery unit flags", async () => {
     const res = await repairStaleBatteryFlags(
       request({ reason: "Shelf count confirmed returned batteries" }),
@@ -167,7 +217,7 @@ describe("POST /api/bulk-skus/batteries/repair-stale", () => {
         reason: "Shelf count confirmed returned batteries",
       },
     });
-    expect(createAuditEntriesTx).toHaveBeenCalledWith(tx, [
+    expect(createAuditEntriesTx).toHaveBeenCalledWith(tx, expect.arrayContaining([
       expect.objectContaining({
         entityType: "bulk_sku_unit",
         entityId: "sku-battery#29",
@@ -178,7 +228,7 @@ describe("POST /api/bulk-skus/batteries/repair-stale", () => {
           reason: "Shelf count confirmed returned batteries",
         }),
       }),
-    ]);
+    ]));
     expect(body.data).toEqual({
       dryRun: false,
       plannedCount: 1,

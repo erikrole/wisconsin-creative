@@ -1,3 +1,7 @@
+import { z } from "zod";
+import { requirePermission } from "@/lib/rbac";
+import { createAuditEntryTx } from "@/lib/audit";
+import { parseDerivedBulkUnitQr } from "@/lib/bulk-unit-qr";
 import { BookingCustodyScope, Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { withKiosk } from "@/lib/api";
@@ -117,4 +121,32 @@ export const POST = withKiosk<{ id: string }>(async (req, { params }) => {
       tagName: asset.assetTag,
     },
   });
+});
+
+/** Remove only a staged reservation scan. Custody already handed over on a
+ * derived checkout is immutable here; replacing a unit never returns it. */
+export const DELETE = withKiosk<{ id: string }>(async (req, { params, kiosk }) => {
+  const body = z.object({
+    actorId: z.string().min(1),
+    bulkSkuId: z.string().min(1),
+    unitNumber: z.number().int().positive(),
+  }).parse(await req.json());
+  await db.$transaction(async (tx) => {
+    const [booking, actor] = await Promise.all([
+      tx.booking.findUnique({ where: { id: params.id }, include: { bulkItems: { include: { bulkSku: true } }, derivedCheckouts: { include: { bulkItems: { include: { unitAllocations: { include: { bulkSkuUnit: true } } } } } } } }),
+      tx.user.findFirst({ where: { id: body.actorId, ...kioskRosterUserWhere() }, select: { id: true, role: true } }),
+    ]);
+    if (!actor) throw new HttpError(403, "Choose an active operator");
+    requirePermission(actor.role, "checkout", "scan");
+    if (!booking || booking.kind !== "RESERVATION" || booking.status !== "BOOKED") throw new HttpError(409, "Refresh the reservation before replacing a staged unit");
+    if (booking.custodyScope !== "SHARED" && booking.requesterUserId !== actor.id && actor.role !== "ADMIN" && actor.role !== "STAFF") throw new HttpError(403, "Only the requester or staff can change this pickup");
+    const bulk = booking.bulkItems.find((item) => item.bulkSkuId === body.bulkSkuId);
+    if (!bulk || booking.derivedCheckouts.some((checkout) => checkout.bulkItems.some((item) => item.bulkSkuId === body.bulkSkuId && item.unitAllocations.some((unit) => unit.bulkSkuUnit.unitNumber === body.unitNumber)))) throw new HttpError(409, "That unit was already picked up. Return or transfer it from its checkout.");
+    const scans = await tx.scanEvent.findMany({ where: { bookingId: params.id, bulkSkuId: body.bulkSkuId, phase: "CHECKOUT", success: true }, select: { id: true, scanValue: true } });
+    const ids = scans.filter((scan) => parseDerivedBulkUnitQr(scan.scanValue, [bulk.bulkSku])?.unitNumber === body.unitNumber).map((scan) => scan.id);
+    await tx.scanEvent.updateMany({ where: { id: { in: ids } }, data: { success: false } });
+    await tx.booking.update({ where: { id: params.id }, data: { updatedAt: new Date() } });
+    await createAuditEntryTx(tx, { actorId: actor.id, actorRole: actor.role, entityType: "booking", entityId: params.id, action: "kiosk_pickup_scan_removed", before: { bulkSkuId: body.bulkSkuId, unitNumber: body.unitNumber, scanIds: ids }, after: { kioskDeviceId: kiosk.kioskId, custodyChanged: false } });
+  }, { isolationLevel: "Serializable" });
+  return ok({ success: true, message: "Staged unit cleared. Scan the replacement unit." });
 });

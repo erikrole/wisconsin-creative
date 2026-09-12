@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { HttpError, ok } from "@/lib/http";
 import { requirePermission } from "@/lib/rbac";
 import { addBulkUnitsSchema } from "@/lib/validation";
-import { createAuditEntry } from "@/lib/audit";
+import { createAuditEntryTx } from "@/lib/audit";
 import { MAX_BULK_UNIT_NUMBER } from "@/lib/request-limits";
 
 export const GET = withAuth<{ id: string }>(async (_req, { params }) => {
@@ -114,7 +114,7 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
       }
     });
 
-    return {
+    const added = {
       startNumber,
       endNumber: startNumber + body.count - 1,
       count: body.count,
@@ -122,16 +122,16 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
       productId: product?.id ?? null,
       productName: product?.name ?? null,
     };
+    await createAuditEntryTx(tx, {
+      actorId: user.id,
+      actorRole: user.role,
+      entityType: "bulk_sku",
+      entityId: id,
+      action: "add_units",
+      after: added,
+    });
+    return added;
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
-
-  await createAuditEntry({
-    actorId: user.id,
-    actorRole: user.role,
-    entityType: "bulk_sku",
-    entityId: id,
-    action: "add_units",
-    after: result,
-  });
 
   return ok({ data: result }, 201);
 });

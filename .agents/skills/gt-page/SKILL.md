@@ -1,6 +1,6 @@
 ---
 name: gt-page
-description: "Implement or improve a Wisconsin Creative web route, workflow, or focused UI polish. Use for requested changes; use gt-audit-web for findings only and gt-incident for an actual record problem."
+description: "Implement or improve a Wisconsin Creative web route, workflow, or focused UI detail using its existing product patterns."
 ---
 
 # GT Page

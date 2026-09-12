@@ -1,6 +1,6 @@
 ---
 name: gt-clean-after-merge
-description: Wisconsin Creative merge and parallel-work cleanup workflow. Use after merges, cherry-picks, worktree integrations, or parallel edits when duplicate types, helpers, UI remnants, imports, exports, CSS, routes, docs, tests, or task records may remain. Remove only confirmed artifacts and preserve intentional user work.
+description: "Remove confirmed Wisconsin Creative integration debris after merges or parallel edits while preserving intentional work."
 ---
 
 # GT Clean After Merge
@@ -27,6 +27,6 @@ Use `rg` to prove consumers before deleting anything. Keep intentional parallel 
 
 Select proof from the `AGENTS.md` verification matrix for every affected platform. Use existing focused tests and affected builds to prove retained behavior; add a regression test only when an uncovered behavioral risk warrants it. Inspect the final diff for unrelated reversions.
 
-Stop when ownership is ambiguous, cleanup would revert unrelated work, or the same cleanup approach fails twice. Report the conflict and the smallest safe reconciliation step.
+Pause only the affected cleanup when ownership is ambiguous or it would revert unrelated work. Re-plan a repeated failed approach using new evidence; continue independent cleanup and report any unresolved conflict.
 
 Do not stage, commit, push, or open a PR unless explicitly requested.

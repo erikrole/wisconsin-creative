@@ -258,6 +258,7 @@ describe("kiosk check-in scan route", () => {
       scanValue: "FX3-1",
       kioskLocationId: "loc-1",
       actorUserId: "user-1",
+      deviceContext: "vitest-kiosk",
     });
   });
 
@@ -486,6 +487,7 @@ describe("kiosk check-in scan route", () => {
       scanValue: "94e068d1-7",
       kioskLocationId: "loc-1",
       actorUserId: "user-1",
+      deviceContext: "kiosk",
     });
     expect(mocks.badgeOnCheckoutReturned).toHaveBeenCalledWith(expect.objectContaining({
       userId: "user-1",

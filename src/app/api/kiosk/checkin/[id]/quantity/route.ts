@@ -1,0 +1,30 @@
+import { z } from "zod";
+import { db } from "@/lib/db";
+import { withKiosk } from "@/lib/api";
+import { HttpError, ok } from "@/lib/http";
+import { requirePermission } from "@/lib/rbac";
+import { maybeAutoComplete } from "@/lib/services/bookings-checkin";
+import { upsertBulkBalancesAndMovements } from "@/lib/services/bookings-helpers";
+import { createAuditEntryTx } from "@/lib/audit";
+import { kioskRosterUserWhere } from "@/lib/user-visibility";
+const schema = z.object({ actorId: z.string().min(1), bulkSkuId: z.string().min(1), quantity: z.number().int().positive().max(200), expectedOutstanding: z.number().int().positive() });
+export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => {
+  const body = schema.parse(await req.json());
+  const result = await db.$transaction(async (tx) => {
+    const actor = await tx.user.findFirst({ where: { id: body.actorId, ...kioskRosterUserWhere() }, select: { id: true, role: true } });
+    if (!actor) throw new HttpError(403, "Choose an active operator");
+    requirePermission(actor.role, "checkout", "scan");
+    const item = await tx.bookingBulkItem.findUnique({ where: { bookingId_bulkSkuId: { bookingId: params.id, bulkSkuId: body.bulkSkuId } }, include: { bulkSku: true, booking: true } });
+    if (!item || item.booking.kind !== "CHECKOUT" || item.booking.status !== "OPEN") throw new HttpError(404, "Active checkout item not found");
+    if (item.bulkSku.trackByNumber) throw new HttpError(400, "Scan each numbered unit to return it");
+    const outstanding = item.checkedOutQuantity - item.checkedInQuantity;
+    if (outstanding !== body.expectedOutstanding || body.quantity > outstanding) throw new HttpError(409, "The remaining quantity changed. Refresh before returning more.");
+    await tx.bookingBulkItem.update({ where: { id: item.id }, data: { checkedInQuantity: { increment: body.quantity } } });
+    await upsertBulkBalancesAndMovements(tx, { bookingId: params.id, locationId: kiosk.locationId, actorUserId: actor.id, kind: "CHECKIN", items: [{ bulkSkuId: item.bulkSkuId, quantity: body.quantity }] });
+    await tx.scanEvent.create({ data: { bookingId: params.id, actorUserId: actor.id, scanType: "BULK_BIN", scanValue: item.bulkSku.binQrCodeValue ?? item.bulkSkuId, bulkSkuId: item.bulkSkuId, quantity: body.quantity, success: true, phase: "CHECKIN", actualLocationId: kiosk.locationId, deviceContext: `kiosk:${kiosk.kioskId}:counted-return` } });
+    await createAuditEntryTx(tx, { actorId: actor.id, actorRole: actor.role, entityType: "booking", entityId: params.id, action: "kiosk_quantity_returned", before: { outstanding }, after: { remaining: outstanding - body.quantity, quantity: body.quantity, bulkSkuId: item.bulkSkuId, locationId: kiosk.locationId } });
+    const completed = await maybeAutoComplete(tx, params.id, kiosk.locationId, actor.id, { auditAction: "auto_completed_by_kiosk_checkin" });
+    return { success: true, completed: completed !== null, remaining: outstanding - body.quantity, message: `${body.quantity} ${item.bulkSku.name} returned` };
+  }, { isolationLevel: "Serializable" });
+  return ok(result);
+});

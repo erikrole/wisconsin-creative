@@ -1,6 +1,6 @@
 ---
 name: gt-ui-review
-description: Create honest matched before/after visual proof and a local HTML review for a Wisconsin Creative web/native UI change. Use for visible changes or requested comparison; no external publishing dependency.
+description: "Create matched visual evidence and a local HTML review for a Wisconsin Creative web or native UI change."
 ---
 
 # GT UI Review

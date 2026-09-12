@@ -44,6 +44,7 @@ struct KioskCheckoutView: View {
     @State private var lastResult: ScanFeedback?
     @State private var feedbackDismissTask: Task<Void, Never>?
     @State private var isCompleting = false
+    @State private var hasPendingCompletion = false
     @State private var showBackConfirm = false
     @State private var showCamera = false
     @State private var eventOptions: [KioskCheckoutEvent] = []
@@ -89,6 +90,7 @@ struct KioskCheckoutView: View {
     // KioskCheckoutDetailSheet's titleFocused/scanFocused).
     @State private var focusedCheckoutField: KioskCheckoutFocusedField? = nil
     @State private var earnedBadges: [EarnedBadgeReward] = []
+    @State private var hasRestoredDraft = false
 
     enum ScanFeedback: Equatable {
         case success(String)
@@ -162,7 +164,7 @@ struct KioskCheckoutView: View {
                 }
                 Haptics.warning()
             }
-            Button("Keep Scanning", role: .cancel) {}
+            Button("Keep Scanning", role: .cancel) { armScannerCaptureAfterRestore() }
         } message: {
             Text("Your scanned items will stay in the cart.")
         }
@@ -187,11 +189,14 @@ struct KioskCheckoutView: View {
             )
         }
         .task {
+            hasPendingCompletion = KioskAPI.shared.hasPendingCheckout(actorId: userId)
             restoreDraftIfNeeded()
             applyRetainedIntent()
             store.scanner.claim(.checkout) { handleScan($0) }
             await loadCheckoutEvents()
-            applySelectedEventDueTime()
+            if !hasRestoredDraft { applySelectedEventDueTime() }
+            if !scannedItems.isEmpty { await refreshAvailability(for: scannedItems) }
+            hasRestoredDraft = false
             #if DEBUG
             // Capture hook: the scan stage is only reachable after the details
             // step is satisfied, which no fixture can express through the API.
@@ -238,13 +243,13 @@ struct KioskCheckoutView: View {
             #endif
         }
         .onChange(of: selectedEventId) { _, _ in
-            applySelectedEventDueTime()
+            if !hasRestoredDraft { applySelectedEventDueTime() }
             persistDraft()
         }
         .onChange(of: isLinkedToEvent) { _, linked in
             if linked {
                 customPurpose = ""
-                applySelectedEventDueTime()
+                if !hasRestoredDraft { applySelectedEventDueTime() }
             } else {
                 selectedEventId = nil
                 DispatchQueue.main.async {
@@ -261,6 +266,9 @@ struct KioskCheckoutView: View {
         }
         .onChange(of: focusedCheckoutField) { _, field in
             store.scanner.setEditing(field != nil)
+        }
+        .onChange(of: showEditContextConfirm) { _, visible in
+            if !visible && checkoutContextReady { armScannerCaptureAfterRestore() }
         }
         .onChange(of: checkoutContextReady) { _, isReady in
             if !isReady {
@@ -426,12 +434,12 @@ struct KioskCheckoutView: View {
             Spacer()
 
             KioskCompletionButton(
-                title: completeButtonTitle,
-                isEnabled: !scannedItems.isEmpty && pendingScanIdentities.isEmpty && (!hasCheckoutContext || !hasValidReturnTime || (hasVerifiedAvailability && !isCheckingAvailability && availabilityError == nil && !availabilityResult.hasBlockingIssue)),
+                title: hasPendingCompletion ? "Check Previous Handoff" : completeButtonTitle,
+                isEnabled: hasPendingCompletion || (!scannedItems.isEmpty && pendingScanIdentities.isEmpty && (!hasCheckoutContext || !hasValidReturnTime || (hasVerifiedAvailability && !isCheckingAvailability && availabilityError == nil && !availabilityResult.hasBlockingIssue))),
                 isBusy: isCompleting,
                 accessibilityLabel: completeAccessibilityLabel,
                 action: {
-                    if hasCheckoutContext && hasValidReturnTime { completeCheckout() }
+                    if hasPendingCompletion || (hasCheckoutContext && hasValidReturnTime) { completeCheckout() }
                     else { requestEditContext() }
                 }
             )
@@ -674,17 +682,19 @@ struct KioskCheckoutView: View {
         guard !isProcessingScan, let value = queuedScanValues.first else { return }
         isProcessingScan = true
         let normalizedScan = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let flow = store.flowGeneration
 
         Task {
             defer {
                 pendingScanIdentities.remove(normalizedScan)
                 if !queuedScanValues.isEmpty { queuedScanValues.removeFirst() }
                 isProcessingScan = false
-                processNextScanIfNeeded()
+                if store.ownsFlow(flow) { processNextScanIfNeeded() }
             }
 
             do {
                 let result = try await KioskAPI.shared.kioskCheckoutScan(actorId: userId, scanValue: value)
+                guard store.ownsFlow(flow) else { return }
                 guard result.success, let item = result.item else {
                     showFeedback(.error(KioskAvailabilityCopy.rejectedScan(result.error ?? "Could not add item")))
                     return
@@ -716,6 +726,7 @@ struct KioskCheckoutView: View {
                     return
                 }
                 let candidateGroup = KioskCartDisplayGroup(id: cartItem.id, items: [cartItem])
+                guard store.ownsFlow(flow) else { return }
                 if let candidateIssue = availabilityIssue(for: candidateGroup, result: preflight), candidateIssue.isBlocking {
                     let feedback = scanAvailabilityFeedback(for: cartItem, result: preflight)
                         ?? .error("Scan rejected; \(cartItem.itemListPrimaryTitle) was not added because it is unavailable.")
@@ -881,14 +892,16 @@ struct KioskCheckoutView: View {
     /// the cart was open.
     private func completeCheckout() {
         let cart = store.cart(for: userId)
-        guard !cart.isEmpty, hasCheckoutContext, hasValidReturnTime, let locationId = store.info?.locationId else { return }
+        guard hasPendingCompletion || (!cart.isEmpty && hasCheckoutContext && hasValidReturnTime), let locationId = store.info?.locationId else { return }
         guard !isCompleting, pendingScanIdentities.isEmpty else { return }
-        let message = successMessage
+        guard let flow = store.beginHandoff() else { return }
         let endsAt = dueBackAt
         let eventId = isLinkedToEvent ? selectedEvent?.id : nil
         let purpose = !isLinkedToEvent && !trimmedCustomPurpose.isEmpty ? trimmedCustomPurpose : nil
         isCompleting = true
         Task {
+            defer { store.endHandoff(flow) }
+            if !hasPendingCompletion {
             guard let preflight = await refreshAvailability(for: cart, endsAt: endsAt) else {
                 isCompleting = false
                 showFeedback(.error(availabilityError ?? "Verify item availability before checkout"))
@@ -899,8 +912,9 @@ struct KioskCheckoutView: View {
                 showFeedback(.error("Resolve item conflicts before checkout"))
                 return
             }
+            }
             do {
-                let completionBadges = try await KioskAPI.shared.kioskCheckoutComplete(
+                let completion = try await KioskAPI.shared.kioskCheckoutComplete(
                     actorId: userId,
                     locationId: locationId,
                     items: cart,
@@ -908,7 +922,8 @@ struct KioskCheckoutView: View {
                     customPurpose: purpose,
                     endsAt: endsAt
                 )
-                earnedBadges.appendUnique(contentsOf: completionBadges)
+                guard store.ownsFlow(flow) else { return }
+                earnedBadges.appendUnique(contentsOf: completion.earnedBadges ?? [])
                 Haptics.success()
                 store.clearCart(for: userId)
                 store.clearCheckoutDraft(for: userId)
@@ -916,10 +931,11 @@ struct KioskCheckoutView: View {
                 scannerCaptureEnabled = false
                 store.screen = .success(KioskSuccessInfo(
                     kind: .checkout,
-                    message: message,
+                    message: completion.itemCount.map { "\($0) item\($0 == 1 ? "" : "s") checked out. Your handoff is recorded." } ?? "Your checkout is recorded.",
                     earnedBadges: earnedBadges
                 ))
             } catch {
+                hasPendingCompletion = KioskAPI.shared.hasPendingCheckout(actorId: userId)
                 let message = (error as? APIError)?.errorDescription
                     ?? "Checkout failed. Please try again."
                 showFeedback(.error(message))
@@ -938,6 +954,7 @@ struct KioskCheckoutView: View {
 
     private func restoreDraftIfNeeded() {
         guard let draft = store.checkoutDraft(for: userId) else { return }
+        hasRestoredDraft = true
         isLinkedToEvent = draft.isLinkedToEvent
         selectedEventId = draft.selectedEventId
         customPurpose = draft.customPurpose
@@ -952,7 +969,7 @@ struct KioskCheckoutView: View {
 
     private func applyRetainedIntent() {
         guard var intent = store.pendingIntent, intent.identifiedUser?.id == user.id else { return }
-        if let event = intent.selectedEvent {
+        if let event = intent.selectedEvent, !hasRestoredDraft || selectedEventId != event.id {
             isLinkedToEvent = true
             selectedEventId = event.id
             if let end = event.endsAt,

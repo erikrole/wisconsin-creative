@@ -95,7 +95,23 @@ struct KioskCheckoutDraft: Equatable {
 @MainActor
 final class KioskStore {
     var info: KioskInfo?
-    var screen: KioskScreen = .activation
+    var screen: KioskScreen = .activation {
+        didSet { if screen != oldValue { flowGeneration = UUID() } }
+    }
+    private(set) var flowGeneration = UUID()
+    private var handoffOwner: UUID?
+    var isProcessingHandoff: Bool { handoffOwner != nil }
+
+    func ownsFlow(_ generation: UUID) -> Bool { flowGeneration == generation }
+    func beginHandoff() -> UUID? {
+        guard handoffOwner == nil else { return nil }
+        handoffOwner = flowGeneration
+        resetInactivity()
+        return flowGeneration
+    }
+    func endHandoff(_ generation: UUID) {
+        if handoffOwner == generation { handoffOwner = nil; resetInactivity() }
+    }
     var isActive: Bool = false
     var isKioskMode: Bool { info != nil }
     let scanner = KioskScannerCoordinator()
@@ -284,6 +300,7 @@ final class KioskStore {
     }
 
     func deactivate() {
+        handoffOwner = nil
         // Advance before clearing local state so an in-flight request cannot
         // publish or revoke anything after this credential lifetime ends.
         kioskCredentialBoundary.advance()
@@ -369,6 +386,7 @@ final class KioskStore {
         inactivityTask = Task { [weak self] in
             try? await Task.sleep(nanoseconds: Self.inactivityWarning)
             guard let self, !Task.isCancelled else { return }
+            guard !self.isProcessingHandoff else { self.resetInactivity(); return }
             // Only show the warning if we're inside an active flow — idle
             // screen has nothing to lose.
             if case .idle = self.screen {
@@ -378,6 +396,7 @@ final class KioskStore {
             }
             try? await Task.sleep(nanoseconds: Self.inactivityTotal - Self.inactivityWarning)
             guard !Task.isCancelled else { return }
+            guard !self.isProcessingHandoff else { self.resetInactivity(); return }
             // Soft reset: keep the cart for the active student so a returning
             // tap restores progress; just route back to idle.
             if self.inactivityWarningVisible {
@@ -391,6 +410,7 @@ final class KioskStore {
     /// Ends the session immediately from the inactivity warning: same
     /// destination the timeout would reach, without the wait.
     func finishSessionNow() {
+        guard !isProcessingHandoff else { return }
         inactivityWarningVisible = false
         clearIntent(reason: .timeout)
         screen = .idle

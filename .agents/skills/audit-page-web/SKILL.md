@@ -1,6 +1,6 @@
 ---
 name: audit-page-web
-description: "Explicit-only compatibility alias for Wisconsin Creative gt-audit-web. Use when the user invokes audit-page-web; the canonical workflow owns all guidance."
+description: "Explicit alias for the Wisconsin Creative gt-audit-web readiness audit."
 ---
 
 # Compatibility alias

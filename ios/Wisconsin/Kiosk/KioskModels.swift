@@ -43,12 +43,13 @@ private struct LossyDecodableArray<Element: Decodable>: Decodable {
 }
 
 struct KioskDashboard: Decodable {
-    let stats: Stats
+    var stats: Stats
     let capabilities: Capabilities
     let standby: Standby?
     let events: [KioskEvent]
-    let activeItems: [ActiveItem]
-    let checkouts: [KioskActiveCheckout]
+    var activeItems: [ActiveItem]
+    var checkouts: [KioskActiveCheckout]
+    let partialFailures: [String]
 
     enum CodingKeys: String, CodingKey {
         case stats
@@ -57,10 +58,12 @@ struct KioskDashboard: Decodable {
         case events
         case activeItems
         case checkouts
+        case partialFailures
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        partialFailures = try container.decodeIfPresent([String].self, forKey: .partialFailures) ?? []
         stats = try container.decodeIfPresent(Stats.self, forKey: .stats) ?? Stats()
         capabilities = try container.decodeIfPresent(Capabilities.self, forKey: .capabilities) ?? Capabilities()
         standby = try container.decodeIfPresent(Standby.self, forKey: .standby)
@@ -419,6 +422,13 @@ struct KioskResolveScanResult: Decodable {
     let expectedRequester: KioskUser?
     let item: KioskResolvedItem?
     let booking: KioskResolvedBooking?
+    let candidates: [KioskScanCandidate]?
+}
+
+struct KioskScanCandidate: Decodable, Identifiable {
+    let booking: KioskResolvedBooking
+    let expectedRequester: KioskUser?
+    var id: String { booking.id }
 }
 
 struct KioskResolvedItem: Decodable, Equatable {
@@ -630,6 +640,8 @@ struct KioskCheckoutDetail: Decodable {
     let status: String
     let requesterId: String?
     let custodyScope: String?
+    let updatedAt: Date?
+    let locationId: String?
     let endsAt: Date
     let scanSummary: ScanSummary?
     let items: [ReturnItem]
@@ -650,6 +662,7 @@ struct KioskCheckoutDetail: Decodable {
         let bulkSkuName: String?
         let unitNumber: Int?
         let imageUrl: String?
+        let quantity: Int?
 
         var isNumberedBulk: Bool { type == "numbered_bulk" }
         var isBulkQuantity: Bool { type == "bulk_quantity" }
@@ -693,6 +706,7 @@ struct KioskPickupConfirmResult: Decodable {
     let success: Bool
     let bookingId: String
     let partial: Bool?
+    let itemCount: Int?
     let earnedBadges: [EarnedBadgeReward]?
 }
 

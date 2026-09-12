@@ -14,6 +14,9 @@ struct KioskIdleView: View {
     @State private var selectedCheckout: KioskCheckoutDrawerContext?
     @State private var identityScanFeedback: IdentityScanFeedback?
     @State private var isIdentifyingScan = false
+    @State private var identityRequests = LatestRequestGeneration()
+    @State private var dashboardRequests = LatestRequestGeneration()
+    @State private var unavailableSections: Set<String> = []
 
     /// The idle screen is a monitoring surface, not a live custody mutation
     /// flow. Five minutes lets Neon scale down between unattended checks while
@@ -91,6 +94,8 @@ struct KioskIdleView: View {
             store.isStandbyVisible = isStandby
         }
         .onDisappear {
+            identityRequests.invalidate()
+            dashboardRequests.invalidate()
             store.scanner.release(.home)
             store.isStandbyVisible = false
         }
@@ -130,7 +135,7 @@ struct KioskIdleView: View {
     }
 
     private var shouldShowSleepMode: Bool {
-        guard dashboard?.standby?.sleepMode == true else { return false }
+        guard unavailableSections.isEmpty, dashboard?.standby?.sleepMode == true else { return false }
         guard sleepModeReason != "active_window" else { return false }
         if let sleepDismissedUntil = store.sleepDismissedUntil, sleepDismissedUntil > Date() {
             return false
@@ -222,6 +227,9 @@ struct KioskIdleView: View {
             if hasConnectionIssue {
                 connectionBanner
             }
+            if !unavailableSections.isEmpty {
+                KioskFeedbackBanner(tone: .warning, message: "Some kiosk data could not be refreshed. Showing the last available results. Tap Refresh to retry.")
+            }
 
             TimelineView(.periodic(from: .now, by: 1)) { context in
                 VStack(alignment: .leading, spacing: 4) {
@@ -243,7 +251,7 @@ struct KioskIdleView: View {
             }
 
             // Stats row
-            if let stats = dashboard?.stats {
+            if let stats = dashboard?.stats, !unavailableSections.contains("stats") {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(spacing: 6) {
                         Image(systemName: "line.3.horizontal.decrease.circle")
@@ -298,7 +306,7 @@ struct KioskIdleView: View {
 
             // Quiet-day state: without it the left panel is a black void
             // below the stat tiles whenever nothing is out and no events run.
-            if let dashboard, dashboard.checkouts.isEmpty, selectedSummary == .checkouts {
+            if let dashboard, dashboard.checkouts.isEmpty, selectedSummary == .checkouts, !unavailableSections.contains("checkouts") {
                 Spacer()
                 VStack(spacing: 14) {
                     ZStack {
@@ -493,6 +501,7 @@ struct KioskIdleView: View {
                     displayName: labels[user.id] ?? user.name,
                     metrics: metrics
                 ) {
+                    identityRequests.invalidate()
                     store.deferSleepMode(for: sleepWakeDuration)
                     store.screen = .operatorHub(user)
                 }
@@ -565,14 +574,14 @@ struct KioskIdleView: View {
             switch selectedSummary {
             case .itemsOut:
                 let itemGroups = ActiveItemGroup.groups(from: dashboard.activeItems)
-                KioskDashboardList(title: "Items Out", emptyMessage: "No items are out.", isEmpty: dashboard.activeItems.isEmpty, onClose: { toggleSummary(.itemsOut) }) {
+                KioskDashboardList(title: "Items Out", emptyMessage: unavailableSections.contains("activeItems") ? "Item status unavailable. Tap Refresh to retry." : "No items are out.", isEmpty: dashboard.activeItems.isEmpty, onClose: { toggleSummary(.itemsOut) }) {
                     ForEach(itemGroups) { group in
                         ActiveItemRow(group: group) { openCheckout(id: group.first.checkoutId, title: group.first.checkoutTitle, requesterId: group.first.requesterId, requesterName: group.first.requesterName, requesterAvatarUrl: group.first.requesterAvatarUrl, custodyScope: group.first.custodyScope ?? "PERSON", endsAt: group.first.endsAt, isOverdue: group.first.isOverdue) }
                     }
                 }
             case .checkouts:
                 let checkouts = orderedCheckouts(dashboard.checkouts)
-                KioskDashboardList(title: "Active Checkouts", emptyMessage: "No active checkouts.", isEmpty: checkouts.isEmpty, onClose: nil) {
+                KioskDashboardList(title: "Active Checkouts", emptyMessage: unavailableSections.contains("checkouts") ? "Checkout status unavailable. Tap Refresh to retry." : "No active checkouts.", isEmpty: checkouts.isEmpty, onClose: nil) {
                     ForEach(checkouts) { checkout in
                         CheckoutRow(
                             checkout: checkout,
@@ -583,7 +592,7 @@ struct KioskIdleView: View {
                 }
             case .overdue:
                 let overdueCheckouts = orderedCheckouts(dashboard.checkouts.filter(\.isOverdue))
-                KioskDashboardList(title: "Overdue", emptyMessage: "No overdue checkouts.", isEmpty: overdueCheckouts.isEmpty, onClose: { toggleSummary(.overdue) }) {
+                KioskDashboardList(title: "Overdue", emptyMessage: unavailableSections.contains("checkouts") ? "Checkout status unavailable. Tap Refresh to retry." : "No overdue checkouts.", isEmpty: overdueCheckouts.isEmpty, onClose: { toggleSummary(.overdue) }) {
                     ForEach(overdueCheckouts) { checkout in
                         CheckoutRow(
                             checkout: checkout,
@@ -679,18 +688,29 @@ struct KioskIdleView: View {
     }
 
     private func loadAll() async {
+        let request = dashboardRequests.begin()
+        let flow = store.flowGeneration
         isLoading = true
         async let dashboardResult = fetchDashboard()
         async let usersResult = fetchUsers()
 
         let dashboardOutcome = await dashboardResult
         let usersOutcome = await usersResult
+        guard dashboardRequests.owns(request), store.ownsFlow(flow), !Task.isCancelled else { return }
         var loadedAnyData = false
         var hitFailure = false
         var sawCancellation = false
 
         switch dashboardOutcome {
-        case .success(let value):
+        case .success(var value):
+            unavailableSections = Set(value.partialFailures)
+            if unavailableSections.contains("active items") || unavailableSections.contains("active bulk units") { unavailableSections.insert("activeItems") }
+            hitFailure = !unavailableSections.isEmpty
+            if let previous = dashboard {
+                if unavailableSections.contains("stats") { value.stats = previous.stats }
+                if unavailableSections.contains("checkouts") { value.checkouts = previous.checkouts }
+                if unavailableSections.contains("activeItems") { value.activeItems = previous.activeItems }
+            }
             dashboard = value
             #if DEBUG
             print("[KioskIdleView] dashboard capabilities: workerDetails=\(value.capabilities.eventWorkerDetails), callTimes=\(value.capabilities.eventCallTimes)")
@@ -722,7 +742,7 @@ struct KioskIdleView: View {
             hitFailure = true
         }
 
-        if loadedAnyData {
+        if loadedAnyData && !hitFailure {
             lastLoadedAt = Date()
         }
         if hitFailure {
@@ -777,9 +797,13 @@ struct KioskIdleView: View {
         store.resetInactivity()
         isIdentifyingScan = true
         identityScanFeedback = .working("Resolving scan...")
+        let request = identityRequests.begin()
+        let flow = store.flowGeneration
         Task {
+            defer { if identityRequests.owns(request) { isIdentifyingScan = false } }
             do {
                 let result = try await KioskAPI.shared.kioskResolveScan(scanValue: value)
+                guard identityRequests.owns(request), store.ownsFlow(flow) else { return }
                 if result.kind == "identity", let user = result.user {
                     Haptics.success()
                     identityScanFeedback = .success(user.name)
@@ -804,6 +828,7 @@ struct KioskIdleView: View {
                     identityScanFeedback = .error(result.message ?? "That scan cannot start a kiosk flow.")
                 }
             } catch {
+                guard identityRequests.owns(request), store.ownsFlow(flow) else { return }
                 if isUnauthorized(error) {
                     store.deactivate()
                 } else {

@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Bulk Inventory Management
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-09-03
+- Last Updated: 2026-09-11
 - Status: Active
 - Version: V1
 
@@ -60,7 +60,8 @@ Operate item families backed by `BulkSku` records. Normal discovery happens in `
   - Numbered-unit receiving can assign one existing active family product to the entire new range through the existing audited unit-add endpoint; individual product reassignment remains in family detail.
   - Metadata editing remains in the shared item-family detail flow and is one explicit action away from every Battery Ops workspace.
   - Checked-out units are read-only in this surface and must be returned through check-in before status changes.
-  - Stale checked-out flag repair uses `POST /api/bulk-skus/batteries/repair-stale`; it is limited to active battery families, requires `bulk_sku.adjust`, defaults to a dry-run preview, and restores the family balance with an adjustment movement plus one audit entry per repaired unit only when an operator explicitly applies the repair.
+  - Stale checked-out flag repair uses `POST /api/bulk-skus/batteries/repair-stale`; it is limited to active numbered battery families, requires `bulk_sku.adjust`, defaults to a dry-run preview, and restores only a proven aggregate stock deficit, capped at the repaired count. Each repaired unit and any balance correction are audited in the same transaction.
+  - Battery Ops reads units, balances, and custody from one repeatable-read snapshot. Every unreturned allocation remains unavailable regardless of the parent booking status, matching exact-unit claiming and stale repair; an incorrectly ended booking must not make its held battery appear available.
 
 ### `/items/bulk-{id}` and `/bulk-inventory/{id}`
 - **Page:** `src/app/(app)/bulk-inventory/[id]/BulkSkuDetailExperience.tsx`
@@ -158,7 +159,8 @@ Operate item families backed by `BulkSku` records. Normal discovery happens in `
 - Body: `{ reason?: string, dryRun?: boolean }`
 - Repairs active battery-family units where raw `BulkSkuUnit.status = CHECKED_OUT` but no active `BookingBulkUnitAllocation` exists.
 - Defaults to `dryRun: true`; preview responses return candidate units without updating rows or writing audit logs.
-- When called with `dryRun: false`, sets those stale rows to `AVAILABLE`, restores the same per-family quantity to the home-location balance with an adjustment movement, and writes `repair_stale_checked_out` audit entries in one serializable transaction.
+- When called with `dryRun: false`, sets those stale rows to `AVAILABLE`, compares claimable units against balances across all locations, and restores only a positive deficit capped at the repaired count to the home-location balance. Balanced or over-counted ledgers receive no increment. Unit and balance audit entries share the serializable transaction; a changed candidate count aborts the repair.
+- Malformed JSON returns 400 instead of silently defaulting to a preview.
 - Does not alter true active checkout allocations or non-battery bulk families.
 - Requires: ADMIN/STAFF
 
@@ -203,8 +205,10 @@ See `AREA_ITEMS.md` 2026-04-06 entry for bulk inventory page hardening:
 - [x] AC-11: Staff and admins can replace a bad item-family QR with a generated or manually scanned value through a confirmed, collision-safe, audited mutation that preserves inventory and unit identity while clearly requiring label reprints.
 - [x] AC-12: A numbered item family can define multiple branded products, assign one product to each permanent unit, show product counts and identity in the unit workspace, and keep one booking line and derived QR sequence.
 - [x] AC-13: Battery Ops presents one compact family workspace with explicit unit receiving, label export, metadata handoff, product mix, derived-count guidance, and an on-demand status-filtered unit roster; quantity-tracked battery corrections remain clearly separate.
+- [ ] AC-14: Deploy and replay the 2026-09-11 battery integrity fixes at the native kiosk: cross-location removal, partial-family removal, shared-return operator/scan evidence, custody-safe status changes, and deficit-only repair. Local verification is tracked in `tasks/battery-data-flow-hardening-2026-09-11.md`.
 
 ## Change Log
+- 2026-09-11: **Battery data and flow hardening prepared locally.** Stale repair cannot double-count stock, status recovery cannot override OPEN/PENDING_PICKUP custody even with LOST/RETIRED flags, status decrements cannot produce negative local balances, and receiving/status audits commit with inventory. Ended-allocation recovery preserves allocation IDs/timestamps in audit evidence. Battery Ops uses a repeatable-read allocation-consistent snapshot. Kiosk battery returns record exact scan, operator, and location evidence; removal restores the kiosk location and permits an unreturned unit to be removed after another unit in its family was returned without deleting that history. Production read-only audit at 2026-09-12 03:50 UTC found five families, 103 units, 99 claimable and four held, with matching balances and no stale flags/ended allocations; Football Sony Battery already has 12 units. No production writes occurred. Local checks and external acceptance are recorded in the task ledger.
 - 2026-09-07: Item-family listing now uses shared integer pagination: default 50, maximum 200, default offset 0, and a 400 response above offset 10,000. Fractional or nonnumeric pagination no longer reaches Prisma. Acceptance: focused route regressions pass locally; authenticated runtime and deployment remain unverified.
 - 2026-09-03: **Numbered battery unit truth now repairs a deficient aggregate ledger.** A large active checkout successfully scanned 18 Sony units, then exposed historical drift: a June stale-flag repair had made 14 unit records effectively available without restoring the aggregate balance, so later exact scans stopped at `0 available` while Battery Ops still showed units 1, 2, and 40 available. Active-checkout exact scans now add only a positive aggregate deficit from effective unit truth through an audited adjustment before the normal checkout decrement. Future stale-flag repairs restore the matching balance and movement atomically with the unit changes.
 - 2026-08-30: **Battery family operations became count-honest and compact.** Battery Ops now keeps all numbered tiles collapsed on load, uses one independent row per family, leads with available/active state plus threshold/label/QR/product metadata, and names `Add units`, `Export labels`, and `Edit metadata` explicitly. The on-demand roster filters by effective unit status, receiving can assign an existing active product to the new permanent range, and quantity-tracked families retain a separate audited `Adjust live count` action. A development-only authenticated fixture supports matched visual proof without mutating inventory.

@@ -8,6 +8,7 @@ import { neon } from "@neondatabase/serverless";
 import "dotenv/config";
 import { resolvePrismaDirectUrl } from "./lib/prisma-direct-url.mjs";
 import { evaluateMigrationHealth } from "./prisma-migrate-health.mjs";
+import { readMigrationRows, loadMigrationBaseline, assertBaselineFiles, baselineGuardBody } from "./lib/migration-baseline.mjs";
 
 const migrationsDir = join(process.cwd(), "prisma", "migrations");
 const blankSchemaEnginePattern = /Error:\s*Schema engine error:\s*$/m;
@@ -28,6 +29,28 @@ async function main() {
   const migrationEnvironment = { ...process.env, DIRECT_URL: connectionString };
   if (source === "DATABASE_URL_UNPOOLED") {
     console.log("Using DATABASE_URL_UNPOOLED for Prisma migration deploy.");
+  }
+
+  const sql = neon(connectionString);
+  const migrations = readdirSync(migrationsDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort();
+  const sources = Object.fromEntries(migrations.map((name) => {
+    const migrationPath = join(migrationsDir, name, "migration.sql");
+    if (!existsSync(migrationPath)) throw new Error(`Missing migration.sql for ${name}`);
+    return [name, readFileSync(migrationPath, "utf8")];
+  }));
+  const checksums = Object.fromEntries(migrations.map((name) => [name, hashSql(sources[name])]));
+  const baseline = await loadMigrationBaseline(sql, checksums);
+  if (baseline) {
+    console.warn(`Using ${baseline.id}: legacy provenance exceptions remain recorded, not reclassified as verified SQL.`);
+    const pending = assertFallbackHistory(checksums, await readMigrationRows(sql), baseline);
+    const plans = pending.map((name) => buildFallbackTransaction(name, sources[name], checksums, baseline));
+    for (const plan of plans) {
+      console.log(`Applying ${plan.name} atomically on checkpoint-verified Preview`);
+      await applyFallbackMigration(sql, plan);
+    }
+    console.log(`Preview applied ${plans.length} migration(s).`);
+    return;
   }
 
   const deploy = spawnSync("npx", ["prisma", "migrate", "deploy"], {
@@ -55,26 +78,7 @@ async function main() {
     "Prisma schema engine could not connect; checking history before atomic Neon HTTP migration apply.",
   );
 
-  const sql = neon(connectionString);
-
-  const appliedRows = await sql`
-    SELECT migration_name, checksum, finished_at, rolled_back_at
-    FROM _prisma_migrations
-  `;
-  const migrations = readdirSync(migrationsDir, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
-    .sort();
-
-  const sources = Object.fromEntries(migrations.map((name) => {
-    const migrationPath = join(migrationsDir, name, "migration.sql");
-    if (!existsSync(migrationPath)) {
-      throw new Error(`Missing migration.sql for ${name}`);
-    }
-    return [name, readFileSync(migrationPath, "utf8")];
-  }));
-  const checksums = Object.fromEntries(migrations.map((name) => [name, hashSql(sources[name])]));
-  const pending = assertFallbackHistory(checksums, appliedRows);
+  const pending = assertFallbackHistory(checksums, await readMigrationRows(sql));
   // Validate every pending file before the first write. HTTP cannot safely run
   // non-transactional migrations or SQL that commits the driver's transaction.
   const plans = pending.map((name) => buildFallbackTransaction(name, sources[name], checksums));
@@ -99,8 +103,8 @@ function hashSql(source) {
   return createHash("sha256").update(source).digest("hex");
 }
 
-export function assertFallbackHistory(checksums, rows) {
-  const health = evaluateMigrationHealth(Object.keys(checksums).sort(), rows, checksums);
+export function assertFallbackHistory(checksums, rows, baseline = null) {
+  const health = evaluateMigrationHealth(Object.keys(checksums).sort(), rows, checksums, baseline);
   if (health.unresolvedFailed.length || health.appliedDbOnly.length
     || health.checksumMismatches.length || health.unverifiedChecksums.length) {
     throw new Error("Refusing Neon HTTP fallback: migration history is failed, missing locally, or has unverified/changed checksums. Run db:migrate:health and reconcile before retrying.");
@@ -108,7 +112,8 @@ export function assertFallbackHistory(checksums, rows) {
   return health.pending;
 }
 
-export function buildFallbackTransaction(name, source, checksums) {
+export function buildFallbackTransaction(name, source, checksums, baseline = null) {
+  if (baseline) assertBaselineFiles(baseline, checksums);
   const checksum = hashSql(source);
   if (checksums[name] !== checksum) throw new Error(`SQL checksum changed while preparing ${name}`);
   const statements = splitSqlStatements(source).filter((statement) => stripLeadingComments(statement));
@@ -124,8 +129,9 @@ export function buildFallbackTransaction(name, source, checksums) {
     id, name, checksum,
     queries: [
       { text: `SELECT set_config('lock_timeout', '5s', true), set_config('statement_timeout', '60s', true),
-          set_config('wc.migration_name', $1, true), set_config('wc.migration_checksums', $2, true)`,
-        values: [name, JSON.stringify(checksums)] },
+          set_config('timezone', 'UTC', true), set_config('wc.migration_name', $1, true),
+          set_config('wc.migration_checksums', $2, true), set_config('wc.baseline_ids', $3, true)`,
+        values: [name, JSON.stringify(checksums), JSON.stringify(baseline?.exceptions.map((entry) => entry.id) ?? [])] },
       { text: `DO $guard$
         BEGIN
           -- Prisma's migration advisory-lock key; try rather than wait so a
@@ -133,9 +139,11 @@ export function buildFallbackTransaction(name, source, checksums) {
           IF NOT pg_try_advisory_xact_lock(72707369) THEN
             RAISE EXCEPTION 'Another migration is running; inspect health before retrying' USING ERRCODE = '55P03';
           END IF;
+          ${baseline ? baselineGuardBody(baseline) : ""}
           IF EXISTS (SELECT 1 FROM _prisma_migrations m WHERE m.rolled_back_at IS NULL
-            AND (m.finished_at IS NULL OR m.checksum IS DISTINCT FROM
-              (current_setting('wc.migration_checksums')::jsonb ->> m.migration_name))) THEN
+            AND (m.finished_at IS NULL OR (m.checksum IS DISTINCT FROM
+              (current_setting('wc.migration_checksums')::jsonb ->> m.migration_name)
+              AND NOT (current_setting('wc.baseline_ids')::jsonb ? m.id)))) THEN
             RAISE EXCEPTION 'Migration history changed or needs reconciliation; no SQL applied';
           END IF;
           IF EXISTS (SELECT 1 FROM _prisma_migrations WHERE rolled_back_at IS NULL

@@ -1,6 +1,6 @@
 ---
 name: gt-migrate
-description: "Design, generate, diagnose, or deploy a Wisconsin Creative Prisma/Neon migration using the repository direct-connection wrappers. Distinguish offline schema work from isolated development and live mutation."
+description: "Design, generate, diagnose, or deploy Wisconsin Creative Prisma/Neon migrations through repository wrappers."
 ---
 
 # GT Migrate

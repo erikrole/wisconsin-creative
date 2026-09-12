@@ -53,6 +53,7 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
       scanValue,
       kioskLocationId: kiosk.locationId,
       actorUserId: operationalActorId,
+      deviceContext: req.headers.get("user-agent") ?? "kiosk",
     }),
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
   );

@@ -10,7 +10,7 @@
 | `src/lib/services/auto-assign.ts` | 92 |
 | `src/lib/services/auto-fill-preview.ts` | 325 |
 | `src/lib/services/availability-conflict-recompute.ts` | 130 |
-| `src/lib/services/availability.ts` | 631 |
+| `src/lib/services/availability.ts` | 670 |
 | `src/lib/services/blast-targeting.ts` | 165 |
 | `src/lib/services/blasts.ts` | 358 |
 | `src/lib/services/booking-custody.ts` | 82 |
@@ -24,7 +24,7 @@
 | `src/lib/services/bookings.ts` | 8 |
 | `src/lib/services/bulk-assignment-batches.ts` | 252 |
 | `src/lib/services/bulk-schedule-assignment.ts` | 969 |
-| `src/lib/services/bulk-unit-scans.ts` | 690 |
+| `src/lib/services/bulk-unit-scans.ts` | 699 |
 | `src/lib/services/calendar-sync-health.ts` | 165 |
 | `src/lib/services/calendar-sync.ts` | 734 |
 | `src/lib/services/candidate-scoring.ts` | 439 |
@@ -191,7 +191,8 @@
 | `src/lib/resource-assets-client.ts` | 20 |
 | `src/lib/resource-assets-storage.ts` | 75 |
 | `src/lib/resource-assets.ts` | 865 |
-| `src/lib/resource-import.ts` | 469 |
+| `src/lib/resource-import-images.ts` | 102 |
+| `src/lib/resource-import.ts` | 189 |
 | `src/lib/resource-search.ts` | 124 |
 | `src/lib/role-preview.ts` | 226 |
 | `src/lib/sanitize.ts` | 40 |
@@ -245,7 +246,7 @@
 | `src/lib/user-list-cache.ts` | 73 |
 | `src/lib/user-visibility.ts` | 85 |
 | `src/lib/utils.ts` | 7 |
-| `src/lib/validation.ts` | 875 |
+| `src/lib/validation.ts` | 876 |
 | `src/lib/venue-mapping-audit.ts` | 56 |
 | `src/lib/venue-mapping-contract.ts` | 46 |
 | `src/lib/venue-tone.ts` | 135 |

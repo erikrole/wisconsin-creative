@@ -1,6 +1,6 @@
 ---
 name: make-interfaces-feel-better
-description: "Explicit-only compatibility alias for Wisconsin Creative gt-page. Use when the user invokes make-interfaces-feel-better; the canonical workflow owns all guidance."
+description: "Explicit alias for focused Wisconsin Creative UI polish through gt-page."
 ---
 
 # Compatibility alias

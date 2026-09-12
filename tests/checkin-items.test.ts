@@ -67,6 +67,7 @@ function makeOpenCheckout(serializedItems: { assetId: string; allocationStatus: 
   return {
     id: "booking-1",
     kind: "CHECKOUT",
+    custodyScope: "PERSON",
     status: "OPEN",
     locationId: "loc-1",
     requesterUserId: "user-1",

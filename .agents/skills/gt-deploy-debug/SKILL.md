@@ -1,6 +1,6 @@
 ---
 name: gt-deploy-debug
-description: Wisconsin Creative deployment diagnosis and recovery workflow. Use when the user runs /gt-deploy-debug or a Vercel build, production runtime, Prisma or Neon migration, cron, environment, authentication, or release deployment fails. Reproduce the real failure and fix the smallest safe root cause.
+description: "Diagnose and repair Wisconsin Creative build, Vercel runtime, migration, or deployment failures from current evidence."
 ---
 
 # GT Deploy Debug
@@ -9,7 +9,7 @@ Treat the deployment failure as the bounded task. Do not mix in unrelated cleanu
 
 ## Gather evidence
 
-1. Read `AGENTS.md`, `package.json`, `vercel.json`, the Prisma/Neon runbook, gaps, current deployment logs, and the active ledger.
+1. Inspect `AGENTS.md`, current deployment logs, and the scripts/configuration for the failing phase. Read the Prisma/Neon runbook for database failures and relevant gaps or ledger entries when they explain the failure.
 2. Read the scripts and source files named by the failure completely.
 3. Record environment, commit, deployment, timestamp, failing phase, and exact error without exposing secrets.
 4. Reproduce with the narrowest safe local command.
@@ -30,7 +30,7 @@ Use wrapper-backed migration health before diagnosing database drift. Use `build
 - Required live access or logs are unavailable: stop the dependent live operation, state the missing evidence, and continue independent source diagnosis.
 - A fix would require destructive or unapproved shared-database changes.
 - Live migration history disagrees with local folders.
-- The same repair attempt fails twice without new evidence.
+- Repeated failure without new evidence: re-plan the approach and continue independent diagnosis; report a blocker only when no supported repair remains.
 
 ## Closeout
 

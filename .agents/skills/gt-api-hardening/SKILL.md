@@ -1,6 +1,6 @@
 ---
 name: gt-api-hardening
-description: "Audit or fix a Wisconsin Creative API route family for authorization, validation, concurrency, auditability, bounded work, and client recovery. Audit-only requests stay read-only."
+description: "Audit or fix Wisconsin Creative API authorization, validation, concurrency, audit evidence, and failure recovery."
 ---
 
 # GT API Hardening

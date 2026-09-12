@@ -15,7 +15,8 @@ describe("kiosk active checkout edits", () => {
     expect(route).toContain("export const POST = withKiosk");
     expect(route).toContain("export const DELETE = withKiosk");
     expect(route).toContain("status: \"OPEN\"");
-    expect(route).not.toContain("locationId: args.locationId");
+    const editableCheckoutGuard = route.slice(route.indexOf("async function requireEditableCheckout"), route.indexOf("function activeBulkQuantity"));
+    expect(editableCheckoutGuard).not.toContain("locationId: args.locationId");
     expect(route).toContain("Prisma.TransactionIsolationLevel.Serializable");
     expect(route).toContain("createAuditEntryTx(tx");
     expect(route).toContain("itemName:");
@@ -39,8 +40,8 @@ describe("kiosk active checkout edits", () => {
     const drawer = source("ios/Wisconsin/Kiosk/KioskCheckoutDetailSheet.swift");
     const dashboardRoute = source("src/app/api/kiosk/dashboard/route.ts");
 
-    expect(dashboardRoute).toContain("requesterId: c.requester.id");
-    expect(dashboardRoute).toContain("requesterId: entry.booking.requester.id");
+    expect(dashboardRoute).toContain('requesterId: c.custodyScope === "SHARED" ? null : c.requester.id');
+    expect(dashboardRoute).toContain('requesterId: entry.booking.custodyScope === "SHARED" ? null : entry.booking.requester.id');
     expect(models).toContain("let requesterId: String?");
     expect(models).toContain("struct KioskActiveCheckoutMutationResult");
 

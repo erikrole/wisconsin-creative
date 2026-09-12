@@ -53,6 +53,8 @@ struct KioskCheckoutDetailSheet: View {
     @State private var pendingRemoval: KioskCheckoutDetail.ReturnItem?
     @State private var mutationMessage: KioskMutationMessage?
     @State private var showCamera = false
+    @State private var scanQueue = KioskScanQueue()
+    @State private var presentationGeneration = UUID()
 
     private enum ActiveMutation: Equatable {
         case savingDetails
@@ -68,7 +70,7 @@ struct KioskCheckoutDetailSheet: View {
         canEditActiveCheckout
             && scannerCaptureEnabled
             && !titleFocused
-            && !isMutating
+            && (activeMutation == nil || activeMutation == .addingItem)
             && pendingRemoval == nil
             && !showCamera
     }
@@ -137,7 +139,7 @@ struct KioskCheckoutDetailSheet: View {
 
             if canEditActiveCheckout {
                 HIDScannerField(isEnabled: shouldListenForItemScans) { value in
-                    Task { await addItem(scanValue: value) }
+                    enqueueScan(value)
                 }
                 .frame(width: 1, height: 1)
                 .opacity(0)
@@ -158,8 +160,11 @@ struct KioskCheckoutDetailSheet: View {
             armScannerCapture()
         }
         .onDisappear {
+            presentationGeneration = UUID()
+            scanQueue.reset()
             scannerCaptureEnabled = false
         }
+        .interactiveDismissDisabled(isMutating || !scanQueue.isEmpty)
         .onChange(of: titleFocused) { _, isFocused in
             // Report focus so the shell's keyboard popup can arm for this
             // field the same way it does for checkout setup.
@@ -173,7 +178,7 @@ struct KioskCheckoutDetailSheet: View {
             KioskBarcodeCameraView(
                 feedbackMessage: mutationMessage?.text,
                 feedbackTone: mutationMessage?.tone,
-                onScan: { value in Task { await addItem(scanValue: value) } },
+                onScan: { value in enqueueScan(value) },
                 onCancel: { showCamera = false }
             )
         }
@@ -297,12 +302,14 @@ struct KioskCheckoutDetailSheet: View {
                 .buttonStyle(.glassProminent)
                 .tint(Color.kioskRed)
                 .controlSize(.large)
+                .disabled(isMutating || !scanQueue.isEmpty)
             }
             Button("Done") { dismiss() }
                 .font(.headline.weight(.semibold))
                 .foregroundStyle(KioskText.primary)
                 .buttonStyle(.glass)
                 .controlSize(.large)
+                .disabled(isMutating || !scanQueue.isEmpty)
         }
     }
 
@@ -420,7 +427,7 @@ struct KioskCheckoutDetailSheet: View {
 
             HStack(spacing: 12) {
                 if activeMutation == .addingItem {
-                    Label("Adding scanned item...", systemImage: "arrow.triangle.2.circlepath")
+                    Label("Saving \(scanQueue.count) scan\(scanQueue.count == 1 ? "" : "s")…", systemImage: "arrow.triangle.2.circlepath")
                         .font(KioskType.chip)
                         .foregroundStyle(KioskStatus.active)
                     ProgressView()
@@ -635,6 +642,7 @@ struct KioskCheckoutDetailSheet: View {
     }
 
     private func saveDetails() async {
+        guard activeMutation == nil, scanQueue.isEmpty else { return }
         guard let actorId else { return }
         let title = editTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !title.isEmpty else {
@@ -647,7 +655,7 @@ struct KioskCheckoutDetailSheet: View {
                 id: context.checkoutId,
                 actorId: actorId,
                 title: title,
-                endsAt: editEndsAt
+                endsAt: editEndsAt == detail?.endsAt ? nil : editEndsAt
             )
             showMutationMessage(tone: result.success ? .success : .warning, text: result.message ?? result.error ?? "Checkout updated")
             await load()
@@ -658,14 +666,36 @@ struct KioskCheckoutDetailSheet: View {
         activeMutation = nil
     }
 
+    private func enqueueScan(_ value: String) {
+        guard scanQueue.enqueue(value) else {
+            showMutationMessage(tone: .warning, text: "Already waiting for that scan")
+            KioskScanFeedbackSound.playFailure()
+            return
+        }
+        processNextScanIfNeeded()
+    }
+
+    private func processNextScanIfNeeded() {
+        guard activeMutation == nil, let entry = scanQueue.next() else { return }
+        let generation = presentationGeneration
+        Task {
+            await addItem(scanValue: entry.value)
+            guard presentationGeneration == generation else { return }
+            scanQueue.finish(entry)
+            processNextScanIfNeeded()
+        }
+    }
+
     private func addItem(scanValue: String) async {
         guard let actorId else { return }
         let value = scanValue.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !value.isEmpty else { return }
         guard activeMutation == nil else { return }
+        let generation = presentationGeneration
         activeMutation = .addingItem
         do {
             let result = try await KioskAPI.shared.kioskAddActiveCheckoutItem(id: context.checkoutId, actorId: actorId, scanValue: value)
+            guard presentationGeneration == generation else { return }
             showMutationMessage(tone: result.success ? .success : .warning, text: result.message ?? result.error ?? "Scan handled")
             if result.success {
                 await load()

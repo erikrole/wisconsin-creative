@@ -416,6 +416,31 @@ describe("stageKioskReservationPickupBulkUnit", () => {
 });
 
 describe("scanKioskCheckinBulkUnit", () => {
+  it("records exact battery return evidence and the shared-checkout operator", async () => {
+    const tx = makeTx();
+    tx.booking.findUnique.mockResolvedValue({
+      ...pickupBooking, status: "OPEN", custodyScope: "SHARED", locationId: "loc-origin",
+      requesterUserId: "compatibility-owner", bulkItems: [{ ...pickupBooking.bulkItems[0], checkedOutQuantity: 2, checkedInQuantity: 0 }],
+    });
+    tx.bulkSkuUnit.findUnique.mockResolvedValue({ id: "unit-7", bulkSkuId: "sku-1", unitNumber: 7, status: "CHECKED_OUT" });
+    tx.bookingBulkUnitAllocation.findUnique.mockResolvedValue({ id: "allocation-1", checkedOutAt: new Date(), checkedInAt: null });
+    tx.bookingBulkItem.findMany.mockResolvedValue([{ checkedOutQuantity: 2, checkedInQuantity: 1 }]);
+    const result = await scanKioskCheckinBulkUnit(tx, {
+      bookingId: "booking-1", scanValue: "94e068d1-7", kioskLocationId: "loc-return",
+      actorUserId: "actual-operator", deviceContext: "WisconsinKiosk test",
+    });
+    expect(result).toEqual(expect.objectContaining({ success: true, completed: false, badgeEvent: null }));
+    expect(tx.bulkStockMovement.createMany).toHaveBeenCalledWith({ data: [expect.objectContaining({
+      actorUserId: "actual-operator", bulkSkuId: "sku-1", kind: "CHECKIN", quantity: 1, locationId: "loc-return",
+    })] });
+    expect(tx.scanEvent.create).toHaveBeenCalledWith({ data: {
+      bookingId: "booking-1", actorUserId: "actual-operator", scanType: "BULK_BIN", scanValue: "94e068d1-7",
+      success: true, phase: "CHECKIN", bulkSkuId: "sku-1", quantity: 1,
+      expectedLocationId: "loc-origin", actualLocationId: "loc-return", locationMismatch: true,
+      deviceContext: "WisconsinKiosk test",
+    } });
+  });
+
   it("returns only the scanned numbered unit", async () => {
     const tx = makeTx();
     tx.booking.findUnique.mockResolvedValue({

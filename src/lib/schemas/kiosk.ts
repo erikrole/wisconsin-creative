@@ -25,6 +25,7 @@ const checkoutCompleteItem = z.union([
 
 export const checkoutCompleteBody = z.object({
   actorId: cuidish,
+  requestId: z.string().max(64).optional(),
   locationId: cuidish.optional(),
   items: z.array(checkoutCompleteItem)
     .min(1, "At least one item required")
@@ -106,6 +107,7 @@ export type ResolveKioskScanBody = z.infer<typeof resolveKioskScanBody>;
 
 export const pickupConfirmBody = z.object({
   actorId: cuidish,
+  requestId: z.string().max(64).optional(),
   // Reservation pickups may hand over only the items already scanned. The
   // source reservation stays BOOKED until a later pickup finishes the rest.
   partial: z.boolean().optional().default(false),

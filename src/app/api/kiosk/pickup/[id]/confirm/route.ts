@@ -1,3 +1,4 @@
+import { rejectKioskOperation, kioskOperationContext, readKioskOperationReceipt, claimKioskOperationReceiptTx, finishKioskOperationReceiptTx } from "@/lib/services/kiosk-operation-receipts";
 import { BookingCustodyScope, BookingKind, Prisma, type Role } from "@prisma/client";
 import { db } from "@/lib/db";
 import { withKiosk } from "@/lib/api";
@@ -15,7 +16,14 @@ import { parseDerivedBulkUnitQr } from "@/lib/bulk-unit-qr";
  */
 export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => {
   const badgeWindowStart = new Date(Date.now() - 1);
-  const { actorId, partial } = pickupConfirmBody.parse(await req.json());
+  const body = pickupConfirmBody.parse(await req.json());
+  const { actorId, partial } = body;
+  const receipt = kioskOperationContext({ requestId: body.requestId, kioskId: kiosk.kioskId, actorId, operation: "pickup", sourceId: params.id, payload: body });
+  const replay = await readKioskOperationReceipt(db, receipt);
+  if (replay) return ok(replay);
+  try {
+  let itemCount = 0;
+  let actualPartial = false;
   let openedBookingId = params.id;
   let openedSourceKey = params.id;
   let openedPersonalUserId: string | null = actorId;
@@ -72,6 +80,8 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
       }
 
       if (booking.kind === "RESERVATION") return;
+      await claimKioskOperationReceiptTx(tx, receipt);
+      itemCount = booking.serializedItems.length + booking.bulkItems.reduce((sum, item) => sum + item.plannedQuantity, 0);
 
       if (booking.custodyScope !== BookingCustodyScope.SHARED && booking.requesterUserId !== actorId) {
         throw new HttpError(403, "Only the current checkout owner can confirm pickup at the kiosk");
@@ -135,6 +145,7 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
           locationName: kiosk.locationName,
         },
       });
+      await finishKioskOperationReceiptTx(tx, receipt, { success: true, bookingId: params.id, itemCount, partial: false });
     },
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
   );
@@ -323,6 +334,7 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
     const eventIds = sourceReservation.events.map((event) => event.eventId);
     const checkout = await createBooking({
       kind: BookingKind.CHECKOUT,
+      kioskCompletionReceipt: receipt,
       custodyScope: sourceReservation.custodyScope,
       custodySource: "KIOSK",
       title: sourceReservation.title,
@@ -349,6 +361,8 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
       bulkUnitItems,
     });
 
+    itemCount = selectedSerializedAssetIds.length + bulkItems.reduce((sum, item) => sum + item.quantity, 0);
+    actualPartial = (await db.booking.findUnique({ where: { id: params.id }, select: { status: true } }))?.status === "BOOKED";
     await createAuditEntry({
       actorId,
       actorRole,
@@ -387,7 +401,15 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
   return ok({
     success: true,
     bookingId: openedBookingId,
-    ...(partial ? { partial: true } : {}),
+    itemCount,
+    partial: actualPartial,
     ...(earnedBadges.length > 0 ? { earnedBadges } : {}),
   });
+  } catch (error) {
+    const replay = await readKioskOperationReceipt(db, receipt);
+    if (replay) return ok(replay);
+    const rejected = await rejectKioskOperation(db, receipt, error);
+    if (rejected) return ok(rejected);
+    throw error;
+  }
 });

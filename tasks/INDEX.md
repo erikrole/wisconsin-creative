@@ -37,6 +37,8 @@ Audit files intentionally remain at root for now because the repo audit skills r
 
 ## Active Follow-up Ledgers
 
+- `resource-import-hardening-plan-2026-09-11.md` - backend guide importer audit fixes and verification; Preview migration provenance, image credentials and authenticated apply/read-back remain gated.
+
 - `ios-notifications-polish-plan-2026-09-07.md` - native inbox, reminder and settings polish; local tests and visual evidence tracked separately from APNs/device acceptance.
 
 - `database-audit-plan-2026-09-07.md` - production integrity and migration-checksum audit, local overlap-guard repair, and remaining historical reconciliation/application gates.

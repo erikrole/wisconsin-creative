@@ -1,6 +1,6 @@
 ---
 name: prisma-migrate-safely
-description: "Explicit-only compatibility alias for Wisconsin Creative gt-migrate. Use when the user invokes prisma-migrate-safely; the canonical workflow owns all guidance."
+description: "Explicit alias for Wisconsin Creative Prisma/Neon migrations through gt-migrate."
 ---
 
 # Compatibility alias

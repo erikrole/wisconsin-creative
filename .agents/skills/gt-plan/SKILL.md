@@ -1,13 +1,13 @@
 ---
 name: gt-plan
-description: "Plan a substantial Wisconsin Creative feature, fix, or follow-up from current source. Use for explicit planning or multi-step work needing a durable plan; small implementation tasks can plan inline."
+description: "Plan a substantial Wisconsin Creative feature, fix, or follow-up from current source and acceptance criteria."
 ---
 
 # GT Plan
 
 Produce a bounded path to the requested outcome, then continue implementation if already requested. A plan is not an extra approval gate.
 
-1. Inspect working-tree scope, `AGENTS.md`, `docs/NORTH_STAR.md`, the owner source, and relevant area/brief contracts. Search decisions, risks, and lessons for this issue. Inspect schema only when data contracts change.
+1. Inspect working-tree scope, `AGENTS.md`, the owner source, and relevant area/brief contracts. Consult `docs/NORTH_STAR.md` when product direction affects the plan. Search decisions, risks, and lessons for this issue. Inspect schema only when data contracts change.
 2. Identify the user-visible outcome, owner area, current evidence, and unresolved decisions. Separate checkout changes from deployed/runtime state.
 3. Reuse an existing owner plan when it belongs to this work. Consult `tasks/README.md` and `tasks/INDEX.md` before creating a durable plan or moving one. For a small task, an inline bounded plan is sufficient.
 4. Choose the smallest coherent first slice. Split schema/service/client work when independently verifiable; do not force every task into five fixed phases.

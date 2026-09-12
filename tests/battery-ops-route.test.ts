@@ -7,6 +7,7 @@ vi.mock("@/lib/auth", () => ({
 
 vi.mock("@/lib/db", () => ({
   db: {
+    $transaction: vi.fn((queries: Promise<unknown>[]) => Promise.all(queries)),
     bulkSku: { findMany: vi.fn() },
     asset: { findMany: vi.fn() },
     bookingBulkUnitAllocation: { findMany: vi.fn() },
@@ -61,6 +62,32 @@ beforeEach(() => {
 });
 
 describe("battery ops live counts", () => {
+  it.each(["PENDING_PICKUP", "COMPLETED"])("does not advertise an unreturned %s allocation as available or repairable", async (status) => {
+    vi.mocked(db.bulkSku.findMany).mockResolvedValue(batterySkus([{
+      id: "sku-battery", name: "Sony Battery", category: "Batteries", trackByNumber: true,
+      minThreshold: 4, binQrCodeValue: "sony", location: { id: "loc-1", name: "Camp Randall" },
+      categoryRel: null, balances: [], products: [],
+      units: [{ id: "held-unit", unitNumber: 7, status: BulkUnitStatus.CHECKED_OUT, notes: null }],
+    }]));
+    vi.mocked(db.asset.findMany).mockResolvedValue(cameraAssets([]));
+    vi.mocked(db.bookingBulkUnitAllocation.findMany).mockResolvedValue(unitAllocations([{
+      bulkSkuUnitId: "held-unit", checkedOutAt: new Date("2026-09-01T12:00:00Z"), createdAt: new Date("2026-09-01T12:00:00Z"),
+      bookingBulkItem: { booking: {
+        id: "booking-1", title: "Travel gear", refNumber: "CO-1001", status,
+        endsAt: new Date("2026-09-02T12:00:00Z"), requester: { name: "Operator" },
+      } },
+    }]));
+    const res = await getBatteryOps(makeGetRequest("/api/bulk-skus/batteries"), noParams);
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(db.bookingBulkUnitAllocation.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { checkedOutAt: { not: null }, checkedInAt: null },
+    }));
+    expect(body.data.skus[0].counts).toEqual({ total: 1, available: 0, checkedOut: 1, lost: 0, retired: 0 });
+    expect(body.data.integrity.staleCheckedOutCount).toBe(0);
+    expect(body.data.skus[0].units[0].booking.id).toBe("booking-1");
+  });
+
   it("returns no-store battery metrics derived from numbered unit status", async () => {
     vi.mocked(db.bulkSku.findMany).mockResolvedValue(batterySkus([
       {
@@ -163,6 +190,7 @@ describe("battery ops live counts", () => {
     const body = await res.json();
 
     expect(res.headers.get("cache-control")).toBe("private, no-store");
+    expect(db.$transaction).toHaveBeenCalledWith(expect.any(Array), { isolationLevel: "RepeatableRead" });
     expect(body.data.totals).toEqual({
       total: 4,
       available: 1,
@@ -311,12 +339,6 @@ describe("battery ops live counts", () => {
       where: expect.objectContaining({
         checkedOutAt: { not: null },
         checkedInAt: null,
-        bookingBulkItem: {
-          booking: {
-            kind: "CHECKOUT",
-            status: "OPEN",
-          },
-        },
       }),
     }));
     expect(body.data.skus[0].units[0]).toEqual(expect.objectContaining({

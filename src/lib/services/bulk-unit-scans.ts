@@ -458,7 +458,7 @@ export async function stageKioskReservationPickupBulkUnit(
  */
 export async function scanKioskCheckinBulkUnit(
   tx: TxClient,
-  args: { bookingId: string; scanValue: string; kioskLocationId: string; actorUserId: string },
+  args: { bookingId: string; scanValue: string; kioskLocationId: string; actorUserId: string; deviceContext?: string | null },
 ): Promise<KioskUnitScanResult<{ completed: boolean; badgeEvent: CheckoutReturnedBadgeEvent | null }>> {
   const booking = await tx.booking.findUnique({
     where: { id: args.bookingId },
@@ -584,10 +584,19 @@ export async function scanKioskCheckinBulkUnit(
   await upsertBulkBalancesAndMovements(tx, {
     bookingId: booking.id,
     locationId: args.kioskLocationId,
-    actorUserId: booking.requesterUserId,
+    actorUserId: args.actorUserId,
     kind: BulkMovementKind.CHECKIN,
     items: [{ bulkSkuId: bulkItem.bulkSkuId, quantity: 1 }],
   });
+
+  await tx.scanEvent.create({ data: {
+    bookingId: booking.id, actorUserId: args.actorUserId,
+    scanType: "BULK_BIN", scanValue: args.scanValue, success: true,
+    phase: "CHECKIN", bulkSkuId: bulkItem.bulkSkuId, quantity: 1,
+    deviceContext: args.deviceContext ?? "kiosk", actualLocationId: args.kioskLocationId,
+    expectedLocationId: booking.locationId,
+    locationMismatch: args.kioskLocationId !== booking.locationId,
+  } });
 
   const completedAt = await maybeAutoComplete(tx, booking.id, booking.locationId, args.actorUserId, {
     auditAction: "auto_completed_by_kiosk_checkin",

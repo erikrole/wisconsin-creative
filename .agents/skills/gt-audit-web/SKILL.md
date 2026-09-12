@@ -1,6 +1,6 @@
 ---
 name: gt-audit-web
-description: Canonical read-only Wisconsin Creative web readiness audit. Use when the user runs /gt-audit-web, asks to audit a route or page, asks whether a web surface is ready to ship, or wants prioritized findings before deciding what to fix. Findings-only unless the same request also asks for fixes.
+description: "Audit Wisconsin Creative web workflow readiness using current source, product contracts, and authenticated runtime evidence."
 ---
 
 # GT Audit Web
@@ -9,7 +9,7 @@ Audit one route or tightly related route family from current source and runtime 
 
 ## Orient
 
-1. Use the already-read `AGENTS.md` and `docs/NORTH_STAR.md`; inspect relevant sections of `docs/DESIGN_LANGUAGE.md`, the owning area and brief docs, decisions, gaps, active ledger, and prior audit.
+1. Use `AGENTS.md`; consult `docs/NORTH_STAR.md` when product direction is relevant. Inspect the owning sections of `docs/DESIGN_LANGUAGE.md`, the owning area and brief docs, decisions, gaps, active ledger, and prior audit.
 2. Read the target route and trace direct consumers/dependencies needed to evaluate the requested workflow. Expand only when evidence points beyond that boundary.
 3. Inspect `git status --short` and distinguish shipped source from unrelated or active dirty work.
 4. Map routes to their real owner area. A route name does not need a same-named `AREA_*.md`; flag missing documentation only when no accepted owner exists.

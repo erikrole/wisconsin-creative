@@ -1,6 +1,6 @@
 ---
 name: gt-ship
-description: "Verify and perform the explicitly requested Wisconsin Creative commit, push, PR, deployment, or release for a bounded slice. Preserve unrelated dirty work and report each completed publication step."
+description: "Perform the requested Wisconsin Creative commit, push, PR, deployment, or release for a verified, bounded slice."
 ---
 
 # GT Ship

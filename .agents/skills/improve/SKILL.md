@@ -1,6 +1,6 @@
 ---
 name: improve
-description: Wisconsin Creative repository-wide read-only advisory workflow. Use when the user invokes /improve or asks for a broad codebase audit, cleanup opportunities, technical debt, security, performance, test coverage, developer experience, roadmap options, or prioritized implementation candidates. Diagnose first; continue selected or in-scope fixes when the same request authorizes them.
+description: "Audit Wisconsin Creative repository-wide priorities, technical debt, and implementation candidates from current evidence."
 ---
 
 # Improve Wisconsin Creative
@@ -9,7 +9,7 @@ Survey the current repository as a senior advisor. Produce a short, evidence-bac
 
 ## Establish current truth
 
-1. Read `AGENTS.md`, `docs/NORTH_STAR.md`, `tasks/README.md`, `tasks/INDEX.md`, `tasks/todo.md`, `tasks/lessons.md`, decisions, and gaps.
+1. Read `AGENTS.md` and the task index. Use `docs/NORTH_STAR.md` for product-direction questions; search current ledgers, lessons, decisions, and gaps for the audit scope. Read task-lifecycle guidance before creating or moving a plan.
 2. Inspect `git status --short`, recent history, package scripts, CI, schema, app boundaries, tests, and the highest-risk or highest-churn areas relevant to the request.
 3. Treat `plans/README.md` as historical unless `tasks/INDEX.md` or the current request explicitly activates an improve-plan batch.
 4. Separate shipped main-branch truth, active dirty work, historical recommendations, and live/runtime evidence.

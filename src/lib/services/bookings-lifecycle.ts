@@ -1,3 +1,4 @@
+import { claimKioskOperationReceiptTx, finishKioskOperationReceiptTx, type KioskOperationContext } from "@/lib/services/kiosk-operation-receipts";
 import {
   AllocationKind,
   BookingCustodyScope,
@@ -17,7 +18,7 @@ import {
   createAuditEntryTx,
   lookupActorRole,
 } from "@/lib/audit";
-import { checkAvailability, type BulkRequest } from "@/lib/services/availability";
+import { checkAvailability, checkCheckoutDueTime, type BulkRequest } from "@/lib/services/availability";
 import { ACTIVE_BULK_UNIT_ALLOCATION_WHERE, CLAIMABLE_BULK_UNIT_WHERE, effectiveBulkUnitStatus } from "@/lib/bulk-unit-status";
 import { parseDerivedBulkUnitQr } from "@/lib/bulk-unit-qr";
 import { nextBookingRef } from "@/lib/services/booking-ref";
@@ -60,6 +61,8 @@ import {
 import { assertBookingSnapshot } from "@/lib/booking-concurrency";
 
 type CreateBookingInput = {
+  /** Internal kiosk completion receipt, committed atomically with custody. */
+  kioskCompletionReceipt?: KioskOperationContext;
   kind: BookingKind;
   custodyScope?: BookingCustodyScope;
   /** Reservation-only concurrency cap. When present, the active BOOKED count
@@ -389,6 +392,8 @@ export async function createBooking(input: CreateBookingInput) {
     const booking = await withSerializationRetry(() =>
       db.$transaction(
         async (tx) => {
+          await claimKioskOperationReceiptTx(tx, input.kioskCompletionReceipt);
+          let hasRemainingReservationItems = false;
           let resolvedCustodyScope = input.custodyScope ?? BookingCustodyScope.PERSON;
           // A missing requester would otherwise surface as an FK 500; an inactive
           // one would silently hold gear they can no longer account for.
@@ -876,6 +881,21 @@ export async function createBooking(input: CreateBookingInput) {
               }))
             });
 
+            // A reservation pickup transfers the same physical assets into the
+            // linked checkout. Release only this selected subset before creating
+            // the replacement allocations so the active-allocation constraint
+            // does not mistake the atomic handoff for competing custody.
+            if (input.sourceReservationId) {
+              await tx.assetAllocation.updateMany({
+                where: {
+                  bookingId: input.sourceReservationId,
+                  assetId: { in: resolvedSerializedAssetIds },
+                  active: true,
+                },
+                data: { active: false },
+              });
+            }
+
             await tx.assetAllocation.createMany({
               data: resolvedSerializedAssetIds.map((assetId) => ({
                 bookingId: booking.id,
@@ -903,7 +923,7 @@ export async function createBooking(input: CreateBookingInput) {
                   bookingId: booking.id,
                   bulkSkuId: item.bulkSkuId,
                   plannedQuantity: item.quantity,
-                  ...(checkedOutQuantity === undefined ? {} : { checkedOutQuantity }),
+                  ...(input.kind === BookingKind.CHECKOUT ? { checkedOutQuantity: checkedOutQuantity ?? item.quantity } : {}),
                 };
               })
             });
@@ -1090,6 +1110,7 @@ export async function createBooking(input: CreateBookingInput) {
                 return pickedQuantity < item.plannedQuantity;
               });
               const sourceCompleted = remainingSerializedCount === 0 && !hasRemainingBulk;
+              hasRemainingReservationItems = !sourceCompleted;
 
               if (selectedSerializedAssetIds.size > 0) {
                 await tx.bookingSerializedItem.updateMany({
@@ -1255,6 +1276,10 @@ export async function createBooking(input: CreateBookingInput) {
           const createdBooking = await tx.booking.findUniqueOrThrow({
             where: { id: booking.id },
             include: bookingInclude
+          });
+          await finishKioskOperationReceiptTx(tx, input.kioskCompletionReceipt, {
+            success: true, bookingId: booking.id, partial: hasRemainingReservationItems,
+            itemCount: resolvedSerializedAssetIds.length + resolvedBulkItems.reduce((sum, item) => sum + item.quantity, 0),
           });
           return { booking: createdBooking, creationDisposition: "created" as const };
         },
@@ -1594,12 +1619,13 @@ export async function updateReservation(
       const updatesEquipment = updates.serializedAssetIds !== undefined || updates.bulkItems !== undefined;
       const updatesWindow = updates.startsAt !== undefined || updates.endsAt !== undefined || updates.locationId !== undefined;
 
-      const hasPickedUpEquipment =
-        existing.serializedItems.some((item) => item.allocationStatus === "picked_up")
-        || existing.bulkItems.some((item) => (item.checkedOutQuantity ?? 0) > 0);
-      if (updatesEquipment && hasPickedUpEquipment) {
-        throw new HttpError(409, "Equipment cannot be edited after a partial pickup");
+      const pickedAssetIds = new Set(existing.serializedItems.filter((item) => item.allocationStatus === "picked_up").map((item) => item.assetId));
+      const pickedBulkBySku = new Map(existing.bulkItems.map((item) => [item.bulkSkuId, item.checkedOutQuantity ?? 0]));
+      if ([...pickedAssetIds].some((id) => !serializedAssetIds.includes(id)) || existing.bulkItems.some((item) => (bulkItems.find((next) => next.bulkSkuId === item.bulkSkuId)?.quantity ?? 0) < (item.checkedOutQuantity ?? 0))) {
+        throw new HttpError(409, "Items already picked up must stay in reservation history. Edit the remaining items only.");
       }
+      const remainingAssetIds = serializedAssetIds.filter((id) => !pickedAssetIds.has(id));
+      const remainingBulkItems = bulkItems.map((item) => ({ bulkSkuId: item.bulkSkuId, quantity: item.quantity - (pickedBulkBySku.get(item.bulkSkuId) ?? 0) })).filter((item) => item.quantity > 0);
 
       if (updatesEquipment) {
         await assertNumberedPickupPlanLimit(tx, bulkItems);
@@ -1610,8 +1636,8 @@ export async function updateReservation(
           locationId: nextLocationId,
           startsAt: nextStartsAt,
           endsAt: nextEndsAt,
-          serializedAssetIds,
-          bulkItems,
+          serializedAssetIds: remainingAssetIds,
+          bulkItems: remainingBulkItems,
           excludeBookingId: bookingId,
           bookingKind: "RESERVATION",
         });
@@ -1634,51 +1660,34 @@ export async function updateReservation(
         }
       });
 
-      if (!updatesEquipment) {
-        if (updatesWindow) {
-          await tx.assetAllocation.updateMany({
-            where: { bookingId },
-            data: {
-              startsAt: nextStartsAt,
-              endsAt: nextEndsAt,
-            },
+      if (updatesEquipment) {
+        const currentAssetIds = new Set(existing.serializedItems.map((item) => item.assetId));
+        const removedIds = existing.serializedItems.filter((item) => !serializedAssetIds.includes(item.assetId)).map((item) => item.assetId);
+        const addedIds = serializedAssetIds.filter((id) => !currentAssetIds.has(id));
+        await tx.bookingSerializedItem.deleteMany({ where: { bookingId, assetId: { in: removedIds }, allocationStatus: "active" } });
+        await tx.assetAllocation.updateMany({ where: { bookingId, assetId: { in: removedIds }, active: true }, data: { active: false } });
+        if (addedIds.length) {
+          await tx.bookingSerializedItem.createMany({ data: addedIds.map((assetId) => ({ bookingId, assetId, allocationStatus: "active" })) });
+          await tx.assetAllocation.createMany({ data: addedIds.map((assetId) => ({ bookingId, assetId, startsAt: nextStartsAt, endsAt: nextEndsAt, active: true, kind: "RESERVATION" as const })) });
+        }
+        const nextSkuIds = bulkItems.map((item) => item.bulkSkuId);
+        await tx.bookingBulkItem.deleteMany({ where: { bookingId, bulkSkuId: { notIn: nextSkuIds }, checkedOutQuantity: 0 } });
+        for (const item of bulkItems) {
+          await tx.bookingBulkItem.upsert({
+            where: { bookingId_bulkSkuId: { bookingId, bulkSkuId: item.bulkSkuId } },
+            create: { bookingId, bulkSkuId: item.bulkSkuId, plannedQuantity: item.quantity },
+            update: { plannedQuantity: item.quantity },
           });
         }
-      } else {
-        await tx.bookingSerializedItem.deleteMany({ where: { bookingId } });
-        await tx.assetAllocation.deleteMany({ where: { bookingId } });
-        await tx.bookingBulkItem.deleteMany({ where: { bookingId } });
-
-        if (serializedAssetIds.length > 0) {
-          await tx.bookingSerializedItem.createMany({
-            data: serializedAssetIds.map((assetId) => ({
-              bookingId,
-              assetId,
-              allocationStatus: "active"
-            }))
-          });
-
-          await tx.assetAllocation.createMany({
-            data: serializedAssetIds.map((assetId) => ({
-              bookingId,
-              assetId,
-              startsAt: nextStartsAt,
-              endsAt: nextEndsAt,
-              active: true,
-              kind: "RESERVATION"
-            }))
-          });
-        }
-
-        if (bulkItems.length > 0) {
-          await tx.bookingBulkItem.createMany({
-            data: bulkItems.map((item) => ({
-              bookingId,
-              bulkSkuId: item.bulkSkuId,
-              plannedQuantity: item.quantity
-            }))
-          });
-        }
+        // Keep evidence but reset the remaining pickup checklist after a plan
+        // edit. Scans on derived checkouts remain the durable handoff record.
+        await tx.scanEvent.updateMany({
+          where: { bookingId, phase: "CHECKOUT", success: true, OR: [ { assetId: { notIn: [...pickedAssetIds] } }, { bulkSkuId: { not: null } } ] },
+          data: { success: false },
+        });
+      }
+      if (updatesWindow) {
+        await tx.assetAllocation.updateMany({ where: { bookingId, active: true }, data: { startsAt: nextStartsAt, endsAt: nextEndsAt } });
       }
 
       // Granular equipment audit entries
@@ -2184,7 +2193,9 @@ export async function updateCheckout(
         const extendsOpenCheckout = existing.status === BookingStatus.OPEN
           && updates.endsAt !== undefined
           && nextEndsAt > existing.endsAt;
-        const availability = await checkAvailability(tx, {
+        const availability = existing.status === BookingStatus.OPEN
+          ? await checkCheckoutDueTime(tx, existing, nextEndsAt)
+          : await checkAvailability(tx, {
           locationId: nextLocationId,
           startsAt: nextStartsAt,
           endsAt: nextEndsAt,
@@ -2621,7 +2632,9 @@ export async function extendBooking(
         quantity: i.plannedQuantity
       }));
 
-      const availability = await checkAvailability(tx, {
+      const availability = existing.kind === BookingKind.CHECKOUT && existing.status === BookingStatus.OPEN
+        ? await checkCheckoutDueTime(tx, existing, newEndsAt)
+        : await checkAvailability(tx, {
         locationId: existing.locationId,
         startsAt: existing.startsAt,
         endsAt: newEndsAt,

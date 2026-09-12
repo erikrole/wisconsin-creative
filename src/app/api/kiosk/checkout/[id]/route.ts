@@ -7,7 +7,7 @@ import { findAssetByScanValue } from "@/lib/services/kiosk-scan";
 import { findBulkUnitByScanValue } from "@/lib/services/bulk-unit-scans";
 import { parseDerivedBulkUnitQr } from "@/lib/bulk-unit-qr";
 import { CLAIMABLE_BULK_UNIT_WHERE } from "@/lib/bulk-unit-status";
-import { checkAvailability } from "@/lib/services/availability";
+import { checkAvailability, checkCheckoutDueTime } from "@/lib/services/availability";
 import { availabilityBlockedItemMessage } from "@/lib/availability-copy";
 import { upsertBulkBalancesAndMovements } from "@/lib/services/bookings-helpers";
 import { BookingCustodyScope, BookingKind, BulkMovementKind, BulkUnitStatus, Prisma, Role } from "@prisma/client";
@@ -16,7 +16,7 @@ import { updateCheckoutReturnLiveActivities } from "@/lib/services/live-activiti
 import { normalizeBookingTitle, normalizeTeamAbbreviations } from "@/lib/title-normalization";
 import { MAX_EQUIPMENT_SELECTIONS_PER_REQUEST } from "@/lib/request-limits";
 
-function hasBlockingAvailabilityIssue(result: Awaited<ReturnType<typeof checkAvailability>>) {
+function hasBlockingAvailabilityIssue(result: Pick<Awaited<ReturnType<typeof checkAvailability>>, "conflicts" | "shortages" | "unavailableAssets">) {
   return result.conflicts.length > 0 || result.shortages.length > 0 || result.unavailableAssets.length > 0;
 }
 
@@ -151,6 +151,7 @@ type KioskBulkDetailItem = {
   bulkSkuName: string;
   unitNumber: number | null;
   imageUrl: string | null;
+  quantity?: number;
 };
 
 /** Get checkout details for kiosk return and pickup flows */
@@ -165,6 +166,8 @@ export const GET = withKiosk<{ id: string }>(async (_req, { params }) => {
       kind: true,
       custodyScope: true,
       requesterUserId: true,
+      updatedAt: true,
+      locationId: true,
       endsAt: true,
       scanEvents: {
         where: {
@@ -335,6 +338,7 @@ export const GET = withKiosk<{ id: string }>(async (_req, { params }) => {
             id: `${bi.id}:bulk-quantity`,
             tagName: `x${remainingQuantity}`,
             name: quantityLabel(bi.bulkSku.name, remainingQuantity),
+            quantity: remainingQuantity,
             // Quantity-tracked stock is checked out as one aggregate ledger row,
             // so there is no physical per-unit QR scan for the native checklist.
             returned: true,
@@ -398,7 +402,7 @@ export const GET = withKiosk<{ id: string }>(async (_req, { params }) => {
           unitNumber: allocation.bulkSkuUnit.unitNumber,
           imageUrl: bi.bulkSku.imageUrl,
         }));
-        const missingQuantity = Math.max(0, activeBulkQuantity(bi) - bi.unitAllocations.length);
+        const missingQuantity = Math.max(0, activeBulkQuantity(bi) - bi.unitAllocations.filter((allocation) => !allocation.checkedInAt).length);
         if (missingQuantity <= 0) return activeAllocations;
         return [
           ...activeAllocations,
@@ -406,6 +410,7 @@ export const GET = withKiosk<{ id: string }>(async (_req, { params }) => {
             id: `${bi.id}:bulk-quantity`,
             tagName: `x${missingQuantity}`,
             name: quantityLabel(bi.bulkSku.name, missingQuantity),
+            quantity: missingQuantity,
             returned: false,
             type: "bulk_quantity" as const,
             bulkSkuId: bi.bulkSku.id,
@@ -458,6 +463,8 @@ export const GET = withKiosk<{ id: string }>(async (_req, { params }) => {
       : booking.requesterUserId,
     custodyScope: booking.custodyScope,
     endsAt: booking.endsAt,
+    updatedAt: booking.updatedAt,
+    locationId: booking.locationId,
     scanSummary: {
       serializedTotal: serializedItems.length,
       numberedBulkTotal,
@@ -484,35 +491,7 @@ export const PATCH = withKiosk<{ id: string }>(async (req, { kiosk, params }) =>
     }
 
     if (requestedEndsAt) {
-      const activeSerialized = await tx.bookingSerializedItem.findMany({
-        where: { bookingId: booking.id, allocationStatus: "active" },
-        select: { assetId: true },
-      });
-      const activeBulkUnits = await tx.bookingBulkUnitAllocation.findMany({
-        where: {
-          checkedOutAt: { not: null },
-          checkedInAt: null,
-          bookingBulkItem: { bookingId: booking.id },
-        },
-        select: {
-          bookingBulkItem: { select: { bulkSkuId: true } },
-        },
-      });
-      const bulkCounts = new Map<string, number>();
-      for (const allocation of activeBulkUnits) {
-        const bulkSkuId = allocation.bookingBulkItem.bulkSkuId;
-        bulkCounts.set(bulkSkuId, (bulkCounts.get(bulkSkuId) ?? 0) + 1);
-      }
-
-      const availability = await checkAvailability(tx, {
-        locationId: booking.locationId,
-        startsAt: booking.startsAt,
-        endsAt: requestedEndsAt,
-        serializedAssetIds: activeSerialized.map((item) => item.assetId),
-        bulkItems: [...bulkCounts.entries()].map(([bulkSkuId, quantity]) => ({ bulkSkuId, quantity })),
-        bookingKind: BookingKind.CHECKOUT,
-        excludeBookingId: booking.id,
-      });
+      const availability = await checkCheckoutDueTime(tx, booking, requestedEndsAt);
       if (hasBlockingAvailabilityIssue(availability)) {
         throw new HttpError(409, "One or more items are not available through that return time", availability);
       }
@@ -623,33 +602,36 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
         return { success: false, error: `${unit.bulkSku.name} #${unit.unitNumber} is no longer available` };
       }
 
+      const existingItem = await tx.bookingBulkItem.findUnique({
+        where: { bookingId_bulkSkuId: { bookingId: booking.id, bulkSkuId: unit.bulkSkuId } },
+      });
+      const previous = existingItem ? await tx.bookingBulkUnitAllocation.findUnique({
+        where: { bookingBulkItemId_bulkSkuUnitId: { bookingBulkItemId: existingItem.id, bulkSkuUnitId: unit.id } },
+      }) : null;
       const bulkItem = await tx.bookingBulkItem.upsert({
-        where: {
-          bookingId_bulkSkuId: {
-            bookingId: booking.id,
-            bulkSkuId: unit.bulkSkuId,
-          },
-        },
-        create: {
-          bookingId: booking.id,
-          bulkSkuId: unit.bulkSkuId,
-          plannedQuantity: 1,
-          checkedOutQuantity: 1,
-        },
-        update: {
-          plannedQuantity: { increment: 1 },
-          checkedOutQuantity: { increment: 1 },
-        },
+        where: { bookingId_bulkSkuId: { bookingId: booking.id, bulkSkuId: unit.bulkSkuId } },
+        create: { bookingId: booking.id, bulkSkuId: unit.bulkSkuId, plannedQuantity: 1, checkedOutQuantity: 1 },
+        update: previous?.checkedInAt
+          ? { checkedInQuantity: { decrement: 1 } }
+          : { plannedQuantity: { increment: 1 }, checkedOutQuantity: { increment: 1 } },
         select: { id: true },
       });
-
-      await tx.bookingBulkUnitAllocation.create({
-        data: {
-          bookingBulkItemId: bulkItem.id,
-          bulkSkuUnitId: unit.id,
-          checkedOutAt: now,
-        },
-      });
+      // One allocation is the current manifest state. Scan evidence retains
+      // every handoff, including the previous cycle before reopening the row.
+      if (previous?.checkedInAt) {
+        await tx.bookingBulkUnitAllocation.update({
+          where: { id: previous.id }, data: { checkedOutAt: now, checkedInAt: null },
+        });
+      } else {
+        await tx.bookingBulkUnitAllocation.create({
+          data: { bookingBulkItemId: bulkItem.id, bulkSkuUnitId: unit.id, checkedOutAt: now },
+        });
+      }
+      await tx.scanEvent.create({ data: {
+        bookingId: booking.id, actorUserId: actorId, scanType: "BULK_BIN", scanValue,
+        phase: "CHECKOUT", success: true, bulkSkuId: unit.bulkSkuId, quantity: 1,
+        deviceContext: JSON.stringify({ kioskId: kiosk.kioskId, previousCycle: previous?.checkedInAt ? { checkedOutAt: previous.checkedOutAt, checkedInAt: previous.checkedInAt } : null }), actualLocationId: kiosk.locationId,
+      } });
 
       // Unit status/allocation is the numbered-family source of truth. Repair
       // any older aggregate deficit before writing this exact checkout
@@ -794,7 +776,7 @@ export const DELETE = withKiosk<{ id: string }>(async (req, { kiosk, params }) =
         return { success: false, error: "Item is not active on this checkout" };
       }
 
-      await tx.bookingSerializedItem.delete({ where: { id: item.id } });
+      await tx.bookingSerializedItem.update({ where: { id: item.id }, data: { allocationStatus: "returned" } });
       await tx.assetAllocation.updateMany({
         where: { bookingId: booking.id, assetId: body.assetId, active: true },
         data: { active: false },
@@ -850,30 +832,21 @@ export const DELETE = withKiosk<{ id: string }>(async (req, { kiosk, params }) =
     if (!allocation) {
       return { success: false, error: "Battery unit is not active on this checkout" };
     }
-    if (allocation.bookingBulkItem.checkedInQuantity > 0) {
-      return { success: false, error: "Returned battery units cannot be removed from checkout history" };
+    if (allocation.bookingBulkItem.checkedOutQuantity <= allocation.bookingBulkItem.checkedInQuantity) {
+      throw new HttpError(409, "Battery counts do not match active custody. Refresh the checkout before editing.");
     }
-
-    await tx.bookingBulkUnitAllocation.delete({ where: { id: allocation.id } });
+    await tx.bookingBulkUnitAllocation.update({
+      where: { id: allocation.id }, data: { checkedInAt: new Date() },
+    });
     await tx.bulkSkuUnit.update({
-      where: { id: allocation.bulkSkuUnit.id },
-      data: { status: BulkUnitStatus.AVAILABLE },
+      where: { id: allocation.bulkSkuUnit.id }, data: { status: BulkUnitStatus.AVAILABLE },
+    });
+    await tx.bookingBulkItem.update({
+      where: { id: allocation.bookingBulkItem.id }, data: { checkedInQuantity: { increment: 1 } },
     });
 
-    if (allocation.bookingBulkItem.plannedQuantity <= 1) {
-      await tx.bookingBulkItem.delete({ where: { id: allocation.bookingBulkItem.id } });
-    } else {
-      await tx.bookingBulkItem.update({
-        where: { id: allocation.bookingBulkItem.id },
-        data: {
-          plannedQuantity: { decrement: 1 },
-          checkedOutQuantity: { decrement: 1 },
-        },
-      });
-    }
-
     await upsertBulkBalancesAndMovements(tx, {
-      locationId: booking.locationId,
+      locationId: kiosk.locationId,
       bookingId: booking.id,
       actorUserId: actorId,
       kind: BulkMovementKind.CHECKIN,
@@ -890,6 +863,7 @@ export const DELETE = withKiosk<{ id: string }>(async (req, { kiosk, params }) =
         bulkSkuId: allocation.bulkSkuUnit.bulkSkuId,
         unitNumber: allocation.bulkSkuUnit.unitNumber,
         itemName: `${allocation.bulkSkuUnit.bulkSku.name} #${allocation.bulkSkuUnit.unitNumber}`,
+        stockLocationId: kiosk.locationId,
         kioskDeviceId: kiosk.kioskId,
         kioskName: kiosk.name,
       },

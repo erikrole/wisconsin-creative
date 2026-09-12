@@ -6,7 +6,7 @@
 - Owner: Erik Role (Wisconsin Athletics Creative)
 - Status: Shipped
 - Created: 2026-04-14
-- Last Updated: 2026-09-10
+- Last Updated: 2026-09-11
 - Brief: `tasks/guides-plan.md` (archived)
 
 ## Description
@@ -72,9 +72,15 @@ All mutations use `createAuditEntry` per D-007.
 - `updateGuide(id, patch, editorRole, editorId)` — STAFF restricted to own guides; regenerates slug only if title changed
 - `deleteGuide(id)`
 
-`src/lib/resource-import.ts` owns the assistant-first import contract. Markdown is submitted as the canonical body, `{{image:key}}` placeholders are replaced with durable public Blob URLs from multipart files or safely rehosted http(s) image URLs, and a required `importKey` makes repeat imports update the same resource instead of creating `-2` copies. Dry runs validate the manifest and report the create/update target without writing Prisma or Blob state.
+`src/lib/resource-import.ts` owns the assistant-first import contract. Markdown is preserved as canonical CommonMark/GFM, including angle-bracket destinations and code examples; both readers retain their existing no-HTML and safe-link rules. `{{image:key}}` placeholders become content-addressed public Blob URLs. `src/lib/resource-import-images.ts` validates matching raster MIME/signatures, restricts remote fetches and every redirect to HTTPS Googleusercontent or public Vercel Blob hosts, and accepts other sources as multipart files. A required `importKey` identifies one resource; it does not adopt an existing manually created guide by title.
 
 JSON callers submit `{ "dryRun": true, "manifest": { "importKey": "provider:document:section", "title": "...", "category": "...", "markdown": "...", "images": [] } }`; multipart callers send the same manifest as a `manifest` field plus files named `image:<key>`. A normal guide handoff only needs the source document and any desired audience/publication direction; the assistant can produce the manifest and use the dry-run result before committing it.
+
+Dry-run is the default. Send `dryRun: false` explicitly to write. Both paths require a valid existing Staff/Admin session and a matching `Origin` header; there is no unauthenticated assistant backdoor. STAFF can preview/update only their own import-key match. Preview returns `proposed` Markdown/settings, the target, missing inputs, and `expectedUpdatedAt`. For updates, echo that non-null version in the manifest; for creates, omit it. Omitted type/publication/audience/feature settings preserve existing values (new guides default to General, draft, all audiences, not featured). A stale version returns 409 before uploading; repeat the preview before retrying. An unchanged versioned import returns `meta.operation: "unchanged"` without a resource update or duplicate audit. Creates return 201; updates/unchanged return 200. Slugs remain stable on imported updates.
+
+Limits: 4,000,000 bytes for the entire HTTP body, including multipart overhead; 20 images, 10MiB per image, 20MiB combined fetched/uploaded input, a shared 25-second image-processing deadline, and 200,000 characters of final Markdown. Dry-run does not fetch remote images or prove storage credentials. All images are validated before the first upload; existing content-addressed objects are reused. A later Blob/DB/audit failure may leave reusable unreferenced objects; there is no unsafe rollback deletion of potentially shared URLs. Resource and audit writes commit in one serializable transaction.
+
+Rollout status: local hardening only. Preview `preview-default` is missing `0146_resource_import_key`; historical checksum reconciliation and dedicated Preview image credentials remain gates. See [the importer audit](../tasks/resource-import-hardening-plan-2026-09-11.md) and [migration runbook](PRISMA_NEON_RUNBOOK.md).
 
 `src/lib/resource-assets.ts` owns folder listing, logical-file/version reads, upload-intent validation/finalization, folder creation, and audit snapshots. `src/lib/resource-assets-storage.ts` wraps the dedicated private Vercel Blob token; raw Blob URLs are not returned to clients.
 
@@ -132,6 +138,7 @@ JSON callers submit `{ "dryRun": true, "manifest": { "importKey": "provider:docu
 | AC-28 | Favorites persist per user, recent shortcuts remain device-local, and internal links reopen the selected asset without a raw Blob URL | ✅ Preview migration plus source/type/build gates; authenticated populated-data proof pending |
 
 ## Change Log
+- 2026-09-11: Audited and hardened backend imports locally: explicit apply, bounded/strict request parsing, service-level permissions and ownership, version-checked updates, preserved omitted settings and Markdown, unchanged-result dedupe, create-race retry, provider-scoped/size-bounded image rehosting and content-addressed reuse. Seventy-seven focused tests, TypeScript, full lint and `build:app` pass. Preview read-only inspection found 43 unverified historical checksums, one mismatch, and no import-key column/index; no migration, import, Blob write or deployment was performed. GAP-79 tracks the remaining rollout.
 - 2026-09-10: Added the backend-first `POST /api/resources/import` path. Trusted clients can dry-run or commit a validated Markdown manifest with `{{image:key}}` placeholders, multipart image files or safe remote-image rehosting, and a required idempotent `importKey`; committed creates/updates use serializable persistence and resource audit entries. The existing editor and single-image upload flow remain available as UI fallbacks.
 - 2026-09-10: Added the published **Football Clip Naming Guide** as a first-class How-to resource in the Naming Guides category, targeted to Video and open to every role. Imported the Football tab from the shared Creative Guides document, including the naming-format graphic, glossary, duplicate-name guidance, suffix and coach rules, and tips. Authenticated production reader and Resources-index verification confirmed the published entry, rendered headings/lists, and image; the pre-existing base-slug draft was left untouched.
 

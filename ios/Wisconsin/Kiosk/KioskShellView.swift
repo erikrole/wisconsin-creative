@@ -63,7 +63,7 @@ struct KioskShellView: View {
             }
             return "This checkout will close without saving."
         case .pickup, .return:
-            return "Your scan progress on this booking will be lost."
+            return "This screen will close. Scans already recorded on this booking will be kept."
         case .operatorHub, .identity:
             return "You'll be signed out of this kiosk session."
         default:
@@ -100,6 +100,7 @@ struct KioskShellView: View {
                 }
             }
             .id(screenKey)
+            .disabled(store.isProcessingHandoff)
             .transition(screenTransition)
 
             if store.inactivityWarningVisible {

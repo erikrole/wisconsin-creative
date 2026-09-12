@@ -6,6 +6,7 @@ import { pathToFileURL } from "node:url";
 import { neon } from "@neondatabase/serverless";
 import "dotenv/config";
 import { resolvePrismaDirectUrl } from "./lib/prisma-direct-url.mjs";
+import { readMigrationRows, loadMigrationBaseline, assertBaselineFiles, canonical } from "./lib/migration-baseline.mjs";
 
 const migrationsDir = join(process.cwd(), "prisma", "migrations");
 
@@ -29,17 +30,14 @@ async function main() {
 
   const localMigrations = readLocalMigrations();
   const sql = neon(connectionString);
-  const migrationRows = await sql`
-    SELECT migration_name, checksum, finished_at, rolled_back_at, applied_steps_count
-    FROM _prisma_migrations
-    ORDER BY migration_name ASC, started_at ASC
-  `;
+  const migrationRows = await readMigrationRows(sql);
 
   const checksums = Object.fromEntries(localMigrations.map((name) => [
     name,
     createHash("sha256").update(readFileSync(join(migrationsDir, name, "migration.sql"))).digest("hex"),
   ]));
-  const health = evaluateMigrationHealth(localMigrations, migrationRows, checksums);
+  const baseline = await loadMigrationBaseline(sql, checksums, migrationRows);
+  const health = evaluateMigrationHealth(localMigrations, migrationRows, checksums, baseline);
   const allocationGuards = await sql`
     SELECT pg_get_constraintdef(c.oid) AS definition,
       c.convalidated AND i.indisvalid AND i.indisready AS valid
@@ -68,12 +66,17 @@ function readLocalMigrations() {
     .sort();
 }
 
-export function evaluateMigrationHealth(localMigrations, migrationRows, localChecksums = {}) {
+export function evaluateMigrationHealth(localMigrations, migrationRows, localChecksums = {}, baseline = null) {
   const appliedNames = new Set();
   const unresolvedFailed = [];
   const rolledBack = [];
   const checksumMismatches = new Set();
   const unverifiedChecksums = new Set();
+  const baselinedUnknown = new Set();
+  const baselinedHistorical = new Set();
+  if (baseline) assertBaselineFiles(baseline, localChecksums);
+  const exceptions = new Map((baseline?.exceptions ?? []).map((entry) => [entry.id, entry]));
+  const frozenRows = new Map((baseline?.receipts ?? []).map((row) => [row.id, row]));
 
   for (const row of migrationRows) {
     const migrationName = row.migration_name;
@@ -85,7 +88,10 @@ export function evaluateMigrationHealth(localMigrations, migrationRows, localChe
     if (row.finished_at) {
       appliedNames.add(migrationName);
       if (localMigrations.includes(migrationName)) {
-        if (!/^[a-f0-9]{64}$/i.test(row.checksum ?? "") || !localChecksums[migrationName]) {
+        const exception = exceptions.get(row.id);
+        if (exception && canonical(frozenRows.get(row.id)) === canonical(row)) {
+          (exception.provenance === "unknown" ? baselinedUnknown : baselinedHistorical).add(migrationName);
+        } else if (!/^[a-f0-9]{64}$/i.test(row.checksum ?? "") || !localChecksums[migrationName]) {
           unverifiedChecksums.add(migrationName);
         } else if (row.checksum.toLowerCase() !== localChecksums[migrationName].toLowerCase()) {
           checksumMismatches.add(migrationName);
@@ -125,6 +131,9 @@ export function evaluateMigrationHealth(localMigrations, migrationRows, localChe
     rolledBack,
     checksumMismatches: [...checksumMismatches].sort(),
     unverifiedChecksums: [...unverifiedChecksums].sort(),
+    baselinedUnknown: [...baselinedUnknown].sort(),
+    baselinedHistorical: [...baselinedHistorical].sort(),
+    baselineId: baseline?.id ?? null,
     newestLocal,
     newestLocalApplied,
   };
@@ -144,9 +153,13 @@ function printHealthReport(health) {
   printList("Rolled-back rows", health.rolledBack);
   printList("Applied SQL checksum mismatches", health.checksumMismatches);
   printList("Unverified applied SQL checksums", health.unverifiedChecksums);
+  printList("Preview baseline: original SQL provenance UNKNOWN", health.baselinedUnknown);
+  printList("Preview baseline: verified historical SQL version differs from local", health.baselinedHistorical);
 
   if (health.ok) {
-    console.log("OK: local SQL matches Neon migration history and asset overlap protection is present.");
+    console.log(health.baselineId
+      ? `OK: ${health.baselineId} preserved, forward SQL verified, and asset overlap protection present. Historical exceptions remain above.`
+      : "OK: local SQL matches Neon migration history and asset overlap protection is present.");
     return;
   }
 

@@ -11,7 +11,16 @@ const mocks = vi.hoisted(() => ({
   bulkStockBalanceUpsert: vi.fn(),
   bulkStockMovementCreate: vi.fn(),
   bookingBulkItemUpsert: vi.fn(),
+  bookingBulkItemFindUnique: vi.fn(),
+  bookingBulkUnitAllocationFindUnique: vi.fn(),
+  bookingBulkUnitAllocationUpdate: vi.fn(),
+  scanEventCreate: vi.fn(),
   bookingBulkUnitAllocationCreate: vi.fn(),
+  bookingBulkUnitAllocationFindFirst: vi.fn(),
+  bookingBulkUnitAllocationDelete: vi.fn(),
+  bookingBulkItemDelete: vi.fn(),
+  bookingBulkItemUpdate: vi.fn(),
+  bulkSkuUnitUpdate: vi.fn(),
   findBulkUnitByScanValue: vi.fn(),
   findAssetByScanValue: vi.fn(),
   checkAvailability: vi.fn(),
@@ -56,7 +65,7 @@ vi.mock("@/lib/services/bookings-helpers", () => ({
 vi.mock("@/lib/live-activity-workflow", () => ({ scheduleCheckoutReturnLiveActivity: vi.fn() }));
 vi.mock("@/lib/services/live-activities", () => ({ updateCheckoutReturnLiveActivities: vi.fn() }));
 
-import { POST as addActiveCheckoutItem } from "@/app/api/kiosk/checkout/[id]/route";
+import { POST as addActiveCheckoutItem, DELETE as removeActiveCheckoutItem } from "@/app/api/kiosk/checkout/[id]/route";
 
 function routeContext(id: string) {
   return { params: Promise.resolve({ id }) };
@@ -71,20 +80,33 @@ beforeEach(() => {
       findUnique: mocks.bulkSkuUnitFindUnique,
       updateMany: mocks.bulkSkuUnitUpdateMany,
       count: mocks.bulkSkuUnitCount,
+      update: mocks.bulkSkuUnitUpdate,
     },
     bulkStockBalance: {
       findMany: mocks.bulkStockBalanceFindMany,
       upsert: mocks.bulkStockBalanceUpsert,
     },
     bulkStockMovement: { create: mocks.bulkStockMovementCreate },
-    bookingBulkItem: { upsert: mocks.bookingBulkItemUpsert },
-    bookingBulkUnitAllocation: { create: mocks.bookingBulkUnitAllocationCreate },
+    bookingBulkItem: {
+      upsert: mocks.bookingBulkItemUpsert,
+      findUnique: mocks.bookingBulkItemFindUnique,
+      delete: mocks.bookingBulkItemDelete,
+      update: mocks.bookingBulkItemUpdate,
+    },
+    bookingBulkUnitAllocation: {
+      create: mocks.bookingBulkUnitAllocationCreate,
+      findUnique: mocks.bookingBulkUnitAllocationFindUnique,
+      update: mocks.bookingBulkUnitAllocationUpdate,
+      findFirst: mocks.bookingBulkUnitAllocationFindFirst,
+      delete: mocks.bookingBulkUnitAllocationDelete,
+    },
     bookingSerializedItem: {
       findUnique: mocks.bookingSerializedItemFindUnique,
       create: mocks.bookingSerializedItemCreate,
       update: mocks.bookingSerializedItemUpdate,
     },
     assetAllocation: { create: mocks.assetAllocationCreate },
+    scanEvent: { create: mocks.scanEventCreate },
   }));
   mocks.userFindFirst.mockResolvedValue({ id: "actor-1", role: "STAFF" });
   mocks.bookingFindFirst.mockResolvedValue({
@@ -117,6 +139,8 @@ beforeEach(() => {
   mocks.bulkSkuUnitUpdateMany.mockResolvedValue({ count: 1 });
   mocks.bulkSkuUnitCount.mockResolvedValue(15);
   mocks.bulkStockBalanceFindMany.mockResolvedValue([{ onHandQuantity: 16 }]);
+  mocks.bookingBulkItemFindUnique.mockResolvedValue(null);
+  mocks.bookingBulkUnitAllocationFindUnique.mockResolvedValue(null);
   mocks.bookingBulkItemUpsert.mockResolvedValue({ id: "bulk-item-1" });
   mocks.bookingBulkUnitAllocationCreate.mockResolvedValue({ id: "allocation-1" });
   mocks.checkAvailability.mockResolvedValue({
@@ -136,6 +160,53 @@ beforeEach(() => {
 });
 
 describe("kiosk active checkout add item", () => {
+  it("rejects mismatched battery counters before removing custody or restocking", async () => {
+    const bulkSkuId = "cmnrtquja0021jp04780v9kej";
+    mocks.bookingBulkUnitAllocationFindFirst.mockResolvedValueOnce({
+      id: "allocation-21",
+      bulkSkuUnit: { id: "unit-21", bulkSkuId, unitNumber: 21, bulkSku: { name: "Sony Battery" } },
+      bookingBulkItem: { id: "bulk-item-1", plannedQuantity: 2, checkedOutQuantity: 2, checkedInQuantity: 2 },
+    });
+    await expect(removeActiveCheckoutItem(new Request("http://test/api/kiosk/checkout/checkout-1", {
+      method: "DELETE", body: JSON.stringify({ actorId: "actor-1", bulkSkuId, unitNumber: 21 }),
+    }), routeContext("checkout-1"))).rejects.toMatchObject({ status: 409 });
+    expect(mocks.bookingBulkUnitAllocationUpdate).not.toHaveBeenCalled();
+    expect(mocks.bulkSkuUnitUpdate).not.toHaveBeenCalled();
+    expect(mocks.upsertBulkBalancesAndMovements).not.toHaveBeenCalled();
+    expect(mocks.createAuditEntryTx).not.toHaveBeenCalled();
+  });
+
+  it.each([0, 1])("restores the kiosk stock and preserves prior returns when removing a battery (%i returned)", async (checkedInQuantity) => {
+    const bulkSkuId = "cmnrtquja0021jp04780v9kej";
+    mocks.bookingBulkUnitAllocationFindFirst.mockResolvedValueOnce({
+      id: "allocation-21",
+      bulkSkuUnit: { id: "unit-21", bulkSkuId, unitNumber: 21, bulkSku: { name: "Sony Battery" } },
+      bookingBulkItem: {
+        id: "bulk-item-1", plannedQuantity: checkedInQuantity + 1,
+        checkedOutQuantity: checkedInQuantity + 1, checkedInQuantity,
+      },
+    });
+    const response = await removeActiveCheckoutItem(new Request("http://test/api/kiosk/checkout/checkout-1", {
+      method: "DELETE", body: JSON.stringify({ actorId: "actor-1", bulkSkuId, unitNumber: 21 }),
+    }), routeContext("checkout-1"));
+    expect(await response.json()).toEqual({ success: true, message: "Sony Battery #21 removed" });
+    expect(mocks.upsertBulkBalancesAndMovements).toHaveBeenCalledWith(expect.anything(), {
+      locationId: "loc-1", bookingId: "checkout-1", actorUserId: "actor-1", kind: "CHECKIN",
+      items: [{ bulkSkuId, quantity: 1 }],
+    });
+    expect(mocks.bookingBulkUnitAllocationDelete).not.toHaveBeenCalled();
+    expect(mocks.bookingBulkUnitAllocationUpdate).toHaveBeenCalledWith({
+      where: { id: "allocation-21" }, data: { checkedInAt: expect.any(Date) },
+    });
+    expect(mocks.bookingBulkItemDelete).not.toHaveBeenCalled();
+    expect(mocks.bookingBulkItemUpdate).toHaveBeenCalledWith({
+      where: { id: "bulk-item-1" }, data: { checkedInQuantity: { increment: 1 } },
+    });
+    expect(mocks.createAuditEntryTx).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      action: "kiosk_checkout_item_removed", before: expect.objectContaining({ stockLocationId: "loc-1" }),
+    }));
+  });
+
   it("lets an exact available unit scan override aggregate reservation commitments", async () => {
     const request = new Request("http://test/api/kiosk/checkout/checkout-1", {
       method: "POST",

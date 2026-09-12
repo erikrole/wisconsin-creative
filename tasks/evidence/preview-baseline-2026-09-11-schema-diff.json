@@ -1,0 +1,2242 @@
+[
+  {
+    "section": "enums",
+    "differences": [
+      {
+        "kind": "changed",
+        "name": "BadgeStreakType",
+        "live": {
+          "name": "BadgeStreakType",
+          "labels": [
+            "ON_TIME_RETURN",
+            "SCAN_CLEAN",
+            "SHIFT_ATTENDANCE",
+            "SCAN_SUCCESS_COUNT"
+          ]
+        },
+        "expected": {
+          "name": "BadgeStreakType",
+          "labels": [
+            "ON_TIME_RETURN",
+            "SCAN_CLEAN",
+            "SCAN_SUCCESS_COUNT",
+            "SHIFT_ATTENDANCE"
+          ]
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "BookingStatus",
+        "live": {
+          "name": "BookingStatus",
+          "labels": [
+            "DRAFT",
+            "BOOKED",
+            "OPEN",
+            "COMPLETED",
+            "CANCELLED",
+            "PENDING_PICKUP"
+          ]
+        },
+        "expected": {
+          "name": "BookingStatus",
+          "labels": [
+            "DRAFT",
+            "BOOKED",
+            "PENDING_PICKUP",
+            "OPEN",
+            "COMPLETED",
+            "CANCELLED"
+          ]
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "FootballGameDayRole",
+        "row": {
+          "name": "FootballGameDayRole",
+          "labels": [
+            "SLOW1",
+            "SLOW2",
+            "BENCH",
+            "ROAM1",
+            "ROAM2",
+            "ROAM3",
+            "ROAM4",
+            "PHOTO1",
+            "PHOTO2",
+            "PHOTO3",
+            "PHOTO4",
+            "SOCIAL"
+          ]
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "LicenseCodeStatus",
+        "live": {
+          "name": "LicenseCodeStatus",
+          "labels": [
+            "AVAILABLE",
+            "CLAIMED",
+            "RETIRED",
+            "PARTIAL"
+          ]
+        },
+        "expected": {
+          "name": "LicenseCodeStatus",
+          "labels": [
+            "AVAILABLE",
+            "PARTIAL",
+            "CLAIMED",
+            "RETIRED"
+          ]
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "ShiftArea",
+        "live": {
+          "name": "ShiftArea",
+          "labels": [
+            "VIDEO",
+            "PHOTO",
+            "GRAPHICS",
+            "COMMS",
+            "LIVE_PRODUCTION",
+            "SOCIAL"
+          ]
+        },
+        "expected": {
+          "name": "ShiftArea",
+          "labels": [
+            "VIDEO",
+            "PHOTO",
+            "GRAPHICS",
+            "SOCIAL",
+            "COMMS",
+            "LIVE_PRODUCTION"
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "section": "views",
+    "differences": [
+      {
+        "kind": "live-only",
+        "name": "event_credits",
+        "row": {
+          "kind": "v",
+          "name": "event_credits",
+          "definition": " SELECT id,\n    event_id,\n    user_id,\n    note,\n    added_by_id AS created_by_id,\n    created_at,\n    updated_at\n   FROM event_workers;"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "pg_stat_statements",
+        "row": {
+          "kind": "v",
+          "name": "pg_stat_statements",
+          "definition": " SELECT userid,\n    dbid,\n    toplevel,\n    queryid,\n    query,\n    plans,\n    total_plan_time,\n    min_plan_time,\n    max_plan_time,\n    mean_plan_time,\n    stddev_plan_time,\n    calls,\n    total_exec_time,\n    min_exec_time,\n    max_exec_time,\n    mean_exec_time,\n    stddev_exec_time,\n    rows,\n    shared_blks_hit,\n    shared_blks_read,\n    shared_blks_dirtied,\n    shared_blks_written,\n    local_blks_hit,\n    local_blks_read,\n    local_blks_dirtied,\n    local_blks_written,\n    temp_blks_read,\n    temp_blks_written,\n    shared_blk_read_time,\n    shared_blk_write_time,\n    local_blk_read_time,\n    local_blk_write_time,\n    temp_blk_read_time,\n    temp_blk_write_time,\n    wal_records,\n    wal_fpi,\n    wal_bytes,\n    jit_functions,\n    jit_generation_time,\n    jit_inlining_count,\n    jit_inlining_time,\n    jit_optimization_count,\n    jit_optimization_time,\n    jit_emission_count,\n    jit_emission_time,\n    jit_deform_count,\n    jit_deform_time,\n    stats_since,\n    minmax_stats_since\n   FROM pg_stat_statements(true) pg_stat_statements(userid, dbid, toplevel, queryid, query, plans, total_plan_time, min_plan_time, max_plan_time, mean_plan_time, stddev_plan_time, calls, total_exec_time, min_exec_time, max_exec_time, mean_exec_time, stddev_exec_time, rows, shared_blks_hit, shared_blks_read, shared_blks_dirtied, shared_blks_written, local_blks_hit, local_blks_read, local_blks_dirtied, local_blks_written, temp_blks_read, temp_blks_written, shared_blk_read_time, shared_blk_write_time, local_blk_read_time, local_blk_write_time, temp_blk_read_time, temp_blk_write_time, wal_records, wal_fpi, wal_bytes, jit_functions, jit_generation_time, jit_inlining_count, jit_inlining_time, jit_optimization_count, jit_optimization_time, jit_emission_count, jit_emission_time, jit_deform_count, jit_deform_time, stats_since, minmax_stats_since);"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "pg_stat_statements_info",
+        "row": {
+          "kind": "v",
+          "name": "pg_stat_statements_info",
+          "definition": " SELECT dealloc,\n    stats_reset\n   FROM pg_stat_statements_info() pg_stat_statements_info(dealloc, stats_reset);"
+        }
+      }
+    ]
+  },
+  {
+    "section": "tables",
+    "differences": [
+      {
+        "kind": "live-only",
+        "name": "varsity_season_owners",
+        "row": {
+          "rls": false,
+          "kind": "r",
+          "name": "varsity_season_owners"
+        }
+      }
+    ]
+  },
+  {
+    "section": "columns",
+    "differences": [
+      {
+        "kind": "changed",
+        "name": "allowed_emails.preloaded_areas",
+        "live": {
+          "name": "preloaded_areas",
+          "type": "\"ShiftArea\"[]",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "allowed_emails",
+          "default_expr": "ARRAY[]::\"ShiftArea\"[]"
+        },
+        "expected": {
+          "name": "preloaded_areas",
+          "type": "\"ShiftArea\"[]",
+          "identity": "",
+          "not_null": false,
+          "generated": "",
+          "table_name": "allowed_emails",
+          "default_expr": "ARRAY[]::\"ShiftArea\"[]"
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "allowed_emails.preloaded_sport_codes",
+        "live": {
+          "name": "preloaded_sport_codes",
+          "type": "text[]",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "allowed_emails",
+          "default_expr": "ARRAY[]::text[]"
+        },
+        "expected": {
+          "name": "preloaded_sport_codes",
+          "type": "text[]",
+          "identity": "",
+          "not_null": false,
+          "generated": "",
+          "table_name": "allowed_emails",
+          "default_expr": "ARRAY[]::text[]"
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "asset_allocations.id",
+        "live": {
+          "name": "id",
+          "type": "text",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "asset_allocations",
+          "default_expr": "(gen_random_uuid())::text"
+        },
+        "expected": {
+          "name": "id",
+          "type": "text",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "asset_allocations",
+          "default_expr": null
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "asset_allocations.updated_at",
+        "live": {
+          "name": "updated_at",
+          "type": "timestamp(3) without time zone",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "asset_allocations",
+          "default_expr": "CURRENT_TIMESTAMP"
+        },
+        "expected": {
+          "name": "updated_at",
+          "type": "timestamp(3) without time zone",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "asset_allocations",
+          "default_expr": null
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "assets.id",
+        "live": {
+          "name": "id",
+          "type": "text",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "assets",
+          "default_expr": "(gen_random_uuid())::text"
+        },
+        "expected": {
+          "name": "id",
+          "type": "text",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "assets",
+          "default_expr": null
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "assets.updated_at",
+        "live": {
+          "name": "updated_at",
+          "type": "timestamp(3) without time zone",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "assets",
+          "default_expr": "CURRENT_TIMESTAMP"
+        },
+        "expected": {
+          "name": "updated_at",
+          "type": "timestamp(3) without time zone",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "assets",
+          "default_expr": null
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "audit_logs.id",
+        "live": {
+          "name": "id",
+          "type": "text",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "audit_logs",
+          "default_expr": "(gen_random_uuid())::text"
+        },
+        "expected": {
+          "name": "id",
+          "type": "text",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "audit_logs",
+          "default_expr": null
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "booking_bulk_items.id",
+        "live": {
+          "name": "id",
+          "type": "text",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "booking_bulk_items",
+          "default_expr": "(gen_random_uuid())::text"
+        },
+        "expected": {
+          "name": "id",
+          "type": "text",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "booking_bulk_items",
+          "default_expr": null
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "booking_serialized_items.id",
+        "live": {
+          "name": "id",
+          "type": "text",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "booking_serialized_items",
+          "default_expr": "(gen_random_uuid())::text"
+        },
+        "expected": {
+          "name": "id",
+          "type": "text",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "booking_serialized_items",
+          "default_expr": null
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "bookings.id",
+        "live": {
+          "name": "id",
+          "type": "text",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "bookings",
+          "default_expr": "(gen_random_uuid())::text"
+        },
+        "expected": {
+          "name": "id",
+          "type": "text",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "bookings",
+          "default_expr": null
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "bookings.updated_at",
+        "live": {
+          "name": "updated_at",
+          "type": "timestamp(3) without time zone",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "bookings",
+          "default_expr": "CURRENT_TIMESTAMP"
+        },
+        "expected": {
+          "name": "updated_at",
+          "type": "timestamp(3) without time zone",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "bookings",
+          "default_expr": null
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "bulk_skus.id",
+        "live": {
+          "name": "id",
+          "type": "text",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "bulk_skus",
+          "default_expr": "(gen_random_uuid())::text"
+        },
+        "expected": {
+          "name": "id",
+          "type": "text",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "bulk_skus",
+          "default_expr": null
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "bulk_skus.updated_at",
+        "live": {
+          "name": "updated_at",
+          "type": "timestamp(3) without time zone",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "bulk_skus",
+          "default_expr": "CURRENT_TIMESTAMP"
+        },
+        "expected": {
+          "name": "updated_at",
+          "type": "timestamp(3) without time zone",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "bulk_skus",
+          "default_expr": null
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "bulk_stock_balances.id",
+        "live": {
+          "name": "id",
+          "type": "text",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "bulk_stock_balances",
+          "default_expr": "(gen_random_uuid())::text"
+        },
+        "expected": {
+          "name": "id",
+          "type": "text",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "bulk_stock_balances",
+          "default_expr": null
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "bulk_stock_balances.updated_at",
+        "live": {
+          "name": "updated_at",
+          "type": "timestamp(3) without time zone",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "bulk_stock_balances",
+          "default_expr": "CURRENT_TIMESTAMP"
+        },
+        "expected": {
+          "name": "updated_at",
+          "type": "timestamp(3) without time zone",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "bulk_stock_balances",
+          "default_expr": null
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "bulk_stock_movements.id",
+        "live": {
+          "name": "id",
+          "type": "text",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "bulk_stock_movements",
+          "default_expr": "(gen_random_uuid())::text"
+        },
+        "expected": {
+          "name": "id",
+          "type": "text",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "bulk_stock_movements",
+          "default_expr": null
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "collaborator_affiliations.updated_at",
+        "live": {
+          "name": "updated_at",
+          "type": "timestamp(3) without time zone",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "collaborator_affiliations",
+          "default_expr": "CURRENT_TIMESTAMP"
+        },
+        "expected": {
+          "name": "updated_at",
+          "type": "timestamp(3) without time zone",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "collaborator_affiliations",
+          "default_expr": null
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "collaborator_policies.updated_at",
+        "live": {
+          "name": "updated_at",
+          "type": "timestamp(3) without time zone",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "collaborator_policies",
+          "default_expr": "CURRENT_TIMESTAMP"
+        },
+        "expected": {
+          "name": "updated_at",
+          "type": "timestamp(3) without time zone",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "collaborator_policies",
+          "default_expr": null
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "locations.id",
+        "live": {
+          "name": "id",
+          "type": "text",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "locations",
+          "default_expr": "(gen_random_uuid())::text"
+        },
+        "expected": {
+          "name": "id",
+          "type": "text",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "locations",
+          "default_expr": null
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "locations.updated_at",
+        "live": {
+          "name": "updated_at",
+          "type": "timestamp(3) without time zone",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "locations",
+          "default_expr": "CURRENT_TIMESTAMP"
+        },
+        "expected": {
+          "name": "updated_at",
+          "type": "timestamp(3) without time zone",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "locations",
+          "default_expr": null
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "override_events.id",
+        "live": {
+          "name": "id",
+          "type": "text",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "override_events",
+          "default_expr": "(gen_random_uuid())::text"
+        },
+        "expected": {
+          "name": "id",
+          "type": "text",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "override_events",
+          "default_expr": null
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "passkey_credentials.transports",
+        "live": {
+          "name": "transports",
+          "type": "text[]",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "passkey_credentials",
+          "default_expr": "ARRAY[]::text[]"
+        },
+        "expected": {
+          "name": "transports",
+          "type": "text[]",
+          "identity": "",
+          "not_null": false,
+          "generated": "",
+          "table_name": "passkey_credentials",
+          "default_expr": "ARRAY[]::text[]"
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "resources.target_areas",
+        "live": {
+          "name": "target_areas",
+          "type": "\"ShiftArea\"[]",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "resources",
+          "default_expr": "ARRAY[]::\"ShiftArea\"[]"
+        },
+        "expected": {
+          "name": "target_areas",
+          "type": "\"ShiftArea\"[]",
+          "identity": "",
+          "not_null": false,
+          "generated": "",
+          "table_name": "resources",
+          "default_expr": "ARRAY[]::\"ShiftArea\"[]"
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "resources.target_roles",
+        "live": {
+          "name": "target_roles",
+          "type": "\"Role\"[]",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "resources",
+          "default_expr": "ARRAY[]::\"Role\"[]"
+        },
+        "expected": {
+          "name": "target_roles",
+          "type": "\"Role\"[]",
+          "identity": "",
+          "not_null": false,
+          "generated": "",
+          "table_name": "resources",
+          "default_expr": "ARRAY[]::\"Role\"[]"
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "scan_events.id",
+        "live": {
+          "name": "id",
+          "type": "text",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "scan_events",
+          "default_expr": "(gen_random_uuid())::text"
+        },
+        "expected": {
+          "name": "id",
+          "type": "text",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "scan_events",
+          "default_expr": null
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "scan_sessions.id",
+        "live": {
+          "name": "id",
+          "type": "text",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "scan_sessions",
+          "default_expr": "(gen_random_uuid())::text"
+        },
+        "expected": {
+          "name": "id",
+          "type": "text",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "scan_sessions",
+          "default_expr": null
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "sessions.id",
+        "live": {
+          "name": "id",
+          "type": "text",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "sessions",
+          "default_expr": "(gen_random_uuid())::text"
+        },
+        "expected": {
+          "name": "id",
+          "type": "text",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "sessions",
+          "default_expr": null
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "shift_assignments.football_roles",
+        "row": {
+          "name": "football_roles",
+          "type": "\"FootballGameDayRole\"[]",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "shift_assignments",
+          "default_expr": "ARRAY[]::\"FootballGameDayRole\"[]"
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "software_credentials.visible_to",
+        "live": {
+          "name": "visible_to",
+          "type": "\"SoftwareCredentialAudience\"[]",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "software_credentials",
+          "default_expr": "ARRAY['STAFF'::\"SoftwareCredentialAudience\", 'STUDENT'::\"SoftwareCredentialAudience\"]"
+        },
+        "expected": {
+          "name": "visible_to",
+          "type": "\"SoftwareCredentialAudience\"[]",
+          "identity": "",
+          "not_null": false,
+          "generated": "",
+          "table_name": "software_credentials",
+          "default_expr": "ARRAY['STAFF'::\"SoftwareCredentialAudience\", 'STUDENT'::\"SoftwareCredentialAudience\"]"
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "student_availability_blocks.updated_at",
+        "live": {
+          "name": "updated_at",
+          "type": "timestamp(3) without time zone",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "student_availability_blocks",
+          "default_expr": "CURRENT_TIMESTAMP"
+        },
+        "expected": {
+          "name": "updated_at",
+          "type": "timestamp(3) without time zone",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "student_availability_blocks",
+          "default_expr": null
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "users.id",
+        "live": {
+          "name": "id",
+          "type": "text",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "users",
+          "default_expr": "(gen_random_uuid())::text"
+        },
+        "expected": {
+          "name": "id",
+          "type": "text",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "users",
+          "default_expr": null
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "users.updated_at",
+        "live": {
+          "name": "updated_at",
+          "type": "timestamp(3) without time zone",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "users",
+          "default_expr": "CURRENT_TIMESTAMP"
+        },
+        "expected": {
+          "name": "updated_at",
+          "type": "timestamp(3) without time zone",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "users",
+          "default_expr": null
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "varsity_season_owners.area",
+        "row": {
+          "name": "area",
+          "type": "\"ShiftArea\"",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "varsity_season_owners",
+          "default_expr": null
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "varsity_season_owners.created_at",
+        "row": {
+          "name": "created_at",
+          "type": "timestamp(3) without time zone",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "varsity_season_owners",
+          "default_expr": "CURRENT_TIMESTAMP"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "varsity_season_owners.created_by_id",
+        "row": {
+          "name": "created_by_id",
+          "type": "text",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "varsity_season_owners",
+          "default_expr": null
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "varsity_season_owners.ends_on",
+        "row": {
+          "name": "ends_on",
+          "type": "date",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "varsity_season_owners",
+          "default_expr": null
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "varsity_season_owners.id",
+        "row": {
+          "name": "id",
+          "type": "text",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "varsity_season_owners",
+          "default_expr": null
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "varsity_season_owners.sport_code",
+        "row": {
+          "name": "sport_code",
+          "type": "text",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "varsity_season_owners",
+          "default_expr": null
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "varsity_season_owners.starts_on",
+        "row": {
+          "name": "starts_on",
+          "type": "date",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "varsity_season_owners",
+          "default_expr": null
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "varsity_season_owners.user_id",
+        "row": {
+          "name": "user_id",
+          "type": "text",
+          "identity": "",
+          "not_null": true,
+          "generated": "",
+          "table_name": "varsity_season_owners",
+          "default_expr": null
+        }
+      },
+      {
+        "kind": "expected-only",
+        "name": "resources.import_key",
+        "row": {
+          "name": "import_key",
+          "type": "text",
+          "identity": "",
+          "not_null": false,
+          "generated": "",
+          "table_name": "resources",
+          "default_expr": null
+        }
+      }
+    ]
+  },
+  {
+    "section": "indexes",
+    "differences": [
+      {
+        "kind": "live-only",
+        "name": "assets.assets_asset_tag_trgm_idx",
+        "row": {
+          "name": "assets_asset_tag_trgm_idx",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE INDEX assets_asset_tag_trgm_idx ON public.assets USING gin (asset_tag gin_trgm_ops)",
+          "table_name": "assets"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "assets.assets_brand_trgm_idx",
+        "row": {
+          "name": "assets_brand_trgm_idx",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE INDEX assets_brand_trgm_idx ON public.assets USING gin (brand gin_trgm_ops)",
+          "table_name": "assets"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "assets.assets_model_trgm_idx",
+        "row": {
+          "name": "assets_model_trgm_idx",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE INDEX assets_model_trgm_idx ON public.assets USING gin (model gin_trgm_ops)",
+          "table_name": "assets"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "assets.assets_name_trgm_idx",
+        "row": {
+          "name": "assets_name_trgm_idx",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE INDEX assets_name_trgm_idx ON public.assets USING gin (name gin_trgm_ops)",
+          "table_name": "assets"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "booking_bulk_unit_allocations.booking_bulk_unit_allocations_booking_bulk_item_id_bulk_sku_u_k",
+        "row": {
+          "name": "booking_bulk_unit_allocations_booking_bulk_item_id_bulk_sku_u_k",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX booking_bulk_unit_allocations_booking_bulk_item_id_bulk_sku_u_k ON public.booking_bulk_unit_allocations USING btree (booking_bulk_item_id, bulk_sku_unit_id)",
+          "table_name": "booking_bulk_unit_allocations"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "booking_bulk_unit_allocations.booking_bulk_unit_allocations_one_active_unit_key",
+        "row": {
+          "name": "booking_bulk_unit_allocations_one_active_unit_key",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX booking_bulk_unit_allocations_one_active_unit_key ON public.booking_bulk_unit_allocations USING btree (bulk_sku_unit_id) WHERE ((checked_out_at IS NOT NULL) AND (checked_in_at IS NULL))",
+          "table_name": "booking_bulk_unit_allocations"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "bookings.bookings_ref_number_trgm_idx",
+        "row": {
+          "name": "bookings_ref_number_trgm_idx",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE INDEX bookings_ref_number_trgm_idx ON public.bookings USING gin (ref_number gin_trgm_ops)",
+          "table_name": "bookings"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "bookings.bookings_title_trgm_idx",
+        "row": {
+          "name": "bookings_title_trgm_idx",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE INDEX bookings_title_trgm_idx ON public.bookings USING gin (title gin_trgm_ops)",
+          "table_name": "bookings"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "bulk_sku_units.bulk_sku_units_label_printed_by_id_idx",
+        "row": {
+          "name": "bulk_sku_units_label_printed_by_id_idx",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE INDEX bulk_sku_units_label_printed_by_id_idx ON public.bulk_sku_units USING btree (label_printed_by_id)",
+          "table_name": "bulk_sku_units"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "license_code_claims.idx_lcc_active",
+        "row": {
+          "name": "idx_lcc_active",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE INDEX idx_lcc_active ON public.license_code_claims USING btree (license_code_id) WHERE (released_at IS NULL)",
+          "table_name": "license_code_claims"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "license_code_claims.license_code_claims_one_active_per_user",
+        "row": {
+          "name": "license_code_claims_one_active_per_user",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX license_code_claims_one_active_per_user ON public.license_code_claims USING btree (user_id) WHERE ((released_at IS NULL) AND (user_id IS NOT NULL))",
+          "table_name": "license_code_claims"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "license_code_claims.license_code_claims_released_by_id_idx",
+        "row": {
+          "name": "license_code_claims_released_by_id_idx",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE INDEX license_code_claims_released_by_id_idx ON public.license_code_claims USING btree (released_by_id)",
+          "table_name": "license_code_claims"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "license_codes.idx_lc_expires",
+        "row": {
+          "name": "idx_lc_expires",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE INDEX idx_lc_expires ON public.license_codes USING btree (expires_at) WHERE (expires_at IS NOT NULL)",
+          "table_name": "license_codes"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "resources.guides_pkey",
+        "row": {
+          "name": "guides_pkey",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX guides_pkey ON public.resources USING btree (id)",
+          "table_name": "resources"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "scan_events.scan_events_location_mismatch_idx",
+        "row": {
+          "name": "scan_events_location_mismatch_idx",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE INDEX scan_events_location_mismatch_idx ON public.scan_events USING btree (location_mismatch)",
+          "table_name": "scan_events"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "schedule_bulk_assignment_items.schedule_bulk_assignment_items_bulk_assignment_id_shift_group_i",
+        "row": {
+          "name": "schedule_bulk_assignment_items_bulk_assignment_id_shift_group_i",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX schedule_bulk_assignment_items_bulk_assignment_id_shift_group_i ON public.schedule_bulk_assignment_items USING btree (bulk_assignment_id, shift_group_id)",
+          "table_name": "schedule_bulk_assignment_items"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "signature_save_operations.signature_save_operations_collection_id_member_id_created_at_id",
+        "row": {
+          "name": "signature_save_operations_collection_id_member_id_created_at_id",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE INDEX signature_save_operations_collection_id_member_id_created_at_id ON public.signature_save_operations USING btree (collection_id, member_id, created_at)",
+          "table_name": "signature_save_operations"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "users.users_name_trgm_idx",
+        "row": {
+          "name": "users_name_trgm_idx",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE INDEX users_name_trgm_idx ON public.users USING gin (name gin_trgm_ops)",
+          "table_name": "users"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "varsity_season_owners.varsity_season_owners_pkey",
+        "row": {
+          "name": "varsity_season_owners_pkey",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX varsity_season_owners_pkey ON public.varsity_season_owners USING btree (id)",
+          "table_name": "varsity_season_owners"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "varsity_season_owners.varsity_season_owners_sport_code_area_starts_on_ends_on_idx",
+        "row": {
+          "name": "varsity_season_owners_sport_code_area_starts_on_ends_on_idx",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE INDEX varsity_season_owners_sport_code_area_starts_on_ends_on_idx ON public.varsity_season_owners USING btree (sport_code, area, starts_on, ends_on)",
+          "table_name": "varsity_season_owners"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "varsity_season_owners.varsity_season_owners_sport_code_area_user_id_starts_on_key",
+        "row": {
+          "name": "varsity_season_owners_sport_code_area_user_id_starts_on_key",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX varsity_season_owners_sport_code_area_user_id_starts_on_key ON public.varsity_season_owners USING btree (sport_code, area, user_id, starts_on)",
+          "table_name": "varsity_season_owners"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "varsity_season_owners.varsity_season_owners_user_id_starts_on_ends_on_idx",
+        "row": {
+          "name": "varsity_season_owners_user_id_starts_on_ends_on_idx",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE INDEX varsity_season_owners_user_id_starts_on_ends_on_idx ON public.varsity_season_owners USING btree (user_id, starts_on, ends_on)",
+          "table_name": "varsity_season_owners"
+        }
+      },
+      {
+        "kind": "expected-only",
+        "name": "asset_allocations.asset_allocations_no_overlap",
+        "row": {
+          "name": "asset_allocations_no_overlap",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE INDEX asset_allocations_no_overlap ON public.asset_allocations USING gist (asset_id, tsrange(starts_at, ends_at, '[)'::text)) WHERE (active = true)",
+          "table_name": "asset_allocations"
+        }
+      },
+      {
+        "kind": "expected-only",
+        "name": "audit_logs.audit_logs_actor_user_id_created_at_idx",
+        "row": {
+          "name": "audit_logs_actor_user_id_created_at_idx",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE INDEX audit_logs_actor_user_id_created_at_idx ON public.audit_logs USING btree (actor_user_id, created_at)",
+          "table_name": "audit_logs"
+        }
+      },
+      {
+        "kind": "expected-only",
+        "name": "booking_bulk_unit_allocations.booking_bulk_unit_allocations_booking_bulk_item_id_bulk_sku_key",
+        "row": {
+          "name": "booking_bulk_unit_allocations_booking_bulk_item_id_bulk_sku_key",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX booking_bulk_unit_allocations_booking_bulk_item_id_bulk_sku_key ON public.booking_bulk_unit_allocations USING btree (booking_bulk_item_id, bulk_sku_unit_id)",
+          "table_name": "booking_bulk_unit_allocations"
+        }
+      },
+      {
+        "kind": "expected-only",
+        "name": "bookings.bookings_requester_user_id_idx",
+        "row": {
+          "name": "bookings_requester_user_id_idx",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE INDEX bookings_requester_user_id_idx ON public.bookings USING btree (requester_user_id)",
+          "table_name": "bookings"
+        }
+      },
+      {
+        "kind": "expected-only",
+        "name": "bulk_stock_movements.bulk_stock_movements_actor_user_id_idx",
+        "row": {
+          "name": "bulk_stock_movements_actor_user_id_idx",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE INDEX bulk_stock_movements_actor_user_id_idx ON public.bulk_stock_movements USING btree (actor_user_id)",
+          "table_name": "bulk_stock_movements"
+        }
+      },
+      {
+        "kind": "expected-only",
+        "name": "notifications.notifications_user_id_created_at_idx",
+        "row": {
+          "name": "notifications_user_id_created_at_idx",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE INDEX notifications_user_id_created_at_idx ON public.notifications USING btree (user_id, created_at)",
+          "table_name": "notifications"
+        }
+      },
+      {
+        "kind": "expected-only",
+        "name": "override_events.override_events_actor_user_id_idx",
+        "row": {
+          "name": "override_events_actor_user_id_idx",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE INDEX override_events_actor_user_id_idx ON public.override_events USING btree (actor_user_id)",
+          "table_name": "override_events"
+        }
+      },
+      {
+        "kind": "expected-only",
+        "name": "resources.resources_import_key_key",
+        "row": {
+          "name": "resources_import_key_key",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX resources_import_key_key ON public.resources USING btree (import_key)",
+          "table_name": "resources"
+        }
+      },
+      {
+        "kind": "expected-only",
+        "name": "resources.resources_pkey",
+        "row": {
+          "name": "resources_pkey",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX resources_pkey ON public.resources USING btree (id)",
+          "table_name": "resources"
+        }
+      },
+      {
+        "kind": "expected-only",
+        "name": "scan_events.scan_events_actor_user_id_idx",
+        "row": {
+          "name": "scan_events_actor_user_id_idx",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE INDEX scan_events_actor_user_id_idx ON public.scan_events USING btree (actor_user_id)",
+          "table_name": "scan_events"
+        }
+      },
+      {
+        "kind": "expected-only",
+        "name": "schedule_bulk_assignment_items.schedule_bulk_assignment_items_bulk_assignment_id_shift_gro_key",
+        "row": {
+          "name": "schedule_bulk_assignment_items_bulk_assignment_id_shift_gro_key",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX schedule_bulk_assignment_items_bulk_assignment_id_shift_gro_key ON public.schedule_bulk_assignment_items USING btree (bulk_assignment_id, shift_group_id)",
+          "table_name": "schedule_bulk_assignment_items"
+        }
+      },
+      {
+        "kind": "expected-only",
+        "name": "signature_save_operations.signature_save_operations_collection_id_member_id_created_a_idx",
+        "row": {
+          "name": "signature_save_operations_collection_id_member_id_created_a_idx",
+          "ready": true,
+          "valid": true,
+          "definition": "CREATE INDEX signature_save_operations_collection_id_member_id_created_a_idx ON public.signature_save_operations USING btree (collection_id, member_id, created_at)",
+          "table_name": "signature_save_operations"
+        }
+      }
+    ]
+  },
+  {
+    "section": "policies",
+    "differences": []
+  },
+  {
+    "section": "triggers",
+    "differences": []
+  },
+  {
+    "section": "constraints",
+    "differences": [
+      {
+        "kind": "live-only",
+        "name": "allowed_emails.allowed_emails_collaborator_policy_check",
+        "row": {
+          "name": "allowed_emails_collaborator_policy_check",
+          "type": "c",
+          "valid": true,
+          "definition": "CHECK ((((role = 'COLLABORATOR'::\"Role\") AND (collaborator_policy_id IS NOT NULL)) OR ((role <> 'COLLABORATOR'::\"Role\") AND (collaborator_policy_id IS NULL) AND (affiliation IS NULL) AND (collaborator_profile IS NULL))))",
+          "table_name": "allowed_emails"
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "asset_allocations.asset_allocations_asset_id_fkey",
+        "live": {
+          "name": "asset_allocations_asset_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (asset_id) REFERENCES assets(id)",
+          "table_name": "asset_allocations"
+        },
+        "expected": {
+          "name": "asset_allocations_asset_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (asset_id) REFERENCES assets(id) ON UPDATE CASCADE ON DELETE CASCADE",
+          "table_name": "asset_allocations"
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "asset_allocations.asset_allocations_booking_id_fkey",
+        "live": {
+          "name": "asset_allocations_booking_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE",
+          "table_name": "asset_allocations"
+        },
+        "expected": {
+          "name": "asset_allocations_booking_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (booking_id) REFERENCES bookings(id) ON UPDATE CASCADE ON DELETE CASCADE",
+          "table_name": "asset_allocations"
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "assets.assets_location_id_fkey",
+        "live": {
+          "name": "assets_location_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (location_id) REFERENCES locations(id)",
+          "table_name": "assets"
+        },
+        "expected": {
+          "name": "assets_location_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (location_id) REFERENCES locations(id) ON UPDATE CASCADE ON DELETE RESTRICT",
+          "table_name": "assets"
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "audit_logs.audit_logs_actor_user_id_fkey",
+        "live": {
+          "name": "audit_logs_actor_user_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (actor_user_id) REFERENCES users(id) ON DELETE SET NULL",
+          "table_name": "audit_logs"
+        },
+        "expected": {
+          "name": "audit_logs_actor_user_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (actor_user_id) REFERENCES users(id) ON UPDATE CASCADE ON DELETE SET NULL",
+          "table_name": "audit_logs"
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "booking_bulk_items.booking_bulk_items_booking_id_fkey",
+        "live": {
+          "name": "booking_bulk_items_booking_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE",
+          "table_name": "booking_bulk_items"
+        },
+        "expected": {
+          "name": "booking_bulk_items_booking_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (booking_id) REFERENCES bookings(id) ON UPDATE CASCADE ON DELETE CASCADE",
+          "table_name": "booking_bulk_items"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "booking_bulk_items.booking_bulk_items_quantity_check",
+        "row": {
+          "name": "booking_bulk_items_quantity_check",
+          "type": "c",
+          "valid": true,
+          "definition": "CHECK (((planned_quantity > 0) AND (checked_out_quantity >= 0) AND (checked_in_quantity >= 0) AND (checked_out_quantity <= planned_quantity) AND (checked_in_quantity <= checked_out_quantity)))",
+          "table_name": "booking_bulk_items"
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "booking_serialized_items.booking_serialized_items_asset_id_fkey",
+        "live": {
+          "name": "booking_serialized_items_asset_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (asset_id) REFERENCES assets(id)",
+          "table_name": "booking_serialized_items"
+        },
+        "expected": {
+          "name": "booking_serialized_items_asset_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (asset_id) REFERENCES assets(id) ON UPDATE CASCADE ON DELETE RESTRICT",
+          "table_name": "booking_serialized_items"
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "booking_serialized_items.booking_serialized_items_booking_id_fkey",
+        "live": {
+          "name": "booking_serialized_items_booking_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE",
+          "table_name": "booking_serialized_items"
+        },
+        "expected": {
+          "name": "booking_serialized_items_booking_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (booking_id) REFERENCES bookings(id) ON UPDATE CASCADE ON DELETE CASCADE",
+          "table_name": "booking_serialized_items"
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "bookings.bookings_created_by_fkey",
+        "live": {
+          "name": "bookings_created_by_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (created_by) REFERENCES users(id)",
+          "table_name": "bookings"
+        },
+        "expected": {
+          "name": "bookings_created_by_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (created_by) REFERENCES users(id) ON UPDATE CASCADE ON DELETE RESTRICT",
+          "table_name": "bookings"
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "bookings.bookings_location_id_fkey",
+        "live": {
+          "name": "bookings_location_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (location_id) REFERENCES locations(id)",
+          "table_name": "bookings"
+        },
+        "expected": {
+          "name": "bookings_location_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (location_id) REFERENCES locations(id) ON UPDATE CASCADE ON DELETE RESTRICT",
+          "table_name": "bookings"
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "bookings.bookings_requester_user_id_fkey",
+        "live": {
+          "name": "bookings_requester_user_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (requester_user_id) REFERENCES users(id)",
+          "table_name": "bookings"
+        },
+        "expected": {
+          "name": "bookings_requester_user_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (requester_user_id) REFERENCES users(id) ON UPDATE CASCADE ON DELETE RESTRICT",
+          "table_name": "bookings"
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "bookings.bookings_source_reservation_id_fkey",
+        "live": {
+          "name": "bookings_source_reservation_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (source_reservation_id) REFERENCES bookings(id) ON DELETE SET NULL",
+          "table_name": "bookings"
+        },
+        "expected": {
+          "name": "bookings_source_reservation_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (source_reservation_id) REFERENCES bookings(id) ON UPDATE CASCADE ON DELETE SET NULL",
+          "table_name": "bookings"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "bookings.bookings_time_window_check",
+        "row": {
+          "name": "bookings_time_window_check",
+          "type": "c",
+          "valid": true,
+          "definition": "CHECK ((ends_at > starts_at))",
+          "table_name": "bookings"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "bulk_sku_units.bulk_sku_units_label_printed_by_id_fkey",
+        "row": {
+          "name": "bulk_sku_units_label_printed_by_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (label_printed_by_id) REFERENCES users(id) ON UPDATE CASCADE ON DELETE SET NULL",
+          "table_name": "bulk_sku_units"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "bulk_sku_units.bulk_sku_units_unit_number_check",
+        "row": {
+          "name": "bulk_sku_units_unit_number_check",
+          "type": "c",
+          "valid": true,
+          "definition": "CHECK ((unit_number > 0))",
+          "table_name": "bulk_sku_units"
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "bulk_skus.bulk_skus_location_id_fkey",
+        "live": {
+          "name": "bulk_skus_location_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (location_id) REFERENCES locations(id)",
+          "table_name": "bulk_skus"
+        },
+        "expected": {
+          "name": "bulk_skus_location_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (location_id) REFERENCES locations(id) ON UPDATE CASCADE ON DELETE RESTRICT",
+          "table_name": "bulk_skus"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "bulk_skus.bulk_skus_min_threshold_check",
+        "row": {
+          "name": "bulk_skus_min_threshold_check",
+          "type": "c",
+          "valid": true,
+          "definition": "CHECK ((min_threshold >= 0))",
+          "table_name": "bulk_skus"
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "bulk_stock_balances.bulk_stock_balances_bulk_sku_id_fkey",
+        "live": {
+          "name": "bulk_stock_balances_bulk_sku_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (bulk_sku_id) REFERENCES bulk_skus(id) ON DELETE CASCADE",
+          "table_name": "bulk_stock_balances"
+        },
+        "expected": {
+          "name": "bulk_stock_balances_bulk_sku_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (bulk_sku_id) REFERENCES bulk_skus(id) ON UPDATE CASCADE ON DELETE CASCADE",
+          "table_name": "bulk_stock_balances"
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "bulk_stock_balances.bulk_stock_balances_location_id_fkey",
+        "live": {
+          "name": "bulk_stock_balances_location_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (location_id) REFERENCES locations(id)",
+          "table_name": "bulk_stock_balances"
+        },
+        "expected": {
+          "name": "bulk_stock_balances_location_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (location_id) REFERENCES locations(id) ON UPDATE CASCADE ON DELETE RESTRICT",
+          "table_name": "bulk_stock_balances"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "bulk_stock_balances.bulk_stock_balances_on_hand_quantity_check",
+        "row": {
+          "name": "bulk_stock_balances_on_hand_quantity_check",
+          "type": "c",
+          "valid": true,
+          "definition": "CHECK ((on_hand_quantity >= 0))",
+          "table_name": "bulk_stock_balances"
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "bulk_stock_movements.bulk_stock_movements_actor_user_id_fkey",
+        "live": {
+          "name": "bulk_stock_movements_actor_user_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (actor_user_id) REFERENCES users(id)",
+          "table_name": "bulk_stock_movements"
+        },
+        "expected": {
+          "name": "bulk_stock_movements_actor_user_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (actor_user_id) REFERENCES users(id) ON UPDATE CASCADE ON DELETE RESTRICT",
+          "table_name": "bulk_stock_movements"
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "bulk_stock_movements.bulk_stock_movements_booking_id_fkey",
+        "live": {
+          "name": "bulk_stock_movements_booking_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE SET NULL",
+          "table_name": "bulk_stock_movements"
+        },
+        "expected": {
+          "name": "bulk_stock_movements_booking_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (booking_id) REFERENCES bookings(id) ON UPDATE CASCADE ON DELETE SET NULL",
+          "table_name": "bulk_stock_movements"
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "bulk_stock_movements.bulk_stock_movements_bulk_sku_id_fkey",
+        "live": {
+          "name": "bulk_stock_movements_bulk_sku_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (bulk_sku_id) REFERENCES bulk_skus(id)",
+          "table_name": "bulk_stock_movements"
+        },
+        "expected": {
+          "name": "bulk_stock_movements_bulk_sku_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (bulk_sku_id) REFERENCES bulk_skus(id) ON UPDATE CASCADE ON DELETE RESTRICT",
+          "table_name": "bulk_stock_movements"
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "bulk_stock_movements.bulk_stock_movements_location_id_fkey",
+        "live": {
+          "name": "bulk_stock_movements_location_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (location_id) REFERENCES locations(id)",
+          "table_name": "bulk_stock_movements"
+        },
+        "expected": {
+          "name": "bulk_stock_movements_location_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (location_id) REFERENCES locations(id) ON UPDATE CASCADE ON DELETE RESTRICT",
+          "table_name": "bulk_stock_movements"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "collaborator_affiliations.collaborator_affiliations_badge_label_check",
+        "row": {
+          "name": "collaborator_affiliations_badge_label_check",
+          "type": "c",
+          "valid": true,
+          "definition": "CHECK (((char_length(badge_label) >= 2) AND (char_length(badge_label) <= 12)))",
+          "table_name": "collaborator_affiliations"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "collaborator_affiliations.collaborator_affiliations_display_name_check",
+        "row": {
+          "name": "collaborator_affiliations_display_name_check",
+          "type": "c",
+          "valid": true,
+          "definition": "CHECK (((char_length(display_name) >= 1) AND (char_length(display_name) <= 80)))",
+          "table_name": "collaborator_affiliations"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "collaborator_policies.collaborator_policies_version_check",
+        "row": {
+          "name": "collaborator_policies_version_check",
+          "type": "c",
+          "valid": true,
+          "definition": "CHECK ((version >= 1))",
+          "table_name": "collaborator_policies"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "license_code_claims.license_code_claims_released_by_id_fkey",
+        "row": {
+          "name": "license_code_claims_released_by_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (released_by_id) REFERENCES users(id) ON UPDATE CASCADE ON DELETE SET NULL",
+          "table_name": "license_code_claims"
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "location_mappings.location_mappings_location_id_fkey",
+        "live": {
+          "name": "location_mappings_location_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (location_id) REFERENCES locations(id) ON UPDATE CASCADE ON DELETE RESTRICT",
+          "table_name": "location_mappings"
+        },
+        "expected": {
+          "name": "location_mappings_location_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (location_id) REFERENCES locations(id) ON UPDATE CASCADE ON DELETE CASCADE",
+          "table_name": "location_mappings"
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "override_events.override_events_actor_user_id_fkey",
+        "live": {
+          "name": "override_events_actor_user_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (actor_user_id) REFERENCES users(id)",
+          "table_name": "override_events"
+        },
+        "expected": {
+          "name": "override_events_actor_user_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (actor_user_id) REFERENCES users(id) ON UPDATE CASCADE ON DELETE RESTRICT",
+          "table_name": "override_events"
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "override_events.override_events_booking_id_fkey",
+        "live": {
+          "name": "override_events_booking_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE",
+          "table_name": "override_events"
+        },
+        "expected": {
+          "name": "override_events_booking_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (booking_id) REFERENCES bookings(id) ON UPDATE CASCADE ON DELETE CASCADE",
+          "table_name": "override_events"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "resources.guides_pkey",
+        "row": {
+          "name": "guides_pkey",
+          "type": "p",
+          "valid": true,
+          "definition": "PRIMARY KEY (id)",
+          "table_name": "resources"
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "scan_events.scan_events_actor_user_id_fkey",
+        "live": {
+          "name": "scan_events_actor_user_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (actor_user_id) REFERENCES users(id)",
+          "table_name": "scan_events"
+        },
+        "expected": {
+          "name": "scan_events_actor_user_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (actor_user_id) REFERENCES users(id) ON UPDATE CASCADE ON DELETE RESTRICT",
+          "table_name": "scan_events"
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "scan_events.scan_events_asset_id_fkey",
+        "live": {
+          "name": "scan_events_asset_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE SET NULL",
+          "table_name": "scan_events"
+        },
+        "expected": {
+          "name": "scan_events_asset_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (asset_id) REFERENCES assets(id) ON UPDATE CASCADE ON DELETE SET NULL",
+          "table_name": "scan_events"
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "scan_events.scan_events_booking_id_fkey",
+        "live": {
+          "name": "scan_events_booking_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE",
+          "table_name": "scan_events"
+        },
+        "expected": {
+          "name": "scan_events_booking_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (booking_id) REFERENCES bookings(id) ON UPDATE CASCADE ON DELETE CASCADE",
+          "table_name": "scan_events"
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "scan_events.scan_events_bulk_sku_id_fkey",
+        "live": {
+          "name": "scan_events_bulk_sku_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (bulk_sku_id) REFERENCES bulk_skus(id) ON DELETE SET NULL",
+          "table_name": "scan_events"
+        },
+        "expected": {
+          "name": "scan_events_bulk_sku_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (bulk_sku_id) REFERENCES bulk_skus(id) ON UPDATE CASCADE ON DELETE SET NULL",
+          "table_name": "scan_events"
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "scan_sessions.scan_sessions_actor_user_id_fkey",
+        "live": {
+          "name": "scan_sessions_actor_user_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (actor_user_id) REFERENCES users(id)",
+          "table_name": "scan_sessions"
+        },
+        "expected": {
+          "name": "scan_sessions_actor_user_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (actor_user_id) REFERENCES users(id) ON UPDATE CASCADE ON DELETE RESTRICT",
+          "table_name": "scan_sessions"
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "scan_sessions.scan_sessions_booking_id_fkey",
+        "live": {
+          "name": "scan_sessions_booking_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE",
+          "table_name": "scan_sessions"
+        },
+        "expected": {
+          "name": "scan_sessions_booking_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (booking_id) REFERENCES bookings(id) ON UPDATE CASCADE ON DELETE CASCADE",
+          "table_name": "scan_sessions"
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "sessions.sessions_user_id_fkey",
+        "live": {
+          "name": "sessions_user_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE",
+          "table_name": "sessions"
+        },
+        "expected": {
+          "name": "sessions_user_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE",
+          "table_name": "sessions"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "shift_group_working_copies.shift_group_working_copies_base_version_check",
+        "row": {
+          "name": "shift_group_working_copies_base_version_check",
+          "type": "c",
+          "valid": true,
+          "definition": "CHECK ((base_published_version >= 0))",
+          "table_name": "shift_group_working_copies"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "shift_group_working_copies.shift_group_working_copies_payload_version_check",
+        "row": {
+          "name": "shift_group_working_copies_payload_version_check",
+          "type": "c",
+          "valid": true,
+          "definition": "CHECK ((payload_version > 0))",
+          "table_name": "shift_group_working_copies"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "shift_group_working_copies.shift_group_working_copies_redo_stack_array_check",
+        "row": {
+          "name": "shift_group_working_copies_redo_stack_array_check",
+          "type": "c",
+          "valid": true,
+          "definition": "CHECK ((jsonb_typeof(redo_stack) = 'array'::text))",
+          "table_name": "shift_group_working_copies"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "shift_group_working_copies.shift_group_working_copies_undo_stack_array_check",
+        "row": {
+          "name": "shift_group_working_copies_undo_stack_array_check",
+          "type": "c",
+          "valid": true,
+          "definition": "CHECK ((jsonb_typeof(undo_stack) = 'array'::text))",
+          "table_name": "shift_group_working_copies"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "shift_group_working_copies.shift_group_working_copies_version_check",
+        "row": {
+          "name": "shift_group_working_copies_version_check",
+          "type": "c",
+          "valid": true,
+          "definition": "CHECK ((version > 0))",
+          "table_name": "shift_group_working_copies"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "sport_shift_configs.sport_shift_configs_count_range_check",
+        "row": {
+          "name": "sport_shift_configs_count_range_check",
+          "type": "c",
+          "valid": true,
+          "definition": "CHECK ((((home_count >= 0) AND (home_count <= 20)) AND ((away_count >= 0) AND (away_count <= 20)) AND ((home_staff_count >= 0) AND (home_staff_count <= 20)) AND ((home_student_count >= 0) AND (home_student_count <= 20)) AND ((away_staff_count >= 0) AND (away_staff_count <= 20)) AND ((away_student_count >= 0) AND (away_student_count <= 20))))",
+          "table_name": "sport_shift_configs"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "users.users_birth_year_check",
+        "row": {
+          "name": "users_birth_year_check",
+          "type": "c",
+          "valid": true,
+          "definition": "CHECK (((birth_year IS NULL) OR ((birth_year >= 1900) AND (birth_year <= 2100))))",
+          "table_name": "users"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "users.users_birthday_day_check",
+        "row": {
+          "name": "users_birthday_day_check",
+          "type": "c",
+          "valid": true,
+          "definition": "CHECK (((birthday_day IS NULL) OR ((birthday_day >= 1) AND (birthday_day <= 31))))",
+          "table_name": "users"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "users.users_birthday_month_check",
+        "row": {
+          "name": "users_birthday_month_check",
+          "type": "c",
+          "valid": true,
+          "definition": "CHECK (((birthday_month IS NULL) OR ((birthday_month >= 1) AND (birthday_month <= 12))))",
+          "table_name": "users"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "users.users_birthday_month_day_pair_check",
+        "row": {
+          "name": "users_birthday_month_day_pair_check",
+          "type": "c",
+          "valid": true,
+          "definition": "CHECK (((birthday_month IS NULL) = (birthday_day IS NULL)))",
+          "table_name": "users"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "users.users_collaborator_policy_check",
+        "row": {
+          "name": "users_collaborator_policy_check",
+          "type": "c",
+          "valid": true,
+          "definition": "CHECK ((((role = 'COLLABORATOR'::\"Role\") AND (collaborator_policy_id IS NOT NULL)) OR ((role <> 'COLLABORATOR'::\"Role\") AND (collaborator_policy_id IS NULL) AND (affiliation IS NULL) AND (collaborator_profile IS NULL))))",
+          "table_name": "users"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "users.users_ics_token_key",
+        "row": {
+          "name": "users_ics_token_key",
+          "type": "u",
+          "valid": true,
+          "definition": "UNIQUE (ics_token)",
+          "table_name": "users"
+        }
+      },
+      {
+        "kind": "changed",
+        "name": "users.users_location_id_fkey",
+        "live": {
+          "name": "users_location_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE SET NULL",
+          "table_name": "users"
+        },
+        "expected": {
+          "name": "users_location_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (location_id) REFERENCES locations(id) ON UPDATE CASCADE ON DELETE SET NULL",
+          "table_name": "users"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "varsity_season_owners.varsity_season_owners_created_by_id_fkey",
+        "row": {
+          "name": "varsity_season_owners_created_by_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (created_by_id) REFERENCES users(id) ON UPDATE CASCADE ON DELETE RESTRICT",
+          "table_name": "varsity_season_owners"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "varsity_season_owners.varsity_season_owners_pkey",
+        "row": {
+          "name": "varsity_season_owners_pkey",
+          "type": "p",
+          "valid": true,
+          "definition": "PRIMARY KEY (id)",
+          "table_name": "varsity_season_owners"
+        }
+      },
+      {
+        "kind": "live-only",
+        "name": "varsity_season_owners.varsity_season_owners_user_id_fkey",
+        "row": {
+          "name": "varsity_season_owners_user_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON UPDATE CASCADE ON DELETE RESTRICT",
+          "table_name": "varsity_season_owners"
+        }
+      },
+      {
+        "kind": "expected-only",
+        "name": "asset_allocations.asset_allocations_no_overlap",
+        "row": {
+          "name": "asset_allocations_no_overlap",
+          "type": "x",
+          "valid": true,
+          "definition": "EXCLUDE USING gist (asset_id WITH =, tsrange(starts_at, ends_at, '[)'::text) WITH &&) WHERE ((active = true))",
+          "table_name": "asset_allocations"
+        }
+      },
+      {
+        "kind": "expected-only",
+        "name": "booking_bulk_items.booking_bulk_items_bulk_sku_id_fkey",
+        "row": {
+          "name": "booking_bulk_items_bulk_sku_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (bulk_sku_id) REFERENCES bulk_skus(id) ON UPDATE CASCADE ON DELETE RESTRICT",
+          "table_name": "booking_bulk_items"
+        }
+      },
+      {
+        "kind": "expected-only",
+        "name": "notifications.notifications_user_id_fkey",
+        "row": {
+          "name": "notifications_user_id_fkey",
+          "type": "f",
+          "valid": true,
+          "definition": "FOREIGN KEY (user_id) REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE",
+          "table_name": "notifications"
+        }
+      },
+      {
+        "kind": "expected-only",
+        "name": "resources.resources_pkey",
+        "row": {
+          "name": "resources_pkey",
+          "type": "p",
+          "valid": true,
+          "definition": "PRIMARY KEY (id)",
+          "table_name": "resources"
+        }
+      }
+    ]
+  }
+]

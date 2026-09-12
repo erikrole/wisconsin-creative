@@ -795,17 +795,18 @@ const resourceImportImageSchema = z.object({
  */
 export const resourceImportManifestSchema = z.object({
   importKey: resourceImportKeySchema,
+  expectedUpdatedAt: z.string().datetime().optional(),
   sourceLabel: z.string().trim().max(200).optional(),
   title: z.string().trim().min(1, "Title is required").max(200),
-  type: z.nativeEnum(ResourceType).default(ResourceType.GENERAL),
+  type: z.nativeEnum(ResourceType).optional(),
   category: z.string().trim().min(1, "Category is required").max(100),
   markdown: z.string().trim().min(1, "Markdown is required").max(200_000),
   images: z.array(resourceImportImageSchema).max(20).default([]),
-  targetRoles: z.array(z.nativeEnum(Role)).max(3).default([]),
-  targetAreas: z.array(z.nativeEnum(ShiftArea)).max(4).default([]),
-  featured: z.boolean().default(false),
+  targetRoles: z.array(z.nativeEnum(Role)).max(3).optional(),
+  targetAreas: z.array(z.nativeEnum(ShiftArea)).max(4).optional(),
+  featured: z.boolean().optional(),
   featuredRank: z.number().int().min(1).max(999).nullable().optional(),
-  published: z.boolean().default(false),
+  published: z.boolean().optional(),
 }).strict().superRefine((manifest, ctx) => {
   const seen = new Set<string>();
   manifest.images.forEach((image, index) => {
@@ -821,7 +822,7 @@ export const resourceImportManifestSchema = z.object({
 });
 
 export const resourceImportRequestSchema = z.object({
-  dryRun: z.boolean().default(false),
+  dryRun: z.boolean().default(true),
   manifest: resourceImportManifestSchema,
 }).strict();
 

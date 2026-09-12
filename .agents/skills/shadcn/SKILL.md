@@ -1,6 +1,6 @@
 ---
 name: shadcn
-description: Wisconsin Creative shadcn/ui component workflow. Use when adding, updating, debugging, or composing a shadcn primitive, when components.json or a registry is involved, or when deciding whether an existing Wisconsin Creative control should use an installed shadcn component. Prefer current local components and product contracts before CLI or registry changes.
+description: "Add, update, debug, or compose Wisconsin Creative shadcn/ui primitives while preserving local component contracts."
 ---
 
 # Shadcn for Wisconsin Creative

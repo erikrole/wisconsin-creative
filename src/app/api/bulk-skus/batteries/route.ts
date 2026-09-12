@@ -1,12 +1,12 @@
 import { withAuth } from "@/lib/api";
 import { getBatteryCompatibilitySummaries } from "@/lib/battery-compatibility";
 import { isBatterySku } from "@/lib/bulk-batteries";
-import { buildActiveBulkUnitAllocationMap, effectiveBulkUnitStatus } from "@/lib/bulk-unit-status";
+import { ACTIVE_BULK_UNIT_ALLOCATION_WHERE, buildActiveBulkUnitAllocationMap, effectiveBulkUnitStatus } from "@/lib/bulk-unit-status";
 import { db } from "@/lib/db";
 import { ok } from "@/lib/http";
 import { requirePermission } from "@/lib/rbac";
 import { getBatteryOpsFixture } from "@/lib/fixtures/battery-ops";
-import { BookingKind, BookingStatus } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
 function daysSince(value: Date | null | undefined, now: Date) {
   if (!value) return null;
@@ -34,7 +34,7 @@ export const GET = withAuth(async (req, { user }) => {
   }
 
   const now = new Date();
-  const [rawSkus, cameraAssets, activeUnitAllocations] = await Promise.all([
+  const [rawSkus, cameraAssets, activeUnitAllocations] = await db.$transaction([
     db.bulkSku.findMany({
       where: {
         active: true,
@@ -74,16 +74,9 @@ export const GET = withAuth(async (req, { user }) => {
       },
     }),
     db.bookingBulkUnitAllocation.findMany({
-      where: {
-        checkedOutAt: { not: null },
-        checkedInAt: null,
-        bookingBulkItem: {
-          booking: {
-            kind: BookingKind.CHECKOUT,
-            status: BookingStatus.OPEN,
-          },
-        },
-      },
+      // An unreturned allocation still blocks an exact scan even if the
+      // parent booking was closed incorrectly. Match the claim/repair rule.
+      where: ACTIVE_BULK_UNIT_ALLOCATION_WHERE,
       orderBy: [{ checkedOutAt: "desc" }, { createdAt: "desc" }],
       select: {
         bulkSkuUnitId: true,
@@ -104,7 +97,7 @@ export const GET = withAuth(async (req, { user }) => {
         },
       },
     }),
-  ]);
+  ], { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
 
   const activeAllocationByUnitId = buildActiveBulkUnitAllocationMap(activeUnitAllocations);
 

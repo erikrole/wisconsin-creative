@@ -1184,6 +1184,42 @@ describe("createBooking", () => {
     }));
   });
 
+  it("releases selected reservation allocations before opening checkout custody", async () => {
+    mockTx.booking.findUnique.mockResolvedValue({
+      id: "rv-1",
+      kind: BookingKind.RESERVATION,
+      status: BookingStatus.BOOKED,
+      locationId: "loc-1",
+      custodyScope: "PERSON",
+      serializedItems: [
+        { assetId: "a-1", allocationStatus: "active" },
+        { assetId: "a-2", allocationStatus: "active" },
+      ],
+      bulkItems: [],
+    });
+
+    await createBooking(baseInput({
+      sourceReservationId: "rv-1",
+      sourceReservationPickup: true,
+      serializedAssetIds: ["a-1"],
+      bulkItems: [],
+    }));
+
+    const release = mockTx.assetAllocation.updateMany.mock.invocationCallOrder[0];
+    const checkoutAllocation = mockTx.assetAllocation.createMany.mock.invocationCallOrder[0];
+    expect(release).toBeDefined();
+    expect(checkoutAllocation).toBeDefined();
+    expect(release!).toBeLessThan(checkoutAllocation!);
+    expect(mockTx.assetAllocation.updateMany).toHaveBeenCalledWith({
+      where: {
+        bookingId: "rv-1",
+        assetId: { in: ["a-1"] },
+        active: true,
+      },
+      data: { active: false },
+    });
+  });
+
   it("rejects reservation pickup above 10 distinct bulk SKUs before availability or writes", async () => {
     mockTx.booking.findUnique.mockResolvedValue({
       id: "rv-1",

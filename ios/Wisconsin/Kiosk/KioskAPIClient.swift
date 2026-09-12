@@ -229,7 +229,7 @@ struct KioskAPI {
         eventId: String?,
         customPurpose: String?,
         endsAt: Date
-    ) async throws -> [EarnedBadgeReward] {
+    ) async throws -> KioskCheckoutCompletion {
         struct Body: Encodable {
             let actorId: String
             let locationId: String
@@ -247,12 +247,54 @@ struct KioskAPI {
             customPurpose: customPurpose,
             endsAt: isoString(from: endsAt)
         ))
-        struct Response: Decodable {
-            let bookingId: String
-            let earnedBadges: [EarnedBadgeReward]?
+        return try await performCompletion(req, actorId: actorId)
+    }
+
+    struct KioskCheckoutCompletion: Decodable {
+        let bookingId: String
+        let itemCount: Int?
+        let earnedBadges: [EarnedBadgeReward]?
+    }
+
+    func hasPendingCheckout(actorId: String) -> Bool {
+        hasPendingCompletion(path: "/api/kiosk/checkout/complete", actorId: actorId)
+    }
+
+    func hasPendingPickup(bookingId: String, actorId: String) -> Bool {
+        hasPendingCompletion(path: "/api/kiosk/pickup/\(bookingId)/confirm", actorId: actorId)
+    }
+
+    private func completionKey(path: String, actorId: String) -> String {
+        "kiosk.pending-operation.\(path).\(actorId)"
+    }
+
+    private func hasPendingCompletion(path: String, actorId: String) -> Bool {
+        UserDefaults.standard.data(forKey: completionKey(path: path, actorId: actorId)) != nil
+    }
+
+    /// Persist the exact request before transmission. A retry uses these bytes,
+    /// even after relaunch, until the server confirms a handoff or seals a rejection.
+    private func performCompletion<T: Decodable>(_ request: URLRequest, actorId: String) async throws -> T {
+        var pending = request
+        let key = completionKey(path: request.url!.path, actorId: actorId)
+        if let saved = UserDefaults.standard.data(forKey: key) {
+            pending.httpBody = saved
+        } else {
+            var body = try JSONSerialization.jsonObject(with: request.httpBody!) as! [String: Any]
+            body["requestId"] = "\(Int64(Date().timeIntervalSince1970 * 1000)):\(UUID().uuidString)"
+            pending.httpBody = try JSONSerialization.data(withJSONObject: body, options: [.sortedKeys])
+            UserDefaults.standard.set(pending.httpBody, forKey: key)
         }
-        let response: Response = try await perform(req)
-        return response.earnedBadges ?? []
+        // Decode once inside the normal credential boundary. The envelope can
+        // contain either a committed receipt or an explicit, sealed rejection.
+        let envelope: KioskCompletionEnvelope<T> = try await perform(pending)
+        if envelope.operationRejected == true {
+            UserDefaults.standard.removeObject(forKey: key)
+            throw APIError.serverError(envelope.error ?? "This handoff was not recorded. Review the list and try again.")
+        }
+        guard let result = envelope.result else { throw APIError.serverError("Could not read the handoff receipt. Retry to check its status.") }
+        UserDefaults.standard.removeObject(forKey: key)
+        return result
     }
 
     func kioskCheckoutDetail(id: String) async throws -> KioskCheckoutDetail {
@@ -346,7 +388,7 @@ struct KioskAPI {
         // the prior `try?` swallowed every failure mode and produced phantom
         // successes (booking stayed PENDING_PICKUP server-side, kiosk showed
         // the confirmation screen).
-        return try await perform(req)
+        return try await performCompletion(req, actorId: actorId)
     }
 
     // MARK: - Internals
@@ -542,5 +584,18 @@ struct KioskBuildIdentity: Encodable {
         sysctlbyname("hw.machine", &machine, &size, nil, 0)
         let bytes = machine.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }
         return String(decoding: bytes, as: UTF8.self)
+    }
+}
+
+private struct KioskCompletionEnvelope<T: Decodable>: Decodable {
+    let operationRejected: Bool?
+    let error: String?
+    let result: T?
+    enum CodingKeys: String, CodingKey { case operationRejected, error }
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        operationRejected = try values.decodeIfPresent(Bool.self, forKey: .operationRejected)
+        error = try values.decodeIfPresent(String.self, forKey: .error)
+        result = operationRejected == true ? nil : try T(from: decoder)
     }
 }

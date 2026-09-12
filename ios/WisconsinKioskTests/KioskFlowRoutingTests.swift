@@ -87,4 +87,37 @@ final class KioskFlowRoutingTests: XCTestCase {
         XCTAssertFalse(boundary.owns(replacedSession))
         XCTAssertTrue(boundary.owns(activeSession))
     }
+    @MainActor
+    func testQueuedScansWaitForTheirOwnResponseAndPreserveBurstOrder() {
+        let queue = KioskScanQueue()
+        XCTAssertTrue(queue.enqueue(" A "))
+        let first = queue.next()!
+        XCTAssertFalse(queue.enqueue("a"))
+        XCTAssertTrue(queue.enqueue("B"))
+        XCTAssertNil(queue.next())
+        XCTAssertEqual(queue.count, 2)
+        queue.finish(first)
+        let second = queue.next()!
+        XCTAssertEqual(second.value, "B")
+        queue.finish(first)
+        XCTAssertEqual(queue.active, second)
+        queue.finish(second)
+        XCTAssertTrue(queue.isEmpty)
+        XCTAssertTrue(queue.enqueue("A"))
+    }
+
+    @MainActor
+    func testLateScanResponseCannotConsumeANewSessionsInput() {
+        let queue = KioskScanQueue()
+        queue.enqueue("A")
+        let old = queue.next()!
+        queue.reset()
+        queue.enqueue("A")
+        let current = queue.next()!
+        queue.finish(old)
+        XCTAssertEqual(queue.active, current)
+        XCTAssertEqual(queue.count, 1)
+        XCTAssertFalse(queue.enqueue("  "))
+    }
+
 }

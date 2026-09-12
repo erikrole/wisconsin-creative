@@ -453,6 +453,8 @@ export async function checkBulkShortages(
     startsAt: Date;
     endsAt: Date;
     excludeBookingId?: string;
+    /** Server-derived custody credit; never accepted from an API payload. */
+    heldQuantities?: ReadonlyMap<string, number>;
   }
 ): Promise<AvailabilityResult["shortages"]> {
   if (args.bulkItems.length === 0) {
@@ -496,7 +498,7 @@ export async function checkBulkShortages(
     .map((item) => {
       const onHand = balanceMap.get(item.bulkSkuId) ?? 0;
       const committed = committedMap.get(item.bulkSkuId) ?? 0;
-      const available = Math.max(0, onHand - committed);
+      const available = Math.max(0, onHand + (args.heldQuantities?.get(item.bulkSkuId) ?? 0) - committed);
       return {
         bulkSkuId: item.bulkSkuId,
         requested: item.quantity,
@@ -627,4 +629,41 @@ export async function checkAvailability(
   });
 
   return { conflicts, shortages, unavailableAssets, upcomingCommitments, turnaroundRisks, bulkTurnaroundRisks };
+}
+
+/** Validate only the additional custody window. Held stock has already left
+ * the shelf; it must not be requested a second time when changing its due time. */
+export async function checkCheckoutDueTime(
+  tx: Prisma.TransactionClient,
+  booking: { id: string; locationId: string; endsAt: Date },
+  endsAt: Date,
+) {
+  if (endsAt <= booking.endsAt) return { conflicts: [], shortages: [], unavailableAssets: [] };
+  const [serialized, bulk] = await Promise.all([
+    tx.bookingSerializedItem.findMany({
+      where: { bookingId: booking.id, allocationStatus: "active" },
+      select: { assetId: true },
+    }),
+    tx.bookingBulkItem.findMany({
+      where: { bookingId: booking.id },
+      select: { bulkSkuId: true, checkedOutQuantity: true, checkedInQuantity: true },
+    }),
+  ]);
+  const bulkItems = bulk.map((item) => ({
+    bulkSkuId: item.bulkSkuId,
+    quantity: Math.max(0, item.checkedOutQuantity - item.checkedInQuantity),
+  })).filter((item) => item.quantity > 0);
+  const startsAt = new Date(Math.max(Date.now(), booking.endsAt.getTime()));
+  const [conflicts, shortages] = await Promise.all([
+    checkSerializedConflicts(tx, {
+      serializedAssetIds: serialized.map((item) => item.assetId), startsAt, endsAt,
+      excludeBookingId: booking.id, enforceTurnaroundBuffer: false,
+    }),
+    checkBulkShortages(tx, {
+      locationId: booking.locationId, bulkItems, startsAt, endsAt,
+      excludeBookingId: booking.id,
+      heldQuantities: new Map(bulkItems.map((item) => [item.bulkSkuId, item.quantity])),
+    }),
+  ]);
+  return { conflicts, shortages, unavailableAssets: [] };
 }
