@@ -88,6 +88,7 @@ describe("iOS kiosk reservation pickup contract", () => {
     const pickupView = source("ios/Wisconsin/Kiosk/KioskPickupView.swift");
 
     expect(detailRoute).toContain('type: "bulk_quantity" as const');
+    expect(detailRoute).toContain("booking.kind === \"RESERVATION\" ? { reservationItemId: bi.id }");
     expect(detailRoute).toMatch(/if \(!bi\.bulkSku\.trackByNumber\)[\s\S]*?returned: true/);
     expect(confirmRoute).toContain("item.bulkSku.trackByNumber &&");
     expect(confirmRoute).toContain("if (!item.bulkSku.trackByNumber) {");
@@ -105,12 +106,17 @@ describe("iOS kiosk reservation pickup contract", () => {
     const scanRoute = source("src/app/api/kiosk/pickup/[id]/scan/route.ts");
     const pickupView = source("ios/Wisconsin/Kiosk/KioskPickupView.swift");
     const add = source("src/lib/services/kiosk-pickup-add.ts");
+    const apiClient = source("ios/Wisconsin/Kiosk/KioskAPIClient.swift");
 
     expect(scanRoute).toContain('errorCode: "add_available"');
     expect(scanRoute).not.toContain("findPickupSubstitutionCandidate");
     expect(add).toContain("preflightReservationPickupSerializedAdd");
     expect(add).toContain("kioskAvailabilityBlockMessage");
     expect(add).toContain("kiosk_pickup_item_added");
+    expect(add).toContain("remainingPickupAllocationWindow");
+    expect(add).toContain("assertKioskPickupPlanActor");
+    expect(apiClient).toContain("formatOptions = [.withInternetDateTime, .withFractionalSeconds]");
+    expect(apiClient).toContain("encodeIfPresent(quantity");
     expect(pickupView).toContain('"Add this item?"');
     expect(pickupView).toContain('"Can\'t add this item"');
     expect(pickupView).toContain("presentBlockedAdd");
@@ -119,6 +125,8 @@ describe("iOS kiosk reservation pickup contract", () => {
     expect(pickupView).toContain("KioskScanFeedbackSound.playFailure()");
     expect(pickupView).toContain("presentAddOrDiscard");
     expect(pickupView).toContain("removeRemainingItem");
+    expect(pickupView).toContain("remainingBatteryRemove");
+    expect(pickupView).toContain("canRemoveRemaining");
     expect(pickupView).toContain('intent: "add"');
   });
 });

@@ -40,6 +40,7 @@ type ActiveUnitHolder = {
   title?: string;
   kind?: string;
   status?: string;
+  custodyScope?: BookingCustodyScope | string | null;
   endsAt?: Date;
   requester?: { name: string | null } | null;
 };
@@ -48,14 +49,20 @@ const activeUnitHolderSelect = {
   title: true,
   kind: true,
   status: true,
+  custodyScope: true,
   endsAt: true,
   requester: { select: { name: true } },
 } as const;
 
+function disclosedHolderName(booking?: ActiveUnitHolder | null) {
+  if (!booking || booking.custodyScope === BookingCustodyScope.SHARED) return null;
+  return booking.requester?.name ?? null;
+}
+
 function numberedUnitHeldMessage(skuName: string, unitNumber: number, booking?: ActiveUnitHolder | null) {
   return kioskHeldItemMessage({
     itemName: `${skuName} #${unitNumber}`,
-    holder: booking?.requester?.name,
+    holder: disclosedHolderName(booking),
     dueAt: booking?.endsAt,
     kind: booking?.kind,
     status: booking?.status,
@@ -702,7 +709,7 @@ export async function findBulkUnitByScanValue(scanValue: string) {
     bulkSkuName: unit.bulkSku.name,
     bulkSkuId: unit.bulkSku.id,
     unitNumber: unit.unitNumber,
-    holder: booking?.requester.name,
+    holder: disclosedHolderName(booking),
     dueAt: booking?.endsAt.toISOString(),
     bookingTitle: booking?.title,
   };

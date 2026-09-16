@@ -1,4 +1,4 @@
-import { BookingKind, BookingStatus, PrismaClient, type Prisma } from "@prisma/client";
+import { BookingCustodyScope, BookingKind, BookingStatus, PrismaClient, type Prisma } from "@prisma/client";
 import {
   TURNAROUND_WARNING_WINDOW_MINUTES,
   addSerializedTurnaroundBuffer,
@@ -134,22 +134,28 @@ export async function checkSerializedConflicts(
           title: true,
           kind: true,
           status: true,
+          custodyScope: true,
           requester: { select: { name: true } },
         },
       }
     }
   });
 
-  return conflicts.map((item) => ({
-    assetId: item.assetId,
-    conflictingBookingId: item.bookingId,
-    conflictingBookingTitle: item.booking.title,
-    ...(item.booking.requester?.name ? { conflictingBookingRequesterName: item.booking.requester.name } : {}),
-    ...(item.booking.kind ? { conflictingBookingKind: item.booking.kind } : {}),
-    ...(item.booking.status ? { conflictingBookingStatus: item.booking.status } : {}),
-    startsAt: item.startsAt,
-    endsAt: item.endsAt
-  }));
+  return conflicts.map((item) => {
+    const requesterName = item.booking.custodyScope === BookingCustodyScope.SHARED
+      ? undefined
+      : item.booking.requester?.name;
+    return {
+      assetId: item.assetId,
+      conflictingBookingId: item.bookingId,
+      conflictingBookingTitle: item.booking.title,
+      ...(requesterName ? { conflictingBookingRequesterName: requesterName } : {}),
+      ...(item.booking.kind ? { conflictingBookingKind: item.booking.kind } : {}),
+      ...(item.booking.status ? { conflictingBookingStatus: item.booking.status } : {}),
+      startsAt: item.startsAt,
+      endsAt: item.endsAt,
+    };
+  });
 }
 
 export async function checkAssetStatuses(

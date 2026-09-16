@@ -110,11 +110,44 @@ describe("checkSerializedConflicts", () => {
             title: true,
             kind: true,
             status: true,
+            custodyScope: true,
             requester: { select: { name: true } },
           },
         },
       }),
     }));
+  });
+
+  it("omits the requester name when the conflicting booking is shared", async () => {
+    const tx = createMockTx();
+    tx.assetAllocation.findMany.mockResolvedValue([{
+      assetId: "a-1",
+      bookingId: "b-shared",
+      startsAt: new Date("2026-04-01T08:00:00Z"),
+      endsAt: new Date("2026-04-01T17:00:00Z"),
+      booking: {
+        title: "Football Travel Case",
+        kind: "RESERVATION",
+        status: "BOOKED",
+        custodyScope: "SHARED",
+        requester: { name: "Hidden Creator" },
+      },
+    }]);
+
+    const result = await checkSerializedConflicts(availabilityTx(tx), {
+      serializedAssetIds: ["a-1"],
+      startsAt: new Date("2026-04-01T10:00:00Z"),
+      endsAt: new Date("2026-04-01T12:00:00Z"),
+    });
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        assetId: "a-1",
+        conflictingBookingTitle: "Football Travel Case",
+        conflictingBookingKind: "RESERVATION",
+      }),
+    ]);
+    expect(result[0]).not.toHaveProperty("conflictingBookingRequesterName");
   });
 
   it("allows reuse when an earlier booking ends exactly at the serialized turnaround buffer", async () => {

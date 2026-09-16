@@ -152,6 +152,7 @@ type KioskBulkDetailItem = {
   unitNumber: number | null;
   imageUrl: string | null;
   quantity?: number;
+  reservationItemId?: string;
 };
 
 /** Get checkout details for kiosk return and pickup flows */
@@ -304,7 +305,7 @@ export const GET = withKiosk<{ id: string }>(async (_req, { params }) => {
     : booking.serializedItems;
   const serializedItems = serializedSourceItems.map((si) => ({
     id: si.asset.id,
-    reservationItemId: si.id,
+    ...(booking.kind === "RESERVATION" ? { reservationItemId: si.id } : {}),
     tagName: si.asset.assetTag,
     name: si.asset.name || si.asset.assetTag,
     returned: isPickupChecklist
@@ -348,6 +349,7 @@ export const GET = withKiosk<{ id: string }>(async (_req, { params }) => {
             bulkSkuName: bi.bulkSku.name,
             unitNumber: null,
             imageUrl: bi.bulkSku.imageUrl,
+            ...(booking.kind === "RESERVATION" ? { reservationItemId: bi.id } : {}),
           }];
         }
         const pickedUnits = booking.kind === "CHECKOUT" && booking.status === "PENDING_PICKUP"
@@ -375,6 +377,7 @@ export const GET = withKiosk<{ id: string }>(async (_req, { params }) => {
               bulkSkuName: bi.bulkSku.name,
               unitNumber,
               imageUrl: bi.bulkSku.imageUrl,
+              ...(booking.kind === "RESERVATION" ? { reservationItemId: bi.id } : {}),
             };
           }
 
@@ -388,6 +391,7 @@ export const GET = withKiosk<{ id: string }>(async (_req, { params }) => {
             bulkSkuName: bi.bulkSku.name,
             unitNumber: null,
             imageUrl: bi.bulkSku.imageUrl,
+            ...(booking.kind === "RESERVATION" ? { reservationItemId: bi.id } : {}),
           };
         });
       })
