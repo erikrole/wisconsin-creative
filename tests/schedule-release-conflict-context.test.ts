@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
-import type { Prisma } from "@prisma/client";
+import type { Prisma, Role } from "@prisma/client";
 import { collectPublishBlockers } from "@/lib/services/schedule-publication";
-import { findTimeConflict } from "@/lib/services/shift-assignments";
+import { checkTimeConflict, findTimeConflict } from "@/lib/services/shift-assignments";
 import type { WorkingSchedulePayload } from "@/lib/schedule-working-copy";
 
 vi.mock("@/lib/db", () => ({ db: {} }));
@@ -11,18 +11,18 @@ const end = new Date("2026-10-04T00:00:00Z");
 function assignment(day: number, summary: string, overrides = {}) {
   const startsAt = new Date(`2026-10-0${day}T00:00:00Z`);
   const endsAt = new Date(`2026-10-0${day + 1}T00:00:00Z`);
-  return { id: `assignment-${day}`, callStartsAt: null, callEndsAt: null, ...overrides,
+  return { user: { role: "STUDENT" }, id: `assignment-${day}`, callStartsAt: null, callEndsAt: null, ...overrides,
     shift: { area: "PHOTO", startsAt, endsAt, callStartsAt: null, callEndsAt: null,
       shiftGroup: { event: { id: `event-${day}`, summary, allDay: true, startsAt, endsAt } } } };
 }
-function context(rows: ReturnType<typeof assignment>[]) {
+function context(rows: ReturnType<typeof assignment>[], role: Role = "STUDENT") {
   return { shiftAssignment: { findMany: vi.fn().mockResolvedValue(rows) },
     user: { findMany: vi.fn().mockResolvedValue([{ id: "worker", name: "Test Worker", active: true,
-      role: "STAFF", staffingType: "FT", availabilityBlocks: [] }]) } } as unknown as Prisma.TransactionClient;
+      role, staffingType: role === "STUDENT" ? "ST" : "FT", availabilityBlocks: [] }]) } } as unknown as Prisma.TransactionClient;
 }
 const payload: WorkingSchedulePayload = {
   eventStartsAt: start.toISOString(), eventEndsAt: end.toISOString(), baseShiftIds: [],
-  slots: [{ key: "draft:photo", sourceShiftId: null, area: "PHOTO", workerType: "FT",
+  slots: [{ key: "draft:photo", sourceShiftId: null, area: "PHOTO", workerType: "ST",
     startsAt: start.toISOString(), endsAt: end.toISOString(), callStartsAt: null, callEndsAt: null,
     notes: null, assignmentHistoryCount: 0, assignment: { userId: "worker", sourceAssignmentId: null,
       status: "DIRECT_ASSIGNED", callStartsAt: null, callEndsAt: null, callNote: null,
@@ -32,6 +32,18 @@ const group = { shifts: [], publishedVersion: 0,
   workingCopy: { basePublishedVersion: 0, createdAt: new Date("2026-08-17T00:00:00Z") } } as unknown as Parameters<typeof collectPublishBlockers>[1];
 
 describe("staff release conflict context", () => {
+  it.each(["STAFF", "ADMIN"] as const)("allows overlapping %s assignments during release and assignment checks", async (role) => {
+    const tx = context([assignment(3, "Other event", { user: { role } })], role);
+    expect(await findTimeConflict(tx, "worker", start, end)).toBeNull();
+    await expect(checkTimeConflict(tx, "worker", start, end)).resolves.toBeUndefined();
+    const staffPayload = { ...payload, slots: payload.slots.map((slot) => ({ ...slot, workerType: "FT" as const })) };
+    expect((await collectPublishBlockers(tx, group, staffPayload)).blockers).toEqual([]);
+    expect(tx.shiftAssignment.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      include: expect.objectContaining({ user: { select: { role: true } } }),
+    }));
+  });
+
+
   it("identifies the same-day event, not adjacent all-day work, in release preflight", async () => {
     const tx = context([assignment(2, "Hockey vs Robert Morris"), assignment(3, "Football vs Michigan State")]);
     const result = await collectPublishBlockers(tx, group, payload);

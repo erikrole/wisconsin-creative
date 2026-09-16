@@ -1,3 +1,4 @@
+import { allowsOverlappingShifts } from "@/lib/shift-constants";
 import { createHash, randomUUID } from "node:crypto";
 import {
   Prisma,
@@ -831,7 +832,7 @@ export async function applyBulkScheduleAssignment(
         }
         const window = effectiveSlotWindow(slot);
         await checkTimeConflict(tx, user.id, window.startsAt, window.endsAt);
-        addTentativeWindow(tentativeWindows, user.id, window);
+        if (!allowsOverlappingShifts(user.role)) addTentativeWindow(tentativeWindows, user.id, window);
         const availability = evaluateAvailabilityPreferences(user.availabilityBlocks, window);
         if (availability.blocking) throw new HttpError(409, availability.blocking.note);
         working = applyWorkingScheduleCommand(working, {

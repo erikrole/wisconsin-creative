@@ -975,6 +975,7 @@ These are non-negotiable integrity constraints. Every feature must preserve them
   - Routine Draft, Publish, Republish, and Unacknowledged controls remain retired. Staff and Admins have an explicit `Publish now` exception for a pending future working copy; it uses the same version, blocker, serializable reconciliation, audit, and notification path while bypassing only the ten-minute wait.
   - The relational schedule remains worker-facing truth. Until the quiet period completes, My Shifts, Dashboard, ICS, Open Work, Trade Board, collaborator Schedule, and existing iOS clients continue showing the last released version.
   - Active collaborators whose policy grants `PUBLISHED_SCHEDULE_VIEW` may be manually assigned to Staff slots. They remain outside Student availability, Open Work pickup, and Trade Board workflows, and reservation-created collaborator staffing remains excluded.
+  - Staff and Admin workers may hold overlapping shifts. Student and collaborator workers retain overlap validation. This applies to assignment, draft editing, release, pickup, trades, and candidate scoring; occupied slots, approved time off, and equipment availability retain their own checks.
   - Only Student slots and Student assignments use configured call times. Staff and collaborator coverage retains the event window internally for integrity but exposes no call-time value, event-time substitute in the call-time position, editing control, or call-time notification copy.
   - Every eligible future event receives configured slots. Home events use their sport Home template; Away and neutral-site games with an opponent use the sport Away template; events without an opponent use the Settings-owned Non-game template. Cancelled, hidden, and archived events are excluded.
   - Assignment acknowledgement timestamps remain historical compatibility data but no longer gate readiness, visibility, or release.
@@ -987,7 +988,7 @@ These are non-negotiable integrity constraints. Every feature must preserve them
   - Never commit a pending schedule mutation unless its version-specific release run was successfully enqueued.
   - Never let an older workflow release a newer pending version.
   - Never hide a permanent release blocker; persist and surface recovery state.
-  - Never expose `Publish now` to Staff or allow it without an existing expected-version working copy; it must not publish an unchanged live schedule.
+  - Never expose `Publish now` to Students or collaborators, or allow it without an existing expected-version working copy; it must not publish an unchanged live schedule.
   - Record Admin `Publish now` as a distinct audit action and apply the same worker/follower notification policy as automatic future release.
   - Never present a pending-release countdown or “assignees notified” copy for an ended event.
   - Never expose collaborators to internal contacts, availability, Trade Board, Open Work, or broader Schedule controls through assignment eligibility.

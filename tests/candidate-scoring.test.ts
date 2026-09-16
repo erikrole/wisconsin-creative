@@ -44,6 +44,15 @@ function candidate(overrides: Partial<CandidateScoringUser> & { id: string }): C
 }
 
 describe("scoreCandidatesForShift", () => {
+  it.each(["STAFF", "ADMIN", "STUDENT", "COLLABORATOR"] as const)("applies the overlap policy for %s candidates", (role) => {
+    const [score] = scoreCandidatesForShift({ shift, candidates: [candidate({
+      id: "worker", role, staffingType: role === "STUDENT" ? "ST" : "FT",
+      assignments: [assignment("overlap", "2026-10-06T18:00:00.000Z", "2026-10-06T21:00:00.000Z")],
+    })] });
+    expect(score?.warnings.some((warning) => warning.code === "overlapping_assignment"))
+      .toBe(role !== "STAFF" && role !== "ADMIN");
+  });
+
   it("ranks role, area, sport, and prior sport fit ahead of weak matches", () => {
     const scores = scoreCandidatesForShift({
       shift,

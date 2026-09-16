@@ -383,6 +383,18 @@ describe("schedule open work", () => {
     });
   });
 
+  it.each(["STAFF", "ADMIN"])("allows %s pickup despite another overlapping assignment", async (role) => {
+    mockDb._mockTx.shift.findUnique.mockResolvedValue(baseShift());
+    mockDb._mockTx.user.findUnique.mockResolvedValue({ ...activeStudent(), role });
+    mockDb._mockTx.shiftAssignment.findMany.mockResolvedValue([{
+      id: "other-assignment", callStartsAt: null, callEndsAt: null, shift: baseShift(),
+    }]);
+    mockDb._mockTx.shiftAssignment.findFirst.mockResolvedValue(null);
+    mockDb._mockTx.shiftAssignment.create.mockResolvedValue({ id: "request-1", status: "REQUESTED" });
+    await expect(pickupOpenShift("shift-1", "student-1")).resolves.toMatchObject({ status: "REQUESTED" });
+    expect(mockDb._mockTx.shiftAssignment.create).toHaveBeenCalled();
+  });
+
   it("files an open-slot claim as a pending request, holding no slot", async () => {
     mockDb._mockTx.shift.findUnique.mockResolvedValue(baseShift());
     mockDb._mockTx.user.findUnique.mockResolvedValue(activeStudent());

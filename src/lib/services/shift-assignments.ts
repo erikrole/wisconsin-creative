@@ -1,7 +1,7 @@
 import { Prisma, Role, ShiftAssignmentStatus, ShiftWorkerType, type CollaboratorPolicyStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
-import { ACTIVE_ASSIGNMENT_STATUSES } from "@/lib/shift-constants";
+import { ACTIVE_ASSIGNMENT_STATUSES, allowsOverlappingShifts } from "@/lib/shift-constants";
 import {
   buildShiftAssignmentOverlapWhere,
   resolveEffectiveAssignmentWindow,
@@ -177,7 +177,7 @@ export async function findTimeConflict(
       window: requestedWindow,
       excludeAssignmentId,
     }),
-    include: { shift: { select: {
+    include: { user: { select: { role: true } }, shift: { select: {
       ...assignableShiftSelect,
       shiftGroup: { select: { event: { select: {
         startsAt: true, endsAt: true, allDay: true, summary: true,
@@ -185,6 +185,7 @@ export async function findTimeConflict(
     } } },
   });
   for (const conflict of conflicts) {
+    if (allowsOverlappingShifts(conflict.user?.role)) continue;
     const window = effectiveAssignmentWindow(conflict);
     if (!scheduleWindowsOverlap(requestedWindow, window)) continue;
     const message = `User already has a shift during this time (${conflict.shift.area})`;

@@ -1,7 +1,7 @@
 import { Prisma, type Role, type ShiftArea, type ShiftAssignmentStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
-import { ACTIVE_ASSIGNMENT_STATUSES } from "@/lib/shift-constants";
+import { ACTIVE_ASSIGNMENT_STATUSES, allowsOverlappingShifts } from "@/lib/shift-constants";
 import {
   buildShiftAssignmentOverlapWhere,
   resolveEffectiveAssignmentWindow,
@@ -474,7 +474,7 @@ export async function pickupOpenShift(shiftId: string, userId: string) {
     const hardConflict = conflictCandidates.find((assignment) =>
       scheduleWindowsOverlap(window, resolveEffectiveAssignmentWindow(assignment))
     );
-    if (hardConflict) {
+    if (hardConflict && !allowsOverlappingShifts(user.role)) {
       throw new HttpError(409, `User already has a shift during this time (${hardConflict.shift.area})`);
     }
 

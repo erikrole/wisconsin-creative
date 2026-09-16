@@ -1,7 +1,7 @@
 import { Role, ShiftArea, ShiftAssignmentStatus, ShiftWorkerType, type Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
-import { ACTIVE_ASSIGNMENT_STATUSES } from "@/lib/shift-constants";
+import { ACTIVE_ASSIGNMENT_STATUSES, allowsOverlappingShifts } from "@/lib/shift-constants";
 import { evaluateAvailabilityPreferences, type AvailabilityBlockLike } from "@/lib/student-availability";
 import { shiftWorkerTypeForProfile } from "@/lib/shift-display";
 import { visibleActiveUserWhere } from "@/lib/user-visibility";
@@ -197,7 +197,7 @@ export function scoreCandidatesForShift({ shift, candidates, now }: ScoreArgs): 
         if (assignment.shift.id === shift.id) return false;
         return overlaps(targetWindow, assignmentWindow(assignment));
       });
-      if (blockingConflict) {
+      if (blockingConflict && !allowsOverlappingShifts(candidate.role)) {
         addWarning("overlapping_assignment", "Already assigned during this call window", -60);
       }
 

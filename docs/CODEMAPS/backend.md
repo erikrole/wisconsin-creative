@@ -23,7 +23,7 @@
 | `src/lib/services/bookings-queries.ts` | 306 |
 | `src/lib/services/bookings.ts` | 8 |
 | `src/lib/services/bulk-assignment-batches.ts` | 252 |
-| `src/lib/services/bulk-schedule-assignment.ts` | 969 |
+| `src/lib/services/bulk-schedule-assignment.ts` | 970 |
 | `src/lib/services/bulk-unit-scans.ts` | 699 |
 | `src/lib/services/calendar-sync-health.ts` | 165 |
 | `src/lib/services/calendar-sync.ts` | 734 |
@@ -78,7 +78,7 @@
 | `src/lib/services/schedule-working-copy.ts` | 1095 |
 | `src/lib/services/scoreboard.ts` | 303 |
 | `src/lib/services/shift-assignment-conflicts.ts` | 43 |
-| `src/lib/services/shift-assignments.ts` | 708 |
+| `src/lib/services/shift-assignments.ts` | 709 |
 | `src/lib/services/shift-generation.ts` | 628 |
 | `src/lib/services/shift-trade-emails.ts` | 56 |
 | `src/lib/services/shift-trades.ts` | 1321 |
@@ -227,7 +227,7 @@
 | `src/lib/shell-navigation.ts` | 11 |
 | `src/lib/shift-call-windows.ts` | 200 |
 | `src/lib/shift-claim-eligibility.ts` | 48 |
-| `src/lib/shift-constants.ts` | 8 |
+| `src/lib/shift-constants.ts` | 13 |
 | `src/lib/shift-display.ts` | 71 |
 | `src/lib/shift-notification-workflow.ts` | 18 |
 | `src/lib/software-vault-access.ts` | 20 |
