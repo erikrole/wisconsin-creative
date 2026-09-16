@@ -62,6 +62,8 @@ export const actionLabels: Record<string, string> = {
   admin_force_completed_checkout: "closed checkout without scan",
   admin_force_checkout: "force-checked out reservation",
   reservation_closed_remaining_released: "closed reservation and released remaining gear",
+  reservation_picked_items_moved_to_checkout: "moved picked-up reservation gear onto its checkout",
+  kiosk_pickup_appended: "added more reservation pickup items to the existing checkout",
   completed_after_plan_edit: "completed reservation after removing the remaining gear",
   "booking.item_substituted": "swapped a reserved item at pickup",
   cancelled_by_checkout_conversion: "converted to checkout",

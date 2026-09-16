@@ -80,6 +80,17 @@ export const POST = withKiosk<{ id: string }>(async (req, { params }) => {
 
   if (!bookingItem) {
     if (activeBooking.kind === "RESERVATION") {
+      const alreadyPicked = await db.bookingSerializedItem.findFirst({
+        where: {
+          assetId: asset.id,
+          booking: { sourceReservationId: params.id, kind: "CHECKOUT" },
+        },
+        select: { id: true },
+      });
+      if (alreadyPicked) {
+        const label = asset.name || asset.assetTag;
+        return ok({ success: false, error: `${label} already picked up`, errorCode: "duplicate" });
+      }
       const substitution = await findPickupSubstitutionCandidate({
         bookingId: params.id,
         scanned: asset,

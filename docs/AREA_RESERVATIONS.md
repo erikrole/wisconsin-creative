@@ -13,7 +13,7 @@ Make app and web reservation-first. A user who is not physically at a kiosk rese
 ## Core Rules
 1. Reservations live in Booking with lifecycle states: `BOOKED`, `COMPLETED`, `CANCELLED`; `DRAFT` exists for interrupted creation.
 2. Reservation creation typically starts as `BOOKED`.
-3. Reservations do not become custody records in the normal flow. Kiosk pickup creates or opens a linked checkout custody record for the scanned selection; the source reservation remains `BOOKED` until every remaining item is picked up, then closes as fulfilled.
+3. Reservations do not become custody records in the normal flow. Kiosk pickup creates or opens a linked checkout custody record for the scanned selection and removes those items from the reservation plan; the source reservation remains `BOOKED` until every remaining item is picked up, then closes as fulfilled. A later pickup on the same reservation adds to the existing open checkout instead of opening a second one. Direct kiosk checkout is blocked while leftover reservation pickup is still open at that counter.
 4. A `BOOKED` reservation enters the user-facing Pending Pickup phase when
    `startsAt` arrives. This starts the configured no-show clock without
    changing the stored reservation status or claiming custody.
@@ -79,7 +79,7 @@ Native iOS creation mirrors the three-step reservation rhythm while staying mobi
 
 ### Close Remaining After Partial Pickup
 1. Staff/admin `Close without remaining gear` is the supported exit when a partial kiosk pickup already opened custody and the leftover reserved gear is not coming.
-2. It keeps picked-up history and linked checkouts, deletes remaining active serialized rows, shrinks leftover bulk plans to the handed-over quantity, releases leftover allocations, and marks the reservation `COMPLETED`.
+2. It leaves picked gear on the linked checkout, removes those lines from the reservation plan, deletes remaining active serialized rows, releases leftover allocations, and marks the reservation `COMPLETED`.
 3. Cancel is the wrong verb once custody has opened; Force checkout is the wrong verb when the leftover gear is still on the shelf.
 4. A plan edit that removes the last remaining item after pickup has started completes the reservation automatically (`completed_after_plan_edit`) so it cannot stay `BOOKED` with nothing left to scan.
 
@@ -209,7 +209,7 @@ The access labels below describe state-machine actions, not list/detail reads. I
 6. Transfer owner — staff/admin or owner requester reassignment with optimistic-lock protection and `owner_transferred` audit history
 7. Edit linked events — scheduled-event link, change, or clear action using the existing `Booking.eventId` primary plus `BookingEvent` junction contract
 8. Force checkout — admin-only reasoned exception that creates linked checkout custody without kiosk scan verification
-9. Close without remaining gear — staff/admin exit after a partial pickup when the leftover gear is not coming; keeps picked-up history, releases leftover holds, and completes the reservation
+9. Close without remaining gear — staff/admin exit after a partial pickup when the leftover gear is not coming; picked gear stays on its checkout, leftover holds are released, and the reservation completes
 10. Deferred: Spotcheck creation, PDF generation
 
 ## Bug Traps and Mitigations
@@ -287,7 +287,7 @@ The access labels below describe state-machine actions, not list/detail reads. I
 
 ## Change Log
 
-- 2026-09-16: **Partial pickup leftover recovery (server/web).** Staff/admin can close leftover holds after pickup has started, a plan edit that removes the last remaining item completes the reservation, and kiosk pickup can substitute an equivalent off-plan serialized item onto the remaining plan. Native kiosk leftover/swap/hub UI remains in the local kiosk checkout. Authenticated browser, physical kiosk, and the RV-0453 close remain separate.
+- 2026-09-16: **Picked reservation gear lives on the checkout.** Partial pickup removes handed-over serialized items and fully handed bulk from the reservation plan so the reservation only shows what is still waiting. A later pickup appends to the existing open checkout. Direct kiosk checkout is blocked while leftover reservation pickup is still open, so a second booking cannot be created for the leftover gear. Close-remaining and a completing plan edit also clear handed-over lines from the reservation. RV-0453 listed returned CO-0454 items after close-remaining; that record was repaired. CO-0455 stays the open 755CX3 checkout.
 - 2026-09-07: **Higher-traffic UI reliability (local).** Shared Booking filters now title the view from the special filter that takes precedence in the API request, and retain an active Sport control even when current results have no sport codes. Shared search respects text composition, Enter submission boundaries, and disabled/read-only state. Acceptance: focused tests and component browser proof; authenticated application and deployment remain unverified. Evidence: `tasks/archive/proofs/high-traffic-ui15-2026-09-07/review.html`.
 
 - 2026-09-04: **Reservation pickup locations narrowed to Camp Randall and Kohl Center.** The web reservation wizard and reservation bulk-location control no longer offer Field House, event selection no longer copies an event venue into pickup, and reservation create/edit/candidate/draft mutation boundaries reject unsupported or inactive pickup locations. Existing Field House catalog records and historical bookings remain intact for event and inventory context.

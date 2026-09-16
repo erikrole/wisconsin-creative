@@ -5,11 +5,12 @@ type MockFn = ReturnType<typeof vi.fn>;
 type UpdateBookingTx = {
   booking: Record<"findUnique" | "findUniqueOrThrow" | "update", MockFn>;
   bookingSerializedItem: Record<"deleteMany" | "createMany", MockFn>;
-  bookingBulkItem: Record<"deleteMany" | "createMany" | "update", MockFn>;
+  bookingBulkItem: Record<"deleteMany" | "createMany" | "update" | "upsert", MockFn>;
   bulkSku: Record<"findMany", MockFn>;
   assetAllocation: Record<"deleteMany" | "createMany" | "updateMany", MockFn>;
   auditLog: Record<"create" | "createMany", MockFn>;
   user: Record<"findUnique", MockFn>;
+  scanSession: Record<"updateMany", MockFn>;
   bulkStockBalance: Record<"findMany" | "upsert", MockFn>;
   bulkStockMovement: Record<"createMany", MockFn>;
 };
@@ -22,11 +23,12 @@ vi.mock("@/lib/db", () => {
   const mockTx = {
     booking: { findUnique: vi.fn(), findUniqueOrThrow: vi.fn(), update: vi.fn() },
     bookingSerializedItem: { deleteMany: vi.fn(), createMany: vi.fn() },
-    bookingBulkItem: { deleteMany: vi.fn(), createMany: vi.fn(), update: vi.fn() },
+    bookingBulkItem: { deleteMany: vi.fn(), createMany: vi.fn(), update: vi.fn(), upsert: vi.fn() },
     bulkSku: { findMany: vi.fn() },
     assetAllocation: { deleteMany: vi.fn(), createMany: vi.fn(), updateMany: vi.fn() },
     auditLog: { create: vi.fn(), createMany: vi.fn() },
     user: { findUnique: vi.fn().mockResolvedValue({ role: "ADMIN", active: true }) },
+    scanSession: { updateMany: vi.fn() },
     bulkStockBalance: { findMany: vi.fn(), upsert: vi.fn() },
     bulkStockMovement: { createMany: vi.fn() },
   };
@@ -44,6 +46,14 @@ vi.mock("@/lib/db", () => {
 
 vi.mock("@/lib/services/availability", () => ({
   checkAvailability: vi.fn().mockResolvedValue({
+    conflicts: [],
+    shortages: [],
+    unavailableAssets: [],
+    upcomingCommitments: [],
+    turnaroundRisks: [],
+    bulkTurnaroundRisks: [],
+  }),
+  checkCheckoutDueTime: vi.fn().mockResolvedValue({
     conflicts: [],
     shortages: [],
     unavailableAssets: [],
@@ -78,6 +88,7 @@ function makeExistingReservation(overrides: Record<string, unknown> = {}) {
     notes: null,
     serializedItems: [{ assetId: "a-1" }],
     bulkItems: [{ bulkSkuId: "sku-1", plannedQuantity: 5 }],
+    derivedCheckouts: [],
     ...overrides,
   };
 }
@@ -117,6 +128,7 @@ beforeEach(() => {
   mockTx.bookingSerializedItem.createMany.mockResolvedValue({});
   mockTx.bookingBulkItem.deleteMany.mockResolvedValue({});
   mockTx.bookingBulkItem.createMany.mockResolvedValue({});
+  mockTx.bookingBulkItem.upsert.mockResolvedValue({});
   mockTx.bulkSku.findMany.mockResolvedValue([]);
   mockTx.assetAllocation.deleteMany.mockResolvedValue({});
   mockTx.assetAllocation.createMany.mockResolvedValue({});
@@ -124,6 +136,7 @@ beforeEach(() => {
   mockTx.bookingBulkItem.update.mockResolvedValue({});
   mockTx.auditLog.create.mockResolvedValue({});
   mockTx.auditLog.createMany.mockResolvedValue({});
+  mockTx.scanSession.updateMany.mockResolvedValue({ count: 0 });
   mockTx.bulkStockBalance.findMany.mockResolvedValue([{ bulkSkuId: "sku-1", onHandQuantity: 50 }]);
   mockTx.bulkStockBalance.upsert.mockResolvedValue({});
   mockTx.bulkStockMovement.createMany.mockResolvedValue({});
@@ -217,7 +230,7 @@ describe("updateReservation", () => {
       updateReservation("r-1", "actor-1", { serializedAssetIds: ["a-2"] }),
     ).rejects.toMatchObject({
       status: 409,
-      message: "Equipment cannot be edited after a partial pickup",
+      message: "Items already picked up are on the checkout. Edit the remaining items only.",
     });
 
     expect(checkAvailability).not.toHaveBeenCalled();

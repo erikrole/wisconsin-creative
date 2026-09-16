@@ -16,7 +16,7 @@ Root cause: the kiosk pickup flow has no substitution path for "I grabbed an equ
 ## Contracts
 
 - D-040 kiosk remains the physical custody boundary. Substitution edits the reservation plan and stages the scan; custody still opens only through pickup confirmation.
-- Picked-up allocations stay in reservation history; only remaining (`active`) items may be swapped or released.
+- Picked gear lives on the linked checkout, not as current reservation equipment. Only remaining (`active`) items may be swapped or released.
 - Every mutation stays `SERIALIZABLE`, permission-checked, and audited with before/after snapshots.
 - Preserve the in-flight Codex kiosk hardening work (dirty `KioskAPIClient.swift`, `KioskModels.swift`, `KioskOperatorHubView.swift`, `bulk-unit-scans.ts`); additive edits only.
 
@@ -29,7 +29,9 @@ Root cause: the kiosk pickup flow has no substitution path for "I grabbed an equ
 - [x] S3 Native kiosk leftover/swap/hub UI exists in the local dirty tree and is not part of this server/web commit (blocked by in-flight kiosk hardening in the same Swift files).
 - [x] S4 Area docs (`AREA_RESERVATIONS`, `AREA_KIOSK`), `GAPS_AND_RISKS`, task index.
 - [x] S5 DEBUG kiosk fixtures and after-only iPad captures: `tasks/archive/proofs/reservation-partial-pickup-2026-09-16/review.html` (local; native client not in this commit).
-- [ ] Live repair of RV-0453 through the shipped close-remaining action after this deploy.
+- [x] Live repair of RV-0453 through the shipped close-remaining action after this deploy.
+- [x] Detach returned CO-0454 items from completed RV-0453 so the reservation does not still list them. Do not move them onto CO-0455.
+- [x] Duplicate-booking guard: leftover pickup appends to the existing open checkout; direct checkout is blocked while remaining pickup is still open.
 - [ ] Authenticated reservation-detail close-remaining proof and managed-iPad swap/partial-confirm proof.
 
 ## Verification

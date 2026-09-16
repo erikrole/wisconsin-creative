@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   bookingUpdate: vi.fn(),
   bookingUpdateMany: vi.fn(),
   bookingSerializedItemFindUnique: vi.fn(),
+  bookingSerializedItemFindFirst: vi.fn(),
   scanEventFindFirst: vi.fn(),
   scanEventCreate: vi.fn(),
   transaction: vi.fn(),
@@ -32,6 +33,7 @@ vi.mock("@/lib/db", () => ({
     },
     bookingSerializedItem: {
       findUnique: mocks.bookingSerializedItemFindUnique,
+      findFirst: mocks.bookingSerializedItemFindFirst,
     },
     scanEvent: {
       findFirst: mocks.scanEventFindFirst,
@@ -129,6 +131,7 @@ beforeEach(() => {
     },
   }));
   mocks.bookingUpdateMany.mockResolvedValue({ count: 1 });
+  mocks.bookingSerializedItemFindFirst.mockResolvedValue(null);
   mocks.scanEventFindFirst.mockResolvedValue(null);
   mocks.stageKioskReservationPickupBulkUnit.mockResolvedValue({ handled: false });
   mocks.findPickupSubstitutionCandidate.mockResolvedValue(null);
@@ -774,6 +777,36 @@ describe("kiosk pickup serialized scan guard", () => {
       errorCode: "duplicate",
     });
     expect(mocks.scanEventFindFirst).not.toHaveBeenCalled();
+    expect(mocks.scanEventCreate).not.toHaveBeenCalled();
+  });
+
+  it("returns duplicate feedback when the item already lives on the linked checkout", async () => {
+    mocks.bookingFindUnique.mockResolvedValue({
+      id: "reservation-1",
+      status: "BOOKED",
+      kind: "RESERVATION",
+      requesterUserId: "user-1",
+      locationId: "loc-1",
+    });
+    mocks.findAssetByScanValue.mockResolvedValue({
+      id: "asset-1",
+      assetTag: "FX3 1",
+      name: "FX3 1",
+    });
+    mocks.bookingSerializedItemFindUnique.mockResolvedValue(null);
+    mocks.bookingSerializedItemFindFirst.mockResolvedValue({ id: "checkout-line-1" });
+
+    const res = await scanKioskPickup(new Request("http://test", {
+      method: "POST",
+      body: JSON.stringify({ scanValue: "23723854" }),
+    }), routeCtx("reservation-1"));
+
+    expect(await res.json()).toEqual({
+      success: false,
+      error: "FX3 1 already picked up",
+      errorCode: "duplicate",
+    });
+    expect(mocks.findPickupSubstitutionCandidate).not.toHaveBeenCalled();
     expect(mocks.scanEventCreate).not.toHaveBeenCalled();
   });
 

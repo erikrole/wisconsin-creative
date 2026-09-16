@@ -17,8 +17,8 @@ type CreateBookingTx = {
   shiftAssignment: Record<"findMany" | "findUnique" | "updateMany" | "create", MockFn>;
   bookingEvent: Record<"createMany", MockFn>;
   scheduleEventFollow: Record<"createMany", MockFn>;
-  bookingSerializedItem: Record<"createMany" | "updateMany", MockFn>;
-  bookingBulkItem: Record<"createMany" | "update" | "upsert", MockFn>;
+  bookingSerializedItem: Record<"createMany" | "updateMany" | "deleteMany", MockFn>;
+  bookingBulkItem: Record<"createMany" | "update" | "upsert" | "delete", MockFn>;
   bulkSku: Record<"findMany", MockFn>;
   assetAllocation: Record<"createMany" | "updateMany", MockFn>;
   bulkStockBalance: Record<"findMany" | "upsert", MockFn>;
@@ -52,8 +52,8 @@ vi.mock("@/lib/db", () => {
     shiftAssignment: { findMany: vi.fn(), findUnique: vi.fn(), updateMany: vi.fn(), create: vi.fn() },
     bookingEvent: { createMany: vi.fn() },
     scheduleEventFollow: { createMany: vi.fn() },
-    bookingSerializedItem: { createMany: vi.fn(), updateMany: vi.fn() },
-    bookingBulkItem: { createMany: vi.fn(), update: vi.fn(), upsert: vi.fn() },
+    bookingSerializedItem: { createMany: vi.fn(), updateMany: vi.fn(), deleteMany: vi.fn() },
+    bookingBulkItem: { createMany: vi.fn(), update: vi.fn(), upsert: vi.fn(), delete: vi.fn() },
     bulkSku: { findMany: vi.fn() },
     assetAllocation: { createMany: vi.fn(), updateMany: vi.fn() },
     bulkStockBalance: { findMany: vi.fn(), upsert: vi.fn() },
@@ -166,10 +166,12 @@ beforeEach(() => {
   mockTx.scheduleEventFollow.createMany.mockResolvedValue({});
   mockTx.bookingSerializedItem.createMany.mockResolvedValue({});
   mockTx.bookingSerializedItem.updateMany.mockResolvedValue({ count: 0 });
+  mockTx.bookingSerializedItem.deleteMany.mockResolvedValue({ count: 0 });
   mockTx.assetAllocation.createMany.mockResolvedValue({});
   mockTx.bookingBulkItem.createMany.mockResolvedValue({});
   mockTx.bookingBulkItem.update.mockResolvedValue({});
   mockTx.bookingBulkItem.upsert.mockResolvedValue({});
+  mockTx.bookingBulkItem.delete.mockResolvedValue({});
   mockTx.bulkSku.findMany.mockResolvedValue([]);
   mockTx.bulkStockBalance.findMany.mockResolvedValue([]);
   mockTx.bulkStockBalance.upsert.mockResolvedValue({});
@@ -1156,13 +1158,12 @@ describe("createBooking", () => {
       bulkItems: [],
     }));
 
-    expect(mockTx.bookingSerializedItem.updateMany).toHaveBeenCalledWith({
+    expect(mockTx.bookingSerializedItem.deleteMany).toHaveBeenCalledWith({
       where: {
         bookingId: "rv-1",
         assetId: { in: ["a-1"] },
         allocationStatus: "active",
       },
-      data: { allocationStatus: "picked_up" },
     });
     expect(mockTx.assetAllocation.updateMany).toHaveBeenCalledWith({
       where: {
@@ -1257,6 +1258,56 @@ describe("createBooking", () => {
     mockTx.user.findUnique.mockResolvedValueOnce({ active: false });
     await expect(createBooking(baseInput())).rejects.toThrow("inactive user");
     expect(mockTx.booking.create).not.toHaveBeenCalled();
+  });
+
+  it("appends a later reservation pickup onto the existing OPEN checkout", async () => {
+    const startsAt = new Date("2026-09-15T20:00:00Z");
+    const endsAt = new Date("2026-09-16T00:15:00Z");
+    mockTx.booking.findUnique.mockResolvedValue({
+      id: "rv-1",
+      kind: "RESERVATION",
+      status: "BOOKED",
+      locationId: "loc-1",
+      custodyScope: "PERSON",
+      serializedItems: [
+        { assetId: "a-1", allocationStatus: "picked_up" },
+        { assetId: "a-2", allocationStatus: "active" },
+      ],
+      bulkItems: [],
+    });
+    mockTx.booking.findFirst.mockResolvedValue({
+      id: "co-existing",
+      refNumber: "CO-0454",
+      startsAt,
+      endsAt,
+      sourceReservationId: "rv-1",
+    });
+
+    await createBooking(baseInput({
+      sourceReservationId: "rv-1",
+      sourceReservationPickup: true,
+      serializedAssetIds: ["a-2"],
+      bulkItems: [],
+    }));
+
+    expect(mockTx.booking.create).not.toHaveBeenCalled();
+    expect(mockTx.bookingSerializedItem.createMany).toHaveBeenCalledWith({
+      data: [{ bookingId: "co-existing", assetId: "a-2", allocationStatus: "active" }],
+    });
+    expect(mockTx.assetAllocation.createMany).toHaveBeenCalledWith({
+      data: [expect.objectContaining({
+        bookingId: "co-existing",
+        assetId: "a-2",
+        startsAt,
+        endsAt,
+      })],
+    });
+    expect(mockTx.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        entityId: "co-existing",
+        action: "kiosk_pickup_appended",
+      }),
+    }));
   });
 
   it("throws 404 when source reservation not found", async () => {

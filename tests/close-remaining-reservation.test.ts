@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   allocationUpdateMany: vi.fn(),
   bulkUpdate: vi.fn(),
   bulkDelete: vi.fn(),
+  bulkDeleteMany: vi.fn(),
   scanSessionUpdateMany: vi.fn(),
   lookupActorRole: vi.fn(),
   createAuditEntryTx: vi.fn(),
@@ -23,7 +24,7 @@ vi.mock("@/lib/db", () => {
       updateMany: mocks.bookingUpdateMany,
     },
     bookingSerializedItem: { deleteMany: mocks.serializedDeleteMany },
-    bookingBulkItem: { update: mocks.bulkUpdate, delete: mocks.bulkDelete },
+    bookingBulkItem: { update: mocks.bulkUpdate, delete: mocks.bulkDelete, deleteMany: mocks.bulkDeleteMany },
     assetAllocation: { updateMany: mocks.allocationUpdateMany },
     scanSession: { updateMany: mocks.scanSessionUpdateMany },
   };
@@ -43,7 +44,7 @@ vi.mock("@/lib/audit", () => ({
 }));
 
 import { db } from "@/lib/db";
-import { closeReservationRemaining } from "@/lib/services/bookings-lifecycle";
+import { closeReservationRemaining, detachRolledReservationPlan } from "@/lib/services/bookings-lifecycle";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -82,7 +83,10 @@ describe("closeReservationRemaining", () => {
       { assetId: "535", name: "Manfrotto 535 MPro Tripod" },
     ]);
     expect(mocks.serializedDeleteMany).toHaveBeenCalledWith({
-      where: { bookingId: "rv-1", assetId: { in: ["535"] }, allocationStatus: "active" },
+      where: { bookingId: "rv-1" },
+    });
+    expect(mocks.bulkDeleteMany).toHaveBeenCalledWith({
+      where: { bookingId: "rv-1" },
     });
     expect(mocks.createAuditEntryTx).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       action: "reservation_closed_remaining_released",
@@ -109,5 +113,38 @@ describe("closeReservationRemaining", () => {
       actorUserId: "staff-1",
     })).rejects.toThrow("Nothing from this reservation has been picked up yet");
     expect(mocks.bookingUpdateMany).not.toHaveBeenCalled();
+  });
+
+  it("moves picked reservation lines off the completed plan onto the linked checkout", async () => {
+    mocks.findUnique.mockResolvedValue({
+      id: "rv-1",
+      kind: BookingKind.RESERVATION,
+      status: BookingStatus.COMPLETED,
+      refNumber: "RV-0453",
+      serializedItems: [
+        { assetId: "fx3", allocationStatus: "picked_up", asset: { assetTag: "FX3 2", name: "FX3 2" } },
+      ],
+      bulkItems: [
+        { bulkSkuId: "sony", plannedQuantity: 3, checkedOutQuantity: 3, bulkSku: { name: "Sony Battery" } },
+      ],
+      derivedCheckouts: [{ id: "co-1", refNumber: "CO-0454", status: "COMPLETED" }],
+    });
+
+    const result = await detachRolledReservationPlan({
+      reservationId: "rv-1",
+      actorUserId: "staff-1",
+      expectedRefNumber: "RV-0453",
+    });
+
+    expect(result.rolledSerialized).toHaveLength(1);
+    expect(mocks.serializedDeleteMany).toHaveBeenCalledWith({
+      where: { bookingId: "rv-1", assetId: { in: ["fx3"] }, allocationStatus: "picked_up" },
+    });
+    expect(mocks.bulkDeleteMany).toHaveBeenCalledWith({
+      where: { bookingId: "rv-1", bulkSkuId: { in: ["sony"] } },
+    });
+    expect(mocks.createAuditEntryTx).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      action: "reservation_picked_items_moved_to_checkout",
+    }));
   });
 });
