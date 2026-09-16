@@ -407,20 +407,36 @@ struct KioskAPI {
         actorId: String,
         expectedUpdatedAt: Date,
         action: String,
-        itemId: String? = nil
+        itemId: String? = nil,
+        quantity: Int? = nil
     ) async throws -> KioskReservationMutationResult {
         struct Body: Encodable {
             let actorId: String
             let expectedUpdatedAt: String
             let action: String
             let itemId: String?
+            let quantity: Int?
+
+            enum CodingKeys: String, CodingKey {
+                case actorId, expectedUpdatedAt, action, itemId, quantity
+            }
+
+            func encode(to encoder: Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                try container.encode(actorId, forKey: .actorId)
+                try container.encode(expectedUpdatedAt, forKey: .expectedUpdatedAt)
+                try container.encode(action, forKey: .action)
+                try container.encodeIfPresent(itemId, forKey: .itemId)
+                try container.encodeIfPresent(quantity, forKey: .quantity)
+            }
         }
         var req = request(path: "/api/kiosk/reservation/\(id)/items", method: "POST")
         req.httpBody = try JSONEncoder().encode(Body(
             actorId: actorId,
             expectedUpdatedAt: isoString(from: expectedUpdatedAt),
             action: action,
-            itemId: itemId
+            itemId: itemId,
+            quantity: quantity
         ))
         return try await perform(req)
     }
@@ -462,7 +478,7 @@ struct KioskAPI {
 
     private func isoString(from date: Date) -> String {
         let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime]
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return formatter.string(from: date)
     }
 

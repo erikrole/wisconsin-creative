@@ -1,10 +1,11 @@
-import { AllocationKind, BookingCustodyScope, BookingKind, BookingStatus, Prisma } from "@prisma/client";
+import { AllocationKind, BookingKind, BookingStatus, Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
 import { createAuditEntryTx, lookupActorRole } from "@/lib/audit";
 import { kioskAvailabilityBlockMessage } from "@/lib/availability-copy";
 import { checkAvailability } from "@/lib/services/availability";
 import { findAssetByScanValue } from "@/lib/services/kiosk-scan";
+import { assertKioskPickupPlanActor, kioskPickupPlanActorSelect, remainingPickupAllocationWindow } from "@/lib/services/kiosk-pickup-add";
 import { kioskRosterUserWhere } from "@/lib/user-visibility";
 
 export type PickupNamedItem = {
@@ -181,17 +182,10 @@ export async function substituteReservationPickupItem(args: {
 
     const actor = await tx.user.findFirst({
       where: { id: args.actorUserId, ...kioskRosterUserWhere() },
-      select: { id: true, role: true },
+      select: kioskPickupPlanActorSelect,
     });
     if (!actor) throw new HttpError(403, "This user cannot operate kiosk custody");
-    if (
-      booking.custodyScope !== BookingCustodyScope.SHARED
-      && booking.requesterUserId !== actor.id
-      && actor.role !== "ADMIN"
-      && actor.role !== "STAFF"
-    ) {
-      throw new HttpError(403, "Only the reservation requester can swap an item at pickup");
-    }
+    assertKioskPickupPlanActor(booking, actor);
 
     const scanned = await findAssetByScanValue(args.scanValue, {
       id: true,
@@ -223,10 +217,11 @@ export async function substituteReservationPickupItem(args: {
       throw new HttpError(409, "That reserved item was already picked up");
     }
 
+    const window = remainingPickupAllocationWindow(booking);
     const availability = await checkAvailability(tx, {
       locationId: booking.locationId,
-      startsAt: booking.startsAt,
-      endsAt: booking.endsAt,
+      startsAt: window.startsAt,
+      endsAt: window.endsAt,
       serializedAssetIds: [scanned.id],
       bulkItems: [],
       excludeBookingId: booking.id,
@@ -266,8 +261,8 @@ export async function substituteReservationPickupItem(args: {
       data: {
         bookingId: booking.id,
         assetId: scanned.id,
-        startsAt: booking.startsAt,
-        endsAt: booking.endsAt,
+        startsAt: window.startsAt,
+        endsAt: window.endsAt,
         active: true,
         kind: AllocationKind.RESERVATION,
       },

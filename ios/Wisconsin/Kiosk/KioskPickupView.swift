@@ -26,7 +26,7 @@ struct KioskPickupView: View {
     @State private var scanQueue = KioskScanQueue()
     @State private var pendingAdd: PendingOffPlanAdd?
     @State private var pendingBlock: PendingBlockedAdd?
-    @State private var pendingRemoveItem: KioskCheckoutDetail.ReturnItem?
+    @State private var pendingRemove: PendingRemove?
 
     private struct PendingOffPlanAdd: Identifiable {
         let scanValue: String
@@ -37,6 +37,14 @@ struct KioskPickupView: View {
     private struct PendingBlockedAdd: Identifiable {
         let message: String
         var id: String { message }
+    }
+
+    private struct PendingRemove: Identifiable {
+        let item: KioskCheckoutDetail.ReturnItem
+        let keepQuantity: Int?
+        let label: String
+
+        var id: String { item.id }
     }
 
     enum ScanFeedback: Equatable {
@@ -153,18 +161,18 @@ struct KioskPickupView: View {
         .confirmationDialog(
             "Leave this off the reservation?",
             isPresented: Binding(
-                get: { pendingRemoveItem != nil },
-                set: { if !$0 { pendingRemoveItem = nil } }
+                get: { pendingRemove != nil },
+                set: { if !$0 { pendingRemove = nil } }
             ),
             titleVisibility: .visible,
-            presenting: pendingRemoveItem
-        ) { item in
-            Button("Remove \(item.itemListPrimaryTitle)", role: .destructive) {
-                Task { await removeRemainingItem(item) }
+            presenting: pendingRemove
+        ) { pending in
+            Button("Remove remaining \(pending.label)", role: .destructive) {
+                Task { await removeRemainingItem(pending) }
             }
-            Button("Cancel", role: .cancel) { pendingRemoveItem = nil }
-        } message: { item in
-            Text("\(item.itemListPrimaryTitle) stays on the shelf. It will not go out with this pickup.")
+            Button("Cancel", role: .cancel) { pendingRemove = nil }
+        } message: { pending in
+            Text("\(pending.label) stays on the shelf. It will not go out with this pickup.")
         }
         .sheet(isPresented: $showCamera) {
             KioskBarcodeCameraView(
@@ -448,9 +456,13 @@ struct KioskPickupView: View {
                         ?? item.itemListPrimaryTitle,
                     isDone: confirmedIds.contains(item.id)
                 )
-                if !confirmedIds.contains(item.id), item.reservationItemId != nil {
+                if canRemoveRemaining(item) {
                     Button {
-                        pendingRemoveItem = item
+                        pendingRemove = PendingRemove(
+                            item: item,
+                            keepQuantity: nil,
+                            label: item.itemListPrimaryTitle
+                        )
                     } label: {
                         Image(systemName: "trash.fill")
                             .font(.body.weight(.semibold))
@@ -464,12 +476,27 @@ struct KioskPickupView: View {
             }
                 .id(entry.id)
         case .battery(let group):
-            KioskPickupBatteryChecklistRow(
-                name: group.name,
-                total: group.items.count,
-                confirmedCount: group.items.filter { confirmedIds.contains($0.id) }.count,
-                scannedTags: group.items.compactMap { confirmedItemOverrides[$0.id]?.itemListPrimaryTitle }
-            )
+            HStack(spacing: 0) {
+                KioskPickupBatteryChecklistRow(
+                    name: group.name,
+                    total: group.items.count,
+                    confirmedCount: group.items.filter { confirmedIds.contains($0.id) }.count,
+                    scannedTags: group.items.compactMap { confirmedItemOverrides[$0.id]?.itemListPrimaryTitle }
+                )
+                if let pending = remainingBatteryRemove(group) {
+                    Button {
+                        pendingRemove = pending
+                    } label: {
+                        Image(systemName: "trash.fill")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(Color.statusText(.red))
+                            .frame(width: 44, height: 44)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Remove remaining \(group.name)")
+                    .padding(.trailing, 12)
+                }
+            }
                 .id(entry.id)
         }
     }
@@ -477,7 +504,7 @@ struct KioskPickupView: View {
     // MARK: - Logic
 
     private func handleScan(_ value: String) {
-        guard pendingAdd == nil, pendingBlock == nil, pendingRemoveItem == nil else { return }
+        guard pendingAdd == nil, pendingBlock == nil, pendingRemove == nil else { return }
         guard !isConfirming else {
             showFeedback(.error("Hold on — confirming pickup"))
             return
@@ -493,7 +520,7 @@ struct KioskPickupView: View {
     }
 
     private func processNextScanIfNeeded() {
-        guard pendingAdd == nil, pendingBlock == nil, pendingRemoveItem == nil else { return }
+        guard pendingAdd == nil, pendingBlock == nil, pendingRemove == nil else { return }
         guard let items = detail?.items, let entry = scanQueue.next() else { return }
         let flow = store.flowGeneration
         Task {
@@ -676,14 +703,31 @@ struct KioskPickupView: View {
         }
     }
 
-    private func removeRemainingItem(_ item: KioskCheckoutDetail.ReturnItem) async {
-        guard let reservationItemId = item.reservationItemId else {
-            pendingRemoveItem = nil
+    private func canRemoveRemaining(_ item: KioskCheckoutDetail.ReturnItem) -> Bool {
+        guard item.reservationItemId != nil else { return false }
+        if item.isBulkQuantity { return true }
+        return !confirmedIds.contains(item.id)
+    }
+
+    private func remainingBatteryRemove(_ group: KioskPickupBatteryChecklistGroup) -> PendingRemove? {
+        guard let item = group.items.first(where: { $0.reservationItemId != nil }) else { return nil }
+        let confirmedCount = group.items.filter { confirmedIds.contains($0.id) }.count
+        guard confirmedCount < group.items.count else { return nil }
+        return PendingRemove(
+            item: item,
+            keepQuantity: confirmedCount == 0 ? nil : confirmedCount,
+            label: group.name
+        )
+    }
+
+    private func removeRemainingItem(_ pending: PendingRemove) async {
+        guard let reservationItemId = pending.item.reservationItemId else {
+            pendingRemove = nil
             showFeedback(.error("Refresh this pickup before removing an item."))
             return
         }
         guard let expectedUpdatedAt = detail?.updatedAt else {
-            pendingRemoveItem = nil
+            pendingRemove = nil
             showFeedback(.error("Refresh this pickup before removing an item."))
             return
         }
@@ -691,19 +735,20 @@ struct KioskPickupView: View {
         isConfirming = true
         defer {
             isConfirming = false
-            pendingRemoveItem = nil
+            pendingRemove = nil
         }
         do {
             _ = try await KioskAPI.shared.kioskUpdateReservationItem(
                 id: bookingId,
                 actorId: userId,
                 expectedUpdatedAt: expectedUpdatedAt,
-                action: "remove",
-                itemId: reservationItemId
+                action: pending.keepQuantity == nil ? "remove" : "quantity",
+                itemId: reservationItemId,
+                quantity: pending.keepQuantity
             )
             guard store.ownsFlow(flow) else { return }
             await loadDetail(showLoading: false)
-            showFeedback(.success("Removed \(item.itemListPrimaryTitle)"))
+            showFeedback(.success("Removed remaining \(pending.label)"))
         } catch {
             let message = (error as? APIError)?.errorDescription ?? "Could not remove that item. Please try again."
             showFeedback(.error(message))

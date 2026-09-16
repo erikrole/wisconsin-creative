@@ -1,8 +1,9 @@
-import { AllocationKind, BookingCustodyScope, BookingKind, BookingStatus, Prisma } from "@prisma/client";
+import { AllocationKind, BookingCustodyScope, BookingKind, BookingStatus, CollaboratorPolicyStatus, Prisma, Role } from "@prisma/client";
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
 import { createAuditEntryTx, lookupActorRole } from "@/lib/audit";
 import { kioskAvailabilityBlockMessage } from "@/lib/availability-copy";
+import { hasCollaboratorCapability } from "@/lib/collaborator-access";
 import { checkAvailability } from "@/lib/services/availability";
 import { MAX_EQUIPMENT_SELECTIONS_PER_REQUEST } from "@/lib/request-limits";
 import { kioskRosterUserWhere } from "@/lib/user-visibility";
@@ -36,12 +37,68 @@ const bookingSelect = {
 
 type PickupAddBooking = Prisma.BookingGetPayload<{ select: typeof bookingSelect }>;
 
+export const kioskPickupPlanActorSelect = {
+  id: true,
+  role: true,
+  collaboratorPolicy: {
+    select: {
+      status: true,
+      grants: { select: { capabilityKey: true } },
+    },
+  },
+} as const;
+
+export type KioskPickupPlanActor = Prisma.UserGetPayload<{ select: typeof kioskPickupPlanActorSelect }>;
+
+/**
+ * Remaining custody window for a leftover pickup add. Past overlaps should
+ * not block an item that is free at the counter now.
+ */
+export function remainingPickupAllocationWindow(
+  booking: { startsAt: Date; endsAt: Date },
+  now = new Date(),
+) {
+  const startsAt = booking.startsAt.getTime() > now.getTime() ? booking.startsAt : now;
+  const endsAt = booking.endsAt.getTime() > startsAt.getTime()
+    ? booking.endsAt
+    : new Date(startsAt.getTime() + 60_000);
+  return { startsAt, endsAt };
+}
+
+export function assertKioskPickupPlanActor(
+  booking: { custodyScope: BookingCustodyScope; requesterUserId: string },
+  actor: {
+    id: string;
+    role: Role;
+    collaboratorPolicy?: KioskPickupPlanActor["collaboratorPolicy"];
+  },
+) {
+  if (actor.role === Role.ADMIN || actor.role === Role.STAFF) return;
+  if (booking.custodyScope === BookingCustodyScope.SHARED) return;
+  if (booking.requesterUserId !== actor.id) {
+    throw new HttpError(403, "Only the reservation requester can change remaining pickup items");
+  }
+  const capabilities = actor.collaboratorPolicy?.status === CollaboratorPolicyStatus.ACTIVE
+    ? actor.collaboratorPolicy.grants.map((grant) => grant.capabilityKey)
+    : [];
+  if (actor.role === Role.COLLABORATOR && !hasCollaboratorCapability({ role: actor.role, capabilities }, "RESERVATION_EDIT_OWN")) {
+    throw new HttpError(403, "Your collaborator access does not include this reservation action");
+  }
+}
+
 function namedItem(asset: { id: string; name: string | null; assetTag: string }): AddedPickupItem {
   return {
     id: asset.id,
     name: asset.name || asset.assetTag,
     tagName: asset.assetTag,
   };
+}
+
+function isPickupAllocationOverlap(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+  const code = (error as { code?: unknown }).code;
+  const message = error instanceof Error ? error.message : "";
+  return code === "23P01" || message.includes("asset_allocations_no_overlap");
 }
 
 async function loadPickupAddBooking(
@@ -65,17 +122,10 @@ async function requirePickupAddActor(
 ) {
   const actor = await tx.user.findFirst({
     where: { id: actorUserId, ...kioskRosterUserWhere() },
-    select: { id: true, role: true },
+    select: kioskPickupPlanActorSelect,
   });
   if (!actor) throw new HttpError(403, "This user cannot operate kiosk custody");
-  if (
-    booking.custodyScope !== BookingCustodyScope.SHARED
-    && booking.requesterUserId !== actor.id
-    && actor.role !== "ADMIN"
-    && actor.role !== "STAFF"
-  ) {
-    throw new HttpError(403, "Only the reservation requester can add an item at pickup");
-  }
+  assertKioskPickupPlanActor(booking, actor);
   return actor;
 }
 
@@ -94,10 +144,11 @@ async function evaluatePickupAddAvailability(
     throw new HttpError(400, "This reservation has too many items");
   }
 
+  const window = remainingPickupAllocationWindow(booking);
   const availability = await checkAvailability(tx, {
     locationId: booking.locationId,
-    startsAt: booking.startsAt,
-    endsAt: booking.endsAt,
+    startsAt: window.startsAt,
+    endsAt: window.endsAt,
     serializedAssetIds: [asset.id],
     bulkItems: [],
     excludeBookingId: booking.id,
@@ -150,13 +201,15 @@ export async function addAndStageReservationPickupSerialized(args: {
   };
   deviceContext: string;
 }): Promise<AddReservationPickupSerializedResult> {
-  return db.$transaction(async (tx) => {
+  try {
+    return await db.$transaction(async (tx) => {
     const booking = await loadPickupAddBooking(tx, args.bookingId);
     const actor = await requirePickupAddActor(tx, booking, args.actorUserId);
     const preview = await evaluatePickupAddAvailability(tx, booking, args.asset);
     if (!preview.ok) {
       return { success: false, error: preview.error, errorCode: preview.errorCode };
     }
+    const window = remainingPickupAllocationWindow(booking);
 
     await tx.bookingSerializedItem.create({
       data: {
@@ -169,8 +222,8 @@ export async function addAndStageReservationPickupSerialized(args: {
       data: {
         bookingId: booking.id,
         assetId: args.asset.id,
-        startsAt: booking.startsAt,
-        endsAt: booking.endsAt,
+        startsAt: window.startsAt,
+        endsAt: window.endsAt,
         active: true,
         kind: AllocationKind.RESERVATION,
       },
@@ -205,5 +258,15 @@ export async function addAndStageReservationPickupSerialized(args: {
     });
 
     return { success: true, addedToPlan: true, item };
-  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  } catch (error) {
+    if (isPickupAllocationOverlap(error)) {
+      return {
+        success: false,
+        error: `${args.asset.assetTag} is no longer available`,
+        errorCode: "conflict",
+      };
+    }
+    throw error;
+  }
 }

@@ -2,11 +2,14 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { withKiosk } from "@/lib/api";
 import { HttpError, ok } from "@/lib/http";
-import { requirePermission } from "@/lib/rbac";
-import { canPerformBookingAction } from "@/lib/services/booking-rules";
-import { updateReservation } from "@/lib/services/bookings-lifecycle";
+import { bookingSnapshotMatches } from "@/lib/booking-concurrency";
 import { findAssetByScanValue } from "@/lib/services/kiosk-scan";
 import { findBulkUnitByScanValue } from "@/lib/services/bulk-unit-scans";
+import { updateReservation } from "@/lib/services/bookings-lifecycle";
+import {
+  assertKioskPickupPlanActor,
+  kioskPickupPlanActorSelect,
+} from "@/lib/services/kiosk-pickup-add";
 import { kioskRosterUserWhere } from "@/lib/user-visibility";
 import { MAX_EQUIPMENT_SELECTIONS_PER_REQUEST } from "@/lib/request-limits";
 
@@ -20,14 +23,22 @@ const bodySchema = z.object({
 
 async function context(id: string, actorId: string) {
   const [booking, actor] = await Promise.all([
-    db.booking.findUnique({ where: { id }, include: { serializedItems: { include: { asset: true } }, bulkItems: { include: { bulkSku: true } } } }),
-    db.user.findFirst({ where: { id: actorId, ...kioskRosterUserWhere() }, select: { id: true, role: true } }),
+    db.booking.findUnique({
+      where: { id },
+      include: {
+        serializedItems: { include: { asset: true } },
+        bulkItems: { include: { bulkSku: true } },
+        derivedCheckouts: { select: { id: true } },
+      },
+    }),
+    db.user.findFirst({
+      where: { id: actorId, ...kioskRosterUserWhere() },
+      select: kioskPickupPlanActorSelect,
+    }),
   ]);
   if (!booking || booking.kind !== "RESERVATION" || booking.status !== "BOOKED") throw new HttpError(404, "Open reservation not found");
   if (!actor) throw new HttpError(403, "Choose an active operator");
-  requirePermission(actor.role, "booking", "create");
-  const permission = canPerformBookingAction(actor, booking, "edit");
-  if (!permission.allowed) throw new HttpError(403, permission.reason ?? "You cannot edit this reservation");
+  assertKioskPickupPlanActor(booking, actor);
   return { booking, actor };
 }
 
@@ -38,6 +49,12 @@ function manifest(booking: Awaited<ReturnType<typeof context>>["booking"]) {
   ] };
 }
 
+function pickupAlreadyStarted(booking: Awaited<ReturnType<typeof context>>["booking"]) {
+  return booking.serializedItems.some((item) => item.allocationStatus === "picked_up")
+    || booking.bulkItems.some((item) => (item.checkedOutQuantity ?? 0) > 0)
+    || booking.derivedCheckouts.length > 0;
+}
+
 export const GET = withKiosk<{ id: string }>(async (req, { params }) => {
   const actorId = new URL(req.url).searchParams.get("actorId") ?? "";
   return ok(manifest((await context(params.id, actorId)).booking));
@@ -46,7 +63,9 @@ export const GET = withKiosk<{ id: string }>(async (req, { params }) => {
 export const POST = withKiosk<{ id: string }>(async (req, { params }) => {
   const body = bodySchema.parse(await req.json());
   const { booking } = await context(params.id, body.actorId);
-  if (booking.updatedAt.getTime() !== new Date(body.expectedUpdatedAt).getTime()) throw new HttpError(409, "This reservation changed. Refresh its items before editing.");
+  if (!bookingSnapshotMatches(booking.updatedAt, new Date(body.expectedUpdatedAt))) {
+    throw new HttpError(409, "This reservation changed. Refresh its items before editing.");
+  }
   let assetIds = booking.serializedItems.map((item) => item.assetId);
   let bulkItems = booking.bulkItems.map((item) => ({ bulkSkuId: item.bulkSkuId, quantity: item.plannedQuantity }));
   if (body.action === "add") {
@@ -77,7 +96,9 @@ export const POST = withKiosk<{ id: string }>(async (req, { params }) => {
     } else throw new HttpError(404, "Reservation item not found");
   }
   if (assetIds.length + bulkItems.reduce((sum, item) => sum + item.quantity, 0) > MAX_EQUIPMENT_SELECTIONS_PER_REQUEST) throw new HttpError(400, "This reservation has too many items");
-  if (!assetIds.length && !bulkItems.length) throw new HttpError(409, "Keep at least one reserved item, or cancel the reservation from its booking page.");
+  if (!assetIds.length && !bulkItems.length && !pickupAlreadyStarted(booking)) {
+    throw new HttpError(409, "Keep at least one reserved item, or cancel the reservation from its booking page.");
+  }
   const updated = await updateReservation(booking.id, body.actorId, { serializedAssetIds: assetIds, bulkItems }, new Date(body.expectedUpdatedAt));
   return ok({ success: true, message: "Reservation updated. Scan the remaining pickup items again before handing them over.", updatedAt: updated.updatedAt });
 });

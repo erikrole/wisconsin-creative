@@ -10,7 +10,7 @@
 | `src/lib/services/auto-assign.ts` | 92 |
 | `src/lib/services/auto-fill-preview.ts` | 325 |
 | `src/lib/services/availability-conflict-recompute.ts` | 130 |
-| `src/lib/services/availability.ts` | 670 |
+| `src/lib/services/availability.ts` | 676 |
 | `src/lib/services/blast-targeting.ts` | 165 |
 | `src/lib/services/blasts.ts` | 358 |
 | `src/lib/services/booking-custody.ts` | 82 |
@@ -19,12 +19,12 @@
 | `src/lib/services/booking-rules.ts` | 110 |
 | `src/lib/services/bookings-checkin.ts` | 854 |
 | `src/lib/services/bookings-helpers.ts` | 281 |
-| `src/lib/services/bookings-lifecycle.ts` | 3054 |
+| `src/lib/services/bookings-lifecycle.ts` | 3211 |
 | `src/lib/services/bookings-queries.ts` | 310 |
 | `src/lib/services/bookings.ts` | 8 |
 | `src/lib/services/bulk-assignment-batches.ts` | 252 |
 | `src/lib/services/bulk-schedule-assignment.ts` | 970 |
-| `src/lib/services/bulk-unit-scans.ts` | 699 |
+| `src/lib/services/bulk-unit-scans.ts` | 717 |
 | `src/lib/services/calendar-sync-health.ts` | 165 |
 | `src/lib/services/calendar-sync.ts` | 734 |
 | `src/lib/services/candidate-scoring.ts` | 439 |
@@ -47,6 +47,7 @@
 | `src/lib/services/kiosk-item-transfer.ts` | 95 |
 | `src/lib/services/kiosk-location.ts` | 72 |
 | `src/lib/services/kiosk-operation-receipts.ts` | 90 |
+| `src/lib/services/kiosk-pickup-add.ts` | 273 |
 | `src/lib/services/kiosk-pickup-substitute.ts` | 311 |
 | `src/lib/services/kiosk-scan.ts` | 44 |
 | `src/lib/services/kits.ts` | 329 |
@@ -60,6 +61,7 @@
 | `src/lib/services/pending-pickup-expiry.ts` | 281 |
 | `src/lib/services/reports.ts` | 1932 |
 | `src/lib/services/reservation-consolidation.ts` | 253 |
+| `src/lib/services/reservation-pickup-guard.ts` | 62 |
 | `src/lib/services/reservation-pickup-location.ts` | 34 |
 | `src/lib/services/reservation-rules.ts` | 46 |
 | `src/lib/services/reservation-schedule.ts` | 667 |
@@ -112,7 +114,7 @@
 | `src/lib/auth-email-guidance.ts` | 7 |
 | `src/lib/auth.ts` | 361 |
 | `src/lib/auto-fill-preview-types.ts` | 61 |
-| `src/lib/availability-copy.ts` | 233 |
+| `src/lib/availability-copy.ts` | 327 |
 | `src/lib/avatar.ts` | 44 |
 | `src/lib/battery-compatibility.ts` | 145 |
 | `src/lib/bhphoto-image.ts` | 67 |

@@ -820,17 +820,20 @@ enum KioskFixtures {
             {"id":"bulk-battery:slot:\(index)","tagName":"#\(index)",
              "name":"V-Mount Battery \(index)","returned":false,
              "type":"numbered_bulk","bulkSkuId":"sku-bat",
-             "bulkSkuName":"V-Mount Battery","unitNumber":null,"imageUrl":null}
+             "bulkSkuName":"V-Mount Battery","unitNumber":null,"imageUrl":null,
+             "reservationItemId":"bi-1"}
             """
         }.joined(separator: ",")
 
         return """
         {"id":"\(id)","title":"Volleyball vs Minnesota","refNumber":"RS-2204","status":"BOOKED",
          "requesterId":"\(primaryUser.id)","endsAt":"\(iso(hours(6)))",
+         "updatedAt":"\(iso(hours(-1)))",
          "scanSummary":{"serializedTotal":1,"numberedBulkTotal":10,"numberedBulkCompleted":0},
          "items":[
            {"id":"asset-1","tagName":"CAM-014","name":"Sony FX3","returned":false,
-            "type":"serialized","bulkSkuId":null,"bulkSkuName":null,"unitNumber":null,"imageUrl":null},
+            "type":"serialized","bulkSkuId":null,"bulkSkuName":null,"unitNumber":null,"imageUrl":null,
+            "reservationItemId":"si-1"},
            \(batteryItems)
          ]}
         """

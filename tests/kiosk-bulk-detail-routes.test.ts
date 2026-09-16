@@ -256,12 +256,14 @@ describe("kiosk checkout detail bulk units", () => {
       name: "Sony Battery #7",
       returned: true,
       unitNumber: 7,
+      reservationItemId: "bulk-item-1",
     });
     expect(json.items[1]).toMatchObject({
       id: "bulk-item-1:slot:2",
       tagName: "#2",
       returned: false,
       unitNumber: null,
+      reservationItemId: "bulk-item-1",
     });
     expect(json.scanSummary).toEqual({
       serializedTotal: 0,
@@ -595,7 +597,6 @@ describe("kiosk checkout detail bulk units", () => {
 
     expect(json.items).toEqual([{
       id: "asset-1",
-      reservationItemId: "serialized-1",
       tagName: "FX3 1",
       name: "Camera",
       returned: true,
