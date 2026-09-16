@@ -2,7 +2,7 @@ export type BookingKind = "CHECKOUT" | "RESERVATION";
 export type BookingStatus = "DRAFT" | "BOOKED" | "PENDING_PICKUP" | "OPEN" | "COMPLETED" | "CANCELLED";
 
 export type CheckoutAction = "edit" | "extend" | "cancel" | "checkin" | "open" | "force-complete" | "nudge" | "transfer-owner" | "manage-custody";
-export type ReservationAction = "edit" | "extend" | "cancel" | "convert" | "duplicate" | "force-checkout" | "transfer-owner";
+export type ReservationAction = "edit" | "extend" | "cancel" | "convert" | "duplicate" | "force-checkout" | "close-remaining" | "transfer-owner";
 export type BookingAction = CheckoutAction | ReservationAction | "view";
 
 export type BookingContext = {
@@ -33,7 +33,7 @@ type ActionOptions = {
 const CLIENT_CHECKOUT_ACTIONS: CheckoutAction[] = ["edit", "extend", "cancel", "open", "transfer-owner", "manage-custody"];
 const SERVER_CHECKOUT_ACTIONS: CheckoutAction[] = ["edit", "extend", "cancel", "checkin", "open", "force-complete", "nudge", "transfer-owner", "manage-custody"];
 const CLIENT_RESERVATION_ACTIONS: ReservationAction[] = ["edit", "extend", "cancel", "duplicate", "transfer-owner"];
-const SERVER_RESERVATION_ACTIONS: ReservationAction[] = ["edit", "extend", "cancel", "convert", "duplicate", "force-checkout", "transfer-owner"];
+const SERVER_RESERVATION_ACTIONS: ReservationAction[] = ["edit", "extend", "cancel", "convert", "duplicate", "force-checkout", "close-remaining", "transfer-owner"];
 const COLLABORATOR_RESERVATION_ACTION_CAPABILITIES: Partial<Record<"edit" | "extend" | "cancel", string>> = {
   edit: "RESERVATION_EDIT_OWN",
   extend: "RESERVATION_EXTEND_OWN",
@@ -51,7 +51,7 @@ const STATE_ACTIONS: Record<BookingKind, Record<BookingStatus, Set<string>>> = {
   },
   RESERVATION: {
     DRAFT: new Set(["edit", "cancel", "transfer-owner"]),
-    BOOKED: new Set(["edit", "extend", "cancel", "duplicate", "force-checkout", "transfer-owner"]),
+    BOOKED: new Set(["edit", "extend", "cancel", "duplicate", "force-checkout", "close-remaining", "transfer-owner"]),
     PENDING_PICKUP: new Set(),
     OPEN: new Set(),
     COMPLETED: new Set(["duplicate"]),
@@ -144,6 +144,12 @@ export function canPerformBookingAction(
     return actor.role === "ADMIN"
       ? { allowed: true }
       : { allowed: false, reason: "Only admins can force-checkout a reservation" };
+  }
+
+  if (action === "close-remaining") {
+    return isStaffOrAbove(actor.role)
+      ? { allowed: true }
+      : { allowed: false, reason: "Only staff or admin can close a partially picked-up reservation" };
   }
 
   if (action === "nudge") {

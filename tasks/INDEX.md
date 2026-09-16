@@ -1,6 +1,6 @@
 # Tasks Index
 
-Last updated: 2026-09-04
+Last updated: 2026-09-16
 
 ## Start Here
 
@@ -36,6 +36,8 @@ As of this cleanup pass, root `tasks/` contains:
 Audit files intentionally remain at root for now because the repo audit skills read and write `tasks/audit-*.md` paths directly.
 
 ## Active Follow-up Ledgers
+
+- `reservation-partial-pickup-recovery-plan-2026-09-16.md` - RV-0453 leftover-tripod incident: prevent accidental partial pickup, swap equivalent remaining items at kiosk, staff close-remaining, and live repair after deploy.
 
 - `resource-import-hardening-plan-2026-09-11.md` - backend guide importer audit fixes and verification; Preview migration provenance, image credentials and authenticated apply/read-back remain gated.
 

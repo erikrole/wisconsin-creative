@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { AlertCircle, ChevronDown } from "lucide-react";
+import { AlertCircle, ChevronDown, PackageCheck } from "lucide-react";
 import BookingDetailsSheet from "@/components/BookingDetailsSheet";
 import { toast } from "sonner";
 import { useBreadcrumbLabel } from "@/components/BreadcrumbContext";
@@ -85,6 +85,8 @@ export default function BookingDetailPage({
   const [forceCheckoutOpen, setForceCheckoutOpen] = useState(false);
   const [forceCheckoutReason, setForceCheckoutReason] = useState("");
   const [forceCheckoutError, setForceCheckoutError] = useState("");
+  const [closeRemainingOpen, setCloseRemainingOpen] = useState(false);
+  const [closeRemainingReason, setCloseRemainingReason] = useState("");
 
   useEffect(() => {
     if (booking?.title) setBreadcrumbLabel(booking.title);
@@ -161,6 +163,14 @@ export default function BookingDetailPage({
     }
   }
 
+  async function handleCloseRemaining() {
+    const ok = await actions.closeRemaining(closeRemainingReason);
+    if (ok) {
+      setCloseRemainingOpen(false);
+      setCloseRemainingReason("");
+    }
+  }
+
   // Derived
   const allowedActions = booking?.allowedActions ?? [];
   const canEdit = allowedActions.includes("edit");
@@ -170,6 +180,21 @@ export default function BookingDetailPage({
   const canNudge = allowedActions.includes("nudge");
   const canForceComplete = kind === "CHECKOUT" && allowedActions.includes("force-complete");
   const canForceCheckout = kind === "RESERVATION" && allowedActions.includes("force-checkout");
+  const pickedUpSerialized = kind === "RESERVATION"
+    ? (booking?.serializedItems ?? []).filter((item) => item.allocationStatus === "picked_up")
+    : [];
+  const remainingSerialized = kind === "RESERVATION"
+    ? (booking?.serializedItems ?? []).filter((item) => item.allocationStatus !== "picked_up")
+    : [];
+  const remainingBulk = kind === "RESERVATION"
+    ? (booking?.bulkItems ?? []).filter((item) => item.plannedQuantity - (item.checkedOutQuantity ?? 0) > 0)
+    : [];
+  const pickupStarted = kind === "RESERVATION" && booking?.status === "BOOKED" && (
+    pickedUpSerialized.length > 0
+    || (booking?.bulkItems ?? []).some((item) => (item.checkedOutQuantity ?? 0) > 0)
+    || (booking?.derivedCheckouts?.length ?? 0) > 0
+  );
+  const canCloseRemaining = pickupStarted && allowedActions.includes("close-remaining");
   const canTransferOwner = allowedActions.includes("transfer-owner");
   const canManageCustody = kind === "CHECKOUT" && allowedActions.includes("manage-custody");
   const canEditEvents = canEdit;
@@ -285,6 +310,7 @@ export default function BookingDetailPage({
         canNudge={canNudge}
         canForceComplete={canForceComplete}
         canForceCheckout={canForceCheckout}
+        canCloseRemaining={canCloseRemaining}
         canTransferOwner={canTransferOwner}
         canManageCustody={canManageCustody}
         canEditEvents={canEditEvents}
@@ -306,6 +332,7 @@ export default function BookingDetailPage({
         onNudge={actions.nudge}
         onForceComplete={() => setForceCompleteOpen(true)}
         onForceCheckout={() => setForceCheckoutOpen(true)}
+        onCloseRemaining={() => setCloseRemainingOpen(true)}
         onTransferOwner={() => setTransferOwnerOpen(true)}
         onToggleCustody={() => actions.toggleCustodyScope(booking.custodyScope)}
         onEditEvents={() => setEditEventsOpen(true)}
@@ -353,6 +380,54 @@ export default function BookingDetailPage({
             ))}
           </div>
         </Card>
+      )}
+
+      {/* ── Partial pickup callout ── */}
+      {pickupStarted && (
+        <Alert>
+          <PackageCheck className="size-4" />
+          <AlertTitle>Partially picked up</AlertTitle>
+          <AlertDescription className="flex flex-col gap-2">
+            <p>
+              {pickedUpSerialized.length > 0 || (booking.bulkItems ?? []).some((item) => (item.checkedOutQuantity ?? 0) > 0)
+                ? "Some of this gear already left the counter"
+                : "A checkout was opened from this reservation"}
+              {booking.derivedCheckouts && booking.derivedCheckouts.length > 0 && (
+                <>
+                  {" "}on{" "}
+                  {booking.derivedCheckouts.map((checkout, index) => (
+                    <span key={checkout.id}>
+                      {index > 0 && ", "}
+                      <Link href={`/checkouts/${checkout.id}`} className="font-medium text-primary hover:underline">
+                        {checkout.refNumber ?? "checkout"}
+                      </Link>
+                    </span>
+                  ))}
+                </>
+              )}
+              .{" "}
+              {remainingSerialized.length + remainingBulk.length > 0 ? (
+                <>
+                  Still reserved and waiting for kiosk pickup:{" "}
+                  <span className="font-medium text-foreground">
+                    {[
+                      ...remainingSerialized.map((item) => item.asset.name || item.asset.assetTag),
+                      ...remainingBulk.map((item) => `${item.plannedQuantity - (item.checkedOutQuantity ?? 0)} × ${item.bulkSku.name}`),
+                    ].join(", ")}
+                  </span>
+                  .
+                </>
+              ) : (
+                "Nothing is left to pick up, but this reservation is still open."
+              )}
+            </p>
+            {canCloseRemaining && (
+              <p className="text-muted-foreground">
+                If the rest is not coming, use <span className="font-medium text-foreground">Close without remaining gear</span> in Actions to release the holds and finish this reservation. The picked-up checkout keeps its own history.
+              </p>
+            )}
+          </AlertDescription>
+        </Alert>
       )}
 
       {/* ── Two-column layout: Equipment + Info ── */}
@@ -550,6 +625,65 @@ export default function BookingDetailPage({
               disabled={actions.actionLoading === "force-checkout" || forceCheckoutReason.trim().length < 10}
             >
               {actions.actionLoading === "force-checkout" ? "Forcing checkout…" : "Force checkout"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={closeRemainingOpen}
+        onOpenChange={(open) => {
+          if (actions.actionLoading === "close-remaining") return;
+          setCloseRemainingOpen(open);
+          if (!open) setCloseRemainingReason("");
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Close without the remaining gear?</DialogTitle>
+            <DialogDescription>
+              {remainingSerialized.length + remainingBulk.length > 0 ? (
+                <>
+                  This releases{" "}
+                  <span className="font-medium text-foreground">
+                    {[
+                      ...remainingSerialized.map((item) => item.asset.name || item.asset.assetTag),
+                      ...remainingBulk.map((item) => `${item.plannedQuantity - (item.checkedOutQuantity ?? 0)} × ${item.bulkSku.name}`),
+                    ].join(", ")}
+                  </span>{" "}
+                  back to the shelf and marks the reservation complete. Gear that was already picked up stays on its checkout.
+                </>
+              ) : (
+                "Nothing is left to release. This marks the reservation complete so it stops showing as an open pickup."
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogBody className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="close-remaining-reason">Note (optional)</Label>
+              <Textarea
+                id="close-remaining-reason"
+                value={closeRemainingReason}
+                onChange={(event) => setCloseRemainingReason(event.target.value)}
+                placeholder="Example: Grabbed the 755CX3 instead of the reserved 535; checked out separately."
+                rows={3}
+                disabled={actions.actionLoading === "close-remaining"}
+              />
+            </div>
+          </DialogBody>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setCloseRemainingOpen(false)}
+              disabled={actions.actionLoading === "close-remaining"}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCloseRemaining}
+              disabled={actions.actionLoading === "close-remaining"}
+            >
+              {actions.actionLoading === "close-remaining" ? "Closing…" : "Close reservation"}
             </Button>
           </DialogFooter>
         </DialogContent>

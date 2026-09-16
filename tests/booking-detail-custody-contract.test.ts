@@ -35,8 +35,11 @@ describe("booking detail custody contracts", () => {
     expect(sheetSource).not.toContain("Start checkout");
     expect(actionSource).not.toContain("/api/reservations/${bookingId}/convert");
     expect(actionSource).toContain("/api/reservations/${bookingId}/force-checkout");
+    expect(actionSource).toContain("/api/reservations/${bookingId}/close-remaining");
     expect(detailSource).toContain("Force checkout reservation?");
+    expect(detailSource).toContain("Close without remaining gear");
     expect(detailSource).toContain('allowedActions.includes("force-checkout")');
+    expect(detailSource).toContain('allowedActions.includes("close-remaining")');
   });
 
   it("names cancellation as an irreversible release of equipment commitments", () => {

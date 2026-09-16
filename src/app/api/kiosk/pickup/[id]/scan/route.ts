@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { withKiosk } from "@/lib/api";
 import { HttpError, ok } from "@/lib/http";
 import { findAssetByScanValue } from "@/lib/services/kiosk-scan";
+import { findPickupSubstitutionCandidate } from "@/lib/services/kiosk-pickup-substitute";
 import { pickupScanBody } from "@/lib/schemas/kiosk";
 import { scanKioskPickupBulkUnit, stageKioskReservationPickupBulkUnit } from "@/lib/services/bulk-unit-scans";
 import { kioskRosterUserWhere } from "@/lib/user-visibility";
@@ -65,6 +66,8 @@ export const POST = withKiosk<{ id: string }>(async (req, { params }) => {
     id: true,
     assetTag: true,
     name: true,
+    type: true,
+    categoryId: true,
   });
 
   if (!asset) {
@@ -76,8 +79,25 @@ export const POST = withKiosk<{ id: string }>(async (req, { params }) => {
   });
 
   if (!bookingItem) {
-    const error = `${asset.assetTag} is not in this checkout`;
-    return ok({ success: false, error });
+    if (activeBooking.kind === "RESERVATION") {
+      const substitution = await findPickupSubstitutionCandidate({
+        bookingId: params.id,
+        scanned: asset,
+      });
+      if (substitution) {
+        return ok({
+          success: false,
+          error: `${asset.assetTag} is not on this reservation. Swap ${substitution.reserved.tagName} for it?`,
+          errorCode: "substitution_available",
+          substitution,
+        });
+      }
+    }
+    return ok({
+      success: false,
+      error: `${asset.assetTag} is not in this checkout`,
+      errorCode: "not_in_booking",
+    });
   }
   if (activeBooking.kind === "RESERVATION" && bookingItem.allocationStatus === "picked_up") {
     const label = asset.name || asset.assetTag;

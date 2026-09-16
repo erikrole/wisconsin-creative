@@ -1,0 +1,23 @@
+{
+  "sourceRevision": "07618e50a06c7cdd9d26642788511cabc7daa80b",
+  "sourcePatchSha256": "5eb8a0cc2018c4e8cd1ca6d3b1cb9ef1b8a1cdee35059898c1e9e57bfcca4750",
+  "settings": {
+    "device": "iPad (A16) simulator AD637556-84F9-4AEB-84C0-17457581CE72, framebuffer 1640x2360 @2x, UI Orientation Portrait. Shipping kiosk is landscape-mounted; this is the compact KioskAdaptiveSplit layout.",
+    "viewport": [
+      820,
+      1180
+    ],
+    "fixture": "GT_KIOSK_SCENARIO=operator-hub-finish-pickup, Finish pickup first? dialog over remaining WBB Practice tripod",
+    "role": "kiosk fixture student (Erik Role)",
+    "route": "WisconsinKiosk Debug fixture screen",
+    "appearance": "dark",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "KioskFixtures.launch hour-snapped to Wed Sep 16, 2026 7:00 AM CT",
+    "scroll": [
+      0,
+      0
+    ]
+  }
+}

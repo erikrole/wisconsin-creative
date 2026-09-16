@@ -174,6 +174,10 @@ export async function getBookingDetail(bookingId: string) {
         },
       },
       sourceReservation: { select: { id: true, refNumber: true, title: true } },
+      derivedCheckouts: {
+        select: { id: true, refNumber: true, status: true, createdAt: true },
+        orderBy: { createdAt: "asc" },
+      },
       shiftAssignment: {
         select: {
           id: true,

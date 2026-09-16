@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Reservations
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-09-04
+- Last Updated: 2026-09-16
 - Status: Active — V1 Shipped (2026-03-10)
 - Version: V1
 
@@ -63,7 +63,7 @@ Native iOS creation mirrors the three-step reservation rhythm while staying mobi
 ### Kiosk Pickup From Reservation
 1. App/web reservation detail should show pickup guidance, not a `Start checkout` custody action.
 2. The user claims the reservation at the kiosk once the pickup window is due.
-3. The kiosk validates identity, persists scan evidence, rechecks availability at confirmation, and either scans all remaining required serialized assets and numbered units for a complete pickup or accepts a deliberate scanned subset for a partial pickup. Quantity-tracked bulk items use their remaining quantity; numbered bulk items bind the exact scanned units.
+3. The kiosk validates identity, persists scan evidence, rechecks availability at confirmation, and either scans all remaining required serialized assets and numbered units for a complete pickup or accepts an explicit partial pickup after naming the leftover gear. An off-plan serialized scan of an equivalent remaining item can be swapped onto the reservation and staged, instead of forcing a new checkout. Quantity-tracked bulk items use their remaining quantity; numbered bulk items bind the exact scanned units.
 4. A complete pickup marks the source reservation `COMPLETED`; a partial pickup creates an `OPEN` linked checkout and keeps the source `BOOKED` with the remaining gear eligible for a later pickup.
 5. Preserve allocation linkage, `sourceReservationId`, selected-item custody, remaining reservation allocation, and audit trail across reloads and later pickup attempts.
 6. Numbered-unit intent remains quantity-based on the reservation; exact unit binding happens only during kiosk pickup confirmation.
@@ -76,6 +76,12 @@ Native iOS creation mirrors the three-step reservation rhythm while staying mobi
 3. It creates an `OPEN` linked checkout for all remaining serialized and bulk equipment, prefers durable staged numbered-unit scans, and fills any remaining numbered quantity from currently claimable units.
 4. The source reservation is completed atomically with its remaining allocations released, and the linked checkout carries `sourceReservationId` for custody history.
 5. The transaction writes `OverrideEvent` and `admin_force_checkout` audit evidence. Availability conflicts and unavailable numbered units still fail the action so the override bypasses scan proof, not inventory truth.
+
+### Close Remaining After Partial Pickup
+1. Staff/admin `Close without remaining gear` is the supported exit when a partial kiosk pickup already opened custody and the leftover reserved gear is not coming.
+2. It keeps picked-up history and linked checkouts, deletes remaining active serialized rows, shrinks leftover bulk plans to the handed-over quantity, releases leftover allocations, and marks the reservation `COMPLETED`.
+3. Cancel is the wrong verb once custody has opened; Force checkout is the wrong verb when the leftover gear is still on the shelf.
+4. A plan edit that removes the last remaining item after pickup has started completes the reservation automatically (`completed_after_plan_edit`) so it cannot stay `BOOKED` with nothing left to scan.
 
 ### Cancel Reservation
 1. Allowed by role and policy.
@@ -183,7 +189,7 @@ The access labels below describe state-machine actions, not list/detail reads. I
 - Access: staff+ or owner
 
 ### `BOOKED`
-- Allowed actions: Edit, Extend, Cancel, Transfer owner, view kiosk pickup guidance; Admin: Force checkout
+- Allowed actions: Edit, Extend, Cancel, Transfer owner, view kiosk pickup guidance; Staff+: Close remaining; Admin: Force checkout
 - Access: staff+ or owner
 
 ### `COMPLETED`
@@ -203,7 +209,8 @@ The access labels below describe state-machine actions, not list/detail reads. I
 6. Transfer owner — staff/admin or owner requester reassignment with optimistic-lock protection and `owner_transferred` audit history
 7. Edit linked events — scheduled-event link, change, or clear action using the existing `Booking.eventId` primary plus `BookingEvent` junction contract
 8. Force checkout — admin-only reasoned exception that creates linked checkout custody without kiosk scan verification
-9. Deferred: Spotcheck creation, PDF generation
+9. Close without remaining gear — staff/admin exit after a partial pickup when the leftover gear is not coming; keeps picked-up history, releases leftover holds, and completes the reservation
+10. Deferred: Spotcheck creation, PDF generation
 
 ## Bug Traps and Mitigations
 
@@ -280,6 +287,7 @@ The access labels below describe state-machine actions, not list/detail reads. I
 
 ## Change Log
 
+- 2026-09-16: **Partial pickup leftover recovery (server/web).** Staff/admin can close leftover holds after pickup has started, a plan edit that removes the last remaining item completes the reservation, and kiosk pickup can substitute an equivalent off-plan serialized item onto the remaining plan. Native kiosk leftover/swap/hub UI remains in the local kiosk checkout. Authenticated browser, physical kiosk, and the RV-0453 close remain separate.
 - 2026-09-07: **Higher-traffic UI reliability (local).** Shared Booking filters now title the view from the special filter that takes precedence in the API request, and retain an active Sport control even when current results have no sport codes. Shared search respects text composition, Enter submission boundaries, and disabled/read-only state. Acceptance: focused tests and component browser proof; authenticated application and deployment remain unverified. Evidence: `tasks/archive/proofs/high-traffic-ui15-2026-09-07/review.html`.
 
 - 2026-09-04: **Reservation pickup locations narrowed to Camp Randall and Kohl Center.** The web reservation wizard and reservation bulk-location control no longer offer Field House, event selection no longer copies an event venue into pickup, and reservation create/edit/candidate/draft mutation boundaries reject unsupported or inactive pickup locations. Existing Field House catalog records and historical bookings remain intact for event and inventory context.

@@ -5,21 +5,29 @@ const QR_PREFIX = /^bg:\/\/item\/(.+)$/;
 
 export type AssetSelect = Prisma.AssetSelect;
 
+type AssetLookupClient = {
+  asset: {
+    findUnique: typeof db.asset.findUnique;
+    findFirst: typeof db.asset.findFirst;
+  };
+};
+
 export async function findAssetByScanValue<S extends AssetSelect>(
   scanValue: string,
   select: S,
+  client: AssetLookupClient = db,
 ): Promise<Prisma.AssetGetPayload<{ select: S }> | null> {
   const trimmed = scanValue.trim();
   const qrMatch = trimmed.match(QR_PREFIX);
 
   if (qrMatch) {
-    return db.asset.findUnique({
+    return client.asset.findUnique({
       where: { id: qrMatch[1] },
       select,
     }) as Promise<Prisma.AssetGetPayload<{ select: S }> | null>;
   }
 
-  return db.asset.findFirst({
+  return client.asset.findFirst({
     where: {
       OR: [
         { assetTag: { equals: trimmed, mode: "insensitive" } },

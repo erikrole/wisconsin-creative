@@ -19,8 +19,8 @@
 | `src/lib/services/booking-rules.ts` | 110 |
 | `src/lib/services/bookings-checkin.ts` | 854 |
 | `src/lib/services/bookings-helpers.ts` | 281 |
-| `src/lib/services/bookings-lifecycle.ts` | 2863 |
-| `src/lib/services/bookings-queries.ts` | 306 |
+| `src/lib/services/bookings-lifecycle.ts` | 3054 |
+| `src/lib/services/bookings-queries.ts` | 310 |
 | `src/lib/services/bookings.ts` | 8 |
 | `src/lib/services/bulk-assignment-batches.ts` | 252 |
 | `src/lib/services/bulk-schedule-assignment.ts` | 970 |
@@ -47,7 +47,8 @@
 | `src/lib/services/kiosk-item-transfer.ts` | 95 |
 | `src/lib/services/kiosk-location.ts` | 72 |
 | `src/lib/services/kiosk-operation-receipts.ts` | 90 |
-| `src/lib/services/kiosk-scan.ts` | 36 |
+| `src/lib/services/kiosk-pickup-substitute.ts` | 311 |
+| `src/lib/services/kiosk-scan.ts` | 44 |
 | `src/lib/services/kits.ts` | 329 |
 | `src/lib/services/licenses.ts` | 554 |
 | `src/lib/services/live-activities.ts` | 632 |
@@ -116,7 +117,7 @@
 | `src/lib/battery-compatibility.ts` | 145 |
 | `src/lib/bhphoto-image.ts` | 67 |
 | `src/lib/blob.ts` | 160 |
-| `src/lib/booking-action-policy.ts` | 209 |
+| `src/lib/booking-action-policy.ts` | 215 |
 | `src/lib/booking-actions.ts` | 14 |
 | `src/lib/booking-availability-window.ts` | 31 |
 | `src/lib/booking-concurrency.ts` | 39 |
@@ -505,6 +506,7 @@
 - `/api/kiosk/me`
 - `/api/kiosk/pickup/[id]/confirm`
 - `/api/kiosk/pickup/[id]/scan`
+- `/api/kiosk/pickup/[id]/substitute`
 - `/api/kiosk/reservation/[id]/items`
 - `/api/kiosk/resolve-scan`
 - `/api/kiosk/scan-lookup`
@@ -608,6 +610,7 @@
 ### `/api/reservations`
 
 - `/api/reservations/[id]/cancel`
+- `/api/reservations/[id]/close-remaining`
 - `/api/reservations/[id]/convert`
 - `/api/reservations/[id]/duplicate`
 - `/api/reservations/[id]/force-checkout`

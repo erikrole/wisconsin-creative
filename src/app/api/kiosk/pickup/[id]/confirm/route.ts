@@ -24,6 +24,7 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
   try {
   let itemCount = 0;
   let actualPartial = false;
+  let remainingItemNames: string[] = [];
   let openedBookingId = params.id;
   let openedSourceKey = params.id;
   let openedPersonalUserId: string | null = actorId;
@@ -362,6 +363,17 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
     });
 
     itemCount = selectedSerializedAssetIds.length + bulkItems.reduce((sum, item) => sum + item.quantity, 0);
+    remainingItemNames = [
+      ...remainingSerializedItems
+        .filter((item) => !selectedSerializedAssetIds.includes(item.assetId))
+        .map((item) => item.asset.name || item.asset.assetTag),
+      ...sourceReservation.bulkItems.flatMap((item) => {
+        const remainingQuantity = Math.max(0, item.plannedQuantity - (item.checkedOutQuantity ?? 0));
+        const taken = bulkItems.find((selected) => selected.bulkSkuId === item.bulkSkuId)?.quantity ?? 0;
+        const leftover = remainingQuantity - taken;
+        return leftover > 0 ? [`${leftover} × ${item.bulkSku.name}`] : [];
+      }),
+    ];
     actualPartial = (await db.booking.findUnique({ where: { id: params.id }, select: { status: true } }))?.status === "BOOKED";
     await createAuditEntry({
       actorId,
@@ -403,6 +415,7 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
     bookingId: openedBookingId,
     itemCount,
     partial: actualPartial,
+    ...(remainingItemNames.length > 0 ? { remainingItemNames } : {}),
     ...(earnedBadges.length > 0 ? { earnedBadges } : {}),
   });
   } catch (error) {
