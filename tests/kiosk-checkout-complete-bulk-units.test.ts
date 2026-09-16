@@ -91,6 +91,7 @@ vi.mock("@/lib/live-activity-workflow", () => ({
 
 import { POST as completeKioskCheckout } from "@/app/api/kiosk/checkout/complete/route";
 import { normalizeCheckoutCompleteItems } from "@/lib/services/kiosk-checkout-complete";
+import { kioskAvailabilityBlockMessage } from "@/lib/availability-copy";
 
 const runCompleteKioskCheckout = completeKioskCheckout as unknown as (req: Request) => Promise<Response>;
 
@@ -615,7 +616,13 @@ describe("kiosk checkout complete bulk units", () => {
     await expect(runCompleteKioskCheckout(completeRequest(
       [{ assetId: "asset-1" }],
       { endsAt },
-    ))).rejects.toThrow("One or more items are not available for the selected return time");
+    ))).rejects.toThrow(kioskAvailabilityBlockMessage({
+      conflicts: [{
+        conflictingBookingTitle: "Practice",
+        startsAt: "2026-06-16T20:00:00.000Z",
+        endsAt: "2026-06-16T22:00:00.000Z",
+      }],
+    }, "item"));
     expect(mocks.bookingCreate).not.toHaveBeenCalled();
   });
 

@@ -24,6 +24,20 @@ struct KioskPickupView: View {
     @State private var confirmedItemOverrides: [String: KioskScanResult.ScannedItem] = [:]
     @State private var earnedBadges: [EarnedBadgeReward] = []
     @State private var scanQueue = KioskScanQueue()
+    @State private var pendingAdd: PendingOffPlanAdd?
+    @State private var pendingBlock: PendingBlockedAdd?
+    @State private var pendingRemoveItem: KioskCheckoutDetail.ReturnItem?
+
+    private struct PendingOffPlanAdd: Identifiable {
+        let scanValue: String
+        let item: KioskScanResult.ScannedItem
+        var id: String { item.id }
+    }
+
+    private struct PendingBlockedAdd: Identifiable {
+        let message: String
+        var id: String { message }
+    }
 
     enum ScanFeedback: Equatable {
         case success(String)
@@ -44,6 +58,12 @@ struct KioskPickupView: View {
             }
         }
     }
+
+    private static let blockedAddErrorCodes: Set<String> = [
+        "conflict",
+        "unavailable",
+        "already_checked_out",
+    ]
 
     private var totalItems: Int { detail?.items.count ?? 0 }
     private var confirmedCount: Int { confirmedIds.count }
@@ -85,6 +105,67 @@ struct KioskPickupView: View {
             replayPendingIntentScan()
         }
         .onDisappear { scanQueue.reset(); store.scanner.release(.pickup) }
+        .confirmationDialog(
+            "Add this item?",
+            isPresented: Binding(
+                get: { pendingAdd != nil },
+                set: {
+                    if !$0 {
+                        pendingAdd = nil
+                        if !isConfirming { processNextScanIfNeeded() }
+                    }
+                }
+            ),
+            titleVisibility: .visible,
+            presenting: pendingAdd
+        ) { pending in
+            Button("Add \(pending.item.itemListPrimaryTitle)") {
+                Task { await addScannedItem(pending) }
+            }
+            Button("Discard", role: .cancel) {
+                pendingAdd = nil
+                processNextScanIfNeeded()
+            }
+        } message: { pending in
+            Text("\(pending.item.itemListPrimaryTitle) is not on this reservation. Add it to this pickup, or discard this scan?")
+        }
+        .confirmationDialog(
+            "Can't add this item",
+            isPresented: Binding(
+                get: { pendingBlock != nil },
+                set: {
+                    if !$0 {
+                        pendingBlock = nil
+                        if !isConfirming { processNextScanIfNeeded() }
+                    }
+                }
+            ),
+            titleVisibility: .visible,
+            presenting: pendingBlock
+        ) { _ in
+            Button("OK", role: .cancel) {
+                pendingBlock = nil
+                processNextScanIfNeeded()
+            }
+        } message: { blocked in
+            Text(blocked.message)
+        }
+        .confirmationDialog(
+            "Leave this off the reservation?",
+            isPresented: Binding(
+                get: { pendingRemoveItem != nil },
+                set: { if !$0 { pendingRemoveItem = nil } }
+            ),
+            titleVisibility: .visible,
+            presenting: pendingRemoveItem
+        ) { item in
+            Button("Remove \(item.itemListPrimaryTitle)", role: .destructive) {
+                Task { await removeRemainingItem(item) }
+            }
+            Button("Cancel", role: .cancel) { pendingRemoveItem = nil }
+        } message: { item in
+            Text("\(item.itemListPrimaryTitle) stays on the shelf. It will not go out with this pickup.")
+        }
         .sheet(isPresented: $showCamera) {
             KioskBarcodeCameraView(
                 feedbackMessage: lastResult?.message,
@@ -358,14 +439,29 @@ struct KioskPickupView: View {
     private func checklistEntryView(_ entry: KioskPickupChecklistEntry) -> some View {
         switch entry {
         case .item(let item):
-            KioskChecklistRow(
-                name: confirmedItemOverrides[item.id]?.itemListSecondaryTitle
-                    ?? item.itemListSecondaryTitle
-                    ?? item.name,
-                tag: confirmedItemOverrides[item.id]?.itemListPrimaryTitle
-                    ?? item.itemListPrimaryTitle,
-                isDone: confirmedIds.contains(item.id)
-            )
+            HStack(spacing: 0) {
+                KioskChecklistRow(
+                    name: confirmedItemOverrides[item.id]?.itemListSecondaryTitle
+                        ?? item.itemListSecondaryTitle
+                        ?? item.name,
+                    tag: confirmedItemOverrides[item.id]?.itemListPrimaryTitle
+                        ?? item.itemListPrimaryTitle,
+                    isDone: confirmedIds.contains(item.id)
+                )
+                if !confirmedIds.contains(item.id), item.reservationItemId != nil {
+                    Button {
+                        pendingRemoveItem = item
+                    } label: {
+                        Image(systemName: "trash.fill")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(Color.statusText(.red))
+                            .frame(width: 44, height: 44)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Remove \(item.itemListPrimaryTitle)")
+                    .padding(.trailing, 12)
+                }
+            }
                 .id(entry.id)
         case .battery(let group):
             KioskPickupBatteryChecklistRow(
@@ -381,6 +477,7 @@ struct KioskPickupView: View {
     // MARK: - Logic
 
     private func handleScan(_ value: String) {
+        guard pendingAdd == nil, pendingBlock == nil, pendingRemoveItem == nil else { return }
         guard !isConfirming else {
             showFeedback(.error("Hold on — confirming pickup"))
             return
@@ -396,6 +493,7 @@ struct KioskPickupView: View {
     }
 
     private func processNextScanIfNeeded() {
+        guard pendingAdd == nil, pendingBlock == nil, pendingRemoveItem == nil else { return }
         guard let items = detail?.items, let entry = scanQueue.next() else { return }
         let flow = store.flowGeneration
         Task {
@@ -408,7 +506,16 @@ struct KioskPickupView: View {
                 guard store.ownsFlow(flow) else { return }
                 earnedBadges.appendUnique(contentsOf: result.earnedBadges ?? [])
                 if result.success, let item = result.item {
-                    if confirmedIds.contains(item.id) {
+                    if result.addedToPlan == true {
+                        await loadDetail(showLoading: false)
+                        lastConfirmedId = item.id
+                        lastAccepted = KioskAcceptedScan(
+                            title: item.itemListPrimaryTitle,
+                            subtitle: item.itemListSecondaryTitle,
+                            progress: "\(confirmedIds.count) of \(totalItems) confirmed"
+                        )
+                        showFeedback(.success("Added \(item.tagName) to this pickup"))
+                    } else if confirmedIds.contains(item.id) {
                         showFeedback(.alreadyConfirmed("\(item.tagName) already confirmed"))
                     } else {
                         confirmedIds.insert(item.id)
@@ -421,6 +528,23 @@ struct KioskPickupView: View {
                         )
                         showFeedback(.success(result.locationMessage ?? item.name))
                     }
+                } else if result.errorCode == "add_available", let item = result.item {
+                    presentAddOrDiscard(scanValue: entry.value, item: item)
+                } else if let substitution = result.substitution {
+                    presentAddOrDiscard(
+                        scanValue: entry.value,
+                        item: KioskScanResult.ScannedItem(
+                            id: substitution.scanned.id,
+                            name: substitution.scanned.name,
+                            tagName: substitution.scanned.tagName,
+                            type: nil,
+                            imageUrl: nil,
+                            bulkSkuId: nil,
+                            unitNumber: nil
+                        )
+                    )
+                } else if Self.blockedAddErrorCodes.contains(result.errorCode ?? "") {
+                    presentBlockedAdd(result.error ?? "This item cannot be added to this pickup.")
                 } else {
                     let isInBooking = items.contains { $0.tagName.lowercased() == entry.value.lowercased() || $0.id == entry.value }
                     showFeedback(.error(result.error ?? (isInBooking ? "Already confirmed" : "Not in this pickup")))
@@ -495,8 +619,99 @@ struct KioskPickupView: View {
         }
     }
 
-    private func loadDetail() async {
-        isLoading = true
+    private func presentAddOrDiscard(scanValue: String, item: KioskScanResult.ScannedItem) {
+        lastAccepted = nil
+        lastResult = nil
+        pendingAdd = PendingOffPlanAdd(scanValue: scanValue, item: item)
+        Haptics.warning()
+        KioskScanFeedbackSound.playFailure()
+        UIAccessibility.post(
+            notification: .announcement,
+            argument: "\(item.itemListPrimaryTitle) is not on this reservation. Add it, or discard?"
+        )
+    }
+
+    private func presentBlockedAdd(_ message: String) {
+        lastAccepted = nil
+        lastResult = nil
+        pendingBlock = PendingBlockedAdd(message: message)
+        Haptics.error()
+        KioskScanFeedbackSound.playFailure()
+        UIAccessibility.post(notification: .announcement, argument: message)
+    }
+
+    private func addScannedItem(_ pending: PendingOffPlanAdd) async {
+        guard !isConfirming else { return }
+        let flow = store.flowGeneration
+        isConfirming = true
+        defer {
+            isConfirming = false
+            pendingAdd = nil
+            processNextScanIfNeeded()
+        }
+        do {
+            let result = try await KioskAPI.shared.kioskPickupScan(
+                bookingId: bookingId,
+                actorId: userId,
+                scanValue: pending.scanValue,
+                intent: "add"
+            )
+            guard store.ownsFlow(flow) else { return }
+            earnedBadges.appendUnique(contentsOf: result.earnedBadges ?? [])
+            if result.success, let item = result.item {
+                await loadDetail(showLoading: false)
+                lastConfirmedId = item.id
+                lastAccepted = KioskAcceptedScan(
+                    title: item.itemListPrimaryTitle,
+                    subtitle: item.itemListSecondaryTitle,
+                    progress: "\(confirmedIds.count) of \(totalItems) confirmed"
+                )
+                showFeedback(.success("Added \(item.tagName) to this pickup"))
+            } else {
+                presentBlockedAdd(result.error ?? "This item cannot be added to this pickup.")
+            }
+        } catch {
+            let message = (error as? APIError)?.errorDescription ?? "Could not add that item. Please try again."
+            presentBlockedAdd(message)
+        }
+    }
+
+    private func removeRemainingItem(_ item: KioskCheckoutDetail.ReturnItem) async {
+        guard let reservationItemId = item.reservationItemId else {
+            pendingRemoveItem = nil
+            showFeedback(.error("Refresh this pickup before removing an item."))
+            return
+        }
+        guard let expectedUpdatedAt = detail?.updatedAt else {
+            pendingRemoveItem = nil
+            showFeedback(.error("Refresh this pickup before removing an item."))
+            return
+        }
+        let flow = store.flowGeneration
+        isConfirming = true
+        defer {
+            isConfirming = false
+            pendingRemoveItem = nil
+        }
+        do {
+            _ = try await KioskAPI.shared.kioskUpdateReservationItem(
+                id: bookingId,
+                actorId: userId,
+                expectedUpdatedAt: expectedUpdatedAt,
+                action: "remove",
+                itemId: reservationItemId
+            )
+            guard store.ownsFlow(flow) else { return }
+            await loadDetail(showLoading: false)
+            showFeedback(.success("Removed \(item.itemListPrimaryTitle)"))
+        } catch {
+            let message = (error as? APIError)?.errorDescription ?? "Could not remove that item. Please try again."
+            showFeedback(.error(message))
+        }
+    }
+
+    private func loadDetail(showLoading: Bool = true) async {
+        if showLoading { isLoading = true }
         error = nil
         do {
             let loaded = try await KioskAPI.shared.kioskCheckoutDetail(id: bookingId)

@@ -5,6 +5,7 @@ import { effectiveBulkUnitStatus } from "@/lib/bulk-unit-status";
 import { parseDerivedBulkUnitQr } from "@/lib/bulk-unit-qr";
 import { HttpError } from "@/lib/http";
 import { maybeAutoComplete, wasReturnedOnTime } from "@/lib/services/bookings-checkin";
+import { kioskHeldItemMessage } from "@/lib/availability-copy";
 
 type TxClient = Prisma.TransactionClient;
 
@@ -34,6 +35,32 @@ type BookingBulkItemWithSku = {
   checkedInQuantity?: number;
   bulkSku: NumberedBulkSku;
 };
+
+type ActiveUnitHolder = {
+  title?: string;
+  kind?: string;
+  status?: string;
+  endsAt?: Date;
+  requester?: { name: string | null } | null;
+};
+
+const activeUnitHolderSelect = {
+  title: true,
+  kind: true,
+  status: true,
+  endsAt: true,
+  requester: { select: { name: true } },
+} as const;
+
+function numberedUnitHeldMessage(skuName: string, unitNumber: number, booking?: ActiveUnitHolder | null) {
+  return kioskHeldItemMessage({
+    itemName: `${skuName} #${unitNumber}`,
+    holder: booking?.requester?.name,
+    dueAt: booking?.endsAt,
+    kind: booking?.kind,
+    status: booking?.status,
+  });
+}
 
 type BulkUnitScanItem = {
   id: string;
@@ -168,10 +195,7 @@ export async function scanKioskPickupBulkUnit(
           bookingBulkItem: {
             include: {
               booking: {
-                select: {
-                  title: true,
-                  requester: { select: { name: true } },
-                },
+                select: activeUnitHolderSelect,
               },
             },
           },
@@ -199,11 +223,10 @@ export async function scanKioskPickupBulkUnit(
   const unitStatus = effectiveBulkUnitStatus(unit, activeAllocation);
   if (unitStatus === BulkUnitStatus.CHECKED_OUT) {
     const activeBooking = activeAllocation?.bookingBulkItem.booking;
-    const holder = activeBooking?.requester.name;
     return {
       handled: true,
       success: false,
-      error: `${bulkItem.bulkSku.name} #${unit.unitNumber} is already checked out${holder ? ` to ${holder}` : ""}`,
+      error: numberedUnitHeldMessage(bulkItem.bulkSku.name, unit.unitNumber, activeBooking),
       errorCode: "already_checked_out",
     };
   }
@@ -331,10 +354,7 @@ export async function stageKioskReservationPickupBulkUnit(
           bookingBulkItem: {
             include: {
               booking: {
-                select: {
-                  title: true,
-                  requester: { select: { name: true } },
-                },
+                select: activeUnitHolderSelect,
               },
             },
           },
@@ -405,11 +425,10 @@ export async function stageKioskReservationPickupBulkUnit(
   const unitStatus = effectiveBulkUnitStatus(unit, activeAllocation);
   if (unitStatus === BulkUnitStatus.CHECKED_OUT) {
     const activeBooking = activeAllocation?.bookingBulkItem.booking;
-    const holder = activeBooking?.requester.name;
     return {
       handled: true,
       success: false,
-      error: `${bulkItem.bulkSku.name} #${unit.unitNumber} is already checked out${holder ? ` to ${holder}` : ""}`,
+      error: numberedUnitHeldMessage(bulkItem.bulkSku.name, unit.unitNumber, activeBooking),
       errorCode: "already_checked_out",
     };
   }
@@ -514,10 +533,7 @@ export async function scanKioskCheckinBulkUnit(
           bookingBulkItem: {
             include: {
               booking: {
-                select: {
-                  title: true,
-                  requester: { select: { name: true } },
-                },
+                select: activeUnitHolderSelect,
               },
             },
           },
@@ -543,11 +559,10 @@ export async function scanKioskCheckinBulkUnit(
     const unitStatus = effectiveBulkUnitStatus(unit, activeAllocation);
     if (unitStatus === BulkUnitStatus.CHECKED_OUT) {
       const activeBooking = activeAllocation?.bookingBulkItem.booking;
-      const holder = activeBooking?.requester.name;
       return {
         handled: true,
         success: false,
-        error: `${bulkItem.bulkSku.name} #${unit.unitNumber} is checked out on another booking${holder ? ` to ${holder}` : ""}`,
+        error: numberedUnitHeldMessage(bulkItem.bulkSku.name, unit.unitNumber, activeBooking),
         errorCode: "wrong_status",
       };
     }
@@ -666,11 +681,7 @@ export async function findBulkUnitByScanValue(scanValue: string) {
       bookingBulkItem: {
         select: {
           booking: {
-            select: {
-              title: true,
-              endsAt: true,
-              requester: { select: { name: true } },
-            },
+            select: activeUnitHolderSelect,
           },
         },
       },

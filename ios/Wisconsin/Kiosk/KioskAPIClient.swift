@@ -366,10 +366,62 @@ struct KioskAPI {
 
     // MARK: - Pickup
 
-    func kioskPickupScan(bookingId: String, actorId: String, scanValue: String) async throws -> KioskScanResult {
-        struct Body: Encodable { let actorId: String; let scanValue: String }
+    func kioskPickupScan(
+        bookingId: String,
+        actorId: String,
+        scanValue: String,
+        intent: String? = nil
+    ) async throws -> KioskScanResult {
+        struct Body: Encodable {
+            let actorId: String
+            let scanValue: String
+            let intent: String?
+        }
         var req = request(path: "/api/kiosk/pickup/\(bookingId)/scan", method: "POST")
-        req.httpBody = try JSONEncoder().encode(Body(actorId: actorId, scanValue: scanValue))
+        req.httpBody = try JSONEncoder().encode(Body(actorId: actorId, scanValue: scanValue, intent: intent))
+        return try await perform(req)
+    }
+
+    func kioskPickupSubstitute(
+        bookingId: String,
+        actorId: String,
+        scanValue: String,
+        reservedAssetId: String
+    ) async throws -> KioskScanResult {
+        struct Body: Encodable {
+            let actorId: String
+            let scanValue: String
+            let reservedAssetId: String
+        }
+        var req = request(path: "/api/kiosk/pickup/\(bookingId)/substitute", method: "POST")
+        req.httpBody = try JSONEncoder().encode(Body(
+            actorId: actorId,
+            scanValue: scanValue,
+            reservedAssetId: reservedAssetId
+        ))
+        return try await perform(req)
+    }
+
+    func kioskUpdateReservationItem(
+        id: String,
+        actorId: String,
+        expectedUpdatedAt: Date,
+        action: String,
+        itemId: String? = nil
+    ) async throws -> KioskReservationMutationResult {
+        struct Body: Encodable {
+            let actorId: String
+            let expectedUpdatedAt: String
+            let action: String
+            let itemId: String?
+        }
+        var req = request(path: "/api/kiosk/reservation/\(id)/items", method: "POST")
+        req.httpBody = try JSONEncoder().encode(Body(
+            actorId: actorId,
+            expectedUpdatedAt: isoString(from: expectedUpdatedAt),
+            action: action,
+            itemId: itemId
+        ))
         return try await perform(req)
     }
 

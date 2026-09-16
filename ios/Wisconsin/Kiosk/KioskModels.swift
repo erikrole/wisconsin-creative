@@ -611,6 +611,9 @@ struct KioskScanResult: Decodable {
     let actualLocationName: String?
     let locationMessage: String?
     let earnedBadges: [EarnedBadgeReward]?
+    let errorCode: String?
+    let substitution: KioskPickupSubstitution?
+    let addedToPlan: Bool?
 
     struct ScannedItem: Decodable, Identifiable {
         let id: String
@@ -663,6 +666,7 @@ struct KioskCheckoutDetail: Decodable {
         let unitNumber: Int?
         let imageUrl: String?
         let quantity: Int?
+        let reservationItemId: String?
 
         var isNumberedBulk: Bool { type == "numbered_bulk" }
         var isBulkQuantity: Bool { type == "bulk_quantity" }
@@ -707,7 +711,29 @@ struct KioskPickupConfirmResult: Decodable {
     let bookingId: String
     let partial: Bool?
     let itemCount: Int?
+    let remainingItemNames: [String]?
     let earnedBadges: [EarnedBadgeReward]?
+}
+
+/// Offered when a pickup scan is not on the reservation but can replace one
+/// remaining reserved item. The operator can swap or add the scanned item too.
+struct KioskPickupSubstitution: Decodable, Identifiable {
+    let scanned: NamedItem
+    let reserved: NamedItem
+
+    var id: String { scanned.id }
+
+    struct NamedItem: Decodable, Identifiable {
+        let id: String
+        let name: String
+        let tagName: String
+    }
+}
+
+struct KioskReservationMutationResult: Decodable {
+    let success: Bool
+    let message: String?
+    let updatedAt: Date?
 }
 
 // MARK: - Screen State

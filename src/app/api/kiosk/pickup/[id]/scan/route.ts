@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 import { withKiosk } from "@/lib/api";
 import { HttpError, ok } from "@/lib/http";
 import { findAssetByScanValue } from "@/lib/services/kiosk-scan";
-import { findPickupSubstitutionCandidate } from "@/lib/services/kiosk-pickup-substitute";
+import { addAndStageReservationPickupSerialized, preflightReservationPickupSerializedAdd } from "@/lib/services/kiosk-pickup-add";
 import { pickupScanBody } from "@/lib/schemas/kiosk";
 import { scanKioskPickupBulkUnit, stageKioskReservationPickupBulkUnit } from "@/lib/services/bulk-unit-scans";
 import { kioskRosterUserWhere } from "@/lib/user-visibility";
@@ -18,7 +18,7 @@ import { kioskRosterUserWhere } from "@/lib/user-visibility";
  * due BOOKED reservation.
  */
 export const POST = withKiosk<{ id: string }>(async (req, { params }) => {
-  const { scanValue, actorId } = pickupScanBody.parse(await req.json());
+  const { scanValue, actorId, intent } = pickupScanBody.parse(await req.json());
 
   const booking = await db.booking.findUnique({
     where: { id: params.id },
@@ -91,18 +91,37 @@ export const POST = withKiosk<{ id: string }>(async (req, { params }) => {
         const label = asset.name || asset.assetTag;
         return ok({ success: false, error: `${label} already picked up`, errorCode: "duplicate" });
       }
-      const substitution = await findPickupSubstitutionCandidate({
-        bookingId: params.id,
-        scanned: asset,
-      });
-      if (substitution) {
+      if (intent === "add") {
+        const added = await addAndStageReservationPickupSerialized({
+          bookingId: params.id,
+          actorUserId: scanActorId,
+          scanValue,
+          asset,
+          deviceContext: req.headers.get("user-agent") ?? "kiosk",
+        });
+        if (!added.success) {
+          return ok({ success: false, error: added.error, errorCode: added.errorCode });
+        }
         return ok({
-          success: false,
-          error: `${asset.assetTag} is not on this reservation. Swap ${substitution.reserved.tagName} for it?`,
-          errorCode: "substitution_available",
-          substitution,
+          success: true,
+          addedToPlan: true,
+          item: added.item,
         });
       }
+      const preview = await preflightReservationPickupSerializedAdd({
+        bookingId: params.id,
+        actorUserId: scanActorId,
+        asset,
+      });
+      if (!preview.ok) {
+        return ok({ success: false, error: preview.error, errorCode: preview.errorCode });
+      }
+      return ok({
+        success: false,
+        error: `${preview.item.tagName} is not on this reservation.`,
+        errorCode: "add_available",
+        item: preview.item,
+      });
     }
     return ok({
       success: false,

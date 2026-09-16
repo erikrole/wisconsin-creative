@@ -19,6 +19,7 @@ import {
   lookupActorRole,
 } from "@/lib/audit";
 import { checkAvailability, checkCheckoutDueTime, type BulkRequest } from "@/lib/services/availability";
+import { kioskAvailabilityBlockMessage } from "@/lib/availability-copy";
 import { ACTIVE_BULK_UNIT_ALLOCATION_WHERE, CLAIMABLE_BULK_UNIT_WHERE, effectiveBulkUnitStatus } from "@/lib/bulk-unit-status";
 import { parseDerivedBulkUnitQr } from "@/lib/bulk-unit-qr";
 import { nextBookingRef } from "@/lib/services/booking-ref";
@@ -1938,7 +1939,7 @@ export async function updateReservation(
         });
 
         if (availability.conflicts.length > 0 || availability.shortages.length > 0 || availability.unavailableAssets.length > 0) {
-          throw new HttpError(409, "Availability conflict", availability);
+          throw new HttpError(409, kioskAvailabilityBlockMessage(availability, "this item"), availability);
         }
       }
 
@@ -2554,7 +2555,7 @@ export async function updateCheckout(
         });
 
         if (availability.conflicts.length > 0 || availability.shortages.length > 0 || availability.unavailableAssets.length > 0) {
-          throw new HttpError(409, "Conflicts with another booking", availability);
+          throw new HttpError(409, kioskAvailabilityBlockMessage(availability, "this item"), availability);
         }
       }
 
@@ -3000,7 +3001,7 @@ export async function extendBooking(
       // unavailableAssets stays out deliberately — gear already in custody
       // should not be blocked from extension by a later retire flag.
       if (availability.conflicts.length > 0 || availability.shortages.length > 0) {
-        throw new HttpError(409, "Conflicts with another booking", availability);
+        throw new HttpError(409, kioskAvailabilityBlockMessage(availability, "this item"), availability);
       }
 
       await tx.booking.update({

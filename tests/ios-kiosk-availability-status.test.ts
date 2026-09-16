@@ -27,6 +27,7 @@ describe("iOS Kiosk availability status contract", () => {
 
   it("names reserved and checked-out conflicts in the Kiosk row and feedback", () => {
     const checkout = source("ios/Wisconsin/Kiosk/KioskCheckoutView.swift");
+    const pickup = source("ios/Wisconsin/Kiosk/KioskPickupView.swift");
     const fixtures = source("ios/Wisconsin/KioskOnly/KioskOnlyApp.swift");
 
     expect(checkout).toContain("case .reserved: return \"Reserved\"");
@@ -35,6 +36,8 @@ describe("iOS Kiosk availability status contract", () => {
     expect(checkout).toContain("has checked out the");
     expect(checkout).toContain(".month(.abbreviated).day().hour().minute()");
     expect(checkout).toContain("KioskAvailabilityCopy.blockingTitle(for: result)");
+    expect(pickup).toContain("\"Can't add this item\"");
+    expect(pickup).toContain("presentBlockedAdd");
     expect(checkout).toContain("let status = availabilityIssue.map");
     expect(fixtures).toContain("case availabilityConflicts = \"availability-conflicts\"");
     expect(fixtures).toContain("conflictingBookingKind: \"RESERVATION\"");

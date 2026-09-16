@@ -126,9 +126,103 @@ export function availabilityBlockedItemMessage(
 
   const status = conflict.conflictingBookingStatus?.toUpperCase();
   const kind = conflict.conflictingBookingKind?.toUpperCase();
-  const isCheckedOut = status === "OPEN" || (kind === "CHECKOUT" && status !== "PENDING_PICKUP");
-  const verb = isCheckedOut ? "has checked out" : "has reserved";
+  const isPendingPickup = status === "PENDING_PICKUP";
+  const isCheckedOut = !isPendingPickup && (
+    status === "OPEN" || (kind === "CHECKOUT" && status !== "BOOKED")
+  );
+  const verb = isPendingPickup
+    ? "has a pending pickup for"
+    : isCheckedOut
+      ? "has checked out"
+      : "has reserved";
   return `${requester} ${verb} the ${item} until ${formatAvailabilityDeadline(endsAt)}`;
+}
+
+export function availabilityUnavailableItemMessage(status: string, itemName: string) {
+  const item = itemName.trim() || "This item";
+  switch (status.toUpperCase()) {
+    case "MAINTENANCE":
+      return `${item} is in maintenance`;
+    case "RETIRED":
+      return `${item} is retired`;
+    case "NOT_AVAILABLE_FOR_CHECKOUT":
+      return `${item} is not enabled for checkout`;
+    case "NOT_AVAILABLE_FOR_RESERVATION":
+      return `${item} is not enabled for reservations`;
+    case "NOT_FOUND":
+      return `${item} was not found`;
+    default:
+      return `${item} is unavailable`;
+  }
+}
+
+export function availabilityShortageMessage(
+  shortage: { requested: number; available: number },
+  itemName?: string,
+) {
+  const item = itemName?.trim() || "that counted item";
+  return `Only ${shortage.available} ${item} available; this request needs ${shortage.requested}`;
+}
+
+type KioskAvailabilityBlock = {
+  conflicts?: AvailabilityConflictLike[];
+  unavailableAssets?: Array<{ status: string }>;
+  shortages?: Array<{ requested: number; available: number }>;
+};
+
+/**
+ * One kiosk-facing sentence for a blocked add, in the same voice as checkout:
+ * who has it, what is wrong with the item, or how much stock is left.
+ */
+export function kioskAvailabilityBlockMessage(
+  availability: KioskAvailabilityBlock,
+  itemName: string,
+) {
+  const unavailable = availability.unavailableAssets?.[0];
+  if (unavailable) {
+    return availabilityUnavailableItemMessage(unavailable.status, itemName);
+  }
+  const conflict = availability.conflicts?.[0];
+  if (conflict) {
+    return availabilityBlockedItemMessage(conflict, itemName);
+  }
+  const shortage = availability.shortages?.[0];
+  if (shortage) {
+    return availabilityShortageMessage(shortage, itemName);
+  }
+  return `${itemName.trim() || "This item"} is not available`;
+}
+
+/**
+ * Names who holds a scanned unit, and until when, when the kiosk cannot
+ * claim it for this booking. Falls back to the item's own status when
+ * there is no living holder.
+ */
+export function kioskHeldItemMessage(args: {
+  itemName: string;
+  holder?: string | null;
+  dueAt?: string | Date | null;
+  kind?: string | null;
+  status?: string | null;
+}) {
+  const item = args.itemName.trim() || "This item";
+  const holder = args.holder?.trim();
+  const dueAt = validDate(args.dueAt ?? null);
+  if (holder && dueAt) {
+    return availabilityBlockedItemMessage({
+      conflictingBookingRequesterName: holder,
+      conflictingBookingKind: args.kind ?? "CHECKOUT",
+      conflictingBookingStatus: args.status ?? "OPEN",
+      startsAt: dueAt,
+      endsAt: dueAt,
+    }, item);
+  }
+  if (holder) return `${item} is already checked out to ${holder}`;
+  const status = args.status?.trim();
+  if (status && !["AVAILABLE", "CHECKED_OUT", "OPEN", "BOOKED", "PENDING_PICKUP"].includes(status.toUpperCase())) {
+    return availabilityUnavailableItemMessage(status, item);
+  }
+  return `${item} is already checked out`;
 }
 
 /**

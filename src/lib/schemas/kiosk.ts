@@ -96,7 +96,11 @@ const scanBody = z.object({
 
 export const checkinScanBody = scanBody;
 export const checkoutScanBody = scanBody;
-export const pickupScanBody = scanBody;
+export const pickupScanBody = scanBody.extend({
+  // Extra off-plan scans add to the reservation. Pass "add" to keep a
+  // substitution candidate and still add the scanned item beside it.
+  intent: z.enum(["add"]).nullish(),
+});
 export const scanLookupBody = scanBody;
 
 export const resolveKioskScanBody = z.object({

@@ -8,7 +8,7 @@ import { findBulkUnitByScanValue } from "@/lib/services/bulk-unit-scans";
 import { parseDerivedBulkUnitQr } from "@/lib/bulk-unit-qr";
 import { CLAIMABLE_BULK_UNIT_WHERE } from "@/lib/bulk-unit-status";
 import { checkAvailability, checkCheckoutDueTime } from "@/lib/services/availability";
-import { availabilityBlockedItemMessage } from "@/lib/availability-copy";
+import { kioskAvailabilityBlockMessage, kioskHeldItemMessage } from "@/lib/availability-copy";
 import { upsertBulkBalancesAndMovements } from "@/lib/services/bookings-helpers";
 import { BookingCustodyScope, BookingKind, BulkMovementKind, BulkUnitStatus, Prisma, Role } from "@prisma/client";
 import { scheduleCheckoutReturnLiveActivity } from "@/lib/live-activity-workflow";
@@ -304,6 +304,7 @@ export const GET = withKiosk<{ id: string }>(async (_req, { params }) => {
     : booking.serializedItems;
   const serializedItems = serializedSourceItems.map((si) => ({
     id: si.asset.id,
+    reservationItemId: si.id,
     tagName: si.asset.assetTag,
     name: si.asset.name || si.asset.assetTag,
     returned: isPickupChecklist
@@ -493,7 +494,11 @@ export const PATCH = withKiosk<{ id: string }>(async (req, { kiosk, params }) =>
     if (requestedEndsAt) {
       const availability = await checkCheckoutDueTime(tx, booking, requestedEndsAt);
       if (hasBlockingAvailabilityIssue(availability)) {
-        throw new HttpError(409, "One or more items are not available through that return time", availability);
+        throw new HttpError(
+          409,
+          kioskAvailabilityBlockMessage(availability, "item"),
+          availability,
+        );
       }
     }
 
@@ -573,7 +578,15 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
 
     if (bulkUnit) {
       if (bulkUnit.status !== BulkUnitStatus.AVAILABLE) {
-        return { success: false, error: `${bulkUnit.name} is not available` };
+        return {
+          success: false,
+          error: kioskHeldItemMessage({
+            itemName: bulkUnit.name,
+            holder: bulkUnit.holder,
+            dueAt: bulkUnit.dueAt,
+            status: bulkUnit.status,
+          }),
+        };
       }
 
       const unit = await tx.bulkSkuUnit.findUnique({
@@ -701,12 +714,9 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
       excludeBookingId: booking.id,
     });
     if (hasBlockingAvailabilityIssue(availability)) {
-      const conflict = availability.conflicts.find((item) => item.assetId === asset.id);
       return {
         success: false,
-        error: conflict
-          ? availabilityBlockedItemMessage(conflict, asset.name || asset.assetTag)
-          : "Item is not available for this checkout",
+        error: kioskAvailabilityBlockMessage(availability, asset.name || asset.assetTag),
       };
     }
 
