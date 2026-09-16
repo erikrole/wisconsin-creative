@@ -9,6 +9,7 @@ import { checkoutCompleteBody } from "@/lib/schemas/kiosk";
 import { nextBookingRef } from "@/lib/services/booking-ref";
 import { upsertBulkBalancesAndMovements } from "@/lib/services/bookings-helpers";
 import { bulkRequestsFromCheckoutUnits, normalizeCheckoutCompleteItems } from "@/lib/services/kiosk-checkout-complete";
+import { findLeftoverReservationPickup, leftoverReservationPickupConflict } from "@/lib/services/reservation-pickup-guard";
 import { ACTIVE_BULK_UNIT_ALLOCATION_WHERE, CLAIMABLE_BULK_UNIT_WHERE, effectiveBulkUnitStatus } from "@/lib/bulk-unit-status";
 import { checkAvailability, type AvailabilityResult } from "@/lib/services/availability";
 import { parseDateRange } from "@/lib/time";
@@ -100,6 +101,14 @@ export const POST = withKiosk(async (req, { kiosk }) => {
         if (!transactionalUser) throw new HttpError(404, "User not found");
 
         await claimKioskOperationReceiptTx(tx, receipt);
+
+        const leftoverPickup = await findLeftoverReservationPickup(tx, {
+          requesterUserId: actorId,
+          locationId,
+        });
+        if (leftoverPickup) {
+          throw leftoverReservationPickupConflict(leftoverPickup);
+        }
 
         // References come from the database sequence; the receipt key owns replay.
         const refNumber = await nextBookingRef(tx, "CO");

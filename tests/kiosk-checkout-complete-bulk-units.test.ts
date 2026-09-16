@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   transactionUserFindFirst: vi.fn(),
   bookingCreate: vi.fn(),
   bookingCount: vi.fn(),
+  bookingFindMany: vi.fn(),
   systemConfigFindUnique: vi.fn(),
   bookingSerializedItemCreateMany: vi.fn(),
   assetAllocationCreateMany: vi.fn(),
@@ -111,7 +112,7 @@ function completeRequest(items: Array<Record<string, unknown>>, extra: Record<st
 function transactionClient() {
   return {
     user: { findFirst: mocks.transactionUserFindFirst },
-    booking: { create: mocks.bookingCreate, count: mocks.bookingCount },
+    booking: { create: mocks.bookingCreate, count: mocks.bookingCount, findMany: mocks.bookingFindMany },
     systemConfig: { findUnique: mocks.systemConfigFindUnique },
     bookingSerializedItem: { createMany: mocks.bookingSerializedItemCreateMany },
     assetAllocation: { createMany: mocks.assetAllocationCreateMany },
@@ -140,6 +141,7 @@ beforeEach(() => {
   mocks.nextBookingRef.mockResolvedValue("CO-1001");
   mocks.systemConfigFindUnique.mockResolvedValue(null);
   mocks.bookingCount.mockResolvedValue(0);
+  mocks.bookingFindMany.mockResolvedValue([]);
   mocks.bookingCreate.mockImplementation(({ data }) => Promise.resolve({
     id: "booking-1",
     title: data.title,
@@ -699,5 +701,26 @@ describe("kiosk checkout complete bulk units", () => {
     expect(mocks.after).not.toHaveBeenCalled();
     expect(mocks.badgeOnCheckoutOpened).not.toHaveBeenCalled();
     expect(mocks.scheduleCheckoutReturnLiveActivity).not.toHaveBeenCalled();
+  });
+
+  it("refuses a new checkout while leftover reservation pickup is still open", async () => {
+    mocks.bookingFindMany.mockResolvedValueOnce([
+      {
+        id: "rv-1",
+        refNumber: "RV-0453",
+        title: "WBB Practice",
+        serializedItems: [{ allocationStatus: "active" }],
+        bulkItems: [],
+        derivedCheckouts: [{ id: "co-1" }],
+      },
+    ]);
+
+    await expect(runCompleteKioskCheckout(completeRequest([
+      { assetId: "asset-tripod" },
+    ]))).rejects.toMatchObject({
+      status: 409,
+      message: "Finish pickup for RV-0453 first instead of starting a new checkout.",
+    });
+    expect(mocks.bookingCreate).not.toHaveBeenCalled();
   });
 });

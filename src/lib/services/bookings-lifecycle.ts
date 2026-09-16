@@ -802,32 +802,55 @@ export async function createBooking(input: CreateBookingInput) {
           }
 
           const prefix = input.kind === BookingKind.CHECKOUT ? "CO" : "RV";
-          const refNumber = await nextBookingRef(tx, prefix);
-
-          const booking = await tx.booking.create({
-            data: {
-              kind: input.kind,
-              custodyScope: resolvedCustodyScope,
-              title,
-              refNumber,
-              requesterUserId: input.requesterUserId,
-              locationId: input.locationId,
-              startsAt: input.startsAt,
-              endsAt: input.endsAt,
-              status,
-              createdBy: input.createdBy,
-              notes: input.notes,
-              sourceReservationId: input.sourceReservationId ?? null,
-              eventId: primaryEventId,
-              sportCode: input.sportCode ?? null,
-              shiftAssignmentId: resolvedCustodyScope === BookingCustodyScope.PERSON ? input.shiftAssignmentId ?? null : null,
-              kitId: input.kitId ?? null,
-              pickupKioskDeviceId: input.pickupKioskDeviceId ?? null
+          let booking;
+          let appendedToExistingCheckout = false;
+          if (
+            input.kind === BookingKind.CHECKOUT
+            && input.sourceReservationPickup
+            && input.sourceReservationId
+          ) {
+            const existingCheckout = await tx.booking.findFirst({
+              where: {
+                sourceReservationId: input.sourceReservationId,
+                kind: BookingKind.CHECKOUT,
+                status: BookingStatus.OPEN,
+              },
+              orderBy: { createdAt: "asc" },
+            });
+            if (existingCheckout) {
+              booking = existingCheckout;
+              appendedToExistingCheckout = true;
             }
-          });
+          }
+          if (!booking) {
+            const refNumber = await nextBookingRef(tx, prefix);
+            booking = await tx.booking.create({
+              data: {
+                kind: input.kind,
+                custodyScope: resolvedCustodyScope,
+                title,
+                refNumber,
+                requesterUserId: input.requesterUserId,
+                locationId: input.locationId,
+                startsAt: input.startsAt,
+                endsAt: input.endsAt,
+                status,
+                createdBy: input.createdBy,
+                notes: input.notes,
+                sourceReservationId: input.sourceReservationId ?? null,
+                eventId: primaryEventId,
+                sportCode: input.sportCode ?? null,
+                shiftAssignmentId: resolvedCustodyScope === BookingCustodyScope.PERSON ? input.shiftAssignmentId ?? null : null,
+                kitId: input.kitId ?? null,
+                pickupKioskDeviceId: input.pickupKioskDeviceId ?? null
+              }
+            });
+          }
+          const allocationStartsAt = appendedToExistingCheckout ? booking.startsAt : input.startsAt;
+          const allocationEndsAt = appendedToExistingCheckout ? booking.endsAt : input.endsAt;
 
           let reservationScheduleAssignment: ReservationScheduleAssignment | null = null;
-          if (sortedEventIds.length > 0) {
+          if (sortedEventIds.length > 0 && !appendedToExistingCheckout) {
             await tx.bookingEvent.createMany({
               data: sortedEventIds.map((eventId, ordinal) => ({
                 bookingId: booking.id,
@@ -900,8 +923,8 @@ export async function createBooking(input: CreateBookingInput) {
               data: resolvedSerializedAssetIds.map((assetId) => ({
                 bookingId: booking.id,
                 assetId,
-                startsAt: input.startsAt,
-                endsAt: input.endsAt,
+                startsAt: allocationStartsAt,
+                endsAt: allocationEndsAt,
                 active: true,
                 kind: input.kind === BookingKind.RESERVATION ? AllocationKind.RESERVATION : AllocationKind.CHECKOUT
               }))
@@ -916,17 +939,36 @@ export async function createBooking(input: CreateBookingInput) {
                 (checkoutUnitCountBySku.get(unit.bulkSkuId) ?? 0) + 1,
               );
             }
-            await tx.bookingBulkItem.createMany({
-              data: resolvedBulkItems.map((item) => {
-                const checkedOutQuantity = checkoutUnitCountBySku.get(item.bulkSkuId);
-                return {
-                  bookingId: booking.id,
-                  bulkSkuId: item.bulkSkuId,
-                  plannedQuantity: item.quantity,
-                  ...(input.kind === BookingKind.CHECKOUT ? { checkedOutQuantity: checkedOutQuantity ?? item.quantity } : {}),
-                };
-              })
-            });
+            if (appendedToExistingCheckout) {
+              for (const item of resolvedBulkItems) {
+                const checkedOutQuantity = checkoutUnitCountBySku.get(item.bulkSkuId) ?? item.quantity;
+                await tx.bookingBulkItem.upsert({
+                  where: { bookingId_bulkSkuId: { bookingId: booking.id, bulkSkuId: item.bulkSkuId } },
+                  create: {
+                    bookingId: booking.id,
+                    bulkSkuId: item.bulkSkuId,
+                    plannedQuantity: item.quantity,
+                    ...(input.kind === BookingKind.CHECKOUT ? { checkedOutQuantity } : {}),
+                  },
+                  update: {
+                    plannedQuantity: { increment: item.quantity },
+                    ...(input.kind === BookingKind.CHECKOUT ? { checkedOutQuantity: { increment: checkedOutQuantity } } : {}),
+                  },
+                });
+              }
+            } else {
+              await tx.bookingBulkItem.createMany({
+                data: resolvedBulkItems.map((item) => {
+                  const checkedOutQuantity = checkoutUnitCountBySku.get(item.bulkSkuId);
+                  return {
+                    bookingId: booking.id,
+                    bulkSkuId: item.bulkSkuId,
+                    plannedQuantity: item.quantity,
+                    ...(input.kind === BookingKind.CHECKOUT ? { checkedOutQuantity: checkedOutQuantity ?? item.quantity } : {}),
+                  };
+                })
+              });
+            }
 
             if (input.kind === BookingKind.CHECKOUT) {
               await upsertBulkBalancesAndMovements(tx, {
@@ -1055,7 +1097,7 @@ export async function createBooking(input: CreateBookingInput) {
             actorRole,
             entityType: "booking",
             entityId: booking.id,
-            action: "created",
+            action: appendedToExistingCheckout ? "kiosk_pickup_appended" : "created",
             after: {
               kind: input.kind,
               title,
@@ -1113,13 +1155,12 @@ export async function createBooking(input: CreateBookingInput) {
               hasRemainingReservationItems = !sourceCompleted;
 
               if (selectedSerializedAssetIds.size > 0) {
-                await tx.bookingSerializedItem.updateMany({
+                await tx.bookingSerializedItem.deleteMany({
                   where: {
                     bookingId: input.sourceReservationId,
                     assetId: { in: [...selectedSerializedAssetIds] },
                     allocationStatus: "active",
                   },
-                  data: { allocationStatus: "picked_up" },
                 });
                 await tx.assetAllocation.updateMany({
                   where: {
@@ -1132,15 +1173,30 @@ export async function createBooking(input: CreateBookingInput) {
               }
 
               for (const item of resolvedBulkItems) {
-                await tx.bookingBulkItem.update({
-                  where: {
-                    bookingId_bulkSkuId: {
-                      bookingId: input.sourceReservationId,
-                      bulkSkuId: item.bulkSkuId,
+                const sourceItem = sourceReservationForPickup.bulkItems.find(
+                  (candidate) => candidate.bulkSkuId === item.bulkSkuId,
+                );
+                const nextCheckedOut = (sourceItem?.checkedOutQuantity ?? 0) + item.quantity;
+                if (sourceItem && nextCheckedOut >= sourceItem.plannedQuantity) {
+                  await tx.bookingBulkItem.delete({
+                    where: {
+                      bookingId_bulkSkuId: {
+                        bookingId: input.sourceReservationId,
+                        bulkSkuId: item.bulkSkuId,
+                      },
                     },
-                  },
-                  data: { checkedOutQuantity: { increment: item.quantity } },
-                });
+                  });
+                } else {
+                  await tx.bookingBulkItem.update({
+                    where: {
+                      bookingId_bulkSkuId: {
+                        bookingId: input.sourceReservationId,
+                        bulkSkuId: item.bulkSkuId,
+                      },
+                    },
+                    data: { checkedOutQuantity: { increment: item.quantity } },
+                  });
+                }
               }
 
               if (sourceCompleted) {
@@ -1501,8 +1557,8 @@ export async function forceCheckoutReservation(args: {
  * A partial kiosk pickup leaves the source reservation BOOKED so the
  * remaining gear can be collected later. When that gear is never coming
  * (wrong item swapped at the counter, plans changed, no-show for the rest),
- * staff need a supported exit that keeps the picked-up history intact,
- * releases the leftover holds, and records what was released. Cancel is the
+ * staff need a supported exit that leaves picked gear on the linked checkout,
+ * releases leftover holds, and records what was released. Cancel is the
  * wrong verb here because custody already opened; force-checkout is wrong
  * because the gear is still on the shelf.
  */
@@ -1579,35 +1635,19 @@ export async function closeReservationRemaining(args: {
       throw new HttpError(409, "This reservation changed. Refresh and try again.");
     }
 
-    // Remaining serialized rows are removed from the plan (their allocation
-    // is released); picked-up rows stay as history. Bulk plans shrink to the
-    // quantity actually handed over so the ledger matches custody.
-    if (releasedSerialized.length > 0) {
-      await tx.bookingSerializedItem.deleteMany({
-        where: {
-          bookingId: source.id,
-          assetId: { in: releasedSerialized.map((item) => item.assetId) },
-          allocationStatus: "active",
-        },
-      });
-    }
+    // Remaining holds are released. Gear already handed over lives on the
+    // linked checkout, so it is removed from the reservation plan instead of
+    // left looking like current reservation custody.
+    await tx.bookingSerializedItem.deleteMany({
+      where: { bookingId: source.id },
+    });
     await tx.assetAllocation.updateMany({
       where: { bookingId: source.id, active: true },
       data: { active: false },
     });
-    for (const item of releasedBulk) {
-      const picked = source.bulkItems.find((candidate) => candidate.bulkSkuId === item.bulkSkuId)?.checkedOutQuantity ?? 0;
-      if (picked > 0) {
-        await tx.bookingBulkItem.update({
-          where: { bookingId_bulkSkuId: { bookingId: source.id, bulkSkuId: item.bulkSkuId } },
-          data: { plannedQuantity: picked },
-        });
-      } else {
-        await tx.bookingBulkItem.delete({
-          where: { bookingId_bulkSkuId: { bookingId: source.id, bulkSkuId: item.bulkSkuId } },
-        });
-      }
-    }
+    await tx.bookingBulkItem.deleteMany({
+      where: { bookingId: source.id },
+    });
     await tx.scanSession.updateMany({
       where: { bookingId: source.id, status: ScanSessionStatus.OPEN },
       data: { status: ScanSessionStatus.CANCELLED },
@@ -1640,6 +1680,110 @@ export async function closeReservationRemaining(args: {
       status: BookingStatus.COMPLETED,
       releasedSerialized,
       releasedBulk,
+      linkedCheckouts: source.derivedCheckouts,
+    };
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+}
+
+/**
+ * After pickup gear already lives on a derived checkout, a completed
+ * reservation should not keep those lines as if the requester still has
+ * them on the reservation. Used to repair a close-remaining that left
+ * picked-up history on the plan.
+ */
+export async function detachRolledReservationPlan(args: {
+  reservationId: string;
+  actorUserId: string;
+  expectedRefNumber: string;
+}) {
+  return db.$transaction(async (tx) => {
+    const source = await tx.booking.findUnique({
+      where: { id: args.reservationId },
+      select: {
+        id: true,
+        kind: true,
+        status: true,
+        refNumber: true,
+        serializedItems: {
+          select: { assetId: true, allocationStatus: true, asset: { select: { assetTag: true, name: true } } },
+        },
+        bulkItems: {
+          select: {
+            bulkSkuId: true,
+            plannedQuantity: true,
+            checkedOutQuantity: true,
+            bulkSku: { select: { name: true } },
+          },
+        },
+        derivedCheckouts: { select: { id: true, refNumber: true, status: true } },
+      },
+    });
+    if (!source || source.kind !== BookingKind.RESERVATION) {
+      throw new HttpError(404, "Reservation not found");
+    }
+    if (source.refNumber !== args.expectedRefNumber) {
+      throw new HttpError(409, `Ref mismatch: ${source.refNumber}`);
+    }
+    if (source.status !== BookingStatus.COMPLETED) {
+      throw new HttpError(409, `Reservation is not COMPLETED (current: ${source.status})`);
+    }
+    if (source.derivedCheckouts.length === 0) {
+      throw new HttpError(409, "No linked checkout to roll items onto.");
+    }
+
+    const rolledSerialized = source.serializedItems.filter((item) => item.allocationStatus === "picked_up");
+    const rolledBulk = source.bulkItems.filter((item) => (item.checkedOutQuantity ?? 0) > 0);
+    if (rolledSerialized.length === 0 && rolledBulk.length === 0) {
+      return {
+        id: source.id,
+        status: source.status,
+        rolledSerialized: [],
+        rolledBulk: [],
+        linkedCheckouts: source.derivedCheckouts,
+      };
+    }
+
+    if (rolledSerialized.length > 0) {
+      await tx.bookingSerializedItem.deleteMany({
+        where: {
+          bookingId: source.id,
+          assetId: { in: rolledSerialized.map((item) => item.assetId) },
+          allocationStatus: "picked_up",
+        },
+      });
+    }
+    if (rolledBulk.length > 0) {
+      await tx.bookingBulkItem.deleteMany({
+        where: {
+          bookingId: source.id,
+          bulkSkuId: { in: rolledBulk.map((item) => item.bulkSkuId) },
+        },
+      });
+    }
+
+    const actorRole = await lookupActorRole(tx, args.actorUserId);
+    await createAuditEntryTx(tx, {
+      actorId: args.actorUserId,
+      actorRole,
+      entityType: "booking",
+      entityId: source.id,
+      action: "reservation_picked_items_moved_to_checkout",
+      before: {
+        serializedAssetIds: rolledSerialized.map((item) => item.assetId),
+        bulkSkuIds: rolledBulk.map((item) => item.bulkSkuId),
+      },
+      after: {
+        linkedCheckoutIds: source.derivedCheckouts.map((checkout) => checkout.id),
+        rolledSerialized: rolledSerialized.map((item) => item.asset.name || item.asset.assetTag),
+        rolledBulk: rolledBulk.map((item) => item.bulkSku.name),
+      },
+    });
+
+    return {
+      id: source.id,
+      status: source.status,
+      rolledSerialized,
+      rolledBulk,
       linkedCheckouts: source.derivedCheckouts,
     };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
@@ -1773,7 +1917,7 @@ export async function updateReservation(
       const pickedAssetIds = new Set(existing.serializedItems.filter((item) => item.allocationStatus === "picked_up").map((item) => item.assetId));
       const pickedBulkBySku = new Map(existing.bulkItems.map((item) => [item.bulkSkuId, item.checkedOutQuantity ?? 0]));
       if ([...pickedAssetIds].some((id) => !serializedAssetIds.includes(id)) || existing.bulkItems.some((item) => (bulkItems.find((next) => next.bulkSkuId === item.bulkSkuId)?.quantity ?? 0) < (item.checkedOutQuantity ?? 0))) {
-        throw new HttpError(409, "Items already picked up must stay in reservation history. Edit the remaining items only.");
+        throw new HttpError(409, "Items already picked up are on the checkout. Edit the remaining items only.");
       }
       const remainingAssetIds = serializedAssetIds.filter((id) => !pickedAssetIds.has(id));
       const remainingBulkItems = bulkItems.map((item) => ({ bulkSkuId: item.bulkSkuId, quantity: item.quantity - (pickedBulkBySku.get(item.bulkSkuId) ?? 0) })).filter((item) => item.quantity > 0);
@@ -1847,7 +1991,7 @@ export async function updateReservation(
       // window passes, and no supported action can ever close it.
       const pickupStarted = pickedAssetIds.size > 0
         || existing.bulkItems.some((item) => (item.checkedOutQuantity ?? 0) > 0)
-        || existing.derivedCheckouts.length > 0;
+        || (existing.derivedCheckouts?.length ?? 0) > 0;
       const completedByEdit = updatesEquipment
         && existing.status === BookingStatus.BOOKED
         && pickupStarted
@@ -1857,6 +2001,18 @@ export async function updateReservation(
         await tx.booking.update({
           where: { id: bookingId },
           data: { status: BookingStatus.COMPLETED, completedAt: new Date() },
+        });
+        if (pickedAssetIds.size > 0) {
+          await tx.bookingSerializedItem.deleteMany({
+            where: {
+              bookingId,
+              assetId: { in: [...pickedAssetIds] },
+              allocationStatus: "picked_up",
+            },
+          });
+        }
+        await tx.bookingBulkItem.deleteMany({
+          where: { bookingId },
         });
         await tx.assetAllocation.updateMany({
           where: { bookingId, active: true },
