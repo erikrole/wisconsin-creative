@@ -11,10 +11,10 @@ Wisconsin Creative is a Next.js App Router application with a companion native i
 |---|---:|
 | App pages | 89 |
 | App layouts | 7 |
-| API route handlers | 329 |
-| Service files | 87 |
+| API route handlers | 331 |
+| Service files | 88 |
 | Component files | 157 |
-| Test files | 640 |
+| Test files | 643 |
 
 ## Oversized Source Watchlist
 
@@ -22,7 +22,7 @@ Informational only. These are the largest TypeScript and TSX files under `src/`;
 
 | File | Lines |
 |---|---:|
-| `src/lib/services/bookings-lifecycle.ts` | 2863 |
+| `src/lib/services/bookings-lifecycle.ts` | 3054 |
 | `src/lib/services/signatures.ts` | 2068 |
 | `src/lib/services/reports.ts` | 1932 |
 | `src/components/TradeBoard.tsx` | 1853 |
@@ -33,7 +33,7 @@ Informational only. These are the largest TypeScript and TSX files under `src/`;
 | `src/app/(app)/bulk-inventory/batteries/page.tsx` | 1554 |
 | `src/app/(app)/users/[id]/UserInfoTab.tsx` | 1450 |
 | `src/app/(app)/resources/page.tsx` | 1425 |
-| `src/components/ActivityTimeline.tsx` | 1375 |
+| `src/components/ActivityTimeline.tsx` | 1386 |
 | `src/lib/services/shift-trades.ts` | 1321 |
 | `src/app/(app)/items/new-item-sheet/SerializedItemForm.tsx` | 1272 |
 | `src/app/api/assets/route.ts` | 1227 |

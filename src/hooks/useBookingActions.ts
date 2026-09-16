@@ -191,6 +191,29 @@ export function useBookingActions(
     [bookingId, onSuccess],
   );
 
+  const closeRemaining = useCallback(
+    async (reason: string) => {
+      if (!guardStart("close-remaining")) return false;
+      try {
+        const result = await callAction(
+          `/api/reservations/${bookingId}/close-remaining`,
+          "POST",
+          reason.trim() ? { reason: reason.trim() } : {},
+        );
+        if (result.ok) {
+          toast.success("Reservation closed. Remaining gear released.");
+          onSuccess();
+        } else {
+          toast.error(result.error!);
+        }
+        return result.ok;
+      } finally {
+        guardEnd();
+      }
+    },
+    [bookingId, onSuccess],
+  );
+
   const toggleCustodyScope = useCallback(
     async (currentScope: "PERSON" | "SHARED") => {
       const nextScope = currentScope === "SHARED" ? "PERSON" : "SHARED";
@@ -266,6 +289,7 @@ export function useBookingActions(
     nudge,
     forceComplete,
     forceCheckout,
+    closeRemaining,
     toggleCustodyScope,
     saveField,
   };

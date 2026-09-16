@@ -1,0 +1,75 @@
+{
+  "title": "Reservation leftover pickup recovery",
+  "eyebrow": "Kiosk · Wisconsin Creative · 2026-09-16",
+  "lede": "After David Saddler's WBB Practice pickup, the leftover tripod could be skipped with one tap and then checked out as a new booking. These after-only fixture captures show the three recoveries: leftover pickup stays an explicit secondary action, an equivalent scan can be swapped onto the reservation, and the hub asks to finish remaining pickup before a new checkout.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "Kiosk leftover pickup",
+      "note": "After-only. A matched before pair is unavailable: the true baseline was a live Video Office pickup of RV-0453, not a fixture, and this checkout already contained the prevention work. Captured on iPad (A16) simulator AD637556-84F9-4AEB-84C0-17457581CE72, Debug WisconsinKiosk, GT_KIOSK_SCENARIO payloads, dark, default text, America/Chicago, hour-snapped fixture clock. The simulator framebuffer was Portrait (820×1180 pt @2x); the mounted kiosk is landscape. These shots show the compact split, not the counter landscape layout.",
+      "singles": [
+        {
+          "title": "One leftover item",
+          "sub": "Primary CTA stays Scan 1 More Item.",
+          "image": "after/leftover-pickup.png",
+          "cap": "WBB Practice, 4 of 5 confirmed. Primary action is still scan the remaining item. Pick up without remaining is a secondary control, not the confirm button.",
+          "evidence": "after/leftover-pickup.evidence.json",
+          "wide": true
+        },
+        {
+          "title": "Named leftover confirmation",
+          "sub": "Leaving gear behind has to name what is left.",
+          "image": "after/leftover-confirm.png",
+          "cap": "The dialog is anchored on Pick up without remaining and names SUP-031 · Manfrotto 535 MPro Tripod. Pick Up Scanned Items is the explicit confirm; Keep Scanning is the system cancel.",
+          "evidence": "after/leftover-confirm.evidence.json",
+          "wide": true
+        },
+        {
+          "title": "Equivalent-item swap",
+          "sub": "Off-plan serialized scan offers substitution instead of a stray checkout.",
+          "image": "after/leftover-swap.png",
+          "cap": "SUP-042 is not on the reservation. The kiosk asks to use it in place of reserved SUP-031 rather than rejecting the scan with no next step.",
+          "evidence": "after/leftover-swap.evidence.json",
+          "wide": true
+        },
+        {
+          "title": "Hub nudge before a new checkout",
+          "sub": "Finish remaining pickup first.",
+          "image": "after/hub-finish-pickup.png",
+          "cap": "Check Out Gear already says the Manfrotto 535 MPro Tripod is still waiting. Starting a new checkout asks to Continue Pickup instead of silently opening a second booking.",
+          "evidence": "after/hub-finish-pickup.evidence.json",
+          "wide": true
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Partial pickup stopped being the easy button",
+      "was": "With one leftover item, Confirm 4 of 5 was the primary action. That opened CO-0454 and left RV-0453 booked, so the next move was a new checkout.",
+      "now": "The primary CTA stays Scan N more. Leaving gear behind is a named secondary confirmation."
+    },
+    {
+      "h": "The wrong tripod can join the reservation",
+      "was": "Scanning the 755CX3 during pickup returned not in this checkout, with no swap.",
+      "now": "An off-plan equivalent scan offers to replace the remaining reserved item and stage the scan in the same transaction."
+    },
+    {
+      "h": "The hub pushes leftover pickup along",
+      "was": "Check Out Gear was available immediately, which is how CO-0455 was created 31 seconds later.",
+      "now": "Remaining pickup is named on Check Out Gear, and starting a new checkout asks to finish pickup first."
+    }
+  ],
+  "verification": [
+    "Focused source tests: ios-kiosk-partial-pickup-fixtures, ios-kiosk-reservation-pickup-contract, kiosk-pickup-substitute, close-remaining-*.",
+    "WisconsinKiosk Xcode verify passed on iPad (A16) AD637556-84F9-4AEB-84C0-17457581CE72, including XCTest.",
+    "These fixture screenshots prove presentation of leftover, swap, and hub dialogs. They do not prove the substitute/confirm/close-remaining mutations, authenticated web Close without remaining gear, or a physical kiosk scan.",
+    "RV-0453 live close-remaining and CO-0455 were not mutated."
+  ],
+  "notes": [
+    "No trustworthy before fixture existed for leftover pickup, so this review is after-only.",
+    "Web reservation-detail Close without remaining gear was not captured in this slice.",
+    "Simulator was Portrait; mounted kiosk proof remains landscape iPad.",
+    "Local review: tasks/archive/proofs/reservation-partial-pickup-2026-09-16/review.html"
+  ]
+}

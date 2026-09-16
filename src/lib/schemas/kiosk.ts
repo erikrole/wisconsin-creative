@@ -114,6 +114,13 @@ export const pickupConfirmBody = z.object({
 });
 export type PickupConfirmBody = z.infer<typeof pickupConfirmBody>;
 
+export const pickupSubstituteBody = z.object({
+  actorId: cuidish,
+  scanValue: z.string().trim().min(1, "Scan value required"),
+  reservedAssetId: cuidish,
+});
+export type PickupSubstituteBody = z.infer<typeof pickupSubstituteBody>;
+
 export const activateBody = z.object({
   code: z
     .string()

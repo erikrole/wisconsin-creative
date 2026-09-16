@@ -72,6 +72,8 @@ export type BookingDetail = {
   locationMode: "SINGLE" | "MIXED";
   allowedActions?: string[];
   sourceReservation?: { id: string; refNumber: string | null; title: string } | null;
+  /** Checkouts opened from this reservation by kiosk pickup or admin force checkout. */
+  derivedCheckouts?: Array<{ id: string; refNumber: string | null; status: string; createdAt: string }>;
   event?: { id: string; summary: string; sportCode: string | null; opponent: string | null; isHome: boolean | null } | null;
   /** All events linked to this booking (1..3), sorted chronologically by ordinal.
    *  When only one event is linked it will match `event` above. */

@@ -4,7 +4,7 @@
 - Owner: Erik Role (Wisconsin Athletics Creative)
 - Status: Shipped — iOS canonical (web kiosk deprecated 2026-04-24)
 - Created: 2026-04-07
-- Last Updated: 2026-09-04
+- Last Updated: 2026-09-16
 - Brief: `BRIEF_KIOSK.md`
 - Decision Refs: D-030, D-032, D-040
 
@@ -67,7 +67,7 @@ Files under `ios/Wisconsin/Kiosk/`:
   - `GET /student/[userId]` — global person context with active checkouts, pending pickups, and reservations
   - `POST /checkout/scan`, `POST /checkout/complete`, `GET/PATCH/POST/DELETE /checkout/[id]`
   - `POST /checkin/[id]/scan`, `POST /checkin/[id]/complete`
-  - `POST /pickup/[id]/scan`, `POST /pickup/[id]/confirm`
+  - `POST /pickup/[id]/scan`, `POST /pickup/[id]/confirm`, `POST /pickup/[id]/substitute`
   - `POST /scan-lookup` — read-only item-by-tag lookup
 - Successful checkout, pickup, and check-in completion responses may include an additive `earnedBadges` array. Individual scans remain operational evidence but no longer award badges. The native client accumulates and deduplicates completion awards for the current flow; older clients safely ignore the field.
 - Numbered battery units scan through the same pickup/check-in endpoints with derived values like `{binQrCodeValue}-{unitNumber}`. Pickup binds the unit to the booking; check-in returns only the scanned unit.
@@ -80,7 +80,7 @@ Files under `ios/Wisconsin/Kiosk/`:
 - Active kiosk checkouts can be edited from the idle detail drawer. The kiosk-authenticated checkout detail route can update title/return time, add one scanned serialized asset or numbered bulk unit, and remove one unreturned active item on any `OPEN` checkout. Mutations run in `SERIALIZABLE` transactions, re-check availability using the booking's source location when custody changes, update active allocations/bulk unit status, and write audit entries.
 - Standard checkout return remains kiosk-owned. Web can close an `OPEN` checkout without scan only through the admin-only reasoned override route when staff have physically verified every item is back; that path records override/audit evidence and is not a general app/web return flow.
 - Shared travel-case checkouts remain one manifest with package identity and no requester disclosure. Any identified active visible operator may perform the return, while scans, unit bindings, allocations, location transfer, and actor audit evidence remain authoritative. Shared completion does not award personal return badges.
-- Kiosk owns the reservation-to-custody bridge. A booked reservation can enter pickup from the operator hub before or after its scheduled start time; the schedule does not disable the handoff. Scan evidence is staged on the source reservation, confirmation creates the linked checkout custody record through `sourceReservationId`, binds exact numbered units, opens checkout custody, and marks the source reservation `COMPLETED` because the reservation was fulfilled.
+- Kiosk owns the reservation-to-custody bridge. A booked reservation can enter pickup from the operator hub before or after its scheduled start time; the schedule does not disable the handoff. Scan evidence is staged on the source reservation. An off-plan serialized scan can swap a remaining reserved item in place when it is the leftover item or the same family. Confirmation creates the linked checkout custody record through `sourceReservationId`, binds exact numbered units, and opens checkout custody. A complete pickup marks the source reservation `COMPLETED`; a partial pickup is an explicit secondary action that names leftover gear and keeps the source `BOOKED`. Starting a new checkout while remaining pickup exists asks the operator to finish that pickup first.
 - Compatibility `PENDING_PICKUP` confirmation resolves the current booking requester on the server and rejects a stale submitted user after ownership transfer. The client cannot assign checkout-open badge credit to a former owner by carrying an old actor identifier into confirmation.
 - Stale pending-pickup checkouts auto-expire during the scheduled morning refresh after 48 hours past `startsAt`. Expiry cancels the booking, releases serialized allocations, restores held bulk stock, releases any scanned numbered units, cancels open scan sessions, and writes a system audit entry.
 - **Auth helpers:** `withKiosk()` (`src/lib/api.ts`) and `requireKiosk()` (`src/lib/auth.ts`) validate the kiosk-session cookie, enforce the server-side 7-day `sessionExpiresAt`, refresh `lastSeenAt`, throw 401 if expired/inactive/deactivated.
@@ -126,6 +126,7 @@ Files under `ios/Wisconsin/Kiosk/`:
 - Badge reward presentation has generic iOS Simulator compile proof, but the iPad-only target excludes the standard iPhone 16 Pro simulator destination and the reward state has not yet been rendered on the managed landscape iPad. Custody remains complete even if reward lookup fails.
 
 ## Change Log
+| 2026-09-16 | **Pickup leftover recovery API.** Off-plan serialized pickup scans can return a substitution candidate, `POST /api/kiosk/pickup/[id]/substitute` swaps the remaining reserved item, and pickup confirm names leftover gear. Native swap/partial-confirm/hub-nudge UI remains in the local kiosk checkout, separate from this server slice. |
 | 2026-09-04 | **Flow navigation no longer shares the top-left hit target with device status.** The shell's device-status reveal is hidden on operator hub, identity, checkout, pickup, and return screens, leaving their Back/Cancel control visually and interactively unambiguous; idle and success retain the status affordance. |
 | 2026-09-04 | **Blocking checkout scans are now rejected before admission.** A reservation, active-checkout, unavailable-asset, or bulk-shortage conflict is preflighted before the item enters the visible cart/count, so an assembly-line operator can trust that every visible item was accepted. Rejected, failed, and duplicate scan feedback adds a short audible cue while keeping haptic, visual, VoiceOver, final preflight, and server transaction safeguards intact. The existing `What now?` row remains for conflicts that appear after an item was accepted or after the return window changes. |
 | 2026-09-04 | **Blocked checkout items now show a `What now?` recovery row.** Operators can remove the staged item, change the return time when timing can resolve the conflict without losing the scanned cart, or re-arm scanning for another item/unit. Editing the due time refreshes availability before scanning resumes; completion and exact-unit custody gates are unchanged. |

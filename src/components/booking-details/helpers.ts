@@ -41,6 +41,7 @@ export const EQUIPMENT_ACTIONS = new Set([
   "booking.items_added",
   "booking.items_removed",
   "booking.items_qty_changed",
+  "booking.item_substituted",
 ]);
 
 export const actionLabels: Record<string, string> = {
@@ -60,6 +61,9 @@ export const actionLabels: Record<string, string> = {
   checkin_completed: "completed check in",
   admin_force_completed_checkout: "closed checkout without scan",
   admin_force_checkout: "force-checked out reservation",
+  reservation_closed_remaining_released: "closed reservation and released remaining gear",
+  completed_after_plan_edit: "completed reservation after removing the remaining gear",
+  "booking.item_substituted": "swapped a reserved item at pickup",
   cancelled_by_checkout_conversion: "converted to checkout",
   "booking.items_added": "added items",
   "booking.items_removed": "removed items",

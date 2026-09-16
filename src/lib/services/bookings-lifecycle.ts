@@ -1495,6 +1495,156 @@ export async function forceCheckoutReservation(args: {
   });
 }
 
+/**
+ * Close a partially picked-up reservation without handing over the rest.
+ *
+ * A partial kiosk pickup leaves the source reservation BOOKED so the
+ * remaining gear can be collected later. When that gear is never coming
+ * (wrong item swapped at the counter, plans changed, no-show for the rest),
+ * staff need a supported exit that keeps the picked-up history intact,
+ * releases the leftover holds, and records what was released. Cancel is the
+ * wrong verb here because custody already opened; force-checkout is wrong
+ * because the gear is still on the shelf.
+ */
+export async function closeReservationRemaining(args: {
+  reservationId: string;
+  actorUserId: string;
+  reason?: string | null;
+}) {
+  const reason = args.reason?.trim() || null;
+  if (reason && reason.length > 1000) {
+    throw new HttpError(400, "Reason must be at most 1000 characters");
+  }
+
+  return db.$transaction(async (tx) => {
+    const source = await tx.booking.findUnique({
+      where: { id: args.reservationId },
+      select: {
+        id: true,
+        kind: true,
+        status: true,
+        refNumber: true,
+        serializedItems: {
+          select: {
+            assetId: true,
+            allocationStatus: true,
+            asset: { select: { assetTag: true, name: true } },
+          },
+        },
+        bulkItems: {
+          select: {
+            bulkSkuId: true,
+            plannedQuantity: true,
+            checkedOutQuantity: true,
+            bulkSku: { select: { name: true } },
+          },
+        },
+        derivedCheckouts: { select: { id: true, refNumber: true } },
+      },
+    });
+
+    if (!source || source.kind !== BookingKind.RESERVATION) {
+      throw new HttpError(404, "Reservation not found");
+    }
+    if (source.status !== BookingStatus.BOOKED) {
+      throw new HttpError(409, `Reservation is not in BOOKED status (current: ${source.status})`);
+    }
+
+    const pickedSerialized = source.serializedItems.filter((item) => item.allocationStatus === "picked_up");
+    const pickedBulkQuantity = source.bulkItems.reduce((sum, item) => sum + (item.checkedOutQuantity ?? 0), 0);
+    if (source.derivedCheckouts.length === 0 && pickedSerialized.length === 0 && pickedBulkQuantity === 0) {
+      throw new HttpError(
+        409,
+        "Nothing from this reservation has been picked up yet. Cancel the reservation instead.",
+      );
+    }
+
+    const releasedSerialized = source.serializedItems
+      .filter((item) => item.allocationStatus === "active")
+      .map((item) => ({ assetId: item.assetId, name: item.asset.name || item.asset.assetTag }));
+    const releasedBulk = source.bulkItems
+      .map((item) => ({
+        bulkSkuId: item.bulkSkuId,
+        name: item.bulkSku.name,
+        quantity: Math.max(0, item.plannedQuantity - (item.checkedOutQuantity ?? 0)),
+      }))
+      .filter((item) => item.quantity > 0);
+
+    const now = new Date();
+    const updated = await tx.booking.updateMany({
+      where: { id: source.id, status: BookingStatus.BOOKED },
+      data: { status: BookingStatus.COMPLETED, completedAt: now },
+    });
+    if (updated.count !== 1) {
+      throw new HttpError(409, "This reservation changed. Refresh and try again.");
+    }
+
+    // Remaining serialized rows are removed from the plan (their allocation
+    // is released); picked-up rows stay as history. Bulk plans shrink to the
+    // quantity actually handed over so the ledger matches custody.
+    if (releasedSerialized.length > 0) {
+      await tx.bookingSerializedItem.deleteMany({
+        where: {
+          bookingId: source.id,
+          assetId: { in: releasedSerialized.map((item) => item.assetId) },
+          allocationStatus: "active",
+        },
+      });
+    }
+    await tx.assetAllocation.updateMany({
+      where: { bookingId: source.id, active: true },
+      data: { active: false },
+    });
+    for (const item of releasedBulk) {
+      const picked = source.bulkItems.find((candidate) => candidate.bulkSkuId === item.bulkSkuId)?.checkedOutQuantity ?? 0;
+      if (picked > 0) {
+        await tx.bookingBulkItem.update({
+          where: { bookingId_bulkSkuId: { bookingId: source.id, bulkSkuId: item.bulkSkuId } },
+          data: { plannedQuantity: picked },
+        });
+      } else {
+        await tx.bookingBulkItem.delete({
+          where: { bookingId_bulkSkuId: { bookingId: source.id, bulkSkuId: item.bulkSkuId } },
+        });
+      }
+    }
+    await tx.scanSession.updateMany({
+      where: { bookingId: source.id, status: ScanSessionStatus.OPEN },
+      data: { status: ScanSessionStatus.CANCELLED },
+    });
+
+    const actorRole = await lookupActorRole(tx, args.actorUserId);
+    await createAuditEntryTx(tx, {
+      actorId: args.actorUserId,
+      actorRole,
+      entityType: "booking",
+      entityId: source.id,
+      action: "reservation_closed_remaining_released",
+      before: {
+        status: BookingStatus.BOOKED,
+        remainingSerializedAssetIds: releasedSerialized.map((item) => item.assetId),
+        remainingBulk: releasedBulk.map((item) => ({ bulkSkuId: item.bulkSkuId, quantity: item.quantity })),
+      },
+      after: {
+        status: BookingStatus.COMPLETED,
+        reason,
+        releasedSerialized,
+        releasedBulk,
+        pickedSerializedAssetIds: pickedSerialized.map((item) => item.assetId),
+        linkedCheckoutIds: source.derivedCheckouts.map((checkout) => checkout.id),
+      },
+    });
+
+    return {
+      id: source.id,
+      status: BookingStatus.COMPLETED,
+      releasedSerialized,
+      releasedBulk,
+      linkedCheckouts: source.derivedCheckouts,
+    };
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+}
+
 export async function updateReservation(
   bookingId: string,
   actorUserId: string,
@@ -1511,6 +1661,7 @@ export async function updateReservation(
         include: {
           serializedItems: true,
           bulkItems: true,
+          derivedCheckouts: { select: { id: true } },
           requester: {
             select: {
               role: true,
@@ -1688,6 +1839,46 @@ export async function updateReservation(
       }
       if (updatesWindow) {
         await tx.assetAllocation.updateMany({ where: { bookingId, active: true }, data: { startsAt: nextStartsAt, endsAt: nextEndsAt } });
+      }
+
+      // A plan edit that removes the last remaining gear from a reservation
+      // whose pickup already started must complete the reservation. Left
+      // BOOKED, it has nothing to scan, drops off the kiosk hub once its
+      // window passes, and no supported action can ever close it.
+      const pickupStarted = pickedAssetIds.size > 0
+        || existing.bulkItems.some((item) => (item.checkedOutQuantity ?? 0) > 0)
+        || existing.derivedCheckouts.length > 0;
+      const completedByEdit = updatesEquipment
+        && existing.status === BookingStatus.BOOKED
+        && pickupStarted
+        && remainingAssetIds.length === 0
+        && remainingBulkItems.length === 0;
+      if (completedByEdit) {
+        await tx.booking.update({
+          where: { id: bookingId },
+          data: { status: BookingStatus.COMPLETED, completedAt: new Date() },
+        });
+        await tx.assetAllocation.updateMany({
+          where: { bookingId, active: true },
+          data: { active: false },
+        });
+        await tx.scanSession.updateMany({
+          where: { bookingId, status: ScanSessionStatus.OPEN },
+          data: { status: ScanSessionStatus.CANCELLED },
+        });
+        await createAuditEntryTx(tx, {
+          actorId: actorUserId,
+          actorRole: await lookupActorRole(tx, actorUserId),
+          entityType: "booking",
+          entityId: bookingId,
+          action: "completed_after_plan_edit",
+          before: { status: existing.status },
+          after: {
+            status: BookingStatus.COMPLETED,
+            pickedSerializedAssetIds: [...pickedAssetIds],
+            reason: "remaining_items_removed",
+          },
+        });
       }
 
       // Granular equipment audit entries

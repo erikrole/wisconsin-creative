@@ -20,6 +20,7 @@ const mocks = vi.hoisted(() => ({
   badgeOnScanResult: vi.fn(),
   badgeOnCheckoutOpened: vi.fn(),
   earnedBadgesSince: vi.fn(),
+  findPickupSubstitutionCandidate: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -78,6 +79,10 @@ vi.mock("@/lib/services/kiosk-scan", () => ({
   findAssetByScanValue: mocks.findAssetByScanValue,
 }));
 
+vi.mock("@/lib/services/kiosk-pickup-substitute", () => ({
+  findPickupSubstitutionCandidate: mocks.findPickupSubstitutionCandidate,
+}));
+
 vi.mock("@/lib/services/bulk-unit-scans", () => ({
   scanKioskPickupBulkUnit: mocks.scanKioskPickupBulkUnit,
   stageKioskReservationPickupBulkUnit: mocks.stageKioskReservationPickupBulkUnit,
@@ -126,6 +131,7 @@ beforeEach(() => {
   mocks.bookingUpdateMany.mockResolvedValue({ count: 1 });
   mocks.scanEventFindFirst.mockResolvedValue(null);
   mocks.stageKioskReservationPickupBulkUnit.mockResolvedValue({ handled: false });
+  mocks.findPickupSubstitutionCandidate.mockResolvedValue(null);
   mocks.createBooking.mockResolvedValue({ id: "checkout-1" });
   mocks.earnedBadgesSince.mockResolvedValue([]);
 });
@@ -359,6 +365,7 @@ describe("kiosk checkout detail bulk units", () => {
       id: "bulk-item-1:bulk-quantity",
       tagName: "x1000000",
       name: "Gaffer Tape x1000000",
+      quantity: 1000000,
       returned: true,
       type: "bulk_quantity",
       bulkSkuId: "sku-tape",
@@ -467,6 +474,7 @@ describe("kiosk checkout detail bulk units", () => {
         id: "bulk-item-1:bulk-quantity",
         tagName: "x8",
         name: "Sony Battery x8",
+        quantity: 8,
         returned: false,
         type: "bulk_quantity",
         bulkSkuId: "sku-sony",
@@ -680,6 +688,8 @@ describe("kiosk pickup serialized scan guard", () => {
       id: true,
       assetTag: true,
       name: true,
+      type: true,
+      categoryId: true,
     });
     expect(mocks.scanEventCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({
@@ -764,6 +774,60 @@ describe("kiosk pickup serialized scan guard", () => {
       errorCode: "duplicate",
     });
     expect(mocks.scanEventFindFirst).not.toHaveBeenCalled();
+    expect(mocks.scanEventCreate).not.toHaveBeenCalled();
+  });
+
+  it("offers a substitution when an off-plan serialized scan can replace remaining reserved gear", async () => {
+    mocks.bookingFindUnique.mockResolvedValue({
+      id: "reservation-1",
+      status: "BOOKED",
+      kind: "RESERVATION",
+      requesterUserId: "user-1",
+      locationId: "loc-1",
+    });
+    mocks.findAssetByScanValue.mockResolvedValue({
+      id: "asset-755",
+      assetTag: "Manfrotto 755CX3 Tripod",
+      name: "Manfrotto 755CX3 Tripod",
+      type: "Tripod",
+      categoryId: "tripods",
+    });
+    mocks.bookingSerializedItemFindUnique.mockResolvedValue(null);
+    mocks.findPickupSubstitutionCandidate.mockResolvedValue({
+      scanned: {
+        id: "asset-755",
+        name: "Manfrotto 755CX3 Tripod",
+        tagName: "Manfrotto 755CX3 Tripod",
+      },
+      reserved: {
+        id: "asset-535",
+        name: "Manfrotto 535 MPro Tripod",
+        tagName: "Manfrotto 535 MPro Tripod",
+      },
+    });
+
+    const res = await scanKioskPickup(new Request("http://test", {
+      method: "POST",
+      body: JSON.stringify({ scanValue: "755CX3" }),
+    }), routeCtx("reservation-1"));
+
+    expect(await res.json()).toEqual({
+      success: false,
+      error: "Manfrotto 755CX3 Tripod is not on this reservation. Swap Manfrotto 535 MPro Tripod for it?",
+      errorCode: "substitution_available",
+      substitution: {
+        scanned: {
+          id: "asset-755",
+          name: "Manfrotto 755CX3 Tripod",
+          tagName: "Manfrotto 755CX3 Tripod",
+        },
+        reserved: {
+          id: "asset-535",
+          name: "Manfrotto 535 MPro Tripod",
+          tagName: "Manfrotto 535 MPro Tripod",
+        },
+      },
+    });
     expect(mocks.scanEventCreate).not.toHaveBeenCalled();
   });
 
@@ -993,7 +1057,8 @@ describe("kiosk reservation pickup confirmation", () => {
         }],
         derivedCheckouts: [],
         events: [{ eventId: "event-1" }],
-      });
+      })
+      .mockResolvedValueOnce({ status: "COMPLETED" });
 
     const res = await confirmKioskPickup(new Request("http://test", {
       method: "POST",
@@ -1059,7 +1124,7 @@ describe("kiosk reservation pickup confirmation", () => {
     }), routeCtx("reservation-1"));
     const json = await res.json();
 
-    expect(json).toEqual({ success: true, bookingId: "checkout-1" });
+    expect(json).toEqual({ success: true, bookingId: "checkout-1", itemCount: 1, partial: false });
     expect(mocks.createBooking).toHaveBeenCalledWith(expect.objectContaining({
       kind: "CHECKOUT",
       custodySource: "KIOSK",
@@ -1134,7 +1199,8 @@ describe("kiosk reservation pickup confirmation", () => {
         }],
         derivedCheckouts: [],
         events: [],
-      });
+      })
+      .mockResolvedValueOnce({ status: "BOOKED" });
 
     const res = await confirmKioskPickup(new Request("http://test", {
       method: "POST",
@@ -1142,7 +1208,13 @@ describe("kiosk reservation pickup confirmation", () => {
     }), routeCtx("reservation-1"));
     const json = await res.json();
 
-    expect(json).toEqual({ success: true, bookingId: "checkout-1", partial: true });
+    expect(json).toEqual({
+      success: true,
+      bookingId: "checkout-1",
+      itemCount: 1,
+      partial: true,
+      remainingItemNames: ["Camera 2"],
+    });
     expect(mocks.createBooking).toHaveBeenCalledWith(expect.objectContaining({
       sourceReservationId: "reservation-1",
       sourceReservationPickup: true,

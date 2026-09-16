@@ -72,7 +72,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Doc: `docs/AREA_KIOSK.md`
 - Pages: `/settings/kiosk-devices`
 - APIs: `/api/kiosk-devices/[id]/regenerate-code`, `/api/kiosk-devices/[id]`, `/api/kiosk-devices`, `/api/kiosk/activate`, `/api/kiosk/checkin/[id]/complete`, `/api/kiosk/checkin/[id]/quantity`, `/api/kiosk/checkin/[id]/scan`, `/api/kiosk/checkout/[id]`, `/api/kiosk/checkout/[id]/transfer`, `/api/kiosk/checkout/availability`
-- Services: `src/lib/services/kiosk-checkout-complete.ts`, `src/lib/services/kiosk-item-transfer.ts`, `src/lib/services/kiosk-location.ts`, `src/lib/services/kiosk-operation-receipts.ts`, `src/lib/services/kiosk-scan.ts`
+- Services: `src/lib/services/kiosk-checkout-complete.ts`, `src/lib/services/kiosk-item-transfer.ts`, `src/lib/services/kiosk-location.ts`, `src/lib/services/kiosk-operation-receipts.ts`, `src/lib/services/kiosk-pickup-substitute.ts`, `src/lib/services/kiosk-scan.ts`
 - Tests: `tests/bulk-unit-kiosk-scans.test.ts`, `tests/ios-kiosk-actionable-availability.test.ts`, `tests/ios-kiosk-all-day-contract.test.ts`, `tests/ios-kiosk-availability-status.test.ts`, `tests/ios-kiosk-back-button.test.ts`, `tests/ios-kiosk-checkout-details-polish.test.ts`, `tests/ios-kiosk-idle-cancellation.test.ts`, `tests/ios-kiosk-idle-checkout-list.test.ts`
 
 ## kits
@@ -96,7 +96,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Doc: `docs/AREA_MOBILE.md`
 - Pages: `/settings/kiosk-devices`
 - APIs: `/api/kiosk-devices/[id]/regenerate-code`, `/api/kiosk-devices/[id]`, `/api/kiosk-devices`, `/api/kiosk/activate`, `/api/kiosk/checkin/[id]/complete`, `/api/kiosk/checkin/[id]/quantity`, `/api/kiosk/checkin/[id]/scan`, `/api/kiosk/checkout/[id]`, `/api/kiosk/checkout/[id]/transfer`, `/api/kiosk/checkout/availability`
-- Services: `src/lib/services/kiosk-checkout-complete.ts`, `src/lib/services/kiosk-item-transfer.ts`, `src/lib/services/kiosk-location.ts`, `src/lib/services/kiosk-operation-receipts.ts`, `src/lib/services/kiosk-scan.ts`
+- Services: `src/lib/services/kiosk-checkout-complete.ts`, `src/lib/services/kiosk-item-transfer.ts`, `src/lib/services/kiosk-location.ts`, `src/lib/services/kiosk-operation-receipts.ts`, `src/lib/services/kiosk-pickup-substitute.ts`, `src/lib/services/kiosk-scan.ts`
 - Tests: `tests/bulk-unit-kiosk-scans.test.ts`, `tests/ios-accessibility-layout-hardening.test.ts`, `tests/ios-action-error-recovery.test.ts`, `tests/ios-all-day-calendar-date.test.ts`, `tests/ios-api-contract.test.ts`, `tests/ios-app-intents.test.ts`, `tests/ios-app-web-trust-contract.test.ts`, `tests/ios-appstate-refresh.test.ts`
 
 ## notifications

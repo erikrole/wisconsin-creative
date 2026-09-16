@@ -43,6 +43,7 @@ type Props = {
   canNudge: boolean;
   canForceComplete: boolean;
   canForceCheckout: boolean;
+  canCloseRemaining: boolean;
   canTransferOwner: boolean;
   canManageCustody: boolean;
   canEditEvents: boolean;
@@ -61,6 +62,7 @@ type Props = {
   onNudge: () => void;
   onForceComplete: () => void;
   onForceCheckout: () => void;
+  onCloseRemaining: () => void;
   onTransferOwner: () => void;
   onToggleCustody: () => void;
   onEditEvents: () => void;
@@ -115,6 +117,7 @@ export function BookingHeader({
   canNudge,
   canForceComplete,
   canForceCheckout,
+  canCloseRemaining,
   canTransferOwner,
   canManageCustody,
   canEditEvents,
@@ -133,11 +136,12 @@ export function BookingHeader({
   onNudge,
   onForceComplete,
   onForceCheckout,
+  onCloseRemaining,
   onTransferOwner,
   onToggleCustody,
   onEditEvents,
 }: Props) {
-  const hasSecondaryActions = canDuplicate || canCancel || canNudge || canForceComplete || canForceCheckout || canTransferOwner || canManageCustody || canEditEvents;
+  const hasSecondaryActions = canDuplicate || canCancel || canNudge || canForceComplete || canForceCheckout || canCloseRemaining || canTransferOwner || canManageCustody || canEditEvents;
   const hasPrimaryActions = canEdit || canExtend;
   const displayStatus = operationalBookingStatus(booking);
 
@@ -322,6 +326,15 @@ export function BookingHeader({
                           disabled={!!actionLoading}
                         >
                           Force checkout
+                        </PendingDropdownMenuItem>
+                      )}
+                      {canCloseRemaining && (
+                        <PendingDropdownMenuItem
+                          active={actionLoading === "close-remaining"}
+                          onSelect={onCloseRemaining}
+                          disabled={!!actionLoading}
+                        >
+                          Close without remaining gear
                         </PendingDropdownMenuItem>
                       )}
                       {canTransferOwner && (

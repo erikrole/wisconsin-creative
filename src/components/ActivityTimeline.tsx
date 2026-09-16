@@ -156,6 +156,7 @@ const EQUIPMENT_ACTIONS = new Set([
   "booking.items_added",
   "booking.items_removed",
   "booking.items_qty_changed",
+  "booking.item_substituted",
 ]);
 
 /** Human-readable field name labels */
@@ -312,6 +313,9 @@ const ACTION_COLORS: Record<string, ActionColorKey> = {
   partially_fulfilled_by_kiosk_pickup: "blue",
   admin_force_completed_checkout: "purple",
   admin_force_checkout: "purple",
+  reservation_closed_remaining_released: "purple",
+  completed_after_plan_edit: "green",
+  "booking.item_substituted": "amber",
   nudge_sent: "muted",
   overdue_nudge_sent: "muted",
   auto_completed_by_kiosk_checkin: "green",
@@ -364,6 +368,7 @@ const ACTION_ICONS: Record<string, LucideIcon> = {
   admin_override: ShieldAlert,
   admin_force_completed_checkout: ShieldAlert,
   admin_force_checkout: ShieldAlert,
+  reservation_closed_remaining_released: ShieldAlert,
   nudge_sent: Bell,
   overdue_nudge_sent: Bell,
   auto_escalation: Bell,
@@ -746,6 +751,12 @@ export function describeAction(
       return `${reportPrefix}Closed the checkout without a scan`;
     case "admin_force_checkout":
       return `${reportPrefix}Force-checked out the reservation without a kiosk scan`;
+    case "reservation_closed_remaining_released":
+      return `${reportPrefix}Closed the reservation and released the gear that was never picked up`;
+    case "completed_after_plan_edit":
+      return `${reportPrefix}Completed the reservation after the remaining gear was removed`;
+    case "booking.item_substituted":
+      return `${reportPrefix}Swapped a reserved item for the one scanned at pickup`;
     case "nudge_sent":
     case "overdue_nudge_sent":
       return `${reportPrefix}Sent a reminder`;

@@ -22,6 +22,7 @@ describe("iOS kiosk reservation pickup contract", () => {
     expect(studentRoute).toContain("...dueReservations.map");
     expect(detailRoute).toContain('booking.kind === "RESERVATION"');
     expect(scanRoute).toContain('booking.kind === "RESERVATION" && booking.status === "BOOKED"');
+    expect(scanRoute).toContain("substitution_available");
     expect(confirmRoute).toContain("sourceReservationId: sourceReservation.id");
 
     expect(models).toContain("struct KioskPendingPickup: Decodable, Identifiable");
@@ -67,6 +68,7 @@ describe("iOS kiosk reservation pickup contract", () => {
     expect(confirmRoute).toContain("stagedUnitNumbers");
     expect(confirmRoute).toContain("sourceReservationPickup: true");
     expect(confirmRoute).toContain("Partial pickup is only available for reservations");
+    expect(confirmRoute).toContain("remainingItemNames");
 
     // Already-done confirms read as success states, not raw status leaks.
     expect(confirmRoute).toContain("This reservation was already picked up");

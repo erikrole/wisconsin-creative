@@ -1,0 +1,792 @@
+diff --git a/ios/Wisconsin/Kiosk/KioskOperatorHubView.swift b/ios/Wisconsin/Kiosk/KioskOperatorHubView.swift
+index 290da50b..fd853949 100644
+--- a/ios/Wisconsin/Kiosk/KioskOperatorHubView.swift
++++ b/ios/Wisconsin/Kiosk/KioskOperatorHubView.swift
+@@ -8,6 +8,11 @@ struct KioskOperatorHubView: View {
+     @State private var isLoading = true
+     @State private var error: String?
+     @State private var selectedCheckout: KioskCheckoutDrawerContext?
++    @State private var selectedReservation: KioskReservation?
++    @State private var showMultiCheckoutReturn = false
++    @State private var pendingCheckoutScan: String?
++    @State private var pendingScanChoice: PendingScanChoice?
++    @State private var pendingCheckoutDespitePickup: PendingDirectCheckout?
+     @State private var scanFeedback: ScanRouteFeedback?
+     @State private var scanFeedbackDismissTask: Task<Void, Never>?
+     @State private var scanRouteTask: Task<Void, Never>?
+@@ -78,7 +83,7 @@ struct KioskOperatorHubView: View {
+         }
+         .kioskScreenPadding()
+         .overlay(alignment: .bottom) {
+-            if selectedCheckout == nil {
++            if selectedCheckout == nil && pendingScanChoice == nil && !showMultiCheckoutReturn {
+                 HIDScannerField(onScan: { store.scanner.receive($0) }).frame(width: 1, height: 1).opacity(0)
+             }
+         }
+@@ -94,6 +99,9 @@ struct KioskOperatorHubView: View {
+             if KioskFixtureScenario.active == .checkoutSheet, let first = context?.checkouts.first {
+                 selectedCheckout = drawerContext(for: first)
+             }
++            if KioskFixtureScenario.active == .operatorHubFinishPickup {
++                pendingCheckoutDespitePickup = .hero
++            }
+             #endif
+         }
+         .onDisappear {
+@@ -120,10 +128,12 @@ struct KioskOperatorHubView: View {
+                 await loadContext()
+             }
+         }
+-        .sheet(item: $selectedCheckout) { checkout in
++        .sheet(item: $selectedCheckout, onDismiss: { pendingCheckoutScan = nil }) { checkout in
+             KioskCheckoutDetailSheet(
+                 context: checkout,
+                 allowsEditing: true,
++                actor: user,
++                initialScanValue: pendingCheckoutScan,
+                 onReturn: {
+                     startReturn(checkout)
+                 }
+@@ -136,6 +146,66 @@ struct KioskOperatorHubView: View {
+             .presentationSizing(.page)
+             .presentationDragIndicator(.visible)
+         }
++        .sheet(item: $selectedReservation) { reservation in
++            KioskReservationItemsSheet(reservation: reservation, actor: user) {
++                Task { await loadContext() }
++            }
++            .presentationSizing(.page)
++        }
++        .sheet(isPresented: $showMultiCheckoutReturn) {
++            KioskMultiCheckoutReturnSheet(actor: user) {
++                Task { await loadContext() }
++            }
++            .presentationSizing(.page)
++        }
++        .confirmationDialog(
++            "Finish pickup first?",
++            isPresented: Binding(
++                get: { pendingCheckoutDespitePickup != nil },
++                set: { if !$0 { pendingCheckoutDespitePickup = nil } }
++            ),
++            titleVisibility: .visible
++        ) {
++            if let pickup = context?.pendingPickups.first {
++                Button("Continue Pickup") {
++                    pendingCheckoutDespitePickup = nil
++                    startPickup(id: pickup.id, title: pickup.title, startsAt: pickup.startsAt)
++                }
++            }
++            Button("Check Out Something Else") {
++                beginPendingDirectCheckout()
++            }
++            Button("Cancel", role: .cancel) {
++                pendingCheckoutDespitePickup = nil
++            }
++        } message: {
++            Text(remainingPickupPrompt)
++        }
++        .confirmationDialog(
++            "Choose what to do with this scan",
++            isPresented: Binding(
++                get: { pendingScanChoice != nil },
++                set: { if !$0 { pendingScanChoice = nil } }
++            ),
++            titleVisibility: .visible,
++            presenting: pendingScanChoice
++        ) { choice in
++            if choice.result.action == .checkout {
++                Button("Start a New Checkout") { beginResolvedFlow(choice) }
++                ForEach(context?.checkouts ?? []) { checkout in
++                    Button("Add to \(checkout.title)") {
++                        pendingCheckoutScan = choice.scan
++                        selectedCheckout = drawerContext(for: checkout)
++                        pendingScanChoice = nil
++                    }
++                }
++            } else {
++                Button(actionTitle(for: choice.result.action)) { beginResolvedFlow(choice) }
++            }
++            Button("Cancel", role: .cancel) { pendingScanChoice = nil }
++        } message: { choice in
++            Text(choice.result.item?.name ?? choice.result.message ?? "The scan is preserved until you choose a destination.")
++        }
+     }
+ 
+     // MARK: - Action Panel
+@@ -200,6 +270,17 @@ struct KioskOperatorHubView: View {
+ 
+                     if let checkouts = context?.checkouts, !checkouts.isEmpty {
+                         section("Out with you") {
++                            if checkouts.count > 1 {
++                                Button {
++                                    showMultiCheckoutReturn = true
++                                } label: {
++                                    Label("Return Across Checkouts", systemImage: "square.stack.3d.up.fill")
++                                        .frame(maxWidth: .infinity)
++                                }
++                                .kioskButtonRole(.secondary)
++                                .controlSize(.large)
++                                .accessibilityHint("Scan items and review a separate return for each checkout")
++                            }
+                             ForEach(checkouts) { checkout in
+                                 // The row is the booking, not a verb. Returning
+                                 // gear is the common case and now has its own
+@@ -225,9 +306,12 @@ struct KioskOperatorHubView: View {
+                     if let reservations = context?.reservations, !reservations.isEmpty {
+                         section("Coming up") {
+                             ForEach(reservations) { res in
+-                                ReservationCard(title: res.title, startsAt: res.startsAt) {
+-                                    startPickup(id: res.id, title: res.title, startsAt: res.startsAt)
+-                                }
++                                ReservationCard(
++                                    title: res.title,
++                                    startsAt: res.startsAt,
++                                    onEdit: { selectedReservation = res },
++                                    onPickup: { startPickup(id: res.id, title: res.title, startsAt: res.startsAt) }
++                                )
+                             }
+                         }
+                     }
+@@ -319,22 +403,55 @@ struct KioskOperatorHubView: View {
+     /// event row, and prefills due-back to 90 minutes after the event end —
+     /// so this lands on the details step with both required answers already filled.
+     private func startCheckout(for event: KioskCheckoutEvent) {
++        if hasRemainingPickup {
++            pendingCheckoutDespitePickup = .shift(event)
++            return
++        }
++        beginCheckout(event: event)
++    }
++
++    private func beginCheckout(event: KioskCheckoutEvent?) {
+         store.deferSleepMode()
+         store.resetInactivity()
+-        store.setIntent(KioskFlowIntent(
+-            action: .checkout,
+-            source: .event,
+-            identifiedUser: user,
+-            expectedRequester: nil,
+-            selectedEvent: KioskIntentEvent(id: event.id, title: event.title, endsAt: event.endsAt),
+-            targetBooking: nil,
+-            pendingScanValues: [],
+-            createdAt: Date(),
+-            ambiguity: .none
+-        ))
++        if let event {
++            store.setIntent(KioskFlowIntent(
++                action: .checkout,
++                source: .event,
++                identifiedUser: user,
++                expectedRequester: nil,
++                selectedEvent: KioskIntentEvent(id: event.id, title: event.title, endsAt: event.endsAt),
++                targetBooking: nil,
++                pendingScanValues: [],
++                createdAt: Date(),
++                ambiguity: .none
++            ))
++        } else {
++            store.setIntent(KioskFlowIntent(
++                action: .checkout,
++                source: .person,
++                identifiedUser: user,
++                expectedRequester: nil,
++                selectedEvent: nil,
++                targetBooking: nil,
++                pendingScanValues: [],
++                createdAt: Date(),
++                ambiguity: .none
++            ))
++        }
+         store.screen = .checkout(user: user)
+     }
+ 
++    private func beginPendingDirectCheckout() {
++        switch pendingCheckoutDespitePickup {
++        case .shift(let event):
++            pendingCheckoutDespitePickup = nil
++            beginCheckout(event: event)
++        case .hero, .none:
++            pendingCheckoutDespitePickup = nil
++            beginCheckout(event: nil)
++        }
++    }
++
+     /// Shifts are supplementary: a failure here greys one rail, it does not
+     /// take down the screen someone came to return gear on.
+     private func loadShifts() async {
+@@ -382,8 +499,11 @@ struct KioskOperatorHubView: View {
+             color: Color.kioskRed,
+             isHero: true
+         ) {
+-            store.setIntent(KioskFlowIntent(action: .checkout, source: .person, identifiedUser: user, expectedRequester: nil, selectedEvent: nil, targetBooking: nil, pendingScanValues: [], createdAt: Date(), ambiguity: .none))
+-            store.screen = .checkout(user: user)
++            if hasRemainingPickup {
++                pendingCheckoutDespitePickup = .hero
++            } else {
++                beginCheckout(event: nil)
++            }
+         }
+     }
+ 
+@@ -496,12 +616,53 @@ struct KioskOperatorHubView: View {
+     }
+ 
+     private var checkoutActionSubtitle: String {
++        if hasRemainingPickup {
++            let names = remainingPickupNames.prefix(2)
++            let head = names.joined(separator: ", ")
++            if head.isEmpty {
++                return "Finish remaining pickup first"
++            }
++            return "Still waiting: \(head)"
++        }
+         let count = store.cart(for: user.id).count
+         return count > 0
+             ? "Resume checkout · \(count) scanned item\(count == 1 ? "" : "s")"
+             : "Scan items to check out"
+     }
+ 
++    private var hasRemainingPickup: Bool {
++        !(context?.pendingPickups.isEmpty ?? true)
++    }
++
++    private var remainingPickupNames: [String] {
++        context?.pendingPickups.flatMap { pickup in
++            pickup.serializedItems.map(\.name) + pickup.bulkItems.map { item in
++                item.quantity == 1 ? item.name : "\(item.quantity) × \(item.name)"
++            }
++        } ?? []
++    }
++
++    private var remainingPickupPrompt: String {
++        let names = remainingPickupNames.prefix(4)
++        let head = names.joined(separator: ", ")
++        if head.isEmpty {
++            return "This person still has reserved gear waiting at pickup. Finish that pickup instead of starting a new checkout."
++        }
++        return "Still waiting for pickup: \(head). Finish that pickup instead of starting a new checkout."
++    }
++
++    private enum PendingDirectCheckout: Identifiable {
++        case hero
++        case shift(KioskCheckoutEvent)
++
++        var id: String {
++            switch self {
++            case .hero: return "hero"
++            case .shift(let event): return event.id
++            }
++        }
++    }
++
+     private func checkoutSubtitle(_ checkout: KioskStudentCheckout) -> String {
+         let names = checkout.items.prefix(2).map(\.name)
+         let head = names.joined(separator: ", ")
+@@ -613,30 +774,11 @@ struct KioskOperatorHubView: View {
+                 let result = try await KioskAPI.shared.kioskResolveScan(scanValue: scan, userId: user.id)
+                 try Task.checkCancellation()
+                 guard ownsScanRoute(requestToken) else { return }
+-                guard result.kind == "action", let action = result.action else {
++                guard result.kind == "action", result.action != nil else {
+                     showScanFeedback(.warning(result.message ?? "That item cannot start a flow for \(user.name)."))
+                     return
+                 }
+-                let intent = KioskFlowIntent(
+-                    action: action,
+-                    source: .scan,
+-                    identifiedUser: user,
+-                    expectedRequester: result.expectedRequester,
+-                    selectedEvent: nil,
+-                    targetBooking: result.booking.map { KioskIntentBooking(id: $0.id, title: $0.title, startsAt: $0.startsAt, endsAt: $0.endsAt) },
+-                    pendingScanValues: [scan],
+-                    createdAt: Date(),
+-                    ambiguity: .none
+-                )
+-                store.setIntent(intent)
+-                switch action {
+-                case .checkout: store.screen = .checkout(user: user)
+-                case .pickup:
+-                    if let id = result.booking?.id { store.screen = .pickup(bookingId: id, userId: user.id) }
+-                case .return:
+-                    if let id = result.booking?.id { store.screen = .return(bookingId: id, userId: user.id) }
+-                case .manage: break
+-                }
++                pendingScanChoice = PendingScanChoice(scan: scan, result: result)
+             } catch is CancellationError {
+                 // A newer scan or navigation away owns the screen now.
+             } catch {
+@@ -646,6 +788,40 @@ struct KioskOperatorHubView: View {
+         }
+     }
+ 
++    private func beginResolvedFlow(_ choice: PendingScanChoice) {
++        guard let action = choice.result.action else { return }
++        let booking = choice.result.booking
++        store.setIntent(KioskFlowIntent(
++            action: action, source: .scan, identifiedUser: user,
++            expectedRequester: choice.result.expectedRequester, selectedEvent: nil,
++            targetBooking: booking.map { KioskIntentBooking(id: $0.id, title: $0.title, startsAt: $0.startsAt, endsAt: $0.endsAt) },
++            pendingScanValues: [choice.scan], createdAt: Date(), ambiguity: .none
++        ))
++        pendingScanChoice = nil
++        switch action {
++        case .checkout: store.screen = .checkout(user: user)
++        case .pickup:
++            if let id = booking?.id { store.screen = .pickup(bookingId: id, userId: user.id) }
++        case .return:
++            if let id = booking?.id { store.screen = .return(bookingId: id, userId: user.id) }
++        case .manage:
++            if let id = booking?.id, let checkout = context?.checkouts.first(where: { $0.id == id }) {
++                pendingCheckoutScan = choice.scan
++                selectedCheckout = drawerContext(for: checkout)
++            }
++        }
++    }
++
++    private func actionTitle(for action: KioskFlowAction?) -> String {
++        switch action {
++        case .pickup: "Add to Reservation Pickup"
++        case .return: "Return to This Checkout"
++        case .manage: "Open This Checkout"
++        case .checkout: "Start a New Checkout"
++        case nil: "Continue"
++        }
++    }
++
+     /// A scanner response can mutate this flow only while it is still the
+     /// newest request and this exact student's hub owns both navigation and
+     /// scanner input. Cancellation is advisory, so every post-await publish
+@@ -966,11 +1142,11 @@ private struct ShiftCard: View {
+ private struct ReservationCard: View {
+     let title: String
+     let startsAt: Date
+-    let action: () -> Void
++    let onEdit: () -> Void
++    let onPickup: () -> Void
+ 
+     var body: some View {
+-        Button(action: action) {
+-            HStack(spacing: 14) {
++        HStack(spacing: 14) {
+                 VStack(spacing: 1) {
+                     Text(startsAt.formatted(.dateTime.day()))
+                         .font(.title2.weight(.heavy).monospacedDigit())
+@@ -994,17 +1170,22 @@ private struct ReservationCard: View {
+                         .foregroundStyle(KioskText.tertiary)
+                 }
+                 Spacer()
+-                Image(systemName: "chevron.right")
+-                    .font(.caption)
+-                    .foregroundStyle(KioskText.secondary)
+-                    .accessibilityHidden(true)
++                Button("Edit Items", action: onEdit)
++                    .kioskButtonRole(.secondary)
++                Button("Pick Up", action: onPickup)
++                    .kioskButtonRole(.primary)
++                    .accessibilityHint("Start pickup now")
+             }
+             .padding(12)
+             .kioskCard(KioskSurface.card, radius: KioskRadius.md, stroke: Color.statusText(.purple).opacity(0.3))
+-        }
+-        .buttonStyle(KioskPressStyle())
+         .accessibilityElement(children: .combine)
+         .accessibilityLabel("\(title), \(startsAt.formatted(date: .abbreviated, time: .shortened))")
+-        .accessibilityHint("Start pickup now")
++        .accessibilityHint("Edit reserved items or start pickup")
+     }
+ }
++
++private struct PendingScanChoice: Identifiable {
++    let id = UUID()
++    let scan: String
++    let result: KioskResolveScanResult
++}
+diff --git a/ios/Wisconsin/Kiosk/KioskPickupView.swift b/ios/Wisconsin/Kiosk/KioskPickupView.swift
+index 893adca7..b33dd07a 100644
+--- a/ios/Wisconsin/Kiosk/KioskPickupView.swift
++++ b/ios/Wisconsin/Kiosk/KioskPickupView.swift
+@@ -24,6 +24,9 @@ struct KioskPickupView: View {
+     @State private var confirmedItemOverrides: [String: KioskScanResult.ScannedItem] = [:]
+     @State private var earnedBadges: [EarnedBadgeReward] = []
+     @State private var scanQueue = KioskScanQueue()
++    @State private var showPartialConfirm = false
++    @State private var pendingSubstitution: KioskPickupSubstitution?
++    @State private var pendingSubstituteScan: String?
+ 
+     enum ScanFeedback: Equatable {
+         case success(String)
+@@ -54,7 +57,18 @@ struct KioskPickupView: View {
+     private var canConfirmPartial: Bool {
+         detail?.status == "BOOKED" && confirmedCount > 0 && !allConfirmed
+     }
+-    private var canConfirm: Bool { scanQueue.isEmpty && (allConfirmed || canConfirmPartial) }
++    private var canConfirm: Bool { scanQueue.isEmpty && allConfirmed }
++    private var remainingItems: [KioskCheckoutDetail.ReturnItem] {
++        detail?.items.filter { !confirmedIds.contains($0.id) } ?? []
++    }
++    private var remainingItemLabels: String {
++        remainingItems.map { item in
++            if let secondary = item.itemListSecondaryTitle {
++                return "\(item.itemListPrimaryTitle) · \(secondary)"
++            }
++            return item.itemListPrimaryTitle
++        }.joined(separator: ", ")
++    }
+     private var batteryTotal: Int { detail?.scanSummary?.numberedBulkTotal ?? detail?.numberedBulkItems.count ?? 0 }
+     private var confirmedBatteryCount: Int {
+         detail?.numberedBulkItems.filter { confirmedIds.contains($0.id) }.count ?? 0
+@@ -83,6 +97,18 @@ struct KioskPickupView: View {
+             store.scanner.claim(.pickup) { handleScan($0) }
+             await loadDetail()
+             replayPendingIntentScan()
++            #if DEBUG
++            // Capture hooks: leftover confirm and swap dialogs only exist after
++            // a real scan or tap, which no fixture payload can produce.
++            if KioskFixtureScenario.active == .reservationPartialConfirm {
++                showPartialConfirm = true
++            }
++            if KioskFixtureScenario.active == .reservationPickupSubstitute {
++                pendingSubstitution = KioskFixtures.pickupSubstitution
++                pendingSubstituteScan = "SUP-042"
++                lastResult = .error("SUP-042 is not on this reservation")
++            }
++            #endif
+         }
+         .onDisappear { scanQueue.reset(); store.scanner.release(.pickup) }
+         .sheet(isPresented: $showCamera) {
+@@ -126,16 +152,12 @@ struct KioskPickupView: View {
+                         VStack(spacing: 6) {
+                             Text(allConfirmed
+                                 ? "All items confirmed"
+-                                : canConfirmPartial
+-                                    ? "Ready to pick up selected items"
+-                                    : "Scan each item to confirm pickup")
++                                : "Scan each item to confirm pickup")
+                                 .font(KioskType.actionTitle)
+                                 .foregroundStyle(allConfirmed ? KioskStatus.ok : KioskText.primary)
+                                 .multilineTextAlignment(.center)
+                             if !allConfirmed {
+-                                Text(canConfirmPartial
+-                                    ? "Keep scanning to add more, or pick up the confirmed items now."
+-                                    : "Use the hand scanner, or tap Camera to scan with the iPad.")
++                                Text("Use the hand scanner, or tap Camera to scan with the iPad.")
+                                     .font(KioskType.rowDetail)
+                                     .foregroundStyle(KioskText.tertiary)
+                                     .multilineTextAlignment(.center)
+@@ -183,23 +205,60 @@ struct KioskPickupView: View {
+     }
+ 
+     private var confirmButton: some View {
+-        KioskCompletionButton(
+-            title: confirmButtonTitle,
+-            icon: allConfirmed || canConfirmPartial ? "checkmark.circle.fill" : "barcode.viewfinder",
+-            isEnabled: canConfirm,
+-            isBusy: isConfirming,
+-            busyTitle: "Confirming...",
+-            accessibilityLabel: confirmAccessibilityLabel,
+-            action: confirmPickup
+-        )
++        VStack(spacing: 12) {
++            KioskCompletionButton(
++                title: confirmButtonTitle,
++                icon: allConfirmed ? "checkmark.circle.fill" : "barcode.viewfinder",
++                isEnabled: canConfirm,
++                isBusy: isConfirming,
++                busyTitle: "Confirming...",
++                accessibilityLabel: confirmAccessibilityLabel,
++                action: { confirmPickup(partial: false) }
++            )
++            if canConfirmPartial {
++                Button("Pick up without remaining") {
++                    showPartialConfirm = true
++                }
++                .kioskButtonRole(.secondary)
++                .controlSize(.large)
++                .disabled(isConfirming || !scanQueue.isEmpty)
++                .accessibilityHint("Leaves \(remainingItemLabels) reserved for later")
++                .confirmationDialog(
++                    "Leave remaining gear reserved?",
++                    isPresented: $showPartialConfirm,
++                    titleVisibility: .visible
++                ) {
++                    Button("Pick Up Scanned Items") { confirmPickup(partial: true) }
++                    Button("Keep Scanning", role: .cancel) {}
++                } message: {
++                    Text("Still not scanned: \(remainingItemLabels). The scanned items will check out now. Remaining stays reserved.")
++                }
++            }
++        }
++        .confirmationDialog(
++            "Swap this item in?",
++            isPresented: Binding(
++                get: { pendingSubstitution != nil },
++                set: { if !$0 { pendingSubstitution = nil; pendingSubstituteScan = nil } }
++            ),
++            titleVisibility: .visible,
++            presenting: pendingSubstitution
++        ) { substitution in
++            Button("Use \(substitution.scanned.tagName)") {
++                Task { await confirmSubstitution(substitution) }
++            }
++            Button("Keep the reserved item", role: .cancel) {
++                pendingSubstitution = nil
++                pendingSubstituteScan = nil
++            }
++        } message: { substitution in
++            Text("This reservation asked for \(substitution.reserved.tagName). Use \(substitution.scanned.tagName) instead?")
++        }
+     }
+ 
+     private var confirmAccessibilityLabel: String {
+         if isConfirming { return "Confirming pickup" }
+         if allConfirmed { return "Confirm Pickup, \(totalItems) item\(totalItems == 1 ? "" : "s")" }
+-        if canConfirmPartial {
+-            return "Pick up \(confirmedCount) confirmed item\(confirmedCount == 1 ? "" : "s") now, or continue scanning"
+-        }
+         if remainingBatteryCount > 0 {
+             return "Scan \(remainingBatteryCount) more battery unit\(remainingBatteryCount == 1 ? "" : "s") before confirming"
+         }
+@@ -216,9 +275,6 @@ struct KioskPickupView: View {
+     /// already reports the unit sub-total; the CTA's job is the whole number.
+     private var confirmButtonTitle: String {
+         if allConfirmed { return "Confirm Pickup" }
+-        if canConfirmPartial {
+-            return "Pick Up \(confirmedCount) Item\(confirmedCount == 1 ? "" : "s")"
+-        }
+         let remaining = max(0, totalItems - confirmedCount)
+         return "Scan \(remaining) More Item\(remaining == 1 ? "" : "s")"
+     }
+@@ -421,6 +477,10 @@ struct KioskPickupView: View {
+                         )
+                         showFeedback(.success(result.locationMessage ?? item.name))
+                     }
++                } else if let substitution = result.substitution {
++                    pendingSubstituteScan = entry.value
++                    pendingSubstitution = substitution
++                    showFeedback(.error(result.error ?? "\(substitution.scanned.tagName) is not on this reservation"))
+                 } else {
+                     let isInBooking = items.contains { $0.tagName.lowercased() == entry.value.lowercased() || $0.id == entry.value }
+                     showFeedback(.error(result.error ?? (isInBooking ? "Already confirmed" : "Not in this pickup")))
+@@ -460,9 +520,13 @@ struct KioskPickupView: View {
+         }
+     }
+ 
+-    private func confirmPickup() {
+-        guard canConfirm, !isConfirming else { return }
+-        let isPartial = canConfirmPartial
++    private func confirmPickup(partial: Bool) {
++        guard !isConfirming else { return }
++        if partial {
++            guard canConfirmPartial, scanQueue.isEmpty else { return }
++        } else {
++            guard canConfirm else { return }
++        }
+         guard let flow = store.beginHandoff() else { return }
+         isConfirming = true
+         Task {
+@@ -471,18 +535,27 @@ struct KioskPickupView: View {
+                 let confirmation = try await KioskAPI.shared.kioskPickupConfirm(
+                     bookingId: bookingId,
+                     actorId: userId,
+-                    partial: isPartial
++                    partial: partial
+                 )
+                 guard store.ownsFlow(flow) else { return }
+                 earnedBadges.appendUnique(contentsOf: confirmation.earnedBadges ?? [])
+                 Haptics.success()
+                 let count = confirmation.itemCount
+                 let summary = count.map { "\($0) item\($0 == 1 ? "" : "s") checked out." } ?? "Your pickup is recorded."
++                let leftover = confirmation.remainingItemNames?.joined(separator: ", ")
++                let message: String
++                if confirmation.partial ?? partial {
++                    if let leftover, !leftover.isEmpty {
++                        message = "\(summary) Still reserved: \(leftover). Finish that pickup from Ready to pick up."
++                    } else {
++                        message = "\(summary) The remaining items are reserved for a later pickup."
++                    }
++                } else {
++                    message = summary
++                }
+                 store.screen = .success(KioskSuccessInfo(
+                     kind: .pickup,
+-                    message: (confirmation.partial ?? isPartial)
+-                        ? "\(summary) The remaining items are reserved for a later pickup."
+-                        : summary,
++                    message: message,
+                     earnedBadges: earnedBadges
+                 ))
+                 store.clearIntent(reason: .success)
+@@ -495,8 +568,44 @@ struct KioskPickupView: View {
+         }
+     }
+ 
+-    private func loadDetail() async {
+-        isLoading = true
++    private func confirmSubstitution(_ substitution: KioskPickupSubstitution) async {
++        guard let scanValue = pendingSubstituteScan, !isConfirming else { return }
++        let flow = store.flowGeneration
++        isConfirming = true
++        defer {
++            isConfirming = false
++            pendingSubstitution = nil
++            pendingSubstituteScan = nil
++        }
++        do {
++            let result = try await KioskAPI.shared.kioskPickupSubstitute(
++                bookingId: bookingId,
++                actorId: userId,
++                scanValue: scanValue,
++                reservedAssetId: substitution.reserved.id
++            )
++            guard store.ownsFlow(flow) else { return }
++            earnedBadges.appendUnique(contentsOf: result.earnedBadges ?? [])
++            await loadDetail(showLoading: false)
++            if result.success, let item = result.item {
++                lastConfirmedId = item.id
++                lastAccepted = KioskAcceptedScan(
++                    title: item.itemListPrimaryTitle,
++                    subtitle: item.itemListSecondaryTitle,
++                    progress: "\(confirmedIds.count) of \(totalItems) confirmed"
++                )
++                showFeedback(.success("Swapped \(substitution.reserved.tagName) for \(item.tagName)"))
++            } else {
++                showFeedback(.error(result.error ?? "Could not swap that item. Keep scanning."))
++            }
++        } catch {
++            let message = (error as? APIError)?.errorDescription ?? "Could not swap that item. Please try again."
++            showFeedback(.error(message))
++        }
++    }
++
++    private func loadDetail(showLoading: Bool = true) async {
++        if showLoading { isLoading = true }
+         error = nil
+         do {
+             let loaded = try await KioskAPI.shared.kioskCheckoutDetail(id: bookingId)
+diff --git a/ios/Wisconsin/KioskOnly/KioskOnlyApp.swift b/ios/Wisconsin/KioskOnly/KioskOnlyApp.swift
+index c872398c..1d81a823 100644
+--- a/ios/Wisconsin/KioskOnly/KioskOnlyApp.swift
++++ b/ios/Wisconsin/KioskOnly/KioskOnlyApp.swift
+@@ -64,7 +64,7 @@ struct WisconsinKioskApp: App {
+         switch scenario {
+         case .idle:
+             kioskStore.screen = .idle
+-        case .operatorHub, .checkoutSheet:
++        case .operatorHub, .checkoutSheet, .operatorHubFinishPickup:
+             kioskStore.screen = .operatorHub(kioskUser)
+         case .resume:
+             // The splash is a store state, not a screen, so it is the one
+@@ -117,6 +117,8 @@ struct WisconsinKioskApp: App {
+             kioskStore.screen = .pickup(bookingId: "co-1", userId: kioskUser.id)
+         case .reservationBatteryPickup:
+             kioskStore.screen = .pickup(bookingId: "rs-1", userId: kioskUser.id)
++        case .reservationPartialPickup, .reservationPartialConfirm, .reservationPickupSubstitute:
++            kioskStore.screen = .pickup(bookingId: "rs-partial", userId: kioskUser.id)
+         case .returnFlow, .returnAccepted:
+             kioskStore.screen = .return(bookingId: "co-1", userId: kioskUser.id)
+         case .identity:
+@@ -441,6 +443,14 @@ enum KioskFixtureScenario: String {
+     case pickup = "pickup"
+     /// Reservation pickup checklist with a quantity of numbered batteries.
+     case reservationBatteryPickup = "reservation-battery-pickup"
++    /// Reservation pickup with one leftover serialized item still unscanned.
++    case reservationPartialPickup = "reservation-partial-pickup"
++    /// The same leftover pickup with the explicit partial-confirm dialog open.
++    case reservationPartialConfirm = "reservation-partial-confirm"
++    /// Off-plan equivalent scan offering to swap onto the remaining reserved item.
++    case reservationPickupSubstitute = "reservation-pickup-substitute"
++    /// Operator hub asking to finish remaining pickup before a new checkout.
++    case operatorHubFinishPickup = "operator-hub-finish-pickup"
+     /// Return checklist.
+     case returnFlow = "return"
+     /// The return checklist in the moment right after a scan lands.
+@@ -764,7 +774,24 @@ enum KioskFixtures {
+     // MARK: Student context
+ 
+     static func studentContextJSON() -> String {
+-        """
++        let pendingPickups: String
++        if KioskFixtureScenario.active == .operatorHubFinishPickup {
++            pendingPickups = """
++            [{"id":"rs-partial","title":"WBB Practice","refNumber":"RS-0453",
++              "startsAt":"\(iso(hours(-1)))",
++              "serializedItems":[{"id":"it-5","tagName":"SUP-031","name":"Manfrotto 535 MPro Tripod"}],
++              "bulkItems":[]}]
++            """
++        } else {
++            pendingPickups = """
++            [{"id":"pk-1","title":"Wrestling Duals Kit","refNumber":"RS-2201",
++              "startsAt":"\(iso(hours(2)))",
++              "serializedItems":[{"id":"si-1","tagName":"CAM-009","name":"Sony A7S III"},
++                                 {"id":"si-2","tagName":"LNS-004","name":"Sigma 24-70mm"}],
++              "bulkItems":[{"name":"V-Mount Battery","quantity":2}]}]
++            """
++        }
++        return """
+         {"checkouts":[
+            {"id":"co-1","title":"Volleyball vs Minnesota","refNumber":"CO-1043",
+             "items":[{"name":"Sony FX3","tagName":"CAM-014"},
+@@ -776,13 +803,7 @@ enum KioskFixtures {
+                      {"name":"V-Mount Battery #4","tagName":"BAT-004"}],
+             "endsAt":"\(iso(at(-1, 15, 30)))","isOverdue":true}
+          ],
+-         "pendingPickups":[
+-           {"id":"pk-1","title":"Wrestling Duals Kit","refNumber":"RS-2201",
+-            "startsAt":"\(iso(hours(2)))",
+-            "serializedItems":[{"id":"si-1","tagName":"CAM-009","name":"Sony A7S III"},
+-                               {"id":"si-2","tagName":"LNS-004","name":"Sigma 24-70mm"}],
+-            "bulkItems":[{"name":"V-Mount Battery","quantity":2}]}
+-         ],
++         "pendingPickups":\(pendingPickups),
+          "reservations":[
+            {"id":"rs-1","title":"Senior Day Portraits","startsAt":"\(iso(hours(52)))"}
+          ]}
+@@ -791,10 +812,20 @@ enum KioskFixtures {
+ 
+     // MARK: Checkout detail
+ 
++    static let pickupSubstitution = KioskPickupSubstitution(
++        scanned: .init(id: "asset-755", name: "Manfrotto 755CX3 Tripod", tagName: "SUP-042"),
++        reserved: .init(id: "it-5", name: "Manfrotto 535 MPro Tripod", tagName: "SUP-031")
++    )
++
+     static func checkoutDetailJSON(id: String) -> String {
+         if KioskFixtureScenario.active == .reservationBatteryPickup {
+             return reservationBatteryPickupDetailJSON(id: id)
+         }
++        if KioskFixtureScenario.active == .reservationPartialPickup
++            || KioskFixtureScenario.active == .reservationPartialConfirm
++            || KioskFixtureScenario.active == .reservationPickupSubstitute {
++            return reservationPartialPickupDetailJSON(id: id)
++        }
+ 
+         return """
+         {"id":"\(id)","title":"Volleyball vs Minnesota","refNumber":"CO-1043","status":"OPEN",
+@@ -814,6 +845,26 @@ enum KioskFixtures {
+         """
+     }
+ 
++    static func reservationPartialPickupDetailJSON(id: String) -> String {
++        """
++        {"id":"\(id)","title":"WBB Practice","refNumber":"RS-0453","status":"BOOKED",
++         "requesterId":"\(primaryUser.id)","endsAt":"\(iso(hours(3)))",
++         "scanSummary":{"serializedTotal":5,"numberedBulkTotal":0,"numberedBulkCompleted":0},
++         "items":[
++           {"id":"it-1","tagName":"CAM-014","name":"Sony FX3","returned":true,"type":"serialized",
++            "bulkSkuId":null,"bulkSkuName":null,"unitNumber":null,"imageUrl":null},
++           {"id":"it-2","tagName":"LNS-012","name":"Sony 16-35mm","returned":true,
++            "type":"serialized","bulkSkuId":null,"bulkSkuName":null,"unitNumber":null,"imageUrl":null},
++           {"id":"it-3","tagName":"LNS-018","name":"Sony 70-200mm","returned":true,
++            "type":"serialized","bulkSkuId":null,"bulkSkuName":null,"unitNumber":null,"imageUrl":null},
++           {"id":"it-4","tagName":"MON-004","name":"Atomos Monitor","returned":true,
++            "type":"serialized","bulkSkuId":null,"bulkSkuName":null,"unitNumber":null,"imageUrl":null},
++           {"id":"it-5","tagName":"SUP-031","name":"Manfrotto 535 MPro Tripod","returned":false,
++            "type":"serialized","bulkSkuId":null,"bulkSkuName":null,"unitNumber":null,"imageUrl":null}
++         ]}
++        """
++    }
++
+     static func reservationBatteryPickupDetailJSON(id: String) -> String {
+         let batteryItems = (1...10).map { index in
+             """
