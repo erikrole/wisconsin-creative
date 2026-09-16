@@ -653,7 +653,7 @@ describe("scanKioskCheckinBulkUnit", () => {
     expect(result).toEqual({
       handled: true,
       success: false,
-      error: "Sony Battery #7 is checked out on another booking to Bucky Badger",
+      error: "Sony Battery #7 is already checked out to Bucky Badger",
       errorCode: "wrong_status",
     });
   });

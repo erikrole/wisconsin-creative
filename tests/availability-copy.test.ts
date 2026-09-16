@@ -5,6 +5,8 @@ import {
   availabilityRiskBadgeLabel,
   availabilityRiskMessage,
   formatAvailabilityDuration,
+  kioskAvailabilityBlockMessage,
+  kioskHeldItemMessage,
   upcomingCommitmentLabel,
 } from "@/lib/availability-copy";
 
@@ -67,6 +69,37 @@ describe("availability copy", () => {
       startsAt: "2026-09-12T19:00:00.000Z",
       endsAt: "2026-09-12T21:30:00.000Z",
     }, "FX3 2")).toBe("Maya Fitzgerald has checked out the FX3 2 until Sep 12 at 4:30 PM");
+
+    expect(availabilityBlockedItemMessage({
+      conflictingBookingRequesterName: "David Saddler",
+      conflictingBookingKind: "CHECKOUT",
+      conflictingBookingStatus: "PENDING_PICKUP",
+      startsAt: "2026-09-12T19:00:00.000Z",
+      endsAt: "2026-09-12T21:30:00.000Z",
+    }, "FX3 2")).toBe("David Saddler has a pending pickup for the FX3 2 until Sep 12 at 4:30 PM");
+  });
+
+  it("names kiosk add blocks for maintenance, shortage, and held units", () => {
+    expect(kioskAvailabilityBlockMessage({
+      unavailableAssets: [{ status: "MAINTENANCE" }],
+    }, "FX3 2")).toBe("FX3 2 is in maintenance");
+
+    expect(kioskAvailabilityBlockMessage({
+      shortages: [{ requested: 4, available: 1 }],
+    }, "Sony Battery")).toBe("Only 1 Sony Battery available; this request needs 4");
+
+    expect(kioskHeldItemMessage({
+      itemName: "Sony Battery #7",
+      holder: "Bucky Badger",
+      dueAt: "2026-09-12T21:30:00.000Z",
+      status: "OPEN",
+      kind: "CHECKOUT",
+    })).toBe("Bucky Badger has checked out the Sony Battery #7 until Sep 12 at 4:30 PM");
+
+    expect(kioskHeldItemMessage({
+      itemName: "Sony Battery #7",
+      holder: "Bucky Badger",
+    })).toBe("Sony Battery #7 is already checked out to Bucky Badger");
   });
 
   it("keeps timing, transfer, and condition notices distinct", () => {

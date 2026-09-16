@@ -22,6 +22,8 @@ const mocks = vi.hoisted(() => ({
   badgeOnCheckoutOpened: vi.fn(),
   earnedBadgesSince: vi.fn(),
   findPickupSubstitutionCandidate: vi.fn(),
+  preflightReservationPickupSerializedAdd: vi.fn(),
+  addAndStageReservationPickupSerialized: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -81,6 +83,11 @@ vi.mock("@/lib/services/kiosk-scan", () => ({
   findAssetByScanValue: mocks.findAssetByScanValue,
 }));
 
+vi.mock("@/lib/services/kiosk-pickup-add", () => ({
+  preflightReservationPickupSerializedAdd: mocks.preflightReservationPickupSerializedAdd,
+  addAndStageReservationPickupSerialized: mocks.addAndStageReservationPickupSerialized,
+}));
+
 vi.mock("@/lib/services/kiosk-pickup-substitute", () => ({
   findPickupSubstitutionCandidate: mocks.findPickupSubstitutionCandidate,
 }));
@@ -135,6 +142,15 @@ beforeEach(() => {
   mocks.scanEventFindFirst.mockResolvedValue(null);
   mocks.stageKioskReservationPickupBulkUnit.mockResolvedValue({ handled: false });
   mocks.findPickupSubstitutionCandidate.mockResolvedValue(null);
+  mocks.preflightReservationPickupSerializedAdd.mockResolvedValue({
+    ok: true,
+    item: { id: "asset-755", name: "Manfrotto 755CX3 Tripod", tagName: "Manfrotto 755CX3 Tripod" },
+  });
+  mocks.addAndStageReservationPickupSerialized.mockResolvedValue({
+    success: true,
+    addedToPlan: true,
+    item: { id: "asset-755", name: "Manfrotto 755CX3 Tripod", tagName: "Manfrotto 755CX3 Tripod" },
+  });
   mocks.createBooking.mockResolvedValue({ id: "checkout-1" });
   mocks.earnedBadgesSince.mockResolvedValue([]);
 });
@@ -579,6 +595,7 @@ describe("kiosk checkout detail bulk units", () => {
 
     expect(json.items).toEqual([{
       id: "asset-1",
+      reservationItemId: "serialized-1",
       tagName: "FX3 1",
       name: "Camera",
       returned: true,
@@ -810,7 +827,7 @@ describe("kiosk pickup serialized scan guard", () => {
     expect(mocks.scanEventCreate).not.toHaveBeenCalled();
   });
 
-  it("offers a substitution when an off-plan serialized scan can replace remaining reserved gear", async () => {
+  it("asks before adding an off-plan serialized scan to the reservation", async () => {
     mocks.bookingFindUnique.mockResolvedValue({
       id: "reservation-1",
       status: "BOOKED",
@@ -826,18 +843,6 @@ describe("kiosk pickup serialized scan guard", () => {
       categoryId: "tripods",
     });
     mocks.bookingSerializedItemFindUnique.mockResolvedValue(null);
-    mocks.findPickupSubstitutionCandidate.mockResolvedValue({
-      scanned: {
-        id: "asset-755",
-        name: "Manfrotto 755CX3 Tripod",
-        tagName: "Manfrotto 755CX3 Tripod",
-      },
-      reserved: {
-        id: "asset-535",
-        name: "Manfrotto 535 MPro Tripod",
-        tagName: "Manfrotto 535 MPro Tripod",
-      },
-    });
 
     const res = await scanKioskPickup(new Request("http://test", {
       method: "POST",
@@ -846,22 +851,52 @@ describe("kiosk pickup serialized scan guard", () => {
 
     expect(await res.json()).toEqual({
       success: false,
-      error: "Manfrotto 755CX3 Tripod is not on this reservation. Swap Manfrotto 535 MPro Tripod for it?",
-      errorCode: "substitution_available",
-      substitution: {
-        scanned: {
-          id: "asset-755",
-          name: "Manfrotto 755CX3 Tripod",
-          tagName: "Manfrotto 755CX3 Tripod",
-        },
-        reserved: {
-          id: "asset-535",
-          name: "Manfrotto 535 MPro Tripod",
-          tagName: "Manfrotto 535 MPro Tripod",
-        },
+      error: "Manfrotto 755CX3 Tripod is not on this reservation.",
+      errorCode: "add_available",
+      item: {
+        id: "asset-755",
+        name: "Manfrotto 755CX3 Tripod",
+        tagName: "Manfrotto 755CX3 Tripod",
       },
     });
+    expect(mocks.preflightReservationPickupSerializedAdd).toHaveBeenCalled();
+    expect(mocks.addAndStageReservationPickupSerialized).not.toHaveBeenCalled();
     expect(mocks.scanEventCreate).not.toHaveBeenCalled();
+  });
+
+  it("adds the off-plan item only after the operator confirms Add", async () => {
+    mocks.bookingFindUnique.mockResolvedValue({
+      id: "reservation-1",
+      status: "BOOKED",
+      kind: "RESERVATION",
+      requesterUserId: "user-1",
+      locationId: "loc-1",
+    });
+    mocks.findAssetByScanValue.mockResolvedValue({
+      id: "asset-755",
+      assetTag: "Manfrotto 755CX3 Tripod",
+      name: "Manfrotto 755CX3 Tripod",
+      type: "Tripod",
+      categoryId: "tripods",
+    });
+    mocks.bookingSerializedItemFindUnique.mockResolvedValue(null);
+
+    const res = await scanKioskPickup(new Request("http://test", {
+      method: "POST",
+      body: JSON.stringify({ scanValue: "755CX3", intent: "add" }),
+    }), routeCtx("reservation-1"));
+
+    expect(await res.json()).toEqual({
+      success: true,
+      addedToPlan: true,
+      item: {
+        id: "asset-755",
+        name: "Manfrotto 755CX3 Tripod",
+        tagName: "Manfrotto 755CX3 Tripod",
+      },
+    });
+    expect(mocks.addAndStageReservationPickupSerialized).toHaveBeenCalled();
+    expect(mocks.preflightReservationPickupSerializedAdd).not.toHaveBeenCalled();
   });
 
   it("blocks pickup confirmation until all serialized items are scanned", async () => {

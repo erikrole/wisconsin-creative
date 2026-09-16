@@ -51,6 +51,7 @@ struct KioskCheckoutDetailSheet: View {
     @State private var scannerCaptureEnabled = false
     @State private var activeMutation: ActiveMutation?
     @State private var pendingRemoval: KioskCheckoutDetail.ReturnItem?
+    @State private var pendingBlock: PendingBlockedAdd?
     @State private var mutationMessage: KioskMutationMessage?
     @State private var showCamera = false
     @State private var scanQueue = KioskScanQueue()
@@ -60,6 +61,12 @@ struct KioskCheckoutDetailSheet: View {
         case savingDetails
         case addingItem
         case removingItem
+    }
+
+    private struct PendingBlockedAdd: Identifiable {
+        let title: String
+        let message: String
+        var id: String { title + message }
     }
 
     private var isMutating: Bool {
@@ -72,6 +79,7 @@ struct KioskCheckoutDetailSheet: View {
             && !titleFocused
             && (activeMutation == nil || activeMutation == .addingItem)
             && pendingRemoval == nil
+            && pendingBlock == nil
             && !showCamera
     }
 
@@ -208,6 +216,27 @@ struct KioskCheckoutDetailSheet: View {
             }
         } message: { item in
             Text("This releases \(item.name) from \(context.requesterName)'s active checkout.")
+        }
+        .confirmationDialog(
+            pendingBlock?.title ?? "Can't add this item",
+            isPresented: Binding(
+                get: { pendingBlock != nil },
+                set: {
+                    if !$0 {
+                        pendingBlock = nil
+                        processNextScanIfNeeded()
+                    }
+                }
+            ),
+            titleVisibility: .visible,
+            presenting: pendingBlock
+        ) { _ in
+            Button("OK", role: .cancel) {
+                pendingBlock = nil
+                processNextScanIfNeeded()
+            }
+        } message: { blocked in
+            Text(blocked.message)
         }
     }
 
@@ -641,6 +670,14 @@ struct KioskCheckoutDetailSheet: View {
         }
     }
 
+    private func presentBlockedAdd(title: String, message: String) {
+        mutationMessage = nil
+        pendingBlock = PendingBlockedAdd(title: title, message: message)
+        Haptics.error()
+        KioskScanFeedbackSound.playFailure()
+        UIAccessibility.post(notification: .announcement, argument: message)
+    }
+
     private func saveDetails() async {
         guard activeMutation == nil, scanQueue.isEmpty else { return }
         guard let actorId else { return }
@@ -657,11 +694,21 @@ struct KioskCheckoutDetailSheet: View {
                 title: title,
                 endsAt: editEndsAt == detail?.endsAt ? nil : editEndsAt
             )
-            showMutationMessage(tone: result.success ? .success : .warning, text: result.message ?? result.error ?? "Checkout updated")
-            await load()
-            onChanged()
+            if result.success {
+                showMutationMessage(tone: .success, text: result.message ?? "Checkout updated")
+                await load()
+                onChanged()
+            } else {
+                presentBlockedAdd(
+                    title: "Can't update this checkout",
+                    message: result.error ?? result.message ?? "This checkout could not be updated."
+                )
+            }
         } catch {
-            showMutationMessage(tone: .error, text: (error as? APIError)?.errorDescription ?? "Could not update checkout")
+            presentBlockedAdd(
+                title: "Can't update this checkout",
+                message: (error as? APIError)?.errorDescription ?? "Could not update checkout"
+            )
         }
         activeMutation = nil
     }
@@ -676,7 +723,7 @@ struct KioskCheckoutDetailSheet: View {
     }
 
     private func processNextScanIfNeeded() {
-        guard activeMutation == nil, let entry = scanQueue.next() else { return }
+        guard activeMutation == nil, pendingBlock == nil, let entry = scanQueue.next() else { return }
         let generation = presentationGeneration
         Task {
             await addItem(scanValue: entry.value)
@@ -696,13 +743,21 @@ struct KioskCheckoutDetailSheet: View {
         do {
             let result = try await KioskAPI.shared.kioskAddActiveCheckoutItem(id: context.checkoutId, actorId: actorId, scanValue: value)
             guard presentationGeneration == generation else { return }
-            showMutationMessage(tone: result.success ? .success : .warning, text: result.message ?? result.error ?? "Scan handled")
             if result.success {
+                showMutationMessage(tone: .success, text: result.message ?? "Scan handled")
                 await load()
                 onChanged()
+            } else {
+                presentBlockedAdd(
+                    title: "Can't add this item",
+                    message: result.error ?? result.message ?? "This item cannot be added to this checkout."
+                )
             }
         } catch {
-            showMutationMessage(tone: .error, text: (error as? APIError)?.errorDescription ?? "Could not add item")
+            presentBlockedAdd(
+                title: "Can't add this item",
+                message: (error as? APIError)?.errorDescription ?? "Could not add item"
+            )
         }
         activeMutation = nil
     }

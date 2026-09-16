@@ -11,6 +11,7 @@ type UpdateBookingTx = {
   auditLog: Record<"create" | "createMany", MockFn>;
   user: Record<"findUnique", MockFn>;
   scanSession: Record<"updateMany", MockFn>;
+  scanEvent: Record<"updateMany", MockFn>;
   bulkStockBalance: Record<"findMany" | "upsert", MockFn>;
   bulkStockMovement: Record<"createMany", MockFn>;
 };
@@ -29,6 +30,7 @@ vi.mock("@/lib/db", () => {
     auditLog: { create: vi.fn(), createMany: vi.fn() },
     user: { findUnique: vi.fn().mockResolvedValue({ role: "ADMIN", active: true }) },
     scanSession: { updateMany: vi.fn() },
+    scanEvent: { updateMany: vi.fn() },
     bulkStockBalance: { findMany: vi.fn(), upsert: vi.fn() },
     bulkStockMovement: { createMany: vi.fn() },
   };
@@ -67,7 +69,7 @@ import { db } from "@/lib/db";
 import {
   MAX_EQUIPMENT_SELECTIONS_PER_REQUEST,
 } from "@/lib/request-limits";
-import { checkAvailability } from "@/lib/services/availability";
+import { checkAvailability, checkCheckoutDueTime } from "@/lib/services/availability";
 import { updateReservation, updateCheckout } from "@/lib/services/bookings";
 
 const mockTx = (db as unknown as { _mockTx: UpdateBookingTx })._mockTx;
@@ -137,6 +139,7 @@ beforeEach(() => {
   mockTx.auditLog.create.mockResolvedValue({});
   mockTx.auditLog.createMany.mockResolvedValue({});
   mockTx.scanSession.updateMany.mockResolvedValue({ count: 0 });
+  mockTx.scanEvent.updateMany.mockResolvedValue({ count: 0 });
   mockTx.bulkStockBalance.findMany.mockResolvedValue([{ bulkSkuId: "sku-1", onHandQuantity: 50 }]);
   mockTx.bulkStockBalance.upsert.mockResolvedValue({});
   mockTx.bulkStockMovement.createMany.mockResolvedValue({});
@@ -147,6 +150,11 @@ beforeEach(() => {
     upcomingCommitments: [],
     turnaroundRisks: [],
     bulkTurnaroundRisks: [],
+  });
+  vi.mocked(checkCheckoutDueTime).mockResolvedValue({
+    conflicts: [],
+    shortages: [],
+    unavailableAssets: [],
   });
 });
 
@@ -249,7 +257,7 @@ describe("updateReservation", () => {
       expect.objectContaining({ excludeBookingId: "r-1" })
     );
     expect(mockTx.assetAllocation.updateMany).toHaveBeenCalledWith({
-      where: { bookingId: "r-1" },
+      where: { bookingId: "r-1", active: true },
       data: {
         startsAt,
         endsAt: newEnd,
@@ -270,7 +278,7 @@ describe("updateReservation", () => {
 
     await expect(
       updateReservation("r-1", "actor-1", { endsAt: new Date("2026-04-11T17:00:00Z") })
-    ).rejects.toThrow("Availability conflict");
+    ).rejects.toThrow("Conflict with another booking");
   });
 
   it("maps commit-time allocation races to a booking conflict", async () => {
@@ -287,13 +295,11 @@ describe("updateReservation", () => {
 
     await updateReservation("r-1", "actor-1", { serializedAssetIds: ["a-1", "a-2"] });
 
-    expect(mockTx.bookingSerializedItem.deleteMany).toHaveBeenCalledWith({ where: { bookingId: "r-1" } });
-    expect(mockTx.assetAllocation.deleteMany).toHaveBeenCalledWith({ where: { bookingId: "r-1" } });
     expect(mockTx.bookingSerializedItem.createMany).toHaveBeenCalledWith({
-      data: expect.arrayContaining([
-        expect.objectContaining({ bookingId: "r-1", assetId: "a-1" }),
-        expect.objectContaining({ bookingId: "r-1", assetId: "a-2" }),
-      ]),
+      data: [expect.objectContaining({ bookingId: "r-1", assetId: "a-2" })],
+    });
+    expect(mockTx.assetAllocation.createMany).toHaveBeenCalledWith({
+      data: [expect.objectContaining({ bookingId: "r-1", assetId: "a-2" })],
     });
   });
 
@@ -308,12 +314,14 @@ describe("updateReservation", () => {
       }],
     });
 
-    expect(mockTx.bookingBulkItem.createMany).toHaveBeenCalledWith({
-      data: [{
+    expect(mockTx.bookingBulkItem.upsert).toHaveBeenCalledWith({
+      where: { bookingId_bulkSkuId: { bookingId: "r-1", bulkSkuId: "sku-numbered" } },
+      create: {
         bookingId: "r-1",
         bulkSkuId: "sku-numbered",
         plannedQuantity: MAX_EQUIPMENT_SELECTIONS_PER_REQUEST,
-      }],
+      },
+      update: { plannedQuantity: MAX_EQUIPMENT_SELECTIONS_PER_REQUEST },
     });
   });
 
@@ -348,12 +356,14 @@ describe("updateReservation", () => {
       bulkItems: [{ bulkSkuId: "sku-quantity", quantity: 1_000_000 }],
     });
 
-    expect(mockTx.bookingBulkItem.createMany).toHaveBeenCalledWith({
-      data: [{
+    expect(mockTx.bookingBulkItem.upsert).toHaveBeenCalledWith({
+      where: { bookingId_bulkSkuId: { bookingId: "r-1", bulkSkuId: "sku-quantity" } },
+      create: {
         bookingId: "r-1",
         bulkSkuId: "sku-quantity",
         plannedQuantity: 1_000_000,
-      }],
+      },
+      update: { plannedQuantity: 1_000_000 },
     });
   });
 
@@ -492,12 +502,10 @@ describe("updateCheckout", () => {
 
     await updateCheckout("c-1", "actor-1", { endsAt: newEnd });
 
-    expect(checkAvailability).toHaveBeenCalledWith(
+    expect(checkCheckoutDueTime).toHaveBeenCalledWith(
       mockTx,
-      expect.objectContaining({
-        excludeBookingId: "c-1",
-        enforceSerializedTurnaroundBuffer: false,
-      })
+      expect.objectContaining({ id: "c-1" }),
+      newEnd,
     );
     expect(mockTx.assetAllocation.updateMany).toHaveBeenCalledWith({
       where: { bookingId: "c-1" },
@@ -514,26 +522,24 @@ describe("updateCheckout", () => {
 
     await updateCheckout("c-1", "actor-1", { endsAt: earlierEnd });
 
-    expect(checkAvailability).toHaveBeenCalledWith(
+    expect(checkCheckoutDueTime).toHaveBeenCalledWith(
       mockTx,
-      expect.objectContaining({ enforceSerializedTurnaroundBuffer: true }),
+      expect.objectContaining({ id: "c-1" }),
+      earlierEnd,
     );
   });
 
   it("throws 409 on availability conflict", async () => {
     mockTx.booking.findUnique.mockResolvedValue(makeExistingCheckout());
-    vi.mocked(checkAvailability).mockResolvedValueOnce({
+    vi.mocked(checkCheckoutDueTime).mockResolvedValueOnce({
       conflicts: [{ assetId: "a-1", conflictingBookingId: "b-other", startsAt: new Date(), endsAt: new Date() }],
       shortages: [],
       unavailableAssets: [],
-      upcomingCommitments: [],
-      turnaroundRisks: [],
-      bulkTurnaroundRisks: [],
     });
 
     await expect(
       updateCheckout("c-1", "actor-1", { endsAt: new Date("2026-04-11T17:00:00Z") })
-    ).rejects.toThrow("Conflicts");
+    ).rejects.toThrow("Conflict with another booking");
   });
 
   it("rejects checkout equipment edits outside the kiosk service boundary", async () => {

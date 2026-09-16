@@ -2,6 +2,7 @@ import { AllocationKind, BookingCustodyScope, BookingKind, BookingStatus, Prisma
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
 import { createAuditEntryTx, lookupActorRole } from "@/lib/audit";
+import { kioskAvailabilityBlockMessage } from "@/lib/availability-copy";
 import { checkAvailability } from "@/lib/services/availability";
 import { findAssetByScanValue } from "@/lib/services/kiosk-scan";
 import { kioskRosterUserWhere } from "@/lib/user-visibility";
@@ -236,7 +237,11 @@ export async function substituteReservationPickupItem(args: {
       || availability.shortages.length > 0
       || availability.unavailableAssets.length > 0
     ) {
-      throw new HttpError(409, `${scanned.assetTag} is not available to swap onto this reservation`, availability);
+      throw new HttpError(
+        409,
+        kioskAvailabilityBlockMessage(availability, scanned.name || scanned.assetTag),
+        availability,
+      );
     }
 
     await tx.bookingSerializedItem.deleteMany({

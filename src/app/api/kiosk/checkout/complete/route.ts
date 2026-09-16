@@ -12,6 +12,7 @@ import { bulkRequestsFromCheckoutUnits, normalizeCheckoutCompleteItems } from "@
 import { findLeftoverReservationPickup, leftoverReservationPickupConflict } from "@/lib/services/reservation-pickup-guard";
 import { ACTIVE_BULK_UNIT_ALLOCATION_WHERE, CLAIMABLE_BULK_UNIT_WHERE, effectiveBulkUnitStatus } from "@/lib/bulk-unit-status";
 import { checkAvailability, type AvailabilityResult } from "@/lib/services/availability";
+import { kioskAvailabilityBlockMessage } from "@/lib/availability-copy";
 import { parseDateRange } from "@/lib/time";
 import { badges, earnedBadgesSince } from "@/lib/badges";
 import { scheduleCheckoutReturnLiveActivity } from "@/lib/live-activity-workflow";
@@ -183,7 +184,7 @@ export const POST = withKiosk(async (req, { kiosk }) => {
         if (hasBlockingAvailabilityIssue(availability)) {
           throw new HttpError(
             409,
-            "One or more items are not available for the selected return time",
+            kioskAvailabilityBlockMessage(availability, "item"),
             availability,
           );
         }

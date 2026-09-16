@@ -20,7 +20,8 @@ describe("kiosk active checkout edits", () => {
     expect(route).toContain("Prisma.TransactionIsolationLevel.Serializable");
     expect(route).toContain("createAuditEntryTx(tx");
     expect(route).toContain("itemName:");
-    expect(route).toContain("checkAvailability(tx");
+    expect(route).toContain("kioskAvailabilityBlockMessage");
+    expect(route).toContain("kioskHeldItemMessage");
     expect(route).toContain("excludeBookingId: booking.id");
     expect(route).toContain("findAssetByScanValue(scanValue");
     expect(route).toContain("findBulkUnitByScanValue(scanValue)");
@@ -57,7 +58,7 @@ describe("kiosk active checkout edits", () => {
     expect(drawer).toContain("DatePicker(");
     expect(drawer).toContain("await saveDetails()");
     expect(drawer).toContain("HIDScannerField(isEnabled: shouldListenForItemScans)");
-    expect(drawer).toContain("Task { await addItem(scanValue: value) }");
+    expect(drawer).toContain("enqueueScan(value)");
     expect(drawer).toContain("private func addItem(scanValue: String) async");
     expect(drawer).toContain("scannerCaptureEnabled");
     expect(drawer).toContain("!titleFocused");
@@ -74,6 +75,8 @@ describe("kiosk active checkout edits", () => {
     expect(drawer).toContain('.accessibilityLabel("Remove \\(item.itemListPrimaryTitle)")');
     expect(drawer).not.toContain('Label("Remove", systemImage: "minus.circle.fill")');
     expect(drawer).toContain('"Remove item from checkout?"');
+    expect(drawer).toContain('"Can\'t add this item"');
+    expect(drawer).toContain("presentBlockedAdd");
     expect(drawer).toContain("Task { await removeItem(item) }");
     expect(drawer).not.toContain('"Remove one"');
     expect(drawer).toContain("onChanged()");

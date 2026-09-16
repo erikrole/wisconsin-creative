@@ -22,7 +22,11 @@ describe("iOS kiosk reservation pickup contract", () => {
     expect(studentRoute).toContain("...dueReservations.map");
     expect(detailRoute).toContain('booking.kind === "RESERVATION"');
     expect(scanRoute).toContain('booking.kind === "RESERVATION" && booking.status === "BOOKED"');
-    expect(scanRoute).toContain("substitution_available");
+    expect(scanRoute).toContain("add_available");
+    expect(scanRoute).toContain("preflightReservationPickupSerializedAdd");
+    expect(scanRoute).toContain("addAndStageReservationPickupSerialized");
+    expect(scanRoute).toContain('intent === "add"');
+    expect(scanRoute).toContain("addedToPlan: true");
     expect(confirmRoute).toContain("sourceReservationId: sourceReservation.id");
 
     expect(models).toContain("struct KioskPendingPickup: Decodable, Identifiable");
@@ -31,7 +35,10 @@ describe("iOS kiosk reservation pickup contract", () => {
     expect(operatorHub).toContain("source: .reservation");
     expect(operatorHub).toContain('accessibilityHint("Start pickup now")');
     expect(apiClient).toContain("func kioskCheckoutDetail(id: String)");
-    expect(apiClient).toContain("func kioskPickupScan(bookingId: String, actorId: String, scanValue: String)");
+    expect(apiClient).toContain("func kioskPickupScan(");
+    expect(apiClient).toContain("intent: String? = nil");
+    expect(apiClient).toContain("func kioskPickupSubstitute(");
+    expect(apiClient).toContain("func kioskUpdateReservationItem(");
     expect(apiClient).toContain("Body(actorId: actorId, scanValue: scanValue)");
     expect(apiClient).toContain("func kioskPickupConfirm(");
     expect(apiClient).toContain("partial: Bool = false");
@@ -92,5 +99,26 @@ describe("iOS kiosk reservation pickup contract", () => {
     expect(pickupView).toContain("private var allConfirmed: Bool");
     expect(pickupView).toContain("private var canConfirmPartial: Bool");
     expect(pickupView).toContain("partial: isPartial");
+  });
+
+  it("prompts Add or Discard before an off-plan pickup scan mutates the reservation", () => {
+    const scanRoute = source("src/app/api/kiosk/pickup/[id]/scan/route.ts");
+    const pickupView = source("ios/Wisconsin/Kiosk/KioskPickupView.swift");
+    const add = source("src/lib/services/kiosk-pickup-add.ts");
+
+    expect(scanRoute).toContain('errorCode: "add_available"');
+    expect(scanRoute).not.toContain("findPickupSubstitutionCandidate");
+    expect(add).toContain("preflightReservationPickupSerializedAdd");
+    expect(add).toContain("kioskAvailabilityBlockMessage");
+    expect(add).toContain("kiosk_pickup_item_added");
+    expect(pickupView).toContain('"Add this item?"');
+    expect(pickupView).toContain('"Can\'t add this item"');
+    expect(pickupView).toContain("presentBlockedAdd");
+    expect(pickupView).toContain("blockedAddErrorCodes");
+    expect(pickupView).toContain('Button("Discard", role: .cancel)');
+    expect(pickupView).toContain("KioskScanFeedbackSound.playFailure()");
+    expect(pickupView).toContain("presentAddOrDiscard");
+    expect(pickupView).toContain("removeRemainingItem");
+    expect(pickupView).toContain('intent: "add"');
   });
 });
