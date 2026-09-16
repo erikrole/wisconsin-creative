@@ -84,7 +84,7 @@ describe("working-copy mutation guard", () => {
     expect(editor).not.toContain("Refresh from live");
   });
 
-  it("keeps the Admin publish-now override on the audited reconciliation path", () => {
+  it("keeps the Staff/Admin publish-now override on the audited reconciliation path", () => {
     const service = readFileSync("src/lib/services/schedule-publication.ts", "utf8");
     const route = readFileSync("src/app/api/shift-groups/[id]/publish/route.ts", "utf8");
     const editor = readFileSync("src/app/(app)/schedule/_components/WorkingCrewEditor.tsx", "utf8");
@@ -101,14 +101,17 @@ describe("working-copy mutation guard", () => {
     expect(workflow).toContain("autoReleaseError");
   });
 
-  it("keeps new position creation Admin-only while preserving other working-copy edits", () => {
+  it("shows position creation to Staff and Admins while preserving the API permission gate", () => {
     const route = readFileSync("src/app/api/shift-groups/[id]/working-copy/route.ts", "utf8");
     const editor = readFileSync("src/app/(app)/schedule/_components/WorkingCrewEditor.tsx", "utf8");
     const crewRow = readFileSync("src/components/shift-detail/crew-row.tsx", "utf8");
 
     expect(route).toContain('requirePermission(user.role, "shift", "manage_positions")');
     expect(route).toContain('body.command.type === "adjustSlots" && body.command.delta === 1');
-    expect(editor).toContain('currentUser?.role === "ADMIN"');
+    expect(editor).toContain('const canManageSchedule = currentUser?.role === "ADMIN" || currentUser?.role === "STAFF"');
+    expect(editor).toContain("action={canManageSchedule ? (");
+    expect(editor).toContain("canManageSchedule && emptyAreas.length > 0");
+    expect(editor).toContain("canManageSchedule && !eventHasEnded && data.hasWorkingCopy");
     expect(crewRow).toContain("New position");
   });
 });

@@ -43,7 +43,7 @@ describe("schedule assign source wiring", () => {
     expect(shiftDetail).toContain("Nothing changes until you apply.");
   });
 
-  it("keeps publish-now behind the Admin-only publication permission", () => {
+  it("keeps publish-now behind the explicit publication permission", () => {
     const publishRoute = readFileSync("src/app/api/shift-groups/[id]/publish/route.ts", "utf8");
     const acknowledgeRoute = readFileSync("src/app/api/shift-assignments/[id]/acknowledge/route.ts", "utf8");
 

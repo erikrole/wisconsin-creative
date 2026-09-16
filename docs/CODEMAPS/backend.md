@@ -19,7 +19,7 @@
 | `src/lib/services/booking-rules.ts` | 110 |
 | `src/lib/services/bookings-checkin.ts` | 854 |
 | `src/lib/services/bookings-helpers.ts` | 281 |
-| `src/lib/services/bookings-lifecycle.ts` | 2850 |
+| `src/lib/services/bookings-lifecycle.ts` | 2863 |
 | `src/lib/services/bookings-queries.ts` | 306 |
 | `src/lib/services/bookings.ts` | 8 |
 | `src/lib/services/bulk-assignment-batches.ts` | 252 |
@@ -44,7 +44,9 @@
 | `src/lib/services/game-record.ts` | 171 |
 | `src/lib/services/hidden-users-cleanup.ts` | 122 |
 | `src/lib/services/kiosk-checkout-complete.ts` | 90 |
+| `src/lib/services/kiosk-item-transfer.ts` | 95 |
 | `src/lib/services/kiosk-location.ts` | 72 |
+| `src/lib/services/kiosk-operation-receipts.ts` | 90 |
 | `src/lib/services/kiosk-scan.ts` | 36 |
 | `src/lib/services/kits.ts` | 329 |
 | `src/lib/services/licenses.ts` | 554 |
@@ -489,8 +491,10 @@
 
 - `/api/kiosk/activate`
 - `/api/kiosk/checkin/[id]/complete`
+- `/api/kiosk/checkin/[id]/quantity`
 - `/api/kiosk/checkin/[id]/scan`
 - `/api/kiosk/checkout/[id]`
+- `/api/kiosk/checkout/[id]/transfer`
 - `/api/kiosk/checkout/availability`
 - `/api/kiosk/checkout/complete`
 - `/api/kiosk/checkout/scan`
@@ -501,6 +505,7 @@
 - `/api/kiosk/me`
 - `/api/kiosk/pickup/[id]/confirm`
 - `/api/kiosk/pickup/[id]/scan`
+- `/api/kiosk/reservation/[id]/items`
 - `/api/kiosk/resolve-scan`
 - `/api/kiosk/scan-lookup`
 - `/api/kiosk/student/[userId]`

@@ -82,7 +82,11 @@ export async function transferKioskItems(args: {
     await tx.booking.update({ where: { id: source.id }, data: { updatedAt, ...(sourceClosed ? { status: "CANCELLED" } : {}) } });
     await tx.booking.update({ where: { id: receiving.id }, data: { updatedAt } });
     const evidence = { sourceBookingId: source.id, targetBookingId: receiving.id, assetIds: args.assetIds, bulkUnitIds: args.bulkUnitIds, reason: args.reason, kioskId: args.kioskId, originalEvidenceBookingId: source.id, sourceClosed };
-    for (const [entityId, action] of [[source.id, "kiosk_items_transferred_out"], [receiving.id, "kiosk_items_transferred_in"]]) await createAuditEntryTx(tx, { actorId: actor.id, actorRole: actor.role, entityType: "booking", entityId, action, before: { sourceSnapshot: source.updatedAt.toISOString(), custodyScope: source.custodyScope, requesterId: source.custodyScope === "PERSON" ? source.requesterUserId : null }, after: evidence });
+    const auditEntries: Array<[string, string]> = [
+      [source.id, "kiosk_items_transferred_out"],
+      [receiving.id, "kiosk_items_transferred_in"],
+    ];
+    for (const [entityId, action] of auditEntries) await createAuditEntryTx(tx, { actorId: actor.id, actorRole: actor.role, entityType: "booking", entityId, action, before: { sourceSnapshot: source.updatedAt.toISOString(), custodyScope: source.custodyScope, requesterId: source.custodyScope === "PERSON" ? source.requesterUserId : null }, after: evidence });
     const response = { success: true, targetBookingId: receiving.id, sourceClosed, itemCount: serialized.length + units.length, message: `${serialized.length + units.length} items transferred to ${target?.name ?? receiving.title}`, endsAt: receiving.endsAt };
     await finishKioskOperationReceiptTx(tx, args.receipt, response);
     return response;

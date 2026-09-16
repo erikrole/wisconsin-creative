@@ -960,18 +960,19 @@ These are non-negotiable integrity constraints. Every feature must preserve them
 
 ## D-046: Schedule Edits Release Automatically After a Ten-Minute Quiet Period
 - Date: 2026-08-07
-- Status: Accepted; amended 2026-09-08; implemented locally, rollout pending
+- Status: Accepted; amended 2026-09-15 for Staff slot creation and immediate publication
 - Context:
   - Manual Draft and Publish actions make routine staffing slower and create ambiguity about whether a visible name is actually on the worker-facing schedule.
   - Staff commonly make several assignment and slot changes together and need a short quiet period before workers see or receive churn.
   - The versioned working-copy model already provides safe staging, optimistic concurrency, atomic reconciliation, and compatibility with existing worker-facing relational reads.
 - Decision:
+  - Staff and Admins may create new Staff or Student slots. Students and collaborators cannot author or publish schedules.
   - Staff schedule edits remain private for ten minutes after the most recent edit. Every new edit restarts the quiet period.
   - When the live event `endsAt` is already past, the standard Schedule editor is the default backfill path: the mutation clears pending release metadata and publishes synchronously instead of entering the quiet period.
   - Each mutation pre-enqueues a version-specific durable Workflow run before committing the pending version. When it wakes, the run releases only if that exact version is still current; superseded runs no-op.
   - Release reconciles the pending copy into relational shifts and assignments atomically, updates the collaborator snapshot, preserves history and safety blockers, and sends at most one consolidated event notification per affected worker.
   - Past-event publication sends no schedule, follower, gear-prep, push, email, in-app, or badge notification. The resulting assignment is immediately Scoreboard-visible; result-less worked events contribute to the work total and event list but not to official W/L/T stats.
-  - Routine Draft, Publish, Republish, and Unacknowledged controls remain retired. Admins have an explicit `Publish now` exception for a pending future working copy; it uses the same version, blocker, serializable reconciliation, audit, and notification path while bypassing only the ten-minute wait.
+  - Routine Draft, Publish, Republish, and Unacknowledged controls remain retired. Staff and Admins have an explicit `Publish now` exception for a pending future working copy; it uses the same version, blocker, serializable reconciliation, audit, and notification path while bypassing only the ten-minute wait.
   - The relational schedule remains worker-facing truth. Until the quiet period completes, My Shifts, Dashboard, ICS, Open Work, Trade Board, collaborator Schedule, and existing iOS clients continue showing the last released version.
   - Active collaborators whose policy grants `PUBLISHED_SCHEDULE_VIEW` may be manually assigned to Staff slots. They remain outside Student availability, Open Work pickup, and Trade Board workflows, and reservation-created collaborator staffing remains excluded.
   - Only Student slots and Student assignments use configured call times. Staff and collaborator coverage retains the event window internally for integrity but exposes no call-time value, event-time substitute in the call-time position, editing control, or call-time notification copy.
@@ -980,7 +981,7 @@ These are non-negotiable integrity constraints. Every feature must preserve them
 - Consequences:
   - For future events, a name becomes worker-visible only after the ten-minute quiet period, at the same boundary that creates consolidated notification evidence.
   - For ended events, the same editing flow corrects the published schedule immediately without a second backfill control or any recipient notification.
-  - Operators can make several quick changes without notification churn or a routine publish ceremony; an Admin can intentionally release a pending future schedule when the operational need outweighs the wait.
+  - Operators can make several quick changes without notification churn or a routine publish ceremony; a Staff member or Admin can intentionally release a pending future schedule when the operational need outweighs the wait.
   - The staging table remains an internal reliability mechanism, but product surfaces no longer present a draft lifecycle.
 - Guardrails:
   - Never commit a pending schedule mutation unless its version-specific release run was successfully enqueued.

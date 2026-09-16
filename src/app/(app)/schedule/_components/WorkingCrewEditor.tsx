@@ -338,7 +338,7 @@ export function WorkingCrewEditor({
 }: Props) {
   const shiftGroupId = entry.shiftGroupId;
   const { data: currentUser } = useCurrentUser();
-  const isAdmin = currentUser?.role === "ADMIN";
+  const canManageSchedule = currentUser?.role === "ADMIN" || currentUser?.role === "STAFF";
   const [data, setData] = useState<EditorData | null>(null);
   const [loading, setLoading] = useState(true);
   const [editorLoadError, setEditorLoadError] = useState<LoadError>(false);
@@ -767,7 +767,7 @@ export function WorkingCrewEditor({
                 )}
               />
             )}
-            {isAdmin && !eventHasEnded && data.hasWorkingCopy && (
+            {canManageSchedule && !eventHasEnded && data.hasWorkingCopy && (
               <Button
                 type="button"
                 variant="outline"
@@ -810,7 +810,7 @@ export function WorkingCrewEditor({
                 area={area}
                 filled={slots.filter((slot) => slot.assignment).length}
                 total={slots.length}
-                action={isAdmin ? (
+                action={canManageSchedule ? (
                   <AddSlotMenu
                     area={area}
                     disabled={actionsDisabled}
@@ -970,7 +970,7 @@ export function WorkingCrewEditor({
             </section>
           );
         })}
-        {isAdmin && emptyAreas.length > 0 && (
+        {canManageSchedule && emptyAreas.length > 0 && (
           <div className={cn("flex items-center", compact ? "py-1" : "py-1.5")}>
             <Popover>
               <PopoverTrigger asChild>
