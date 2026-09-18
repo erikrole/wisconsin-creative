@@ -3,28 +3,34 @@
 ## Document Control
 - Area: Kits Management
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-06-20
+- Last Updated: 2026-09-17
 - Status: Active
 - Version: V1
 - Brief: `BRIEF_KIT_MANAGEMENT_V1.md`
-- Decision Refs: D-020 (kit-to-booking)
+- Decision Refs: D-020 (historical sequencing), D-062 (calling, exclusive membership, pickup aliases)
 
 ## Direction
-Enable staff to group related gear items into named kits for faster checkout workflows. Student scans kit QR or staff selects from kit dropdown during booking — all kit members are added to the booking in one action.
+Enable staff to name the cameras, lenses, and batteries each gameday position uses. Anyone who can create a reservation can call that kit from web, native iOS, or kiosk checkout. Selecting the kit expands every member into the booking’s item list on reservation create, or becomes the kiosk scan plan. `Booking.kitId` remains provenance (“this plan started from Slow 1”); the reserved/checked-out gear is the expanded serialized items and item families. The booking title stays the event name.
 
 ## Core Rules
 1. Kit is a named group of serialized items (via `KitMembership`) and/or bulk SKUs (via `KitBulkMembership`).
-2. Kits are location-scoped (tied to a `Location`).
-3. Staff (ADMIN/STAFF) can create, rename, describe, add/remove members, archive kits.
-4. Students can see kits via gear selection during booking and checkout flows.
-5. Archived kits are hidden by default but can be shown with filter toggle.
-6. Kit member count is displayed inline.
-7. Kit with zero members shows "Empty" status; non-empty kits show "Ready".
+2. Kits are location-scoped (tied to a `Location`). Camp Randall and Camp Randall Stadium are the same pickup for membership and calling.
+3. Staff (ADMIN/STAFF) can create, rename, describe, assign an optional sport, assign a football gameday job (Slow 1, Slow 2, Bench, Roam 1–4), duplicate, add/remove members, archive kits. Duplicate copies batteries and sport, not cameras and not the football job.
+4. Anyone with `kit.view` or collaborator `RESERVATION_CREATE` can list and call active kits. Students cannot include archived kits. Calling pickers hide empty kits and sort football jobs Slow 1 → Roam 4.
+5. Serialized membership is exclusive within a sport: two Football kits cannot share a camera; a Basketball kit may use that same body. Kits without a sport exclusive among themselves.
+6. At a pickup, including Camp Randall aliases, only one active kit may own each football job. Photo kits stay un-roled.
+7. Archived kits are hidden by default but can be shown with filter toggle.
+8. Kit member count is displayed inline.
+9. Kit with zero members shows "Empty" status; non-empty kits show "Ready".
+10. Selecting a kit on reservation create expands current members into booking lines when the client sent no equipment. An edited client list is kept as the source of truth. Empty and archived kits cannot be used. Direct kiosk checkout records `kitId` as provenance and still requires scanned items; the kit is the remaining-item checklist, not a silent cart fill.
+11. Reservation and kiosk calling can suggest the current kit for the requester’s last football job at that pickup.
+12. Kit member writes stay location-scoped: serialized items and item families must belong to the kit’s pickup group.
 
 ## Routes
 
 ### `/kits`
 - **Page:** `src/app/(app)/kits/page.tsx`
+- **Auth:** Staff/Admin only (`src/app/(app)/kits/layout.tsx` requires `kit.create`). Students and collaborators call kits from reservation create, not this authoring surface.
 - **Type:** List view with search, location filter, show archived toggle, pagination
 - **Components:**
   - `PageHeader` with "New Kit" button opens `NewKitSheet`
@@ -33,8 +39,8 @@ Enable staff to group related gear items into named kits for faster checkout wor
   - Location filter dropdown (loads from `/api/locations`)
   - Show archived checkbox
   - Clear filters button resets search, location, archived visibility, and sort state
-  - Desktop table: columns are Name (with description), Location, Contents count, Status, Updated date, Action
-  - Mobile card layout: compact link card per kit with name, status, content count, location
+  - Desktop table: columns are Name (with description), Location, Sport, Job, Contents count, Status, Updated date, Action
+  - Mobile card layout: compact link card per kit with name, status, content count, sport, job, location
   - Pagination: shows the visible result range and total
 - **Behaviors:**
   - Name and Open actions navigate to kit detail via real links
@@ -48,19 +54,20 @@ Enable staff to group related gear items into named kits for faster checkout wor
 - **Page:** `src/app/(app)/kits/[id]/page.tsx`
 - **Type:** Detail view — kit settings, member list (serialized), bulk member list
 - **Sections:**
-  1. **Header:** Shared `PageHeader` with kit name, location/content-count summary, archive/restore, delete, and back actions. Kit name, description, location, and created date remain editable/visible in the info card.
-  2. **Serialized Items:** Table of kit members (asset tag, name, brand/model, type, status, date added). Search bar. Add items via `EquipmentPicker` (shares code with booking flow). Remove button per row.
+  1. **Header:** Shared `PageHeader` with kit name, location/job/content-count summary, duplicate, archive/restore, delete, and back actions. Kit name, description, sport, football job, location, and created date remain editable/visible in the info card.
+  2. **Serialized Items:** Table of kit members (asset tag, name, brand/model, type, status, date added). Location-scoped search adds items at this kit’s location. Remove button per row.
   3. **Bulk Members:** Table of bulk SKU members (SKU name, category, unit, quantity). Search bar. Add bulk SKUs (quantity picker). Remove button per row.
-  4. **Actions:** Archive/unarchive kit. Delete kit (deletes all memberships).
+  4. **Actions:** Duplicate, archive/unarchive, delete kit (deletes all memberships).
 - **Behaviors:**
   - All edits are inline (name/description via `SaveableField` component)
-  - Add item opens equipment picker modal (same component as booking creation)
+  - Add serialized items through location-scoped search
   - Bulk operations: confirm dialog before remove/delete
   - 401 redirect on all mutations
   - Error toast + retry on mutation failure
 - **Data:**
   - GET `/api/kits/[id]` → `KitDetail` with members and bulkMembers arrays
-  - PATCH `/api/kits/[id]` → name, description, active flag
+  - PATCH `/api/kits/[id]` → name, description, active flag, optional sport, optional football job
+  - POST `/api/kits/[id]/clone` → duplicate kit, members, and item-family quantities at the same location
   - POST `/api/kits/[id]/members` → add serialized item (assetId)
   - DELETE `/api/kits/[id]/members/[membershipId]` → remove item
   - POST `/api/kits/[id]/bulk-members` → add bulk SKU (skuId, quantity)
@@ -69,14 +76,14 @@ Enable staff to group related gear items into named kits for faster checkout wor
 ### `/kits/new`
 - **Sheet:** `src/app/(app)/kits/new-kit-sheet.tsx` (opened via button on `/kits`)
 - **Type:** Modal dialog
-- **Fields:** Name (required), description (optional), location (dropdown)
+- **Fields:** Name (required), description (optional), location (dropdown), optional sport, optional football job (Slow 1, Slow 2, Bench, Roam 1–4) when the sport is Football
 - **Behaviors:** Submit creates kit; client/server validation appears inline; on success, the sheet shows explicit handoff actions to open the kit, return to the refreshed kits list, or create another kit.
 
 ## Data Model
 
 **Key tables:**
-- `Kit` — name, description, active (boolean), location FK, timestamps
-- `KitMembership` — kit FK, asset FK, timestamps (one-to-many to Kit)
+- `Kit` — name, description, optional `sportCode`, optional `gamedayRole` (football jobs Slow 1, Slow 2, Bench, Roam 1–4), active (boolean), location FK, timestamps
+- `KitMembership` — kit FK, asset FK, timestamps (one-to-many to Kit). Same-sport exclusivity is enforced in `SERIALIZABLE` kit writes, not a unique index, so Basketball and Football may share a camera.
 - `KitBulkMembership` — kit FK, bulk SKU FK, quantity, timestamps (one-to-many to Kit)
 
 ## Hardening Notes
@@ -91,10 +98,14 @@ See `AREA_ITEMS.md` 2026-04-06 entry for kit detail page hardening work:
 - [x] AC-2: Kits can contain serialized items and bulk SKUs
 - [x] AC-3: Kit membership add/remove with error handling
 - [x] AC-4: Kit QR generation for direct checkout flow (D-020)
-- [x] AC-5: Kits visible in booking equipment picker
+- [x] AC-5: Selecting a kit expands members into the reservation equipment list on web and native iOS; kiosk uses the kit as a scan checklist plus `kitId` provenance; the booking title stays the event name
 - [x] AC-6: Mobile kit list responsive; detail scrollable
+- [x] AC-7: Football kits can own Slow 1, Slow 2, Bench, or Roam 1–4 at a pickup; calling surfaces hide empty kits and can suggest last week’s job
 
 ## Change Log
+- 2026-09-17: **Football kits are Slow 1, Slow 2, Bench, and Roam 1–4.** Staff assign one of those jobs per pickup, including Camp Randall aliases. Duplicate copies batteries and sport, not the job. Reservation and kiosk pickers hide empty kits, label Slow 1–Roam 4, and suggest this week’s kit from the requester’s last football job. Photo kits stay un-roled. Local source/test; migrations `0149_kit_sport_code` and `0150_kit_gameday_role` are not applied to production; authenticated browser, iPhone 16 Pro, and physical kiosk proof remain open.
+- 2026-09-17: **Anyone can call a kit; exclusive per sport.** Active kits are callable from web reservation create, native iOS create, and kiosk checkout by any actor who can make a reservation. Authoring stays staff/admin. Optional `sportCode` scopes exclusive serialized membership so two Football kits cannot share a camera while Basketball may. Camp Randall and Camp Randall Stadium share kit pickup. Duplicate copies batteries and sport, not cameras. Reservation and checkout titles stay the event name. Kiosk kit pick is a scan checklist plus `kitId` provenance; scans remain the cart. Local source/test; authenticated browser, iPhone 16 Pro, and physical kiosk proof remain open.
+- 2026-09-16: **Gameday kit expansion.** Kits are named position templates. Reservation/checkout create expands current members into serialized and item-family booking lines; `kitId` stays provenance. The reservation wizard loads those items for review, kit detail can duplicate a kit and searches only the kit location, and member writes reject cross-location gear. Direct kiosk checkout still does not pick a kit; pickup uses the expanded reservation list.
 - 2026-07-10: **Kits operational status rail.** Active kit count now anchors the shared rail, empty kits surface as the actionable warning, and matching, active, archived, and empty totals remain under Details with the existing archived toggle and filters intact.
 - 2026-07-10: **Kits search typing stability.** The Kits list search now uses the shared `DebouncedSearchInput` and `useKitsQuery` keeps previous rows visible (`keepPreviousData`) while a changed search/filter refetches, so the full-page skeleton (which previously unmounted the search field and dropped focus on every committed keystroke) only appears on true first load. Regression guard: `tests/search-input-focus-stability.test.ts`.
 - 2026-06-20: Kit detail inline-edit rows inherit the refreshed shared `SaveableField` dirty-row treatment, preserving name/description save semantics while making pending save/cancel actions visually explicit and 40px target sized.

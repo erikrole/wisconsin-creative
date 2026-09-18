@@ -17,7 +17,9 @@ import { parseDateRange } from "@/lib/time";
 import { badges, earnedBadgesSince } from "@/lib/badges";
 import { scheduleCheckoutReturnLiveActivity } from "@/lib/live-activity-workflow";
 import { normalizeBookingTitle } from "@/lib/title-normalization";
+import { displayBookingTitle } from "@/lib/booking-display-title";
 import { normalizeCheckoutPolicies } from "@/lib/services/checkout-policies";
+import { loadKitEquipmentPlan } from "@/lib/services/kits";
 import { isSerializationConflict } from "@/lib/serialization";
 
 const MAX_SERIALIZABLE_ATTEMPTS = 2;
@@ -111,6 +113,12 @@ export const POST = withKiosk(async (req, { kiosk }) => {
           throw leftoverReservationPickupConflict(leftoverPickup);
         }
 
+        let resolvedKitId: string | null = null;
+        if (body.kitId) {
+          const kitPlan = await loadKitEquipmentPlan(tx, body.kitId, locationId);
+          resolvedKitId = kitPlan.kitId;
+        }
+
         // References come from the database sequence; the receipt key owns replay.
         const refNumber = await nextBookingRef(tx, "CO");
 
@@ -168,7 +176,7 @@ export const POST = withKiosk(async (req, { kiosk }) => {
         if (!rawTitle) {
           throw new HttpError(400, "Select an event or enter what this checkout is for");
         }
-        const title = normalizeBookingTitle(rawTitle);
+        const title = normalizeBookingTitle(displayBookingTitle(rawTitle));
         // The pickup kiosk is captured on `pickupKioskDeviceId`, so we no longer
         // duplicate it as a note. Keep only a real user-entered purpose.
         const notes = event && customPurpose ? `Purpose: ${customPurpose}` : null;
@@ -204,6 +212,7 @@ export const POST = withKiosk(async (req, { kiosk }) => {
             endsAt,
             refNumber,
             notes,
+            kitId: resolvedKitId,
             pickupKioskDeviceId: kiosk.kioskId,
           },
         });
@@ -364,6 +373,7 @@ export const POST = withKiosk(async (req, { kiosk }) => {
             kioskDeviceId: kiosk.kioskId,
             locationName: kiosk.locationName,
             eventId: body.eventId ?? null,
+            kitId: resolvedKitId,
             customPurpose: customPurpose ?? null,
             title: b.title,
             startsAt: b.startsAt.toISOString(),

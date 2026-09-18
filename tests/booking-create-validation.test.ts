@@ -57,6 +57,16 @@ describe("booking create validation", () => {
     expect(() => createReservationSchema.parse(basePayload)).toThrow("Add at least one piece of equipment");
   });
 
+  it("allows a kit-only reservation payload so the server can expand kit members", () => {
+    const parsed = createReservationSchema.parse({
+      ...basePayload,
+      kitId: ids.asset,
+    });
+    expect(parsed.kitId).toBe(ids.asset);
+    expect(parsed.serializedAssetIds).toEqual([]);
+    expect(parsed.bulkItems).toEqual([]);
+  });
+
   it("allows checkout conversion payloads to omit explicit equipment when sourceReservationId is present", () => {
     expect(() => createCheckoutSchema.parse({
       ...basePayload,

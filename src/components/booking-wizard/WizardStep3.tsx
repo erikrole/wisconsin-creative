@@ -36,6 +36,7 @@ type Props = {
   bulkSkus: BulkSkuOption[];
   itemCount: number;
   selectionState: EquipmentPickerSelectionState;
+  kitName?: string | null;
 };
 
 function eventDateLabel(ev: FormState["selectedEvents"][number]) {
@@ -76,6 +77,7 @@ export function WizardStep3({
   bulkSkus,
   itemCount,
   selectionState,
+  kitName,
 }: Props) {
   const locationName = locations.find((l) => l.id === form.locationId)?.name || "";
   const requester = users.find((u) => u.id === form.requester);
@@ -161,6 +163,9 @@ export function WizardStep3({
             <SummaryRow label="Equipment">
               <span className="tabular-nums">{itemCount} item{itemCount !== 1 ? "s" : ""}</span>
             </SummaryRow>
+            {kitName && (
+              <SummaryRow label="Kit">{kitName}</SummaryRow>
+            )}
           </div>
         </div>
       </div>
@@ -207,6 +212,9 @@ export function WizardStep3({
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-3">
         <div className="flex items-center gap-2.5">
           <h3 className="text-base font-semibold tracking-tight">Equipment</h3>
+          {kitName && (
+            <Badge variant="outline" size="sm">From {kitName}</Badge>
+          )}
         </div>
 
         {itemCount === 0 ? (

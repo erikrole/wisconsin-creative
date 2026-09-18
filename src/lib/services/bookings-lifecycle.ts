@@ -19,6 +19,7 @@ import {
   lookupActorRole,
 } from "@/lib/audit";
 import { checkAvailability, checkCheckoutDueTime, type BulkRequest } from "@/lib/services/availability";
+import { loadKitEquipmentPlan } from "@/lib/services/kits";
 import { kioskAvailabilityBlockMessage } from "@/lib/availability-copy";
 import { ACTIVE_BULK_UNIT_ALLOCATION_WHERE, CLAIMABLE_BULK_UNIT_WHERE, effectiveBulkUnitStatus } from "@/lib/bulk-unit-status";
 import { parseDerivedBulkUnitQr } from "@/lib/bulk-unit-qr";
@@ -538,6 +539,22 @@ export async function createBooking(input: CreateBookingInput) {
                   quantity: item.plannedQuantity
                 }));
               }
+            }
+          }
+
+          if (input.kitId && !input.sourceReservationPickup) {
+            const kitPlan = await loadKitEquipmentPlan(tx, input.kitId, input.locationId);
+            const hasClientEquipment =
+              resolvedSerializedAssetIds.length > 0 || resolvedBulkItems.length > 0;
+            if (!hasClientEquipment) {
+              resolvedSerializedAssetIds = kitPlan.serializedAssetIds;
+              resolvedBulkItems = kitPlan.bulkItems;
+            }
+            if (resolvedSerializedAssetIds.length === 0 && resolvedBulkItems.length === 0) {
+              throw new HttpError(
+                400,
+                `${kitPlan.name} has no cameras, lenses, or batteries yet. Add gear to the kit first.`,
+              );
             }
           }
 
@@ -1110,6 +1127,7 @@ export async function createBooking(input: CreateBookingInput) {
               sourceDraftId: input.sourceDraftId,
               eventIds: sortedEventIds,
               shiftAssignmentId: reservationScheduleAssignment?.shiftAssignmentId ?? input.shiftAssignmentId ?? null,
+              kitId: input.kitId ?? null,
             },
           });
 

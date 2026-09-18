@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { HttpError, ok } from "@/lib/http";
 import { requirePermission } from "@/lib/rbac";
 import { createAuditEntries, createAuditEntriesTx } from "@/lib/audit";
+import { addKitMembers } from "@/lib/services/kits";
 
 const bulkSchema = z
   .object({
@@ -215,35 +216,15 @@ export const POST = withAuth(async (req, { user }) => {
       throw new HttpError(400, "kitId required for add_to_kit");
     }
 
-    const kit = await db.kit.findUnique({ where: { id: body.kitId } });
-    if (!kit) throw new HttpError(404, "Kit not found");
-
-    // Skip assets already in this kit
-    const existing = await db.kitMembership.findMany({
-      where: { kitId: body.kitId, assetId: { in: ids } },
-      select: { assetId: true },
-    });
-    const existingIds = new Set(existing.map((e) => e.assetId));
-    const newIds = ids.filter((id) => !existingIds.has(id));
-
-    if (newIds.length > 0) {
-      await db.kitMembership.createMany({
-        data: newIds.map((assetId) => ({ kitId: body.kitId!, assetId })),
-      });
-    }
-    updated = newIds.length;
-
-    await createAuditEntries(
-      newIds.map((assetId) => ({
-        actorId: user.id,
-        actorRole: user.role,
-        entityType: "asset",
-        entityId: assetId,
-        action: "bulk_added_to_kit",
-        before: {},
-        after: { kitId: body.kitId! },
-      }))
+    requirePermission(user.role, "kit", "edit");
+    const { addedAssetIds } = await addKitMembers(
+      body.kitId,
+      ids,
+      user.id,
+      user.role,
+      { allowAlreadyMembers: true },
     );
+    updated = addedAssetIds.length;
   }
 
   return ok({ updated });

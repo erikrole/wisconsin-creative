@@ -141,8 +141,8 @@ export function BookingHeader({
   onToggleCustody,
   onEditEvents,
 }: Props) {
-  const hasSecondaryActions = canDuplicate || canCancel || canNudge || canForceComplete || canForceCheckout || canCloseRemaining || canTransferOwner || canManageCustody || canEditEvents;
-  const hasPrimaryActions = canEdit || canExtend;
+  const hasSecondaryActions = (canDuplicate && canEdit) || canCancel || canNudge || canForceComplete || canForceCheckout || canCloseRemaining || canTransferOwner || canManageCustody || canEditEvents;
+  const hasPrimaryActions = canEdit || canExtend || (canDuplicate && !canEdit);
   const displayStatus = operationalBookingStatus(booking);
 
   const eventLabel =
@@ -366,13 +366,13 @@ export function BookingHeader({
                           Edit linked events
                         </PendingDropdownMenuItem>
                       )}
-                      {canDuplicate && (
+                      {canDuplicate && canEdit && (
                         <PendingDropdownMenuItem
                           active={actionLoading === "duplicate"}
                           onSelect={onDuplicate}
                           disabled={!!actionLoading}
                         >
-                          Reuse gear for another event
+                          Re-reserve for another event
                         </PendingDropdownMenuItem>
                       )}
                       {canCancel && (
@@ -388,6 +388,16 @@ export function BookingHeader({
                     </DropdownMenuGroup>
                   </DropdownMenuContent>
                 </DropdownMenu>
+              )}
+              {canDuplicate && !canEdit && (
+                <Button
+                  variant="brand"
+                  className="h-10"
+                  onClick={onDuplicate}
+                  disabled={!!actionLoading}
+                >
+                  Re-reserve
+                </Button>
               )}
               {canEdit && (
                 <Button variant="outline" className="h-10" onClick={onEdit}>

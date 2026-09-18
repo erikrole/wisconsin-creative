@@ -116,7 +116,7 @@ describe("reservation convert custody boundary", () => {
 });
 
 describe("retired reservation duplicate endpoint", () => {
-  it("directs eligible callers to reuse gear in a new event context", async () => {
+  it("directs eligible callers to re-reserve in a new event context", async () => {
     const res = await duplicate(request(`/api/reservations/${RESERVATION_ID}/duplicate`), ctx());
     const body = await res.json();
 

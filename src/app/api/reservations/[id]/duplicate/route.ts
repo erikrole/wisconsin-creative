@@ -16,7 +16,7 @@ export const POST = withAuth<{ id: string }>(async (_req, { user, params }) => {
   const { id } = params;
 
   await requireBookingAction(id, user, "duplicate", BookingKind.RESERVATION);
-  throw new HttpError(409, "Choose a new event before reusing this reservation's gear", {
-    reuseUrl: `/reservations/new?reuseFrom=${encodeURIComponent(id)}`,
-  });
+    throw new HttpError(409, "Choose a new event before re-reserving this booking", {
+      reuseUrl: `/reservations/new?reuseFrom=${encodeURIComponent(id)}`,
+    });
 });

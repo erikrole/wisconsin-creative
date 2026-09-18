@@ -148,6 +148,20 @@ export default function BookingsPage() {
 
   const checkoutContextMenuExtras = useMemo<ContextMenuExtra[]>(() => [
     {
+      action: "duplicate",
+      label: "Re-reserve for another event",
+      kind: "CHECKOUT",
+      handler: async (bookingId) => {
+        if (actionBusyRef.current) return;
+        actionBusyRef.current = true;
+        try {
+          router.push(`/reservations/new?reuseFrom=${encodeURIComponent(bookingId)}`);
+        } finally {
+          actionBusyRef.current = false;
+        }
+      },
+    },
+    {
       action: "cancel",
       label: "Cancel checkout",
       kind: "CHECKOUT",
@@ -190,12 +204,12 @@ export default function BookingsPage() {
         }
       },
     },
-  ], [confirm]);
+  ], [confirm, router]);
 
   const reservationContextMenuExtras = useMemo<ContextMenuExtra[]>(() => [
     {
       action: "duplicate",
-      label: "Reuse gear for another event",
+      label: "Re-reserve for another event",
       kind: "RESERVATION",
       handler: async (bookingId) => {
         if (actionBusyRef.current) return;

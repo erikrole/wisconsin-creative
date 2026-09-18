@@ -29,10 +29,11 @@ import {
   type Location,
   type AvailableAsset,
   type BulkSkuOption,
+  type CalendarEvent,
 } from "@/components/booking-list/types";
 import type { FormState, FormAction } from "@/components/create-booking/types";
 import { applyDurationPreservingStartChange } from "@/components/create-booking/date-duration";
-import { useEventContext } from "@/components/create-booking/use-event-context";
+import { deriveReusedReservationWindow, useEventContext } from "@/components/create-booking/use-event-context";
 import { useDraftManagement } from "@/components/create-booking/use-draft-management";
 import { useKitFetching } from "@/components/create-booking/use-kit-fetching";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -223,7 +224,7 @@ export function BookingWizard() {
   }, [initialRequester, form.requester]);
 
   useEffect(() => {
-    if (preferredLocationLoadedRef.current || locations.length === 0 || !meData?.id) return;
+    if (reuseFromId || preferredLocationLoadedRef.current || locations.length === 0 || !meData?.id) return;
     preferredLocationLoadedRef.current = true;
     let preferred = "";
     try {
@@ -241,7 +242,7 @@ export function BookingWizard() {
     } else if (firstLocationId && (!form.locationId || locationNeedsReplacement)) {
       dispatch({ type: "SET_LOCATION_ID", value: firstLocationId });
     }
-  }, [firstLocationId, form.locationId, initialLocationId, locations, meData?.id]);
+  }, [firstLocationId, form.locationId, initialLocationId, locations, meData?.id, reuseFromId]);
 
   // A legacy or resumed draft may still carry a location that is no longer a
   // valid reservation pickup. Keep the draft editable instead of submitting a
@@ -270,19 +271,38 @@ export function BookingWizard() {
   );
   const [activeSection, setActiveSection] = useState<EquipmentSectionKey>(EQUIPMENT_SECTIONS[0]!.key);
   const reuseAppliedRef = useRef(false);
-  const { data: reuseSource } = useQuery({
+  const { data: reuseSource, isError: reuseSourceError, error: reuseSourceLoadError, refetch: refetchReuseSource } = useQuery({
     queryKey: ["reservationReuseSource", reuseFromId],
     enabled: Boolean(reuseFromId),
     queryFn: async ({ signal }) => {
-      const res = await fetch(`/api/bookings/${reuseFromId}`, { signal });
+      const res = await fetch(`/api/bookings/${reuseFromId}/reuse-plan`, { signal });
       if (handleAuthRedirect(res)) return null;
       if (!res.ok) throw new Error(await parseErrorMessage(res, "Could not load the source reservation."));
       const json = await parseJsonSafely<{
         data?: {
-          id: string;
+          sourceId: string;
           kind: string;
           title: string;
-          events?: Array<{ id: string }>;
+          notes: string | null;
+          requesterUserId: string;
+          requesterName: string | null;
+          custodyScope: "PERSON" | "SHARED";
+          locationId: string;
+          kitId: string | null;
+          kitName: string | null;
+          sportCode: string | null;
+          startsAt: string;
+          endsAt: string;
+          events: Array<{
+            id: string;
+            summary: string;
+            startsAt: string;
+            endsAt: string;
+            allDay: boolean;
+            sportCode: string | null;
+            opponent: string | null;
+            isHome: boolean | null;
+          }>;
           serializedItems: Array<{ asset: AvailableAsset }>;
           bulkItems: Array<{ bulkSku: { id: string }; plannedQuantity: number }>;
         };
@@ -290,10 +310,64 @@ export function BookingWizard() {
       return json?.data ?? null;
     },
   });
+  const deriveReuseSelection = useCallback((selectedEvents: CalendarEvent[], sport: string) => {
+    if (!reuseSource) return {};
+    return deriveReusedReservationWindow({
+      targetEvents: selectedEvents,
+      sourceEvents: reuseSource.events,
+      sourceStartsAt: reuseSource.startsAt,
+      sourceEndsAt: reuseSource.endsAt,
+      sourceTitle: reuseSource.title,
+      sport,
+    });
+  }, [reuseSource]);
 
   // ── Kit state ──
   const [kitId, setKitId] = useState<string>("");
-  const { kits, kitsLoading, kitsLoadError, retryKits } = useKitFetching({ locationId: form.locationId, open: true });
+  const requesterUserId = form.requester || meData?.id || "";
+  const { kits, suggestedKitId, kitsLoading, kitsLoadError, retryKits } = useKitFetching({
+    locationId: form.locationId,
+    requesterUserId,
+    open: true,
+  });
+  const appliedKitIdRef = useRef<string>("");
+  const reusePreserveKitRef = useRef(false);
+  const lastLocationIdRef = useRef(form.locationId);
+  const lastRequesterRef = useRef(requesterUserId);
+  const userClearedKitRef = useRef(false);
+  const didApplySuggestedKitRef = useRef(false);
+  const selectedKit = kits.find((kit) => kit.id === kitId) ?? null;
+  const { data: selectedKitDetail, error: selectedKitError, isFetching: selectedKitLoading } = useQuery({
+    queryKey: ["kitDetail", kitId],
+    enabled: Boolean(kitId),
+    queryFn: async ({ signal }) => {
+      const res = await fetch(`/api/kits/${kitId}`, { signal });
+      if (handleAuthRedirect(res)) return null;
+      if (!res.ok) throw new Error(await parseErrorMessage(res, "Could not load this kit."));
+      const json = await parseJsonSafely<{
+        data?: {
+          id: string;
+          name: string;
+          location: { id: string; name: string };
+          members: Array<{
+            asset: {
+              id: string;
+              assetTag: string;
+              name: string | null;
+              type: string;
+              brand: string;
+              model: string;
+              status: string;
+              imageUrl: string | null;
+              category: { name: string } | null;
+            };
+          }>;
+          bulkMembers: Array<{ quantity: number; bulkSku: { id: string } }>;
+        };
+      }>(res);
+      return json?.data ?? null;
+    },
+  });
 
   // ── Events + shift ──
   const { events, eventsLoading, eventsLoadError, retryEvents, myShiftForEvent, toggleEvent } = useEventContext({
@@ -303,6 +377,7 @@ export function BookingWizard() {
     selectedEvents: form.selectedEvents,
     initialEventId,
     dispatch,
+    deriveSelection: reuseFromId ? deriveReuseSelection : undefined,
   });
 
   const candidatePayload = useMemo(() => {
@@ -395,9 +470,97 @@ export function BookingWizard() {
       bulkSkuId: item.bulkSku.id,
       quantity: item.plannedQuantity,
     })));
+    preferredLocationLoadedRef.current = true;
+    lastLocationIdRef.current = reuseSource.locationId;
+    if (reuseSource.kitId) {
+      reusePreserveKitRef.current = true;
+      appliedKitIdRef.current = reuseSource.kitId;
+      didApplySuggestedKitRef.current = true;
+      userClearedKitRef.current = false;
+      setKitId(reuseSource.kitId);
+    }
     dispatch({ type: "SET_TIE_TO_EVENT", value: true });
-    dispatch({ type: "SET_TITLE", value: "" });
+    if (reuseSource.sportCode) {
+      dispatch({ type: "SET_SPORT", value: reuseSource.sportCode });
+    }
+    dispatch({ type: "SET_CUSTODY_SCOPE", value: reuseSource.custodyScope });
+    dispatch({ type: "SET_REQUESTER", value: reuseSource.requesterUserId });
+    dispatch({ type: "SET_LOCATION_ID", value: reuseSource.locationId });
+    dispatch({ type: "SET_NOTES", value: reuseSource.notes ?? "" });
+    dispatch({ type: "SET_TITLE", value: reuseSource.title });
+    if (snapshots.length === 0 && reuseSource.bulkItems.length === 0) {
+      setCreateError("This booking has no cameras, lenses, or batteries left to copy. Add gear on the next step.");
+    }
   }, [reuseSource]);
+
+  useEffect(() => {
+    if (lastLocationIdRef.current === form.locationId) return;
+    lastLocationIdRef.current = form.locationId;
+    setKitId("");
+    appliedKitIdRef.current = "";
+    userClearedKitRef.current = false;
+    didApplySuggestedKitRef.current = false;
+  }, [form.locationId]);
+
+  useEffect(() => {
+    if (lastRequesterRef.current === requesterUserId) return;
+    lastRequesterRef.current = requesterUserId;
+    if (reusePreserveKitRef.current) return;
+    setKitId("");
+    appliedKitIdRef.current = "";
+    userClearedKitRef.current = false;
+    didApplySuggestedKitRef.current = false;
+  }, [requesterUserId]);
+
+  useEffect(() => {
+    if (reusePreserveKitRef.current || userClearedKitRef.current || didApplySuggestedKitRef.current) return;
+    if (kitId || !suggestedKitId) return;
+    if (!kits.some((kit) => kit.id === suggestedKitId)) return;
+    didApplySuggestedKitRef.current = true;
+    setKitId(suggestedKitId);
+  }, [kits, suggestedKitId, kitId]);
+
+  useEffect(() => {
+    if (!kitId) {
+      if (!reusePreserveKitRef.current) appliedKitIdRef.current = "";
+      return;
+    }
+    if (selectedKitError) {
+      setCreateError(selectedKitError instanceof Error ? selectedKitError.message : "Could not load this kit.");
+      return;
+    }
+    if (!selectedKitDetail || selectedKitDetail.id !== kitId) return;
+    if (appliedKitIdRef.current === kitId) {
+      reusePreserveKitRef.current = false;
+      return;
+    }
+    appliedKitIdRef.current = kitId;
+
+    const snapshots: AvailableAsset[] = selectedKitDetail.members.map((member) => ({
+      id: member.asset.id,
+      assetTag: member.asset.assetTag,
+      name: member.asset.name ?? "",
+      brand: member.asset.brand,
+      model: member.asset.model,
+      serialNumber: "",
+      type: member.asset.type,
+      computedStatus: member.asset.status || "AVAILABLE",
+      imageUrl: member.asset.imageUrl,
+      categoryName: member.asset.category?.name ?? null,
+      location: selectedKitDetail.location,
+    }));
+    setSelectedAssetIds(snapshots.map((asset) => asset.id));
+    setSelectedAssetDetails(snapshots);
+    setSelectedBulkItems(selectedKitDetail.bulkMembers.map((member) => ({
+      bulkSkuId: member.bulkSku.id,
+      quantity: member.quantity,
+    })));
+    if (snapshots.length === 0 && selectedKitDetail.bulkMembers.length === 0) {
+      setCreateError(`${selectedKitDetail.name} has no cameras, lenses, or batteries yet. Add gear on the kit page first.`);
+    } else {
+      setCreateError("");
+    }
+  }, [form.title, kitId, selectedKitDetail, selectedKitError]);
 
   // Clears the error banner whenever the user edits any step-1 field.
   const step1Dispatch = useCallback((action: FormAction) => {
@@ -434,15 +597,21 @@ export function BookingWizard() {
     if (!form.locationId || !locations.some((location) => location.id === form.locationId)) {
       return "Choose a pickup location";
     }
-    if (reuseFromId && form.selectedEvents.length === 0) return "Choose the new event for this gear";
+    if (reuseFromId && form.selectedEvents.length === 0) return "Choose the new event for this reservation";
     if (
       reuseFromId
       && reuseSource?.events?.some((sourceEvent) => form.selectedEvents.some((event) => event.id === sourceEvent.id))
-    ) return "Choose a different event when reusing gear";
+    ) return "Choose a different event when re-reserving";
     const s = new Date(form.startsAt);
     const e = new Date(form.endsAt);
     if (isNaN(s.getTime()) || isNaN(e.getTime())) return "Invalid date. Check start and end times";
     if (e <= s) return "End date must be after start date";
+    if (kitId && (selectedKitLoading || appliedKitIdRef.current !== kitId)) {
+      return "Loading kit contents…";
+    }
+    if (kitId && selectedKitError) {
+      return selectedKitError instanceof Error ? selectedKitError.message : "Could not load this kit.";
+    }
     return null;
   }
 
@@ -762,10 +931,24 @@ export function BookingWizard() {
         </Alert>
       )}
 
+      {reuseSourceError && (
+        <Alert variant="destructive" className="mb-5">
+          <AlertCircleIcon />
+          <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+            <span>{reuseSourceLoadError instanceof Error ? reuseSourceLoadError.message : "Could not load the source reservation."}</span>
+            <Button variant="outline" onClick={() => void refetchReuseSource()} className="h-10 shrink-0">
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {reuseSource && (
         <Alert className="mb-5 border-[var(--purple-border)] bg-[var(--purple-bg)]">
           <AlertDescription>
-            Gear from “{reuseSource.title}” is loaded. Choose the new event and review availability before saving.
+            {reuseSource.custodyScope === "SHARED"
+              ? `Copied “${reuseSource.title}”. Choose this week’s event; pickup and return follow the same timing as last time.`
+              : `Copied “${reuseSource.title}”${reuseSource.requesterName ? ` for ${reuseSource.requesterName}` : ""}. Choose this week’s event; pickup and return follow the same timing as last time.`}
           </AlertDescription>
         </Alert>
       )}
@@ -820,7 +1003,11 @@ export function BookingWizard() {
           kitsLoading={kitsLoading}
           kitsLoadError={kitsLoadError}
           kitId={kitId}
-          setKitId={setKitId}
+          setKitId={(next) => {
+            userClearedKitRef.current = !next;
+            if (next) didApplySuggestedKitRef.current = true;
+            setKitId(next);
+          }}
           onRetryKits={retryKits}
           events={events}
           eventsLoading={eventsLoading}
@@ -845,6 +1032,7 @@ export function BookingWizard() {
           itemCount={itemCount}
           activeSection={activeSection}
           onActiveSectionChange={setActiveSection}
+          kitName={selectedKitDetail?.id === kitId ? selectedKitDetail.name : selectedKit?.name ?? null}
         />
       )}
 
@@ -859,6 +1047,7 @@ export function BookingWizard() {
           bulkSkus={bulkSkus}
           itemCount={itemCount}
           selectionState={pickerSelectionState}
+          kitName={selectedKitDetail?.id === kitId ? selectedKitDetail.name : selectedKit?.name ?? null}
         />
       )}
 

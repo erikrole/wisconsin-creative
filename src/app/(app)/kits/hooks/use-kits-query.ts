@@ -7,6 +7,8 @@ export type KitRow = {
   id: string;
   name: string;
   description: string | null;
+  sportCode: string | null;
+  gamedayRole: string | null;
   active: boolean;
   createdAt: string;
   updatedAt: string;

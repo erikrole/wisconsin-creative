@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ClockIcon, XIcon } from "lucide-react";
+import { callingKitLabel } from "@/lib/football-gameday-kits";
 import { SPORT_CODES, sportLabel } from "@/lib/sports";
 import { formatChipTime, formatDateTime } from "@/lib/format";
 import { formatCalendarEventDateRange } from "@/lib/calendar-event-dates";
@@ -32,6 +33,7 @@ import {
   type Location,
   type CalendarEvent,
 } from "@/components/booking-list/types";
+import type { BookingKitOption } from "@/components/create-booking/use-kit-fetching";
 import { MAX_SCROLL_HEIGHT } from "./constants";
 import type { FormState, FormAction, ShiftInfo } from "@/components/create-booking/types";
 
@@ -51,11 +53,11 @@ type Props = {
   config: WizardConfig;
   users: FormUser[];
   locations: Location[];
-  kits: { id: string; name: string }[];
+  kits: BookingKitOption[];
   kitsLoading: boolean;
   kitsLoadError: false | "network" | "server";
   kitId: string;
-  setKitId: Dispatch<SetStateAction<string>>;
+  setKitId: (value: string) => void;
   onRetryKits: () => void;
   events: CalendarEvent[];
   eventsLoading: boolean;
@@ -520,7 +522,7 @@ export function WizardStep1({
 
           {/* Kit (optional) */}
           {(kits.length > 0 || kitsLoading || kitsLoadError) && (
-            <Field label="Kit" htmlFor="booking-kit-trigger">
+            <Field label="Gameday kit" htmlFor="booking-kit-trigger">
               {kitsLoadError ? (
                 <Alert variant="destructive">
                   <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -535,23 +537,28 @@ export function WizardStep1({
                   Loading kits...
                 </div>
               ) : (
-                <Select
-                  name="booking-kit"
-                  value={kitId || "__none__"}
-                  onValueChange={(v) => setKitId(v === "__none__" ? "" : v)}
-                >
-                  <SelectTrigger id="booking-kit-trigger">
-                    <SelectValue placeholder="None" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">None</SelectItem>
-                    {kits.map((k) => (
-                      <SelectItem key={k.id} value={k.id}>
-                        {k.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <>
+                  <Select
+                    name="booking-kit"
+                    value={kitId || "__none__"}
+                    onValueChange={(v) => setKitId(v === "__none__" ? "" : v)}
+                  >
+                    <SelectTrigger id="booking-kit-trigger">
+                      <SelectValue placeholder="None" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">None</SelectItem>
+                      {kits.map((k) => (
+                        <SelectItem key={k.id} value={k.id}>
+                          {callingKitLabel(k)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Selecting a kit adds every camera, lens, and battery so you can review them before reserving. The reservation keeps the event name.
+                  </p>
+                </>
               )}
             </Field>
           )}

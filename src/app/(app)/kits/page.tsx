@@ -43,6 +43,8 @@ import { OperationalMetricCard } from "@/components/OperationalFeedback";
 import { OperationalStatusRail, type OperationalStatusRailItem } from "@/components/OperationalStatusRail";
 import { FadeUp } from "@/components/ui/motion";
 import { useFetch } from "@/hooks/use-fetch";
+import { footballGamedayKitRoleLabel } from "@/lib/football-gameday-kits";
+import { sportLabel } from "@/lib/sports";
 import { type KitRow, useKitsQuery } from "./hooks/use-kits-query";
 import { NewKitSheet } from "./new-kit-sheet";
 
@@ -136,7 +138,7 @@ function KitsLoadingState() {
     <>
       <PageHeader
         title="Kits"
-        description="Reusable gear groups for faster checkout and booking setup."
+        description="Named gameday gear lists for each position. Duplicate a kit, then swap cameras."
       />
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 4 }).map((_, index) => (
@@ -299,7 +301,7 @@ export default function KitsPage() {
     <FadeUp>
       <PageHeader
         title="Kits"
-        description="Reusable gear groups for faster checkout and booking setup."
+        description="Named gameday gear lists for each position. Duplicate a kit, then swap cameras."
       >
         <Button onClick={() => setSheetOpen(true)} size="lg" disabled={locationsLoading || Boolean(locationsError)}>
           <PlusIcon className="size-4" />
@@ -470,6 +472,10 @@ export default function KitsPage() {
                       {pluralize(counts.total, "content")}
                     </span>
                     <span>{formatContentDetail(kit)}</span>
+                    {kit.sportCode && <span>{sportLabel(kit.sportCode)}</span>}
+                    {footballGamedayKitRoleLabel(kit.gamedayRole) && (
+                      <span>{footballGamedayKitRoleLabel(kit.gamedayRole)}</span>
+                    )}
                     <span>{kit.location.name}</span>
                   </div>
                 </Link>
@@ -485,6 +491,8 @@ export default function KitsPage() {
                     <SortButton column="name">Name</SortButton>
                   </TableHead>
                   <TableHead>Location</TableHead>
+                  <TableHead>Sport</TableHead>
+                  <TableHead>Job</TableHead>
                   <TableHead className="text-center">
                     <SortButton column="memberCount" className="mx-auto">
                       Contents
@@ -518,6 +526,12 @@ export default function KitsPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-muted-foreground">{kit.location.name}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {kit.sportCode ? sportLabel(kit.sportCode) : "Any"}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {footballGamedayKitRoleLabel(kit.gamedayRole) ?? "—"}
+                      </TableCell>
                       <TableCell className="text-center">
                         <div className="flex flex-col items-center">
                           <Badge variant="secondary" className="tabular-nums">

@@ -12,6 +12,7 @@ import {
   ArchiveIcon,
   ArchiveRestoreIcon,
   ArrowLeftIcon,
+  CopyPlusIcon,
   XIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,13 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -50,6 +58,12 @@ import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/er
 import { useFetch } from "@/hooks/use-fetch";
 import { classifyAssetType, EQUIPMENT_SECTIONS } from "@/lib/equipment-sections";
 import type { EquipmentSectionKey } from "@/lib/equipment-sections";
+import { SPORT_CODES, sportLabel } from "@/lib/sports";
+import {
+  FOOTBALL_GAMEDAY_KIT_ROLE_OPTIONS,
+  FOOTBALL_SPORT_CODE,
+  footballGamedayKitRoleLabel,
+} from "@/lib/football-gameday-kits";
 
 // ── Types ─────────────────────────────────────────────────
 
@@ -85,10 +99,13 @@ type KitDetail = {
   id: string;
   name: string;
   description: string | null;
+  sportCode: string | null;
+  gamedayRole: string | null;
   active: boolean;
   createdAt: string;
   updatedAt: string;
   location: { id: string; name: string };
+  pickupLocationIds?: string[];
   members: KitMember[];
   bulkMembers: KitBulkMember[];
 };
@@ -172,6 +189,8 @@ export default function KitDetailPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [togglingActive, setTogglingActive] = useState(false);
+  const [cloning, setCloning] = useState(false);
+  const cloningRef = useRef(false);
 
   // ── Inline save handlers ────────────────────────────────
 
@@ -205,14 +224,55 @@ export default function KitDetailPage() {
     }, [id, setKit])
   );
 
+  const saveSport = useSaveField(
+    useCallback(async (value: string) => {
+      const leavingFootball = kit?.gamedayRole && value !== FOOTBALL_SPORT_CODE;
+      const res = await fetch(`/api/kits/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          leavingFootball
+            ? { sportCode: value || null, gamedayRole: null }
+            : { sportCode: value || null },
+        ),
+      });
+      if (handleAuthRedirect(res)) return;
+      if (!res.ok) throw new Error(await parseErrorMessage(res, "Failed to save kit sport"));
+      const json = await parseJsonSafely<{ data?: KitDetail }>(res);
+      if (!json?.data) throw new Error("Kit was saved, but the response was incomplete");
+      setKit(json.data);
+    }, [id, kit?.gamedayRole, setKit])
+  );
+
+  const saveGamedayRole = useSaveField(
+    useCallback(async (value: string) => {
+      const res = await fetch(`/api/kits/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          value
+            ? { sportCode: FOOTBALL_SPORT_CODE, gamedayRole: value }
+            : { gamedayRole: null },
+        ),
+      });
+      if (handleAuthRedirect(res)) return;
+      if (!res.ok) throw new Error(await parseErrorMessage(res, "Failed to save kit job"));
+      const json = await parseJsonSafely<{ data?: KitDetail }>(res);
+      if (!json?.data) throw new Error("Kit was saved, but the response was incomplete");
+      setKit(json.data);
+    }, [id, setKit])
+  );
+
   // ── Search for assets to add ────────────────────────────
 
   useEffect(() => {
-    if (!addSearch.trim() || addSearch.trim().length < 2) {
+    if (!kit?.location.id || !addSearch.trim() || addSearch.trim().length < 2) {
       setSearchResults([]);
       setSearchError("");
       return;
     }
+    const locationId = kit.location.id;
+    const pickupLocationIds = kit.pickupLocationIds?.length ? kit.pickupLocationIds : [locationId];
     const timer = setTimeout(async () => {
       searchAbort.current?.abort();
       const controller = new AbortController();
@@ -220,8 +280,11 @@ export default function KitDetailPage() {
       setSearching(true);
       setSearchError("");
       try {
+        const locationQuery = pickupLocationIds
+          .map((id) => `location_id=${encodeURIComponent(id)}`)
+          .join("&");
         const res = await fetch(
-          `/api/assets?q=${encodeURIComponent(addSearch.trim())}&limit=10`,
+          `/api/assets?q=${encodeURIComponent(addSearch.trim())}&${locationQuery}&limit=25`,
           { signal: controller.signal }
         );
         if (handleAuthRedirect(res)) return;
@@ -243,7 +306,7 @@ export default function KitDetailPage() {
       }
     }, 300);
     return () => clearTimeout(timer);
-  }, [addSearch, kit?.members]);
+  }, [addSearch, kit?.location.id, kit?.pickupLocationIds, kit?.members]);
 
   // ── Lazy-load location item families when the bulk add-search is first used ──
 
@@ -256,8 +319,11 @@ export default function KitDetailPage() {
       setBulkOptionsLoading(true);
       setBulkOptionsError("");
       try {
+        const locationQuery = (kit.pickupLocationIds?.length ? kit.pickupLocationIds : [kit.location.id])
+          .map((id) => `location_id=${encodeURIComponent(id)}`)
+          .join("&");
         const res = await fetch(
-          `/api/bulk-skus?location_id=${encodeURIComponent(kit.location.id)}&limit=200`,
+          `/api/bulk-skus?${locationQuery}&limit=200`,
         );
         if (handleAuthRedirect(res)) return;
         if (!res.ok) throw new Error(await parseErrorMessage(res, "Failed to load item families"));
@@ -430,6 +496,26 @@ export default function KitDetailPage() {
     }
   }
 
+  async function handleClone() {
+    if (cloningRef.current) return;
+    cloningRef.current = true;
+    setCloning(true);
+    try {
+      const res = await fetch(`/api/kits/${id}/clone`, { method: "POST" });
+      if (handleAuthRedirect(res)) return;
+      if (!res.ok) throw new Error(await parseErrorMessage(res, "Failed to duplicate kit"));
+      const json = await parseJsonSafely<{ data?: { id?: string; name?: string } }>(res);
+      if (!json?.data?.id) throw new Error("Kit was duplicated, but the response was incomplete");
+      toast.success(`Created ${json.data.name ?? "a copy"} without cameras. Add this position’s bodies — kits in the same sport cannot share a camera.`);
+      router.push(`/kits/${json.data.id}`);
+    } catch (err) {
+      toast.error((err as Error).message || "Failed to duplicate kit");
+    } finally {
+      cloningRef.current = false;
+      setCloning(false);
+    }
+  }
+
   // ── Group members by section ────────────────────────────
 
   const groupedMembers = kit
@@ -492,13 +578,18 @@ export default function KitDetailPage() {
     <FadeUp>
       <PageHeader
         title={kit.name}
-        description={`${kit.location.name} · ${kit.members.length + kit.bulkMembers.length} total contents`}
+        description={`${kit.location.name}${footballGamedayKitRoleLabel(kit.gamedayRole) ? ` · ${footballGamedayKitRoleLabel(kit.gamedayRole)}` : kit.sportCode ? ` · ${sportLabel(kit.sportCode)}` : ""} · ${kit.members.length + kit.bulkMembers.length} total contents`}
       >
         <Button variant="outline" className="h-10" onClick={() => router.push("/kits")}>
           <ArrowLeftIcon className="size-4" />
           Back
         </Button>
         {!kit.active && <Badge variant="outline" className="h-10 px-3">Archived</Badge>}
+        <Button variant="outline" className="h-10" onClick={handleClone} disabled={cloning || togglingActive || deleting}>
+            {cloning && <Spinner data-icon="inline-start" />}
+            <CopyPlusIcon className="mr-2 size-4" />
+            Duplicate
+        </Button>
         <Button variant="outline" className="h-10" onClick={handleToggleActive} disabled={togglingActive || deleting}>
             {togglingActive && <Spinner data-icon="inline-start" />}
             {kit.active ? (
@@ -540,6 +631,50 @@ export default function KitDetailPage() {
                 }}
               />
             </SaveableField>
+            <SaveableField label="Sport" status={saveSport.status} htmlFor="kit-sport">
+              <Select
+                value={kit.sportCode || "__none__"}
+                onValueChange={(value) => {
+                  const next = value === "__none__" ? "" : value;
+                  if (next !== (kit.sportCode ?? "")) saveSport.save(next);
+                }}
+              >
+                <SelectTrigger id="kit-sport">
+                  <SelectValue placeholder="Any sport" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Any sport</SelectItem>
+                  {SPORT_CODES.map((sport) => (
+                    <SelectItem key={sport.code} value={sport.code}>
+                      {sportLabel(sport.code)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </SaveableField>
+            {(kit.sportCode === FOOTBALL_SPORT_CODE || kit.gamedayRole) && (
+              <SaveableField label="Job" status={saveGamedayRole.status} htmlFor="kit-job">
+                <Select
+                  value={kit.gamedayRole || "__none__"}
+                  onValueChange={(value) => {
+                    const next = value === "__none__" ? "" : value;
+                    if (next !== (kit.gamedayRole ?? "")) saveGamedayRole.save(next);
+                  }}
+                >
+                  <SelectTrigger id="kit-job">
+                    <SelectValue placeholder="None" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">None</SelectItem>
+                    {FOOTBALL_GAMEDAY_KIT_ROLE_OPTIONS.map((role) => (
+                      <SelectItem key={role.value} value={role.value}>
+                        {role.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </SaveableField>
+            )}
             <SaveableField label="Location">
               <Badge variant="secondary">{kit.location.name}</Badge>
             </SaveableField>
@@ -568,7 +703,7 @@ export default function KitDetailPage() {
                   id="kit-add-member-search"
                   name="kitAddMemberSearch"
                   aria-label="Search items to add"
-                  placeholder="Search items to add…"
+                  placeholder="Search items at this pickup to add…"
                   value={addSearch}
                   onChange={(e) => setAddSearch(e.target.value)}
                   className="pl-9 pr-9"
@@ -626,7 +761,7 @@ export default function KitDetailPage() {
                 <EmptyState
                   icon="search"
                   title="No matching items"
-                  description="Try a different tag, name, brand, or model."
+                  description="Try a different tag, name, brand, or model at this location."
                   inline
                 />
               )}
@@ -637,7 +772,7 @@ export default function KitDetailPage() {
               <EmptyState
                 icon="box"
                 title="No items in this kit"
-                description="Search above to add equipment to this kit."
+                description="Search above to add the cameras, lenses, and other serialized gear this position uses."
               />
             ) : (
               groupedMembers &&
@@ -861,7 +996,7 @@ export default function KitDetailPage() {
                 <EmptyState
                   icon="box"
                   title="No item families in this kit"
-                  description="Search above to add quantity-tracked or unit-tracked item families."
+                  description="Search above to add batteries and other counted item families this position uses."
                   inline
                 />
               )}

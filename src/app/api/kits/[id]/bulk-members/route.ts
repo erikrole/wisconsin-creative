@@ -1,8 +1,7 @@
 import { withAuth } from "@/lib/api";
-import { db } from "@/lib/db";
 import { HttpError, ok } from "@/lib/http";
 import { requirePermission } from "@/lib/rbac";
-import { createAuditEntry } from "@/lib/audit";
+import { addKitBulkMember, removeKitBulkMember } from "@/lib/services/kits";
 import { z } from "zod";
 
 const addBulkMemberSchema = z.object({
@@ -13,26 +12,7 @@ const addBulkMemberSchema = z.object({
 export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
   requirePermission(user.role, "kit", "edit");
   const body = addBulkMemberSchema.parse(await req.json());
-
-  const kit = await db.kit.findUnique({ where: { id: params.id } });
-  if (!kit) throw new HttpError(404, "Kit not found");
-
-  const membership = await db.kitBulkMembership.upsert({
-    where: { kitId_bulkSkuId: { kitId: params.id, bulkSkuId: body.bulkSkuId } },
-    create: { kitId: params.id, bulkSkuId: body.bulkSkuId, quantity: body.quantity },
-    update: { quantity: body.quantity },
-    include: { bulkSku: { select: { id: true, name: true, category: true, unit: true, imageUrl: true } } },
-  });
-
-  await createAuditEntry({
-    actorId: user.id,
-    actorRole: user.role,
-    entityType: "kit",
-    entityId: params.id,
-    action: "bulk_member_added",
-    after: { bulkSkuId: body.bulkSkuId, quantity: body.quantity },
-  });
-
+  const membership = await addKitBulkMember(params.id, body, user.id, user.role);
   return ok({ data: membership }, 201);
 });
 
@@ -41,31 +21,6 @@ export const DELETE = withAuth<{ id: string }>(async (req, { user, params }) => 
   const { searchParams } = new URL(req.url);
   const membershipId = searchParams.get("membershipId");
   if (!membershipId) throw new HttpError(400, "membershipId required");
-
-  const membership = await db.kitBulkMembership.findUnique({
-    where: { id: membershipId },
-    include: { bulkSku: { select: { id: true, name: true, unit: true } } },
-  });
-  if (!membership || membership.kitId !== params.id) {
-    throw new HttpError(404, "Bulk membership not found");
-  }
-
-  await db.kitBulkMembership.delete({ where: { id: membershipId } });
-
-  await createAuditEntry({
-    actorId: user.id,
-    actorRole: user.role,
-    entityType: "kit",
-    entityId: params.id,
-    action: "bulk_member_removed",
-    before: {
-      membershipId,
-      bulkSkuId: membership.bulkSkuId,
-      bulkSkuName: membership.bulkSku.name,
-      quantity: membership.quantity,
-      unit: membership.bulkSku.unit,
-    },
-  });
-
+  await removeKitBulkMember(params.id, membershipId, user.id, user.role);
   return ok({ success: true });
 });

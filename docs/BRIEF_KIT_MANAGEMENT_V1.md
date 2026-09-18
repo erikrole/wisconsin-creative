@@ -4,9 +4,13 @@
 - Owner: Wisconsin Athletics Creative Product
 - Date: 2026-03-24
 - Status: Active
-- Decision Ref: D-020 (Kit Management Is Phase B — schema exists, zero UI)
+- Decision Ref: D-062 (calling, exclusive membership, pickup aliases). D-020 is historical sequencing.
 
 ---
+
+## Current state (2026-09-17)
+
+Kits are named gameday templates. Staff author them. Anyone who can create a reservation can call an active kit from web, native iOS, or kiosk checkout. Serialized membership is exclusive within a sport. Football video kits can own one of Slow 1, Slow 2, Bench, or Roam 1–4 at a pickup. Camp Randall and Camp Randall Stadium are the same pickup. Checkout integration is reservation expansion plus a kiosk scan checklist; it is not a silent cart fill.
 
 ## Problem Statement
 

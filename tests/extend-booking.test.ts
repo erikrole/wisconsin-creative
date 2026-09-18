@@ -43,10 +43,15 @@ vi.mock("@/lib/services/availability", () => ({
     turnaroundRisks: [],
     bulkTurnaroundRisks: [],
   }),
+  checkCheckoutDueTime: vi.fn().mockResolvedValue({
+    conflicts: [],
+    shortages: [],
+    unavailableAssets: [],
+  }),
 }));
 
 import { db } from "@/lib/db";
-import { checkAvailability } from "@/lib/services/availability";
+import { checkAvailability, checkCheckoutDueTime } from "@/lib/services/availability";
 import { extendBooking } from "@/lib/services/bookings";
 
 const mockTx = (db as unknown as { _mockTx: ExtendBookingTx })._mockTx;
@@ -86,6 +91,11 @@ beforeEach(() => {
     upcomingCommitments: [],
     turnaroundRisks: [],
     bulkTurnaroundRisks: [],
+  });
+  vi.mocked(checkCheckoutDueTime).mockResolvedValue({
+    conflicts: [],
+    shortages: [],
+    unavailableAssets: [],
   });
 });
 
@@ -184,29 +194,23 @@ describe("extendBooking", () => {
   });
 
   it("throws 409 on availability conflicts in extended window", async () => {
-    vi.mocked(checkAvailability).mockResolvedValueOnce({
+    vi.mocked(checkCheckoutDueTime).mockResolvedValueOnce({
       conflicts: [{ assetId: "a-1", conflictingBookingId: "b-other", startsAt: new Date(), endsAt: new Date() }],
       shortages: [],
       unavailableAssets: [],
-      upcomingCommitments: [],
-      turnaroundRisks: [],
-      bulkTurnaroundRisks: [],
     });
 
-    await expect(extendBooking("b-1", "actor-1", newEnd)).rejects.toThrow("Conflicts");
+    await expect(extendBooking("b-1", "actor-1", newEnd)).rejects.toThrow("Conflict with another booking");
   });
 
   it("throws 409 on bulk shortages in the extended window", async () => {
-    vi.mocked(checkAvailability).mockResolvedValueOnce({
+    vi.mocked(checkCheckoutDueTime).mockResolvedValueOnce({
       conflicts: [],
       shortages: [{ bulkSkuId: "sku-1", requested: 5, available: 2 }],
       unavailableAssets: [],
-      upcomingCommitments: [],
-      turnaroundRisks: [],
-      bulkTurnaroundRisks: [],
     });
 
-    await expect(extendBooking("b-1", "actor-1", newEnd)).rejects.toThrow("Conflicts");
+    await expect(extendBooking("b-1", "actor-1", newEnd)).rejects.toThrow("available");
     expect(mockTx.booking.update).not.toHaveBeenCalled();
   });
 
@@ -218,15 +222,13 @@ describe("extendBooking", () => {
     );
   });
 
-  it("checks availability with excludeBookingId", async () => {
+  it("checks an open checkout's added due-time window without double-counting held gear", async () => {
     await extendBooking("b-1", "actor-1", newEnd);
 
-    expect(checkAvailability).toHaveBeenCalledWith(
+    expect(checkCheckoutDueTime).toHaveBeenCalledWith(
       mockTx,
-      expect.objectContaining({
-        excludeBookingId: "b-1",
-        enforceSerializedTurnaroundBuffer: false,
-      })
+      expect.objectContaining({ id: "b-1", locationId: "loc-1" }),
+      newEnd,
     );
   });
 

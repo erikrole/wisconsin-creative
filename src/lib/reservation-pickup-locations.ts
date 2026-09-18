@@ -14,8 +14,38 @@ export const RESERVATION_PICKUP_LOCATION_NAMES = [
 export const RESERVATION_PICKUP_LOCATION_ERROR =
   "Reservations can only use Camp Randall or Kohl Center as pickup locations.";
 
+/**
+ * Pickup counters that share kit membership and kit calling.
+ * Camp Randall and Camp Randall Stadium are the same gear room.
+ */
+export const KIT_SHARED_PICKUP_LOCATION_GROUPS = [
+  ["Camp Randall", "Camp Randall Stadium"],
+] as const;
+
 function normalizeLocationName(name: string) {
   return name.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+export function kitPickupGroupKey(name: string) {
+  const normalized = normalizeLocationName(name);
+  for (const group of KIT_SHARED_PICKUP_LOCATION_GROUPS) {
+    if (group.some((alias) => normalizeLocationName(alias) === normalized)) {
+      return normalizeLocationName(group[0]);
+    }
+  }
+  return normalized;
+}
+
+export function kitPickupAliasNames(name: string) {
+  const key = kitPickupGroupKey(name);
+  for (const group of KIT_SHARED_PICKUP_LOCATION_GROUPS) {
+    if (normalizeLocationName(group[0]) === key) return [...group];
+  }
+  return [name];
+}
+
+export function locationsShareKitPickup(left: string, right: string) {
+  return kitPickupGroupKey(left) === kitPickupGroupKey(right);
 }
 
 export function isSupportedReservationPickupLocationName(name: string | null | undefined) {

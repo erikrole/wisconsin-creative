@@ -41,7 +41,7 @@ function request(assetIds: string[]) {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(requireAuth).mockResolvedValue(user);
-  vi.mocked(addKitMembers).mockResolvedValue({ id: "kit-1", members: [] } as never);
+  vi.mocked(addKitMembers).mockResolvedValue({ kit: { id: "kit-1", members: [] }, addedAssetIds: [] } as never);
 });
 
 describe("POST /api/kits/[id]/members", () => {

@@ -12,12 +12,13 @@ import { sanitizeCollaboratorBulkItem } from "@/lib/collaborator-gear";
 export const GET = withAuth(async (req, { user }) => {
   requirePermissionOrCollaboratorCapability(user, "bulk_sku", "view", "GEAR_CATALOG_VIEW");
   const { searchParams } = new URL(req.url);
-  const locationId = searchParams.get("location_id");
+  const locationIds = searchParams.getAll("location_id").filter(Boolean);
   const includeArchived = user.role !== "COLLABORATOR" && searchParams.get("archived") === "true";
   const { limit, offset } = parsePagination(searchParams);
 
   const where: Prisma.BulkSkuWhereInput = {
-    ...(locationId ? { locationId } : {}),
+    ...(locationIds.length === 1 ? { locationId: locationIds[0] } : {}),
+    ...(locationIds.length > 1 ? { locationId: { in: locationIds } } : {}),
     ...(includeArchived ? {} : { active: true }),
   };
 

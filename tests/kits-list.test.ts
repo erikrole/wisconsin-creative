@@ -1,12 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const kit = vi.hoisted(() => ({ findMany: vi.fn(), groupBy: vi.fn(), count: vi.fn() }));
-vi.mock("@/lib/db", () => ({ db: { kit } }));
+const location = vi.hoisted(() => ({ findUnique: vi.fn(), findMany: vi.fn() }));
+vi.mock("@/lib/db", () => ({ db: { kit, location } }));
 vi.mock("@/lib/audit", () => ({ createAuditEntry: vi.fn() }));
 import { listKits } from "@/lib/services/kits";
 
 beforeEach(() => {
   vi.resetAllMocks();
+  location.findUnique.mockResolvedValue({ name: "Kohl Center" });
+  location.findMany.mockResolvedValue([]);
   kit.findMany.mockResolvedValue([{ id: "kit-1" }]);
   kit.groupBy.mockResolvedValue([
     { active: false, _count: { _all: 3 } },
@@ -56,5 +59,17 @@ describe("kit list aggregates", () => {
   it("rejects a failed aggregate instead of reporting a false zero", async () => {
     kit.groupBy.mockRejectedValue(new Error("database unavailable"));
     await expect(listKits({ limit: 25, offset: 0 })).rejects.toThrow("database unavailable");
+  });
+
+  it("lists kits across Camp Randall pickup aliases", async () => {
+    location.findUnique.mockResolvedValue({ name: "Camp Randall" });
+    location.findMany.mockResolvedValue([{ id: "loc-1" }, { id: "loc-stadium" }]);
+    await listKits({ locationId: "loc-1", limit: 25, offset: 0 });
+    expect(kit.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        locationId: { in: ["loc-1", "loc-stadium"] },
+        active: true,
+      }),
+    }));
   });
 });

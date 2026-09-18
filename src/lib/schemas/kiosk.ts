@@ -31,6 +31,7 @@ export const checkoutCompleteBody = z.object({
     .min(1, "At least one item required")
     .max(MAX_EQUIPMENT_SELECTIONS_PER_REQUEST),
   eventId: cuidish.optional(),
+  kitId: cuidish.optional(),
   customPurpose: z.string().trim().min(1).max(160).optional(),
   // No startsAt: checkout start is server-authoritative (the moment of completion).
   endsAt: z.string().datetime({ offset: true }).optional(),

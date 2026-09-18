@@ -73,6 +73,7 @@ export function DashboardBookingRow({
   const timingDateTime = formatOperationalDateTime(
     showPickupBadge ? booking.startsAt : booking.endsAt,
     now,
+    { month: "short" },
   );
   const timingTone = booking.isOverdue
     ? "text-[var(--wi-red)]"

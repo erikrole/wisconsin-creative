@@ -27,6 +27,8 @@ type CreateBookingTx = {
   overrideEvent: Record<"create", MockFn>;
   scanSession: Record<"updateMany", MockFn>;
   user: Record<"findUnique", MockFn>;
+  kit: Record<"findUnique", MockFn>;
+  location: Record<"findUnique", MockFn>;
   $queryRaw: MockFn;
 };
 
@@ -62,6 +64,8 @@ vi.mock("@/lib/db", () => {
     overrideEvent: { create: vi.fn() },
     scanSession: { updateMany: vi.fn() },
     user: { findUnique: vi.fn().mockResolvedValue({ role: "ADMIN", active: true }) },
+    kit: { findUnique: vi.fn() },
+    location: { findUnique: vi.fn() },
     $queryRaw: vi.fn(),
   };
 
@@ -183,6 +187,8 @@ beforeEach(() => {
     role: Role.ADMIN,
     collaboratorProfile: null,
   });
+  mockTx.kit.findUnique.mockResolvedValue(null);
+  mockTx.location.findUnique.mockResolvedValue({ name: "Camp Randall" });
   vi.mocked(checkAvailability).mockResolvedValue({
     conflicts: [],
     shortages: [],
@@ -1337,5 +1343,108 @@ describe("createBooking", () => {
       serializedItems: [], bulkItems: [],
     });
     await expect(createBooking(baseInput({ sourceReservationId: "rv-1" }))).rejects.toThrow("different location");
+  });
+
+  it("expands an empty payload from the selected kit into booking lines", async () => {
+    mockTx.kit.findUnique.mockResolvedValue({
+      id: "kit-slow-1",
+      name: "Slow 1",
+      active: true,
+      locationId: "loc-1",
+      location: { name: "Camp Randall" },
+      members: [{ assetId: "cam-1" }, { assetId: "lens-1" }],
+      bulkMembers: [{ bulkSkuId: "battery-1", quantity: 4 }],
+    });
+
+    await createBooking(baseInput({
+      kind: BookingKind.RESERVATION,
+      kitId: "kit-slow-1",
+      serializedAssetIds: [],
+      bulkItems: [],
+    }));
+
+    expect(mockTx.bookingSerializedItem.createMany).toHaveBeenCalledWith({
+      data: [
+        { bookingId: "b-new", assetId: "cam-1", allocationStatus: "active" },
+        { bookingId: "b-new", assetId: "lens-1", allocationStatus: "active" },
+      ],
+    });
+    expect(mockTx.bookingBulkItem.createMany).toHaveBeenCalledWith({
+      data: [
+        { bookingId: "b-new", bulkSkuId: "battery-1", plannedQuantity: 4 },
+      ],
+    });
+    expect(mockTx.booking.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ kitId: "kit-slow-1" }),
+    }));
+  });
+
+  it("keeps an edited kit payload instead of re-adding dropped members", async () => {
+    mockTx.kit.findUnique.mockResolvedValue({
+      id: "kit-slow-1",
+      name: "Slow 1",
+      active: true,
+      locationId: "loc-1",
+      location: { name: "Camp Randall" },
+      members: [{ assetId: "cam-1" }, { assetId: "lens-1" }],
+      bulkMembers: [{ bulkSkuId: "battery-1", quantity: 4 }],
+    });
+
+    await createBooking(baseInput({
+      kind: BookingKind.RESERVATION,
+      kitId: "kit-slow-1",
+      serializedAssetIds: ["cam-1"],
+      bulkItems: [{ bulkSkuId: "battery-1", quantity: 2 }],
+    }));
+
+    expect(mockTx.bookingSerializedItem.createMany).toHaveBeenCalledWith({
+      data: [{ bookingId: "b-new", assetId: "cam-1", allocationStatus: "active" }],
+    });
+    expect(mockTx.bookingBulkItem.createMany).toHaveBeenCalledWith({
+      data: [{ bookingId: "b-new", bulkSkuId: "battery-1", plannedQuantity: 2 }],
+    });
+  });
+
+  it("rejects an archived or empty kit before creating a booking", async () => {
+    mockTx.kit.findUnique.mockResolvedValue({
+      id: "kit-slow-1",
+      name: "Slow 1",
+      active: false,
+      locationId: "loc-1",
+      location: { name: "Camp Randall" },
+      members: [{ assetId: "cam-1" }],
+      bulkMembers: [],
+    });
+
+    await expect(createBooking(baseInput({
+      kind: BookingKind.RESERVATION,
+      kitId: "kit-slow-1",
+      serializedAssetIds: [],
+      bulkItems: [],
+    }))).rejects.toMatchObject({
+      status: 400,
+      message: "Slow 1 is archived and cannot be added to a booking",
+    });
+    expect(mockTx.booking.create).not.toHaveBeenCalled();
+
+    mockTx.kit.findUnique.mockResolvedValue({
+      id: "kit-slow-1",
+      name: "Slow 1",
+      active: true,
+      locationId: "loc-1",
+      location: { name: "Camp Randall" },
+      members: [],
+      bulkMembers: [],
+    });
+
+    await expect(createBooking(baseInput({
+      kind: BookingKind.RESERVATION,
+      kitId: "kit-slow-1",
+      serializedAssetIds: [],
+      bulkItems: [],
+    }))).rejects.toMatchObject({
+      status: 400,
+      message: "Slow 1 has no cameras, lenses, or batteries yet. Add gear to the kit first.",
+    });
   });
 });

@@ -5,6 +5,12 @@ import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { useFormSubmit } from "@/hooks/use-form-submit";
 import {
+  FOOTBALL_GAMEDAY_KIT_ROLE_OPTIONS,
+  FOOTBALL_SPORT_CODE,
+  footballGamedayKitRoleLabel,
+} from "@/lib/football-gameday-kits";
+import { SPORT_CODES, sportLabel } from "@/lib/sports";
+import {
   Sheet,
   SheetContent,
   SheetDescription,
@@ -41,6 +47,8 @@ const createKitSchema = z.object({
   name: z.string().min(1, "Kit name is required"),
   description: z.string(),
   locationId: z.string().min(1, "Location is required"),
+  sportCode: z.string(),
+  gamedayRole: z.string(),
 });
 
 type CreateKitInput = z.infer<typeof createKitSchema>;
@@ -59,6 +67,8 @@ export function NewKitSheet({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [locationId, setLocationId] = useState(locations[0]?.id ?? "");
+  const [sportCode, setSportCode] = useState("");
+  const [gamedayRole, setGamedayRole] = useState("");
   const [createdKit, setCreatedKit] = useState<CreatedKit | null>(null);
   const defaultLocationId = locations[0]?.id ?? "";
   const hasLocations = locations.length > 0;
@@ -74,6 +84,8 @@ export function NewKitSheet({
     setName("");
     setDescription("");
     setLocationId(defaultLocationId);
+    setSportCode("");
+    setGamedayRole("");
   }
 
   function finishCreatedKit(mode: "another" | "open" | "list") {
@@ -119,6 +131,8 @@ export function NewKitSheet({
       name: name.trim(),
       description: description.trim(),
       locationId,
+      sportCode,
+      gamedayRole,
     });
   }
 
@@ -128,7 +142,7 @@ export function NewKitSheet({
         <SheetHeader>
           <SheetTitle>New Kit</SheetTitle>
           <SheetDescription>
-            Create a named collection of gear items for quick checkout.
+            Name the cameras, lenses, and batteries a position uses on gameday. Open the kit next to add every item that travels with it.
           </SheetDescription>
         </SheetHeader>
 
@@ -136,7 +150,7 @@ export function NewKitSheet({
           <div className="flex flex-col gap-4 py-4">
             <Alert>
               <AlertDescription>
-                Kit {createdKit.name} was created. Open it to add serialized items and item families, or create another kit.
+                Kit {createdKit.name} was created. Open it to add the cameras, lenses, and batteries this position uses, or create another kit.
               </AlertDescription>
             </Alert>
             <div className="rounded-md border bg-muted/30 px-4 py-3 text-sm">
@@ -189,7 +203,7 @@ export function NewKitSheet({
                 setName(e.target.value);
                 if (fieldErrors.name || formError) clearErrors();
               }}
-              placeholder="e.g., Interview Kit"
+              placeholder="e.g., Slow 1"
               disabled={submitting}
               aria-invalid={!!fieldErrors.name}
               aria-describedby={fieldErrors.name ? "kit-name-error" : undefined}
@@ -212,7 +226,7 @@ export function NewKitSheet({
                 setDescription(e.target.value);
                 if (fieldErrors.description || formError) clearErrors();
               }}
-              placeholder="Optional notes about this kit"
+              placeholder="Camp Randall gameday — slow motion 1"
               disabled={submitting}
               aria-invalid={!!fieldErrors.description}
               aria-describedby={fieldErrors.description ? "kit-description-error" : undefined}
@@ -257,6 +271,77 @@ export function NewKitSheet({
               </p>
             )}
           </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="kit-sport">Sport</Label>
+            <Select
+              name="kitSportCode"
+              value={sportCode || "__none__"}
+              onValueChange={(value) => {
+                const next = value === "__none__" ? "" : value;
+                setSportCode(next);
+                if (next !== FOOTBALL_SPORT_CODE) setGamedayRole("");
+                if (fieldErrors.sportCode || formError) clearErrors();
+              }}
+              disabled={submitting}
+            >
+              <SelectTrigger id="kit-sport">
+                <SelectValue placeholder="Any sport" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">Any sport</SelectItem>
+                {SPORT_CODES.map((sport) => (
+                  <SelectItem key={sport.code} value={sport.code}>
+                    {sportLabel(sport.code)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Football kits cannot share the same camera. A basketball kit can still use that camera.
+            </p>
+          </div>
+
+          {sportCode === FOOTBALL_SPORT_CODE && (
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="kit-job">Job</Label>
+              <Select
+                name="kitGamedayRole"
+                value={gamedayRole || "__none__"}
+                onValueChange={(value) => {
+                  const next = value === "__none__" ? "" : value;
+                  const previousLabel = footballGamedayKitRoleLabel(gamedayRole);
+                  setGamedayRole(next);
+                  const nextLabel = footballGamedayKitRoleLabel(next);
+                  if (nextLabel && (!name.trim() || name.trim() === previousLabel)) {
+                    setName(nextLabel);
+                  }
+                  if (fieldErrors.gamedayRole || formError) clearErrors();
+                }}
+                disabled={submitting}
+              >
+                <SelectTrigger id="kit-job">
+                  <SelectValue placeholder="None" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">None</SelectItem>
+                  {FOOTBALL_GAMEDAY_KIT_ROLE_OPTIONS.map((role) => (
+                    <SelectItem key={role.value} value={role.value}>
+                      {role.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                One Slow 1, Slow 2, Bench, or Roam kit at this pickup. Duplicate copies batteries, not the job.
+              </p>
+              {fieldErrors.gamedayRole && (
+                <p id="kit-job-error" className="text-sm text-destructive">
+                  {fieldErrors.gamedayRole}
+                </p>
+              )}
+            </div>
+          )}
 
         </form>
         )}

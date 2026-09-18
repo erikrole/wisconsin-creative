@@ -10,7 +10,10 @@ describe("booking wizard kit fetching recovery", () => {
     expect(hook).toContain("kitsLoadError");
     expect(hook).toContain('throw new Error(await parseErrorMessage(res, "Failed to load kits"))');
     expect(hook).toContain('setKitsLoadError(err instanceof TypeError ? "network" : "server")');
-    expect(hook).toContain("retryKits");
+    expect(hook).toContain("requester_user_id");
+    expect(hook).toContain("suggestedKitId");
+    expect(hook).toContain("filter((kit) => kit.contents > 0)");
+    expect(step).toContain("callingKitLabel");
 
     // Copy was compressed in the Apple-style refresh; the contract is that a
     // failed kit read renders a visible error with a Retry action (instead of
@@ -19,8 +22,15 @@ describe("booking wizard kit fetching recovery", () => {
     expect(step).toContain("Kits failed to load.");
     expect(step).toContain("onClick={onRetryKits}");
     expect(step).toContain("kits.length > 0 || kitsLoading || kitsLoadError");
+    expect(step).toContain("Gameday kit");
+    expect(step).toContain("Selecting a kit adds every camera, lens, and battery");
 
     expect(wizard).toContain("kitsLoadError={kitsLoadError}");
     expect(wizard).toContain("onRetryKits={retryKits}");
+    expect(wizard).toContain("queryKey: [\"kitDetail\", kitId]");
+    expect(wizard).toContain("setSelectedAssetIds(snapshots.map((asset) => asset.id))");
+    expect(wizard).toContain("setSelectedBulkItems(selectedKitDetail.bulkMembers.map((member) => ({");
+    expect(wizard).toContain("suggestedKitId");
+    expect(wizard).not.toContain("value: selectedKit");
   });
 });

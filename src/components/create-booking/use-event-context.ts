@@ -11,16 +11,27 @@ import type { FormAction } from "./types";
 import { handleAuthRedirect, isAbortError, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { MAX_LINKED_EVENTS_PER_BOOKING } from "@/lib/request-limits";
 import { roundUpToQuarterHour } from "@/lib/quarter-hour";
+import { isEventDerivedTitle } from "@/lib/reservation-reuse";
 
 const BOOKING_EVENT_LOOKAHEAD_DAYS = 30;
+
+type EventTitleSource = {
+  summary: string;
+  sportCode: string | null;
+  opponent: string | null;
+  isHome: boolean | null;
+};
+
+function eventDerivedTitle(event: EventTitleSource, sport: string) {
+  return event.opponent && (event.sportCode || sport)
+    ? generateEventTitle(event.sportCode || sport, event.opponent, event.isHome)
+    : event.summary;
+}
 
 /** Derive auto-fill fields from the chronologically-first event in the list. */
 export function deriveFromPrimary(events: CalendarEvent[], sport: string) {
   if (events.length === 0) return {};
   const primary = events[0]!; // guarded by events.length === 0 early return above
-  const title = primary.opponent && (primary.sportCode || sport)
-    ? generateEventTitle(primary.sportCode || sport, primary.opponent, primary.isHome)
-    : primary.summary;
   // endsAt derives from the LAST event — multi-event span covers the whole window.
   const last = events[events.length - 1]!; // same guard: length > 0
   const allDaySpan = primary.allDay && last.allDay;
@@ -32,9 +43,54 @@ export function deriveFromPrimary(events: CalendarEvent[], sport: string) {
     ? new Date(last.endsAt)
     : roundUpToQuarterHour(new Date(new Date(last.endsAt).getTime() + returnBuffer));
   return {
-    title,
+    title: eventDerivedTitle(primary, sport),
     startsAt: toLocalDateTimeValue(start),
     endsAt: toLocalDateTimeValue(end),
+  };
+}
+
+export function deriveReusedReservationWindow(args: {
+  targetEvents: CalendarEvent[];
+  sourceEvents: Array<EventTitleSource & { startsAt: string; endsAt: string }>;
+  sourceStartsAt: string;
+  sourceEndsAt: string;
+  sourceTitle: string;
+  sport: string;
+}): { title?: string; startsAt?: string; endsAt?: string } {
+  const fallback = deriveFromPrimary(args.targetEvents, args.sport);
+  if (args.targetEvents.length === 0) return fallback;
+
+  const sourcePrimary = args.sourceEvents[0];
+  const keepSourceTitle = !isEventDerivedTitle(
+    args.sourceTitle,
+    args.sourceEvents,
+    sourcePrimary ? eventDerivedTitle(sourcePrimary, args.sport) : null,
+  );
+  const title = keepSourceTitle ? args.sourceTitle : fallback.title;
+
+  if (args.sourceEvents.length === 0) {
+    return { ...fallback, title };
+  }
+
+  const sourceLast = args.sourceEvents[args.sourceEvents.length - 1]!;
+  const targetPrimary = args.targetEvents[0]!;
+  const targetLast = args.targetEvents[args.targetEvents.length - 1]!;
+  const startOffset = new Date(args.sourceStartsAt).getTime() - new Date(sourcePrimary!.startsAt).getTime();
+  const endOffset = new Date(args.sourceEndsAt).getTime() - new Date(sourceLast.endsAt).getTime();
+  if (!Number.isFinite(startOffset) || !Number.isFinite(endOffset)) {
+    return { ...fallback, title };
+  }
+
+  const startsAtDate = new Date(new Date(targetPrimary.startsAt).getTime() + startOffset);
+  const endsAtDate = roundUpToQuarterHour(new Date(new Date(targetLast.endsAt).getTime() + endOffset));
+  if (Number.isNaN(startsAtDate.getTime()) || Number.isNaN(endsAtDate.getTime()) || endsAtDate <= startsAtDate) {
+    return { ...fallback, title };
+  }
+
+  return {
+    title,
+    startsAt: toLocalDateTimeValue(startsAtDate),
+    endsAt: toLocalDateTimeValue(endsAtDate),
   };
 }
 
@@ -45,6 +101,7 @@ export function useEventContext({
   selectedEvents,
   initialEventId,
   dispatch,
+  deriveSelection,
 }: {
   sport: string;
   tieToEvent: boolean;
@@ -52,6 +109,11 @@ export function useEventContext({
   selectedEvents: CalendarEvent[];
   initialEventId?: string;
   dispatch: Dispatch<FormAction>;
+  deriveSelection?: (events: CalendarEvent[], sport: string) => {
+    title?: string;
+    startsAt?: string;
+    endsAt?: string;
+  };
 }) {
 
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -129,11 +191,11 @@ export function useEventContext({
       dispatch({
         type: "SET_SELECTED_EVENTS",
         events: next,
-        ...deriveFromPrimary(next, sport),
+        ...(deriveSelection ? deriveSelection(next, sport) : deriveFromPrimary(next, sport)),
       });
       return { ok: true };
     },
-    [selectedEvents, sport, dispatch],
+    [deriveSelection, selectedEvents, sport, dispatch],
   );
 
   // ── Auto-select event when initialEventId matches a loaded event (URL deep link, single-event V0 compat) ──

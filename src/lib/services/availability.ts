@@ -35,6 +35,8 @@ export type AvailabilityResult = {
     assetId: string;
     bookingId: string;
     bookingTitle?: string;
+    requesterName?: string;
+    kind?: BookingKind;
     startsAt: Date;
     endsAt: Date;
     status: BookingStatus;
@@ -237,6 +239,9 @@ export async function checkUpcomingSerializedCommitments(
         select: {
           title: true,
           status: true,
+          kind: true,
+          custodyScope: true,
+          requester: { select: { name: true } },
           location: { select: { id: true, name: true } },
         },
       },
@@ -246,10 +251,15 @@ export async function checkUpcomingSerializedCommitments(
   const nextByAsset = new Map<string, AvailabilityResult["upcomingCommitments"][number]>();
   for (const item of commitments) {
     if (nextByAsset.has(item.assetId)) continue;
+    const requesterName = item.booking.custodyScope === BookingCustodyScope.SHARED
+      ? undefined
+      : item.booking.requester?.name;
     nextByAsset.set(item.assetId, {
       assetId: item.assetId,
       bookingId: item.bookingId,
       bookingTitle: item.booking.title,
+      ...(requesterName ? { requesterName } : {}),
+      ...(item.booking.kind ? { kind: item.booking.kind } : {}),
       startsAt: item.startsAt,
       endsAt: item.endsAt,
       status: item.booking.status,

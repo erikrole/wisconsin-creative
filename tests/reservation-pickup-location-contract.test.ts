@@ -4,6 +4,7 @@ import {
   filterSupportedReservationPickupLocations,
   isSupportedReservationPickupLocation,
   isSupportedReservationPickupLocationName,
+  locationsShareKitPickup,
 } from "@/lib/reservation-pickup-locations";
 
 describe("reservation pickup locations", () => {
@@ -32,6 +33,12 @@ describe("reservation pickup locations", () => {
       locations[0],
       locations[2],
     ]);
+  });
+
+  it("treats Camp Randall and Camp Randall Stadium as the same kit pickup", () => {
+    expect(locationsShareKitPickup("Camp Randall", "Camp Randall Stadium")).toBe(true);
+    expect(locationsShareKitPickup("Camp Randall Stadium", " camp  randall ")).toBe(true);
+    expect(locationsShareKitPickup("Camp Randall", "Kohl Center")).toBe(false);
   });
 });
 

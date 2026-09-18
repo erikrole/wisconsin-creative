@@ -15,6 +15,6 @@ const addMembersSchema = z.object({
 export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
   requirePermission(user.role, "kit", "edit");
   const body = addMembersSchema.parse(await req.json());
-  const kit = await addKitMembers(params.id, body.assetIds, user.id, user.role);
+  const { kit } = await addKitMembers(params.id, body.assetIds, user.id, user.role);
   return ok({ data: kit });
 });

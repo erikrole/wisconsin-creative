@@ -7,6 +7,7 @@ import type { EquipmentSectionKey } from "@/lib/equipment-sections";
 import type { AvailableAsset, BulkSkuOption } from "@/components/booking-list/types";
 import type { FormState } from "@/components/create-booking/types";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircleIcon, Loader2Icon } from "lucide-react";
 import { buildAvailabilityReview, getTurnaroundWarningTotal } from "./flow-summary";
 
@@ -23,6 +24,7 @@ type Props = {
   itemCount: number;
   activeSection: EquipmentSectionKey;
   onActiveSectionChange: (section: EquipmentSectionKey) => void;
+  kitName?: string | null;
 };
 
 export function WizardStep2({
@@ -38,6 +40,7 @@ export function WizardStep2({
   itemCount,
   activeSection,
   onActiveSectionChange,
+  kitName,
 }: Props) {
   const availabilityReview = buildAvailabilityReview(selectionState);
   const turnaroundCount = getTurnaroundWarningTotal(selectionState);
@@ -48,6 +51,13 @@ export function WizardStep2({
 
   return (
     <div className="flex flex-col gap-4">
+      {kitName && (
+        <Alert>
+          <AlertDescription>
+            Loaded {kitName}. Review every camera, lens, and battery — add or remove anything before reserving.
+          </AlertDescription>
+        </Alert>
+      )}
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-lg font-semibold tracking-tight">Equipment</h2>
         {itemCount > 0 && (

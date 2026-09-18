@@ -176,7 +176,7 @@ export default function BookingDetailPage({
   const canEdit = allowedActions.includes("edit");
   const canExtend = allowedActions.includes("extend");
   const canCancel = allowedActions.includes("cancel");
-  const canDuplicate = kind === "RESERVATION" && allowedActions.includes("duplicate");
+  const canDuplicate = allowedActions.includes("duplicate");
   const canNudge = allowedActions.includes("nudge");
   const canForceComplete = kind === "CHECKOUT" && allowedActions.includes("force-complete");
   const canForceCheckout = kind === "RESERVATION" && allowedActions.includes("force-checkout");

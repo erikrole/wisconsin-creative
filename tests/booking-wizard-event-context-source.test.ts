@@ -24,4 +24,12 @@ describe("booking wizard event context recovery", () => {
     expect(wizard).toContain("eventsLoadError={eventsLoadError}");
     expect(wizard).toContain("onRetryEvents={retryEvents}");
   });
+
+  it("loads a reuse plan instead of remaining reservation lines only", () => {
+    const wizard = readFileSync("src/components/booking-wizard/BookingWizard.tsx", "utf8");
+    expect(wizard).toContain("/api/bookings/${reuseFromId}/reuse-plan");
+    expect(wizard).toContain("deriveReusedReservationWindow");
+    expect(wizard).toContain("SET_REQUESTER");
+    expect(wizard).toContain("Choose a different event when re-reserving");
+  });
 });

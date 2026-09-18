@@ -23,6 +23,7 @@ import {
  * | cancel   | staff+/owner | staff+/owner | staff+/owner   | ✗             | ✗         | ✗         |
  * | checkin  | ✗            | ✗            | ✗              | kiosk only    | ✗         | ✗         |
  * | force-complete | ✗       | ✗            | ✗              | admin only    | ✗         | ✗         |
+ * | duplicate | ✗       | ✗            | ✗              | ✗             | staff+/owner | ✗     |
  * | transfer-owner | staff+/owner | staff+/owner | staff+/owner | staff+/owner | ✗         | ✗         |
  * | open     | ✗            | staff+/owner | ✗              | ✗             | ✗         | ✗         |
  * | pickup   | ✗            | ✗            | kiosk only     | ✗             | ✗         | ✗         |
@@ -34,6 +35,7 @@ import {
  * | extend   | ✗            | staff+/owner | ✗         | ✗         |
  * | cancel   | staff+/owner | staff+/owner | ✗         | ✗         |
  * | convert  | ✗            | kiosk only   | ✗         | ✗         |
+ * | duplicate | staff+/owner | staff+/owner | staff+/owner | staff+/owner |
  * | force-checkout | ✗      | admin only   | ✗         | ✗         |
  * | transfer-owner | staff+/owner | staff+/owner | ✗         | ✗         |
  *

@@ -7,7 +7,7 @@ import { optionalSportCodeSchema } from "@/lib/validation";
 import { requirePermissionOrCollaboratorCapability } from "@/lib/rbac";
 import { collaboratorBookingResponse } from "@/lib/collaborator-gear";
 import { getAllowedBookingActions } from "@/lib/services/booking-rules";
-import { normalizeTeamAbbreviations } from "@/lib/title-normalization";
+import { displayBookingTitle } from "@/lib/booking-display-title";
 
 /* ── Combined bookings list (both CHECKOUT and RESERVATION) ── */
 
@@ -116,7 +116,7 @@ export const GET = withAuth(async (req, { user }) => {
     const displayBooking = {
       ...booking,
       // Correct legacy display values without rewriting stored/audit data.
-      title: normalizeTeamAbbreviations(booking.title),
+      title: displayBookingTitle(booking.title),
     };
     return user.role === "COLLABORATOR"
       ? collaboratorBookingResponse(displayBooking, allowedActions)
