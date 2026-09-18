@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Observation
 import ServiceManagement
@@ -59,6 +60,31 @@ final class AppPreferencesStore {
         )
         guard let data = try? JSONEncoder().encode(stored) else { return }
         defaults.set(data, forKey: Self.key)
+    }
+
+    /// Launch reads this before SwiftUI mounts so a hidden extra can still
+    /// recover through the Dock instead of leaving an accessory process with
+    /// no visible entry point.
+    static func showsMenuBarExtra(in defaults: UserDefaults = .standard) -> Bool {
+        guard let data = defaults.data(forKey: key),
+              let stored = try? JSONDecoder().decode(StoredAppPreferences.self, from: data) else {
+            return true
+        }
+        return stored.showsMenuBarExtra
+    }
+}
+
+enum GearOpsActivation {
+    @MainActor
+    static func apply(showsMenuBarExtra visible: Bool) {
+        let policy: NSApplication.ActivationPolicy = visible ? .accessory : .regular
+        guard NSApp.activationPolicy() != policy else { return }
+        NSApp.setActivationPolicy(policy)
+    }
+
+    @MainActor
+    static func applyFromDefaults(_ defaults: UserDefaults = .standard) {
+        apply(showsMenuBarExtra: AppPreferencesStore.showsMenuBarExtra(in: defaults))
     }
 }
 

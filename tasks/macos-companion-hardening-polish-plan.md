@@ -2,6 +2,15 @@
 
 Status: ACTIVE — macOS 1.0.4 installed; post-enrollment cold-restart and full interaction proof remain
 
+## Local extra follow-up (2026-09-18)
+
+- The extra popover is a glance: waiting-for-pickup first, overdue-first open bookings capped at four, pickups at three, live kiosks at four. **View N more expands the remaining rows in the extra**; Show less collapses back to the glance. Clicking a booking opens details and items in the extra; Open in Wisconsin Creative is the secondary web exit. Booking cards match the iOS booking row (rail, avatar, operational timing, 16pt card). Inactive kiosks remain in the fleet summary and do not occupy extra rows. The header names open count, overdue, and freshness. Empty checkouts stay a one-line caption.
+- Offline kiosks stay in the extra’s System health panel (summary, red rows, critical label). The menu-bar extra glyph stays the shipping box and does not swap to a warning.
+
+- Applied Apple’s current menu-bar extra guidance: people control insertion, the extra is a stable monochrome unanimated symbol, window style stays only because the popover is too complex for a menu, and hiding the extra recovers through the Dock plus a Dock menu (Dashboard, Refresh, Show in Menu Bar, Settings) and Settings sign-in.
+- Booking alerts now replace per booking, keep silence unless opted in while Settings is frontmost, offer Open Booking, drop stale requests when a booking leaves the projection, cap one refresh at four newest banners, and clear Notification Center when alerts are turned off.
+- Source contracts and native tests updated. Installed interaction, APNs, and notarization remain open. No commit, push, or release.
+
 ## Local audit follow-up (2026-09-07)
 
 - Sign-in disappearance diagnosed from the actual termination stack at 20:19:40 local: `NSApplication(NSWindowCache) _scheduleCheckForTerminateAfterLastWindowClosed` called `terminate:`. This was an ordinary last-window termination, not a crash or authentication failure. The app delegate now returns false from `applicationShouldTerminateAfterLastWindowClosed`; explicit Quit is unchanged. Removed temporary stack logging after diagnosis. Installed the signed fix, confirmed the process remains alive after the previously failing window transition, and passed 67 native tests plus 30 source contracts. User sign-in and live restored projection remain the acceptance check.

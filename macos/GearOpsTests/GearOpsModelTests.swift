@@ -193,7 +193,7 @@ final class GearOpsModelTests: XCTestCase {
         await model.signIn(email: "admin@wisc.edu", password: "password")
 
         XCTAssertEqual(model.custodyCount, 12)
-        XCTAssertEqual(model.menuBarAccessibilityLabel, "Wisconsin Creative, 12 active checkouts, healthy")
+        XCTAssertEqual(model.menuBarAccessibilityLabel, "Wisconsin Creative, 12 active checkouts")
     }
 
     func testInvalidProjectionPreservesTrustedData() async {
@@ -239,7 +239,7 @@ final class GearOpsModelTests: XCTestCase {
         {
           "data": {
             "version": 1,
-            "generatedAt": "2026-08-09T18:00:00.000Z",
+            "generatedAt": "2026-08-09T18:00:00.123Z",
             "stats": { "checkedOut": 1, "overdue": 0, "reserved": 0, "dueToday": 0 },
             "pendingPickupTotal": 0,
             "openBookings": [],
@@ -249,13 +249,71 @@ final class GearOpsModelTests: XCTestCase {
           }
         }
         """
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-
-        let decoded = try decoder.decode(CompanionProjectionEnvelope.self, from: Data(json.utf8))
+        let decoded = try GearOpsJSON.makeDecoder().decode(CompanionProjectionEnvelope.self, from: Data(json.utf8))
+        let expected = try Date("2026-08-09T18:00:00.123Z", strategy: Date.ISO8601FormatStyle(includingFractionalSeconds: true))
 
         XCTAssertEqual(decoded.data.version, 1)
-        XCTAssertEqual(decoded.data.generatedAt.formatted(.iso8601), "2026-08-09T18:00:00Z")
+        XCTAssertEqual(decoded.data.generatedAt, expected)
+    }
+
+    func testItemReferencePrefersAssetTagThenName() {
+        let tagged = OpenBooking.ItemReference(id: "1", name: "FX3", assetTag: "CAM-1")
+        XCTAssertEqual(tagged.listPrimaryTitle, "CAM-1")
+        XCTAssertEqual(tagged.listSecondaryTitle, "FX3")
+
+        let named = OpenBooking.ItemReference(id: "2", name: "NP-FZ100", quantity: 4)
+        XCTAssertEqual(named.listPrimaryTitle, "NP-FZ100")
+        XCTAssertNil(named.listSecondaryTitle)
+        XCTAssertTrue(named.hasIdentity)
+
+        let unknown = OpenBooking.ItemReference(id: "3")
+        XCTAssertEqual(unknown.listPrimaryTitle, "Item")
+        XCTAssertFalse(unknown.hasIdentity)
+    }
+
+    func testCompanionProjectionDecodesItemIdentityAndLegacyActivity() throws {
+        let json = """
+        {
+          "data": {
+            "version": 1,
+            "generatedAt": "2026-08-09T18:00:00.123Z",
+            "stats": { "checkedOut": 1, "overdue": 0, "reserved": 0, "dueToday": 0 },
+            "pendingPickupTotal": 0,
+            "openBookings": [{
+              "id": "booking-1",
+              "title": "Camera checkout",
+              "endsAt": "2026-08-09T20:00:00.000Z",
+              "refNumber": "C-001",
+              "requester": { "id": "user-1", "name": "Erik", "avatarUrl": null },
+              "location": { "id": "loc-1", "name": "Kohl Center" },
+              "serializedItems": [{ "id": "item-1", "name": "FX3", "assetTag": "CAM-1" }],
+              "bulkItems": [{ "id": "bulk-1", "name": "NP-FZ100", "quantity": 4 }]
+            }],
+            "bookingActivity": [{
+              "id": "booking-1",
+              "title": "Camera checkout",
+              "kind": "CHECKOUT",
+              "status": "OPEN",
+              "startsAt": "2026-08-09T15:00:00.000Z",
+              "endsAt": "2026-08-09T20:00:00.000Z",
+              "updatedAt": "2026-08-09T18:00:00.000Z",
+              "requester": { "id": "user-1", "name": "Erik", "avatarUrl": null },
+              "location": { "id": "loc-1", "name": "Kohl Center" }
+            }],
+            "kioskDevices": [],
+            "kioskAccess": "available"
+          }
+        }
+        """
+        let decoded = try GearOpsJSON.makeDecoder().decode(CompanionProjectionEnvelope.self, from: Data(json.utf8))
+        let item = try XCTUnwrap(decoded.data.openBookings.first?.serializedItems.first)
+        let bulk = try XCTUnwrap(decoded.data.openBookings.first?.bulkItems.first)
+
+        XCTAssertEqual(item.listPrimaryTitle, "CAM-1")
+        XCTAssertEqual(item.listSecondaryTitle, "FX3")
+        XCTAssertEqual(bulk.listPrimaryTitle, "NP-FZ100")
+        XCTAssertEqual(bulk.quantity, 4)
+        XCTAssertEqual(decoded.data.bookingActivity.first?.items, [])
     }
 
     func testCompanionProjectionClientUsesAuthenticatedGET() async throws {
@@ -309,12 +367,87 @@ final class GearOpsModelTests: XCTestCase {
         XCTAssertEqual(deliveredTitles, ["Camera checkout"])
     }
 
+    func testLeavingBookingsRemoveTheirNotifications() async {
+        let client = MockGearOpsClient()
+        let notifications = RecordingBookingNotifier()
+        await client.setBookingActivities([
+            makeBookingActivity(id: "keep", status: .open),
+            makeBookingActivity(id: "drop", status: .open),
+        ])
+        let model = GearOpsModel(
+            client: client,
+            defaults: isolatedDefaults(),
+            bookingNotifications: notifications,
+            credentialStore: InMemoryCredentialStore(),
+            autoStart: false
+        )
+
+        await model.signIn(email: "admin@wisc.edu", password: "password")
+        await client.setBookingActivities([makeBookingActivity(id: "keep", status: .open)])
+        await model.refresh()
+
+        let removed = await notifications.removedIdentifiers()
+        let delivered = await notifications.deliveredChanges()
+        XCTAssertEqual(removed, ["booking-change-drop"])
+        XCTAssertEqual(delivered, [])
+    }
+
+    func testBusyRefreshDeliversOnlyTheLatestBookingAlerts() async {
+        let client = MockGearOpsClient()
+        let notifications = RecordingBookingNotifier()
+        let baseline = (1...6).map { index in
+            makeBookingActivity(
+                id: "booking-\(index)",
+                status: .booked,
+                updatedAt: Date(timeIntervalSince1970: 1_700_000_000)
+            )
+        }
+        await client.setBookingActivities(baseline)
+        let model = GearOpsModel(
+            client: client,
+            defaults: isolatedDefaults(),
+            bookingNotifications: notifications,
+            credentialStore: InMemoryCredentialStore(),
+            autoStart: false
+        )
+
+        await model.signIn(email: "admin@wisc.edu", password: "password")
+        let next = (1...6).map { index in
+            makeBookingActivity(
+                id: "booking-\(index)",
+                status: .open,
+                updatedAt: Date(timeIntervalSince1970: 1_700_000_000).addingTimeInterval(TimeInterval(index))
+            )
+        }
+        await client.setBookingActivities(next)
+        await model.refresh()
+
+        let deliveredIDs = await notifications.deliveredChanges().map(\.bookingID)
+        XCTAssertEqual(deliveredIDs, ["booking-3", "booking-4", "booking-5", "booking-6"])
+    }
+
+    func testClearingBookingAlertsRemovesDeliveredRequests() async {
+        let notifications = RecordingBookingNotifier()
+        let model = GearOpsModel(
+            client: MockGearOpsClient(),
+            defaults: isolatedDefaults(),
+            bookingNotifications: notifications,
+            credentialStore: InMemoryCredentialStore(),
+            autoStart: false
+        )
+
+        await model.clearBookingAlerts()
+
+        let cleared = await notifications.didClear()
+        XCTAssertTrue(cleared)
+    }
+
     func testPendingPickupLaneIncludesDueReservationsAndStagedCheckouts() async {
         let client = MockGearOpsClient()
         let now = Date(timeIntervalSince1970: 1_800_000_000)
         await client.setBookingActivities([
-            makeBookingActivity(id: "future", status: .booked, kind: .reservation, startsAt: now.addingTimeInterval(60)),
             makeBookingActivity(id: "due", status: .booked, kind: .reservation, startsAt: now.addingTimeInterval(-60)),
+            makeBookingActivity(id: "future", status: .booked, kind: .reservation, startsAt: now.addingTimeInterval(60)),
             makeBookingActivity(id: "staged", status: .pendingPickup, kind: .checkout, startsAt: now.addingTimeInterval(-120)),
         ])
         let model = GearOpsModel(
@@ -328,6 +461,37 @@ final class GearOpsModelTests: XCTestCase {
         await model.signIn(email: "admin@wisc.edu", password: "password")
 
         XCTAssertEqual(model.pendingPickupBookings(at: now).map(\.id), ["staged", "due"])
+    }
+
+    func testGlanceOpenBookingsSurfaceOverdueFirst() {
+        let model = GearOpsModel(
+            client: MockGearOpsClient(),
+            defaults: isolatedDefaults(),
+            bookingNotifications: NoopBookingNotifier(),
+            credentialStore: InMemoryCredentialStore(),
+            autoStart: false
+        )
+        let now = Date(timeIntervalSince1970: 2_000_000)
+        model.openBookings = [
+            makeOpenBooking(id: "later", endsAt: now.addingTimeInterval(3_600)),
+            makeOpenBooking(id: "overdue-old", endsAt: now.addingTimeInterval(-7_200)),
+            makeOpenBooking(id: "soon", endsAt: now.addingTimeInterval(60)),
+            makeOpenBooking(id: "overdue-new", endsAt: now.addingTimeInterval(-60)),
+        ]
+
+        XCTAssertEqual(
+            model.glanceOpenBookings(at: now).map(\.id),
+            ["overdue-old", "overdue-new", "soon", "later"]
+        )
+        XCTAssertEqual(model.overdueBookingCount(at: now), 2)
+    }
+
+    func testOperationalDateTimeLabelMatchesIOSBookingCards() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let calendar = Calendar.current
+        XCTAssertTrue(now.operationalDateTimeLabel(now: now, capitalizesRelativeDay: false).hasPrefix("today at "))
+        XCTAssertEqual(calendar.date(byAdding: .day, value: 1, to: now)?.operationalDayLabel(now: now), "Tomorrow")
+        XCTAssertEqual(calendar.date(byAdding: .day, value: -1, to: now)?.operationalDayLabel(now: now), "Yesterday")
     }
 
     func testSnapshotFreshnessUsesCompactElapsedTime() {
@@ -690,7 +854,7 @@ final class GearOpsModelTests: XCTestCase {
         )
     }
 
-    func testMenuBarSymbolTracksHealth() async {
+    func testMenuBarSymbolStaysIdentifiableAcrossHealth() async {
         let model = GearOpsModel(
             client: MockGearOpsClient(),
             defaults: isolatedDefaults(),
@@ -698,14 +862,15 @@ final class GearOpsModelTests: XCTestCase {
             credentialStore: InMemoryCredentialStore(),
             autoStart: false
         )
+        XCTAssertEqual(model.menuBarSymbol, "shippingbox")
         await model.signIn(email: "admin@wisc.edu", password: "password")
         XCTAssertEqual(model.menuBarSymbol, "shippingbox.fill")
 
         model.statusMessage = "Offline"
-        XCTAssertEqual(model.menuBarSymbol, "shippingbox.and.arrow.backward.fill")
+        XCTAssertEqual(model.menuBarSymbol, "shippingbox.fill")
 
         model.snapshot = nil
-        XCTAssertEqual(model.menuBarSymbol, "exclamationmark.triangle.fill")
+        XCTAssertEqual(model.menuBarSymbol, "shippingbox.fill")
     }
 
     func testIdleKioskDoesNotEscalateHealth() async {
@@ -778,6 +943,12 @@ final class GearOpsModelTests: XCTestCase {
         await model.signIn(email: "admin@wisc.edu", password: "password")
 
         XCTAssertEqual(model.monitoredKioskDevices.map(\.id), ["offline", "online", "stale", "inactive"])
+        XCTAssertEqual(model.glanceKioskDevices(at: now).map(\.id), ["offline", "online", "stale"])
+        XCTAssertEqual(model.kioskStatusSummary(at: now), "1 online · 1 idle · 1 offline · 1 inactive")
+        XCTAssertEqual(model.kioskHealthSeverity, .critical)
+        XCTAssertEqual(model.healthSeverity, .critical)
+        XCTAssertEqual(model.menuBarSymbol, "shippingbox.fill")
+        XCTAssertEqual(model.menuBarAccessibilityLabel, "Wisconsin Creative, 12 active checkouts")
     }
 
     private func isolatedDefaults() -> UserDefaults {
@@ -803,7 +974,7 @@ private final class ProjectionGETURLProtocol: URLProtocol, @unchecked Sendable {
         {
           "data": {
             "version": 1,
-            "generatedAt": "2026-08-12T12:00:00.000Z",
+            "generatedAt": "2026-08-12T12:00:00.123Z",
             "stats": { "checkedOut": 1, "overdue": 0, "reserved": 0, "dueToday": 0 },
             "pendingPickupTotal": 0,
             "openBookings": [],
@@ -1144,17 +1315,23 @@ private actor NoopBookingNotifier: BookingNotificationDelivering {
     func requestAuthorization() async {}
     func authorization() async -> BookingNotificationAuthorization { .authorized }
     func deliver(_ change: BookingChange, playsSound: Bool) async {}
+    func removeNotifications(identifiers: [String]) async {}
     func clearPrivateNotifications() async {}
 }
 
 private actor RecordingBookingNotifier: BookingNotificationDelivering {
     private var changes: [BookingChange] = []
+    private var removed: [String] = []
+    private var cleared = false
 
     func requestAuthorization() async {}
     func authorization() async -> BookingNotificationAuthorization { .authorized }
     func deliver(_ change: BookingChange, playsSound: Bool) async { changes.append(change) }
     func deliveredChanges() -> [BookingChange] { changes }
-    func clearPrivateNotifications() async {}
+    func removeNotifications(identifiers: [String]) async { removed.append(contentsOf: identifiers) }
+    func removedIdentifiers() -> [String] { removed }
+    func clearPrivateNotifications() async { cleared = true }
+    func didClear() -> Bool { cleared }
 }
 
 private actor SuspendedBookingNotifier: BookingNotificationDelivering {
@@ -1187,14 +1364,19 @@ private actor SuspendedBookingNotifier: BookingNotificationDelivering {
     }
 
     func deliver(_ change: BookingChange, playsSound: Bool) async {}
+    func removeNotifications(identifiers: [String]) async {}
     func clearPrivateNotifications() async {}
 }
 
-private func makeOpenBooking() -> OpenBooking {
+private func makeOpenBooking(
+    id: String = "booking-1",
+    title: String = "Camera checkout",
+    endsAt: Date = Date(timeIntervalSince1970: 1_800_000_000)
+) -> OpenBooking {
     OpenBooking(
-        id: "booking-1",
-        title: "Camera checkout",
-        endsAt: Date(timeIntervalSince1970: 1_800_000_000),
+        id: id,
+        title: title,
+        endsAt: endsAt,
         refNumber: "C-001",
         requester: .init(id: "user-1", name: "Erik Role", avatarUrl: nil),
         location: .init(id: "location-1", name: "Kohl Center"),

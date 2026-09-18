@@ -60,11 +60,7 @@ actor GearOpsClient: GearOpsServing {
         configuration.timeoutIntervalForResource = 30
         configuration.waitsForConnectivity = false
         session = URLSession(configuration: configuration)
-
-        let decoder = JSONDecoder()
-        decoder.keyDecodingStrategy = .convertFromSnakeCase
-        decoder.dateDecodingStrategy = .iso8601
-        self.decoder = decoder
+        self.decoder = GearOpsJSON.makeDecoder()
     }
 
     func login(email: String, password: String) async throws -> LoginResponse {
@@ -179,6 +175,31 @@ actor GearOpsClient: GearOpsServing {
         default:
             "Wisconsin Creative could not complete the request. Try again."
         }
+    }
+}
+
+enum GearOpsJSON {
+    /// Prisma and `Date.toISOString()` emit fractional seconds. Foundation's
+    /// `.iso8601` strategy still rejects some of those strings, so both shapes
+    /// have to be accepted before a projection is treated as unreadable.
+    static func makeDecoder() -> JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let value = try container.decode(String.self)
+            if let date = try? Date(value, strategy: Date.ISO8601FormatStyle(includingFractionalSeconds: true)) {
+                return date
+            }
+            if let date = try? Date(value, strategy: Date.ISO8601FormatStyle()) {
+                return date
+            }
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Invalid ISO-8601 date: \(value)"
+            )
+        }
+        return decoder
     }
 }
 

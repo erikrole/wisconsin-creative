@@ -19,6 +19,10 @@ enum KioskConnectionState: String, Equatable, Sendable {
     /// simply not in use. Only a device past 24 hours, or one that has never
     /// checked in, represents an actual fault.
     var isFault: Bool { self == .offline }
+
+    /// The extra lists devices staff can act on. Inactive stays in the fleet
+    /// summary so the count is honest, without occupying a glance row.
+    var appearsInGlance: Bool { self != .inactive }
 }
 
 extension KioskDevice {

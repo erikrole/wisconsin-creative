@@ -179,4 +179,25 @@ final class AppPreferencesTests: XCTestCase {
         XCTAssertNotNil(LoginItemState.requiresApproval.detail)
         XCTAssertNotNil(LoginItemState.unavailable.detail)
     }
+
+    func testMenuBarExtraStaysVisibleByDefaultAndPersists() {
+        let defaults = isolatedDefaults()
+        let first = AppPreferencesStore(defaults: defaults)
+        XCTAssertTrue(first.showsMenuBarExtra)
+        XCTAssertTrue(AppPreferencesStore.showsMenuBarExtra(in: defaults))
+
+        first.showsMenuBarExtra = false
+
+        XCTAssertFalse(AppPreferencesStore(defaults: defaults).showsMenuBarExtra)
+        XCTAssertFalse(AppPreferencesStore.showsMenuBarExtra(in: defaults))
+    }
+
+    func testLegacyPreferencesKeepTheMenuBarExtraVisible() {
+        let defaults = isolatedDefaults()
+        let legacy = #"{"showsMenuBarCount":false}"#
+        defaults.set(Data(legacy.utf8), forKey: "GearOpsAppPreferencesV1")
+
+        XCTAssertTrue(AppPreferencesStore(defaults: defaults).showsMenuBarExtra)
+        XCTAssertFalse(AppPreferencesStore(defaults: defaults).showsMenuBarCount)
+    }
 }

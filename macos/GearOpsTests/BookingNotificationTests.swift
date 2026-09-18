@@ -89,6 +89,46 @@ final class BookingNotificationTests: XCTestCase {
         )
     }
 
+    func testLaterUpdatesReplaceTheSameBookingNotification() {
+        let first = BookingChangeDetector.change(from: nil, to: snapshot(status: .booked))
+        let second = BookingChangeDetector.change(
+            from: snapshot(status: .booked),
+            to: snapshot(status: .open)
+        )
+
+        XCTAssertEqual(first?.notificationIdentifier, "booking-change-booking-1")
+        XCTAssertEqual(second?.notificationIdentifier, first?.notificationIdentifier)
+        XCTAssertEqual(CompanionBookingNotification.categoryIdentifier, "GT_BOOKING")
+        XCTAssertEqual(CompanionBookingNotification.openActionIdentifier, "OPEN_BOOKING")
+    }
+
+    func testForegroundPresentationKeepsSilenceUnlessTheAlertCarriesSound() {
+        XCTAssertEqual(
+            BookingNotificationPresentation.options(playsSound: false),
+            [.banner, .list]
+        )
+        XCTAssertEqual(
+            BookingNotificationPresentation.options(playsSound: true),
+            [.banner, .list, .sound]
+        )
+    }
+
+    func testPayloadStaysVisibleAndSilentUnlessSoundIsOptedIn() {
+        let change = BookingChangeDetector.change(from: nil, to: snapshot())!
+        let silent = BookingNotificationPayload.content(for: change, playsSound: false)
+        XCTAssertEqual(silent.title, "Camera checkout")
+        XCTAssertEqual(silent.categoryIdentifier, "GT_BOOKING")
+        XCTAssertEqual(silent.threadIdentifier, "booking-booking-1")
+        XCTAssertEqual(silent.targetContentIdentifier, "booking-change-booking-1")
+        XCTAssertEqual(silent.interruptionLevel, .active)
+        XCTAssertNil(silent.sound)
+        XCTAssertEqual(silent.relevanceScore, 0.4)
+
+        let audible = BookingNotificationPayload.content(for: change, playsSound: true)
+        XCTAssertEqual(audible.sound, .default)
+        XCTAssertEqual(audible.interruptionLevel, .active)
+    }
+
     private func snapshot(
         title: String = "Camera checkout",
         status: BookingStatus = .booked,

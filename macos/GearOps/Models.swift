@@ -145,6 +145,37 @@ struct OpenBooking: Codable, Equatable, Identifiable, Sendable {
 
     struct ItemReference: Codable, Equatable, Identifiable, Sendable {
         let id: String
+        let name: String?
+        let assetTag: String?
+        let quantity: Int?
+
+        init(id: String, name: String? = nil, assetTag: String? = nil, quantity: Int? = nil) {
+            self.id = id
+            self.name = name
+            self.assetTag = assetTag
+            self.quantity = quantity
+        }
+
+        var hasIdentity: Bool {
+            Self.nonempty(assetTag) != nil || Self.nonempty(name) != nil
+        }
+
+        /// Tag-first, matching iOS item lists.
+        var listPrimaryTitle: String {
+            Self.nonempty(assetTag) ?? Self.nonempty(name) ?? "Item"
+        }
+
+        var listSecondaryTitle: String? {
+            guard let name = Self.nonempty(name) else { return nil }
+            return name.compare(listPrimaryTitle, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
+                ? nil
+                : name
+        }
+
+        private static func nonempty(_ value: String?) -> String? {
+            let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            return trimmed.isEmpty ? nil : trimmed
+        }
     }
 
     let id: String
@@ -156,7 +187,8 @@ struct OpenBooking: Codable, Equatable, Identifiable, Sendable {
     let serializedItems: [ItemReference]
     let bulkItems: [ItemReference]
 
-    var itemCount: Int { serializedItems.count + bulkItems.count }
+    var items: [ItemReference] { serializedItems + bulkItems }
+    var itemCount: Int { items.count }
     func isOverdue(at now: Date = .now) -> Bool { endsAt < now }
 }
 
@@ -196,6 +228,66 @@ struct BookingActivitySnapshot: Codable, Equatable, Identifiable, Sendable {
     let updatedAt: Date
     let requester: OpenBooking.Person
     let location: OpenBooking.Location
+    let serializedItems: [OpenBooking.ItemReference]
+    let bulkItems: [OpenBooking.ItemReference]
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case title
+        case kind
+        case status
+        case startsAt
+        case endsAt
+        case updatedAt
+        case requester
+        case location
+        case serializedItems
+        case bulkItems
+    }
+
+    init(
+        id: String,
+        title: String,
+        kind: BookingKind,
+        status: BookingStatus,
+        startsAt: Date,
+        endsAt: Date,
+        updatedAt: Date,
+        requester: OpenBooking.Person,
+        location: OpenBooking.Location,
+        serializedItems: [OpenBooking.ItemReference] = [],
+        bulkItems: [OpenBooking.ItemReference] = []
+    ) {
+        self.id = id
+        self.title = title
+        self.kind = kind
+        self.status = status
+        self.startsAt = startsAt
+        self.endsAt = endsAt
+        self.updatedAt = updatedAt
+        self.requester = requester
+        self.location = location
+        self.serializedItems = serializedItems
+        self.bulkItems = bulkItems
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        title = try container.decode(String.self, forKey: .title)
+        kind = try container.decode(BookingKind.self, forKey: .kind)
+        status = try container.decode(BookingStatus.self, forKey: .status)
+        startsAt = try container.decode(Date.self, forKey: .startsAt)
+        endsAt = try container.decode(Date.self, forKey: .endsAt)
+        updatedAt = try container.decode(Date.self, forKey: .updatedAt)
+        requester = try container.decode(OpenBooking.Person.self, forKey: .requester)
+        location = try container.decode(OpenBooking.Location.self, forKey: .location)
+        serializedItems = try container.decodeIfPresent([OpenBooking.ItemReference].self, forKey: .serializedItems) ?? []
+        bulkItems = try container.decodeIfPresent([OpenBooking.ItemReference].self, forKey: .bulkItems) ?? []
+    }
+
+    var items: [OpenBooking.ItemReference] { serializedItems + bulkItems }
+    var itemCount: Int { items.count }
 
     func isWaitingForPickup(at now: Date = .now) -> Bool {
         status == .pendingPickup || (kind == .reservation && status == .booked && startsAt <= now)
@@ -297,4 +389,41 @@ struct KioskDevicesResponse: Decodable, Sendable {
 
 struct ServerErrorResponse: Decodable, Sendable {
     let error: String
+}
+
+extension Date {
+    var gearTime: String {
+        formatted(date: .omitted, time: .shortened)
+    }
+
+    func operationalDayLabel(now: Date = .now) -> String {
+        let calendar = Calendar.current
+        if calendar.isDate(self, inSameDayAs: now) { return "Today" }
+        if let tomorrow = calendar.date(byAdding: .day, value: 1, to: now),
+           calendar.isDate(self, inSameDayAs: tomorrow) {
+            return "Tomorrow"
+        }
+        if let yesterday = calendar.date(byAdding: .day, value: -1, to: now),
+           calendar.isDate(self, inSameDayAs: yesterday) {
+            return "Yesterday"
+        }
+
+        let dayDistance = calendar.dateComponents(
+            [.day],
+            from: calendar.startOfDay(for: now),
+            to: calendar.startOfDay(for: self)
+        ).day ?? 7
+        return abs(dayDistance) < 7
+            ? formatted(.dateTime.weekday(.wide))
+            : formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
+    }
+
+    /// Same wording as iOS booking cards: "today at 3:00 PM".
+    func operationalDateTimeLabel(now: Date = .now, capitalizesRelativeDay: Bool = true) -> String {
+        let day = operationalDayLabel(now: now)
+        let displayDay = !capitalizesRelativeDay && ["Today", "Tomorrow", "Yesterday"].contains(day)
+            ? day.lowercased()
+            : day
+        return "\(displayDay) at \(gearTime)"
+    }
 }

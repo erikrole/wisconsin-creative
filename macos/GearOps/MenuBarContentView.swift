@@ -5,6 +5,14 @@ enum GearOpsLayout {
     /// One popover width for every state so switching between restoring,
     /// signed-out, and operations does not resize the window under the cursor.
     static let popoverWidth: CGFloat = 380
+    static let glanceOpenBookings = 4
+    static let glancePickups = 3
+    static let glanceKiosks = 4
+}
+
+private enum ExtraRoute: Equatable {
+    case open(id: String)
+    case pickup(id: String)
 }
 
 struct MenuBarContentView: View {
@@ -15,6 +23,10 @@ struct MenuBarContentView: View {
 
     @State private var measuredContentHeight: CGFloat = 320
     @State private var isHoveringRefresh = false
+    @State private var showsAllPickups = false
+    @State private var showsAllOpenBookings = false
+    @State private var showsAllKiosks = false
+    @State private var selectedRoute: ExtraRoute?
 
     private let minimumContentHeight: CGFloat = 180
     private let maximumContentHeight: CGFloat = 500
@@ -41,6 +53,16 @@ struct MenuBarContentView: View {
             guard shouldRetry else { return }
             Task { await model.restoreSession() }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .gearOpsOpenSettings)) { _ in
+            NSApplication.shared.activate()
+            openWindow(id: GearOpsWindow.settings)
+        }
+        .onChange(of: model.user?.id) { _, _ in
+            showsAllPickups = false
+            showsAllOpenBookings = false
+            showsAllKiosks = false
+            selectedRoute = nil
+        }
     }
 
     private var restoringView: some View {
@@ -59,10 +81,16 @@ struct MenuBarContentView: View {
                 header(at: context.date)
                 Divider()
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 16) {
-                        openBookingsList(at: context.date)
-                        pendingPickupsList(at: context.date)
-                        systemHealth(at: context.date)
+                    Group {
+                        if let selectedRoute {
+                            bookingDetail(selectedRoute, at: context.date)
+                        } else {
+                            VStack(alignment: .leading, spacing: 16) {
+                                pendingPickupsList(at: context.date)
+                                openBookingsList(at: context.date)
+                                systemHealth(at: context.date)
+                            }
+                        }
                     }
                     .padding(16)
                     .onGeometryChange(for: CGFloat.self, of: { proxy in
@@ -120,48 +148,129 @@ struct MenuBarContentView: View {
         .padding(16)
     }
 
-    /// Custody count plus projection freshness, so the two facts that decide
-    /// whether the popover is worth trusting are visible without scrolling.
+    /// Custody, overdue, and freshness stay in the header so a glance does not
+    /// require scrolling past rows.
     private func headerSubtitle(at now: Date) -> String {
         guard let count = model.custodyCount else { return model.healthLabel }
-        let custody = "\(count) open booking\(count == 1 ? "" : "s")"
-        guard let snapshot = model.snapshot else { return custody }
-        return "\(custody) · \(snapshot.freshnessLabel(at: now))"
+        var parts = ["\(count) open"]
+        let overdue = model.overdueBookingCount(at: now)
+        if overdue > 0 { parts.append("\(overdue) overdue") }
+        if let snapshot = model.snapshot {
+            parts.append(snapshot.freshnessLabel(at: now))
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    @ViewBuilder
+    private func bookingDetail(_ route: ExtraRoute, at now: Date) -> some View {
+        switch route {
+        case .open(let id):
+            if let booking = model.openBookings.first(where: { $0.id == id }) {
+                ExtraBookingDetail(
+                    title: booking.title,
+                    timing: "Due \(booking.endsAt.operationalDateTimeLabel(now: now, capitalizesRelativeDay: false))",
+                    tone: booking.isOverdue(at: now) ? .red : .blue,
+                    isOverdue: booking.isOverdue(at: now),
+                    requester: booking.requester,
+                    locationName: booking.location.name,
+                    refNumber: booking.refNumber,
+                    items: booking.items,
+                    backLabel: "All bookings",
+                    onBack: { selectedRoute = nil },
+                    onOpenWeb: { model.openBooking(booking) }
+                )
+            } else {
+                missingBookingDetail
+            }
+        case .pickup(let id):
+            if let booking = model.pendingPickupBookings(at: now).first(where: { $0.id == id })
+                ?? model.activeBookingActivity.first(where: { $0.id == id }) {
+                ExtraBookingDetail(
+                    title: booking.title,
+                    timing: pickupTiming(booking, at: now),
+                    tone: .orange,
+                    isOverdue: false,
+                    requester: booking.requester,
+                    locationName: booking.location.name,
+                    refNumber: nil,
+                    items: booking.items,
+                    backLabel: "All bookings",
+                    onBack: { selectedRoute = nil },
+                    onOpenWeb: { model.openBooking(booking) }
+                )
+            } else {
+                missingBookingDetail
+            }
+        }
+    }
+
+    private var missingBookingDetail: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Button {
+                selectedRoute = nil
+            } label: {
+                Label("All bookings", systemImage: "chevron.left")
+            }
+            .buttonStyle(.link)
+            .font(.callout.weight(.semibold))
+            Text("This booking is no longer in the current snapshot.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func pickupTiming(_ booking: BookingActivitySnapshot, at now: Date) -> String {
+        let when = booking.startsAt.operationalDateTimeLabel(now: now, capitalizesRelativeDay: false)
+        if booking.kind == .reservation, booking.status == .booked, booking.startsAt < now {
+            return "Pickup was due \(when)"
+        }
+        return "Pickup \(when)"
     }
 
     private func openBookingsList(at now: Date) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        let bookings = model.glanceOpenBookings(at: now)
+        return VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
                 sectionTitle("Open bookings")
                 overdueBadge(at: now)
                 Spacer()
-                Button("View all") { model.openCheckouts() }
-                    .buttonStyle(.link)
-                    .font(.caption)
-                    .accessibilityLabel("View all open bookings")
+                if !model.openBookings.isEmpty {
+                    Button("View all") { model.openCheckouts() }
+                        .buttonStyle(.link)
+                        .font(.caption)
+                        .accessibilityLabel("View all open bookings")
+                }
             }
 
             if model.openBookings.isEmpty {
-                ContentUnavailableView(
-                    "No open bookings",
-                    systemImage: "checkmark.seal.fill",
-                    description: Text(model.openBookingTotal == nil
-                        ? "Refresh to load current checkouts."
-                        : "All gear is accounted for.")
-                )
-                .frame(maxWidth: .infinity, minHeight: 96)
+                Text(model.openBookingTotal == nil
+                    ? "Refresh to load current checkouts."
+                    : "All gear is accounted for.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 2)
             } else {
+                let visible = visibleItems(bookings, cap: GearOpsLayout.glanceOpenBookings, expanded: showsAllOpenBookings)
                 if #available(macOS 26.0, *) {
                     GlassEffectContainer(spacing: 8) {
                         LazyVStack(spacing: 8) {
-                            bookingRows(at: now)
+                            bookingRows(visible, at: now)
                         }
                     }
                 } else {
                     LazyVStack(spacing: 8) {
-                        bookingRows(at: now)
+                        bookingRows(visible, at: now)
                     }
                 }
+
+                moreRowsButton(
+                    remaining: bookings.count - GearOpsLayout.glanceOpenBookings,
+                    expanded: $showsAllOpenBookings,
+                    accessibilityNoun: "open bookings"
+                )
             }
         }
     }
@@ -185,10 +294,10 @@ struct MenuBarContentView: View {
         }
     }
 
-    private func bookingRows(at now: Date) -> some View {
-        ForEach(model.openBookings) { booking in
+    private func bookingRows<S: Sequence>(_ bookings: S, at now: Date) -> some View where S.Element == OpenBooking {
+        ForEach(Array(bookings)) { booking in
             OpenBookingRow(booking: booking, now: now) {
-                model.openBooking(booking)
+                selectedRoute = .open(id: booking.id)
             }
         }
     }
@@ -208,25 +317,25 @@ struct MenuBarContentView: View {
                 }
 
                 LazyVStack(spacing: 8) {
-                    ForEach(bookings.prefix(3)) { booking in
+                    ForEach(visibleItems(bookings, cap: GearOpsLayout.glancePickups, expanded: showsAllPickups)) { booking in
                         PickupBookingRow(booking: booking, now: now) {
-                            model.openBooking(booking)
+                            selectedRoute = .pickup(id: booking.id)
                         }
                     }
                 }
 
-                if bookings.count > 3 {
-                    Button("View \(bookings.count - 3) more") { model.openPendingPickups() }
-                        .buttonStyle(.link)
-                        .font(.caption)
-                        .accessibilityLabel("View \(bookings.count - 3) more bookings waiting for pickup")
-                }
+                moreRowsButton(
+                    remaining: bookings.count - GearOpsLayout.glancePickups,
+                    expanded: $showsAllPickups,
+                    accessibilityNoun: "bookings waiting for pickup"
+                )
             }
         }
     }
 
     private func systemHealth(at now: Date) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        let kiosks = model.glanceKioskDevices(at: now)
+        return VStack(alignment: .leading, spacing: 8) {
             HStack {
                 sectionTitle("System health")
                 Spacer()
@@ -250,14 +359,15 @@ struct MenuBarContentView: View {
                 rowSeparator
                 HealthRow(
                     title: model.kioskAccess == .available ? "Kiosks" : "Kiosk access",
-                    detail: model.kioskStatusSummary,
+                    detail: model.kioskStatusSummary(at: now),
                     severity: model.kioskHealthSeverity,
                     action: model.kioskAccess == .available ? { model.openKioskDevices() } : nil
                 )
 
-                if model.kioskAccess == .available, !model.monitoredKioskDevices.isEmpty {
+                if model.kioskAccess == .available, !kiosks.isEmpty {
+                    let visible = visibleItems(kiosks, cap: GearOpsLayout.glanceKiosks, expanded: showsAllKiosks)
                     rowSeparator
-                    ForEach(Array(model.monitoredKioskDevices.prefix(4).enumerated()), id: \.element.id) { index, device in
+                    ForEach(Array(visible.enumerated()), id: \.element.id) { index, device in
                         if index > 0 { rowSeparator }
                         KioskRow(device: device, now: now) { model.openKioskDevices() }
                     }
@@ -272,12 +382,13 @@ struct MenuBarContentView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            if model.kioskAccess == .available, model.monitoredKioskDevices.count > 4 {
-                Button("View \(model.monitoredKioskDevices.count - 4) more kiosks") {
-                    model.openKioskDevices()
-                }
-                .buttonStyle(.link)
-                .font(.caption)
+            if model.kioskAccess == .available {
+                moreRowsButton(
+                    remaining: kiosks.count - GearOpsLayout.glanceKiosks,
+                    expanded: $showsAllKiosks,
+                    accessibilityNoun: "kiosks",
+                    visibleSuffix: " kiosks"
+                )
             }
         }
     }
@@ -330,6 +441,37 @@ struct MenuBarContentView: View {
         openWindow(id: GearOpsWindow.settings)
     }
 
+    private func visibleItems<T>(_ items: [T], cap: Int, expanded: Bool) -> [T] {
+        expanded ? items : Array(items.prefix(cap))
+    }
+
+    @ViewBuilder
+    private func moreRowsButton(
+        remaining: Int,
+        expanded: Binding<Bool>,
+        accessibilityNoun: String,
+        visibleSuffix: String = ""
+    ) -> some View {
+        if remaining > 0 {
+            Button(expanded.wrappedValue ? "Show less" : "View \(remaining) more\(visibleSuffix)") {
+                if reduceMotion {
+                    expanded.wrappedValue.toggle()
+                } else {
+                    withAnimation(.smooth(duration: 0.22)) {
+                        expanded.wrappedValue.toggle()
+                    }
+                }
+            }
+            .buttonStyle(.link)
+            .font(.caption)
+            .accessibilityLabel(
+                expanded.wrappedValue
+                    ? "Show fewer \(accessibilityNoun)"
+                    : "View \(remaining) more \(accessibilityNoun)"
+            )
+        }
+    }
+
     private func sectionTitle(_ title: String) -> some View {
         Text(title)
             .font(.caption.weight(.semibold))
@@ -360,78 +502,30 @@ private struct PickupBookingRow: View {
     let now: Date
     let action: () -> Void
 
-    @State private var isHovering = false
+    private var timingLabel: String {
+        let when = booking.startsAt.operationalDateTimeLabel(now: now, capitalizesRelativeDay: false)
+        if booking.kind == .reservation, booking.status == .booked, booking.startsAt < now {
+            return "Pickup was due \(when)"
+        }
+        return "Pickup \(when)"
+    }
 
-    @ViewBuilder
     var body: some View {
-        if #available(macOS 26.0, *) {
-            pickupButton
-                .glassEffect(
-                    .regular.tint(Color.orange.opacity(isHovering ? 0.22 : 0.12)).interactive(),
-                    in: .rect(cornerRadius: 10)
-                )
-                .onHover { isHovering = $0 }
-        } else {
-            pickupButton
-                .background(
-                    isHovering ? Color.primary.opacity(0.1) : Color.primary.opacity(0.045),
-                    in: RoundedRectangle(cornerRadius: 10, style: .continuous)
-                )
-                .overlay {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .strokeBorder(.secondary.opacity(0.25), lineWidth: 0.5)
-                }
-                .onHover { isHovering = $0 }
-        }
-    }
-
-    private var pickupButton: some View {
-        Button(action: action) {
-            HStack(spacing: 10) {
-                Capsule()
-                    .fill(.orange)
-                    .frame(width: 3, height: 42)
-
-                UserAvatarView(
-                    name: booking.requester.name,
-                    avatarUrl: booking.requester.avatarUrl
-                )
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(booking.title)
-                        .font(.headline)
-                        .lineLimit(1)
-                    Text(pickupLabel)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.orange)
-                        .lineLimit(1)
-                    Text("\(booking.requester.name) · \(booking.location.name)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-                Spacer(minLength: 4)
-                Image(systemName: "chevron.right")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(isHovering ? .secondary : .tertiary)
-            }
-            .padding(10)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(.rect)
-        }
-        .buttonStyle(.plain)
-        .help(booking.title)
-        .accessibilityLabel("\(booking.title), \(pickupLabel), \(booking.requester.name), \(booking.location.name)")
-        .accessibilityHint("Opens this booking in Wisconsin Creative")
-    }
-
-    private var pickupLabel: String {
-        let age = max(0, now.timeIntervalSince(booking.startsAt))
-        if age < 60 { return "Waiting now" }
-        if Calendar.current.isDateInToday(booking.startsAt) {
-            return "Waiting since \(booking.startsAt.formatted(date: .omitted, time: .shortened))"
-        }
-        return "Waiting since \(booking.startsAt.formatted(.dateTime.month(.abbreviated).day().hour().minute()))"
+        BookingGlanceCard(
+            tone: .orange,
+            isOverdue: false,
+            title: booking.title,
+            timing: timingLabel,
+            requester: booking.requester.name,
+            location: booking.location.name,
+            itemCount: nil,
+            avatarName: booking.requester.name,
+            avatarUrl: booking.requester.avatarUrl,
+            help: booking.title,
+            accessibilityLabel: "\(booking.title), \(timingLabel), \(booking.requester.name), \(booking.location.name)",
+            accessibilityHint: "Shows details and items",
+            action: action
+        )
     }
 }
 
@@ -440,105 +534,262 @@ private struct OpenBookingRow: View {
     let now: Date
     let action: () -> Void
 
+    private var isOverdue: Bool { booking.isOverdue(at: now) }
+    private var timingLabel: String {
+        "Due \(booking.endsAt.operationalDateTimeLabel(now: now, capitalizesRelativeDay: false))"
+    }
+
+    var body: some View {
+        BookingGlanceCard(
+            tone: isOverdue ? .red : .blue,
+            isOverdue: isOverdue,
+            title: booking.title,
+            timing: timingLabel,
+            requester: booking.requester.name,
+            location: booking.location.name,
+            itemCount: booking.itemCount,
+            avatarName: booking.requester.name,
+            avatarUrl: booking.requester.avatarUrl,
+            help: booking.refNumber.map { "\(booking.title) · \($0)" } ?? booking.title,
+            accessibilityLabel: "\(isOverdue ? "Overdue, " : "")\(booking.title), \(booking.requester.name), \(booking.location.name), \(timingLabel)",
+            accessibilityHint: "Shows details and items",
+            action: action
+        )
+    }
+}
+
+/// iOS `BookingRow` compact card: 4pt rail, 40pt avatar, 16pt title, operational
+/// timing, requester · location · items, 16pt continuous card.
+private struct BookingGlanceCard: View {
+    let tone: StatusTone
+    let isOverdue: Bool
+    let title: String
+    let timing: String
+    let requester: String
+    let location: String
+    let itemCount: Int?
+    let avatarName: String
+    let avatarUrl: String?
+    let help: String
+    let accessibilityLabel: String
+    let accessibilityHint: String
+    let action: () -> Void
+
     @State private var isHovering = false
 
-    @ViewBuilder
     var body: some View {
         if #available(macOS 26.0, *) {
-            bookingButton
+            cardButton
                 .glassEffect(
-                    booking.isOverdue(at: now)
+                    isOverdue
                         ? .regular.tint(Color.red.opacity(0.12)).interactive()
                         : .regular.interactive(),
-                    in: .rect(cornerRadius: 10)
+                    in: .rect(cornerRadius: Brand.Radius.md)
                 )
                 .onHover { isHovering = $0 }
         } else {
-            bookingButton
+            cardButton
                 .background(
                     fallbackBackground,
-                    in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    in: RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous)
                 )
                 .overlay {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .strokeBorder(.secondary.opacity(0.25), lineWidth: 0.5)
+                    RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous)
+                        .strokeBorder(Color.hairline, lineWidth: 0.5)
                 }
+                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 3)
                 .onHover { isHovering = $0 }
         }
     }
 
     private var fallbackBackground: Color {
-        if booking.isOverdue(at: now) {
-            return Color.red.opacity(isHovering ? 0.16 : 0.08)
-        }
+        if isOverdue { return Color.statusBackground(.red) }
         return isHovering ? Color.primary.opacity(0.1) : Color.primary.opacity(0.045)
     }
 
-    private var bookingButton: some View {
+    private var cardButton: some View {
         Button(action: action) {
-            HStack(spacing: 10) {
-                Capsule()
-                    .fill(booking.isOverdue(at: now) ? Color.red : Color.blue)
-                    .frame(width: 3, height: 42)
-                UserAvatarView(
-                    name: booking.requester.name,
-                    avatarUrl: booking.requester.avatarUrl
-                )
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(booking.title)
-                        .font(.headline)
+            HStack(spacing: 12) {
+                StatusRail(tone: tone)
+                UserAvatarView(name: avatarName, avatarUrl: avatarUrl, size: 40)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.system(size: 16, weight: .bold))
                         .lineLimit(1)
-                    Text(dueLabel(at: now))
+                    Text(timing)
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(booking.isOverdue(at: now) ? .red : .blue)
+                        .foregroundStyle(Color.statusText(tone))
                         .lineLimit(1)
-                    Text(metadata)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                    HStack(spacing: 4) {
+                        Text(requester)
+                        Text("·")
+                        Text(location)
+                        if let itemCount, itemCount > 0 {
+                            Text("·")
+                            Text("\(itemCount) item\(itemCount == 1 ? "" : "s")")
+                                .monospacedDigit()
+                        }
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
                 }
-                Spacer(minLength: 4)
+                Spacer(minLength: 8)
                 Image(systemName: "chevron.right")
                     .font(.caption2.weight(.semibold))
-                    .foregroundStyle(isHovering ? .secondary : .tertiary)
+                    .foregroundStyle(.tertiary)
+                    .accessibilityHidden(true)
             }
-            .padding(10)
+            .padding(.vertical, 12)
+            .padding(.horizontal, 14)
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
-        .help(booking.refNumber.map { "\(booking.title) · \($0)" } ?? booking.title)
-        .accessibilityLabel(accessibilityLabel(at: now))
-        .accessibilityHint("Opens this checkout in Wisconsin Creative")
+        .help(help)
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityHint(accessibilityHint)
     }
+}
 
-    private var metadata: String {
-        var parts = [booking.requester.name, booking.location.name]
-        if booking.itemCount > 0 {
-            parts.append("\(booking.itemCount) item\(booking.itemCount == 1 ? "" : "s")")
+private struct ExtraBookingDetail: View {
+    let title: String
+    let timing: String
+    let tone: StatusTone
+    let isOverdue: Bool
+    let requester: OpenBooking.Person
+    let locationName: String
+    let refNumber: String?
+    let items: [OpenBooking.ItemReference]
+    let backLabel: String
+    let onBack: () -> Void
+    let onOpenWeb: () -> Void
+
+    private var namedItems: [OpenBooking.ItemReference] { items.filter(\.hasIdentity) }
+    private var itemsAreAnonymous: Bool { !items.isEmpty && namedItems.isEmpty }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Button(action: onBack) {
+                Label(backLabel, systemImage: "chevron.left")
+            }
+            .buttonStyle(.link)
+            .font(.callout.weight(.semibold))
+            .accessibilityLabel(backLabel)
+
+            HStack(alignment: .top, spacing: 12) {
+                StatusRail(tone: tone)
+                UserAvatarView(name: requester.name, avatarUrl: requester.avatarUrl, size: 40)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.system(size: 16, weight: .bold))
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(timing)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.statusText(tone))
+                    HStack(spacing: 4) {
+                        Text(requester.name)
+                        Text("·")
+                        Text(locationName)
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    if let refNumber, !refNumber.isEmpty {
+                        Text(refNumber)
+                            .font(.caption.monospaced())
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.vertical, 12)
+            .padding(.horizontal, 14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                isOverdue ? Color.statusBackground(.red) : Color.primary.opacity(0.045),
+                in: RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous)
+            )
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("Items")
+                        .font(.caption.weight(.semibold))
+                        .kerning(0.4)
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+                    Spacer()
+                    if !items.isEmpty {
+                        Text("\(items.count)")
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if items.isEmpty {
+                    Text("No items on this booking.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                } else if itemsAreAnonymous {
+                    Text("Item names are not in this snapshot yet. They appear after the next booking update.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                            if index > 0 { Divider() }
+                            ExtraItemRow(item: item)
+                        }
+                    }
+                    if items.count >= 48 {
+                        Text("Showing the first 48 items.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
+            Button("Open in Wisconsin Creative", action: onOpenWeb)
+                .buttonStyle(.link)
+                .font(.callout)
         }
-        return parts.joined(separator: " · ")
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
+}
 
-    private func dueLabel(at now: Date) -> String {
-        let calendar = Calendar.current
-        let day: String
-        if calendar.isDateInToday(booking.endsAt) {
-            day = "today"
-        } else if calendar.isDateInTomorrow(booking.endsAt) {
-            day = "tomorrow"
-        } else if calendar.isDateInYesterday(booking.endsAt) {
-            day = "yesterday"
-        } else {
-            day = booking.endsAt.formatted(.dateTime.month(.abbreviated).day())
+private struct ExtraItemRow: View {
+    let item: OpenBooking.ItemReference
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.listPrimaryTitle)
+                    .font(.callout.weight(.semibold))
+                    .lineLimit(1)
+                if let subtitle = item.listSecondaryTitle {
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+            Spacer(minLength: 8)
+            if let quantity = item.quantity, quantity > 1 {
+                Text("×\(quantity)")
+                    .font(.callout.monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
         }
-        let time = booking.endsAt.formatted(date: .omitted, time: .shortened)
-        return "Due \(day), \(time)"
+        .padding(.vertical, 8)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(accessibilityLabel)
     }
 
-    private func accessibilityLabel(at now: Date) -> String {
-        let prefix = booking.isOverdue(at: now) ? "Overdue, " : ""
-        return "\(prefix)\(booking.title), \(booking.requester.name), \(booking.location.name), \(dueLabel(at: now))"
+    private var accessibilityLabel: String {
+        var parts = [item.listPrimaryTitle]
+        if let subtitle = item.listSecondaryTitle { parts.append(subtitle) }
+        if let quantity = item.quantity { parts.append("quantity \(quantity)") }
+        return parts.joined(separator: ", ")
     }
 }
 

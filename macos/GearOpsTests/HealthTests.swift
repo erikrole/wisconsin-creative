@@ -47,6 +47,10 @@ final class HealthTests: XCTestCase {
         XCTAssertFalse(device(active: false, lastSeenAt: now).connectionState(at: now).isFault)
         XCTAssertTrue(device(lastSeenAt: now.addingTimeInterval(-25 * 60 * 60)).connectionState(at: now).isFault)
         XCTAssertEqual(KioskConnectionState.stale.label, "Idle")
+        XCTAssertTrue(KioskConnectionState.offline.appearsInGlance)
+        XCTAssertTrue(KioskConnectionState.online.appearsInGlance)
+        XCTAssertTrue(KioskConnectionState.stale.appearsInGlance)
+        XCTAssertFalse(KioskConnectionState.inactive.appearsInGlance)
     }
 
     func testEmptyFleetSummaryNamesConfigurationState() {

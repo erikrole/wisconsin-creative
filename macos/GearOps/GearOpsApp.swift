@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 enum GearOpsWindow {
@@ -16,17 +17,27 @@ struct GearOpsApp: App {
         MenuBarExtra(isInserted: $preferences.showsMenuBarExtra) {
             MenuBarContentView(model: model)
         } label: {
+            // Template (black/clear) SF Symbol so the system can tint it for
+            // light/dark menu bars and the selected state. Apple asks extras
+            // not to animate and to stay recognizable; health does not swap
+            // the glyph. The optional count stays a static numeral.
             HStack(spacing: 4) {
                 Image(systemName: model.menuBarSymbol)
+                    .symbolRenderingMode(.monochrome)
                 if model.appPreferences.showsMenuBarCount, let count = model.custodyCount {
                     Text(count, format: .number)
                         .monospacedDigit()
-                        .contentTransition(.numericText())
                 }
             }
             .accessibilityLabel(model.menuBarAccessibilityLabel)
         }
+        // Bookings, pickups, health, and sign-in are too complex for a flat
+        // command menu, which is Apple's documented exception to "display a
+        // menu, not a popover" for menu bar extras.
         .menuBarExtraStyle(.window)
+        .onChange(of: preferences.showsMenuBarExtra, initial: true) { _, visible in
+            GearOpsActivation.apply(showsMenuBarExtra: visible)
+        }
 
         // Not a `Settings` scene: an accessory app never activates itself, so
         // the settings window opened behind every other window and read as
@@ -42,6 +53,7 @@ struct GearOpsApp: App {
         .commands {
             CommandGroup(replacing: .appSettings) {
                 Button("Settings…") {
+                    NSApplication.shared.activate()
                     openWindow(id: GearOpsWindow.settings)
                 }
                 .keyboardShortcut(",", modifiers: .command)

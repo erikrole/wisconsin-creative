@@ -1,8 +1,10 @@
+import AppKit
 import SwiftUI
 
 struct GearOpsLoginView: View {
     let model: GearOpsModel
 
+    @Environment(\.openWindow) private var openWindow
     @State private var email = ""
     @State private var password = ""
     @State private var showPassword = false
@@ -172,6 +174,10 @@ struct GearOpsLoginView: View {
     private var footer: some View {
         HStack {
             Button("Open Wisconsin Creative") { model.openDashboard() }
+            Button("Settings…") {
+                NSApplication.shared.activate()
+                openWindow(id: GearOpsWindow.settings)
+            }
             Spacer()
             Button("Quit") { model.quit() }
                 .keyboardShortcut("q", modifiers: .command)

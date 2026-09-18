@@ -14,6 +14,14 @@ struct BookingChange: Equatable, Sendable {
     var summary: String {
         "\(statusLabel) • \(requesterName) • \(timestamp.formatted(date: .abbreviated, time: .shortened))"
     }
+
+    /// One request per booking so a later status replaces the previous alert
+    /// instead of filling Notification Center with the same custody event.
+    var notificationIdentifier: String { Self.identifier(for: bookingID) }
+
+    static func identifier(for bookingID: String) -> String {
+        "booking-change-\(bookingID)"
+    }
 }
 
 enum BookingDeepLink {
@@ -131,7 +139,66 @@ protocol BookingNotificationDelivering: Sendable {
     func requestAuthorization() async
     func authorization() async -> BookingNotificationAuthorization
     func deliver(_ change: BookingChange, playsSound: Bool) async
+    func removeNotifications(identifiers: [String]) async
     func clearPrivateNotifications() async
+}
+
+enum CompanionBookingNotification {
+    static let categoryIdentifier = "GT_BOOKING"
+    static let openActionIdentifier = "OPEN_BOOKING"
+    /// One projection refresh can contain many historical edges. Keep the
+    /// visible burst small; the baseline still advances for everything else.
+    static let maxAlertsPerRefresh = 4
+
+    static func register(with center: UNUserNotificationCenter = .current()) {
+        let open = UNNotificationAction(
+            identifier: openActionIdentifier,
+            title: "Open Booking",
+            options: [.foreground]
+        )
+        let category = UNNotificationCategory(
+            identifier: categoryIdentifier,
+            actions: [open],
+            intentIdentifiers: [],
+            hiddenPreviewsBodyPlaceholder: "Gear and reservation update",
+            options: []
+        )
+        center.setNotificationCategories([category])
+    }
+}
+
+enum BookingNotificationPayload {
+    static func content(for change: BookingChange, playsSound: Bool) -> UNMutableNotificationContent {
+        let content = UNMutableNotificationContent()
+        content.title = change.bookingTitle
+        content.body = change.summary
+        content.sound = playsSound ? .default : nil
+        // Visible banners stay on `.active`. `.passive` would only land in
+        // Notification Center and hide the silent-but-visible companion contract.
+        content.interruptionLevel = .active
+        content.categoryIdentifier = CompanionBookingNotification.categoryIdentifier
+        content.threadIdentifier = "booking-\(change.bookingID)"
+        content.targetContentIdentifier = change.notificationIdentifier
+        content.relevanceScore = change.category.notificationRelevance
+        content.userInfo = [
+            "bookingID": change.bookingID,
+            "bookingKind": change.bookingKind.rawValue,
+        ]
+        return content
+    }
+}
+
+enum BookingNotificationPresentation {
+    /// Foreground presentation must not force the default sound. Including
+    /// `.sound` when `content.sound` is nil makes macOS play the system sound,
+    /// which would break the silent-by-default companion contract.
+    static func options(playsSound: Bool) -> UNNotificationPresentationOptions {
+        var options: UNNotificationPresentationOptions = [.banner, .list]
+        if playsSound {
+            options.insert(.sound)
+        }
+        return options
+    }
 }
 
 private final class BookingNotificationPresenter: NSObject, UNUserNotificationCenterDelegate, @unchecked Sendable {
@@ -141,13 +208,18 @@ private final class BookingNotificationPresenter: NSObject, UNUserNotificationCe
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification
     ) async -> UNNotificationPresentationOptions {
-        [.banner, .list]
+        BookingNotificationPresentation.options(
+            playsSound: notification.request.content.sound != nil
+        )
     }
 
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse
     ) async {
+        let action = response.actionIdentifier
+        guard action == UNNotificationDefaultActionIdentifier
+            || action == CompanionBookingNotification.openActionIdentifier else { return }
         guard let bookingID = response.notification.request.content.userInfo["bookingID"] as? String,
               let url = BookingDeepLink.notificationURL(
                 bookingID: bookingID,
@@ -162,10 +234,12 @@ actor BookingNotificationCenter: BookingNotificationDelivering {
 
     init(center: UNUserNotificationCenter = .current()) {
         self.center = center
+        CompanionBookingNotification.register(with: center)
         center.delegate = BookingNotificationPresenter.shared
     }
 
     func requestAuthorization() async {
+        CompanionBookingNotification.register(with: center)
         // Sound remains opt-in at delivery, but requesting the capability up
         // front means turning that preference on later works without a second,
         // surprising authorization dead end.
@@ -183,23 +257,26 @@ actor BookingNotificationCenter: BookingNotificationDelivering {
     }
 
     func deliver(_ change: BookingChange, playsSound: Bool) async {
-        let content = UNMutableNotificationContent()
-        content.title = change.bookingTitle
-        content.body = change.summary
-        content.sound = playsSound ? .default : nil
-        content.interruptionLevel = .active
-        content.threadIdentifier = "booking-\(change.bookingID)"
-        content.userInfo = [
-            "bookingID": change.bookingID,
-            "bookingKind": change.bookingKind.rawValue,
-        ]
+        switch await authorization() {
+        case .authorized, .provisional:
+            break
+        case .notDetermined, .denied, .unknown:
+            return
+        }
 
+        let content = BookingNotificationPayload.content(for: change, playsSound: playsSound)
         let request = UNNotificationRequest(
-            identifier: "booking-change-\(UUID().uuidString)",
+            identifier: change.notificationIdentifier,
             content: content,
             trigger: nil
         )
         try? await center.add(request)
+    }
+
+    func removeNotifications(identifiers: [String]) async {
+        guard !identifiers.isEmpty else { return }
+        center.removePendingNotificationRequests(withIdentifiers: identifiers)
+        center.removeDeliveredNotifications(withIdentifiers: identifiers)
     }
 
     func clearPrivateNotifications() async {

@@ -50,6 +50,14 @@ enum BookingChangeCategory: String, Codable, CaseIterable, Identifiable, Sendabl
         case .other: "pencil.circle"
         }
     }
+
+    var notificationRelevance: Double {
+        switch self {
+        case .pickupReady, .checkout: 1
+        case .cancellation, .timeChange: 0.7
+        case .reservation, .checkIn, .other: 0.4
+        }
+    }
 }
 
 /// Persisted shape. Categories are stored as an explicit allow list so a

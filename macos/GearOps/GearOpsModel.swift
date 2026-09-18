@@ -145,19 +145,16 @@ final class GearOpsModel {
     }
 
     var menuBarSymbol: String {
-        if user == nil { return "shippingbox" }
-        return switch healthSeverity {
-        case .healthy: "shippingbox.fill"
-        case .attention: "shippingbox.and.arrow.backward.fill"
-        case .critical: "exclamationmark.triangle.fill"
-        }
+        // Apple asks extras to stay an identifiable black/clear symbol. Health
+        // belongs in the window, not a different extra glyph.
+        user == nil ? "shippingbox" : "shippingbox.fill"
     }
 
     var menuBarAccessibilityLabel: String {
         guard let count = custodyCount else {
             return user == nil ? "Wisconsin Creative, signed out" : "Wisconsin Creative, status unavailable"
         }
-        return "Wisconsin Creative, \(count) active checkout\(count == 1 ? "" : "s"), \(healthLabel.lowercased())"
+        return "Wisconsin Creative, \(count) active checkout\(count == 1 ? "" : "s")"
     }
 
     /// The projection's checked-out statistic is the single physical-custody
@@ -190,9 +187,13 @@ final class GearOpsModel {
     }
 
     var kioskStatusSummary: String {
+        kioskStatusSummary(at: .now)
+    }
+
+    func kioskStatusSummary(at now: Date) -> String {
         switch kioskAccess {
         case .available:
-            kioskFleetCounts.summary
+            KioskFleetCounts(devices: monitoredKioskDevices(at: now), at: now).summary
         case .restricted:
             "Restricted for this account"
         case .failed:
@@ -210,13 +211,12 @@ final class GearOpsModel {
         }
     }
 
-    var kioskFleetCounts: KioskFleetCounts {
-        KioskFleetCounts(devices: monitoredKioskDevices)
+    var monitoredKioskDevices: [KioskDevice] {
+        monitoredKioskDevices(at: .now)
     }
 
-    var monitoredKioskDevices: [KioskDevice] {
-        let now = Date.now
-        return kioskDevices
+    func monitoredKioskDevices(at now: Date) -> [KioskDevice] {
+        kioskDevices
             .filter(\.isIncludedInMonitoring)
             .sorted { lhs, rhs in
                 let lhsPriority = Self.monitoringPriority(for: lhs.connectionState(at: now))
@@ -231,8 +231,28 @@ final class GearOpsModel {
             }
     }
 
+    func glanceKioskDevices(at now: Date = .now) -> [KioskDevice] {
+        monitoredKioskDevices(at: now).filter { $0.connectionState(at: now).appearsInGlance }
+    }
+
     func pendingPickupBookings(at now: Date = .now) -> [BookingActivitySnapshot] {
-        activeBookingActivity.filter { $0.isWaitingForPickup(at: now) }
+        activeBookingActivity
+            .filter { $0.isWaitingForPickup(at: now) }
+            .sorted { lhs, rhs in
+                if lhs.startsAt != rhs.startsAt { return lhs.startsAt < rhs.startsAt }
+                return lhs.id < rhs.id
+            }
+    }
+
+    /// Overdue first (oldest due time first), then the soonest remaining due.
+    func glanceOpenBookings(at now: Date = .now) -> [OpenBooking] {
+        openBookings.sorted { lhs, rhs in
+            let lhsOverdue = lhs.isOverdue(at: now)
+            let rhsOverdue = rhs.isOverdue(at: now)
+            if lhsOverdue != rhsOverdue { return lhsOverdue }
+            if lhs.endsAt != rhs.endsAt { return lhs.endsAt < rhs.endsAt }
+            return lhs.id < rhs.id
+        }
     }
 
     /// Derived from the same rows the popover renders rather than from the
@@ -529,6 +549,15 @@ final class GearOpsModel {
         notificationAuthorization = await bookingNotifications.authorization()
     }
 
+    func requestNotificationAccess() async {
+        await bookingNotifications.requestAuthorization()
+        await refreshNotificationAuthorization()
+    }
+
+    func clearBookingAlerts() async {
+        await bookingNotifications.clearPrivateNotifications()
+    }
+
     func clearStatusMessage() {
         statusMessage = nil
     }
@@ -538,8 +567,15 @@ final class GearOpsModel {
     }
 
     func openSystemNotificationSettings() {
-        guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.notifications") else { return }
-        open(url: url)
+        let candidates = [
+            "x-apple.systemsettings:com.apple.Notifications-Settings.extension",
+            "x-apple.systempreferences:com.apple.Notifications-Settings.extension",
+            "x-apple.systempreferences:com.apple.preference.notifications",
+        ]
+        for candidate in candidates {
+            guard let url = URL(string: candidate) else { continue }
+            if NSWorkspace.shared.open(url) { return }
+        }
     }
 
     func quit() {
@@ -574,6 +610,12 @@ final class GearOpsModel {
                     guard let self else { continue }
                     await self.retryPendingRevocations()
                     await self.restoreSession()
+                case .openDashboard:
+                    self?.openDashboard()
+                case .refreshRequested:
+                    await self?.refresh()
+                case .showMenuBarExtra:
+                    self?.appPreferences.showsMenuBarExtra = true
                 }
             }
         }
@@ -626,7 +668,11 @@ final class GearOpsModel {
             guard let self else { return }
             await self.registerCurrentDeviceToken(expectedGeneration: expectedGeneration)
             guard self.sessionIsCurrent(generation: expectedGeneration, token: token) else { return }
-            await self.bookingNotifications.requestAuthorization()
+            if self.notificationSettings.isEnabled {
+                await self.bookingNotifications.requestAuthorization()
+            }
+            guard self.sessionIsCurrent(generation: expectedGeneration, token: token) else { return }
+            await self.refreshNotificationAuthorization()
             guard self.sessionIsCurrent(generation: expectedGeneration, token: token) else { return }
             await self.registerCurrentDeviceToken(expectedGeneration: expectedGeneration)
         }
@@ -735,6 +781,12 @@ final class GearOpsModel {
         )
         persistCache()
 
+        let staleIdentifiers = previousActivity.keys
+            .filter { knownBookingActivity[$0] == nil }
+            .map(BookingChange.identifier(for:))
+            .sorted()
+        await bookingNotifications.removeNotifications(identifiers: staleIdentifiers)
+
         if deliverNotifications {
             let changes = sortedActivity
                 .filter({ previousActivity[$0.id] != $0 })
@@ -745,7 +797,9 @@ final class GearOpsModel {
                         to: current
                     )
                 }
-            for change in changes where notificationSettings.allows(change.category) {
+                .filter { notificationSettings.allows($0.category) }
+            let capped = Array(changes.suffix(CompanionBookingNotification.maxAlertsPerRefresh))
+            for change in capped {
                 guard expectedGeneration == sessionGeneration else { return }
                 await bookingNotifications.deliver(change, playsSound: notificationSettings.playsSound)
             }

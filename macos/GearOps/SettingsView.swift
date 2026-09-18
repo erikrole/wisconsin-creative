@@ -3,6 +3,7 @@ import SwiftUI
 
 struct GearOpsSettingsView: View {
     let model: GearOpsModel
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         TabView {
@@ -15,6 +16,10 @@ struct GearOpsSettingsView: View {
         }
         .frame(width: 480)
         .background(SettingsWindowActivator())
+        .onReceive(NotificationCenter.default.publisher(for: .gearOpsOpenSettings)) { _ in
+            NSApplication.shared.activate()
+            openWindow(id: GearOpsWindow.settings)
+        }
     }
 }
 
@@ -93,20 +98,21 @@ private struct GeneralSettingsTab: View {
             } header: {
                 Text("Startup")
             } footer: {
-                Text("Wisconsin Creative runs only in the menu bar and never appears in the Dock or app switcher.")
+                Text("Open Wisconsin Creative automatically after you log in to this Mac.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
             Section {
-                Toggle("Show open booking count", isOn: $preferences.showsMenuBarCount)
-                    .toggleStyle(.switch)
                 Toggle("Show in menu bar", isOn: $preferences.showsMenuBarExtra)
                     .toggleStyle(.switch)
+                Toggle("Show open booking count", isOn: $preferences.showsMenuBarCount)
+                    .toggleStyle(.switch)
+                    .disabled(!preferences.showsMenuBarExtra)
             } header: {
                 Text("Menu bar")
             } footer: {
-                Text("Choose whether Wisconsin Creative stays visible in the menu bar. Command-Comma always opens Settings when the app is active.")
+                Text("You choose whether the icon stays in the menu bar. Command-dragging it out also turns this off, and macOS may hide extras when space is tight. Wisconsin Creative then appears in the Dock, where Dashboard, Refresh, Show in Menu Bar, and Settings stay available.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -115,6 +121,9 @@ private struct GeneralSettingsTab: View {
         .onAppear { loginItem.refresh() }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { loginItem.refresh() }
+        }
+        .onChange(of: preferences.showsMenuBarExtra) { _, visible in
+            GearOpsActivation.apply(showsMenuBarExtra: visible)
         }
     }
 
@@ -190,6 +199,15 @@ private struct NotificationSettingsTab: View {
         }
         .formStyle(.grouped)
         .task { await model.refreshNotificationAuthorization() }
+        .onChange(of: settings.isEnabled) { _, enabled in
+            Task {
+                if enabled {
+                    await model.requestNotificationAccess()
+                } else {
+                    await model.clearBookingAlerts()
+                }
+            }
+        }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
             Task { await model.refreshNotificationAuthorization() }
@@ -225,8 +243,8 @@ private struct AccountSettingsTab: View {
 
     var body: some View {
         Form {
-            Section {
-                if let user = model.user {
+            if let user = model.user {
+                Section {
                     LabeledContent("Signed in as") {
                         VStack(alignment: .trailing, spacing: 1) {
                             Text(user.name)
@@ -236,10 +254,9 @@ private struct AccountSettingsTab: View {
                         }
                     }
                     LabeledContent("Role", value: user.role.capitalized)
-                } else {
-                    Text("Not signed in")
-                        .foregroundStyle(.secondary)
                 }
+            } else {
+                SettingsSignInForm(model: model)
             }
 
             Section {
@@ -271,5 +288,81 @@ private struct AccountSettingsTab: View {
             }
         }
         .formStyle(.grouped)
+    }
+}
+
+/// Settings is the recovery surface when the extra is hidden, so sign-in cannot
+/// live only in the menu bar popover.
+private struct SettingsSignInForm: View {
+    let model: GearOpsModel
+
+    @State private var email = ""
+    @State private var password = ""
+    @FocusState private var focusedField: Field?
+
+    private enum Field: Hashable {
+        case email
+        case password
+    }
+
+    private var trimmedEmail: String {
+        email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+
+    private var authBusy: Bool {
+        model.isSigningIn || model.isSigningOut
+    }
+
+    private var canSubmit: Bool {
+        trimmedEmail.contains("@") && !password.isEmpty && !authBusy
+    }
+
+    var body: some View {
+        Section {
+            TextField("Email", text: $email)
+                .textContentType(.username)
+                .focused($focusedField, equals: .email)
+                .disabled(authBusy)
+                .onSubmit { focusedField = .password }
+            SecureField("Password", text: $password)
+                .textContentType(.password)
+                .focused($focusedField, equals: .password)
+                .disabled(authBusy)
+                .onSubmit(submit)
+            if let message = model.statusMessage {
+                Label(message, systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityLabel("Sign-in problem: \(message)")
+                    .accessibilityAddTraits(.updatesFrequently)
+            }
+            Button(authBusy ? "Signing in…" : "Sign in") { submit() }
+                .disabled(!canSubmit)
+        } header: {
+            Text("Account")
+        } footer: {
+            Text("Sign in here if the menu bar icon is hidden or macOS has tucked it away.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .onDisappear {
+            password = ""
+            focusedField = nil
+        }
+    }
+
+    private func submit() {
+        guard canSubmit else { return }
+        focusedField = nil
+        let submittedEmail = trimmedEmail
+        let submittedPassword = password
+        password = ""
+        Task {
+            await model.signIn(email: submittedEmail, password: submittedPassword)
+            if model.user == nil {
+                focusedField = .password
+            }
+        }
     }
 }

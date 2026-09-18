@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 /// Login palette shared with the web `login-bg`/`login-card` rules and the iOS
@@ -115,5 +116,70 @@ struct BrandLoginCard<Content: View>: View {
             }
             .shadow(color: .black.opacity(0.45), radius: 24, y: 12)
             .shadow(color: .black.opacity(0.30), radius: 8, y: 4)
+    }
+}
+
+enum StatusTone: String, Sendable {
+    case blue, red, orange, purple, gray
+}
+
+enum Brand {
+    enum Radius {
+        static let md: CGFloat = 16
+    }
+}
+
+extension Color {
+    static let cardSurface = Color(nsColor: .controlBackgroundColor)
+    static let hairline = Color(nsColor: .separatorColor).opacity(0.5)
+
+    static func statusText(_ tone: StatusTone) -> Color {
+        switch tone {
+        case .blue: adaptive(light: (0.149, 0.388, 0.922), dark: (0.40, 0.65, 1.0))
+        case .red: adaptive(light: (0.863, 0.149, 0.149), dark: (1.0, 0.40, 0.40))
+        case .orange: adaptive(light: (0.851, 0.467, 0.024), dark: (1.0, 0.70, 0.30))
+        case .purple: adaptive(light: (0.486, 0.227, 0.929), dark: (0.70, 0.55, 1.0))
+        case .gray: Color.secondary
+        }
+    }
+
+    static func statusBackground(_ tone: StatusTone) -> Color {
+        switch tone {
+        case .blue: adaptive(light: (0.937, 0.965, 1.0), dark: (0.40, 0.65, 1.0), darkAlpha: 0.18)
+        case .red: adaptive(light: (0.996, 0.949, 0.949), dark: (1.0, 0.40, 0.40), darkAlpha: 0.18)
+        case .orange: adaptive(light: (1.0, 0.969, 0.929), dark: (1.0, 0.70, 0.30), darkAlpha: 0.18)
+        case .purple: adaptive(light: (0.961, 0.953, 1.0), dark: (0.70, 0.55, 1.0), darkAlpha: 0.18)
+        case .gray: Color.secondary.opacity(0.12)
+        }
+    }
+
+    private static func adaptive(
+        light: (CGFloat, CGFloat, CGFloat),
+        dark: (CGFloat, CGFloat, CGFloat),
+        lightAlpha: CGFloat = 1,
+        darkAlpha: CGFloat = 1
+    ) -> Color {
+        Color(nsColor: NSColor(name: nil) { appearance in
+            let isDark = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            let pair = isDark ? dark : light
+            return NSColor(
+                srgbRed: pair.0,
+                green: pair.1,
+                blue: pair.2,
+                alpha: isDark ? darkAlpha : lightAlpha
+            )
+        })
+    }
+}
+
+/// Same 4pt leading rail the iOS booking cards use.
+struct StatusRail: View {
+    let tone: StatusTone
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 2)
+            .fill(Color.statusText(tone))
+            .frame(width: 4)
+            .accessibilityHidden(true)
     }
 }
