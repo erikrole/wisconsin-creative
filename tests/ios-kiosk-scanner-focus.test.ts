@@ -100,13 +100,15 @@ describe("iOS kiosk scanner focus", () => {
     expect(detailSheet).toContain("HIDScannerField(isEnabled: shouldListenForItemScans)");
     expect(detailSheet).toContain("scannerCaptureEnabled");
     expect(detailSheet).toContain("!titleFocused");
-    expect(detailSheet).toContain("!isMutating");
+    expect(detailSheet).toContain("(activeMutation == nil || activeMutation == .addingItem)");
     expect(detailSheet).toContain("pendingRemoval == nil");
     expect(detailSheet).toContain("HIDScannerFocusGate.allowScannerFocusNow()");
     expect(detailSheet).toContain(".onChange(of: titleFocused)");
     expect(detailSheet).toContain("if !isFocused {");
     expect(detailSheet).toContain("armScannerCapture()");
-    expect(detailSheet).toContain("Task { await addItem(scanValue: value) }");
+    expect(detailSheet).toContain("onScan: { value in enqueueScan(value) }");
+    expect(detailSheet).toContain("processNextScanIfNeeded()");
+    expect(detailSheet).toContain("await addItem(scanValue: entry.value)");
     expect(detailSheet).not.toContain('placeholder: "Scan or type item"');
 
     expect(shell).toContain("KioskActivityMonitor { store.resetInactivity() }");

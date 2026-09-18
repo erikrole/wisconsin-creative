@@ -247,6 +247,7 @@ describe("GET /api/users", () => {
         orderBy: [
           { lastActiveAt: { sort: "desc", nulls: "last" } },
           { name: "asc" },
+          { id: "asc" },
         ],
       }),
     );

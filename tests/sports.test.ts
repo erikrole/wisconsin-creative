@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { generateEventTitle, sportLabel } from "../src/lib/sports";
+import { generateEventTitle, sportColumnLabel, sportLabel, sportProgram, sportsGroupedByProgram } from "../src/lib/sports";
 
 describe("generateEventTitle", () => {
   it("generates home title", () => {
@@ -27,5 +27,17 @@ describe("sportLabel", () => {
 
   it("returns code for unknown code", () => {
     expect(sportLabel("XYZ")).toBe("XYZ");
+  });
+});
+
+describe("sport program grouping", () => {
+  it("keeps 11 men's sports and 12 women's sports", () => {
+    const { men, women } = sportsGroupedByProgram();
+    expect(men).toHaveLength(11);
+    expect(women).toHaveLength(12);
+    expect(sportProgram("FB")).toBe("men");
+    expect(sportProgram("VB")).toBe("women");
+    expect(sportColumnLabel("MBB")).toBe("Basketball");
+    expect(sportColumnLabel("FB")).toBe("Football");
   });
 });

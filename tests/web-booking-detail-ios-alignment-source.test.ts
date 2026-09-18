@@ -21,7 +21,7 @@ describe("web booking detail iOS alignment", () => {
     expect(header).toContain("Transfer owner");
     expect(header).toContain("Edit linked events");
     expect(header).toContain("syncStatus");
-    expect(detail).toContain("<BookingEquipmentTab booking={booking} />");
+    expect(detail).toContain("<BookingEquipmentTab booking={booking} onBookingUpdated={patchLocal} />");
     expect(detail).toContain("<BookingInfoCard");
     expect(detail).toContain("<BookingHistoryTab");
   });

@@ -38,7 +38,7 @@ describe("Typography scope contracts", () => {
       ["src/app/(app)/schedule/_components/ScheduleAutomationDigest.tsx", 'text-sm! font-semibold!'],
       ["src/app/(app)/schedule/_components/ListView.tsx", 'text-sm! font-semibold!'],
       ["src/app/(app)/page.tsx", 'text-[20px]! font-black!'],
-      ["src/app/(app)/schedule/_components/CalendarView.tsx", 'text-xl! font-bold!'],
+      ["src/app/(app)/schedule/_components/CalendarView.tsx", 'text-sm font-bold'],
       ["src/app/(app)/dashboard/section-header.tsx", 'text-sm! font-semibold!'],
     ];
 

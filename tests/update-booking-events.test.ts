@@ -167,6 +167,7 @@ describe("updateBookingEvents", () => {
   it("adds the requester when an existing reservation gains its first event link", async () => {
     mockTx.booking.findUnique.mockResolvedValue(reservation({
       requesterUserId: "student-1",
+      custodyScope: "PERSON",
       shiftAssignmentId: null,
       requester: {
         role: Role.STUDENT,
@@ -220,6 +221,7 @@ describe("updateBookingEvents", () => {
   it("moves a reservation-managed assignment when the primary event changes", async () => {
     mockTx.booking.findUnique.mockResolvedValue(reservation({
       requesterUserId: "student-1",
+      custodyScope: "PERSON",
       shiftAssignmentId: "assignment-old",
       requester: {
         role: Role.STUDENT,

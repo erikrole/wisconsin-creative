@@ -88,7 +88,8 @@ describe("iOS notification long-press actions", () => {
    */
   it("carries only Sendable routing keys across the isolation boundary", () => {
     expect(actions).toContain("struct Payload: Sendable");
-    expect(actions).toContain('static let routingKeys = ["bookingId", "checkoutId", "eventId", "blastId"');
+    expect(actions).toContain("static let routingKeys = [");
+    expect(actions).toContain('"bookingId", "checkoutId", "eventId", "blastId"');
     expect(actions).toContain('content.threadIdentifier = payload.threadIdentifier');
     expect(actions).toContain("let routing: [String: String]");
     expect(delegate).toContain("NotificationSnooze.Payload(notification: response.notification)");

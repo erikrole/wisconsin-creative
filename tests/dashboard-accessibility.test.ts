@@ -28,7 +28,7 @@ describe("dashboard accessibility contracts", () => {
 
     expect(page).toContain('className="h-10 px-3"');
     expect(page).toContain('className="h-10"');
-    expect(filters).toContain('className="h-10 gap-1.5"');
+    expect(filters).toMatch(/className="h-10[^\"]*gap-1\.5"/);
   });
 
   it("keeps dashboard secondary actions at the 40px target baseline", () => {

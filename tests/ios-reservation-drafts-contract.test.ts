@@ -110,7 +110,7 @@ describe("iOS reservation composer survives leaving the sheet", () => {
 
   it("treats swipe-down as minimize and never blocks it", () => {
     expect(sheet).toContain(".interactiveDismissDisabled(vm.isSubmitting)");
-    expect(shell).toContain("set: { if !$0 { drafts.minimize() } }");
+    expect(shell).toMatch(/set: \{ isExpanded in\s*if !isExpanded \{ drafts\.minimize\(\) \}/);
     expect(store).toContain("func minimize() {");
   });
 
@@ -256,7 +256,8 @@ describe("iOS reservation entry points hand off to the store", () => {
     expect(store).toContain("func finish(bookingId: String) {");
     expect(store).toContain("guard ownedSubmissionBookingId == bookingId else { return }");
     expect(store).toContain("self.composer === newComposer");
-    expect(composer).toContain("onReservationSubmitted?(id)");
+    expect(composer).toContain("onReservationSubmitted?(receipt.id)");
+    expect(sheet).toContain("drafts.finish(bookingId: bookingId)");
     expect(shell).toContain("appState.pendingBookingDetailId = bookingId");
     const bookings = readFileSync("ios/Wisconsin/Views/BookingsView.swift", "utf8");
     expect(bookings).toContain("private func consumePendingBookingDetail() {");

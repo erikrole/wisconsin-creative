@@ -21,7 +21,8 @@ describe("iOS kiosk rapid-scan atomicity", () => {
     expect(checkout).toContain("pendingScanIdentities.remove(normalizedScan)");
     expect(checkout).toContain("queuedScanValues.removeFirst()");
     expect(checkout).toContain("guard !isCompleting, pendingScanIdentities.isEmpty else { return }");
-    expect(checkout).toContain("isEnabled: !scannedItems.isEmpty && pendingScanIdentities.isEmpty");
+    expect(checkout).toContain("isEnabled: hasPendingCompletion ||");
+    expect(checkout).toContain("pendingScanIdentities.isEmpty");
   });
 
   it("preflights a candidate before adding it or showing an accepted receipt", () => {

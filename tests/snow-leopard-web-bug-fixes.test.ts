@@ -38,7 +38,7 @@ describe("Snow Leopard website bug regressions", () => {
     const schedule = source("src/app/(app)/schedule/_components/CollaboratorSchedule.tsx");
     const route = source("src/app/api/schedule/published/[id]/follow/route.ts");
 
-    expect(page).toContain('canFollow={user.capabilities?.includes("SCHEDULE_FOLLOW") === true}');
+    expect(page).toContain('canFollow={!user.preview?.readOnly && user.capabilities?.includes("SCHEDULE_FOLLOW") === true}');
     expect(schedule).toContain("{canFollow && (");
     expect(schedule).toContain("if (!canFollow) return;");
     expect(route).toContain('requireCollaboratorCapability(user, "SCHEDULE_FOLLOW")');

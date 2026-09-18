@@ -22,12 +22,18 @@ describe("schedule timeline", () => {
     expect(listView).not.toContain("timeScope");
   });
 
-  it("loads the whole window up front so client-side filters stay honest", () => {
-    // Area, coverage, and my-shifts filter loaded rows. Loading on scroll would
-    // make a filtered list look empty until the reader scrolled far enough.
+  it("opens a today-centered window and loads more as the reader scrolls", () => {
+    // Area, coverage, venue, my shifts, and queues still fill remaining pages
+    // in the background so a filtered list cannot look empty while matches exist later.
+    expect(hook).toContain("const hasClientContentFilters = !!(areaFilter || coverageFilter || homeAwayFilter !== \"all\" || myShiftsOnly || activeQueue);");
     expect(hook).toContain("async function fetchAllPages");
     expect(hook).toContain("const PAGE_SIZE = 200");
     expect(hook).toContain("const MAX_PAGES =");
+    expect(hook).toContain("createInitialScheduleTimelineWindow");
+    expect(hook).toContain("fetchScheduleSlice");
+    expect(hook).toContain("beforeStartsAt");
+    expect(hook).toContain("afterStartsAt");
+    expect(listView).toContain("data-schedule-scroll-sentinel");
   });
 
   it("requests the remaining pages together instead of walking offsets", () => {
@@ -50,7 +56,7 @@ describe("schedule timeline", () => {
   it("reports hitting the page cap instead of silently truncating", () => {
     expect(hook).toContain("truncated = first.total > PAGE_SIZE * MAX_PAGES;");
     expect(hook).toContain("timelineTruncated");
-    expect(listView).toContain("Showing the most recent events only");
+    expect(listView).toContain("Showing a limited stretch of the schedule");
   });
 
   it("holds the reading position instead of yanking it back to today", () => {
@@ -63,6 +69,7 @@ describe("schedule timeline", () => {
     // A plain `scroll` listener also fires for the anchor's own programmatic
     // scroll, which raced the settle pass and left today mispositioned.
     expect(listView).toContain('["wheel", "touchstart", "keydown", "mousedown"]');
+    expect(listView).toContain("input, textarea, select, [contenteditable='true']");
   });
 
   it("re-anchors on layout change rather than for a fixed stretch of time", () => {
@@ -73,25 +80,19 @@ describe("schedule timeline", () => {
   });
 
   it("holds the reader's position across a refresh", () => {
-    // The browser's own restore lands after the async list renders, so the
-    // anchor had already snapped the page up to today before it arrived.
-    expect(listView).toContain('const SCROLL_KEY = "schedule:timeline-scroll";');
+    // Pixel offsets from a previous document height (error boundary, skeleton,
+    // archive-floor first paint) put the list at May. Restore the visible event
+    // when it is still in this window; otherwise open on today.
     expect(listView).toContain("function isScheduleReload()");
     expect(listView).toContain("const reload = isScheduleReload();");
-    expect(listView).toContain("? storedScroll()");
-    // The list renders in stages, so one pass is not enough: bailing out when
-    // the document was still short dropped the restore and left the reader at
-    // the top of the timeline.
-    expect(listView).toContain("const observer = new ResizeObserver(apply);");
-    expect(listView).toContain("if (target <= max) pendingRestoreRef.current = null;");
-    // Native restoration lands later than the async timeline and otherwise
-    // overrides the custom restore after it appears to have succeeded.
+    expect(listView).toContain("readScheduleTimelineReadingPosition");
+    expect(listView).toContain("chooseScheduleTimelineTarget");
+    expect(listView).toContain("if (anchorToday()) didAnchorRef.current = true;");
     expect(listView).toContain('window.history.scrollRestoration = "manual";');
     expect(listView).toContain("window.history.scrollRestoration = previous;");
-    // Persist an immediate refresh even if the throttled scroll write has not
-    // reached its next animation frame yet.
     expect(listView).toContain('window.addEventListener("pagehide", write);');
     expect(listView).toContain('window.removeEventListener("pagehide", write);');
+    expect(listView).not.toContain("? storedScroll()\n      : fromHistory");
   });
 
   it("still opens a fresh visit on today rather than the stored position", () => {
@@ -150,21 +151,24 @@ describe("schedule timeline", () => {
     expect(page).toContain('[data-app-shell-breadcrumb-frame]');
     expect(page).toContain("+ Math.round(appShellBreadcrumb?.getBoundingClientRect().height ?? 0);");
     expect(page).toContain('document.documentElement.style.setProperty("--schedule-sticky-top"');
-    expect(page).toContain('const bottom = top + Math.round(el.getBoundingClientRect().height);');
+    expect(page).toContain("const bottom = Math.round(el.getBoundingClientRect().bottom);");
   });
 
   it("gives the pinned bar its own spacing instead of hugging the viewport", () => {
     // Flush against the top edge the title reads as clipped; CSS alone cannot
-    // tell a sticky element it is currently stuck.
+    // tell a sticky element it is currently stuck. Resize recreates the observer
+    // so a wrapping header cannot leave the pin detection on a stale margin.
     expect(page).toContain("const [pinned, setPinned] = useState(false);");
     expect(page).toContain("setPinned(!entry?.isIntersecting)");
     expect(page).toContain("pt-4");
+    expect(page).toContain("const resizeObserver = new ResizeObserver(connect);");
     expect(page).toContain("}, [pinned]);");
   });
 
   it("keeps the reader in place when archived events prepend above them", () => {
     expect(listView).toContain("transitionAnchorRef");
     expect(listView).toContain("const observer = new ResizeObserver(apply);");
+    expect(listView).toContain("prependSnapshotRef");
     // The wider window keeps the old rows, but view and sport changes do not.
     expect(hook).toContain("shouldKeepPreviousScheduleData(previousScope, scheduleScope)");
     expect(timelinePosition).toContain('previous.includeArchived === false');
@@ -190,7 +194,13 @@ describe("schedule timeline", () => {
 
   it("retries the Today anchor when rows arrive after loading settles", () => {
     expect(listView).toContain("groupedEntries.length === 0");
-    expect(listView).toContain("}, [groupedEntries, isTimeline, loading, anchorToday]);");
+    expect(listView).toContain("}, [filteredEntries, groupedEntries, isTimeline, loading, anchorToday]);");
+  });
+
+  it("does not walk older history until the reader scrolls toward it", () => {
+    expect(listView).toContain("allowOlderFetch");
+    expect(listView).toContain("disabled={!allowOlderFetch || loadingPast || loadPastError}");
+    expect(listView).toContain("setAllowOlderFetch(true)");
   });
 
   it("names the archive floor and offers the way through it", () => {
@@ -205,6 +215,7 @@ describe("schedule timeline", () => {
     expect(listView).toContain('window.addEventListener("scroll", schedule');
     expect(listView).toContain("const observer = new ResizeObserver(schedule);");
     expect(listView).toContain('[data-schedule-sticky-frame]');
+    expect(listView).toContain("max-md:bottom-[calc(5.75rem+env(safe-area-inset-bottom,0px))]");
   });
 
   it("separates ordinary past crew history from older archived records", () => {

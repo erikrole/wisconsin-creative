@@ -58,7 +58,9 @@ describe("iOS kiosk idle checkout list", () => {
 
     expect(row).toContain("Text(holderSummary)");
     expect(row).toContain("private var holderSummary: String");
-    expect(row).toContain('"\\(checkout.requesterName) · \\(itemCountSummary)"');
+    expect(row).toContain('checkout.custodyScope == "SHARED"');
+    expect(row).toContain('"Shared checkout"');
+    expect(row).toContain('checkout.custodyScope == "SHARED" ? "Shared checkout" : checkout.requesterName');
     expect(row).toContain('"\\(checkout.itemCount) \\(checkout.itemCount == 1 ? "item" : "items")"');
     expect(row).toContain("held by \\(checkout.requesterName)");
     expect(row).not.toContain("private var itemSummary");

@@ -40,6 +40,7 @@ describe("iOS notifications read recovery", () => {
     expect(sheet).toContain("!existingIDs.contains($0.id)");
     expect(sheet).toContain("nextOffset = offset + resp.data.count");
     expect(sheet).toContain(".safeAreaInset(edge: .top");
-    expect(sheet).toContain("sharedAppState?.pendingPushBlastId = blastId");
+    expect(sheet).toContain("GearTrackerRouteParser.parseNotification");
+    expect(sheet).toContain("onRoute?(route)");
   });
 });

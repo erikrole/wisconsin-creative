@@ -45,7 +45,7 @@ describe("iOS Settings detail menus", () => {
     expect(detail).toContain("Text(\"In-app notifications always show in your inbox, regardless of these settings.\")");
     expect(detail).toContain("title: \"Push alerts\"");
     expect(detail).toContain("Text(\"Notification Types\")");
-    expect(detail).toContain("Text(\"Quiet hours\")");
+    expect(detail).toContain("Text(\"Pause alerts\")");
     expect(detail).toContain("pauseButton(title: \"Pause 1 hour\"");
     expect(detail).toContain("Label(\"Resume now\", systemImage: \"bell.fill\")");
 

@@ -86,12 +86,18 @@ describe("native app and web trust contracts", () => {
   // Re-pinned on every bump on purpose: the pair has to move together, and a
   // stale number must not survive. The separate kiosk target keeps its own
   // build number and is deliberately not counted here.
-  it("versions the app and Live Activity extension together as version 1.1 build 28", () => {
+  it("versions the app and Live Activity extension together on the current release pair", () => {
     const project = source("ios/project.yml");
     const mainTarget = between(project, "  Wisconsin:\n", "  WisconsinKiosk:\n");
     const liveActivitiesTarget = between(project, "  WisconsinLiveActivities:\n", "schemes:\n");
-    expect(project.match(/MARKETING_VERSION: "1.1"/g)).toHaveLength(2);
-    expect(project.match(/CURRENT_PROJECT_VERSION: "28"/g)).toHaveLength(2);
+    const mainVersion = mainTarget.match(/MARKETING_VERSION: "([^"]+)"/)?.[1];
+    const liveVersion = liveActivitiesTarget.match(/MARKETING_VERSION: "([^"]+)"/)?.[1];
+    const mainBuild = mainTarget.match(/CURRENT_PROJECT_VERSION: "([^"]+)"/)?.[1];
+    const liveBuild = liveActivitiesTarget.match(/CURRENT_PROJECT_VERSION: "([^"]+)"/)?.[1];
+    expect(mainVersion).toBe("1.2");
+    expect(liveVersion).toBe(mainVersion);
+    expect(mainBuild).toBe("31");
+    expect(liveBuild).toBe(mainBuild);
     expect(mainTarget).not.toContain('MARKETING_VERSION: "1.0"');
     expect(mainTarget).not.toContain('CURRENT_PROJECT_VERSION: "27"');
     expect(liveActivitiesTarget).not.toContain('MARKETING_VERSION: "1.0"');

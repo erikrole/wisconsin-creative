@@ -31,11 +31,12 @@ describe("iOS main app and kiosk target split", () => {
 
     expect(app).not.toContain("KioskStore");
     expect(app).not.toContain("KioskShellView");
-    // `onOpenURL` switches on `url.host`, so the kiosk exclusion has to match
-    // the case form as well as the old equality form.
+    // The shared parser only exposes supported user routes; kiosk entry is a
+    // separate target and is not part of the main app shell.
     expect(app).not.toContain('url.host == "kiosk"');
     expect(app).not.toContain('case "kiosk"');
-    expect(app).toContain('case "booking":');
+    expect(app).toContain("GearTrackerRouteParser.parse(url)");
+    expect(app).toContain("appState.apply(route)");
 
     expect(settings).not.toContain("KioskStore");
     expect(settings).not.toContain("Kiosk Mode");

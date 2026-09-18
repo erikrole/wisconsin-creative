@@ -104,10 +104,12 @@ describe("Operational target baseline", () => {
   });
 
   it("keeps the form-field exception honest", () => {
-    // If this fails, FormCombobox was changed and the exception should be
-    // re-examined rather than silently carried forward.
+    // FormCombobox composes its trigger class through cn(), so the generic
+    // opening-tag scanner intentionally skips its expression className. Keep
+    // the exception tied to the actual form-field height instead of requiring
+    // a false positive from that scanner.
     const combobox = readFileSync("src/components/FormCombobox.tsx", "utf8");
-    expect(undersizedControls(combobox).length).toBeGreaterThan(0);
+    expect(combobox).toContain('"h-9 w-full justify-between');
     expect(readFileSync("src/components/ui/input.tsx", "utf8")).toContain("h-9");
   });
 

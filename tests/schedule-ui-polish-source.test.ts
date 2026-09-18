@@ -14,6 +14,8 @@ describe("Schedule interaction-detail contracts", () => {
     const sourceSignal = source("src/app/(app)/schedule/_components/ScheduleSourceSignal.tsx");
 
     expect(page).not.toContain("Assign shifts");
+    expect(page).toContain("Add event");
+    expect(page).toContain("onClick={() => setNewEventOpen(true)}");
     expect(page).toContain('className="h-10" aria-label="More schedule actions"');
     expect(calendar).toContain("<SchedulePeriodNavigator");
     expect(periodNavigator).toContain('className="size-10 text-muted-foreground"');
@@ -28,7 +30,7 @@ describe("Schedule interaction-detail contracts", () => {
     const calendar = source("src/app/(app)/schedule/_components/CalendarView.tsx");
     const week = source("src/app/(app)/schedule/_components/WeekView.tsx");
 
-    expect(filters).toContain('<Label\n          htmlFor="my-shifts-toggle"');
+    expect(filters).toContain('aria-pressed={filters.myShiftsOnly}');
     expect(filters).not.toContain('className="scale-[0.8] origin-center"');
     expect(calendar).toContain("flex min-h-10 w-full items-center");
     expect(calendar).not.toContain('"text-foreground hover:bg-muted/60"');

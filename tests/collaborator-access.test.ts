@@ -294,7 +294,7 @@ describe("published collaborator schedule", () => {
     expect(result.data[0]?.crew[0]).toEqual(expect.objectContaining({
       area: "VIDEO",
       role: "FT",
-      callStartsAt: "2026-09-01T17:00:00.000Z",
+      callStartsAt: null,
     }));
     expect(JSON.stringify(result)).not.toContain("private call note");
     expect(JSON.stringify(result)).not.toContain("callNote");

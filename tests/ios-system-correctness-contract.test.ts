@@ -135,7 +135,7 @@ describe("iOS system correctness request ownership", () => {
     const publishGuard =
       "guard loadRequests.owns(requestToken), !Task.isCancelled else { return }";
     expect(performLoad.indexOf(publishGuard)).toBeLessThan(
-      performLoad.indexOf("events = fetchedEvents"),
+      performLoad.indexOf("events = collapsedCombinedScheduleEvents(fetchedEvents)"),
     );
     expect(performLoad.indexOf(publishGuard)).toBeLessThan(
       performLoad.indexOf("GearStore.shared.seedScheduleEvents(fetchedEvents)"),

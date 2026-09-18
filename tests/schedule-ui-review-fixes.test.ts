@@ -17,8 +17,8 @@ describe("schedule browse fixes", () => {
     // Sport is applied server-side, so the loaded window only contains the
     // selected sport. Deriving the options from it offered the reader nothing
     // but the sport they were already on.
-    expect(filters).toContain("if (filters.sportFilter) {");
-    expect(filters).toContain("return SPORT_CODES.map((s) => ({ value: s.code, label: s.label }));");
+    expect(filters).toContain("if (filters.sportFilter || entries.length === 0) return undefined;");
+    expect(filters).toContain("allowedCodes={sportCodesInWindow}");
     expect(filters).toContain("}, [entries, filters.sportFilter]);");
   });
 
@@ -26,6 +26,33 @@ describe("schedule browse fixes", () => {
     expect(filters).toContain("filteredEntries: CalendarEntry[];");
     expect(filters).toContain("events in this shareable queue.");
     expect(page).toContain("filteredEntries={data.filteredEntries}");
+  });
+
+  it("keeps the Schedule command row compact and the overflow filters honest", () => {
+    expect(filters).toContain("Searching remaining events");
+    expect(filters).toContain("sourceSignal");
+    expect(filters).toContain('aria-pressed={filters.myShiftsOnly}');
+    expect(filters).toContain("onClick={filters.clearAll}");
+    expect(filters).toContain('label="Venue"');
+    expect(filters).toContain('label="Area"');
+    expect(filters).toContain('label="Coverage"');
+    expect(filters).toContain("Dates:");
+    expect(page).toContain("fillingWindow={data.fillingWindow}");
+    expect(page).toContain("sourceSignal={data.sourceSignal}");
+    const picker = source("src/components/SportPicker.tsx");
+    expect(picker).toContain('heading="Men"');
+    expect(picker).toContain('heading="Women"');
+    // cmdk walks CommandList children; wrapping groups in a layout div
+    // infinite-loops and trips the workspace error boundary.
+    expect(picker).not.toMatch(/<div className=\{cn\(columnCount/);
+    expect(picker).toContain("[&_[cmdk-list-sizer]]:grid");
+    expect(picker).toContain("<Popover modal");
+    const hook = source("src/hooks/use-schedule-data.ts");
+    expect(hook).toContain("dateRange: deepLink.dateRange");
+    expect(hook).toContain("clearDateRange");
+    expect(hook).not.toContain("setMyShiftsOnlyRaw(false)");
+    const clearAll = hook.slice(hook.indexOf("clearAll: () => {"));
+    expect(clearAll).not.toContain('params.delete("myShifts")');
   });
 
   it("leads the readiness rail with exceptions rather than activity counters", () => {
@@ -82,7 +109,7 @@ describe("schedule browse fixes", () => {
 
   it("only clears the expanded-row pointer for the row that owns it", () => {
     expect(list).toContain("if (expandedRowId === entryId) setExpandedRowId(null);");
-    expect(list).toContain("}, [expandedRowId, expandedRowIds, setExpandedRowId]);");
+    expect(list).toContain("}, [expandedRowId, setExpandedRowId]);");
   });
 
   it("dates both halves of a week that crosses New Year", () => {

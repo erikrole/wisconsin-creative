@@ -49,7 +49,8 @@ describe("iOS Event detail temporal state", () => {
     // `displayedShifts` already falls back to the published shifts, so a failed
     // draft overlay never needed to take the crew section down with it.
     expect(eventDetail).toContain("var workingCopyError: String?");
-    expect(eventDetail).toContain("workingEditor = try await APIClient.shared.workingScheduleEditor(shiftGroupId: group.id)");
+    expect(eventDetail).toContain("let editor = try await APIClient.shared.workingScheduleEditor(shiftGroupId: group.id)");
+    expect(eventDetail).toContain("workingEditor = editor");
     expect(eventDetail).toContain("workingCopyError = error.localizedDescription");
     expect(eventDetail).toContain("vm.shiftGroup != nil, let workingCopyError = vm.workingCopyError");
     expect(eventDetail).toContain('Text("Showing the published crew")');

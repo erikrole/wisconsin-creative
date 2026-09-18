@@ -258,6 +258,49 @@ describe("GET /api/calendar-events", () => {
     expect(res.status).toBe(400);
     expect(db.calendarEvent.findMany).not.toHaveBeenCalled();
   });
+
+  it("rejects mixing before and after event cursors", async () => {
+    const res = await GET(
+      get("/api/calendar-events?beforeStartsAt=2026-09-18T12:00:00.000Z&afterStartsAt=2026-09-19T12:00:00.000Z"),
+      { params: Promise.resolve({}) },
+    );
+
+    expect(res.status).toBe(400);
+    expect(db.calendarEvent.findMany).not.toHaveBeenCalled();
+  });
+
+  it("walks older events with a descending keyset, then returns them ascending", async () => {
+    vi.mocked(db.calendarEvent.findMany).mockResolvedValue([
+      {
+        id: "newer",
+        startsAt: new Date("2026-09-18T12:00:00.000Z"),
+        endsAt: new Date("2026-09-18T14:00:00.000Z"),
+        combinedEvents: [],
+      },
+      {
+        id: "older",
+        startsAt: new Date("2026-09-17T12:00:00.000Z"),
+        endsAt: new Date("2026-09-17T14:00:00.000Z"),
+        combinedEvents: [],
+      },
+    ] as never);
+    vi.mocked(db.shiftGroup.findMany).mockResolvedValue([]);
+
+    const res = await GET(
+      get("/api/calendar-events?includePast=true&beforeStartsAt=2026-09-19T12:00:00.000Z&beforeId=event-9"),
+      { params: Promise.resolve({}) },
+    );
+    const json = await res.json() as { data: Array<{ id: string }> };
+
+    expect(res.status).toBe(200);
+    expect(json.data.map((row) => row.id)).toEqual(["older", "newer"]);
+    expect(db.calendarEvent.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: [{ startsAt: "desc" }, { id: "desc" }],
+        skip: 0,
+      }),
+    );
+  });
 });
 
 describe("POST /api/calendar-events", () => {

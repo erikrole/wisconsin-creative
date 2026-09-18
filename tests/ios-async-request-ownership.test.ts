@@ -46,7 +46,7 @@ describe("iOS asynchronous request ownership", () => {
     expect(view).toContain("private var loadRequests = LatestRequestGeneration()");
     expect(view).toContain("let requestToken = loadRequests.begin()");
     expect(view).toContain("guard loadRequests.owns(requestToken), !Task.isCancelled else { return }");
-    expect(view).toContain("if loadRequests.owns(requestToken) { isLoading = false }");
+    expect(view).toMatch(/if loadRequests\.owns\(requestToken\) \{\s*isLoading = false/);
     expect(view).not.toContain("if Task.isCancelled { isLoading = false; return }");
   });
 

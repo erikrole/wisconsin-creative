@@ -221,8 +221,8 @@ describe("schedule source-of-truth and browser smoke contracts", () => {
     const readiness = source("src/app/(app)/schedule/_components/ScheduleReadiness.tsx");
 
     expect(filters).toContain("const menuFilterCount = [");
-    expect(filters).toContain('label="Sport"');
-    expect(filters).toContain("options={sportOptions}");
+    expect(filters).toContain("<SportPicker");
+    expect(filters).toContain("allowedCodes={sportCodesInWindow}");
     expect(filters).toContain("<OperationalActiveFilterChips filters={activeFilters} />");
     expect(filters).toContain("{menuFilterCount}");
     expect(filters).not.toContain('className="w-72 p-3">\n            <div className="flex flex-col gap-3">\n              <FilterChip\n                label="Sport"');
@@ -252,6 +252,8 @@ describe("schedule source-of-truth and browser smoke contracts", () => {
     }
     expect(eventDetail).toContain("EventEditorFields");
     expect(newEventSheet).toContain("EventEditorFields");
+    expect(newEventSheet).toContain('intent="create"');
+    expect(newEventSheet).toContain("createManualEventDraft");
 
     expect(fields).toContain("Event venue from calendar");
     expect(eventDetail).toContain("handleHideEvent");

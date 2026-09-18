@@ -12,7 +12,8 @@ describe("native Schedule staff authoring redesign", () => {
     expect(view).toContain("LazyVGrid");
     expect(view).toContain("Text(\"Worker Class\")");
     expect(view).toContain("Toggle(\"Custom call window\"");
-    expect(view).toContain("stride(from: 0, through: 23 * 60 + 45, by: 15)");
+    expect(view).toContain("roundedToQuarterHour");
+    expect(view).toContain("ShiftDateTimeRow");
     expect(view).toContain("Text(\"Add \\(area.label) Shift\")");
     expect(view).toContain("guard !isSubmitting, hasValidWindow else { return }");
     expect(view).toContain("Label(\"End time must be after call time.\"");

@@ -10,6 +10,7 @@ describe("iOS checkout return Live Activity source contract", () => {
   it("wires ActivityKit, the widget extension, and booking deep links into the project", () => {
     const project = source("ios/project.yml");
     const app = source("ios/Wisconsin/App/WisconsinApp.swift");
+    const appState = source("ios/Wisconsin/Core/AppState.swift");
     const tabs = source("ios/Wisconsin/Views/AppTabView.swift");
 
     expect(project).toContain("NSSupportsLiveActivities: true");
@@ -17,13 +18,15 @@ describe("iOS checkout return Live Activity source contract", () => {
     expect(project).toContain("com.apple.widgetkit-extension");
     expect(project).toContain("CFBundleURLSchemes:");
     expect(project).toContain("- wisconsin");
-    // `onOpenURL` switches on `url.host` now that widget taps share it.
-    expect(app).toContain("switch url.host {");
-    expect(app).toContain('case "booking":');
+    // Custom URLs and universal links share the route parser; AppState owns
+    // the destination projection so every entry point clears stale routes.
+    expect(app).toContain("GearTrackerRouteParser.parse(url)");
+    expect(app).toContain("appState.apply(route)");
+    expect(appState).toContain("case .booking(let id):");
     // A booking link routes to booking detail and nothing else. Extend is an
     // action taken deliberately on that page, never opened by a tapped link, so
     // no routing slot may carry a link straight into a mutation sheet.
-    expect(app).toContain("appState.pendingPushBookingId = bookingId");
+    expect(appState).toContain("pendingPushBookingId = id");
     expect(app).not.toContain("pendingExtendBookingId");
     expect(app).not.toContain('value == "extend"');
     expect(source("ios/Wisconsin/Core/AppState.swift")).not.toContain("pendingExtendBookingId");
@@ -264,7 +267,7 @@ describe("iOS checkout return Live Activity source contract", () => {
     expect(service).toContain("status: BookingStatus.OPEN");
     expect(service).toContain("liveActivityStarts:");
     expect(service).toContain("liveActivityStartTokens:");
-    expect(lifecycle).toContain("scheduleCheckoutReturnLiveActivity({ bookingId: booking.id");
+    expect(lifecycle).toContain("scheduleCheckoutReturnLiveActivity({ bookingId: result.id");
     expect(lifecycle).toContain("scheduleCheckoutReturnLiveActivity({ bookingId, endsAt: updated.endsAt })");
     expect(kioskComplete).toContain("scheduleCheckoutReturnLiveActivity({");
     expect(kioskCheckout).toContain("scheduleCheckoutReturnLiveActivity({ bookingId: updated.id");

@@ -10,10 +10,16 @@ describe("action result copy", () => {
     const tradeBoard = source("src/components/TradeBoard.tsx");
 
     expect(tradeBoard).toContain("const TRADE_OUTCOME_COPY");
-    expect(tradeBoard).toContain("The trade was not claimed.");
-    expect(tradeBoard).toContain("The shift assignment was not changed.");
-    // Premier removal: open-shift pickups are instant claims, not requests.
-    expect(tradeBoard).toContain("The shift was not claimed.");
+    expect(tradeBoard).toContain("Could not claim the trade. Refresh the Trade Board and try again.");
+    expect(tradeBoard).toContain("Could not approve the trade. The shift assignment was not changed.");
+    expect(tradeBoard).toContain("Could not decline the trade. The claim stayed in review.");
+    expect(tradeBoard).toContain("Could not approve the request. Nobody was added to the shift.");
+    expect(tradeBoard).toContain("Could not decline the request. It stayed in review.");
+    expect(tradeBoard).toContain("Could not cancel the trade. The shift stays assigned to the poster.");
+    expect(tradeBoard).toContain("Could not withdraw the claim. Refresh the Trade Board and try again.");
+    expect(tradeBoard).toContain("Could not withdraw the request. Refresh the Trade Board and try again.");
+    // Open-shift pickups are instant claims, not requests.
+    expect(tradeBoard).toContain("Could not claim the shift. Refresh the Trade Board and try again.");
     expect(tradeBoard).toContain("Open shifts did not load. Retry before acting on shift or trade coverage.");
 
     expect(tradeBoard).not.toContain("Failed to claim trade");

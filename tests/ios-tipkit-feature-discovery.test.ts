@@ -14,7 +14,7 @@ describe("native TipKit feature discovery", () => {
 
   it("configures persistent tips once in the main app", () => {
     expect(app).toContain("import TipKit");
-    expect(app).toContain("try? Tips.configure()");
+    expect(app).toContain("try? Tips.configure(");
     expect(app.match(/Tips\.configure\(/g)).toHaveLength(1);
   });
 

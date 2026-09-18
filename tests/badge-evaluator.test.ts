@@ -783,6 +783,7 @@ describe("badge evaluator checkout events", () => {
         requesterUserId: "user-1",
         kind: "CHECKOUT",
         status: "COMPLETED",
+        custodyScope: "PERSON",
       },
       select: {
         startsAt: true,

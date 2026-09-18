@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { BookingCustodyScope } from "@prisma/client";
 import { makeBulkItem } from "./_helpers/factories";
 import { expectSerializableIsolation } from "./_helpers/assert-transaction";
 
@@ -90,6 +91,7 @@ describe("markCheckoutCompleted", () => {
       status: "OPEN",
       locationId: "loc-1",
       requesterUserId: "user-1",
+      custodyScope: BookingCustodyScope.PERSON,
       endsAt: new Date("2026-05-09T18:00:00.000Z"),
       bulkItems,
     };
@@ -378,6 +380,7 @@ describe("forceCompleteCheckout", () => {
       status: "OPEN",
       locationId: "loc-1",
       requesterUserId: "user-1",
+      custodyScope: BookingCustodyScope.PERSON,
       endsAt: new Date("2026-05-09T18:00:00.000Z"),
       serializedItems: [{ id: "bsi-1", allocationStatus: "active", assetId: "asset-1" }],
       bulkItems: [],
