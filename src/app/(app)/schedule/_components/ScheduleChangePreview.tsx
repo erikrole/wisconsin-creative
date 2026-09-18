@@ -6,6 +6,7 @@ import {
   CalendarClockIcon,
   CalendarDaysIcon,
   Clock3Icon,
+  HistoryIcon,
   UserPlusIcon,
   UserRoundIcon,
 } from "lucide-react";
@@ -23,7 +24,7 @@ import type { ScheduleChangeItem, ScheduleChangeKind } from "@/lib/schedule-chan
 import type { CalendarEntry } from "./types";
 import { scheduleEventTitleParts } from "./types";
 
-export type ScheduleChangePreviewFilter = "calendar" | "assignee";
+export type ScheduleChangePreviewFilter = "all" | "calendar" | "assignee";
 
 const DAILY_ACTIVITY_WINDOW_MS = 24 * 60 * 60 * 1000;
 
@@ -34,13 +35,35 @@ const FILTER_CONFIG: Record<ScheduleChangePreviewFilter, {
   icon: typeof CalendarDaysIcon;
   kinds: Set<ScheduleChangeKind>;
   title: string;
+  windowMs: number;
 }> = {
+  all: {
+    title: "Recent activity",
+    description: "Crew assignments and calendar sync changes, newest first.",
+    emptyTitle: "No recent changes",
+    emptyDescription: "New assignments and synced calendar updates will appear here.",
+    icon: HistoryIcon,
+    windowMs: 0,
+    kinds: new Set([
+      "assignment_assigned",
+      "assignment_removed",
+      "assignment_updated",
+      "pickup_claimed",
+      "pickup_requested",
+      "published",
+      "republished",
+      "event_created",
+      "event_updated",
+      "event_visibility_updated",
+    ]),
+  },
   calendar: {
     title: "Synced calendar changes",
     description: "Calendar event changes recorded in the last 24 hours.",
     emptyTitle: "No calendar changes",
     emptyDescription: "New or updated calendar events will appear here after the next sync.",
     icon: CalendarDaysIcon,
+    windowMs: DAILY_ACTIVITY_WINDOW_MS,
     kinds: new Set(["event_created", "event_updated", "event_visibility_updated"]),
   },
   assignee: {
@@ -49,14 +72,19 @@ const FILTER_CONFIG: Record<ScheduleChangePreviewFilter, {
     emptyTitle: "No assignee changes",
     emptyDescription: "New assignments, removals, and call-time changes will appear here.",
     icon: UserRoundIcon,
+    windowMs: DAILY_ACTIVITY_WINDOW_MS,
     kinds: new Set(["assignment_assigned", "assignment_removed", "assignment_updated", "pickup_claimed"]),
   },
 };
 
-function recentItems(items: ScheduleChangeItem[], kinds: Set<ScheduleChangeKind>) {
-  const cutoff = Date.now() - DAILY_ACTIVITY_WINDOW_MS;
+function recentItems(
+  items: ScheduleChangeItem[],
+  kinds: Set<ScheduleChangeKind>,
+  windowMs: number,
+) {
+  const cutoff = windowMs > 0 ? Date.now() - windowMs : 0;
   return items
-    .filter((item) => kinds.has(item.kind) && Date.parse(item.createdAt) >= cutoff)
+    .filter((item) => kinds.has(item.kind) && (cutoff === 0 || Date.parse(item.createdAt) >= cutoff))
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
 }
 
@@ -101,7 +129,7 @@ export function ScheduleChangePreview({
 }) {
   const config = FILTER_CONFIG[filter];
   const entryById = new Map(entries.map((entry) => [entry.id, entry]));
-  const visibleItems = recentItems(items, config.kinds);
+  const visibleItems = recentItems(items, config.kinds, config.windowMs);
   const Icon = config.icon;
 
   return (

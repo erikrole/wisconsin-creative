@@ -13,13 +13,13 @@ import {
   UsersIcon,
 } from "lucide-react";
 import { useState } from "react";
+import { coalesceScheduleChanges } from "@/app/(app)/events/[id]/_activity";
 import { OperationalMetricCard } from "@/components/OperationalFeedback";
-import {
-  OperationalStatusRail,
-  type OperationalStatusRailItem,
-} from "@/components/OperationalStatusRail";
+import { OperationalStatusRail } from "@/components/OperationalStatusRail";
+import type { CombinedScheduleEventSuggestion } from "@/lib/combined-schedule-event-suggestions";
 import type { ScheduleHealthSnapshot } from "@/lib/schedule-health-types";
-import type { ScheduleChangeItem, ScheduleChangeKind } from "@/lib/schedule-change-history-types";
+import type { ScheduleChangeKind } from "@/lib/schedule-change-history-types";
+import { recentScheduleActivityItems } from "@/lib/schedule-recent-activity";
 import type { ScheduleSourceSignal } from "@/lib/calendar-source-freshness";
 import type { ScheduleQueue } from "@/lib/schedule-queues";
 import { filterEntriesForScheduleQueue } from "@/lib/schedule-queues";
@@ -27,6 +27,7 @@ import type { ScheduleAutomationDigest as ScheduleAutomationDigestData } from "@
 import type { CalendarEntry } from "./types";
 import { ACTIVE_STATUSES } from "./types";
 import { ScheduleAutomationCards } from "./ScheduleAutomationDigest";
+import { ScheduleRecentActivity } from "./ScheduleRecentActivity";
 import { ScheduleSourceSignal as ScheduleSourceStatus } from "./ScheduleSourceSignal";
 import {
   ScheduleChangePreview,
@@ -43,8 +44,12 @@ type ScheduleReadinessProps = {
   digest: ScheduleAutomationDigestData | null;
   isStaff: boolean;
   canReviewClaims: boolean;
+  combineSuggestion?: CombinedScheduleEventSuggestion<CalendarEntry> | null;
   onShowQueue: (queue: ScheduleQueue) => void;
   onOpenTradeBoard: () => void;
+  onReviewCombine?: (suggestion: CombinedScheduleEventSuggestion<CalendarEntry>) => void;
+  onDismissCombine?: (suggestion: CombinedScheduleEventSuggestion<CalendarEntry>) => void;
+  onReviewPendingCrew?: (entry: CalendarEntry) => void;
 };
 
 type ReadinessTone = "attention" | "critical" | "good" | "neutral" | "personal";
@@ -67,10 +72,6 @@ const METRIC_TONE: Record<ReadinessTone, "red" | "orange" | "green" | "blue" | "
   personal: "blue",
   neutral: "muted",
 };
-
-function isActionableValue(value: number | string) {
-  return typeof value === "number" ? value > 0 : Boolean(value);
-}
 
 function missingSlots(entry: CalendarEntry) {
   if (!entry.coverage) return 0;
@@ -114,13 +115,6 @@ function recentActivityCount(health: ScheduleHealthSnapshot | null, kinds: Set<S
   }, 0);
 }
 
-function recentActivityItems(health: ScheduleHealthSnapshot | null): ScheduleChangeItem[] {
-  if (!health) return [];
-  const cutoff = Date.now() - DAILY_ACTIVITY_WINDOW_MS;
-  return Object.values(health.changeHistory.events)
-    .flatMap((summary) => summary.items)
-    .filter((item) => Date.parse(item.createdAt) >= cutoff);
-}
 
 export function ScheduleReadiness({
   entries,
@@ -132,8 +126,12 @@ export function ScheduleReadiness({
   digest,
   isStaff,
   canReviewClaims,
+  combineSuggestion = null,
   onShowQueue,
   onOpenTradeBoard,
+  onReviewCombine,
+  onDismissCombine,
+  onReviewPendingCrew,
 }: ScheduleReadinessProps) {
   const [previewFilter, setPreviewFilter] = useState<ScheduleChangePreviewFilter | null>(null);
   const fallbackOpenSlots = filteredEntries.reduce((sum, entry) => sum + missingSlots(entry), 0);
@@ -162,7 +160,11 @@ export function ScheduleReadiness({
   const openTrades = health?.queues.openTrades.count ?? openTradeCount;
   const recentCalendarChanges = recentActivityCount(health, CALENDAR_ACTIVITY_KINDS);
   const recentAssigneeChanges = recentActivityCount(health, ASSIGNEE_ACTIVITY_KINDS);
-  const recentChanges = recentActivityItems(health);
+  const recentChanges = recentScheduleActivityItems(health);
+  const recentActivity = coalesceScheduleChanges(recentChanges);
+  const releaseFailures = isStaff
+    ? filteredEntries.filter((entry) => entry.autoReleaseError && !entry.archivedAt && !entry.eventArchivedAt)
+    : [];
   const sourceNeedsAttention = sourceSignal?.severity === "attention";
   const hiddenAndArchivedCount = (health?.queues.hiddenEvents.count ?? 0) + (health?.queues.archivedEvents.count ?? 0);
   const healthWarnings = health?.partialFailures.length ?? 0;
@@ -312,55 +314,25 @@ export function ScheduleReadiness({
   ];
 
   const detailItems = [...items, ...contextualItems];
-  const attentionItems = detailItems.filter(
-    (item) => (item.tone === "critical" || item.tone === "attention") && isActionableValue(item.value),
-  );
-  const personalItem = contextualItems.find((item) => item.tone === "personal");
-  /**
-   * Activity counters are context, not work: they earn a rail slot only when
-   * something actually changed. Reporting "Synced calendar 0" every visit spent
-   * the rail on nothing and pushed the all-clear state out of reach.
-   */
-  const activityLabels = new Set(staffItems.map((item) => item.label));
-  const activityItems = items.filter(
-    (item) => activityLabels.has(item.label) && isActionableValue(item.value),
-  );
-  /**
-   * The rail is the part of the readiness block that is visible without
-   * expanding it, and it sorts by tone and caps at three. Feeding it only the
-   * activity counters buried every genuine exception -- open crew slots,
-   * conflicts, requests awaiting review -- one collapsed panel below the fold.
-   * Exceptions lead; the reader's own calls and activity fill what is left and
-   * otherwise roll into the overflow count.
-   */
-  const railItems: OperationalStatusRailItem[] = [
-    ...attentionItems,
-    ...(personalItem ? [personalItem] : []),
-    ...activityItems,
-  ].map((item) => ({
-    id: item.label,
-    label: item.label,
-    value: item.value,
-    detail: item.detail,
-    icon: item.icon,
-    tone: item.tone === "critical"
-      ? "critical"
-      : item.tone === "personal" || item.tone === "good"
-        ? "info"
-        : item.tone === "neutral"
-          ? "neutral"
-          : "warning",
-    onSelect: item.onClick,
-    href: item.href,
-    scope: item.scope,
-  }));
 
   return (
     <>
       <OperationalStatusRail
         className="mb-3"
-        items={railItems}
-        allClearLabel={attentionItems.length === 0 && healthWarnings === 0 ? "Nothing needs attention" : undefined}
+        items={[]}
+        feed={(
+          <ScheduleRecentActivity
+            changes={recentActivity}
+            combineSuggestion={isStaff ? combineSuggestion : null}
+            entries={entries}
+            isStaff={isStaff}
+            onDismissCombine={onDismissCombine}
+            onReviewCombine={onReviewCombine}
+            onReviewPendingCrew={onReviewPendingCrew}
+            onSeeAll={recentActivity.length > 0 ? () => setPreviewFilter("all") : undefined}
+            releaseFailures={releaseFailures}
+          />
+        )}
         details={(
           <>
               {sourceSignal && (
@@ -397,7 +369,7 @@ export function ScheduleReadiness({
       />
       <ScheduleChangePreview
         entries={entries}
-        filter={previewFilter ?? "assignee"}
+        filter={previewFilter ?? "all"}
         items={recentChanges}
         onOpenChange={(open) => {
           if (!open) setPreviewFilter(null);

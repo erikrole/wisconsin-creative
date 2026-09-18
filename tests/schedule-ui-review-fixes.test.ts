@@ -55,14 +55,24 @@ describe("schedule browse fixes", () => {
     expect(clearAll).not.toContain('params.delete("myShifts")');
   });
 
-  it("leads the readiness rail with exceptions rather than activity counters", () => {
-    // The rail is what shows without expanding the readiness block, and it
-    // sorts by tone and caps at three. Activity-only rail items buried open
-    // crew slots, conflicts, and pending requests one panel below the fold.
-    expect(readiness).toContain("const railItems: OperationalStatusRailItem[] = [\n    ...attentionItems,");
-    expect(readiness).toContain("...(personalItem ? [personalItem] : []),\n    ...activityItems,");
-    // A zero-value counter no longer spends a rail slot.
-    expect(readiness).toContain("activityLabels.has(item.label) && isActionableValue(item.value)");
+  it("leads the readiness rail with recent crew and calendar activity", () => {
+    // Standing queue counts (crew needed, gear gaps, data quality) stay in
+    // Details. The visible strip is recent shift changes, calendar syncs, and
+    // a quiet row for unreleased crew or a combine suggestion.
+    expect(readiness).toContain("<ScheduleRecentActivity");
+    expect(readiness).toContain("feed={(");
+    expect(readiness).toContain("items={[]}");
+    expect(readiness).toContain("recentScheduleActivityItems(health)");
+    expect(readiness).toContain("coalesceScheduleChanges(recentChanges)");
+    expect(readiness).not.toContain("Nothing needs attention");
+    const activity = source("src/app/(app)/schedule/_components/ScheduleRecentActivity.tsx");
+    expect(activity).toContain("Crew not released");
+    expect(activity).toContain("May share a crew");
+    expect(activity).toContain("No recent crew or calendar changes");
+    expect(page).not.toContain("2 related events may share a crew");
+    expect(page).not.toContain("changes have not been released");
+    expect(page).toContain("combineSuggestion={isStaff ? leadingCombineSuggestion : null}");
+    expect(page).toContain("onReviewPendingCrew={openCrewSheet}");
   });
 
   it("scopes control-room readiness metrics to staff", () => {

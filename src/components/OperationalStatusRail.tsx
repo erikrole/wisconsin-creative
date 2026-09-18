@@ -93,6 +93,7 @@ export function OperationalStatusRail({
   defaultOpen = false,
   details,
   detailsLabel = "Details",
+  feed,
   items,
   maxVisibleItems = 3,
   notice,
@@ -103,6 +104,7 @@ export function OperationalStatusRail({
   defaultOpen?: boolean;
   details?: ReactNode;
   detailsLabel?: string;
+  feed?: ReactNode;
   items: OperationalStatusRailItem[];
   maxVisibleItems?: number;
   notice?: ReactNode;
@@ -130,7 +132,10 @@ export function OperationalStatusRail({
   return (
     <section className={cn("border-y border-border/50", className)}>
       <Collapsible open={open} onOpenChange={setOpen}>
-        <div className="flex flex-col gap-2 px-1 py-2 lg:flex-row lg:items-center">
+        <div className={cn(
+          "flex flex-col gap-2 px-1 py-2 lg:flex-row",
+          feed ? "lg:items-start" : "lg:items-center",
+        )}>
           {orientation?.href ? (
             <Link
               href={orientation.href}
@@ -146,16 +151,20 @@ export function OperationalStatusRail({
 
           {orientation ? <Separator orientation="vertical" className="hidden h-5 lg:block" /> : null}
 
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
-            {visibleItems.length > 0 ? (
-              visibleItems.map((item) => <StatusItem key={item.id} item={item} />)
-            ) : allClearLabel ? (
-              <span className="inline-flex h-10 items-center gap-1.5 px-2 text-sm text-muted-foreground">
-                <CheckCircle2Icon className="size-4" aria-hidden="true" />
-                {allClearLabel}
-              </span>
-            ) : null}
-          </div>
+          {feed ? (
+            <div className="min-w-0 flex-1">{feed}</div>
+          ) : (
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+              {visibleItems.length > 0 ? (
+                visibleItems.map((item) => <StatusItem key={item.id} item={item} />)
+              ) : allClearLabel ? (
+                <span className="inline-flex h-10 items-center gap-1.5 px-2 text-sm text-muted-foreground">
+                  <CheckCircle2Icon className="size-4" aria-hidden="true" />
+                  {allClearLabel}
+                </span>
+              ) : null}
+            </div>
+          )}
 
           {details ? (
             <CollapsibleTrigger asChild>

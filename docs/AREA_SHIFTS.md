@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Shift Calendar & Scheduling
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-09-17
+- Last Updated: 2026-09-18
 - Status: Active — implemented V1 with ongoing hardening
 
 ## Purpose
@@ -46,7 +46,7 @@ Replace Asana-based shift scheduling with a native shift calendar in Wisconsin C
 - [x] Week view: navigable 7-day strip with day/event counts, readable time/venue/title cards, coverage and open-slot truth, My Shifts highlight, and useful mobile expansion
 - [x] Home/away/neutral/non-game classification: filterable with shared green, orange, gray, and blue event treatment; List rows retain a left color rail for at-a-glance scanning
 - [x] Hide events: staff can hide irrelevant events from schedule views
-- [x] Schedule readiness snapshot: server-side health snapshot for staff/admin with open slots, requests, conflicts, trades, gear gaps, source/visibility state, my shifts, and next call surfaced as a compact attention bar of clickable queue chips with an expandable details grid
+- [x] Schedule readiness snapshot: server-side health snapshot for staff/admin with open slots, requests, conflicts, trades, gear gaps, source/visibility state, my shifts, and next call. The visible Schedule strip shows recent crew and calendar-sync activity, with standing queue totals available in the expandable details grid
 - [x] Schedule activity counts: staff/admin readiness and Event command-center history derive recent calendar-sync, live assignment, and private working-copy edits from scoped audit history while student Schedule reads remain published-only
 - [x] Student availability: profile Availability tab stores recurring weekly blocks and assignment flows show conflicts
 - [x] Student availability exceptions: web profile Availability supports semester date ranges and one-time conflicts
@@ -77,13 +77,13 @@ Replace Asana-based shift scheduling with a native shift calendar in Wisconsin C
 - [x] Auto-fill and manual crew review: staff/admin can preview auto-fill recommendations before applying assignments through existing safety checks. Template-review UI is retired to keep Event detail focused.
 - [x] Gear readiness: Schedule health carries event and assignment gear readiness across primary event, linked-event, and shift-assignment booking paths, while detailed gear prep stays on Event detail and gear queues instead of the main Schedule list
 - [x] Personal calendar subscriptions: worker ICS feeds use the effective personal call window, preserve inherited all-day assignments as RFC 5545 date values, keep explicit Student call windows timed, include concise area-plus-matchup titles and event deep links, mark active trade-board posts, and remove swapped-away assignments when another worker takes the shift
-- [ ] Combined events: Staff/Admin receive a dismissible inline prompt and count for likely future same-day/same-family pairs; Review opens the server preview with exact kept-assignment and retired-empty-slot counts before combining one same-venue pair into one Schedule row and canonical crew. Any second live crew fails closed. An unpublished unassigned secondary draft is retained but made ineligible for queued release, and audited Undo restores that draft without publishing or scheduling it. Migration `0142` is applied; compatible app deployment and authenticated runtime proof remain open.
+- [ ] Combined events: Staff/Admin receive a quiet activity-strip row and More-menu count for likely future same-day/same-family pairs; Review opens the server preview with exact kept-assignment and retired-empty-slot counts before combining one same-venue pair into one Schedule row and canonical crew. Any second live crew fails closed. An unpublished unassigned secondary draft is retained but made ineligible for queued release, and audited Undo restores that draft without publishing or scheduling it. Migration `0142` is applied; compatible app deployment and authenticated runtime proof remain open.
 
 ## Information Architecture
 
 ### Schedule Page (`/schedule`)
-1. **Page Header** — title plus staff/admin **Add event**, Auto assign, and a "More" overflow for Combine events (with suggestion count), Trade Board (with open-trade count), and Export CSV; students keep a direct Trade Board button. Combine events is Staff/Admin-only and preview-first. A dismissible inline prompt opens a matching pair's server preview immediately; the dialog retains manual selectors and dismissible suggested pairs.
-2. **Schedule attention bar** (`ScheduleReadiness` + shared `OperationalStatusRail`) — compact strip with next call plus up to three priority-ordered clickable exceptions for the nonzero staffing, gear-gap, data-quality, conflict, request, trade, source, and personal-shift queues. Additional exceptions remain accounted for in Details, and a calm all-clear state appears only when health data is complete.
+1. **Page Header** — title plus staff/admin **Add event**, Auto assign, and a "More" overflow for Combine events (with suggestion count), Trade Board (with open-trade count), and Export CSV; students keep a direct Trade Board button. Combine events is Staff/Admin-only and preview-first. A quiet activity-strip row opens a matching pair's server preview immediately; the dialog retains manual selectors and dismissible suggested pairs.
+2. **Recent activity** (`ScheduleReadiness` + shared `OperationalStatusRail` feed) — compact newest crew and calendar-sync rows, with quiet unreleased-crew and combine-suggestion rows when those need a review. Standing Crew needed, gear-gap, data-quality, conflict, request, trade, source, and personal-shift totals stay in Details rather than occupying the default strip.
 3. **Details panel** — one collapsed-by-default expander (shared `OperationalMetricCard` grid) holding the full readiness metrics and, for staff/admin, the review-first Automation review cards: staffing, auto-fill preview, publish readiness, blockers, sources, and cleanup
 4. **Work queues** — URL-backed `queue` state for Needs staffing, Conflicts, Pending requests, Trade approval, Gear gaps, My calls today, and Stale source
 5. **Data quality queue** — staff/admin Schedule health flags visible events with missing sport context, missing opponents, missing venue/location mapping, future archived status, or shifts without sport metadata. The queue filters the list to affected events and routes cleanup back through existing Event detail, Locations, and Venue Mappings ownership.
@@ -121,6 +121,7 @@ Replace Asana-based shift scheduling with a native shift calendar in Wisconsin C
 - Sports code mappings (existing — `src/lib/sports.ts`)
 
 ## Change Log
+- 2026-09-18: **Schedule chrome leads with recent activity (local).** The default strip shows recent crew assignments and calendar syncs instead of standing Crew needed / Gear gaps / Data quality badges. Unreleased crews and a combine suggestion fold into the same quiet list. Queue totals remain in Details. Source contracts are local; authenticated visual proof remains a local gate.
 - 2026-09-18: **Add event is a Schedule header action (local).** Staff/admin get an outline Add event button beside Auto assign; More keeps Combine, Trade Board, and Export. Authenticated visual proof remains a local gate.
 - 2026-09-18: **Web Schedule toolbar and filters (local).** The command row is View, My Shifts, searchable Sport, Filters, and Clear. Venue, Area, Coverage, and Older records live in the Filters panel as 40px toggles instead of nested chips. Clear leaves My Shifts alone, date-window deep links get a removable chip, week/calendar empty states can clear the same filters, and staff source status sits on the toolbar. Authenticated visual proof remains a local gate.
 - 2026-09-17: **Event detail Activity names calendar diffs (local).** UWBadgers.com update rows list the fields that changed. Activity opens on All. Student call times stay on every Student row. Header Source is enough without an Imported badge. Source contracts are local; authenticated visual proof remains open.

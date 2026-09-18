@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
-import { MergeIcon, MoreHorizontalIcon, PlusIcon, SparklesIcon, XIcon } from "lucide-react";
+import { MergeIcon, MoreHorizontalIcon, PlusIcon, SparklesIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -475,32 +475,6 @@ function InternalSchedulePage() {
         />
       </div>
 
-      {isStaff && leadingCombineSuggestion && (
-        <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-orange-500/25 bg-orange-500/10 px-4 py-3">
-          <SparklesIcon className="size-4 shrink-0 text-[var(--orange-text)]" />
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium">
-              2 related events may share a crew
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {leadingCombineSuggestion.sportFamily}: {leadingCombineSuggestion.first.summary} + {leadingCombineSuggestion.second.summary}
-            </p>
-          </div>
-          <Button variant="outline" size="sm" className="h-10" onClick={() => reviewCombineSuggestion(leadingCombineSuggestion)}>
-            Review
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-10 text-muted-foreground"
-            aria-label={`Dismiss ${leadingCombineSuggestion.sportFamily} suggestion`}
-            onClick={() => dismissCombineSuggestion(leadingCombineSuggestion)}
-          >
-            <XIcon className="size-4" />
-          </Button>
-        </div>
-      )}
-
       {(data.loadError || data.refreshError || data.healthUnavailable) && !data.loading && (
         <Alert className="my-4" role="alert">
           <AlertTitle>{data.loadError ? "Schedule could not be loaded" : data.refreshError ? "Schedule may be out of date" : "Schedule checks are unavailable"}</AlertTitle>
@@ -515,17 +489,7 @@ function InternalSchedulePage() {
         </Alert>
       )}
 
-      {isStaff && canDisplaySchedule && data.filteredEntries.filter((entry) => entry.autoReleaseError && !entry.archivedAt && !entry.eventArchivedAt).map((entry) => (
-        <Alert key={entry.id} variant="destructive" className="my-3" role="alert">
-          <AlertTitle>{entry.summary}: changes have not been released</AlertTitle>
-          <AlertDescription>
-            <p>{entry.autoReleaseError}</p>
-            <Button variant="outline" size="sm" className="mt-2 h-10" onClick={() => openCrewSheet(entry)}>Review pending crew</Button>
-          </AlertDescription>
-        </Alert>
-      ))}
-
-      {!data.loading && !data.loadError && !data.refreshError && !data.healthUnavailable && <ScheduleReadiness
+      {!data.loading && !data.loadError && <ScheduleReadiness
         entries={data.entries}
         filteredEntries={data.filteredEntries}
         currentUserId={data.currentUserId}
@@ -535,8 +499,12 @@ function InternalSchedulePage() {
         digest={data.scheduleAutomation}
         isStaff={isStaff}
         canReviewClaims={canReviewClaims}
+        combineSuggestion={isStaff ? leadingCombineSuggestion : null}
         onShowQueue={showQueue}
         onOpenTradeBoard={openTradeBoard}
+        onReviewCombine={reviewCombineSuggestion}
+        onDismissCombine={dismissCombineSuggestion}
+        onReviewPendingCrew={openCrewSheet}
       />}
 
       {/* Calendar View */}

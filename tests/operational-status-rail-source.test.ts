@@ -36,6 +36,7 @@ describe("operational status rail source contract", () => {
     expect(rail).toContain("Show ${detailsLabel.toLowerCase()} and ${hiddenCount} more statuses");
     expect(rail).toContain("allClearLabel");
     expect(rail).toContain("tabular-nums");
+    expect(rail).toContain("feed ?");
   });
 
   it("keeps route calculations outside the shared presentation contract", () => {
@@ -47,7 +48,8 @@ describe("operational status rail source contract", () => {
     expect(rail).not.toContain("ScheduleQueue");
     expect(rail).not.toContain("AdminFixTodayQueue");
     expect(schedule).toContain("<OperationalStatusRail");
-    expect(schedule).toContain("const railItems: OperationalStatusRailItem[]");
+    expect(schedule).toContain("<ScheduleRecentActivity");
+    expect(schedule).toContain("feed={(");
     expect(fixToday).toContain("<OperationalStatusRail");
     expect(fixToday).toContain("const railItems: OperationalStatusRailItem[]");
     expect(items).toContain("<OperationalStatusRail");

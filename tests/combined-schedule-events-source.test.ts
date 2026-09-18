@@ -12,8 +12,10 @@ describe("combined Schedule events source contract", () => {
 
     expect(page).toContain("<CombineEventsDialog");
     expect(page).toContain("Combine events");
-    expect(page).toContain("related event");
+    expect(page).toContain("combineSuggestion={isStaff ? leadingCombineSuggestion : null}");
     expect(page).toContain("dismissCombineSuggestion");
+    const activity = source("src/app/(app)/schedule/_components/ScheduleRecentActivity.tsx");
+    expect(activity).toContain("May share a crew");
     expect(dialog).toContain("Review combination");
     expect(dialog).toContain("Suggested pairs");
     expect(dialog).toContain("Same day, sport, venue, and overlapping time.");
