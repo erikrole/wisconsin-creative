@@ -187,6 +187,8 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 
 ## Change Log
 
+- 2026-09-18: **Booking display titles use one cleaner on remaining read paths (local).** Dashboard, kiosk student/dashboard/scan, checkout GET/PATCH, and availability copy now run stored booking titles through `displayBookingTitle` (same prefix/dash/abbreviation cleaning as Schedule) without rewriting stored or audit values. Event summaries stay on the existing event-title path.
+
 - 2026-09-18: **macOS companion booking click stays in the extra (local).** Open and waiting-for-pickup rows open a backable detail pane with requester, location, timing, and item names from the existing two-read companion projection. Open in Wisconsin Creative remains a secondary web exit. Older snapshots without item names decode and say so instead of sending the operator to the website. Source/test complete; names appear in a live extra after the next projection republish.
 
 - 2026-09-18: **macOS companion extra is a glance (local).** Waiting-for-pickup comes first, open bookings are overdue-first and capped at four, inactive kiosks stay in the fleet summary instead of occupying extra rows, and the header names open count, overdue, and freshness without scrolling. **View N more expands that section in the extra**; Open Dashboard and View all remain the web exits. Booking cards use the iOS booking-row layout (4pt status rail, 40pt avatar, “Due/Pickup … at …” timing, 16pt card). The extra glyph stays the shipping box. Source/test complete; installed interaction remains a separate gate.

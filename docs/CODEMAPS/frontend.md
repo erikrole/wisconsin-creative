@@ -118,7 +118,7 @@
 | `src/components/booking-wizard/BookingWizard.tsx` | 1109 |
 | `src/components/onboarding/OnboardingDialog.tsx` | 996 |
 | `src/components/EquipmentPicker.tsx` | 916 |
-| `src/components/BookingListPage.tsx` | 913 |
+| `src/components/BookingListPage.tsx` | 914 |
 | `src/components/AppShell.tsx` | 897 |
 | `src/components/ShiftDetailPanel.tsx` | 795 |
 | `src/components/ChooseImageModal.tsx` | 769 |
@@ -129,10 +129,10 @@
 | `src/components/schedule/SportSetupWizard.tsx` | 675 |
 | `src/components/booking-wizard/WizardStep1.tsx` | 605 |
 | `src/components/booking-details/BookingHeader.tsx` | 472 |
+| `src/components/event-editor/EventEditorFields.tsx` | 435 |
 | `src/components/ui/heatmap.tsx` | 434 |
 | `src/components/Sidebar.tsx` | 415 |
 | `src/components/ui/chart.tsx` | 389 |
-| `src/components/event-editor/EventEditorFields.tsx` | 379 |
 | `src/components/booking-details/BookingInfoCard.tsx` | 358 |
 | `src/components/FormCombobox.tsx` | 352 |
 | `src/components/shift-detail/ShiftSlotCard.tsx` | 345 |
@@ -163,7 +163,7 @@
 | `src/hooks/use-mobile.ts` | 20 |
 | `src/hooks/use-operational-polling-activity.ts` | 131 |
 | `src/hooks/use-profile-completion.ts` | 65 |
-| `src/hooks/use-schedule-data.ts` | 989 |
+| `src/hooks/use-schedule-data.ts` | 1269 |
 | `src/hooks/use-url-state.ts` | 166 |
 | `src/hooks/useBookingActions.ts` | 297 |
 | `src/hooks/useBookingDetail.ts` | 70 |

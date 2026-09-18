@@ -166,7 +166,7 @@ Feature ideas to consider separately:
 - Shared overlay primitives: `Dialog`, `Sheet`, and `Drawer` built-in close controls now use visible 40px targets so modal dismissal is consistent across create/edit/detail flows.
 - Shared inline field rows: `SaveableField` renders display-only labels as text instead of untargeted form labels, preserves real label associations when `htmlFor` is provided, names dirty-row save/cancel controls with the field label, and uses a visible dirty-row accent with 40px action buttons.
 - Shared people avatars: `UserAvatar` is the canonical web entry point for user photos and initials. Use its semantic size scale instead of hand-sized circular image overrides.
-- `/schedule` filters: view and venue segmented controls now use shadcn `ToggleGroup` while Schedule remains a documented domain-specific command-bar exception.
+- `/schedule` filters: view stays a `ToggleGroup`; venue, area, and coverage use the same 40px segmented pattern inside the Filters panel; Sport is a two-column Men/Women `SportPicker`; My Shifts is a pressed-button preference that Clear does not reset. Schedule remains a documented domain-specific command-bar exception.
 - `/schedule` Trade Board: claim and staff approval stay visible; cancel and decline now use `OperationalRowActions` as secondary/destructive row commands.
 - `/schedule` Trade Board: cancel confirmation now names the event, shift window, posted owner, and assignment consequence instead of asking a generic trade question.
 - `/schedule` Trade Board sheet: the overlay now includes an accessible description instead of title-only sheet content.

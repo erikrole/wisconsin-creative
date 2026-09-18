@@ -10,7 +10,7 @@
 | `src/lib/services/auto-assign.ts` | 92 |
 | `src/lib/services/auto-fill-preview.ts` | 325 |
 | `src/lib/services/availability-conflict-recompute.ts` | 130 |
-| `src/lib/services/availability.ts` | 686 |
+| `src/lib/services/availability.ts` | 687 |
 | `src/lib/services/blast-targeting.ts` | 165 |
 | `src/lib/services/blasts.ts` | 359 |
 | `src/lib/services/booking-custody.ts` | 82 |
@@ -158,7 +158,7 @@
 | `src/lib/equipment-section-filters.ts` | 87 |
 | `src/lib/equipment-sections.ts` | 155 |
 | `src/lib/errors.ts` | 80 |
-| `src/lib/event-editor.ts` | 85 |
+| `src/lib/event-editor.ts` | 107 |
 | `src/lib/fetch-with-timeout.ts` | 25 |
 | `src/lib/firmware-watch-targets.ts` | 124 |
 | `src/lib/football-gameday-kits.ts` | 79 |
@@ -218,6 +218,7 @@
 | `src/lib/schedule-data-quality.ts` | 128 |
 | `src/lib/schedule-defaults.ts` | 33 |
 | `src/lib/schedule-event-identity.ts` | 369 |
+| `src/lib/schedule-event-keyset.ts` | 66 |
 | `src/lib/schedule-event-where.ts` | 46 |
 | `src/lib/schedule-health-types.ts` | 83 |
 | `src/lib/schedule-notification-debounce.ts` | 48 |
@@ -227,6 +228,7 @@
 | `src/lib/schedule-sport-family.ts` | 27 |
 | `src/lib/schedule-template-review-types.ts` | 105 |
 | `src/lib/schedule-timeline-position.ts` | 302 |
+| `src/lib/schedule-timeline-window.ts` | 89 |
 | `src/lib/schedule-window.ts` | 152 |
 | `src/lib/schedule-working-copy-guard.ts` | 24 |
 | `src/lib/schedule-working-copy.ts` | 499 |
@@ -245,7 +247,7 @@
 | `src/lib/software-vault-crypto.ts` | 61 |
 | `src/lib/software-vault-validation.ts` | 39 |
 | `src/lib/sport-auto-assign-policy.ts` | 60 |
-| `src/lib/sports.ts` | 78 |
+| `src/lib/sports.ts` | 100 |
 | `src/lib/status-colors.ts` | 49 |
 | `src/lib/status-styles.ts` | 46 |
 | `src/lib/student-availability.ts` | 209 |
