@@ -426,6 +426,7 @@ const badgeDefinitions = [
     kind: BadgeKind.COUNT,
     trigger: "checkout:opened",
     threshold: 5,
+    ruleKey: "category_collector",
     sortOrder: 720,
   },
   {
@@ -815,6 +816,30 @@ const badgeDefinitions = [
     sortOrder: 925,
   },
   {
+    key: "plan_ahead",
+    name: "Plan Ahead",
+    description: "Picked up five reservations at the counter.",
+    icon: "CalendarCheck2",
+    category: BadgeCategory.MILESTONE,
+    kind: BadgeKind.COUNT,
+    trigger: "checkout:opened",
+    threshold: 5,
+    ruleKey: "checkout_from_reservation",
+    sortOrder: 1500,
+  },
+  {
+    key: "crew_checkout",
+    name: "Crew Checkout",
+    description: "Opened five checkouts tied to a scheduled crew assignment.",
+    icon: "PackageCheck",
+    category: BadgeCategory.MILESTONE,
+    kind: BadgeKind.COUNT,
+    trigger: "checkout:opened",
+    threshold: 5,
+    ruleKey: "checkout_for_shift",
+    sortOrder: 1510,
+  },
+  {
     key: "checkout_sprint",
     name: "Burst Mode",
     description: "Opened five gear checkouts in one local calendar week.",
@@ -1098,7 +1123,7 @@ const badgeDefinitions = [
     category: BadgeCategory.MILESTONE,
     kind: BadgeKind.COUNT,
     trigger: "shift:completed",
-    threshold: 3,
+    threshold: 1,
     ruleKey: "shift_result_sites",
     sortOrder: 1230,
   },
@@ -1500,12 +1525,14 @@ async function main() {
       email: "admin@creative.local",
       passwordHash,
       role: Role.ADMIN,
-      locationId: campRandall.id
+      locationId: campRandall.id,
+      hiddenFromRoster: true,
     },
     update: {
       passwordHash,
       role: Role.ADMIN,
-      locationId: campRandall.id
+      locationId: campRandall.id,
+      hiddenFromRoster: true,
     }
   });
 
