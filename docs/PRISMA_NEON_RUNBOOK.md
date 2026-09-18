@@ -1,6 +1,6 @@
 # Prisma + Neon Runbook
 
-Last updated: 2026-09-07
+Last updated: 2026-09-17
 
 ## Connection Rules
 
@@ -39,6 +39,14 @@ Preview uses `DATABASE_URL_UNPOOLED`, not a generic `DIRECT_URL`, so the Neon
 integration's branch-specific migration URL can override the default. Never
 share a Production `DIRECT_URL` into Preview: it takes precedence over the
 branch-specific unpooled URL. Preview also has a separate session secret.
+
+Local `npm run dev:preview` still needs the `gear-tracker` database on that
+Preview compute. The Vercel Preview env currently injects the empty default
+`neondb` pathname; `scripts/start-preview-dev.mjs` rewrites that local process
+to `/gear-tracker` and refuses the production Neon endpoint
+`ep-flat-firefly-ai889avp`. Do not copy a production credential into the local
+shell to work around this. Authenticated local Preview sessions are minted with
+`npm run auth:local`, documented in [TESTING.md](TESTING.md).
 
 Production APNs, web-push private key, Redis, and all three Blob write tokens
 are now scoped to Production only. Preview push and uploads need dedicated test

@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Dashboard
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-09-07
+- Last Updated: 2026-09-18
 - Status: Active — V3 shipped, reliability + UX polish complete
 - Version: V3
 
@@ -186,6 +186,14 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 7. Add regression tests for permissions, window filtering (7 days), and overdue consistency.
 
 ## Change Log
+
+- 2026-09-18: **macOS companion booking click stays in the extra (local).** Open and waiting-for-pickup rows open a backable detail pane with requester, location, timing, and item names from the existing two-read companion projection. Open in Wisconsin Creative remains a secondary web exit. Older snapshots without item names decode and say so instead of sending the operator to the website. Source/test complete; names appear in a live extra after the next projection republish.
+
+- 2026-09-18: **macOS companion extra is a glance (local).** Waiting-for-pickup comes first, open bookings are overdue-first and capped at four, inactive kiosks stay in the fleet summary instead of occupying extra rows, and the header names open count, overdue, and freshness without scrolling. **View N more expands that section in the extra**; Open Dashboard and View all remain the web exits. Booking cards use the iOS booking-row layout (4pt status rail, 40pt avatar, “Due/Pickup … at …” timing, 16pt card). The extra glyph stays the shipping box. Source/test complete; installed interaction remains a separate gate.
+
+- 2026-09-18: **macOS companion keeps offline kiosks in System health, not on the extra icon (local).** An offline device still sorts first in the health panel, names itself in the fleet summary, and turns that panel critical. The menu-bar glyph stays the shipping box. Source/test complete; installed interaction remains a separate gate.
+
+- 2026-09-18: **macOS companion follows Apple’s menu-bar extra rules (local).** People control insertion through Settings, Command-drag, and the Dock menu’s Show in Menu Bar item; a hidden extra recovers through the Dock, Dock menu (Dashboard, Refresh, Show in Menu Bar, Settings), and a Settings sign-in form. The extra uses one monochrome unanimated SF Symbol plus an optional static count. Window style stays because the popover is too complex for a flat menu. Source/test complete; installed interaction, APNs, and notarization remain separate gates.
 
 - 2026-09-07: **Companion survives sign-in popover dismissal.** A captured termination stack identified AppKit's last-window-close policy as the cause of the disappearing icon. The delegate now keeps the accessory process running when its last window closes, while explicit Quit retains its normal behavior. The signed local app remains running and native/source suites pass; the user's next sign-in is the remaining live acceptance check.
 

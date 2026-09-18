@@ -81,6 +81,7 @@
 - `audit:ios`: `bash scripts/ios-audit-inventory.sh`
 - `audit:ios:gaps`: `bash scripts/ios-audit-inventory.sh --gaps`
 - `audit:item-data`: `node --env-file=.env scripts/audit-item-data.mjs`
+- `auth:local`: `npx --yes vercel@latest env run -e preview --project wisconsin-creative --scope erikrole -- node scripts/bootstrap-local-session.mjs`
 - `build`: `node scripts/guard-next-build.mjs && node scripts/prisma-migrate-deploy.mjs && next build`
 - `build:app`: `node scripts/guard-next-build.mjs && next build`
 - `cleanup:item-data`: `node --env-file=.env scripts/cleanup-item-data.mjs`

@@ -101,13 +101,25 @@ def pair_block(p):
       </section>"""
 
 
+def shot_block(s):
+    width = WIDE_WIDTH if s.get("wide") else PAIR_WIDTH
+    return f"""
+      <figure>
+        <span class="tag tag-after">{esc(s.get("tag", "After"))}</span>
+        <img src="{embed(s["image"], width)}" alt="{esc(s.get("title", "After"))}">
+        <figcaption>{rich(s.get("cap", ""))}</figcaption>
+      </figure>"""
+
+
 def section_block(sec):
     pairs = "".join(pair_block(p) for p in sec.get("pairs", []))
+    shots = "".join(shot_block(s) for s in sec.get("shots", []))
     note = f'<p class="sec-note">{rich(sec["note"])}</p>' if sec.get("note") else ""
     return f"""
   <h2>{esc(sec['heading'])}</h2>
   {note}
-  {pairs}"""
+  {pairs}
+  {shots}"""
 
 
 def change_block(c):
@@ -303,6 +315,12 @@ def main():
                 image = Path(pair[key]).expanduser()
                 if not image.is_absolute():
                     pair[key] = str(spec_path.parent / image)
+        for shot in section.get("shots", []):
+            if "image" not in shot:
+                raise ValueError("shot missing image")
+            image = Path(shot["image"]).expanduser()
+            if not image.is_absolute():
+                shot["image"] = str(spec_path.parent / image)
     out = Path(args[1])
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(build(spec))

@@ -10,11 +10,11 @@ Wisconsin Creative is a Next.js App Router application with a companion native i
 | Surface | Count |
 |---|---:|
 | App pages | 89 |
-| App layouts | 7 |
-| API route handlers | 331 |
-| Service files | 90 |
-| Component files | 157 |
-| Test files | 646 |
+| App layouts | 8 |
+| API route handlers | 335 |
+| Service files | 91 |
+| Component files | 160 |
+| Test files | 662 |
 
 ## Oversized Source Watchlist
 
@@ -22,26 +22,26 @@ Informational only. These are the largest TypeScript and TSX files under `src/`;
 
 | File | Lines |
 |---|---:|
-| `src/lib/services/bookings-lifecycle.ts` | 3211 |
+| `src/lib/services/bookings-lifecycle.ts` | 3229 |
 | `src/lib/services/signatures.ts` | 2068 |
 | `src/lib/services/reports.ts` | 1932 |
 | `src/components/TradeBoard.tsx` | 1853 |
 | `src/components/resources/BrandAssetLibrary.tsx` | 1827 |
-| `src/lib/services/notifications.ts` | 1730 |
-| `src/app/(app)/schedule/_components/ListView.tsx` | 1692 |
+| `src/lib/services/notifications.ts` | 1736 |
+| `src/app/(app)/schedule/_components/ListView.tsx` | 1716 |
 | `src/app/(app)/items/[id]/ItemInfoTab.tsx` | 1603 |
 | `src/app/(app)/bulk-inventory/batteries/page.tsx` | 1554 |
 | `src/app/(app)/users/[id]/UserInfoTab.tsx` | 1450 |
 | `src/app/(app)/resources/page.tsx` | 1425 |
 | `src/components/ActivityTimeline.tsx` | 1386 |
+| `src/app/(app)/schedule/_components/WorkingCrewEditor.tsx` | 1342 |
 | `src/lib/services/shift-trades.ts` | 1321 |
 | `src/app/(app)/items/new-item-sheet/SerializedItemForm.tsx` | 1272 |
 | `src/app/api/assets/route.ts` | 1227 |
 | `src/app/(app)/items/new-item-sheet.tsx` | 1222 |
-| `src/app/(app)/users/[id]/page.tsx` | 1127 |
-| `src/app/(app)/schedule/_components/WorkingCrewEditor.tsx` | 1120 |
-| `src/lib/services/schedule-working-copy.ts` | 1095 |
-| `src/app/(app)/accountability/AccountabilityClient.tsx` | 1065 |
+| `src/lib/services/schedule-working-copy.ts` | 1168 |
+| `src/app/(app)/users/[id]/page.tsx` | 1126 |
+| `src/app/(app)/kits/[id]/page.tsx` | 1112 |
 
 ## High-Level Data Flow
 

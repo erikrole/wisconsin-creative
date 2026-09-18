@@ -95,6 +95,7 @@
 
 ## Layouts
 
+- `/kits` -> `src/app/(app)/kits/layout.tsx`
 - `/` -> `src/app/(app)/layout.tsx`
 - `/reports` -> `src/app/(app)/reports/layout.tsx`
 - `/reports/usage` -> `src/app/(app)/reports/usage/layout.tsx`
@@ -165,6 +166,7 @@
 - `/api/bookings/[id]/extend` -> `src/app/api/bookings/[id]/extend/route.ts`
 - `/api/bookings/[id]/force-complete` -> `src/app/api/bookings/[id]/force-complete/route.ts`
 - `/api/bookings/[id]/nudge` -> `src/app/api/bookings/[id]/nudge/route.ts`
+- `/api/bookings/[id]/reuse-plan` -> `src/app/api/bookings/[id]/reuse-plan/route.ts`
 - `/api/bookings/[id]` -> `src/app/api/bookings/[id]/route.ts`
 - `/api/bookings/[id]/serialized-items/[itemId]/holder` -> `src/app/api/bookings/[id]/serialized-items/[itemId]/holder/route.ts`
 - `/api/bookings/[id]/transfer-owner` -> `src/app/api/bookings/[id]/transfer-owner/route.ts`
@@ -259,6 +261,8 @@
 - `/api/kiosk/events` -> `src/app/api/kiosk/events/route.ts`
 - `/api/kiosk/heartbeat` -> `src/app/api/kiosk/heartbeat/route.ts`
 - `/api/kiosk/identify` -> `src/app/api/kiosk/identify/route.ts`
+- `/api/kiosk/kits/[id]` -> `src/app/api/kiosk/kits/[id]/route.ts`
+- `/api/kiosk/kits` -> `src/app/api/kiosk/kits/route.ts`
 - `/api/kiosk/me` -> `src/app/api/kiosk/me/route.ts`
 - `/api/kiosk/pickup/[id]/confirm` -> `src/app/api/kiosk/pickup/[id]/confirm/route.ts`
 - `/api/kiosk/pickup/[id]/scan` -> `src/app/api/kiosk/pickup/[id]/scan/route.ts`
@@ -269,6 +273,7 @@
 - `/api/kiosk/student/[userId]` -> `src/app/api/kiosk/student/[userId]/route.ts`
 - `/api/kiosk/users` -> `src/app/api/kiosk/users/route.ts`
 - `/api/kits/[id]/bulk-members` -> `src/app/api/kits/[id]/bulk-members/route.ts`
+- `/api/kits/[id]/clone` -> `src/app/api/kits/[id]/clone/route.ts`
 - `/api/kits/[id]/members/[membershipId]` -> `src/app/api/kits/[id]/members/[membershipId]/route.ts`
 - `/api/kits/[id]/members` -> `src/app/api/kits/[id]/members/route.ts`
 - `/api/kits/[id]` -> `src/app/api/kits/[id]/route.ts`

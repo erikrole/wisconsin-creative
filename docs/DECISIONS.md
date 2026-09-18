@@ -3,7 +3,7 @@
 ## Document Control
 - Owner: Erik Role (Wisconsin Athletics Creative)
 - Product: Wisconsin Creative
-- Last Updated: 2026-08-27
+- Last Updated: 2026-09-17
 - Status: Living decision log
 - Purpose: track durable decisions, rationale, and downstream constraints
 
@@ -65,6 +65,7 @@
 - D-056: Scoreboard metrics are shared authenticated team data
 - D-057: Event workers are recorded separately from shift scheduling
 - D-061: Shared travel-case checkouts are custodian-neutral
+- D-062: Gameday kits are callable, exclusive per sport, and pickup-aliased
 
 ---
 
@@ -357,7 +358,7 @@
 
 ## D-020: Kit Management Is Phase B
 - Date: 2026-03-11
-- Status: Accepted
+- Status: Accepted; kit authoring UI and reservation/kiosk calling later shipped under D-062
 - Context:
   - Full Kit/KitMembership schema exists (kit creation, item membership, active status) but zero UI.
 - Decision:
@@ -365,6 +366,7 @@
   - V1 imports may reference kits in `sourcePayload` metadata only.
 - Consequences:
   - Kit features can be built without schema migration when prioritized.
+- 2026-09-17 amendment: Authoring, reservation expansion, native/kiosk calling, optional sport, and exclusive serialized membership shipped. Treat D-020 as historical sequencing; D-062 is the current calling contract.
 
 ## D-021: UW Asset Tag Is an Optional Import Field
 - Date: 2026-03-11
@@ -1381,13 +1383,13 @@ These are non-negotiable integrity constraints. Every feature must preserve them
 ## D-057: Event Workers Are Recorded Separately From Shift Scheduling
 
 - Date: 2026-08-23
-- Status: Accepted; migration deployed in `dpl_9cFHwpSQA9QjsQTV3GF3uKf65QtE`; fully-silent backfill amendment implemented locally; authenticated production proof pending
+- Status: Accepted; migration deployed in `dpl_9cFHwpSQA9QjsQTV3GF3uKf65QtE`; fully-silent backfill amendment implemented locally; Event detail UI records unslotted people inside Crew on ended events only (2026-09-17); authenticated production proof pending
 - Context:
   - People work events they were never staffed on: a late fill-in, someone who covered without a slot, or a collaborator whose contribution is tracked but who is never scheduled through our crew system.
   - Backfilling those contributions as shift assignments would be wrong in every direction. It would message the person, publish them into a crew, put a past or future event on their My Shifts, expose them to trade and acknowledgement flows, and let staffing coverage math count a slot that never existed.
   - Collaborators in particular need tracking without scheduling: their assignments live outside our system, so a shift row would describe work we do not direct.
 - Decision:
-  - The product language is "add worker", never "credit". A credit is what the Scoreboard *counts*; an event worker is a *person on record*. Keeping the two words apart stops a person and a tally from sharing a name.
+  - The product language is "record who worked", never "credit". A credit is what the Scoreboard *counts*; an event worker is a *person on record*. Keeping the two words apart stops a person and a tally from sharing a name.
   - `EventWorker` is a distinct, admin-owned record: one person, one event, optional note, recorded actor, unique per pair. It carries no area, no slot, no call window, and no status.
   - Every place that already counts an active shift assignment for stats counts an added worker identically: the team Scoreboard, the per-person Scoreboard, profile game records, worked-event totals, and shift badge recognition. A person who is both added and assigned on one event still counts once, exactly as two shifts on one event count once.
   - Badge evidence is read through one shared reader used by both the awarding evaluator and the profile progress bar, so a badge can never award from a count the profile cannot show. An added worker contributes the event's own sport, site, result, opponent, and mapped venue; it claims no area and no call window, because it records that the work happened, not how it was staffed. An all-day event's midnight boundaries are a date rather than hours, so an added worker on one is excluded from the early-start and late-finish rules instead of tripping them.
@@ -1395,7 +1397,7 @@ These are non-negotiable integrity constraints. Every feature must preserve them
   - Nothing else reads the table. Schedule, working copies, published snapshots, crew coverage, My Shifts, trades, acknowledgements, notifications, and ICS are unchanged and unaware.
   - An ended event that already has a planned shift slot is corrected through the normal Schedule working-copy editor; that automatic past-event backfill is a schedule publication, not an `EventWorker` record. `EventWorker` remains for work with no shift or slot to correct.
   - Writes are ADMIN-only, rate-limited, transactional, and audited on the event. Staff may read the worker list for an event they are running. Adding or removing a worker sends no notification of any kind, by design and not by omission.
-  - Workers can be added to past and future events alike, and in any role including `COLLABORATOR`.
+  - Event detail presents one Crew surface for people. Future events are staffed with Assign and the normal notify/release path. Unslotted `EventWorker` recording is offered only after the event has ended, as silent Scoreboard archival, including `COLLABORATOR`. The write API remains silent for any timestamp; the UI no longer offers unslotted recording on future events.
 - Consequences:
   - Season stats can be corrected after the fact without rewriting schedule history or paging anyone.
   - Operators use one Schedule editing flow for both future planning and ended-event correction; no separate backfill affordance is required when a slot already exists.
@@ -1515,3 +1517,29 @@ These are non-negotiable integrity constraints. Every feature must preserve them
   - My Gear, accountability, notifications, overdue handling, and returns follow the receiving checkout requester through their existing canonical reads. Schedule the receiving checkout reminders after commit. Original evidence remains linked through the source checkout and two-sided transfer audit; do not rewrite who scanned or opened the original custody episode.
   - Production migration `0143_shared_checkout_custody` renamed the unused enum value with zero `EVENT` rows, retained all 301 existing bookings as `PERSON`, and recorded the exact local migration checksum. Compatible app deployment and the first real shared checkout remain separate rollout gates.
 - Reference: `tasks/shared-travel-case-checkout-plan-2026-09-03.md`, `tasks/checkout-item-holder-transfer-plan-2026-09-07.md`, `docs/AREA_CHECKOUTS.md`, migration `0141_event_checkout_assignments`, and migration `0143_shared_checkout_custody`.
+
+## D-062: Gameday Kits Are Callable, Exclusive Per Sport, and Pickup-Aliased
+- Date: 2026-09-17
+- Status: Accepted; local source/test. Authenticated browser, iPhone 16 Pro, and physical kiosk proof remain open. Migrations `0149_kit_sport_code` and `0150_kit_gameday_role` are not yet applied to production.
+- Context:
+  - Staff name the cameras, lenses, and batteries each gameday position uses (Slow 1, Roam 2). The booking should store those expanded members, not only a kit label.
+  - Students, staff, and collaborators who can create a reservation need to call a kit from web, native iOS, and kiosk checkout. Authoring stays staff/admin.
+  - Two Football kits cannot share a camera. A Basketball kit may use that same body. Batteries stay family quantity. Camp Randall and Camp Randall Stadium are the same pickup.
+- Decision:
+  - Anyone with `kit.view` or collaborator `RESERVATION_CREATE` can list and call active kits. `/kits` authoring remains staff/admin (`kit.create` / `kit.edit` / `kit.delete`).
+  - Optional `Kit.sportCode` scopes exclusive serialized membership. Active kits in the same sport, including unsported kits among themselves, cannot share a camera. Cross-sport sharing is allowed. Duplicate copies batteries and sport, not cameras.
+  - Football video kits may own one of Slow 1, Slow 2, Bench, Roam 1, Roam 2, Roam 3, or Roam 4. One active kit per job at a pickup, including Camp Randall aliases. Duplicate omits the job. Photo kits stay un-roled.
+  - Reservation and kiosk calling hide empty kits, label those football jobs, and can suggest this week’s kit from the requester’s last football job at that pickup.
+  - Reservation create expands current members when the client sent no equipment. An edited client list is kept. The booking title stays the event name. `Booking.kitId` is provenance.
+  - Direct kiosk checkout may pick a kit as the remaining-item checklist and `kitId` provenance. Scans remain the cart. Completion never silently fills custody from kit membership.
+  - Camp Randall and Camp Randall Stadium share kit membership and calling.
+- Guardrails:
+  - Empty and archived kits cannot be used on reservation create. Kiosk completion still requires scanned items.
+  - Exclusive membership is enforced inside `SERIALIZABLE` kit writes, not a unique index, so Basketball and Football can share a body.
+  - Football job uniqueness is a partial unique index per location plus a pickup-alias check in the kit service.
+  - Reservation and kiosk pickup lists resolve alias location IDs together.
+- Consequences:
+  - Football gameday kits can be authored once and called from any reservation surface without colliding cameras inside Football.
+  - A person who shot Slow 1 last week sees this week’s Slow 1 kit first.
+  - Kiosk walk-up checkout can start from the same named plan without replacing scan custody.
+- Reference: `docs/AREA_KITS.md`, `docs/AREA_RESERVATIONS.md`, `docs/AREA_KIOSK.md`, `tasks/kits-gameday-expansion-plan-2026-09-16.md`, and migrations `0149_kit_sport_code` and `0150_kit_gameday_role`.

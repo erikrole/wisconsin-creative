@@ -1,6 +1,6 @@
 # Tasks Index
 
-Last updated: 2026-09-16
+Last updated: 2026-09-18
 
 ## Start Here
 
@@ -37,6 +37,17 @@ Audit files intentionally remain at root for now because the repo audit skills r
 
 ## Active Follow-up Ledgers
 
+- `ios-entry-point-hardening-plan-2026-09-16.md` - one destination map for quick actions, Control Center, deep links, and every notification family.
+
+- `schedule-mvp-parity-plan-2026-09-16.md` - Schedule web/iOS trust pass plus UI polish: claim pause, ended-event publish recovery, native Publish now, combined-event read collapse, multi-shift display, and trade-count honesty.
+- `audit-schedule-mvp-2026-09-16.md` - 2026-09-16 Schedule MVP audit/fix record.
+
+- `badges-mvp-polish-plan-2026-09-16.md` - repair unreachable catalog rows, close reservation/crew coverage holes, and align web/iOS badge shelves for MVP fun plus accountability.
+
+- `kits-gameday-expansion-plan-2026-09-16.md` - named gameday position kits expand into reservation/checkout item lists; exclusive-per-sport membership; Slow 1–Roam 4 jobs and last-kit suggestion; native and kiosk calling. Authenticated browser, iPhone 16 Pro, and physical kiosk proof remain.
+
+- `reservation-rereserve-plan-2026-09-16.md` - copy a past booking’s person, pickup, kit, and original gear into a new event without same-context cloning.
+
 - `reservation-partial-pickup-recovery-plan-2026-09-16.md` - RV-0453 leftover-tripod incident: prevent accidental partial pickup, swap equivalent remaining items at kiosk, staff close-remaining, and live repair after deploy.
 
 - `resource-import-hardening-plan-2026-09-11.md` - backend guide importer audit fixes and verification; Preview migration provenance, image credentials and authenticated apply/read-back remain gated.
@@ -56,7 +67,8 @@ Audit files intentionally remain at root for now because the repo audit skills r
 - `bookings-search-qol-plan-2026-08-30.md` - preserve Bookings list context, keep reservation creation globally available on the page, and add explicit global Search recovery.
 - `schedule-timeline-context-hardening-plan-2026-08-30.md` - end-to-end List/Week/Calendar browsing hardening is complete; the active follow-up brings the shared versioned staff crew editor and Home/Away/empty setup to all three views, with authenticated parity proof, matched review captures, and final shared-tree gates still tracked.
 - `list-state-preservation-plan-2026-08-26.md` - preserve Schedule and Items filters, view state, sort, and pagination across detail navigation and browser Back.
-- `macos-companion-hardening-polish-plan.md` - installed Developer ID/notarized macOS 1.0.4 companion with crash-durable Keychain identity recovery, event-driven refresh, projection/session privacy hardening, and native interaction/accessibility polish; post-enrollment cold-restart, full smoke, and real APNs proof remain.
+- `macos-companion-hardening-polish-plan.md` - installed Developer ID/notarized macOS 1.0.4 companion with crash-durable Keychain identity recovery, event-driven refresh, projection/session privacy hardening, Apple menu-bar extra recoverability, glance extra, and native notification polish; post-enrollment cold-restart, full smoke, and real APNs proof remain.
+- `audit-macos-companion.md` - 2026-09-18 end-to-end GearOps menu bar and notification audit; SOURCE READY locally.
 - `repository-audit-improvement-plan.md` - current whole-repository evidence-first audit, ranked repair, verification, and proof-boundary ledger.
 - `overdue-notification-hardening-plan.md` - durable five-stage checkout escalation is implemented locally; migration, responder configuration, deployment, and authenticated channel/timing proof remain.
 - `schedule-window-kernel-plan-2026-08-26.md` - centralize effective schedule-window and conflict overlap semantics across assignment and Open Work paths.

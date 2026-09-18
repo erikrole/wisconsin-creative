@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Checkouts
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-09-04
+- Last Updated: 2026-09-17
 - Status: Active — V1 Shipped
 - Version: V1
 
@@ -196,7 +196,8 @@ Source of truth: `src/lib/services/booking-rules.ts` — `STATE_ACTIONS[CHECKOUT
 
 ### `COMPLETED`
 - Allowed actions:
-  - View only
+  - View
+  - Re-reserve for another event (creates a reservation, not checkout custody)
 
 ### `CANCELLED`
 - Allowed actions:
@@ -338,6 +339,9 @@ The checkout detail page (`/checkouts/[id]`) uses the shared `BookingDetailPage`
 
 ## Change Log
 
+- 2026-09-17: **Direct kiosk checkout can start from a kit.** Setup offers pickup-scoped gameday kits, hides empty kits, labels Slow 1–Roam 4, and can suggest last week’s football job. Scans remain the cart; remaining kit members are a checklist; completion stores `kitId` as provenance after validating the kit against the kiosk pickup. Local source/test; physical kiosk proof remains open.
+- 2026-09-16: **Completed checkouts can re-reserve for a new event.** The action copies person, pickup, notes, title, and equipment into the reservation composer. It does not create checkout custody from app/web. Source/test complete; authenticated proof remains open.
+- 2026-09-16: **Kit-backed checkout lines come from expanded reservations.** Direct kiosk checkout still does not pick a kit. When a reservation was created from a gameday kit, pickup and force-checkout inherit the expanded cameras, lenses, and batteries rather than a kit-only label. `Booking.kitId` remains provenance on both records.
 - 2026-09-07: **Replaced inline holder correction with real item ownership transfer locally.** Per explicit user direction, the existing serialized line and active allocation move together into the receiving person’s compatible checkout or a new personal checkout with the source context. Allocation dates and original scan/photo evidence are preserved; legacy assignee labels are cleared; two-sided audit and both-parent freshness keep custody traceable. Empty sources close as cancelled transfers without return rewards. Post-commit scheduling uses the receiving checkout for return reminders and ends activities for closed sources. GAP-78 tracks deployment and real custody/delivery acceptance.
 - 2026-09-04: **Checkout merge conflicts now resolve in an explicit modal locally.** Staff/Admin review the available return windows, can choose or edit the surviving due-back, and can choose which reservation link remains when duplicate checkouts came through different reservation records. The mutation validates the selected window against combined availability, updates active allocation due times, records `BookingDueDateChange`, and audits the selected context. Partial/returned/duplicate custody and different-person/event/location records remain blocked; deployment and authenticated proof remain open under GAP-77.
 - 2026-09-04: **Card-grid selection and overflow controls are separated locally.** The merge checkbox and three-dot actions now sit beside each other in a reserved top-right rail, preserving the card header's duration layout and keeping both controls reachable. Deployment and authenticated browser proof remain separate acceptance gates.

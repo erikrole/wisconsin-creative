@@ -45,11 +45,11 @@
 | `SignatureCapture` | 16 | 3 |
 | `SignatureArtifactRevision` | 19 | 4 |
 | `SignatureSaveOperation` | 19 | 4 |
-| `Kit` | 11 | 2 |
+| `Kit` | 13 | 6 |
 | `KitMembership` | 6 | 2 |
 | `KitBulkMembership` | 7 | 3 |
 | `CalendarSource` | 11 | 2 |
-| `CalendarEvent` | 38 | 7 |
+| `CalendarEvent` | 42 | 7 |
 | `EventWorker` | 10 | 4 |
 | `ScheduleEventFollow` | 9 | 3 |
 | `BookingEvent` | 7 | 4 |
@@ -301,6 +301,16 @@
 
 - `REGISTRATION`
 - `AUTHENTICATION`
+
+### `FootballGamedayKitRole`
+
+- `SLOW1`
+- `SLOW2`
+- `BENCH`
+- `ROAM1`
+- `ROAM2`
+- `ROAM3`
+- `ROAM4`
 
 ### `CalendarEventStatus`
 

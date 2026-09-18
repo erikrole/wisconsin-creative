@@ -1148,18 +1148,24 @@ Indexes and constraints:
 - `@@index([revisionId])`
 - `@@map("signature_save_operations")`
 
+## Enum `FootballGamedayKitRole`
+
+Values: `SLOW1`, `SLOW2`, `BENCH`, `ROAM1`, `ROAM2`, `ROAM3`, `ROAM4`
+
 ## Model `Kit`
 
-Fields: 11
+Fields: 13
 
-- `id          String              @id @default(cuid())`
+- `id          String                  @id @default(cuid())`
 - `name        String`
 - `description String?`
-- `locationId  String              @map("location_id")`
-- `active      Boolean             @default(true)`
-- `createdAt   DateTime            @default(now()) @map("created_at")`
-- `updatedAt   DateTime            @updatedAt @map("updated_at")`
-- `location    Location            @relation(fields: [locationId], references: [id], onDelete: Restrict)`
+- `locationId  String                  @map("location_id")`
+- `sportCode   String?                 @map("sport_code")`
+- `gamedayRole FootballGamedayKitRole? @map("gameday_role")`
+- `active      Boolean                 @default(true)`
+- `createdAt   DateTime                @default(now()) @map("created_at")`
+- `updatedAt   DateTime                @updatedAt @map("updated_at")`
+- `location    Location                @relation(fields: [locationId], references: [id], onDelete: Restrict)`
 - `members     KitMembership[]`
 - `bulkMembers KitBulkMembership[]`
 - `bookings    Booking[]`
@@ -1167,6 +1173,10 @@ Fields: 11
 Indexes and constraints:
 
 - `@@unique([name, locationId])`
+- `@@index([sportCode])`
+- `@@index([locationId, sportCode])`
+- `@@index([gamedayRole])`
+- `@@index([locationId, gamedayRole])`
 - `@@map("kits")`
 
 ## Model `KitMembership`
@@ -1238,7 +1248,7 @@ Indexes and constraints:
 
 ## Model `CalendarEvent`
 
-Fields: 38
+Fields: 42
 
 - `id              String                @id @default(cuid())`
 - `sourceId        String?               @map("source_id")`
@@ -1251,6 +1261,9 @@ Fields: 38
 - `startsAt        DateTime              @map("starts_at")`
 - `endsAt          DateTime              @map("ends_at")`
 - `allDay          Boolean               @default(false) @map("all_day")`
+- `rawStartsAt     DateTime?             @map("raw_starts_at")`
+- `rawEndsAt       DateTime?             @map("raw_ends_at")`
+- `rawAllDay       Boolean?              @map("raw_all_day")`
 - `status          CalendarEventStatus   @default(CONFIRMED)`
 - `result          CalendarEventResult?`
 - `site            CalendarEventSite?`
@@ -1261,6 +1274,7 @@ Fields: 38
 - `summaryLocked   Boolean               @default(false) @map("summary_locked")`
 - `isHomeLocked    Boolean               @default(false) @map("is_home_locked")`
 - `locationLocked  Boolean               @default(false) @map("location_locked")`
+- `timingLocked    Boolean               @default(false) @map("timing_locked")`
 - `archivedAt      DateTime?             @map("archived_at")`
 - `subtitle        String?`
 - `opponent        String?`

@@ -1,6 +1,6 @@
 # Testing Guide
 
-Last refreshed: 2026-07-17
+Last refreshed: 2026-09-17
 
 ## Overview
 
@@ -10,7 +10,7 @@ Current static inventory:
 
 - 391 test files under `tests/`
 - 2,331 `it()` / `test()` declarations by static grep
-- 54 iOS source-contract files named `ios-*.test.ts`
+- 55 iOS source-contract files named `ios-*.test.ts`
 - 79 source or contract files with `source` or `contract` in the filename
 - 66 route-focused files with `route` in the filename
 - 35 current `BUG:` references across 11 files
@@ -96,6 +96,27 @@ npm run test:e2e:smoke
 ```
 
 `PLAYWRIGHT_ROLE` must be `STUDENT`, `STAFF`, or `ADMIN` and must match the account. A `STUDENT` or `STAFF` account is required for the direct role-restricted Settings proof. Authentication uses the real `/login` UI, which creates a session and audit entry. Authenticated requests can also refresh the test user's last-active timestamp. This session metadata is why every authenticated run requires the affirmative `PLAYWRIGHT_TARGET_ISOLATED=1` contract even though the suite avoids business-data mutations. Cookies are written only to ignored `test-results/playwright/auth/user.json`. Traces and screenshots are retained only for failures.
+
+### Local Preview identity bootstrap
+
+Use this path for authenticated local Preview work on `http://127.0.0.1:3000`. Do not mint session rows by hand, and do not point Playwright at production.
+
+```bash
+npm run dev:preview
+npm run auth:local
+```
+
+`npm run dev:preview` keeps Preview variables in memory, replaces a short provider `SESSION_SECRET` with the gitignored local development secret, retargets Preview's empty default `neondb` database to `gear-tracker`, refuses the production Neon endpoint, and overlays local Preview flags from `.env.development.local`. Unless that file explicitly sets `BADGES_ENABLED=false`, local Preview starts with badges on.
+
+`npm run auth:local` then:
+
+1. Refuses Vercel production env, production Neon, and non-loopback app URLs.
+2. Uses the hidden `admin@creative.local` smoke identity only.
+3. Signs in through `POST /api/auth/login` and writes Playwright storage to ignored `test-results/playwright/auth/user.json`.
+4. Stores `PLAYWRIGHT_EMAIL`, `PLAYWRIGHT_PASSWORD`, `PLAYWRIGHT_ROLE`, `PLAYWRIGHT_BASE_URL`, and `PLAYWRIGHT_TARGET_ISOLATED=1` in gitignored `.env.development.local`.
+5. Probes `GET /api/me` and prints identity fields without passwords, tokens, or secrets.
+
+If the stored smoke password is missing or rejected, the script rotates that hidden `@creative.local` password on the isolated Preview or local database only. Playwright loads those gitignored values automatically for local runs and still ignores them in CI. Session cookies expire after 12 hours; rerun `npm run auth:local` or the Playwright auth setup to refresh them. Expired server sessions now clear the cookie instead of leaving a stale `gear-tracker-session` value in the browser.
 
 The harness rejects `wisconsincreative.com` and its known legacy production host even if the isolation flag is set. Set comma-separated `PLAYWRIGHT_PRODUCTION_HOSTS` when another hostname must be treated as production. Do not commit auth state, weaken normal auth, seed production, or use production credentials.
 

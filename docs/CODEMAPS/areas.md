@@ -9,7 +9,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/badges`, `/reports/badges`
 - APIs: `/api/badges/award/[id]`, `/api/badges/award/bulk`, `/api/badges/award`, `/api/badges/events/app-open`, `/api/badges/recent`, `/api/badges`, `/api/badges/user/[userId]`, `/api/reports/badges`
 - Services: _none matched_
-- Tests: `tests/badges-award-route.test.ts`, `tests/badges-bulk-award-route.test.ts`, `tests/badges-celebration-ui.test.ts`, `tests/badges-display.test.ts`, `tests/badges-flag-off.test.ts`, `tests/badges-manual-awards.test.ts`, `tests/badges-operations-page.test.ts`, `tests/badges-recent-route.test.ts`
+- Tests: `tests/badges-award-route.test.ts`, `tests/badges-bulk-award-route.test.ts`, `tests/badges-celebration-ui.test.ts`, `tests/badges-display.test.ts`, `tests/badges-flag-off.test.ts`, `tests/badges-manual-awards.test.ts`, `tests/badges-mvp-polish.test.ts`, `tests/badges-operations-page.test.ts`
 
 ## bulk-inventory
 
@@ -79,9 +79,9 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 
 - Doc: `docs/AREA_KITS.md`
 - Pages: `/kits/[id]`, `/kits`
-- APIs: `/api/kits/[id]/bulk-members`, `/api/kits/[id]/members/[membershipId]`, `/api/kits/[id]/members`, `/api/kits/[id]`, `/api/kits`
+- APIs: `/api/kiosk/kits/[id]`, `/api/kiosk/kits`, `/api/kits/[id]/bulk-members`, `/api/kits/[id]/clone`, `/api/kits/[id]/members/[membershipId]`, `/api/kits/[id]/members`, `/api/kits/[id]`, `/api/kits`
 - Services: `src/lib/services/kits.ts`
-- Tests: `tests/kits-list.test.ts`, `tests/kits-location-load-state.test.ts`
+- Tests: `tests/football-gameday-kits.test.ts`, `tests/kits-gameday-authoring-source.test.ts`, `tests/kits-list.test.ts`, `tests/kits-location-load-state.test.ts`, `tests/kits-service.test.ts`
 
 ## licenses
 
@@ -97,7 +97,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/settings/kiosk-devices`
 - APIs: `/api/kiosk-devices/[id]/regenerate-code`, `/api/kiosk-devices/[id]`, `/api/kiosk-devices`, `/api/kiosk/activate`, `/api/kiosk/checkin/[id]/complete`, `/api/kiosk/checkin/[id]/quantity`, `/api/kiosk/checkin/[id]/scan`, `/api/kiosk/checkout/[id]`, `/api/kiosk/checkout/[id]/transfer`, `/api/kiosk/checkout/availability`
 - Services: `src/lib/services/kiosk-checkout-complete.ts`, `src/lib/services/kiosk-item-transfer.ts`, `src/lib/services/kiosk-location.ts`, `src/lib/services/kiosk-operation-receipts.ts`, `src/lib/services/kiosk-pickup-add.ts`, `src/lib/services/kiosk-pickup-substitute.ts`, `src/lib/services/kiosk-scan.ts`
-- Tests: `tests/bulk-unit-kiosk-scans.test.ts`, `tests/ios-accessibility-layout-hardening.test.ts`, `tests/ios-action-error-recovery.test.ts`, `tests/ios-all-day-calendar-date.test.ts`, `tests/ios-api-contract.test.ts`, `tests/ios-app-intents.test.ts`, `tests/ios-app-web-trust-contract.test.ts`, `tests/ios-appstate-refresh.test.ts`
+- Tests: `tests/bulk-unit-kiosk-scans.test.ts`, `tests/ios-27-native-chrome.test.ts`, `tests/ios-accessibility-layout-hardening.test.ts`, `tests/ios-action-error-recovery.test.ts`, `tests/ios-all-day-calendar-date.test.ts`, `tests/ios-api-contract.test.ts`, `tests/ios-app-intents.test.ts`, `tests/ios-app-web-trust-contract.test.ts`
 
 ## notifications
 
@@ -127,7 +127,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 
 - Doc: `docs/AREA_RESERVATIONS.md`
 - Pages: `/bookings`, `/reservations/[id]`, `/reservations/new`, `/reservations`, `/settings/bookings`
-- APIs: `/api/bookings/[id]/audit-logs`, `/api/bookings/[id]/cancel`, `/api/bookings/[id]/custody-scope`, `/api/bookings/[id]/events`, `/api/bookings/[id]/extend`, `/api/bookings/[id]/force-complete`, `/api/bookings/[id]/nudge`, `/api/bookings/[id]`, `/api/bookings/[id]/serialized-items/[itemId]/holder`, `/api/bookings/[id]/transfer-owner`
+- APIs: `/api/bookings/[id]/audit-logs`, `/api/bookings/[id]/cancel`, `/api/bookings/[id]/custody-scope`, `/api/bookings/[id]/events`, `/api/bookings/[id]/extend`, `/api/bookings/[id]/force-complete`, `/api/bookings/[id]/nudge`, `/api/bookings/[id]/reuse-plan`, `/api/bookings/[id]`, `/api/bookings/[id]/serialized-items/[itemId]/holder`
 - Services: `src/lib/services/bookings-checkin.ts`, `src/lib/services/bookings-helpers.ts`, `src/lib/services/bookings-lifecycle.ts`, `src/lib/services/bookings-queries.ts`, `src/lib/services/bookings.ts`
 - Tests: `tests/bookings-ui-polish-source.test.ts`, `tests/ios-bookings-empty-state.test.ts`, `tests/ios-bookings-power-filters.test.ts`
 

@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Users
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-30
+- Last Updated: 2026-09-17
 - Status: Active
 - Version: V1.4
 
@@ -44,7 +44,7 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 
 ### Scoreboard
 - `ADMIN`, `STAFF`, `STUDENT`, and `COLLABORATOR` may view the shared team Scoreboard and an active, non-hidden person’s Scoreboard through the explicit `scoreboard.view` permission.
-- The team Scoreboard is a generic current-season explorer. Sport, Schedule venue, opponent, and Home/Away/Neutral site each accept one exact value and combine with AND semantics; totals, dimensional breakdowns, the Snapshot, and every person ranking are recomputed from that same intersection. Filter choices remain stable across narrowing.
+- The team Scoreboard is a generic current-season explorer. Sport, Schedule venue, opponent, and Home/Away/Neutral site each accept one exact value and combine with AND semantics; totals, dimensional breakdowns, the Snapshot, and every person ranking are recomputed from that same intersection. Filter choices remain stable across narrowing. Web explorer state is URL-backed, so a stacked view can be refreshed or shared. Opening a person keeps that stack on the URL; sport and site also filter the person Scoreboard, and All leaders restores the team view. The leaderboard can be searched by name without changing the underlying rank. Snapshot labels follow the last loaded intersection while a new stack refreshes.
 - Imported W/L/T source markers are preserved as resolved game results. Ties count as games, render as `T`/orange, and appear in `W–L–T` records and W–L–T meter segments only when present; win rate treats a tie as half a win while the server remains the authority for the calculation.
 - Shared Scoreboard identity is limited to user id, name, and avatar. Scoreboard access does not grant the People directory or expose role, affiliation, contact, profile, presence, assignment, availability, call-time, booking, activity, badge, audit, or custody data.
 - Per-person Scoreboard event history includes every completed event with an active assignment or added worker, including result-less work. Those rows use the event summary for identity and remain outside official W/L/T totals, form, streak, and result-filtered reads.
@@ -107,7 +107,7 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 - Student attempts to edit a booking that was reassigned.
 - Staff account is demoted while editing a record.
 - Owner is deactivated with active reservations/check-outs: `OPEN` checkouts block deactivation; `BOOKED`, `DRAFT`, and `PENDING_PICKUP` work is cancelled with allocation/session cleanup, and pending-pickup bulk stock is restored before sessions are invalidated.
-- Disposable hidden smoke/test users are cleaned up by deactivation, not hard delete. `POST /api/users/hidden-cleanup` is internal-operator-only via `INTERNAL_OPERATOR_EMAILS`, defaults to dry-run, scans active `hiddenFromRoster` users older than the requested TTL, and reuses the same deactivation side effects as normal user edits. Active hidden users are also excluded from the org chart and from live operational user-picking helpers.
+- Disposable hidden smoke/test users are cleaned up by deactivation, not hard delete. `POST /api/users/hidden-cleanup` is internal-operator-only via `INTERNAL_OPERATOR_EMAILS`, defaults to dry-run, scans active `hiddenFromRoster` users older than the requested TTL, and reuses the same deactivation side effects as normal user edits. Active hidden users are also excluded from the org chart and from live operational user-picking helpers. Hidden smoke identities are not prompted to complete campus profile details, so local Preview and Playwright verification are not blocked by the returning-user wizard.
 - Draft created by one user but accessed by another user.
 - API request bypasses UI and attempts unauthorized edit.
 
@@ -130,6 +130,10 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 6. Ensure audit logs include actor role, target owner, and exception metadata.
 
 ## Change Log
+- 2026-09-17: **Scoreboard is now an explorer you can search, share, and read as a season.** The team tab leads with the official record and a W–L–T meter, then work totals, a calm Snapshot, and a findable leaderboard. Rank, sport/venue/opponent/site, and person-page result/sport/site filters live in the URL; a failed filtered read still restores the last valid stack; Snapshot copy stays on the loaded intersection while a new stack refreshes; opening a person keeps the stack so sport/site still apply and All leaders returns to the same view. Leaderboard rows are one control, first/second/third no longer use warning or problem colors, ineligible win rates say they need the minimum games, and methodology sits behind a disclosure. Per-person Scoreboard uses the same toolbar/chip pattern, dims while refreshing, and bootstraps sport options from an unfiltered read when the URL already has a filter. Counting rules, shared-identity allowlist, and native clients are unchanged. Acceptance: local source/explorer tests and lint; authenticated browser and `build:app` remain local proof gates.
+
+- 2026-09-17: **Hidden smoke identities skip campus profile completion.** `hiddenFromRoster` users no longer receive the returning-user wizard or profile-completion banner. Local Preview and Playwright use `npm run auth:local` to sign the hidden `admin@creative.local` smoke identity in through normal login; the completion API still omits the hidden-roster flag from the browser payload. Real campus accounts are unchanged. Acceptance: local source/tests; production deploy remains unverified.
+
 - 2026-09-07: Roster CSV now shares directory predicates (including Collaborator, validated area, and trimmed location), caps output at 5,000 with truncation metadata, and preserves the admin-only collaborator private-profile boundary. Directory pagination uses an id tiebreaker. Acceptance: route regressions pass locally; authenticated browser and deployment proof remain open.
 
 - 2026-08-30: **Self-service account deletion now performs real personal-data cleanup.** After current-password reauthentication and explicit confirmation, the authenticated delete route keeps only the minimum pseudonymized user row needed to preserve custody and audit history, removes direct profile and authentication data, deletes notification/device/app-preference records and passkeys, revokes companion access, and writes an exact retention-boundary audit entry. Admin deactivation remains a separate reversible lifecycle. Local service, route, and source-contract tests pass; authenticated production read-back remains a rollout gate.
