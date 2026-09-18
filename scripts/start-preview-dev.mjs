@@ -6,13 +6,25 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import {
+  ensureDevelopmentSessionCookieName,
   ensureDevelopmentSessionSecret,
   isValidSessionSecret,
   readDotenvValue,
 } from "./ensure-dev-env.mjs";
+import {
+  DEFAULT_SESSION_COOKIE_NAME,
+  LOCAL_PREVIEW_OVERLAY_KEYS,
+  assertNotProductionDatabase,
+  readLocalPreviewOverlay,
+  retargetPreviewDatabaseEnv,
+} from "./lib/preview-dev-env.mjs";
 
 export function resolveDevelopmentSessionSecret({ rootDir = process.cwd() } = {}) {
   ensureDevelopmentSessionSecret({
+    rootDir,
+    environment: { NODE_ENV: "development" },
+  });
+  ensureDevelopmentSessionCookieName({
     rootDir,
     environment: { NODE_ENV: "development" },
   });
@@ -30,16 +42,36 @@ export function resolveDevelopmentSessionSecret({ rootDir = process.cwd() } = {}
   );
 }
 
-export function buildPreviewDevEnvironment({ baseEnvironment = process.env, developmentSecret }) {
+export function buildPreviewDevEnvironment({
+  baseEnvironment = process.env,
+  developmentSecret,
+  rootDir = process.cwd(),
+} = {}) {
   if (!isValidSessionSecret(developmentSecret)) {
     throw new Error("The local development SESSION_SECRET must be at least 32 characters.");
   }
 
-  return {
+  const overlay = readLocalPreviewOverlay(rootDir);
+  const next = {
     ...baseEnvironment,
     NODE_ENV: "development",
     SESSION_SECRET: developmentSecret,
   };
+
+  for (const key of LOCAL_PREVIEW_OVERLAY_KEYS) {
+    if (overlay[key] !== undefined) next[key] = overlay[key];
+  }
+
+  next.SESSION_COOKIE_NAME ||= DEFAULT_SESSION_COOKIE_NAME;
+  if (overlay.APP_URL === undefined) next.APP_URL = "http://127.0.0.1:3000";
+  if (overlay.BADGES_ENABLED === undefined) next.BADGES_ENABLED = "true";
+
+  for (const key of ["DATABASE_URL", "DIRECT_URL", "DATABASE_URL_UNPOOLED"]) {
+    if (!next[key] || next[key].trim() === "[SENSITIVE]") continue;
+    assertNotProductionDatabase(next[key], key);
+  }
+
+  return retargetPreviewDatabaseEnv(next);
 }
 
 function startPreviewDev() {
@@ -53,7 +85,7 @@ function startPreviewDev() {
 
   const child = spawn(process.platform === "win32" ? "npm.cmd" : "npm", args, {
     cwd: rootDir,
-    env: buildPreviewDevEnvironment({ developmentSecret }),
+    env: buildPreviewDevEnvironment({ developmentSecret, rootDir }),
     stdio: "inherit",
   });
 

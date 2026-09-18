@@ -6,8 +6,10 @@ import { join, relative } from "node:path";
 import { pathToFileURL } from "node:url";
 
 export const SESSION_SECRET_KEY = "SESSION_SECRET";
+export const SESSION_COOKIE_NAME_KEY = "SESSION_COOKIE_NAME";
 export const MIN_SESSION_SECRET_LENGTH = 32;
 const GENERATED_SESSION_SECRET_BYTES = 32;
+const DEFAULT_SESSION_COOKIE_NAME = "gear-tracker-session";
 
 if (isMainModule()) {
   try {
@@ -15,6 +17,12 @@ if (isMainModule()) {
     if (result.status === "generated") {
       console.log(
         `Generated a local development SESSION_SECRET in ${relative(process.cwd(), result.path)}.`,
+      );
+    }
+    const cookie = ensureDevelopmentSessionCookieName();
+    if (cookie.status === "generated") {
+      console.log(
+        `Set ${SESSION_COOKIE_NAME_KEY} in ${relative(process.cwd(), cookie.path)}.`,
       );
     }
   } catch (error) {
@@ -75,6 +83,37 @@ export function ensureDevelopmentSessionSecret({
   return { status: "generated", path: developmentEnvPath };
 }
 
+export function ensureDevelopmentSessionCookieName({
+  rootDir = process.cwd(),
+  environment = process.env,
+} = {}) {
+  if (environment.NODE_ENV === "production") {
+    return { status: "skipped", reason: "production" };
+  }
+
+  if (environment[SESSION_COOKIE_NAME_KEY]) {
+    return { status: "process" };
+  }
+
+  const developmentEnvPath = join(rootDir, ".env.development.local");
+  if (existsSync(developmentEnvPath)) {
+    const existing = readDotenvValue(
+      readFileSync(developmentEnvPath, "utf8"),
+      SESSION_COOKIE_NAME_KEY,
+    );
+    if (existing) return { status: "development-file", path: developmentEnvPath };
+  }
+
+  const localEnvPath = join(rootDir, ".env.local");
+  if (existsSync(localEnvPath)) {
+    const existing = readDotenvValue(readFileSync(localEnvPath, "utf8"), SESSION_COOKIE_NAME_KEY);
+    if (existing) return { status: "local-file", path: localEnvPath };
+  }
+
+  writeDotenvValue(developmentEnvPath, SESSION_COOKIE_NAME_KEY, DEFAULT_SESSION_COOKIE_NAME);
+  return { status: "generated", path: developmentEnvPath };
+}
+
 export function isValidSessionSecret(value) {
   return typeof value === "string" && value.length >= MIN_SESSION_SECRET_LENGTH;
 }
@@ -95,7 +134,7 @@ export function readDotenvValue(contents, key) {
   return value;
 }
 
-function writeDotenvValue(filePath, key, value) {
+export function writeDotenvValue(filePath, key, value) {
   const existing = existsSync(filePath) ? readFileSync(filePath, "utf8") : "";
   const lines = existing.split(/\r?\n/);
   while (lines.at(-1) === "") lines.pop();

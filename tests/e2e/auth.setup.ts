@@ -2,6 +2,10 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { expect, test as setup } from "@playwright/test";
 
+import { loadLocalPlaywrightEnv } from "./load-local-playwright-env";
+
+loadLocalPlaywrightEnv();
+
 export const AUTH_FILE = "test-results/playwright/auth/user.json";
 
 const email = process.env.PLAYWRIGHT_EMAIL?.trim();
@@ -13,7 +17,7 @@ const hasCredentials = Boolean(
 
 setup.skip(
   !hasCredentials,
-  "Set PLAYWRIGHT_EMAIL, PLAYWRIGHT_PASSWORD, and PLAYWRIGHT_ROLE to run authenticated smoke locally.",
+  "Set PLAYWRIGHT_EMAIL, PLAYWRIGHT_PASSWORD, and PLAYWRIGHT_ROLE, or run npm run auth:local, to run authenticated smoke locally.",
 );
 
 setup("authenticate through the normal sign-in flow", async ({ page }) => {

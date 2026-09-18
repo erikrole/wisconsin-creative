@@ -1,5 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
+import { loadLocalPlaywrightEnv } from "./tests/e2e/load-local-playwright-env";
 import { resolveSmokeSafety } from "./tests/e2e/smoke-safety";
+
+loadLocalPlaywrightEnv();
 
 const authFile = "test-results/playwright/auth/user.json";
 const { baseURL, hasCredentials, strictMode } = resolveSmokeSafety();

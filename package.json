@@ -47,6 +47,7 @@
     "predev": "node scripts/ensure-dev-env.mjs",
     "dev": "next dev",
     "dev:preview": "npx --yes vercel@latest env run -e preview --project wisconsin-creative --scope erikrole -- node scripts/start-preview-dev.mjs",
+    "auth:local": "npx --yes vercel@latest env run -e preview --project wisconsin-creative --scope erikrole -- node scripts/bootstrap-local-session.mjs",
     "postinstall": "prisma generate",
     "build": "node scripts/guard-next-build.mjs && node scripts/prisma-migrate-deploy.mjs && next build",
     "build:app": "node scripts/guard-next-build.mjs && next build",
