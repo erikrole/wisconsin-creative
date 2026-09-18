@@ -58,7 +58,8 @@ describe("student field mobile contracts", () => {
     expect(route).toContain("const totalCheckedOut = gearHidden ? 0 : isPersonalOnly ? counts.myCheckoutsTotal : counts.totalCheckedOut");
     expect(route).toContain('const gearHidden = isCollaborator && !hasCollaboratorCapability(user, "MY_GEAR_VIEW")');
     expect(route).toContain("const pendingPickupTotalCount = isPersonalOnly ? pendingPickupsRaw.length : counts.pendingPickupTotal");
-    expect(route).toContain("...(isPersonalOnly ? { requesterUserId: user.id } : {})");
+    expect(route).toMatch(/isPersonalOnly\s+\?\s+Promise\.resolve\(\[\]\)/);
+    expect(route).toContain("requesterUserId: user.id");
     // No stat lane may still read a team total on a personal dashboard.
     expect(route).not.toMatch(/const (total|dueToday|pendingPickup|team|stale)\w* = isCollaborator \?/);
 
@@ -164,12 +165,12 @@ describe("student field mobile contracts", () => {
     expect(scheduleView).toContain("Picker(\"Sport\"");
     // Toolbar controls are Labels, not bare Images: the title is what makes
     // them self-describing, and it lets the system own sizing and hit area.
-    expect(scheduleView).toContain("Label(\n                            \"Trade Board\",");
+    expect(scheduleView).toContain("Label(\n                \"Trade Board\",");
     expect(scheduleView).toContain("arrow.left.arrow.right.circle");
     expect(scheduleView).toContain("Label(\"My Availability\", systemImage: \"calendar.badge.clock\")");
     expect(scheduleView).toContain("Label(\"Shift Calendar\", systemImage: \"calendar.badge.plus\")");
     expect(scheduleView).toContain("\"Filters, \\(activeFilterCount) active\"");
-    expect(scheduleView).toContain("\"Trade Board, \\(appState.openTradeCount) open\"");
+    expect(scheduleView).toContain("\"Trade Board, \\(openTradeCount) open\"");
     expect(scheduleView).toContain("accessibilityLabel(\"More Schedule actions\")");
     expect(scheduleView).not.toContain("Switch to calendar view");
     expect(scheduleView).not.toContain("Switch to list view");
@@ -445,7 +446,8 @@ describe("student field mobile contracts", () => {
     expect(createSheet).toContain("attemptReview()");
     expect(createSheet).toContain('(vm.selectedConflictCount == 0 ? "Review" : "Resolve Conflicts")');
     expect(createSheet).toContain(".disabled(!vm.canReviewEquipment)");
-    expect(createSheet).toContain("Text(vm.title.isEmpty ? \"Review your reservation\" : vm.title)");
+    expect(createSheet).toContain("private var reviewDisplayTitle: String");
+    expect(createSheet).toContain("if title.isEmpty { return \"Review your reservation\" }");
     expect(createSheet).not.toContain("Batteries & Counted Items");
     // Scan is a toolbar action with continuous scanning; keep it labeled
     // for VoiceOver since it's icon-only.

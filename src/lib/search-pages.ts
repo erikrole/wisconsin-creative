@@ -12,7 +12,7 @@ export type PageSearchResult = {
 const CORE_SEARCH_PAGES: PageSearchResult[] = [
   { type: "page", id: "dashboard", title: "Dashboard", subtitle: "Daily gear, checkout, reservation, and draft work", href: "/", keywords: ["home", "today", "overdue", "drafts", "my gear"] },
   { type: "page", id: "schedule", title: "Schedule", subtitle: "Events, shifts, crew coverage, and event command center", href: "/schedule", keywords: ["events", "calendar", "assignments", "coverage", "shifts"] },
-  { type: "page", id: "scoreboard", title: "Scoreboard", subtitle: "Team season totals and per-person leaderboards", href: "/scoreboard", keywords: ["record", "wins", "losses", "leaderboard", "events worked", "recognition"] },
+  { type: "page", id: "scoreboard", title: "Scoreboard", subtitle: "Current-season coverage, official record, and who worked", href: "/scoreboard", keywords: ["record", "wins", "losses", "leaderboard", "events worked", "recognition"] },
   { type: "page", id: "items", title: "Items", subtitle: "Inventory list, filters, favorites, and item details", href: "/items", keywords: ["gear", "inventory", "assets", "equipment", "favorites"] },
   { type: "page", id: "bookings", title: "Bookings", subtitle: "Combined active checkouts and reservations", href: "/bookings", keywords: ["all bookings", "active", "past", "history"] },
   { type: "page", id: "checkouts", title: "Checkouts", subtitle: "Gear pickup, custody, due-back, and return work", href: "/bookings?tab=checkouts", keywords: ["checked out", "pickup", "pending pickup", "returns", "custody"] },

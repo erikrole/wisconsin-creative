@@ -37,8 +37,16 @@ describe("companion projection", () => {
         refNumber: "C-1",
         requester: { id: "user-1", name: "Erik", avatarUrl: null },
         location: { id: "loc-1", name: "Kohl Center" },
-        serializedItems: [{ id: "item-1" }],
-        bulkItems: [],
+        serializedItems: [{
+          id: "item-1",
+          asset: { assetTag: "CAM-1", name: "FX3", brand: "Sony", model: "FX3", type: "Camera" },
+        }],
+        bulkItems: [{
+          id: "bulk-1",
+          plannedQuantity: 4,
+          checkedOutQuantity: 4,
+          bulkSku: { name: "NP-FZ100" },
+        }],
       },
       {
         id: "reservation-1",
@@ -95,8 +103,16 @@ describe("companion projection", () => {
     expect(projection.bookingActivity.every((booking) => booking.status !== "DRAFT")).toBe(true);
     expect(projection.openBookings.map((booking) => booking.id)).toEqual(["checkout-1"]);
     expect(projection.openBookings[0]?.title).toBe("Women's Soccer vs TCU");
+    expect(projection.openBookings[0]?.serializedItems).toEqual([
+      { id: "item-1", name: "FX3", assetTag: "CAM-1" },
+    ]);
+    expect(projection.openBookings[0]?.bulkItems).toEqual([
+      { id: "bulk-1", name: "NP-FZ100", quantity: 4 },
+    ]);
     expect(projection.bookingActivity.find((booking) => booking.id === "checkout-1")?.title)
       .toBe("Women's Soccer vs TCU");
+    expect(projection.bookingActivity.find((booking) => booking.id === "checkout-1")?.serializedItems)
+      .toEqual([{ id: "item-1", name: "FX3", assetTag: "CAM-1" }]);
     expect(projection.kioskDevices[0]).toMatchObject({
       pendingPickupCount: 1,
       openCheckoutCount: 1,

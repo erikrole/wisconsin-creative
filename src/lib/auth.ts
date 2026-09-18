@@ -167,10 +167,18 @@ export async function requireAuth(): Promise<AuthUser> {
   });
 
   if (!session || session.expiresAt < new Date()) {
+    cookieStore.delete(env.sessionCookieName);
+    await clearRolePreviewCookie();
+    if (session) {
+      await db.session.deleteMany({ where: { id: session.id } });
+    }
     throw new HttpError(401, "Session expired");
   }
 
   if (!session.user.active) {
+    cookieStore.delete(env.sessionCookieName);
+    await clearRolePreviewCookie();
+    await db.session.deleteMany({ where: { tokenHash: hashed } });
     throw new HttpError(401, "Account deactivated");
   }
 

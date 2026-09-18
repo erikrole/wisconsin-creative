@@ -14,6 +14,14 @@ export type ClaimViewerRequest = {
   conflictNote?: string | null;
 };
 
+export function ClaimsPausedNotice({ className }: { className?: string }) {
+  return (
+    <p className={cn("text-xs text-muted-foreground", className)}>
+      Staff are updating this crew. Claims open after the changes are released.
+    </p>
+  );
+}
+
 type Props = {
   shiftId: string;
   workerType: string;
@@ -21,6 +29,7 @@ type Props = {
   isAssigned: boolean;
   viewerRequest?: ClaimViewerRequest | null;
   canClaim: boolean;
+  claimsPaused?: boolean;
   isPublished: boolean;
   compact?: boolean;
   className?: string;
@@ -39,6 +48,7 @@ export function ClaimShiftAction({
   isAssigned,
   viewerRequest,
   canClaim,
+  claimsPaused = false,
   isPublished,
   compact = false,
   className,
@@ -53,7 +63,8 @@ export function ClaimShiftAction({
     && !isAssigned
     && !isPending
     && isPublished
-    && isFuture;
+    && isFuture
+    && !claimsPaused;
 
   if (canClaim && isPending && viewerRequest) {
     return (
@@ -98,7 +109,9 @@ export function ClaimShiftAction({
     );
   }
 
-  if (!canRequest) return null;
+  if (!canRequest) {
+    return null;
+  }
 
   return (
     <Button

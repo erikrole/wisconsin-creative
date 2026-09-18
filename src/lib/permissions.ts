@@ -161,7 +161,7 @@ export const PERMISSIONS: Record<string, Record<string, Role[]>> = {
     delete: ["ADMIN", "STAFF"],
   },
   kit: {
-    view: ["ADMIN", "STAFF"],
+    view: ["ADMIN", "STAFF", "STUDENT"],
     create: ["ADMIN", "STAFF"],
     edit: ["ADMIN", "STAFF"],
     delete: ["ADMIN"],

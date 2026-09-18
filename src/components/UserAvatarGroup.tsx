@@ -19,6 +19,7 @@ export function UserAvatarGroup({
   className,
   avatarClassName,
   emptyLabel = "No assignments",
+  ariaLabel,
 }: {
   users: UserAvatarGroupUser[];
   max?: number;
@@ -26,6 +27,7 @@ export function UserAvatarGroup({
   className?: string;
   avatarClassName?: string;
   emptyLabel?: string;
+  ariaLabel?: string;
 }) {
   const visibleUsers = users.slice(0, max);
   const overflow = users.length - visibleUsers.length;
@@ -41,7 +43,8 @@ export function UserAvatarGroup({
   return (
     <AvatarGroup
       className={className}
-      aria-label={`${users.length} assigned ${users.length === 1 ? "person" : "people"}`}
+      aria-hidden={ariaLabel === ""}
+      aria-label={ariaLabel === "" ? undefined : ariaLabel ?? `${users.length} assigned ${users.length === 1 ? "person" : "people"}`}
     >
       {visibleUsers.map((user) => {
         const label = user.label ?? user.name;

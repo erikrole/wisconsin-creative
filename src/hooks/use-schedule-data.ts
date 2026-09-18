@@ -196,6 +196,7 @@ export function mergeScheduleData(events: CalendarEvent[], groups: ShiftGroup[])
       archivedAt: g?.archivedAt ?? null,
       publication: g?.publication ?? null,
       hasWorkingCopy: g?.hasWorkingCopy ?? false,
+      claimsPaused: g?.claimsPaused ?? false,
       autoReleaseAt: g?.autoReleaseAt ?? null,
       autoReleaseError: g?.autoReleaseError ?? null,
       combinedEventCount: members.length,
@@ -405,8 +406,10 @@ export async function fetchSchedule(
 
 async function fetchTradeCount(): Promise<number> {
   const r = await fetch("/api/shift-trades?status=OPEN&limit=1", SCHEDULE_READ_FETCH_INIT);
-  if (handleAuthRedirect(r)) return 0;
-  if (!r.ok) return 0;
+  if (handleAuthRedirect(r, "/schedule")) {
+    throw new DOMException("Auth redirect", "AbortError");
+  }
+  if (!r.ok) throw new Error("trade count fetch failed");
   const j = await parseJsonSafely<{ total?: number; data?: unknown[] }>(r);
   return typeof j?.total === "number" ? j.total : j?.data?.length ?? 0;
 }
@@ -727,7 +730,7 @@ export function useScheduleData(): UseScheduleDataResult {
   }, [meData?.role, preferencesLoaded, searchParams]);
 
   // --- React Query: trade count ---
-  const { data: tradeCount = 0, refetch: refetchTrades } = useQuery({
+  const { data: tradeCount, refetch: refetchTrades } = useQuery({
     queryKey: ["shift-trades", "OPEN", "count"],
     queryFn: fetchTradeCount,
     ...SCHEDULE_FRESH_QUERY_OPTIONS,
@@ -968,7 +971,7 @@ export function useScheduleData(): UseScheduleDataResult {
     setWeekStart: setScheduleWeek,
     currentUserId,
     currentUserRole,
-    openTradeCount: tradeCount,
+    openTradeCount: tradeCount ?? 0,
     tradeSheetOpen,
     setTradeSheetOpen,
     loadTradeCount: refetchTrades,

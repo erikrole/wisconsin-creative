@@ -62,9 +62,9 @@ describe("getAllowedActionsClient", () => {
   describe("PENDING_PICKUP state", () => {
     const ctx = booking("PENDING_PICKUP");
 
-    it("staff can edit, cancel, and transfer awaiting pickup checkouts", () => {
+    it("staff can edit, cancel, transfer, and manage custody before pickup", () => {
       const actions = getActions(staff, ctx);
-      expect(actions).toEqual(["edit", "cancel", "transfer-owner"]);
+      expect(actions).toEqual(["edit", "cancel", "transfer-owner", "manage-custody"]);
     });
 
     it("owner can edit, cancel, and transfer awaiting pickup checkouts", () => {
@@ -105,11 +105,12 @@ describe("getAllowedActionsClient", () => {
   });
 
   describe("COMPLETED state", () => {
-    it("returns empty for all roles", () => {
+    it("allows re-reserve for staff, admin, and owner", () => {
       const ctx = booking("COMPLETED");
-      expect(getActions(staff, ctx)).toEqual([]);
-      expect(getActions(admin, ctx)).toEqual([]);
-      expect(getActions(owner, ctx)).toEqual([]);
+      expect(getActions(staff, ctx)).toEqual(["duplicate"]);
+      expect(getActions(admin, ctx)).toEqual(["duplicate"]);
+      expect(getActions(owner, ctx)).toEqual(["duplicate"]);
+      expect(getActions(nonOwner, ctx)).toEqual([]);
     });
   });
 

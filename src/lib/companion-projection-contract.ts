@@ -20,8 +20,8 @@ export type CompanionProjection = {
     refNumber: string | null;
     requester: { id: string; name: string; avatarUrl: string | null };
     location: { id: string; name: string };
-    serializedItems: Array<{ id: string }>;
-    bulkItems: Array<{ id: string }>;
+    serializedItems: Array<{ id: string; name?: string; assetTag?: string }>;
+    bulkItems: Array<{ id: string; name?: string; quantity?: number }>;
   }>;
   bookingActivity: Array<{
     id: string;
@@ -33,6 +33,8 @@ export type CompanionProjection = {
     updatedAt: Date;
     requester: { id: string; name: string; avatarUrl: string | null };
     location: { id: string; name: string };
+    serializedItems: Array<{ id: string; name?: string; assetTag?: string }>;
+    bulkItems: Array<{ id: string; name?: string; quantity?: number }>;
   }>;
   kioskDevices: Array<{
     id: string;

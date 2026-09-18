@@ -190,9 +190,9 @@ describe("getAllowedActions", () => {
     expect(getAllowedBookingActions(owner, booking)).toEqual(["edit", "cancel", "transfer-owner"]);
   });
 
-  it("returns empty array for COMPLETED checkout", () => {
+  it("returns duplicate for COMPLETED checkout", () => {
     const booking = makeCheckout("COMPLETED");
-    expect(getAllowedBookingActions(admin, booking)).toEqual([]);
+    expect(getAllowedBookingActions(admin, booking)).toEqual(["duplicate"]);
   });
 
   it("returns empty array for CANCELLED checkout", () => {

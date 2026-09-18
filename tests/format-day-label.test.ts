@@ -70,6 +70,10 @@ describe("formatOperationalDateTime", () => {
     expect(formatOperationalDateTime(localIso(2026, 6, 29), now)).toBe("July 29, 2:30 PM");
   });
 
+  it("can use a short month on dense surfaces", () => {
+    expect(formatOperationalDateTime(localIso(2026, 6, 29), now, { month: "short" })).toBe("Jul 29, 2:30 PM");
+  });
+
   it("includes the year when the timestamp is outside the current year", () => {
     expect(formatOperationalDateTime(localIso(2027, 0, 2), now)).toBe("January 2, 2027, 2:30 PM");
   });

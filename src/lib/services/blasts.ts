@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
 import { sendPush } from "@/lib/push/apns";
 import { sendWebPushToUsers } from "@/lib/push/web";
+import { withNotificationHref } from "@/lib/notification-destination";
 import { deferPush } from "@/lib/services/notifications";
 import { normalizePrefs, shouldDeliverPush } from "@/lib/services/notification-prefs";
 import {
@@ -118,7 +119,7 @@ async function writeInboxCopies(
         type: "blast",
         title: input.title,
         body: input.body,
-        payload: { blastId },
+        payload: withNotificationHref({ blastId }) as unknown as Prisma.InputJsonValue,
         channel: "IN_APP",
         sentAt,
         // The prefix keeps this globally unique from schedule and trade rows.
@@ -208,7 +209,7 @@ export async function sendBlastPush(blastId: string): Promise<void> {
         {
           title: blast.title,
           body: blast.body,
-          payload: { blastId },
+          payload: withNotificationHref({ blastId }),
           category: "GT_BLAST",
           interruptionLevel: "active",
         },
@@ -218,7 +219,7 @@ export async function sendBlastPush(blastId: string): Promise<void> {
     const webDeliveries = await sendWebPushToUsers(eligible, {
       title: blast.title,
       body: blast.body,
-      payload: { blastId },
+      payload: withNotificationHref({ blastId }),
     });
 
     const acceptedSet = new Set(accepted);

@@ -71,15 +71,22 @@ const profileSelect = {
   shoeSize: true,
   avatarUrl: true,
   profilePromptSnoozedUntil: true,
+  hiddenFromRoster: true,
 } as const;
 
 type ProfileClient = Pick<Prisma.TransactionClient, "user">;
 type Profile = NonNullable<Awaited<ReturnType<typeof loadProfile>>>;
 type PatchBody = z.infer<typeof patchSchema>;
 
+function publicProfile(profile: Profile): Omit<Profile, "hiddenFromRoster"> {
+  const { hiddenFromRoster, ...rest } = profile;
+  void hiddenFromRoster;
+  return rest;
+}
+
 function responseData(profile: Awaited<ReturnType<typeof loadProfile>>) {
   if (!profile) throw new HttpError(404, "User not found");
-  return { profile, completion: getProfileCompletion(profile) };
+  return { profile: publicProfile(profile), completion: getProfileCompletion(profile) };
 }
 
 function loadProfile(client: ProfileClient, userId: string) {

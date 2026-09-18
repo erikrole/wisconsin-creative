@@ -17,7 +17,13 @@ describe("student shift claim surfaces", () => {
     expect(helper).toContain('"/api/shift-assignments/pickup"');
     expect(helper).toContain("/withdraw");
     expect(helper).toContain("Awaiting approval");
-    expect(helper).toContain("onChanged");
+    expect(helper).toContain("claimsPaused");
+    expect(helper).toContain("Staff are updating this crew");
+    expect(helper).toContain("function ClaimsPausedNotice");
+    expect(schedule).toContain("claimsPaused={Boolean(entry.claimsPaused)}");
+    expect(schedule).toContain("<ClaimsPausedNotice");
+    expect(eventDetail).toContain("claimsPaused={Boolean(shiftGroup.claimsPaused)}");
+    expect(eventDetail).toContain("<ClaimsPausedNotice");
     expect(panel).not.toContain("onRequest");
     expect(area).not.toContain("onRequest");
     expect(slot).not.toContain("Claim this shift");
@@ -32,6 +38,7 @@ describe("student shift claim surfaces", () => {
     expect(route).toContain('userId: user.id, status: "REQUESTED"');
     expect(route).toContain("viewerRequestByShiftId");
     expect(route).toContain("viewerRequest: viewerRequestByShiftId.get(s.id) ?? null");
+    expect(route).toContain("claimsPaused: Boolean(g.workingCopy)");
     expect(scheduleTypes).toContain("viewerRequest?: ShiftViewerRequest | null");
     expect(eventTypes).toContain("viewerRequest?: {");
   });
@@ -46,6 +53,9 @@ describe("student shift claim surfaces", () => {
     expect(apiClient).toContain("offset + pageCount < response.total");
     expect(apiClient).toContain("func allMyShifts(");
     expect(source("src/app/api/calendar-events/route.ts")).toContain(
+      "combinedIntoId: null",
+    );
+    expect(source("src/app/api/calendar-events/route.ts")).toContain(
       'orderBy: [{ startsAt: "asc" }, { id: "asc" }]',
     );
     expect(source("src/app/api/my-shifts/route.ts")).toContain(
@@ -56,6 +66,9 @@ describe("student shift claim surfaces", () => {
     expect(models).toContain("let viewerRequest: ViewerShiftRequest?");
     expect(eventDetail).toContain("$0.viewerRequest == nil");
     expect(eventDetail).toContain("pendingStudentClaimShifts");
+    expect(eventDetail).toContain("claimsPaused");
+    expect(schedule).toContain("orderedPersonalShiftsByEvent");
+    expect(schedule).toContain("collapsedCombinedScheduleEvents(fetchedEvents)");
   });
 
   it("fans out every claim-review notification only to active admins", () => {

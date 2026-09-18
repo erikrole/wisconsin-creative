@@ -602,6 +602,7 @@ export default function AppShell({
           reward={earnedBadgeQueue[0]}
           remaining={earnedBadgeQueue.length - 1}
           onDismiss={() => setEarnedBadgeQueue((current) => current.slice(1))}
+          onViewShelf={rewardUserId ? () => router.push(`/users/${rewardUserId}?tab=badges`) : undefined}
         />
       )}
 

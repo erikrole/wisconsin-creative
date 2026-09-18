@@ -63,7 +63,8 @@ describe("Schedule crew management parity", () => {
 
   it("guards setup against competing submissions and malformed success responses", () => {
     expect(crewSheet).toContain("if (setupRef.current) return;");
-    expect(crewSheet).toContain("disabled={settingUpSide !== null}");
+    expect(crewSheet).toContain("<CrewSetupChoices loadingSide={settingUpSide}");
+    expect(crewSheet).toContain("disabled={loadingSide !== null}");
     expect(page).toContain("if (settingUpRef.current.has(eventId)) return null;");
     expect(page).toContain("Crew setup response was incomplete. Refresh and try again.");
     expect(page).toContain("settingUpRef.current.delete(eventId)");

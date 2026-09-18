@@ -10,7 +10,7 @@ import {
 import { sendCompanionInvalidation } from "@/lib/push/apns";
 import { startOfDayInAppTz } from "@/lib/app-time";
 import type { CompanionProjection } from "@/lib/companion-projection-contract";
-import { normalizeTeamAbbreviations } from "@/lib/title-normalization";
+import { displayBookingTitle } from "@/lib/booking-display-title";
 
 const ACTIVE_STATUSES: BookingStatus[] = [
   BookingStatus.BOOKED,
@@ -43,8 +43,20 @@ export async function buildCompanionProjection(
         refNumber: true,
         requester: { select: { id: true, name: true, avatarUrl: true } },
         location: { select: { id: true, name: true } },
-        serializedItems: { select: { id: true } },
-        bulkItems: { select: { id: true } },
+        serializedItems: {
+          select: {
+            id: true,
+            asset: { select: { assetTag: true, name: true, brand: true, model: true, type: true } },
+          },
+        },
+        bulkItems: {
+          select: {
+            id: true,
+            plannedQuantity: true,
+            checkedOutQuantity: true,
+            bulkSku: { select: { name: true } },
+          },
+        },
       },
     }),
     db.kioskDevice.findMany({
@@ -106,17 +118,16 @@ export async function buildCompanionProjection(
     pendingPickupTotal: pendingPickups.length,
     openBookings: openBookings.map((booking) => ({
       id: booking.id,
-      title: normalizeTeamAbbreviations(booking.title),
+      title: displayBookingTitle(booking.title),
       endsAt: booking.endsAt,
       refNumber: booking.refNumber,
       requester: booking.requester,
       location: booking.location,
-      serializedItems: booking.serializedItems,
-      bulkItems: booking.bulkItems,
+      ...companionItemLists(booking),
     })),
     bookingActivity: bookings.filter((booking) => booking.status !== BookingStatus.DRAFT).map((booking) => ({
       id: booking.id,
-      title: normalizeTeamAbbreviations(booking.title),
+      title: displayBookingTitle(booking.title),
       kind: booking.kind,
       status: booking.status,
       startsAt: booking.startsAt,
@@ -124,6 +135,7 @@ export async function buildCompanionProjection(
       updatedAt: booking.updatedAt,
       requester: booking.requester,
       location: booking.location,
+      ...companionItemLists(booking),
     })),
     kioskDevices: devices.map((device) => {
       const counts = countsByLocation.get(device.locationId) ?? { pendingPickup: 0, open: 0 };
@@ -143,6 +155,48 @@ export async function buildCompanionProjection(
       };
     }),
   };
+}
+
+const MAX_COMPANION_ITEMS = 48;
+
+type CompanionBookingItems = {
+  serializedItems: Array<{ id: string; asset?: { assetTag: string; name: string | null; brand: string; model: string; type: string } }>;
+  bulkItems: Array<{ id: string; plannedQuantity: number; checkedOutQuantity: number; bulkSku?: { name: string } }>;
+};
+
+function optionalText(value: string | null | undefined): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+function companionItemLists(booking: CompanionBookingItems): Pick<
+  CompanionProjection["openBookings"][number],
+  "serializedItems" | "bulkItems"
+> {
+  const serializedItems = booking.serializedItems.slice(0, MAX_COMPANION_ITEMS).map((item) => {
+    const assetTag = optionalText(item.asset?.assetTag);
+    const name = optionalText(
+      item.asset?.name
+      || [item.asset?.brand, item.asset?.model].filter(Boolean).join(" · ")
+      || item.asset?.type,
+    );
+    return {
+      id: item.id,
+      ...(name ? { name } : {}),
+      ...(assetTag ? { assetTag } : {}),
+    };
+  });
+  const remaining = MAX_COMPANION_ITEMS - serializedItems.length;
+  const bulkItems = booking.bulkItems.slice(0, remaining).map((item) => {
+    const name = optionalText(item.bulkSku?.name);
+    const quantity = item.checkedOutQuantity > 0 ? item.checkedOutQuantity : item.plannedQuantity;
+    return {
+      id: item.id,
+      ...(name ? { name } : {}),
+      ...(quantity > 0 ? { quantity } : {}),
+    };
+  });
+  return { serializedItems, bulkItems };
 }
 
 function kioskProjectionSignature(projection: CompanionProjection): string {

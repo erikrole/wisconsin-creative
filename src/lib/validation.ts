@@ -187,10 +187,16 @@ function hasSelectedEquipment(v: { serializedAssetIds?: string[]; bulkItems?: Ar
   return (v.serializedAssetIds?.length ?? 0) > 0 || (v.bulkItems?.length ?? 0) > 0;
 }
 
-function hasSelectedEquipmentOrSourceReservation(
-  v: { serializedAssetIds?: string[]; bulkItems?: Array<{ quantity: number }>; sourceReservationId?: string },
+function hasSelectedEquipmentOrKit(
+  v: { serializedAssetIds?: string[]; bulkItems?: Array<{ quantity: number }>; kitId?: string },
 ): boolean {
-  return Boolean(v.sourceReservationId) || hasSelectedEquipment(v);
+  return Boolean(v.kitId) || hasSelectedEquipment(v);
+}
+
+function hasSelectedEquipmentOrSourceReservation(
+  v: { serializedAssetIds?: string[]; bulkItems?: Array<{ quantity: number }>; sourceReservationId?: string; kitId?: string },
+): boolean {
+  return Boolean(v.sourceReservationId) || hasSelectedEquipmentOrKit(v);
 }
 
 const equipmentRequiredMsg = {
@@ -200,7 +206,7 @@ const equipmentRequiredMsg = {
 
 export const createReservationSchema = z.object(bookingBaseShape)
   .refine(eventIdsExclusive, eventIdsExclusiveMsg)
-  .refine(hasSelectedEquipment, equipmentRequiredMsg);
+  .refine(hasSelectedEquipmentOrKit, equipmentRequiredMsg);
 
 export const createCheckoutSchema = z.object({
   ...bookingBaseShape,

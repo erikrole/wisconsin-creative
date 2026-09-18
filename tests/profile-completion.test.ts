@@ -145,4 +145,17 @@ describe("profile completion", () => {
     expect(snoozed.isSnoozed).toBe(true);
     expect(expired.shouldPrompt).toBe(true);
   });
+
+  it("does not prompt hidden smoke identities for campus profile details", () => {
+    const result = getProfileCompletion(profile({
+      email: "admin@creative.local",
+      hiddenFromRoster: true,
+    }));
+
+    expect(result.shouldPrompt).toBe(false);
+    expect(result.isComplete).toBe(true);
+    expect(result.operationalReady).toBe(true);
+    expect(result.missingFields).toEqual([]);
+    expect(result.firstIncompleteStep).toBeNull();
+  });
 });

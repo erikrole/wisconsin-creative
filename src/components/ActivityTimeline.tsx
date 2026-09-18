@@ -58,7 +58,7 @@ function entityHref(
     case "bulk_sku":
       return `/bulk-inventory/${entityId}`;
     case "kit":
-      return `/settings/kits/${entityId}`;
+      return `/kits/${entityId}`;
     default:
       return null;
   }

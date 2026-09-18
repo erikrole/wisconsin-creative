@@ -36,6 +36,7 @@ export type ProfileCompletionProfile = {
   shoeSize: string | null;
   avatarUrl: string | null;
   profilePromptSnoozedUntil: Date | string | null;
+  hiddenFromRoster?: boolean;
 };
 
 const FIELD_STEP: Record<ProfileCompletionField, ProfileCompletionStep> = {
@@ -139,18 +140,19 @@ export function getProfileCompletion(profile: ProfileCompletionProfile, now = ne
   ) ?? null;
   const operationalReady = operationalFields.every((field) => completeByField[field]);
   const profileComplete = missingFields.length === 0;
+  const hiddenSmokeIdentity = profile.hiddenFromRoster === true;
 
   return {
-    operationalReady,
-    profileComplete,
-    isComplete: profileComplete,
+    operationalReady: hiddenSmokeIdentity || operationalReady,
+    profileComplete: hiddenSmokeIdentity || profileComplete,
+    isComplete: hiddenSmokeIdentity || profileComplete,
     isSnoozed,
-    shouldPrompt: missingFields.length > 0 && !isSnoozed,
+    shouldPrompt: !hiddenSmokeIdentity && missingFields.length > 0 && !isSnoozed,
     snoozedUntil: snoozedUntil?.toISOString() ?? null,
-    completedCount,
+    completedCount: hiddenSmokeIdentity ? applicableFields.length : completedCount,
     totalCount: applicableFields.length,
-    missingFields,
-    firstIncompleteStep,
+    missingFields: hiddenSmokeIdentity ? [] : missingFields,
+    firstIncompleteStep: hiddenSmokeIdentity ? null : firstIncompleteStep,
     completeByField,
   };
 }

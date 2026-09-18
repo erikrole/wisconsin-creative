@@ -90,7 +90,24 @@ describe("/api/me/profile-completion", () => {
     expect(response.status).toBe(200);
     expect(body.data.completion.missingFields).toContain("personalPhone");
     expect(body.data.profile).not.toHaveProperty("wiscardNumber");
+    expect(body.data.profile).not.toHaveProperty("hiddenFromRoster");
     expect(dbMock.user.findUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { id: "user-1" } }));
+  });
+
+  it("does not prompt hidden smoke identities to complete campus profile details", async () => {
+    dbMock.user.findUnique.mockResolvedValue(storedProfile({
+      email: "admin@creative.local",
+      hiddenFromRoster: true,
+    }));
+
+    const response = await GET(new Request("https://app.example.com/api/me/profile-completion"), noParams);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.data.completion.shouldPrompt).toBe(false);
+    expect(body.data.completion.isComplete).toBe(true);
+    expect(body.data.completion.missingFields).toEqual([]);
+    expect(body.data.profile).not.toHaveProperty("hiddenFromRoster");
   });
 
   it("classifies phone data while keeping the legacy phone as the personal compatibility value", async () => {

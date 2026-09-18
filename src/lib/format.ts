@@ -101,8 +101,13 @@ export function formatTimeShort(iso: string) {
 /**
  * Calendar-relative operational time, such as "Today, 2:30 PM",
  * "Tomorrow, 2:30 PM", "Yesterday, 2:30 PM", or "July 29, 2:30 PM".
+ * Dense surfaces can pass `{ month: "short" }` for "Jul 29, 2:30 PM".
  */
-export function formatOperationalDateTime(iso: string, now: Date): string {
+export function formatOperationalDateTime(
+  iso: string,
+  now: Date,
+  options?: { month?: "long" | "short" },
+): string {
   const date = new Date(iso);
   const today = new Date(now);
   today.setHours(0, 0, 0, 0);
@@ -125,7 +130,7 @@ export function formatOperationalDateTime(iso: string, now: Date): string {
     dayLabel = "Yesterday";
   } else {
     dayLabel = date.toLocaleDateString("en-US", {
-      month: "long",
+      month: options?.month ?? "long",
       day: "numeric",
       ...(date.getFullYear() !== now.getFullYear() && { year: "numeric" }),
     });

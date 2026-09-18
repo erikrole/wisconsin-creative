@@ -17,17 +17,20 @@ describe("web Event and Schedule quarter-hour contract", () => {
   it("uses a native 15-minute step and forward normalization for manual events", () => {
     const newEvent = source("src/app/(app)/schedule/_components/NewEventSheet.tsx");
     const eventDetail = source("src/app/(app)/events/[id]/page.tsx");
+    const fields = source("src/components/event-editor/EventEditorFields.tsx");
+    const helpers = source("src/lib/event-editor.ts");
     const stepContract = `step={QUARTER_HOUR_MINUTES * 60}`;
 
     expect(QUARTER_HOUR_MINUTES).toBe(15);
-    expect(newEvent).toContain(stepContract);
-    expect(newEvent).toContain("return roundUpToQuarterHour(d).toISOString()");
-    expect(eventDetail.match(new RegExp(stepContract.replace(/[{}*]/g, "\\$&"), "g"))?.length).toBe(1);
+    expect(fields).toContain(stepContract);
+    expect(helpers).toContain("roundUpToQuarterHour(new Date(startsAt)).toISOString()");
+    expect(eventDetail.match(new RegExp(stepContract.replace(/[{}*]/g, "\\$&"), "g")) ?? []).toHaveLength(0);
     expect(eventDetail).toContain("Preserve untouched legacy off-grid values");
     expect(eventDetail).toContain("!timingModeChanged && !startTimingTouched");
     expect(eventDetail).toContain("!timingModeChanged && !endTimingTouched");
     expect(eventDetail).toContain("roundUpToQuarterHour(new Date(draftStartsAt))");
     expect(eventDetail).toContain("roundUpToQuarterHour(new Date(draftEndsAt))");
+    expect(newEvent).toContain("buildCreatedEventWindow(draft)");
   });
 
   it("uses the same 15-minute policy for live and working-copy call windows", () => {
@@ -44,10 +47,13 @@ describe("web Event and Schedule quarter-hour contract", () => {
   it("keeps all-day and imported-event ownership boundaries intact", () => {
     const newEvent = source("src/app/(app)/schedule/_components/NewEventSheet.tsx");
     const eventDetail = source("src/app/(app)/events/[id]/page.tsx");
+    const helpers = source("src/lib/event-editor.ts");
+    const fields = source("src/components/event-editor/EventEditorFields.tsx");
 
-    expect(newEvent).toContain("buildAllDayEndDate(endDate)");
-    expect(eventDetail).toContain("{!event.source && (");
-    expect(eventDetail).toContain("date.getDate() + (isEnd ? 1 : 0)");
-    expect(eventDetail).toContain("Existing gear reservation windows stay unchanged.");
+    expect(helpers).toContain("date.getDate() + (isEnd ? 1 : 0)");
+    expect(eventDetail).toContain("imported={Boolean(event.source)}");
+    expect(fields).toContain("Saving a new window keeps UWBadgers.com as the source");
+    expect(fields).toContain("Existing gear reservation windows stay unchanged.");
+    expect(newEvent).toContain("EventEditorFields");
   });
 });
