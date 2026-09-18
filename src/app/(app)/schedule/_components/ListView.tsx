@@ -850,6 +850,12 @@ export function ListView({
       ? mobileTodayGroupRef.current
       : desktopTodayGroupRef.current
   ), []);
+  const anchorToday = useCallback(() => {
+    const el = todayGroupEl();
+    if (!el) return false;
+    el.scrollIntoView({ block: "start", behavior: "instant" });
+    return true;
+  }, [todayGroupEl]);
   const desktopList = useDesktopScheduleList();
   const firstEventId = filteredEntries[0]?.id ?? null;
   const prependSnapshotRef = useRef<{ firstId: string | null; height: number; y: number }>({
@@ -933,13 +939,6 @@ export function ListView({
 
   /** Where a reload should land, held until the list is tall enough to get there. */
   const pendingRestoreRef = useRef<number | null>(null);
-
-  const anchorToday = useCallback(() => {
-    const el = todayGroupEl();
-    if (!el) return false;
-    el.scrollIntoView({ block: "start", behavior: "instant" });
-    return true;
-  }, [todayGroupEl]);
 
   useLayoutEffect(() => {
     // Loading can settle before the filtered rows commit their today ref. Keep
