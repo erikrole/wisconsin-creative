@@ -1,2 +1,4 @@
 # Local App Store Connect archives and dSYMs are not web deployment inputs.
 .asc/
+# Local browser and simulator evidence is retained for review, not deployed.
+tasks/archive/proofs/
