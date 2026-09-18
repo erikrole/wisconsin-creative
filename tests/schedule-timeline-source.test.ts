@@ -79,20 +79,18 @@ describe("schedule timeline", () => {
     expect(listView).toContain("Math.abs(el.getBoundingClientRect().top - stickyBottom()) > 2");
   });
 
-  it("holds the reader's position across a refresh", () => {
-    // Pixel offsets from a previous document height (error boundary, skeleton,
-    // archive-floor first paint) put the list at May. Restore the visible event
-    // when it is still in this window; otherwise open on today.
+  it("opens on today after a refresh", () => {
+    // A leftover filter snapshot or the topmost event from the previous
+    // viewport claimed the list, then older rows prepended and the reader
+    // landed a week above today. Refresh is the timeline home; back keeps place.
     expect(listView).toContain("function isScheduleReload()");
     expect(listView).toContain("const reload = isScheduleReload();");
-    expect(listView).toContain("readScheduleTimelineReadingPosition");
-    expect(listView).toContain("chooseScheduleTimelineTarget");
+    expect(listView).toContain("if (isScheduleReload()) {");
+    expect(listView).toContain("discardScheduleTimelineReadingPosition();");
     expect(listView).toContain("if (anchorToday()) didAnchorRef.current = true;");
+    expect(listView).not.toContain("readScheduleTimelineReadingPosition");
     expect(listView).toContain('window.history.scrollRestoration = "manual";');
     expect(listView).toContain("window.history.scrollRestoration = previous;");
-    expect(listView).toContain('window.addEventListener("pagehide", write);');
-    expect(listView).toContain('window.removeEventListener("pagehide", write);');
-    expect(listView).not.toContain("? storedScroll()\n      : fromHistory");
   });
 
   it("still opens a fresh visit on today rather than the stored position", () => {
@@ -194,7 +192,7 @@ describe("schedule timeline", () => {
 
   it("retries the Today anchor when rows arrive after loading settles", () => {
     expect(listView).toContain("groupedEntries.length === 0");
-    expect(listView).toContain("}, [filteredEntries, groupedEntries, isTimeline, loading, anchorToday]);");
+    expect(listView).toContain("}, [groupedEntries, isTimeline, loading, anchorToday]);");
   });
 
   it("does not walk older history until the reader scrolls toward it", () => {

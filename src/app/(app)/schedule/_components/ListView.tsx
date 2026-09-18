@@ -50,10 +50,9 @@ import type { CalendarEntry, Shift } from "./types";
 import { WorkingCrewEditor, type WorkingCrewEntry } from "./WorkingCrewEditor";
 import type { ScheduleQueueMeta } from "@/lib/schedule-queues";
 import {
-  chooseScheduleTimelineTarget,
   discardScheduleTimelinePosition,
+  discardScheduleTimelineReadingPosition,
   readScheduleTimelinePosition,
-  readScheduleTimelineReadingPosition,
   rememberScheduleTimelineReadingPosition,
   restoreScheduleTimelinePosition,
   type ScheduleTimelineSnapshot,
@@ -804,6 +803,13 @@ export function ListView({
    */
   useLayoutEffect(() => {
     if (!isTimeline || loading) return;
+    // A refresh is a new visit to the timeline home. Stale filter-transition
+    // snapshots must not claim the list before Today can.
+    if (isScheduleReload()) {
+      discardScheduleTimelinePosition();
+      discardScheduleTimelineReadingPosition();
+      return;
+    }
     // Keep the snapshot in session storage while the matching URL update
     // settles. App Router can remount this list after the first restoration;
     // a one-shot read lets that second mount fall through to the ordinary
@@ -869,7 +875,10 @@ export function ListView({
       height: document.documentElement.scrollHeight,
       y: window.scrollY,
     };
-  }, [firstEventId, groupedEntries, prependRestore]);
+    if (!readerOwnsScrollRef.current && didAnchorRef.current) {
+      anchorToday();
+    }
+  }, [anchorToday, firstEventId, groupedEntries, prependRestore]);
 
   useEffect(() => {
     if (!isTimeline) return;
@@ -944,20 +953,9 @@ export function ListView({
     arrivedByHistory = false;
     try { sessionStorage.removeItem(HISTORY_RETURN_KEY); } catch { /* Storage is optional. */ }
     if (reload) {
-      const reading = readScheduleTimelineReadingPosition();
-      if (reading) {
-        const target = chooseScheduleTimelineTarget(
-          reading,
-          new Set(filteredEntries.map((entry) => entry.id)),
-          groupedEntries.map(([key]) => new Date(key).getTime()),
-        );
-        if (target) {
-          didAnchorRef.current = true;
-          readerOwnsScrollRef.current = true;
-          transitionAnchorRef.current = reading;
-          return;
-        }
-      }
+      // Refresh is the timeline home, not a scroll restore. Restoring the
+      // topmost visible event from the previous viewport put Sep 11 under the
+      // frame, then older rows prepended and the reader landed in the prior week.
       if (anchorToday()) didAnchorRef.current = true;
       return;
     }
@@ -978,7 +976,7 @@ export function ListView({
       return;
     }
     if (anchorToday()) didAnchorRef.current = true;
-  }, [filteredEntries, groupedEntries, isTimeline, loading, anchorToday]);
+  }, [groupedEntries, isTimeline, loading, anchorToday]);
 
   /**
    * Hold the anchor while the page settles.
