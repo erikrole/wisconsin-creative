@@ -42,13 +42,14 @@ describe("schedule working-copy route wiring", () => {
     expect(editor).toContain("/working-copy");
     expect(editor).toContain("/publish");
     expect(editor).toContain("Publish now");
+    expect(editor).toContain("Apply correction now");
     expect(editor).toContain("formatScheduleReleaseCountdown");
     expect(release).toContain("Release scheduled in");
     expect(route).toContain("enqueuePendingScheduleRelease");
     expect(route).toContain("getWorkingScheduleEventEndsAt");
     expect(route).toContain("const eventHasEnded");
     expect(route).toContain("const autoRelease = eventHasEnded");
-    expect(route).toContain("data.workingVersion,\n      user.role,\n      { clearNotificationPending: true }");
+    expect(route).toContain("publishEndedWorkingSchedule");
     expect(route).toContain("badges.onShiftsWorked({ userId }, { notify: false })");
     expect(route.indexOf("await enqueuePendingScheduleRelease")).toBeLessThan(route.indexOf("await mutateWorkingSchedule"));
     expect(route).toContain("version: body.expectedVersion + 1");
@@ -57,7 +58,10 @@ describe("schedule working-copy route wiring", () => {
     expect(editor).toContain("Student call time");
     expect(editor).toContain("Staff and collaborators do not have a call time");
     expect(editor).toContain("data?.assignedUsers");
+    expect(editor).toContain("<CrewPendingReview");
     expect(workingService).toContain("assignedUsers");
+    expect(workingService).toContain("pendingClaims");
+    expect(workingService).toContain("pendingTrades");
     expect(workingService).toContain("where: { id: { in: assignedUserIds } }");
     expect(workingService).not.toContain("sendPush");
     expect(workingService).not.toContain("sendEmail");

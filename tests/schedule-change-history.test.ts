@@ -283,4 +283,69 @@ describe("getScheduleChangeHistory", () => {
       expect.objectContaining({ entityType: "shift_group_working_copy" }),
     ]));
   });
+
+  it("names every calendar field that actually changed", async () => {
+    dbMock.auditLog.findMany.mockResolvedValue([
+      {
+        id: "audit-calendar",
+        actorUserId: null,
+        entityType: "calendar_event",
+        entityId: "event-1",
+        action: "calendar_event_updated",
+        beforeJson: {
+          summary: "Football vs Illinois",
+          opponent: "Illinois",
+          startsAt: "2026-09-02T08:19:00.000Z",
+          rawStartsAt: "2026-09-02T07:00:00.000Z",
+          site: "HOME",
+        },
+        afterJson: {
+          summary: "Football vs Eastern Michigan",
+          opponent: "Eastern Michigan",
+          startsAt: "2026-09-02T08:19:00.000Z",
+          rawStartsAt: "2026-09-02T08:19:00.000Z",
+          site: "HOME",
+        },
+        createdAt: new Date("2026-09-02T08:19:00Z"),
+        actor: null,
+      },
+    ]);
+
+    const history = await getScheduleChangeHistory({
+      eventIds: ["event-1"],
+      limitPerEvent: 5,
+    });
+
+    expect(history.events["event-1"]?.items[0]).toEqual(expect.objectContaining({
+      kind: "event_updated",
+      label: "Updated event details",
+      detail: expect.stringMatching(/Title: Football vs Illinois → Football vs Eastern Michigan/),
+    }));
+    expect(history.events["event-1"]?.items[0]?.detail).toContain("Opponent: Illinois → Eastern Michigan");
+    expect(history.events["event-1"]?.items[0]?.detail).toContain("Calendar start:");
+    expect(history.events["event-1"]?.items[0]?.detail).not.toContain("Start:");
+  });
+
+  it("falls back honestly when a calendar update has no recorded field diff", async () => {
+    dbMock.auditLog.findMany.mockResolvedValue([
+      {
+        id: "audit-calendar-empty",
+        actorUserId: null,
+        entityType: "calendar_event",
+        entityId: "event-1",
+        action: "calendar_event_updated",
+        beforeJson: { summary: "Football vs Eastern Michigan", startsAt: "2026-09-02T08:19:00.000Z" },
+        afterJson: { summary: "Football vs Eastern Michigan", startsAt: "2026-09-02T08:19:00.000Z" },
+        createdAt: new Date("2026-09-02T08:19:00Z"),
+        actor: null,
+      },
+    ]);
+
+    const history = await getScheduleChangeHistory({
+      eventIds: ["event-1"],
+      limitPerEvent: 5,
+    });
+
+    expect(history.events["event-1"]?.items[0]?.detail).toBe("Calendar listing refreshed");
+  });
 });

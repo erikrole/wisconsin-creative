@@ -38,6 +38,7 @@ const manualEventTypeSchema = z.enum(VENUE_TONE_VALUES);
 
 const createCalendarEventSchema = z.object({
   summary: z.string().trim().min(1, "Title is required").max(500),
+  subtitle: z.string().trim().max(100).nullable().optional(),
   startsAt: z.string().trim().min(1, "Start date/time is required"),
   endsAt: z.string().trim().min(1, "End date/time is required"),
   allDay: z.boolean().optional().default(false),
@@ -87,15 +88,18 @@ export const GET = withAuth(async (req, { user }) => {
   const parsedEndDate = parseOptionalDate(endDate, "endDate");
   assertDateOrder(parsedStartDate, parsedEndDate);
 
-  const where = buildScheduleEventWhere({
-    parsedStartDate,
-    parsedEndDate,
-    includePast,
-    includeHidden,
-    includeArchived,
-    unmappedOnly,
-    sportCode,
-  });
+  const where = {
+    ...buildScheduleEventWhere({
+      parsedStartDate,
+      parsedEndDate,
+      includePast,
+      includeHidden,
+      includeArchived,
+      unmappedOnly,
+      sportCode,
+    }),
+    combinedIntoId: null,
+  };
 
   const [data, total] = await Promise.all([
     db.calendarEvent.findMany({
@@ -205,6 +209,7 @@ export const POST = withAuth(async (req, { user }) => {
       sourceId: null,
       externalId: crypto.randomUUID(),
       summary: normalizeManualEventTitle(body.summary),
+      subtitle: body.subtitle ? body.subtitle : null,
       startsAt: start,
       endsAt: end,
       allDay: isAllDay,
@@ -229,6 +234,7 @@ export const POST = withAuth(async (req, { user }) => {
     action: "calendar_event_created",
     after: {
       summary: event.summary,
+      subtitle: event.subtitle,
       startsAt: event.startsAt.toISOString(),
       endsAt: event.endsAt.toISOString(),
       locationId: event.locationId,

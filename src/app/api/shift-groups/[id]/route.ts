@@ -63,6 +63,7 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
     data: {
       ...responseGroup,
       hasWorkingCopy: staffCanSeeWorkingState ? Boolean(workingCopy) : undefined,
+      claimsPaused: Boolean(workingCopy),
       autoReleaseAt: pendingRelease?.autoReleaseAt,
       autoReleaseError: pendingRelease?.autoReleaseError,
       publication: getSchedulePublicationState(group),

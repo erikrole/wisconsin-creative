@@ -31,6 +31,7 @@ const patchSchema = z
     revertTitle: z.literal(true).optional(),
     revertHomeAway: z.literal(true).optional(),
     revertLocation: z.literal(true).optional(),
+    revertTiming: z.literal(true).optional(),
   })
   .strict()
   .superRefine((value, ctx) => {
@@ -46,6 +47,13 @@ const patchSchema = z
         code: z.ZodIssueCode.custom,
         path: ["revertHomeAway"],
         message: "Restore calendar value cannot be combined with event classification edits",
+      });
+    }
+    if (value.revertTiming && (value.startsAt !== undefined || value.endsAt !== undefined || value.allDay !== undefined)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["revertTiming"],
+        message: "Restore calendar time cannot be combined with a new window",
       });
     }
     if ((value.startsAt === undefined) !== (value.endsAt === undefined)) {
@@ -76,7 +84,8 @@ const patchSchema = z
       v.allDay !== undefined ||
       v.revertTitle !== undefined ||
       v.revertHomeAway !== undefined ||
-      v.revertLocation !== undefined,
+      v.revertLocation !== undefined ||
+      v.revertTiming !== undefined,
     { message: "At least one field is required" },
   );
 
@@ -113,6 +122,10 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
         summaryLocked: true,
         isHomeLocked: true,
         locationLocked: true,
+        timingLocked: true,
+        rawStartsAt: true,
+        rawEndsAt: true,
+        rawAllDay: true,
         location: { select: { isHomeVenue: true } },
       },
     });
@@ -123,10 +136,37 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
     const after: Record<string, unknown> = {};
     let scheduleShift = null;
 
-    if (body.allDay !== undefined || body.startsAt !== undefined || body.endsAt !== undefined) {
-      if (existing.sourceId !== null) {
-        throw new HttpError(400, "Imported event times are controlled by their calendar source");
+    if (body.revertTiming) {
+      if (existing.sourceId === null) {
+        throw new HttpError(400, "Only imported events can restore calendar time");
       }
+      if (!existing.rawStartsAt || !existing.rawEndsAt) {
+        throw new HttpError(400, "Calendar time is not available until the next sync");
+      }
+      const nextStartsAt = existing.rawStartsAt;
+      const nextEndsAt = existing.rawEndsAt;
+      const nextAllDay = existing.rawAllDay ?? existing.allDay;
+      before.startsAt = existing.startsAt.toISOString();
+      before.endsAt = existing.endsAt.toISOString();
+      before.allDay = existing.allDay;
+      before.timingLocked = existing.timingLocked;
+      patch.startsAt = nextStartsAt;
+      patch.endsAt = nextEndsAt;
+      patch.allDay = nextAllDay;
+      patch.timingLocked = false;
+      after.startsAt = nextStartsAt.toISOString();
+      after.endsAt = nextEndsAt.toISOString();
+      after.allDay = nextAllDay;
+      after.timingLocked = false;
+      scheduleShift = await shiftManualEventScheduleTx(tx, {
+        eventId: id,
+        previousStartsAt: existing.startsAt,
+        previousEndsAt: existing.endsAt,
+        nextStartsAt,
+        nextEndsAt,
+        actor: user,
+      });
+    } else if (body.allDay !== undefined || body.startsAt !== undefined || body.endsAt !== undefined) {
       if (body.startsAt === undefined || body.endsAt === undefined) {
         throw new HttpError(400, "Start and end are required when changing event timing mode");
       }
@@ -149,6 +189,16 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
         before.allDay = existing.allDay;
         patch.allDay = nextAllDay;
         after.allDay = nextAllDay;
+      }
+      if (existing.sourceId !== null) {
+        before.timingLocked = existing.timingLocked;
+        patch.timingLocked = true;
+        after.timingLocked = true;
+        if (!existing.rawStartsAt) {
+          patch.rawStartsAt = existing.startsAt;
+          patch.rawEndsAt = existing.endsAt;
+          patch.rawAllDay = existing.allDay;
+        }
       }
       scheduleShift = await shiftManualEventScheduleTx(tx, {
         eventId: id,
@@ -306,6 +356,7 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
         summaryLocked: true,
         isHomeLocked: true,
         locationLocked: true,
+        timingLocked: true,
         location: { select: { id: true, name: true } },
       },
     });
@@ -350,7 +401,7 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
     where: { id },
     include: {
       location: { select: { id: true, name: true } },
-      source: { select: { id: true, name: true } },
+      source: { select: { id: true, name: true, url: true } },
       combinedInto: { select: { id: true, summary: true } },
       combinedEvents: {
         select: { id: true, summary: true, startsAt: true, endsAt: true, allDay: true, sportCode: true },
@@ -363,5 +414,61 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
     throw new HttpError(404, "Event not found");
   }
 
-  return ok({ data: event });
+  let createdByName: string | null = null;
+  if (!event.sourceId) {
+    const created = await db.auditLog.findFirst({
+      where: { entityType: "calendar_event", entityId: id, action: "calendar_event_created" },
+      select: { actor: { select: { name: true } } },
+      orderBy: { createdAt: "asc" },
+    });
+    createdByName = created?.actor?.name ?? null;
+  }
+
+  return ok({ data: { ...event, createdByName } });
+});
+
+export const DELETE = withAuth<{ id: string }>(async (_req, { user, params }) => {
+  if (user.role !== "ADMIN" && user.role !== "STAFF") {
+    throw new HttpError(403, "Only staff and admins can remove events");
+  }
+  await enforceRateLimit(`calendar-event:write:${user.id}`, SCHEDULE_MUTATION_LIMIT);
+
+  const { id } = params;
+  await withSerializationRetry(() => db.$transaction(async (tx) => {
+    const existing = await tx.calendarEvent.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        sourceId: true,
+        summary: true,
+        startsAt: true,
+        endsAt: true,
+        combinedIntoId: true,
+        _count: { select: { combinedEvents: true } },
+      },
+    });
+    if (!existing) throw new HttpError(404, "Event not found");
+    if (existing.sourceId !== null) {
+      throw new HttpError(400, "Imported events stay on the calendar source. Hide them from the schedule instead.");
+    }
+    if (existing.combinedIntoId || existing._count.combinedEvents > 0) {
+      throw new HttpError(400, "Undo the combination before removing this event.");
+    }
+
+    await tx.calendarEvent.delete({ where: { id } });
+    await createAuditEntryTx(tx, {
+      actorId: user.id,
+      actorRole: user.role,
+      entityType: "calendar_event",
+      entityId: id,
+      action: "calendar_event_deleted",
+      before: {
+        summary: existing.summary,
+        startsAt: existing.startsAt.toISOString(),
+        endsAt: existing.endsAt.toISOString(),
+      },
+    });
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }));
+
+  return ok({ data: { id } });
 });

@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crew face dismiss is a hover-reveal corner badge</title>
+<style>
+  :root {
+    --ground:#EEF0F4; --surface:#FFFFFF; --raised:#F7F8FA;
+    --ink:#14171C; --muted:#5B6472; --faint:#8B95A3;
+    --line:#D8DDE5; --accent:#C5050C; --good:#1B7F3B; --warn:#A65A00;
+    --shadow:0 1px 2px rgba(20,23,28,.06), 0 8px 24px rgba(20,23,28,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#131519; --surface:#1B1E24; --raised:#22262E;
+      --ink:#E9ECF1; --muted:#9AA4B2; --faint:#727D8C;
+      --line:#2C313A; --accent:#F2545B; --good:#4ADE80; --warn:#F0A64A;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#131519; --surface:#1B1E24; --raised:#22262E;
+    --ink:#E9ECF1; --muted:#9AA4B2; --faint:#727D8C;
+    --line:#2C313A; --accent:#F2545B; --good:#4ADE80; --warn:#F0A64A;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; background:var(--ground); color:var(--ink);
+    font-family:"Public Sans", ui-sans-serif, system-ui, sans-serif;
+    font-size:16px; line-height:1.6; -webkit-font-smoothing:antialiased;
+  }
+  .wrap { max-width:1080px; margin:0 auto; padding:56px 24px 96px; }
+  .eyebrow {
+    font-family:"IBM Plex Mono", ui-monospace, monospace; font-size:.72rem;
+    letter-spacing:.14em; text-transform:uppercase; color:var(--accent); margin:0 0 14px;
+  }
+  h1 {
+    font-family:"Archivo Narrow", Arial Narrow, sans-serif; font-weight:700;
+    font-size:clamp(2.4rem,6vw,3.9rem); line-height:1.02; letter-spacing:-.015em;
+    margin:0 0 18px; text-wrap:balance;
+  }
+  .lede { font-size:1.12rem; color:var(--muted); max-width:60ch; margin:0; }
+  .rule { height:2px; background:var(--accent); width:64px; margin:34px 0 0; border:0; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:14px; margin:44px 0 0; }
+  .stat { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:20px; box-shadow:var(--shadow); }
+  .stat .k { font-family:"IBM Plex Mono", monospace; font-size:.68rem; letter-spacing:.12em;
+             text-transform:uppercase; color:var(--faint); margin:0 0 10px; }
+  .stat .v { font-family:"Archivo Narrow", sans-serif; font-weight:700; font-size:2.15rem;
+             line-height:1; margin:0 0 6px; font-variant-numeric:tabular-nums; }
+  .stat .n { font-size:.86rem; color:var(--muted); margin:0; line-height:1.45; }
+  .down { color:var(--good); }
+  h2 { font-family:"Archivo Narrow", sans-serif; font-weight:700;
+       font-size:1.9rem; letter-spacing:-.01em; margin:72px 0 6px; }
+  .sec-note { color:var(--muted); margin:0 0 26px; font-size:.95rem; }
+  .pair { margin:0 0 40px; }
+  .pair-head h3 { font-family:"Archivo Narrow",sans-serif; font-weight:600; font-size:1.2rem; margin:0 0 2px; }
+  .pair-head p { margin:0 0 16px; color:var(--muted); font-size:.92rem; }
+  .shots { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  figure { margin:0; display:flex; flex-direction:column; gap:10px; }
+  figure img { width:100%; height:auto; display:block; border-radius:14px;
+               border:1px solid var(--line); box-shadow:var(--shadow); background:var(--surface); }
+  figcaption { font-size:.85rem; color:var(--muted); line-height:1.5; }
+  .tag { font-family:"IBM Plex Mono",monospace; font-size:.66rem; letter-spacing:.12em;
+         text-transform:uppercase; padding:4px 9px; border-radius:5px; align-self:flex-start; font-weight:600; }
+  .tag-before { background:color-mix(in srgb, var(--muted) 14%, transparent); color:var(--muted); }
+  .tag-after { background:color-mix(in srgb, var(--accent) 13%, transparent); color:var(--accent); }
+  .change { border-top:1px solid var(--line); padding:22px 0 4px; }
+  .change h3 { font-family:"Archivo Narrow",sans-serif; font-weight:600; font-size:1.18rem; margin:0 0 14px; }
+  .ba { display:grid; grid-template-columns:1fr 1fr; gap:26px; }
+  .ba p { margin:6px 0 0; font-size:.93rem; color:var(--muted); }
+  .lbl { font-family:"IBM Plex Mono",monospace; font-size:.64rem; letter-spacing:.13em;
+         text-transform:uppercase; font-weight:600; }
+  .lbl-b { color:var(--faint); }
+  .lbl-a { color:var(--accent); }
+  .panel { background:var(--surface); border:1px solid var(--line); border-radius:12px;
+           padding:24px 26px; box-shadow:var(--shadow); }
+  .panel ul { margin:0; padding-left:19px; }
+  .panel li { margin:0 0 9px; font-size:.94rem; }
+  .panel li:last-child { margin-bottom:0; }
+  code { font-family:"IBM Plex Mono",monospace; font-size:.86em; background:var(--raised);
+         border:1px solid var(--line); padding:1px 5px; border-radius:4px; }
+  .flag { border-left:3px solid var(--warn); }
+  @media (max-width:720px) {
+    .wrap { padding:36px 16px 64px; }
+    .ba { grid-template-columns:1fr; gap:16px; }
+  }
+</style></head><body>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Web · Wisconsin Creative · Event detail Crew</p>
+    <h1>Crew face dismiss is a hover-reveal corner badge</h1>
+    <p class="lede">Assigned photos and empty pluses stay a clean 24px face at rest. Unassign and Remove appear as an 18px disc centered on the trailing-top corner when the row is hovered.</p>
+    <hr class="rule">
+  </header>
+  <div class="stats">
+    <div class="stat">
+      <p class="k">Hit / visual</p>
+      <p class="v down">24px / 18px</p>
+      <p class="n">Hit box centered on the face corner; disc is 18px.</p>
+    </div>
+    <div class="stat">
+      <p class="k">Rest opacity</p>
+      <p class="v down">0</p>
+      <p class="n">Pointer-events none on sm, so Assign still receives the click.</p>
+    </div>
+    <div class="stat">
+      <p class="k">Corner alignment</p>
+      <p class="v down">0px</p>
+      <p class="n">Clear-button center matches plus and avatar top-right in CDP.</p>
+    </div></div>
+
+  <h2>Rest versus hover</h2>
+  <p class="sec-note">Matched Playwright crops of the same Event detail rows. This is rest vs hover of the new control, not a historical before of the covering 28px X. That baseline was not captured in an isolated worktree.</p>
+
+      <section class="pair">
+        <div class="pair-head">
+          <h3>Assigned avatar</h3>
+          <p>Erik Role, Video Staff.</p>
+        </div>
+        <div class="shots">
+          <figure>
+            <span class="tag tag-before">Rest</span>
+            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABC4AAAAtCAIAAADulr1MAAAOOElEQVR4nOzdC1BU9R4H8P/ZXVh5KyoKt+SOomBqZWnahAmKiZFOJaapwVAxpmVNVk5jioaYWWndxmomq2mSyULkomOUV3sZ1GA+u2ok5RNEzEs8FxZYzv1y/rmz8VgeoQue72cc5uzZc84qu8f5ff+/8z9rCgoKEkRERERERFeXQRAREREREV11jCJEREREROQCjCJEREREROQCjCJEREREROQCjCJEREREROQCjCJEREREROQCjCJEREREROQCjCJEREREROQCjCJEREREROQCjCJEREREROQCJkH6ZrSp5nrhVi9MqmpQG9c0KKJeUepMwmoSNqMiiIiIiIiuAEYR/UII8bKqZptQVKEI1Z45jCo+FliveNUKq1GtMisMJERERETU5RhFdKpXrepjbWyDIIQ0f1YR2npVeNQrZptaYRY17kwjRERERNSVGEX0yNOqeteqiqq2GS8QSBBXfK0CPy1mphEiIiIi6jKMIrqDfghyiEFV27l9Y4dExS6Nc0jYGyEiIiKirsIooi9GW+N1WUq7c4gddvGxijpjGxPZQ0NDPTw8HNccPny4yTaBgYG9evU6derU4MGDS0tLS0pKWjtaUFBQQECAXC4uLi4qKhJOtXlAIiIiIuo+GEWEoih+fn4VFRU2m01c67z+nB/SYdgFO2L3ck9neycnJ/fv37+6ulo+VFX1nnvuabLN9OnTQ0JCli5d+swzz+zevTszM7O1o82dO/f+++//448/sDxw4ECkkcWLF//222+tbd/mAYmIiIjspk6dumvXLtFB7u7uq1atsj9EoXLmzJmsrKzKykrRceHh4XfffXdSUlJ9fb3QH71HkVGjRs2ZM6e2ttZsNh85ciQ9PV0GkhtuuOHEiRNOPhPjxo2Lioo6f/781q1b4+PjUX+///77586dE91Y4317bX+Zp+7r6enu5mZ/WFJe7u3hIddUW61VNTWOuyvabbVwEOeNkZSUlK+++srJBvhFGQzt/UKb7du3r1u3Dgve3t5LlixZu3btAw88IIiIiIj+nscff/zXX38VndKrV6/Dhw8fP34cI9r+/v5jxox5+umnUaV0Ik4YjUYcDccRuqTrKIKC+MEHH0xNTcUnCVHk0UcfjYiI+PLLL/HU7Nmz169fX15e3tq+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" alt="Assigned avatar, before">
+            <figcaption>Photo only. No dismiss chip.</figcaption>
+          </figure>
+          <figure>
+            <span class="tag tag-after">Hover</span>
+            <img src="data:image/png;base64,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vkpR8s2Kza8vAU1ERER3J7QsUNYvX75c/GN6vR61pfMCD0QRBBWkCPQuMJft6XwN1JkYIC+hJNR5VVl/yj9h9rx2vVr7uZoQf1+2Lt10iY/snUlNdwE0IoRFK0w1p1jV579gFwruzhxCREREd5+EhISGyiFCPQXd8d0GLrx//YO8iKvjpiOHyD+5va+X52r82BXxL7IxonH3BSPe2WsWrLMlQkRERFQfwcHBVqvVy3lf/klb+zpidBerVmoShbFK1DmKKEqxUbGyi0ZERERUd8ghzi0OkjjF7XfK9aLEoCCQ+HiSluyH4C7lekFERERE1FA4y+2PSg016SLYUvP9697XjeDvaKSgH8IcQkREREQNi1HETyFaVGqVQIvdWFXTH1Fu/L4RuxpCsMuiFaVGrg8hIiIioobHKOK/EDCumRRdtTDahN6m6Ox2jdogQRvEpiiVOmHR8XpZRERERHSrMIr4O4QNm0GImm8trOtSdiIiIiKi+uOkNxERERER3QGMIkREREREdAcwihARERER0R3AKEJERERERHcAowgREREREd0BGkXhdZOIiIiIiOi2QgxhV4SIiIiIiO6AmijCxggREREREd02MoDonG/Y7XZBRERERER0azh3Qf4HAAD//3uhtzoAAAAGSURBVAMAy1Vjh0BVwNUAAAAASUVORK5CYII=" alt="Assigned avatar, after">
+            <figcaption>18px disc on the trailing-top corner; initials stay readable.</figcaption>
+          </figure>
+        </div>
+        <details><summary>Capture provenance and matching settings</summary><pre>{
+  &quot;before&quot;: {
+    &quot;version&quot;: 1,
+    &quot;sourceRevision&quot;: &quot;e0148dd803421f2919c8ed19bcb630c713058ffe&quot;,
+    &quot;sourcePatchSha256&quot;: &quot;b03eddbfb55e4bf4210a118fa2c508efc98c60874b075e4967382bf356654682&quot;,
+    &quot;settings&quot;: {
+      &quot;device&quot;: &quot;Playwright Chromium via Google Chrome channel, macOS, headless&quot;,
+      &quot;viewport&quot;: [
+        1440,
+        1100
+      ],
+      &quot;fixture&quot;: &quot;Authenticated local Preview session; Football vs Eastern Michigan Event detail crew editor (event cmmgnauku006qx10lf8cg5fjk)&quot;,
+      &quot;role&quot;: &quot;Admin (Erik Role)&quot;,
+      &quot;route&quot;: &quot;/events/cmmgnauku006qx10lf8cg5fjk&quot;,
+      &quot;appearance&quot;: &quot;dark&quot;,
+      &quot;textSize&quot;: &quot;default&quot;,
+      &quot;locale&quot;: &quot;en-US&quot;,
+      &quot;timezone&quot;: &quot;America/Chicago&quot;,
+      &quot;clock&quot;: &quot;live local 2026-09-17 morning; event window Sat Sep 19 2026&quot;,
+      &quot;scroll&quot;: [
+        0,
+        0
+      ]
+    },
+    &quot;imageSha256&quot;: &quot;907d76e0cadb1e18255277d539ac6d059909c5d5c9ee342a5db9f67ddb847421&quot;,
+    &quot;dimensions&quot;: [
+      1070,
+      45
+    ]
+  },
+  &quot;after&quot;: {
+    &quot;version&quot;: 1,
+    &quot;sourceRevision&quot;: &quot;e0148dd803421f2919c8ed19bcb630c713058ffe&quot;,
+    &quot;sourcePatchSha256&quot;: &quot;b03eddbfb55e4bf4210a118fa2c508efc98c60874b075e4967382bf356654682&quot;,
+    &quot;settings&quot;: {
+      &quot;device&quot;: &quot;Playwright Chromium via Google Chrome channel, macOS, headless&quot;,
+      &quot;viewport&quot;: [
+        1440,
+        1100
+      ],
+      &quot;fixture&quot;: &quot;Authenticated local Preview session; Football vs Eastern Michigan Event detail crew editor (event cmmgnauku006qx10lf8cg5fjk)&quot;,
+      &quot;role&quot;: &quot;Admin (Erik Role)&quot;,
+      &quot;route&quot;: &quot;/events/cmmgnauku006qx10lf8cg5fjk&quot;,
+      &quot;appearance&quot;: &quot;dark&quot;,
+      &quot;textSize&quot;: &quot;default&quot;,
+      &quot;locale&quot;: &quot;en-US&quot;,
+      &quot;timezone&quot;: &quot;America/Chicago&quot;,
+      &quot;clock&quot;: &quot;live local 2026-09-17 morning; event window Sat Sep 19 2026&quot;,
+      &quot;scroll&quot;: [
+        0,
+        0
+      ]
+    },
+    &quot;imageSha256&quot;: &quot;cc69650bc74e790ac419f6dcec3381d37673a9736f3b477d4ac8d510c789675c&quot;,
+    &quot;dimensions&quot;: [
+      1070,
+      45
+    ]
+  }
+}</pre></details>
+      </section>
+      <section class="pair">
+        <div class="pair-head">
+          <h3>Empty plus</h3>
+          <p>Open Video Student slot.</p>
+        </div>
+        <div class="shots">
+          <figure>
+            <span class="tag tag-before">Rest</span>
+            <img src="data:image/png;base64,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" alt="Empty plus, before">
+            <figcaption>Dashed plus and Assign. No dismiss chip.</figcaption>
+          </figure>
+          <figure>
+            <span class="tag tag-after">Hover</span>
+            <img src="data:image/png;base64,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" alt="Empty plus, after">
+            <figcaption>Same 18px disc on the plus corner; the plus stays visible.</figcaption>
+          </figure>
+        </div>
+        <details><summary>Capture provenance and matching settings</summary><pre>{
+  &quot;before&quot;: {
+    &quot;version&quot;: 1,
+    &quot;sourceRevision&quot;: &quot;e0148dd803421f2919c8ed19bcb630c713058ffe&quot;,
+    &quot;sourcePatchSha256&quot;: &quot;b03eddbfb55e4bf4210a118fa2c508efc98c60874b075e4967382bf356654682&quot;,
+    &quot;settings&quot;: {
+      &quot;device&quot;: &quot;Playwright Chromium via Google Chrome channel, macOS, headless&quot;,
+      &quot;viewport&quot;: [
+        1440,
+        1100
+      ],
+      &quot;fixture&quot;: &quot;Authenticated local Preview session; Football vs Eastern Michigan Event detail crew editor (event cmmgnauku006qx10lf8cg5fjk)&quot;,
+      &quot;role&quot;: &quot;Admin (Erik Role)&quot;,
+      &quot;route&quot;: &quot;/events/cmmgnauku006qx10lf8cg5fjk&quot;,
+      &quot;appearance&quot;: &quot;dark&quot;,
+      &quot;textSize&quot;: &quot;default&quot;,
+      &quot;locale&quot;: &quot;en-US&quot;,
+      &quot;timezone&quot;: &quot;America/Chicago&quot;,
+      &quot;clock&quot;: &quot;live local 2026-09-17 morning; event window Sat Sep 19 2026&quot;,
+      &quot;scroll&quot;: [
+        0,
+        0
+      ]
+    },
+    &quot;imageSha256&quot;: &quot;579ae3e94134e19d37b1d03b2af85c19e8d157689848f98d6638873c77b12184&quot;,
+    &quot;dimensions&quot;: [
+      1070,
+      45
+    ]
+  },
+  &quot;after&quot;: {
+    &quot;version&quot;: 1,
+    &quot;sourceRevision&quot;: &quot;e0148dd803421f2919c8ed19bcb630c713058ffe&quot;,
+    &quot;sourcePatchSha256&quot;: &quot;b03eddbfb55e4bf4210a118fa2c508efc98c60874b075e4967382bf356654682&quot;,
+    &quot;settings&quot;: {
+      &quot;device&quot;: &quot;Playwright Chromium via Google Chrome channel, macOS, headless&quot;,
+      &quot;viewport&quot;: [
+        1440,
+        1100
+      ],
+      &quot;fixture&quot;: &quot;Authenticated local Preview session; Football vs Eastern Michigan Event detail crew editor (event cmmgnauku006qx10lf8cg5fjk)&quot;,
+      &quot;role&quot;: &quot;Admin (Erik Role)&quot;,
+      &quot;route&quot;: &quot;/events/cmmgnauku006qx10lf8cg5fjk&quot;,
+      &quot;appearance&quot;: &quot;dark&quot;,
+      &quot;textSize&quot;: &quot;default&quot;,
+      &quot;locale&quot;: &quot;en-US&quot;,
+      &quot;timezone&quot;: &quot;America/Chicago&quot;,
+      &quot;clock&quot;: &quot;live local 2026-09-17 morning; event window Sat Sep 19 2026&quot;,
+      &quot;scroll&quot;: [
+        0,
+        0
+      ]
+    },
+    &quot;imageSha256&quot;: &quot;270c1b593c1bbe42773b8a835cf39769bb0f7a9515d6813fe2726a933006ca71&quot;,
+    &quot;dimensions&quot;: [
+      1070,
+      45
+    ]
+  }
+}</pre></details>
+      </section>
+  <h2>What changed, and why</h2>
+  <div class="change">
+    <h3>The X covered the face</h3>
+    <div class="ba">
+      <div><span class="lbl lbl-b">Was</span><p>A 16px (earlier 28px) disc sat on the photo with only a 4px offset, so most of the badge covered the avatar or the plus.</p></div>
+      <div><span class="lbl lbl-a">Now</span><p>An 18px disc is centered on the trailing-top corner of a shared 24px face frame. Empty slots overlay that frame on Assign’s plus.</p></div>
+    </div>
+  </div>
+  <div class="change">
+    <h3>The X was always in the way</h3>
+    <div class="ba">
+      <div><span class="lbl lbl-b">Was</span><p>Visible at rest, and a hidden-but-present control could still steal the Assign click.</p></div>
+      <div><span class="lbl lbl-a">Now</span><p>Opacity 0 and pointer-events none at rest on pointer screens. Row hover, row focus-within, and keyboard focus reveal it. Overflow menus keep Unassign and Remove.</p></div>
+    </div>
+  </div>
+  <h2>Verification</h2><div class="panel"><ul><li>Playwright hover on the assigned Erik Role row: opacity 0 at rest, 1 on hover. Crop 1070×45.</li><li>Playwright hover on an open Student slot: overlay box matches the plus (24×24 at the same origin); clear center is the plus top-right. Opacity 0 at rest, 1 on hover.</li><li>Authenticated Event detail rest screenshot: pluses and avatars are clean; no X visible.</li><li>Did not click Unassign or Remove on the live Football vs Eastern Michigan crew.</li><li>tests/schedule-ui-polish-source.test.ts: 7 passed. ESLint clean on crew-row.tsx and WorkingCrewEditor.tsx.</li><li>`npx tsc --noEmit` still fails only on unrelated src/lib/services/blasts.ts payload Json.</li></ul></div>
+  <h2>Things to know</h2><div class="panel flag"><ul><li>These pairs compare rest vs hover of the new badge. The previous covering-X state was not snapshotted in an isolated baseline.</li><li>Badge close-ups badge-assigned-close.png and badge-placeholder-close.png are 24×25 hit-target crops, not matched pairs.</li><li>Native iOS Event detail is unchanged.</li></ul></div>
+</div>
+</body></html>

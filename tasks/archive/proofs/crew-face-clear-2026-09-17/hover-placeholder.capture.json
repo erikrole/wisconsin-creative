@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "e0148dd803421f2919c8ed19bcb630c713058ffe",
+  "sourcePatchSha256": "b03eddbfb55e4bf4210a118fa2c508efc98c60874b075e4967382bf356654682",
+  "settings": {
+    "device": "Playwright Chromium via Google Chrome channel, macOS, headless",
+    "viewport": [
+      1440,
+      1100
+    ],
+    "fixture": "Authenticated local Preview session; Football vs Eastern Michigan Event detail crew editor (event cmmgnauku006qx10lf8cg5fjk)",
+    "role": "Admin (Erik Role)",
+    "route": "/events/cmmgnauku006qx10lf8cg5fjk",
+    "appearance": "dark",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "live local 2026-09-17 morning; event window Sat Sep 19 2026",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "imageSha256": "270c1b593c1bbe42773b8a835cf39769bb0f7a9515d6813fe2726a933006ca71",
+  "dimensions": [
+    1070,
+    45
+  ]
+}

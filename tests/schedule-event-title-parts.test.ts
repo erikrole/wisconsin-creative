@@ -74,6 +74,20 @@ describe("scheduleEventTitleParts", () => {
     });
   });
 
+  it("pulls a promotion qualifier out of the summary when the opponent is clean", () => {
+    expect(
+      scheduleEventTitleParts({
+        summary: "Volleyball vs Marquette- White Out",
+        sportCode: "VB",
+        opponent: "Marquette",
+        isHome: true,
+      }),
+    ).toEqual({
+      title: "Volleyball vs Marquette",
+      detail: "White Out",
+    });
+  });
+
   it("uses the canonical Schedule site when the legacy boolean disagrees", () => {
     expect(
       scheduleEventTitleParts({

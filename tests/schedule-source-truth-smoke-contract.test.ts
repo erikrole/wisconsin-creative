@@ -38,6 +38,9 @@ describe("schedule source-of-truth and browser smoke contracts", () => {
     expect(authSetup).toContain("PLAYWRIGHT_EMAIL");
     expect(authSetup).toContain("PLAYWRIGHT_PASSWORD");
     expect(authSetup).toContain("storageState({ path: AUTH_FILE })");
+    expect(authSetup).toContain("npm run auth:local");
+    expect(config).toContain("loadLocalPlaywrightEnv");
+    expect(packageJson.scripts?.["auth:local"]).toContain("bootstrap-local-session.mjs");
 
     for (const route of [
       'path: "/"',
@@ -163,9 +166,14 @@ describe("schedule source-of-truth and browser smoke contracts", () => {
 
     expect(listView).not.toContain("Reserve gear");
     expect(listView).not.toContain("/reservations/new?");
-    // Gear readiness is a card-level concern now, not a per-crew-row badge.
-    expect(eventCrew).toContain("Missing Gear (");
-    expect(eventCrew).toContain("Reserve gear");
+    const eventDetail = source("src/app/(app)/events/[id]/page.tsx");
+    const eventHeader = source("src/app/(app)/events/[id]/_components/EventHeader.tsx");
+    const eventActivity = source("src/app/(app)/events/[id]/_components/EventActivityCard.tsx");
+    // Event detail keeps header Reserve gear; it does not host a gear card.
+    expect(eventCrew).not.toContain("Missing Gear (");
+    expect(eventDetail).not.toContain("Missing Gear (");
+    expect(eventDetail).not.toContain("EventGearCard");
+    expect(eventHeader).toContain("Reserve gear for this event");
     for (const label of ["Assignment gear", "Event reservation", "Pickup ready"]) {
       expect(eventCrew).not.toContain(label);
     }
@@ -174,8 +182,9 @@ describe("schedule source-of-truth and browser smoke contracts", () => {
     expect(listView).not.toContain("Review changes");
     expect(listView).not.toContain("Unpublished changes");
     expect(listView).not.toContain("Changed recently");
-    expect(eventCrew).toContain("Recent schedule changes");
-    expect(eventCrew).toContain("Needs review");
+    expect(eventCrew).not.toContain("Recent schedule changes");
+    expect(eventActivity).toContain("Activity");
+    expect(eventActivity).toContain("Needs review");
   });
 
   it("keeps Schedule list triage dense, grouped, and actionable across viewport sizes", () => {
@@ -230,36 +239,43 @@ describe("schedule source-of-truth and browser smoke contracts", () => {
 
   it("keeps event editing language clear for type, pickup location, and calendar venue", () => {
     const eventDetail = source("src/app/(app)/events/[id]/page.tsx");
+    const eventHeader = source("src/app/(app)/events/[id]/_components/EventHeader.tsx");
     const newEventSheet = source("src/app/(app)/schedule/_components/NewEventSheet.tsx");
+    const fields = source("src/components/event-editor/EventEditorFields.tsx");
     const patchRoute = source("src/app/api/calendar-events/[id]/route.ts");
     const syncService = source("src/lib/services/calendar-sync.ts");
 
-    for (const file of [eventDetail, newEventSheet]) {
+    for (const file of [fields]) {
       expect(file).toContain("Event type");
       expect(file).toContain("Non-game");
       expect(file).toContain("Pickup location");
     }
+    expect(eventDetail).toContain("EventEditorFields");
+    expect(newEventSheet).toContain("EventEditorFields");
 
-    expect(eventDetail).toContain("Event venue from calendar");
-    expect(eventDetail).toContain("if (!event.source)");
-    expect(eventDetail).toContain("Boolean(event.source) &&");
-    expect(eventDetail).toContain("opponentDraft");
-    expect(eventDetail).toContain("sportCodeDraft");
-    expect(eventDetail).toContain("body.eventType = eventTypeDraft");
-    expect(eventDetail).toContain('sportCodeDraft === "__none__"');
-    expect(eventDetail).toContain("Date and time");
+    expect(fields).toContain("Event venue from calendar");
+    expect(eventDetail).toContain("handleHideEvent");
+    expect(eventHeader).toContain("eventSourceAttribution");
+    expect(eventHeader).toContain("scheduleVenueParts");
+    expect(eventHeader).not.toContain("showPickup");
+    expect(eventDetail).toContain("editDraft.opponent");
+    expect(eventDetail).toContain("editDraft.sportCode");
+    expect(eventDetail).toContain("body.eventType = editDraft.eventType");
+    expect(eventDetail).toContain("editDraft.sportCode === NONE_SPORT_VALUE");
+    expect(fields).toContain("Date and time");
     expect(eventDetail).toContain("body.startsAt = startsAt");
-    expect(eventDetail).toContain("Existing gear reservation windows stay unchanged");
-    expect(newEventSheet).toContain("eventType,");
+    expect(fields).toContain("Existing gear reservation windows stay unchanged");
+    expect(newEventSheet).toContain("eventType: draft.eventType");
     expect(newEventSheet).toContain("Sport is required for a game event");
     expect(newEventSheet).toContain("Opponent is required for a game event");
     expect(patchRoute).toContain("opponent: z.string().max(120).nullable().optional()");
     expect(patchRoute).toContain("isHomeFromVenueTone(body.eventType)");
     expect(patchRoute).toContain("patch.isHomeLocked = true");
-    expect(patchRoute).toContain("Imported event times are controlled by their calendar source");
+    expect(patchRoute).toContain("patch.timingLocked = true");
     expect(patchRoute).toContain("shiftManualEventScheduleTx");
     expect(syncService).toContain("data.sportCode = existing.sportCode");
     expect(syncService).toContain("data.opponent = existing.opponent");
+    expect(syncService).toContain("if (existing.timingLocked)");
   });
 
 });

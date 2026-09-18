@@ -9,6 +9,7 @@ const dbMock = vi.hoisted(() => ({
     findMany: vi.fn(),
     findUnique: vi.fn(),
     update: vi.fn(),
+    delete: vi.fn(),
   },
   shiftGroup: {
     findMany: vi.fn(),
@@ -33,11 +34,16 @@ vi.mock("@/lib/services/shift-generation", () => ({
   generateShiftsForEvent: vi.fn(),
 }));
 
+vi.mock("@/lib/rate-limit", () => ({
+  enforceRateLimit: vi.fn(),
+  SCHEDULE_MUTATION_LIMIT: { windowMs: 60_000, max: 10 },
+}));
+
 import { requireAuth } from "@/lib/auth";
 import { createAuditEntry, createAuditEntryTx } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { generateShiftsForEvent } from "@/lib/services/shift-generation";
-import { PATCH } from "@/app/api/calendar-events/[id]/route";
+import { DELETE, PATCH } from "@/app/api/calendar-events/[id]/route";
 import { GET, POST } from "@/app/api/calendar-events/route";
 
 const staffUser = {
@@ -130,6 +136,10 @@ beforeEach(() => {
     summaryLocked: false,
     isHomeLocked: false,
     locationLocked: false,
+    timingLocked: false,
+    rawStartsAt: null,
+    rawEndsAt: null,
+    rawAllDay: null,
     archivedAt: null,
     subtitle: null,
     opponent: null,
@@ -191,6 +201,7 @@ describe("GET /api/calendar-events", () => {
         where: expect.objectContaining({
           isHidden: false,
           archivedAt: null,
+          combinedIntoId: null,
           startsAt: { lte: new Date("2026-07-08T23:59:59.999Z") },
           endsAt: { gt: new Date("2026-07-08T00:00:00.000Z") },
         }),
@@ -675,7 +686,7 @@ describe("PATCH /api/calendar-events/[id]", () => {
     );
   });
 
-  it("keeps imported event times owned by the calendar source", async () => {
+  it("locks imported event times so later sync cannot overwrite the staff window", async () => {
     vi.mocked(db.calendarEvent.findUnique).mockResolvedValueOnce({
       id: "cmevent000000000000000001",
       sourceId: "calendar-source-1",
@@ -694,6 +705,10 @@ describe("PATCH /api/calendar-events/[id]", () => {
       summaryLocked: false,
       isHomeLocked: false,
       locationLocked: false,
+      timingLocked: false,
+      rawStartsAt: new Date("2026-08-29T18:00:00.000Z"),
+      rawEndsAt: new Date("2026-08-29T20:00:00.000Z"),
+      rawAllDay: false,
       location: null,
     } as unknown as Awaited<ReturnType<typeof db.calendarEvent.findUnique>>);
 
@@ -705,10 +720,16 @@ describe("PATCH /api/calendar-events/[id]", () => {
       { params: Promise.resolve({ id: "cmevent000000000000000001" }) },
     );
 
-    const body = await res.json();
-    expect(res.status).toBe(400);
-    expect(body.error).toBe("Imported event times are controlled by their calendar source");
-    expect(db.calendarEvent.update).not.toHaveBeenCalled();
+    expect(res.status).toBe(200);
+    expect(db.calendarEvent.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          startsAt: new Date("2026-08-28T18:00:00.000Z"),
+          endsAt: new Date("2026-08-28T20:00:00.000Z"),
+          timingLocked: true,
+        }),
+      }),
+    );
   });
 
   it("normalizes manually edited event titles and locks the result", async () => {
@@ -862,5 +883,60 @@ describe("PATCH /api/calendar-events/[id]", () => {
 
     expect(res.status).toBe(400);
     expect(db.calendarEvent.update).not.toHaveBeenCalled();
+  });
+});
+
+describe("DELETE /api/calendar-events/[id]", () => {
+  function del() {
+    return new Request("https://app.example.com/api/calendar-events/cmevent000000000000000001", {
+      method: "DELETE",
+      headers: {
+        host: "app.example.com",
+        origin: "https://app.example.com",
+      },
+    });
+  }
+
+  it("removes a manually added event", async () => {
+    vi.mocked(db.calendarEvent.findUnique).mockResolvedValueOnce({
+      id: "cmevent000000000000000001",
+      sourceId: null,
+      summary: "Media Day",
+      startsAt: new Date("2026-08-29T18:00:00.000Z"),
+      endsAt: new Date("2026-08-29T20:00:00.000Z"),
+      combinedIntoId: null,
+      _count: { combinedEvents: 0 },
+    } as unknown as Awaited<ReturnType<typeof db.calendarEvent.findUnique>>);
+    vi.mocked(db.calendarEvent.delete).mockResolvedValueOnce({
+      id: "cmevent000000000000000001",
+    } as Awaited<ReturnType<typeof db.calendarEvent.delete>>);
+
+    const res = await DELETE(del(), { params: Promise.resolve({ id: "cmevent000000000000000001" }) });
+    expect(res.status).toBe(200);
+    expect(db.calendarEvent.delete).toHaveBeenCalledWith({
+      where: { id: "cmevent000000000000000001" },
+    });
+    expect(createAuditEntryTx).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ action: "calendar_event_deleted" }),
+    );
+  });
+
+  it("refuses to delete imported events", async () => {
+    vi.mocked(db.calendarEvent.findUnique).mockResolvedValueOnce({
+      id: "cmevent000000000000000001",
+      sourceId: "calendar-source-1",
+      summary: "Football vs Notre Dame",
+      startsAt: new Date("2026-08-29T18:00:00.000Z"),
+      endsAt: new Date("2026-08-29T20:00:00.000Z"),
+      combinedIntoId: null,
+      _count: { combinedEvents: 0 },
+    } as unknown as Awaited<ReturnType<typeof db.calendarEvent.findUnique>>);
+
+    const res = await DELETE(del(), { params: Promise.resolve({ id: "cmevent000000000000000001" }) });
+    const body = await res.json();
+    expect(res.status).toBe(400);
+    expect(body.error).toContain("Hide them from the schedule");
+    expect(db.calendarEvent.delete).not.toHaveBeenCalled();
   });
 });

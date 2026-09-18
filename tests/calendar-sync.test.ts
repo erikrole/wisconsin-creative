@@ -601,6 +601,10 @@ function makeExistingRow(overrides: Partial<ExistingEventRow> & { id: string; ex
     startsAt: new Date(Date.UTC(2026, 2, 15, 10, 0, 0)),
     endsAt: new Date(Date.UTC(2026, 2, 15, 12, 0, 0)),
     allDay: false,
+    rawStartsAt: new Date(Date.UTC(2026, 2, 15, 10, 0, 0)),
+    rawEndsAt: new Date(Date.UTC(2026, 2, 15, 12, 0, 0)),
+    rawAllDay: false,
+    rawLocationText: null,
     status: "CONFIRMED",
     locationId: null,
     sportCode: null,
@@ -611,6 +615,7 @@ function makeExistingRow(overrides: Partial<ExistingEventRow> & { id: string; ex
     summaryLocked: false,
     isHomeLocked: false,
     locationLocked: false,
+    timingLocked: false,
     ...overrides,
   };
 }
@@ -648,6 +653,18 @@ describe("splitEventsForSync", () => {
     const existing = [makeExistingRow({ id: "db-1", externalId: "evt-1" })];
     const result = splitEventsForSync(parsed, existing, []);
     expect(result.toUpdate).toHaveLength(1);
+  });
+
+  it("detects changed venue text and puts in toUpdate", () => {
+    const parsed = [makeParsedEvent({ uid: "evt-1", location: "Camp Randall Stadium" })];
+    const existing = [makeExistingRow({
+      id: "db-1",
+      externalId: "evt-1",
+      rawLocationText: "Camp Randall",
+    })];
+    const result = splitEventsForSync(parsed, existing, []);
+    expect(result.toUpdate).toHaveLength(1);
+    expect(result.toUpdate[0]!.data.rawLocationText).toBe("Camp Randall Stadium");
   });
 
   it("detects changed status and puts in toUpdate", () => {
@@ -946,6 +963,20 @@ describe("splitEventsForSync", () => {
     // Time changed → update fires, but the locked summary is preserved in the data
     expect(result.toUpdate).toHaveLength(1);
     expect(result.toUpdate[0]!.data.summary).toBe("My Custom Title");
+  });
+
+  it("timingLocked: sync keeps the staff window and still stores the calendar time", () => {
+    const parsed = [makeParsedEvent({ uid: "evt-1", dtstart: "20260320T100000Z", dtend: "20260320T120000Z" })];
+    const existing = [makeExistingRow({
+      id: "db-1",
+      externalId: "evt-1",
+      timingLocked: true,
+    })];
+    const result = splitEventsForSync(parsed, existing, []);
+    expect(result.toUpdate).toHaveLength(1);
+    expect(result.toUpdate[0]!.data.startsAt).toEqual(existing[0]!.startsAt);
+    expect(result.toUpdate[0]!.data.endsAt).toEqual(existing[0]!.endsAt);
+    expect(result.toUpdate[0]!.data.rawStartsAt.toISOString()).toBe("2026-03-20T10:00:00.000Z");
   });
 
   it("isHomeLocked: sync does not overwrite a manually set event type", () => {

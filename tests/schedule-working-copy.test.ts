@@ -253,6 +253,34 @@ describe("working schedule commands", () => {
     });
   });
 
+  it("replaces an assigned worker without converting the slot", () => {
+    const assigned = applyWorkingScheduleCommand(
+      payload(),
+      { type: "assign", slotKey: "shift-1", userId: "user-1" },
+      () => "unused",
+    );
+
+    const replaced = applyWorkingScheduleCommand(
+      assigned,
+      {
+        type: "convertAndReplace",
+        slotKey: "shift-1",
+        workerType: "ST",
+        userId: "user-2",
+      },
+      () => "unused",
+    );
+
+    expect(replaced.slots[0]).toMatchObject({
+      workerType: "ST",
+      assignment: {
+        sourceAssignmentId: null,
+        userId: "user-2",
+        status: "DIRECT_ASSIGNED",
+      },
+    });
+  });
+
   it("protects active trades and linked bookings during replacement", () => {
     const baseSlot = payload().slots[0]!;
     for (const assignment of [

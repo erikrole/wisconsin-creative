@@ -72,6 +72,12 @@ function createdEvent() {
     sportCode: "MBB",
     opponent: "Iowa",
     isHome: true,
+    site: "HOME",
+    result: null,
+    rawStartsAt: new Date("2026-08-20T19:00:00Z"),
+    rawEndsAt: new Date("2026-08-20T22:00:00Z"),
+    rawAllDay: false,
+    rawLocationText: null,
   };
 }
 
@@ -79,9 +85,11 @@ function existingEvent() {
   return {
     ...createdEvent(),
     summary: "MBB vs Illinois",
+    opponent: "Illinois",
     summaryLocked: false,
     isHomeLocked: false,
     locationLocked: false,
+    timingLocked: false,
   };
 }
 
@@ -115,6 +123,8 @@ describe("syncCalendarSource audit coverage", () => {
         actorUserId: undefined,
         afterJson: expect.objectContaining({
           summary: "MBB vs Iowa",
+          opponent: "Iowa",
+          rawStartsAt: "2026-08-20T19:00:00.000Z",
           _actorRole: null,
         }),
       })],
@@ -136,8 +146,13 @@ describe("syncCalendarSource audit coverage", () => {
         entityType: "calendar_event",
         entityId: "event-1",
         action: "calendar_event_updated",
-        beforeJson: expect.objectContaining({ summary: "MBB vs Illinois" }),
-        afterJson: expect.objectContaining({ summary: "MBB vs Iowa", _actorRole: null }),
+        beforeJson: expect.objectContaining({ summary: "MBB vs Illinois", opponent: "Illinois" }),
+        afterJson: expect.objectContaining({
+          summary: "MBB vs Iowa",
+          opponent: "Iowa",
+          rawStartsAt: "2026-08-20T19:00:00.000Z",
+          _actorRole: null,
+        }),
       })],
     });
   });

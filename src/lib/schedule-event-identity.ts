@@ -100,6 +100,17 @@ export function normalizeVenueText(raw: string | null | undefined): string | nul
  * name an operator scans for.
  */
 export function scheduleVenueDisplayName(raw: string | null | undefined): string | null {
+  return scheduleVenueParts(raw)?.name ?? null;
+}
+
+/**
+ * Split imported calendar location text into the venue name an operator scans
+ * for and the city/state qualifier that belongs on a second line.
+ */
+export function scheduleVenueParts(raw: string | null | undefined): {
+  name: string;
+  locality: string | null;
+} | null {
   const normalized = normalizeVenueText(raw);
   if (!normalized) return null;
 
@@ -108,18 +119,68 @@ export function scheduleVenueDisplayName(raw: string | null | undefined): string
     .map((part) => part.trim())
     .filter(Boolean);
   const first = parts[0];
-  if (!first) return normalized;
-  if (parts.length < 2) return first;
+  if (!first) return { name: normalized, locality: null };
+  if (parts.length === 1) return { name: first, locality: null };
 
-  // A location with only "City, ST" has no venue component to remove.
-  if (parts.length === 2 && isVenueStateToken(parts[1]!)) return parts.join(", ");
+  // A location with only "City, ST" has no separate venue component.
+  if (parts.length === 2 && isVenueStateToken(parts[1]!)) {
+    return { name: parts.join(", "), locality: null };
+  }
 
   // The feed most often uses "City, ST, Venue".
-  if (parts.length >= 3 && isVenueStateToken(parts[1]!)) return parts[2] ?? first;
+  if (parts.length >= 3 && isVenueStateToken(parts[1]!)) {
+    return {
+      name: parts.slice(2).join(", ") || first,
+      locality: `${parts[0]}, ${parts[1]}`,
+    };
+  }
 
-  // Some sources use "Venue, City, ST". For any other malformed shape, keep
-  // the leading component instead of confidently displaying the wrong value.
-  return first;
+  // Some sources use "Venue, City, ST".
+  const last = parts[parts.length - 1];
+  const city = parts[parts.length - 2];
+  if (parts.length >= 3 && last && city && isVenueStateToken(last)) {
+    return {
+      name: parts.slice(0, -2).join(", ") || first,
+      locality: `${city}, ${last}`,
+    };
+  }
+
+  if (parts.length === 2) return { name: first, locality: parts[1] ?? null };
+
+  // For any other malformed shape, keep the leading component.
+  return { name: first, locality: null };
+}
+
+/** Public label for an imported calendar source, e.g. UWBadgers.com. */
+export function calendarSourcePublicLabel(
+  source: { name: string; url?: string | null } | null | undefined,
+): string | null {
+  if (!source) return null;
+  const url = source.url?.trim() ?? "";
+  const haystack = `${source.name} ${url}`.toLowerCase();
+  if (haystack.includes("uwbadgers") || haystack.includes("uw badgers")) {
+    return "UWBadgers.com";
+  }
+  if (url) {
+    try {
+      const host = new URL(url.replace(/^webcal:/i, "https:")).hostname.replace(/^www\./i, "");
+      if (host) return host;
+    } catch {
+      // Fall through to the stored source name.
+    }
+  }
+  return source.name;
+}
+
+/** Event-detail Source line: imported site, or who added a manual event. */
+export function eventSourceAttribution(input: {
+  source?: { name: string; url?: string | null } | null;
+  createdByName?: string | null;
+}): string {
+  const imported = calendarSourcePublicLabel(input.source ?? null);
+  if (imported) return imported;
+  const addedBy = input.createdByName?.trim();
+  return addedBy ? `Added by ${addedBy}` : "Added in Schedule";
 }
 
 function isVenueStateToken(token: string): boolean {

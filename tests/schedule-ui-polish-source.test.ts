@@ -61,17 +61,33 @@ describe("Schedule interaction-detail contracts", () => {
     const editor = source("src/app/(app)/schedule/_components/WorkingCrewEditor.tsx");
 
     // Call | Type | Person | row actions, matching the Event detail Crew table.
-    expect(editor).toContain('const SLOT_ROW_GRID_CLASS = "grid-cols-[4.5rem_4.5rem_minmax(0,1fr)_2.5rem]"');
+    expect(editor).toContain('const SLOT_ROW_GRID_CLASS = "grid-cols-[4.5rem_4.5rem_minmax(0,1fr)]"');
     // The call trigger is bare time in its own column: no clock glyph, no chip.
     expect(editor).not.toContain("Clock3Icon");
     expect(editor).toContain("CREW_CALL_TRIGGER_CLASS");
     // Row chrome comes from the shared crew-row vocabulary, not local copies.
-    expect(editor).toContain("CREW_ROW_REVEAL");
     expect(editor).toContain("CREW_ROW_GROUP");
     expect(editor).not.toContain("const ROW_REVEAL");
     expect(editor).toContain("<AddSlotMenu");
-    expect(editor).toContain("Unassign worker");
+    expect(editor).toContain("Unassign");
+    expect(editor).toContain("Remove ${roleLabel} slot");
     expect(editor).toContain("Remove slot");
+    expect(editor).toContain("CrewFaceClearButton");
+    expect(editor).toContain("CrewFaceFrame");
+    expect(editor).toContain("CrewAssignFaceOverlay");
+    expect(editor).not.toContain('placement="placeholder"');
+    const crewRow = source("src/components/shift-detail/crew-row.tsx");
+    expect(crewRow).toContain("export function CrewFaceClearButton");
+    expect(crewRow).toContain("export function CrewFaceFrame");
+    expect(crewRow).toContain("export function CrewAssignFaceOverlay");
+    expect(crewRow).toContain("CREW_ROW_REVEAL");
+    expect(crewRow).toContain("sm:pointer-events-none");
+    expect(crewRow).toContain("focus:opacity-100");
+    expect(crewRow).toContain("translate-x-1/2 -translate-y-1/2");
+    expect(crewRow).toContain("size-[18px]");
+    expect(crewRow).toContain('data-slot="crew-assign-face"');
+    expect(crewRow).toContain("left-0 top-1/2 -translate-y-1/2");
+    expect(editor).toContain("Replace");
     expect(editor).toContain('className="divide-y divide-border/40 border-y border-border/40"');
     expect(editor).not.toContain("Tooltip");
     expect(editor).not.toContain('<Badge variant="green" size="sm">Published</Badge>');
@@ -100,6 +116,28 @@ describe("Schedule interaction-detail contracts", () => {
 
     expect(editor).toContain('const showCallWindow = !data.allDay && slot.workerType === "ST";');
     expect(editor.match(/\{showCallWindow \?/g)?.length).toBe(2);
+  });
+
+  it("lists every open slot as its own row and keeps Student call times visible", () => {
+    const editor = source("src/app/(app)/schedule/_components/WorkingCrewEditor.tsx");
+    const eventHeader = source("src/app/(app)/events/[id]/_components/EventHeader.tsx");
+    const eventCrew = source("src/app/(app)/events/[id]/_components/ShiftCoverageCard.tsx");
+    const eventActivity = source("src/app/(app)/events/[id]/_components/EventActivityCard.tsx");
+
+    expect(editor).toContain("{slots.map((slot) => {");
+    expect(editor).not.toContain("groupCrewSlotsForDisplay");
+    expect(editor).not.toContain("stackCount");
+    expect(editor).not.toContain("quiet={callQuiet}");
+    expect(editor).toContain("{formatTimeShort(defaultStartsAt)}");
+    expect(editor).toContain("aria-label={`Assign ${roleLabel.toLowerCase()} slot`}");
+    expect(eventHeader).toContain('variant="outline"');
+    expect(eventHeader).toContain("#event-crew");
+    expect(eventHeader).not.toContain("Imported");
+    expect(eventCrew).toContain('id="event-crew"');
+    expect(eventCrew).toContain("Unpublished changes");
+    expect(eventCrew).not.toContain("Pending sync");
+    expect(eventCrew).not.toContain("commonStudentCallKey");
+    expect(eventActivity).toContain('useState<ActivityFilter>("all")');
   });
 
   it("cross-fades collaborator follow-state icons without animating initial render", () => {

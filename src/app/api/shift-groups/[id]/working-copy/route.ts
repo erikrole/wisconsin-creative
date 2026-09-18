@@ -1,6 +1,7 @@
 import { z } from "zod";
+import type { Role } from "@prisma/client";
 import { withAuth } from "@/lib/api";
-import { ok } from "@/lib/http";
+import { HttpError, ok } from "@/lib/http";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { requirePermission } from "@/lib/rbac";
 import { workingScheduleCommandSchema } from "@/lib/schedule-working-copy";
@@ -33,6 +34,32 @@ const rebaseSchema = z.object({
 const discardSchema = z.object({
   expectedVersion: z.coerce.number().int().min(1),
 });
+
+async function publishEndedWorkingSchedule(
+  shiftGroupId: string,
+  actor: { id: string; role: Role },
+  expectedVersion: number,
+) {
+  try {
+    const publication = await publishShiftGroup(
+      shiftGroupId,
+      actor.id,
+      expectedVersion,
+      actor.role,
+      { clearNotificationPending: true },
+    );
+    await Promise.allSettled(
+      publication.affectedUserIds.map((userId) => badges.onShiftsWorked({ userId }, { notify: false })),
+    );
+    return getWorkingScheduleEditor(shiftGroupId, actor.id);
+  } catch (error) {
+    const editor = await getWorkingScheduleEditor(shiftGroupId, actor.id);
+    const message = error instanceof HttpError
+      ? error.message
+      : "Could not apply this correction. Review the crew and try again.";
+    return { ...editor, autoReleaseError: editor.autoReleaseError ?? message };
+  }
+}
 
 export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
   requirePermission(user.role, "shift", "manage");
@@ -71,17 +98,7 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
     ? await changeWorkingScheduleHistory(params.id, body.expectedVersion, body.action, user, autoRelease)
     : await mutateWorkingSchedule(params.id, body.expectedVersion, body.command, user, autoRelease);
   if (eventHasEnded) {
-    const publication = await publishShiftGroup(
-      params.id,
-      user.id,
-      data.workingVersion,
-      user.role,
-      { clearNotificationPending: true },
-    );
-    await Promise.allSettled(
-      publication.affectedUserIds.map((userId) => badges.onShiftsWorked({ userId }, { notify: false })),
-    );
-    return ok({ data: await getWorkingScheduleEditor(params.id, user.id) });
+    return ok({ data: await publishEndedWorkingSchedule(params.id, user, data.workingVersion) });
   }
   return ok({ data });
 });
@@ -100,17 +117,7 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
     });
   const data = await rebaseWorkingSchedule(params.id, body.expectedVersion, user, autoRelease);
   if (eventHasEnded) {
-    const publication = await publishShiftGroup(
-      params.id,
-      user.id,
-      data.workingVersion,
-      user.role,
-      { clearNotificationPending: true },
-    );
-    await Promise.allSettled(
-      publication.affectedUserIds.map((userId) => badges.onShiftsWorked({ userId }, { notify: false })),
-    );
-    return ok({ data: await getWorkingScheduleEditor(params.id, user.id) });
+    return ok({ data: await publishEndedWorkingSchedule(params.id, user, data.workingVersion) });
   }
   return ok({ data });
 });

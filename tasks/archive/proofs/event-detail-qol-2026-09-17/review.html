@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Event detail Activity names calendar diffs</title>
+<style>
+  :root {
+    --ground:#EEF0F4; --surface:#FFFFFF; --raised:#F7F8FA;
+    --ink:#14171C; --muted:#5B6472; --faint:#8B95A3;
+    --line:#D8DDE5; --accent:#C5050C; --good:#1B7F3B; --warn:#A65A00;
+    --shadow:0 1px 2px rgba(20,23,28,.06), 0 8px 24px rgba(20,23,28,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#131519; --surface:#1B1E24; --raised:#22262E;
+      --ink:#E9ECF1; --muted:#9AA4B2; --faint:#727D8C;
+      --line:#2C313A; --accent:#F2545B; --good:#4ADE80; --warn:#F0A64A;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#131519; --surface:#1B1E24; --raised:#22262E;
+    --ink:#E9ECF1; --muted:#9AA4B2; --faint:#727D8C;
+    --line:#2C313A; --accent:#F2545B; --good:#4ADE80; --warn:#F0A64A;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; background:var(--ground); color:var(--ink);
+    font-family:"Public Sans", ui-sans-serif, system-ui, sans-serif;
+    font-size:16px; line-height:1.6; -webkit-font-smoothing:antialiased;
+  }
+  .wrap { max-width:1080px; margin:0 auto; padding:56px 24px 96px; }
+  .eyebrow {
+    font-family:"IBM Plex Mono", ui-monospace, monospace; font-size:.72rem;
+    letter-spacing:.14em; text-transform:uppercase; color:var(--accent); margin:0 0 14px;
+  }
+  h1 {
+    font-family:"Archivo Narrow", Arial Narrow, sans-serif; font-weight:700;
+    font-size:clamp(2.4rem,6vw,3.9rem); line-height:1.02; letter-spacing:-.015em;
+    margin:0 0 18px; text-wrap:balance;
+  }
+  .lede { font-size:1.12rem; color:var(--muted); max-width:60ch; margin:0; }
+  .rule { height:2px; background:var(--accent); width:64px; margin:34px 0 0; border:0; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:14px; margin:44px 0 0; }
+  .stat { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:20px; box-shadow:var(--shadow); }
+  .stat .k { font-family:"IBM Plex Mono", monospace; font-size:.68rem; letter-spacing:.12em;
+             text-transform:uppercase; color:var(--faint); margin:0 0 10px; }
+  .stat .v { font-family:"Archivo Narrow", sans-serif; font-weight:700; font-size:2.15rem;
+             line-height:1; margin:0 0 6px; font-variant-numeric:tabular-nums; }
+  .stat .n { font-size:.86rem; color:var(--muted); margin:0; line-height:1.45; }
+  .down { color:var(--good); }
+  h2 { font-family:"Archivo Narrow", sans-serif; font-weight:700;
+       font-size:1.9rem; letter-spacing:-.01em; margin:72px 0 6px; }
+  .sec-note { color:var(--muted); margin:0 0 26px; font-size:.95rem; }
+  .pair { margin:0 0 40px; }
+  .pair-head h3 { font-family:"Archivo Narrow",sans-serif; font-weight:600; font-size:1.2rem; margin:0 0 2px; }
+  .pair-head p { margin:0 0 16px; color:var(--muted); font-size:.92rem; }
+  .shots { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  figure { margin:0; display:flex; flex-direction:column; gap:10px; }
+  figure img { width:100%; height:auto; display:block; border-radius:14px;
+               border:1px solid var(--line); box-shadow:var(--shadow); background:var(--surface); }
+  figcaption { font-size:.85rem; color:var(--muted); line-height:1.5; }
+  .tag { font-family:"IBM Plex Mono",monospace; font-size:.66rem; letter-spacing:.12em;
+         text-transform:uppercase; padding:4px 9px; border-radius:5px; align-self:flex-start; font-weight:600; }
+  .tag-before { background:color-mix(in srgb, var(--muted) 14%, transparent); color:var(--muted); }
+  .tag-after { background:color-mix(in srgb, var(--accent) 13%, transparent); color:var(--accent); }
+  .change { border-top:1px solid var(--line); padding:22px 0 4px; }
+  .change h3 { font-family:"Archivo Narrow",sans-serif; font-weight:600; font-size:1.18rem; margin:0 0 14px; }
+  .ba { display:grid; grid-template-columns:1fr 1fr; gap:26px; }
+  .ba p { margin:6px 0 0; font-size:.93rem; color:var(--muted); }
+  .lbl { font-family:"IBM Plex Mono",monospace; font-size:.64rem; letter-spacing:.13em;
+         text-transform:uppercase; font-weight:600; }
+  .lbl-b { color:var(--faint); }
+  .lbl-a { color:var(--accent); }
+  .panel { background:var(--surface); border:1px solid var(--line); border-radius:12px;
+           padding:24px 26px; box-shadow:var(--shadow); }
+  .panel ul { margin:0; padding-left:19px; }
+  .panel li { margin:0 0 9px; font-size:.94rem; }
+  .panel li:last-child { margin-bottom:0; }
+  code { font-family:"IBM Plex Mono",monospace; font-size:.86em; background:var(--raised);
+         border:1px solid var(--line); padding:1px 5px; border-radius:4px; }
+  .flag { border-left:3px solid var(--warn); }
+  @media (max-width:720px) {
+    .wrap { padding:36px 16px 64px; }
+    .ba { grid-template-columns:1fr; gap:16px; }
+  }
+</style></head><body>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Web · Wisconsin Creative · Event detail</p>
+    <h1>Event detail Activity names calendar diffs</h1>
+    <p class="lede">Football vs Eastern Michigan Activity rows from UWBadgers.com now name the field that changed. The Sep 2 update is a description/broadcast note, not a blank headline.</p>
+    <hr class="rule">
+  </header>
+  <div class="stats">
+    <div class="stat">
+      <p class="k">Sep 2 row</p>
+      <p class="v">Description</p>
+      <p class="n">The stored audit only differed on description (TV/radio notes). That value is now the supporting line.</p>
+    </div>
+    <div class="stat">
+      <p class="k">Activity filter</p>
+      <p class="v">All</p>
+      <p class="n">All is selected by default so calendar updates are visible without switching filters.</p>
+    </div></div>
+
+  <h2>After</h2>
+  <p class="sec-note">Authenticated after capture on Football vs Eastern Michigan (`/events/cmmgnauku006qx10lf8cg5fjk`), Admin, dark appearance, 1623×1345. Hash-bound pair receipts were not recorded for the earlier before-activity.png, so this is after-only rather than a matched pair. The before PNG in this folder shows the same Sep 2 row with no supporting line.</p>
+
+  <h2>What changed, and why</h2>
+  <div class="change">
+    <h3>Calendar update supporting line</h3>
+    <div class="ba">
+      <div><span class="lbl lbl-b">Was</span><p>Updated from UWBadgers.com with no field list, because the projector only inspected title/start/end/pickup/label.</p></div>
+      <div><span class="lbl lbl-a">Now</span><p>The row lists every changed field. This event’s Sep 2 and Aug 19 syncs recorded a description/broadcast note, so that is what Activity shows.</p></div>
+    </div>
+  </div>
+  <div class="change">
+    <h3>Future raw-window syncs</h3>
+    <div class="ba">
+      <div><span class="lbl lbl-b">Was</span><p>A timing-locked republish of calendar start/end could write an audit with no displayed field, so Activity stayed blank.</p></div>
+      <div><span class="lbl lbl-a">Now</span><p>New sync audits include calendar start/end, all-day, and venue text. If a historical snapshot has no field evidence, the row says Calendar listing refreshed.</p></div>
+    </div>
+  </div>
+  <div class="change">
+    <h3>Student call times</h3>
+    <div class="ba">
+      <div><span class="lbl lbl-b">Was</span><p>Matching Student rows used a dash instead of 8:30 AM.</p></div>
+      <div><span class="lbl lbl-a">Now</span><p>Every Student row shows its call time. Open slots stay one row each. Activity opens on All.</p></div>
+    </div>
+  </div>
+  <h2>Verification</h2><div class="panel"><ul><li>132 focused tests across schedule-change-history, event-activity-copy, calendar-sync, calendar-sync-audit, and schedule-ui-polish-source.</li><li>ESLint passed on schedule-change-history, calendar-sync, Event Activity copy/card, ShiftCoverageCard, and WorkingCrewEditor.</li><li>Authenticated Football vs Eastern Michigan: Sep 2 row supporting line is Description: Wisconsin Athletics Football vs Eastern Michigan TV: Peacock Radio: Badger Ra…; All 10 is selected; Student rows show 8:30 AM; 15 open/assigned slots remain unstacked.</li><li>Did not Hide, Save, Remove, Approve, or Publish on Eastern Michigan.</li></ul></div>
+  <h2>Things to know</h2><div class="panel flag"><ul><li>Native iOS Event detail was not part of this slice.</li><li>`npx tsc --noEmit` still fails on unrelated src/lib/services/blasts.ts.</li><li>Historical audits cannot invent fields that were never snapshotted. Later syncs persist raw calendar times and venue text so those diffs can be named.</li><li>After capture: tasks/archive/proofs/event-detail-qol-2026-09-17/after-activity-diffs.png</li></ul></div>
+</div>
+</body></html>

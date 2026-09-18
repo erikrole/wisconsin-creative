@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
   buildVenueSearchText,
+  calendarSourcePublicLabel,
   cleanSourceSummary,
+  eventSourceAttribution,
   normalizeOpponentName,
   classifySourceEvent,
   normalizeVenueText,
   parseEventResult,
   scheduleVenueDisplayName,
+  scheduleVenueParts,
 } from "@/lib/schedule-event-identity";
 
 describe("schedule event identity normalization", () => {
@@ -37,6 +40,30 @@ describe("schedule event identity normalization", () => {
     expect(scheduleVenueDisplayName("Camp Randall Stadium, Madison, WI")).toBe("Camp Randall Stadium");
     expect(scheduleVenueDisplayName("Iowa City, IA")).toBe("Iowa City, IA");
     expect(scheduleVenueDisplayName("   ")).toBeNull();
+  });
+
+  it("splits venue name from city and state for event identity", () => {
+    expect(scheduleVenueParts("Madison, Wis., UW Field House")).toEqual({
+      name: "UW Field House",
+      locality: "Madison, WI",
+    });
+    expect(scheduleVenueParts("Camp Randall Stadium, Madison, WI")).toEqual({
+      name: "Camp Randall Stadium",
+      locality: "Madison, WI",
+    });
+    expect(scheduleVenueParts("Iowa City, IA")).toEqual({
+      name: "Iowa City, IA",
+      locality: null,
+    });
+  });
+
+  it("attributes imported events to UWBadgers.com and manual events to the adder", () => {
+    expect(calendarSourcePublicLabel({ name: "UW Badgers", url: "webcal://uwbadgers.com/api/v2/Calendar/subscribe" })).toBe("UWBadgers.com");
+    expect(eventSourceAttribution({
+      source: { name: "UW Badgers", url: "webcal://uwbadgers.com/api/v2/Calendar/subscribe" },
+    })).toBe("UWBadgers.com");
+    expect(eventSourceAttribution({ source: null, createdByName: "Erik Role" })).toBe("Added by Erik Role");
+    expect(eventSourceAttribution({ source: null })).toBe("Added in Schedule");
   });
 });
 

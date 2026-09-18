@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeftRightIcon, MoreHorizontalIcon, PlusIcon, UsersRoundIcon, XIcon } from "lucide-react";
+import { ArrowLeftRightIcon, MoreHorizontalIcon, PlusIcon, UserMinusIcon, UsersRoundIcon, XIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,12 +33,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { UserAvatar } from "@/components/UserAvatar";
+import { CrewPendingReview } from "@/components/shift-detail/CrewPendingReview";
 import { UserAvatarPicker, type PickerUser } from "@/components/shift-detail/UserAvatarPicker";
 import { handleAuthRedirect, isAbortError, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { formatTimeShort } from "@/lib/format";
 import { formatScheduleReleaseCountdown } from "@/lib/schedule-release";
 import { QUARTER_HOUR_MINUTES, roundUpToQuarterHour } from "@/lib/quarter-hour";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { claimsForWorkingSlot, tradeForWorkingSlot, type PendingCrewClaim, type PendingCrewTrade } from "@/lib/crew-pending-review";
 import type { WorkingScheduleCommand, WorkingSchedulePayload } from "@/lib/schedule-working-copy";
 import type { CandidateRecommendation } from "@/lib/candidate-scoring-types";
 import { cn } from "@/lib/utils";
@@ -47,8 +49,10 @@ import {
   AssignSlotButton,
   CREW_CALL_TRIGGER_CLASS,
   CREW_ROW_GROUP,
-  CREW_ROW_REVEAL,
   CrewAreaHeading,
+  CrewAssignFaceOverlay,
+  CrewFaceClearButton,
+  CrewFaceFrame,
   CrewTypeLabel,
 } from "@/components/shift-detail/crew-row";
 import { AREA_LABELS } from "@/types/areas";
@@ -79,6 +83,8 @@ type EditorData = {
   };
   affectedWorkerCount: number;
   assignedUsers: PickerUser[];
+  pendingClaims?: PendingCrewClaim[];
+  pendingTrades?: PendingCrewTrade[];
   autoReleaseAt: string | null;
   autoReleaseError: string | null;
   schedule: WorkingSchedulePayload;
@@ -104,11 +110,14 @@ type Props = {
   compact?: boolean;
   showReleaseCountdown?: boolean;
   eventDetailHref?: string;
+  showStudentCallButton?: boolean;
+  studentCallOpen?: boolean;
+  onStudentCallOpenChange?: (open: boolean) => void;
 };
 
 const AREA_ORDER = ["VIDEO", "PHOTO", "GRAPHICS", "SOCIAL", "COMMS", "LIVE_PRODUCTION"] as const;
-// Call | Type | Person | row actions, matching the Event detail Crew table.
-const SLOT_ROW_GRID_CLASS = "grid-cols-[4.5rem_4.5rem_minmax(0,1fr)_2.5rem]";
+// Call | Type | Person | row actions
+const SLOT_ROW_GRID_CLASS = "grid-cols-[4.5rem_4.5rem_minmax(0,1fr)]";
 type LoadError = false | "network" | "server";
 
 function candidateWorkerType(candidate: PickerUser): "FT" | "ST" {
@@ -238,23 +247,31 @@ function SetAllCallTimesEditor({
   disabled,
   onSave,
   onReview,
+  open,
+  onOpenChange,
+  showTrigger = true,
 }: {
   data: Pick<EditorData, "defaultWindow" | "schedule">;
   disabled: boolean;
   onSave: (callStartsAt: string, callEndsAt: string) => Promise<boolean>;
   onReview: () => Promise<void>;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  showTrigger?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const dialogOpen = open ?? uncontrolledOpen;
+  const setDialogOpen = onOpenChange ?? setUncontrolledOpen;
   const [saveError, setSaveError] = useState(false);
   const [startsAt, setStartsAt] = useState(() => toLocalDateTimeValue(data.defaultWindow.startsAt));
   const [endsAt, setEndsAt] = useState(() => toLocalDateTimeValue(data.defaultWindow.endsAt));
 
   useEffect(() => {
-    if (open) return;
+    if (dialogOpen) return;
     setSaveError(false);
     setStartsAt(toLocalDateTimeValue(data.defaultWindow.startsAt));
     setEndsAt(toLocalDateTimeValue(data.defaultWindow.endsAt));
-  }, [data.defaultWindow.endsAt, data.defaultWindow.startsAt, open]);
+  }, [data.defaultWindow.endsAt, data.defaultWindow.startsAt, dialogOpen]);
 
   async function save() {
     if (disabled) return;
@@ -270,26 +287,28 @@ function SetAllCallTimesEditor({
       return;
     }
     const saved = await onSave(nextStartsAt.toISOString(), nextEndsAt.toISOString());
-    if (saved) setOpen(false);
+    if (saved) setDialogOpen(false);
     else setSaveError(true);
   }
 
   return (
     <>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="h-10 gap-1.5 px-2 text-xs"
-        disabled={disabled || data.schedule.slots.length === 0}
-        onClick={() => setOpen(true)}
-      >
-        <UsersRoundIcon className="size-3.5" />
-        Set Student call time
-      </Button>
-      <Dialog open={open} onOpenChange={setOpen}>
+      {showTrigger ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-10 gap-1.5 px-2 text-xs"
+          disabled={disabled || data.schedule.slots.length === 0}
+          onClick={() => setDialogOpen(true)}
+        >
+          <UsersRoundIcon className="size-3.5" />
+          Set Student call time
+        </Button>
+      ) : null}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-md">
-          <DialogHeader>
+          <DialogHeader className="flex-col items-start gap-1">
             <DialogTitle>Set Student call time</DialogTitle>
             <DialogDescription>
               Every Student slot will use this window and Student personal overrides will be cleared.
@@ -320,7 +339,7 @@ function SetAllCallTimesEditor({
           </div>
           {saveError && <div className="space-y-2 px-6"><p role="alert" className="text-xs text-destructive">Save was not confirmed. Your entered times are still here. Review the latest crew before trying again.</p><Button type="button" variant="outline" className="h-10" onClick={() => void onReview()}>Review latest crew</Button></div>}
           <DialogFooter>
-            <Button type="button" variant="outline" disabled={disabled} onClick={() => setOpen(false)}>Cancel</Button>
+            <Button type="button" variant="outline" disabled={disabled} onClick={() => setDialogOpen(false)}>Cancel</Button>
             <Button type="button" disabled={disabled} onClick={() => void save()}>Apply to Students</Button>
           </DialogFooter>
         </DialogContent>
@@ -335,10 +354,14 @@ export function WorkingCrewEditor({
   compact = false,
   showReleaseCountdown = true,
   eventDetailHref,
+  showStudentCallButton = true,
+  studentCallOpen,
+  onStudentCallOpenChange,
 }: Props) {
   const shiftGroupId = entry.shiftGroupId;
   const { data: currentUser } = useCurrentUser();
   const canManageSchedule = currentUser?.role === "ADMIN" || currentUser?.role === "STAFF";
+  const canReviewClaims = currentUser?.role === "ADMIN";
   const [data, setData] = useState<EditorData | null>(null);
   const [loading, setLoading] = useState(true);
   const [editorLoadError, setEditorLoadError] = useState<LoadError>(false);
@@ -362,6 +385,10 @@ export function WorkingCrewEditor({
   const usersAbortRef = useRef<AbortController | null>(null);
   const editorAbortRef = useRef<AbortController | null>(null);
   const [userSearch, setUserSearch] = useState("");
+  const [activePickerKey, setActivePickerKey] = useState<string | null>(null);
+  const [internalStudentCallOpen, setInternalStudentCallOpen] = useState(false);
+  const studentCallDialogOpen = studentCallOpen ?? internalStudentCallOpen;
+  const setStudentCallDialogOpen = onStudentCallOpenChange ?? setInternalStudentCallOpen;
   const [usersLoadError, setUsersLoadError] = useState<LoadError>(false);
   const [revertOpen, setRevertOpen] = useState(false);
   const [publishNowOpen, setPublishNowOpen] = useState(false);
@@ -427,6 +454,7 @@ export function WorkingCrewEditor({
 
   const closePicker = useCallback(() => {
     setUserSearch("");
+    setActivePickerKey(null);
   }, []);
 
   const loadEditor = useCallback(async (): Promise<EditorData | null> => {
@@ -584,6 +612,51 @@ export function WorkingCrewEditor({
     if (await loadEditor()) setMutationUncertain(false);
   }, [loadEditor]);
 
+  const reviewPending = useCallback(async (
+    kind: "claim" | "trade",
+    id: string,
+    decision: "approve" | "decline",
+    claimantName: string,
+  ) => {
+    if (!canReviewClaims || actingRef.current || mutationUncertain) return;
+    actingRef.current = true;
+    const acting = `${decision}:${id}`;
+    setActingKey(acting);
+    const path = kind === "claim"
+      ? `/api/shift-assignments/${id}/${decision}`
+      : `/api/shift-trades/${id}/${decision}`;
+    try {
+      const response = await fetch(path, { method: "PATCH" });
+      if (handleAuthRedirect(response)) return;
+      if (response.status >= 500) throw new Error("Mutation outcome unavailable");
+      if (response.ok) {
+        toast.success(decision === "approve"
+          ? kind === "claim"
+            ? `${claimantName} is on the schedule`
+            : "Trade approved"
+          : kind === "claim"
+            ? `Request declined for ${claimantName}`
+            : "Claim declined");
+        await loadEditor();
+        void Promise.resolve().then(onPublished).catch(() => {
+          toast.error("Review saved; refresh the schedule to confirm its display.");
+        });
+        return;
+      }
+      toast.error(await parseErrorMessage(
+        response,
+        decision === "approve" ? "Could not approve this request" : "Could not decline this request",
+      ));
+      if (response.status === 409) await loadEditor();
+    } catch {
+      await loadEditor();
+      toast.error("The review response was lost. Review the latest crew before trying again.");
+    } finally {
+      actingRef.current = false;
+      setActingKey(null);
+    }
+  }, [canReviewClaims, loadEditor, mutationUncertain, onPublished]);
+
   const discard = useCallback(async () => {
     if (!shiftGroupId || !data?.hasWorkingCopy || actingRef.current || mutationUncertain) return;
     actingRef.current = true;
@@ -665,7 +738,9 @@ export function WorkingCrewEditor({
       setData(json.data);
       setMutationUncertain(false);
       void Promise.resolve().then(onPublished).catch(() => toast.error("Schedule published; refresh the schedule to confirm its display."));
-      toast.success("Schedule published now");
+      toast.success(new Date(data.eventEndsAt).getTime() <= Date.now()
+        ? "Correction applied"
+        : "Schedule published now");
     } catch {
       setMutationUncertain(true);
       await loadEditor();
@@ -744,7 +819,7 @@ export function WorkingCrewEditor({
       {(data.hasWorkingCopy
         || (showReleaseCountdown && data.autoReleaseError)
         || compact
-        || (!data.allDay && data.schedule.slots.some((slot) => slot.workerType === "ST"))) && (
+        || (showStudentCallButton && !data.allDay && data.schedule.slots.some((slot) => slot.workerType === "ST"))) && (
         <div className="flex min-h-10 flex-wrap items-center gap-2 pb-1">
           {showReleaseCountdown && !eventHasEnded && data.hasWorkingCopy && data.autoReleaseAt && !data.autoReleaseError && (
             <span className="text-xs text-muted-foreground">{formatNotificationCountdown(data.autoReleaseAt, clock)}</span>
@@ -752,22 +827,24 @@ export function WorkingCrewEditor({
           {showReleaseCountdown && !eventHasEnded && data.hasWorkingCopy && !data.autoReleaseAt && !data.autoReleaseError && (
             <span className="text-xs text-muted-foreground">{formatScheduleReleaseCountdown(null, clock)}</span>
           )}
-          {showReleaseCountdown && !eventHasEnded && data.autoReleaseError && (
+          {showReleaseCountdown && data.autoReleaseError && (
             <span className="text-xs text-destructive">Release needs attention: {data.autoReleaseError}</span>
           )}
           <div className="ml-0 flex w-full flex-wrap items-center gap-1.5 sm:ml-auto sm:w-auto">
-            {!data.allDay && data.schedule.slots.some((slot) => slot.workerType === "ST") && (
-              <SetAllCallTimesEditor
-                data={data}
-                onReview={reviewLatestCrew}
-                disabled={actionsDisabled}
-                onSave={(callStartsAt, callEndsAt) => mutate(
-                  { type: "setCallWindowForAll", callStartsAt, callEndsAt },
-                  "all-call-window",
-                )}
-              />
+            {canManageSchedule && showStudentCallButton && !data.allDay && data.schedule.slots.some((slot) => slot.workerType === "ST") && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-10 gap-1.5 px-2 text-xs"
+                disabled={actionsDisabled || data.schedule.slots.length === 0}
+                onClick={() => setStudentCallDialogOpen(true)}
+              >
+                <UsersRoundIcon className="size-3.5" />
+                Set Student call time
+              </Button>
             )}
-            {canManageSchedule && !eventHasEnded && data.hasWorkingCopy && (
+            {canManageSchedule && data.hasWorkingCopy && (
               <Button
                 type="button"
                 variant="outline"
@@ -776,7 +853,7 @@ export function WorkingCrewEditor({
                 disabled={actionsDisabled}
                 onClick={() => setPublishNowOpen(true)}
               >
-                Publish now
+                {eventHasEnded ? "Apply correction now" : "Publish now"}
               </Button>
             )}
             {data.hasWorkingCopy && (
@@ -829,6 +906,11 @@ export function WorkingCrewEditor({
                   const showCallWindow = !data.allDay && slot.workerType === "ST";
                   const canConvert = !slot.assignment && slot.assignmentHistoryCount === 0;
                   const eligibleUsers = availableUsersForSlot(slot.workerType);
+                  const pendingClaims = claimsForWorkingSlot(slot, data.pendingClaims ?? []);
+                  const pendingTrade = tradeForWorkingSlot(slot, data.pendingTrades ?? []);
+                  const reviewBlockedReason = data.hasWorkingCopy
+                    ? "Release or discard crew edits before reviewing claims."
+                    : null;
                   return slot.assignment ? (
                     <div key={slot.key} className={cn(`${CREW_ROW_GROUP} grid min-h-11 min-w-0 items-center gap-2 rounded-md px-1 hover:bg-muted/20`, SLOT_ROW_GRID_CLASS)}>
                       {showCallWindow ? (
@@ -843,47 +925,125 @@ export function WorkingCrewEditor({
                         />
                       ) : <span aria-hidden="true" />}
                       <CrewTypeLabel label={roleLabel} />
-                      <div className="flex min-w-0 items-center gap-2">
-                        <UserAvatar name={user?.name ?? "Assigned"} avatarUrl={user?.avatarUrl} size="sm" />
-                        <span className="min-w-0 truncate text-sm">{user?.name ?? "Assigned worker"}</span>
-                      </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            className={cn("size-10 text-muted-foreground", CREW_ROW_REVEAL)}
-                            aria-label={`Actions for ${user?.name ?? "assigned worker"}`}
+                      <div className="flex min-w-0 items-center gap-2 overflow-visible">
+                        <CrewFaceFrame>
+                          <UserAvatar name={user?.name ?? "Assigned"} avatarUrl={user?.avatarUrl} size="sm" />
+                          <CrewFaceClearButton
+                            label={`Unassign ${user?.name ?? "worker"}`}
                             disabled={actionsDisabled}
-                          >
-                            <MoreHorizontalIcon className="size-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-56">
-                          <DropdownMenuItem
-                            onSelect={() => {
-                              const target = {
-                                slotKey: slot.key,
-                                workerType: otherWorkerType as "FT" | "ST",
-                                currentWorkerName: user?.name ?? "assigned worker",
-                              };
-                              setReplacementTarget(target);
+                            onClick={() => void mutate({ type: "unassign", slotKey: slot.key }, `${slot.key}-unassign`)}
+                          />
+                        </CrewFaceFrame>
+                        <span className="min-w-0 truncate text-sm">{user?.name ?? "Assigned worker"}</span>
+                        {pendingTrade && (
+                          <CrewPendingReview
+                            trade={pendingTrade}
+                            canReview={canReviewClaims}
+                            reviewBlockedReason={reviewBlockedReason}
+                            disabled={actionsDisabled}
+                            actingId={actingKey}
+                            onApprove={(id) => void reviewPending(
+                              "trade",
+                              id,
+                              "approve",
+                              pendingTrade.claimedBy?.name ?? "Someone",
+                            )}
+                            onDecline={(id) => void reviewPending(
+                              "trade",
+                              id,
+                              "decline",
+                              pendingTrade.claimedBy?.name ?? "Someone",
+                            )}
+                          />
+                        )}
+                        <div className="ml-auto flex items-center justify-end gap-0.5">
+                        <Popover
+                          open={activePickerKey === `${slot.key}-replace`}
+                          onOpenChange={(open) => {
+                            if (open) {
+                              setActivePickerKey(`${slot.key}-replace`);
                               openPicker();
-                              void loadCandidateScores(slot.key, target.workerType);
-                            }}
-                          >
-                            <ArrowLeftRightIcon />
-                            Replace and convert to {otherWorkerType === "FT" ? "Staff" : "Student"}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            variant="destructive"
-                            onSelect={() => void mutate({ type: "unassign", slotKey: slot.key }, `${slot.key}-unassign`)}
-                          >
-                            <XIcon />
-                            Unassign worker
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                              void loadCandidateScores(slot.key, slot.workerType);
+                            } else {
+                              closePicker();
+                            }
+                          }}
+                        >
+                          <PopoverTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              className="h-10 px-2 text-xs text-muted-foreground hover:text-foreground"
+                              disabled={actionsDisabled}
+                              aria-label={`Replace ${user?.name ?? "assigned worker"}`}
+                            >
+                              <ArrowLeftRightIcon className="size-3.5" />
+                              Replace
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-80 max-w-[calc(100vw-2rem)] p-2 sm:w-96" align="end">
+                            <UserAvatarPicker
+                              users={eligibleUsers}
+                              loading={usersLoading}
+                              loadError={usersLoadError}
+                              onRetry={retryUsers}
+                              search={userSearch}
+                              onSearchChange={setUserSearch}
+                              onSelect={(userId) => {
+                                void mutate(
+                                  { type: "convertAndReplace", slotKey: slot.key, workerType: slot.workerType, userId },
+                                  `${slot.key}-replace`,
+                                ).then((succeeded) => {
+                                  if (succeeded) closePicker();
+                                });
+                              }}
+                              disabled={actionsDisabled}
+                              slotWorkerType={slot.workerType}
+                              candidateScores={candidateScoreState?.slotKey === slot.key ? candidateScoreState.scores : undefined}
+                              scoresLoading={scoresLoadingKey === slot.key}
+                              scoresLoadError={scoresErrorKey === slot.key}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              className="size-10 text-muted-foreground"
+                              aria-label={`More actions for ${user?.name ?? "assigned worker"}`}
+                              disabled={actionsDisabled}
+                            >
+                              <MoreHorizontalIcon className="size-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-56">
+                            <DropdownMenuItem
+                              onSelect={() => {
+                                const target = {
+                                  slotKey: slot.key,
+                                  workerType: otherWorkerType as "FT" | "ST",
+                                  currentWorkerName: user?.name ?? "assigned worker",
+                                };
+                                setReplacementTarget(target);
+                                openPicker();
+                                void loadCandidateScores(slot.key, target.workerType);
+                              }}
+                            >
+                              <ArrowLeftRightIcon />
+                              Convert to {otherWorkerType === "FT" ? "Staff" : "Student"}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              variant="destructive"
+                              onSelect={() => void mutate({ type: "unassign", slotKey: slot.key }, `${slot.key}-unassign`)}
+                            >
+                              <UserMinusIcon />
+                              Unassign
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      </div>
                     </div>
                   ) : (
                     <div key={slot.key} className={cn(`${CREW_ROW_GROUP} grid min-h-11 min-w-0 items-center gap-2 rounded-md px-1 hover:bg-muted/20`, SLOT_ROW_GRID_CLASS)}>
@@ -899,70 +1059,111 @@ export function WorkingCrewEditor({
                         />
                       ) : <span aria-hidden="true" />}
                       <CrewTypeLabel label={roleLabel} />
-                      <Popover onOpenChange={(open) => {
-                        if (open) {
-                          openPicker();
-                          void loadCandidateScores(slot.key);
-                        } else {
-                          closePicker();
-                        }
-                      }}>
-                        <PopoverTrigger asChild>
-                          <AssignSlotButton
+                      <div className="flex min-w-0 items-center gap-2">
+                        <div className="relative w-fit overflow-visible">
+                          <Popover
+                            open={activePickerKey === `${slot.key}-assign`}
+                            onOpenChange={(open) => {
+                              if (open) {
+                                setActivePickerKey(`${slot.key}-assign`);
+                                openPicker();
+                                void loadCandidateScores(slot.key);
+                              } else {
+                                closePicker();
+                              }
+                            }}
+                          >
+                            <PopoverTrigger asChild>
+                              <AssignSlotButton
+                                disabled={actionsDisabled}
+                                aria-label={`Assign ${roleLabel.toLowerCase()} slot`}
+                              />
+                            </PopoverTrigger>
+                            <PopoverContent className="w-80 max-w-[calc(100vw-2rem)] p-2 sm:w-96" align="start">
+                              <UserAvatarPicker
+                                users={eligibleUsers}
+                                loading={usersLoading}
+                                loadError={usersLoadError}
+                                onRetry={retryUsers}
+                                search={userSearch}
+                                onSearchChange={setUserSearch}
+                                onSelect={(userId) => {
+                                  void mutate({ type: "assign", slotKey: slot.key, userId }, `${slot.key}-assign`)
+                                    .then((succeeded) => {
+                                      if (succeeded) closePicker();
+                                    });
+                                }}
+                                disabled={actionsDisabled}
+                                slotWorkerType={slot.workerType}
+                                candidateScores={candidateScoreState?.slotKey === slot.key ? candidateScoreState.scores : undefined}
+                                scoresLoading={scoresLoadingKey === slot.key}
+                                scoresLoadError={scoresErrorKey === slot.key}
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          {canConvert ? (
+                            <CrewAssignFaceOverlay>
+                              <CrewFaceClearButton
+                                label={`Remove ${roleLabel} slot`}
+                                disabled={actionsDisabled}
+                                onClick={() => void mutate({ type: "removeSlot", slotKey: slot.key }, `${slot.key}-remove`)}
+                              />
+                            </CrewAssignFaceOverlay>
+                          ) : null}
+                        </div>
+                        {pendingClaims.length > 0 && (
+                          <CrewPendingReview
+                            claims={pendingClaims}
+                            canReview={canReviewClaims}
+                            reviewBlockedReason={reviewBlockedReason}
                             disabled={actionsDisabled}
-                            aria-label={`Assign ${roleLabel.toLowerCase()} slot`}
+                            actingId={actingKey}
+                            onApprove={(id) => {
+                              const claim = pendingClaims.find((row) => row.id === id);
+                              void reviewPending("claim", id, "approve", claim?.user.name ?? "Student");
+                            }}
+                            onDecline={(id) => {
+                              const claim = pendingClaims.find((row) => row.id === id);
+                              void reviewPending("claim", id, "decline", claim?.user.name ?? "Student");
+                            }}
                           />
-                        </PopoverTrigger>
-                        <PopoverContent className="w-80 max-w-[calc(100vw-2rem)] p-2 sm:w-96" align="start">
-                          <UserAvatarPicker
-                            users={eligibleUsers}
-                            loading={usersLoading}
-                            loadError={usersLoadError}
-                            onRetry={retryUsers}
-                            search={userSearch}
-                            onSearchChange={setUserSearch}
-                            onSelect={(userId) => void mutate({ type: "assign", slotKey: slot.key, userId }, `${slot.key}-assign`)}
-                            disabled={actionsDisabled}
-                            slotWorkerType={slot.workerType}
-                            candidateScores={candidateScoreState?.slotKey === slot.key ? candidateScoreState.scores : undefined}
-                            scoresLoading={scoresLoadingKey === slot.key}
-                            scoresLoadError={scoresErrorKey === slot.key}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      {canConvert && (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              className={cn("col-start-4 size-10 text-muted-foreground", CREW_ROW_REVEAL)}
-                              disabled={actionsDisabled}
-                              aria-label={`Actions for open ${roleLabel} slot`}
-                            >
-                              <MoreHorizontalIcon className="size-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-44">
-                            <DropdownMenuItem
-                              onSelect={() => void mutate(
-                                { type: "convertSlot", slotKey: slot.key, workerType: otherWorkerType },
-                                `${slot.key}-convert`,
-                              )}
-                            >
-                              <ArrowLeftRightIcon />
-                              Convert to {otherWorkerType === "FT" ? "Staff" : "Student"}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              variant="destructive"
-                              onSelect={() => void mutate({ type: "removeSlot", slotKey: slot.key }, `${slot.key}-remove`)}
-                            >
-                              <XIcon />
-                              Remove slot
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      )}
+                        )}
+                        <div className="ml-auto flex items-center justify-end gap-0.5">
+                        {canConvert ? (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                className="size-10 text-muted-foreground"
+                                disabled={actionsDisabled}
+                                aria-label={`More actions for open ${roleLabel} slot`}
+                              >
+                                <MoreHorizontalIcon className="size-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-44">
+                              <DropdownMenuItem
+                                onSelect={() => void mutate(
+                                  { type: "convertSlot", slotKey: slot.key, workerType: otherWorkerType },
+                                  `${slot.key}-convert`,
+                                )}
+                              >
+                                <ArrowLeftRightIcon />
+                                Convert to {otherWorkerType === "FT" ? "Staff" : "Student"}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                variant="destructive"
+                                onSelect={() => void mutate({ type: "removeSlot", slotKey: slot.key }, `${slot.key}-remove`)}
+                              >
+                                <XIcon />
+                                Remove slot
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        ) : null}
+                        </div>
+                      </div>
                     </div>
                   );
                 })}
@@ -1009,6 +1210,21 @@ export function WorkingCrewEditor({
           </div>
         )}
       </div>
+
+      {canManageSchedule && !data.allDay && (
+        <SetAllCallTimesEditor
+          data={data}
+          onReview={reviewLatestCrew}
+          disabled={actionsDisabled}
+          showTrigger={false}
+          open={studentCallDialogOpen}
+          onOpenChange={setStudentCallDialogOpen}
+          onSave={(callStartsAt, callEndsAt) => mutate(
+            { type: "setCallWindowForAll", callStartsAt, callEndsAt },
+            "all-call-window",
+          )}
+        />
+      )}
 
       <Dialog
         open={replacementTarget !== null}
@@ -1094,13 +1310,17 @@ export function WorkingCrewEditor({
       <AlertDialog open={publishNowOpen} onOpenChange={setPublishNowOpen}>
         <AlertDialogContent className="w-[calc(100vw-2rem)] sm:max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle>Publish schedule now?</AlertDialogTitle>
+            <AlertDialogTitle>{eventHasEnded ? "Apply this correction now?" : "Publish schedule now?"}</AlertDialogTitle>
             <AlertDialogDescription>
-              This sends the pending schedule to worker-facing views immediately and may notify affected workers. It bypasses the normal ten-minute release timer.
+              {eventHasEnded
+                ? "This writes the pending correction to the published crew immediately. Nobody is notified."
+                : "This sends the pending schedule to worker-facing views immediately and may notify affected workers. It bypasses the normal ten-minute release timer."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={actionsDisabled}>Keep waiting</AlertDialogCancel>
+            <AlertDialogCancel disabled={actionsDisabled}>
+              {eventHasEnded ? "Keep editing" : "Keep waiting"}
+            </AlertDialogCancel>
             <AlertDialogAction
               disabled={actionsDisabled}
               onClick={() => {
@@ -1108,7 +1328,9 @@ export function WorkingCrewEditor({
                 void publishNow();
               }}
             >
-              {actingKey === "publish-now" ? "Publishing…" : "Publish now"}
+              {actingKey === "publish-now"
+                ? (eventHasEnded ? "Applying…" : "Publishing…")
+                : (eventHasEnded ? "Apply correction now" : "Publish now")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

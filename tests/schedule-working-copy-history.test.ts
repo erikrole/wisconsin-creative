@@ -7,6 +7,8 @@ const { tx, transactionCalls, createAuditEntryTx } = vi.hoisted(() => ({
     shiftGroup: { findUnique: vi.fn() },
     user: { findUnique: vi.fn(), findMany: vi.fn() },
     sportConfig: { findUnique: vi.fn() },
+    shiftAssignment: { findMany: vi.fn() },
+    shiftTrade: { findMany: vi.fn() },
     shiftGroupWorkingCopy: { updateMany: vi.fn(), create: vi.fn() },
   },
   transactionCalls: [] as Array<{ options: unknown }>,
@@ -112,6 +114,8 @@ describe("schedule working-copy history", () => {
     }
     tx.sportConfig.findUnique.mockResolvedValue(null);
     tx.user.findMany.mockResolvedValue([]);
+    tx.shiftAssignment.findMany.mockResolvedValue([]);
+    tx.shiftTrade.findMany.mockResolvedValue([]);
     tx.shiftGroupWorkingCopy.updateMany.mockResolvedValue({ count: 1 });
   });
 

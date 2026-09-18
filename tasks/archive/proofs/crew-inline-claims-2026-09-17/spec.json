@@ -1,0 +1,36 @@
+{
+  "title": "Inline student claim review on crew rows",
+  "eyebrow": "Web · Wisconsin Creative · Event detail Crew",
+  "lede": "Staff and Admins should see who has claimed an open Student slot or a posted trade on the crew row itself, then review Approve or Decline without leaving Event detail.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "After-only",
+      "note": "No trustworthy matched pair. The checkout already carried Event authoring and crew dirty work, and no isolated baseline was captured before this slice. After captures: after-crew-row.png (Ben Xiong’s claim on the first Video Student slot) and after-review-popover.png (Admin Approve/Decline popover). Role: ADMIN on Preview Football vs Eastern Michigan. Live claim was opened, not approved or declined."
+    }
+  ],
+  "changes": [
+    {
+      "h": "Pending claims lived only on Trade Board queues",
+      "was": "Event detail crew showed an empty Assign control. Admins had to leave for Trade Board to see who claimed the slot.",
+      "now": "The working-copy crew row shows an avatar group of claimants and a Review popover with Approve/Decline. Multiple students on one slot stack as a group; approving one declines the rest."
+    },
+    {
+      "h": "Claimed trades were a badge, not a face",
+      "was": "Schedule students saw Trade claimed without a claimant avatar. Staff crew rows had no inline trade request.",
+      "now": "A claimed trade attaches the claimant to the assigned row with the same Review popover."
+    }
+  ],
+  "verification": [
+    "41 focused tests across crew-pending-review, schedule-working-copy-editor, rebase, history, call-window-validation, route-source, and claim-surfaces-source.",
+    "ESLint on the changed web files passed with --max-warnings=0.",
+    "TypeScript still fails only on the unrelated src/lib/services/blasts.ts payload typing.",
+    "Authenticated Preview Event detail for Football vs Eastern Michigan: working-copy GET returned pendingClaims for Ben Xiong; the first Video Student row showed Review 1 claim; the popover listed Ben Xiong with Approve and Decline. The live claim was not mutated.",
+    "npm run build:app was not run: 127.0.0.1:3000 is occupied by the existing Preview gear-tracker dev server."
+  ],
+  "notes": [
+    "Student shift-group reads still return only the viewer’s own pending request. Staff can see claimants without approve permission. Review is blocked while unpublished crew edits exist because live approve/decline already refuse a working copy.",
+    "No live shift currently has multiple claimants, so the stacked avatar-group overflow is source-tested rather than screenshot-proven. No claimed trades were waiting on Preview during this pass.",
+    "Native iOS Event detail still uses the viewer’s own pendingStudentClaimShifts list and was not changed in this slice."
+  ]
+}

@@ -165,6 +165,7 @@ export const GET = withAuth(async (req, { user }) => {
         ? { ...publication, status: "changed" as const, changedAfterPublish: true, workingVersion: g.workingCopy.version }
         : publication,
       hasWorkingCopy: staffCanSeeWorkingState ? Boolean(g.workingCopy) : undefined,
+      claimsPaused: Boolean(g.workingCopy),
       autoReleaseAt: pendingRelease?.autoReleaseAt,
       autoReleaseError: pendingRelease?.autoReleaseError,
       coverage: {

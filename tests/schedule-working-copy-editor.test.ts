@@ -4,6 +4,8 @@ const mocks = vi.hoisted(() => ({
   findGroup: vi.fn(),
   findUsers: vi.fn(),
   findSportConfig: vi.fn(),
+  findAssignments: vi.fn(),
+  findTrades: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -11,6 +13,8 @@ vi.mock("@/lib/db", () => ({
     shiftGroup: { findUnique: mocks.findGroup },
     user: { findMany: mocks.findUsers },
     sportConfig: { findUnique: mocks.findSportConfig },
+    shiftAssignment: { findMany: mocks.findAssignments },
+    shiftTrade: { findMany: mocks.findTrades },
   },
 }));
 
@@ -49,7 +53,11 @@ describe("working schedule editor read model", () => {
     mocks.findGroup.mockReset();
     mocks.findUsers.mockReset();
     mocks.findSportConfig.mockReset();
+    mocks.findAssignments.mockReset();
+    mocks.findTrades.mockReset();
     mocks.findSportConfig.mockResolvedValue(null);
+    mocks.findAssignments.mockResolvedValue([]);
+    mocks.findTrades.mockResolvedValue([]);
   });
 
   it("hydrates draft-only assignee identities after refresh", async () => {
@@ -141,5 +149,105 @@ describe("working schedule editor read model", () => {
       endsAt: "2026-08-08T20:30:00.000Z",
     });
     expect(result.allDay).toBe(false);
+  });
+
+  it("includes live open-slot claims and claimed trades for crew review", async () => {
+    mocks.findGroup.mockResolvedValue({
+      id: "group-3",
+      publishedAt: new Date("2026-07-01T12:00:00.000Z"),
+      publishedVersion: 2,
+      event: { startsAt: eventStartsAt, endsAt: eventEndsAt, allDay: false, sportCode: "VB" },
+      shifts: [
+        {
+          id: "shift-open",
+          createdAt: eventStartsAt,
+          area: "VIDEO",
+          workerType: "ST",
+          startsAt: eventStartsAt,
+          endsAt: eventEndsAt,
+          callStartsAt: null,
+          callEndsAt: null,
+          notes: null,
+          _count: { assignments: 0 },
+          assignments: [],
+        },
+        {
+          id: "shift-filled",
+          createdAt: eventStartsAt,
+          area: "PHOTO",
+          workerType: "ST",
+          startsAt: eventStartsAt,
+          endsAt: eventEndsAt,
+          callStartsAt: null,
+          callEndsAt: null,
+          notes: null,
+          _count: { assignments: 1 },
+          assignments: [{
+            id: "assignment-live",
+            userId: "poster-id",
+            status: "DIRECT_ASSIGNED",
+            source: "MANUAL",
+            callStartsAt: null,
+            callEndsAt: null,
+            callNote: null,
+            trades: [{ id: "trade-1" }],
+            _count: { bookings: 0 },
+          }],
+        },
+      ],
+      workingCopy: null,
+    });
+    mocks.findUsers.mockResolvedValue([{
+      id: "poster-id",
+      name: "Poster",
+      role: "STUDENT",
+      staffingType: "ST",
+      primaryArea: "PHOTO",
+      avatarUrl: null,
+    }]);
+    mocks.findAssignments.mockResolvedValue([
+      {
+        id: "claim-1",
+        shiftId: "shift-open",
+        hasConflict: false,
+        conflictNote: null,
+        user: { id: "student-a", name: "Alex", avatarUrl: null },
+      },
+      {
+        id: "claim-2",
+        shiftId: "shift-open",
+        hasConflict: true,
+        conflictNote: "Overlaps class",
+        user: { id: "student-b", name: "Blair", avatarUrl: "/blair.jpg" },
+      },
+    ]);
+    mocks.findTrades.mockResolvedValue([{
+      id: "trade-1",
+      notes: "Can cover",
+      shiftAssignmentId: "assignment-live",
+      claimedBy: { id: "student-c", name: "Casey", avatarUrl: null },
+      postedBy: { id: "poster-id", name: "Poster", avatarUrl: null },
+    }]);
+
+    const result = await getWorkingScheduleEditor("group-3");
+
+    expect(result.pendingClaims).toEqual([
+      expect.objectContaining({ id: "claim-1", shiftId: "shift-open", user: expect.objectContaining({ name: "Alex" }) }),
+      expect.objectContaining({
+        id: "claim-2",
+        hasConflict: true,
+        conflictNote: "Overlaps class",
+        user: expect.objectContaining({ name: "Blair" }),
+      }),
+    ]);
+    expect(result.pendingTrades).toEqual([
+      expect.objectContaining({
+        id: "trade-1",
+        assignmentId: "assignment-live",
+        status: "CLAIMED",
+        claimedBy: expect.objectContaining({ name: "Casey" }),
+        postedBy: expect.objectContaining({ name: "Poster" }),
+      }),
+    ]);
   });
 });

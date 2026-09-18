@@ -1,0 +1,52 @@
+{
+  "title": "Schedule UI polish after the trust pass",
+  "eyebrow": "Web + iOS · Wisconsin Creative · Schedule",
+  "lede": "Staff and students should read one honest row for combined events, see every area they work, and never confuse a failed Trade Board count or a private crew edit with an empty board.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "After-only",
+      "note": "No trustworthy matched pair. The checkout already carried the Schedule trust-pass dirty tree, no isolated baseline was captured before this polish, and WisconsinPerformance ScheduleScreenshotUITests crashed at bootstrap (signal term) on iPhone 16 Pro iOS 27.0."
+    }
+  ],
+  "changes": [
+    {
+      "h": "Claim pause spoke on every open slot",
+      "was": "Each empty Student slot repeated “Staff are updating this crew,” so a six-slot crew looked like six problems.",
+      "now": "One crew-level notice on Schedule disclosure and Event detail. Claim buttons stay hidden until the draft releases."
+    },
+    {
+      "h": "Combined events were silent on native rows",
+      "was": "Web named “N events · shared crew.” iOS collapsed the row but did not say why two games shared one crew.",
+      "now": "Native list and Event detail use the same shared-crew cue. Web mobile list and timed multi-day rows also name the span."
+    },
+    {
+      "h": "A second personal area disappeared",
+      "was": "Dictionary uniquing kept only the earliest shift, so Photo vanished when Camera was also assigned.",
+      "now": "The list names every extra area. Event detail lists each personal assignment."
+    },
+    {
+      "h": "Publish now sat under history controls",
+      "was": "Undo, Redo, and Revert led the pending card; Publish now was the last button. Ended drafts still advertised the 10-minute timer.",
+      "now": "Publish now / Apply correction now is the primary action. Ended pending copies omit the timer copy."
+    },
+    {
+      "h": "A failed Trade Board count looked like zero trades",
+      "was": "A non-OK fetch returned 0 and overwrote a known count in the React Query cache.",
+      "now": "The count fetch throws, so a failure keeps the last good number and does not show a 0 badge."
+    }
+  ],
+  "verification": [
+    "22 focused web source tests across claim-surfaces, ios-schedule-mvp-parity, ios-schedule-ui-cleanup, ios-schedule-working-copy, and calendar-event-dates.",
+    "TypeScript `npx tsc --noEmit` passed. ESLint on the changed web files passed with --max-warnings=0.",
+    "iPhone 16 Pro (E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE, iOS 27.0): CombinedScheduleEventProjectionTests, ScheduleDateMathTests, and ScheduleAllDayDisplayTests TEST SUCCEEDED against a clean derived-data path.",
+    "`npm run verify:docs` passed after regenerating codemaps.",
+    "`npm run build:app` was not run: 127.0.0.1:3000 is occupied by an existing Preview gear-tracker dev server.",
+    "Authenticated /schedule redirected to Sign in. No credentials were used.",
+    "ScheduleScreenshotUITests crashed during bootstrap; no fixture PNG pair exists for this slice."
+  ],
+  "notes": [
+    "Default DerivedData still fails to compile Wisconsin because an unrelated untracked GearTrackerRoute.swift is missing from that cache’s file list. This slice used /tmp/wc-ios-schedule-dd, which compiled the file from the current pbxproj.",
+    "Week view, combine authoring, and auto-assign stay web-only. GAP-75 live Cross Country combine and signed-in staff-edit → student-read → Publish now remain open."
+  ]
+}

@@ -166,7 +166,10 @@ export function workingScheduleCommandLabel(
     }
     case "convertAndReplace": {
       const slot = slotFor(command.slotKey);
-      return `Replace ${slot ? titleCaseScheduleWord(slot.area) : "schedule"} worker with ${scheduleWorkerTypeLabel(command.workerType)}`;
+      const converting = slot ? slot.workerType !== command.workerType : true;
+      return converting
+        ? `Replace ${slot ? titleCaseScheduleWord(slot.area) : "schedule"} worker with ${scheduleWorkerTypeLabel(command.workerType)}`
+        : `Replace ${slot ? titleCaseScheduleWord(slot.area) : "schedule"} worker`;
     }
     case "assign": {
       const slot = slotFor(command.slotKey);
@@ -417,17 +420,16 @@ export function applyWorkingScheduleCommand(
     const slot = next.slots.find((candidate) => candidate.key === command.slotKey);
     if (!slot) throw new Error("WORKING_SLOT_NOT_FOUND");
     if (!slot.assignment) throw new Error("WORKING_SLOT_NOT_ASSIGNED");
-    if (slot.workerType === command.workerType) {
-      throw new Error("CONVERT_AND_REPLACE_REQUIRES_CONVERSION");
-    }
     if (slot.assignment.activeTradeId) throw new Error("CANCEL_TRADE_BEFORE_REPLACING");
     if (slot.assignment.bookingCount > 0) throw new Error("UNLINK_BOOKING_BEFORE_REPLACING");
-    slot.workerType = command.workerType;
-    if (command.workerType === "FT") {
-      slot.startsAt = next.eventStartsAt;
-      slot.endsAt = next.eventEndsAt;
-      slot.callStartsAt = null;
-      slot.callEndsAt = null;
+    if (slot.workerType !== command.workerType) {
+      slot.workerType = command.workerType;
+      if (command.workerType === "FT") {
+        slot.startsAt = next.eventStartsAt;
+        slot.endsAt = next.eventEndsAt;
+        slot.callStartsAt = null;
+        slot.callEndsAt = null;
+      }
     }
     slot.assignment = {
       ...slot.assignment,

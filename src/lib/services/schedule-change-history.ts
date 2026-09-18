@@ -104,6 +104,116 @@ function changedFieldDetail(before: Record<string, unknown>, after: Record<strin
   return null;
 }
 
+const CALENDAR_EVENT_DIFF_FIELDS = [
+  "summary",
+  "subtitle",
+  "startsAt",
+  "endsAt",
+  "allDay",
+  "rawStartsAt",
+  "rawEndsAt",
+  "rawAllDay",
+  "opponent",
+  "isHome",
+  "site",
+  "sportCode",
+  "status",
+  "result",
+  "description",
+  "rawLocationText",
+  "locationId",
+] as const;
+
+function calendarFieldLabel(field: string) {
+  switch (field) {
+    case "summary": return "Title";
+    case "subtitle": return "Label";
+    case "startsAt": return "Start";
+    case "endsAt": return "End";
+    case "allDay": return "All day";
+    case "rawStartsAt": return "Calendar start";
+    case "rawEndsAt": return "Calendar end";
+    case "rawAllDay": return "Calendar all day";
+    case "opponent": return "Opponent";
+    case "isHome": return "Home/Away";
+    case "site": return "Site";
+    case "sportCode": return "Sport";
+    case "status": return "Status";
+    case "result": return "Result";
+    case "description": return "Description";
+    case "rawLocationText": return "Venue";
+    case "locationId": return "Location";
+    default: return field;
+  }
+}
+
+function displayCalendarValue(field: string, value: unknown) {
+  if (field === "allDay" || field === "rawAllDay") {
+    if (typeof value !== "boolean") return null;
+    return value ? "All day" : "Timed";
+  }
+  if (field === "isHome") {
+    if (value === true) return "Home";
+    if (value === false) return "Away";
+    return "Unspecified";
+  }
+  if (field === "site") {
+    if (value === "HOME") return "Home";
+    if (value === "AWAY") return "Away";
+    if (value === "NEUTRAL") return "Neutral";
+    return stringValue(value);
+  }
+  if (field === "result") {
+    if (value === "WIN") return "Win";
+    if (value === "LOSS") return "Loss";
+    if (value === "TIE") return "Tie";
+    return stringValue(value);
+  }
+  if (field === "status") {
+    return stringValue(value)?.replaceAll("_", " ");
+  }
+  if (field === "description") {
+    const text = stringValue(value)?.replace(/\s+/g, " ").trim();
+    if (!text) return value == null ? "None" : null;
+    return text.length > 80 ? `${text.slice(0, 77)}…` : text;
+  }
+  return formatDateLike(value) ?? stringValue(value) ?? (value == null ? "None" : String(value));
+}
+
+function sameAuditValue(left: unknown, right: unknown) {
+  if (left === right) return true;
+  const leftDate = formatDateLike(left);
+  const rightDate = formatDateLike(right);
+  if (leftDate && rightDate) return leftDate === rightDate;
+  return JSON.stringify(left ?? null) === JSON.stringify(right ?? null);
+}
+
+function locationChangeLabel(before: Record<string, unknown>, after: Record<string, unknown>) {
+  if ("rawLocationText" in before || "rawLocationText" in after) return "Venue";
+  if ("locationLocked" in before || "locationLocked" in after) return "Pickup location";
+  return "Location";
+}
+
+function changedCalendarEventDetail(before: Record<string, unknown>, after: Record<string, unknown>) {
+  const parts: string[] = [];
+  const venueTextChanged = !sameAuditValue(before.rawLocationText, after.rawLocationText);
+  for (const field of CALENDAR_EVENT_DIFF_FIELDS) {
+    if (sameAuditValue(before[field], after[field])) continue;
+    if (field === "locationId") {
+      if (venueTextChanged) continue;
+      parts.push(`${locationChangeLabel(before, after)} changed`);
+      continue;
+    }
+    const from = displayCalendarValue(field, before[field]);
+    const to = displayCalendarValue(field, after[field]);
+    if (!from && !to) continue;
+    if (from && to && from !== to) parts.push(`${calendarFieldLabel(field)}: ${from} → ${to}`);
+    else if (to && to !== "None") parts.push(`${calendarFieldLabel(field)}: ${to}`);
+    else if (from && from !== "None") parts.push(`${calendarFieldLabel(field)} removed`);
+  }
+  return parts.length > 0 ? parts.join(" · ") : "Calendar listing refreshed";
+}
+
 function workingScheduleActionMeta(row: AuditRow): { kind: ScheduleChangeKind; label: string; detail: string | null } | null {
   const command = jsonObject(jsonObject(row.beforeJson).command);
   const commandType = stringValue(command.type);
@@ -213,7 +323,7 @@ function actionMeta(row: AuditRow, lookup: {
     case "calendar_event_created":
       return { kind: "event_created", label: "Created event", detail: stringValue(after.summary) };
     case "calendar_event_updated":
-      return { kind: "event_updated", label: "Updated event details", detail: changedFieldDetail(before, after, ["summary", "startsAt", "endsAt", "locationId", "subtitle"]) };
+      return { kind: "event_updated", label: "Updated event details", detail: changedCalendarEventDetail(before, after) };
     case "calendar_event_visibility_updated":
       return { kind: "event_visibility_updated", label: "Updated visibility", detail: null };
     case "shift_group_archived":

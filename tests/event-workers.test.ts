@@ -118,6 +118,24 @@ describe("EventWorkersCard load failure", () => {
     expect(source).not.toMatch(/will be notified/i);
     expect(source).not.toMatch(/no one was notified/i);
   });
+
+  it("lives inside Crew and only offers recording after the event has ended", () => {
+    const crew = readFileSync(
+      path.join(process.cwd(), "src/app/(app)/events/[id]/_components/ShiftCoverageCard.tsx"),
+      "utf8",
+    );
+    const page = readFileSync(
+      path.join(process.cwd(), "src/app/(app)/events/[id]/page.tsx"),
+      "utf8",
+    );
+
+    expect(crew).toContain("<EventWorkersCard");
+    expect(crew).toContain("eventHasEnded={eventHasEnded}");
+    expect(source).toContain("const showAddForm = isAdmin && eventHasEnded");
+    expect(source).toContain("Record who worked");
+    expect(source).not.toContain("Added workers");
+    expect(page).not.toMatch(/isStaffOrAdmin && \(\s*<EventWorkersCard eventId=\{id\} isAdmin=\{currentUserRole === "ADMIN"\} \/>/);
+  });
 });
 
 describe("participatedEventWhere", () => {

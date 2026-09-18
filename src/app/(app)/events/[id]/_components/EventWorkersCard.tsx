@@ -1,17 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AwardIcon, Trash2Icon } from "lucide-react";
+import { Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { handleAuthRedirect, isAbortError, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { formatRelativeTime } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import { CREW_ROW_GROUP } from "@/components/shift-detail/crew-row";
 
 type WorkerUser = {
   id: string;
@@ -39,12 +40,18 @@ function roleLabel(role: string): string {
 }
 
 /**
- * People who worked an event without a scheduled shift — a late addition, a
- * fill-in, or a collaborator who is tracked but never staffed. Admin-only,
- * silent, and separate from the crew table on purpose: adding someone here
- * moves season stats and touches nothing else.
+ * People recorded on this event without a scheduled slot. Lives inside Crew:
+ * future events use Assign; ended events use this silent Scoreboard record.
  */
-export function EventWorkersCard({ eventId, isAdmin }: { eventId: string; isAdmin: boolean }) {
+export function EventWorkersCard({
+  eventId,
+  isAdmin,
+  eventHasEnded,
+}: {
+  eventId: string;
+  isAdmin: boolean;
+  eventHasEnded: boolean;
+}) {
   const [workers, setWorkers] = useState<EventWorker[]>([]);
   const [loading, setLoading] = useState(true);
   /**
@@ -89,7 +96,7 @@ export function EventWorkersCard({ eventId, isAdmin }: { eventId: string; isAdmi
   }, [load]);
 
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!isAdmin || !eventHasEnded) return;
     const controller = new AbortController();
     void (async () => {
       try {
@@ -103,7 +110,7 @@ export function EventWorkersCard({ eventId, isAdmin }: { eventId: string; isAdmi
       }
     })();
     return () => controller.abort();
-  }, [isAdmin]);
+  }, [isAdmin, eventHasEnded]);
 
   const addedIds = useMemo(() => new Set(workers.map((worker) => worker.user.id)), [workers]);
 
@@ -134,7 +141,7 @@ export function EventWorkersCard({ eventId, isAdmin }: { eventId: string; isAdmi
       setWorkers(json?.data ?? []);
       setSelectedUserId("");
       setNote("");
-      toast.success("Worker added.");
+      toast.success("Recorded on Scoreboard.");
     } catch (error) {
       if (isAbortError(error)) return;
       toast.error("Network error - worker not added");
@@ -167,114 +174,128 @@ export function EventWorkersCard({ eventId, isAdmin }: { eventId: string; isAdmi
     }
   }
 
-  return (
-    <Card className="mt-4">
-      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
-        <div className="flex min-w-0 flex-col gap-1">
-          <CardTitle className="flex items-center gap-2">
-            <AwardIcon className="size-4 shrink-0 text-muted-foreground" />
-            Added workers
-          </CardTitle>
-          <p className="text-xs text-muted-foreground">
-            People who worked this event but were not on the crew. Counts toward Scoreboard, profile
-            stats, and badges only — it never appears on their schedule.
-          </p>
-        </div>
-      </CardHeader>
+  const showAddForm = isAdmin && eventHasEnded;
+  if (!eventHasEnded && (loading || (!loadFailed && workers.length === 0))) return null;
 
-      <CardContent className="flex flex-col gap-4">
-        {loading ? (
-          <p className="text-sm text-muted-foreground">Loading workers…</p>
-        ) : loadFailed ? (
-          <div className="flex flex-wrap items-center gap-3">
-            <p className="text-sm text-[var(--red-text)]">
-              Could not load who has been added to this event.
-            </p>
-            <Button
-              variant="outline"
-              className="h-10 text-xs"
-              onClick={() => {
-                setLoading(true);
-                void load();
-              }}
-            >
-              Retry
-            </Button>
-          </div>
-        ) : workers.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No one has been added outside the scheduled crew.
+  return (
+    <div className="mt-4 border-t border-border/60 pt-4">
+      <div className="mb-2 flex flex-col gap-0.5">
+        <div className="flex items-baseline gap-2">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-foreground/70">
+            Recorded work
+          </span>
+          {!loading && !loadFailed && (
+            <span className="text-[11px] tabular-nums text-muted-foreground">{workers.length}</span>
+          )}
+        </div>
+        {eventHasEnded ? (
+          <p className="text-xs text-muted-foreground">
+            People who worked this event without a scheduled slot. Silent Scoreboard record only.
           </p>
         ) : (
-          <ul className="flex flex-col divide-y">
-            {workers.map((worker) => (
-              <li key={worker.id} className="flex flex-wrap items-center gap-3 py-2 first:pt-0">
-                <UserAvatar name={worker.user.name} avatarUrl={worker.user.avatarUrl} size="sm" />
-                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <span className="flex flex-wrap items-center gap-2">
-                    <span className="truncate text-sm">{worker.user.name}</span>
-                    <Badge variant="outline" size="sm">{roleLabel(worker.user.role)}</Badge>
-                    {worker.alsoAssigned && (
-                      <Badge variant="gray" size="sm">Also on crew</Badge>
-                    )}
-                    {!worker.user.active && <Badge variant="gray" size="sm">Inactive</Badge>}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {worker.note ? `${worker.note} · ` : ""}
-                    Added{worker.addedBy ? ` by ${worker.addedBy.name}` : ""}{" "}
-                    {formatRelativeTime(worker.createdAt, new Date())}
-                  </span>
-                </div>
-                {isAdmin && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    aria-label={`Remove ${worker.user.name}`}
-                    disabled={removing === worker.id}
-                    onClick={() => void removeWorker(worker)}
-                  >
-                    <Trash2Icon className="size-4" />
-                  </Button>
-                )}
-              </li>
-            ))}
-          </ul>
+          <p className="text-xs text-muted-foreground">
+            Recorded for Scoreboard. Use Assign above to staff the live crew.
+          </p>
         )}
+      </div>
 
-        {isAdmin && (
-          <div className="flex flex-wrap items-end gap-2 border-t pt-4">
-            <div className="flex min-w-[220px] flex-1 flex-col gap-1.5">
-              <Label htmlFor="event-worker-person">Person</Label>
-              <Combobox
-                id="event-worker-person"
-                options={options}
-                value={selectedUserId}
-                onValueChange={setSelectedUserId}
-                placeholder="Select a person"
-                searchPlaceholder="Search people…"
-                emptyMessage="No one left to add."
-              />
-            </div>
-            <div className="flex min-w-[220px] flex-1 flex-col gap-1.5">
-              <Label htmlFor="event-worker-note">Note (optional)</Label>
-              <Input
-                id="event-worker-note"
-                value={note}
-                maxLength={NOTE_MAX}
-                placeholder="Why they are on this list"
-                onChange={(e) => setNote(e.target.value)}
-              />
-            </div>
-            <Button
-              className="min-h-10"
-              disabled={!selectedUserId || saving}
-              onClick={() => void addWorker()}
+      {loading ? (
+        <p className="text-sm text-muted-foreground">Loading workers…</p>
+      ) : loadFailed ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="text-sm text-[var(--red-text)]">
+            Could not load who has been added to this event.
+          </p>
+          <Button
+            variant="outline"
+            className="h-10 text-xs"
+            onClick={() => {
+              setLoading(true);
+              void load();
+            }}
+          >
+            Retry
+          </Button>
+        </div>
+      ) : workers.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          {eventHasEnded
+            ? "No one else is on record for this event."
+            : "No one has been added outside the scheduled crew."}
+        </p>
+      ) : (
+        <ul className="flex flex-col">
+          {workers.map((worker) => (
+            <li
+              key={worker.id}
+              className={cn(CREW_ROW_GROUP, "flex flex-wrap items-center gap-3 border-b border-border/40 py-2.5 last:border-b-0")}
             >
-              {saving ? "Adding…" : "Add worker"}
-            </Button>
+              <UserAvatar name={worker.user.name} avatarUrl={worker.user.avatarUrl} size="sm" />
+              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span className="flex flex-wrap items-center gap-2">
+                  <span className="truncate text-sm">{worker.user.name}</span>
+                  <span className="text-xs text-muted-foreground">{roleLabel(worker.user.role)}</span>
+                  {worker.alsoAssigned && (
+                    <Badge variant="gray" size="sm">Also assigned</Badge>
+                  )}
+                  {!worker.user.active && <Badge variant="gray" size="sm">Inactive</Badge>}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {worker.note ? `${worker.note} · ` : ""}
+                  Recorded{worker.addedBy ? ` by ${worker.addedBy.name}` : ""}{" "}
+                  {formatRelativeTime(worker.createdAt, new Date())}
+                </span>
+              </div>
+              {isAdmin && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-10"
+                  aria-label={`Remove ${worker.user.name}`}
+                  disabled={removing === worker.id}
+                  onClick={() => void removeWorker(worker)}
+                >
+                  <Trash2Icon className="size-4" />
+                </Button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {showAddForm && (
+        <div className="mt-3 flex flex-wrap items-end gap-2">
+          <div className="flex min-w-[220px] flex-1 flex-col gap-1.5">
+            <Label htmlFor="event-worker-person">Person</Label>
+            <Combobox
+              id="event-worker-person"
+              options={options}
+              value={selectedUserId}
+              onValueChange={setSelectedUserId}
+              placeholder="Select a person"
+              searchPlaceholder="Search people…"
+              emptyMessage="No one left to add."
+            />
           </div>
-        )}
-      </CardContent>
-    </Card>
+          <div className="flex min-w-[220px] flex-1 flex-col gap-1.5">
+            <Label htmlFor="event-worker-note">Note (optional)</Label>
+            <Input
+              id="event-worker-note"
+              value={note}
+              maxLength={NOTE_MAX}
+              placeholder="Why they are on this list"
+              onChange={(e) => setNote(e.target.value)}
+            />
+          </div>
+          <Button
+            className="min-h-10"
+            disabled={!selectedUserId || saving}
+            onClick={() => void addWorker()}
+          >
+            {saving ? "Recording…" : "Record who worked"}
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }

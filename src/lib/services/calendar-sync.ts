@@ -260,6 +260,9 @@ type ValidatedEventData = {
   startsAt: Date;
   endsAt: Date;
   allDay: boolean;
+  rawStartsAt: Date;
+  rawEndsAt: Date;
+  rawAllDay: boolean;
   status: CalendarEventStatus;
   locationId: string | null;
   sportCode: string | null;
@@ -277,6 +280,10 @@ export type ExistingEventRow = {
   startsAt: Date;
   endsAt: Date;
   allDay: boolean;
+  rawStartsAt: Date | null;
+  rawEndsAt: Date | null;
+  rawAllDay: boolean | null;
+  rawLocationText: string | null;
   status: string;
   locationId: string | null;
   sportCode: string | null;
@@ -287,6 +294,7 @@ export type ExistingEventRow = {
   summaryLocked: boolean;
   isHomeLocked: boolean;
   locationLocked: boolean;
+  timingLocked: boolean;
 };
 
 type CalendarEventAuditSource = {
@@ -303,7 +311,17 @@ type CalendarEventAuditSource = {
   isHome: boolean | null;
   site: CalendarEventSite | null;
   result: CalendarEventResult | null;
+  rawStartsAt?: Date | string | null;
+  rawEndsAt?: Date | string | null;
+  rawAllDay?: boolean | null;
+  rawLocationText?: string | null;
 };
+
+function isoOrNull(value: Date | string | null | undefined) {
+  if (value == null) return null;
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value.toISOString();
+  return value;
+}
 
 function calendarEventAuditSnapshot(event: CalendarEventAuditSource) {
   return {
@@ -320,6 +338,10 @@ function calendarEventAuditSnapshot(event: CalendarEventAuditSource) {
     isHome: event.isHome,
     site: event.site,
     result: event.result,
+    rawStartsAt: isoOrNull(event.rawStartsAt),
+    rawEndsAt: isoOrNull(event.rawEndsAt),
+    rawAllDay: event.rawAllDay ?? null,
+    rawLocationText: event.rawLocationText ?? null,
   };
 }
 
@@ -393,6 +415,9 @@ export function splitEventsForSync(
         startsAt: startParsed.date,
         endsAt: endParsed.date,
         allDay: startParsed.allDay,
+        rawStartsAt: startParsed.date,
+        rawEndsAt: endParsed.date,
+        rawAllDay: startParsed.allDay,
         status,
         locationId,
         sportCode,
@@ -406,6 +431,11 @@ export function splitEventsForSync(
       if (existing) {
         // Preserve manually locked fields: sync never overwrites them.
         if (existing.summaryLocked) data.summary = existing.summary;
+        if (existing.timingLocked) {
+          data.startsAt = existing.startsAt;
+          data.endsAt = existing.endsAt;
+          data.allDay = existing.allDay;
+        }
         if (existing.isHomeLocked) {
           data.sportCode = existing.sportCode;
           data.isHome = existing.isHome;
@@ -432,6 +462,10 @@ export function splitEventsForSync(
           existing.startsAt.getTime() !== data.startsAt.getTime() ||
           existing.endsAt.getTime() !== data.endsAt.getTime() ||
           existing.allDay !== data.allDay ||
+          existing.rawStartsAt?.getTime() !== data.rawStartsAt.getTime() ||
+          existing.rawEndsAt?.getTime() !== data.rawEndsAt.getTime() ||
+          existing.rawAllDay !== data.rawAllDay ||
+          existing.rawLocationText !== data.rawLocationText ||
           existing.status !== data.status ||
           existing.locationId !== data.locationId ||
           existing.sportCode !== data.sportCode ||
@@ -578,7 +612,8 @@ export async function syncCalendarSource(sourceId: string): Promise<SyncResult> 
       id: true, externalId: true, summary: true, description: true,
       startsAt: true, endsAt: true, allDay: true, status: true, locationId: true,
       sportCode: true, opponent: true, isHome: true, site: true, result: true,
-      summaryLocked: true, isHomeLocked: true, locationLocked: true,
+      rawStartsAt: true, rawEndsAt: true, rawAllDay: true, rawLocationText: true,
+      summaryLocked: true, isHomeLocked: true, locationLocked: true, timingLocked: true,
     }
   });
 

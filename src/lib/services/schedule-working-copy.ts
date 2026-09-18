@@ -23,6 +23,76 @@ import { ACTIVE_ASSIGNMENT_STATUSES } from "@/lib/shift-constants";
 import { checkTimeConflict } from "@/lib/services/shift-assignments";
 import { getCandidateScoresForTarget } from "@/lib/services/candidate-scoring";
 import { evaluateAvailabilityPreferences } from "@/lib/student-availability";
+import type { PendingCrewClaim, PendingCrewReviewUser, PendingCrewTrade } from "@/lib/crew-pending-review";
+
+const pendingReviewUserSelect = {
+  id: true,
+  name: true,
+  avatarUrl: true,
+} as const;
+
+function serializePendingReviewUser(
+  user: { id: string; name: string; avatarUrl: string | null },
+): PendingCrewReviewUser {
+  return { id: user.id, name: user.name, avatarUrl: user.avatarUrl };
+}
+
+async function loadPendingCrewReview(
+  group: EditorGroup,
+  tx: Prisma.TransactionClient,
+): Promise<{ pendingClaims: PendingCrewClaim[]; pendingTrades: PendingCrewTrade[] }> {
+  const shiftIds = group.shifts.map((shift) => shift.id);
+  const assignmentIds = group.shifts.flatMap((shift) => shift.assignments.map((assignment) => assignment.id));
+  const [pendingClaims, claimedTrades] = await Promise.all([
+    shiftIds.length > 0
+      ? tx.shiftAssignment.findMany({
+        where: { shiftId: { in: shiftIds }, status: "REQUESTED" },
+        select: {
+          id: true,
+          shiftId: true,
+          hasConflict: true,
+          conflictNote: true,
+          user: { select: pendingReviewUserSelect },
+        },
+        orderBy: { createdAt: "asc" },
+      })
+      : Promise.resolve([]),
+    assignmentIds.length > 0
+      ? tx.shiftTrade.findMany({
+        where: { shiftAssignmentId: { in: assignmentIds }, status: "CLAIMED" },
+        select: {
+          id: true,
+          notes: true,
+          shiftAssignmentId: true,
+          claimedBy: { select: pendingReviewUserSelect },
+          postedBy: { select: pendingReviewUserSelect },
+        },
+        orderBy: { claimedAt: "asc" },
+      })
+      : Promise.resolve([]),
+  ]);
+
+  return {
+    pendingClaims: pendingClaims.map((claim) => ({
+      id: claim.id,
+      shiftId: claim.shiftId,
+      hasConflict: claim.hasConflict,
+      conflictNote: claim.conflictNote,
+      user: serializePendingReviewUser(claim.user),
+    })),
+    pendingTrades: claimedTrades.flatMap((trade) => {
+      if (!trade.claimedBy) return [];
+      return [{
+        id: trade.id,
+        assignmentId: trade.shiftAssignmentId,
+        status: "CLAIMED" as const,
+        notes: trade.notes,
+        claimedBy: serializePendingReviewUser(trade.claimedBy),
+        postedBy: serializePendingReviewUser(trade.postedBy),
+      }];
+    }),
+  };
+}
 
 const groupEditorSelect = {
   id: true,
@@ -259,6 +329,7 @@ async function editorResponse(
       },
     })
     : [];
+  const { pendingClaims, pendingTrades } = await loadPendingCrewReview(group, tx);
   const changes = summarizeWorkingScheduleChanges(published, working);
   const affectedWorkerIds = new Set<string>();
   const publishedBySourceId = new Map(
@@ -320,6 +391,8 @@ async function editorResponse(
     changes,
     affectedWorkerCount: group.publishedAt ? affectedWorkerIds.size : initialPublishWorkerCount,
     assignedUsers,
+    pendingClaims,
+    pendingTrades,
     defaultWindow,
     schedule: working,
   };

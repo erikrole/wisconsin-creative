@@ -84,6 +84,7 @@ export type ShiftGroup = {
   archivedAt?: string | null;
   publication?: SchedulePublicationState | null;
   hasWorkingCopy?: boolean;
+  claimsPaused?: boolean;
   autoReleaseAt?: string | null;
   autoReleaseError?: string | null;
   event: { id: string; startsAt: string };
@@ -113,6 +114,7 @@ export type CalendarEntry = CalendarEvent & {
   archivedAt?: string | null;
   publication?: SchedulePublicationState | null;
   hasWorkingCopy?: boolean;
+  claimsPaused?: boolean;
   combinedEventCount?: number;
   autoReleaseAt?: string | null;
   autoReleaseError?: string | null;
@@ -180,7 +182,7 @@ export function scheduleEventTitleParts(entry: ScheduleEventTitleInput): {
     const venueTone = venueToneFromEvent(entry);
     return {
       title: `${scheduleSportFamily(entry.sportCode) ?? sportLabel(entry.sportCode)} ${venueTone === "away" ? "at" : "vs"} ${opponent.primary}`,
-      detail: opponent.qualifier,
+      detail: opponent.qualifier ?? splitTitleQualifier(entry.summary).qualifier,
     };
   }
   if (entry.sportCode && entry.opponent) {
@@ -190,7 +192,7 @@ export function scheduleEventTitleParts(entry: ScheduleEventTitleInput): {
     const neutralLocation = venueTone === "neutral" ? entry.location?.name ?? null : null;
     return {
       title: `${sportLabel(entry.sportCode)} ${venueWord} ${opponent.primary}`,
-      detail: opponent.qualifier ?? neutralLocation,
+      detail: opponent.qualifier ?? splitTitleQualifier(entry.summary).qualifier ?? neutralLocation,
     };
   }
 

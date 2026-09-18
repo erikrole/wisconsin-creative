@@ -13,24 +13,29 @@ describe("schedule gear readiness source contracts", () => {
   });
 
   it("keeps per-row gear readiness out of Event detail Crew rows", () => {
-    // Crew rows carry one signal (coverage status). Gear readiness lives in the
-    // card's gear summary strip and the actionable Missing Gear section instead.
+    const eventDetail = readFileSync("src/app/(app)/events/[id]/page.tsx", "utf8");
+    const eventHeader = readFileSync("src/app/(app)/events/[id]/_components/EventHeader.tsx", "utf8");
+    // Crew rows carry one signal (coverage status). Event detail does not host
+    // a gear-readiness or missing-gear card; Reserve gear stays on the header.
     for (const label of ["Assignment gear", "Event reservation", "Pickup ready"]) {
       expect(crewSource).not.toContain(label);
     }
-    expect(crewSource).toContain("Missing Gear (");
-    expect(crewSource).toContain("commandCenter.missingGear.map");
-    expect(crewSource).toContain("Reserve gear");
+    expect(crewSource).not.toContain("Missing Gear (");
+    expect(eventDetail).not.toContain("Missing Gear (");
+    expect(eventDetail).not.toContain("EventGearCard");
+    expect(eventHeader).toContain("Reserve gear for this event");
   });
 
   it("shows audit-derived schedule changes without draft/review badges", () => {
     const readinessSource = readFileSync("src/app/(app)/schedule/_components/ScheduleReadiness.tsx", "utf8");
+    const activitySource = readFileSync("src/app/(app)/events/[id]/_components/EventActivityCard.tsx", "utf8");
     expect(readinessSource).toContain('label: "Assignee changes"');
     expect(readinessSource).toContain("recentActivityCount");
     expect(listViewSource).not.toContain("Review changes");
     expect(listViewSource).not.toContain("Unpublished changes");
-    expect(crewSource).toContain("Recent schedule changes");
-    expect(crewSource).toContain("Needs review");
+    expect(crewSource).not.toContain("Recent schedule changes");
+    expect(activitySource).toContain("Activity");
+    expect(activitySource).toContain("Needs review");
   });
 
   it("preserves assignment context when Schedule opens the reservation wizard", () => {

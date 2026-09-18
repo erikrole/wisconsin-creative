@@ -58,6 +58,46 @@ const SETUP_OPTIONS: Array<{
   },
 ];
 
+export function CrewSetupChoices({
+  loadingSide,
+  onSetup,
+}: {
+  loadingSide: CrewTemplateSide | null;
+  onSetup: (side: CrewTemplateSide) => void;
+}) {
+  return (
+    <div className="grid gap-2">
+      {SETUP_OPTIONS.map((option) => {
+        const Icon = option.icon;
+        return (
+          <Button
+            key={option.side}
+            type="button"
+            variant="outline"
+            className={cn(
+              "h-auto min-h-16 justify-start gap-3 px-3 py-2.5 text-left",
+              loadingSide === option.side && "border-primary/50 bg-primary/5",
+            )}
+            disabled={loadingSide !== null}
+            loading={loadingSide === option.side}
+            onClick={() => onSetup(option.side)}
+          >
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+              <Icon className="size-4" />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-sm font-medium text-foreground">{option.title}</span>
+              <span className="mt-0.5 block whitespace-normal text-xs font-normal text-muted-foreground">
+                {option.description}
+              </span>
+            </span>
+          </Button>
+        );
+      })}
+    </div>
+  );
+}
+
 function eventTiming(entry: CalendarEntry) {
   if (entry.allDay) {
     return `${formatDateShort(entry.startsAt, true)} · ${formatCalendarEventAllDayLabel(entry)}`;
@@ -167,34 +207,8 @@ export function ScheduleCrewSheet({
               <p className="mt-1 max-w-md text-sm leading-relaxed text-muted-foreground">
                 Choose a starting point. You can add, remove, convert, and assign every slot before changes are released.
               </p>
-              <div className="mt-5 grid gap-2">
-                {SETUP_OPTIONS.map((option) => {
-                  const Icon = option.icon;
-                  return (
-                    <Button
-                      key={option.side}
-                      type="button"
-                      variant="outline"
-                      className={cn(
-                        "h-auto min-h-16 justify-start gap-3 px-3 py-2.5 text-left",
-                        settingUpSide === option.side && "border-primary/50 bg-primary/5",
-                      )}
-                      disabled={settingUpSide !== null}
-                      loading={settingUpSide === option.side}
-                      onClick={() => void setupCrew(option.side)}
-                    >
-                      <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
-                        <Icon className="size-4" />
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block text-sm font-medium text-foreground">{option.title}</span>
-                        <span className="mt-0.5 block whitespace-normal text-xs font-normal text-muted-foreground">
-                          {option.description}
-                        </span>
-                      </span>
-                    </Button>
-                  );
-                })}
+              <div className="mt-5">
+                <CrewSetupChoices loadingSide={settingUpSide} onSetup={(side) => void setupCrew(side)} />
               </div>
             </div>
           )}

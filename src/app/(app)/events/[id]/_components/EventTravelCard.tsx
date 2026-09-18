@@ -308,10 +308,10 @@ export function EventTravelCard({
   }
 
   return (
-    <Card className="mt-4">
+    <Card elevation="flat" className="border-border/50 shadow-xs">
       <CardHeader className="pb-3 flex flex-row items-center justify-between">
         <div>
-          <CardTitle className="text-sm font-semibold">Travel Roster</CardTitle>
+          <CardTitle>Travel</CardTitle>
           <p className="text-xs text-muted-foreground mt-0.5">
             Who is traveling to this away event.
           </p>

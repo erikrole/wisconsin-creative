@@ -5,6 +5,8 @@ const mocks = vi.hoisted(() => ({
   findUser: vi.fn(),
   findUsers: vi.fn(),
   findSportConfig: vi.fn(),
+  findAssignments: vi.fn(),
+  findTrades: vi.fn(),
   updateWorkingCopy: vi.fn(),
   createWorkingCopy: vi.fn(),
   checkTimeConflict: vi.fn(),
@@ -16,6 +18,8 @@ vi.mock("@/lib/db", () => {
     shiftGroup: { findUnique: mocks.findGroup },
     user: { findUnique: mocks.findUser, findMany: mocks.findUsers },
     sportConfig: { findUnique: mocks.findSportConfig },
+    shiftAssignment: { findMany: mocks.findAssignments },
+    shiftTrade: { findMany: mocks.findTrades },
     shiftGroupWorkingCopy: {
       updateMany: mocks.updateWorkingCopy,
       create: mocks.createWorkingCopy,
@@ -150,6 +154,8 @@ describe("working-copy call-window validation", () => {
     mocks.findUser.mockResolvedValue(assignee);
     mocks.findUsers.mockResolvedValue([assignee]);
     mocks.findSportConfig.mockResolvedValue(null);
+    mocks.findAssignments.mockResolvedValue([]);
+    mocks.findTrades.mockResolvedValue([]);
     mocks.updateWorkingCopy.mockResolvedValue({ count: 1 });
     mocks.checkTimeConflict.mockResolvedValue(undefined);
     mocks.createAuditEntryTx.mockResolvedValue(undefined);

@@ -111,7 +111,12 @@ describe("working-copy mutation guard", () => {
     expect(editor).toContain('const canManageSchedule = currentUser?.role === "ADMIN" || currentUser?.role === "STAFF"');
     expect(editor).toContain("action={canManageSchedule ? (");
     expect(editor).toContain("canManageSchedule && emptyAreas.length > 0");
-    expect(editor).toContain("canManageSchedule && !eventHasEnded && data.hasWorkingCopy");
-    expect(crewRow).toContain("New position");
+    expect(editor).toContain("Apply correction now");
+    expect(editor).toContain("canManageSchedule && data.hasWorkingCopy");
+    expect(editor).toContain("canManageSchedule && showStudentCallButton && !data.allDay && data.schedule.slots.some");
+    expect(crewRow).toContain("Add ${areaLabel(area)} ${label} position");
+    const eventPage = readFileSync("src/app/(app)/events/[id]/page.tsx", "utf8");
+    expect(eventPage).toContain("useCurrentUser");
+    expect(eventPage).not.toContain('url: "/api/me"');
   });
 });

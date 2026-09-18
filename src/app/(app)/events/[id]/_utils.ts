@@ -16,11 +16,14 @@ export type CalendarEvent = {
   isHome: boolean | null;
   site: "HOME" | "AWAY" | "NEUTRAL" | null;
   subtitle: string | null;
+  isHidden: boolean;
   summaryLocked: boolean;
   isHomeLocked: boolean;
   locationLocked: boolean;
+  timingLocked: boolean;
   location: { id: string; name: string } | null;
-  source: { id: string; name: string } | null;
+  source: { id: string; name: string; url?: string | null } | null;
+  createdByName?: string | null;
   combinedInto: { id: string; summary: string } | null;
   combinedEvents: Array<{ id: string; summary: string; startsAt: string; endsAt: string; allDay: boolean; sportCode: string | null }>;
 };
@@ -28,6 +31,7 @@ export type CalendarEvent = {
 export type ShiftGroupSummary = {
   id: string;
   hasWorkingCopy?: boolean;
+  claimsPaused?: boolean;
   coverage?: { total: number; filled: number; percentage: number };
   publication?: {
     status: "draft" | "published" | "changed";

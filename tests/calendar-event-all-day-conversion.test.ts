@@ -221,8 +221,14 @@ describe("PATCH /api/calendar-events/[id] all-day conversion", () => {
     expect(mocks.db.calendarEvent.update).not.toHaveBeenCalled();
   });
 
-  it("keeps imported event timing and all-day state source-owned", async () => {
-    mocks.db.calendarEvent.findUnique.mockResolvedValueOnce(event({ sourceId: "source-1" }));
+  it("locks imported event timing and all-day state when staff override the calendar window", async () => {
+    mocks.db.calendarEvent.findUnique.mockResolvedValueOnce(event({
+      sourceId: "source-1",
+      rawStartsAt: allDayStart,
+      rawEndsAt: allDayEnd,
+      rawAllDay: true,
+      timingLocked: false,
+    }));
 
     const response = await PATCH(
       request({
@@ -233,9 +239,12 @@ describe("PATCH /api/calendar-events/[id] all-day conversion", () => {
       { params: Promise.resolve({ id: "event-1" }) },
     );
 
-    const body = await response.json();
-    expect(response.status).toBe(400);
-    expect(body.error).toBe("Imported event times are controlled by their calendar source");
-    expect(mocks.db.calendarEvent.update).not.toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(mocks.db.calendarEvent.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        allDay: false,
+        timingLocked: true,
+      }),
+    }));
   });
 });

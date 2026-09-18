@@ -1,0 +1,82 @@
+{
+  "title": "Crew face dismiss is a hover-reveal corner badge",
+  "eyebrow": "Web · Wisconsin Creative · Event detail Crew",
+  "lede": "Assigned photos and empty pluses stay a clean 24px face at rest. Unassign and Remove appear as an 18px disc centered on the trailing-top corner when the row is hovered.",
+  "stats": [
+    {
+      "k": "Hit / visual",
+      "v": "24px / 18px",
+      "n": "Hit box centered on the face corner; disc is 18px.",
+      "tone": "good"
+    },
+    {
+      "k": "Rest opacity",
+      "v": "0",
+      "n": "Pointer-events none on sm, so Assign still receives the click.",
+      "tone": "good"
+    },
+    {
+      "k": "Corner alignment",
+      "v": "0px",
+      "n": "Clear-button center matches plus and avatar top-right in CDP.",
+      "tone": "good"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Rest versus hover",
+      "note": "Matched Playwright crops of the same Event detail rows. This is rest vs hover of the new control, not a historical before of the covering 28px X. That baseline was not captured in an isolated worktree.",
+      "pairs": [
+        {
+          "title": "Assigned avatar",
+          "sub": "Erik Role, Video Staff.",
+          "before": "rest-assigned.png",
+          "beforeTag": "Rest",
+          "beforeCap": "Photo only. No dismiss chip.",
+          "after": "hover-assigned.png",
+          "afterTag": "Hover",
+          "afterCap": "18px disc on the trailing-top corner; initials stay readable.",
+          "beforeEvidence": "rest-assigned.capture.json",
+          "afterEvidence": "hover-assigned.capture.json"
+        },
+        {
+          "title": "Empty plus",
+          "sub": "Open Video Student slot.",
+          "before": "rest-placeholder.png",
+          "beforeTag": "Rest",
+          "beforeCap": "Dashed plus and Assign. No dismiss chip.",
+          "after": "hover-placeholder.png",
+          "afterTag": "Hover",
+          "afterCap": "Same 18px disc on the plus corner; the plus stays visible.",
+          "beforeEvidence": "rest-placeholder.capture.json",
+          "afterEvidence": "hover-placeholder.capture.json"
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "The X covered the face",
+      "was": "A 16px (earlier 28px) disc sat on the photo with only a 4px offset, so most of the badge covered the avatar or the plus.",
+      "now": "An 18px disc is centered on the trailing-top corner of a shared 24px face frame. Empty slots overlay that frame on Assign’s plus."
+    },
+    {
+      "h": "The X was always in the way",
+      "was": "Visible at rest, and a hidden-but-present control could still steal the Assign click.",
+      "now": "Opacity 0 and pointer-events none at rest on pointer screens. Row hover, row focus-within, and keyboard focus reveal it. Overflow menus keep Unassign and Remove."
+    }
+  ],
+  "verification": [
+    "Playwright hover on the assigned Erik Role row: opacity 0 at rest, 1 on hover. Crop 1070×45.",
+    "Playwright hover on an open Student slot: overlay box matches the plus (24×24 at the same origin); clear center is the plus top-right. Opacity 0 at rest, 1 on hover.",
+    "Authenticated Event detail rest screenshot: pluses and avatars are clean; no X visible.",
+    "Did not click Unassign or Remove on the live Football vs Eastern Michigan crew.",
+    "tests/schedule-ui-polish-source.test.ts: 7 passed. ESLint clean on crew-row.tsx and WorkingCrewEditor.tsx.",
+    "`npx tsc --noEmit` still fails only on unrelated src/lib/services/blasts.ts payload Json."
+  ],
+  "notes": [
+    "These pairs compare rest vs hover of the new badge. The previous covering-X state was not snapshotted in an isolated baseline.",
+    "Badge close-ups badge-assigned-close.png and badge-placeholder-close.png are 24×25 hit-target crops, not matched pairs.",
+    "Native iOS Event detail is unchanged."
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "title": "Event detail Activity names calendar diffs",
+  "eyebrow": "Web · Wisconsin Creative · Event detail",
+  "lede": "Football vs Eastern Michigan Activity rows from UWBadgers.com now name the field that changed. The Sep 2 update is a description/broadcast note, not a blank headline.",
+  "stats": [
+    { "k": "Sep 2 row", "v": "Description", "n": "The stored audit only differed on description (TV/radio notes). That value is now the supporting line." },
+    { "k": "Activity filter", "v": "All", "n": "All is selected by default so calendar updates are visible without switching filters." }
+  ],
+  "sections": [
+    {
+      "heading": "After",
+      "note": "Authenticated after capture on Football vs Eastern Michigan (`/events/cmmgnauku006qx10lf8cg5fjk`), Admin, dark appearance, 1623×1345. Hash-bound pair receipts were not recorded for the earlier before-activity.png, so this is after-only rather than a matched pair. The before PNG in this folder shows the same Sep 2 row with no supporting line."
+    }
+  ],
+  "changes": [
+    {
+      "h": "Calendar update supporting line",
+      "was": "Updated from UWBadgers.com with no field list, because the projector only inspected title/start/end/pickup/label.",
+      "now": "The row lists every changed field. This event’s Sep 2 and Aug 19 syncs recorded a description/broadcast note, so that is what Activity shows."
+    },
+    {
+      "h": "Future raw-window syncs",
+      "was": "A timing-locked republish of calendar start/end could write an audit with no displayed field, so Activity stayed blank.",
+      "now": "New sync audits include calendar start/end, all-day, and venue text. If a historical snapshot has no field evidence, the row says Calendar listing refreshed."
+    },
+    {
+      "h": "Student call times",
+      "was": "Matching Student rows used a dash instead of 8:30 AM.",
+      "now": "Every Student row shows its call time. Open slots stay one row each. Activity opens on All."
+    }
+  ],
+  "verification": [
+    "132 focused tests across schedule-change-history, event-activity-copy, calendar-sync, calendar-sync-audit, and schedule-ui-polish-source.",
+    "ESLint passed on schedule-change-history, calendar-sync, Event Activity copy/card, ShiftCoverageCard, and WorkingCrewEditor.",
+    "Authenticated Football vs Eastern Michigan: Sep 2 row supporting line is Description: Wisconsin Athletics Football vs Eastern Michigan TV: Peacock Radio: Badger Ra…; All 10 is selected; Student rows show 8:30 AM; 15 open/assigned slots remain unstacked.",
+    "Did not Hide, Save, Remove, Approve, or Publish on Eastern Michigan."
+  ],
+  "notes": [
+    "Native iOS Event detail was not part of this slice.",
+    "`npx tsc --noEmit` still fails on unrelated src/lib/services/blasts.ts.",
+    "Historical audits cannot invent fields that were never snapshotted. Later syncs persist raw calendar times and venue text so those diffs can be named.",
+    "After capture: tasks/archive/proofs/event-detail-qol-2026-09-17/after-activity-diffs.png"
+  ]
+}

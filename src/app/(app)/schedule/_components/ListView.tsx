@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { SkeletonTable } from "@/components/Skeleton";
 import EmptyState from "@/components/EmptyState";
 import { formatDateShort, formatTimeShort } from "@/lib/format";
-import { formatCalendarEventAllDayLabel, formatCalendarEventDateRange } from "@/lib/calendar-event-dates";
+import { formatCalendarEventAllDayLabel, formatCalendarEventDateRange, eventSpansMultipleDays } from "@/lib/calendar-event-dates";
 import { sportLabel } from "@/lib/sports";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
@@ -33,7 +33,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { UserAvatarGroup } from "@/components/UserAvatarGroup";
-import { ClaimShiftAction } from "@/components/ClaimShiftAction";
+import { ClaimShiftAction, ClaimsPausedNotice } from "@/components/ClaimShiftAction";
 import { CallWindowEditor } from "@/components/shift-detail/CallWindowEditor";
 import { cn } from "@/lib/utils";
 import { handleAuthRedirect, parseErrorMessage } from "@/lib/errors";
@@ -298,6 +298,14 @@ function ShiftRowList({
 
   return (
     <div className={cn("flex flex-col", compact ? "gap-2" : "gap-1.5")}>
+      {entry.claimsPaused && canClaim && (
+        <ClaimsPausedNotice
+          className={cn(
+            "rounded-md px-2 py-1.5",
+            compact ? "bg-muted/30" : "bg-muted/20",
+          )}
+        />
+      )}
       {commonCall && (
         <div className={cn(
           "flex items-center gap-2 rounded-md px-2 py-1 text-xs text-muted-foreground",
@@ -411,6 +419,7 @@ function ShiftRowList({
                     isAssigned={Boolean(activeAssignment)}
                     viewerRequest={viewerRequest}
                     canClaim={canClaim}
+                    claimsPaused={Boolean(entry.claimsPaused)}
                     isPublished={Boolean(entry.publication?.publishedAt)}
                     compact={compact}
                     onChanged={onClaimed}
@@ -1341,6 +1350,15 @@ export function ListView({
                       <span>{titleParts.detail}</span>
                     )}
                     <span>{venueTone.label}</span>
+                    {(entry.combinedEventCount ?? 0) > 1 && (
+                      <span>{entry.combinedEventCount} events · shared crew</span>
+                    )}
+                    {!entry.allDay && eventSpansMultipleDays(entry) && (
+                      <span>{formatCalendarEventDateRange(entry)}</span>
+                    )}
+                    {entry.claimsPaused && !isStaff && (
+                      <span>Updating</span>
+                    )}
                     {entry.subtitle && (
                       <span className="font-medium text-primary/70">{entry.subtitle}</span>
                     )}
@@ -1622,6 +1640,9 @@ function EventRows({
                 {(entry.combinedEventCount ?? 0) > 1 && (
                   <Badge variant="secondary" size="sm">{entry.combinedEventCount} events · shared crew</Badge>
                 )}
+                {!entry.allDay && eventSpansMultipleDays(entry) && (
+                  <Badge variant="secondary" size="sm">{formatCalendarEventDateRange(entry)}</Badge>
+                )}
                 {titleParts.detail && <span className="truncate">{titleParts.detail}</span>}
                 {entry.subtitle && <span className="truncate font-medium text-primary/70">{entry.subtitle}</span>}
               </div>
@@ -1630,6 +1651,9 @@ function EventRows({
             <CrewSummary entry={entry} />
             <div className="flex min-w-0 flex-wrap items-center gap-1">
               {showShiftStatus && shiftStatus === "Pending" && <Badge variant="orange" size="sm">{shiftStatus}</Badge>}
+              {entry.claimsPaused && canClaim && (
+                <Badge variant="secondary" size="sm">Updating</Badge>
+              )}
               {entry.eventArchivedAt && (
                 <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground/60">
                   <ArchiveIcon className="size-3" />

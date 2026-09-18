@@ -1,0 +1,48 @@
+{
+  "title": "Event detail identity and activity",
+  "eyebrow": "Web · local authenticated Admin preview",
+  "lede": "Event detail now leads with a cleaned matchup, a promotion subheadline, stacked venue, and a public source line, with Activity as an open crew/calendar/gear timeline.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "After-only evidence",
+      "note": "Authenticated local Admin preview at http://127.0.0.1:3000/events/cmpvcnaaj000vju045euzqhk4 (Volleyball vs Marquette). Desktop Chromium, dark appearance. No frozen matched before pair was captured for this identity/activity slice; earlier conversation screenshots of the previous header are not hash-bound captures.",
+      "pairs": []
+    }
+  ],
+  "changes": [
+    {
+      "h": "Title vs promotion",
+      "was": "The heading was the raw summary, Volleyball vs Marquette- White Out.",
+      "now": "The heading is Volleyball vs Marquette, with White Out as the subheadline. The breadcrumb matches."
+    },
+    {
+      "h": "Venue vs pickup",
+      "was": "Venue showed Madison, Wis., UW Field House plus Pickup Field House.",
+      "now": "Venue is UW Field House over Madison, WI. Pickup is not in the identity block."
+    },
+    {
+      "h": "Source",
+      "was": "Source read Imported from UWBadgers.",
+      "now": "Source reads UWBadgers.com. Manual events use Added by [person] from the create audit."
+    },
+    {
+      "h": "Activity",
+      "was": "A collapsed five-row list labeled Recent schedule changes.",
+      "now": "An open dated timeline with All/Crew/Calendar/Gear filters, sentence copy, and Needs review reserved for crew changes rather than routine ICS updates."
+    }
+  ],
+  "verification": [
+    "54 focused tests passed across identity, title parts, activity copy, and source contracts. A later 14-test activity/contract rerun also passed.",
+    "ESLint passed on the touched event identity files.",
+    "npx tsc --noEmit still fails in unrelated src/lib/services/blasts.ts; this slice did not change that file.",
+    "Authenticated desktop browser: header identity, Crew filter (3 crew rows), All filter (6 rows), and Raw ICS remaining admin-only. The Next.js issues badge was not present on the reloaded page.",
+    "git diff --check was run on the slice files."
+  ],
+  "notes": [
+    "After-only captures: after-header.png, after-activity-all.png, after-activity-crew.png.",
+    "Added by [person] was unit-tested, not browser-proved on a manual event.",
+    "Tablet width and keyboard-only filter travel were not separately captured.",
+    "No commit or push."
+  ]
+}

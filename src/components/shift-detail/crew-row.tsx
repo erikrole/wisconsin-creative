@@ -1,14 +1,8 @@
 "use client";
 
-import { forwardRef, type ReactNode } from "react";
-import { PlusIcon } from "lucide-react";
+import { forwardRef, type ComponentProps, type ReactNode } from "react";
+import { PlusIcon, XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { shiftWorkerLabel } from "@/lib/shift-display";
 import { cn } from "@/lib/utils";
 import { AREA_LABELS } from "@/types/areas";
@@ -34,6 +28,92 @@ export const CREW_ROW_GROUP = "group/crew-row";
  */
 export const CREW_ROW_REVEAL =
   "transition-opacity sm:opacity-0 sm:group-hover/crew-row:opacity-100 sm:group-focus-within/crew-row:opacity-100 sm:focus-visible:opacity-100";
+
+/**
+ * 24px face that hosts {@link CrewFaceClearButton}. Keep overflow visible so
+ * the corner badge can sit on the trailing-top edge without clipping.
+ */
+export function CrewFaceFrame({
+  children,
+  className,
+  ...props
+}: ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="crew-face-frame"
+      className={cn("relative size-6 shrink-0 overflow-visible", className)}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+}
+
+/**
+ * Overlay that sits on {@link AssignSlotButton}'s dashed plus. The plus lands
+ * at the wrap's left edge because the button uses `-ml-1.5` with `px-1.5`.
+ */
+export function CrewAssignFaceOverlay({ children }: { children: ReactNode }) {
+  return (
+    <CrewFaceFrame
+      data-slot="crew-assign-face-overlay"
+      className="pointer-events-none absolute left-0 top-1/2 -translate-y-1/2"
+    >
+      {children}
+    </CrewFaceFrame>
+  );
+}
+
+/**
+ * Corner dismiss on a 24px crew face. An 18px disc is centered on the
+ * trailing-top corner so it chips the photo instead of covering it. Hidden at
+ * rest on pointer screens (and not hit-testable) so Assign still receives the
+ * click; row hover, focus-within, and keyboard focus reveal it.
+ */
+export function CrewFaceClearButton({
+  label,
+  disabled,
+  onClick,
+}: {
+  label: string;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      disabled={disabled}
+      data-slot="crew-face-clear"
+      className={cn(
+        CREW_ROW_REVEAL,
+        "group/clear absolute right-0 top-0 z-10 flex size-6 translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full",
+        "pointer-events-auto sm:pointer-events-none sm:group-hover/crew-row:pointer-events-auto sm:group-focus-within/crew-row:pointer-events-auto focus:pointer-events-auto focus-visible:pointer-events-auto",
+        "focus:opacity-100 focus-visible:opacity-100",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        "disabled:pointer-events-none disabled:opacity-50",
+        "motion-reduce:transition-none",
+      )}
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onClick();
+      }}
+    >
+      <span
+        aria-hidden="true"
+        className={cn(
+          "flex size-[18px] items-center justify-center rounded-full",
+          "bg-background text-muted-foreground shadow-sm ring-1 ring-border",
+          "transition-[color,background-color,box-shadow,transform] group-hover/clear:bg-destructive group-hover/clear:text-destructive-foreground group-hover/clear:ring-destructive",
+          "group-active/clear:scale-95 motion-reduce:transition-none motion-reduce:group-active/clear:scale-100",
+        )}
+      >
+        <XIcon className="size-2.5" strokeWidth={2.5} />
+      </span>
+    </button>
+  );
+}
 
 /** Quiet call-time trigger, optically aligned to the left edge of its column. */
 export const CREW_CALL_TRIGGER_CLASS = "-ml-2 font-normal text-muted-foreground hover:text-foreground";
@@ -186,7 +266,7 @@ export function CrewTypeLabel({
  */
 export const AssignSlotButton = forwardRef<
   HTMLButtonElement,
-  React.ComponentProps<typeof Button> & { busy?: boolean }
+  ComponentProps<typeof Button> & { busy?: boolean }
 >(function AssignSlotButton({ busy = false, className, children, ...props }, ref) {
   return (
     <Button
@@ -203,7 +283,10 @@ export const AssignSlotButton = forwardRef<
         <span className="text-xs">Assigning...</span>
       ) : (
         <>
-          <span className="flex size-6 items-center justify-center rounded-full border border-dashed border-muted-foreground/30 transition-colors group-hover/assign:border-primary/50">
+          <span
+            data-slot="crew-assign-face"
+            className="flex size-6 items-center justify-center rounded-full border border-dashed border-muted-foreground/30 transition-colors group-hover/assign:border-primary/50"
+          >
             <PlusIcon className="size-3 text-muted-foreground/50 transition-colors group-hover/assign:text-primary" />
           </span>
           {children ?? "Assign"}
@@ -226,24 +309,25 @@ export function AddSlotMenu({
   onAdd: (workerType: "FT" | "ST") => void;
 }) {
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="h-10 gap-1 px-2 text-xs font-normal text-muted-foreground hover:text-foreground"
-          disabled={disabled}
-          aria-label={`New ${areaLabel(area)} staff or student position`}
-        >
-          <PlusIcon className="size-3" />
-          New position
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-40">
-        <DropdownMenuItem onSelect={() => onAdd("FT")}>New Staff position</DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => onAdd("ST")}>New Student position</DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <div className="flex items-center gap-0.5">
+      {(["ST", "FT"] as const).map((workerType) => {
+        const label = shiftWorkerLabel(workerType);
+        return (
+          <Button
+            key={workerType}
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-10 gap-1 px-2 text-xs font-normal text-muted-foreground hover:text-foreground"
+            disabled={disabled}
+            aria-label={`Add ${areaLabel(area)} ${label} position`}
+            onClick={() => onAdd(workerType)}
+          >
+            <PlusIcon className="size-3" />
+            {label}
+          </Button>
+        );
+      })}
+    </div>
   );
 }
