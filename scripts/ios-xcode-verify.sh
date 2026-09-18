@@ -53,15 +53,15 @@ resolve_simulator_udid() {
       line = $0
       sub(/^[ \t]+/, "", line)
       sub(/[ \t]+$/, "", line)
-      # Device names can contain parentheses ("iPad (A16)"), so anchor on the
-      # exact name followed by the UDID group rather than splitting on "(".
+      # Device names can contain parentheses ("iPad (A16)"), and newer
+      # simctl output can include the runtime in the name ("iPhone 16 Pro
+      # (27.0) (UDID)"). Extract the UUID itself rather than assuming the
+      # first closing parenthesis ends the device name.
       prefix = name " ("
       if (index(line, prefix) != 1) next
-      rest = substr(line, length(prefix) + 1)
-      close_at = index(rest, ")")
-      if (close_at == 0) next
-      udid = substr(rest, 1, close_at - 1)
-      if (index(substr(rest, close_at + 1), "(Booted)") > 0) {
+      if (match(line, /[[:xdigit:]]{8}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{12}/) == 0) next
+      udid = substr(line, RSTART, RLENGTH)
+      if (index(line, "(Booted)") > 0) {
         if (booted_udid == "" || vercmp(runtime_version, booted_version) > 0) {
           booted_udid = udid
           booted_version = runtime_version

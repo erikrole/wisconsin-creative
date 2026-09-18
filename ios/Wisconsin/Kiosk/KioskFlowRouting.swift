@@ -3,6 +3,64 @@ import GameController
 import Observation
 import OSLog
 
+/// Classifies the short, repeated character stream a paired HID scanner can
+/// leak into a visible kiosk text field. Human typing is allowed to continue;
+/// a burst is rejected before the extra character lands, and the caller can
+/// restore the captured baseline while the remainder of that burst is ignored.
+struct KioskHIDBurstDetector {
+    enum Decision: Equatable {
+        case allow
+        case reject(baseline: String)
+        case suppress
+    }
+
+    private static let burstInterval: TimeInterval = 0.12
+    private static let burstLength = 5
+    private static let suppressionInterval: TimeInterval = 0.5
+
+    private var baseline: String?
+    private var recentTimes: [Date] = []
+    private var suppressedUntil: Date?
+
+    mutating func evaluate(replacement: String, currentText: String, at date: Date) -> Decision {
+        if let suppressedUntil {
+            guard date < suppressedUntil else {
+                self.suppressedUntil = nil
+                baseline = nil
+                recentTimes.removeAll(keepingCapacity: true)
+                return evaluate(replacement: replacement, currentText: currentText, at: date)
+            }
+            return .suppress
+        }
+
+        guard replacement.count == 1,
+              !replacement.contains(where: \.isNewline) else {
+            baseline = currentText
+            recentTimes.removeAll(keepingCapacity: true)
+            recentTimes.append(date)
+            return .allow
+        }
+
+        guard let baseline,
+              let last = recentTimes.last,
+              date.timeIntervalSince(last) <= Self.burstInterval,
+              currentText.count == baseline.count + recentTimes.count else {
+            self.baseline = currentText
+            recentTimes.removeAll(keepingCapacity: true)
+            recentTimes.append(date)
+            return .allow
+        }
+
+        guard recentTimes.count < Self.burstLength else {
+            suppressedUntil = date.addingTimeInterval(Self.suppressionInterval)
+            return .reject(baseline: baseline)
+        }
+
+        recentTimes.append(date)
+        return .allow
+    }
+}
+
 /// Ordered input owned until its server response settles. Different spellings
 /// are still checked against server item identity; identical pending scans are
 /// rejected before another request starts.

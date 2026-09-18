@@ -421,6 +421,9 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
         guard let path = request.url?.path else { return nil }
         switch path {
         case "/api/resources": return FixtureAPI.guides
+        case let path where path.hasPrefix("/api/resources/"):
+            let slug = String(path.dropFirst("/api/resources/".count))
+            return FixtureAPI.guideDetail(slug: slug)
         case "/api/users":
             if AppRuntimeMode.performanceScenario == .searchPartial { return nil }
             return AppRuntimeMode.performanceScenario == .search
@@ -457,9 +460,13 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
         case "/api/calendar-events": return ScheduleFixtureAPI.calendarEvents
         case "/api/my-shifts": return ScheduleFixtureAPI.myShifts
         case "/api/bookings": return BookingFixtureAPI.list(for: request)
-        case "/api/bookings/\(BookingFixtureAPI.bookingId)": return BookingFixtureAPI.booking
+        case let path where path.hasPrefix("/api/bookings/"):
+            let bookingId = String(path.dropFirst("/api/bookings/".count))
+            return BookingFixtureAPI.booking(for: bookingId)
         case "/api/availability/check": return BookingFixtureAPI.availability
-        case "/api/assets/\(AssetFixtureAPI.assetId)": return AssetFixtureAPI.asset
+        case let path where path.hasPrefix("/api/assets/"):
+            let assetId = String(path.dropFirst("/api/assets/".count))
+            return AssetFixtureAPI.asset(for: assetId)
         case "/api/assets": return SearchFixtureAPI.assets(for: request)
         case "/api/reports/utilization": return ReportsFixtureAPI.utilization
         case "/api/reports/checkouts": return ReportsFixtureAPI.checkouts
@@ -705,7 +712,34 @@ enum SearchFixtureAPI {
 enum AssetFixtureAPI {
     static let assetId = "asset-fixture-1"
 
-    static var asset: Data {
+    private static let linkedSearchAssets: [String: (tag: String, name: String)] = [
+        "a-1": ("CAM-014", "A-cam body"),
+        "a-2": ("CAM-015", "Football camera 02"),
+        "a-3": ("CAM-016", "Football camera 03"),
+        "a-4": ("CAM-017", "Football camera 04"),
+        "a-5": ("LENS-032", "Football 70–200mm"),
+        "a-6": ("LENS-033", "Football 24–70mm"),
+        "a-7": ("AUD-007", "Football field recorder"),
+        "a-8": ("AUD-008", "Football wireless set"),
+        "a-9": ("TRI-021", "Football sideline tripod"),
+        "a-10": ("MON-010", "Football field monitor"),
+        "a-11": ("CAM-018", "Football camera 11"),
+        "a-12": ("CAM-019", "Football camera 12"),
+    ]
+
+    static func asset(for id: String) -> Data? {
+        guard id == assetId || linkedSearchAssets[id] != nil else { return nil }
+        guard let detail = linkedSearchAssets[id] else { return asset }
+
+        var payload = String(decoding: asset, as: UTF8.self)
+        payload = payload.replacingOccurrences(of: "\"id\":\"\(assetId)\"", with: "\"id\":\"\(id)\"")
+        payload = payload.replacingOccurrences(of: "\"assetTag\":\"CAM-014\"", with: "\"assetTag\":\"\(detail.tag)\"")
+        payload = payload.replacingOccurrences(of: "\"name\":\"A-cam body\"", with: "\"name\":\"\(detail.name)\"")
+        payload = payload.replacingOccurrences(of: "\"qrCodeValue\":\"CAM-014\"", with: "\"qrCodeValue\":\"\(detail.tag)\"")
+        return Data(payload.utf8)
+    }
+
+    private static var asset: Data {
         Data("""
         {"data":{
           "id":"\(assetId)","assetTag":"CAM-014","name":"A-cam body",
@@ -731,6 +765,30 @@ enum AssetFixtureAPI {
 enum BookingFixtureAPI {
     static let bookingId = "bk-fixture-1"
 
+    private static let linkedDashboardBookings: [String: (title: String, status: String, kind: String)] = [
+        "od1": ("Volleyball baseline kit", "OPEN", "CHECKOUT"),
+        "dt1": ("Football fall camp — video", "OPEN", "CHECKOUT"),
+        "dt2": ("Women’s soccer portraits", "OPEN", "CHECKOUT"),
+        "up1": ("Ohio State photo kit", "BOOKED", "RESERVATION"),
+        "up2": ("Hockey road audio kit", "BOOKED", "RESERVATION"),
+        "up3": ("Kohl Center studio shoot", "BOOKED", "RESERVATION"),
+        "bk-student-own": ("Student camera kit", "OPEN", "CHECKOUT"),
+        "bk-team-reservation": ("Volleyball photo package", "BOOKED", "RESERVATION"),
+        "bk-team-pickup": ("Field audio pickup", "PENDING_PICKUP", "CHECKOUT"),
+    ]
+
+    static func booking(for id: String) -> Data? {
+        guard id == bookingId || linkedDashboardBookings[id] != nil else { return nil }
+        guard let detail = linkedDashboardBookings[id] else { return booking }
+
+        var payload = String(decoding: booking, as: UTF8.self)
+        payload = payload.replacingOccurrences(of: "\"id\":\"\(bookingId)\"", with: "\"id\":\"\(id)\"")
+        payload = payload.replacingOccurrences(of: "\"title\":\"Volleyball vs Nebraska\"", with: "\"title\":\"\(detail.title)\"")
+        payload = payload.replacingOccurrences(of: "\"status\":\"OPEN\"", with: "\"status\":\"\(detail.status)\"")
+        payload = payload.replacingOccurrences(of: "\"kind\":\"CHECKOUT\"", with: "\"kind\":\"\(detail.kind)\"")
+        return Data(payload.utf8)
+    }
+
     private static let studentListReferenceDate: Date = {
         let now = Date.now
         let calendar = Calendar.current
@@ -750,7 +808,7 @@ enum BookingFixtureAPI {
         return formatter.string(from: studentListReferenceDate.addingTimeInterval(TimeInterval(minutes * 60)))
     }
 
-    static var booking: Data {
+    private static var booking: Data {
         Data("""
         {"data":{
           "id":"\(bookingId)","kind":"CHECKOUT","title":"Volleyball vs Nebraska","status":"OPEN",
@@ -865,6 +923,28 @@ enum BookingFixtureAPI {
 }
 
 private enum FixtureAPI {
+    static func guideDetail(slug: String) -> Data? {
+        let details: [String: (id: String, title: String, type: String, category: String, summary: String, authorId: String, authorName: String, markdown: String)] = [
+            "key-contacts": ("g1", "Key contacts", "CONTACTS", "Contacts", "Escalation numbers, vendor contacts, and internal owners.", "u1", "Media Ops", "# Key contacts\n\nCall the media operations lead first for venue, gear-room, or access issues. Escalate urgent event coverage issues to the on-call producer."),
+            "camp-randall": ("g2", "Camp Randall building numbers", "BUILDING_NUMBERS", "Building Numbers", "Gate codes, dock access, and elevator notes.", "u2", "Erik Role", "# Camp Randall building numbers\n\nUse the Creative Desk entrance for routine gear movement. Call venue operations before changing dock access or elevator routing."),
+            "media-drive": ("g3", "Media Drive overview", "MEDIA_DRIVE", "Media Drive", "Where footage lands and how it is named.", "u1", "Media Ops", "# Media Drive overview\n\nCreate the event folder before ingest, preserve the camera-card source name, and verify the transfer before formatting media."),
+            "card-offload-sop": ("g4", "Card offload SOP", "SOP", "SOP", "The standard offload and verification pass after a shoot.", "u3", "Jordan Lee", "# Card offload SOP\n\nCopy the card to the event folder, compare the source and destination counts, then mark the transfer verified before returning the card."),
+        ]
+        guard let detail = details[slug] else { return nil }
+        return Data("""
+        { "data": {
+          "id": "\(detail.id)", "title": "\(detail.title)", "slug": "\(slug)",
+          "type": "\(detail.type)", "category": "\(detail.category)",
+          "summary": "\(detail.summary)", "searchText": "\(detail.title)",
+          "markdown": "\(detail.markdown.replacingOccurrences(of: "\n", with: "\\n"))",
+          "featured": false, "featuredRank": null, "lastVerifiedAt": null,
+          "lastVerifiedBy": null, "personalizationReason": "General", "published": true,
+          "createdAt": "2026-07-01T12:00:00.000Z", "updatedAt": "2026-08-14T15:04:00.000Z",
+          "author": { "id": "\(detail.authorId)", "name": "\(detail.authorName)" }
+        } }
+        """.utf8)
+    }
+
     static let guides = json("""
     { "data": [
       { "id": "g1", "title": "Key contacts", "slug": "key-contacts", "type": "CONTACTS",

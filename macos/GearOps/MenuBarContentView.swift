@@ -730,7 +730,7 @@ private struct ExtraBookingDetail: View {
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 } else if itemsAreAnonymous {
-                    Text("Item names are not in this snapshot yet. They appear after the next booking update.")
+                    Text("Item names are not in this snapshot yet. Sign in again to load them.")
                         .font(.callout)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
