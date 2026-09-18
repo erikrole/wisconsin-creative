@@ -472,6 +472,7 @@ export async function processExpiryWarnings() {
             type: isExpired ? "license_expired" : "license_expiring_soon",
             title,
             body,
+            payload: { type: "license_expiry", licenseCodeId: code.id, href: "/licenses" },
             channel: "IN_APP",
             sentAt: now,
             dedupeKey,
@@ -481,7 +482,7 @@ export async function processExpiryWarnings() {
         await sendPushToUser(admin.id, {
           title,
           body,
-          payload: { type: "license_expiry", licenseCodeId: code.id },
+            payload: { type: "license_expiry", licenseCodeId: code.id, href: "/licenses" },
           category: "licenseExpiry",
         });
 
@@ -530,6 +531,7 @@ export async function processLicenseNags() {
           type: "license_held_2d",
           title,
           body,
+          payload: { type: "license_nag", licenseCodeId: claim.licenseCodeId, href: "/licenses" },
           channel: "IN_APP",
           sentAt: new Date(),
           dedupeKey,
@@ -539,7 +541,7 @@ export async function processLicenseNags() {
       await sendPushToUser(claim.userId, {
         title,
         body,
-        payload: { type: "license_nag", licenseCodeId: claim.licenseCodeId },
+            payload: { type: "license_nag", licenseCodeId: claim.licenseCodeId, href: "/licenses" },
         category: "licenseExpiry",
       });
 

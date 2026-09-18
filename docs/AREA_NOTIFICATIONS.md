@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Notifications
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-09-07
+- Last Updated: 2026-09-18
 - Status: Active; browser push is deployed to Production, with physical Android acceptance still open
 - Version: V1.8
 
@@ -134,7 +134,7 @@ Implementation: `src/lib/checkout-escalation-policy.ts`, `src/lib/services/notif
 - Registration: `POST /api/devices` upserts token on every app foreground after login; `DELETE /api/devices` bulk-revokes on logout. An intentionally empty DELETE body means revoke all, a token body revokes only that caller-owned registration, and malformed non-empty JSON returns 400 without revoking anything. Native registration/revocation decodes the `{ success: true }` response through the shared API handler so 401s trigger the global session-expired path.
 - iOS: `AppDelegate.didRegisterForRemoteNotificationsWithDeviceToken` → POST hex token. Permission requested once after login (`.notDetermined` guard; existing `.authorized` silently re-registers).
 - Push fires for: checkout due/overdue escalation, staff-triggered overdue checkout nudges, `shift_gear_up`, shift schedule changes, trade lifecycle events, reservation lifecycle events, and license nag/expiry warnings when the recipient has push enabled for that category.
-- Tap handling: `UNUserNotificationCenterDelegate.didReceive` sets `AppState.pendingPushBookingId` or `AppState.pendingPushEventId`. Booking pushes open through `HomeView`; event pushes switch to Schedule and let `ScheduleView` open the matching event sheet.
+- Tap handling: APNs, the in-app inbox, browser-push clicks, custom `wisconsin://` URLs, and `https://wisconsincreative.com` universal links share `GearTrackerRoute` / `notificationDestinationPath`. Booking, checkout, event, item, user, license, firmware search, blast, Trade Board, and unknown families all resolve to a destination; unknown APNs taps open the inbox instead of appearing to do nothing. Mutation query parameters never open Extend or another write sheet. Control Center Scan / My Gear / New Reservation open the same URLs. Universal-link proof requires the deployed AASA `applinks` record plus a physical tap from Calendar or Mail.
 - Native Settings > Notifications is push-focused and exposes category toggles for checkout due reminders, checkout overdue alerts, reservation updates, license expiry reminders, schedule updates, trade updates, and gear prep nudges. It also surfaces the account-wide `pausedUntil` state with Pause 1 hour/day/week choices and a one-tap Resume action; while paused, push and email delivery are suppressed but in-app inbox rows remain visible. The delivery summary distinguishes account pause, Push alerts preference, iOS authorization, and APNs registration. The device-specific self-test is offered only when all of those delivery gates plus the current installation token are ready, and failed preference saves remain visible and recoverable.
 - Environment fallback: sends go to the primary APNs host (production in prod, sandbox in dev); tokens rejected with `BadDeviceToken`/`Unregistered` are retried on the other APNs environment before any revocation, because Xcode development builds carry sandbox tokens even against the production server. Only tokens both environments reject are revoked in DB.
 - Provider-token recovery: `ExpiredProviderToken`/`InvalidProviderToken` responses invalidate the cached JWT and retry the affected tokens once with a fresh token.
@@ -159,7 +159,9 @@ Implementation: `src/lib/checkout-escalation-policy.ts`, `src/lib/services/notif
 - The push contains no booking details. It only invalidates the local snapshot; the Mac then fetches `/api/companion/projection`, whose authentication and data source are entirely external to Neon.
 - APNs delivery is best-effort and may be throttled by the operating system. Manual refresh uses the same Upstash-only route and cached data remains visible on failure.
 - Local booking-change notifications use the booking title as the stackable notification title and show a localized `Status • Requester • Timestamp` body from the projection's server `updatedAt`, so delayed delivery retains the source event time instead of relying only on the Mac's delivery time.
-- Wisconsin Creative requests both alert and sound authorization while keeping sound delivery opt-in. On sign-out or identity replacement it removes pending and delivered companion booking requests so requester names, titles, and timestamps do not remain in Notification Center.
+- Same-booking updates replace one Notification Center request. A booking that leaves the projection removes that request. One refresh delivers at most four newest allowed alerts; older edges still advance the quiet baseline. Foreground presentation plays sound only when the user opted in. The `GT_BOOKING` category offers **Open Booking** and uses the same booking deep link as a banner tap.
+- Turning Booking alerts off, signing out, or replacing identity removes pending and delivered companion booking requests so requester names, titles, and timestamps do not remain in Notification Center.
+- Wisconsin Creative requests both alert and sound authorization while keeping sound delivery opt-in. Delivery stays on the active interruption level so silent banners remain visible; `.passive` is not used because it would hide those banners.
 - Account deactivation and role changes revoke that user's external companion sessions and device registrations. Companion credentials are 90-day leases renewed through the Upstash-only session route during normal restore, APNs, or manual refresh; a credential that is unused past its lease still requires sign-in again.
 - Existing production KV/Upstash, session-secret, and APNs provider variables satisfy the server prerequisites. The macOS App ID capability and Developer ID signed/notarized build shipped in `macos-v1.0.0` with profile `4f4171d8-f959-4ed5-be70-7cc663253d52`; real APNs delivery and end-to-end notification acceptance remain rollout gates.
 
@@ -187,7 +189,7 @@ Implementation: `src/lib/checkout-escalation-policy.ts`, `src/lib/services/notif
 - Mutation reliability: mark-read, mark-all-read, and manual overdue processing use ref-backed duplicate-action guards, shared 401 redirects, safe response parsing, and specific server/network error toasts
 - API reliability: malformed mark-read JSON returns 400, stale or wrong notification IDs return 404, and audit rows are only created after a real update
 - Empty state: "All caught up" with `bell.slash` icon
-- Deep links: row actions navigate to the related booking, reservation, schedule surface, or explicit `payload.href`
+- Deep links: row actions navigate through `notificationDestinationPath` to the related booking, reservation, event, item, user, license, schedule, or explicit `payload.href`
 - Unread badge: `GET /api/notifications/count` returns `{ unreadCount }` — lightweight, no data fetch
 - Foreground refresh: iOS app re-fetches unread count on every foreground return (scenePhase hook)
 
@@ -398,6 +400,10 @@ renders a tap-only alert. Neither side needs to ship first.
 - Source/build, isolated native behavior tests, fixture captures, and physical-device delivery are separate gates. See `tasks/ios-notifications-polish-plan-2026-09-07.md` for evidence and limitations.
 
 ## Change Log
+
+- 2026-09-18: **macOS companion booking alerts replace, stay silent by default, and stay bounded (local).** Same-booking updates reuse one request identifier, a booking that leaves the projection clears its alert, and one refresh shows at most four newest banners. Foreground presentation honors the opt-in sound, turning alerts off clears Notification Center, and Open Booking uses the existing booking deep link. Source/test complete; real APNs delivery remains under the Companion delivery gap.
+
+- 2026-09-16: **Every notification family now has a tap destination (local).** Inbox, APNs, and browser push share `notificationDestinationPath` / `GearTrackerRoute`. License, firmware, item, badge, blast, Trade Board, and unknown families resolve instead of appearing to do nothing. Checkout/reservation/license/test payloads carry `href`. Universal links and Control Center are documented in `AREA_MOBILE.md`. Source/test complete; physical APNs, Calendar, and browser-push tap-through remain open.
 
 - 2026-09-07: **Native notification audit and polish, local candidate.** Hardened read/pagination/preference recovery, session-safe reminder scheduling, full-message readability, and permission/delivery copy. Existing category, recipient, publication, and APNs transport policies remain unchanged. Physical delivery and distribution are not claimed.
 

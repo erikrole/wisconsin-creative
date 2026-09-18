@@ -34,6 +34,7 @@ import { useUrlState } from "@/hooks/use-url-state";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Spinner } from "@/components/ui/spinner";
 import { dispatchNotificationCountChanged } from "@/lib/notification-count-sync";
+import { notificationDestinationPath } from "@/lib/notification-destination";
 import { cn } from "@/lib/utils";
 
 type Notification = {
@@ -690,21 +691,7 @@ function NotificationRow({
 }
 
 function getNotificationHref(notification: Notification) {
-  if (typeof notification.payload?.href === "string") {
-    return notification.payload.href;
-  }
-
-  if (typeof notification.payload?.bookingId === "string") {
-    return isReservationNotification(notification)
-      ? `/reservations/${notification.payload.bookingId}`
-      : `/checkouts/${notification.payload.bookingId}`;
-  }
-
-  if (typeof notification.payload?.shiftGroupId === "string") {
-    return "/schedule";
-  }
-
-  return null;
+  return notificationDestinationPath(notification.payload, notification.type);
 }
 
 function getNotificationActionLabel(notification: Notification) {

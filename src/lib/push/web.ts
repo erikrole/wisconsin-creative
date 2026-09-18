@@ -1,6 +1,7 @@
 import * as webpush from "web-push";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
+import { notificationOpenPath } from "@/lib/notification-destination";
 
 const WEB_PUSH_TTL_SECONDS = 24 * 60 * 60;
 const WEB_PUSH_TIMEOUT_MS = 5_000;
@@ -55,10 +56,7 @@ function isExpiredSubscription(error: unknown): boolean {
 }
 
 function notificationUrl(payload: Record<string, unknown> | undefined): string {
-  const candidate = payload?.url;
-  return typeof candidate === "string" && candidate.startsWith("/") && !candidate.startsWith("//")
-    ? candidate
-    : "/notifications";
+  return notificationOpenPath(payload);
 }
 
 function mergeDelivery(

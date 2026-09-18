@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { sendEmail, buildNotificationEmail } from "@/lib/email";
 import { DEFAULT_APNS_INTERRUPTION_LEVEL, sendPush } from "@/lib/push/apns";
 import { sendWebPushToUsers } from "@/lib/push/web";
+import { withNotificationHref } from "@/lib/notification-destination";
 import { ACTIVE_ASSIGNMENT_STATUSES } from "@/lib/shift-constants";
 import { loadUserPrefs, normalizePrefs, shouldDeliverEmail, shouldDeliverPush, shouldDeliverCategory, type NotificationCategory } from "@/lib/services/notification-prefs";
 import { loadCheckoutPolicies } from "@/lib/services/checkout-policies";
@@ -94,6 +95,8 @@ export async function sendPushToUser(
     // Keep native APNs tokens and browser subscriptions on their own delivery
     // paths. The web sender is best-effort and has its own failure boundary, so
     // missing VAPID configuration never suppresses iOS delivery.
+    const payloadType = typeof opts.payload?.type === "string" ? opts.payload.type : undefined;
+    const payload = withNotificationHref(opts.payload, payloadType);
     const [tokens] = await Promise.all([
       db.deviceToken.findMany({
         where: {
@@ -104,7 +107,7 @@ export async function sendPushToUser(
         },
         select: { token: true },
       }),
-      sendWebPushToUsers([userId], opts),
+      sendWebPushToUsers([userId], { ...opts, payload }),
     ]);
     if (tokens.length === 0) return;
 
@@ -113,7 +116,7 @@ export async function sendPushToUser(
       {
         title: opts.title,
         body: opts.body ?? "",
-        payload: opts.payload,
+        payload,
         category: opts.category ? APNS_ACTION_CATEGORY[opts.category] : undefined,
         interruptionLevel: opts.category
           ? APNS_INTERRUPTION_LEVEL[opts.category] ?? DEFAULT_APNS_INTERRUPTION_LEVEL
@@ -291,6 +294,7 @@ async function persistCheckoutEscalation(args: {
           dueAt: args.checkout.endsAt.toISOString(),
           dueVersion,
           recipientKind: args.recipientKind,
+          href: `/checkouts/${args.checkout.id}`,
         },
         channel: "IN_APP",
         sentAt: args.now,
@@ -309,7 +313,7 @@ async function persistCheckoutEscalation(args: {
     deferPush(sendPushToUser(args.recipient.id, {
       title: args.title,
       body: args.body,
-      payload: { bookingId: args.checkout.id },
+      payload: { bookingId: args.checkout.id, href: `/checkouts/${args.checkout.id}` },
       category,
     }));
   }
@@ -1474,14 +1478,14 @@ export async function createReservationLifecycleNotification(args: {
         type,
         title,
         body,
-        payload: { bookingId },
+        payload: { bookingId, href: `/reservations/${bookingId}` },
         channel: "IN_APP",
         sentAt: new Date(),
         dedupeKey,
       },
     });
 
-    deferPush(sendPushToUser(requesterUserId, { title, body, payload: { bookingId }, category: "reservation" }));
+    deferPush(sendPushToUser(requesterUserId, { title, body, payload: { bookingId, href: `/reservations/${bookingId}` }, category: "reservation" }));
   } catch (err) {
     console.error(`[NOTIFY] Failed to create reservation_${event} notification for booking ${bookingId}:`, err);
   }
@@ -1528,6 +1532,7 @@ export async function notifyItemReport(args: {
       assetTag: args.assetTag,
       reportType: args.reportType,
       reporterName: args.reporterName,
+      href: `/checkouts/${args.bookingId}`,
       ...(args.evidenceImageUrl ? { evidenceImageUrl: args.evidenceImageUrl } : {}),
     },
     channel: "IN_APP" as const,
@@ -1615,6 +1620,7 @@ export async function notifyLowStock(args: {
         skuName: args.skuName,
         onHandQuantity: args.onHandQuantity,
         minThreshold: args.minThreshold,
+        href: `/items?search=${encodeURIComponent(args.skuName)}`,
       },
       channel: "IN_APP" as const,
       sentAt: now,
