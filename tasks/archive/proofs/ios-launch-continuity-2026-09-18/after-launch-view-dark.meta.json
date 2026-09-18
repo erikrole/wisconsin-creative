@@ -1,0 +1,17 @@
+{
+  "sourceRevision": "e0148dd803421f2919c8ed19bcb630c713058ffe",
+  "sourcePatchSha256": "97550363cf80a92b0cbf9d95ffb9f397febb921451f2ef528232607e43cd0e9b",
+  "settings": {
+    "device": "iPhone 16 Pro (27.0) Simulator E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE",
+    "viewport": [402, 874],
+    "fixture": "WisconsinPerformance PasswordManagerScreenshotUITests/testLaunchViewCaptures launch-view",
+    "role": "unsigned-in restore",
+    "route": "LaunchView",
+    "appearance": "dark",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "simulator local 2026-09-18 09:51",
+    "scroll": [0, 0]
+  }
+}

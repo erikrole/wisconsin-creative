@@ -87,7 +87,7 @@ describe("iOS system hardening contracts", () => {
     // `Task`, touches no session state, and never routes.
     const mainActorBranches =
       notificationRouting.match(/Task \{ @MainActor in/g)?.length ?? 0;
-    expect(mainActorBranches).toBeGreaterThanOrEqual(3);
+    expect(mainActorBranches).toBeGreaterThanOrEqual(2);
     expect(
       notificationRouting.match(/authSessionBoundary\.owns\(notificationBoundary\)/g),
     ).toHaveLength(mainActorBranches);
@@ -104,16 +104,16 @@ describe("iOS system hardening contracts", () => {
   it("binds notification permission awaits and the soft prompt to one signed-in identity", () => {
     const app = source("ios/Wisconsin/App/WisconsinApp.swift");
     const prompt = source("ios/Wisconsin/Views/PushPrePromptView.swift");
+    const profile = source("ios/Wisconsin/Views/ProfileView.swift");
 
     expect(app).toContain("registerForPushIfAuthorized(");
     expect(app).toContain("userId: String,");
     expect(app).toContain("sessionBoundary: UUID");
     expect(app).toContain("session.currentUser?.id == userId");
     expect(app).toContain("authSessionBoundary.owns(sessionBoundary)");
-    expect(app).toContain("maybeShowPushPrompt(");
-    expect(app).toMatch(
-      /Task\.sleep\(for: \.milliseconds\(600\)\)[\s\S]*?session\.currentUser\?\.id == userId[\s\S]*?authSessionBoundary\.owns\(sessionBoundary\)[\s\S]*?showPushPrePrompt = true/,
-    );
+    expect(profile).toContain("@State private var showPushPrompt = false");
+    expect(profile).toContain(".sheet(isPresented: $showPushPrompt)");
+    expect(profile).toContain("PushPrePromptView()");
     expect(prompt).toContain("@Environment(SessionStore.self) private var session");
     expect(prompt).toContain("let sessionBoundary = authSessionBoundary.capture()");
     expect(prompt).toContain("session.currentUser?.id == userId");
@@ -127,6 +127,10 @@ describe("iOS system hardening contracts", () => {
     const reset = appState.slice(
       appState.indexOf("func resetForSessionBoundary()"),
       appState.indexOf("\n    func selectTab", appState.indexOf("func resetForSessionBoundary()")),
+    );
+    const pendingReset = appState.slice(
+      appState.indexOf("private func clearPendingDestinations()"),
+      appState.indexOf("\n    func refresh", appState.indexOf("private func clearPendingDestinations()")),
     );
     const signedOutHandler = app.slice(
       app.indexOf("private func handleCurrentUserChange"),
@@ -152,8 +156,9 @@ describe("iOS system hardening contracts", () => {
       "pendingBrowseDestination",
       "resetTab",
     ]) {
-      expect(reset).toContain(`${pending} = nil`);
+      expect(pending === "resetTab" ? reset : pendingReset).toContain(`${pending} = nil`);
     }
+    expect(reset).toContain("clearPendingDestinations()");
     expect(reset).toContain("selectedTab = 0");
     expect(reset).toContain("tabResetToken = 0");
     expect(reset).toContain("pushRegistrationState = .unknown");
@@ -249,18 +254,15 @@ describe("iOS system hardening contracts", () => {
     expect(thumbnails).toContain("thumbnailURLCache.removeAllCachedResponses()");
   });
 
-  it("covers the entire scene window before iOS captures an inactive app snapshot", () => {
+  it("does not cover inactive snapshots with a splash or privacy lock", () => {
     const app = source("ios/Wisconsin/App/WisconsinApp.swift");
 
-    expect(app).toContain("WindowPrivacyShieldHost(isSceneActive: scenePhase == .active)");
-    expect(app).toContain("private weak var window: UIWindow?");
-    expect(app).toContain("UIScene.willDeactivateNotification");
-    expect(app).toContain("UIScene.didEnterBackgroundNotification");
-    expect(app).toContain("UIScene.didActivateNotification");
-    expect(app).toContain('UIImage(systemName: "lock.shield.fill")');
-    expect(app).toContain("window.addSubview(shieldView)");
-    expect(app).toContain("window.bringSubviewToFront(shieldView)");
+    expect(app).not.toContain("WindowLaunchStillHost");
+    expect(app).not.toContain("WindowPrivacyShieldHost");
     expect(app).not.toContain("private struct AppPrivacyShield: View");
+    expect(app).not.toContain('UIImage(named: "LaunchLockup")');
+    expect(app).not.toContain('UIImage(systemName: "lock.shield.fill")');
+    expect(app).not.toContain("window.addSubview(shieldView)");
   });
 
   it("keeps kiosk credentials on one device and has one cold-launch owner", () => {

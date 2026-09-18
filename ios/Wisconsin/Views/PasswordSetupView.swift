@@ -60,12 +60,19 @@ struct PasswordSetupView: View {
 
             GeometryReader { geo in
                 ScrollView {
-                    VStack {
-                        Spacer(minLength: 0)
+                    VStack(spacing: 0) {
+                        Spacer(minLength: 24)
+
+                        BrandSplashLockup(subtitle: "Set your password")
+                            .padding(.bottom, 22)
+
                         card
-                            .padding(.horizontal, 24)
-                        Spacer(minLength: 0)
+                            .padding(.horizontal, 20)
+
+                        Spacer(minLength: 24)
                     }
+                    .frame(maxWidth: 468)
+                    .frame(maxWidth: .infinity)
                     .frame(minHeight: geo.size.height)
                 }
                 .scrollDismissesKeyboard(.interactively)
@@ -81,18 +88,8 @@ struct PasswordSetupView: View {
     }
 
     private var card: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: 16) {
             VStack(spacing: 8) {
-                Image("Badgers")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 52, height: 52)
-                    .accessibilityHidden(true)
-
-                Text("Set your password")
-                    .font(.title2.weight(.bold))
-                    .foregroundStyle(.primary)
-
                 // Renders exactly like the label it replaces, but as a real
                 // account field: iOS needs one next to a new-password field to
                 // file the saved credential under the right address.
@@ -101,8 +98,8 @@ struct PasswordSetupView: View {
                     .textContentType(.username)
                     .multilineTextAlignment(.center)
                     .disabled(true)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
                     .accessibilityLabel("Signed in as \(email)")
@@ -111,10 +108,7 @@ struct PasswordSetupView: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
-                    .padding(.top, 4)
             }
-            .padding(.top, 32)
-            .padding(.bottom, 28)
 
             VStack(spacing: 16) {
                 passwordField(
@@ -190,12 +184,8 @@ struct PasswordSetupView: View {
                 .foregroundStyle(.secondary)
                 .disabled(session.isLoading)
             }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 28)
         }
-        .background(Color(.systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 20))
-        .shadow(color: Color(.sRGBLinear, white: 0, opacity: 0.4), radius: 24, y: 12)
+        .brandLoginCardChrome()
     }
 
     @ViewBuilder

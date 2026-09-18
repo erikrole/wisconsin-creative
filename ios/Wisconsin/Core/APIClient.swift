@@ -434,6 +434,12 @@ final class APIClient {
         return resp.data
     }
 
+    func bookingReusePlan(id: String) async throws -> BookingReusePlan {
+        let req = request(path: "/api/bookings/\(id)/reuse-plan")
+        let resp: DataWrapper<BookingReusePlan> = try await perform(req)
+        return resp.data
+    }
+
     func cancelBooking(id: String) async throws -> Booking {
         let req = request(path: "/api/bookings/\(id)/cancel", method: "POST")
         let response: DataWrapper<Booking> = try await perform(req)
@@ -667,7 +673,8 @@ final class APIClient {
         shiftAssignmentId: String? = nil,
         sourceDraftId: String? = nil,
         serializedAssetIds: [String] = [],
-        bulkItems: [BulkReservationRequest] = []
+        bulkItems: [BulkReservationRequest] = [],
+        kitId: String? = nil
     ) async throws -> ReservationCreationReceipt {
         struct Body: Encodable {
             let title: String
@@ -682,6 +689,7 @@ final class APIClient {
             let eventIds: [String]?
             let shiftAssignmentId: String?
             let sourceDraftId: String?
+            let kitId: String?
         }
         var req = request(path: "/api/reservations", method: "POST")
         let iso = ISO8601DateFormatter()
@@ -698,7 +706,8 @@ final class APIClient {
             eventId: eventId,
             eventIds: eventIds.isEmpty ? nil : eventIds,
             shiftAssignmentId: shiftAssignmentId,
-            sourceDraftId: sourceDraftId
+            sourceDraftId: sourceDraftId,
+            kitId: kitId
         ))
         let resp: DataWrapper<BookingStub> = try await perform(req)
         return ReservationCreationReceipt(
@@ -994,6 +1003,29 @@ final class APIClient {
             let msg = (try? JSONDecoder().decode(ServerErrorBody.self, from: data))?.error ?? "Couldn't remove block"
             throw APIError.serverError(msg)
         }
+    }
+
+    func reservationKits(locationId: String, requesterUserId: String? = nil) async throws -> (kits: [BookingKitOption], suggestedKitId: String?) {
+        struct Resp: Decodable {
+            let data: [BookingKitOption]
+            let suggestedKitId: String?
+        }
+        var items: [URLQueryItem] = [
+            .init(name: "location_id", value: locationId),
+            .init(name: "limit", value: "100"),
+        ]
+        if let requesterUserId, !requesterUserId.isEmpty {
+            items.append(.init(name: "requester_user_id", value: requesterUserId))
+        }
+        let req = request(path: "/api/kits", queryItems: items)
+        let resp: Resp = try await perform(req)
+        return (resp.data, resp.suggestedKitId)
+    }
+
+    func reservationKitDetail(id: String) async throws -> BookingKitDetail {
+        let req = request(path: "/api/kits/\(id)")
+        let resp: DataWrapper<BookingKitDetail> = try await perform(req)
+        return resp.data
     }
 
     func formOptions() async throws -> FormOptions {
@@ -1874,6 +1906,14 @@ final class APIClient {
                 queryItems: [.init(name: "expectedVersion", value: "\(expectedVersion)")]
             )
         )
+        return response.data
+    }
+
+    func publishWorkingSchedule(shiftGroupId: String, expectedVersion: Int) async throws -> WorkingScheduleEditor {
+        struct Body: Encodable { let expectedVersion: Int }
+        var req = request(path: "/api/shift-groups/\(shiftGroupId)/publish", method: "POST")
+        req.httpBody = try JSONEncoder().encode(Body(expectedVersion: expectedVersion))
+        let response: DataWrapper<WorkingScheduleEditor> = try await perform(req)
         return response.data
     }
 

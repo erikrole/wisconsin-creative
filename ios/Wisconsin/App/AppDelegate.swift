@@ -209,24 +209,12 @@ extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
         userInfo: [AnyHashable: Any],
         notificationBoundary: UUID
     ) {
-        if let blastId = userInfo["blastId"] as? String {
-            Task { @MainActor in
-                guard PushTokenStorage.registrationAllowed,
-                      authSessionBoundary.owns(notificationBoundary) else { return }
-                sharedAppState?.pendingPushBlastId = blastId
-            }
-        } else if let bookingId = userInfo["bookingId"] as? String {
-            Task { @MainActor in
-                guard PushTokenStorage.registrationAllowed,
-                      authSessionBoundary.owns(notificationBoundary) else { return }
-                sharedAppState?.pendingPushBookingId = bookingId
-            }
-        } else if let eventId = userInfo["eventId"] as? String {
-            Task { @MainActor in
-                guard PushTokenStorage.registrationAllowed,
-                      authSessionBoundary.owns(notificationBoundary) else { return }
-                sharedAppState?.pendingPushEventId = eventId
-            }
+        let type = userInfo["type"] as? String
+        let route = GearTrackerRouteParser.parseNotification(userInfo: userInfo, type: type)
+        Task { @MainActor in
+            guard PushTokenStorage.registrationAllowed,
+                  authSessionBoundary.owns(notificationBoundary) else { return }
+            sharedAppState?.apply(route)
         }
     }
 }

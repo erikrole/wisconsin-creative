@@ -5,13 +5,23 @@ struct EventSelectionCard: View {
     let selectedEvents: [ScheduleEvent]
     let isLoading: Bool
     let error: String?
+    var usesFormCard = true
     let onRetry: () -> Void
     let onToggle: (ScheduleEvent) -> Void
     let onRemove: (ScheduleEvent) -> Void
 
     var body: some View {
-        FormCard {
-            VStack(alignment: .leading, spacing: Brand.Space.sm) {
+        Group {
+            if usesFormCard {
+                FormCard { eventPickerBody }
+            } else {
+                eventPickerBody
+            }
+        }
+    }
+
+    private var eventPickerBody: some View {
+        VStack(alignment: .leading, spacing: Brand.Space.sm) {
                 if !selectedEvents.isEmpty {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
@@ -81,7 +91,6 @@ struct EventSelectionCard: View {
                     .buttonStyle(.plain)
                     .accessibilityLabel(selectedEvents.isEmpty ? "Choose from \(events.count) upcoming events" : "Edit \(selectedEvents.count) linked events")
                 }
-            }
         }
     }
 }

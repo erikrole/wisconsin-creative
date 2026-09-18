@@ -5,9 +5,9 @@ import Foundation
 struct ScheduleEvent: Codable, Identifiable {
     let id: String
     let summary: String
-    let startsAt: Date
-    let endsAt: Date
-    let allDay: Bool
+    var startsAt: Date
+    var endsAt: Date
+    var allDay: Bool
     let status: String
     let sportCode: String?
     let opponent: String?
@@ -32,6 +32,41 @@ struct ScheduleEvent: Codable, Identifiable {
     /// defaults to nil in the memberwise init, so dashboard event seeds that don't
     /// supply coverage keep compiling.
     var coverage: ShiftCoverage?
+    /// Present when this source event was combined into another Schedule row.
+    /// List/calendar collapse uses it so students never see two crews for one
+    /// operational event.
+    var combinedIntoId: String?
+    var combinedEvents: [CombinedScheduleMember]?
+
+    /// Primary plus nested secondaries. 1 when this row is a single source event.
+    var combinedMemberCount: Int { 1 + (combinedEvents?.count ?? 0) }
+}
+
+struct CombinedScheduleMember: Codable, Identifiable {
+    let id: String
+    let summary: String
+    let startsAt: Date
+    let endsAt: Date
+    let allDay: Bool
+    let sportCode: String?
+    let opponent: String?
+}
+
+/// Collapse combined source events onto the canonical primary, matching web
+/// `mergeScheduleData`. Secondaries are omitted; the primary spans both windows.
+func collapsedCombinedScheduleEvents(_ events: [ScheduleEvent]) -> [ScheduleEvent] {
+    let nestedSecondaryIds = Set(events.flatMap { event in (event.combinedEvents ?? []).map(\.id) })
+    return events.compactMap { event in
+        if event.combinedIntoId != nil { return nil }
+        if nestedSecondaryIds.contains(event.id) { return nil }
+        let members = event.combinedEvents ?? []
+        guard !members.isEmpty else { return event }
+        var next = event
+        next.startsAt = ([event.startsAt] + members.map(\.startsAt)).min() ?? event.startsAt
+        next.endsAt = ([event.endsAt] + members.map(\.endsAt)).max() ?? event.endsAt
+        next.allDay = event.allDay && members.allSatisfy(\.allDay)
+        return next
+    }
 }
 
 struct EventLocation: Codable, Identifiable {
@@ -345,6 +380,9 @@ struct EventShiftGroup: Codable, Identifiable {
     let event: ShiftGroupEvent
     let shifts: [EventShift]
     let coverage: ShiftCoverage
+    /// Student-safe pause flag. True while a private working copy exists, without
+    /// exposing that draft. Older servers omit it and claims stay offered.
+    var claimsPaused: Bool?
 }
 
 struct ShiftGroupEvent: Codable, Identifiable {

@@ -83,7 +83,7 @@ describe("iOS Booking Detail Item Detail alignment", () => {
   });
 
   it("keeps Gear clean and gives returned rows a non-color cue", () => {
-    const gear = sliceBetween(detail, "private struct EquipmentSection", "private struct BulkThumbnail");
+    const gear = sliceBetween(detail, "private struct EquipmentSection", "private struct ActionsSection");
 
     expect(gear).toContain('BrandSectionHeader(title: "Gear")');
     expect(gear).not.toContain("equipmentItemPill");

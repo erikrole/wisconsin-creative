@@ -200,6 +200,26 @@ struct KioskAPI {
         return resp.data
     }
 
+    func kioskKits(requesterId: String? = nil) async throws -> (kits: [KioskKitOption], suggestedKitId: String?) {
+        struct Resp: Decodable {
+            let data: [KioskKitOption]
+            let suggestedKitId: String?
+        }
+        let query = requesterId.flatMap { id in
+            id.isEmpty ? nil : [URLQueryItem(name: "requester_user_id", value: id)]
+        } ?? []
+        let req = request(path: "/api/kiosk/kits", query: query)
+        let resp: Resp = try await perform(req)
+        return (resp.data, resp.suggestedKitId)
+    }
+
+    func kioskKitDetail(id: String) async throws -> KioskKitDetail {
+        struct Resp: Decodable { let data: KioskKitDetail }
+        let req = request(path: "/api/kiosk/kits/\(id)")
+        let resp: Resp = try await perform(req)
+        return resp.data
+    }
+
     func kioskCheckoutAvailability(
         locationId: String,
         items: [KioskCartItem],
@@ -228,7 +248,8 @@ struct KioskAPI {
         items: [KioskCartItem],
         eventId: String?,
         customPurpose: String?,
-        endsAt: Date
+        endsAt: Date,
+        kitId: String? = nil
     ) async throws -> KioskCheckoutCompletion {
         struct Body: Encodable {
             let actorId: String
@@ -237,6 +258,7 @@ struct KioskAPI {
             let eventId: String?
             let customPurpose: String?
             let endsAt: String
+            let kitId: String?
         }
         var req = request(path: "/api/kiosk/checkout/complete", method: "POST")
         req.httpBody = try JSONEncoder().encode(Body(
@@ -245,7 +267,8 @@ struct KioskAPI {
             items: checkoutItemRefs(from: items),
             eventId: eventId,
             customPurpose: customPurpose,
-            endsAt: isoString(from: endsAt)
+            endsAt: isoString(from: endsAt),
+            kitId: kitId
         ))
         return try await performCompletion(req, actorId: actorId)
     }

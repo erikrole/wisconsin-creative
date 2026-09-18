@@ -1,0 +1,61 @@
+{
+  "title": "Native reservation availability copy and Review",
+  "eyebrow": "iOS · Wisconsin Creative",
+  "lede": "Gear now names the person on a hold in reservation purple or checkout red. Review is a grouped form with a matchup-only title, and it no longer calls timing notices conflicts.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "After-only fixture evidence",
+      "note": "iPhone 16 Pro (27.0) UDID E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE, WisconsinPerformance create-booking-events, light appearance. The 7:43 AM device screenshots are live inventory in a different clock and appearance, so they are not a matched before pair.",
+      "pairs": [],
+      "shots": [
+        {
+          "title": "Gear holds",
+          "tag": "After",
+          "image": "after-gear.png",
+          "cap": "CAM-014 reads “Jordan Lee has reserved for today at 1:00 PM.” in purple and stays addable. LENS-032 reads “Erik Role has this item until today at 2:00 PM.” in red with a red alert in the add slot."
+        },
+        {
+          "title": "Selected cart",
+          "tag": "After",
+          "image": "after-gear-selected.png",
+          "cap": "Adding CAM-015 opens the Sony Battery card above the toolbar. The count stays visible at 0 on a system stepper. The cart is purple with a red badge."
+        },
+        {
+          "title": "Review",
+          "tag": "After",
+          "image": "after-review.png",
+          "cap": "The title is MBB vs Duke with Rivalry Night dropped. Schedule uses native labeled rows. There is no gear-conflict card for an addable selection."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Hold copy",
+      "was": "Conflict rows named the overlapping booking and window. Needed-next used clock-advisory language, often read as a conflict.",
+      "now": "Reserved holds name the person and start in purple. Active checkouts name the person and until-time in red."
+    },
+    {
+      "h": "Cart and quantities",
+      "was": "The selected cart could inherit a red tint. Battery and counted rows used custom plus/minus circles.",
+      "now": "The cart icon is reservation purple with a system red badge. Counted quantities use a system Stepper."
+    },
+    {
+      "h": "Review",
+      "was": "The title kept promotion extras after the matchup. Schedule used colored icon circles. A conflict card counted every visible catalog hold, including items that were not selected.",
+      "now": "Review is a grouped form. The title is matchup-only. Schedule uses LabeledContent. A route back to Gear appears only when a selected item is actually blocked."
+    }
+  ],
+  "verification": [
+    "vitest ios-create-booking-picker-parity, availability, ios-api-contract, and ios-native-control-cleanup passed (99 tests).",
+    "WisconsinPerformance CreateBookingEventPickerScreenshotUITests/testEventPickerCaptures passed on iPhone 16 Pro (27.0).",
+    "git diff --check passed on the touched composer, test, and area-doc files.",
+    "npx tsc --noEmit still reports unrelated UserScoreboardTab and blasts errors; availability.ts did not add new TypeScript failures."
+  ],
+  "notes": [
+    "After captures: after-gear.png, after-gear-selected.png, after-review.png.",
+    "Authenticated physical dark-mode proof remains open.",
+    "No commit or push."
+  ]
+}

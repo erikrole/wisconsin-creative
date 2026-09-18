@@ -132,6 +132,12 @@ struct AppTabView: View {
         routePendingAppIntent()
         routePendingEventPush()
         routePendingBookingPush()
+        routePendingBlastPush()
+        routePendingAssetPush()
+        routePendingUserPush()
+        routePendingInbox()
+        routePendingTradeBoard()
+        routePendingBrowse()
         recordCurrentSurface()
     }
 
@@ -239,6 +245,10 @@ struct AppTabView: View {
             tabItems
         }
         .tabViewCustomization($tabCustomization)
+        // Recede with content like Music and Photos. Stay expanded while a
+        // reservation draft is parked in the tab accessory so that pill never
+        // becomes a shrinking target mid-compose.
+        .tabBarMinimizeBehavior(drafts.showsCard ? .never : .onScrollDown)
     }
 
     private var routedTabContainer: some View {
@@ -269,6 +279,21 @@ struct AppTabView: View {
             }
             .onChange(of: appState.pendingPushBlastId) { _, _ in
                 routePendingBlastPush()
+            }
+            .onChange(of: appState.pendingPushAssetId) { _, _ in
+                routePendingAssetPush()
+            }
+            .onChange(of: appState.pendingPushUserId) { _, _ in
+                routePendingUserPush()
+            }
+            .onChange(of: appState.pendingNotificationsInbox) { _, _ in
+                routePendingInbox()
+            }
+            .onChange(of: appState.pendingTradeBoard) { _, _ in
+                routePendingTradeBoard()
+            }
+            .onChange(of: appState.pendingBrowseDestination) { _, _ in
+                routePendingBrowse()
             }
     }
 
@@ -398,6 +423,52 @@ struct AppTabView: View {
         }
         if appState.selectedTab != 0 {
             appState.selectedTab = 0
+        }
+    }
+
+    private func routePendingAssetPush() {
+        guard appState.pendingPushAssetId != nil else { return }
+        guard hasCapability("GEAR_CATALOG_VIEW") else {
+            appState.pendingPushAssetId = nil
+            return
+        }
+        if appState.selectedTab != 0 {
+            appState.selectedTab = 0
+        }
+    }
+
+    private func routePendingUserPush() {
+        guard appState.pendingPushUserId != nil else { return }
+        if appState.selectedTab != 0 {
+            appState.selectedTab = 0
+        }
+    }
+
+    private func routePendingInbox() {
+        guard appState.pendingNotificationsInbox else { return }
+        if appState.selectedTab != 0 {
+            appState.selectedTab = 0
+        }
+    }
+
+    private func routePendingTradeBoard() {
+        guard appState.pendingTradeBoard else { return }
+        if appState.selectedTab != 0 {
+            appState.selectedTab = 0
+        }
+    }
+
+    private func routePendingBrowse() {
+        guard appState.pendingBrowseDestination != nil else { return }
+        if showsSidebarDestinations, appState.pendingBrowseDestination == "licenses", !isCollaborator {
+            if appState.selectedTab != 7 {
+                appState.selectedTab = 7
+            }
+            appState.pendingBrowseDestination = nil
+            return
+        }
+        if appState.selectedTab != 2 {
+            appState.selectedTab = 2
         }
     }
 

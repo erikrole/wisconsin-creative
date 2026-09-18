@@ -54,6 +54,9 @@ enum AppRuntimeMode {
         /// payload -- they are here so the two screens every user meets first
         /// can be captured without typing a credential into the app.
         case login
+        /// The branded launch still itself, so the system frame, SwiftUI
+        /// handoff, and inactive snapshot can be captured without a session.
+        case launchView = "launch-view"
         /// Account & Security against a canned passkey list: one synced
         /// credential, one bound to this device, and one never used -- the
         /// three shapes the rows have to tell apart.

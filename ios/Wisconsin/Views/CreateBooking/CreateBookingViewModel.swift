@@ -37,6 +37,62 @@ struct BatteryRecommendation: Identifiable {
     var reminderKey: String { sku.id }
 }
 
+/// Person-first availability line on Gear and Review.
+/// Reservations stay purple; someone who already has the item stays red.
+struct ReservationAvailabilityCaption: Equatable {
+    enum Kind: Equatable {
+        case reserved
+        case held
+    }
+
+    let text: String
+    let kind: Kind
+
+    var tone: StatusTone { kind == .reserved ? .purple : .red }
+
+    static func make(
+        requesterName: String?,
+        kind: String?,
+        status: String?,
+        startsAt: Date?,
+        endsAt: Date?,
+        now: Date = .now
+    ) -> ReservationAvailabilityCaption? {
+        let person = requesterName.nonBlankText
+        if isCheckoutHold(kind: kind, status: status, startsAt: startsAt, endsAt: endsAt, now: now) {
+            guard let until = endsAt else { return nil }
+            let when = until.operationalDateTimeLabel(now: now, capitalizesRelativeDay: false)
+            let text = person.map { "\($0) has this item until \(when)." }
+                ?? "This item is out until \(when)."
+            return ReservationAvailabilityCaption(text: text, kind: .held)
+        }
+        guard let reservedAt = startsAt else { return nil }
+        let when = reservedAt.operationalDateTimeLabel(now: now, capitalizesRelativeDay: false)
+        let text = person.map { "\($0) has reserved for \(when)." }
+            ?? "Reserved for \(when)."
+        return ReservationAvailabilityCaption(text: text, kind: .reserved)
+    }
+
+    private static func isCheckoutHold(
+        kind: String?,
+        status: String?,
+        startsAt: Date?,
+        endsAt: Date?,
+        now: Date
+    ) -> Bool {
+        let status = status?.uppercased()
+        let kind = kind?.uppercased()
+        if status == "OPEN" { return true }
+        if kind == "CHECKOUT" && status != "BOOKED" && status != "PENDING_PICKUP" {
+            return true
+        }
+        if status == nil && kind == nil, let startsAt, let endsAt {
+            return startsAt <= now && endsAt > now
+        }
+        return false
+    }
+}
+
 enum ReservationPickerResult: Identifiable {
     case asset(Asset)
     case bulk(FormBulkSku)
@@ -109,6 +165,12 @@ final class CreateBookingViewModel {
     var title = ""
     var selectedUserId: String = ""
     var selectedLocationId: String = ""
+    var selectedKitId = ""
+    var kits: [BookingKitOption] = []
+    var kitsLoading = false
+    var kitsLoadError: String?
+    private var appliedKitId = ""
+    private var didApplySuggestedKit = false
     var startsAt = nextCleanHour(addingHours: 0)
     var endsAt = nextCleanHour(addingHours: 1)
     var notes = ""
@@ -124,6 +186,10 @@ final class CreateBookingViewModel {
     var prefillShiftAssignmentId: String?
     var reusedGearSourceTitle: String?
     private var reusedGearSourceEventIds: Set<String> = []
+    private var reusedSourceStartsAt: Date?
+    private var reusedSourceEndsAt: Date?
+    private var reusedSourceEventStartsAt: Date?
+    private var reusedSourceEventEndsAt: Date?
 
     /// Id of the `/api/drafts` row this composer is bound to, once it has been
     /// saved at least once. Subsequent saves update in place.
@@ -264,22 +330,33 @@ final class CreateBookingViewModel {
     }
 
     func conflictMessage(for assetId: String) -> String? {
-        guard let conflict = conflictDetailsByAssetId[assetId] else { return nil }
-        let booking = conflict.conflictingBookingTitle ?? "another booking"
-        guard let conflictStart = conflict.startsAt, let conflictEnd = conflict.endsAt else {
-            return "Conflict with \(booking). Remove this item or change the dates."
-        }
+        availabilityCaption(for: assetId)?.text
+    }
 
-        let conflictWindow = "\(conflictStart.formatted(date: .abbreviated, time: .shortened))–\(conflictEnd.formatted(date: .abbreviated, time: .shortened))"
-        if conflictStart >= endsAt {
-            let returnBy = conflictStart.addingTimeInterval(-ReservationAvailabilityThresholds.serializedTurnaroundBuffer)
-            return "Conflict with \(booking) (\(conflictWindow)); return by \(returnBy.formatted(date: .abbreviated, time: .shortened))."
+    /// Picker-row supporting line. The add slot shows a red alert instead of plus.
+    func conflictDetail(for assetId: String) -> String? {
+        guard conflictedAssetIds.contains(assetId) else { return nil }
+        return availabilityCaption(for: assetId)?.text
+    }
+
+    func availabilityCaption(for assetId: String) -> ReservationAvailabilityCaption? {
+        if let conflict = conflictDetailsByAssetId[assetId] {
+            return ReservationAvailabilityCaption.make(
+                requesterName: conflict.conflictingBookingRequesterName,
+                kind: conflict.conflictingBookingKind,
+                status: conflict.conflictingBookingStatus,
+                startsAt: conflict.startsAt,
+                endsAt: conflict.endsAt
+            )
         }
-        if conflictEnd <= startsAt {
-            let availableAfter = conflictEnd.addingTimeInterval(ReservationAvailabilityThresholds.serializedTurnaroundBuffer)
-            return "Conflict with \(booking) (\(conflictWindow)); available after \(availableAfter.formatted(date: .abbreviated, time: .shortened))."
-        }
-        return "Conflict with \(booking) (\(conflictWindow)); remove this item or change the dates."
+        guard let commitment = upcomingCommitmentsByAssetId[assetId] else { return nil }
+        return ReservationAvailabilityCaption.make(
+            requesterName: commitment.requesterName,
+            kind: commitment.kind,
+            status: commitment.status,
+            startsAt: commitment.startsAt,
+            endsAt: commitment.endsAt
+        )
     }
 
     var selectedTimingAdvisoryCount: Int {
@@ -300,29 +377,11 @@ final class CreateBookingViewModel {
         selectedTimingAdvisoryCount > 0
     }
 
-    /// Copies the web picker language: show the next use plainly, and add the
-    /// return-by time plus the actual gap when the window is close.
+    /// Next-use copy for rows that can still be added. Hard conflicts use
+    /// `conflictDetail` instead so the plus slot can stay a red alert.
     func upcomingCommitmentLabel(for assetId: String) -> String? {
-        guard !conflictedAssetIds.contains(assetId),
-              let commitment = upcomingCommitmentsByAssetId[assetId] else {
-            return nil
-        }
-        guard let startsAt = commitment.startsAt else {
-            return "Needed next"
-        }
-
-        let nextLabel = startsAt.formatted(date: .abbreviated, time: .shortened)
-        let gapMinutes = max(0, Int((startsAt.timeIntervalSince(endsAt) / 60).rounded()))
-        guard gapMinutes * 60 <= Int(ReservationAvailabilityThresholds.warningWindow) else {
-            return "Needed next at \(nextLabel)"
-        }
-
-        let returnBy = startsAt.addingTimeInterval(-ReservationAvailabilityThresholds.serializedTurnaroundBuffer)
-        let returnByLabel = returnBy.formatted(date: .abbreviated, time: .shortened)
-        if gapMinutes * 60 <= Int(ReservationAvailabilityThresholds.criticalWindow) {
-            return "Needed next at \(nextLabel) · return by \(returnByLabel) (\(availabilityDurationLabel(gapMinutes)) gap)"
-        }
-        return "Needed next at \(nextLabel) · return by \(returnByLabel)"
+        guard !conflictedAssetIds.contains(assetId) else { return nil }
+        return availabilityCaption(for: assetId)?.text
     }
 
     /// Location-transfer and recent-check-in notices supplement the primary
@@ -352,7 +411,7 @@ final class CreateBookingViewModel {
             let returnBy = startsAt.addingTimeInterval(-ReservationAvailabilityThresholds.serializedTurnaroundBuffer)
             let quantity = risk.plannedQuantity.map { String($0) } ?? "the next quantity"
             let gap = risk.gapMinutes.map { $0 <= Int(ReservationAvailabilityThresholds.criticalWindow / 60) ? " (\(availabilityDurationLabel($0)) gap)" : "" } ?? ""
-            return "Next booking needs \(quantity) at \(startsAt.formatted(date: .abbreviated, time: .shortened)) · return by \(returnBy.formatted(date: .abbreviated, time: .shortened))\(gap)"
+            return "Next booking needs \(quantity) at \(startsAt.compactReservationDateTime()) · return by \(returnBy.compactReservationDateTime())\(gap)"
         }
         return risk.message ?? "Tight timing — confirm the return time."
     }
@@ -386,7 +445,7 @@ final class CreateBookingViewModel {
             guard let startsAt = risk.startsAt else { return risk.message ?? turnaroundFallbackMessage(for: risk.code) }
             let returnBy = startsAt.addingTimeInterval(-ReservationAvailabilityThresholds.serializedTurnaroundBuffer)
             let gap = risk.gapMinutes.map { $0 <= Int(ReservationAvailabilityThresholds.criticalWindow / 60) ? " (\(availabilityDurationLabel($0)) gap)" : "" } ?? ""
-            return "Needed next at \(startsAt.formatted(date: .abbreviated, time: .shortened)) · return by \(returnBy.formatted(date: .abbreviated, time: .shortened))\(gap)"
+            return "Needed next at \(startsAt.compactReservationDateTime()) · return by \(returnBy.compactReservationDateTime())\(gap)"
         default:
             return risk.message ?? turnaroundFallbackMessage(for: risk.code)
         }
@@ -501,10 +560,14 @@ final class CreateBookingViewModel {
         Self.reservationCategories
     }
 
+    var showsBrowseCategoryFilter: Bool {
+        isBrowsing && browseCategories.count > 1
+    }
+
     /// Asset groups the picker renders. Default browse is one flat
     /// "Most popular" section in server popularity order (same sort as the
-    /// items list); a category chip switches to that category; an active
-    /// search shows category-grouped matches.
+    /// items list); the search-bar category menu switches to that category;
+    /// an active search shows category-grouped matches.
     var displayedAssetGroups: [AssetCategoryGroup] {
         guard isBrowsing else { return availableAssetGroups }
         guard browseCategoryFilter != nil else {
@@ -516,7 +579,7 @@ final class CreateBookingViewModel {
     }
 
     /// Bulk SKUs stay out of the default browse list (they'd bury the
-    /// popular gear); they surface via search or their category chip.
+    /// popular gear); they surface via search or their category menu.
     var displayedBulkSkus: [FormBulkSku] {
         let visibleSkus = availableBulkSkus.filter { !isHiddenAttachmentCategory(bulkCategoryTitle($0)) }
         guard isBrowsing else { return visibleSkus }
@@ -678,6 +741,7 @@ final class CreateBookingViewModel {
         let shiftAssignmentId: String?
         let serializedAssetIds: [String]
         let bulkItems: [BulkReservationRequest]
+        let kitId: String?
     }
 
     private struct UncertainReservationSubmission {
@@ -1028,9 +1092,30 @@ final class CreateBookingViewModel {
     func setLocationFromUser(_ value: String) {
         submissionConflict = nil
         userEditedLocation = true
+        if selectedLocationId != value {
+            selectedKitId = ""
+            appliedKitId = ""
+            didApplySuggestedKit = false
+        }
         selectedLocationId = value
         UserDefaults.standard.set(value, forKey: "preferredReservationPickupLocationId")
         scheduleConflictCheck()
+        Task { await loadKits() }
+    }
+
+    func selectKit(_ id: String) {
+        selectedKitId = id
+        if id.isEmpty {
+            appliedKitId = ""
+            didApplySuggestedKit = true
+            return
+        }
+        didApplySuggestedKit = true
+        Task { await applySelectedKit() }
+    }
+
+    func kitPickerLabel(_ kit: BookingKitOption) -> String {
+        callingKitLabel(name: kit.name, gamedayRole: kit.gamedayRole, contents: kit.contents)
     }
 
     private func sortSelectedEventIds() {
@@ -1063,6 +1148,18 @@ final class CreateBookingViewModel {
 
     private func applyDefaultEventWindow(_ picked: [ScheduleEvent]) {
         guard let first = picked.first, let last = picked.last else { return }
+        if let sourceStart = reusedSourceStartsAt,
+           let sourceEnd = reusedSourceEndsAt,
+           let sourceEventStart = reusedSourceEventStartsAt,
+           let sourceEventEnd = reusedSourceEventEndsAt {
+            let nextStart = first.startsAt.addingTimeInterval(sourceStart.timeIntervalSince(sourceEventStart))
+            let nextEnd = last.endsAt.addingTimeInterval(sourceEnd.timeIntervalSince(sourceEventEnd))
+            if nextEnd > nextStart {
+                startsAt = nextStart
+                endsAt = nextEnd
+                return
+            }
+        }
         startsAt = first.startsAt.addingTimeInterval(-eventPickupLeadTime)
         endsAt = last.endsAt.addingTimeInterval(eventReturnBuffer)
     }
@@ -1105,15 +1202,63 @@ final class CreateBookingViewModel {
         }
     }
 
-    /// Starts a fresh event plan with the source booking's gear only. The
-    /// original title, dates, and event links intentionally stay behind so a
-    /// same-context copy cannot recreate the duplicate this flow replaces.
+    /// Starts a fresh event plan from a past booking. Person, pickup, notes,
+    /// title, and original equipment come along; the old event and window stay
+    /// behind so the user must pick this week's game.
+    func prefillForReuse(from plan: BookingReusePlan) {
+        usesEventLinkedSetup = true
+        reusedGearSourceTitle = plan.title
+        reusedGearSourceEventIds = Set(plan.events.map(\.id))
+        reusedSourceStartsAt = plan.startsAt
+        reusedSourceEndsAt = plan.endsAt
+        reusedSourceEventStartsAt = plan.events.first?.startsAt
+        reusedSourceEventEndsAt = plan.events.last?.endsAt
+        title = plan.title
+        userEditedTitle = plan.keepTitle
+        notes = plan.notes ?? ""
+        selectedUserId = plan.requesterUserId
+        selectedLocationId = plan.locationId
+        userEditedLocation = !plan.locationId.isEmpty
+        selectedEventIds = []
+        prefillEventId = nil
+        prefillShiftAssignmentId = nil
+        selectedAssetIds = Set(plan.serializedItems.map(\.assetId))
+        selectedAssetOrder = plan.serializedItems.map(\.assetId)
+        selectedBulkQuantities = Dictionary(
+            plan.bulkItems
+                .filter { $0.plannedQuantity > 0 }
+                .map { ($0.bulkSkuId, $0.plannedQuantity) },
+            uniquingKeysWith: { _, later in later }
+        )
+        if let kitId = plan.kitId {
+            selectedKitId = kitId
+            appliedKitId = kitId
+            didApplySuggestedKit = true
+        } else {
+            selectedKitId = ""
+            appliedKitId = ""
+            didApplySuggestedKit = false
+        }
+        Task { await loadKits() }
+        Task { await loadSnapshotsForSelectedAssets(ids: Array(selectedAssetIds)) }
+    }
+
+    /// Starts a fresh event plan with the source booking's remaining gear only.
+    /// Prefer `prefillForReuse` so completed reservations still copy handed-over cameras.
     func prefillGearForNewEvent(from booking: Booking) {
         usesEventLinkedSetup = true
         reusedGearSourceTitle = booking.title
         reusedGearSourceEventIds = Set(booking.linkedEvents.map(\.id))
-        title = ""
-        userEditedTitle = false
+        reusedSourceStartsAt = booking.startsAt
+        reusedSourceEndsAt = booking.endsAt
+        reusedSourceEventStartsAt = nil
+        reusedSourceEventEndsAt = nil
+        title = booking.title
+        userEditedTitle = !booking.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        notes = booking.notes ?? ""
+        selectedUserId = booking.requester.id
+        selectedLocationId = booking.location.id
+        userEditedLocation = true
         selectedEventIds = []
         prefillEventId = nil
         prefillShiftAssignmentId = nil
@@ -1142,6 +1287,79 @@ final class CreateBookingViewModel {
             self.error = error.localizedDescription
         }
         isLoadingOptions = false
+        await loadKits()
+    }
+
+    func loadKits() async {
+        guard !selectedLocationId.isEmpty else {
+            kits = []
+            kitsLoadError = nil
+            kitsLoading = false
+            return
+        }
+        let locationId = selectedLocationId
+        let requesterUserId = selectedUserId
+        kitsLoading = true
+        kitsLoadError = nil
+        do {
+            let response = try await APIClient.shared.reservationKits(
+                locationId: locationId,
+                requesterUserId: requesterUserId
+            )
+            guard locationId == selectedLocationId else { return }
+            kits = response.kits
+                .filter { $0.contents > 0 }
+                .sorted {
+                    let roleDelta = footballGamedayKitOrder($0.gamedayRole) - footballGamedayKitOrder($1.gamedayRole)
+                    if roleDelta != 0 { return roleDelta < 0 }
+                    return $0.name.localizedStandardCompare($1.name) == .orderedAscending
+                }
+            kitsLoading = false
+            if !selectedKitId.isEmpty, !kits.contains(where: { $0.id == selectedKitId }) {
+                selectedKitId = ""
+                appliedKitId = ""
+            } else if selectedKitId.isEmpty,
+                      !didApplySuggestedKit,
+                      let suggestedKitId = response.suggestedKitId,
+                      kits.contains(where: { $0.id == suggestedKitId }) {
+                didApplySuggestedKit = true
+                selectedKitId = suggestedKitId
+                await applySelectedKit()
+            } else if !selectedKitId.isEmpty {
+                await applySelectedKit()
+            }
+        } catch {
+            guard locationId == selectedLocationId else { return }
+            kits = []
+            kitsLoadError = error.localizedDescription
+            kitsLoading = false
+        }
+    }
+
+    private func applySelectedKit() async {
+        let kitId = selectedKitId
+        guard !kitId.isEmpty else { return }
+        if appliedKitId == kitId { return }
+        do {
+            let detail = try await APIClient.shared.reservationKitDetail(id: kitId)
+            guard selectedKitId == kitId else { return }
+            appliedKitId = kitId
+            selectedAssetIds = Set(detail.members.map(\.asset.id))
+            selectedAssetOrder = detail.members.map(\.asset.id)
+            selectedAssetSnapshots = selectedAssetSnapshots.filter { selectedAssetIds.contains($0.key) }
+            selectedBulkQuantities = Dictionary(
+                detail.bulkMembers.map { ($0.bulkSku.id, $0.quantity) },
+                uniquingKeysWith: { _, later in later }
+            )
+            if detail.members.isEmpty && detail.bulkMembers.isEmpty {
+                error = "\(detail.name) has no cameras, lenses, or batteries yet. Add gear on the kit page first."
+            }
+            Task { await loadSnapshotsForSelectedAssets(ids: Array(selectedAssetIds)) }
+            scheduleConflictCheck()
+        } catch {
+            guard selectedKitId == kitId else { return }
+            self.error = error.localizedDescription
+        }
     }
 
     func loadAvailableAssets(reset: Bool = false) async {
@@ -1350,7 +1568,8 @@ final class CreateBookingViewModel {
             eventIds: selectedEventIds,
             shiftAssignmentId: prefillShiftAssignmentId,
             serializedAssetIds: selectedAssetIds.sorted(),
-            bulkItems: selectedBulkRequests
+            bulkItems: selectedBulkRequests,
+            kitId: selectedKitId.isEmpty ? nil : selectedKitId
         )
     }
 
@@ -1372,7 +1591,8 @@ final class CreateBookingViewModel {
                 shiftAssignmentId: payload.shiftAssignmentId,
                 sourceDraftId: sourceDraftId,
                 serializedAssetIds: payload.serializedAssetIds,
-                bulkItems: payload.bulkItems
+                bulkItems: payload.bulkItems,
+                kitId: payload.kitId
             )
             return await finishCommittedSubmission(receipt: receipt, payload: payload)
         } catch APIError.conflict(let message) {
@@ -1451,11 +1671,35 @@ final class CreateBookingViewModel {
     }
 
     func isAtPickupLocation(_ asset: Asset) -> Bool {
-        selectedLocationId.isEmpty || asset.location.id == selectedLocationId
+        if selectedLocationId.isEmpty { return true }
+        if asset.location.id == selectedLocationId { return true }
+        guard let pickupName = selectedLocation?.name else { return false }
+        return kitPickupNamesShare(pickupName, asset.location.name)
     }
 
     func isAtPickupLocation(_ sku: FormBulkSku) -> Bool {
-        selectedLocationId.isEmpty || sku.locationId == nil || sku.locationId == selectedLocationId
+        if selectedLocationId.isEmpty { return true }
+        guard let skuLocationId = sku.locationId else { return true }
+        if skuLocationId == selectedLocationId { return true }
+        guard
+            let pickupName = selectedLocation?.name,
+            let skuName = options?.locations.first(where: { $0.id == skuLocationId })?.name
+        else { return false }
+        return kitPickupNamesShare(pickupName, skuName)
+    }
+
+    private func kitPickupNamesShare(_ left: String, _ right: String) -> Bool {
+        let a = normalizedKitPickupName(left)
+        let b = normalizedKitPickupName(right)
+        if a == b { return true }
+        let campRandall: Set<String> = ["camp randall", "camp randall stadium"]
+        return campRandall.contains(a) && campRandall.contains(b)
+    }
+
+    private func normalizedKitPickupName(_ name: String) -> String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            .lowercased()
     }
 
     func locationName(for sku: FormBulkSku) -> String {

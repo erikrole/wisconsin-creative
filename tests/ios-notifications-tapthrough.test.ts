@@ -51,9 +51,10 @@ describe("iOS notification tap-through contracts", () => {
     const schedule = source("ios/Wisconsin/Views/ScheduleView.swift");
     const notifications = source("ios/Wisconsin/Views/NotificationsSheet.swift");
     const notificationModels = source("ios/Wisconsin/Models/NotificationModels.swift");
+    const router = source("ios/Wisconsin/Core/GearTrackerRoute.swift");
 
-    expect(appDelegate).toContain("userInfo[\"eventId\"] as? String");
-    expect(appDelegate).toContain("sharedAppState?.pendingPushEventId = eventId");
+    expect(appDelegate).toContain("GearTrackerRouteParser.parseNotification(userInfo:");
+    expect(appDelegate).toContain("sharedAppState?.apply(route)");
 
     expect(appTab).toContain(".onChange(of: appState.pendingPushEventId)");
     expect(appTab).toContain("private func routePendingEventPush()");
@@ -68,7 +69,7 @@ describe("iOS notification tap-through contracts", () => {
     expect(schedule).toContain("navigationPath.append(PublishedScheduleRoute(id: eventId))");
 
     expect(notificationModels).toContain("let eventId: String?");
-    expect(notifications).toContain("if isShiftTargetedType(notif.type), let eventId = notif.payload?.eventId");
-    expect(notifications).toContain("onSelectEvent?(eventId)");
+    expect(notifications).toContain("GearTrackerRouteParser.parseNotification(payload:");
+    expect(router).toContain("if let eventId = string(userInfo[\"eventId\"])");
   });
 });

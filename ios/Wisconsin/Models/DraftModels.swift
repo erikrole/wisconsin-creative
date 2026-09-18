@@ -32,7 +32,8 @@ protocol ReservationDraftPersistence {
         shiftAssignmentId: String?,
         sourceDraftId: String?,
         serializedAssetIds: [String],
-        bulkItems: [BulkReservationRequest]
+        bulkItems: [BulkReservationRequest],
+        kitId: String?
     ) async throws -> ReservationCreationReceipt
 }
 

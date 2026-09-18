@@ -68,8 +68,10 @@ struct SelectedEquipmentRow: View {
     let asset: Asset
     let isConflicted: Bool
     var conflictMessage: String?
+    var availabilityTone: StatusTone = .red
     var isAtPickupLocation = true
     var upcomingCommitmentLabel: String?
+    var upcomingTone: StatusTone = .purple
     var turnaroundMessage: String?
     var turnaroundIsCritical = false
     let onRemove: () -> Void
@@ -90,31 +92,32 @@ struct SelectedEquipmentRow: View {
                         .lineLimit(1)
                 }
                 if isConflicted {
-                    Label(conflictMessage ?? "Scheduling conflict", systemImage: "exclamationmark.triangle.fill")
-                        .font(.caption2)
-                        .foregroundStyle(Color.statusText(.red))
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .accessibilityLabel(conflictMessage ?? "Scheduling conflict")
+                    BookingAdvisoryLabel(
+                        text: conflictMessage ?? "Scheduling conflict",
+                        systemImage: "exclamationmark.triangle.fill",
+                        tone: Color.statusText(availabilityTone)
+                    )
                 }
                 if !isAtPickupLocation {
-                    Label("At \(asset.location.name)", systemImage: "mappin.and.ellipse")
-                        .font(.caption2)
-                        .foregroundStyle(Color.statusText(.orange))
+                    BookingAdvisoryLabel(
+                        text: "At \(asset.location.name)",
+                        systemImage: "mappin.and.ellipse",
+                        tone: Color.statusText(.orange)
+                    )
                 }
                 if let upcomingCommitmentLabel {
-                    Label(upcomingCommitmentLabel, systemImage: "clock.arrow.circlepath")
-                        .font(.caption2)
-                        .foregroundStyle(Color.statusText(.blue))
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
+                    BookingAdvisoryLabel(
+                        text: upcomingCommitmentLabel,
+                        systemImage: "clock.arrow.circlepath",
+                        tone: Color.statusText(upcomingTone)
+                    )
                 }
                 if let turnaroundMessage {
-                    Label(turnaroundMessage, systemImage: "exclamationmark.triangle.fill")
-                        .font(.caption2)
-                        .foregroundStyle(Color.statusText(turnaroundIsCritical ? .red : .orange))
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
+                    BookingAdvisoryLabel(
+                        text: turnaroundMessage,
+                        systemImage: "exclamationmark.triangle.fill",
+                        tone: Color.statusText(turnaroundIsCritical ? .red : .orange)
+                    )
                 }
             }
             Spacer()
@@ -143,6 +146,51 @@ struct SelectedEquipmentRow: View {
     }
 }
 
+/// Compact native stepper that keeps the selected count visible.
+/// SwiftUI's `.labelsHidden()` hides a Stepper label, so the count has to
+/// live beside the control instead of inside it.
+struct ReservationQuantityStepper: View {
+    let value: Int
+    let range: ClosedRange<Int>
+    let label: String
+    let onIncrement: () -> Void
+    let onDecrement: () -> Void
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Text("\(value)")
+                .font(.subheadline.weight(.semibold).monospacedDigit())
+                .frame(minWidth: 22, alignment: .center)
+                .contentTransition(.numericText())
+                .accessibilityHidden(true)
+            Stepper(
+                value: Binding(
+                    get: { value },
+                    set: { newValue in
+                        if newValue > value { onIncrement() }
+                        else if newValue < value { onDecrement() }
+                    }
+                ),
+                in: range
+            ) {
+                EmptyView()
+            }
+            .labelsHidden()
+            .fixedSize()
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(label)
+        .accessibilityValue("\(value) selected")
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment: onIncrement()
+            case .decrement: onDecrement()
+            default: break
+            }
+        }
+    }
+}
+
 struct BulkQuantityRow: View {
     let sku: FormBulkSku
     let quantity: Int
@@ -152,9 +200,10 @@ struct BulkQuantityRow: View {
     var turnaroundIsCritical = false
     let onDecrement: () -> Void
     let onIncrement: () -> Void
-    @Environment(\.colorSchemeContrast) private var accessibilityContrast
 
-    private var canIncrement: Bool { isAtPickupLocation && quantity < sku.availableQuantity }
+    private var stepperRange: ClosedRange<Int> {
+        isAtPickupLocation ? 0...sku.availableQuantity : 0...quantity
+    }
     private var unitLabel: String {
         sku.unit?.isEmpty == false ? " \(sku.unit!)" : ""
     }
@@ -191,37 +240,13 @@ struct BulkQuantityRow: View {
 
             Spacer()
 
-            HStack(spacing: 8) {
-                Button(action: onDecrement) {
-                    Image(systemName: "minus")
-                        .font(.caption.weight(.bold))
-                        .frame(width: 28, height: 28)
-                        .background(Color(.tertiarySystemFill), in: Circle())
-                }
-                .buttonStyle(.plain)
-                .frame(width: 44, height: 44)
-                .contentShape(Circle())
-                .disabled(quantity == 0)
-                .accessibilityLabel("Remove one \(sku.name)")
-
-                Text("\(quantity)")
-                    .font(.body.monospacedDigit())
-                    .frame(minWidth: 24)
-                    .accessibilityLabel("\(quantity) selected")
-
-                Button(action: onIncrement) {
-                    Image(systemName: "plus")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(Color.statusControlForeground(.purple, contrast: accessibilityContrast))
-                        .frame(width: 28, height: 28)
-                        .background(Color.statusText(.purple), in: Circle())
-                }
-                .buttonStyle(.plain)
-                .frame(width: 44, height: 44)
-                .contentShape(Circle())
-                .disabled(!canIncrement)
-                .accessibilityLabel("Add one \(sku.name)")
-            }
+            ReservationQuantityStepper(
+                value: quantity,
+                range: stepperRange,
+                label: "\(sku.name) quantity",
+                onIncrement: onIncrement,
+                onDecrement: onDecrement
+            )
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
@@ -239,100 +264,120 @@ struct AssetPickerRow: View {
     let isSelected: Bool
     var isConflicted: Bool = false
     var conflictMessage: String?
+    var conflictDetail: String?
+    var conflictTone: StatusTone = .red
     var isAtPickupLocation = true
     var upcomingCommitmentLabel: String?
+    var upcomingTone: StatusTone = .purple
     var turnaroundMessage: String?
     var turnaroundIsCritical = false
-    let onTap: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        Button(action: onTap) {
-            HStack(spacing: 12) {
-                BookingAssetThumbnail(imageUrl: asset.imageUrl)
+        HStack(spacing: 12) {
+            BookingAssetThumbnail(imageUrl: asset.imageUrl)
 
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(asset.itemListPrimaryTitle)
-                        .font(.gothamBold(size: 16))
-                        .foregroundStyle(.primary)
-                    HStack(spacing: 6) {
-                        if let subtitle = asset.itemListSecondaryTitle {
-                            Text(subtitle)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                        }
-                        Text(asset.location.name)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    if isConflicted {
-                        Label(conflictMessage ?? "Scheduling conflict", systemImage: "exclamationmark.triangle.fill")
-                            .font(.caption2)
-                            .foregroundStyle(Color.statusText(.red))
-                            .lineLimit(2)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .accessibilityLabel(conflictMessage ?? "Scheduling conflict")
-                    }
-                    if !isAtPickupLocation {
-                        Text("Choose \(asset.location.name) pickup to add")
-                            .font(.caption2.weight(.medium))
-                            .foregroundStyle(Color.statusText(.orange))
-                    }
-                    if let upcomingCommitmentLabel {
-                        Label(upcomingCommitmentLabel, systemImage: "clock.arrow.circlepath")
-                            .font(.caption2)
-                            .foregroundStyle(Color.statusText(.blue))
-                            .lineLimit(2)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(asset.itemListPrimaryTitle)
+                    .font(.gothamBold(size: 16))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                if isConflicted {
+                    if let conflictDetail {
+                        Text(conflictDetail)
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(Color.statusText(conflictTone))
                             .fixedSize(horizontal: false, vertical: true)
                     }
-                    if let turnaroundMessage {
-                        Label(turnaroundMessage, systemImage: "exclamationmark.triangle.fill")
-                            .font(.caption2)
-                            .foregroundStyle(Color.statusText(turnaroundIsCritical ? .red : .orange))
-                            .lineLimit(2)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                } else if !isAtPickupLocation {
+                    Label("Choose \(asset.location.name) pickup to add", systemImage: "mappin.and.ellipse")
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(Color.statusText(.orange))
+                        .fixedSize(horizontal: false, vertical: true)
+                } else if let upcomingCommitmentLabel {
+                    Text(upcomingCommitmentLabel)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(Color.statusText(upcomingTone))
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-
-                Spacer()
-
-                // Plus (not an empty radio) because tapping adds to the cart;
-                // tapping an added row removes it.
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "plus.circle")
-                    .font(.title3)
-                    .foregroundStyle(indicatorColor)
-                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: isSelected)
-                    .accessibilityHidden(true)
+                if let turnaroundMessage, !isConflicted {
+                    BookingAdvisoryLabel(
+                        text: turnaroundMessage,
+                        systemImage: "exclamationmark.triangle.fill",
+                        tone: Color.statusText(turnaroundIsCritical ? .red : .orange)
+                    )
+                }
             }
-            .contentShape(Rectangle())
-            .opacity(((!isAtPickupLocation || isConflicted) && !isSelected) ? 0.48 : 1)
+
+            Spacer(minLength: 8)
+
+            trailingIndicator
         }
-        .buttonStyle(ScalePressStyle())
-        .disabled((isConflicted && !isSelected) || (!isAtPickupLocation && !isSelected))
+        .contentShape(Rectangle())
+        .opacity((!isAtPickupLocation && !isConflicted && !isSelected) ? 0.48 : 1)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(rowAccessibilityLabel)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    @ViewBuilder
+    private var trailingIndicator: some View {
+        Image(systemName: indicatorSystemImage)
+            .font(.title3)
+            .foregroundStyle(indicatorColor)
+            .symbolEffect(.bounce, options: .nonRepeating, isActive: !reduceMotion && isSelected)
+            .accessibilityHidden(true)
+    }
+
+    private var indicatorSystemImage: String {
+        if isSelected { return "checkmark.circle.fill" }
+        if isConflicted { return "exclamationmark.triangle.fill" }
+        if !isAtPickupLocation { return "mappin.circle" }
+        return "plus.circle"
+    }
+
+    private var indicatorColor: Color {
+        if isSelected { return Color.statusText(.purple) }
+        if isConflicted { return Color.statusText(.red) }
+        if !isAtPickupLocation { return Color.statusText(.orange) }
+        return Color(.systemGray2)
     }
 
     private var rowAccessibilityLabel: String {
         var parts: [String] = [asset.itemListPrimaryTitle]
         if let subtitle = asset.itemListSecondaryTitle { parts.append(subtitle) }
         parts.append(asset.location.name)
-        if isConflicted { parts.append(conflictMessage ?? "Scheduling conflict") }
+        if isConflicted { parts.append(conflictMessage ?? "Unavailable") }
         if !isAtPickupLocation { parts.append("At another pickup location") }
         if let upcomingCommitmentLabel { parts.append(upcomingCommitmentLabel) }
         if let turnaroundMessage { parts.append(turnaroundMessage) }
-        parts.append(isSelected ? "Selected" : "Not selected")
+        if isSelected {
+            parts.append("Selected")
+        } else if isConflicted || !isAtPickupLocation {
+            parts.append("Unavailable")
+        } else {
+            parts.append("Not selected")
+        }
         return parts.joined(separator: ", ")
     }
+}
 
-    private var indicatorColor: Color {
-        if isConflicted { return Color.statusText(.orange) }
-        if turnaroundIsCritical { return Color.statusText(.red) }
-        if turnaroundMessage != nil { return Color.statusText(.orange) }
-        if upcomingCommitmentLabel != nil { return Color.statusText(.blue) }
-        return isSelected ? Color.statusText(.purple) : Color(.systemGray2)
+private struct BookingAdvisoryLabel: View {
+    let text: String
+    let systemImage: String
+    var tone: Color
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 4) {
+            Image(systemName: systemImage)
+                .font(.caption2)
+                .padding(.top, 1)
+            Text(text)
+                .font(.caption2)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .foregroundStyle(tone)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(text)
     }
-
 }

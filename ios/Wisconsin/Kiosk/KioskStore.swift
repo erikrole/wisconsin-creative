@@ -89,6 +89,7 @@ struct KioskCheckoutDraft: Equatable {
     let customPurpose: String
     let dueBackAt: Date
     let contextReady: Bool
+    let selectedKitId: String?
 }
 
 @Observable

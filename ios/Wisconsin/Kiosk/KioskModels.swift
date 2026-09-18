@@ -222,6 +222,49 @@ struct KioskEvent: Decodable, Identifiable {
     }
 }
 
+struct KioskKitOption: Decodable, Identifiable, Equatable, Hashable {
+    let id: String
+    let name: String
+    let sportCode: String?
+    let gamedayRole: String?
+    let contents: Int
+}
+
+func kioskFootballGamedayKitLabel(_ role: String?) -> String? {
+    switch role {
+    case "SLOW1": return "Slow 1"
+    case "SLOW2": return "Slow 2"
+    case "BENCH": return "Bench"
+    case "ROAM1": return "Roam 1"
+    case "ROAM2": return "Roam 2"
+    case "ROAM3": return "Roam 3"
+    case "ROAM4": return "Roam 4"
+    default: return nil
+    }
+}
+
+struct KioskKitDetail: Decodable, Equatable {
+    let id: String
+    let name: String
+    let sportCode: String?
+    let gamedayRole: String?
+    let members: [Member]
+    let bulkMembers: [BulkMember]
+
+    struct Member: Decodable, Equatable, Identifiable {
+        let id: String
+        let assetTag: String?
+        let name: String
+    }
+
+    struct BulkMember: Decodable, Equatable, Identifiable {
+        let bulkSkuId: String
+        let name: String
+        let quantity: Int
+        var id: String { bulkSkuId }
+    }
+}
+
 struct KioskCheckoutEvent: Decodable, Identifiable, Equatable {
     let id: String
     let title: String

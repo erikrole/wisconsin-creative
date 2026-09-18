@@ -520,30 +520,16 @@ struct WelcomePhotoStepView: View {
     }
 
     private var avatarPreview: some View {
-        Group {
-            if let avatarUrl = profile.avatarUrl, let url = URL(string: avatarUrl) {
-                AsyncImage(url: url) { image in
-                    image.resizable().scaledToFill()
-                } placeholder: {
-                    ProgressView()
-                }
-            } else {
-                ZStack {
-                    Color.statusBackground(.blue)
-                    Text(initials)
-                        .font(.largeTitle.weight(.semibold))
-                        .foregroundStyle(Color.statusText(.blue))
-                }
-            }
-        }
-        .frame(width: 128, height: 128)
-        .clipShape(Circle())
+        UserAvatarView(
+            name: profile.name,
+            avatarUrl: profile.avatarUrl,
+            size: 128,
+            fallbackBackground: Color.statusBackground(.blue),
+            fallbackForeground: Color.statusText(.blue),
+            showsBorder: false
+        )
         .overlay(Circle().stroke(Color.primary.opacity(0.12), lineWidth: 1))
         .accessibilityLabel(profile.avatarUrl == nil ? "No profile photo" : "Current profile photo")
-    }
-
-    private var initials: String {
-        profile.name.split(separator: " ").prefix(2).compactMap(\.first).map(String.init).joined().uppercased()
     }
 }
 

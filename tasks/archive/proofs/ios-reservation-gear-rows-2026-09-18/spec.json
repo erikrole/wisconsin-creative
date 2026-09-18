@@ -1,0 +1,50 @@
+{
+  "title": "Native reservation Gear rows, filters, and conflicts",
+  "eyebrow": "iOS · Wisconsin Creative",
+  "lede": "Gear browse now leads with the asset tag, puts category on the search bar, and paints known conflicts as blocked instead of a faded plus.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "After-only fixture evidence",
+      "note": "iPhone 16 Pro (27.0) UDID E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE, WisconsinPerformance scenario create-booking-events, light appearance. Erik’s 6:30 AM screenshot is physical-device dark mode with live inventory, so it is not a matched before pair.",
+      "pairs": [],
+      "shots": [
+        {
+          "title": "Gear browse",
+          "tag": "After",
+          "image": "after-gear.png",
+          "cap": "Search carries an All menu. Browse rows keep the tag only. LENS-032 is a red Unavailable row with the conflicting booking and window."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Identity subline",
+      "was": "Every browse row repeated the product name and Camp Randall under the tag, so the list read as a catalog instead of grab-and-go gear.",
+      "now": "Browse rows keep the asset tag. Product and location stay in VoiceOver. Needed-next and conflict copy remain the only supporting lines."
+    },
+    {
+      "h": "Category chips",
+      "was": "All, Cameras, Lenses, Batteries, and Other sat as a second control strip under search.",
+      "now": "Those categories are a menu on the search field, with a checkmark on the current choice."
+    },
+    {
+      "h": "Conflict chrome",
+      "was": "A conflicted lens kept a plus-shaped mark and a faded red caption, so it still looked tappable.",
+      "now": "Conflicted rows use a red rail, red fill, red title, the booking plus window, and an Unavailable badge. They cannot be newly selected."
+    }
+  ],
+  "verification": [
+    "vitest ios-create-booking-picker-parity, ios-native-control-cleanup, and ios-item-list-identity-source passed (28 tests).",
+    "WisconsinPerformance CreateBookingEventPickerScreenshotUITests/testEventPickerCaptures passed on iPhone 16 Pro (27.0) UDID E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE after a clean rebuild.",
+    "git diff --check passed on the touched composer, fixture, test, and area-doc files."
+  ],
+  "notes": [
+    "After capture: after-gear.png.",
+    "Reported live frame (unmatched): reported-before.png from the 6:30 AM device screenshot.",
+    "Fixture LENS-032 conflicts with VB vs Milwaukee so Unavailable is on the first screen. Needed-next on CAM-014 is still advisory, not the removed product/location subline.",
+    "Authenticated physical dark-mode proof remains open.",
+    "No commit or push."
+  ]
+}

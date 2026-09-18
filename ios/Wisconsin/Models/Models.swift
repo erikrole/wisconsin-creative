@@ -368,6 +368,47 @@ struct BookingStub: Codable {
     let creationDisposition: String?
 }
 
+struct BookingReuseEvent: Codable, Identifiable {
+    let id: String
+    let summary: String
+    let startsAt: Date
+    let endsAt: Date
+    let allDay: Bool
+    let sportCode: String?
+    let opponent: String?
+    let isHome: Bool?
+}
+
+struct BookingReuseSerializedItem: Codable {
+    let assetId: String
+}
+
+struct BookingReuseBulkItem: Codable {
+    let bulkSkuId: String
+    let plannedQuantity: Int
+    let bulkSku: BulkSku
+}
+
+struct BookingReusePlan: Codable {
+    let sourceId: String
+    let kind: BookingKind
+    let title: String
+    let notes: String?
+    let requesterUserId: String
+    let requesterName: String?
+    let custodyScope: String
+    let locationId: String
+    let kitId: String?
+    let kitName: String?
+    let sportCode: String?
+    let keepTitle: Bool
+    let startsAt: Date
+    let endsAt: Date
+    let events: [BookingReuseEvent]
+    let serializedItems: [BookingReuseSerializedItem]
+    let bulkItems: [BookingReuseBulkItem]
+}
+
 struct ReservationCreationReceipt: Equatable {
     let id: String
     let consolidated: Bool
@@ -381,6 +422,9 @@ struct AssetConflict: Decodable {
     let assetId: String
     let conflictingBookingId: String?
     let conflictingBookingTitle: String?
+    let conflictingBookingRequesterName: String?
+    let conflictingBookingKind: String?
+    let conflictingBookingStatus: String?
     let startsAt: Date?
     let endsAt: Date?
 }
@@ -405,6 +449,8 @@ struct AvailabilityCommitment: Decodable {
     let assetId: String
     let bookingId: String?
     let bookingTitle: String?
+    let requesterName: String?
+    let kind: String?
     let startsAt: Date?
     let endsAt: Date?
     let status: String?
@@ -694,12 +740,17 @@ struct UserBadge: Codable, Identifiable {
     /// different name because `rarity` itself is that accessor.
     let servedRarity: String?
     let holders: Int?
+    /// True when `rarity` came from the difficulty fallback, not scarcity.
+    let rarityProvisional: Bool?
+    /// The `StudentBadge` row id, present only when earned. Web revoke uses it.
+    let awardId: String?
 
     enum CodingKeys: String, CodingKey {
         case id, key, name, description, icon, category, kind, trigger
         case threshold, ruleKey, active, sortOrder, earned, awardedAt
         case source, note, awardedByName, progressCurrent, progressTarget, holders
         case servedRarity = "rarity"
+        case rarityProvisional, awardId
     }
 }
 

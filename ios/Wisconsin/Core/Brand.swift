@@ -16,7 +16,7 @@ extension Color {
             : UIColor(red: 0.627, green: 0, blue: 0, alpha: 1)
     }))
 
-    /// Static launch base and top stop of the shared splash scene — `#140B10`.
+    /// Top stop of the sign-in splash scene — `#140B10`.
     static let brandSplashTop = Color(red: 0.078, green: 0.043, blue: 0.063)
 
     /// Mid stop of the shared splash scene — `#22090D`.
@@ -265,8 +265,10 @@ extension Color {
 //
 // A small, consistent layout vocabulary so screens share the same rhythm and
 // card treatment instead of re-deriving padding/radius per view. Pairs with the
-// native iOS 26 Liquid Glass controls (`.buttonStyle(.glass/.glassProminent)`,
-// material-backed floating controls) the app already uses.
+// native Liquid Glass controls (`.buttonStyle(.glass/.glassProminent)`,
+// material-backed floating controls) the app already uses. Built with the
+// iOS 27 SDK those controls pick up the refined 27 material automatically;
+// scrolling lists opt into receding bars through `nativeScrollBarMinimization`.
 
 /// Layout tokens — use instead of raw point literals so spacing stays in step.
 enum Brand {

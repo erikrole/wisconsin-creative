@@ -1,0 +1,56 @@
+{
+  "title": "Native New Reservation details cleanup",
+  "eyebrow": "iOS · Wisconsin Creative · Create Reservation",
+  "lede": "Pickup and Return stay on one line. Title and the window share a plan card. Choose Gear names the missing requirement instead of failing silently.",
+  "stats": [
+    {
+      "k": "When row",
+      "v": "1 time menu",
+      "n": "Was two full-time menus that crushed Return into a vertical stack and inherited brand red."
+    },
+    {
+      "k": "Details cards",
+      "v": "Plan + pickup",
+      "n": "Title/When and pickup/kit are grouped. Empty kit lists no longer take a whole card."
+    }
+  ],
+  "sections": [
+    {
+      "heading": "After",
+      "note": "After-only iPhone 16 Pro (iOS 27) fixture capture in light appearance, 1206×2622 px, create-booking-events after selecting MBB vs Duke. Hash-bound pair receipts were not recorded against the reported dark-mode device screenshot because device, appearance, clock, and pixel dimensions differ. Reported defect: tasks/archive/proofs/ios-reservation-when-row-2026-09-17/reported-broken.png. After: tasks/archive/proofs/ios-reservation-when-row-2026-09-17/after-details.png."
+    }
+  ],
+  "changes": [
+    {
+      "h": "Pickup and return",
+      "was": "Two menu pickers each showed the full time, so Pickup vanished and Return stacked letter-by-letter. Times used brand red.",
+      "now": "One compact date control and one 15-minute time menu per row. Labels stay on a single line. Time menus use reservation purple."
+    },
+    {
+      "h": "Details hierarchy",
+      "was": "Title, When, pickup, and kit were four separate cards. Toolbar Back sat next to Cancel on later steps.",
+      "now": "Title and the window share a plan card; pickup and kit share the next. Completed steps in the progress strip go back."
+    },
+    {
+      "h": "Blocked actions",
+      "was": "Choose Gear disabled with no reason. Review on Gear did the same.",
+      "now": "Choose Gear states the missing requirement. Gear Review exposes the same reason to VoiceOver."
+    },
+    {
+      "h": "Review",
+      "was": "Pickup/return used a weekday+date stamp. A selected kit was invisible.",
+      "now": "Review uses the shared operational date language and names the gameday kit as provenance."
+    }
+  ],
+  "verification": [
+    "Wisconsin iPhone 16 Pro Debug build succeeded.",
+    "Wisconsin generic iOS device Debug build succeeded earlier in this slice.",
+    "CreateBookingEventPickerScreenshotUITests.testEventPickerCaptures passed on iPhone 16 Pro (27.0), including Pickup and Return labels on the details step.",
+    "Focused source contracts for compact details, three-step progression, kit calling, and native search passed. Unrelated dirty-tree failures remain in Bookings search mounting, reservation drafts, TipKit configure, and visible-row conflict preview."
+  ],
+  "notes": [
+    "The reported screenshot is a signed-in dark-mode device capture of FB vs Eastern Michigan. The after shot is a light fixture capture of MBB vs Duke. Do not treat them as a matched pair.",
+    "Gameday kit sits in the pickup card below Camp Randall / Kohl Center; it is one scroll below this frame because Choose Gear is pinned.",
+    "Authenticated physical iPhone 16 Pro proof of the live reservation composer remains open. No commit or deploy in this slice."
+  ]
+}

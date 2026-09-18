@@ -38,6 +38,9 @@ describe("iOS Home Screen widgets", () => {
   it("vends the widgets from the existing extension bundle", () => {
     expect(bundle).toContain("NextShiftWidget()");
     expect(bundle).toContain("GearDueWidget()");
+    expect(bundle).toContain("ScanGearControl()");
+    expect(bundle).toContain("MyGearControl()");
+    expect(bundle).toContain("ReserveGearControl()");
     // One extension, one bundle. A second widget target would need its own
     // provisioning profile for no gain.
     expect(widgets).not.toContain("@main");
@@ -120,12 +123,8 @@ describe("iOS Home Screen widgets", () => {
     expect(widgets).toContain("components.host = \"booking\"");
     expect(widgets).toContain("components.path = \"/\\(bookingId)\"");
     expect(widgets).toContain("bookingURL(for: entry.snapshot)");
-    expect(app).toContain('case "schedule":');
-    expect(app).toContain("let eventId = url.path.trimmingCharacters");
-    expect(app).toContain("appState.pendingPushEventId = eventId");
-    expect(app).toContain("appState.pendingAppIntentDestination = .todaySchedule");
-    expect(app).toContain('case "bookings":');
-    expect(app).toContain("appState.pendingAppIntentDestination = .myGear");
+    expect(app).toContain("GearTrackerRouteParser.parse(url)");
+    expect(app).toContain("appState.apply(route)");
 
     // Both destinations are capability-checked before the tab switches.
     const tabView = source("ios/Wisconsin/Views/AppTabView.swift");

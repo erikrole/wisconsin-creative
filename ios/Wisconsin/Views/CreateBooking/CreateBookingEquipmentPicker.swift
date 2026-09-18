@@ -4,21 +4,16 @@ import SwiftUI
 ///
 /// Serialized results use "search, grab, search again." Counted items keep
 /// explicit quantity controls in both results and the selected-gear drawer.
-/// Selected gear lives in a cart drawer pinned to the bottom edge.
+/// Selected gear lives in the system bottom toolbar and a cart sheet.
 struct CreateBookingEquipmentPicker: View {
     @Bindable var vm: CreateBookingViewModel
     let onReview: () -> Void
 
     @State private var showCart = false
-    @State private var justAdded: String?
-    @State private var justAddedClearTask: Task<Void, Never>?
+    @State private var viewingAsset: AssetRouteId?
     @State private var acknowledgedRecommendationIDs: Set<String> = []
     @State private var listResetID = UUID()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    private var isBrowsing: Bool {
-        vm.assetSearch.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
 
     var body: some View {
         let displayedAssetGroups = vm.displayedAssetGroups
@@ -34,20 +29,12 @@ struct CreateBookingEquipmentPicker: View {
             && vm.error == nil
 
         List {
-            if vm.selectedEquipmentCount > 0 {
-                selectedSummary
-            }
-
             if let submissionConflict = vm.submissionConflict {
                 submissionConflictSection(submissionConflict)
             }
 
             if let availabilityCheckError = vm.availabilityCheckError {
                 availabilityCheckSection(availabilityCheckError)
-            }
-
-            if isBrowsing && vm.browseCategories.count > 1 {
-                categoryChips
             }
 
             statusSection(hasNoResults: hasNoResults)
@@ -74,18 +61,7 @@ struct CreateBookingEquipmentPicker: View {
                     ForEach(categoryResults) { result in
                         switch result {
                         case .asset(let asset):
-                            AssetPickerRow(
-                                asset: asset,
-                                isSelected: vm.selectedAssetIds.contains(asset.id),
-                                isConflicted: vm.conflictedAssetIds.contains(asset.id),
-                                conflictMessage: vm.conflictMessage(for: asset.id),
-                                isAtPickupLocation: vm.isAtPickupLocation(asset),
-                                upcomingCommitmentLabel: vm.upcomingCommitmentLabel(for: asset.id),
-                                turnaroundMessage: vm.turnaroundMessage(for: asset.id),
-                                turnaroundIsCritical: vm.turnaroundIsCritical(for: asset.id)
-                            ) {
-                                handleAssetTap(asset)
-                            }
+                            assetResultRow(asset)
                         case .bulk(let sku):
                             BulkResultRow(
                                 sku: sku,
@@ -105,18 +81,7 @@ struct CreateBookingEquipmentPicker: View {
             ForEach(displayedAssetGroups) { group in
                 Section(group.title) {
                     ForEach(group.assets) { asset in
-                        AssetPickerRow(
-                            asset: asset,
-                            isSelected: vm.selectedAssetIds.contains(asset.id),
-                            isConflicted: vm.conflictedAssetIds.contains(asset.id),
-                            conflictMessage: vm.conflictMessage(for: asset.id),
-                            isAtPickupLocation: vm.isAtPickupLocation(asset),
-                            upcomingCommitmentLabel: vm.upcomingCommitmentLabel(for: asset.id),
-                            turnaroundMessage: vm.turnaroundMessage(for: asset.id),
-                            turnaroundIsCritical: vm.turnaroundIsCritical(for: asset.id)
-                        ) {
-                            handleAssetTap(asset)
-                        }
+                        assetResultRow(asset)
                     }
                 }
             }
@@ -135,131 +100,116 @@ struct CreateBookingEquipmentPicker: View {
         .searchable(
             text: $vm.assetSearch,
             placement: .navigationBarDrawer(displayMode: .always),
-            prompt: Text("Search all equipment")
+            prompt: "Search all equipment"
         )
         .onChange(of: vm.assetSearch) { vm.onSearchChange() }
         .scrollDismissesKeyboard(.immediately)
+        .refreshable { await vm.loadAvailableAssets(reset: true) }
+        .nativeScrollBarMinimization()
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            VStack(spacing: 0) {
-                if !activeRecommendations.isEmpty {
-                    VStack(spacing: 6) {
-                        ForEach(activeRecommendations) { recommendation in
-                            BatteryRecommendationCard(
-                                recommendation: recommendation,
-                                quantity: vm.quantity(for: recommendation.sku),
-                                onDecrement: {
-                                    vm.decrementBulk(recommendation.sku)
-                                    Haptics.selection()
-                                },
-                                onIncrement: {
-                                    vm.incrementBulk(recommendation.sku)
-                                    Haptics.selection()
-                                },
-                                onDismiss: {
-                                    acknowledge(recommendation)
-                                }
-                            )
-                            .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
-                        }
+            if !activeRecommendations.isEmpty {
+                VStack(spacing: 6) {
+                    ForEach(activeRecommendations) { recommendation in
+                        BatteryRecommendationCard(
+                            recommendation: recommendation,
+                            quantity: vm.quantity(for: recommendation.sku),
+                            onDecrement: {
+                                vm.decrementBulk(recommendation.sku)
+                                Haptics.selection()
+                            },
+                            onIncrement: {
+                                vm.incrementBulk(recommendation.sku)
+                                Haptics.selection()
+                            },
+                            onDismiss: {
+                                acknowledge(recommendation)
+                            }
+                        )
+                        .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.top, 6)
-                    .padding(.bottom, 4)
-                    .background(.bar)
                 }
-                cartBar
+                .padding(.horizontal, 12)
+                .padding(.top, 6)
+                .padding(.bottom, 4)
+                .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: activeRecommendations.map(\.reminderKey))
             }
-            .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: activeRecommendations.map(\.reminderKey))
         }
+        .toolbar { gearBottomToolbar }
         .sheet(isPresented: $showCart) {
             EquipmentCartSheet(vm: vm)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
+                .presentationContentInteraction(.scrolls)
         }
-    }
-
-    // MARK: - Sections
-
-    private var selectedSummary: some View {
-        Section {
-            Button {
-                showCart = true
-            } label: {
-                HStack(spacing: 12) {
-                    Image(systemName: selectedSummaryHasWarning ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
-                        .font(.title3.weight(.semibold))
-                        .foregroundStyle(
-                            selectedSummaryHasWarning
-                                ? Color.statusText(.orange)
-                                : Color.statusText(.green)
-                        )
-                        .frame(width: 38, height: 38)
-                        .background(
-                            selectedSummaryHasWarning
-                                ? Color.statusBackground(.orange)
-                                : Color.statusBackground(.green),
-                            in: Circle()
-                        )
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Selected Gear")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.primary)
-                        Text(selectionSummaryText)
-                            .font(.caption)
-                            .foregroundStyle(
-                                selectedSummaryHasWarning
-                                    ? Color.statusText(.orange)
-                                    : Color.secondary
-                            )
-                    }
-
-                    Spacer()
-
-                    Text("\(vm.selectedEquipmentCount)")
-                        .font(.subheadline.weight(.semibold))
-                        .monospacedDigit()
-                        .foregroundStyle(.secondary)
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.tertiary)
-                }
-                .contentShape(Rectangle())
+        .sheet(item: $viewingAsset) { route in
+            NavigationStack {
+                ItemDetailView(assetId: route.id)
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Selected gear, \(selectionSummaryText)")
-            .accessibilityHint("Shows selected equipment")
         }
     }
 
-    private var selectedSummaryHasWarning: Bool {
-        vm.selectedLocationMismatchCount > 0
-            || vm.selectedConflictCount > 0
-            || vm.hasSelectedTimingAdvisories
-            || vm.availabilityCheckError != nil
-            || vm.isCheckingAvailability
-    }
+    // MARK: - Rows
 
-    private var selectionSummaryText: String {
-        let mismatchCount = vm.selectedLocationMismatchCount
-        if mismatchCount > 0 {
-            return "\(mismatchCount) item\(mismatchCount == 1 ? " is" : "s are") at another pickup location"
+    @ViewBuilder
+    private func assetResultRow(_ asset: Asset) -> some View {
+        let isSelected = vm.selectedAssetIds.contains(asset.id)
+        let isConflicted = vm.conflictedAssetIds.contains(asset.id)
+        let atPickup = vm.isAtPickupLocation(asset)
+        let canAdd = !isSelected && atPickup && !isConflicted
+        let caption = vm.availabilityCaption(for: asset.id)
+
+        Button {
+            handleAssetTap(asset)
+        } label: {
+            AssetPickerRow(
+                asset: asset,
+                isSelected: isSelected,
+                isConflicted: isConflicted,
+                conflictMessage: caption?.text,
+                conflictDetail: isConflicted ? caption?.text : nil,
+                conflictTone: caption?.tone ?? .red,
+                isAtPickupLocation: atPickup,
+                upcomingCommitmentLabel: isConflicted ? nil : caption?.text,
+                upcomingTone: caption?.tone ?? .purple,
+                turnaroundMessage: vm.turnaroundMessage(for: asset.id),
+                turnaroundIsCritical: vm.turnaroundIsCritical(for: asset.id)
+            )
         }
-        let count = vm.selectedConflictCount
-        if count > 0 {
-            return "\(count) conflict\(count == 1 ? "" : "s") to review"
+        .buttonStyle(.plain)
+        .disabled((isConflicted && !isSelected) || (!atPickup && !isSelected))
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            if canAdd {
+                Button {
+                    handleAssetTap(asset)
+                } label: {
+                    Label("Add", systemImage: "plus")
+                }
+                .tint(Color.statusText(.purple))
+            }
         }
-        if let availabilityCheckError = vm.availabilityCheckError {
-            return availabilityCheckError
+        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+            if isSelected {
+                Button("Remove", role: .destructive) {
+                    vm.toggleAsset(asset)
+                    Haptics.selection()
+                }
+            }
         }
-        let timingCount = vm.selectedTimingAdvisoryCount
-        if timingCount > 0 {
-            return "\(timingCount) timing notice\(timingCount == 1 ? "" : "s") to review"
+        .contextMenu {
+            if isSelected {
+                Button("Remove", role: .destructive) {
+                    vm.toggleAsset(asset)
+                    Haptics.selection()
+                }
+            } else if canAdd {
+                Button("Add", systemImage: "plus") {
+                    handleAssetTap(asset)
+                }
+            }
+            Button("View item", systemImage: "info.circle") {
+                viewingAsset = AssetRouteId(id: asset.id)
+            }
         }
-        if vm.isCheckingAvailability {
-            return "Checking availability…"
-        }
-        return "Ready to review"
     }
 
     private func submissionConflictSection(_ message: String) -> some View {
@@ -305,37 +255,6 @@ struct CreateBookingEquipmentPicker: View {
         }
     }
 
-    private var categoryChips: some View {
-        Section {
-            ViewThatFits(in: .horizontal) {
-                categoryChipRow
-                ScrollView(.horizontal, showsIndicators: false) {
-                    categoryChipRow
-                        .padding(.horizontal, 12)
-                }
-            }
-            .padding(.vertical, 2)
-            .listRowInsets(EdgeInsets(top: 6, leading: 12, bottom: 6, trailing: 12))
-            .listRowBackground(Color.clear)
-            .accessibilityLabel("Filter by category")
-        }
-    }
-
-    private var categoryChipRow: some View {
-        HStack(spacing: 5) {
-            ReservationCategoryChip(label: "All", isOn: vm.browseCategoryFilter == nil) {
-                vm.browseCategoryFilter = nil
-                Haptics.selection()
-            }
-            ForEach(vm.browseCategories, id: \.self) { category in
-                ReservationCategoryChip(label: category, isOn: vm.browseCategoryFilter == category) {
-                    vm.browseCategoryFilter = vm.browseCategoryFilter == category ? nil : category
-                    Haptics.selection()
-                }
-            }
-        }
-    }
-
     @ViewBuilder
     private func statusSection(hasNoResults: Bool) -> some View {
         if vm.isLoadingAssets || vm.error != nil || hasNoResults {
@@ -348,8 +267,6 @@ struct CreateBookingEquipmentPicker: View {
                     }
                     .listRowBackground(Color.clear)
                 } else if let err = vm.error {
-                    // Surface a load error with retry so server failures do not
-                    // look like an empty equipment room.
                     HStack(spacing: 12) {
                         Image(systemName: "wifi.exclamationmark")
                             .foregroundStyle(Color.statusText(.red))
@@ -369,7 +286,7 @@ struct CreateBookingEquipmentPicker: View {
                         .buttonStyle(.bordered)
                         .controlSize(.small)
                     }
-                } else if isBrowsing {
+                } else if vm.assetSearch.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     Text("No available equipment found.")
                         .foregroundStyle(.secondary)
                         .font(.subheadline)
@@ -381,70 +298,60 @@ struct CreateBookingEquipmentPicker: View {
         }
     }
 
-    // MARK: - Cart bar
+    // MARK: - Toolbar
 
-    private var cartBar: some View {
-        HStack(spacing: 12) {
-            Button {
-                showCart = true
-            } label: {
-                HStack(spacing: 10) {
-                    Image(systemName: "shippingbox.fill")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(vm.selectedEquipmentCount > 0 ? Color.statusText(.purple) : Color(.systemGray3))
-                    Group {
-                        if let justAdded {
-                            Label(justAdded, systemImage: "checkmark.circle.fill")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(Color.statusText(.green))
-                                .lineLimit(1)
-                        } else if vm.selectedEquipmentCount == 0 {
-                            Text("No equipment yet")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        } else {
-                            HStack(spacing: 5) {
-                                Text("\(vm.selectedEquipmentCount) item\(vm.selectedEquipmentCount == 1 ? "" : "s")")
-                                    .font(.subheadline.weight(.semibold))
-                                    .monospacedDigit()
-                                    .contentTransition(.numericText())
-                                Image(systemName: "chevron.up")
-                                    .font(.caption2.weight(.bold))
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    }
+    @ToolbarContentBuilder
+    private var gearBottomToolbar: some ToolbarContent {
+        if vm.selectedEquipmentCount > 0 {
+            ToolbarItem(placement: .bottomBar) {
+                Button {
+                    showCart = true
+                } label: {
+                    Label("Selected", systemImage: "shippingbox.fill")
+                        .symbolRenderingMode(.monochrome)
+                        .foregroundStyle(Color.statusText(.purple))
                 }
-                .contentShape(Rectangle())
+                .tint(Color.statusText(.purple))
+                .badge(vm.selectedEquipmentCount)
+                .accessibilityLabel("\(vm.selectedEquipmentCount) items selected, view selected equipment")
             }
-            .buttonStyle(.plain)
-            .disabled(vm.selectedEquipmentCount == 0)
-            .accessibilityLabel("\(vm.selectedEquipmentCount) items selected, view selected equipment")
-            .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: justAdded)
-            .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: vm.selectedEquipmentCount)
-
-            Spacer(minLength: 12)
-
-            Button {
-                attemptReview()
-            } label: {
-                Text(
-                    vm.selectedLocationMismatchCount > 0
-                        ? "Fix Location"
-                        : (vm.selectedConflictCount == 0 ? "Review" : "Resolve Conflicts")
-                )
+            ToolbarSpacer(.flexible, placement: .bottomBar)
+            ToolbarItem(placement: .bottomBar) {
+                Button {
+                    attemptReview()
+                } label: {
+                    Text(
+                        vm.selectedLocationMismatchCount > 0
+                            ? "Fix Location"
+                            : (vm.selectedConflictCount == 0 ? "Review" : "Resolve Conflicts")
+                    )
                     .fontWeight(.semibold)
-                    .padding(.horizontal, 6)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Color.statusText(.purple))
+                .disabled(!vm.canReviewEquipment)
+                .accessibilityHint(reviewBlockedHint)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(Color.statusText(.purple))
-            .disabled(!vm.canReviewEquipment)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .frame(maxWidth: .infinity)
-        .background(.bar)
-        .overlay(alignment: .top) { Divider() }
+    }
+
+    private var reviewBlockedHint: String {
+        if vm.selectedEquipmentCount == 0 {
+            return "Add equipment first"
+        }
+        if vm.selectedLocationMismatchCount > 0 {
+            return "Every selected item has to match this pickup"
+        }
+        if vm.selectedConflictCount > 0 {
+            return "Remove conflicting items first"
+        }
+        if vm.isCheckingAvailability {
+            return "Availability is still checking"
+        }
+        if vm.availabilityCheckError != nil {
+            return "Retry the availability check"
+        }
+        return "Reviews the reservation"
     }
 
     // MARK: - Tap handling
@@ -459,7 +366,7 @@ struct CreateBookingEquipmentPicker: View {
                 return
             }
             vm.addAsset(asset)
-            noteAdded(asset.itemListPrimaryTitle)
+            noteAdded()
         }
     }
 
@@ -473,7 +380,7 @@ struct CreateBookingEquipmentPicker: View {
             return
         }
         vm.incrementBulk(sku)
-        noteBulkChanged(sku.name)
+        Haptics.selection()
     }
 
     private func handleBulkDecrement(_ sku: FormBulkSku) {
@@ -498,30 +405,12 @@ struct CreateBookingEquipmentPicker: View {
         acknowledgedRecommendationIDs.insert(recommendation.reminderKey)
     }
 
-    private func noteBulkChanged(_ name: String) {
-        Haptics.selection()
-        justAddedClearTask?.cancel()
-        justAdded = name
-        justAddedClearTask = Task {
-            try? await Task.sleep(for: .seconds(1.6))
-            guard !Task.isCancelled else { return }
-            justAdded = nil
-        }
-    }
-
-    /// Post-add bookkeeping: haptic, clear the query so the next search
-    /// starts clean (keyboard stays up), and flash the name on the cart bar.
-    private func noteAdded(_ name: String) {
+    /// Clear the query so browse returns after a search-add, without
+    /// stealing focus back into the search field.
+    private func noteAdded() {
         Haptics.selection()
         if !vm.assetSearch.isEmpty {
             vm.assetSearch = ""
-        }
-        justAddedClearTask?.cancel()
-        justAdded = name
-        justAddedClearTask = Task {
-            try? await Task.sleep(for: .seconds(1.6))
-            guard !Task.isCancelled else { return }
-            justAdded = nil
         }
     }
 }
@@ -539,7 +428,6 @@ struct BulkResultRow: View {
     let onDecrement: () -> Void
     let onIncrement: () -> Void
 
-    private var atMax: Bool { quantity >= sku.availableQuantity }
     private var subtitle: String {
         "\(sku.availableQuantity)/\(sku.currentQuantity) available"
     }
@@ -573,62 +461,15 @@ struct BulkResultRow: View {
 
             Spacer(minLength: 6)
 
-            HStack(spacing: 4) {
-                Button(action: onDecrement) {
-                    Image(systemName: "minus")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(Color.statusText(.purple))
-                        .frame(width: 30, height: 30)
-                        .background(Color.statusBackground(.purple), in: Circle())
-                }
-                .buttonStyle(.plain)
-                .frame(width: 44, height: 44)
-                .contentShape(Circle())
-                .disabled(quantity == 0)
-                .accessibilityLabel("Remove one \(sku.name)")
-
-                Text("\(quantity)")
-                    .font(.subheadline.weight(.semibold).monospacedDigit())
-                    .frame(minWidth: 20)
-                    .contentTransition(.numericText())
-                    .accessibilityLabel("\(quantity) selected")
-
-                Button(action: onIncrement) {
-                    Image(systemName: "plus")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(Color.statusText(.purple))
-                        .frame(width: 30, height: 30)
-                        .background(Color.statusBackground(.purple), in: Circle())
-                }
-                .buttonStyle(.plain)
-                .frame(width: 44, height: 44)
-                .contentShape(Circle())
-                .disabled(atMax || !isAtPickupLocation)
-                .accessibilityLabel("Add one \(sku.name)")
-            }
+            ReservationQuantityStepper(
+                value: quantity,
+                range: isAtPickupLocation ? 0...sku.availableQuantity : 0...quantity,
+                label: "\(sku.name) quantity",
+                onIncrement: onIncrement,
+                onDecrement: onDecrement
+            )
         }
         .opacity(!isAtPickupLocation && quantity == 0 ? 0.48 : 1)
-    }
-}
-
-private struct ReservationCategoryChip: View {
-    let label: String
-    let isOn: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Text(label)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(isOn ? Color.statusText(.purple) : Color.secondary)
-                .padding(.horizontal, 8)
-                .frame(minHeight: 44)
-                .background(isOn ? Color.statusBackground(.purple) : Color(.secondarySystemGroupedBackground), in: Capsule())
-                .overlay(Capsule().strokeBorder(isOn ? Color.statusText(.purple).opacity(0.4) : Color.hairline))
-                .fixedSize(horizontal: true, vertical: false)
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 }
 
@@ -638,9 +479,6 @@ private struct BatteryRecommendationCard: View {
     let onDecrement: () -> Void
     let onIncrement: () -> Void
     let onDismiss: () -> Void
-    @Environment(\.colorSchemeContrast) private var accessibilityContrast
-
-    private var canIncrement: Bool { quantity < recommendation.sku.availableQuantity }
 
     var body: some View {
         HStack(spacing: 10) {
@@ -649,35 +487,13 @@ private struct BatteryRecommendationCard: View {
                 .font(.subheadline.weight(.semibold))
                 .lineLimit(1)
             Spacer(minLength: 4)
-            HStack(spacing: 5) {
-                Button(action: onDecrement) {
-                    Image(systemName: "minus")
-                        .font(.caption.weight(.bold))
-                        .frame(width: 28, height: 28)
-                        .background(Color(.tertiarySystemFill), in: Circle())
-                }
-                .buttonStyle(.plain)
-                .frame(width: 44, height: 44)
-                .contentShape(Circle())
-                .disabled(quantity == 0)
-                .accessibilityLabel("Remove one \(recommendation.sku.name)")
-                Text("\(quantity)")
-                    .font(.subheadline.weight(.semibold).monospacedDigit())
-                    .frame(minWidth: 20)
-                    .contentTransition(.numericText())
-                Button(action: onIncrement) {
-                    Image(systemName: "plus")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(Color.statusControlForeground(.purple, contrast: accessibilityContrast))
-                        .frame(width: 30, height: 30)
-                        .background(Color.statusText(.purple), in: Circle())
-                }
-                .buttonStyle(.plain)
-                .frame(width: 44, height: 44)
-                .contentShape(Circle())
-                .disabled(!canIncrement)
-                .accessibilityLabel("Add one \(recommendation.sku.name)")
-            }
+            ReservationQuantityStepper(
+                value: quantity,
+                range: 0...recommendation.sku.availableQuantity,
+                label: "\(recommendation.sku.name) quantity",
+                onIncrement: onIncrement,
+                onDecrement: onDecrement
+            )
             Button(action: onDismiss) {
                 Image(systemName: "xmark")
                     .font(.caption.weight(.bold))
@@ -772,8 +588,10 @@ struct EquipmentCartSheet: View {
                                         asset: asset,
                                         isConflicted: vm.conflictedAssetIds.contains(asset.id),
                                         conflictMessage: vm.conflictMessage(for: asset.id),
+                                        availabilityTone: vm.availabilityCaption(for: asset.id)?.tone ?? .red,
                                         isAtPickupLocation: vm.isAtPickupLocation(asset),
                                         upcomingCommitmentLabel: vm.upcomingCommitmentLabel(for: asset.id),
+                                        upcomingTone: vm.availabilityCaption(for: asset.id)?.tone ?? .purple,
                                         turnaroundMessage: vm.turnaroundMessage(for: asset.id),
                                         turnaroundIsCritical: vm.turnaroundIsCritical(for: asset.id)
                                     ) {

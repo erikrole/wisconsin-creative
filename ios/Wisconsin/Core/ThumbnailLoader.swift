@@ -130,6 +130,7 @@ struct CachedThumbnail: View {
     let url: URL
     let size: CGFloat
     var placeholderSystemImage: String?
+    var contentMode: ContentMode = .fill
 
     @Environment(\.displayScale) private var displayScale
     @State private var uiImage: UIImage?
@@ -142,7 +143,7 @@ struct CachedThumbnail: View {
             if let uiImage {
                 Image(uiImage: uiImage)
                     .resizable()
-                    .scaledToFill()
+                    .aspectRatio(contentMode: contentMode)
             } else if let placeholderSystemImage {
                 Image(systemName: placeholderSystemImage)
                     .font(.system(size: size * 0.36))

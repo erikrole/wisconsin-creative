@@ -271,19 +271,10 @@ private struct ScanHeroImage: View {
                 Color(.secondarySystemBackground)
             }
             if let imageUrl, let url = URL(string: imageUrl) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        // Fit, not fill: inventory photos are catalog-style
-                        // product shots — cropping them cuts the object.
-                        image
-                            .resizable()
-                            .scaledToFit()
-                            .padding(12)
-                    default:
-                        placeholder
-                    }
-                }
+                // Fit, not fill: inventory photos are catalog-style
+                // product shots — cropping them cuts the object.
+                CachedThumbnail(url: url, size: 400, contentMode: .fit)
+                    .padding(12)
             } else {
                 placeholder
             }

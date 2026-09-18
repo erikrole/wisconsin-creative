@@ -42,7 +42,7 @@ struct KioskSuccessView: View {
             if let reward = info.earnedBadges.first {
                 KioskBadgeCelebration(
                     reward: reward,
-                    additionalCount: max(0, info.earnedBadges.count - 1),
+                    additionalRewards: Array(info.earnedBadges.dropFirst()),
                     appeared: appeared,
                     reduceMotion: reduceMotion
                 )
@@ -289,11 +289,12 @@ struct KioskSuccessView: View {
 /// by hand, and this screen auto-returns on a countdown.
 private struct KioskBadgeCelebration: View {
     let reward: EarnedBadgeReward
-    let additionalCount: Int
+    let additionalRewards: [EarnedBadgeReward]
     let appeared: Bool
     let reduceMotion: Bool
 
     private var color: Color { reward.badgeRarity.accent }
+    private var additionalCount: Int { additionalRewards.count }
 
     var body: some View {
         VStack(spacing: KioskSpacing.md) {
@@ -322,7 +323,9 @@ private struct KioskBadgeCelebration: View {
                         .overlay(Circle().stroke(KioskSurface.base, lineWidth: 3))
                         .offset(x: 6, y: 6)
                         .modifier(KioskSuccessView.BadgeEntrance(trigger: appeared, reduceMotion: reduceMotion))
-                        .accessibilityLabel("\(additionalCount) more badges earned")
+                        .accessibilityLabel(
+                            "Also earned: \(additionalRewards.map(\.name).joined(separator: ", "))"
+                        )
                 }
             }
             .background(
@@ -367,6 +370,10 @@ private struct KioskBadgeCelebration: View {
             .modifier(KioskSuccessView.EntranceFade(visible: appeared || reduceMotion, reduceMotion: reduceMotion, delay: 0.24))
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Badge earned. \(reward.name), \(reward.badgeRarity.title). \(reward.description)")
+        .accessibilityLabel(
+            additionalRewards.isEmpty
+                ? "Badge earned. \(reward.name), \(reward.badgeRarity.title). \(reward.description)"
+                : "Badge earned. \(reward.name), \(reward.badgeRarity.title). Also earned: \(additionalRewards.map(\.name).joined(separator: ", ")). \(reward.description)"
+        )
     }
 }

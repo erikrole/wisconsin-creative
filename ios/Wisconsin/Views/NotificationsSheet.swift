@@ -182,11 +182,7 @@ private extension AppNotification {
 }
 
 struct NotificationsSheet: View {
-    var onSelectBooking: ((String) -> Void)?
-    var onSelectTrades: (() -> Void)?
-    var onSelectAsset: ((String) -> Void)?
-    var onSelectUser: ((String) -> Void)?
-    var onSelectEvent: ((String) -> Void)?
+    var onRoute: ((GearTrackerRoute) -> Void)?
 
     @State var vm = NotificationsViewModel()
     @Environment(\.dismiss) private var dismiss
@@ -389,61 +385,12 @@ struct NotificationsSheet: View {
     private func handleTap(_ notif: AppNotification) {
         Task { await vm.markRead(id: notif.id) }
 
-        if let blastId = notif.payload?.blastId {
-            // Reading the archive copy is not acknowledgment. Return to the
-            // authoritative Home banner, where Got it remains deliberate.
-            sharedAppState?.pendingPushBlastId = blastId
-            dismiss()
+        let route = GearTrackerRouteParser.parseNotification(payload: notif.payload, type: notif.type)
+        if route == .inbox {
             return
         }
-
-        // Booking-related types → booking detail (covers checkout_due/overdue,
-        // reservation_*, trade_* with bookingId in payload).
-        if let bookingId = notif.payload?.effectiveBookingId {
-            onSelectBooking?(bookingId)
-            dismiss()
-            return
-        }
-
-        // Trade types without an effectiveBookingId → trade board.
-        if notif.type.hasPrefix("trade_") {
-            onSelectTrades?()
-            dismiss()
-            return
-        }
-
-        if isShiftTargetedType(notif.type), let eventId = notif.payload?.eventId {
-            onSelectEvent?(eventId)
-            dismiss()
-            return
-        }
-
-        // Asset-related types → asset detail. Damage / lost / low-stock all
-        // carry assetId; routing there puts the staffer one tap from action.
-        if let assetId = notif.payload?.assetId, isAssetTargetedType(notif.type) {
-            onSelectAsset?(assetId)
-            dismiss()
-            return
-        }
-
-        if notif.type == "badge_awarded", let userId = notif.payload?.userId {
-            onSelectUser?(userId)
-            dismiss()
-            return
-        }
-
-        // Shift rows without event routing and other no-target types: mark-read only (handled
-        // above), no navigation.
-    }
-
-    private func isAssetTargetedType(_ type: String) -> Bool {
-        type.hasPrefix("checkin_item_damaged")
-            || type.hasPrefix("checkin_item_lost")
-            || type.hasPrefix("low_stock")
-    }
-
-    private func isShiftTargetedType(_ type: String) -> Bool {
-        type.hasPrefix("shift_")
+        onRoute?(route)
+        dismiss()
     }
 
     private var groupedSections: [(String, [AppNotification])] {

@@ -375,7 +375,9 @@ describe("iOS API contracts — kiosk student context decoding", () => {
 
     expect(route).toContain("return ok({");
     expect(route).toContain("checkouts: checkouts.map");
-    expect(route).toContain("pendingPickups: [...pendingPickups, ...dueReservations].map");
+    expect(route).toContain("pendingPickups: [");
+    expect(route).toContain("...pendingPickups.map");
+    expect(route).toContain("...dueReservations.map");
     expect(route).toContain("reservations: reservations.map");
     expect(models).toContain("struct KioskStudentContext: Decodable");
     expect(models).toContain("LossyDecodableArray<KioskStudentCheckout>");
@@ -430,14 +432,25 @@ describe("iOS API contracts — kiosk checkout context", () => {
     expect(checkoutView).toContain("KioskCartGroupRow");
     expect(checkoutView).toContain("dueBackAt");
     expect(checkoutView).toContain("availabilityResult.hasBlockingIssue");
-    expect(checkoutView).toContain("let preflight = await refreshAvailability(for: updated)");
-    expect(checkoutView).toContain("scanAvailabilityFeedback(for: cartItem, result: $0)");
-    expect(checkoutView).toContain("Remove it before checkout.");
+    expect(checkoutView).toContain("let preflight = await refreshAvailability(for: cart, endsAt: endsAt)");
+    expect(checkoutView).toContain("scanAvailabilityFeedback(for: cartItem, result: preflight)");
+    expect(checkoutView).toContain("Remove it or change the return time before checkout.");
     expect(checkoutView).toContain("Start Scanning");
     expect(checkoutView).toContain("Checkout Details");
     expect(checkoutView).toContain("Scan Items");
     expect(checkoutView).toContain("checkoutContextReady");
     expect(checkoutView).toContain("hasCheckoutContext");
+    expect(schema).toContain("kitId: cuidish.optional()");
+    expect(route).toContain("loadKitEquipmentPlan");
+    expect(client).toContain("func kioskKits(");
+    expect(client).toContain("requester_user_id");
+    expect(client).toContain("func kioskKitDetail(id: String)");
+    expect(client).toContain("kitId: kitId");
+    expect(models).toContain("struct KioskKitOption");
+    expect(models).toContain("struct KioskKitDetail");
+    expect(checkoutView).toContain("KioskCheckoutKitPicker");
+    expect(checkoutView).toContain("Still to scan");
+    expect(checkoutView).toContain("kitId: selectedKitId");
   });
 
   it("kiosk checkout completion uses the shared kiosk API error path", () => {
@@ -447,8 +460,8 @@ describe("iOS API contracts — kiosk checkout context", () => {
       client.indexOf("func kioskCheckoutDetail("),
     );
 
-    expect(method).toContain("let response: Response = try await perform(req)");
-    expect(method).toContain("return response.earnedBadges ?? []");
+    expect(method).toContain("return try await performCompletion(req, actorId: actorId)");
+    expect(method).toContain("kitId: kitId");
     expect(method).not.toContain("session.data(for: req)");
     expect(method).not.toContain("HTTPURLResponse");
   });

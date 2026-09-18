@@ -26,6 +26,9 @@ struct WisconsinLiveActivitiesBundle: WidgetBundle {
         CheckoutReturnLiveActivityWidget()
         NextShiftWidget()
         GearDueWidget()
+        ScanGearControl()
+        MyGearControl()
+        ReserveGearControl()
     }
 }
 

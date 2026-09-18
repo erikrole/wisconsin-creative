@@ -859,6 +859,30 @@ enum KioskFixtures {
         ]}
         """
     }
+
+    static func kitsJSON() -> String {
+        """
+        {"data":[
+          {"id":"kit-slow-1","name":"Slow 1","sportCode":"FB","gamedayRole":"SLOW1","contents":6},
+          {"id":"kit-high-2","name":"High 2","sportCode":"FB","contents":5}
+        ],"suggestedKitId":"kit-slow-1"}
+        """
+    }
+
+    static func kitDetailJSON() -> String {
+        """
+        {"data":{
+          "id":"kit-slow-1","name":"Slow 1","sportCode":"FB",
+          "members":[
+            {"id":"a-1","assetTag":"FX6-1","name":"Sony FX6"},
+            {"id":"a-2","assetTag":"LENS-70","name":"70-200"}
+          ],
+          "bulkMembers":[
+            {"bulkSkuId":"sku-1","name":"Sony Battery","quantity":4}
+          ]
+        }}
+        """
+    }
 }
 
 /// Answers every `/api/kiosk/*` request locally.
@@ -906,7 +930,12 @@ final class KioskFixtureURLProtocol: URLProtocol {
             return (200, KioskFixtures.usersJSON())
         case "/api/kiosk/events":
             return (200, KioskFixtures.eventsJSON())
+        case "/api/kiosk/kits":
+            return (200, KioskFixtures.kitsJSON())
         default:
+            if path.hasPrefix("/api/kiosk/kits/") {
+                return (200, KioskFixtures.kitDetailJSON())
+            }
             if path.hasPrefix("/api/kiosk/student/") {
                 return (200, KioskFixtures.studentContextJSON())
             }

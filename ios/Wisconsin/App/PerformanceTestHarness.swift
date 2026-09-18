@@ -31,7 +31,8 @@ private final class PerformanceDraftPersistence: ReservationDraftPersistence {
         shiftAssignmentId: String?,
         sourceDraftId: String?,
         serializedAssetIds: [String],
-        bulkItems: [BulkReservationRequest]
+        bulkItems: [BulkReservationRequest],
+        kitId: String?
     ) async throws -> ReservationCreationReceipt { throw CancellationError() }
 }
 
@@ -68,6 +69,8 @@ struct PerformanceTestRootView: View {
             ProfileHarnessView()
         case .login:
             LoginView()
+        case .launchView:
+            LaunchView()
         case .passwordSetup:
             PasswordSetupView(email: "avery.nakamura@wisc.edu")
         case .studentBookings:
@@ -461,12 +464,45 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
         case "/api/reports/utilization": return ReportsFixtureAPI.utilization
         case "/api/reports/checkouts": return ReportsFixtureAPI.checkouts
         case "/api/reservations": return SearchFixtureAPI.reservations
+        case "/api/kits": return ReservationFixtureAPI.kits
+        case "/api/form-options": return ReservationFixtureAPI.formOptions
         // Left unmapped in the partial scenario so the protocol answers 404 and
         // those two sources throw, exactly as a real outage would.
         case "/api/checkouts":
             return AppRuntimeMode.performanceScenario == .searchPartial ? nil : SearchFixtureAPI.checkouts
         default: return nil
         }
+    }
+}
+
+/// Pickup rooms and a callable kit so New Reservation Details can be captured
+/// without a live `/api/form-options` or kit catalog.
+enum ReservationFixtureAPI {
+    static var formOptions: Data {
+        Data(#"""
+        {"data":{
+          "locations":[
+            {"id":"loc-1","name":"Camp Randall"},
+            {"id":"loc-kc","name":"Kohl Center"}
+          ],
+          "users":[
+            {"id":"fixture-staff","name":"Bucky Badger","avatarUrl":null}
+          ],
+          "bulkSkus":[
+            {"id":"sku-sony-battery","name":"Sony Battery","category":"Batteries","unit":"each",
+             "locationId":"loc-1","binQrCodeValue":null,"trackByNumber":true,
+             "categoryName":"Batteries","imageUrl":null,"currentQuantity":24,"availableQuantity":18}
+          ]
+        }}
+        """#.utf8)
+    }
+
+    static var kits: Data {
+        Data(#"""
+        {"data":[
+          {"id":"kit-slow-1","name":"Slow 1","sportCode":"FB","gamedayRole":"SLOW1","_count":{"members":4,"bulkMembers":2}}
+        ],"suggestedKitId":null}
+        """#.utf8)
     }
 }
 
@@ -615,10 +651,10 @@ enum SearchFixtureAPI {
         let requestedOffset = Int(queryItems.first(where: { $0.name == "offset" })?.value ?? "0") ?? 0
         let rows: [(id: String, kind: String, payload: String)] = [
             ("a-1", "asset", asset(id: "a-1", tag: "CAM-014", name: "A-cam body", categoryId: "cat-camera", category: "Cameras", departmentId: "dep-video", department: "Video", status: "CHECKED_OUT")),
+            ("a-5", "asset", asset(id: "a-5", tag: "LENS-032", name: "Football 70–200mm", categoryId: "cat-lens", category: "Lenses", departmentId: "dep-photo", department: "Photo", status: "AVAILABLE", favorited: true)),
             ("a-2", "asset", asset(id: "a-2", tag: "CAM-015", name: "Football camera 02", categoryId: "cat-camera", category: "Cameras", departmentId: "dep-video", department: "Video", status: "AVAILABLE")),
             ("a-3", "asset", asset(id: "a-3", tag: "CAM-016", name: "Football camera 03", categoryId: "cat-camera", category: "Cameras", departmentId: "dep-video", department: "Video", status: "AVAILABLE")),
             ("a-4", "asset", asset(id: "a-4", tag: "CAM-017", name: "Football camera 04", categoryId: "cat-camera", category: "Cameras", departmentId: "dep-video", department: "Video", status: "AVAILABLE")),
-            ("a-5", "asset", asset(id: "a-5", tag: "LENS-032", name: "Football 70–200mm", categoryId: "cat-lens", category: "Lenses", departmentId: "dep-photo", department: "Photo", status: "AVAILABLE", favorited: true)),
             ("a-6", "asset", asset(id: "a-6", tag: "LENS-033", name: "Football 24–70mm", categoryId: "cat-lens", category: "Lenses", departmentId: "dep-photo", department: "Photo", status: "AVAILABLE")),
             ("a-7", "asset", asset(id: "a-7", tag: "AUD-007", name: "Football field recorder", categoryId: "cat-audio", category: "Audio", departmentId: "dep-audio", department: "Audio", status: "CHECKED_OUT")),
             ("a-8", "asset", asset(id: "a-8", tag: "AUD-008", name: "Football wireless set", categoryId: "cat-audio", category: "Audio", departmentId: "dep-audio", department: "Audio", status: "AVAILABLE")),
@@ -754,10 +790,15 @@ enum BookingFixtureAPI {
     static var availability: Data {
         Data("""
         {
-          "conflicts":[],"shortages":[],"unavailableAssets":[],
+          "conflicts":[
+            {"assetId":"a-5","conflictingBookingId":"bk-conflict","conflictingBookingTitle":"VB vs Milwaukee",
+             "conflictingBookingRequesterName":"Erik Role","conflictingBookingKind":"CHECKOUT",
+             "conflictingBookingStatus":"OPEN",
+             "startsAt":"\(iso(-60))","endsAt":"\(iso(360))"}
+          ],"shortages":[],"unavailableAssets":[],
           "upcomingCommitments":[
             {"assetId":"a-1","bookingId":"bk-next","bookingTitle":"Football vs Ohio State",
-             "bookingKind":"RESERVATION","status":"BOOKED",
+             "bookingKind":"RESERVATION","kind":"RESERVATION","status":"BOOKED",
              "startsAt":"\(iso(300))","endsAt":"\(iso(480))",
              "requesterName":"Jordan Lee","locationId":"loc-1",
              "locationName":"Camp Randall Creative Desk"}
@@ -1596,7 +1637,10 @@ enum ScheduleFixtureAPI {
             "endsAt": "\(at(0, 14))", "allDay": false, "status": "CONFIRMED",
             "sportCode": "VB", "opponent": "Nebraska", "isHome": true,
             "location": { "id": "loc-fh", "name": "UW Field House" },
-            "coverage": { "total": 6, "filled": 4, "percentage": 67 } },
+            "coverage": { "total": 6, "filled": 4, "percentage": 67 },
+            "combinedEvents": [{ "id": "e1b", "summary": "Volleyball vs Nebraska (TV)",
+              "startsAt": "\(at(0, 11))", "endsAt": "\(at(0, 14))", "allDay": false,
+              "sportCode": "VB", "opponent": "Nebraska" }] },
           { "id": "e2", "summary": "Men's Hockey at Minnesota", "startsAt": "\(at(0, 16))",
             "endsAt": "\(at(0, 19))", "allDay": false, "status": "CONFIRMED",
             "sportCode": "MHKY", "opponent": "Minnesota", "isHome": false,
@@ -1607,9 +1651,9 @@ enum ScheduleFixtureAPI {
             "sportCode": "WBB", "opponent": "Iowa", "isHome": true,
             "location": { "id": "loc-kc", "name": "Kohl Center" },
             "coverage": { "total": 5, "filled": 2, "percentage": 40 } },
-          { "id": "e10", "summary": "Men's Basketball vs Duke", "startsAt": "\(at(0, 20, 30))",
+          { "id": "e10", "summary": "Men's Basketball vs Duke - Rivalry Night", "startsAt": "\(at(0, 20, 30))",
             "endsAt": "\(at(0, 23))", "allDay": false, "status": "CONFIRMED",
-            "sportCode": "MBB", "opponent": "Duke", "isHome": true, "site": "NEUTRAL",
+            "sportCode": "MBB", "opponent": "Duke - Rivalry Night", "isHome": true, "site": "NEUTRAL",
             "location": null,
             "coverage": { "total": 4, "filled": 4, "percentage": 100 } },
           { "id": "e9", "summary": "Women's Soccer vs Penn State", "startsAt": "\(fromNow(-45))",
@@ -1744,6 +1788,12 @@ enum ScheduleFixtureAPI {
                        "opponent": "Nebraska", "locationId": "loc-fh", "locationName": "UW Field House" },
             "gear": { "status": "checked_out",
                       "bookings": [ { "id": "b1", "status": "CHECKED_OUT", "kind": "SERIALIZED", "itemCount": 4 } ] } },
+          { "id": "s1b", "area": "PHOTO", "workerType": "ST", "startsAt": "\(at(0, 10))",
+            "endsAt": "\(at(0, 14))", "status": "ACTIVE",
+            "event": { "id": "e1", "summary": "Volleyball vs Nebraska", "startsAt": "\(at(0, 11))",
+                       "endsAt": "\(at(0, 14))", "sportCode": "VB", "isHome": true,
+                       "opponent": "Nebraska", "locationId": "loc-fh", "locationName": "UW Field House" },
+            "gear": { "status": "none", "bookings": [] } },
           { "id": "s2", "area": "REPLAY", "workerType": "FT", "startsAt": "\(at(1, 12))",
             "endsAt": "\(at(1, 15, 30))", "status": "ACTIVE",
             "event": { "id": "e4", "summary": "Football vs Ohio State", "startsAt": "\(at(1, 12))",

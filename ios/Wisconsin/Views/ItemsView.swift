@@ -10,7 +10,7 @@ struct BookingRouteId: Hashable {
 /// route from arbitrary String values pushed onto the path. Used by the
 /// notifications sheet to route damage / lost / low-stock notifications
 /// to the right asset.
-struct AssetRouteId: Hashable {
+struct AssetRouteId: Hashable, Identifiable {
     let id: String
 }
 
@@ -249,22 +249,14 @@ struct ItemsView: View {
                 prompt: Text("Search tag, model, serial, location")
             )
             .toolbar {
-                ToolbarItemGroup(placement: .topBarTrailing) {
-                    Button {
-                        vm.favoritesOnly.toggle()
-                        Task { await vm.load(reset: true) }
-                    } label: {
-                        Label("Favorites", systemImage: vm.favoritesOnly ? "star.fill" : "star")
+                if #available(iOS 27.0, *) {
+                    ToolbarItemGroup(placement: .topBarTrailing) {
+                        itemsListControls
                     }
-                    .listControlTint(isActive: vm.favoritesOnly)
-                    .accessibilityLabel(vm.favoritesOnly ? "Favorites on" : "Favorites off")
-
-                    AssetStatusFilterMenu(selected: $vm.selectedStatuses) {
-                        Task { await vm.load(reset: true) }
-                    }
-
-                    ItemSortMenu(selected: $vm.sortOption) {
-                        Task { await vm.load(reset: true) }
+                    .visibilityPriority(.high)
+                } else {
+                    ToolbarItemGroup(placement: .topBarTrailing) {
+                        itemsListControls
                     }
                 }
             }
@@ -278,12 +270,43 @@ struct ItemsView: View {
                 vm.resetDefaults()
                 Task { await vm.load(reset: true) }
             }
+            .onAppear { consumePendingItemsSearch() }
+            .onChange(of: appState.pendingItemsSearch) { _, _ in
+                consumePendingItemsSearch()
+            }
             .navigationDestination(for: Asset.self) { asset in
                 ItemDetailView(assetId: asset.id)
             }
             .navigationDestination(for: BookingRouteId.self) { route in
                 BookingDetailView(bookingId: route.id)
             }
+    }
+
+    private func consumePendingItemsSearch() {
+        guard let query = appState.pendingItemsSearch, !query.isEmpty else { return }
+        appState.pendingItemsSearch = nil
+        vm.searchText = query
+        vm.onSearchChange()
+    }
+
+    @ViewBuilder
+    private var itemsListControls: some View {
+        Button {
+            vm.favoritesOnly.toggle()
+            Task { await vm.load(reset: true) }
+        } label: {
+            Label("Favorites", systemImage: vm.favoritesOnly ? "star.fill" : "star")
+        }
+        .listControlTint(isActive: vm.favoritesOnly)
+        .accessibilityLabel(vm.favoritesOnly ? "Favorites on" : "Favorites off")
+
+        AssetStatusFilterMenu(selected: $vm.selectedStatuses) {
+            Task { await vm.load(reset: true) }
+        }
+
+        ItemSortMenu(selected: $vm.sortOption) {
+            Task { await vm.load(reset: true) }
+        }
     }
 
     /// Reserve from a row hands the item to the app-level composer, so the user

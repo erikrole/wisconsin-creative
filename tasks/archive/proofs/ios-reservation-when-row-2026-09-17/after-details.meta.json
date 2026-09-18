@@ -1,0 +1,23 @@
+{
+  "sourceRevision": "e0148dd803421f2919c8ed19bcb630c713058ffe",
+  "sourcePatchSha256": "8be064244953d593283bb0b2aeda124f90f9a7026ee3ca5672741615fff74555",
+  "settings": {
+    "device": "iPhone 16 Pro (27.0) simulator E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE",
+    "viewport": [
+      1206,
+      2622
+    ],
+    "fixture": "GT_PERFORMANCE_SCENARIO=create-booking-events after selecting MBB vs Duke",
+    "role": "staff fixture user",
+    "route": "CreateBookingSheet details step",
+    "appearance": "light",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "simulator wall clock 10:46 local",
+    "scroll": [
+      0,
+      0
+    ]
+  }
+}

@@ -178,4 +178,21 @@ describe("iOS badge display parity with the web tab", () => {
     expect(badgesTab).toContain('<Badge variant="gray">Retired</Badge>');
     expect(detail).toContain('BadgeChip(text: "Retired", tone: .gray)');
   });
+
+  it("keeps the native gallery on the same shelf contract as the web tab", () => {
+    const detail = source("ios/Wisconsin/Views/UserDetailView.swift");
+    const models = source("ios/Wisconsin/Models/Models.swift");
+    const tab = source("src/app/(app)/users/[id]/UserBadgesTab.tsx");
+
+    expect(detail).toContain('if trigger == "checkout:returned" { return .reliability }');
+    expect(detail).toContain('if trigger == "checkout:opened" { return .gearFlow }');
+    expect(detail).toContain("private static let shelfPreviewCount = 10");
+    expect(detail).toContain("sortedForDisplay");
+    expect(detail).toContain("Show \\(hiddenGalleryCount(for: section)) more");
+    expect(detail).toContain("Too new to rate by scarcity yet");
+    expect(detail).toContain("rarityChipTitle");
+    expect(models).toContain("let rarityProvisional: Bool?");
+    expect(tab).toContain("OnTimeStreakRow");
+    expect(tab).toContain("liveStreaks");
+  });
 });

@@ -64,7 +64,7 @@ describe("iOS create booking picker parity", () => {
     expect(createSheet).toContain("BulkQuantityRow(");
     expect(createSheet).toContain("BulkResultRow(");
     expect(review).toContain('reviewSectionHeader(title: "Gear", count: vm.selectedEquipmentCount, editStep: 2)');
-    expect(review).toContain("ForEach(Array(vm.selectedBulkSkus.enumerated()), id: \\.element.id)");
+    expect(review).toContain("ForEach(vm.selectedBulkSkus)");
     expect(review).toContain("Text(\"×\\(vm.quantity(for: sku))\")");
     expect(review).not.toContain("more selected");
   });
@@ -251,9 +251,27 @@ describe("iOS create booking picker parity", () => {
     expect(details).toContain('BrandSectionHeader("Pickup Location")');
     expect(details).toContain("vm.primaryPickupLocations");
     expect(details).toContain("QuarterHourDatePickerRow(");
-    expect(sheet).toContain("private let quarterHours = Array(0..<96)");
-    expect(sheet).toContain('DatePicker(\n                "\\(label) date"');
-    expect(sheet).toContain('Picker("\\(label) time", selection: quarterBinding)');
+    expect(details).toContain("reservationPlanCard");
+    expect(details).toContain("pickupAndKitCard");
+    expect(details).toContain("showsPlanDetails");
+    expect(sheet).toContain("continueBlockedReason");
+    expect(sheet).toContain("func goToStep(_ value: Int)");
+    expect(sheet).not.toContain('Label("Back", systemImage: "chevron.left")');
+    const scheduleRow = sliceBetween(
+      sheet,
+      "private struct QuarterHourDatePickerRow",
+      "private struct ReservationStepProgress",
+    );
+    expect(scheduleRow).toContain("private let quarterHours = Array(0..<96)");
+    expect(scheduleRow).toContain('DatePicker(\n                "\\(label) date"');
+    expect(scheduleRow).toContain('Picker("\\(label) time", selection: quarterBinding)');
+    expect(scheduleRow).toContain(".lineLimit(1)");
+    expect(scheduleRow).toContain(".fixedSize(horizontal: true, vertical: false)");
+    expect(scheduleRow).toContain(".tint(Color.statusText(.purple))");
+    expect(scheduleRow).toContain("ViewThatFits(in: .horizontal)");
+    expect(scheduleRow).not.toContain("in: (minimumDate ?? .distantPast)...");
+    expect(scheduleRow).not.toContain('Picker("\\(label) hour"');
+    expect(scheduleRow).not.toContain('Picker("\\(label) minute"');
     expect(sheet).not.toContain("UIViewRepresentable");
     expect(details).not.toContain("BookingStepHeader(");
     expect(details).not.toContain('label: "For"');
@@ -262,7 +280,8 @@ describe("iOS create booking picker parity", () => {
     expect(details.indexOf('BrandSectionHeader("Set Schedule From")')).toBeLessThan(
       details.indexOf("reservationTitleCard"),
     );
-    expect(details).toContain("if vm.linkedEventCount > 0");
+    expect(details).toContain("usesFormCard: false");
+    expect(sheet).toContain("setupMode == .manual || vm.linkedEventCount > 0");
     expect(details).toContain("scheduleWindowCard");
     expect(viewModel).toContain("private let eventPickupLeadTime: TimeInterval = 60 * 60");
     expect(viewModel).toContain("private let eventReturnBuffer: TimeInterval = 2 * 60 * 60");
@@ -293,6 +312,10 @@ describe("iOS create booking picker parity", () => {
     expect(picker).toContain('vm.browseCategoryFilter = "Batteries"');
     expect(picker).toContain("guard !vm.hasSelectedPower, let recommendation = vm.batteryRecommendations.first else");
     expect(picker).toContain("onReview()\n            return");
+    expect(picker).toContain(".safeAreaInset(edge: .bottom");
+    expect(picker.indexOf(".safeAreaInset(edge: .bottom")).toBeLessThan(
+      picker.indexOf(".toolbar { gearBottomToolbar }"),
+    );
     expect(createSheet).toContain("private var selectedAssetOrder: [String] = []");
     expect(createSheet).toContain(".sorted { $0.0 < $1.0 }");
     const recommendationCard = sliceBetween(
@@ -301,24 +324,29 @@ describe("iOS create booking picker parity", () => {
       "// MARK: - Cart drawer",
     );
     expect(recommendationCard).toContain('Text(recommendation.sku.name)');
+    expect(recommendationCard).toContain("ReservationQuantityStepper(");
     expect(recommendationCard).not.toContain('Text("Add \\(recommendation.sku.name)")');
     expect(recommendationCard).not.toContain("recommendation.reason");
     expect(picker).not.toContain('Section("Don\'t forget power")');
   });
 
-  it("keeps all gear categories visible and counted quantities explicit", () => {
+    it("keeps all gear categories visible and counted quantities explicit", () => {
     const picker = source("ios/Wisconsin/Views/CreateBooking/CreateBookingEquipmentPicker.swift");
-    const bulkRow = sliceBetween(picker, "struct BulkResultRow: View", "private struct ReservationCategoryChip");
+    const sheet = source("ios/Wisconsin/Views/CreateBookingSheet.swift");
+    const bulkRow = sliceBetween(picker, "struct BulkResultRow: View", "private struct BatteryRecommendationCard");
 
-    expect(picker).toContain("ViewThatFits(in: .horizontal)");
-    expect(picker).toContain('ReservationCategoryChip(label: "All"');
-    expect(picker).toContain("ForEach(vm.browseCategories");
+    expect(sheet).toContain("vm.showsBrowseCategoryFilter");
+    expect(sheet).toContain("Picker(selection: browseCategorySelection)");
+    expect(sheet).toContain('Text("All").tag(String?.none)');
+    expect(sheet).toContain(".pickerStyle(.menu)");
+    expect(sheet).toContain("line.3.horizontal.decrease");
+    expect(picker).not.toContain("ReservationCategoryChip");
+    expect(sheet).not.toContain("ReservationCategoryChip");
     expect(bulkRow).toContain("let onDecrement: () -> Void");
     expect(bulkRow).toContain("let onIncrement: () -> Void");
-    expect(bulkRow).toContain('Image(systemName: "minus")');
-    expect(bulkRow).toContain('Image(systemName: "plus")');
-    expect(bulkRow).toContain('Text("\\(quantity)")');
-    expect(bulkRow.match(/Color\.statusBackground\(\.purple\)/g)?.length).toBeGreaterThanOrEqual(2);
+    expect(bulkRow).toContain("ReservationQuantityStepper(");
+    expect(bulkRow).toContain('label: "\\(sku.name) quantity"');
+    expect(bulkRow).not.toContain('Image(systemName: "minus")');
     expect(bulkRow).toContain('"\\(sku.availableQuantity)/\\(sku.currentQuantity) available"');
     const viewModel = source("ios/Wisconsin/Views/CreateBooking/CreateBookingViewModel.swift");
     expect(viewModel).toContain('private static let reservationCategories = ["Cameras", "Lenses", "Batteries", "Other"]');
@@ -360,8 +388,8 @@ describe("iOS create booking picker parity", () => {
     expect(createSheet).toContain("var bookingEventSubtitle: String");
     expect(createSheet).not.toContain("struct ReviewEventRow: View");
     expect(review).toContain("calendar.badge.checkmark");
-    expect(review).toContain('label: vm.linkedEventCount > 1 ? "Events" : "Event"');
-    expect(review).toContain("value: linked");
+    expect(review).toContain('vm.linkedEventCount > 1 ? "Events" : "Event"');
+    expect(review).toContain("Text(linked)");
     expect(review).not.toContain("Linked Event");
     expect(review).not.toContain("ReviewEventRow(event: event)");
   });
@@ -379,7 +407,9 @@ describe("iOS create booking picker parity", () => {
       "private func reviewSectionHeader",
     );
 
-    expect(formRows).toContain("return \"\\(code) \\(prefix) \\(opponent)\"");
+    expect(formRows).toContain("return \"\\(code) \\(prefix) \\(opponentPrimary)\"");
+    expect(formRows).toContain("let opponentPrimary = opponent?.bookingMatchupPrimary");
+    expect(formRows).toContain("return summary.bookingMatchupPrimary");
     expect(formRows).toContain("let prefix = isHome == false ? \"at\" : \"vs\"");
     expect(formRows).not.toContain("sportLabel(sportCode)");
     expect(formRows).not.toContain("(Neutral)");
@@ -391,13 +421,13 @@ describe("iOS create booking picker parity", () => {
     expect(eventDetail).not.toContain('title: "Gear - \\(event.summary)"');
     expect(viewModel).not.toContain("first.location?.id");
     expect(sheet).toContain('BrandSectionHeader("Pickup Location")');
-    expect(sheet).toContain('Picker(\n                            "Pickup location"');
+    expect(sheet).toContain('Picker(\n                    "Pickup location"');
     expect(sheet).toContain("vm.primaryPickupLocations");
-    expect(review).toContain('label: "Pickup"');
-    expect(review).toContain("value: reviewPickupText");
-    expect(review).toContain('label: "Return"');
-    expect(review).toContain("value: reviewReturnText");
-    expect(sheet).toContain("vm.endsAt.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day().hour().minute())");
+    expect(review).toContain('LabeledContent("Pickup", value: reviewPickupText)');
+    expect(review).toContain('LabeledContent("Return", value: reviewReturnText)');
+    expect(sheet).toContain("vm.startsAt.operationalDateTimeLabel()");
+    expect(sheet).toContain("vm.endsAt.operationalDateTimeLabel()");
+    expect(review).toContain('LabeledContent("Gameday Kit", value: vm.kitPickerLabel(kit))');
     expect(review).toContain("BookingAssetThumbnail(imageUrl: asset.imageUrl, size: 40, cornerRadius: 8)");
     expect(review).toContain("BookingBulkThumbnail(imageUrl: sku.imageUrl, size: 40, cornerRadius: 8)");
     expect(review).toContain("if showsBulkSubtitle(sku)");
@@ -411,14 +441,15 @@ describe("iOS create booking picker parity", () => {
     const picker = source("ios/Wisconsin/Views/CreateBooking/CreateBookingEquipmentPicker.swift");
     const sheet = source("ios/Wisconsin/Views/CreateBookingSheet.swift");
 
-    expect(picker).toContain("private var selectedSummary: some View");
-    expect(picker).toContain('Text("Selected Gear")');
-    expect(picker).toContain('return "Ready to review"');
-    expect(picker).toContain('return "\\(count) conflict\\(count == 1 ? "" : "s") to review"');
+    expect(picker).toContain("ToolbarItem(placement: .bottomBar)");
+    expect(picker).toContain('Label("Selected", systemImage: "shippingbox.fill")');
+    expect(picker).toContain(".badge(vm.selectedEquipmentCount)");
+    expect(picker).toContain(".tint(Color.statusText(.purple))");
     expect(picker).toContain('(vm.selectedConflictCount == 0 ? "Review" : "Resolve Conflicts")');
-    expect(picker).toContain('vm.selectedLocationMismatchCount > 0');
+    expect(picker).toContain("vm.selectedLocationMismatchCount > 0");
     expect(sheet).toContain('reviewSectionHeader(title: "Schedule", editStep: 1)');
     expect(sheet).toContain('reviewSectionHeader(title: "Gear", count: vm.selectedEquipmentCount, editStep: 2)');
+    expect(sheet).toContain("vm.selectedConflictCount > 0");
     expect(sheet).toContain('Button("Review Gear") { setStep(2) }');
     expect(sheet).toContain('} else if step == 3 {');
     const cartSheet = picker.slice(picker.indexOf("struct EquipmentCartSheet"));
@@ -433,7 +464,8 @@ describe("iOS create booking picker parity", () => {
     expect(viewModel).toContain("for asset in availableAssets");
     expect(viewModel).toContain("let ids = conflictPreviewAssetIds");
     expect(viewModel).toContain("scheduleConflictCheck()\n        } catch {");
-    expect(viewModel).toContain("selectedLocationId = value\n        scheduleConflictCheck()");
+    expect(viewModel).toContain("selectedLocationId = value");
+    expect(viewModel).toContain("scheduleConflictCheck()");
   });
 
   it("surfaces needed-next and turnaround advisories before reservation review", () => {
@@ -454,17 +486,37 @@ describe("iOS create booking picker parity", () => {
     expect(viewModel).toContain("private var conflictPreviewBulkItems: [BulkReservationRequest]");
     expect(viewModel).toContain("for sku in visibleSkus where quantities[sku.id] == nil");
     expect(viewModel).toContain("var upcomingCommitmentsByAssetId: [String: AvailabilityCommitment]");
-    expect(viewModel).toContain("Needed next at \\(nextLabel)");
-    expect(viewModel).toContain("return by \\(returnByLabel)");
+    expect(models).toContain("let conflictingBookingRequesterName: String?");
+    expect(models).toContain("let requesterName: String?");
+    expect(models).toContain("let kind: String?");
+    expect(viewModel).toContain("struct ReservationAvailabilityCaption: Equatable");
+    expect(viewModel).toContain("has reserved for");
+    expect(viewModel).toContain("has this item until");
+    expect(viewModel).toContain("operationalDateTimeLabel(now: now, capitalizesRelativeDay: false)");
+    expect(viewModel).toContain("func availabilityCaption(for assetId: String)");
+    expect(viewModel).toContain("compactReservationDateTime()");
+    expect(viewModel).toContain("func conflictDetail(for assetId: String)");
     expect(viewModel).toContain("selectedTimingAdvisoryCount");
-    expect(picker).toContain("upcomingCommitmentLabel: vm.upcomingCommitmentLabel(for: asset.id)");
+    expect(picker).toContain("let caption = vm.availabilityCaption(for: asset.id)");
+    expect(picker).toContain("upcomingCommitmentLabel: isConflicted ? nil : caption?.text");
     expect(picker).toContain("turnaroundMessage: vm.turnaroundMessage(for: asset.id)");
     expect(picker).toContain("turnaroundMessage: vm.bulkTurnaroundMessage(for: sku.id)");
-    expect(picker).toContain("conflictMessage: vm.conflictMessage(for: asset.id)");
-    expect(rows).toContain(".disabled((isConflicted && !isSelected) || (!isAtPickupLocation && !isSelected))");
+    expect(picker).toContain("conflictDetail: isConflicted ? caption?.text : nil");
+    expect(picker).toContain(".swipeActions(edge: .trailing");
+    expect(picker).toContain(".swipeActions(edge: .leading");
+    expect(picker).toContain(".contextMenu");
+    expect(picker).not.toContain('.badge(isConflicted && !isSelected ? Text("Unavailable") : nil)');
+    expect(picker).toContain(".disabled((isConflicted && !isSelected) || (!atPickup && !isSelected))");
+    expect(rows).toContain('return "exclamationmark.triangle.fill"');
+    expect(rows).toContain("if isConflicted { return Color.statusText(.red) }");
+    expect(rows).toContain("return Color(.systemGray2)");
     expect(rows).toContain("var conflictMessage: String?");
     expect(rows).toContain('systemImage: "clock.arrow.circlepath"');
     expect(rows).toContain("turnaroundIsCritical ? .red : .orange");
+    expect(rows).not.toContain("Color.statusBackground(.red)");
+    expect(rows).not.toContain("StatusRail(tone: .red)");
+    expect(rows).not.toContain("Text(asset.location.name)");
+    expect(rows).toContain("struct BookingAdvisoryLabel");
   });
 
   it("returns create-time conflicts to gear without dropping the selection", () => {

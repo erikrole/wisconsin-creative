@@ -94,7 +94,11 @@ enum NotificationSnooze {
     /// which also means the reminder can only ever route somewhere the original
     /// could.
     struct Payload: Sendable {
-        static let routingKeys = ["bookingId", "checkoutId", "eventId", "blastId", "assignmentId", "shiftId", "tradeId", "type", "href"]
+        static let routingKeys = [
+            "bookingId", "checkoutId", "eventId", "blastId", "assignmentId",
+            "shiftId", "tradeId", "type", "href", "url", "assetId", "userId",
+            "skuName", "licenseCodeId",
+        ]
 
         let identifier: String
         let title: String

@@ -542,3 +542,41 @@ struct ScheduleAllDayDisplayTests {
         }
     }
 }
+
+@Suite
+struct CombinedScheduleEventProjectionTests {
+    @Test func collapseDropsSecondariesAndSpansThePrimaryWindow() {
+        let start = Date(timeIntervalSince1970: 1_778_000_000)
+        let laterStart = start.addingTimeInterval(45 * 60)
+        let end = start.addingTimeInterval(3 * 3600)
+        let laterEnd = laterStart.addingTimeInterval(3 * 3600)
+        var primary = ScheduleEvent(
+            id: "primary", summary: "Women's Cross Country vs Badger Classic",
+            startsAt: start, endsAt: end, allDay: false, status: "CONFIRMED",
+            sportCode: "WXC", opponent: "Badger Classic", isHome: true, location: nil
+        )
+        primary.combinedEvents = [
+            CombinedScheduleMember(
+                id: "secondary",
+                summary: "Men's Cross Country vs Badger Classic",
+                startsAt: laterStart,
+                endsAt: laterEnd,
+                allDay: false,
+                sportCode: "MXC",
+                opponent: "Badger Classic"
+            ),
+        ]
+        var secondary = ScheduleEvent(
+            id: "secondary", summary: "Men's Cross Country vs Badger Classic",
+            startsAt: laterStart, endsAt: laterEnd, allDay: false, status: "CONFIRMED",
+            sportCode: "MXC", opponent: "Badger Classic", isHome: true, location: nil
+        )
+        secondary.combinedIntoId = "primary"
+
+        let collapsed = collapsedCombinedScheduleEvents([primary, secondary])
+        #expect(collapsed.map(\.id) == ["primary"])
+        #expect(collapsed[0].startsAt == start)
+        #expect(collapsed[0].endsAt == laterEnd)
+        #expect(collapsed[0].combinedMemberCount == 2)
+    }
+}

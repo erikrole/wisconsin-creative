@@ -1,0 +1,43 @@
+{
+  "title": "Native New Reservation composer, end to end",
+  "eyebrow": "iOS · Wisconsin Creative",
+  "lede": "New Reservation now asks for the next decision only: an event first, matching pickup/return chips, then gear with search above the list instead of under the cart.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "After-only fixture evidence",
+      "note": "iPhone 16 Pro (27.0) UDID E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE, WisconsinPerformance scenario create-booking-events, light appearance. Erik’s reported screenshots are physical-device dark mode with live inventory, so they are not a matched before pair.",
+      "pairs": []
+    }
+  ],
+  "changes": [
+    {
+      "h": "Event Linked empty state",
+      "was": "Pickup, gameday kit, and Add note appeared before an event was chosen, so the sheet felt like a location form with a disabled Choose Gear.",
+      "now": "Event Linked shows Set Schedule From and Choose Event only. Pickup, kit, notes, and the title/when card wait until an event is selected."
+    },
+    {
+      "h": "Pickup vs Return date chips",
+      "was": "Return’s DatePicker used a minimumDate range, so compact iOS rendered 9/18/26 next to Pickup’s Sep 17, 2026.",
+      "now": "Both chips are unbounded compact DatePickers. Ordering is still clamped in the binding. Fixture Manual shows 9/18/26 on both rows; event-linked shows Sep 17, 2026 and Sep 18, 2026."
+    },
+    {
+      "h": "Gear search and cart",
+      "was": "iOS 27 put searchable under the cart. Conflict copy truncated. Conflicted rows still showed a plus. A disabled black Review sat next to No equipment yet.",
+      "now": "Search sits above the results. The system bottom search accessory is removed. Advisory copy wraps on a compact same-day window. Blocked rows show a pin or conflict mark. Review appears only after gear is selected."
+    }
+  ],
+  "verification": [
+    "Wisconsin iPhone 16 Pro (27.0) build succeeded.",
+    "WisconsinPerformance CreateBookingEventPickerScreenshotUITests/testEventPickerCaptures passed and captured event-empty, manual, when, and gear.",
+    "vitest ios-create-booking-picker-parity and ios-native-control-cleanup passed (25 tests).",
+    "git diff --check passed on the touched composer, test, and area-doc files."
+  ],
+  "notes": [
+    "After captures: after-event-empty.png, after-manual.png, after-when.png, after-gear.png.",
+    "Reported device frames (not matched): before-event-empty.png, before-manual.png, before-gear.jpg.",
+    "Fixture gear uses Camp Randall Creative Desk rows, so location-mismatch copy appears; live-device conflict truncation is covered by the compact window formatter rather than this fixture list.",
+    "Authenticated physical dark-mode proof remains open.",
+    "No commit or push."
+  ]
+}

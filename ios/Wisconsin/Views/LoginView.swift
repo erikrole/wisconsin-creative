@@ -229,10 +229,7 @@ struct LoginView: View {
         }
     }
 
-    // The card is a fixed-light frosted material over the dark scene — same
-    // treatment as the web login card, which pins light tokens regardless of
-    // the user's theme. The `.light` environment makes materials and
-    // system colors inside resolve light even though the screen is dark.
+    // Shared splash-scene card: light material over the dark crimson scene.
     private var card: some View {
         VStack(spacing: 14) {
             if loginStep == .identity {
@@ -319,31 +316,7 @@ struct LoginView: View {
                 .accessibilityHint("Choose an account with a saved passkey")
             }
         }
-        .padding(20)
-        .background(
-            // Frosted material plus a white wash so the card reads as a light
-            // surface (web: rgba(255,255,255,0.88) + blur), not a pink one —
-            // the material alone soaks up too much of the red scene.
-            RoundedRectangle(cornerRadius: Brand.Radius.card, style: .continuous)
-                .fill(.regularMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: Brand.Radius.card, style: .continuous)
-                        .fill(Color.white.opacity(0.58))
-                )
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: Brand.Radius.card, style: .continuous)
-                .strokeBorder(
-                    LinearGradient(
-                        colors: [.white.opacity(0.7), .white.opacity(0.22)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    ),
-                    lineWidth: 1
-                )
-        )
-        .environment(\.colorScheme, .light)
-        .shadow(color: Color(.sRGBLinear, white: 0, opacity: 0.35), radius: 20, y: 10)
+        .brandLoginCardChrome()
     }
 
     private var identityStep: some View {

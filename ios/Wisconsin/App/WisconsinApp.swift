@@ -37,10 +37,8 @@ struct WisconsinApp: App {
                 .environment(appState)
                 .environment(drafts)
                 .environment(network)
+                .nativeRemoteImageSession()
                 .preferredColorScheme(themeChoice.colorScheme)
-                .background {
-                    WindowPrivacyShieldHost(isSceneActive: scenePhase == .active)
-                }
                 .onAppear {
                     sharedAppState = appState
                 }
@@ -57,31 +55,11 @@ struct WisconsinApp: App {
                     }
                 }
                 .onOpenURL { url in
-                    // A booking link routes to booking detail and nothing else.
-                    // Extend is a deliberate action taken on that page, never
-                    // something a tapped link opens on the user's behalf, so no
-                    // query parameter here may reach a mutation sheet.
-                    guard url.scheme == "wisconsin" else { return }
-                    switch url.host {
-                    case "booking":
-                        let bookingId = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-                        guard !bookingId.isEmpty else { return }
-                        appState.pendingPushBookingId = bookingId
-                    // Widget taps. Both land on a tab the router already
-                    // capability-gates, so a widget left on the Home Screen
-                    // after a role change opens nothing the user may not see.
-                    case "schedule":
-                        let eventId = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-                        if eventId.isEmpty {
-                            appState.pendingAppIntentDestination = .todaySchedule
-                        } else {
-                            appState.pendingPushEventId = eventId
-                        }
-                    case "bookings":
-                        appState.pendingAppIntentDestination = .myGear
-                    default:
-                        break
-                    }
+                    // Custom URLs and universal links share one parser. Query
+                    // parameters never open a mutation sheet — Extend stays a
+                    // deliberate action on booking detail.
+                    guard let route = GearTrackerRouteParser.parse(url) else { return }
+                    appState.apply(route)
                 }
                 .onContinueUserActivity(CSSearchableItemActionType) { activity in
                     // A Spotlight hit carries the booking id, which the push
@@ -343,165 +321,6 @@ struct ResumeReservationTip: Tip {
 
     var options: [Option] {
         MaxDisplayCount(1)
-    }
-}
-
-/// Installs the privacy cover directly on the scene's window. SwiftUI sheets
-/// are presented above their source view, so a normal root overlay cannot
-/// cover them in an inactive app-switcher snapshot.
-private struct WindowPrivacyShieldHost: UIViewRepresentable {
-    let isSceneActive: Bool
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(isSceneActive: isSceneActive)
-    }
-
-    func makeUIView(context: Context) -> UIView {
-        let view = UIView(frame: .zero)
-        view.backgroundColor = .clear
-        view.isUserInteractionEnabled = false
-        return view
-    }
-
-    func updateUIView(_ view: UIView, context: Context) {
-        context.coordinator.update(isSceneActive: isSceneActive)
-        DispatchQueue.main.async {
-            context.coordinator.install(on: view.window)
-        }
-    }
-
-    static func dismantleUIView(_ uiView: UIView, coordinator: Coordinator) {
-        coordinator.uninstall()
-    }
-
-    @MainActor
-    final class Coordinator: NSObject {
-        private weak var window: UIWindow?
-        private var isSceneActive: Bool
-        private var isObservingScene = false
-
-        private lazy var shieldView: UIView = {
-            let shield = UIView(frame: .zero)
-            shield.backgroundColor = .systemBackground
-            shield.isAccessibilityElement = false
-            shield.accessibilityElementsHidden = true
-
-            let image = UIImageView(image: UIImage(systemName: "lock.shield.fill"))
-            image.preferredSymbolConfiguration = UIImage.SymbolConfiguration(
-                pointSize: 36,
-                weight: .semibold
-            )
-            image.tintColor = .secondaryLabel
-            image.contentMode = .scaleAspectFit
-
-            let label = UILabel()
-            label.text = "Wisconsin Creative"
-            label.font = .preferredFont(forTextStyle: .headline)
-            label.textColor = .secondaryLabel
-
-            let stack = UIStackView(arrangedSubviews: [image, label])
-            stack.axis = .vertical
-            stack.alignment = .center
-            stack.spacing = 12
-            stack.translatesAutoresizingMaskIntoConstraints = false
-            shield.addSubview(stack)
-            NSLayoutConstraint.activate([
-                stack.centerXAnchor.constraint(equalTo: shield.centerXAnchor),
-                stack.centerYAnchor.constraint(equalTo: shield.centerYAnchor),
-            ])
-            return shield
-        }()
-
-        init(isSceneActive: Bool) {
-            self.isSceneActive = isSceneActive
-        }
-
-        func update(isSceneActive: Bool) {
-            self.isSceneActive = isSceneActive
-            updateShieldVisibility()
-        }
-
-        func install(on window: UIWindow?) {
-            guard let window else { return }
-            if self.window !== window {
-                uninstall()
-                self.window = window
-                observeSceneLifecycle()
-            }
-            updateShieldVisibility()
-        }
-
-        func uninstall() {
-            shieldView.removeFromSuperview()
-            window = nil
-            if isObservingScene {
-                NotificationCenter.default.removeObserver(self)
-                isObservingScene = false
-            }
-        }
-
-        private func observeSceneLifecycle() {
-            guard !isObservingScene else { return }
-            isObservingScene = true
-            NotificationCenter.default.addObserver(
-                self,
-                selector: #selector(sceneWillDeactivate(_:)),
-                name: UIScene.willDeactivateNotification,
-                object: nil
-            )
-            NotificationCenter.default.addObserver(
-                self,
-                selector: #selector(sceneDidEnterBackground(_:)),
-                name: UIScene.didEnterBackgroundNotification,
-                object: nil
-            )
-            NotificationCenter.default.addObserver(
-                self,
-                selector: #selector(sceneDidActivate(_:)),
-                name: UIScene.didActivateNotification,
-                object: nil
-            )
-        }
-
-        @objc private func sceneWillDeactivate(_ notification: Notification) {
-            guard belongsToInstalledScene(notification) else { return }
-            isSceneActive = false
-            updateShieldVisibility()
-        }
-
-        @objc private func sceneDidEnterBackground(_ notification: Notification) {
-            guard belongsToInstalledScene(notification) else { return }
-            isSceneActive = false
-            updateShieldVisibility()
-        }
-
-        @objc private func sceneDidActivate(_ notification: Notification) {
-            guard belongsToInstalledScene(notification) else { return }
-            isSceneActive = true
-            updateShieldVisibility()
-        }
-
-        private func belongsToInstalledScene(_ notification: Notification) -> Bool {
-            guard let notificationScene = notification.object as? UIScene else { return true }
-            return notificationScene === window?.windowScene
-        }
-
-        private func updateShieldVisibility() {
-            guard let window, !isSceneActive else {
-                shieldView.removeFromSuperview()
-                return
-            }
-
-            if shieldView.superview !== window {
-                shieldView.removeFromSuperview()
-                shieldView.frame = window.bounds
-                shieldView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-                window.addSubview(shieldView)
-            } else {
-                shieldView.frame = window.bounds
-                window.bringSubviewToFront(shieldView)
-            }
-        }
     }
 }
 

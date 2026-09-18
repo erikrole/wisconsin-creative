@@ -53,6 +53,12 @@ struct KioskCheckoutView: View {
     @State private var isLinkedToEvent = false
     @State private var selectedEventId: String?
     @State private var customPurpose = ""
+    @State private var kitOptions: [KioskKitOption] = []
+    @State private var isLoadingKits = false
+    @State private var kitLoadError: String?
+    @State private var selectedKitId: String?
+    @State private var selectedKitDetail: KioskKitDetail?
+    @State private var didApplySuggestedKit = false
     /// A new checkout starts on its details step. Checkout is a two-step flow —
     /// say what this is for and when it comes back, then scan — and the details
     /// were previously a sheet floating over a scan screen you could not
@@ -194,6 +200,8 @@ struct KioskCheckoutView: View {
             applyRetainedIntent()
             store.scanner.claim(.checkout) { handleScan($0) }
             await loadCheckoutEvents()
+            await loadCheckoutKits()
+            await loadSelectedKitDetail()
             if !hasRestoredDraft { applySelectedEventDueTime() }
             if !scannedItems.isEmpty { await refreshAvailability(for: scannedItems) }
             hasRestoredDraft = false
@@ -245,6 +253,11 @@ struct KioskCheckoutView: View {
         .onChange(of: selectedEventId) { _, _ in
             if !hasRestoredDraft { applySelectedEventDueTime() }
             persistDraft()
+        }
+        .onChange(of: selectedKitId) { _, kitId in
+            if kitId == nil { selectedKitDetail = nil }
+            persistDraft()
+            Task { await loadSelectedKitDetail() }
         }
         .onChange(of: isLinkedToEvent) { _, linked in
             if linked {
@@ -364,18 +377,23 @@ struct KioskCheckoutView: View {
     }
 
     private var checkoutSetupPanel: some View {
-        KioskCheckoutSetupPanel(
+            KioskCheckoutSetupPanel(
             user: user,
             locationName: store.info?.locationName,
             events: eventOptions,
             isLoadingEvents: isLoadingEvents,
             eventLoadError: eventLoadError,
+            kits: kitOptions,
+            isLoadingKits: isLoadingKits,
+            kitLoadError: kitLoadError,
             isLinkedToEvent: $isLinkedToEvent,
             selectedEventId: $selectedEventId,
+            selectedKitId: $selectedKitId,
             customPurpose: $customPurpose,
             dueBackAt: $dueBackAt,
             selectedEvent: selectedEvent,
-            focusedField: $focusedCheckoutField
+            focusedField: $focusedCheckoutField,
+            onRetryKits: { Task { await loadCheckoutKits() } }
         )
         .frame(maxWidth: KioskCheckoutSetupLayout.maxWidth)
         .frame(maxWidth: .infinity)
@@ -504,7 +522,7 @@ struct KioskCheckoutView: View {
 
             Divider().background(KioskStroke.divider)
 
-            if scannedItems.isEmpty {
+            if scannedItems.isEmpty && remainingKitItems.isEmpty {
                 Spacer()
                 VStack(spacing: 10) {
                     Image(systemName: "photo.on.rectangle.angled")
@@ -521,6 +539,42 @@ struct KioskCheckoutView: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(spacing: 0) {
+                            if !remainingKitItems.isEmpty {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Still to scan")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(KioskText.muted)
+                                        .textCase(.uppercase)
+                                        .tracking(1.1)
+                                    Text(selectedKitDetail.map { "\($0.name) is the plan. Scan each item — the cart is what actually checks out." } ?? "Scan each remaining kit item.")
+                                        .font(.caption.weight(.medium))
+                                        .foregroundStyle(KioskText.secondary)
+                                    ForEach(remainingKitItems) { item in
+                                        HStack(alignment: .firstTextBaseline, spacing: 10) {
+                                            Image(systemName: "circle")
+                                                .font(.caption)
+                                                .foregroundStyle(KioskText.muted)
+                                                .accessibilityHidden(true)
+                                            VStack(alignment: .leading, spacing: 2) {
+                                                Text(item.title)
+                                                    .font(.subheadline.weight(.semibold))
+                                                    .foregroundStyle(KioskText.primary)
+                                                if !item.subtitle.isEmpty, item.subtitle != item.title {
+                                                    Text(item.subtitle)
+                                                        .font(.caption)
+                                                        .foregroundStyle(KioskText.secondary)
+                                                }
+                                            }
+                                            Spacer(minLength: 0)
+                                        }
+                                        .padding(.vertical, 8)
+                                    }
+                                }
+                                .padding(.horizontal, 20)
+                                .padding(.top, 16)
+                                .padding(.bottom, 8)
+                                Divider().background(KioskStroke.hairline)
+                            }
                             ForEach(Array(groupedScannedItems.enumerated()), id: \.element.id) { index, group in
                                 let issue = availabilityIssue(for: group)
                                 KioskCartGroupRow(
@@ -640,6 +694,70 @@ struct KioskCheckoutView: View {
             eventLoadError = (error as? APIError)?.errorDescription ?? "Events unavailable"
         }
         isLoadingEvents = false
+    }
+
+    @MainActor
+    private func loadCheckoutKits() async {
+        guard kitOptions.isEmpty, !isLoadingKits else { return }
+        isLoadingKits = true
+        kitLoadError = nil
+        do {
+            let response = try await KioskAPI.shared.kioskKits(requesterId: user.id)
+            kitOptions = response.kits
+            if !didApplySuggestedKit,
+               selectedKitId == nil,
+               let suggestedKitId = response.suggestedKitId,
+               kitOptions.contains(where: { $0.id == suggestedKitId }) {
+                didApplySuggestedKit = true
+                selectedKitId = suggestedKitId
+            }
+        } catch {
+            kitLoadError = (error as? APIError)?.errorDescription ?? "Kits unavailable"
+        }
+        isLoadingKits = false
+    }
+
+    @MainActor
+    private func loadSelectedKitDetail() async {
+        guard let selectedKitId else {
+            selectedKitDetail = nil
+            return
+        }
+        if selectedKitDetail?.id == selectedKitId { return }
+        do {
+            let detail = try await KioskAPI.shared.kioskKitDetail(id: selectedKitId)
+            guard self.selectedKitId == selectedKitId else { return }
+            selectedKitDetail = detail
+        } catch {
+            guard self.selectedKitId == selectedKitId else { return }
+            selectedKitDetail = nil
+            showFeedback(.error((error as? APIError)?.errorDescription ?? "Could not load this kit."))
+        }
+    }
+
+    private var remainingKitItems: [KioskKitRemainingItem] {
+        guard let kit = selectedKitDetail else { return [] }
+        let scannedAssetIds = Set(scannedItems.filter { $0.bulkSkuId == nil }.map(\.id))
+        var rows: [KioskKitRemainingItem] = []
+        for member in kit.members where !scannedAssetIds.contains(member.id) {
+            rows.append(KioskKitRemainingItem(
+                id: member.id,
+                title: member.assetTag.nonBlankText ?? member.name,
+                subtitle: member.name
+            ))
+        }
+        for bulk in kit.bulkMembers {
+            let scanned = scannedItems.filter { $0.bulkSkuId == bulk.bulkSkuId }.count
+            let missing = bulk.quantity - scanned
+            if missing > 0 {
+                rows.append(KioskKitRemainingItem(
+                    id: bulk.bulkSkuId,
+                    title: bulk.name,
+                    subtitle: missing == bulk.quantity ? "Scan \(missing)" : "Scan \(missing) more"
+                ))
+            }
+        }
+        return rows
     }
 
     private func handleScan(_ value: String) {
@@ -920,7 +1038,8 @@ struct KioskCheckoutView: View {
                     items: cart,
                     eventId: eventId,
                     customPurpose: purpose,
-                    endsAt: endsAt
+                    endsAt: endsAt,
+                    kitId: selectedKitId
                 )
                 guard store.ownsFlow(flow) else { return }
                 earnedBadges.appendUnique(contentsOf: completion.earnedBadges ?? [])
@@ -960,6 +1079,8 @@ struct KioskCheckoutView: View {
         customPurpose = draft.customPurpose
         let minimum = KioskQuarterHour.roundedUp(Date().addingTimeInterval(5 * 60))
         dueBackAt = draft.dueBackAt >= minimum ? draft.dueBackAt : minimum
+        selectedKitId = draft.selectedKitId
+        if draft.selectedKitId != nil { didApplySuggestedKit = true }
         // Resume where the draft actually left off. Forcing `true` here sent a
         // half-filled draft straight to the scan step.
         checkoutContextReady = draft.contextReady
@@ -998,7 +1119,8 @@ struct KioskCheckoutView: View {
                 selectedEventId: selectedEventId,
                 customPurpose: customPurpose,
                 dueBackAt: dueBackAt,
-                contextReady: checkoutContextReady
+                contextReady: checkoutContextReady,
+                selectedKitId: selectedKitId
             ),
             for: userId
         )
@@ -1388,6 +1510,12 @@ private struct KioskCartDisplayGroup: Identifiable, Equatable {
     }
 }
 
+private struct KioskKitRemainingItem: Identifiable {
+    let id: String
+    let title: String
+    let subtitle: String
+}
+
 private struct KioskCartAvailabilityIssue: Equatable {
     let tone: KioskAvailabilityTone
     let message: String
@@ -1410,12 +1538,17 @@ private struct KioskCheckoutSetupPanel: View {
     let events: [KioskCheckoutEvent]
     let isLoadingEvents: Bool
     let eventLoadError: String?
+    let kits: [KioskKitOption]
+    let isLoadingKits: Bool
+    let kitLoadError: String?
     @Binding var isLinkedToEvent: Bool
     @Binding var selectedEventId: String?
+    @Binding var selectedKitId: String?
     @Binding var customPurpose: String
     @Binding var dueBackAt: Date
     let selectedEvent: KioskCheckoutEvent?
     let focusedField: Binding<KioskCheckoutFocusedField?>
+    let onRetryKits: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: KioskSpacing.lg) {
@@ -1443,6 +1576,13 @@ private struct KioskCheckoutSetupPanel: View {
         VStack(alignment: .leading, spacing: KioskSpacing.lg) {
             contextWindow
             returnWindow
+            KioskCheckoutKitPicker(
+                kits: kits,
+                isLoading: isLoadingKits,
+                errorMessage: kitLoadError,
+                selectedKitId: $selectedKitId,
+                onRetry: onRetryKits
+            )
         }
     }
 
@@ -1471,6 +1611,108 @@ private struct KioskCheckoutSetupPanel: View {
 
     private var returnWindow: some View {
         KioskCheckoutReturnWindow(dueBackAt: $dueBackAt, eventEnd: selectedEvent?.endsAt)
+    }
+}
+
+private struct KioskCheckoutKitPicker: View {
+    let kits: [KioskKitOption]
+    let isLoading: Bool
+    let errorMessage: String?
+    @Binding var selectedKitId: String?
+    let onRetry: () -> Void
+
+    var body: some View {
+        KioskCheckoutWindow(title: "Gameday kit") {
+            if isLoading {
+                KioskCheckoutEventLoadingRow()
+            } else if kits.isEmpty && errorMessage == nil {
+                Text("No kits at this pickup yet.")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(KioskText.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 8)
+            } else {
+                VStack(spacing: 0) {
+                    kitRow(id: nil, title: "None", subtitle: "Scan without a kit")
+                    ForEach(kits) { kit in
+                        Divider().background(KioskStroke.divider)
+                        kitRow(
+                            id: kit.id,
+                            title: kioskFootballGamedayKitLabel(kit.gamedayRole) ?? kit.name,
+                            subtitle: kitSubtitle(kit)
+                        )
+                    }
+                }
+                .background(KioskSurface.sunken, in: RoundedRectangle(cornerRadius: KioskRadius.md))
+                .overlay(
+                    RoundedRectangle(cornerRadius: KioskRadius.md)
+                        .stroke(KioskStroke.hairline, lineWidth: 1)
+                )
+            }
+
+            if let errorMessage {
+                HStack {
+                    Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
+                        .font(KioskType.chip)
+                        .foregroundStyle(KioskStatus.attention)
+                    Spacer()
+                    Button("Retry", action: onRetry)
+                        .font(KioskType.chip.weight(.semibold))
+                }
+            }
+
+            Text("A kit is the scan list. What you scan is what checks out.")
+                .font(.caption.weight(.medium))
+                .foregroundStyle(KioskText.secondary)
+        }
+    }
+
+    private func kitSubtitle(_ kit: KioskKitOption) -> String {
+        var parts: [String] = []
+        let job = kioskFootballGamedayKitLabel(kit.gamedayRole)
+        if let job, kit.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() != job.lowercased() {
+            parts.append(kit.name)
+        } else if job == nil, let sport = kit.sportCode, !sport.isEmpty {
+            parts.append(sport)
+        }
+        parts.append(kit.contents > 0 ? "\(kit.contents) items" : "empty")
+        return parts.joined(separator: " · ")
+    }
+
+    private func kitRow(id: String?, title: String, subtitle: String) -> some View {
+        let isSelected = selectedKitId == id
+        return Button {
+            selectedKitId = isSelected ? nil : id
+        } label: {
+            HStack(spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 5)
+                        .stroke(isSelected ? Color.kioskRed : KioskStroke.standard, lineWidth: isSelected ? 2 : 1)
+                        .frame(width: 20, height: 20)
+                    if isSelected {
+                        Image(systemName: "checkmark")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(Color.kioskRed)
+                            .accessibilityHidden(true)
+                    }
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(KioskText.primary)
+                    Text(subtitle)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(KioskText.secondary)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 14)
+            .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
+            .background(isSelected ? Color.kioskRed.opacity(0.12) : Color.clear)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(title), \(subtitle)\(isSelected ? ", selected" : "")")
     }
 }
 

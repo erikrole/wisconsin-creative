@@ -76,8 +76,7 @@ struct BookingDetailView: View {
     }
 
     private var canReuseReservationGear: Bool {
-        guard let booking, booking.kind == .reservation else { return false }
-        return booking.allows("duplicate") == true
+        booking?.allows("duplicate") == true
     }
 
     var body: some View {
@@ -149,7 +148,7 @@ struct BookingDetailView: View {
                             Label("Edit Details", systemImage: "pencil")
                         }
                         Button { reuseReservationGear() } label: {
-                            Label("Reuse Gear for Another Event", systemImage: "arrow.trianglehead.2.clockwise.rotate.90")
+                            Label("Re-reserve for Another Event", systemImage: "arrow.trianglehead.2.clockwise.rotate.90")
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")
@@ -168,10 +167,10 @@ struct BookingDetailView: View {
             } else if canReuseReservationGear {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { reuseReservationGear() } label: {
-                        Label("Reuse Gear", systemImage: "arrow.trianglehead.2.clockwise.rotate.90")
+                        Label("Re-reserve", systemImage: "arrow.trianglehead.2.clockwise.rotate.90")
                             .frame(minHeight: 44)
                     }
-                    .accessibilityLabel("Reuse gear for another event")
+                    .accessibilityLabel("Re-reserve for another event")
                 }
             }
         }
@@ -316,10 +315,20 @@ struct BookingDetailView: View {
 
     private func reuseReservationGear() {
         guard let booking else { return }
-        let composer = CreateBookingViewModel()
-        composer.prefillGearForNewEvent(from: booking)
-        drafts.start(composer)
-        Haptics.selection()
+        isActioning = true
+        Task {
+            do {
+                let plan = try await APIClient.shared.bookingReusePlan(id: booking.id)
+                let composer = CreateBookingViewModel()
+                composer.prefillForReuse(from: plan)
+                drafts.start(composer)
+                Haptics.selection()
+            } catch {
+                self.error = error.localizedDescription
+                Haptics.warning()
+            }
+            isActioning = false
+        }
     }
 
 }
@@ -1042,7 +1051,7 @@ private struct EquipmentSection: View {
             && item.checkedOutQuantity > 0
             && item.checkedInQuantity >= item.checkedOutQuantity
         HStack(spacing: 10) {
-            BulkThumbnail(imageUrl: item.bulkSku.imageUrl, size: 40)
+            BookingBulkThumbnail(imageUrl: item.bulkSku.imageUrl, size: 40, cornerRadius: 6)
                 .opacity(isReturned ? 0.55 : 1)
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.itemListPrimaryTitle)
@@ -1112,43 +1121,6 @@ private struct EquipmentSection: View {
             return "\(title) (\(window)); available after \(endsAt.addingTimeInterval(buffer).gearShort)."
         }
         return "\(title) (\(window)); choose another item or change the dates."
-    }
-}
-
-/// Bulk SKU thumbnail with a neutral placeholder when no image is set —
-/// mirrors web's `bulkSku.imageUrl ? <ItemThumbnail/> : <ImageIcon/>` pattern.
-private struct BulkThumbnail: View {
-    let imageUrl: String?
-    let size: CGFloat
-
-    var body: some View {
-        if let urlString = imageUrl, let url = URL(string: urlString) {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .success(let image):
-                    image.resizable().scaledToFill()
-                default:
-                    placeholder
-                }
-            }
-            .frame(width: size, height: size)
-            .clipShape(RoundedRectangle(cornerRadius: 6))
-            .overlay(
-                RoundedRectangle(cornerRadius: 6)
-                    .stroke(Color(.separator), lineWidth: 0.5)
-            )
-        } else {
-            placeholder
-                .frame(width: size, height: size)
-                .background(Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 6))
-        }
-    }
-
-    private var placeholder: some View {
-        Image(systemName: "shippingbox")
-            .font(.system(size: 16))
-            .foregroundStyle(.tertiary)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 

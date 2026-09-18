@@ -156,10 +156,7 @@ struct HomeView: View {
     @State private var showNotifications = false
     @State private var showTrades = false
     @State private var navigationPath = NavigationPath()
-    @State private var pendingBookingId: String?
-    @State private var pendingAssetId: String?
-    @State private var pendingUserId: String?
-    @State private var pendingShowTrades = false
+    @State private var pendingInboxRoute: GearTrackerRoute?
     @State private var selectedEventWork: DashboardEventWork?
     /// Shifts the viewer could offer for trade. Home opened the Trade Board
     /// with an empty list, which left Post a Trade with nothing to post while
@@ -224,6 +221,32 @@ struct HomeView: View {
         navigationPath = NavigationPath()
         rememberSceneDestination("profileSettings")
         navigationPath.append(ProfileRoute(initialDestination: .settings))
+    }
+
+    private func consumePendingHomeRoutes() {
+        if let id = appState.pendingPushBookingId {
+            rememberSceneDestination("booking", id: id)
+            navigationPath.append(id)
+            appState.pendingPushBookingId = nil
+        }
+        if let id = appState.pendingPushAssetId {
+            rememberSceneDestination("asset", id: id)
+            navigationPath.append(AssetRouteId(id: id))
+            appState.pendingPushAssetId = nil
+        }
+        if let id = appState.pendingPushUserId {
+            rememberSceneDestination("user", id: id)
+            navigationPath.append(UserRouteId(id: id))
+            appState.pendingPushUserId = nil
+        }
+        if appState.pendingNotificationsInbox {
+            appState.pendingNotificationsInbox = false
+            showNotifications = true
+        }
+        if appState.pendingTradeBoard {
+            appState.pendingTradeBoard = false
+            showTrades = true
+        }
     }
 
     /// Rendered in every state of `mainContent` -- loading, error, and loaded. A
@@ -452,6 +475,7 @@ struct HomeView: View {
                     .accessibilityLabel(appState.unreadNotifCount > 0 ? "\(appState.unreadNotifCount) unread notifications" : "Notifications")
                 }
             }
+            .nativeScrollBarMinimization()
             // Walking back into signal should not require noticing the list is
             // stale and pulling it down. Gated on the visible tab so a
             // reconnection does not fan out into a refetch from every tab that
@@ -488,14 +512,34 @@ struct HomeView: View {
                     appState.pendingPushBookingId = nil
                 }
             }
+            .onChange(of: appState.pendingPushAssetId) { _, id in
+                if let id {
+                    rememberSceneDestination("asset", id: id)
+                    navigationPath.append(AssetRouteId(id: id))
+                    appState.pendingPushAssetId = nil
+                }
+            }
+            .onChange(of: appState.pendingPushUserId) { _, id in
+                if let id {
+                    rememberSceneDestination("user", id: id)
+                    navigationPath.append(UserRouteId(id: id))
+                    appState.pendingPushUserId = nil
+                }
+            }
+            .onChange(of: appState.pendingNotificationsInbox) { _, openInbox in
+                guard openInbox else { return }
+                appState.pendingNotificationsInbox = false
+                showNotifications = true
+            }
+            .onChange(of: appState.pendingTradeBoard) { _, openTrades in
+                guard openTrades else { return }
+                appState.pendingTradeBoard = false
+                showTrades = true
+            }
             .onAppear {
                 restoreHomeSceneIfNeeded()
                 routePendingSettings()
-                if let id = appState.pendingPushBookingId {
-                    rememberSceneDestination("booking", id: id)
-                    navigationPath.append(id)
-                    appState.pendingPushBookingId = nil
-                }
+                consumePendingHomeRoutes()
             }
             .onChange(of: appState.pendingSettingsRoute) { _, _ in
                 routePendingSettings()
@@ -543,36 +587,14 @@ struct HomeView: View {
             }
             .sheet(isPresented: $showNotifications, onDismiss: {
                 Task { await appState.refresh(forceRefresh: true) }
-                if let id = pendingBookingId {
-                    rememberSceneDestination("booking", id: id)
-                    navigationPath.append(id)
-                    pendingBookingId = nil
-                }
-                if let assetId = pendingAssetId {
-                    rememberSceneDestination("asset", id: assetId)
-                    navigationPath.append(AssetRouteId(id: assetId))
-                    pendingAssetId = nil
-                }
-                if let userId = pendingUserId {
-                    rememberSceneDestination("user", id: userId)
-                    navigationPath.append(UserRouteId(id: userId))
-                    pendingUserId = nil
-                }
-                if pendingShowTrades {
-                    pendingShowTrades = false
-                    showTrades = true
+                if let route = pendingInboxRoute {
+                    pendingInboxRoute = nil
+                    appState.apply(route)
                 }
             }) {
-                NotificationsSheet(
-                    onSelectBooking: { id in pendingBookingId = id },
-                    onSelectTrades: { pendingShowTrades = true },
-                    onSelectAsset: { id in pendingAssetId = id },
-                    onSelectUser: { id in pendingUserId = id },
-                    onSelectEvent: { id in
-                        appState.pendingPushEventId = id
-                        appState.selectedTab = 4
-                    }
-                )
+                NotificationsSheet { route in
+                    pendingInboxRoute = route
+                }
             }
             .sheet(isPresented: $showTrades) {
                 TradeBoardSheet(

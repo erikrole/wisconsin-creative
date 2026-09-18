@@ -31,6 +31,11 @@ final class AppState {
     /// Set when a blast push is tapped. Routes to Home and forces a banner refresh;
     /// the blast itself is fetched from /api/me/blasts, never trusted from the payload.
     var pendingPushBlastId: String?
+    var pendingPushAssetId: String?
+    var pendingPushUserId: String?
+    var pendingNotificationsInbox = false
+    var pendingTradeBoard = false
+    var pendingItemsSearch: String?
     /// Server-registration truth, kept separate from iOS authorization state.
     /// `.registered` means the APNs token was accepted by `/api/devices`; it
     /// does not claim that a later push reached the device.
@@ -79,15 +84,7 @@ final class AppState {
         unreadNotifCount = 0
         openTradeCount = 0
 
-        pendingPushBookingId = nil
-        pendingPushEventId = nil
-        pendingPushBlastId = nil
-        pendingAppIntentDestination = nil
-        pendingBookingsScope = nil
-        pendingScheduleMyShifts = false
-        pendingBookingDetailId = nil
-        pendingBrowseDestination = nil
-        pendingSettingsRoute = false
+        clearPendingDestinations()
 
         selectedTab = 0
         resetTab = nil
@@ -122,6 +119,61 @@ final class AppState {
         guard pendingAppIntentDestination == destination else { return false }
         pendingAppIntentDestination = nil
         return true
+    }
+
+    /// Last incoming destination wins. A second tap, Control, or universal link
+    /// must not also open the previous booking, scan, or inbox route.
+    func apply(_ route: GearTrackerRoute) {
+        clearPendingDestinations()
+        switch route {
+        case .scan:
+            pendingAppIntentDestination = .scan
+        case .search:
+            presentSearch()
+        case .myGear:
+            pendingAppIntentDestination = .myGear
+        case .createReservation:
+            pendingAppIntentDestination = .createReservation
+        case .schedule(let myShifts):
+            pendingAppIntentDestination = .todaySchedule
+            pendingScheduleMyShifts = myShifts
+        case .booking(let id):
+            pendingPushBookingId = id
+        case .event(let id):
+            pendingPushEventId = id
+        case .item(let id):
+            pendingPushAssetId = id
+        case .user(let id):
+            pendingPushUserId = id
+        case .licenses:
+            pendingBrowseDestination = "licenses"
+        case .itemsSearch(let query):
+            pendingBrowseDestination = "items"
+            pendingItemsSearch = query
+        case .blast(let id):
+            pendingPushBlastId = id
+        case .tradeBoard:
+            pendingTradeBoard = true
+        case .inbox:
+            pendingNotificationsInbox = true
+        }
+    }
+
+    private func clearPendingDestinations() {
+        pendingPushBookingId = nil
+        pendingPushEventId = nil
+        pendingPushBlastId = nil
+        pendingPushAssetId = nil
+        pendingPushUserId = nil
+        pendingNotificationsInbox = false
+        pendingTradeBoard = false
+        pendingItemsSearch = nil
+        pendingAppIntentDestination = nil
+        pendingBookingsScope = nil
+        pendingScheduleMyShifts = false
+        pendingBookingDetailId = nil
+        pendingBrowseDestination = nil
+        pendingSettingsRoute = false
     }
 
     func refresh(forceRefresh: Bool = false) async {

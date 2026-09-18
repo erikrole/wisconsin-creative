@@ -40,6 +40,27 @@ extension Date {
             : formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
     }
 
+    /// "Sep 19, 8:30 AM" — omits the year when it matches `now`.
+    func compactReservationDateTime(now: Date = .now) -> String {
+        let calendar = Calendar.current
+        if calendar.component(.year, from: self) == calendar.component(.year, from: now) {
+            return formatted(.dateTime.month(.abbreviated).day().hour().minute())
+        }
+        return formatted(date: .abbreviated, time: .shortened)
+    }
+
+    /// Same-day windows collapse to "Sep 19, 8:30 AM–9:30 AM".
+    static func compactReservationWindow(from start: Date, to end: Date, now: Date = .now) -> String {
+        let calendar = Calendar.current
+        if calendar.isDate(start, inSameDayAs: end) {
+            let day = calendar.component(.year, from: start) == calendar.component(.year, from: now)
+                ? start.formatted(.dateTime.month(.abbreviated).day())
+                : start.formatted(date: .abbreviated, time: .omitted)
+            return "\(day), \(start.gearTime)–\(end.gearTime)"
+        }
+        return "\(start.compactReservationDateTime(now: now))–\(end.compactReservationDateTime(now: now))"
+    }
+
     /// "Today at 3:00 PM", "Monday at 8:30 AM", or "Mon, Jul 27 at 8:30 AM".
     func operationalDateTimeLabel(now: Date = .now, capitalizesRelativeDay: Bool = true) -> String {
         let day = operationalDayLabel(now: now)

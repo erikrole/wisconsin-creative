@@ -1,0 +1,73 @@
+{
+  "title": "Native launch continuity",
+  "eyebrow": "iOS · Wisconsin Creative",
+  "lede": "The system launch frame and session restore are now a quiet grouped background that matches Home. The Motion W lockup stays on sign-in, where Apple allows a splash after launch completes.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "After-only fixture evidence",
+      "note": "iPhone 16 Pro (27.0) UDID E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE, WisconsinPerformance launch-view / login. No matched before pair from this checkout: the previous branded still lived in the system UILaunchScreen and the launch-view fixture, and those PNGs were not retained beside the earlier review. The reported 9:30 still is included as a device screenshot at a different pixel size, not as a hash-matched pair.",
+      "pairs": [],
+      "shots": [
+        {
+          "title": "Reported system still",
+          "tag": "Before",
+          "image": "reported-system-still.png",
+          "cap": "The dark-purple LaunchBackground plus Motion W lockup. This is the system frame Apple says not to brand."
+        },
+        {
+          "title": "Restore in Dark Mode",
+          "tag": "After",
+          "image": "after-launch-view-dark.png",
+          "cap": "LaunchView is now system grouped black. Session-checking copy appears only after restore takes long enough. No lockup."
+        },
+        {
+          "title": "Restore in Light Mode",
+          "tag": "After",
+          "image": "after-launch-view-light.png",
+          "cap": "The same continuity background follows appearance mode, matching Home's grouped surface."
+        },
+        {
+          "title": "Sign-in",
+          "tag": "After",
+          "image": "after-login.png",
+          "cap": "The crimson scene and Gotham lockup remain here. Apple treats this as splash/onboarding after launch completes."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "System launch frame",
+      "was": "LaunchBackground #140B10 plus a centered LaunchLockup wordmark, which read as a purple splash.",
+      "now": "UILaunchScreen is a required iOS 27 color-only frame. LaunchBackground matches system grouped (light #F2F2F7, dark #000000). No image."
+    },
+    {
+      "h": "Session restore",
+      "was": "LaunchView continued the crimson scene and raster lockup, so the first SwiftUI frame was also a splash.",
+      "now": "LaunchView is Color(.systemGroupedBackground) with delayed Checking your session copy. Optimistic sessions still skip it."
+    },
+    {
+      "h": "App switcher",
+      "was": "WindowLaunchStillHost covered the live UI with the same branded still.",
+      "now": "Inactive snapshots show the live UI. No privacy lock and no splash overlay."
+    },
+    {
+      "h": "Sign-in and kiosk",
+      "was": "Kiosk cold launch and resume used the same Motion W still.",
+      "now": "Login and password setup keep the crimson lockup. Kiosk launch uses KioskLaunchBackground #0B0B0D; resume is labeled progress on the existing backdrop."
+    }
+  ],
+  "verification": [
+    "vitest ios-launch-experience (6) and the isolated ios-system-hardening snapshot contract passed. Three other hardening tests fail on unrelated pre-existing session-boundary assertions.",
+    "xcodebuild Wisconsin iPhone 16 Pro (27.0) Debug BUILD SUCCEEDED.",
+    "xcodebuild WisconsinKiosk generic iOS Simulator Debug BUILD SUCCEEDED.",
+    "WisconsinPerformance PasswordManagerScreenshotUITests testLaunchViewCaptures and testLoginIdentityCaptures passed on iPhone 16 Pro (27.0), including a second launch-view pass in Dark Mode.",
+    "git diff --check passed on the touched launch, splash, test, and area-doc files."
+  ],
+  "notes": [
+    "The launch-view captures include Checking your session because the fixture waits through the delayed progress reveal. The system UILaunchScreen itself has no spinner or text.",
+    "Physical-device app-switcher and managed-iPad kiosk visual proof remain open.",
+    "No commit or push."
+  ]
+}

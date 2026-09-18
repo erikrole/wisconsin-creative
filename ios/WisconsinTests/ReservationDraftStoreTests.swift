@@ -107,7 +107,8 @@ private final class DraftPersistenceStub: ReservationDraftPersistence {
         shiftAssignmentId: String?,
         sourceDraftId: String?,
         serializedAssetIds: [String],
-        bulkItems: [BulkReservationRequest]
+        bulkItems: [BulkReservationRequest],
+        kitId: String?
     ) async throws -> ReservationCreationReceipt {
         createCalls += 1
         createdTitles.append(title)

@@ -343,6 +343,37 @@ final class PasswordManagerScreenshotUITests: XCTestCase {
         continueAfterFailure = false
     }
 
+    func testLaunchViewCaptures() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "launch-view"
+        app.launch()
+
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 20), "Launch still never reached the foreground")
+        attach(app, name: "launch-still")
+    }
+
+    func testLoginIdentityCaptures() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "login"
+        app.launch()
+
+        let email = app.textFields["Email address"]
+        XCTAssertTrue(email.waitForExistence(timeout: 20), "Login never rendered its email field")
+        attach(app, name: "login-identity")
+    }
+
+    func testPasswordSetupCaptures() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "password-setup"
+        app.launch()
+
+        XCTAssertTrue(
+            app.staticTexts["Set your password"].waitForExistence(timeout: 20),
+            "Password setup never rendered"
+        )
+        attach(app, name: "password-setup")
+    }
+
     func testLoginPasswordStepCaptures() throws {
         let app = XCUIApplication()
         app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "login"
@@ -625,6 +656,19 @@ final class CreateBookingEventPickerScreenshotUITests: XCTestCase {
         app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "create-booking-events"
         app.launch()
 
+        XCTAssertTrue(app.staticTexts["New Reservation"].waitForExistence(timeout: 20), "Composer never opened")
+        attach(app, name: "create-booking-details-event-empty")
+
+        let manual = app.buttons["Manual"].firstMatch
+        XCTAssertTrue(manual.waitForExistence(timeout: 8), "Manual setup control missing")
+        manual.tap()
+        XCTAssertTrue(app.staticTexts["When"].waitForExistence(timeout: 8), "Manual When card never appeared")
+        attach(app, name: "create-booking-details-manual")
+
+        let eventLinked = app.buttons["Event Linked"].firstMatch
+        XCTAssertTrue(eventLinked.waitForExistence(timeout: 5), "Event Linked setup control missing")
+        eventLinked.tap()
+
         // The card's NavigationLink carries an `.accessibilityLabel`, which
         // *replaces* the "Choose Event" text -- querying the visible string
         // finds nothing.
@@ -640,12 +684,59 @@ final class CreateBookingEventPickerScreenshotUITests: XCTestCase {
 
         // The Neutral scope: the same row has to be reachable through the
         // filter that matches the label the row is showing.
+        let all = app.buttons["All"].firstMatch
         let neutral = app.buttons["Neutral"].firstMatch
         if neutral.waitForExistence(timeout: 5) {
             neutral.tap()
             _ = duke.waitForExistence(timeout: 10)
             attach(app, name: "create-booking-event-picker-neutral")
+            if all.waitForExistence(timeout: 5) {
+                all.tap()
+                _ = duke.waitForExistence(timeout: 10)
+            }
         }
+
+        let dukeRow = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "MBB vs Duke")).firstMatch
+        XCTAssertTrue(dukeRow.waitForExistence(timeout: 5), "Duke event row was not tappable")
+        dukeRow.tap()
+
+        let confirm = app.buttons["Confirm event selection"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: 8), "Confirm event selection never appeared")
+        XCTAssertTrue(confirm.isEnabled, "Confirm stayed disabled after selecting Duke")
+        confirm.tap()
+
+        XCTAssertTrue(app.staticTexts["When"].waitForExistence(timeout: 10), "When card never appeared")
+        XCTAssertTrue(app.staticTexts["Pickup"].waitForExistence(timeout: 5), "Pickup label missing from the schedule row")
+        XCTAssertTrue(app.staticTexts["Return"].waitForExistence(timeout: 5), "Return label missing from the schedule row")
+        attach(app, name: "create-booking-details-when")
+
+        let chooseGear = app.buttons["Choose Gear"]
+        XCTAssertTrue(chooseGear.waitForExistence(timeout: 8), "Choose Gear never appeared")
+        XCTAssertTrue(chooseGear.isEnabled, "Choose Gear stayed disabled after selecting Duke")
+        chooseGear.tap()
+        var gearSearch = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label == %@ OR placeholderValue == %@", "Search all equipment", "Search all equipment"))
+            .firstMatch
+        if !gearSearch.waitForExistence(timeout: 3) {
+            gearSearch = app.searchFields["Search all equipment"]
+        }
+        XCTAssertTrue(gearSearch.waitForExistence(timeout: 15), "Gear search never appeared")
+        let conflicted = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "has this item until")).firstMatch
+        XCTAssertTrue(conflicted.waitForExistence(timeout: 10), "Conflicted gear never rendered")
+        XCTAssertTrue(
+            app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "has reserved for")).firstMatch.waitForExistence(timeout: 8),
+            "Upcoming reservation copy never rendered"
+        )
+        attach(app, name: "create-booking-gear")
+
+        let camera = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label CONTAINS %@", "CAM-015"))
+            .firstMatch
+        XCTAssertTrue(camera.waitForExistence(timeout: 8), "Available camera never rendered")
+        camera.tap()
+        XCTAssertTrue(app.staticTexts["Sony Battery"].waitForExistence(timeout: 8), "Battery recommendation never appeared")
+        XCTAssertTrue(app.buttons["Review"].waitForExistence(timeout: 8), "Review never appeared after adding gear")
+        attach(app, name: "create-booking-gear-selected")
     }
 
     private func attach(_ app: XCUIApplication, name: String) {

@@ -132,37 +132,49 @@ struct GuidesView: View {
                 Task { await vm.load() }
             }
             .toolbar {
-                ToolbarItemGroup(placement: .topBarTrailing) {
-                    Menu {
-                        Picker("Focus", selection: $focus) {
-                            ForEach(GuideFocus.allCases) { focus in
-                                Label(focus.label, systemImage: focus.systemImage).tag(focus)
-                            }
-                        }
-                    } label: {
-                        // Filled glyph plus the shared control tint is how every
-                        // other list in the app says "a filter is narrowing this".
-                        Label(
-                            "Focus",
-                            systemImage: "line.3.horizontal.decrease.circle\(focus == .all ? "" : ".fill")"
-                        )
+                if #available(iOS 27.0, *) {
+                    ToolbarItemGroup(placement: .topBarTrailing) {
+                        guidesListControls
                     }
-                    .listControlTint(isActive: focus != .all)
-                    .accessibilityLabel(focus == .all ? "Guide focus" : "Guide focus, \(focus.label)")
-
-                    Menu {
-                        Picker("Sort", selection: $sort) {
-                            ForEach(GuideSort.allCases) { sort in
-                                Text(sort.label).tag(sort)
-                            }
-                        }
-                    } label: {
-                        Label("Sort", systemImage: "arrow.up.arrow.down")
+                    .visibilityPriority(.high)
+                } else {
+                    ToolbarItemGroup(placement: .topBarTrailing) {
+                        guidesListControls
                     }
-                    .listControlTint(isActive: sort != .recommended)
-                    .accessibilityLabel(sort == .recommended ? "Sort guides" : "Sort guides, \(sort.label)")
                 }
             }
+    }
+
+    @ViewBuilder
+    private var guidesListControls: some View {
+        Menu {
+            Picker("Focus", selection: $focus) {
+                ForEach(GuideFocus.allCases) { focus in
+                    Label(focus.label, systemImage: focus.systemImage).tag(focus)
+                }
+            }
+        } label: {
+            // Filled glyph plus the shared control tint is how every
+            // other list in the app says "a filter is narrowing this".
+            Label(
+                "Focus",
+                systemImage: "line.3.horizontal.decrease.circle\(focus == .all ? "" : ".fill")"
+            )
+        }
+        .listControlTint(isActive: focus != .all)
+        .accessibilityLabel(focus == .all ? "Guide focus" : "Guide focus, \(focus.label)")
+
+        Menu {
+            Picker("Sort", selection: $sort) {
+                ForEach(GuideSort.allCases) { sort in
+                    Text(sort.label).tag(sort)
+                }
+            }
+        } label: {
+            Label("Sort", systemImage: "arrow.up.arrow.down")
+        }
+        .listControlTint(isActive: sort != .recommended)
+        .accessibilityLabel(sort == .recommended ? "Sort guides" : "Sort guides, \(sort.label)")
     }
 
     private func clearFilters() {

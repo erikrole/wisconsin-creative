@@ -33,7 +33,7 @@
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>
-		<string></string>
+		<string>KioskLaunchBackground</string>
 	</dict>
 	<key>UIRequiresFullScreen</key>
 	<true/>

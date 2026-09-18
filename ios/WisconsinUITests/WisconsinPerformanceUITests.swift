@@ -39,7 +39,9 @@ final class WisconsinPerformanceUITests: XCTestCase {
 
     func testEquipmentSearchAndSelectionPerformance() throws {
         let application = launch(scenario: "equipment")
-        let search = application.searchFields["Search all equipment"]
+        let search = application.searchFields["Search all equipment"].exists
+            ? application.searchFields["Search all equipment"]
+            : application.textFields["Search all equipment"]
         XCTAssertTrue(search.waitForExistence(timeout: 5))
 
         let options = XCTMeasureOptions()

@@ -24,6 +24,7 @@ struct NotificationPayload: Codable {
     let userId: String?
     let badgeDefinitionId: String?
     let studentBadgeId: String?
+    let skuName: String?
     let href: String?
 
     var effectiveBookingId: String? { bookingId ?? checkoutId }

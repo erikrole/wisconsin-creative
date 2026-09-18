@@ -1,9 +1,7 @@
 import SwiftUI
 
-/// The shared splash scene behind LaunchView, LoginView, and PasswordSetupView.
-/// Its base is the exact color used by the system-owned launch screen. The
-/// layered light can fade in after SwiftUI takes over without a first-frame
-/// color jump.
+/// The shared splash scene behind LoginView and PasswordSetupView. This is
+/// sign-in content, not the system launch screen.
 struct BrandSplashScene: View {
     var accentOpacity = 1.0
 
@@ -41,6 +39,12 @@ struct BrandSplashScene: View {
                             startRadius: 0,
                             endRadius: geo.size.height * 0.8
                         )
+                        RadialGradient(
+                            colors: [Self.crimson.opacity(0.18), .clear],
+                            center: UnitPoint(x: 0.5, y: 0.45),
+                            startRadius: 0,
+                            endRadius: geo.size.height * 0.55
+                        )
                     }
                 }
             }
@@ -51,9 +55,7 @@ struct BrandSplashScene: View {
     }
 }
 
-/// The brand lockup shared by LaunchView and LoginView — mark + white
-/// wordmark sitting directly on the splash scene, matching the web login's
-/// lockup-above-the-card composition.
+/// The brand lockup shared by LoginView and PasswordSetupView.
 struct BrandSplashLockup: View {
     var subtitle: String? = nil
 
@@ -62,13 +64,14 @@ struct BrandSplashLockup: View {
             Image("Badgers")
                 .resizable()
                 .scaledToFit()
-                .frame(width: 72, height: 72)
+                .frame(width: 80, height: 80)
                 .shadow(color: .black.opacity(0.35), radius: 10, y: 4)
                 .accessibilityHidden(true)
                 .padding(.bottom, 14)
 
             Text("Wisconsin Creative")
                 .font(.gothamBlack(size: 26, relativeTo: .title2))
+                .kerning(-0.4)
                 .foregroundStyle(.white)
                 .shadow(color: .black.opacity(0.45), radius: 8, y: 2)
 
@@ -79,16 +82,50 @@ struct BrandSplashLockup: View {
                     .padding(.top, 4)
             }
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
+        .accessibilityLabel(subtitle.map { "Wisconsin Creative. \($0)" } ?? "Wisconsin Creative")
     }
 }
 
-/// Branded launch state shown only while the app has no optimistic session
-/// snapshot and is validating `/me`. The lockup stays centered exactly where
-/// the system launch image placed it. Progress appears only when validation
-/// takes long enough to need an explanation.
+extension View {
+    /// Frosted material plus a white wash so the card reads as a light surface
+    /// (web: rgba(255,255,255,0.88) + blur), not a pink one — the material
+    /// alone soaks up too much of the red scene. Pins light tokens even though
+    /// the surrounding splash is dark.
+    func brandLoginCardChrome() -> some View {
+        self
+            .padding(20)
+            .background(
+                RoundedRectangle(cornerRadius: Brand.Radius.card, style: .continuous)
+                    .fill(.regularMaterial)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Brand.Radius.card, style: .continuous)
+                            .fill(Color.white.opacity(0.58))
+                    )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: Brand.Radius.card, style: .continuous)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [.white.opacity(0.7), .white.opacity(0.22)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        ),
+                        lineWidth: 1
+                    )
+            )
+            .environment(\.colorScheme, .light)
+            .shadow(color: Color(.sRGBLinear, white: 0, opacity: 0.35), radius: 20, y: 10)
+    }
+}
+
+/// Quiet restore state shown only while the app has no optimistic session
+/// snapshot and is validating `/me`. Matches the system launch frame and
+/// Home's grouped background so launch is continuity, not a splash. Progress
+/// appears only when validation takes long enough to need an explanation.
 struct LaunchView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var accentsVisible = false
     @State private var restoreProgress: RestoreProgress = .hidden
 
     private enum RestoreProgress {
@@ -111,47 +148,31 @@ struct LaunchView: View {
 
     var body: some View {
         ZStack {
-            BrandSplashScene(accentOpacity: accentsVisible ? 1 : 0)
-
-            BrandSplashLockup()
-                .accessibilityHidden(true)
+            Color(.systemGroupedBackground)
 
             if let progressLabel = restoreProgress.label {
                 HStack(spacing: 9) {
                     ProgressView()
                         .controlSize(.small)
-                        .tint(.white)
+                        .tint(.secondary)
                         .accessibilityHidden(true)
 
                     Text(progressLabel)
                         .font(.footnote.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.82))
+                        .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
                 .padding(.horizontal, 14)
                 .frame(minHeight: 34)
-                .background(.white.opacity(0.08), in: Capsule())
-                .overlay {
-                    Capsule()
-                        .strokeBorder(.white.opacity(0.12), lineWidth: 0.5)
-                }
-                .offset(y: 112)
+                .background(.fill.tertiary, in: Capsule())
                 .transition(.opacity)
                 .accessibilityHidden(true)
             }
         }
-        .preferredColorScheme(.dark)
+        .ignoresSafeArea()
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityStatus)
         .task {
-            if reduceMotion {
-                accentsVisible = true
-            } else {
-                withAnimation(.easeOut(duration: 0.45)) {
-                    accentsVisible = true
-                }
-            }
-
             do {
                 try await Task.sleep(for: .milliseconds(650))
             } catch {

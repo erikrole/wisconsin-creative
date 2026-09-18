@@ -268,8 +268,9 @@ private struct KioskActivityMonitor: UIViewRepresentable {
     }
 }
 
-/// Brief splash shown while a cold-launch session restore is in flight, so the
-/// kiosk never flashes the activation numpad to a returning device.
+/// Brief restore state shown while a cold-launch session restore is in flight,
+/// so the kiosk never flashes the activation numpad to a returning device. The
+/// shell backdrop is already the first-screen color; this only explains the wait.
 private struct KioskResumeSplash: View {
     var body: some View {
         VStack(spacing: 18) {

@@ -81,7 +81,7 @@ describe("iOS SwiftUI performance contracts", () => {
     expect(instrumentation).not.toContain("iOS 27");
     expect(instrumentation).not.toContain("#available(iOS 27");
     expect(harness).toContain("#if DEBUG");
-    expect(project).toContain('xcodeVersion: "26.6"');
+    expect(project).toContain('xcodeVersion: "27.0"');
     expect(project).toContain('deploymentTarget: "26.0"');
   });
 });

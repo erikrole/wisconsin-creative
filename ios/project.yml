@@ -4,7 +4,7 @@ options:
   deploymentTarget:
     iOS: "26.0"
   createIntermediateGroups: true
-  xcodeVersion: "26.6"
+  xcodeVersion: "27.0"
 
 settings:
   base:
@@ -73,6 +73,7 @@ targets:
         aps-environment: production
         com.apple.developer.associated-domains:
           - webcredentials:wisconsincreative.com
+          - applinks:wisconsincreative.com
         # Shared container the Home Screen widgets read their snapshot from.
         com.apple.security.application-groups:
           - group.com.erikrole.Wisconsin
@@ -108,7 +109,7 @@ targets:
       path: Wisconsin/KioskOnly/Info.plist
       properties:
         UILaunchScreen:
-          UIColorName: ""
+          UIColorName: KioskLaunchBackground
         # Landscape only. The kiosk is a counter-mounted iPad and every layout
         # in it is designed as a two-column landscape task; portrait was a
         # supported-but-unloved fallback that nothing was verified against.

@@ -20,26 +20,29 @@ describe("iOS booking list actions", () => {
   it("does not show search before or for a short loaded list", () => {
     expect(bookings).toContain("private var showsSearch: Bool");
     expect(bookings).toContain("if !vm.searchText.isEmpty { return true }");
-    expect(bookings).toContain("!vm.isLoading && visibleCount > 0");
+    expect(bookings).toContain(
+      "return visibleCount > 0 && (visibleCount > 4 || vm.hasMore)",
+    );
     expect(bookings).toContain("visibleCount > 4 || vm.hasMore");
     expect(bookings).toContain("BookingsSearchModifier(isVisible: showsSearch");
   });
 });
 
 describe("iOS focused booking edit and transfer", () => {
-  it("reuses reservation gear only into a different event context", () => {
+  it("re-reserves a past booking into a different event context", () => {
     const viewModel = readFileSync("ios/Wisconsin/Views/CreateBooking/CreateBookingViewModel.swift", "utf8");
 
-    expect(detail).toContain('booking.allows("duplicate") == true');
-    expect(detail).toContain('Label("Reuse Gear for Another Event"');
-    expect(detail).toContain("composer.prefillGearForNewEvent(from: booking)");
-    expect(viewModel).toContain("func prefillGearForNewEvent(from booking: Booking)");
-    expect(viewModel).toContain("reusedGearSourceEventIds = Set(booking.linkedEvents.map(\\.id))");
-    expect(viewModel).toContain("selectedAssetIds = Set(booking.serializedItems.map(\\.assetId))");
+    expect(detail).toContain('booking?.allows("duplicate") == true');
+    expect(detail).toContain('Label("Re-reserve for Another Event"');
+    expect(detail).toContain("APIClient.shared.bookingReusePlan(id: booking.id)");
+    expect(detail).toContain("composer.prefillForReuse(from: plan)");
+    expect(viewModel).toContain("func prefillForReuse(from plan: BookingReusePlan)");
+    expect(viewModel).toContain("reusedGearSourceEventIds = Set(plan.events.map(\\.id))");
+    expect(viewModel).toContain("selectedAssetIds = Set(plan.serializedItems.map(\\.assetId))");
     expect(viewModel).toContain("hasInvalidReusedEventSelection");
     expect(create).toContain("!vm.isReusingGear || (setupMode == .event && vm.linkedEventCount > 0)");
     expect(create).toContain("if canLinkEvents && !vm.isReusingGear");
-    expect(create).toContain('Label("Choose a different event when reusing gear"');
+    expect(create).toContain('Label("Choose a different event when re-reserving"');
   });
 
   it("only edits the booking name and return time", () => {
@@ -72,7 +75,7 @@ describe("iOS focused booking edit and transfer", () => {
 
 describe("iOS reservation setup refresh", () => {
   it("uses a visible three-step progression and bottom primary action", () => {
-    expect(create).toContain("ReservationStepProgress(currentStep: step)");
+    expect(create).toContain("ReservationStepProgress(currentStep: step, onSelect: goToStep)");
     expect(create).toContain('private let labels = ["Details", "Gear", "Review"]');
     expect(create).toContain(".safeAreaInset(edge: .bottom, spacing: 0)");
     expect(create).toContain('Label("Choose Gear", systemImage: "shippingbox")');

@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -20,24 +20,27 @@ function pngDimensions(relativeFile: string) {
 }
 
 describe("iOS launch experience", () => {
-  it("keeps the system launch frame content-neutral before the app scene loads", () => {
+  it("keeps a required UILaunchScreen without treating it as a brand splash", () => {
     const project = source("ios/project.yml");
     const plist = source("ios/Wisconsin/Supporting/Info.plist");
+    const kioskPlist = source("ios/Wisconsin/KioskOnly/Info.plist");
 
-    expect(project).toMatch(/UILaunchScreen:\n\s+UIColorName: LaunchBackground/);
+    expect(project).toMatch(/UILaunchScreen:\n\s+UIColorName: LaunchBackground\n\s+UISupportedInterfaceOrientations:/);
+    expect(project).toMatch(/UILaunchScreen:\n\s+UIColorName: KioskLaunchBackground\n/);
     expect(project).not.toContain("UIImageName: LaunchLockup");
     expect(plist).toMatch(
-      /<key>UILaunchScreen<\/key>[\s\S]*?<key>UIColorName<\/key>\s*<string>LaunchBackground<\/string>/,
+      /<key>UILaunchScreen<\/key>\s*<dict>\s*<key>UIColorName<\/key>\s*<string>LaunchBackground<\/string>\s*<\/dict>/,
     );
-    expect(plist).not.toContain("<key>UIImageName</key>");
+    expect(plist).not.toContain("LaunchLockup");
+    expect(kioskPlist).toMatch(
+      /<key>UILaunchScreen<\/key>\s*<dict>\s*<key>UIColorName<\/key>\s*<string>KioskLaunchBackground<\/string>\s*<\/dict>/,
+    );
+    expect(kioskPlist).not.toContain("LaunchLockup");
   });
 
-  it("ships native-resolution Motion W and launch-lockup assets", () => {
+  it("ships native-resolution Motion W assets for sign-in, not a launch lockup", () => {
     const mark = json<{ images: Array<{ filename?: string; scale: string }> }>(
       "ios/Wisconsin/Assets.xcassets/Badgers.imageset/Contents.json",
-    );
-    const lockup = json<{ images: Array<{ filename?: string; scale: string }> }>(
-      "ios/Wisconsin/Assets.xcassets/LaunchLockup.imageset/Contents.json",
     );
 
     expect(mark.images.map(({ filename, scale }) => ({ filename, scale }))).toEqual([
@@ -45,38 +48,62 @@ describe("iOS launch experience", () => {
       { filename: "Badgers@2x.png", scale: "2x" },
       { filename: "Badgers@3x.png", scale: "3x" },
     ]);
-    expect(lockup.images.map(({ filename, scale }) => ({ filename, scale }))).toEqual([
-      { filename: "LaunchLockup.png", scale: "1x" },
-      { filename: "LaunchLockup@2x.png", scale: "2x" },
-      { filename: "LaunchLockup@3x.png", scale: "3x" },
-    ]);
-
     expect(pngDimensions("ios/Wisconsin/Assets.xcassets/Badgers.imageset/Badgers.png")).toEqual({ width: 72, height: 72 });
     expect(pngDimensions("ios/Wisconsin/Assets.xcassets/Badgers.imageset/Badgers@2x.png")).toEqual({ width: 144, height: 144 });
     expect(pngDimensions("ios/Wisconsin/Assets.xcassets/Badgers.imageset/Badgers@3x.png")).toEqual({ width: 216, height: 216 });
-    expect(pngDimensions("ios/Wisconsin/Assets.xcassets/LaunchLockup.imageset/LaunchLockup.png")).toEqual({ width: 270, height: 118 });
-    expect(pngDimensions("ios/Wisconsin/Assets.xcassets/LaunchLockup.imageset/LaunchLockup@2x.png")).toEqual({ width: 540, height: 236 });
-    expect(pngDimensions("ios/Wisconsin/Assets.xcassets/LaunchLockup.imageset/LaunchLockup@3x.png")).toEqual({ width: 810, height: 354 });
+    expect(existsSync("ios/Wisconsin/Assets.xcassets/LaunchLockup.imageset")).toBe(false);
   });
 
-  it("keeps the system frame and SwiftUI scene on one first-frame color", () => {
+  it("matches the system frame to Home's grouped background", () => {
     const background = json<{
-      colors: Array<{ color: { components: Record<string, string> } }>;
+      colors: Array<{ color: { components: Record<string, string> }; appearances?: Array<{ value: string }> }>;
     }>("ios/Wisconsin/Assets.xcassets/LaunchBackground.colorset/Contents.json");
-    const brand = source("ios/Wisconsin/Core/Brand.swift");
+    const kioskBackground = json<{
+      colors: Array<{ color: { components: Record<string, string> } }>;
+    }>("ios/Wisconsin/Assets.xcassets/KioskLaunchBackground.colorset/Contents.json");
     const launch = source("ios/Wisconsin/Views/LaunchView.swift");
+    const home = source("ios/Wisconsin/Views/HomeView.swift");
+    const kioskDesign = source("ios/Wisconsin/Kiosk/KioskDesign.swift");
 
+    expect(background.colors[0]?.appearances).toBeUndefined();
     expect(background.colors[0]?.color.components).toMatchObject({
-      red: "0.078",
-      green: "0.043",
-      blue: "0.063",
+      red: "0.949",
+      green: "0.949",
+      blue: "0.969",
       alpha: "1.000",
     });
-    expect(brand).toContain(
-      "static let brandSplashTop = Color(red: 0.078, green: 0.043, blue: 0.063)",
-    );
-    expect(launch).toContain("Color.brandSplashTop");
-    expect(launch).toContain("BrandSplashScene(accentOpacity: accentsVisible ? 1 : 0)");
+    expect(background.colors[1]?.appearances?.[0]?.value).toBe("dark");
+    expect(background.colors[1]?.color.components).toMatchObject({
+      red: "0.000",
+      green: "0.000",
+      blue: "0.000",
+      alpha: "1.000",
+    });
+    expect(home).toContain("Color(.systemGroupedBackground)");
+    expect(launch).toContain("Color(.systemGroupedBackground)");
+    expect(launch).not.toContain("BrandSplashScene(");
+    expect(launch).not.toContain('Image("LaunchLockup")');
+    expect(launch).toContain("struct BrandSplashScene");
+    expect(launch).toContain('Image("Badgers")');
+    expect(kioskBackground.colors[0]?.color.components).toMatchObject({
+      red: "0.043",
+      green: "0.043",
+      blue: "0.051",
+      alpha: "1.000",
+    });
+    expect(kioskDesign).toContain("static let base = Color(red: 11 / 255, green: 11 / 255, blue: 13 / 255)");
+  });
+
+  it("does not cover inactive snapshots with a splash or privacy lock", () => {
+    const app = source("ios/Wisconsin/App/WisconsinApp.swift");
+    const kiosk = source("ios/Wisconsin/Kiosk/KioskShellView.swift");
+
+    expect(app).not.toContain("WindowLaunchStillHost");
+    expect(app).not.toContain("WindowPrivacyShieldHost");
+    expect(app).not.toContain('UIImage(named: "LaunchLockup")');
+    expect(app).not.toContain('UIImage(systemName: "lock.shield.fill")');
+    expect(kiosk).not.toContain('Image("LaunchLockup")');
+    expect(kiosk).toContain("Resuming kiosk");
   });
 
   it("delays truthful progress copy and cancels cleanly on fast restores", () => {
@@ -92,19 +119,23 @@ describe("iOS launch experience", () => {
     expect(launch).toContain(".accessibilityLabel(accessibilityStatus)");
   });
 
-  it("shares one destination backdrop without delaying optimistic sessions", () => {
+  it("reserves the crimson lockup for sign-in and does not delay optimistic sessions", () => {
     const app = source("ios/Wisconsin/App/WisconsinApp.swift");
     const session = source("ios/Wisconsin/Core/SessionStore.swift");
     const login = source("ios/Wisconsin/Views/LoginView.swift");
     const passwordSetup = source("ios/Wisconsin/Views/PasswordSetupView.swift");
+    const launch = source("ios/Wisconsin/Views/LaunchView.swift");
 
     expect(app).toMatch(/if session\.isRestoring \{\s+LaunchView\(\)/);
     expect(session).toMatch(
       /if !AppRuntimeMode\.isPerformanceTesting,[\s\S]*?currentUser = snapshot\s+isRestoring = false/,
     );
     expect(login).toContain("BrandSplashScene()");
+    expect(login).toContain('BrandSplashLockup(subtitle: "Sign in to your account")');
     expect(passwordSetup).toContain("BrandSplashScene()");
+    expect(passwordSetup).toContain('BrandSplashLockup(subtitle: "Set your password")');
     expect(passwordSetup).not.toContain("LinearGradient(");
+    expect(launch).toContain("struct BrandSplashLockup");
     expect(launchMinimumDurationTokens(app + session)).toEqual([]);
   });
 });

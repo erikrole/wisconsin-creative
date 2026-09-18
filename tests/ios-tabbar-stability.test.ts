@@ -40,7 +40,9 @@ describe("iOS tab bar stability", () => {
     expect(appTab).not.toContain(".tabItem");
     expect(appTab).not.toContain(".tag(");
     expect(appTab).not.toContain(".toolbar(.hidden, for: .tabBar)");
-    expect(appTab).not.toContain(".tabBarMinimizeBehavior(");
+    expect(appTab).toContain(
+      ".tabBarMinimizeBehavior(drafts.showsCard ? .never : .onScrollDown)",
+    );
   });
 
   it("renders global Search through the native trailing search tab role, with scan inside Search", () => {

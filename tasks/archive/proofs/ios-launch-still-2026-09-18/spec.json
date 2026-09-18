@@ -1,0 +1,64 @@
+{
+  "title": "Native launch still and adjacent splash",
+  "eyebrow": "iOS · Wisconsin Creative",
+  "lede": "The inactive snapshot no longer uses a privacy lock. Cold launch, session restore, sign-in, and password setup now share the Motion W lockup on the crimson splash scene.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "After-only fixture evidence",
+      "note": "iPhone 16 Pro (27.0) UDID E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE, WisconsinPerformance launch-view / login / password-setup, dark splash appearance. No matched before pair: the previous privacy lock lived only in the inactive app-switcher snapshot, which the fixture harness cannot freeze without changing scene phase during capture.",
+      "pairs": [],
+      "shots": [
+        {
+          "title": "Launch still",
+          "tag": "After",
+          "image": "after-launch-still.png",
+          "cap": "Centered Motion W and Wisconsin Creative wordmark on the crimson splash. Session-checking copy appears only after restore takes long enough. No lock icon."
+        },
+        {
+          "title": "Sign-in",
+          "tag": "After",
+          "image": "after-login.png",
+          "cap": "The live Gotham lockup sits on the same scene as the still. The light card is email-first Continue and passkey, unchanged in contract."
+        },
+        {
+          "title": "Set password",
+          "tag": "After",
+          "image": "after-password-setup.png",
+          "cap": "Forced-password setup now uses the scene lockup and the same light card chrome as sign-in, instead of a small W inside an opaque white card."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Inactive snapshot",
+      "was": "A systemBackground cover with lock.shield.fill and Wisconsin Creative in secondary label color.",
+      "now": "The same LaunchBackground plus LaunchLockup still as the system launch frame. Identity, not a privacy lock."
+    },
+    {
+      "h": "System launch frame",
+      "was": "LaunchBackground color only, so returning users saw a blank maroon flash.",
+      "now": "Centered transparent LaunchLockup on LaunchBackground for both the main app and WisconsinKiosk."
+    },
+    {
+      "h": "Sign-in and password setup",
+      "was": "Login used a 72pt mark. Password setup put a 52pt W and title inside an opaque card.",
+      "now": "Both keep the lockup on the splash scene. The card chrome is shared. The W is 80pt with tight Gotham tracking."
+    }
+  ],
+  "verification": [
+    "vitest ios-launch-experience, ios-login-presentation, ios-forced-password, password-manager-integration, and ios-kiosk-windowing-cleanup passed (31 tests).",
+    "ios-system-hardening snapshot contract passed in isolation. Three other hardening tests in that file fail on unrelated pre-existing session-boundary assertions.",
+    "xcodebuild Wisconsin iPhone 16 Pro (27.0) Debug BUILD SUCCEEDED.",
+    "xcodebuild WisconsinKiosk generic iOS Simulator Debug BUILD SUCCEEDED.",
+    "WisconsinPerformance PasswordManagerScreenshotUITests launch-view, login identity, and password-setup passed on iPhone 16 Pro (27.0).",
+    "git diff --check passed on the touched launch, splash, test, and area-doc files."
+  ],
+  "notes": [
+    "After captures: after-launch-still.png, after-login.png, after-password-setup.png.",
+    "The launch-still capture includes Checking your session because the fixture waited through the delayed progress reveal. The system UILaunchScreen itself has no spinner.",
+    "Kiosk resume uses the same LaunchLockup raster; managed-iPad visual proof remains open.",
+    "No commit or push."
+  ]
+}

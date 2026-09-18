@@ -165,6 +165,7 @@ struct TeamScoreboardView: View {
                 .accessibilityLabel("Refresh Scoreboard")
             }
         }
+        .nativeScrollBarMinimization()
         .task(id: filters) {
             await load(for: filters)
         }

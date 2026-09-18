@@ -441,7 +441,7 @@ private struct BadgeStreakRow: View {
                     .foregroundStyle(.tertiary)
             }
         }
-        .frame(minHeight: 28)
+        .frame(minHeight: 44)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(
             streak.current > 0
@@ -482,6 +482,7 @@ private struct BadgeProgressRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .frame(minHeight: 44)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Closest badge: \(badge.name), \(badge.progressCurrent ?? 0) of \(badge.progressTarget ?? 0)")
     }
@@ -732,6 +733,9 @@ struct BadgeGallerySheet: View {
     @State private var filter: BadgeGalleryFilter = .all
     @State private var selectedBadge: UserBadge?
     @State private var tapFeedback = false
+    @State private var expandedCollections: Set<BadgeCollection> = []
+
+    private static let shelfPreviewCount = 10
 
     private var filteredBadges: [UserBadge] {
         profile.visibleBadges.filter { badge in
@@ -751,12 +755,9 @@ struct BadgeGallerySheet: View {
         let filtered = filteredBadges
         return BadgeCollection.allCases.compactMap { collection in
             let collectionBadges = profile.visibleBadges.filter { $0.primaryCollection == collection }
-            let displayBadges = filtered
-                .filter { $0.primaryCollection == collection }
-                .sorted { a, b in
-                    if a.earned != b.earned { return a.earned }
-                    return (a.awardedDate ?? .distantPast) > (b.awardedDate ?? .distantPast)
-                }
+            let displayBadges = sortedForDisplay(
+                filtered.filter { $0.primaryCollection == collection }
+            )
             guard !displayBadges.isEmpty else { return nil }
             return BadgeGallerySection(
                 collection: collection,
@@ -801,7 +802,7 @@ struct BadgeGallerySheet: View {
                                 .accessibilityElement(children: .combine)
 
                                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 104), spacing: 10)], spacing: 10) {
-                                    ForEach(section.badges) { badge in
+                                    ForEach(visibleGalleryBadges(for: section)) { badge in
                                         Button {
                                             tapFeedback.toggle()
                                             selectedBadge = badge
@@ -810,6 +811,27 @@ struct BadgeGallerySheet: View {
                                         }
                                         .buttonStyle(.plain)
                                     }
+                                }
+
+                                if shouldCollapse(section) {
+                                    Button {
+                                        tapFeedback.toggle()
+                                        toggleExpanded(section.collection)
+                                    } label: {
+                                        Label(
+                                            isExpanded(section.collection)
+                                                ? "Show less"
+                                                : "Show \(hiddenGalleryCount(for: section)) more",
+                                            systemImage: isExpanded(section.collection)
+                                                ? "chevron.up"
+                                                : "chevron.down"
+                                        )
+                                        .font(.caption.weight(.semibold))
+                                        .frame(maxWidth: .infinity, minHeight: 44)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .foregroundStyle(.secondary)
+                                    .accessibilityAddTraits(.isButton)
                                 }
                             }
                         }
@@ -837,30 +859,32 @@ struct BadgeGallerySheet: View {
         }
     }
 
-    /// Mirrors the web tab's summary band: completion leads with a bar, then the
-    /// three counts that explain it. The old middle cell read "Gallery" over the
-    /// number of visible badges -- a total that answered no question anyone had,
-    /// while "how many are left" went unanswered.
+    /// Mirrors the web tab's summary band: the count leads, the bar still
+    /// carries the proportion. A catalog built to stay mostly unearned makes
+    /// "20%" feel like a score rather than a collection.
     private var gallerySummary: some View {
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text("\(profile.completionPercent)%")
+                    Text("\(profile.earnedCount)")
                         .font(.system(.largeTitle, design: .default, weight: .semibold))
                         .monospacedDigit()
-                    Text("of automatic goals")
+                    Text(profile.earnedCount == 1 ? "badge" : "badges")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Spacer(minLength: 0)
+                    Text("\(profile.goalsEarnedCount) of \(profile.automaticGoals.count) goals")
+                        .font(.caption)
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
                 }
                 ProgressView(value: Double(profile.completionPercent), total: 100)
                     .tint(Color.brandPrimary)
             }
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("\(profile.completionPercent) percent of automatic goals complete")
+            .accessibilityLabel("\(profile.earnedCount) badges, \(profile.goalsEarnedCount) of \(profile.automaticGoals.count) automatic goals")
 
             HStack(spacing: 8) {
-                BadgeSummaryCell(value: "\(profile.earnedCount)", label: "Earned")
                 BadgeSummaryCell(value: "\(profile.goalsRemainingCount)", label: "Goals left")
                 if profile.hiddenSurpriseCount > 0 {
                     BadgeSummaryCell(value: "\(profile.hiddenSurpriseCount)", label: "Hidden")
@@ -900,6 +924,52 @@ struct BadgeGallerySheet: View {
             .padding(.vertical, 2)
         }
         .scrollClipDisabled()
+    }
+
+    private func sortedForDisplay(_ badges: [UserBadge]) -> [UserBadge] {
+        badges.sorted { a, b in
+            if a.earned != b.earned { return a.earned }
+            if a.earned && b.earned {
+                let aDate = a.awardedDate ?? .distantPast
+                let bDate = b.awardedDate ?? .distantPast
+                if aDate != bDate { return aDate > bDate }
+                return a.sortOrder < b.sortOrder
+            }
+            let aStarted = a.hasProgress && (a.progressCurrent ?? 0) > 0
+            let bStarted = b.hasProgress && (b.progressCurrent ?? 0) > 0
+            if aStarted != bStarted { return aStarted }
+            if aStarted && bStarted, a.progressFraction != b.progressFraction {
+                return a.progressFraction > b.progressFraction
+            }
+            return a.sortOrder < b.sortOrder
+        }
+    }
+
+    private func shouldCollapse(_ section: BadgeGallerySection) -> Bool {
+        filter == .all && section.badges.count > Self.shelfPreviewCount
+    }
+
+    private func isExpanded(_ collection: BadgeCollection) -> Bool {
+        expandedCollections.contains(collection)
+    }
+
+    private func visibleGalleryBadges(for section: BadgeGallerySection) -> [UserBadge] {
+        if shouldCollapse(section) && !isExpanded(section.collection) {
+            return Array(section.badges.prefix(Self.shelfPreviewCount))
+        }
+        return section.badges
+    }
+
+    private func hiddenGalleryCount(for section: BadgeGallerySection) -> Int {
+        max(0, section.badges.count - visibleGalleryBadges(for: section).count)
+    }
+
+    private func toggleExpanded(_ collection: BadgeCollection) {
+        if expandedCollections.contains(collection) {
+            expandedCollections.remove(collection)
+        } else {
+            expandedCollections.insert(collection)
+        }
     }
 
 }
@@ -958,18 +1028,17 @@ struct BadgeDetailSheet: View {
                 // Chips wrap rather than clip. A recently earned manual award of
                 // a retired definition carries four of them, and on a narrow
                 // phone the fixed row simply cut the last one off.
-                HStack(spacing: 6) {
-                    BadgeStatusChip(badge: badge)
-                    if badge.recentlyEarned {
-                        BadgeChip(text: "New", tone: .green)
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 6) {
+                        BadgeStatusChip(badge: badge)
+                        if badge.recentlyEarned {
+                            BadgeChip(text: "New", tone: .green)
+                        }
+                        if badge.isRetiredAward {
+                            BadgeChip(text: "Retired", tone: .gray)
+                        }
                     }
-                    // Nothing is deleted from the catalog -- retirement is
-                    // `active = false` -- so an earned badge can outlive the goal
-                    // it came from. Web says so and the phone did not.
-                    if badge.isRetiredAward {
-                        BadgeChip(text: "Retired", tone: .gray)
-                    }
-                    Text(badge.rarity.title)
+                    Text(badge.rarityChipTitle)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(badge.rarity.accent)
                 }
@@ -1408,26 +1477,29 @@ private extension UserBadge {
     /// shelf, while automatic milestones follow their earning workflow.
     var primaryCollection: BadgeCollection {
         if isManualRecognition { return .staffPicks }
-        if category == "MILESTONE" && trigger == "checkout:opened" { return .gearFlow }
-        if category == "MILESTONE" && trigger == "shift:completed" { return .teamwork }
-        if category == "MILESTONE" { return .staffPicks }
+        if category == "SCAN" { return .scans }
+        // Route by the workflow that earns it, before falling back to category.
+        // The v8 expansion filed every return and trade rule under `MILESTONE`,
+        // and the old `MILESTONE` catch-all swept them onto Staff Picks.
+        if trigger == "checkout:returned" { return .reliability }
+        if trigger == "checkout:opened" { return .gearFlow }
+        if trigger == "trade:completed" || trigger == "shift:completed" { return .teamwork }
         switch category {
         case "CHECKOUT": return .gearFlow
-        case "ON_TIME": return .reliability
-        case "SCAN": return .scans
+        case "ON_TIME", "STREAK": return .reliability
         case "TRADE", "SHIFT": return .teamwork
         default: break
         }
         if key.contains("streak") || key.contains("reliable") || key.contains("zero_errors") { return .reliability }
-        return .gearFlow
+        return category == "MILESTONE" ? .staffPicks : .gearFlow
     }
 
-    /// One quiet line under the tile name: earned date, progress, requirement,
-    /// or how the badge unlocks.
+    /// One quiet line under the tile name: earned date, progress, or the
+    /// definition's own description so a locked tile says what earns it.
     var tileMetaLine: String {
         if earned { return earnedDateText }
         if hasProgress { return "\(progressCurrent ?? 0)/\(progressTarget ?? 0)" }
-        if let threshold, threshold > 0 { return "\(threshold) required" }
+        if !description.isEmpty { return description }
         return trigger == "manual" ? "Staff recognition" : "Locked"
     }
 
@@ -1472,8 +1544,13 @@ private extension UserBadge {
     /// Rarity is computed from exactly this number, and printing only the
     /// adjective asked people to trust a word with nothing behind it.
     var holdersLine: String? {
+        if rarityProvisional == true { return "Too new to rate by scarcity yet" }
         guard let holders, holders > 0 else { return nil }
         return holders == 1 ? "1 person has this" : "\(holders) people have this"
+    }
+
+    var rarityChipTitle: String {
+        rarityProvisional == true ? "\(rarity.title) (provisional)" : rarity.title
     }
 
     /// How this badge is come by. Answers the same question whether or not it
@@ -1617,7 +1694,9 @@ enum BadgePreviewData {
             progressCurrent: progress?.current,
             progressTarget: progress?.target,
             servedRarity: rarity,
-            holders: holders
+            holders: holders,
+            rarityProvisional: nil,
+            awardId: earned ? "award-\(key)" : nil
         )
     }
 

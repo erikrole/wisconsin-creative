@@ -32,6 +32,7 @@
 		1B4E293359A562A97EC501C0 /* ScoreboardModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EE808994D4A26C719DA2432 /* ScoreboardModelsTests.swift */; };
 		1B981CC8085A81571DFAEB49 /* ProfileCompletionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC88ED41091D463A9A8D5503 /* ProfileCompletionModels.swift */; };
 		1C2E6D4D0BA7A114FB6E9DB7 /* Toast.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D900B3FE267BAB0F0904D07 /* Toast.swift */; };
+		1E6D8D44F250F79DCDD09D1E /* NativeChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45271B9687525AA0016BAAC6 /* NativeChrome.swift */; };
 		1E84624B222CD81665D2EC79 /* StatusPill.swift in Sources */ = {isa = PBXBuildFile; fileRef = A97E29E06DBD7A4474F9E66A /* StatusPill.swift */; };
 		1EC76C21F12315FFEA89CD45 /* WisconsinLiveActivities.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 88F162C9B5233CB44C35E9E5 /* WisconsinLiveActivities.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		21806351E0E51FB5D0200F7F /* SemanticTones.swift in Sources */ = {isa = PBXBuildFile; fileRef = D670C3FF7EA66807225FD6FD /* SemanticTones.swift */; };
@@ -73,6 +74,7 @@
 		521817F1F579897074A3B1D4 /* CreateBookingEventViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88FF0CACAB4BD4886FD0219B /* CreateBookingEventViews.swift */; };
 		5222CCDEB1C3A451B2B7EDED /* PostTradeSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = C76AD0C31463DD95EE65E1E6 /* PostTradeSheet.swift */; };
 		53ED600858F0C9D58AD17CB0 /* ProfileNextUp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66242B4730F2C1AF5CF188FF /* ProfileNextUp.swift */; };
+		563D04BBDE05CA2EDE98513A /* GearTrackerRouteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21093FA38C7231AD95DA04B0 /* GearTrackerRouteTests.swift */; };
 		56A81DDDEF06AB1D40D13B33 /* AvailabilityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE250FADCDB66EDCBD5DF234 /* AvailabilityView.swift */; };
 		59A62659B5B66ECB9776D716 /* CheckoutReturnLiveActivityWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B440FC4AD4F07C1163F8856 /* CheckoutReturnLiveActivityWidget.swift */; };
 		5B9D51D7C22E4C6CC71E1594 /* LatestRequestGeneration.swift in Sources */ = {isa = PBXBuildFile; fileRef = D39486DE707928DB17EA4667 /* LatestRequestGeneration.swift */; };
@@ -112,6 +114,7 @@
 		96DAC20EB887DA3916DEE474 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38065600FA5A1C1AC4C8CC2F /* AppState.swift */; };
 		9920100D23D0FF37F2528340 /* KioskBarcodeCameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06C085E7CDEC3CCE6DFDD630 /* KioskBarcodeCameraView.swift */; };
 		9939B52822812D9C7B8CF92B /* ScannerDebuggerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6B542F56A00A8C2FEB2078C /* ScannerDebuggerView.swift */; };
+		9C5BEA921A15CE17B5A5B15D /* GearControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70435C0EDE51880CDE9D6BA1 /* GearControls.swift */; };
 		9CF45F32E90F4C03DDE548AB /* KioskShellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E5A80EBE9AE9D0094E70FBB /* KioskShellView.swift */; };
 		9D35DC6120309C27ADBC9FF3 /* BlastBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 222E2FBE9DCF411B6C8A5FD9 /* BlastBanner.swift */; };
 		9EF17BF323C8CEDE6CEC8D66 /* GuideMarkdown.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5159F2511DF2C09D8E495B8 /* GuideMarkdown.swift */; };
@@ -149,6 +152,7 @@
 		CB86127CB5CF65F1921BE695 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 84430D9886900EA2E8F3CB0B /* AppIcon.icon */; };
 		CC0861DE9B9E5C12D3EFFD83 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 911EE1AA37106EDB44B9B2E9 /* PrivacyInfo.xcprivacy */; };
 		CE860A32B56D88E0802D8EFE /* DashboardModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB8C14E1F7005B408A6A4CCD /* DashboardModels.swift */; };
+		CEF64765984853FDCDFE272F /* GearTrackerRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32D615552EE7D68CF4808A62 /* GearTrackerRoute.swift */; };
 		D00E7601CEFE39E880ADF85B /* WisconsinPerformanceUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9128816C8E1A251912BD38AB /* WisconsinPerformanceUITests.swift */; };
 		D0BEAE453503EBBEDD922745 /* KioskDateFormatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = E37E6A8082FFD84EC009BC21 /* KioskDateFormatting.swift */; };
 		D1B46EF364FBA2F815B27704 /* NotificationInboxTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 059964A4433E68C24BA3469A /* NotificationInboxTests.swift */; };
@@ -240,6 +244,7 @@
 		14DA88A1DF6F8D23066A07BC /* GuidesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuidesView.swift; sourceTree = "<group>"; };
 		1770023701735D8701DCAA5B /* OverdueReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverdueReportView.swift; sourceTree = "<group>"; };
 		1B440FC4AD4F07C1163F8856 /* CheckoutReturnLiveActivityWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckoutReturnLiveActivityWidget.swift; sourceTree = "<group>"; };
+		21093FA38C7231AD95DA04B0 /* GearTrackerRouteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GearTrackerRouteTests.swift; sourceTree = "<group>"; };
 		2228A84C3CCBC90ABF9103F1 /* BookingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingsView.swift; sourceTree = "<group>"; };
 		2228C8C2447924ED80ABD8C4 /* CheckoutReturnLiveActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckoutReturnLiveActivityManager.swift; sourceTree = "<group>"; };
 		222E2FBE9DCF411B6C8A5FD9 /* BlastBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlastBanner.swift; sourceTree = "<group>"; };
@@ -252,6 +257,7 @@
 		2BD749C0D91CAF1E8784E04F /* ProfilePhotoCropView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilePhotoCropView.swift; sourceTree = "<group>"; };
 		2DCFCD62823EAF922978F5E0 /* PasswordSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasswordSetupView.swift; sourceTree = "<group>"; };
 		2F4FFF38CD734CA5656C8878 /* KioskIdleRoster.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskIdleRoster.swift; sourceTree = "<group>"; };
+		32D615552EE7D68CF4808A62 /* GearTrackerRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GearTrackerRoute.swift; sourceTree = "<group>"; };
 		33E539B4DF2AE3F73D36C2BA /* BookingModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingModelsTests.swift; sourceTree = "<group>"; };
 		348C1E3385689A947929A115 /* KioskComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskComponents.swift; sourceTree = "<group>"; };
 		3505D284815BD7237ACFED5F /* KioskFlowRouting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskFlowRouting.swift; sourceTree = "<group>"; };
@@ -266,6 +272,7 @@
 		4321D991D40907BB2A1819C1 /* ReportsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportsView.swift; sourceTree = "<group>"; };
 		4461DC62BDB05085191DB129 /* ReservationDraftStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReservationDraftStoreTests.swift; sourceTree = "<group>"; };
 		44E5D1DB0C8CBAD5E452E807 /* QRScannerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScannerSheet.swift; sourceTree = "<group>"; };
+		45271B9687525AA0016BAAC6 /* NativeChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeChrome.swift; sourceTree = "<group>"; };
 		468E248680EC5A61BEC1EE38 /* Skeleton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Skeleton.swift; sourceTree = "<group>"; };
 		4A9DAB950F60885A23620BEC /* Brand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Brand.swift; sourceTree = "<group>"; };
 		50023637E6B61A75BF40891B /* CrewRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrewRow.swift; sourceTree = "<group>"; };
@@ -295,6 +302,7 @@
 		6D6258D04F2CBF34C14EBB69 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		6ED3D57FAA3E94281C3FF27C /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		6FDEEC500E8732A76AA01E90 /* GuideMarkdownTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideMarkdownTests.swift; sourceTree = "<group>"; };
+		70435C0EDE51880CDE9D6BA1 /* GearControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GearControls.swift; sourceTree = "<group>"; };
 		71D4B19DF59FC05500A7F758 /* PasskeyModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasskeyModels.swift; sourceTree = "<group>"; };
 		73A192946D33F875B4A0A772 /* WisconsinKioskTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = WisconsinKioskTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		74157D1DF3F4EF9F53F70494 /* ScheduleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleView.swift; sourceTree = "<group>"; };
@@ -458,6 +466,7 @@
 			isa = PBXGroup;
 			children = (
 				1B440FC4AD4F07C1163F8856 /* CheckoutReturnLiveActivityWidget.swift */,
+				70435C0EDE51880CDE9D6BA1 /* GearControls.swift */,
 				6720D70A7A90FE5BEFBFDD1F /* GearHomeScreenWidgets.swift */,
 				B037789B5F94297AC27AA18B /* Info.plist */,
 				F9B8707A6B2439C7C0E585A5 /* WisconsinLiveActivities.entitlements */,
@@ -661,7 +670,9 @@
 				4A9DAB950F60885A23620BEC /* Brand.swift */,
 				39565FFA7236A61DAD12D9BB /* DateFormats.swift */,
 				FAD4EC3F211EACBB157F7DDE /* GearStore.swift */,
+				32D615552EE7D68CF4808A62 /* GearTrackerRoute.swift */,
 				2A73B2A1C9B274552CBA7C8B /* Haptics.swift */,
+				45271B9687525AA0016BAAC6 /* NativeChrome.swift */,
 				2536547429CB16E12CB069C0 /* NetworkMonitor.swift */,
 				B83DB9EE3ED741F3A11FD83F /* PasskeyService.swift */,
 				9062A30C344C008E28EAAC29 /* PerformanceInstrumentation.swift */,
@@ -751,6 +762,7 @@
 			isa = PBXGroup;
 			children = (
 				33E539B4DF2AE3F73D36C2BA /* BookingModelsTests.swift */,
+				21093FA38C7231AD95DA04B0 /* GearTrackerRouteTests.swift */,
 				6FDEEC500E8732A76AA01E90 /* GuideMarkdownTests.swift */,
 				F7E2243115099DA4F3973F11 /* LatestRequestGenerationTests.swift */,
 				68542663977099AEC90AAFE5 /* LicenseExpiryTests.swift */,
@@ -898,7 +910,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 2660;
+				LastUpgradeCheck = 2700;
 				TargetAttributes = {
 					305E70CB1F6D374E6234A19C = {
 						DevelopmentTeam = T26T3G8C7Q;
@@ -980,6 +992,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				ADB0FD771E094960BDFC5D6B /* BookingModelsTests.swift in Sources */,
+				563D04BBDE05CA2EDE98513A /* GearTrackerRouteTests.swift in Sources */,
 				0E3E3B49635A5FE7B0C6DE71 /* GuideMarkdownTests.swift in Sources */,
 				D90FDB80F8FFF8F2921E26A5 /* LatestRequestGenerationTests.swift in Sources */,
 				C102925440D4EB154CF681D1 /* LicenseExpiryTests.swift in Sources */,
@@ -1052,6 +1065,7 @@
 			files = (
 				D4355A04DA0626C754E3993C /* CheckoutReturnActivityAttributes.swift in Sources */,
 				59A62659B5B66ECB9776D716 /* CheckoutReturnLiveActivityWidget.swift in Sources */,
+				9C5BEA921A15CE17B5A5B15D /* GearControls.swift in Sources */,
 				7CE11553481BC17CEAE88EDC /* GearHomeScreenWidgets.swift in Sources */,
 				BC65F462F70527063603B045 /* GearWidgetSnapshot.swift in Sources */,
 			);
@@ -1101,6 +1115,7 @@
 				F8198BB80C4CB84C0C12ED6A /* FloatingSearchButton.swift in Sources */,
 				470F79B703DF9EB55FECE070 /* FormModels.swift in Sources */,
 				795277BA3B90A0AB27B5C672 /* GearStore.swift in Sources */,
+				CEF64765984853FDCDFE272F /* GearTrackerRoute.swift in Sources */,
 				37F0EBD3CF55156C593EB7E5 /* GearWidgetPublisher.swift in Sources */,
 				B3836CE0F5F3C6E234501639 /* GearWidgetSnapshot.swift in Sources */,
 				AF66ADDE1D3CF5B16155A3BA /* GlobalSearchSheet.swift in Sources */,
@@ -1119,6 +1134,7 @@
 				DACC18C0E1181FD912992FEE /* LoginView.swift in Sources */,
 				0FC9DC340824D39EB558E913 /* Models.swift in Sources */,
 				045D72067A5662DABE89377E /* NativeAuthViews.swift in Sources */,
+				1E6D8D44F250F79DCDD09D1E /* NativeChrome.swift in Sources */,
 				4F0A1067946B104FF1220865 /* NetworkMonitor.swift in Sources */,
 				5C5788C2FC8CDF5CC6B03E69 /* NotificationActions.swift in Sources */,
 				5D716269ED62B3BCD83B904B /* NotificationModels.swift in Sources */,

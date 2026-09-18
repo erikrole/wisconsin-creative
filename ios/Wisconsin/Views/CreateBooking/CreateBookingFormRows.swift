@@ -51,11 +51,12 @@ extension FormPickerRow where Leading == EmptyView {
 extension ScheduleEvent {
     var shortBookingEventTitle: String {
         let code = sportCode?.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let code, !code.isEmpty, let opponent, !opponent.isEmpty {
+        let opponentPrimary = opponent?.bookingMatchupPrimary
+        if let code, !code.isEmpty, let opponentPrimary, !opponentPrimary.isEmpty {
             let prefix = isHome == false ? "at" : "vs"
-            return "\(code) \(prefix) \(opponent)"
+            return "\(code) \(prefix) \(opponentPrimary)"
         }
-        return summary
+        return summary.bookingMatchupPrimary
     }
 
     var bookingEventSubtitle: String {
@@ -125,5 +126,20 @@ extension ScheduleEvent {
 
     var bookingEventRailColor: Color {
         venueRailColor(for: self)
+    }
+}
+
+extension String {
+    /// Drops promotion extras after the matchup, e.g. "Milwaukee - Wisconsin Day" → "Milwaukee".
+    var bookingMatchupPrimary: String {
+        let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let regex = try? NSRegularExpression(pattern: #"\s*[-–—]\s+"#) else { return trimmed }
+        let range = NSRange(trimmed.startIndex..., in: trimmed)
+        guard let match = regex.firstMatch(in: trimmed, range: range),
+              let separator = Range(match.range, in: trimmed) else {
+            return trimmed
+        }
+        let primary = trimmed[..<separator.lowerBound].trimmingCharacters(in: .whitespacesAndNewlines)
+        return primary.isEmpty ? trimmed : String(primary)
     }
 }

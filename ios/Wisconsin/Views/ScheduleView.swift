@@ -54,6 +54,10 @@ final class ScheduleViewModel {
     private var loadRequests = LatestRequestGeneration()
 
     var shiftsByEventId: [String: MyShift] = [:]
+    /// Every personal assignment on an event, earliest first. `shiftsByEventId`
+    /// keeps the primary row so existing filters and swipe actions stay stable.
+    var allShiftsByEventId: [String: [MyShift]] = [:]
+    var extraShiftAreasByEventId: [String: [String]] = [:]
     var lastLoadedAt: Date?
 
     var isStale: Bool {
@@ -148,9 +152,15 @@ final class ScheduleViewModel {
             async let shiftsTask = APIClient.shared.allMyShifts()
             let (fetchedEvents, fetchedShifts) = try await (eventsTask, shiftsTask)
             guard loadRequests.owns(requestToken), !Task.isCancelled else { return }
-            events = fetchedEvents
+            events = collapsedCombinedScheduleEvents(fetchedEvents)
             myShifts = fetchedShifts
-            shiftsByEventId = Dictionary(uniqueKeysWithValues: fetchedShifts.map { ($0.event.id, $0) })
+            let grouped = orderedPersonalShiftsByEvent(fetchedShifts)
+            allShiftsByEventId = grouped
+            shiftsByEventId = grouped.compactMapValues(\.first)
+            extraShiftAreasByEventId = grouped.reduce(into: [:]) { result, pair in
+                let extras = extraPersonalAreas(from: pair.value)
+                if !extras.isEmpty { result[pair.key] = extras }
+            }
             hasLoaded = true
             lastLoadedAt = .now
             error = nil
@@ -181,6 +191,25 @@ enum HomeAwayFilter: String, CaseIterable {
     case away = "Away"
     case neutral = "Neutral"
     case nonGame = "Non-game"
+}
+
+private func orderedPersonalShiftsByEvent(_ shifts: [MyShift]) -> [String: [MyShift]] {
+    Dictionary(grouping: shifts, by: { $0.event.id }).mapValues { group in
+        group.sorted { first, second in
+            if first.startsAt != second.startsAt {
+                return first.startsAt < second.startsAt
+            }
+            return first.id < second.id
+        }
+    }
+}
+
+private func extraPersonalAreas(from ordered: [MyShift]) -> [String] {
+    guard let firstArea = ordered.first?.area else { return [] }
+    var seen: Set<String> = [firstArea]
+    return ordered.dropFirst().compactMap { shift in
+        seen.insert(shift.area).inserted ? shift.area : nil
+    }
 }
 
 private func scheduleEventMatches(_ event: ScheduleEvent, filter: HomeAwayFilter) -> Bool {
@@ -594,19 +623,14 @@ private struct PublishedCrewAvatar: View {
     let size: CGFloat
 
     var body: some View {
-        AsyncImage(url: person.avatarUrl.flatMap(URL.init(string:))) { image in
-            image.resizable().scaledToFill()
-        } placeholder: {
-            Circle()
-                .fill(Color.cardSurfaceRaised)
-                .overlay(
-                    Text(String(person.name.prefix(1)))
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                )
-        }
-        .frame(width: size, height: size)
-        .clipShape(Circle())
+        UserAvatarView(
+            name: person.name,
+            avatarUrl: person.avatarUrl,
+            size: size,
+            fallbackBackground: Color.cardSurfaceRaised,
+            fallbackForeground: .secondary,
+            showsBorder: false
+        )
     }
 }
 
@@ -902,6 +926,138 @@ private func publishedAreaOrder(_ area: String) -> Int {
     }
 }
 
+/// Isolated from `InternalScheduleView.body` so iOS 27 overflow content type-checks
+/// in a small ToolbarContent unit instead of the Schedule root's giant tree.
+private struct ScheduleRootToolbar: ToolbarContent {
+    let activeFilterCount: Int
+    let canManageAvailability: Bool
+    let openTradeCount: Int
+    let scheduleOpenWorkTip: ScheduleOpenWorkTip
+    let shiftCalendarTip: ShiftCalendarTip
+    @Binding var showFilters: Bool
+    @Binding var showTradeBoard: Bool
+    @Binding var showAvailability: Bool
+    @Binding var showCalendarSetup: Bool
+
+    var body: some ToolbarContent {
+        if #available(iOS 27.0, *) {
+            ToolbarItem(placement: .topBarTrailing) {
+                filtersButton
+            }
+            .visibilityPriority(.high)
+
+            ToolbarSpacer(.fixed, placement: .topBarTrailing)
+
+            ToolbarItem(placement: .topBarTrailing) {
+                tradeBoardButton
+            }
+            .visibilityPriority(.high)
+
+            ToolbarOverflowMenu {
+                overflowActions
+            }
+        } else {
+            ToolbarItem(placement: .topBarTrailing) {
+                filtersButton
+            }
+
+            ToolbarSpacer(.fixed, placement: .topBarTrailing)
+
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                tradeBoardButton
+                moreControl
+            }
+        }
+    }
+
+    private var filtersButton: some View {
+        Button {
+            showFilters = true
+        } label: {
+            Label(
+                "Filters",
+                systemImage: activeFilterCount > 0
+                    ? "line.3.horizontal.decrease.circle.fill"
+                    : "line.3.horizontal.decrease.circle"
+            )
+        }
+        .listControlTint(isActive: activeFilterCount > 0)
+        .accessibilityLabel(activeFilterCount > 0
+            ? "Filters, \(activeFilterCount) active"
+            : "Filters")
+    }
+
+    private var tradeBoardButton: some View {
+        Button {
+            scheduleOpenWorkTip.invalidate(reason: .actionPerformed)
+            showTradeBoard = true
+        } label: {
+            // No count badge: the iOS 26 toolbar clips item content
+            // to its glass capsule, which sliced the old overlay
+            // into an orange half-disc with the number cut off. The
+            // filled variant carries "there is open work" instead,
+            // the way Items' star does, and the exact number stays
+            // in the accessibility label and on the board itself.
+            Label(
+                "Trade Board",
+                systemImage: openTradeCount > 0
+                    ? "arrow.left.arrow.right.circle.fill"
+                    : "arrow.left.arrow.right.circle"
+            )
+            .popoverTip(scheduleOpenWorkTip, arrowEdge: .top)
+        }
+        .tint(Color.primary)
+        .accessibilityLabel(openTradeCount > 0
+            ? "Trade Board, \(openTradeCount) open"
+            : "Trade Board")
+    }
+
+    @ViewBuilder
+    private var overflowActions: some View {
+        if canManageAvailability {
+            availabilityButton
+        }
+        calendarButton
+    }
+
+    @ViewBuilder
+    private var moreControl: some View {
+        if canManageAvailability {
+            Menu {
+                availabilityButton
+                calendarButton
+            } label: {
+                Label("More", systemImage: "ellipsis")
+                    .popoverTip(shiftCalendarTip, arrowEdge: .top)
+            }
+            .tint(Color.primary)
+            .accessibilityLabel("More Schedule actions")
+        } else {
+            calendarButton
+                .popoverTip(shiftCalendarTip, arrowEdge: .top)
+                .tint(Color.primary)
+                .accessibilityLabel("Shift Calendar")
+        }
+    }
+
+    private var availabilityButton: some View {
+        Button {
+            showAvailability = true
+        } label: {
+            Label("My Availability", systemImage: "calendar.badge.clock")
+        }
+    }
+
+    private var calendarButton: some View {
+        Button {
+            shiftCalendarTip.invalidate(reason: .actionPerformed)
+            showCalendarSetup = true
+        } label: {
+            Label("Shift Calendar", systemImage: "calendar.badge.plus")
+        }
+    }
+}
+
 private struct InternalScheduleView: View {
     private let scheduleOpenWorkTip = ScheduleOpenWorkTip()
     private let shiftCalendarTip = ShiftCalendarTip()
@@ -948,41 +1104,6 @@ private struct InternalScheduleView: View {
 
     private var canManageAvailability: Bool {
         session.currentUser?.staffingType == "ST"
-    }
-
-    @ViewBuilder
-    private var scheduleMoreControl: some View {
-        if canManageAvailability {
-            Menu {
-                Button {
-                    showAvailability = true
-                } label: {
-                    Label("My Availability", systemImage: "calendar.badge.clock")
-                }
-
-                Button {
-                    shiftCalendarTip.invalidate(reason: .actionPerformed)
-                    showCalendarSetup = true
-                } label: {
-                    Label("Shift Calendar", systemImage: "calendar.badge.plus")
-                }
-            } label: {
-                Label("More", systemImage: "ellipsis")
-                    .popoverTip(shiftCalendarTip, arrowEdge: .top)
-            }
-            .tint(Color.primary)
-            .accessibilityLabel("More Schedule actions")
-        } else {
-            Button {
-                shiftCalendarTip.invalidate(reason: .actionPerformed)
-                showCalendarSetup = true
-            } label: {
-                Label("Shift Calendar", systemImage: "calendar.badge.plus")
-                    .popoverTip(shiftCalendarTip, arrowEdge: .top)
-            }
-            .tint(Color.primary)
-            .accessibilityLabel("Shift Calendar")
-        }
     }
 
     private var displayedGroups: [(date: Date, events: [ScheduleEvent])] {
@@ -1074,6 +1195,7 @@ private struct InternalScheduleView: View {
                                 homeAwayFilter: homeAwayFilter,
                                 sportFilter: sportFilter,
                                 shiftsByEventId: vm.shiftsByEventId,
+                                extraShiftAreasByEventId: vm.extraShiftAreasByEventId,
                                 showsCrewCoverage: showsCrewCoverage,
                                 onSelectEvent: { navigationPath.append(ScheduleEventRoute(id: $0.id)) },
                                 onClearFilters: clearFiltersAction
@@ -1113,57 +1235,19 @@ private struct InternalScheduleView: View {
             // titles because they lead with search.
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                // Filters is a list control, so it rides the toolbar with the
-                // same tint contract Items and Users use: secondary at rest,
-                // primary while it is changing what the list shows.
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showFilters = true
-                    } label: {
-                        Label(
-                            "Filters",
-                            systemImage: activeFilterCount > 0
-                                ? "line.3.horizontal.decrease.circle.fill"
-                                : "line.3.horizontal.decrease.circle"
-                        )
-                    }
-                    .listControlTint(isActive: activeFilterCount > 0)
-                    .accessibilityLabel(activeFilterCount > 0
-                        ? "Filters, \(activeFilterCount) active"
-                        : "Filters")
-                }
-
-                // A control and two actions are different kinds of thing, so
-                // they get different glass groups rather than one long capsule.
-                ToolbarSpacer(.fixed, placement: .topBarTrailing)
-
-                ToolbarItemGroup(placement: .topBarTrailing) {
-                    Button {
-                        scheduleOpenWorkTip.invalidate(reason: .actionPerformed)
-                        showTradeBoard = true
-                    } label: {
-                        // No count badge: the iOS 26 toolbar clips item content
-                        // to its glass capsule, which sliced the old overlay
-                        // into an orange half-disc with the number cut off. The
-                        // filled variant carries "there is open work" instead,
-                        // the way Items' star does, and the exact number stays
-                        // in the accessibility label and on the board itself.
-                        Label(
-                            "Trade Board",
-                            systemImage: appState.openTradeCount > 0
-                                ? "arrow.left.arrow.right.circle.fill"
-                                : "arrow.left.arrow.right.circle"
-                        )
-                        .popoverTip(scheduleOpenWorkTip, arrowEdge: .top)
-                    }
-                    .tint(Color.primary)
-                    .accessibilityLabel(appState.openTradeCount > 0
-                        ? "Trade Board, \(appState.openTradeCount) open"
-                        : "Trade Board")
-
-                    scheduleMoreControl
-                }
+                ScheduleRootToolbar(
+                    activeFilterCount: activeFilterCount,
+                    canManageAvailability: canManageAvailability,
+                    openTradeCount: appState.openTradeCount,
+                    scheduleOpenWorkTip: scheduleOpenWorkTip,
+                    shiftCalendarTip: shiftCalendarTip,
+                    showFilters: $showFilters,
+                    showTradeBoard: $showTradeBoard,
+                    showAvailability: $showAvailability,
+                    showCalendarSetup: $showCalendarSetup
+                )
             }
+            .nativeScrollBarMinimization()
             .task {
                 if !canSeePastEvents {
                     vm.includePast = false
@@ -1228,7 +1312,7 @@ private struct InternalScheduleView: View {
                 if let event = vm.events.first(where: { $0.id == route.id }) {
                     EventDetailView(
                         event: event,
-                        myShift: vm.shiftsByEventId[event.id]
+                        myShifts: vm.allShiftsByEventId[event.id] ?? []
                     )
                 } else {
                     ContentUnavailableView(
@@ -1376,6 +1460,7 @@ private struct InternalScheduleView: View {
                                 EventRow(
                                     event: event,
                                     myShift: vm.shiftsByEventId[event.id],
+                                    extraAreas: vm.extraShiftAreasByEventId[event.id] ?? [],
                                     contextDay: group.date,
                                     showsCrewCoverage: showsCrewCoverage
                                 )
@@ -1881,6 +1966,7 @@ struct ScheduleCalendarView: View {
     let homeAwayFilter: HomeAwayFilter
     var sportFilter: String?
     let shiftsByEventId: [String: MyShift]
+    var extraShiftAreasByEventId: [String: [String]] = [:]
     let showsCrewCoverage: Bool
     let onSelectEvent: (ScheduleEvent) -> Void
     /// Supplied by the Schedule screen, which owns the filter state the day
@@ -2102,6 +2188,7 @@ struct ScheduleCalendarView: View {
                         EventRow(
                             event: event,
                             myShift: shiftsByEventId[event.id],
+                            extraAreas: extraShiftAreasByEventId[event.id] ?? [],
                             contextDay: calendar.startOfDay(for: selectedDate),
                             showsCrewCoverage: showsCrewCoverage
                         )
@@ -2394,6 +2481,7 @@ private struct ScheduleDateHeader: View {
 struct EventRow: View {
     let event: ScheduleEvent
     let myShift: MyShift?
+    var extraAreas: [String] = []
     /// The day this row is rendered under. For a multi-day event it drives the
     /// "Day n/m" marker and the segment-aware time line.
     var contextDay: Date? = nil
@@ -2442,6 +2530,12 @@ struct EventRow: View {
                 Text(eventDisplayTitle)
                     .font(.body.weight(.semibold))
                     .fixedSize(horizontal: false, vertical: true)
+
+                if event.combinedMemberCount > 1 {
+                    Text("\(event.combinedMemberCount) events · shared crew")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
+                }
 
                 // Keep a compact metadata row when it fits. A long venue gets
                 // its own line rather than shrinking around the crew ratio.
@@ -2634,6 +2728,9 @@ struct EventRow: View {
             parts.append("Assigned")
         }
         parts.append(shift.area.shiftAreaLabel)
+        for area in extraAreas {
+            parts.append(area.shiftAreaLabel)
+        }
         parts.append(shift.gear.gearLabel)
         return parts.joined(separator: " · ")
     }
@@ -2645,8 +2742,11 @@ struct EventRow: View {
         case .past: parts.append("Ended")
         case .upcoming: break
         }
-        if myShift != nil { parts.append("My shift") }
+        if myShift != nil { parts.append(extraAreas.isEmpty ? "My shift" : "My shifts") }
         parts.append(eventDisplayTitle)
+        if event.combinedMemberCount > 1 {
+            parts.append("\(event.combinedMemberCount) events, shared crew")
+        }
         if showsCrewCoverage, let cov = event.coverage, cov.total > 0 {
             parts.append("Crew \(cov.filled) of \(cov.total)")
         }
@@ -2669,7 +2769,7 @@ struct EventRow: View {
             } else {
                 parts.append("Event \(eventTime) to \(eventEndTime)")
             }
-            parts.append(shift.area.shiftAreaLabel)
+            parts.append(([shift.area] + extraAreas).map(\.shiftAreaLabel).joined(separator: ", "))
             parts.append(shift.gear.gearLabel)
         } else {
             parts.append(eventTimeLabel)

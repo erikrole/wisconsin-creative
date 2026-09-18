@@ -1,0 +1,51 @@
+{
+  "title": "Native reservation Gear on system chrome",
+  "eyebrow": "iOS · Wisconsin Creative",
+  "lede": "Gear search, category, cart, and conflicts now use searchable, toolbar, swipe, and badge APIs instead of a handmade field, chip bar, and cart inset.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "After-only fixture evidence",
+      "note": "iPhone 16 Pro (27.0) UDID E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE, WisconsinPerformance create-booking-events, light appearance. Bottom toolbar is empty-state hidden until an item is selected. The 6:30 AM device screenshot is live inventory in dark mode, so it is not a matched before pair.",
+      "pairs": [],
+      "shots": [
+        {
+          "title": "Gear browse",
+          "tag": "After",
+          "image": "after-gear.png",
+          "cap": "System search sits in the navigation drawer. Category is a trailing toolbar menu next to Scan. LENS-032 keeps a red alert in the add slot. Addable pluses stay gray, including needed-next rows."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Search",
+      "was": "A handmade TextField in a top inset, with .toolbar(removing: .search) to suppress iOS 27’s bottom search accessory.",
+      "now": ".searchable in the navigation bar drawer, with .searchFocused so search-select-search can keep the keyboard after an add."
+    },
+    {
+      "h": "Category and cart",
+      "was": "All/Cameras/Lenses/Batteries/Other lived in the search field. Selected gear was a custom bottom bar.",
+      "now": "Category is a trailing toolbar menu beside Scan. Selected count and Review are ToolbarItem(placement: .bottomBar) and appear after the first add."
+    },
+    {
+      "h": "Rows",
+      "was": "Custom plus/Unavailable chrome, no swipe, no item peek.",
+      "now": "Swipe Add/Remove, long-press View item, and a red alert in the add slot for conflicts. The plus stays gray on every addable row."
+    }
+  ],
+  "verification": [
+    "vitest ios-create-booking-picker-parity and ios-native-control-cleanup passed (25 tests in the later rerun; 28 including identity).",
+    "Wisconsin iPhone 16 Pro (27.0) build succeeded.",
+    "WisconsinPerformance CreateBookingEventPickerScreenshotUITests/testEventPickerCaptures passed and captured Gear with Unavailable visible.",
+    "git diff --check passed on the touched composer, test, and area-doc files."
+  ],
+  "notes": [
+    "After capture: after-gear.png.",
+    "The empty cart does not mount the bottom toolbar, by design.",
+    "iOS 27 groups the filter, Scan, and minimize controls into one trailing cluster.",
+    "Authenticated physical dark-mode proof remains open.",
+    "No commit or push."
+  ]
+}

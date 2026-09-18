@@ -4,6 +4,7 @@ import SwiftUI
 
 struct AccountAvatar: View {
     @Environment(SessionStore.self) private var session
+    @Environment(\.appearsActive) private var appearsActive
     let size: CGFloat
 
     var body: some View {
@@ -15,5 +16,8 @@ struct AccountAvatar: View {
             fallbackForeground: Color.brandPrimary,
             showsBorder: false
         )
+        // Custom chrome has to dim with the system tab labels when an iPad or
+        // resized iPhone window is inactive.
+        .opacity(appearsActive ? 1 : 0.5)
     }
 }

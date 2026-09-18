@@ -15,7 +15,7 @@ describe("native schedule working-copy adoption", () => {
     expect(apiClient).toContain("func discardWorkingSchedule");
     expect(apiClient).toContain("func convertAndReplaceWorkingScheduleSlot");
     expect(apiClient).toContain("type: \"convertAndReplace\"");
-    expect(apiClient).not.toContain("func publishWorkingSchedule");
+    expect(apiClient).toContain("func publishWorkingSchedule");
     expect(apiClient).toContain("expectedVersion: Int");
   });
 
@@ -46,7 +46,8 @@ describe("native schedule working-copy adoption", () => {
     expect(eventDetail).toContain("Set Student call time");
     expect(eventDetail).toContain("scope: .allAssigned");
     expect(eventDetail).toContain("addWorkingScheduleSlot");
-    expect(eventDetail).not.toContain("publishWorkingSchedule");
+    expect(eventDetail).toContain("publishWorkingSchedule");
+    expect(eventDetail).toContain("Apply correction now");
     expect(eventDetail).toContain("Editing again restarts the 10-minute timer");
     expect(eventDetail).toContain("discardWorkingSchedule");
     expect(eventDetail).toContain("onConvertAndReplace");

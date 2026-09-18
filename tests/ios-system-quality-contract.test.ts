@@ -130,10 +130,35 @@ describe("iOS system quality contracts", () => {
       "ios/Wisconsin/Views/CreateBooking/CreateBookingEquipmentRows.swift",
     );
     const search = source("ios/Wisconsin/Views/Search/SearchResultRow.swift");
+    const schedule = source("ios/Wisconsin/Views/ScheduleView.swift");
+    const itemDetail = source("ios/Wisconsin/Views/ItemDetailView.swift");
+    const bookingDetail = source("ios/Wisconsin/Views/BookingDetailView.swift");
+    const scanHero = source("ios/Wisconsin/Views/Search/ScanResultHeroCard.swift");
+    const welcome = source(
+      "ios/Wisconsin/Views/Welcome/ProfileCompletionWelcomeComponents.swift",
+    );
+    const zoom = source("ios/Wisconsin/Core/Brand.swift");
+    const loader = source("ios/Wisconsin/Core/ThumbnailLoader.swift");
 
     expect(equipment.match(/CachedThumbnail\(url: url, size: size\)/g)).toHaveLength(2);
     expect(equipment).not.toContain("AsyncImage");
-    expect(search).toContain("CachedThumbnail(url: url, size: size)");
+    expect(search).toContain(
+      'CachedThumbnail(url: url, size: size, placeholderSystemImage: "shippingbox")',
+    );
     expect(search).not.toContain("AsyncImage");
+    expect(schedule).toContain("UserAvatarView(");
+    expect(schedule).not.toContain("AsyncImage(");
+    expect(itemDetail).toContain("CachedThumbnail(url: url, size: 124, contentMode: .fit)");
+    expect(itemDetail).not.toContain("AsyncImage(");
+    expect(bookingDetail).toContain("BookingBulkThumbnail(imageUrl: item.bulkSku.imageUrl");
+    expect(bookingDetail).not.toContain("AsyncImage(");
+    expect(scanHero).toContain("contentMode: .fit");
+    expect(scanHero).not.toContain("AsyncImage(");
+    expect(welcome).toContain("UserAvatarView(");
+    expect(welcome).not.toContain("AsyncImage(");
+    expect(loader).toContain("var contentMode: ContentMode = .fill");
+    // Full-screen pinch zoom still needs the original pixels.
+    expect(zoom).toContain("struct ZoomableImageViewer: View");
+    expect(zoom).toContain("AsyncImage(url: url)");
   });
 });

@@ -467,17 +467,9 @@ private struct ItemHeroCard: View {
     @ViewBuilder
     private var bannerImage: some View {
         if let urlString = asset.imageUrl, let url = URL(string: urlString) {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .success(let image):
-                    // Fit, not fill: catalog product shots get cropped by fill.
-                    image.resizable().scaledToFit().padding(10)
-                case .empty:
-                    ZStack { bannerPlaceholder; ProgressView() }
-                default:
-                    bannerPlaceholder
-                }
-            }
+            // Fit, not fill: catalog product shots get cropped by fill.
+            CachedThumbnail(url: url, size: 124, contentMode: .fit)
+                .padding(10)
         } else {
             bannerPlaceholder
         }

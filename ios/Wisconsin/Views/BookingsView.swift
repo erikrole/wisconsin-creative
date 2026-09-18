@@ -557,59 +557,28 @@ struct BookingsView: View {
                 // button, so the filter sits opposite the create action
                 // instead of crowding three icons against the inline title.
                 ToolbarItem(placement: .topBarLeading) {
-                    Menu {
-                        Picker("Show", selection: $vm.statusFilter) {
-                            ForEach(BookingStatusFilter.allCases) { filter in
-                                Label(filter.label, systemImage: filter.systemImage)
-                                    .tag(filter)
-                            }
-                        }
-                        .pickerStyle(.inline)
-
-                        Picker("Sort", selection: $vm.sortOption) {
-                            ForEach(BookingSortOption.allCases) { option in
-                                Text(option.label).tag(option)
-                            }
-                        }
-                        .pickerStyle(.inline)
-                    } label: {
-                        Image(systemName: isDefaultFiltering
-                            ? "line.3.horizontal.decrease.circle"
-                            : "line.3.horizontal.decrease.circle.fill")
-                    }
-                    .tint(isDefaultFiltering ? Color.primary : Color.statusText(vm.statusFilter.tone))
-                    .accessibilityLabel("Filter and sort bookings")
-                    .accessibilityValue("\(vm.statusFilter.label), sorted by \(vm.sortOption.label)")
+                    bookingsFilterMenu
                 }
-                ToolbarItemGroup(placement: .topBarTrailing) {
+                if #available(iOS 27.0, *) {
                     if !isCollaborator {
-                        Button {
-                            vm.scope = vm.mineOnly ? .all : .mine
-                        } label: {
-                            Image(systemName: vm.mineOnly ? "person.crop.circle.fill" : "person.crop.circle")
+                        ToolbarItem(placement: .topBarTrailing) {
+                            bookingsMineToggle
                         }
-                        // Blue for the active filter rather than brand red —
-                        // red is reserved for overdue, and this toggle sits
-                        // directly above rows that use it.
-                        .tint(vm.mineOnly ? Color.statusText(.blue) : Color.primary)
-                        .accessibilityLabel(vm.mineOnly ? "Showing my bookings. Show all bookings" : "Show my bookings")
-                        .accessibilityValue(vm.mineOnly ? "Mine" : "All")
+                        .visibilityPriority(.high)
                     }
                     if canCreate && !showsEmptyCreateAction {
-                        Button {
-                            newReservationTip.invalidate(reason: .actionPerformed)
-                            drafts.start()
-                        } label: {
-                            Image(systemName: "plus")
-                                .popoverTip(newReservationTip, arrowEdge: .top)
+                        ToolbarItem(placement: .topBarPinnedTrailing) {
+                            bookingsNewReservationButton
                         }
-                        // Purple: this creates a reservation, so it carries the
-                        // colour of what it produces.
-                        .tint(Color.statusText(.purple))
-                        .accessibilityLabel("New Reservation")
+                    }
+                } else {
+                    ToolbarItemGroup(placement: .topBarTrailing) {
+                        if !isCollaborator { bookingsMineToggle }
+                        if canCreate && !showsEmptyCreateAction { bookingsNewReservationButton }
                     }
                 }
             }
+            .nativeScrollBarMinimization()
             .sheet(item: $presentedAction) { action in
                 switch action {
                 case .edit(let booking):
@@ -628,19 +597,13 @@ struct BookingsView: View {
             }
             .confirmationDialog(
                 "Cancel Reservation",
-                isPresented: Binding(
-                    get: { cancelTarget != nil },
-                    set: { if !$0 { cancelTarget = nil } }
-                ),
+                item: $cancelTarget,
                 titleVisibility: .visible
-            ) {
+            ) { booking in
                 Button("Cancel Reservation", role: .destructive) {
-                    guard let booking = cancelTarget else { return }
-                    cancelTarget = nil
                     Task { await cancelReservation(booking) }
                 }
-                Button("Keep Reservation", role: .cancel) { cancelTarget = nil }
-            } message: {
+            } message: { _ in
                 Text("This removes the reservation and releases its gear.")
             }
             // See HomeView: refetch when signal returns, only for the tab the
@@ -691,6 +654,60 @@ struct BookingsView: View {
     private func hasCapability(_ capability: String) -> Bool {
         guard let user = session.currentUser else { return false }
         return user.role != "COLLABORATOR" || (user.capabilities ?? []).contains(capability)
+    }
+
+    private var bookingsFilterMenu: some View {
+        Menu {
+            Picker("Show", selection: $vm.statusFilter) {
+                ForEach(BookingStatusFilter.allCases) { filter in
+                    Label(filter.label, systemImage: filter.systemImage)
+                        .tag(filter)
+                }
+            }
+            .pickerStyle(.inline)
+
+            Picker("Sort", selection: $vm.sortOption) {
+                ForEach(BookingSortOption.allCases) { option in
+                    Text(option.label).tag(option)
+                }
+            }
+            .pickerStyle(.inline)
+        } label: {
+            Image(systemName: isDefaultFiltering
+                ? "line.3.horizontal.decrease.circle"
+                : "line.3.horizontal.decrease.circle.fill")
+        }
+        .tint(isDefaultFiltering ? Color.primary : Color.statusText(vm.statusFilter.tone))
+        .accessibilityLabel("Filter and sort bookings")
+        .accessibilityValue("\(vm.statusFilter.label), sorted by \(vm.sortOption.label)")
+    }
+
+    private var bookingsMineToggle: some View {
+        Button {
+            vm.scope = vm.mineOnly ? .all : .mine
+        } label: {
+            Image(systemName: vm.mineOnly ? "person.crop.circle.fill" : "person.crop.circle")
+        }
+        // Blue for the active filter rather than brand red —
+        // red is reserved for overdue, and this toggle sits
+        // directly above rows that use it.
+        .tint(vm.mineOnly ? Color.statusText(.blue) : Color.primary)
+        .accessibilityLabel(vm.mineOnly ? "Showing my bookings. Show all bookings" : "Show my bookings")
+        .accessibilityValue(vm.mineOnly ? "Mine" : "All")
+    }
+
+    private var bookingsNewReservationButton: some View {
+        Button {
+            newReservationTip.invalidate(reason: .actionPerformed)
+            drafts.start()
+        } label: {
+            Image(systemName: "plus")
+                .popoverTip(newReservationTip, arrowEdge: .top)
+        }
+        // Purple: this creates a reservation, so it carries the
+        // colour of what it produces.
+        .tint(Color.statusText(.purple))
+        .accessibilityLabel("New Reservation")
     }
 
     private func ownsOrManages(_ booking: Booking) -> Bool {

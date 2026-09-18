@@ -64,13 +64,17 @@ describe("iOS native control cleanup", () => {
     const sheet = source("ios/Wisconsin/Views/CreateBookingSheet.swift");
 
     expect(picker).toContain(".searchable(");
-    expect(picker).toContain("text: $vm.assetSearch");
     expect(picker).toContain("placement: .navigationBarDrawer(displayMode: .always)");
-    expect(picker).toContain('prompt: Text("Search all equipment")');
-    // Scan is an icon-only toolbar action; keep it labeled for VoiceOver.
+    expect(picker).toContain('prompt: "Search all equipment"');
+    expect(picker).not.toContain(".searchFocused($searchFocused)");
+    expect(picker).toContain("ToolbarItem(placement: .bottomBar)");
+    expect(picker).toContain(".refreshable");
+    expect(picker).not.toContain(".toolbar(removing: .search)");
+    expect(picker).not.toContain("equipmentSearchField");
+    expect(picker).not.toContain('TextField("Search all equipment"');
+    expect(sheet).toContain("Picker(selection: browseCategorySelection)");
     expect(sheet).toContain('Image(systemName: "barcode.viewfinder")');
     expect(sheet).toContain('.accessibilityLabel("Scan equipment")');
-    expect(picker).not.toContain('TextField("Search equipment');
   });
 
   it("uses native bordered booking detail actions instead of glass buttons", () => {

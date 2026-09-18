@@ -250,6 +250,7 @@ enum EventConfirmation: Identifiable {
     case unassign(ShiftAssignmentRecord)
     case delete(EventShift)
     case revertWorkingSchedule
+    case publishNow
 
     var id: String {
         switch self {
@@ -258,6 +259,7 @@ enum EventConfirmation: Identifiable {
         case .unassign(let assignment): "unassign-\(assignment.id)"
         case .delete(let shift): "delete-\(shift.id)"
         case .revertWorkingSchedule: "revert-working-schedule"
+        case .publishNow: "publish-now"
         }
     }
 
@@ -268,6 +270,7 @@ enum EventConfirmation: Identifiable {
         case .unassign: "Remove assignment?"
         case .delete: "Delete shift?"
         case .revertWorkingSchedule: "Revert pending changes?"
+        case .publishNow: "Publish schedule now?"
         }
     }
 
@@ -278,6 +281,7 @@ enum EventConfirmation: Identifiable {
         case .unassign: "Remove assignment"
         case .delete: "Delete shift"
         case .revertWorkingSchedule: "Revert"
+        case .publishNow: "Publish now"
         }
     }
 
@@ -293,8 +297,7 @@ enum EventConfirmation: Identifiable {
 
     var isDestructive: Bool {
         switch self {
-        case .claim: false
-        case .cancelTrade: false
+        case .claim, .cancelTrade, .publishNow: false
         case .unassign, .delete, .revertWorkingSchedule: true
         }
     }
@@ -304,7 +307,7 @@ enum EventConfirmation: Identifiable {
 
 struct EventDetailView: View {
     let event: ScheduleEvent
-    let myShift: MyShift?
+    let myShifts: [MyShift]
     let eventWork: DashboardEventWork?
     @Environment(SessionStore.self) private var session
     @Environment(\.undoManager) private var undoManager
@@ -319,17 +322,25 @@ struct EventDetailView: View {
     @State private var showAddShift = false
     @State private var isCreatingGroup = false
     @State private var isDiscarding = false
+    @State private var isPublishing = false
+    @State private var isClaiming = false
     @State private var actionError: String?
     @State private var actionErrorTitle = "Couldn't update event"
     @State private var undoCoordinator = ScheduleWorkingCopyUndoCoordinator()
     @State private var seededSystemUndo = false
 
     init(event: ScheduleEvent, myShift: MyShift?, eventWork: DashboardEventWork? = nil) {
-        self.event = event
-        self.myShift = myShift
-        self.eventWork = eventWork
-        _vm = State(initialValue: EventDetailViewModel(event: event, myShift: myShift))
+        self.init(event: event, myShifts: myShift.map { [$0] } ?? [], eventWork: eventWork)
     }
+
+    init(event: ScheduleEvent, myShifts: [MyShift], eventWork: DashboardEventWork? = nil) {
+        self.event = event
+        self.myShifts = myShifts
+        self.eventWork = eventWork
+        _vm = State(initialValue: EventDetailViewModel(event: event, myShift: myShifts.first))
+    }
+
+    private var myShift: MyShift? { myShifts.first }
 
     private var canManageShifts: Bool {
         let role = session.currentUser?.role ?? ""
@@ -386,9 +397,16 @@ struct EventDetailView: View {
             .navigationTitle("Event")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) { addShiftToolbarButton }
-                if hasOverflowActions {
+                if #available(iOS 27.0, *) {
+                    if canManageShifts, vm.shiftGroup != nil {
+                        ToolbarItem(placement: .topBarPinnedTrailing) { addShiftToolbarButton }
+                    }
                     ToolbarItem(placement: .topBarTrailing) { overflowMenu }
+                } else {
+                    ToolbarItem(placement: .topBarTrailing) { addShiftToolbarButton }
+                    if hasOverflowActions {
+                        ToolbarItem(placement: .topBarTrailing) { overflowMenu }
+                    }
                 }
             }
             .safeAreaInset(edge: .bottom) { primaryActionBar }
@@ -469,7 +487,7 @@ struct EventDetailView: View {
             // the same nil-out-on-dismiss dance. Failures stay in the screen
             // below without requesting another modal presentation.
             .confirmationDialog(
-                confirmation?.title ?? "",
+                confirmationDialogTitle,
                 isPresented: confirmationPresentedBinding,
                 titleVisibility: .visible,
                 presenting: confirmation
@@ -498,9 +516,20 @@ struct EventDetailView: View {
             }
     }
 
+    private var confirmationDialogTitle: String {
+        if case .publishNow = confirmation, eventHasEnded {
+            return "Apply this correction now?"
+        }
+        return confirmation?.title ?? ""
+    }
+
     @ViewBuilder
     private func confirmationActions(for pending: EventConfirmation) -> some View {
-        Button(pending.confirmTitle, role: pending.isDestructive ? .destructive : nil) {
+        let confirmTitle: String = {
+            if case .publishNow = pending, eventHasEnded { return "Apply correction now" }
+            return pending.confirmTitle
+        }()
+        Button(confirmTitle, role: pending.isDestructive ? .destructive : nil) {
             perform(pending)
         }
         Button(pending.cancelTitle, role: .cancel) { confirmation = nil }
@@ -639,6 +668,8 @@ struct EventDetailView: View {
             Task { await deleteShift(shift) }
         case .revertWorkingSchedule:
             Task { await discardWorkingSchedule() }
+        case .publishNow:
+            Task { await publishWorkingSchedule() }
         }
     }
 
@@ -661,6 +692,10 @@ struct EventDetailView: View {
                 : "This shift has someone assigned. They'll be removed too."
         case .revertWorkingSchedule:
             return "The pending crew edits for this event will be removed. Workers will keep seeing the current schedule."
+        case .publishNow:
+            return eventHasEnded
+                ? "This writes the pending correction to the published crew immediately. Nobody is notified."
+                : "Workers see the pending crew immediately. This skips the ten-minute timer and may notify affected people."
         }
     }
 
@@ -685,6 +720,9 @@ struct EventDetailView: View {
     }
 
     private func claimShift(_ shift: EventShift) async {
+        guard !isClaiming else { return }
+        isClaiming = true
+        defer { isClaiming = false }
         do {
             try await APIClient.shared.pickupOpenShift(id: shift.id)
             Haptics.success()
@@ -820,6 +858,29 @@ struct EventDetailView: View {
         }
     }
 
+    private func publishWorkingSchedule() async {
+        guard !isPublishing,
+              canManageShifts,
+              let groupId = vm.shiftGroup?.id,
+              vm.workingEditor?.hasWorkingCopy == true else { return }
+        isPublishing = true
+        defer { isPublishing = false }
+        do {
+            let editor = try await APIClient.shared.publishWorkingSchedule(
+                shiftGroupId: groupId,
+                expectedVersion: vm.workingVersion
+            )
+            Haptics.success()
+            acceptWorkingScheduleEditor(editor)
+            await vm.load(forceRefresh: true)
+        } catch {
+            presentActionError(
+                title: eventHasEnded ? "Couldn't apply correction" : "Couldn't publish schedule",
+                error: error
+            )
+        }
+    }
+
     private var callTime: Date? {
         if event.displayAllDay || myShift?.workerType == "FT" { return nil }
         return eventWork?.shift.callStartsAt ?? myShift?.callStartsAt
@@ -837,11 +898,13 @@ struct EventDetailView: View {
     /// survive past the event to keep gear links reachable; with gear gone,
     /// a finished shift has nothing left to say.
     private var showsYourEventSection: Bool {
-        (eventWork != nil || myShift != nil) && !eventHasEnded
+        (eventWork != nil || !myShifts.isEmpty) && !eventHasEnded
     }
 
+    private var claimsPaused: Bool { vm.shiftGroup?.claimsPaused == true }
+
     private var claimableStudentShifts: [EventShift] {
-        guard isStudent, myShift == nil, !eventHasEnded else { return [] }
+        guard isStudent, myShifts.isEmpty, !eventHasEnded, !claimsPaused else { return [] }
         return vm.displayedShifts.filter {
             $0.workerType == "ST"
                 && $0.isOpen
@@ -851,7 +914,7 @@ struct EventDetailView: View {
     }
 
     private var pendingStudentClaimShifts: [EventShift] {
-        guard isStudent, myShift == nil, !eventHasEnded else { return [] }
+        guard isStudent, myShifts.isEmpty, !eventHasEnded else { return [] }
         return vm.displayedShifts.filter {
             $0.workerType == "ST"
                 && $0.isOpen
@@ -861,7 +924,10 @@ struct EventDetailView: View {
     }
 
     private var showsOpenShiftSection: Bool {
-        !claimableStudentShifts.isEmpty || !pendingStudentClaimShifts.isEmpty
+        !claimableStudentShifts.isEmpty
+            || !pendingStudentClaimShifts.isEmpty
+            || (isStudent && claimsPaused && !eventHasEnded && myShifts.isEmpty
+                && vm.displayedShifts.contains { $0.workerType == "ST" && $0.isOpen })
     }
 
     /// Your own shift on this event: when to report and which area. Gear used to
@@ -873,7 +939,16 @@ struct EventDetailView: View {
             BrandSectionHeader("Your Shift", systemImage: "person.crop.circle.badge.checkmark")
 
             VStack(alignment: .leading, spacing: 12) {
-                if let callTime {
+                if eventWork == nil && myShifts.count > 1 {
+                    ForEach(myShifts) { shift in
+                        detailLine(
+                            icon: "person.fill.checkmark",
+                            title: shift.area.shiftAreaLabel,
+                            subtitle: multiAssignmentSubtitle(shift),
+                            tone: .blue
+                        )
+                    }
+                } else if let callTime {
                     TimelineView(.periodic(from: .now, by: 60)) { context in
                         detailLine(
                             icon: "clock.fill",
@@ -901,6 +976,13 @@ struct EventDetailView: View {
     private var openShiftSection: some View {
         VStack(alignment: .leading, spacing: Brand.Space.sm) {
             BrandSectionHeader("Open Shifts", systemImage: "person.badge.plus")
+            if claimsPaused && isStudent && claimableStudentShifts.isEmpty {
+                Text("Staff are updating this crew. Claims open after the changes are released.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .brandCard()
+            }
             if !claimableStudentShifts.isEmpty {
                 VStack(spacing: 0) {
                     ForEach(Array(claimableStudentShifts.enumerated()), id: \.element.id) { index, shift in
@@ -1187,6 +1269,17 @@ struct EventDetailView: View {
         return parts.joined(separator: " · ")
     }
 
+    private func multiAssignmentSubtitle(_ shift: MyShift) -> String {
+        var parts: [String] = []
+        if !event.displayAllDay, shift.workerType == "ST", let call = shift.callStartsAt {
+            parts.append("Call \(call.formatted(date: .omitted, time: .shortened))")
+        } else if shift.workerType == "FT" {
+            parts.append("Assigned")
+        }
+        parts.append("Until \(shift.endsAt.formatted(date: .omitted, time: .shortened))")
+        return parts.joined(separator: " · ")
+    }
+
     private func detailLine(icon: String, title: String, subtitle: String, tone: StatusTone, showsChevron: Bool = false) -> some View {
         HStack(spacing: 10) {
             Image(systemName: icon)
@@ -1444,6 +1537,12 @@ struct EventDetailView: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
 
+                    if event.combinedMemberCount > 1 {
+                        Label("\(event.combinedMemberCount) events · shared crew", systemImage: "rectangle.on.rectangle")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+
                     readinessLine
                 }
             }
@@ -1524,7 +1623,7 @@ struct EventDetailView: View {
                         Text(error)
                             .font(.caption)
                             .foregroundStyle(Color.statusText(.red))
-                    } else if let releaseAt = vm.workingEditor?.autoReleaseAt {
+                    } else if !eventHasEnded, let releaseAt = vm.workingEditor?.autoReleaseAt {
                         Text("Workers see this at \(releaseAt.formatted(date: .omitted, time: .shortened)). Editing again restarts the 10-minute timer.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
@@ -1544,6 +1643,17 @@ struct EventDetailView: View {
                     Button("Retry") { requestWorkingHistoryAction(action) }
                         .font(.caption.weight(.semibold))
                 }
+            }
+
+            if canManageShifts, vm.workingEditor?.hasWorkingCopy == true {
+                Button {
+                    confirmation = .publishNow
+                } label: {
+                    Text(eventHasEnded ? "Apply correction now" : "Publish now")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(isPublishing || isDiscarding)
             }
 
             HStack(spacing: 8) {
@@ -1571,7 +1681,7 @@ struct EventDetailView: View {
 
                 Button("Revert", role: .destructive) { confirmation = .revertWorkingSchedule }
                     .font(.caption.weight(.semibold))
-                    .disabled(isDiscarding)
+                    .disabled(isDiscarding || isPublishing)
             }
         }
         // The one card surface, tinted — this was hand-rolled chrome that missed
