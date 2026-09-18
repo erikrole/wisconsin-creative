@@ -100,6 +100,7 @@ describe("badge catalog rebalance", () => {
     const categoryDefinition = seed.slice(seed.indexOf('key: "category_collector"'), seed.indexOf('key: "event_hero"'));
     expect(categoryDefinition).toContain("kind: BadgeKind.COUNT");
     expect(categoryDefinition).toContain('threshold: 5');
+    expect(categoryDefinition).toContain('ruleKey: "category_collector"');
     expect(categoryDefinition).not.toContain('trigger: "manual"');
 
     const retiredKeys = [

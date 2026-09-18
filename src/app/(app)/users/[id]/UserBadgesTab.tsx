@@ -106,7 +106,15 @@ type UserBadgesResponse = {
   earnedCount: number;
   totalCount: number;
   badges: UserBadge[];
+  streaks?: BadgeStreakSummary[];
   disabled?: boolean;
+};
+
+type BadgeStreakSummary = {
+  type: string;
+  current: number;
+  longest: number;
+  lastEventAt: string | null;
 };
 
 type BadgeFilter = "all" | "earned" | "locked" | "manual" | "rare";
@@ -443,6 +451,38 @@ function closestToEarned(badges: UserBadge[]): UserBadge | null {
   }
 
   return best;
+}
+
+function onTimeStreakLabel(streak: BadgeStreakSummary) {
+  if (streak.current <= 0) return "On-time streak reset";
+  return streak.current === 1
+    ? "1 on-time return in a row"
+    : `${streak.current} on-time returns in a row`;
+}
+
+function OnTimeStreakRow({ streak }: { streak: BadgeStreakSummary }) {
+  const live = streak.current > 0;
+
+  return (
+    <div
+      className="flex min-h-11 items-center gap-3 rounded-xl bg-card px-4 py-3 shadow-[0_0_0_1px_var(--border)]"
+      aria-label={
+        live
+          ? `${onTimeStreakLabel(streak)}, best ${streak.longest}`
+          : `On-time streak reset, best ${streak.longest}`
+      }
+    >
+      <AlarmClockCheck className={cn("size-4 shrink-0", live ? "text-[var(--blue-text)]" : "text-muted-foreground")} aria-hidden="true" />
+      <p className={cn("min-w-0 flex-1 truncate text-sm font-medium", live ? "text-foreground" : "text-muted-foreground")}>
+        {onTimeStreakLabel(streak)}
+      </p>
+      {streak.longest > streak.current ? (
+        <p className="shrink-0 text-xs tabular-nums text-muted-foreground">
+          best {streak.longest}
+        </p>
+      ) : null}
+    </div>
+  );
 }
 
 function NextUpRow({
@@ -904,7 +944,9 @@ export default function UserBadgesTab({
         <AlertCircle className="size-4" />
         <AlertTitle>Badges unavailable</AlertTitle>
         <AlertDescription>
-          This badge profile could not be loaded.
+          {error === "server"
+            ? "This person's badges aren't shared with the team, or the profile could not be loaded."
+            : "This badge profile could not be loaded."}
         </AlertDescription>
       </Alert>
     );
@@ -925,6 +967,11 @@ export default function UserBadgesTab({
   const nextUp = filter === "all" ? closestToEarned(galleryBadges) : null;
   // A 0% band stacked on "Badges unavailable" is chrome measuring nothing.
   const hasCatalog = !data.disabled && data.badges.length > 0;
+  const liveStreaks = (data.streaks ?? []).filter((streak) => (
+    streak.type !== "SCAN_SUCCESS_COUNT"
+    && streak.type !== "SCAN_CLEAN"
+    && (streak.current > 0 || streak.longest > 0)
+  ));
 
   return (
     <div className="flex flex-col gap-6">
@@ -936,6 +983,10 @@ export default function UserBadgesTab({
           hidden={hiddenSurpriseCount}
         />
       ) : null}
+
+      {liveStreaks.map((streak) => (
+        <OnTimeStreakRow key={streak.type} streak={streak} />
+      ))}
 
       {nextUp ? <NextUpRow badge={nextUp} onSelect={setSelectedBadge} /> : null}
 

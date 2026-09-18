@@ -1,26 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { RefreshCw, Sparkles, Trophy } from "lucide-react";
-import MetricCard from "../reports/MetricCard";
-import {
-  ReportDataRegion,
-  ReportEmptyState,
-  ReportErrorState,
-  ReportLoadingState,
-  ReportMetricGrid,
-  ReportSectionCard,
-} from "../reports/report-ui";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { AlertCircle, ChevronDown, ChevronUp, RefreshCw, Sparkles } from "lucide-react";
+import EmptyState from "@/components/EmptyState";
+import { DebouncedSearchInput } from "@/components/DebouncedSearchInput";
 import { UserAvatar } from "@/components/UserAvatar";
 import {
   OperationalActiveFilterChips,
   OperationalToolbar,
   type OperationalActiveFilter,
 } from "@/components/OperationalToolbar";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { FadeUp } from "@/components/ui/motion";
 import {
   Select,
@@ -29,20 +25,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { BucketBar, RankMark, RecordMeter, ScoreboardDataRegion } from "@/components/scoreboard/ScoreboardVisuals";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import { useFetch } from "@/hooks/use-fetch";
 import { formatRelativeTime } from "@/lib/format";
 import { rateLabel, recordLabel } from "@/lib/scoreboard-digest";
+import {
+  EMPTY_TEAM_SCOREBOARD_FILTERS,
+  SCOREBOARD_ALL_FILTER,
+  filtersFromTeamScoreboardResponse,
+  parseTeamScoreboardFilters,
+  parseTeamScoreboardSort,
+  personScoreboardPath,
+  scoreboardPersonMatches,
+  teamScoreboardApiUrl,
+  teamScoreboardFiltersEqual,
+  writeTeamScoreboardSearchParams,
+  type TeamScoreboardFilterKey,
+  type TeamScoreboardFilterState,
+  type TeamScoreboardSortKey,
+} from "@/lib/scoreboard-explorer";
 import type {
   TeamScoreboard,
   TeamScoreboardBreakdown,
@@ -51,35 +56,37 @@ import type {
   TeamScoreboardPersonSummary,
 } from "@/lib/services/team-scoreboard";
 import { cn } from "@/lib/utils";
+import { ReportSectionCard } from "../reports/report-ui";
 
-type SortKey = "events" | "wins" | "rate";
-type FilterKey = "sportCode" | "venue" | "opponent" | "site";
-type FilterState = Record<FilterKey, string>;
+type SortKey = TeamScoreboardSortKey;
+type FilterKey = TeamScoreboardFilterKey;
+type FilterState = TeamScoreboardFilterState;
 type RankedPerson = {
   person: TeamScoreboardPerson;
   metrics: TeamScoreboardPersonSummary;
+  rank: number;
 };
 
-const ALL_FILTERS = "__all__";
-const EMPTY_FILTERS: FilterState = {
-  sportCode: ALL_FILTERS,
-  venue: ALL_FILTERS,
-  opponent: ALL_FILTERS,
-  site: ALL_FILTERS,
-};
+const ALL_FILTERS = SCOREBOARD_ALL_FILTER;
+const EMPTY_FILTERS = EMPTY_TEAM_SCOREBOARD_FILTERS;
+const BREAKDOWN_COLLAPSED_ROWS = 8;
 
 function scoreboardUrl(filters: FilterState): string {
-  const query = new URLSearchParams();
-  for (const [key, value] of Object.entries(filters)) {
-    if (value !== ALL_FILTERS) query.set(key, value);
-  }
-  const serialized = query.toString();
-  return serialized ? `/api/scoreboard?${serialized}` : "/api/scoreboard";
+  return teamScoreboardApiUrl(filters);
+}
+
+function ordinal(rank: number): string {
+  const remainder = rank % 100;
+  if (remainder >= 11 && remainder <= 13) return `${rank}th`;
+  if (rank % 10 === 1) return `${rank}st`;
+  if (rank % 10 === 2) return `${rank}nd`;
+  if (rank % 10 === 3) return `${rank}rd`;
+  return `${rank}th`;
 }
 
 function compareRankedPeople(
-  a: RankedPerson,
-  b: RankedPerson,
+  a: Pick<RankedPerson, "person" | "metrics">,
+  b: Pick<RankedPerson, "person" | "metrics">,
   sort: SortKey,
   minimumRateGames: number,
 ): number {
@@ -106,100 +113,183 @@ function compareRankedPeople(
     || a.person.userId.localeCompare(b.person.userId);
 }
 
-function rankTone(rank: number): string {
-  if (rank === 1) return "border-[var(--orange-border)] bg-[var(--orange-bg)] text-[var(--orange-text)]";
-  if (rank === 2) return "border-border bg-muted text-foreground";
-  if (rank === 3) return "border-[var(--red-border)] bg-[var(--red-bg)] text-[var(--red-text)]";
-  return "border-transparent bg-transparent text-muted-foreground";
+function useTeamScoreboardExplorerState() {
+  const searchParams = useSearchParams();
+  const searchSignature = searchParams.toString();
+  const lastObservedSearchRef = useRef(searchSignature);
+  const skipNextWriteRef = useRef(false);
+  const [filters, setFilters] = useState<FilterState>(() => parseTeamScoreboardFilters(searchParams));
+  const [sort, setSort] = useState<SortKey>(() => parseTeamScoreboardSort(searchParams));
+
+  useEffect(() => {
+    if (lastObservedSearchRef.current === searchSignature) return;
+    lastObservedSearchRef.current = searchSignature;
+    skipNextWriteRef.current = true;
+    setFilters(parseTeamScoreboardFilters(searchParams));
+    setSort(parseTeamScoreboardSort(searchParams));
+  }, [searchParams, searchSignature]);
+
+  useEffect(() => {
+    if (skipNextWriteRef.current) {
+      skipNextWriteRef.current = false;
+      return;
+    }
+    const url = new URL(window.location.href);
+    writeTeamScoreboardSearchParams(url.searchParams, filters, sort);
+    const next = url.searchParams.toString()
+      ? `${url.pathname}?${url.searchParams.toString()}`
+      : url.pathname;
+    if (next !== `${window.location.pathname}${window.location.search}`) {
+      window.history.replaceState(null, "", next);
+    }
+  }, [filters, sort]);
+
+  return { filters, setFilters, sort, setSort };
 }
 
-function RankMark({ rank }: { rank: number }) {
+function ScoreboardLoadingState() {
   return (
-    <span
-      className={cn(
-        "inline-flex size-8 items-center justify-center rounded-full border text-xs font-semibold tabular-nums",
-        rankTone(rank),
-      )}
-      aria-label={`Rank ${rank}`}
-    >
-      {rank === 1 ? <Trophy className="size-3.5" aria-hidden="true" /> : rank}
-    </span>
+    <div className="flex flex-col gap-4">
+      <div className="rounded-lg border border-border/60 bg-card/60 p-3">
+        <Skeleton className="h-10 w-full max-w-sm" />
+        <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+          {[0, 1, 2, 3].map((slot) => <Skeleton key={slot} className="h-10 w-full" />)}
+        </div>
+      </div>
+      <div className="rounded-xl border p-5 sm:p-6">
+        <Skeleton className="h-3 w-28" />
+        <Skeleton className="mt-3 h-10 w-36" />
+        <Skeleton className="mt-4 h-2.5 w-full rounded-full" />
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          {[0, 1, 2].map((slot) => <Skeleton key={slot} className="h-12 w-full" />)}
+        </div>
+      </div>
+      <div className="rounded-xl border p-4">
+        {[0, 1, 2, 3, 4, 5, 6, 7].map((row) => <Skeleton key={row} className="my-2 h-12 w-full" />)}
+      </div>
+    </div>
+  );
+}
+
+function ScoreboardErrorState({ error, onRetry }: { error: string | false; onRetry: () => void }) {
+  return (
+    <Alert variant="destructive">
+      <AlertCircle className="size-4" />
+      <AlertTitle>Scoreboard unavailable</AlertTitle>
+      <AlertDescription className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <p>
+          {error === "network"
+            ? "Couldn’t reach the server. Check the connection and try again."
+            : "The shared Scoreboard could not be loaded."}
+        </p>
+        <Button variant="outline" onClick={onRetry} className="h-10 w-fit">Retry</Button>
+      </AlertDescription>
+    </Alert>
   );
 }
 
 function LeaderboardTable({
+  currentUserId,
+  hrefForPerson,
   minimumRateGames,
   rows,
+  showRateEligibility,
 }: {
+  currentUserId: string | null;
+  hrefForPerson: (userId: string) => string;
   minimumRateGames: number;
   rows: RankedPerson[];
+  showRateEligibility: boolean;
 }) {
   return (
     <>
       <div className="hidden md:block">
-        <Table>
-          <TableCaption className="sr-only">
-            Per-person Scoreboard rankings. Open a name to view that person&apos;s shared Scoreboard.
-          </TableCaption>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-16">Rank</TableHead>
-              <TableHead>Person</TableHead>
-              <TableHead className="text-right">Events</TableHead>
-              <TableHead className="text-right">Record</TableHead>
-              <TableHead className="text-right">Win rate</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map(({ person, metrics }, index) => {
-              const rank = index + 1;
-              const rateIsRankEligible = metrics.games >= minimumRateGames;
-              return (
-                <TableRow key={person.userId}>
-                  <TableCell><RankMark rank={rank} /></TableCell>
-                  <TableCell>
-                    <Link
-                      prefetch={false}
-                      href={`/scoreboard/${person.userId}`}
-                      className="inline-flex items-center gap-2.5 rounded-sm font-medium text-foreground underline-offset-4 hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    >
-                      <UserAvatar name={person.name} avatarUrl={person.avatarUrl} size="md" />
-                      <span className="brand-identity">{person.name}</span>
-                    </Link>
-                  </TableCell>
-                  <TableCell className="text-right font-semibold tabular-nums">{metrics.eventsWorked}</TableCell>
-                  <TableCell className="text-right font-semibold tabular-nums">{recordLabel(metrics)}</TableCell>
-                  <TableCell
-                    className={cn("text-right tabular-nums", !rateIsRankEligible && "text-muted-foreground")}
-                    title={rateIsRankEligible ? undefined : `Needs ${minimumRateGames} resolved games for win-rate ranking`}
-                  >
-                    {rateLabel(metrics.winRate)}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+        <div
+          role="table"
+          aria-label="Per-person Scoreboard rankings. Open a name to view that person's shared Scoreboard."
+        >
+          <div
+            role="row"
+            className="grid grid-cols-[4rem_minmax(0,1fr)_5.5rem_6rem_7rem] border-b bg-muted/30 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+          >
+            <span role="columnheader" className="flex h-10 items-center">Rank</span>
+            <span role="columnheader" className="flex h-10 items-center">Person</span>
+            <span role="columnheader" className="flex h-10 items-center justify-end">Events</span>
+            <span role="columnheader" className="flex h-10 items-center justify-end">Record</span>
+            <span role="columnheader" className="flex h-10 items-center justify-end">Win rate</span>
+          </div>
+          {rows.map(({ person, metrics, rank }) => {
+            const rateIsRankEligible = metrics.games >= minimumRateGames;
+            const showEligibility = showRateEligibility && !rateIsRankEligible;
+            const isYou = currentUserId === person.userId;
+            return (
+              <Link
+                key={person.userId}
+                data-scoreboard-person={person.userId}
+                prefetch={false}
+                href={hrefForPerson(person.userId)}
+                role="row"
+                className={cn(
+                  "grid min-h-14 grid-cols-[4rem_minmax(0,1fr)_5.5rem_6rem_7rem] items-center border-b px-4 no-underline last:border-b-0 transition-colors duration-150 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                  isYou && "bg-muted/40",
+                )}
+              >
+                <span role="cell"><RankMark rank={rank} /></span>
+                <span role="cell" className="flex min-w-0 items-center gap-2.5">
+                  <UserAvatar name={person.name} avatarUrl={person.avatarUrl} size="md" />
+                  <span className="brand-identity truncate font-medium text-foreground">{person.name}</span>
+                  {isYou ? <Badge variant="secondary" size="sm">You</Badge> : null}
+                </span>
+                <span role="cell" className="text-right font-semibold tabular-nums">{metrics.eventsWorked}</span>
+                <span role="cell" className="text-right font-semibold tabular-nums">{recordLabel(metrics)}</span>
+                <span
+                  role="cell"
+                  className={cn("text-right tabular-nums", showEligibility && "text-muted-foreground")}
+                >
+                  <span className="block">{rateLabel(metrics.winRate)}</span>
+                  {showEligibility ? (
+                    <span className="block text-[11px] font-normal text-muted-foreground">
+                      Min. {minimumRateGames} games
+                    </span>
+                  ) : null}
+                  {showEligibility ? (
+                    <span className="sr-only">{`Needs ${minimumRateGames} resolved games for win-rate ranking`}</span>
+                  ) : null}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
       </div>
 
       <div className="divide-y md:hidden">
-        {rows.map(({ person, metrics }, index) => (
-          <Link
-            key={person.userId}
-            prefetch={false}
-            href={`/scoreboard/${person.userId}`}
-            className="flex min-h-20 items-center gap-3 px-4 py-3 no-underline transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-          >
-            <RankMark rank={index + 1} />
-            <UserAvatar name={person.name} avatarUrl={person.avatarUrl} size="md" />
-            <div className="min-w-0 flex-1">
-              <p className="brand-identity truncate text-sm font-semibold">{person.name}</p>
-              <p className="mt-0.5 text-xs tabular-nums text-muted-foreground">
-                {metrics.eventsWorked} {metrics.eventsWorked === 1 ? "event" : "events"} · {recordLabel(metrics)} record · {rateLabel(metrics.winRate)}
-              </p>
-            </div>
-          </Link>
-        ))}
+        {rows.map(({ person, metrics, rank }) => {
+          const isYou = currentUserId === person.userId;
+          return (
+            <Link
+              key={person.userId}
+              data-scoreboard-person={person.userId}
+              prefetch={false}
+              href={hrefForPerson(person.userId)}
+              className={cn(
+                "flex min-h-20 items-center gap-3 px-4 py-3 no-underline transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                isYou && "bg-muted/40",
+              )}
+            >
+              <RankMark rank={rank} />
+              <UserAvatar name={person.name} avatarUrl={person.avatarUrl} size="md" />
+              <div className="min-w-0 flex-1">
+                <p className="flex items-center gap-1.5">
+                  <span className="brand-identity truncate text-sm font-semibold">{person.name}</span>
+                  {isYou ? <Badge variant="secondary" size="sm">You</Badge> : null}
+                </p>
+                <p className="mt-0.5 text-xs tabular-nums text-muted-foreground">
+                  {metrics.eventsWorked} {metrics.eventsWorked === 1 ? "event" : "events"} · {recordLabel(metrics)} record · {rateLabel(metrics.winRate)}
+                </p>
+              </div>
+            </Link>
+          );
+        })}
       </div>
     </>
   );
@@ -249,9 +339,13 @@ function BreakdownRows({
   emptyTitle: string;
   emptyDescription: string;
 }) {
+  const [expanded, setExpanded] = useState(false);
+  const visible = expanded ? rows : rows.slice(0, BREAKDOWN_COLLAPSED_ROWS);
+  const maxGames = rows.reduce((max, row) => Math.max(max, row.games), 0);
+
   if (rows.length === 0) {
     return (
-      <ReportEmptyState
+      <EmptyState
         compact
         icon="calendar"
         title={emptyTitle}
@@ -261,44 +355,60 @@ function BreakdownRows({
   }
 
   return (
-    <div className="divide-y">
-      {rows.map((row) => {
-        const value = row.key;
-        const selected = value !== null && selectedValue === value;
-        const interactive = value !== null;
-        return (
-          <button
-            key={`${value ?? "__unknown__"}-${row.label}`}
-            type="button"
-            onClick={() => value && onSelect(selected ? ALL_FILTERS : value)}
-            aria-pressed={selected}
-            disabled={!interactive}
-            className={cn(
-              "relative flex min-h-14 w-full items-center justify-between gap-4 px-4 py-3 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-              selected && "bg-muted/45 before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:bg-[var(--wi-red)]",
-              !interactive && "cursor-default hover:bg-transparent",
-            )}
-          >
-            <span className="min-w-0">
-              <span className="brand-identity block truncate text-sm font-semibold">{row.label}</span>
-              <span className="mt-0.5 block text-xs tabular-nums text-muted-foreground">
-                {row.eventsCovered} {row.eventsCovered === 1 ? "event" : "events"} · {row.contributors} {row.contributors === 1 ? "person" : "people"}
+    <>
+      <div className="divide-y">
+        {visible.map((row) => {
+          const value = row.key;
+          const selected = value !== null && selectedValue === value;
+          const interactive = value !== null;
+          return (
+            <button
+              key={`${value ?? "__unknown__"}-${row.label}`}
+              type="button"
+              onClick={() => value && onSelect(selected ? ALL_FILTERS : value)}
+              aria-pressed={selected}
+              disabled={!interactive}
+              className={cn(
+                "relative flex min-h-14 w-full items-center justify-between gap-4 px-4 py-3 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                selected && "bg-muted/45 before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:bg-[var(--wi-red)]",
+                !interactive && "cursor-default hover:bg-transparent",
+              )}
+            >
+              <span className="min-w-0 flex-1">
+                <span className="brand-identity block truncate text-sm font-semibold">{row.label}</span>
+                <span className="mt-0.5 block text-xs tabular-nums text-muted-foreground">
+                  {row.eventsCovered} {row.eventsCovered === 1 ? "event" : "events"} · {row.contributors} {row.contributors === 1 ? "person" : "people"}
+                </span>
+                <BucketBar row={row} maxGames={maxGames} />
               </span>
-            </span>
-            <span className="shrink-0 text-right">
-              <span className="block text-sm font-semibold tabular-nums">{recordLabel(row)}</span>
-              <span className="block text-xs tabular-nums text-muted-foreground">{rateLabel(row.winRate)}</span>
-            </span>
-          </button>
-        );
-      })}
-    </div>
+              <span className="shrink-0 text-right">
+                <span className="block text-sm font-semibold tabular-nums">{recordLabel(row)}</span>
+                <span className="block text-xs tabular-nums text-muted-foreground">{rateLabel(row.winRate)}</span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      {rows.length > BREAKDOWN_COLLAPSED_ROWS ? (
+        <div className="border-t border-border/40">
+          <Button
+            variant="ghost"
+            className="h-10 w-full rounded-none text-xs"
+            onClick={() => setExpanded((current) => !current)}
+          >
+            {expanded ? "Show fewer" : `Show all ${rows.length}`}
+            {expanded ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
+          </Button>
+        </div>
+      ) : null}
+    </>
   );
 }
 
-export default function TeamScoreboardClient() {
-  const [filters, setFilters] = useState<FilterState>({ ...EMPTY_FILTERS });
-  const [sort, setSort] = useState<SortKey>("events");
+function TeamScoreboardExplorer() {
+  const { data: currentUser } = useCurrentUser();
+  const { filters, setFilters, sort, setSort } = useTeamScoreboardExplorerState();
+  const [query, setQuery] = useState("");
   const [clock, setClock] = useState(() => new Date());
   const apiUrl = useMemo(() => scoreboardUrl(filters), [filters]);
   const { data, loading, refreshing, error, lastRefreshed, reload } = useFetch<TeamScoreboard>({
@@ -315,32 +425,36 @@ export default function TeamScoreboardClient() {
 
   useEffect(() => {
     if (!error || !data) return;
-    const lastLoadedFilters: FilterState = {
-      sportCode: data.filters?.sportCode ?? ALL_FILTERS,
-      venue: data.filters?.venue ?? ALL_FILTERS,
-      opponent: data.filters?.opponent ?? ALL_FILTERS,
-      site: data.filters?.site ?? ALL_FILTERS,
-    };
-    if (scoreboardUrl(lastLoadedFilters) !== apiUrl) setFilters(lastLoadedFilters);
-  }, [apiUrl, data, error]);
+    const lastLoadedFilters = filtersFromTeamScoreboardResponse(data.filters);
+    if (!teamScoreboardFiltersEqual(lastLoadedFilters, filters)) setFilters(lastLoadedFilters);
+  }, [data, error, filters, setFilters]);
 
   const rankedPeople = useMemo(() => {
     if (!data) return [];
     return data.leaderboard
-      .map((person): RankedPerson => ({ person, metrics: person.summary }))
-      .sort((a, b) => compareRankedPeople(a, b, sort, data.methodology.minimumGamesForWinRate));
+      .map((person) => ({ person, metrics: person.summary }))
+      .sort((a, b) => compareRankedPeople(a, b, sort, data.methodology.minimumGamesForWinRate))
+      .map((row, index): RankedPerson => ({ ...row, rank: index + 1 }));
   }, [data, sort]);
+  const visiblePeople = useMemo(
+    () => rankedPeople.filter((row) => scoreboardPersonMatches(row.person.name, query)),
+    [query, rankedPeople],
+  );
   const eventLeader = useMemo(() => {
     if (!data) return null;
     return data.leaderboard
-      .map((person): RankedPerson => ({ person, metrics: person.summary }))
+      .map((person) => ({ person, metrics: person.summary }))
       .sort((a, b) => compareRankedPeople(a, b, "events", data.methodology.minimumGamesForWinRate))[0] ?? null;
   }, [data]);
+  const currentUserId = currentUser?.id ?? null;
+  const yourStanding = currentUserId
+    ? rankedPeople.find((row) => row.person.userId === currentUserId) ?? null
+    : null;
 
-  if (loading && !data) return <ReportLoadingState metricCount={4} rows={8} />;
+  if (loading && !data) return <ScoreboardLoadingState />;
 
   if (error && !data) {
-    return <ReportErrorState error={error} onRetry={reload} title="Scoreboard unavailable" />;
+    return <ScoreboardErrorState error={error} onRetry={reload} />;
   }
 
   if (!data) return null;
@@ -376,44 +490,67 @@ export default function TeamScoreboardClient() {
     }];
   });
   const activeFilterCount = activeFilters.length;
-  const scopeLabel = activeFilterCount > 0
-    ? activeFilters.map((filter) => filter.label.replace(/^[^:]+:\s*/, "")).join(" · ")
-    : "All events";
-  const selectedTotals = data.summary;
-  const optionLabel = (key: FilterKey) => {
-    const value = filters[key];
+  const loadedFilters = filtersFromTeamScoreboardResponse(data.filters);
+  const loadedOptionLabel = (key: FilterKey) => {
+    const value = loadedFilters[key];
     return value === ALL_FILTERS
       ? null
       : filterDefinitions.find((definition) => definition.key === key)
           ?.options.find((option) => option.key === value)?.label ?? value;
   };
+  const scopeLabel = [
+    loadedOptionLabel("sportCode"),
+    loadedOptionLabel("venue"),
+    loadedOptionLabel("opponent"),
+    loadedOptionLabel("site"),
+  ].filter((part): part is string => Boolean(part)).join(" · ") || "All events";
+  const selectedTotals = data.summary;
   const snapshotParts = [
-    optionLabel("sportCode"),
-    optionLabel("venue") ? `At ${optionLabel("venue")}` : null,
-    optionLabel("opponent") ? `Against ${optionLabel("opponent")}` : null,
-    optionLabel("site") ? `${optionLabel("site")} events` : null,
+    loadedOptionLabel("sportCode"),
+    loadedOptionLabel("venue") ? `At ${loadedOptionLabel("venue")}` : null,
+    loadedOptionLabel("opponent") ? `Against ${loadedOptionLabel("opponent")}` : null,
+    loadedOptionLabel("site") ? `${loadedOptionLabel("site")} events` : null,
   ].filter((part): part is string => Boolean(part));
   const snapshotTitle = snapshotParts.length > 0
     ? snapshotParts.join(" · ")
     : "All events, one shared Scoreboard";
+  const hasSearch = query.trim().length > 0;
+  const revealYou = () => {
+    if (!currentUserId) return;
+    setQuery("");
+    window.requestAnimationFrame(() => {
+      const targets = document.querySelectorAll<HTMLElement>(`[data-scoreboard-person="${currentUserId}"]`);
+      const visible = [...targets].find((node) => node.getClientRects().length > 0) ?? targets[0];
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      visible?.scrollIntoView({ block: "center", behavior: reduceMotion ? "auto" : "smooth" });
+    });
+  };
 
   return (
     <FadeUp>
       <div className="flex flex-col gap-4">
-        <OperationalToolbar className="border border-border/60 bg-card/60 p-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="brand-identity text-sm font-semibold">Explore the Scoreboard</p>
-                {activeFilterCount > 0 && <Badge variant="secondary">{activeFilterCount} active</Badge>}
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Sport, venue, opponent, and site combine to filter every total and ranking below.
-              </p>
-            </div>
-
-            <div className="flex shrink-0 items-center justify-between gap-2 sm:justify-end">
-              <Badge variant="secondary">Current season</Badge>
+        <OperationalToolbar>
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <DebouncedSearchInput
+              value={query}
+              onValueChange={setQuery}
+              placeholder="Find a person"
+              aria-label="Find a person on the Scoreboard"
+              containerClassName="w-full max-w-sm"
+            />
+            <div className="flex shrink-0 items-center justify-between gap-2 lg:justify-end">
+              <Badge variant="secondary">{data.scope.label}</Badge>
+              {yourStanding ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-10"
+                  onClick={revealYou}
+                  aria-label={`Jump to your Scoreboard standing, ${ordinal(yourStanding.rank)}`}
+                >
+                  You’re {ordinal(yourStanding.rank)}
+                </Button>
+              ) : null}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -446,20 +583,10 @@ export default function TeamScoreboardClient() {
             ))}
           </div>
 
-          <div className="flex flex-col gap-2 border-t border-border/50 pt-2 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-muted-foreground">Rank by</span>
-              <ToggleGroup
-                type="single"
-                value={sort}
-                onValueChange={(value) => value && setSort(value as SortKey)}
-                aria-label="Rank leaderboard"
-              >
-                <ToggleGroupItem value="events" className="h-10 text-xs">Events</ToggleGroupItem>
-                <ToggleGroupItem value="wins" className="h-10 text-xs">Wins</ToggleGroupItem>
-                <ToggleGroupItem value="rate" className="h-10 text-xs">Win rate</ToggleGroupItem>
-              </ToggleGroup>
-            </div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-muted-foreground">
+              Sport, venue, opponent, and site combine to filter every total and ranking below.
+            </p>
             {activeFilterCount > 0 && (
               <Button
                 variant="ghost"
@@ -475,87 +602,137 @@ export default function TeamScoreboardClient() {
           <OperationalActiveFilterChips filters={activeFilters} />
         </OperationalToolbar>
 
-        <ReportDataRegion refreshing={refreshing}>
-          <ReportMetricGrid>
-            <MetricCard
-              value={selectedTotals.eventsCovered}
-              label="Events covered"
-              helper="Unique completed events"
-              tooltip={data.methodology.eventsCovered}
-            />
-            <MetricCard
-              value={recordLabel(selectedTotals)}
-              label="Team record"
-              helper={`${selectedTotals.games} unique resolved ${selectedTotals.games === 1 ? "game" : "games"} · ${rateLabel(selectedTotals.winRate)}`}
-              tooltip={data.methodology.record}
-            />
-            <MetricCard
-              value={selectedTotals.eventCredits}
-              label="Work credits"
-              helper={`${selectedTotals.gameCredits} person-game record credits`}
-              tooltip={`${data.methodology.eventCredits} ${data.methodology.gameCredits}`}
-            />
-            <MetricCard
-              value={selectedTotals.contributors}
-              label="Contributors"
-              helper={scopeLabel}
-              tooltip="Active, visible people with at least one event or record credit in this scope."
-            />
-          </ReportMetricGrid>
-
-          <Card className="mt-4 border-[var(--orange-border)] bg-[var(--orange-bg)] p-4 shadow-xs">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex min-w-0 items-start gap-3">
-                <span className="mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-background/75 text-[var(--orange-text)]">
-                  <Sparkles className="size-4" aria-hidden="true" />
-                </span>
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--orange-text)]">Snapshot</p>
-                  <p className="brand-identity mt-0.5 text-base font-semibold text-balance">{snapshotTitle}</p>
-                  <p className="mt-1 text-sm tabular-nums text-muted-foreground">
-                    {selectedTotals.eventsCovered} {selectedTotals.eventsCovered === 1 ? "event" : "events"} · {recordLabel(selectedTotals)} record · {selectedTotals.contributors} {selectedTotals.contributors === 1 ? "contributor" : "contributors"}
+        <ScoreboardDataRegion refreshing={refreshing}>
+          <Card className="p-5 shadow-xs sm:p-6">
+            <div className="flex flex-col gap-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                    Team record
                   </p>
+                  <div className="mt-1.5 flex items-baseline gap-3">
+                    <p className="text-4xl font-bold tracking-tight tabular-nums">{recordLabel(selectedTotals)}</p>
+                    <span className="text-sm text-muted-foreground">{scopeLabel}</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-xl font-semibold tabular-nums">{rateLabel(selectedTotals.winRate)}</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Win rate</p>
                 </div>
               </div>
 
-              {eventLeader && (
-                <Link
-                  prefetch={false}
-                  href={`/scoreboard/${eventLeader.person.userId}`}
-                  className="flex min-w-56 items-center gap-2.5 rounded-lg border border-[var(--orange-border)] bg-background/70 px-3 py-2.5 no-underline transition-colors hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <UserAvatar name={eventLeader.person.name} avatarUrl={eventLeader.person.avatarUrl} size="md" />
-                  <span className="min-w-0">
-                    <span className="block text-xs text-muted-foreground">Most events</span>
-                    <span className="brand-identity block truncate text-sm font-semibold">{eventLeader.person.name}</span>
+              <RecordMeter wins={selectedTotals.wins} losses={selectedTotals.losses} ties={selectedTotals.ties} />
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Events covered</p>
+                  <p className="mt-1 text-lg font-semibold tabular-nums">{selectedTotals.eventsCovered}</p>
+                  <p className="text-xs text-muted-foreground">Unique completed events</p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Work credits</p>
+                  <p className="mt-1 text-lg font-semibold tabular-nums">{selectedTotals.eventCredits}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {selectedTotals.gameCredits} person-game record credits
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Contributors</p>
+                  <p className="mt-1 text-lg font-semibold tabular-nums">{selectedTotals.contributors}</p>
+                  <p className="text-xs text-muted-foreground">People with work in this view</p>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3 border-t border-border/50 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex min-w-0 items-start gap-3">
+                  <span className="mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                    <Sparkles className="size-4" aria-hidden="true" />
                   </span>
-                  <span className="ml-auto shrink-0 text-sm font-semibold tabular-nums">
-                    {eventLeader.metrics.eventsWorked}
-                  </span>
-                </Link>
-              )}
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Snapshot</p>
+                    <p className="brand-identity mt-0.5 text-base font-semibold text-balance">{snapshotTitle}</p>
+                    <p className="mt-1 text-sm tabular-nums text-muted-foreground">
+                      {selectedTotals.eventsCovered} {selectedTotals.eventsCovered === 1 ? "event" : "events"} · {recordLabel(selectedTotals)} record · {selectedTotals.contributors} {selectedTotals.contributors === 1 ? "contributor" : "contributors"}
+                    </p>
+                  </div>
+                </div>
+
+                {eventLeader && (
+                  <Link
+                    prefetch={false}
+                    href={personScoreboardPath(eventLeader.person.userId, filters, sort)}
+                    className="flex min-w-56 items-center gap-2.5 rounded-lg border bg-background px-3 py-2.5 no-underline transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <UserAvatar name={eventLeader.person.name} avatarUrl={eventLeader.person.avatarUrl} size="md" />
+                    <span className="min-w-0">
+                      <span className="block text-xs text-muted-foreground">Most events</span>
+                      <span className="brand-identity block truncate text-sm font-semibold">{eventLeader.person.name}</span>
+                    </span>
+                    <span className="ml-auto shrink-0 text-sm font-semibold tabular-nums">
+                      {eventLeader.metrics.eventsWorked}
+                    </span>
+                  </Link>
+                )}
+              </div>
             </div>
           </Card>
 
           <ReportSectionCard
             title="Leaderboard"
             description={sort === "rate"
-              ? `Win-rate ranking requires at least ${data.methodology.minimumGamesForWinRate} resolved games.`
-              : `${rankedPeople.length} ${rankedPeople.length === 1 ? "person" : "people"} · ${scopeLabel}`}
+              ? `${hasSearch
+                ? `${visiblePeople.length} ${visiblePeople.length === 1 ? "match" : "matches"}`
+                : `${rankedPeople.length} ${rankedPeople.length === 1 ? "person" : "people"}`} · win-rate ranking needs ${data.methodology.minimumGamesForWinRate} resolved games`
+              : `${hasSearch
+                ? `${visiblePeople.length} ${visiblePeople.length === 1 ? "match" : "matches"}`
+                : `${rankedPeople.length} ${rankedPeople.length === 1 ? "person" : "people"}`} · ${scopeLabel}`}
             contentClassName="p-0"
           >
-            {rankedPeople.length > 0 ? (
-              <LeaderboardTable
-                rows={rankedPeople}
-                minimumRateGames={data.methodology.minimumGamesForWinRate}
-              />
-            ) : (
-              <ReportEmptyState
+            <div className="flex flex-col gap-2 border-b border-border/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-muted-foreground">Rank by</span>
+                <ToggleGroup
+                  type="single"
+                  value={sort}
+                  onValueChange={(value) => value && setSort(value as SortKey)}
+                  aria-label="Rank leaderboard"
+                >
+                  <ToggleGroupItem value="events" className="h-10 text-xs">Events</ToggleGroupItem>
+                  <ToggleGroupItem value="wins" className="h-10 text-xs">Wins</ToggleGroupItem>
+                  <ToggleGroupItem value="rate" className="h-10 text-xs">Win rate</ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+              {hasSearch ? (
+                <p className="text-xs tabular-nums text-muted-foreground">
+                  {visiblePeople.length} of {rankedPeople.length}
+                </p>
+              ) : null}
+            </div>
+            {rankedPeople.length === 0 ? (
+              <EmptyState
                 icon="users"
                 title={activeFilterCount > 0 ? "No matching Scoreboard results" : "No Scoreboard credits yet"}
                 description={activeFilterCount > 0
                   ? "Remove one filter or clear the stack to broaden the results."
                   : "People appear here after they work an eligible Schedule event."}
+                actionLabel={activeFilterCount > 0 ? "Clear filters" : undefined}
+                onAction={activeFilterCount > 0 ? () => setFilters({ ...EMPTY_FILTERS }) : undefined}
+              />
+            ) : visiblePeople.length === 0 ? (
+              <EmptyState
+                icon="search"
+                title="No matching people"
+                description="The current leaderboard has no name that matches this search."
+                actionLabel="Clear search"
+                onAction={() => setQuery("")}
+              />
+            ) : (
+              <LeaderboardTable
+                rows={visiblePeople}
+                hrefForPerson={(userId) => personScoreboardPath(userId, filters, sort)}
+                minimumRateGames={data.methodology.minimumGamesForWinRate}
+                currentUserId={currentUserId}
+                showRateEligibility={sort === "rate"}
               />
             )}
           </ReportSectionCard>
@@ -618,11 +795,32 @@ export default function TeamScoreboardClient() {
             </ReportSectionCard>
           </div>
 
-          <p className="mt-4 max-w-4xl text-xs leading-relaxed text-muted-foreground">
-            {data.methodology.eventsCovered} {data.methodology.eventCredits} {data.methodology.record} {data.methodology.gameCredits}
-          </p>
-        </ReportDataRegion>
+          <Collapsible className="mt-4">
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" className="h-10 px-0 text-xs text-muted-foreground">
+                How these numbers count
+                <ChevronDown className="size-3.5" />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <ul className="mt-1 max-w-4xl list-disc space-y-1 pl-5 text-xs leading-relaxed text-muted-foreground">
+                <li>{data.methodology.eventsCovered}</li>
+                <li>{data.methodology.eventCredits}</li>
+                <li>{data.methodology.record}</li>
+                <li>{data.methodology.gameCredits}</li>
+              </ul>
+            </CollapsibleContent>
+          </Collapsible>
+        </ScoreboardDataRegion>
       </div>
     </FadeUp>
+  );
+}
+
+export default function TeamScoreboardClient() {
+  return (
+    <Suspense fallback={<ScoreboardLoadingState />}>
+      <TeamScoreboardExplorer />
+    </Suspense>
   );
 }

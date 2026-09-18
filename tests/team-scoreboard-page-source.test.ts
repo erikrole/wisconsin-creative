@@ -15,16 +15,19 @@ describe("team Scoreboard page source contract", () => {
     expect(page).not.toContain("2026-27 stats");
     expect(client).toContain("function scoreboardUrl");
     expect(client).toContain("url: apiUrl");
-    expect(client).toContain("ReportLoadingState");
-    expect(client).toContain("ReportErrorState");
+    expect(client).toContain("ScoreboardLoadingState");
+    expect(client).toContain("ScoreboardErrorState");
+    expect(client).toContain("The shared Scoreboard could not be loaded.");
+    expect(client).not.toContain("Unable to load this report");
     expect(client).toContain("No Scoreboard credits yet");
     expect(client).toContain("No matching Scoreboard results");
+    expect(client).toContain("No matching people");
     expect(client).toContain("Events covered");
     expect(client).toContain("Work credits");
     expect(client).toContain("Team record");
     expect(client).toContain("Contributors");
-    expect(client).toContain('type SortKey = "events" | "wins" | "rate"');
-    expect(client).toContain('type FilterKey = "sportCode" | "venue" | "opponent" | "site"');
+    expect(client).toContain("Find a person on the Scoreboard");
+    expect(client).toContain("writeTeamScoreboardSearchParams");
     expect(client).toContain("OperationalActiveFilterChips");
     expect(client).toContain("Sport, venue, opponent, and site combine");
     expect(client).toContain("Snapshot");
@@ -40,12 +43,17 @@ describe("team Scoreboard page source contract", () => {
     expect(client).toContain('allLabel: "All sites"');
     expect(client).toContain('aria-label="Rank leaderboard"');
     expect(client).toContain('className="h-10');
+    expect(client).toContain("How these numbers count");
+    expect(client).not.toContain("bg-[var(--orange-bg)]");
+    expect(client).not.toContain("bg-[var(--red-bg)]");
+    expect(client).not.toContain("text-[var(--red-text)]");
   });
 
   it("links leaderboard identity only to the dedicated shared Scoreboard detail", () => {
     const client = source("src/app/(app)/scoreboard/TeamScoreboardClient.tsx");
 
-    expect(client).toContain('href={`/scoreboard/${person.userId}`}');
+    expect(client).toContain("personScoreboardPath(userId, filters, sort)");
+    expect(client).toContain("href={hrefForPerson(person.userId)}");
     expect(client).not.toContain('href={`/users/${person.userId}');
     expect(client).not.toContain("email");
     expect(client).not.toContain("primaryArea");
@@ -63,7 +71,10 @@ describe("team Scoreboard page source contract", () => {
     expect(detail).toContain("hiddenFromRoster: true");
     expect(detail).not.toContain("email: true");
     expect(detail).toContain("linkEvents={false}");
+    expect(detail).toContain("teamScoreboardPath");
+    expect(detail).toContain("DetailPageHeader");
     expect(tab).toContain("linkEvents?: boolean");
     expect(tab).toContain("returnTo?: string");
+    expect(tab).toContain("writePersonScoreboardSearchParams");
   });
 });

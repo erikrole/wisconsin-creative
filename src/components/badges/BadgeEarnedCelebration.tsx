@@ -43,10 +43,12 @@ export function BadgeEarnedCelebration({
   reward,
   remaining,
   onDismiss,
+  onViewShelf,
 }: {
   reward: EarnedBadgeReward;
   remaining: number;
   onDismiss: () => void;
+  onViewShelf?: () => void;
 }) {
   const Icon = badgeIcon(reward.icon);
 
@@ -56,10 +58,14 @@ export function BadgeEarnedCelebration({
         <DialogTitle className="sr-only">Badge earned: {reward.name}</DialogTitle>
         <DialogDescription className="sr-only">{reward.description}</DialogDescription>
 
-        <DialogBody className={cn(
-          "relative isolate flex flex-col items-center overflow-hidden bg-gradient-to-b px-7 pb-7 pt-12 text-center",
-          rarityStage[reward.rarity],
-        )}>
+        <DialogBody
+          className={cn(
+            "relative isolate flex flex-col items-center overflow-hidden bg-gradient-to-b px-7 pb-7 pt-12 text-center",
+            rarityStage[reward.rarity],
+          )}
+          role="status"
+          aria-live="polite"
+        >
           <div className="pointer-events-none absolute inset-0 opacity-70" aria-hidden="true">
             <Sparkles className="absolute left-[14%] top-[18%] size-5 animate-pulse text-current motion-reduce:animate-none" />
             <Sparkles className="absolute right-[12%] top-[30%] size-4 animate-pulse text-current [animation-delay:450ms] motion-reduce:animate-none" />
@@ -89,9 +95,30 @@ export function BadgeEarnedCelebration({
         </DialogBody>
 
         <DialogFooter className="border-t border-border/50 bg-background px-6 py-5 sm:justify-center">
-          <Button className="w-full sm:w-auto sm:min-w-40" onClick={onDismiss}>
-            {remaining > 0 ? `Next badge (${remaining})` : "Nice"}
-          </Button>
+          {remaining > 0 ? (
+            <Button className="w-full sm:w-auto sm:min-w-40" onClick={onDismiss}>
+              Next badge ({remaining})
+            </Button>
+          ) : onViewShelf ? (
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+              <Button variant="outline" className="w-full sm:min-w-32" onClick={onDismiss}>
+                Nice
+              </Button>
+              <Button
+                className="w-full sm:min-w-40"
+                onClick={() => {
+                  onViewShelf();
+                  onDismiss();
+                }}
+              >
+                See on shelf
+              </Button>
+            </div>
+          ) : (
+            <Button className="w-full sm:w-auto sm:min-w-40" onClick={onDismiss}>
+              Nice
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

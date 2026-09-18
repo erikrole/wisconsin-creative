@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { AlertCircle, CalendarDays, ChevronDown, ChevronUp, Flag, Home, Route, Trophy } from "lucide-react";
 import { useFetch } from "@/hooks/use-fetch";
 import {
@@ -23,7 +24,21 @@ import {
   scoreboardHighlights,
   totalsSentence,
 } from "@/lib/scoreboard-digest";
+import {
+  EMPTY_PERSON_SCOREBOARD_FILTERS,
+  parsePersonScoreboardFilters,
+  personScoreboardHasFilters,
+  writePersonScoreboardSearchParams,
+  type PersonScoreboardFilterState,
+  type PersonScoreboardResultFilter,
+  type PersonScoreboardSiteFilter,
+} from "@/lib/scoreboard-explorer";
 import { AREA_LABELS } from "@/types/areas";
+import {
+  OperationalActiveFilterChips,
+  OperationalToolbar,
+  type OperationalActiveFilter,
+} from "@/components/OperationalToolbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,10 +46,11 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { BucketBar, RecordMeter, ScoreboardDataRegion } from "@/components/scoreboard/ScoreboardVisuals";
 import type { ScoreboardBucket, ScoreboardEvent, UserScoreboard } from "@/lib/services/scoreboard";
 
-type ResultFilter = "all" | "WIN" | "LOSS" | "TIE";
-type SiteFilter = "all" | "HOME" | "AWAY" | "NEUTRAL";
+type ResultFilter = PersonScoreboardResultFilter;
+type SiteFilter = PersonScoreboardSiteFilter;
 type SportOption = { key: string; label: string };
 type ExtraEvents = { requestUrl: string; events: ScoreboardEvent[]; nextCursor: string | null | undefined };
 
@@ -61,11 +77,6 @@ const DIMENSIONS: Array<{ value: Dimension; label: string }> = [
   { value: "site", label: "Site" },
   { value: "venue", label: "Venue" },
 ];
-
-/** Wins/losses/ties use the chart palette's available/problem/neutral roles. */
-const WIN_FILL = "var(--chart-2)";
-const LOSS_FILL = "var(--chart-5)";
-const TIE_FILL = "var(--chart-4)";
 
 function dimensionRows(scoreboard: UserScoreboard, dimension: Dimension): ScoreboardBucket[] {
   if (dimension === "sport") return scoreboard.bySport;
@@ -133,47 +144,6 @@ function resultSpokenLabel(result: ScoreboardEvent["result"]): string {
   if (result === "LOSS") return "Loss";
   if (result === null) return "Worked event";
   return "Tie";
-}
-
-/**
- * The record as a proportion. The W-L-T bar mirrors the record label so the tie
- * segment stays in the same place as the tie count.
- */
-function RecordMeter({ wins, losses, ties }: { wins: number; losses: number; ties: number }) {
-  const games = wins + losses + ties;
-
-  return (
-    <div>
-      <div className="flex h-2.5 gap-[3px] overflow-hidden" aria-hidden="true">
-        {games === 0 ? (
-          <div className="h-full w-full rounded-full bg-muted" />
-        ) : (
-          <>
-            {wins > 0 ? <div className="h-full min-w-0 flex-1 rounded-full" style={{ flexGrow: wins, background: WIN_FILL }} /> : null}
-            {losses > 0 ? <div className="h-full min-w-0 flex-1 rounded-full" style={{ flexGrow: losses, background: LOSS_FILL }} /> : null}
-            {ties > 0 ? <div className="h-full min-w-0 flex-1 rounded-full" style={{ flexGrow: ties, background: TIE_FILL }} /> : null}
-          </>
-        )}
-      </div>
-      <div className="mt-2 grid grid-cols-3 gap-2 text-xs text-muted-foreground">
-        <span className="inline-flex items-center gap-1.5 tabular-nums">
-          <span className="size-[7px] rounded-full" style={{ background: WIN_FILL }} aria-hidden="true" />
-          {wins} {wins === 1 ? "win" : "wins"}
-        </span>
-        <span className="inline-flex items-center gap-1.5 tabular-nums">
-          <span className="size-[7px] rounded-full" style={{ background: LOSS_FILL }} aria-hidden="true" />
-          {losses} {losses === 1 ? "loss" : "losses"}
-        </span>
-        <span className="inline-flex items-center gap-1.5 tabular-nums">
-          <span className="size-[7px] rounded-full" style={{ background: TIE_FILL }} aria-hidden="true" />
-          {ties} {ties === 1 ? "tie" : "ties"}
-        </span>
-      </div>
-      <span className="sr-only">
-        {games === 0 ? "No resolved games yet" : `${wins} wins, ${losses} losses, and ${ties} ties across ${games} games`}
-      </span>
-    </div>
-  );
 }
 
 /** Recent form, newest first — the question anyone with a record asks next. */
@@ -273,24 +243,6 @@ function Highlights({ scoreboard }: { scoreboard: UserScoreboard }) {
           <p className="mt-1 truncate text-xs tabular-nums text-muted-foreground">{highlight.detail}</p>
         </div>
       ))}
-    </div>
-  );
-}
-
-/**
- * Length is how much of the season this row is; the split inside it is how that
- * went. One mark, both questions.
- */
-function BucketBar({ row, maxGames }: { row: ScoreboardBucket; maxGames: number }) {
-  const share = maxGames > 0 ? (row.games / maxGames) * 100 : 0;
-
-  return (
-    <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-muted" aria-hidden="true">
-      <div className="flex h-full" style={{ width: `${Math.max(share, row.games > 0 ? 3 : 0)}%` }}>
-        {row.wins > 0 ? <div className="h-full min-w-0 flex-1" style={{ flexGrow: row.wins, background: WIN_FILL }} /> : null}
-        {row.losses > 0 ? <div className="h-full min-w-0 flex-1" style={{ flexGrow: row.losses, background: LOSS_FILL }} /> : null}
-        {row.ties > 0 ? <div className="h-full min-w-0 flex-1" style={{ flexGrow: row.ties, background: TIE_FILL }} /> : null}
-      </div>
     </div>
   );
 }
@@ -559,7 +511,41 @@ function ScoreboardSkeleton() {
   );
 }
 
-export default function UserScoreboardTab({
+function usePersonScoreboardFilters() {
+  const searchParams = useSearchParams();
+  const searchSignature = searchParams.toString();
+  const lastObservedSearchRef = useRef(searchSignature);
+  const skipNextWriteRef = useRef(false);
+  const [filters, setFilters] = useState<PersonScoreboardFilterState>(
+    () => parsePersonScoreboardFilters(searchParams),
+  );
+
+  useEffect(() => {
+    if (lastObservedSearchRef.current === searchSignature) return;
+    lastObservedSearchRef.current = searchSignature;
+    skipNextWriteRef.current = true;
+    setFilters(parsePersonScoreboardFilters(searchParams));
+  }, [searchParams, searchSignature]);
+
+  useEffect(() => {
+    if (skipNextWriteRef.current) {
+      skipNextWriteRef.current = false;
+      return;
+    }
+    const url = new URL(window.location.href);
+    writePersonScoreboardSearchParams(url.searchParams, filters);
+    const next = url.searchParams.toString()
+      ? `${url.pathname}?${url.searchParams.toString()}`
+      : url.pathname;
+    if (next !== `${window.location.pathname}${window.location.search}`) {
+      window.history.replaceState(null, "", next);
+    }
+  }, [filters]);
+
+  return { filters, setFilters };
+}
+
+function UserScoreboardExplorer({
   userId,
   returnTo,
   linkEvents = true,
@@ -568,9 +554,13 @@ export default function UserScoreboardTab({
   returnTo?: string;
   linkEvents?: boolean;
 }) {
-  const [resultFilter, setResultFilter] = useState<ResultFilter>("all");
-  const [sportFilter, setSportFilter] = useState("all");
-  const [siteFilter, setSiteFilter] = useState<SiteFilter>("all");
+  const { filters, setFilters } = usePersonScoreboardFilters();
+  const resultFilter = filters.result;
+  const sportFilter = filters.sport;
+  const siteFilter = filters.site;
+  const setResultFilter = (value: ResultFilter) => setFilters((current) => ({ ...current, result: value }));
+  const setSportFilter = (value: string) => setFilters((current) => ({ ...current, sport: value }));
+  const setSiteFilter = (value: SiteFilter) => setFilters((current) => ({ ...current, site: value }));
   const [dimension, setDimension] = useState<Dimension>("sport");
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState<FetchErrorKind | null>(null);
@@ -606,6 +596,28 @@ export default function UserScoreboardTab({
     refetchOnFocus: false,
     transform: (json) => (json.data as UserScoreboard),
   });
+
+  const needsUnfilteredBootstrap = personScoreboardHasFilters(filters);
+  useEffect(() => {
+    if (!needsUnfilteredBootstrap) return;
+    const controller = new AbortController();
+    void (async () => {
+      try {
+        const res = await fetch(`/api/users/${userId}/scoreboard?limit=1`, { signal: controller.signal });
+        if (handleAuthRedirect(res, scoreboardReturnTo)) return;
+        if (!res.ok) return;
+        const json = await parseJsonSafely<{ data?: UserScoreboard }>(res);
+        if (!json?.data) return;
+        const next = toSportOptions(json.data.bySport);
+        const signature = (options: SportOption[]) => options.map((option) => option.key).join("|");
+        setSportOptions((current) => (signature(current) === signature(next) ? current : next));
+        setSeasonResolvedGames(json.data.summary.games);
+      } catch (cause) {
+        if (isAbortError(cause)) return;
+      }
+    })();
+    return () => controller.abort();
+  }, [needsUnfilteredBootstrap, scoreboardReturnTo, userId]);
 
   useEffect(() => {
     requestUrlRef.current = requestUrl;
@@ -680,10 +692,8 @@ export default function UserScoreboardTab({
   }, [nextCursor, refreshing, requestUrl, scoreboardReturnTo]);
 
   const clearFilters = useCallback(() => {
-    setResultFilter("all");
-    setSportFilter("all");
-    setSiteFilter("all");
-  }, []);
+    setFilters({ ...EMPTY_PERSON_SCOREBOARD_FILTERS });
+  }, [setFilters]);
 
   if (loading && !data) return <ScoreboardSkeleton />;
 
@@ -702,7 +712,7 @@ export default function UserScoreboardTab({
 
   if (!data) return null;
 
-  const hasFilters = resultFilter !== "all" || sportFilter !== "all" || siteFilter !== "all";
+  const hasFilters = personScoreboardHasFilters(filters);
   // With no filter on, this response is the unfiltered read, so the list comes
   // straight from it and the control does not flicker in on first paint.
   const listedSports = isUnfiltered ? toSportOptions(data.bySport) : sportOptions;
@@ -713,86 +723,131 @@ export default function UserScoreboardTab({
   const sportChoices: SportOption[] = selectedIsListed
     ? listedSports
     : [...listedSports, { key: sportFilter, label: sportFilter }];
+  const activeFilters: OperationalActiveFilter[] = [
+    resultFilter === "all" ? null : {
+      key: "result",
+      label: resultFilter === "WIN" ? "Wins" : resultFilter === "LOSS" ? "Losses" : "Ties",
+      onRemove: () => setResultFilter("all"),
+    },
+    sportFilter === "all" ? null : {
+      key: "sport",
+      label: `Sport: ${sportChoices.find((sport) => sport.key === sportFilter)?.label ?? sportFilter}`,
+      onRemove: () => setSportFilter("all"),
+    },
+    siteFilter === "all" ? null : {
+      key: "site",
+      label: `Site: ${SITE_FILTERS.find((option) => option.value === siteFilter)?.label ?? siteFilter}`,
+      onRemove: () => setSiteFilter("all"),
+    },
+  ].filter((filter): filter is OperationalActiveFilter => filter !== null);
 
   return (
     <div className="flex flex-col gap-5">
-      <SeasonCard
-        scoreboard={data}
-        games={events}
-        // A run of results only means something when every result is eligible;
-        // under a Wins filter "last five" is five wins by construction.
-        showsForm={resultFilter === "all"}
-        isFiltered={hasFilters}
-        seasonResolvedGames={seasonResolvedGames}
-      />
-
-      {/* Orientation, not analysis: once the reader has narrowed to one sport or
-          one result, they are past the point these three facts help with. */}
-      {hasFilters ? null : <Highlights scoreboard={data} />}
-
-      <div className="flex flex-wrap items-center justify-between gap-3 border-y border-border/40 py-2.5">
-        <ToggleGroup
-          type="single"
-          value={resultFilter}
-          onValueChange={(value) => value && setResultFilter(value as ResultFilter)}
-          aria-label="Filter scoreboard results"
-          className="min-h-10"
-        >
-          <ToggleGroupItem value="all" className="h-10 text-xs">All</ToggleGroupItem>
-          <ToggleGroupItem value="WIN" className="h-10 text-xs">Wins</ToggleGroupItem>
-          <ToggleGroupItem value="LOSS" className="h-10 text-xs">Losses</ToggleGroupItem>
-          <ToggleGroupItem value="TIE" className="h-10 text-xs">Ties</ToggleGroupItem>
-        </ToggleGroup>
-        <div className="flex flex-wrap items-center gap-2">
-          {sportChoices.length > 0 ? (
-            <Select value={sportFilter} onValueChange={setSportFilter}>
-              <SelectTrigger className="h-10 w-[190px] text-xs" aria-label="Filter scoreboard sport">
-                <SelectValue placeholder="All sports" />
+      <OperationalToolbar>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <ToggleGroup
+            type="single"
+            value={resultFilter}
+            onValueChange={(value) => value && setResultFilter(value as ResultFilter)}
+            aria-label="Filter scoreboard results"
+            className="min-h-10"
+          >
+            <ToggleGroupItem value="all" className="h-10 text-xs">All</ToggleGroupItem>
+            <ToggleGroupItem value="WIN" className="h-10 text-xs">Wins</ToggleGroupItem>
+            <ToggleGroupItem value="LOSS" className="h-10 text-xs">Losses</ToggleGroupItem>
+            <ToggleGroupItem value="TIE" className="h-10 text-xs">Ties</ToggleGroupItem>
+          </ToggleGroup>
+          <div className="flex flex-wrap items-center gap-2">
+            {sportChoices.length > 0 ? (
+              <Select value={sportFilter} onValueChange={setSportFilter}>
+                <SelectTrigger className="h-10 w-[190px] text-xs" aria-label="Filter scoreboard sport">
+                  <SelectValue placeholder="All sports" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All sports</SelectItem>
+                  {sportChoices.map((sport) => (
+                    <SelectItem key={sport.key} value={sport.key}>{sport.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : null}
+            {/* The site breakdown already sits below; this is the control that
+                row invites -- "how do they do on the road" -- and it narrows the
+                record, the breakdowns, and the games together. */}
+            <Select value={siteFilter} onValueChange={(value) => setSiteFilter(value as SiteFilter)}>
+              <SelectTrigger className="h-10 w-[150px] text-xs" aria-label="Filter scoreboard site">
+                <SelectValue placeholder="All sites" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All sports</SelectItem>
-                {sportChoices.map((sport) => (
-                  <SelectItem key={sport.key} value={sport.key}>{sport.label}</SelectItem>
+                {SITE_FILTERS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
-          ) : null}
-          {/* The site breakdown already sits below; this is the control that
-              row invites -- "how do they do on the road" -- and it narrows the
-              record, the breakdowns, and the games together. */}
-          <Select value={siteFilter} onValueChange={(value) => setSiteFilter(value as SiteFilter)}>
-            <SelectTrigger className="h-10 w-[150px] text-xs" aria-label="Filter scoreboard site">
-              <SelectValue placeholder="All sites" />
-            </SelectTrigger>
-            <SelectContent>
-              {SITE_FILTERS.map((option) => (
-                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            {hasFilters ? (
+              <Button variant="ghost" size="sm" className="h-10" onClick={clearFilters}>
+                Clear filters
+              </Button>
+            ) : null}
+          </div>
         </div>
-      </div>
+        <OperationalActiveFilterChips filters={activeFilters} />
+      </OperationalToolbar>
 
-      <div className="grid items-start gap-4 lg:grid-cols-2">
-        <BreakdownCard
-          scoreboard={data}
-          isFiltered={hasFilters}
-          dimension={dimension}
-          onDimensionChange={setDimension}
-        />
-        <GamesCard
-          events={events}
-          total={data.eventCount}
-          hasFilters={hasFilters}
-          refreshing={refreshing}
-          nextCursor={nextCursor}
-          loadingMore={loadingMore}
-          loadMoreError={loadMoreError}
-          loadMore={loadMore}
-          clearFilters={clearFilters}
-          linkEvents={linkEvents}
-        />
-      </div>
+      <ScoreboardDataRegion refreshing={refreshing}>
+        <div className="flex flex-col gap-5">
+          <SeasonCard
+            scoreboard={data}
+            games={events}
+            // A run of results only means something when every result is eligible;
+            // under a Wins filter "last five" is five wins by construction.
+            showsForm={resultFilter === "all"}
+            isFiltered={hasFilters}
+            seasonResolvedGames={seasonResolvedGames}
+          />
+
+          {/* Orientation, not analysis: once the reader has narrowed to one sport or
+              one result, they are past the point these three facts help with. */}
+          {hasFilters ? null : <Highlights scoreboard={data} />}
+
+          <div className="grid items-start gap-4 lg:grid-cols-2">
+            <BreakdownCard
+              scoreboard={data}
+              isFiltered={hasFilters}
+              dimension={dimension}
+              onDimensionChange={setDimension}
+            />
+            <GamesCard
+              events={events}
+              total={data.eventCount}
+              hasFilters={hasFilters}
+              refreshing={refreshing}
+              nextCursor={nextCursor}
+              loadingMore={loadingMore}
+              loadMoreError={loadMoreError}
+              loadMore={loadMore}
+              clearFilters={clearFilters}
+              linkEvents={linkEvents}
+            />
+          </div>
+        </div>
+      </ScoreboardDataRegion>
     </div>
+  );
+}
+
+export default function UserScoreboardTab({
+  userId,
+  returnTo,
+  linkEvents = true,
+}: {
+  userId: string;
+  returnTo?: string;
+  linkEvents?: boolean;
+}) {
+  return (
+    <Suspense fallback={<ScoreboardSkeleton />}>
+      <UserScoreboardExplorer userId={userId} returnTo={returnTo} linkEvents={linkEvents} />
+    </Suspense>
   );
 }

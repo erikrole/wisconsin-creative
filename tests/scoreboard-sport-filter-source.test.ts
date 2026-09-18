@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const tab = readFileSync("src/app/(app)/users/[id]/UserScoreboardTab.tsx", "utf8");
+const visuals = readFileSync("src/components/scoreboard/ScoreboardVisuals.tsx", "utf8");
 const service = readFileSync("src/lib/services/scoreboard.ts", "utf8");
 
 describe("profile Scoreboard sport filter", () => {
@@ -21,6 +22,8 @@ describe("profile Scoreboard sport filter", () => {
     );
     // Only a settled, unfiltered response may replace the held list.
     expect(tab).toContain("if (!data || !isUnfiltered || loading || refreshing) return;");
+    expect(tab).toContain("needsUnfilteredBootstrap");
+    expect(tab).toContain("`/api/users/${userId}/scoreboard?limit=1`");
     // The dropdown must never be built from whatever the current response holds.
     expect(tab).not.toContain("data.bySport.filter((bucket) => bucket.key !== null)");
   });
@@ -50,18 +53,18 @@ describe("profile Scoreboard sport filter", () => {
     // Home, away, and neutral are complete and never change, so the control
     // does not need the held-options dance the sport picker needs.
     expect(service).toContain("if (filters.site) where.site = filters.site;");
-    expect(tab).toContain('const [siteFilter, setSiteFilter] = useState<SiteFilter>("all");');
+    expect(tab).toContain("const siteFilter = filters.site;");
     expect(tab).toContain('params.set("site", siteFilter)');
     expect(tab).toContain('aria-label="Filter scoreboard site"');
     // A cleared stack has to clear every dimension, or the empty state offers
     // to clear filters that stay on.
-    const clear = tab.slice(tab.indexOf("const clearFilters = useCallback"));
-    expect(clear.slice(0, clear.indexOf("}, []);"))).toContain('setSiteFilter("all")');
+    expect(tab).toContain("setFilters({ ...EMPTY_PERSON_SCOREBOARD_FILTERS })");
+    expect(tab).toContain('onRemove: () => setSiteFilter("all")');
   });
 
   it("keeps web record bars in W-L-T order", () => {
-    const recordMeter = tab.slice(tab.indexOf("function RecordMeter"), tab.indexOf("/** Recent form"));
-    const bucketBar = tab.slice(tab.indexOf("function BucketBar"), tab.indexOf("function BreakdownCard"));
+    const recordMeter = visuals.slice(visuals.indexOf("export function RecordMeter"), visuals.indexOf("export function BucketBar"));
+    const bucketBar = visuals.slice(visuals.indexOf("export function BucketBar"), visuals.indexOf("function rankTone"));
 
     for (const bar of [recordMeter, bucketBar]) {
       const wins = bar.indexOf("WIN_FILL");

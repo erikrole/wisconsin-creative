@@ -1,0 +1,45 @@
+{
+  "title": "Scoreboard explorer polish",
+  "eyebrow": "Web · local authenticated Admin preview",
+  "lede": "The shared Scoreboard now reads as a current-season explorer: official record first, URL-backed stacked filters, a findable leaderboard, and person pages that keep the stack you opened from.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "After-only evidence",
+      "note": "Authenticated local Admin preview at http://127.0.0.1:3000/scoreboard?sportCode=FB and /scoreboard/cmp2zpffw0009k004cyjkkexq?sportCode=FB (Maddy Pehler). Desktop Chromium, dark appearance. No frozen matched before pair was captured for this explorer polish; HEAD is not the user's dirty baseline."
+    }
+  ],
+  "changes": [
+    {
+      "h": "Season, not a report",
+      "was": "Report chrome, orange/red rank medals, and a Snapshot that could name a pending filter while totals still showed the last intersection.",
+      "now": "Team record leads with a W–L–T meter. Snapshot labels follow the last loaded intersection. First/second/third use identity, not warning/problem colors."
+    },
+    {
+      "h": "Shareable stacked explorer",
+      "was": "Filters lived only in component state, so refresh and person drill-in dropped Football.",
+      "now": "Sport, venue, opponent, site, and rank live in the URL. Opening a person keeps the stack; sport and site filter that Scoreboard; All leaders returns to /scoreboard?sportCode=FB."
+    },
+    {
+      "h": "Find a person without reranking",
+      "was": "The leaderboard was a long unscanned list, and a name search still claimed 13 people.",
+      "now": "Search finds Maddy Pehler at rank 6, the card says 1 match · Football, and You’re 2nd clears search and jumps to your row."
+    }
+  ],
+  "verification": [
+    "18 focused tests passed in scoreboard-explorer, team-scoreboard-page-source, and scoreboard-sport-filter-source.",
+    "ESLint passed on the touched Scoreboard explorer files.",
+    "Authenticated Admin browser: team Football 0–1 / 3 events / 13 people; You’re 2nd; search pehl → Maddy Pehler rank 6; person Football 0–1 vs Notre Dame; All leaders restored ?sportCode=FB.",
+    "Phone-width smoke at 390×844 showed stacked filters, You’re 2nd, and the Football chip above the tab bar. The capture is letterboxed in a wider browser frame.",
+    "git diff --check was run on the slice files.",
+    "npm run build:app was not rerun because npm run dev:preview is occupying 127.0.0.1:3000."
+  ],
+  "notes": [
+    "After captures: after-team-football.png, after-search-pehl.png, after-person-football.png, after-phone-football.png.",
+    "Next.js reported a ToggleGroupItem hydration mismatch on the person page. The overlay blocked one click until dismissed; the Football filter still applied.",
+    "Person Scoreboard breadcrumb still has a blank last crumb for the dynamic id.",
+    "Keyboard Tab from the search field was not confirmed in this browser tool. Search itself and You’re 2nd were exercised with pointer.",
+    "Native iOS was out of scope. GAP-71 production Student/Collaborator proof remains open.",
+    "No commit or push."
+  ]
+}

@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, type ComponentType } from "react";
 import type { UserDetail, Location, Role } from "../types";
 import { AREA_LABELS, deriveStudentYear, STUDENT_YEAR_OPTIONS } from "../types";
 import { useFetch } from "@/hooks/use-fetch";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import RoleBadge from "../RoleBadge";
 import UserInfoTab from "./UserInfoTab";
 import UserScoreboardTab from "./UserScoreboardTab";
@@ -277,13 +278,9 @@ export default function UserDetailPage() {
   const [userOverrides, setUserOverrides] = useState<Partial<UserDetail>>({});
   const effectiveUser = user ? { ...user, ...userOverrides } : null;
 
-  const { data: meData } = useFetch<{ id: string; role: Role }>({
-    url: "/api/me",
-    transform: (json) => (json as Record<string, unknown>).user as { id: string; role: Role },
-    refetchOnFocus: false,
-  });
+  const { data: meData } = useCurrentUser();
   const currentUserId = meData?.id ?? null;
-  const currentUserRole = meData?.role ?? null;
+  const currentUserRole = (meData?.role as Role | undefined) ?? null;
 
   const {
     data: formOptions,
@@ -835,10 +832,12 @@ export default function UserDetailPage() {
                       </DropdownMenuItem>
                     </>
                   )}
-                  <DropdownMenuItem onClick={openManualAwardDialog}>
-                    <Award className="mr-2 size-4" />
-                    Award badge
-                  </DropdownMenuItem>
+                  {currentUserRole === "ADMIN" ? (
+                    <DropdownMenuItem onClick={openManualAwardDialog}>
+                      <Award className="mr-2 size-4" />
+                      Award badge
+                    </DropdownMenuItem>
+                  ) : null}
                 </DropdownMenuContent>
               </DropdownMenu>
             )}

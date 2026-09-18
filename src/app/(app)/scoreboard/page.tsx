@@ -6,7 +6,7 @@ export default function ScoreboardPage() {
     <>
       <PageHeader
         title="Scoreboard"
-        description="Team records, work totals, and per-person leaderboards. Stack sport, venue, opponent, and site filters."
+        description="Current-season coverage, the official record, and who worked. Stack sport, venue, opponent, and site filters."
         className="mb-5"
       />
       <TeamScoreboardClient />

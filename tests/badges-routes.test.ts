@@ -153,6 +153,53 @@ describe("GET /api/badges", () => {
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     });
   });
+
+  it("keeps easter eggs out of the catalog while leaving hidden manuals awardable", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(adminUser);
+    vi.mocked(db.badgeDefinition.findMany).mockResolvedValue(badgeDefinitionRows([
+      {
+        id: "hero",
+        key: "event_hero",
+        name: "Event Hero",
+        description: "Recognized by staff for standout help during an event.",
+        icon: "UserCheck",
+        category: "MILESTONE",
+        kind: "RULE",
+        trigger: "manual",
+        threshold: null,
+        ruleKey: "event_hero",
+        active: true,
+        sortOrder: 730,
+        createdAt: new Date("2026-05-09T12:00:00.000Z"),
+      },
+      {
+        id: "egg",
+        key: "go_to_bed",
+        name: "Go To Bed",
+        description: "Opened the app at 2 a.m.",
+        icon: "MoonStar",
+        category: "MILESTONE",
+        kind: "RULE",
+        trigger: "app:opened",
+        threshold: null,
+        ruleKey: "local_hour_2",
+        active: true,
+        sortOrder: 900,
+        createdAt: new Date("2026-08-10T12:00:00.000Z"),
+      },
+    ]));
+
+    const publicCatalog = await getBadgeCatalog(makeGetRequest(), { params: Promise.resolve({}) });
+    expect((await publicCatalog.json()).data).toEqual([]);
+
+    const awardCatalog = await getBadgeCatalog(
+      makeGetRequest("https://app.example.com/api/badges?manualOnly=true"),
+      { params: Promise.resolve({}) },
+    );
+    const awardBody = await awardCatalog.json();
+    expect(awardBody.data.map((row: { key: string }) => row.key)).toEqual(["event_hero"]);
+    expect(awardBody.data[0]).toEqual(expect.objectContaining({ trigger: "manual" }));
+  });
 });
 
 describe("GET /api/badges/user/[userId]", () => {

@@ -16,8 +16,12 @@ export const GET = withAuth(async (req, { user }) => {
   const definitions = (await listActiveBadgeDefinitions(manualOnly ? { trigger: "manual" } : undefined))
     // The catalog listing is the one badge surface with no client-side hidden
     // filter, so it handed every signed-in user the name and description of
-    // each unearned easter egg. A surprise is only hidden if the API keeps it.
-    .filter((definition) => !isHiddenUntilEarnedBadge(definition.key));
+    // each unearned easter egg. Manual catch-alls stay hidden on locked shelves
+    // but must remain awardable when staff ask for the award catalog.
+    .filter((definition) => (
+      !isHiddenUntilEarnedBadge(definition.key)
+      || (manualOnly && definition.trigger === "manual")
+    ));
 
   return ok({
     data: definitions.map((definition) => ({
@@ -28,6 +32,7 @@ export const GET = withAuth(async (req, { user }) => {
       icon: definition.icon,
       category: definition.category,
       kind: definition.kind,
+      trigger: definition.trigger,
       threshold: definition.threshold,
       ruleKey: definition.ruleKey,
       active: definition.active,

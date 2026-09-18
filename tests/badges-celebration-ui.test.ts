@@ -29,5 +29,8 @@ describe("earned badge celebration", () => {
     expect(celebration).toContain("motion-reduce:animate-none");
     expect(celebration).toContain("motion-safe:animate-in");
     expect(celebration).toContain("Next badge");
+    expect(celebration).toContain("See on shelf");
+    expect(celebration).toContain('role="status"');
+    expect(celebration).toContain('aria-live="polite"');
   });
 });
