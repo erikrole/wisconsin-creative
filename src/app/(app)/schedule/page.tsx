@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
-import { MergeIcon, MoreHorizontalIcon, SparklesIcon, XIcon } from "lucide-react";
+import { MergeIcon, MoreHorizontalIcon, PlusIcon, SparklesIcon, XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -251,6 +251,11 @@ function InternalSchedulePage() {
     if (nextQueue === "trade-approval") setTradeSheetOpen(true);
   }, [canReviewClaims, setQueue, setTradeSheetOpen]);
 
+  const clearBrowseFilters = useCallback(() => {
+    if (data.filters.hasFilters) data.filters.clearAll();
+    if (data.filters.myShiftsOnly) data.filters.setMyShiftsOnly(false);
+  }, [data.filters]);
+
   const buildExportHref = useCallback((type: (typeof SCHEDULE_EXPORTS)[number]["type"]) => {
     const params = new URLSearchParams({ type });
     const now = new Date();
@@ -316,12 +321,27 @@ function InternalSchedulePage() {
   useEffect(() => {
     const sentinel = sentinelRef.current;
     if (!sentinel || typeof IntersectionObserver === "undefined") return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setPinned(!entry?.isIntersecting),
-      { threshold: 0, rootMargin: `-${appShellStickyTop()}px 0px 0px 0px` },
-    );
-    observer.observe(sentinel);
-    return () => observer.disconnect();
+    let observer: IntersectionObserver | null = null;
+    const connect = () => {
+      observer?.disconnect();
+      observer = new IntersectionObserver(
+        ([entry]) => setPinned(!entry?.isIntersecting),
+        { threshold: 0, rootMargin: `-${appShellStickyTop()}px 0px 0px 0px` },
+      );
+      observer.observe(sentinel);
+    };
+    connect();
+    const header = document.querySelector<HTMLElement>("[data-app-shell-header]");
+    const breadcrumb = document.querySelector<HTMLElement>("[data-app-shell-breadcrumb-frame]");
+    const resizeObserver = new ResizeObserver(connect);
+    if (header) resizeObserver.observe(header);
+    if (breadcrumb) resizeObserver.observe(breadcrumb);
+    window.addEventListener("resize", connect);
+    return () => {
+      observer?.disconnect();
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", connect);
+    };
   }, [appShellStickyTop]);
 
   useLayoutEffect(() => {
@@ -332,7 +352,7 @@ function InternalSchedulePage() {
     const publish = () => {
       const top = Math.round(appShellHeader?.getBoundingClientRect().height ?? 0)
         + Math.round(appShellBreadcrumb?.getBoundingClientRect().height ?? 0);
-      const bottom = top + Math.round(el.getBoundingClientRect().height);
+      const bottom = Math.round(el.getBoundingClientRect().bottom);
       document.documentElement.style.setProperty("--schedule-sticky-top", `${top}px`);
       document.documentElement.style.setProperty("--schedule-sticky-bottom", `${bottom}px`);
     };
@@ -378,6 +398,15 @@ function InternalSchedulePage() {
         <PageHeader title="Schedule">
           {isStaff ? (
             <>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-10"
+                onClick={() => setNewEventOpen(true)}
+              >
+                <PlusIcon data-icon="inline-start" />
+                Add event
+              </Button>
               <Button size="sm" className="h-10" onClick={() => setAutoAssignOpen(true)}>
                 <SparklesIcon data-icon="inline-start" />
                 Auto assign
@@ -390,9 +419,6 @@ function InternalSchedulePage() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuItem onSelect={() => setNewEventOpen(true)}>
-                    New event
-                  </DropdownMenuItem>
                   <DropdownMenuItem onSelect={() => { setCombineInitialEventIds(null); setCombineEventsOpen(true); }}>
                     <MergeIcon className="size-4" />
                     Combine events
@@ -444,6 +470,8 @@ function InternalSchedulePage() {
           filters={data.filters}
           entries={data.entries}
           filteredEntries={data.filteredEntries}
+          fillingWindow={data.fillingWindow}
+          sourceSignal={data.sourceSignal}
         />
       </div>
 
@@ -522,6 +550,8 @@ function InternalSchedulePage() {
           setExpandedDay={data.setExpandedDay}
           canManageCrew={isStaff}
           onOpenCrew={openCrewSheet}
+          hasFilters={data.filters.hasFilters || data.filters.myShiftsOnly}
+          onClearFilters={clearBrowseFilters}
         />
       )}
 
@@ -536,6 +566,8 @@ function InternalSchedulePage() {
           currentUserRole={data.currentUserRole}
           myShiftsOnly={data.filters.myShiftsOnly}
           onOpenCrew={openCrewSheet}
+          hasFilters={data.filters.hasFilters || data.filters.myShiftsOnly}
+          onClearFilters={clearBrowseFilters}
         />
       )}
 
@@ -554,6 +586,15 @@ function InternalSchedulePage() {
           clearFilters={data.filters.clearAll}
           timelineTruncated={data.timelineTruncated}
           isTimeline={data.isTimeline}
+          hasMorePast={data.hasMorePast}
+          hasMoreFuture={data.hasMoreFuture}
+          loadingPast={data.loadingPast}
+          loadingFuture={data.loadingFuture}
+          loadPastError={data.loadPastError}
+          loadFutureError={data.loadFutureError}
+          onLoadOlder={data.loadOlder}
+          onLoadNewer={data.loadNewer}
+          fillingWindow={data.fillingWindow}
           hasContentFilters={data.hasContentFilters}
           includeArchived={data.filters.includeArchived}
           setIncludeArchived={data.filters.setIncludeArchived}

@@ -41,6 +41,17 @@ import {
   shouldKeepPreviousScheduleData,
   type ScheduleQueryScope,
 } from "@/lib/schedule-timeline-position";
+import {
+  SCHEDULE_TIMELINE_SLICE_SIZE,
+  createInitialScheduleTimelineWindow,
+  eventBoundsForGroups,
+  mergeRowsById,
+  newestScheduleCursor,
+  oldestScheduleCursor,
+  sliceHasMore,
+  type ScheduleTimelineCursor,
+  type ScheduleTimelineWindow,
+} from "@/lib/schedule-timeline-window";
 
 export type ViewMode = "list" | "calendar" | "week";
 
@@ -126,6 +137,8 @@ export type ScheduleFilters = {
   queue: ScheduleQueue | null;
   queueMeta: ScheduleQueueMeta | null;
   setQueue: (v: ScheduleQueue | null) => void;
+  dateRange: { startDate: string; endDate: string } | null;
+  clearDateRange: () => void;
   hasFilters: boolean;
   clearAll: () => void;
 };
@@ -138,6 +151,18 @@ export type UseScheduleDataResult = {
   timelineTruncated: boolean;
   /** The list is the continuous today-anchored timeline. */
   isTimeline: boolean;
+  /** Older events exist beyond the rows currently loaded. */
+  hasMorePast: boolean;
+  /** Later events exist beyond the rows currently loaded. */
+  hasMoreFuture: boolean;
+  loadingPast: boolean;
+  loadingFuture: boolean;
+  loadPastError: boolean;
+  loadFutureError: boolean;
+  loadOlder: () => Promise<void>;
+  loadNewer: () => Promise<void>;
+  /** A client-side filter is still searching rows that have not been loaded yet. */
+  fillingWindow: boolean;
   /** A filter is narrowing which events appear, rather than how far back the window reaches. */
   hasContentFilters: boolean;
   loading: boolean;
@@ -212,6 +237,7 @@ function buildScheduleUrls(
   includeArchived: boolean,
   sportFilter: string,
   dateRange: ScheduleDeepLink["dateRange"],
+  timelineWindow?: ScheduleTimelineWindow | null,
 ) {
   const evParams = new URLSearchParams({ limit: "200" });
   const sgParams = new URLSearchParams({ limit: "200" });
@@ -259,10 +285,18 @@ function buildScheduleUrls(
       healthParams.set("endDate", dateRange.endDate);
       automationParams.set("startDate", dateRange.startDate);
       automationParams.set("endDate", dateRange.endDate);
+    } else if (timelineWindow) {
+      // First paint is a today-centered window. Infinite scroll then walks
+      // older and newer events with keyset pages instead of loading the whole
+      // archive before the list can appear.
+      evParams.set("startDate", timelineWindow.start.toISOString());
+      evParams.set("endDate", timelineWindow.end.toISOString());
+      evParams.set("includePast", "true");
+      sgParams.set("startDate", timelineWindow.start.toISOString());
+      sgParams.set("endDate", timelineWindow.end.toISOString());
+      healthParams.set("includePast", "true");
+      automationParams.set("includePast", "true");
     } else {
-      // One continuous timeline: everything unarchived, past and future, in
-      // chronological order. Scrolling up is how you reach the past, so there
-      // is no upcoming-only window to ask for.
       evParams.set("includePast", "true");
       healthParams.set("includePast", "true");
       automationParams.set("includePast", "true");
@@ -296,17 +330,10 @@ function buildScheduleUrls(
 }
 
 /**
- * The list is one continuous timeline rather than a page of results, so it
- * loads its whole window up front instead of chunking as the user scrolls.
- *
- * Loading on scroll would break the filters: area, coverage, and my-shifts run
- * client-side over loaded rows, so filtering to one area would show a handful
- * of matches until the user happened to scroll far enough. Everything loaded
- * means every filter answers from the whole window, the same as before.
- *
- * `PAGE_SIZE` is the server's own cap. `MAX_PAGES` is the stop that keeps a
- * runaway window from hanging the browser; hitting it is reported rather than
- * silently truncating the timeline.
+ * Calendar and week views still load their dated window up front. The list
+ * timeline uses a today-centered first window, then keyset pages as the reader
+ * scrolls. `PAGE_SIZE` is the server's own cap. `MAX_PAGES` keeps a runaway
+ * dated window from hanging the browser.
  */
 const PAGE_SIZE = 200;
 const MAX_PAGES = 15;
@@ -404,6 +431,88 @@ export async function fetchSchedule(
   };
 }
 
+function isScheduleAbort(error: unknown) {
+  return error instanceof DOMException && error.name === "AbortError";
+}
+
+function listKeysetEventsUrl(
+  includeArchived: boolean,
+  sportFilter: string,
+  cursor: ScheduleTimelineCursor,
+  direction: "before" | "after",
+  limit = SCHEDULE_TIMELINE_SLICE_SIZE,
+) {
+  const params = new URLSearchParams({
+    limit: String(limit),
+    includePast: "true",
+  });
+  if (sportFilter) params.set("sportCode", sportFilter);
+  if (includeArchived) {
+    params.set("includeArchived", "true");
+    params.set("includePast", "true");
+  }
+  if (direction === "before") {
+    params.set("beforeStartsAt", cursor.startsAt);
+    if (cursor.id) params.set("beforeId", cursor.id);
+  } else {
+    params.set("afterStartsAt", cursor.startsAt);
+    if (cursor.id) params.set("afterId", cursor.id);
+  }
+  return `/api/calendar-events?${params}`;
+}
+
+function listGroupsUrl(sportFilter: string) {
+  const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
+  if (sportFilter) params.set("sportCode", sportFilter);
+  return `/api/shift-groups?${params}`;
+}
+
+async function fetchKeysetEvents(
+  url: string,
+  signal?: AbortSignal,
+): Promise<{ rows: CalendarEvent[]; hasMore: boolean }> {
+  const res = await fetch(url, { ...SCHEDULE_READ_FETCH_INIT, signal });
+  if (handleAuthRedirect(res)) throw new DOMException("Auth redirect", "AbortError");
+  if (!res.ok) throw new Error("schedule page fetch failed");
+  const json = await parseJsonSafely<{ data?: CalendarEvent[] }>(res);
+  if (!json?.data) throw new Error("schedule page response malformed");
+  return { rows: json.data, hasMore: sliceHasMore(json.data.length) };
+}
+
+async function fetchGroupsForEvents(
+  groupsUrl: string,
+  events: CalendarEvent[],
+  signal?: AbortSignal,
+): Promise<ShiftGroup[]> {
+  const bounds = eventBoundsForGroups(events);
+  if (!bounds) return [];
+  const url = new URL(groupsUrl, window.location.origin);
+  url.searchParams.set("startDate", bounds.startDate);
+  url.searchParams.set("endDate", bounds.endDate);
+  const groups = await fetchAllPages<ShiftGroup>(url.toString(), signal);
+  if (groups.truncated) throw new Error("Crew information is incomplete. Narrow the schedule window and retry.");
+  return groups.rows;
+}
+
+async function fetchScheduleSlice(
+  includeArchived: boolean,
+  sportFilter: string,
+  cursor: ScheduleTimelineCursor,
+  direction: "before" | "after",
+  signal?: AbortSignal,
+): Promise<{ entries: CalendarEntry[]; hasMore: boolean }> {
+  const events = await fetchKeysetEvents(
+    listKeysetEventsUrl(includeArchived, sportFilter, cursor, direction),
+    signal,
+  );
+  if (events.rows.length === 0) return { entries: [], hasMore: false };
+  const groups = await fetchGroupsForEvents(listGroupsUrl(sportFilter), events.rows, signal);
+  return {
+    entries: mergeScheduleData(events.rows, groups),
+    hasMore: events.hasMore,
+  };
+}
+
 async function fetchTradeCount(): Promise<number> {
   const r = await fetch("/api/shift-trades?status=OPEN&limit=1", SCHEDULE_READ_FETCH_INIT);
   if (handleAuthRedirect(r, "/schedule")) {
@@ -478,6 +587,7 @@ export function useScheduleData(): UseScheduleDataResult {
   const initialPreferencesAppliedRef = useRef(false);
   const listViewRoundTripRef = useRef(false);
   const periodContextDateRef = useRef<Date | null>(null);
+  const pendingArchivedLoadRef = useRef(false);
   const deepLink = useMemo<ScheduleDeepLink>(() => {
     const query = new URLSearchParams(searchParamsString);
     const start = query.get("startDate");
@@ -605,6 +715,7 @@ export function useScheduleData(): UseScheduleDataResult {
   }, [captureTimelineContext]);
   const setIncludeArchived = useCallback((next: boolean) => {
     captureTimelineContext();
+    if (next) pendingArchivedLoadRef.current = true;
     setIncludeArchivedRaw(next);
   }, [captureTimelineContext]);
   const setMyShiftsOnly = useCallback((next: boolean) => {
@@ -621,6 +732,16 @@ export function useScheduleData(): UseScheduleDataResult {
     } else {
       params.delete("queue");
     }
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  }, [captureTimelineContext, pathname, router, searchParams]);
+
+  const clearDateRange = useCallback(() => {
+    captureTimelineContext();
+    skipNextScheduleUrlWriteRef.current = true;
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("startDate");
+    params.delete("endDate");
     const query = params.toString();
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
   }, [captureTimelineContext, pathname, router, searchParams]);
@@ -763,6 +884,10 @@ export function useScheduleData(): UseScheduleDataResult {
   /** The list is the continuous today-anchored timeline unless a deep link pinned a window. */
   const isTimeline = effectiveViewMode === "list" && !deepLink.dateRange;
   const effectiveSportFilter = deepLinkApplied ? sportFilter : sportFilter || deepLink.sportCode;
+  const timelineWindow = useMemo(
+    () => (isTimeline ? createInitialScheduleTimelineWindow() : null),
+    [isTimeline],
+  );
   const { eventsUrl, groupsUrl, healthUrl, automationUrl } = buildScheduleUrls(
     effectiveViewMode,
     calMonth,
@@ -770,6 +895,7 @@ export function useScheduleData(): UseScheduleDataResult {
     includeArchived,
     effectiveSportFilter,
     deepLink.dateRange,
+    timelineWindow,
   );
   const scheduleScope: ScheduleQueryScope = {
     viewMode: effectiveViewMode,
@@ -795,7 +921,36 @@ export function useScheduleData(): UseScheduleDataResult {
     },
     ...SCHEDULE_FRESH_QUERY_OPTIONS,
   });
-  const entries = useMemo(() => schedule?.entries ?? [], [schedule]);
+
+  const timelineResetKey = `${effectiveViewMode}|${effectiveSportFilter}|${scheduleScope.dateRangeKey}`;
+  const [timelineExtra, setTimelineExtra] = useState<CalendarEntry[]>([]);
+  const [hasMorePast, setHasMorePast] = useState(true);
+  const [hasMoreFuture, setHasMoreFuture] = useState(true);
+  const [loadingPast, setLoadingPast] = useState(false);
+  const [loadingFuture, setLoadingFuture] = useState(false);
+  const [loadPastError, setLoadPastError] = useState(false);
+  const [loadFutureError, setLoadFutureError] = useState(false);
+  const timelineExtraRef = useRef<CalendarEntry[]>([]);
+  const timelineResetRef = useRef(timelineResetKey);
+  const loadingPastRef = useRef(false);
+  const loadingFutureRef = useRef(false);
+  const loadedEntriesRef = useRef<CalendarEntry[]>([]);
+
+  if (timelineResetRef.current !== timelineResetKey) {
+    timelineResetRef.current = timelineResetKey;
+    timelineExtraRef.current = [];
+    if (timelineExtra.length > 0) setTimelineExtra([]);
+    if (!hasMorePast) setHasMorePast(true);
+    if (!hasMoreFuture) setHasMoreFuture(true);
+    if (loadPastError) setLoadPastError(false);
+    if (loadFutureError) setLoadFutureError(false);
+  }
+
+  const entries = useMemo(
+    () => mergeRowsById(schedule?.entries ?? [], timelineExtra),
+    [schedule, timelineExtra],
+  );
+  loadedEntriesRef.current = entries;
   const timelineTruncated = schedule?.truncated ?? false;
   const { data: healthData = null, error: healthError, refetch: refetchScheduleHealth } = useQuery({
     queryKey: ["schedule-health", healthUrl],
@@ -884,13 +1039,129 @@ export function useScheduleData(): UseScheduleDataResult {
     return groups;
   }, [filteredEntries, isTimeline]);
 
-  const hasFilters = !!(sportFilter || areaFilter || coverageFilter || homeAwayFilter !== "all" || includeArchived || myShiftsOnly || activeQueue || deepLink.dateRange);
+  const hasFilters = !!(sportFilter || areaFilter || coverageFilter || homeAwayFilter !== "all" || includeArchived || activeQueue || deepLink.dateRange);
   /**
    * Filters that narrow *which* events are listed, as opposed to how far back
    * the timeline reaches. Loading archived events is not a filter -- treating it
    * as one made the archive row delete itself the moment it was used.
    */
   const hasContentFilters = !!(sportFilter || areaFilter || coverageFilter || homeAwayFilter !== "all" || myShiftsOnly || activeQueue || deepLink.dateRange);
+  const hasClientContentFilters = !!(areaFilter || coverageFilter || homeAwayFilter !== "all" || myShiftsOnly || activeQueue);
+
+  const fallbackTimelineCursor = useCallback((edge: "past" | "future"): ScheduleTimelineCursor => {
+    const now = new Date();
+    const start = timelineWindow?.start ?? now;
+    const end = timelineWindow?.end ?? now;
+    return {
+      startsAt: (edge === "past" ? start : end).toISOString(),
+      id: "",
+    };
+  }, [timelineWindow]);
+
+  const loadOlder = useCallback(async () => {
+    if (!isTimeline || loadingPastRef.current) return;
+    const cursor = oldestScheduleCursor(loadedEntriesRef.current) ?? fallbackTimelineCursor("past");
+    loadingPastRef.current = true;
+    setLoadingPast(true);
+    setLoadPastError(false);
+    try {
+      const slice = await fetchScheduleSlice(includeArchived, effectiveSportFilter, cursor, "before");
+      if (slice.entries.length === 0) {
+        setHasMorePast(false);
+        return;
+      }
+      timelineExtraRef.current = mergeRowsById(timelineExtraRef.current, slice.entries);
+      setTimelineExtra(timelineExtraRef.current);
+      setHasMorePast(slice.hasMore);
+    } catch (error) {
+      if (isScheduleAbort(error)) return;
+      setLoadPastError(true);
+    } finally {
+      loadingPastRef.current = false;
+      setLoadingPast(false);
+    }
+  }, [effectiveSportFilter, fallbackTimelineCursor, includeArchived, isTimeline]);
+
+  const loadNewer = useCallback(async () => {
+    if (!isTimeline || loadingFutureRef.current) return;
+    const cursor = newestScheduleCursor(loadedEntriesRef.current) ?? fallbackTimelineCursor("future");
+    loadingFutureRef.current = true;
+    setLoadingFuture(true);
+    setLoadFutureError(false);
+    try {
+      const slice = await fetchScheduleSlice(includeArchived, effectiveSportFilter, cursor, "after");
+      if (slice.entries.length === 0) {
+        setHasMoreFuture(false);
+        return;
+      }
+      timelineExtraRef.current = mergeRowsById(timelineExtraRef.current, slice.entries);
+      setTimelineExtra(timelineExtraRef.current);
+      setHasMoreFuture(slice.hasMore);
+    } catch (error) {
+      if (isScheduleAbort(error)) return;
+      setLoadFutureError(true);
+    } finally {
+      loadingFutureRef.current = false;
+      setLoadingFuture(false);
+    }
+  }, [effectiveSportFilter, fallbackTimelineCursor, includeArchived, isTimeline]);
+
+  useEffect(() => {
+    if (!isTimeline || !includeArchived || !pendingArchivedLoadRef.current) return;
+    pendingArchivedLoadRef.current = false;
+    setHasMorePast(true);
+    void loadOlder();
+  }, [includeArchived, isTimeline, loadOlder]);
+
+  useEffect(() => {
+    if (!isTimeline || !schedule || isLoading) return;
+    if (timelineExtraRef.current.length > 0) return;
+    let cancelled = false;
+    const oldest = oldestScheduleCursor(loadedEntriesRef.current) ?? fallbackTimelineCursor("past");
+    const newest = newestScheduleCursor(loadedEntriesRef.current) ?? fallbackTimelineCursor("future");
+    void (async () => {
+      try {
+        const [past, future] = await Promise.all([
+          fetchKeysetEvents(listKeysetEventsUrl(includeArchived, effectiveSportFilter, oldest, "before", 1)),
+          fetchKeysetEvents(listKeysetEventsUrl(includeArchived, effectiveSportFilter, newest, "after", 1)),
+        ]);
+        if (cancelled) return;
+        setHasMorePast(past.rows.length > 0);
+        setHasMoreFuture(future.rows.length > 0);
+      } catch {
+        // Peek failure leaves the last known bounds; the edge retry can recover.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [effectiveSportFilter, fallbackTimelineCursor, includeArchived, isLoading, isTimeline, schedule]);
+
+  useEffect(() => {
+    if (!isTimeline || !hasClientContentFilters || loading || loadingPast || loadingFuture) return;
+    if (loadPastError || loadFutureError) return;
+    if (hasMorePast) {
+      void loadOlder();
+      return;
+    }
+    if (hasMoreFuture) void loadNewer();
+  }, [
+    hasClientContentFilters,
+    hasMoreFuture,
+    hasMorePast,
+    isTimeline,
+    loadFutureError,
+    loadNewer,
+    loadOlder,
+    loadPastError,
+    loading,
+    loadingFuture,
+    loadingPast,
+  ]);
+
+  const fillingWindow = Boolean(
+    isTimeline && hasClientContentFilters && (hasMorePast || hasMoreFuture || loadingPast || loadingFuture),
+  );
 
   const sourceSignal = useMemo(() => {
     if (!canViewSourceStatus) return null;
@@ -916,6 +1187,15 @@ export function useScheduleData(): UseScheduleDataResult {
     groupedEntries,
     timelineTruncated,
     isTimeline,
+    hasMorePast,
+    hasMoreFuture,
+    loadingPast,
+    loadingFuture,
+    loadPastError,
+    loadFutureError,
+    loadOlder,
+    loadNewer,
+    fillingWindow,
     hasContentFilters,
     loading,
     refreshing: preferencesLoaded && isFetching && !isLoading,
@@ -941,6 +1221,8 @@ export function useScheduleData(): UseScheduleDataResult {
       queue: activeQueue,
       queueMeta: activeQueueMeta,
       setQueue,
+      dateRange: deepLink.dateRange,
+      clearDateRange,
       hasFilters,
       clearAll: () => {
         captureTimelineContext();
@@ -949,11 +1231,9 @@ export function useScheduleData(): UseScheduleDataResult {
         setCoverageFilterRaw("");
         setHomeAwayFilterRaw("all");
         setIncludeArchivedRaw(false);
-        setMyShiftsOnlyRaw(false);
         skipNextScheduleUrlWriteRef.current = true;
         const params = new URLSearchParams(searchParams.toString());
         params.delete("queue");
-        params.delete("myShifts");
         params.delete("sportCode");
         params.delete("area");
         params.delete("coverage");

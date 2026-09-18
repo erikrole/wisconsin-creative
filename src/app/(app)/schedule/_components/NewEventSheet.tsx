@@ -19,7 +19,8 @@ import {
   NONE_LOCATION_VALUE,
   NONE_SPORT_VALUE,
   buildCreatedEventWindow,
-  emptyEventEditorDraft,
+  createManualEventDraft,
+  suggestedEventEditorTitle,
   type EventEditorDraft,
 } from "@/lib/event-editor";
 import { EventEditorFields, eventEditorIsComplete } from "@/components/event-editor/EventEditorFields";
@@ -37,18 +38,22 @@ export function NewEventSheet({ open, onOpenChange, onCreated }: Props) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
+  const titleTouchedRef = useRef(false);
   const [locations, setLocations] = useState<Location[]>([]);
   const [locationsError, setLocationsError] = useState("");
+  const [locationsLoading, setLocationsLoading] = useState(false);
+  const [locationLoadId, setLocationLoadId] = useState(0);
   const [createdEvent, setCreatedEvent] = useState<CreatedEvent | null>(null);
-  const [draft, setDraft] = useState<EventEditorDraft>(emptyEventEditorDraft);
+  const [draft, setDraft] = useState<EventEditorDraft>(createManualEventDraft);
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (!open) return;
     const controller = new AbortController();
-    setLocationsError("");
 
     async function loadLocations() {
+      setLocationsLoading(true);
+      setLocationsError("");
       try {
         const res = await fetch("/api/locations", { signal: controller.signal });
         if (controller.signal.aborted) return;
@@ -66,18 +71,25 @@ export function NewEventSheet({ open, onOpenChange, onCreated }: Props) {
       } catch (err) {
         if (isAbortError(err)) return;
         setLocationsError("Locations could not be loaded.");
+      } finally {
+        if (!controller.signal.aborted) setLocationsLoading(false);
       }
     }
 
-    loadLocations();
+    void loadLocations();
     return () => controller.abort();
-  }, [open]);
+  }, [open, locationLoadId]);
 
   function reset() {
-    setDraft(emptyEventEditorDraft());
+    titleTouchedRef.current = false;
+    setDraft(createManualEventDraft());
     setError("");
     setLocationsError("");
     setCreatedEvent(null);
+  }
+
+  function retryLocations() {
+    setLocationLoadId((current) => current + 1);
   }
 
   function finishCreatedEvent(mode: "another" | "open" | "list") {
@@ -94,7 +106,15 @@ export function NewEventSheet({ open, onOpenChange, onCreated }: Props) {
   }
 
   function patchDraft(next: Partial<EventEditorDraft>) {
-    setDraft((current) => ({ ...current, ...next }));
+    setDraft((current) => {
+      if (next.title !== undefined) titleTouchedRef.current = true;
+      const merged = { ...current, ...next };
+      if (!titleTouchedRef.current) {
+        const suggested = suggestedEventEditorTitle(merged);
+        if (suggested && suggested !== merged.title) merged.title = suggested;
+      }
+      return merged;
+    });
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -151,8 +171,11 @@ export function NewEventSheet({ open, onOpenChange, onCreated }: Props) {
       }
       toast.success(`"${event.summary}" added to schedule`);
       onCreated();
-      reset();
-      setCreatedEvent(event);
+      const created = event;
+      titleTouchedRef.current = false;
+      setDraft(createManualEventDraft());
+      setError("");
+      setCreatedEvent(created);
     } catch {
       setError("Network error - check your connection");
     } finally {
@@ -165,8 +188,12 @@ export function NewEventSheet({ open, onOpenChange, onCreated }: Props) {
     <Sheet open={open} onOpenChange={(v) => { if (submitting) return; onOpenChange(v); if (!v) reset(); }}>
       <SheetContent className="sm:inset-y-auto sm:bottom-auto sm:top-4 sm:h-auto sm:max-h-[calc(100vh-2rem)] sm:max-w-xl sm:rounded-lg sm:border">
         <SheetHeader>
-          <SheetTitle>New event</SheetTitle>
-          <SheetDescription>Add an event directly to the schedule.</SheetDescription>
+          <SheetTitle>{createdEvent ? "Event added" : "Add event"}</SheetTitle>
+          <SheetDescription>
+            {createdEvent
+              ? "Staff a crew next, or add another event from here."
+              : "Add a game or other work directly to the schedule."}
+          </SheetDescription>
         </SheetHeader>
 
         <SheetBody className="px-6 py-5">
@@ -174,25 +201,23 @@ export function NewEventSheet({ open, onOpenChange, onCreated }: Props) {
             <div className="flex flex-col gap-4">
               <Alert>
                 <AlertDescription>
-                  Event {createdEvent.summary} was added. Open it to staff a crew, or add another event from here.
+                  <span className="font-medium text-foreground">{createdEvent.summary}</span>
+                  {" "}is on the schedule. Open Event detail to set up a crew.
                 </AlertDescription>
               </Alert>
-              <div className="rounded-md border bg-muted/30 px-4 py-3 text-sm">
-                <p className="font-medium">Next step</p>
-                <p className="mt-1 text-muted-foreground">
-                  Open Event detail to set title details, hide it later, or staff Home, Away, or empty crew.
-                </p>
-              </div>
             </div>
           ) : (
           <form id="new-event-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
             <EventEditorFields
+              intent="create"
               draft={draft}
               onChange={patchDraft}
               locations={locations}
               locationsError={locationsError}
+              locationsLoading={locationsLoading}
+              onRetryLocations={retryLocations}
               disabled={submitting}
-              timingHint="Choose the operational window. Crew and call times will follow this event."
+              timingHint="Crew and call times follow this window. Gear reservations stay independent."
             />
             {error && (
               <Alert variant="destructive">
@@ -206,23 +231,23 @@ export function NewEventSheet({ open, onOpenChange, onCreated }: Props) {
         <SheetFooter>
           {createdEvent ? (
             <>
-              <Button variant="outline" type="button" onClick={() => finishCreatedEvent("another")}>
-                Add another event
+              <Button variant="outline" type="button" className="h-10" onClick={() => finishCreatedEvent("another")}>
+                Add another
               </Button>
-              <Button variant="outline" type="button" onClick={() => finishCreatedEvent("list")}>
+              <Button variant="outline" type="button" className="h-10" onClick={() => finishCreatedEvent("list")}>
                 Return to schedule
               </Button>
-              <Button type="button" onClick={() => finishCreatedEvent("open")}>
+              <Button type="button" className="h-10" onClick={() => finishCreatedEvent("open")}>
                 Open event
               </Button>
             </>
           ) : (
             <>
-              <Button variant="outline" type="button" onClick={() => onOpenChange(false)} disabled={submitting}>
+              <Button variant="outline" type="button" className="h-10" onClick={() => onOpenChange(false)} disabled={submitting}>
                 Cancel
               </Button>
-              <Button type="submit" form="new-event-form" disabled={submitting || !eventEditorIsComplete(draft)}>
-                {submitting ? "Adding..." : "Add event"}
+              <Button type="submit" form="new-event-form" className="h-10" loading={submitting} disabled={!eventEditorIsComplete(draft)}>
+                Add event
               </Button>
             </>
           )}

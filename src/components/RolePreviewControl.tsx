@@ -112,8 +112,8 @@ export function RolePreviewBanner({ user }: { user: CurrentUser }) {
       <Button
         type="button"
         variant="outline"
-        size="xs"
-        className="border-amber-400/70 bg-transparent text-amber-950 hover:bg-amber-200 dark:border-amber-600 dark:text-amber-100 dark:hover:bg-amber-900"
+        size="sm"
+        className="h-10 border-amber-400/70 bg-transparent text-amber-950 hover:bg-amber-200 dark:border-amber-600 dark:text-amber-100 dark:hover:bg-amber-900"
         onClick={() => void stopPreview()}
         loading={pending}
       >
@@ -136,7 +136,7 @@ export function RolePreviewControl({ user }: { user: CurrentUser }) {
           type="button"
           variant="outline"
           size="sm"
-          className="h-8 gap-1.5 text-xs max-md:px-2"
+          className="h-10 gap-1.5 text-xs max-md:px-2"
           aria-label="Preview as another role"
           disabled={pending}
         >

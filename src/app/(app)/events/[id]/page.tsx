@@ -632,7 +632,7 @@ export default function EventDetailPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-9"
+                      className="h-10"
                       disabled={uncombiningId !== null}
                       onClick={() => void handleUncombine(sourceEvent.id)}
                     >

@@ -1,30 +1,31 @@
+export const SPORT_PROGRAMS = ["men", "women"] as const;
+export type SportProgram = (typeof SPORT_PROGRAMS)[number];
+
 /** UW Athletics sport codes — all 23 varsity sports */
 export const SPORT_CODES = [
-  // ── Men's Sports (11) ──
-  { code: "MBB", label: "Men's Basketball" },
-  { code: "MXC", label: "Men's Cross Country" },
-  { code: "FB", label: "Football" },
-  { code: "MGOLF", label: "Men's Golf" },
-  { code: "MHKY", label: "Men's Hockey" },
-  { code: "MROW", label: "Men's Rowing" },
-  { code: "MSOC", label: "Men's Soccer" },
-  { code: "MSWIM", label: "Men's Swimming & Diving" },
-  { code: "MTEN", label: "Men's Tennis" },
-  { code: "MTRACK", label: "Men's Track & Field" },
-  { code: "WRES", label: "Wrestling" },
-  // ── Women's Sports (12) ──
-  { code: "WBB", label: "Women's Basketball" },
-  { code: "WXC", label: "Women's Cross Country" },
-  { code: "WGOLF", label: "Women's Golf" },
-  { code: "WHKY", label: "Women's Hockey" },
-  { code: "LROW", label: "Lightweight Rowing" },
-  { code: "WROW", label: "Women's Rowing" },
-  { code: "WSOC", label: "Women's Soccer" },
-  { code: "SB", label: "Softball" },
-  { code: "WSWIM", label: "Women's Swimming & Diving" },
-  { code: "WTEN", label: "Women's Tennis" },
-  { code: "WTRACK", label: "Women's Track & Field" },
-  { code: "VB", label: "Volleyball" },
+  { code: "MBB", label: "Men's Basketball", program: "men" },
+  { code: "MXC", label: "Men's Cross Country", program: "men" },
+  { code: "FB", label: "Football", program: "men" },
+  { code: "MGOLF", label: "Men's Golf", program: "men" },
+  { code: "MHKY", label: "Men's Hockey", program: "men" },
+  { code: "MROW", label: "Men's Rowing", program: "men" },
+  { code: "MSOC", label: "Men's Soccer", program: "men" },
+  { code: "MSWIM", label: "Men's Swimming & Diving", program: "men" },
+  { code: "MTEN", label: "Men's Tennis", program: "men" },
+  { code: "MTRACK", label: "Men's Track & Field", program: "men" },
+  { code: "WRES", label: "Wrestling", program: "men" },
+  { code: "WBB", label: "Women's Basketball", program: "women" },
+  { code: "WXC", label: "Women's Cross Country", program: "women" },
+  { code: "WGOLF", label: "Women's Golf", program: "women" },
+  { code: "WHKY", label: "Women's Hockey", program: "women" },
+  { code: "LROW", label: "Lightweight Rowing", program: "women" },
+  { code: "WROW", label: "Women's Rowing", program: "women" },
+  { code: "WSOC", label: "Women's Soccer", program: "women" },
+  { code: "SB", label: "Softball", program: "women" },
+  { code: "WSWIM", label: "Women's Swimming & Diving", program: "women" },
+  { code: "WTEN", label: "Women's Tennis", program: "women" },
+  { code: "WTRACK", label: "Women's Track & Field", program: "women" },
+  { code: "VB", label: "Volleyball", program: "women" },
 ] as const;
 
 export type SportCode = (typeof SPORT_CODES)[number]["code"];
@@ -57,6 +58,27 @@ export function sportLabel(code: string): string {
     LEGACY_LABELS[normalized] ??
     code
   );
+}
+
+export function sportProgram(code: string): SportProgram | null {
+  const normalized = normalizeSportCode(code);
+  return SPORT_CODES.find((sport) => sport.code === normalized)?.program ?? null;
+}
+
+/** Short name for a gendered column: "Men's Basketball" → "Basketball". */
+export function sportColumnLabel(code: string): string {
+  const label = sportLabel(code);
+  return label.replace(/^(Men's|Women's)\s+/, "");
+}
+
+export function sportsGroupedByProgram(allowedCodes?: ReadonlySet<string>) {
+  const sports = allowedCodes
+    ? SPORT_CODES.filter((sport) => allowedCodes.has(sport.code))
+    : [...SPORT_CODES];
+  return {
+    men: sports.filter((sport) => sport.program === "men"),
+    women: sports.filter((sport) => sport.program === "women"),
+  };
 }
 
 /**

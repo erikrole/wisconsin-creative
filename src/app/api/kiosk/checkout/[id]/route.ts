@@ -13,7 +13,8 @@ import { upsertBulkBalancesAndMovements } from "@/lib/services/bookings-helpers"
 import { BookingCustodyScope, BookingKind, BulkMovementKind, BulkUnitStatus, Prisma, Role } from "@prisma/client";
 import { scheduleCheckoutReturnLiveActivity } from "@/lib/live-activity-workflow";
 import { updateCheckoutReturnLiveActivities } from "@/lib/services/live-activities";
-import { normalizeBookingTitle, normalizeTeamAbbreviations } from "@/lib/title-normalization";
+import { normalizeBookingTitle } from "@/lib/title-normalization";
+import { displayBookingTitle } from "@/lib/booking-display-title";
 import { MAX_EQUIPMENT_SELECTIONS_PER_REQUEST } from "@/lib/request-limits";
 
 function hasBlockingAvailabilityIssue(result: Pick<Awaited<ReturnType<typeof checkAvailability>>, "conflicts" | "shortages" | "unavailableAssets">) {
@@ -460,7 +461,7 @@ export const GET = withKiosk<{ id: string }>(async (_req, { params }) => {
 
   return ok({
     id: booking.id,
-    title: normalizeTeamAbbreviations(booking.title),
+    title: displayBookingTitle(booking.title),
     refNumber: booking.refNumber,
     status: booking.status,
     requesterId: booking.custodyScope === BookingCustodyScope.SHARED
@@ -551,7 +552,7 @@ export const PATCH = withKiosk<{ id: string }>(async (req, { kiosk, params }) =>
     success: true,
     booking: {
       ...updated,
-      title: normalizeTeamAbbreviations(updated.title),
+      title: displayBookingTitle(updated.title),
     },
   });
 });

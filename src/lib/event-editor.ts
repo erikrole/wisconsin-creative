@@ -1,4 +1,5 @@
 import { QUARTER_HOUR_MINUTES, roundUpToQuarterHour } from "@/lib/quarter-hour";
+import { sportLabel } from "@/lib/sports";
 import type { VenueTone } from "@/lib/venue-tone";
 
 export type EventTypeDraft = VenueTone;
@@ -33,6 +34,27 @@ export function emptyEventEditorDraft(): EventEditorDraft {
     eventType: "non-game",
     opponent: "",
   };
+}
+
+/** Fresh Add Event draft: today, timed, Home so sport and opponent are in view. */
+export function createManualEventDraft(now = new Date()): EventEditorDraft {
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return {
+    ...emptyEventEditorDraft(),
+    startDate: today,
+    endDate: today,
+    eventType: "home",
+  };
+}
+
+export function suggestedEventEditorTitle(draft: EventEditorDraft): string {
+  const sport = draft.sportCode === NONE_SPORT_VALUE ? "" : sportLabel(draft.sportCode);
+  if (draft.eventType === "non-game") return sport;
+  const opponent = draft.opponent.trim();
+  if (!sport || !opponent) return "";
+  if (draft.eventType === "away") return `${sport} at ${opponent}`;
+  if (draft.eventType === "neutral") return `${sport} vs ${opponent} (Neutral)`;
+  return `${sport} vs ${opponent}`;
 }
 
 export function eventDraftDate(value: string, allDay: boolean, isEnd: boolean) {

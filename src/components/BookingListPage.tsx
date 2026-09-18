@@ -704,7 +704,7 @@ export default function BookingListPage({
                       {pickupLocations.map((location) => <SelectItem key={location.id} value={location.id}>{location.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
-                  <Button type="button" variant="outline" size="sm" disabled={!bulkLocationId || bulkActionBusy} onClick={() => { void runBulkReservationAction("location"); }}>
+                  <Button type="button" variant="outline" size="sm" className="h-10" disabled={!bulkLocationId || bulkActionBusy} onClick={() => { void runBulkReservationAction("location"); }}>
                     Apply location
                   </Button>
                   <Select value={bulkRequesterId} onValueChange={setBulkRequesterId} disabled={bulkActionBusy}>
@@ -715,17 +715,18 @@ export default function BookingListPage({
                       {users.map((person) => <SelectItem key={person.id} value={person.id}>{person.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
-                  <Button type="button" variant="outline" size="sm" disabled={!bulkRequesterId || bulkActionBusy} onClick={() => { void runBulkReservationAction("requester"); }}>
+                  <Button type="button" variant="outline" size="sm" className="h-10" disabled={!bulkRequesterId || bulkActionBusy} onClick={() => { void runBulkReservationAction("requester"); }}>
                     Transfer
                   </Button>
                 </>
               )}
-              <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedBookingIds([])}>
+              <Button type="button" variant="ghost" size="sm" className="h-10" onClick={() => setSelectedBookingIds([])}>
                 Clear
               </Button>
               <Button
                 type="button"
                 size="sm"
+                className="h-10"
                 disabled={selectedBookingIds.length < 2 || mergingBookings}
                 onClick={() => { void mergeSelectedBookings(); }}
               >
@@ -734,7 +735,7 @@ export default function BookingListPage({
                   : config.kind === "CHECKOUT" ? "Merge matching checkouts" : "Combine matching reservations"}
               </Button>
               {config.kind === "RESERVATION" && (
-                <Button type="button" variant="destructive" size="sm" disabled={bulkActionBusy} onClick={() => { void runBulkReservationAction("cancel"); }}>
+                <Button type="button" variant="destructive" size="sm" className="h-10" disabled={bulkActionBusy} onClick={() => { void runBulkReservationAction("cancel"); }}>
                   Cancel selected
                 </Button>
               )}

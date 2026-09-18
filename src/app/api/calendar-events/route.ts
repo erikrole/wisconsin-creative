@@ -6,6 +6,11 @@ import { createAuditEntry } from "@/lib/audit";
 import { assertDateOrder, parseOptionalDate } from "@/lib/api-dates";
 import { normalizeAllDayToUtcMidnight } from "@/lib/app-time";
 import { normalizeOpponentName } from "@/lib/schedule-event-identity";
+import {
+  parseScheduleEventKeyset,
+  scheduleEventKeysetOrder,
+  scheduleEventKeysetWhere,
+} from "@/lib/schedule-event-keyset";
 import { buildScheduleEventWhere } from "@/lib/schedule-event-where";
 import { isHomeFromVenueTone, siteFromVenueTone, VENUE_TONE_VALUES } from "@/lib/venue-tone";
 import { nullableSportCodeSchema, optionalSportCodeSchema } from "@/lib/validation";
@@ -87,8 +92,12 @@ export const GET = withAuth(async (req, { user }) => {
   const parsedStartDate = parseOptionalDate(startDate, "startDate");
   const parsedEndDate = parseOptionalDate(endDate, "endDate");
   assertDateOrder(parsedStartDate, parsedEndDate);
+  const keyset = parseScheduleEventKeyset(searchParams);
+  if (keyset && offset > 0) {
+    throw new HttpError(400, "Keyset pagination cannot be combined with a non-zero offset");
+  }
 
-  const where = {
+  const baseWhere = {
     ...buildScheduleEventWhere({
       parsedStartDate,
       parsedEndDate,
@@ -100,8 +109,11 @@ export const GET = withAuth(async (req, { user }) => {
     }),
     combinedIntoId: null,
   };
+  const where = keyset
+    ? { AND: [baseWhere, scheduleEventKeysetWhere(keyset)] }
+    : baseWhere;
 
-  const [data, total] = await Promise.all([
+  const [rows, total] = await Promise.all([
     db.calendarEvent.findMany({
       where,
       include: {
@@ -123,12 +135,15 @@ export const GET = withAuth(async (req, { user }) => {
       // Offset pagination needs a total ordering; several imported events can
       // share an exact start time, so the id tie-breaker prevents a later page
       // from skipping or repeating a row while the native client drains it.
-      orderBy: [{ startsAt: "asc" }, { id: "asc" }],
+      // `beforeStartsAt` pages walk newest-of-the-older-rows first, then reverse
+      // below so every consumer still receives chronological ascending rows.
+      orderBy: scheduleEventKeysetOrder(keyset),
       take: limit,
-      skip: offset
+      skip: keyset ? 0 : offset,
     }),
-    db.calendarEvent.count({ where })
+    db.calendarEvent.count({ where }),
   ]);
+  const data = keyset?.direction === "before" ? [...rows].reverse() : rows;
 
   // Attach crew coverage so list surfaces (e.g. iOS Schedule) can show
   // filled/total without drilling into each event. One batched query keyed by

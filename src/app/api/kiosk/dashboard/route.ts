@@ -3,6 +3,7 @@ import { withKiosk } from "@/lib/api";
 import { ok } from "@/lib/http";
 import { getInitials } from "@/lib/avatar";
 import { env } from "@/lib/env";
+import { displayBookingTitle } from "@/lib/booking-display-title";
 import { normalizeTeamAbbreviations } from "@/lib/title-normalization";
 import { BookingKind, BookingStatus, ShiftAssignmentStatus } from "@prisma/client";
 
@@ -558,7 +559,7 @@ export const GET = withKiosk(async () => {
         bulkSkuId: null,
         unitNumber: null,
         checkoutId: entry.booking.id,
-        checkoutTitle: normalizeTeamAbbreviations(entry.booking.title),
+        checkoutTitle: displayBookingTitle(entry.booking.title),
         custodyScope: entry.booking.custodyScope,
         requesterId: entry.booking.custodyScope === "SHARED" ? null : entry.booking.requester.id,
         requesterName: entry.booking.custodyScope === "SHARED" ? "Shared checkout" : entry.booking.requester.name,
@@ -575,7 +576,7 @@ export const GET = withKiosk(async () => {
         bulkSkuId: entry.bulkSkuUnit.bulkSku.id,
         unitNumber: entry.bulkSkuUnit.unitNumber,
         checkoutId: entry.bookingBulkItem.booking.id,
-        checkoutTitle: normalizeTeamAbbreviations(entry.bookingBulkItem.booking.title),
+        checkoutTitle: displayBookingTitle(entry.bookingBulkItem.booking.title),
         custodyScope: entry.bookingBulkItem.booking.custodyScope,
         requesterId: entry.bookingBulkItem.booking.custodyScope === "SHARED" ? null : entry.bookingBulkItem.booking.requester.id,
         requesterName: entry.bookingBulkItem.booking.custodyScope === "SHARED" ? "Shared checkout" : entry.bookingBulkItem.booking.requester.name,
@@ -596,7 +597,7 @@ export const GET = withKiosk(async () => {
             bulkSkuId: item.bulkSku.id,
             unitNumber: null,
             checkoutId: checkout.id,
-            checkoutTitle: normalizeTeamAbbreviations(checkout.title),
+            checkoutTitle: displayBookingTitle(checkout.title),
             custodyScope: checkout.custodyScope,
             requesterId: checkout.custodyScope === "SHARED" ? null : checkout.requester.id,
             requesterName: checkout.custodyScope === "SHARED" ? "Shared checkout" : checkout.requester.name,
@@ -624,7 +625,7 @@ export const GET = withKiosk(async () => {
 
       return {
         id: c.id,
-        title: normalizeTeamAbbreviations(c.title),
+        title: displayBookingTitle(c.title),
         custodyScope: c.custodyScope,
         requesterName: c.custodyScope === "SHARED" ? "Shared checkout" : c.requester.name,
         requesterId: c.custodyScope === "SHARED" ? null : c.requester.id,

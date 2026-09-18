@@ -7,6 +7,7 @@ import { shiftWorkerLabel } from "@/lib/shift-display";
 import { normalizeTeamAbbreviations } from "@/lib/title-normalization";
 import { readDashboardCounts, zeroDashboardCounts } from "@/lib/services/dashboard-counts";
 import { startOfDayInAppTz } from "@/lib/app-time";
+import { displayBookingTitle } from "@/lib/booking-display-title";
 import { hasCollaboratorCapability } from "@/lib/collaborator-access";
 import { studentCallTimeAppliesToEvent } from "@/lib/shift-call-windows";
 
@@ -66,7 +67,7 @@ function toBookingSummary(c: {
   return {
     id: c.id,
     kind: c.kind,
-    title: normalizeTeamAbbreviations(c.title),
+    title: displayBookingTitle(c.title),
     refNumber: c.refNumber,
     eventId: c.eventId ?? null,
     eventIds,
@@ -663,7 +664,7 @@ export const GET = withAuth(async (req, { user }) => {
 
   const overdueItems = topOverdue.map((b) => ({
     bookingId: b.id,
-    bookingTitle: normalizeTeamAbbreviations(b.title),
+    bookingTitle: displayBookingTitle(b.title),
     requesterName: b.requester.name,
     requesterInitials: getInitials(b.requester.name),
     requesterAvatarUrl: b.requester.avatarUrl ?? null,
@@ -837,7 +838,7 @@ export const GET = withAuth(async (req, { user }) => {
       drafts: myDrafts.map((d) => ({
         id: d.id,
         kind: d.kind,
-        title: normalizeTeamAbbreviations(d.title),
+        title: displayBookingTitle(d.title),
         itemCount: d._count.serializedItems + d._count.bulkItems,
         updatedAt: d.updatedAt.toISOString(),
       })),
@@ -851,7 +852,7 @@ export const GET = withAuth(async (req, { user }) => {
           assetTag: r.asset.assetTag,
           assetName: r.asset.name,
           type: r.type as "DAMAGED" | "LOST",
-          bookingTitle: normalizeTeamAbbreviations(r.booking.title),
+          bookingTitle: displayBookingTitle(r.booking.title),
           reportedBy: r.reportedBy.name,
           imageUrl: r.imageUrl ?? null,
           createdAt: r.createdAt.toISOString(),

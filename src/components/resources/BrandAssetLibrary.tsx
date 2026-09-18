@@ -318,7 +318,7 @@ function AssetPreviewContent({ asset }: { asset: AssetSummary }) {
   }
   if (isImagePreviewable(current.contentType)) {
     return (
-      <div className="flex min-h-44 items-center justify-center overflow-hidden rounded-lg border border-border/80 bg-[linear-gradient(45deg,hsl(var(--muted))_25%,transparent_25%),linear-gradient(-45deg,hsl(var(--muted))_25%,transparent_25%),linear-gradient(45deg,transparent_75%,hsl(var(--muted))_75%),linear-gradient(-45deg,transparent_75%,hsl(var(--muted))_75%)] bg-[length:24px_24px] bg-[position:0_0,0_12px,12px_-12px,-12px_0px] p-4">
+      <div className="flex min-h-44 items-center justify-center overflow-hidden rounded-lg border border-border/80 bg-[linear-gradient(45deg,color-mix(in_oklch,var(--muted)_25%,transparent)_25%,transparent_25%),linear-gradient(-45deg,color-mix(in_oklch,var(--muted)_25%,transparent)_25%,transparent_25%),linear-gradient(45deg,transparent_75%,color-mix(in_oklch,var(--muted)_25%,transparent)_75%),linear-gradient(-45deg,transparent_75%,color-mix(in_oklch,var(--muted)_25%,transparent)_75%)] bg-[length:24px_24px] bg-[position:0_0,0_12px,12px_-12px,-12px_0px] p-4">
         <img
           src={assetHref(asset.id, current.id)}
           alt={asset.name}
@@ -728,7 +728,7 @@ function UploadAssetDialog({
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm font-semibold">Upload queue <span className="font-normal text-muted-foreground">({queue.length})</span></p>
                   {queue.some((item) => item.status === "failed") && !uploading && (
-                    <Button type="button" variant="ghost" size="sm" className="h-8" onClick={retryFailed}>
+                    <Button type="button" variant="ghost" size="sm" className="h-10" onClick={retryFailed}>
                       <RotateCcwIcon data-icon="inline-start" /> Retry failed
                     </Button>
                   )}
@@ -750,10 +750,10 @@ function UploadAssetDialog({
                           {item.status === "conflict" && item.existingAssetId && (
                             <div className="mt-3 flex flex-wrap items-center gap-2">
                               <span className="text-xs text-muted-foreground">Use the existing row or skip this file.</span>
-                              <Button type="button" size="sm" className="h-8" onClick={() => resolveConflict(item.id, "version")}>
+                              <Button type="button" size="sm" className="h-10" onClick={() => resolveConflict(item.id, "version")}>
                                 Upload as new version
                               </Button>
-                              <Button type="button" variant="ghost" size="sm" className="h-8" onClick={() => resolveConflict(item.id, "skip")}>
+                              <Button type="button" variant="ghost" size="sm" className="h-10" onClick={() => resolveConflict(item.id, "skip")}>
                                 Skip
                               </Button>
                             </div>

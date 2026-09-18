@@ -29,6 +29,8 @@ type WeekViewProps = {
   currentUserRole: string;
   myShiftsOnly: boolean;
   onOpenCrew: (entry: CalendarEntry) => void;
+  hasFilters?: boolean;
+  onClearFilters?: () => void;
 };
 
 function getWeekDays(weekStart: Date): Date[] {
@@ -342,6 +344,8 @@ export function WeekView({
   currentUserRole,
   myShiftsOnly,
   onOpenCrew,
+  hasFilters = false,
+  onClearFilters,
 }: WeekViewProps) {
   const today = useMemo(() => {
     const d = new Date();
@@ -496,8 +500,14 @@ export function WeekView({
       {!loading && entries.length === 0 && (
         <EmptyState
           icon="calendar"
-          title="No events this week"
-          description="Try navigating to a different week or clear schedule filters."
+          title={hasFilters ? "No events match these filters" : "No events this week"}
+          description={
+            hasFilters
+              ? "Try another week or clear schedule filters."
+              : "Try navigating to a different week."
+          }
+          actionLabel={hasFilters ? "Clear filters" : undefined}
+          onAction={hasFilters ? onClearFilters : undefined}
           compact
         />
       )}

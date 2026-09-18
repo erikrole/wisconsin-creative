@@ -4,7 +4,7 @@ import { env } from "@/lib/env";
 import { HttpError } from "@/lib/http";
 import { failRequest, tagRequestJsonParseErrors } from "@/lib/api-handler";
 import { deferCompanionProjectionRefresh } from "@/lib/services/companion-projection-publisher";
-import { isRolePreviewBlockedRequest, readRolePreviewCookie } from "@/lib/role-preview";
+import { isRolePreviewBlockedRequest, readRolePreviewFromRequest } from "@/lib/role-preview";
 
 export { withHandler } from "@/lib/api-handler";
 
@@ -125,7 +125,7 @@ export function withKiosk<P extends Record<string, string> = Record<string, stri
       if (req.method !== "GET" && req.method !== "HEAD") {
         assertKioskSameOrigin(req);
       }
-      if (await readRolePreviewCookie()) {
+      if (await readRolePreviewFromRequest(req)) {
         throw new HttpError(403, "Kiosk access is unavailable in role preview");
       }
       const kiosk = await requireKiosk();

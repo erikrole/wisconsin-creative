@@ -235,10 +235,10 @@ export default function BadgesClient({
                     : `${users.length} active users`}
               </p>
               <div className="flex items-center gap-2">
-                <Button type="button" variant="outline" size="sm" className="h-9" onClick={selectAllVisible} disabled={directoryLoading || visibleUsers.length === 0 || allVisibleSelected || targetCount >= MAX_BULK_BADGE_TARGETS}>
+                <Button type="button" variant="outline" size="sm" className="h-10" onClick={selectAllVisible} disabled={directoryLoading || visibleUsers.length === 0 || allVisibleSelected || targetCount >= MAX_BULK_BADGE_TARGETS}>
                   Select all visible
                 </Button>
-                <Button type="button" variant="ghost" size="sm" className="h-9" onClick={clearSelection} disabled={targetCount === 0}>
+                <Button type="button" variant="ghost" size="sm" className="h-10" onClick={clearSelection} disabled={targetCount === 0}>
                   Clear selection
                 </Button>
               </div>

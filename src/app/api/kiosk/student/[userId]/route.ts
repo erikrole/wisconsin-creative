@@ -4,7 +4,7 @@ import { HttpError, ok } from "@/lib/http";
 import { enforceRateLimit, getClientIp } from "@/lib/rate-limit";
 import { isGlobalKioskCollaborator } from "@/lib/collaborator-access";
 import { collaboratorPolicyActorSelect } from "@/lib/services/collaborator-policies";
-import { normalizeTeamAbbreviations } from "@/lib/title-normalization";
+import { displayBookingTitle } from "@/lib/booking-display-title";
 
 /** Get a student's active checkouts, pending pickups, and upcoming reservations */
 export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) => {
@@ -157,7 +157,7 @@ export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) 
   return ok({
     checkouts: checkouts.map((c) => ({
       id: c.id,
-      title: normalizeTeamAbbreviations(c.title),
+      title: displayBookingTitle(c.title),
       refNumber: c.refNumber,
       items: c.serializedItems.map((si) => ({
         name: si.asset.name || si.asset.assetTag,
@@ -175,7 +175,7 @@ export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) 
     pendingPickups: [
       ...pendingPickups.map((p) => ({
         id: p.id,
-        title: normalizeTeamAbbreviations(p.title),
+        title: displayBookingTitle(p.title),
         refNumber: p.refNumber,
         startsAt: p.startsAt,
         serializedItems: p.serializedItems.map((si) => ({
@@ -190,7 +190,7 @@ export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) 
       })),
       ...dueReservations.map((p) => ({
         id: p.id,
-        title: normalizeTeamAbbreviations(p.title),
+        title: displayBookingTitle(p.title),
         refNumber: p.refNumber,
         startsAt: p.startsAt,
         serializedItems: p.serializedItems.map((si) => ({
@@ -208,7 +208,7 @@ export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) 
     ],
     reservations: reservations.map((r) => ({
       id: r.id,
-      title: normalizeTeamAbbreviations(r.title),
+      title: displayBookingTitle(r.title),
       startsAt: r.startsAt,
     })),
   });

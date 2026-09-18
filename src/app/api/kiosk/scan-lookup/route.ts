@@ -5,7 +5,7 @@ import { enforceRateLimit } from "@/lib/rate-limit";
 import { findAssetByScanValue } from "@/lib/services/kiosk-scan";
 import { findBulkUnitByScanValue } from "@/lib/services/bulk-unit-scans";
 import { scanLookupBody } from "@/lib/schemas/kiosk";
-import { normalizeTeamAbbreviations } from "@/lib/title-normalization";
+import { displayBookingTitle } from "@/lib/booking-display-title";
 
 /** Look up an item by QR code or asset tag */
 export const POST = withKiosk(async (req, { kiosk }) => {
@@ -39,7 +39,7 @@ export const POST = withKiosk(async (req, { kiosk }) => {
           status,
           holder: unit.holder,
           dueAt: unit.dueAt,
-          bookingTitle: unit.bookingTitle ? normalizeTeamAbbreviations(unit.bookingTitle) : unit.bookingTitle,
+          bookingTitle: unit.bookingTitle ? displayBookingTitle(unit.bookingTitle) : unit.bookingTitle,
         },
       });
     }
@@ -71,7 +71,7 @@ export const POST = withKiosk(async (req, { kiosk }) => {
   if (activeAllocation) {
     holder = activeAllocation.booking.requester.name;
     dueAt = activeAllocation.endsAt.toISOString();
-    bookingTitle = normalizeTeamAbbreviations(activeAllocation.booking.title);
+    bookingTitle = displayBookingTitle(activeAllocation.booking.title);
   }
 
   // Determine display status

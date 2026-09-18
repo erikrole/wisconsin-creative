@@ -21,6 +21,8 @@ type CalendarViewProps = {
   setExpandedDay: (d: number | null) => void;
   canManageCrew: boolean;
   onOpenCrew: (entry: CalendarEntry) => void;
+  hasFilters?: boolean;
+  onClearFilters?: () => void;
 };
 
 function CalendarSkeleton() {
@@ -258,6 +260,8 @@ export function CalendarView({
   setExpandedDay,
   canManageCrew,
   onOpenCrew,
+  hasFilters = false,
+  onClearFilters,
 }: CalendarViewProps) {
   const calCells = useMemo(() => {
     const year = calMonth.getFullYear();
@@ -344,8 +348,14 @@ export function CalendarView({
         <div className="rounded-lg border border-border/60 bg-card">
           <EmptyState
             icon="calendar"
-            title="No events this month"
-            description="Try another month or clear schedule filters."
+            title={hasFilters ? "No events match these filters" : "No events this month"}
+            description={
+              hasFilters
+                ? "Try another month or clear schedule filters."
+                : "Try another month, or add events from Calendar Sources."
+            }
+            actionLabel={hasFilters ? "Clear filters" : undefined}
+            onAction={hasFilters ? onClearFilters : undefined}
             compact
           />
         </div>

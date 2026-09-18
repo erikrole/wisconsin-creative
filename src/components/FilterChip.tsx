@@ -11,11 +11,14 @@ import {
   Command,
   CommandEmpty,
   CommandGroup,
+  CommandInput,
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
 import { ChevronDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+const SEARCHABLE_OPTION_THRESHOLD = 8;
 
 export function FilterChip({
   label,
@@ -24,6 +27,7 @@ export function FilterChip({
   options,
   onSelect,
   onClear,
+  searchable,
 }: {
   label: string;
   value: string;
@@ -31,9 +35,11 @@ export function FilterChip({
   options: { value: string; label: string }[];
   onSelect: (v: string) => void;
   onClear: () => void;
+  searchable?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const active = value !== "";
+  const showSearch = searchable ?? options.length >= SEARCHABLE_OPTION_THRESHOLD;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -49,6 +55,9 @@ export function FilterChip({
           <Button
             variant="ghost"
             size="sm"
+            aria-haspopup="listbox"
+            aria-expanded={open}
+            aria-label={active ? `${label}: ${displayValue || value}` : `${label} filter`}
             className="h-10 max-w-[220px] min-w-0 gap-1.5 rounded-none border-0 px-3 text-xs shadow-none transition-[background-color,color,scale] hover:bg-foreground/[0.04] active:scale-[0.96]"
           >
             <span className="shrink-0 font-medium">{label}{active && ":"}</span>
@@ -69,15 +78,18 @@ export function FilterChip({
           </Button>
         )}
       </div>
-      <PopoverContent align="start" sideOffset={4} className="w-auto min-w-[140px] p-0">
+      <PopoverContent align="start" sideOffset={4} className={cn("w-auto p-0", showSearch ? "min-w-[220px]" : "min-w-[140px]")}>
         <Command>
+          {showSearch && (
+            <CommandInput placeholder={`Search ${label.toLowerCase()}…`} />
+          )}
           <CommandList className="max-h-[240px]">
-            <CommandEmpty>No options</CommandEmpty>
+            <CommandEmpty>No matching {label.toLowerCase()}</CommandEmpty>
             <CommandGroup>
               {options.map((opt) => (
                 <CommandItem
                   key={opt.value}
-                  value={opt.label}
+                  value={`${opt.label} ${opt.value}`}
                   onSelect={() => { onSelect(opt.value); setOpen(false); }}
                   className={opt.value === value ? "font-medium" : ""}
                 >

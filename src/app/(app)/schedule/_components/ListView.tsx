@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect, useLayoutEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useLayoutEffect, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { ArchiveIcon, ArrowDownIcon, ArrowUpIcon, ChevronDownIcon, ChevronRightIcon, EyeOffIcon, LoaderCircleIcon, UserIcon, UsersRoundIcon, XIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -50,8 +50,10 @@ import type { CalendarEntry, Shift } from "./types";
 import { WorkingCrewEditor, type WorkingCrewEntry } from "./WorkingCrewEditor";
 import type { ScheduleQueueMeta } from "@/lib/schedule-queues";
 import {
+  chooseScheduleTimelineTarget,
   discardScheduleTimelinePosition,
   readScheduleTimelinePosition,
+  readScheduleTimelineReadingPosition,
   rememberScheduleTimelineReadingPosition,
   restoreScheduleTimelinePosition,
   type ScheduleTimelineSnapshot,
@@ -80,10 +82,19 @@ type ListViewProps = {
   setMyShiftsOnly: (v: boolean) => void;
   clearFilters: () => void;
   hasFilters: boolean;
-  /** The window hit its page cap, so the oldest events were not loaded. */
+  /** The window hit its page cap, so some events were not loaded. */
   timelineTruncated: boolean;
   /** The list is the continuous today-anchored timeline. */
   isTimeline: boolean;
+  hasMorePast: boolean;
+  hasMoreFuture: boolean;
+  loadingPast: boolean;
+  loadingFuture: boolean;
+  loadPastError: boolean;
+  loadFutureError: boolean;
+  onLoadOlder: () => void;
+  onLoadNewer: () => void;
+  fillingWindow: boolean;
   /** A filter is narrowing which events appear, not how far back the window reaches. */
   hasContentFilters: boolean;
   includeArchived: boolean;
@@ -489,14 +500,12 @@ if (typeof window !== "undefined") {
 }
 
 /**
- * A reload is the same promise as a back navigation: the reader was somewhere,
- * and pressing refresh should not move them.
+ * A reload should put the reader back on the event they were looking at, not
+ * at a pixel offset from a previous document height.
  *
- * The browser's own restoration cannot be leaned on here. The list renders
- * asynchronously, so at the moment the anchor runs the document is still short
- * and the scroll position is still 0 -- the restore lands later, and the anchor
- * had already snapped the page up to today. Recording the position ourselves
- * makes the restore independent of that race.
+ * Raw window.scrollY is poisoned by the error boundary, the loading skeleton,
+ * and the first paint at the archive floor. Restoring 0 then lets the past
+ * sentinel walk the timeline back to May before today can claim the view.
  */
 const SCROLL_KEY = "schedule:timeline-scroll";
 const HISTORY_SCROLL_KEY = "scheduleTimelineScroll";
@@ -543,6 +552,43 @@ function hasScheduleHistoryReturn(): boolean {
   }
 }
 
+function useDesktopScheduleList() {
+  return useSyncExternalStore(
+    (onChange) => {
+      const media = window.matchMedia("(min-width: 1024px)");
+      media.addEventListener("change", onChange);
+      return () => media.removeEventListener("change", onChange);
+    },
+    () => window.matchMedia("(min-width: 1024px)").matches,
+    () => true,
+  );
+}
+
+function TimelineSentinel({
+  label,
+  disabled,
+  onVisible,
+}: {
+  label: string;
+  disabled: boolean;
+  onVisible: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const element = ref.current;
+    if (!element || disabled || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) onVisible();
+      },
+      { rootMargin: "240px 0px 480px 0px", threshold: 0 },
+    );
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [disabled, onVisible]);
+  return <div ref={ref} aria-hidden className="h-px" data-schedule-scroll-sentinel={label} />;
+}
+
 /**
  * The top edge of the timeline.
  *
@@ -554,29 +600,61 @@ function TimelineStart({
   truncated,
   includeArchived,
   hasContentFilters,
+  hasMorePast,
+  loadingPast,
+  loadPastError,
+  allowOlderFetch,
   onLoadArchived,
+  onLoadOlder,
 }: {
   truncated: boolean;
   includeArchived: boolean;
   hasContentFilters: boolean;
+  hasMorePast: boolean;
+  loadingPast: boolean;
+  loadPastError: boolean;
+  allowOlderFetch: boolean;
   onLoadArchived: () => void;
+  onLoadOlder: () => void;
 }) {
-  // Truncation is about missing data, so it is reported whatever else is on.
-  if (truncated) {
+  if (truncated && !hasMorePast) {
     return (
       <div className="flex flex-col items-center gap-1 border-b border-border/50 bg-muted/10 px-3 py-4 text-center">
         <span className="text-xs font-medium text-[var(--orange-text)]">
-          Showing the most recent events only
+          Showing a limited stretch of the schedule
         </span>
         <span className="text-[11px] text-muted-foreground">
-          This window is larger than the list loads at once. Filter by sport to reach older events.
+          Filter by sport to narrow the window, or scroll to load the next stretch.
         </span>
       </div>
     );
   }
 
-  // A filtered list is a search result, not the top of the timeline; claiming
-  // the season starts here would be a lie about why the rows ran out.
+  if (hasMorePast || loadingPast || loadPastError) {
+    return (
+      <div className="flex flex-col items-center gap-2 border-b border-border/50 bg-muted/10 px-3 py-3 text-center">
+        <TimelineSentinel
+          label="past"
+          disabled={!allowOlderFetch || loadingPast || loadPastError}
+          onVisible={onLoadOlder}
+        />
+        {loadPastError ? (
+          <>
+            <span className="text-[11px] text-muted-foreground">Could not load older events.</span>
+            <Button variant="outline" className="h-10 text-xs" onClick={onLoadOlder}>
+              Try again
+            </Button>
+          </>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground" role="status">
+            {loadingPast && <LoaderCircleIcon className="size-3 animate-spin" />}
+            {loadingPast ? "Loading older events" : "Scroll for older events"}
+          </span>
+        )}
+      </div>
+    );
+  }
+
   if (hasContentFilters) return null;
 
   return (
@@ -588,6 +666,45 @@ function TimelineStart({
         <Button variant="outline" className="h-10 text-xs" onClick={onLoadArchived}>
           Load older records
         </Button>
+      )}
+    </div>
+  );
+}
+
+function TimelineEnd({
+  hasMoreFuture,
+  loadingFuture,
+  loadFutureError,
+  onLoadNewer,
+}: {
+  hasMoreFuture: boolean;
+  loadingFuture: boolean;
+  loadFutureError: boolean;
+  onLoadNewer: () => void;
+}) {
+  if (!hasMoreFuture && !loadingFuture && !loadFutureError) {
+    return (
+      <div className="flex flex-col items-center gap-1 px-3 py-4 text-center">
+        <span className="text-[11px] text-muted-foreground">End of scheduled events</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-2 px-3 py-3 text-center">
+      <TimelineSentinel label="future" disabled={loadingFuture || loadFutureError} onVisible={onLoadNewer} />
+      {loadFutureError ? (
+        <>
+          <span className="text-[11px] text-muted-foreground">Could not load later events.</span>
+          <Button variant="outline" className="h-10 text-xs" onClick={onLoadNewer}>
+            Try again
+          </Button>
+        </>
+      ) : (
+        <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground" role="status">
+          {loadingFuture && <LoaderCircleIcon className="size-3 animate-spin" />}
+          {loadingFuture ? "Loading later events" : "Scroll for later events"}
+        </span>
       )}
     </div>
   );
@@ -607,6 +724,15 @@ export function ListView({
   hasFilters,
   timelineTruncated,
   isTimeline,
+  hasMorePast,
+  hasMoreFuture,
+  loadingPast,
+  loadingFuture,
+  loadPastError,
+  loadFutureError,
+  onLoadOlder,
+  onLoadNewer,
+  fillingWindow,
   hasContentFilters,
   includeArchived,
   setIncludeArchived,
@@ -634,20 +760,18 @@ export function ListView({
 
   const toggleExpandedRow = useCallback((entryId: string) => {
     setExpandedRowIds((current) => {
+      const isOpen = current.has(entryId);
       const next = new Set(current);
-      if (next.has(entryId)) next.delete(entryId);
+      if (isOpen) next.delete(entryId);
       else next.add(entryId);
+      if (isOpen) {
+        if (expandedRowId === entryId) setExpandedRowId(null);
+      } else {
+        setExpandedRowId(entryId);
+      }
       return next;
     });
-    // Only this row's own collapse clears the shared pointer. Clearing it while
-    // it named a different open row left "Manage crew" on that row unable to
-    // re-open it, because the id it would set was already the current value.
-    if (expandedRowIds.has(entryId)) {
-      if (expandedRowId === entryId) setExpandedRowId(null);
-    } else {
-      setExpandedRowId(entryId);
-    }
-  }, [expandedRowId, expandedRowIds, setExpandedRowId]);
+  }, [expandedRowId, setExpandedRowId]);
 
   /**
    * Open on today.
@@ -671,6 +795,7 @@ export function ListView({
   const transitionAnchorRef = useRef<ScheduleTimelineSnapshot | null>(null);
   const [todayOffscreen, setTodayOffscreen] = useState(false);
   const [todayDirection, setTodayDirection] = useState<"up" | "down">("up");
+  const [allowOlderFetch, setAllowOlderFetch] = useState(false);
 
   /**
    * A filter or List -> other view -> List round trip is not a fresh visit.
@@ -719,15 +844,46 @@ export function ListView({
       ? mobileTodayGroupRef.current
       : desktopTodayGroupRef.current
   ), []);
+  const desktopList = useDesktopScheduleList();
+  const firstEventId = filteredEntries[0]?.id ?? null;
+  const prependSnapshotRef = useRef<{ firstId: string | null; height: number; y: number }>({
+    firstId: null,
+    height: 0,
+    y: 0,
+  });
+  const prependRestore = (() => {
+    if (typeof window === "undefined") return null;
+    const snapshot = prependSnapshotRef.current;
+    if (!snapshot.firstId || !firstEventId || snapshot.firstId === firstEventId) return null;
+    if (!filteredEntries.some((entry) => entry.id === snapshot.firstId)) return null;
+    return { height: snapshot.height, y: snapshot.y };
+  })();
+
+  useLayoutEffect(() => {
+    if (prependRestore) {
+      const delta = document.documentElement.scrollHeight - prependRestore.height;
+      if (delta) window.scrollTo({ top: prependRestore.y + delta, behavior: "instant" });
+    }
+    prependSnapshotRef.current = {
+      firstId: firstEventId,
+      height: document.documentElement.scrollHeight,
+      y: window.scrollY,
+    };
+  }, [firstEventId, groupedEntries, prependRestore]);
 
   useEffect(() => {
     if (!isTimeline) return;
     const claim = (event: Event) => {
+      const target = event.target;
+      if (
+        target instanceof Element
+        && target.closest("input, textarea, select, [contenteditable='true']")
+      ) return;
       readerOwnsScrollRef.current = true;
       didAnchorRef.current = true;
+      setAllowOlderFetch(true);
       pendingRestoreRef.current = null;
       transitionAnchorRef.current = null;
-      const target = event.target;
       if (
         event.type === "mousedown"
         && target instanceof Element
@@ -787,11 +943,27 @@ export function ListView({
     const historyRestore = fromHistory ? storedHistoryScroll() : null;
     arrivedByHistory = false;
     try { sessionStorage.removeItem(HISTORY_RETURN_KEY); } catch { /* Storage is optional. */ }
-    const restore = reload
-      ? storedScroll()
-      : fromHistory
-        ? historyRestore ?? storedScroll()
-        : null;
+    if (reload) {
+      const reading = readScheduleTimelineReadingPosition();
+      if (reading) {
+        const target = chooseScheduleTimelineTarget(
+          reading,
+          new Set(filteredEntries.map((entry) => entry.id)),
+          groupedEntries.map(([key]) => new Date(key).getTime()),
+        );
+        if (target) {
+          didAnchorRef.current = true;
+          readerOwnsScrollRef.current = true;
+          transitionAnchorRef.current = reading;
+          return;
+        }
+      }
+      if (anchorToday()) didAnchorRef.current = true;
+      return;
+    }
+    const restore = fromHistory
+      ? historyRestore ?? storedScroll()
+      : null;
     if (restore !== null) {
       didAnchorRef.current = true;
       readerOwnsScrollRef.current = true;
@@ -806,7 +978,7 @@ export function ListView({
       return;
     }
     if (anchorToday()) didAnchorRef.current = true;
-  }, [groupedEntries, isTimeline, loading, anchorToday]);
+  }, [filteredEntries, groupedEntries, isTimeline, loading, anchorToday]);
 
   /**
    * Hold the anchor while the page settles.
@@ -906,6 +1078,18 @@ export function ListView({
     readerOwnsScrollRef.current = true;
     setIncludeArchived(true);
   }, [setIncludeArchived]);
+
+  const keepTimelineWhileLoadingMore = Boolean(
+    isTimeline && (
+      fillingWindow
+      || hasMorePast
+      || hasMoreFuture
+      || loadingPast
+      || loadingFuture
+      || (!hasContentFilters && entries.length > 0)
+    ),
+  );
+  const showEmptyState = filteredEntries.length === 0 && !keepTimelineWhileLoadingMore;
 
   // Throttled to one write per frame: this runs on every scroll event.
   useEffect(() => {
@@ -1100,6 +1284,11 @@ export function ListView({
                 ? `${filteredEntries.length} of ${entries.length}`
                 : filteredEntries.length}
             </span>
+            {myShiftsOnly && !fillingWindow && (hasMorePast || hasMoreFuture) && (
+              <span className="hidden text-[11px] text-muted-foreground sm:inline">
+                Scroll for more of your shifts
+              </span>
+            )}
             {!myShiftsOnly && isTimeline && (
               <span className="hidden text-[11px] text-muted-foreground sm:inline">
                 Past to future
@@ -1141,51 +1330,66 @@ export function ListView({
               Retry
             </Button>
           </div>
-        ) : filteredEntries.length === 0 ? (
+        ) : showEmptyState ? (
           <EmptyState
             icon="calendar"
-            title={activeQueueMeta ? activeQueueMeta.emptyTitle : myShiftsOnly ? "No shifts assigned" : "No events found"}
+            title={
+              activeQueueMeta
+                ? activeQueueMeta.emptyTitle
+                : hasFilters
+                  ? "No events match these filters"
+                  : myShiftsOnly
+                    ? "No shifts assigned"
+                    : "No events found"
+            }
             description={
               activeQueueMeta
                 ? activeQueueMeta.emptyDescription
-                : myShiftsOnly
-                ? "You don't have shift assignments in this timeline."
                 : hasFilters
-                  ? "Try adjusting your filters."
-                  : "No schedule events are available. Check Settings > Calendar Sources to add an ICS feed."
+                  ? "Try adjusting or clearing filters to see more of the schedule."
+                  : myShiftsOnly
+                    ? "You don't have shift assignments in this timeline."
+                    : "No schedule events are available. Check Settings > Calendar Sources to add an ICS feed."
             }
             actionLabel={
               activeQueueMeta
                 ? "Show full schedule"
-                : myShiftsOnly
-                ? "Show all events"
                 : hasFilters
                   ? "Clear filters"
-                  : "Calendar Sources"
+                  : myShiftsOnly
+                    ? "Show all events"
+                    : "Calendar Sources"
             }
             actionHref={
-              activeQueueMeta || myShiftsOnly
+              activeQueueMeta || hasFilters || myShiftsOnly
                 ? undefined
-                : hasFilters
-                  ? undefined
-                  : "/settings/calendar-sources"
+                : "/settings/calendar-sources"
             }
             onAction={
               activeQueueMeta
                 ? clearQueue
-                : myShiftsOnly ? () => setMyShiftsOnly(false) : hasFilters ? clearFilters : undefined
+                : hasFilters
+                  ? clearFilters
+                  : myShiftsOnly
+                    ? () => setMyShiftsOnly(false)
+                    : undefined
             }
           />
         ) : (
           <>
             {/* ── Desktop: timeline table ── */}
-            <div className="max-lg:hidden">
+            <div className={desktopList ? undefined : "hidden"}>
               {isTimeline && (
                 <TimelineStart
                   truncated={timelineTruncated}
                   includeArchived={includeArchived}
                   hasContentFilters={hasContentFilters}
+                  hasMorePast={hasMorePast}
+                  loadingPast={loadingPast}
+                  loadPastError={loadPastError}
+                  allowOlderFetch={allowOlderFetch}
                   onLoadArchived={onLoadArchived}
+                  onLoadOlder={onLoadOlder}
                 />
               )}
               {groupedEntries.map(([dateKey, groupEntries]) => {
@@ -1256,16 +1460,29 @@ export function ListView({
                 </div>
               );
             })}
+            {isTimeline && (
+              <TimelineEnd
+                hasMoreFuture={hasMoreFuture}
+                loadingFuture={loadingFuture}
+                loadFutureError={loadFutureError}
+                onLoadNewer={onLoadNewer}
+              />
+            )}
           </div>
 
           {/* ── Mobile: card list ── */}
-          <div className="hidden max-lg:flex flex-col">
+          <div className={desktopList ? "hidden" : "flex flex-col"}>
             {isTimeline && (
               <TimelineStart
                 truncated={timelineTruncated}
                 includeArchived={includeArchived}
                 hasContentFilters={hasContentFilters}
+                hasMorePast={hasMorePast}
+                loadingPast={loadingPast}
+                loadPastError={loadPastError}
+                allowOlderFetch={allowOlderFetch}
                 onLoadArchived={onLoadArchived}
+                onLoadOlder={onLoadOlder}
               />
             )}
             {groupedEntries.map(([dateKey, groupEntries]) => {
@@ -1450,6 +1667,14 @@ export function ListView({
                 </div>
               );
             })}
+            {isTimeline && (
+              <TimelineEnd
+                hasMoreFuture={hasMoreFuture}
+                loadingFuture={loadingFuture}
+                loadFutureError={loadFutureError}
+                onLoadNewer={onLoadNewer}
+              />
+            )}
           </div>
           </>
         )}
@@ -1514,7 +1739,7 @@ export function ListView({
         it. Only rendered once the reader has actually left today behind.
       */}
       {isTimeline && todayOffscreen && !loading && filteredEntries.length > 0 && (
-        <div className="pointer-events-none fixed inset-x-0 bottom-[max(1rem,env(safe-area-inset-bottom))] z-30 flex justify-center px-4">
+        <div className="pointer-events-none fixed inset-x-0 bottom-[max(1rem,env(safe-area-inset-bottom))] z-30 flex justify-center px-4 max-md:bottom-[calc(5.75rem+env(safe-area-inset-bottom,0px))]">
           <Button
             variant="secondary"
             onClick={scrollToToday}

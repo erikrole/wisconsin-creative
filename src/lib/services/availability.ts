@@ -5,6 +5,7 @@ import {
   subtractSerializedTurnaroundBuffer,
   turnaroundSeverity,
 } from "@/lib/booking-availability-window";
+import { displayBookingTitle } from "@/lib/booking-display-title";
 
 export type BulkRequest = {
   bulkSkuId: string;
@@ -150,7 +151,7 @@ export async function checkSerializedConflicts(
     return {
       assetId: item.assetId,
       conflictingBookingId: item.bookingId,
-      conflictingBookingTitle: item.booking.title,
+      conflictingBookingTitle: displayBookingTitle(item.booking.title),
       ...(requesterName ? { conflictingBookingRequesterName: requesterName } : {}),
       ...(item.booking.kind ? { conflictingBookingKind: item.booking.kind } : {}),
       ...(item.booking.status ? { conflictingBookingStatus: item.booking.status } : {}),
@@ -257,7 +258,7 @@ export async function checkUpcomingSerializedCommitments(
     nextByAsset.set(item.assetId, {
       assetId: item.assetId,
       bookingId: item.bookingId,
-      bookingTitle: item.booking.title,
+      bookingTitle: displayBookingTitle(item.booking.title),
       ...(requesterName ? { requesterName } : {}),
       ...(item.booking.kind ? { kind: item.booking.kind } : {}),
       startsAt: item.startsAt,
@@ -356,7 +357,7 @@ export async function checkSerializedTurnaroundRisks(
         ? "Recent lost report on this item"
         : "Recent damage report on this item",
       bookingId: report.booking.id,
-      bookingTitle: report.booking.title,
+      bookingTitle: displayBookingTitle(report.booking.title),
       reportType: report.type,
       reportCreatedAt: report.createdAt,
     });
@@ -451,7 +452,7 @@ export async function checkBulkTurnaroundRisks(
         ? `Next bulk booking needs ${remainingQuantity} now`
         : `Next bulk booking needs ${remainingQuantity} in ${formatDuration(gapMinutes)}`,
       bookingId: row.bookingId,
-      bookingTitle: row.booking.title,
+      bookingTitle: displayBookingTitle(row.booking.title),
       startsAt: row.booking.startsAt,
       gapMinutes,
       plannedQuantity: remainingQuantity,
