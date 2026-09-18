@@ -224,7 +224,7 @@
 | `src/lib/schedule-notification-debounce.ts` | 48 |
 | `src/lib/schedule-publication-types.ts` | 62 |
 | `src/lib/schedule-queues.ts` | 185 |
-| `src/lib/schedule-recent-activity.ts` | 29 |
+| `src/lib/schedule-recent-activity.ts` | 31 |
 | `src/lib/schedule-release.ts` | 16 |
 | `src/lib/schedule-sport-family.ts` | 27 |
 | `src/lib/schedule-template-review-types.ts` | 105 |
