@@ -9,13 +9,17 @@ import Markdown
 // `cmark-gfm` engine, so both clients agree on the document without either one
 // maintaining a private dialect.
 //
-// Two house conventions ride on top of the spec, and they are the only things
-// this file knows that the spec does not:
+// Two house conventions ride on top of the spec, plus two inline/fence
+// conventions, and they are the only things this file knows that the spec does not:
 //
 //   1. GitHub alert callouts — a blockquote whose first line is `[!WARNING]`.
-//      Mirrors src/lib/remark-callouts.ts.
+//      `shortcut` is a house kind. Mirrors src/lib/remark-callouts.ts.
 //   2. Video embeds — a fenced block tagged `embed` or `video` whose body is a
 //      URL. Mirrors src/lib/media-embed.ts.
+//   3. Keyboard shortcuts — inline code that looks like a key combo (`⌘K`,
+//      `Cmd+S`) renders as a keyboard chip. Mirrors src/lib/guide-keyboard.ts.
+//   4. Copyable strings — a fenced block tagged `copy` or `path`. Mirrors
+//      `isCopyFenceLanguage` in src/lib/guide-content.ts.
 //
 // The contract both platforms implement is written down in
 // docs/GUIDE_MARKDOWN.md. Change that first.
@@ -34,6 +38,9 @@ struct GuideInlineSpan: Hashable {
     var isStrikethrough = false
     var isCode = false
     var link: URL?
+
+    /// Inline code that both readers treat as a keyboard shortcut.
+    var isKeyboardShortcut: Bool { isCode && GuideMarkdown.isKeyboardShortcut(text) }
 
     /// Every mark except the text, so adjacent runs can be coalesced.
     fileprivate var marks: GuideInlineSpan {
@@ -100,6 +107,7 @@ struct GuideInlineText: Hashable {
 enum GuideCallout: String, CaseIterable, Hashable {
     case note
     case tip
+    case shortcut
     case important
     case warning
     case caution
@@ -108,6 +116,7 @@ enum GuideCallout: String, CaseIterable, Hashable {
         switch self {
         case .note: "Note"
         case .tip: "Tip"
+        case .shortcut: "Shortcut"
         case .important: "Important"
         case .warning: "Warning"
         case .caution: "Caution"
@@ -188,6 +197,7 @@ struct GuideBlock: Identifiable, Hashable {
         /// A blockquote. `callout` is nil for a plain quote.
         case quote(callout: GuideCallout?, paragraphs: [GuideInlineText])
         case code(language: String?, text: String)
+        case copy(String)
         case embed(GuideEmbed)
         case table(GuideTable)
         case image(GuideImage)
@@ -216,6 +226,18 @@ enum GuideMarkdown {
         var builder = Builder(inliner: Inliner(baseURL: baseURL))
         builder.append(Document(parsing: markdown).children, depth: 0)
         return builder.blocks()
+    }
+
+    /// Drop a leading ATX h1 that restates the resource title so the reader
+    /// header and the article do not both show the same heading. Mirrors
+    /// `omitDuplicateLeadHeading` in `src/lib/guide-content.ts`.
+    static func omittingDuplicateLeadHeading(_ blocks: [GuideBlock], title: String) -> [GuideBlock] {
+        let expected = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !expected.isEmpty, let first = blocks.first else { return blocks }
+        guard case .heading(let level, let text) = first.kind, level == 1 else { return blocks }
+        let lead = text.plain.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard lead.caseInsensitiveCompare(expected) == .orderedSame else { return blocks }
+        return Array(blocks.dropFirst())
     }
 
     // MARK: Block walk
@@ -357,6 +379,13 @@ enum GuideMarkdown {
                 kinds.append(.embed(embed))
                 return
             }
+            if language == "copy" || language == "path" {
+                let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !value.isEmpty {
+                    kinds.append(.copy(value))
+                    return
+                }
+            }
             kinds.append(.code(language: language, text: text))
         }
 
@@ -485,7 +514,10 @@ enum GuideMarkdown {
     /// from the spans in place and returns the alert kind it named.
     private static func calloutMarker(in spans: inout [GuideInlineSpan]) -> GuideCallout? {
         guard let first = spans.first, !first.isCode else { return nil }
-        let text = first.text.drop(while: \.isWhitespace)
+        var text = first.text.drop(while: \.isWhitespace)
+        // Authors sometimes escape the marker (`\[!TIP]`); CommonMark may leave
+        // the backslash in the text run. Strip it so the kind still parses.
+        if text.hasPrefix("\\[") { text = text.dropFirst() }
         guard text.hasPrefix("[!"), let close = text.firstIndex(of: "]") else { return nil }
 
         let name = String(text[text.index(text.startIndex, offsetBy: 2)..<close]).lowercased()
@@ -555,5 +587,73 @@ enum GuideMarkdown {
         guard let resolved, let scheme = resolved.scheme?.lowercased(),
               allowedSchemes.contains(scheme) else { return nil }
         return resolved
+    }
+
+    // MARK: - Keyboard shortcuts
+
+    /// Mirrors `isKeyboardShortcut` in src/lib/guide-keyboard.ts.
+    static func isKeyboardShortcut(_ raw: String) -> Bool {
+        let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty, text.count <= 48, text.rangeOfCharacter(from: .whitespacesAndNewlines) == nil else {
+            return false
+        }
+        if text.contains("://") || text.contains("\\") || text.contains("/") { return false }
+        if text.rangeOfCharacter(from: modifierSymbols) != nil { return true }
+        if text.rangeOfCharacter(from: specialKeySymbols) != nil { return true }
+        if text.count == 1, text.rangeOfCharacter(from: .decimalDigits.union(.letters)) != nil { return true }
+        if isFunctionKey(text) || keyNames.contains(text.lowercased()) { return true }
+
+        let plusParts = text.split(separator: "+").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+        if plusParts.count >= 2, plusParts.allSatisfy(isShortcutToken), plusParts.contains(where: isModifierToken) {
+            return true
+        }
+
+        let hyphenParts = text.split(separator: "-").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+        if hyphenParts.count >= 2, isModifierToken(hyphenParts[0]), hyphenParts.allSatisfy(isShortcutToken) {
+            return true
+        }
+
+        return false
+    }
+
+    private static let modifierNames: Set<String> = [
+        "ctrl", "control", "cmd", "command", "alt", "option", "opt",
+        "shift", "win", "windows", "meta", "super",
+    ]
+    private static let keyNames: Set<String> = [
+        "tab", "enter", "return", "escape", "esc", "space", "spacebar",
+        "delete", "del", "backspace", "home", "end", "insert", "ins",
+        "pageup", "pagedown", "pgup", "pgdn",
+        "up", "down", "left", "right",
+        "arrowup", "arrowdown", "arrowleft", "arrowright",
+        "plus", "minus",
+    ]
+    private static let modifierSymbols = CharacterSet(charactersIn: "⌘⌥⇧⌃⎈")
+    private static let specialKeySymbols = CharacterSet(charactersIn: "↑↓←→⎋⏎↩⌫⌦")
+
+    private static func isModifierToken(_ part: Substring) -> Bool {
+        isModifierToken(String(part))
+    }
+
+    private static func isModifierToken(_ part: String) -> Bool {
+        modifierNames.contains(part.lowercased()) || part.rangeOfCharacter(from: modifierSymbols) != nil
+    }
+
+    private static func isShortcutToken(_ part: Substring) -> Bool {
+        isShortcutToken(String(part))
+    }
+
+    private static func isShortcutToken(_ part: String) -> Bool {
+        if part.isEmpty { return false }
+        if isModifierToken(part) { return true }
+        if part.count == 1, part.rangeOfCharacter(from: .decimalDigits.union(.letters)) != nil { return true }
+        if isFunctionKey(part) || keyNames.contains(part.lowercased()) { return true }
+        return part.rangeOfCharacter(from: specialKeySymbols) != nil
+    }
+
+    private static func isFunctionKey(_ part: String) -> Bool {
+        let upper = part.uppercased()
+        guard upper.hasPrefix("F"), let number = Int(upper.dropFirst()) else { return false }
+        return (1...12).contains(number)
     }
 }

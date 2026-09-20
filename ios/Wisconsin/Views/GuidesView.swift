@@ -398,7 +398,7 @@ private struct GuideReaderView: View {
             .frame(maxWidth: .infinity, minHeight: 260)
             .background(Color.cardSurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         } else {
-            NativeMarkdownArticle(markdown: displayedGuide.markdown)
+            NativeMarkdownArticle(markdown: displayedGuide.markdown, title: displayedGuide.title)
         }
     }
 
@@ -472,14 +472,15 @@ private struct GuideReaderHeader: View {
 struct NativeMarkdownArticle: View {
     private let blocks: [GuideBlock]
 
-    init(markdown: String) {
+    init(markdown: String, title: String = "") {
         let parsed = GuideMarkdown.parse(markdown)
         // A guide that opens with a rule (or with front-matter fences that
         // reduce to one) shouldn't start with a stray divider under the header.
-        blocks = Array(parsed.drop { block in
+        let withoutRules = Array(parsed.drop { block in
             if case .rule = block.kind { return true }
             return false
         })
+        blocks = GuideMarkdown.omittingDuplicateLeadHeading(withoutRules, title: title)
     }
 
     var body: some View {
@@ -564,6 +565,9 @@ private struct GuideBlockView: View {
         case .code(_, let text):
             GuideCodeBlock(code: text)
 
+        case .copy(let text):
+            GuideCopySnippet(text: text)
+
         case .embed(let embed):
             GuideEmbedCard(embed: embed)
 
@@ -613,7 +617,10 @@ private struct GuideInlineLabel: View {
         var output = AttributedString()
         for span in text.spans {
             var piece = AttributedString(span.text)
-            if span.isCode {
+            if span.isCode && span.isKeyboardShortcut {
+                piece.font = .system(.caption, design: .rounded).weight(.semibold)
+                piece.backgroundColor = Color.primary.opacity(0.08)
+            } else if span.isCode {
                 piece.font = .system(.callout, design: .monospaced)
                 piece.backgroundColor = Color.cardSurfaceRaised
             } else {
@@ -678,6 +685,7 @@ private struct GuideCalloutView: View {
         switch callout {
         case .note: return .blue
         case .tip: return .green
+        case .shortcut: return .gray
         case .important: return .purple
         case .warning: return .orange
         case .caution: return .red
@@ -689,6 +697,7 @@ private struct GuideCalloutView: View {
         switch callout {
         case .note: "info.circle.fill"
         case .tip: "lightbulb.fill"
+        case .shortcut: "keyboard"
         case .important: "exclamationmark.bubble.fill"
         case .warning: "exclamationmark.triangle.fill"
         case .caution: "exclamationmark.octagon.fill"
@@ -828,6 +837,48 @@ private struct GuideCodeBlock: View {
             .accessibilityLabel(didCopy ? "Copied" : "Copy code")
         }
         .background(Color.cardSurfaceRaised, in: RoundedRectangle(cornerRadius: Brand.Radius.sm, style: .continuous))
+        .task(id: didCopy) {
+            guard didCopy else { return }
+            try? await Task.sleep(for: .seconds(2))
+            guard !Task.isCancelled else { return }
+            didCopy = false
+        }
+    }
+}
+
+private struct GuideCopySnippet: View {
+    let text: String
+
+    @State private var didCopy = false
+
+    var body: some View {
+        Button {
+            UIPasteboard.general.string = text
+            Haptics.success()
+            didCopy = true
+        } label: {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Text(text)
+                    .font(.system(.footnote, design: .monospaced).weight(.medium))
+                    .foregroundStyle(.primary)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Text(didCopy ? "Copied" : "Copy")
+                    .font(.caption2.weight(.bold))
+                    .textCase(.uppercase)
+                    .foregroundStyle(didCopy ? Color.statusText(.green) : Color.secondary)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.cardSurfaceRaised, in: RoundedRectangle(cornerRadius: Brand.Radius.sm, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: Brand.Radius.sm, style: .continuous)
+                    .strokeBorder(Color.secondary.opacity(0.22))
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(didCopy ? "Copied \(text)" : "Copy \(text)")
         .task(id: didCopy) {
             guard didCopy else { return }
             try? await Task.sleep(for: .seconds(2))

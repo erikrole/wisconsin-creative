@@ -5,9 +5,10 @@ import Foundation
 /// Locks in the guide Markdown contract shared with the web reader.
 ///
 /// Guide Markdown is CommonMark + GFM on both platforms — `remark-gfm` on web,
-/// apple/swift-markdown (cmark-gfm) here — plus two house conventions: GitHub
-/// alert callouts and `embed`/`video` fences. The contract is written down in
-/// docs/GUIDE_MARKDOWN.md; these tests are the iOS half of enforcing it.
+/// apple/swift-markdown (cmark-gfm) here — plus four house conventions: GitHub
+/// alert callouts, `embed`/`video` fences, keyboard chips, and `copy`/`path`
+/// fences. The contract is written down in docs/GUIDE_MARKDOWN.md; these tests
+/// are the iOS half of enforcing it.
 ///
 /// The image cases are regressions. The previous line-by-line parser dropped or
 /// corrupted a photo whenever the destination carried a title, sat inside a
@@ -162,6 +163,23 @@ struct GuideMarkdownTests {
         #expect(paragraphs.map(\.plain) == ["Start here and continue"])
     }
 
+    @Test func escapedAlertMarkerStillBecomesACallout() {
+        guard case .quote(let callout, let paragraphs)? = kinds("> \\[!IMPORTANT]\n> Connect to VPN first.").first else {
+            Issue.record("expected a quote block")
+            return
+        }
+        #expect(callout == .important)
+        #expect(paragraphs.map(\.plain) == ["Connect to VPN first."])
+    }
+
+    @Test func shortcutAlertKindIsRecognised() {
+        guard case .quote(let callout, _)? = kinds("> [!SHORTCUT]\n> `⌘K` opens Quick find.").first else {
+            Issue.record("expected a quote block")
+            return
+        }
+        #expect(callout == .shortcut)
+    }
+
     @Test func plainBlockquoteHasNoCallout() {
         guard case .quote(let callout, _)? = kinds("> Keep this current.").first else {
             Issue.record("expected a quote block")
@@ -230,6 +248,19 @@ struct GuideMarkdownTests {
         #expect(text.spans.contains { $0.isCode && $0.text == "c" })
     }
 
+    @Test func keyboardShortcutInlineCodeIsFlagged() {
+        guard case .paragraph(let text)? = kinds("Press `⌘K` then paste `smb://server/share`.").first else {
+            Issue.record("expected a paragraph")
+            return
+        }
+        #expect(text.spans.contains { $0.isKeyboardShortcut && $0.text == "⌘K" })
+        #expect(text.spans.contains { $0.isCode && !$0.isKeyboardShortcut && $0.text.contains("smb://") })
+        #expect(GuideMarkdown.isKeyboardShortcut("Cmd+Shift+S"))
+        #expect(GuideMarkdown.isKeyboardShortcut("3"))
+        #expect(!GuideMarkdown.isKeyboardShortcut("SPORT-YYYYMMDD"))
+        #expect(!GuideMarkdown.isKeyboardShortcut("Q2"))
+    }
+
     @Test func contactLinkSchemesAreKept() {
         guard case .paragraph(let text)? = kinds("[Email](mailto:a@wisc.edu) or [Call](tel:+15555555555)").first
         else {
@@ -273,6 +304,44 @@ struct GuideMarkdownTests {
             return
         }
         #expect(embed.provider == .vimeo)
+    }
+
+    @Test func copyFenceBecomesACopyBlock() {
+        guard case .copy(let text)? = kinds("```copy\nsmb://server/share\n```").first else {
+            Issue.record("expected a copy block")
+            return
+        }
+        #expect(text == "smb://server/share")
+    }
+
+    @Test func pathFenceIsAlsoCopyable() {
+        guard case .copy(let text)? = kinds("```path\n/Volumes/Media/RESOURCES\n```").first else {
+            Issue.record("expected a copy block")
+            return
+        }
+        #expect(text == "/Volumes/Media/RESOURCES")
+    }
+
+    @Test func emptyCopyFenceFallsBackToCode() {
+        let isCode = kinds("```copy\n\n```").contains {
+            if case .code = $0 { return true }
+            return false
+        }
+        #expect(isCode)
+    }
+
+    @Test func matchingLeadHeadingIsOmitted() {
+        let markdown = "# Color Correction 101\n\nConfirm Premiere’s color settings."
+        let parsed = GuideMarkdown.parse(markdown, baseURL: base)
+        let stripped = GuideMarkdown.omittingDuplicateLeadHeading(parsed, title: "Color Correction 101")
+        #expect(stripped.contains { if case .heading = $0.kind { return true }; return false } == false)
+        #expect(stripped.contains { if case .paragraph(let text) = $0.kind { return text.plain.contains("Confirm") }; return false })
+    }
+
+    @Test func unmatchedLeadHeadingIsKept() {
+        let parsed = GuideMarkdown.parse("# Phase 1\n\nPlug in the card.", baseURL: base)
+        let kept = GuideMarkdown.omittingDuplicateLeadHeading(parsed, title: "Photo Mechanic")
+        #expect(kept.contains { if case .heading(_, let text) = $0.kind { return text.plain == "Phase 1" }; return false })
     }
 
     @Test func unusableEmbedFallsBackToCode() {
