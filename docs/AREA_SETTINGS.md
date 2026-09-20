@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Settings
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-26
+- Last Updated: 2026-09-18
 - Status: Active
 - Version: V1
 
@@ -15,9 +15,9 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 ## Core Rules
 1. The Settings surface is open to any authenticated user (STUDENT / STAFF / ADMIN). Each sub-page declares its own `requiredRole`; the layout filters tabs and gates direct-route rendering through the canonical `SETTINGS_SECTIONS` role matrix before child controls mount. STUDENTs only see the Personal group. Forbidden and unknown Settings routes show a recovery path instead of rendering child content.
 2. Settings layout provides unified role-aware section navigation via the shared `SectionNav` treatment; sub-pages should not render their own page-level `<h1>`.
-3. Each sub-page uses `SettingsPageShell`: compact intro rail (title + description) and main content for forms, tables, loading states, and errors.
+3. Each sub-page uses `SettingsPageShell`: compact intro (title + description, optional actions), main content, and related-page links. Titles come from the canonical `SETTINGS_SECTIONS` labels so they stay aligned with the rail, command palette, and breadcrumbs.
 4. Mutations should provide immediate feedback via toast notifications and visible form-level errors for create/add forms.
-5. Personal-group preferences belong in **Personal** (top group). System configuration belongs in **People · Inventory · Scheduling · Devices · System**.
+5. Personal-group preferences belong in **Personal** (top group). System configuration belongs in **People · Inventory · Booking · Schedule · Devices · System**. Sports lives under Schedule. Checkout policies, reservation rules, booking extensions, and overdue escalation live under Booking.
 6. **App activity** is a separate owner-only support/adoption report. The Settings rail, command palette, breadcrumbs, direct route, and API all require the configured `USAGE_ANALYTICS_OWNER_EMAILS` identity; ADMIN role alone is not sufficient.
 
 ## Sub-Pages
@@ -39,7 +39,8 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 
 ### Overview (`/settings`)
 - Role-aware control map for every visible settings section.
-- Groups settings into Personal, People, Inventory, Scheduling, Devices, and System with short descriptions.
+- Groups settings into Personal, People, Inventory, Booking, Schedule, Devices, and System with short descriptions.
+- In-page directory search filters visible destinations by label, description, and keywords.
 - Preserves the previous last-tab behavior as a "Resume" action instead of immediately redirecting.
 
 ### Profile (`/settings/profile`) — Personal
@@ -65,13 +66,13 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 - Saved per-device in `localStorage` (`theme`, `text-scale`); the cold-load script in `src/app/layout.tsx` applies both on first paint to avoid FOUC.
 - Available to every authenticated user (STUDENT included).
 
-### Checkout Policies (`/settings/checkout-policies`) -- Inventory, ADMIN
+### Checkout Policies (`/settings/checkout-policies`) -- Booking, ADMIN
 - **Default loan duration** (`defaultLoanDays`, default 3): used as the fallback `endsAt` when a checkout POST omits the end date. The creation form can use this to prefill the due-date picker.
 - **Overdue grace period** (`gracePeriodHours`, default 0): items become overdue and the first overdue notification becomes eligible at `endsAt + gracePeriodHours`. Due-time, +4h, and +24h notification offsets remain exact relative to `endsAt`; manual nudges use the same grace boundary.
 - **Max active checkouts per user** (`maxItemsPerUser`, default null = no limit): enforced at checkout POST time; counts OPEN + PENDING_PICKUP bookings for the requester. Rejects with 409 when at/over cap.
 - `GET/PUT /api/settings/checkout-policies` (ADMIN, rate-limited at `SETTINGS_MUTATION_LIMIT`). Stored in `SystemConfig.checkout_policies`. Missing/null key falls back to defaults -- no behavior change for existing data.
 
-### Reservation Rules (`/settings/reservation-rules`) -- Scheduling, ADMIN
+### Reservation Rules (`/settings/reservation-rules`) -- Booking, ADMIN
 - **Advance booking window** (`advanceWindowDays`, default null = no limit): reservations whose `startsAt` is further out than the window are rejected with 409.
 - **No-show expiry** (`noShowExpiryHours`, default 48): starts when a booked
   reservation reaches `startsAt`. Loaded at cron run time in
@@ -99,6 +100,7 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 - Rows show the last audit actor/time when audit history exists.
 
 ### Sports (`/settings/sports`)
+- Schedule-group configuration for shift generation, not People access.
 - Configure one Non-game template with per-area Staff and Student counts for events without an opponent.
 - Toggle sports active/inactive for shift generation.
 - Configure separate Staff and Student home/away shift counts per area (Video, Photo, Graphics, Comms).
@@ -219,6 +221,10 @@ Navigation breadcrumb versioned roadmap: `tasks/breadcrumbs-roadmap.md`
 All versions shipped. Duplicate breadcrumb removed; parent-level sibling quick-jump dropdown on "Settings" crumb navigates between sub-pages. Role-gated Settings sibling menus now wait for the current role before becoming dropdowns, so the loading frame does not expose an empty menu. The global breadcrumb UI now uses a lighter trail treatment with the current Settings sub-page marked by a subtle underline instead of a filled chip.
 
 ## Change Log
+- 2026-09-18: **Snow Leopard polish.** Settings keeps a single `main` landmark. ⌘K stays on the settings palette. Jump links clear the sticky header. Directory search can be cleared. Command palette no longer stacks a close control on the search field.
+
+- 2026-09-18: **Settings control room rehaul.** Overview is a searchable directory. The rail uses icons and groups Booking (checkout, reservation, extensions, overdue) separately from Schedule (sports, calendars, locations, venue mappings). Sports moved out of People. Page titles match nav labels. Related-page links sit under each tab. Shared save bars keep labels stable. Profile now exposes Slack handle. Local authenticated browser proof on overview search/filter, Profile, Appearance, Sports jump nav, Checkout policies dirty/reset save bar, and related links. `npm run build:app` was not run because Preview `next dev` owns port 3000. Evidence: `tasks/archive/proofs/settings-overhaul-2026-09-18/review.html`.
+
 - 2026-09-07: Settings UI batch adds Enter submission, reset, visible unsaved/pending feedback, browser unload protection, draft-preserving refresh recovery, clean-form synchronization, associated field help/errors, invalid-field focus, persistent save errors, stable save labels, and 40px inputs/actions to Reservation Rules and Checkout Policies. Blank grace is now invalid; policy descriptions distinguish new-booking defaults from ongoing overdue/no-show behavior. Appearance choices add keyboard focus rings, labelled groups, clean text-size names, and a selected checkmark. Acceptance: local component/browser proof and focused checks; authenticated application and deployment remain unverified. Evidence: `tasks/archive/proofs/settings-ui15-2026-09-07/review.html`.
 - 2026-09-07: CSV reliability batch: audit exports validate date windows, audit/booking exports have deterministic timestamp ties, and audit/booking/item/user CSV responses are private and no-store. Truncation warns even without a total header; non-object JSON failures use fallback copy. Recent-item history refreshes renamed entries and recovers corrupt storage; URL filter synchronization preserves history state. Acceptance is local behavior proof, not authenticated browser or deployed proof.
 - 2026-09-07: Audit browse now normalizes invalid page sizes to the shared default, rejects unreadable or inverted date filters, and returns 400 for malformed or conflicting pagination cursors before querying. Valid keyset and live-tail behavior remains unchanged. Acceptance: focused route regressions pass locally; authenticated runtime and deployment remain unverified.

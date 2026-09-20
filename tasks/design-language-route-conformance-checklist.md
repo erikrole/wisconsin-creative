@@ -59,7 +59,7 @@ This is a working checklist, not a redesign brief. Use it before future page-spe
 | `/reports/*` | Mostly conforming | Reports use shared layout, toolbar helpers, active-filter chips on key pages, shared empty states, role gating, and an adapter over `OperationalMetricCard` for report metrics. | No immediate code fix. Keep future report metrics behind the report adapter instead of adding page-local cards. |
 | `/bulk-inventory/batteries` | Strong | Uses `PageHeader`, `OperationalStatusRail` for missing, low-stock, stale-flag, and custody signals, shared empty states, expanded shared metrics, and clear battery operations sections. | No immediate code fix. Keep unit status controls named and audited. |
 | `/bulk-inventory/[id]` | Strong | Item-family detail surfaces use shared inline empty states and the shared image modal handoff. | No immediate code fix. Keep item-family detail copy aligned with Units and Quantity user language. |
-| Detail pages | Strong for the header; watch the tab bodies | Item detail, booking detail, user detail, and bulk SKU detail now share `DetailPageHeader`. Kit detail uses `PageHeader` with a location/content summary. All use shared empty states, shared row actions where actions exist, and explicit operational copy. | Sweep the remaining sub-40px controls inside the user and item tab components, which the 2026-08-22 header pass did not touch. |
+| Detail pages | Strong for the header; user tabs now at 40px | Item detail, booking detail, user detail, and bulk SKU detail now share `DetailPageHeader`. Kit detail uses `PageHeader` with a location/content summary. User profile Info/Activity/Availability/Badges use 40px fields and filters. All use shared empty states, shared row actions where actions exist, and explicit operational copy. | Sweep remaining sub-40px controls inside item tab components. |
 
 ## Route Detail
 
@@ -116,7 +116,7 @@ This is a working checklist, not a redesign brief. Use it before future page-spe
 - **Targets and focus**: pass. Header commands, toolbar actions, filters, sortable headers, recovery actions, and pagination meet the 40px control baseline. Inactive/hidden filters use their full labeled container, mobile roster cards have visible focus and the shared 0.96 press treatment, sort-state icons transition without replaying on initial render, and roster photos use neutral image outlines.
 - **Status and color**: pass. Role badges and inactive handling avoid using green for non-availability states.
 - **Copy**: pass. Add user and temp-password handoff are documented in the area source and prior implementation.
-- **Evidence**: `src/app/(app)/users/page.tsx`, `src/app/(app)/users/UserFilters.tsx`, `src/app/(app)/users/UserRow.tsx`, `tests/users-ui-polish-source.test.ts`, `docs/AREA_USERS.md`, authenticated screenshot `tasks/design-language-proof-users.png` predates the 2026-07-16 interaction-detail pass.
+- **Evidence**: `src/app/(app)/users/page.tsx`, `src/app/(app)/users/UserFilters.tsx`, `src/app/(app)/users/UserRow.tsx`, `tests/users-ui-polish-source.test.ts`, `tests/users-profile-overhaul-source.test.ts`, `docs/AREA_USERS.md`, authenticated screenshot `tasks/design-language-proof-users.png` predates the 2026-07-16 interaction-detail pass. Roster/profile related-link proof: `tasks/archive/proofs/user-profiles-2026-09-18/review.html`.
 
 ### `/settings`
 
@@ -257,7 +257,7 @@ Corrected 2026-08-22. The prior entry called detail pages "mostly conforming" wi
 - **Copy**: pass.
 - **Typography**: pass, and the reason matters. The base `h1` rule in `globals.css` beats Tailwind font-size and font-weight utilities on an `h1`, so per-route title classes on a heading element are dead code. Let the `h1` inherit; do not restate the scale.
 - **Known exception**: the booking reference-copy and refresh affordances remain 10-11px inline text controls rather than 40px buttons. They predate the header pass and need their own decision.
-- **Next fix**: the user and item tab components still contain sub-40px controls the header pass did not cover.
+- **Next fix**: item tab components still contain sub-40px controls the header pass did not cover. User profile Info, Activity, Availability, and Badges were brought onto the 40px baseline on 2026-09-18.
 - **Evidence**: `src/components/DetailPageHeader.tsx`, `tasks/users-header-review-2026-08-22/` (matched before/after captures and measurements).
 
 ## Current Next Fixes
@@ -270,6 +270,6 @@ Corrected 2026-08-22. The prior entry called detail pages "mostly conforming" wi
 6. Counting note: a line-based `grep` undercounts these badly. Multi-line JSX and arrow functions containing `>` both defeat naive tag regexes, and a `size="sm"` carrying an `h-10` override is already compliant. Use a brace-aware scan; `tests/detail-page-header-source.test.ts` matches across newlines for this reason.
 7. Decide whether the booking reference-copy and refresh affordances stay as inline text controls or become 40px buttons.
 8. **Move the `globals.css` typography block into `@layer base`.** It is currently unlayered, so every heading and card-title utility in the app is inert (141 declarations). Measured and documented in `docs/DESIGN_LANGUAGE.md`; the `/about` hero bug it caused is fixed narrowly with `!` modifiers. The full fix changes 141 headings at once and needs its own slice with authenticated visual proof.
-9. **Decide the form-field height baseline.** `Input` and `SelectTrigger` are h-9 (36px), below the 40px target rule. `FormCombobox` was deliberately left at h-9 during the 2026-08-22 sweep to stay aligned with them; raising it alone misaligns every form row. Raising all three together is the real fix and needs its own proof.
+9. **Form-field height baseline, closed 2026-09-19.** Default `Input`, `NativeSelect`, `SelectTrigger`, `Button`, and `FormCombobox` triggers are 40px. `SelectTrigger size="sm"` and button `sm`/`xs`/`icon-sm`/`icon-xs` remain density exceptions. Proof: `tasks/archive/proofs/field-baseline-2026-09-19/review.html`.
 10. `/support` and `/privacy` remain outside both shells: they use neither `AuthScreen` nor the app shell. Decide whether they should adopt the public showroom layout under `/about` or stay standalone.
 11. Bring the routes this checklist has never covered into scope: `/accountability`, `/schedule/assign`, `/events/[id]`, `/import`, `/blasts`, `/signatures/*`, and the unauthenticated surfaces (`/login`, `/forgot-password`, `/reset-password`, `/change-password`, `/support`, `/privacy`), none of which use the shared page shell.

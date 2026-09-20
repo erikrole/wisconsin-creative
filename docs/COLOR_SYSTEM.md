@@ -153,6 +153,7 @@ its own palette. Each accent drives the border, header text, and a tinted backgr
 |---------|----------------|---------------|---------|
 | Note | `oklch(0.540 0.210 262.881)` | `oklch(0.710 0.140 254.624)` | Neutral context / FYI |
 | Tip | `oklch(0.520 0.140 149.214)` | `oklch(0.800 0.175 151.711)` | Helpful best practice |
+| Shortcut | `oklch(0.430 0.028 250)` | `oklch(0.820 0.028 250)` | Keyboard or menu accelerators |
 | Important | `oklch(0.540 0.238 293.009)` | `oklch(0.710 0.155 293.541)` | Do-not-miss requirement |
 | Warning | `oklch(0.540 0.124 58.318)` | `oklch(0.835 0.160 84.429)` | Proceed with caution |
 | Caution | `oklch(0.540 0.200 27.325)` | `oklch(0.710 0.160 22.216)` | Risk of damage / data loss |

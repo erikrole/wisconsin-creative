@@ -19,7 +19,7 @@
 | `Location` | 17 | 1 |
 | `Department` | 7 | 1 |
 | `Category` | 9 | 3 |
-| `Asset` | 41 | 7 |
+| `Asset` | 42 | 8 |
 | `FirmwareWatchTarget` | 17 | 3 |
 | `Booking` | 44 | 15 |
 | `BookingAccountabilityExclusion` | 11 | 4 |
@@ -59,7 +59,7 @@
 | `LiveActivityToken` | 10 | 3 |
 | `LiveActivityStartToken` | 8 | 2 |
 | `LiveActivityStart` | 9 | 4 |
-| `Notification` | 12 | 5 |
+| `Notification` | 13 | 6 |
 | `EscalationRule` | 10 | 1 |
 | `Blast` | 22 | 5 |
 | `BlastRecipient` | 12 | 4 |

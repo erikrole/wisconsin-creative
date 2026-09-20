@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Search
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-30
+- Last Updated: 2026-09-19
 - Status: Active
 - Version: V1
 
@@ -14,7 +14,7 @@ Make search a fast operational jump layer. It should find records when the user 
 
 ### Quick Search Palette
 - Opens from the top bar, mobile search button, or `Cmd/Ctrl+K`.
-- Searches role-visible pages, settings, reports, items, active checkouts, active reservations, and users.
+- Searches role-visible pages, settings, reports, items, active checkouts, active reservations, users, and guides.
 - Page results are role-aware:
   - Everyone can find core app pages and personal settings.
   - Staff/admin can find staff tools, reports, and system settings.
@@ -24,8 +24,11 @@ Make search a fast operational jump layer. It should find records when the user 
   - `/api/checkouts`
   - `/api/reservations`
   - `/api/users`
+  - `/api/resources`
 - Partial endpoint failures show available matches instead of wiping the palette.
-- Empty copy tells operators what to try: tag, borrower, page name, setting, or report.
+- Empty copy tells operators what to try: tag, borrower, guide, page name, setting, or report.
+- Guide hits open `/resources/[slug]`. Students only receive published guides; staff/admin also receive drafts. Subtitles use the guide type and one-line purpose.
+- Resources landing Quick find is an in-page button only. It does not capture `Cmd/Ctrl+K`.
 
 ### Full Search Page
 - `/search?q=...` provides a larger result review surface for the same record categories plus role-visible page destinations.
@@ -46,6 +49,7 @@ Make search a fast operational jump layer. It should find records when the user 
 5. The full search page and quick palette should not disagree on destination search.
 
 ## Change Log
+- 2026-09-19: **Web global search includes Guides.** Quick Search and `/search` fan out to `GET /api/resources?q=` alongside items, checkouts, reservations, and users. Guide hits use the shared mapper for title, type/purpose subtitle, draft status, and `/resources/[slug]` destinations. Resources Quick find no longer captures `Cmd/Ctrl+K`. Native Search is unchanged in this slice.
 - 2026-08-30: **Web Search failures have an in-place recovery path.** Complete and partial failures expose Retry without clearing the query. A failed retry for the same query keeps already loaded, trustworthy matches visible and identifies every unavailable source; a different query never inherits stale results. The existing four-source fan-out, role visibility, and result destinations are unchanged.
 - 2026-08-29: **Native global Search now returns complete, actionable result sets.** Search preserves server totals and per-source cursors, shows a clear loaded/total count, paginates each source independently, keeps successful groups visible when another source fails, and offers retry for a failed next page. Bulk-item families are now direct reservation entry points with an explicit Reserve action, scan results share the same path, and opened results record the query for role-consistent recents. The iPhone 16 Pro Simulator screenshot pair proves first-page versus expanded-result behavior; partial/offline responses, large Dynamic Type, VoiceOver, and authenticated deep-link acceptance remain runtime gates.
 - 2026-08-25: **Authenticated WebMCP progressive enhancement.** The app now registers bounded, role-aware read tools for current-page context, internal navigation, dashboard snapshot, item search, and active booking search when the browser exposes WebMCP. The `tools=(self)` Permissions Policy is explicit; unsupported browsers continue to use the normal website without a fallback dependency. Mutation/custody tools remain intentionally out of scope.

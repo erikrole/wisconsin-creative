@@ -542,8 +542,8 @@ These are non-negotiable integrity constraints. Every feature must preserve them
 - Label mapping:
   - DRAFT → "Draft"
   - BOOKED → "Reserved"
-  - PENDING_PICKUP → "Pending Pickup"
-  - OPEN → "Checked Out"
+  - PENDING_PICKUP → "Pending pickup"
+  - OPEN → "Checked out"
   - COMPLETED → "Completed"
   - CANCELLED → "Cancelled"
 - Constraint: All UI surfaces must use `statusLabel()` for display. Never show raw enum values to users.

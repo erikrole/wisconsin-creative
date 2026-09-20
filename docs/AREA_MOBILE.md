@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Mobile Operations
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-09-18
+- Last Updated: 2026-09-19
 - Status: Active
 - Version: V1
 
@@ -140,11 +140,14 @@ All versions shipped (2026-03-25):
 Navigation shell versioned roadmap: `tasks/sidebar-roadmap.md` (revised 2026-03-25)
 
 - **V1 (shipped)**: `SidebarMenuBadge` on Bookings (overdue) + Notifications (unread), nav groups, quick-create — closes §4 of Mobile Navigation Contract
-- **V2 (partially shipped)**: User-scoped due-today badge is live. Lookup stays out of the web sidebar because laptop/desktop users rely on text search, and sidebar Cmd/Ctrl+number shortcuts stay out because they conflict with browser/system shortcuts. Settings sub-nav was superseded by the role-aware Settings rail and command palette because Settings now includes Personal sections for every authenticated role.
+- **V2 (partially shipped)**: User-scoped due-today badge is live. Lookup stays out of the web sidebar because laptop/desktop users rely on text search, and sidebar Cmd/Ctrl+number shortcuts stay out because they conflict with browser/system shortcuts. Settings is a global destination for every authenticated role, including Collaborator Personal sections. Notifications are top-bar only. Destination grouping (daily work / Team / Library / Operations) shipped 2026-09-18.
 - **V3 (later)**: Bottom nav badge counts via live `/api/nav-counts` polling, game-day/shift context cards
 
 ## Change Log
 
+- 2026-09-19: **Native Guides reader follows the expanded Markdown contract (local).** Shortcut callouts, escaped alert markers, keyboard-chip inline code, copyable `copy`/`path` fences, and duplicate lead-title stripping now match the web reader. Numbered steps were already badge-styled and honor list start indexes. Source tests updated; iPhone 16 Pro runtime visual proof remains open.
+- 2026-09-18: **Web sidebar identity uses Gotham (local).** Destination labels, group labels, the Badgers lockup, and the account name sit on `.brand-identity` at real Gotham weights (Medium 500, Bold 700, Black 800). Role captions stay Geist Mono. Authenticated Chromium proof: `tasks/archive/proofs/sidebar-gotham-2026-09-18/review.html`.
+- 2026-09-18: **Web top bar and sidebar chrome pass (local).** Destinations group as daily work, Team, Library, and Operations. Settings stays a global destination; Notifications move to the top-bar bell; account, theme, help, and log out sit in the footer identity menu. Search is a command field. Active state is a filled pill instead of a red title rail. Authenticated Chromium proof is in `tasks/archive/proofs/app-chrome-2026-09-18/review.html`. Phone-width web remained CSS/source smoke.
 - 2026-09-18: **Native launch follows Apple's continuity guidance (local).** `UILaunchScreen` is a required iOS 27 Info.plist key with `LaunchBackground` matching Home's grouped surface, and no Motion W or wordmark. `LaunchView` uses the same quiet background and still delays session-checking copy; inactive app-switcher snapshots show the live UI. Sign-in and forced-password keep the crimson scene and Gotham lockup. Source/test complete; iPhone 16 Pro fixture capture is in `tasks/archive/proofs/ios-launch-continuity-2026-09-18/review.html`. Authenticated device proof remains open.
 - 2026-09-18: **Native reservation Review names the person on a hold (local).** Reserved-for copy is purple, currently-out copy is red, and the cart stays purple with a red count badge. Counted quantities use a system stepper with the count beside the control. Power cards sit above the selected-gear toolbar. Review is a grouped form with a matchup-only title and native Schedule rows, and it no longer calls timing notices gear conflicts. Source/test complete; iPhone 16 Pro fixture capture is in `tasks/archive/proofs/ios-reservation-review-2026-09-18/review.html`. Authenticated device proof remains open.
 - 2026-09-18: **Native reservation Gear uses system search, toolbar, and swipe (local).** Search is `.searchable` in the navigation bar. Category lives next to Scan. Selected gear and Review are the bottom toolbar. Rows swipe to add/remove and long-press to view the item. Conflicts keep a red alert in the add slot. Tapping a row does not steal search focus, and the plus stays gray unless the row is selected. Source/test complete; iPhone 16 Pro fixture capture is in `tasks/archive/proofs/ios-reservation-gear-system-2026-09-18/review.html`. Authenticated device proof remains open.

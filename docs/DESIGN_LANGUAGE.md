@@ -2,7 +2,7 @@
 
 ## Document Control
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-08-23
+- Last Updated: 2026-09-19
 - Status: Active
 - Purpose: Define the UI and UX rules that keep Wisconsin Creative cohesive, fast, dense, calm, and operationally clear.
 
@@ -31,8 +31,9 @@ Avoid:
 
 ## Visual Language
 ### Layout
-- Use `PageHeader` for page title, optional description, and right-side actions.
-- Use `DetailPageHeader` for entity detail routes that carry identity media and a meta stack, which `PageHeader` has no slots for. It owns the card shell, the `h1`, and the media / status / title / subtitle / meta / actions / footer slots. Pick `sideBySideAt` to match the action column: `sm` for a couple of compact buttons, `lg` when a wide action column would crowd the title. A detail route without identity media stays on `PageHeader`.
+- Use `PageHeader` for page title, optional description, and right-side actions. It is a semantic `<header>` with no decorative brand rail — red left edges are for status, not every title.
+- Use `DetailPageHeader` for entity detail routes that carry identity media and a meta stack, which `PageHeader` has no slots for. It owns the identity row, the `h1`, and the media / status / title / subtitle / meta / actions / footer slots, separated from the body by a hairline rule rather than a card. Pick `sideBySideAt` to match the action column: `sm` for a couple of compact buttons, `lg` when a wide action column would crowd the title. A detail route without identity media stays on `PageHeader`.
+- Breadcrumbs are wayfinding for nested, create, and entity-detail routes. Hide `Home + current section` trails that restate the sidebar and page title. Current crumbs and active section-nav labels use `.brand-identity` (Gotham family) without restating size.
 - Use `AuthScreen` for every unauthenticated screen. It owns the login scene, the noise layer, the brand lockup, the translucent `.login-card` material, and the entrance stagger. Pass a `subtitle` saying what the screen is for and an optional `footer` for content that belongs on the scene rather than in the card. Do not rebuild the scene or the card per route.
 - Do not restate the heading scale on an `h1`. Every detail title is a real `h1`, never a styled `span`.
 - **Heading utilities do not work. Know this before you write one.** The typography rules in `globals.css` (`h1`-`h6`, `[data-slot="card-title"]`, dialog/sheet titles) sit *outside* any `@layer`, and unlayered CSS outranks every layered rule, including all Tailwind utilities. Measured 2026-08-22: on an `h1`, `text-5xl`, `text-[32px]`, and a bare element all compute to the same 30px. Consequences:
@@ -43,7 +44,7 @@ Avoid:
 - There are no `font-heading` or `font-mono` Tailwind utilities: the `@theme inline` block has no font entries. Use the family-only `.brand-identity` class for primary operational identity outside semantic heading/title slots. It deliberately does not set size, weight, tracking, or color. Adding font entries to `@theme` would generate utilities; not yet done.
   - **Open architectural fix:** moving the typography block into `@layer base` makes utilities work normally and is the correct structure. It was measured and deliberately not shipped on 2026-08-22 because it changes 141 headings at once — 6 `h1`, 27 `h2`, 46 `h3`, 59 `CardTitle`, 3 dialog/sheet titles — most on authenticated surfaces that cannot be visually verified locally. It needs its own slice with real proof, not a side effect of another change.
 - Use page sections as full-width groups or direct content, not cards inside cards.
-- Use `OperationalToolbar` for search, filters, quick toggles, and clear actions on operational list pages. The toolbar should read as quiet page chrome; individual controls carry the primary affordance.
+- Use `OperationalToolbar` for search, filters, quick toggles, and clear actions on operational list pages. The toolbar is an unfilled control row — no frosted capsule — so individual controls carry the primary affordance. Do not wrap it in a second glass or card shell.
 - Keep settings sub-pages under the Settings layout header and grouped Settings navigation; use `SettingsPageShell` for the compact section intro and main content, and do not render page-level `h1` inside sub-pages.
 
 ### Spacing And Density
@@ -52,8 +53,8 @@ Avoid:
 - Use cards for repeated items, modals, queue cards, and framed tools. Do not wrap whole pages in decorative cards.
 
 ### Typography
-- Gotham is the identity face: page and entity titles, serialized asset tags, bulk SKU names, booking/event titles, and person names when they are the primary label of a row, card, selection, or report link.
-- Geist is the interface face: controls, field labels, statuses, dates, counts, descriptions, supporting product/model text, email/role metadata, and prose.
+- Gotham is the identity face: page and entity titles, serialized asset tags, bulk SKU names, booking/event titles, sidebar destinations and lockup, and person names when they are the primary label of a row, card, selection, or report link.
+- Geist is the interface face: controls, field labels, statuses, dates, counts, descriptions, supporting product/model text, email/role metadata, and prose. Sidebar role captions stay Geist Mono.
 - Use semantic headings and shadcn title slots first. Add `.brand-identity` only when primary identity lives in a non-heading row or compact selection surface; do not apply it to an entire table, form, toolbar, or container.
 - Labels first, numbers second. Metric cards use small uppercase labels and tabular numbers.
 - Use hero-scale type only for real top-level page headers.
@@ -81,10 +82,10 @@ Avoid:
 - Motion should be short and functional: focus, hover, active press, refresh spin, loading skeleton. No decorative motion.
 
 ## Component Language
-- **Buttons**: shadcn `Button`; primary action first; destructive actions use confirmations; icon buttons require `aria-label`.
-- **Forms**: shadcn `Input`, `Textarea`, `Select`, `Switch`, `Checkbox`, `Combobox` where available; show form-level errors for API, validation, permission, and network failures.
-- **Dialogs**: `Dialog` for create/edit flows; `AlertDialog` for destructive or irreversible choices; `Sheet` or `Drawer` for contextual details. Built-in overlay close controls must keep a visible 40px target and focus ring.
-- **Tables**: shadcn `Table`; compact rows; sticky headers when useful; row click and row actions must be siblings, not nested.
+- **Buttons**: shadcn `Button`; primary action first; destructive actions use confirmations; icon buttons require `aria-label`. Default buttons are 40px (`h-10`) with press scale, a 150ms color/scale transition, and reduced-motion safety. `size="lg"` is 44px so it stays distinct. `size="icon"` is 40px; `sm` / `xs` and `icon-sm` / `icon-xs` remain density exceptions.
+- **Forms**: shadcn `Input`, `Textarea`, `Select`, `Switch`, `Checkbox`, `Combobox` where available; show form-level errors for API, validation, permission, and network failures. Default text fields, native selects, select triggers, and combobox triggers are 40px so a form row lines up without per-page `h-10` overrides. `SelectTrigger size="sm"` stays 32px for dense tables. Field chrome (hover, focus, invalid, disabled) is shared so text fields and selects match in a row. `Switch`, `Checkbox`, and `Radio` keep their compact visual size and expand to a 40px hit area.
+- **Dialogs**: `Dialog` for create/edit flows; `AlertDialog` for destructive or irreversible choices; `Sheet` or `Drawer` for contextual details. Built-in overlay close controls must keep a visible 40px target and focus ring. Long dialogs scroll inside a max-height panel; titles keep padding so they do not sit under the close control.
+- **Tables**: shadcn `Table`; compact rows; sticky headers when useful; sentence-case headers; row click and row actions must be siblings, not nested.
 - **Row actions**: use `OperationalRowActions` for icon overflow menus in operational rows; keep the trigger 40px, give it a specific accessible label, and use destructive menu variants for destructive actions.
 - **Settings row actions**: use `OperationalRowActions` for Settings table/list rows with destructive actions, lifecycle changes, or multiple row commands. Direct inline buttons are only for primary page actions, toggles, and form submit/cancel controls.
 - **Filters**: `OperationalToolbar` shell; search first, mode controls next, filter disclosure after; clear action visible when filters are active.
@@ -148,7 +149,9 @@ Feature ideas to consider separately:
 - Continue replacing local text-only empty rows with `EmptyState inline` in remaining admin tables when those surfaces are touched.
 
 ## Consistency Audit
-- App shell navigation: desktop active matching now selects one most-specific route, Staff management is labeled Operations, collapse state persists, collapsed badges remain glanceable, mobile drawers close after navigation, and sidebar triggers/menu/theme controls meet the operational target floor. The mobile web bar uses the same unified Bookings destination as desktop.
+- Shared form-field baseline (2026-09-19, local): default `Input`, `NativeSelect`, `SelectTrigger`, `Button`, and `FormCombobox` triggers are 40px so a text field, select, and action in the same row share one height. `size="sm"` / `xs` and `icon-sm` / `icon-xs` stay density exceptions; `SelectTrigger size="sm"` stays 32px in dense tables. Proof: `tasks/archive/proofs/field-baseline-2026-09-19/review.html`.
+- Shared high-use shadcn primitives (2026-09-19, local): `Button`, field controls, overlays, menus, `Table`, `Switch`/`Checkbox`/`Radio`, `ToggleGroup`, and `Tabs` now share press/focus/hover chrome, origin-aware menu motion, 40px overlay close and compact hit areas, sentence-case table headers, and skipped tooltip delay after the first open tooltip. Proof: `tasks/archive/proofs/shadcn-primitives-2026-09-19/review.html`.
+- App shell navigation: desktop active matching selects one most-specific route. Destinations are grouped as daily work, Team, Library, and staff Operations, with Settings as a global footer destination for every authenticated role including Collaborator. Notifications live on the top-bar bell only. Account, theme, help, and log out sit in the sidebar footer menu. Collapse state persists, collapsed badges stay on the icon rail, mobile drawers close after navigation, and sidebar/menu/theme controls meet the operational target floor. The mobile web bar uses the same unified Bookings destination as desktop.
 - Shared `StatusIndicator`: status is now carried by the semantic Badge variant, a flat dot, and its label; the decorative ping halo was removed from dashboard, booking, hygiene, Fix Today, and Settings consumers.
 - Public showroom: shared section blocks now use solid backgrounds, restrained borders, inline icons, and compact mockup framing instead of atmospheric gradients, tinted icon tiles, and repeated oversized card shadows.
 - `/dashboard`: pending pickup previously used green row accent. Fixed to orange waiting semantics.
@@ -157,7 +160,10 @@ Feature ideas to consider separately:
 - `/items`: toolbar was the best existing command surface. It now uses `OperationalToolbar` and shared active-filter chips.
 - `/items`: inventory status now uses `OperationalStatusRail` with an active-inventory orientation, prioritized nonzero operational states, and the complete pressed-state-aware status facet set under Details.
 - Page-level operational summaries on Dashboard, Inventory Hygiene, Battery Ops, Notifications, Kits, Licenses, Onboarding Status, and Allowed Emails now share `OperationalStatusRail`; report analytics, import outcomes, badge progress, item insights, and Resources navigation remain card-based by design.
-- Shared operational toolbar shell: `OperationalToolbar` now uses the lighter translucent chrome shared by breadcrumbs and section nav, while child controls keep 40px targets and their own borders.
+- Shared page chrome (2026-09-18, local): `PageHeader` dropped the decorative red title rail; `DetailPageHeader` is an identity row with a hairline rule instead of a card; breadcrumbs hide top-level Home+section trails and set the current crumb in Gotham; `OperationalToolbar` and `SectionNav` no longer share a frosted capsule. Child controls keep 40px targets and their own borders.
+- Default `Button` `size="icon"` is 40px (`size-10`); `icon-sm` / `icon-xs` remain the density exceptions. Booking and equipment status labels are sentence case (`Checked out`, `Pending pickup`, `Maintenance`).
+- App shell chrome (2026-09-18, local): sidebar destinations group as daily work, Team, Library, and Operations; Settings stays global; Notifications are top-bar only; account/theme/help/log out sit in the footer identity menu; search is a command field. Active nav is a filled pill, not a red title rail. Proof: `tasks/archive/proofs/app-chrome-2026-09-18/review.html`.
+- Sidebar identity type (2026-09-18, local): the lockup, destination labels, group labels, and account name use `.brand-identity` (Gotham) at shipped weights (800 / 700 / 500). Role captions stay Geist Mono. Proof: `tasks/archive/proofs/sidebar-gotham-2026-09-18/review.html`.
 - `/items` row actions: table overflow actions now use `OperationalRowActions`.
 - `/bookings`: table rows, mobile rows, and booking cards now use `OperationalRowActions` for overflow commands while preserving right-click context menus.
 - `/bookings`: list filters now use `OperationalToolbar` plus shared active-filter chips, matching Items and Users instead of a route-local card-header toolbar.
@@ -173,6 +179,7 @@ Feature ideas to consider separately:
 - `/schedule` Trade Board filters: active Area, Status, and My trades filters now use `OperationalActiveFilterChips`.
 - `/users`: filter surface matched the idea but used smaller controls and its own frame. It now uses `OperationalToolbar`, 40px controls, and shared active-filter chips.
 - `/users/[id]`: editable area assignments now use 40px row actions through `OperationalRowActions` instead of tiny inline chip buttons for primary/remove commands, and profile-photo/size inputs expose stable id/name metadata.
+- `/users` and `/users/[id]` (2026-09-18, local): roster and profile share related-page jumps. Profile identity lives in `DetailPageHeader` (role/affiliation/inactive as status, title or student year as subtitle, Scoreboard jump beside profile actions). Info splits Contact / Work / Assignments. Scoreboard is a compact season strip plus breakdown and events, not a hero record. Activity/Availability/Badges filters sit on the 40px baseline. Proof: `tasks/archive/proofs/user-profiles-2026-09-18/review.html`.
 - `/settings/categories`: category row actions now use the shared row-action trigger instead of a page-local kebab button.
 - `/settings/categories`, `/settings/departments`, `/settings/locations`, `/settings/allowed-emails`, `/settings/calendar-sources`, `/settings/venue-mappings`, `/settings/bookings`, and `/settings/kiosk-devices`: local text-only empty rows now use shared inline empty states.
 - `/settings/departments`, `/settings/locations`, `/settings/allowed-emails`, `/settings/calendar-sources`, `/settings/venue-mappings`, and `/settings/kiosk-devices`: table/list row actions now use the shared row-action trigger for lifecycle and destructive commands.
@@ -182,7 +189,7 @@ Feature ideas to consider separately:
 - `/settings/database`: initial no-diagnostics state now uses shared inline `EmptyState` copy instead of a route-local text placeholder.
 - `/settings/audit`: filter controls now use `OperationalToolbar` plus shared active-filter chips, and audit rows render through shadcn `Table` with shared empty/error states.
 - `/operations` (absorbed `/admin/fix-today` and `/items/hygiene`, which now redirect there): merged queue uses the shared rail, metric, and partial-results primitives with one check-card vocabulary.
-- `/settings`: uses `PageHeader` plus role-aware grouped navigation. Large desktop uses a left rail; smaller screens keep a horizontal section scroller. Sub-pages now share `SettingsPageShell` for the compact intro/main split.
+- `/settings`: uses `PageHeader` plus role-aware grouped navigation. Large desktop uses an icon rail; smaller screens use a grouped page picker. Overview is a searchable directory. Sub-pages share `SettingsPageShell` for title, optional actions, main content, and related-page links.
 - `/reports/*`: report metric cards now render through `OperationalMetricCard` via the report adapter, preserving report links, tooltips, badges, and string values without maintaining a separate metric primitive.
 - `/reports/checkouts`, `/reports/scans`, and `/reports/audit`: non-default period and phase filters now render removable shared active-filter chips through the report toolbar.
 - `/items/[id]`: item detail secondary actions now use the shared dropdown wrapper instead of a route-local menu shell.
@@ -218,7 +225,7 @@ Feature ideas to consider separately:
 - `/notifications`: summary metrics now use `OperationalMetricCard`, and header/retry/destination/mark-read controls meet the 40px operational target baseline.
 - `/licenses`: license pool summary metrics now use `OperationalMetricCard`, and compact refresh/show-retired/export/admin controls meet the 40px operational target baseline.
 - `/resources`: active filter removals now use `OperationalActiveFilterChips`, sorting uses shadcn `Select`, and search/filter/sort/contact controls meet the 40px target baseline while keeping the documented Resources rail exception.
-- Web sidebar: Settings is visible to every authenticated role, and Bookings uses overdue-first then user-scoped due-today badge priority. Lookup stays out of the web sidebar because laptop/desktop work should use the text search bar or command palette; scan entry points remain mobile/native posture surfaces. Sidebar Cmd/Ctrl+number shortcuts stay out because browser and system shortcuts own that space.
+- Web sidebar: Settings is visible to every authenticated role, including Collaborator Personal sections. Bookings uses overdue-first then user-scoped due-today badge priority. Lookup stays out of the web sidebar because laptop/desktop work should use the text search bar or command palette; scan entry points remain mobile/native posture surfaces. Notifications are top-bar only. Sidebar Cmd/Ctrl+number shortcuts stay out because browser and system shortcuts own that space.
 - Route-by-route conformance checklist: Dashboard, Schedule, Items, Bookings, Users, and Settings are now tracked in `tasks/design-language-route-conformance-checklist.md`; future page work should update that checklist when it changes one of those route patterns.
 - State and copy audit Area 5: dashboard draft recovery, booking detail custody actions, and shift staffing changes now use operational failure, rollback, and confirmation language that names the affected record and consequence.
 - `/schedule` today markers: Calendar, Week, and List views use the shared `--wi-red` token (with the dashboard's `dark:` opacity-bump convention) instead of route-local brand hexes. The token is the official `#c80000` RGB red in both themes, so brand actions and identity moments stay consistent while surrounding contrast treatment remains surface-owned.

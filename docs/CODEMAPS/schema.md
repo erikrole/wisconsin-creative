@@ -404,10 +404,11 @@ Indexes and constraints:
 
 ## Model `Asset`
 
-Fields: 41
+Fields: 42
 
 - `id                      String                  @id @default(cuid())`
 - `assetTag                String                  @unique @map("asset_tag")`
+- `assetTagSortKey         String                  @default("") @map("asset_tag_sort_key")`
 - `name                    String?`
 - `type                    String`
 - `brand                   String`
@@ -456,6 +457,7 @@ Indexes and constraints:
 - `@@index([brand, model])`
 - `@@index([status])`
 - `@@index([parentAssetId])`
+- `@@index([assetTagSortKey])`
 - `@@map("assets")`
 
 ## Model `FirmwareWatchTarget`
@@ -1491,7 +1493,7 @@ Indexes and constraints:
 
 ## Model `Notification`
 
-Fields: 12
+Fields: 13
 
 - `id        String              @id @default(cuid())`
 - `userId    String              @map("user_id")`
@@ -1503,6 +1505,7 @@ Fields: 12
 - `sentAt    DateTime?           @map("sent_at")`
 - `readAt    DateTime?           @map("read_at")`
 - `dedupeKey String?             @unique @map("dedupe_key")`
+- `bookingId String?             @map("booking_id")`
 - `createdAt DateTime            @default(now()) @map("created_at")`
 - `user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)`
 
@@ -1512,6 +1515,7 @@ Indexes and constraints:
 - `@@index([userId, createdAt])`
 - `@@index([type, createdAt])`
 - `@@index([sentAt])`
+- `@@index([bookingId])`
 - `@@map("notifications")`
 
 ## Model `EscalationRule`

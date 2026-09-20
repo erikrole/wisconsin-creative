@@ -187,6 +187,8 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 
 ## Change Log
 
+- 2026-09-18: **Snow Leopard polish.** Pending pickup deep-links restore `/bookings?tab=checkouts&status=PENDING_PICKUP`. Stale reservations appear on the status rail. Sync no longer looks live before the first check. Refresh stays clickable during stats polling. Overdue banner waits for rows. First-run setup is staff-only. Shift rows open the event. Checkout drafts can resume. Saved filters apply sport and location in one URL write. Draft delete keeps a stable Delete label with a spinner on the active row. Overdue Nudge announces sending/sent.
+
 - 2026-09-18: **Booking display titles use one cleaner on remaining read paths (local).** Dashboard, kiosk student/dashboard/scan, checkout GET/PATCH, and availability copy now run stored booking titles through `displayBookingTitle` (same prefix/dash/abbreviation cleaning as Schedule) without rewriting stored or audit values. Event summaries stay on the existing event-title path.
 
 - 2026-09-18: **macOS companion booking click stays in the extra (local).** Open and waiting-for-pickup rows open a backable detail pane with requester, location, timing, and item names from the existing two-read companion projection. Open in Wisconsin Creative remains a secondary web exit. Older snapshots without item names decode and say so instead of sending the operator to the website. Source/test complete; names appear in a live extra after the next projection republish.

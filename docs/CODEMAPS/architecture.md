@@ -13,8 +13,8 @@ Wisconsin Creative is a Next.js App Router application with a companion native i
 | App layouts | 8 |
 | API route handlers | 335 |
 | Service files | 91 |
-| Component files | 161 |
-| Test files | 666 |
+| Component files | 163 |
+| Test files | 679 |
 
 ## Oversized Source Watchlist
 
@@ -22,26 +22,26 @@ Informational only. These are the largest TypeScript and TSX files under `src/`;
 
 | File | Lines |
 |---|---:|
-| `src/lib/services/bookings-lifecycle.ts` | 3229 |
-| `src/lib/services/signatures.ts` | 2068 |
+| `src/lib/services/bookings-lifecycle.ts` | 3198 |
+| `src/lib/services/signatures.ts` | 2051 |
 | `src/app/(app)/schedule/_components/ListView.tsx` | 1938 |
 | `src/lib/services/reports.ts` | 1932 |
 | `src/components/TradeBoard.tsx` | 1853 |
 | `src/components/resources/BrandAssetLibrary.tsx` | 1827 |
-| `src/lib/services/notifications.ts` | 1736 |
-| `src/app/(app)/items/[id]/ItemInfoTab.tsx` | 1603 |
+| `src/lib/services/notifications.ts` | 1686 |
+| `src/app/(app)/items/[id]/ItemInfoTab.tsx` | 1582 |
+| `src/app/(app)/resources/page.tsx` | 1574 |
 | `src/app/(app)/bulk-inventory/batteries/page.tsx` | 1554 |
-| `src/app/(app)/users/[id]/UserInfoTab.tsx` | 1450 |
-| `src/app/(app)/resources/page.tsx` | 1425 |
-| `src/components/ActivityTimeline.tsx` | 1386 |
-| `src/app/(app)/schedule/_components/WorkingCrewEditor.tsx` | 1342 |
+| `src/app/(app)/users/[id]/UserInfoTab.tsx` | 1499 |
+| `src/components/ActivityTimeline.tsx` | 1387 |
+| `src/app/(app)/schedule/_components/WorkingCrewEditor.tsx` | 1352 |
 | `src/lib/services/shift-trades.ts` | 1321 |
 | `src/app/(app)/items/new-item-sheet/SerializedItemForm.tsx` | 1272 |
 | `src/hooks/use-schedule-data.ts` | 1269 |
-| `src/app/api/assets/route.ts` | 1227 |
+| `src/app/api/assets/route.ts` | 1264 |
+| `src/app/(app)/accountability/AccountabilityClient.tsx` | 1260 |
 | `src/app/(app)/items/new-item-sheet.tsx` | 1222 |
-| `src/lib/services/schedule-working-copy.ts` | 1168 |
-| `src/app/(app)/users/[id]/page.tsx` | 1126 |
+| `src/lib/services/schedule-working-copy.ts` | 1169 |
 
 ## High-Level Data Flow
 

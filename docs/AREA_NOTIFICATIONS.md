@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Notifications
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-09-18
+- Last Updated: 2026-09-20
 - Status: Active; browser push is deployed to Production, with physical Android acceptance still open
 - Version: V1.8
 
@@ -178,7 +178,7 @@ Implementation: `src/lib/checkout-escalation-policy.ts`, `src/lib/services/notif
 - **Manual endpoint**: `POST /api/notifications/process` — admin/staff auth required
 - **Schedule**: Daily at 9:00 AM UTC via Vercel Cron (`vercel.json`, schedule: `0 9 * * *`)
 - **Normal timing**: a durable Workflow run is scheduled when checkout custody opens or its due time changes. Every stage rechecks `OPEN` state and the expected `endsAt` before delivery.
-- **Repair behavior**: the daily cron scans up to 500 `OPEN` checkouts and sends only the highest eligible unsent stage. It does not replay every elapsed stage.
+- **Repair behavior**: the daily cron scans up to 500 `OPEN` checkouts and sends only the highest eligible unsent stage. It does not replay every elapsed stage. When more than 500 are open, the response reports `remaining` (unscanned open checkouts) and `truncated: true` instead of silently dropping the backlog.
 - Resilience: overdue, license nag, and license-expiry jobs run independently with `Promise.allSettled`. A single failure returns `ok: false` plus `partialFailures`/`errors` metadata while preserving successful job results and safe fallback counts for failed jobs.
 - Job is fully idempotent — safe to call multiple times per hour due to dedup logic
 
@@ -400,6 +400,10 @@ renders a tap-only alert. Neither side needs to ship first.
 - Source/build, isolated native behavior tests, fixture captures, and physical-device delivery are separate gates. See `tasks/ios-notifications-polish-plan-2026-09-07.md` for evidence and limitations.
 
 ## Change Log
+
+- 2026-09-20: **Dead-code sweep removed the unwired low-stock notifier.** `notifyLowStock` (`src/lib/services/notifications.ts`) had no remaining production caller — nothing in the app triggers a bulk-SKU low-stock alert today, despite the `low_stock` notification type still being handled by inbox display and tap-through. The function and its dedicated dedupe test were deleted; the `low_stock` type itself is left in place since existing rows of that type must still render. Re-wiring a live low-stock trigger is a separate, undocumented gap, not a behavior change here.
+
+- 2026-09-20: **Booking-scoped notifications carry a real `booking_id`, and the license jobs batch (local).** Migration `0152_notification_booking_id` adds an indexed, FK-less `Notification.bookingId` and backfills it from the four booking dedupe-key formats (escalation stage, `reservation_*`, `item_report`, manual `nudge-`) plus a `payload.bookingId` safety net. The overdue repair sweep now filters with `bookingId: { in: [...] }` instead of up to 500 `dedupeKey startsWith` branches, and reports `remaining`/`truncated` through `GET /api/cron/notifications` and `POST /api/notifications/process`. `processExpiryWarnings` and `processLicenseNags` replaced their per-pair `findUnique`+`create`+awaited push with one dedupe `findMany`, one `createMany({ skipDuplicates })`, and `Promise.allSettled` pushes; dedupe keys, payloads, and returned counts are unchanged. Typecheck, lint, and focused tests pass; the migration has not been deployed.
 
 - 2026-09-18: **macOS companion booking alerts replace, stay silent by default, and stay bounded (local).** Same-booking updates reuse one request identifier, a booking that leaves the projection clears its alert, and one refresh shows at most four newest banners. Foreground presentation honors the opt-in sound, turning alerts off clears Notification Center, and Open Booking uses the existing booking deep link. Source/test complete; real APNs delivery remains under the Companion delivery gap.
 

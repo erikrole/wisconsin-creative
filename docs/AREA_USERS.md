@@ -3,9 +3,9 @@
 ## Document Control
 - Area: Users
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-09-17
+- Last Updated: 2026-09-18
 - Status: Active
-- Version: V1.4
+- Version: V1.5
 
 ## Direction
 Use a simple tiered permission model with inheritance so behavior is predictable in UI and backend authorization.
@@ -130,6 +130,8 @@ Design language reference: `docs/DESIGN_LANGUAGE.md`.
 6. Ensure audit logs include actor role, target owner, and exception metadata.
 
 ## Change Log
+- 2026-09-18: **User profiles are an identity page, not a dump of fields.** `/users/[id]` keeps the same tab URLs. The header carries role/affiliation/inactive, title or student year, and a Scoreboard jump next to profile actions instead of duplicating the record. Info splits Contact, Work, and Assignments. Role stays in Work; schedule-as lives with Assignments. Birthday is month and day as MM/DD. Slack stays off the profile (Settings profile still has handle). Collaborator affiliation shows only for Collaborator people. Self-profile Hours stay visible with retry. Activity, Availability, and Badges filters sit on the 40px baseline. Roster and profile add Related jumps. Local authenticated browser proof is in `tasks/archive/proofs/user-profiles-2026-09-18/review.html`. `npm run build:app` was not run because Preview `next dev` owns port 3000.
+
 - 2026-09-17: **Scoreboard is now an explorer you can search, share, and read as a season.** The team tab leads with the official record and a W–L–T meter, then work totals, a calm Snapshot, and a findable leaderboard. Rank, sport/venue/opponent/site, and person-page result/sport/site filters live in the URL; a failed filtered read still restores the last valid stack; Snapshot copy stays on the loaded intersection while a new stack refreshes; opening a person keeps the stack so sport/site still apply and All leaders returns to the same view. Leaderboard rows are one control, first/second/third no longer use warning or problem colors, ineligible win rates say they need the minimum games, and methodology sits behind a disclosure. Per-person Scoreboard uses the same toolbar/chip pattern, dims while refreshing, and bootstraps sport options from an unfiltered read when the URL already has a filter. Counting rules, shared-identity allowlist, and native clients are unchanged. Acceptance: local source/explorer tests and lint; authenticated browser and `build:app` remain local proof gates.
 
 - 2026-09-17: **Hidden smoke identities skip campus profile completion.** `hiddenFromRoster` users no longer receive the returning-user wizard or profile-completion banner. Local Preview and Playwright use `npm run auth:local` to sign the hidden `admin@creative.local` smoke identity in through normal login; the completion API still omits the hidden-roster flag from the browser payload. Real campus accounts are unchanged. Acceptance: local source/tests; production deploy remains unverified.

@@ -105,7 +105,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/notifications`, `/settings/notifications`
 - APIs: `/api/cron/notifications`, `/api/notifications/count`, `/api/notifications/nudge`, `/api/notifications/process`, `/api/notifications`
 - Services: `src/lib/services/claim-review-notifications.ts`, `src/lib/services/notifications.ts`
-- Tests: `tests/ios-notifications-read-recovery.test.ts`, `tests/ios-notifications-registration-health.test.ts`, `tests/ios-notifications-tapthrough.test.ts`, `tests/ios-notifications-token-honesty.test.ts`, `tests/notifications-count-route.test.ts`, `tests/notifications-low-stock-dedupe.test.ts`, `tests/notifications-ownership-ui-contract.test.ts`, `tests/notifications-route.test.ts`
+- Tests: `tests/ios-notifications-read-recovery.test.ts`, `tests/ios-notifications-registration-health.test.ts`, `tests/ios-notifications-tapthrough.test.ts`, `tests/ios-notifications-token-honesty.test.ts`, `tests/notifications-count-route.test.ts`, `tests/notifications-ownership-ui-contract.test.ts`, `tests/notifications-route.test.ts`, `tests/notifications-support-hardening.test.ts`
 
 ## public-showroom
 
@@ -121,7 +121,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/reports/audit`, `/reports/badges`, `/reports/bulk-losses`, `/reports/checkouts`, `/reports/overdue`, `/reports`, `/reports/scans`, `/reports/usage`
 - APIs: `/api/audit/export`, `/api/audit/last`, `/api/audit`, `/api/bookings/[id]/audit-logs`, `/api/cron/audit-archive`, `/api/location-mappings/audit`, `/api/reports/audit`, `/api/reports/badges`, `/api/reports/bulk-losses`, `/api/reports/checkouts`
 - Services: `src/lib/services/reports.ts`
-- Tests: `tests/audit-archive-cron.test.ts`, `tests/audit-helper.test.ts`, `tests/audit-last-route.test.ts`, `tests/booking-audit-history-recovery.test.ts`, `tests/calendar-sync-audit.test.ts`, `tests/ios-audit-inventory.test.ts`, `tests/ios-reports-resilience.test.ts`, `tests/reports-audit-export-route.test.ts`
+- Tests: `tests/audit-archive-cron.test.ts`, `tests/audit-export-route.test.ts`, `tests/audit-helper.test.ts`, `tests/audit-last-route.test.ts`, `tests/booking-audit-history-recovery.test.ts`, `tests/calendar-sync-audit.test.ts`, `tests/ios-audit-inventory.test.ts`, `tests/ios-reports-resilience.test.ts`
 
 ## reservations
 
@@ -145,7 +145,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/reports/scans`
 - APIs: `/api/checkouts/[id]/checkin-scan`, `/api/checkouts/[id]/scan-status`, `/api/checkouts/[id]/scan`, `/api/checkouts/[id]/start-scan-session`, `/api/kiosk/checkin/[id]/scan`, `/api/kiosk/checkout/scan`, `/api/kiosk/pickup/[id]/scan`, `/api/kiosk/resolve-scan`, `/api/kiosk/scan-lookup`, `/api/reports/scans`
 - Services: `src/lib/services/bulk-unit-scans.ts`, `src/lib/services/kiosk-scan.ts`, `src/lib/services/scans.ts`
-- Tests: `tests/bulk-scan-race.test.ts`, `tests/bulk-unit-kiosk-scans.test.ts`, `tests/ios-kiosk-rapid-scan-atomicity.test.ts`, `tests/ios-kiosk-scan-rejection-sound.test.ts`, `tests/ios-kiosk-scanner-focus.test.ts`, `tests/ios-scan-result-retry.test.ts`, `tests/kiosk-checkout-scan-badges.test.ts`, `tests/kiosk-resolve-scan-route.test.ts`
+- Tests: `tests/bulk-unit-kiosk-scans.test.ts`, `tests/ios-kiosk-rapid-scan-atomicity.test.ts`, `tests/ios-kiosk-scan-rejection-sound.test.ts`, `tests/ios-kiosk-scanner-focus.test.ts`, `tests/ios-scan-result-retry.test.ts`, `tests/kiosk-checkout-scan-badges.test.ts`, `tests/kiosk-resolve-scan-route.test.ts`, `tests/kiosk-scan-lookup-title-projection.test.ts`
 
 ## search
 
@@ -153,7 +153,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/search`
 - APIs: `/api/assets/picker-search`, `/api/image-search`
 - Services: _none matched_
-- Tests: `tests/api-image-search.test.ts`, `tests/app-shell-search-source.test.ts`, `tests/image-search.test.ts`, `tests/ios-search-hig-remediation.test.ts`, `tests/ios-search-partial-results.test.ts`, `tests/resource-search.test.ts`, `tests/search-input-focus-stability.test.ts`, `tests/search-page-source.test.ts`
+- Tests: `tests/api-image-search.test.ts`, `tests/app-shell-search-source.test.ts`, `tests/equipment-picker-search-route.test.ts`, `tests/guide-search-result.test.ts`, `tests/image-search.test.ts`, `tests/ios-search-hig-remediation.test.ts`, `tests/ios-search-partial-results.test.ts`, `tests/resource-search.test.ts`
 
 ## settings
 

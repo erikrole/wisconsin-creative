@@ -123,7 +123,7 @@ All section tabs are freely navigable (no forward-lock). Section tabs are labels
 Assets are classified into sections by keyword matching against the asset's `type` field (from Cheqroom category import). Classification is case-insensitive substring matching. Implementation: `classifyAssetType()` in `src/lib/equipment-sections.ts`.
 
 ### Equipment Guidance Rules
-Context-aware hints appear per section based on what has already been selected in other sections. All matching rules for the active section are shown simultaneously. Implementation: `getActiveGuidance()` in `src/lib/equipment-guidance.ts`.
+Context-aware hints appear per section based on what has already been selected in other sections. Rules live in `EQUIPMENT_GUIDANCE_RULES` in `src/lib/equipment-guidance.ts`; only `getUnsatisfiedRequirements()` is wired into the wizard today.
 
 Current rules:
 - `body-needs-batteries` (warning): camera body selected, check compatible battery availability before checkout.
@@ -339,6 +339,7 @@ The checkout detail page (`/checkouts/[id]`) uses the shared `BookingDetailPage`
 
 ## Change Log
 
+- 2026-09-20: **Removed the unused `getActiveGuidance()` helper.** Per-section context hints were never wired into the booking wizard; only `getUnsatisfiedRequirements()` consumes `EQUIPMENT_GUIDANCE_RULES`. The rules table is unchanged.
 - 2026-09-17: **Direct kiosk checkout can start from a kit.** Setup offers pickup-scoped gameday kits, hides empty kits, labels Slow 1–Roam 4, and can suggest last week’s football job. Scans remain the cart; remaining kit members are a checklist; completion stores `kitId` as provenance after validating the kit against the kiosk pickup. Local source/test; physical kiosk proof remains open.
 - 2026-09-16: **Completed checkouts can re-reserve for a new event.** The action copies person, pickup, notes, title, and equipment into the reservation composer. It does not create checkout custody from app/web. Source/test complete; authenticated proof remains open.
 - 2026-09-16: **Kit-backed checkout lines come from expanded reservations.** Direct kiosk checkout still does not pick a kit. When a reservation was created from a gameday kit, pickup and force-checkout inherit the expanded cameras, lenses, and batteries rather than a kit-only label. `Booking.kitId` remains provenance on both records.
