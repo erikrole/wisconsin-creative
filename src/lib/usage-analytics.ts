@@ -1,5 +1,6 @@
 import { createHmac } from "node:crypto";
 import type { AuthUser } from "@/lib/auth";
+import { parseEmailList } from "@/lib/user-visibility";
 
 export const PRODUCT_EVENT_NAMES = [
   "app_opened",
@@ -38,10 +39,6 @@ export const PRODUCT_EVENT_SURFACES = [
 export const PRODUCT_EVENT_OUTCOMES = ["started", "succeeded", "failed", "cancelled"] as const;
 export const PRODUCT_EVENT_DURATION_BUCKETS = ["under_5s", "5_15s", "15_60s", "over_60s"] as const;
 export const PRODUCT_RELEASE_CHANNELS = ["app_store", "testflight", "development", "unknown", "web"] as const;
-
-function parseEmailList(value: string | undefined): Set<string> {
-  return new Set((value ?? "").split(",").map((value) => value.trim().toLowerCase()).filter(Boolean));
-}
 
 export function canViewUsageAnalytics(user: Pick<AuthUser, "email">): boolean {
   return parseEmailList(process.env.USAGE_ANALYTICS_OWNER_EMAILS).has(user.email.toLowerCase());

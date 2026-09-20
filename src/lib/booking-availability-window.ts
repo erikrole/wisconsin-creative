@@ -2,7 +2,7 @@ export const SERIALIZED_TURNAROUND_BUFFER_MINUTES = 60;
 export const TURNAROUND_WARNING_WINDOW_MINUTES = 12 * 60;
 export const TURNAROUND_CRITICAL_WINDOW_MINUTES = 2 * 60;
 
-export type TurnaroundSeverity = "warning" | "critical";
+type TurnaroundSeverity = "warning" | "critical";
 
 export function serializedTurnaroundBufferMs() {
   return SERIALIZED_TURNAROUND_BUFFER_MINUTES * 60_000;

@@ -4,7 +4,7 @@ import { pendingScheduleReleaseWorkflow } from "@/workflows/pending-schedule-rel
 
 export const SCHEDULE_RELEASE_DELAY_MS = 10 * 60_000;
 
-export type PendingScheduleRelease = {
+type PendingScheduleRelease = {
   at: Date;
   runId: string;
 };

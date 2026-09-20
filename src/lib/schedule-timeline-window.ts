@@ -1,7 +1,6 @@
-export const SCHEDULE_TIMELINE_PAGE_SIZE = 200;
 export const SCHEDULE_TIMELINE_SLICE_SIZE = 80;
-export const SCHEDULE_TIMELINE_INITIAL_PAST_DAYS = 21;
-export const SCHEDULE_TIMELINE_INITIAL_FUTURE_DAYS = 84;
+const SCHEDULE_TIMELINE_INITIAL_PAST_DAYS = 21;
+const SCHEDULE_TIMELINE_INITIAL_FUTURE_DAYS = 84;
 
 export type ScheduleTimelineWindow = {
   start: Date;
@@ -19,7 +18,7 @@ export function startOfLocalDay(date: Date): Date {
   return day;
 }
 
-export function addLocalDays(date: Date, days: number): Date {
+function addLocalDays(date: Date, days: number): Date {
   const next = new Date(date);
   next.setDate(next.getDate() + days);
   return next;

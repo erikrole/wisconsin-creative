@@ -16,30 +16,3 @@ export const STATUS_STYLES = {
 } as const;
 
 export type StatusColor = keyof typeof STATUS_STYLES;
-
-/**
- * Maps a computed equipment status to a StatusColor key.
- * Use with STATUS_STYLES[statusColor(status)] for the dot+badge pattern.
- */
-export function statusColor(
-  computedStatus: string,
-  isOverdue?: boolean,
-): StatusColor {
-  if (isOverdue) return "red";
-  switch (computedStatus) {
-    case "AVAILABLE":
-      return "green";
-    case "CHECKED_OUT":
-      return "blue";
-    case "PENDING_PICKUP":
-      return "orange";
-    case "RESERVED":
-      return "purple";
-    case "MAINTENANCE":
-      return "orange";
-    case "RETIRED":
-      return "gray";
-    default:
-      return "gray";
-  }
-}

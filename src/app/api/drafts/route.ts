@@ -17,6 +17,7 @@ import {
   MAX_EQUIPMENT_SELECTIONS_PER_REQUEST,
   MAX_LINKED_EVENTS_PER_BOOKING,
 } from "@/lib/request-limits";
+import { unique } from "@/lib/utils";
 
 const saveDraftSchema = z.object({
   id: z.string().cuid().optional(),
@@ -61,7 +62,7 @@ const saveDraftSchema = z.object({
 });
 
 function dedupeIds(ids: string[]) {
-  return Array.from(new Set(ids));
+  return unique(ids);
 }
 
 function draftExpiryCutoff(now = new Date()) {

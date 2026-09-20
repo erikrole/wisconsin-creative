@@ -35,13 +35,14 @@ export async function maybeAutoComplete(
     auditAction: string;
   }
 ): Promise<Date | null> {
-  const remainingActive = await tx.bookingSerializedItem.count({
-    where: { bookingId, allocationStatus: "active" }
-  });
-
-  const currentBulkItems = await tx.bookingBulkItem.findMany({
-    where: { bookingId }
-  });
+  const [remainingActive, currentBulkItems] = await Promise.all([
+    tx.bookingSerializedItem.count({
+      where: { bookingId, allocationStatus: "active" }
+    }),
+    tx.bookingBulkItem.findMany({
+      where: { bookingId }
+    })
+  ]);
   const bulkRemaining = currentBulkItems.some(
     (item) => (item.checkedInQuantity ?? 0) < (item.checkedOutQuantity ?? item.plannedQuantity)
   );

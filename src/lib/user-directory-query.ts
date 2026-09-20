@@ -3,7 +3,7 @@ import type { AuthUser } from "@/lib/auth";
 import { visibleUserWhere } from "@/lib/user-visibility";
 import { optionalSportCodeSchema } from "@/lib/validation";
 
-export type UserDirectoryActiveFilter = "active" | "inactive" | "all";
+type UserDirectoryActiveFilter = "active" | "inactive" | "all";
 
 export type UserDirectoryFilters = {
   q?: string | null;

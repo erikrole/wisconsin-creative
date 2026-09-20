@@ -14,7 +14,7 @@ import {
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
 
-export const collaboratorPolicyInclude = {
+const collaboratorPolicyInclude = {
   affiliation: true,
   grants: { orderBy: { capabilityKey: "asc" as const } },
 } satisfies Prisma.CollaboratorPolicyInclude;

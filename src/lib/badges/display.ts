@@ -79,7 +79,7 @@ export const manualAwardGuidance: Record<string, string> = {
   above_and_beyond: "Use sparingly for memorable help that made the operation better.",
 };
 
-export function isCustomBadgeKey(key: string): boolean {
+function isCustomBadgeKey(key: string): boolean {
   return key.startsWith("custom_");
 }
 
@@ -122,7 +122,7 @@ function difficultyRarity(badge: BadgeDisplayInput): BadgeRarity {
   return "Common";
 }
 
-export type BadgeRarityInput = BadgeDisplayInput & {
+type BadgeRarityInput = BadgeDisplayInput & {
   /** How many people hold this badge. */
   holders?: number;
   /** How many people could hold it -- active users. */
@@ -145,7 +145,7 @@ export type BadgeRarityInput = BadgeDisplayInput & {
  * not been available long enough for anyone to reach. Both fall back to rating
  * by difficulty.
  */
-export type BadgeRarityDetail = {
+type BadgeRarityDetail = {
   rarity: BadgeRarity;
   /**
    * True when the rating came from the difficulty fallback rather than from

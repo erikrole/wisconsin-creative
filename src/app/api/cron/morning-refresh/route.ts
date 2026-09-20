@@ -30,6 +30,19 @@ function maintenanceValue<T>(
  *  two days is that cadence plus slack for a missed or delayed run. */
 const SHIFT_BADGE_LOOKBACK_MS = 2 * 24 * 60 * 60 * 1000;
 
+/**
+ * Wall-clock budget shared by the two fan-out loops below, matching the
+ * rehost-images cron: the Hobby 10s function budget minus room for the
+ * maintenance steps and the response. Whatever is left over carries to the
+ * next nightly run and is reported as `sourcesSkipped` / `shiftBadgeUsersRemaining`.
+ */
+const DEADLINE_MS = 8000;
+/** Each source is an external ICS fetch plus two writes, so keep the fan-out
+ *  small enough that one slow calendar host cannot starve the others. */
+const SOURCE_CONCURRENCY = 3;
+/** Badge evaluation is database-only and tolerates a wider batch. */
+const SHIFT_BADGE_CONCURRENCY = 5;
+
 /** Events older than this many months are soft-archived (archivedAt stamped). */
 const EVENT_ARCHIVE_MONTHS = 4;
 const PRODUCT_EVENT_RETENTION_DAYS = 90;
@@ -69,67 +82,65 @@ export const GET = withCron(async () => {
     orderBy: { name: "asc" },
   });
 
-  for (const source of sources) {
-    try {
-      const syncResult = await syncCalendarSource(source.id);
-      const shiftResult = await generateShiftsForNewEvents(source.id);
-      const healthResult = await recordCalendarSyncHealth({
-        sourceId: source.id,
-        sourceName: source.name,
-        result: syncResult,
-        now,
-      });
-
-      syncResults.push({
-        sourceId: source.id,
-        sourceName: source.name,
-        eventsAdded: syncResult.added ?? 0,
-        eventsUpdated: syncResult.updated ?? 0,
-        groupsCreated: shiftResult.groupsCreated,
-        shiftsCreated: shiftResult.shiftsCreated,
-        error: syncResult.error,
-        consecutiveFailures: healthResult.consecutiveFailures,
-        adminNotificationsCreated: healthResult.notificationsCreated,
-      });
-    } catch (err) {
-      console.error(`morning-refresh: sync failed for source ${source.name}:`, err);
-      const error = err instanceof Error ? err.message : "Unknown error";
-      const healthResult = await recordCalendarSyncHealth({
-        sourceId: source.id,
-        sourceName: source.name,
-        result: { added: 0, updated: 0, cancelled: 0, skipped: 0, errors: [], error },
-        now,
-      });
-      syncResults.push({
-        sourceId: source.id,
-        sourceName: source.name,
-        error,
-        consecutiveFailures: healthResult.consecutiveFailures,
-        adminNotificationsCreated: healthResult.notificationsCreated,
-      });
+  // Bounded concurrency with a deadline: each source stays atomic (its own
+  // try/catch plus a health write), so a skipped source simply carries over.
+  const deadlineStart = Date.now();
+  let sourcesSkipped = 0;
+  for (let i = 0; i < sources.length; i += SOURCE_CONCURRENCY) {
+    if (Date.now() - deadlineStart > DEADLINE_MS) {
+      sourcesSkipped = sources.length - i;
+      break;
     }
+    await Promise.all(sources.slice(i, i + SOURCE_CONCURRENCY).map(async (source) => {
+      try {
+        const syncResult = await syncCalendarSource(source.id);
+        const shiftResult = await generateShiftsForNewEvents(source.id);
+        const healthResult = await recordCalendarSyncHealth({
+          sourceId: source.id,
+          sourceName: source.name,
+          result: syncResult,
+          now,
+        });
+
+        syncResults.push({
+          sourceId: source.id,
+          sourceName: source.name,
+          eventsAdded: syncResult.added ?? 0,
+          eventsUpdated: syncResult.updated ?? 0,
+          groupsCreated: shiftResult.groupsCreated,
+          shiftsCreated: shiftResult.shiftsCreated,
+          error: syncResult.error,
+          consecutiveFailures: healthResult.consecutiveFailures,
+          adminNotificationsCreated: healthResult.notificationsCreated,
+        });
+      } catch (err) {
+        console.error(`morning-refresh: sync failed for source ${source.name}:`, err);
+        const error = err instanceof Error ? err.message : "Unknown error";
+        const healthResult = await recordCalendarSyncHealth({
+          sourceId: source.id,
+          sourceName: source.name,
+          result: { added: 0, updated: 0, cancelled: 0, skipped: 0, errors: [], error },
+          now,
+        });
+        syncResults.push({
+          sourceId: source.id,
+          sourceName: source.name,
+          error,
+          consecutiveFailures: healthResult.consecutiveFailures,
+          adminNotificationsCreated: healthResult.notificationsCreated,
+        });
+      }
+    }));
   }
 
   // ── 2. Archive completed shift groups ─────────────────────────────────
-  const unarchived = await db.shiftGroup.findMany({
+  const { count: archived } = await db.shiftGroup.updateMany({
     where: {
       archivedAt: null,
       event: { endsAt: { lt: now } },
     },
-    select: { id: true },
+    data: { archivedAt: now },
   });
-
-  let archived = 0;
-  if (unarchived.length > 0) {
-    const result = await db.shiftGroup.updateMany({
-      where: {
-        id: { in: unarchived.map((g) => g.id) },
-        archivedAt: null,
-      },
-      data: { archivedAt: now },
-    });
-    archived = result.count;
-  }
 
   // ── 2b. Recognise shift work that just finished ──────────────────────
   // Nothing calls the server when a game ends, so this is the one badge family
@@ -138,6 +149,7 @@ export const GET = withCron(async () => {
   // each evaluation recounts that person's full history, so a first qualifying
   // shift awards every threshold they had already passed.
   let shiftBadgeUsers = 0;
+  let shiftBadgeUsersRemaining = 0;
   if (badgesEnabled()) {
     try {
       const recentlyEnded = await recentlyWorkedEventUsers(
@@ -145,10 +157,23 @@ export const GET = withCron(async () => {
         now,
       );
 
-      for (const { userId, hasAddedWorker, hasBackfilledAssignment } of recentlyEnded) {
-        await badges.onShiftsWorked({ userId }, { notify: !(hasAddedWorker || hasBackfilledAssignment) });
+      // Same bounded-concurrency + deadline shape as the source loop. Each
+      // person's evaluation is independent and idempotent, so anyone skipped is
+      // simply picked up by the next run.
+      for (let i = 0; i < recentlyEnded.length; i += SHIFT_BADGE_CONCURRENCY) {
+        if (Date.now() - deadlineStart > DEADLINE_MS) break;
+        const batch = recentlyEnded.slice(i, i + SHIFT_BADGE_CONCURRENCY);
+        await Promise.all(
+          batch.map(({ userId, hasAddedWorker, hasBackfilledAssignment }) =>
+            badges.onShiftsWorked(
+              { userId },
+              { notify: !(hasAddedWorker || hasBackfilledAssignment) },
+            ),
+          ),
+        );
+        shiftBadgeUsers += batch.length;
       }
-      shiftBadgeUsers = recentlyEnded.length;
+      shiftBadgeUsersRemaining = recentlyEnded.length - shiftBadgeUsers;
     } catch (err) {
       console.error("morning-refresh: shift badge step failed", err);
     }
@@ -211,6 +236,7 @@ export const GET = withCron(async () => {
       changed: 0,
       baselined: 0,
       failed: 1,
+      skipped: 0,
       notificationsCreated: 0,
       errors: [{ targetId: "unknown", product: "Firmware watch", error: "Firmware watch failed" }],
     },
@@ -252,9 +278,12 @@ export const GET = withCron(async () => {
     ok: maintenanceFailures.length === 0,
     runAt: now.toISOString(),
     sourcesProcessed: sources.length,
+    sourcesSkipped,
     syncResults,
     shiftGroupsArchived: archived,
     shiftBadgeUsers,
+    shiftBadgeUsersRemaining,
+    deadlineExceeded: sourcesSkipped > 0 || shiftBadgeUsersRemaining > 0 || firmwareWatch.skipped > 0,
     eventsArchived,
     tradesExpired,
     pendingPickups,

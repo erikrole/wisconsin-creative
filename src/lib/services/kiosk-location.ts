@@ -9,7 +9,7 @@ export type KioskLocationEvidence = {
   message?: string;
 };
 
-export function locationEvidenceMessage(evidence: KioskLocationEvidence) {
+function locationEvidenceMessage(evidence: KioskLocationEvidence) {
   if (!evidence.locationMismatch) return undefined;
   const expected = evidence.expectedLocationName ?? "this kiosk";
   const actual = evidence.actualLocationName ?? "no saved location";

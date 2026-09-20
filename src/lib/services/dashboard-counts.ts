@@ -6,7 +6,7 @@ import { Prisma } from "@prisma/client";
  * `/api/dashboard/stats` derive these from the same clock + 7-day reservation
  * window so the two routes can never drift on count semantics.
  */
-export type DashboardCountInputs = {
+type DashboardCountInputs = {
   userId: string;
   now: Date;
   sevenDaysFromNow: Date;

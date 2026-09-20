@@ -79,10 +79,6 @@ function readOperationalPrefix(value: string) {
   return { prefix: null, value: normalized };
 }
 
-function stripOperationalPrefix(value: string) {
-  return readOperationalPrefix(value).value;
-}
-
 function looksLikeTeamScopedAssetTag(tokens: string[]) {
   const value = tokens.join(" ");
   if (looksLikeKnownEquipmentTag(tokens)) return true;
@@ -100,16 +96,6 @@ function looksLikeKnownEquipmentTag(tokens: string[]) {
     /^(?:A\d|FX\d|FX\d{2}|FS\d)\b/i.test(value) ||
     EQUIPMENT_STARTERS.has(first)
   );
-}
-
-export function getItemAssetTagSortKey(assetTag: string) {
-  const key = stripOperationalPrefix(assetTag)
-    .replace(/-(\d+)$/, " $1")
-    .replace(/\s+/g, " ")
-    .trim();
-  const tokens = key.split(" ").filter(Boolean);
-  if (tokens.length === 0) return key;
-  return [normalizeFamilyToken(tokens[0]!), ...tokens.slice(1)].join(" ");
 }
 
 function normalizeFamilyToken(token: string) {
@@ -170,6 +156,68 @@ function getItemAssetTagSortParts(assetTag: string) {
     key,
     normalized: normalizeAssetTag(assetTag),
   };
+}
+
+/**
+ * Persisted sort-key support for `assets.asset_tag_sort_key`.
+ *
+ * `compareItemAssetTags` is a six-level comparison (family key, prefix rank,
+ * unit number, prefix, key, normalized tag) driven by an `Intl.Collator` with
+ * `numeric: true` / `sensitivity: "base"`. To let Postgres do the
+ * `ORDER BY ... LIMIT ... OFFSET` we flatten those six levels into a single
+ * byte-comparable string:
+ *
+ *   collation(familyKey) SEP prefixRank SEP unit SEP collation(prefix)
+ *     SEP collation(key) SEP collation(normalized)
+ *
+ * where SEP is U+0001 (sorts before every character a tag can contain).
+ * `collationKey` upper-cases (emulating `sensitivity: "base"`) and zero-pads
+ * every digit run (emulating `numeric: true`). The column is declared
+ * `COLLATE "C"` in migration 0151 so Postgres compares the key byte-wise
+ * instead of folding away separators and punctuation the way a libc/ICU
+ * collation would.
+ *
+ * `prisma/migrations/0151_asset_tag_sort_key/migration.sql` holds a PL/pgSQL
+ * mirror of this function (`bg_asset_tag_sort_key`) used for the backfill and
+ * for a BEFORE INSERT/UPDATE trigger, so non-TypeScript writers (seed and
+ * import `.mjs` scripts, raw SQL) stay in sync as well.
+ */
+export const ASSET_TAG_SORT_KEY_SEPARATOR = "";
+export const ASSET_TAG_SORT_KEY_NUMERIC_WIDTH = 12;
+
+function padNumericRun(run: string) {
+  return run.length >= ASSET_TAG_SORT_KEY_NUMERIC_WIDTH
+    ? run
+    : run.padStart(ASSET_TAG_SORT_KEY_NUMERIC_WIDTH, "0");
+}
+
+function collationKey(value: string) {
+  return value.toUpperCase().replace(/\d+/g, padNumericRun);
+}
+
+/** Build the persisted, byte-comparable sort key for an asset tag. */
+export function buildItemAssetTagSortKey(assetTag: string) {
+  const parts = getItemAssetTagSortParts(assetTag);
+  const unit = parts.unitNumber === null
+    ? "0".repeat(ASSET_TAG_SORT_KEY_NUMERIC_WIDTH)
+    : padNumericRun(String(parts.unitNumber));
+
+  return [
+    collationKey(parts.familyKey),
+    String(parts.prefixRank),
+    unit,
+    collationKey(parts.prefix),
+    collationKey(parts.key),
+    collationKey(parts.normalized),
+  ].join(ASSET_TAG_SORT_KEY_SEPARATOR);
+}
+
+/**
+ * The single place every asset create/update that writes an asset tag goes
+ * through, so `assetTagSortKey` can never drift from `assetTag`.
+ */
+export function buildAssetTagSortFields(assetTag: string) {
+  return { assetTag, assetTagSortKey: buildItemAssetTagSortKey(assetTag) };
 }
 
 export function compareItemAssetTags(a: string, b: string) {

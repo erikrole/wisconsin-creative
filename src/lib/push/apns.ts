@@ -112,7 +112,7 @@ interface SendOpts {
   priority?: 5 | 10;
 }
 
-export type APNsInterruptionLevel = "passive" | "active" | "time-sensitive";
+type APNsInterruptionLevel = "passive" | "active" | "time-sensitive";
 export const DEFAULT_APNS_INTERRUPTION_LEVEL: APNsInterruptionLevel = "passive";
 
 function sendOne(
@@ -274,7 +274,7 @@ function isConfigured(topic: string): boolean {
   );
 }
 
-export interface DispatchResult {
+interface DispatchResult {
   /** Tokens rejected by BOTH APNs environments — safe to mark revoked. */
   revoked: string[];
   /** Tokens APNs accepted (either environment). */

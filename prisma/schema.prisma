@@ -451,6 +451,11 @@ model Category {
 model Asset {
   id                      String                  @id @default(cuid())
   assetTag                String                  @unique @map("asset_tag")
+  /// Flattened operational asset-tag sort key so the Items list can paginate in
+  /// Postgres. Written by buildAssetTagSortFields() and enforced by the
+  /// assets_asset_tag_sort_key trigger from migration 0151. Declared
+  /// COLLATE "C" in SQL (Prisma cannot express column collation).
+  assetTagSortKey         String                  @default("") @map("asset_tag_sort_key")
   name                    String?
   type                    String
   brand                   String
@@ -497,6 +502,7 @@ model Asset {
   @@index([brand, model])
   @@index([status])
   @@index([parentAssetId])
+  @@index([assetTagSortKey])
   @@map("assets")
 }
 
@@ -1428,6 +1434,15 @@ model Notification {
   sentAt    DateTime?           @map("sent_at")
   readAt    DateTime?           @map("read_at")
   dedupeKey String?             @unique @map("dedupe_key")
+  // Booking-scoped notifications carry the owning booking id so escalation
+  // sweeps can filter with `bookingId: { in: [...] }` instead of a fan of
+  // `dedupeKey startsWith` LIKE branches. Intentionally no foreign key:
+  // draft bookings are hard-deleted (see src/app/api/drafts/[id]/route.ts and
+  // bookings-lifecycle draft promotion), and a delivered notification is
+  // history that must survive that delete. A nullable, FK-less column keeps
+  // the same practical shape as the repo's `onDelete: SetNull` booking links
+  // without adding a Booking back-relation or a cascade path.
+  bookingId String?             @map("booking_id")
   createdAt DateTime            @default(now()) @map("created_at")
   user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -1435,6 +1450,7 @@ model Notification {
   @@index([userId, createdAt])
   @@index([type, createdAt])
   @@index([sentAt])
+  @@index([bookingId])
   @@map("notifications")
 }
 

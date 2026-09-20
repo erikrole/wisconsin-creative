@@ -5,15 +5,10 @@ import { requirePermission } from "@/lib/rbac";
 import { createAuditEntry } from "@/lib/audit";
 import { tokenHash, KIOSK_ACTIVATION_CODE_TTL_MS } from "@/lib/auth";
 import { enforceRateLimit, SETTINGS_MUTATION_LIMIT } from "@/lib/rate-limit";
+import { generateActivationCode } from "@/lib/kiosk-activation";
+import { unique } from "@/lib/utils";
 
 /** Generate a random 6-digit numeric code */
-function generateActivationCode(): string {
-  const buf = new Uint32Array(1);
-  crypto.getRandomValues(buf);
-  const code = 100000 + (buf[0]! % 900000); // buf has exactly 1 element
-  return code.toString();
-}
-
 /** List kiosk devices with health stats (ADMIN only) */
 export const GET = withAuth(async (req, { user }) => {
   requirePermission(user.role, "kiosk_device", "view");
@@ -26,7 +21,7 @@ export const GET = withAuth(async (req, { user }) => {
   });
 
   // Aggregate open custody and pending reservation handoffs per location.
-  const locationIds = [...new Set(devices.map((d) => d.locationId))];
+  const locationIds = unique(devices.map((d) => d.locationId));
   const now = new Date();
   const [openCheckoutStats, pendingPickupStats, pendingPickupsByLocation] = await Promise.all([
     db.booking.groupBy({

@@ -10,7 +10,7 @@ import {
 } from "@/lib/services/schedule-notification-diff";
 import { notifyScheduleChanges } from "@/lib/services/notifications";
 
-export type ScheduleFlushOutcome =
+type ScheduleFlushOutcome =
   | { status: "delivered"; shiftGroupId: string; userIds: string[]; version: number }
   | { status: "nothing_to_tell"; shiftGroupId: string }
   | { status: "deferred"; shiftGroupId: string; notifyAfter: Date }
@@ -160,30 +160,4 @@ export async function flushScheduleNotifications(
 
   await advance();
   return { status: "delivered", shiftGroupId, userIds: affectedUserIds(diff), version };
-}
-
-/**
- * Deliver flushes whose timer never fired.
- *
- * A lost workflow run, a deploy in the wrong second, or a failed attempt all
- * leave `notify_after` in the past with nobody coming back for it. Without this
- * the change stays live and silent, which is the failure the old model could
- * not recover from at all.
- */
-export async function sweepDueScheduleNotifications(
-  options: { now?: Date; limit?: number } = {},
-): Promise<ScheduleFlushOutcome[]> {
-  const now = options.now ?? new Date();
-  const due = await db.shiftGroup.findMany({
-    where: { notifyAfter: { not: null, lte: now } },
-    select: { id: true },
-    orderBy: { notifyAfter: "asc" },
-    take: options.limit ?? 50,
-  });
-
-  const outcomes: ScheduleFlushOutcome[] = [];
-  for (const group of due) {
-    outcomes.push(await flushScheduleNotifications(group.id, { now }));
-  }
-  return outcomes;
 }

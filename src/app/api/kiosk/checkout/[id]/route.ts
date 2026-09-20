@@ -7,7 +7,7 @@ import { findAssetByScanValue } from "@/lib/services/kiosk-scan";
 import { findBulkUnitByScanValue } from "@/lib/services/bulk-unit-scans";
 import { parseDerivedBulkUnitQr } from "@/lib/bulk-unit-qr";
 import { CLAIMABLE_BULK_UNIT_WHERE } from "@/lib/bulk-unit-status";
-import { checkAvailability, checkCheckoutDueTime } from "@/lib/services/availability";
+import { checkAvailability, checkCheckoutDueTime, hasBlockingAvailabilityIssue } from "@/lib/services/availability";
 import { kioskAvailabilityBlockMessage, kioskHeldItemMessage } from "@/lib/availability-copy";
 import { upsertBulkBalancesAndMovements } from "@/lib/services/bookings-helpers";
 import { BookingCustodyScope, BookingKind, BulkMovementKind, BulkUnitStatus, Prisma, Role } from "@prisma/client";
@@ -16,10 +16,6 @@ import { updateCheckoutReturnLiveActivities } from "@/lib/services/live-activiti
 import { normalizeBookingTitle } from "@/lib/title-normalization";
 import { displayBookingTitle } from "@/lib/booking-display-title";
 import { MAX_EQUIPMENT_SELECTIONS_PER_REQUEST } from "@/lib/request-limits";
-
-function hasBlockingAvailabilityIssue(result: Pick<Awaited<ReturnType<typeof checkAvailability>>, "conflicts" | "shortages" | "unavailableAssets">) {
-  return result.conflicts.length > 0 || result.shortages.length > 0 || result.unavailableAssets.length > 0;
-}
 
 async function requireActor(tx: Prisma.TransactionClient, actorId: string) {
   const actor = await tx.user.findFirst({

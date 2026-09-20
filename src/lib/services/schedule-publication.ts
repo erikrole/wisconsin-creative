@@ -10,7 +10,7 @@ import {
   type WorkingSchedulePayload,
 } from "@/lib/schedule-working-copy";
 import { withSerializationRetry } from "@/lib/serialization";
-import { checkTimeConflict, findTimeConflict } from "@/lib/services/shift-assignments";
+import { findTimeConflict, findTimeConflictAmong, loadTimeConflictCandidates, timeConflictCandidateInclude, type TimeConflictCandidate } from "@/lib/services/shift-assignments";
 import { evaluateAvailabilityPreferences } from "@/lib/student-availability";
 import { ACTIVE_ASSIGNMENT_STATUSES } from "@/lib/shift-constants";
 import {
@@ -271,7 +271,7 @@ async function findGroupForPublication(shiftGroupId: string, tx: Prisma.Transact
   return group;
 }
 
-export type PublishBlockerCode =
+type PublishBlockerCode =
   | "active_trade"
   | "linked_booking"
   | "history_bearing_conversion"
@@ -281,7 +281,7 @@ export type PublishBlockerCode =
   | "time_conflict"
   | "approved_time_off";
 
-export type PublishBlocker = {
+type PublishBlocker = {
   code: PublishBlockerCode;
   message: string;
   slotKey: string | null;
@@ -291,7 +291,7 @@ export type PublishBlocker = {
 };
 
 /** Staleness is a separate class: one Refresh clears every instance of it. */
-export type PublishStaleness = {
+type PublishStaleness = {
   code: "shift_missing" | "assignment_changed" | "drifted_in" | "published_moved" | "invalid_payload";
   message: string;
 };
@@ -681,6 +681,20 @@ export async function publishShiftGroup(
           },
         });
         const userById = new Map(users.map((user) => [user.id, user]));
+        // One conflict read for every retimed slot instead of one per slot: the
+        // union of the new windows is a wider raw prefilter, and each slot is
+        // still rechecked against its own effective window in memory.
+        const retimed = changedAssignedWindows.filter((entry) => entry.windowChanged);
+        const conflictCandidates = retimed.length > 0
+          ? await loadTimeConflictCandidates(
+            tx,
+            retimed.map(({ assignment }) => assignment.userId),
+            {
+              startsAt: new Date(Math.min(...retimed.map(({ afterWindow }) => new Date(afterWindow.startsAt).getTime()))),
+              endsAt: new Date(Math.max(...retimed.map(({ afterWindow }) => new Date(afterWindow.endsAt).getTime()))),
+            },
+          )
+          : [];
         for (const {
           slot,
           assignment,
@@ -693,13 +707,13 @@ export async function publishShiftGroup(
           const user = userById.get(assignment.userId);
           if (!user?.active) throw new HttpError(409, "An assigned worker is no longer active.");
           if (windowChanged) {
-            await checkTimeConflict(
-              tx,
-              user.id,
-              new Date(afterWindow.startsAt),
-              new Date(afterWindow.endsAt),
-              assignment.id,
-            );
+            const conflict = findTimeConflictAmong(conflictCandidates, {
+              userId: user.id,
+              startsAt: new Date(afterWindow.startsAt),
+              endsAt: new Date(afterWindow.endsAt),
+              excludeAssignmentId: assignment.id,
+            });
+            if (conflict) throw new HttpError(409, conflict);
             if (slot.workerType === "ST") {
               const availability = evaluateAvailabilityPreferences(user.availabilityBlocks, {
                 startsAt: new Date(afterWindow.startsAt),
@@ -725,6 +739,17 @@ export async function publishShiftGroup(
               where: { id: assignment.id },
               data,
             });
+            // The prefetched candidates are this loop's source of truth, so a
+            // call-time write has to land on them too — a later slot for the
+            // same worker used to see this row's new window through its own
+            // query.
+            if (assignmentFieldsChanged) {
+              const candidate = conflictCandidates.find((entry) => entry.id === assignment.id);
+              if (candidate) {
+                candidate.callStartsAt = workingAssignment.callStartsAt ? new Date(workingAssignment.callStartsAt) : null;
+                candidate.callEndsAt = workingAssignment.callEndsAt ? new Date(workingAssignment.callEndsAt) : null;
+              }
+            }
           }
           if (workerVisibleChange) affectedUserIds.add(user.id);
         }
@@ -770,23 +795,27 @@ export async function publishShiftGroup(
       const shiftIdByWorkingKey = new Map(
         workingSlots.flatMap((slot) => slot.sourceShiftId ? [[slot.key, slot.sourceShiftId] as const] : []),
       );
-      for (const slot of added) {
-        const startsAt = slot.workerType === "FT" ? workingPayload.eventStartsAt : slot.startsAt;
-        const endsAt = slot.workerType === "FT" ? workingPayload.eventEndsAt : slot.endsAt;
-        const created = await tx.shift.create({
-          data: {
+      if (added.length > 0) {
+        // One insert for the whole crew. createManyAndReturn keeps input order
+        // on Postgres, which is what maps each new row back to its slot key.
+        const createdShifts = await tx.shift.createManyAndReturn({
+          data: added.map((slot) => ({
             shiftGroupId,
             area: slot.area,
             workerType: slot.workerType,
-            startsAt: new Date(startsAt),
-            endsAt: new Date(endsAt),
+            startsAt: new Date(slot.workerType === "FT" ? workingPayload.eventStartsAt : slot.startsAt),
+            endsAt: new Date(slot.workerType === "FT" ? workingPayload.eventEndsAt : slot.endsAt),
             callStartsAt: slot.workerType === "ST" && slot.callStartsAt ? new Date(slot.callStartsAt) : null,
             callEndsAt: slot.workerType === "ST" && slot.callEndsAt ? new Date(slot.callEndsAt) : null,
             notes: slot.notes,
-          },
+          })),
           select: { id: true },
         });
-        shiftIdByWorkingKey.set(slot.key, created.id);
+        added.forEach((slot, index) => {
+          const created = createdShifts[index];
+          if (!created) throw new HttpError(409, "A working slot could not be reconciled.");
+          shiftIdByWorkingKey.set(slot.key, created.id);
+        });
       }
 
       for (const slot of workingSlots) {
@@ -848,7 +877,22 @@ export async function publishShiftGroup(
           },
         });
         const userById = new Map(users.map((user) => [user.id, user]));
-        for (const { slot, assignment } of draftAssignments) {
+        // Same single-read conflict prefetch as the retimed slots above. The
+        // list is kept current as this loop declines and creates assignments,
+        // so a crew that double-books one worker still fails here.
+        const draftWindows = draftAssignments.map(({ slot, assignment }) => ({
+          startsAt: new Date(assignment.callStartsAt ?? slot.callStartsAt ?? slot.startsAt).getTime(),
+          endsAt: new Date(assignment.callEndsAt ?? slot.callEndsAt ?? slot.endsAt).getTime(),
+        }));
+        const conflictCandidates = await loadTimeConflictCandidates(
+          tx,
+          draftAssignments.map(({ assignment }) => assignment.userId),
+          {
+            startsAt: new Date(Math.min(...draftWindows.map((window) => window.startsAt))),
+            endsAt: new Date(Math.max(...draftWindows.map((window) => window.endsAt))),
+          },
+        );
+        for (const [index, { slot, assignment }] of draftAssignments.entries()) {
           const user = userById.get(assignment.userId);
           if (!user?.active) throw new HttpError(409, "An assigned worker is no longer active.");
           if (scheduleAssigneeWorkerType(user) !== slot.workerType) {
@@ -856,7 +900,8 @@ export async function publishShiftGroup(
           }
           const startsAt = new Date(assignment.callStartsAt ?? slot.callStartsAt ?? slot.startsAt);
           const endsAt = new Date(assignment.callEndsAt ?? slot.callEndsAt ?? slot.endsAt);
-          await checkTimeConflict(tx, user.id, startsAt, endsAt);
+          const conflict = findTimeConflictAmong(conflictCandidates, { userId: user.id, startsAt, endsAt });
+          if (conflict) throw new HttpError(409, conflict);
           if (slot.workerType === "ST") {
             const availability = evaluateAvailabilityPreferences(user.availabilityBlocks, { startsAt, endsAt });
             if (availability.blocking) throw new HttpError(409, availability.blocking.note);
@@ -867,7 +912,15 @@ export async function publishShiftGroup(
             where: { shiftId, status: "REQUESTED" },
             data: { status: "DECLINED" },
           });
-          await tx.shiftAssignment.create({
+          for (const candidate of conflictCandidates) {
+            if (candidate.shift.id === shiftId && candidate.status === "REQUESTED") {
+              candidate.status = "DECLINED";
+            }
+          }
+          // Only the rows a later slot could still collide with are read back
+          // in candidate shape; the last create needs no echo.
+          const echoNeeded = index < draftAssignments.length - 1;
+          const createdAssignment = await tx.shiftAssignment.create({
             data: {
               shiftId,
               userId: user.id,
@@ -878,7 +931,9 @@ export async function publishShiftGroup(
               callEndsAt: slot.workerType === "ST" && assignment.callEndsAt ? new Date(assignment.callEndsAt) : null,
               callNote: assignment.callNote,
             },
+            ...(echoNeeded ? { include: timeConflictCandidateInclude } : {}),
           });
+          if (echoNeeded) conflictCandidates.push(createdAssignment as TimeConflictCandidate);
           affectedUserIds.add(user.id);
         }
       }

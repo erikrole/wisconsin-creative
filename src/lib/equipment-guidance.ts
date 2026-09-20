@@ -5,7 +5,7 @@ export type GuidanceContext = {
   activeSection: EquipmentSectionKey;
 };
 
-export type GuidanceRule = {
+type GuidanceRule = {
   id: string;
   section: EquipmentSectionKey | null;
   message: string;
@@ -117,12 +117,6 @@ export const EQUIPMENT_GUIDANCE_RULES: GuidanceRule[] = [
     condition: (ctx) => ctx.selectedSectionKeys.length >= 4,
   },
 ];
-
-export function getActiveGuidance(ctx: GuidanceContext): GuidanceRule[] {
-  return EQUIPMENT_GUIDANCE_RULES.filter(
-    (rule) => rule.section === ctx.activeSection && rule.condition(ctx)
-  );
-}
 
 export function getUnsatisfiedRequirements(selectedSectionKeys: EquipmentSectionKey[]): GuidanceRule[] {
   const ctx: GuidanceContext = { selectedSectionKeys, activeSection: "cameras" };

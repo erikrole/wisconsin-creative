@@ -7,14 +7,14 @@ const GROUP_ORDER: Record<SignatureMemberGroup, number> = {
   SUPPORT_STAFF: 3,
 };
 
-export type SortableSignatureMember = {
+type SortableSignatureMember = {
   name: string;
   jerseyNumber: number | null;
   roleGroup: SignatureMemberGroup;
   sourceOrder?: number | null;
 };
 
-export function signatureLastName(name: string): string {
+function signatureLastName(name: string): string {
   const normalized = name.trim();
   if (normalized.includes(",")) return normalized.split(",", 1)[0] ?? normalized;
   const parts = normalized.split(/\s+/);

@@ -11,6 +11,7 @@ import {
   locationsShareKitPickup,
 } from "@/lib/reservation-pickup-locations";
 import { withSerializationRetry } from "@/lib/serialization";
+import { unique } from "@/lib/utils";
 
 const SERIALIZABLE = { isolationLevel: Prisma.TransactionIsolationLevel.Serializable } as const;
 
@@ -24,7 +25,7 @@ export type CreateKitInput = {
   gamedayRole?: FootballGamedayKitRole | null;
 };
 
-export type UpdateKitInput = {
+type UpdateKitInput = {
   name?: string;
   description?: string | null;
   active?: boolean;
@@ -32,7 +33,7 @@ export type UpdateKitInput = {
   gamedayRole?: FootballGamedayKitRole | null;
 };
 
-export type ListKitsParams = {
+type ListKitsParams = {
   search?: string;
   locationId?: string;
   includeArchived?: boolean;
@@ -42,7 +43,7 @@ export type ListKitsParams = {
   offset: number;
 };
 
-export type KitEquipmentPlan = {
+type KitEquipmentPlan = {
   kitId: string;
   name: string;
   serializedAssetIds: string[];
@@ -103,7 +104,7 @@ type LocationLookupClient = {
   };
 };
 
-export async function resolveKitPickupLocationIds(
+async function resolveKitPickupLocationIds(
   client: LocationLookupClient,
   locationId: string,
   knownName?: string | null,
@@ -515,7 +516,7 @@ export async function addKitMembers(
   options: { allowAlreadyMembers?: boolean } = {},
 ) {
   if (assetIds.length === 0) throw new HttpError(400, "No assets provided");
-  const uniqueAssetIds = [...new Set(assetIds)];
+  const uniqueAssetIds = unique(assetIds);
 
   return withSerializationRetry(() =>
     db.$transaction(async (tx) => {

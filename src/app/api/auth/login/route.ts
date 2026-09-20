@@ -97,8 +97,14 @@ export const POST = withHandler(async (req) => {
     // Enrollment is an explicit user action that already woke Neon. Build the
     // external projection before responding so the companion never needs a
     // database-backed bootstrap request.
-    const enrollmentEpoch = await getCompanionUserEpoch(user.id);
-    const projection = await refreshCompanionProjection({ notify: false });
+    // The epoch read and the projection build are independent, so they run
+    // together. The authority re-read stays sequential and last: it is the
+    // guard that the account did not change during enrollment, so it must
+    // observe state after the projection work, not alongside it.
+    const [enrollmentEpoch, projection] = await Promise.all([
+      getCompanionUserEpoch(user.id),
+      refreshCompanionProjection({ notify: false }),
+    ]);
     const currentAuthority = await db.user.findUnique({
       where: { id: user.id },
       select: {

@@ -2,10 +2,10 @@ import { Affiliation, CollaboratorProfile, Prisma, Role, ShiftArea } from "@pris
 import { createAuditEntries, createAuditEntry, createAuditEntryTx } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
-import { shiftWorkerTypeForRole } from "@/lib/shift-display";
 import { normalizeSportCode } from "@/lib/sports";
+import { unique } from "@/lib/utils";
 
-export type OnboardingActor = {
+type OnboardingActor = {
   id: string;
   role: Role;
 };
@@ -29,16 +29,6 @@ type NormalizedInviteProfile = {
   preloadedSportCodes: string[];
 };
 
-type AllowedEmailAudit = {
-  id: string;
-  action: "created" | "claimed";
-  after: Record<string, unknown>;
-};
-
-type CreatedUser = Prisma.UserGetPayload<{
-  include: { location: { select: { name: true } } };
-}>;
-
 type AllowedEmailWithPeople = Prisma.AllowedEmailGetPayload<{
   include: {
     createdBy: { select: { id: true; name: true } };
@@ -46,18 +36,18 @@ type AllowedEmailWithPeople = Prisma.AllowedEmailGetPayload<{
   };
 }>;
 
-export type AllowedEmailInviteResult =
+type AllowedEmailInviteResult =
   | { skipped: false; entry: AllowedEmailWithPeople }
   | { skipped: true; email: string; role: InviteRole };
 
-export type AllowedEmailInvitePreviewStatus =
+type AllowedEmailInvitePreviewStatus =
   | "ready"
   | "duplicate"
   | "existing_user"
   | "pending_invite"
   | "claimed_invite";
 
-export type AllowedEmailInvitePreviewRow = {
+type AllowedEmailInvitePreviewRow = {
   email: string;
   requestedRole: InviteRole;
   requestedAffiliation?: Affiliation | null;
@@ -71,11 +61,11 @@ export type AllowedEmailInvitePreviewRow = {
   existingRole?: Role;
 };
 
-export function normalizeOnboardingEmail(email: string) {
+function normalizeOnboardingEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
-export function assertCanInviteRole(actor: OnboardingActor, role: Role) {
+function assertCanInviteRole(actor: OnboardingActor, role: Role) {
   if (role === "STAFF" && actor.role !== "ADMIN") {
     throw new HttpError(403, "Only admins can pre-approve staff accounts");
   }
@@ -85,8 +75,8 @@ export function assertCanInviteRole(actor: OnboardingActor, role: Role) {
 }
 
 function normalizePendingProfile(role: InviteRole, profile: InviteProfile): NormalizedInviteProfile {
-  const requestedAreas = [...new Set(profile.preloadedAreas ?? [])];
-  const requestedSportCodes = [...new Set((profile.preloadedSportCodes ?? []).map(normalizeSportCode))];
+  const requestedAreas = unique(profile.preloadedAreas ?? []);
+  const requestedSportCodes = unique((profile.preloadedSportCodes ?? []).map(normalizeSportCode));
   const hasPendingProfile = Boolean(
     profile.preloadedName?.trim() ||
     profile.preloadedPrimaryArea ||
@@ -191,222 +181,6 @@ function allowedEmailAuditAfter(
     claimedAt: entry.claimedAt?.toISOString() ?? null,
     source,
   };
-}
-
-async function claimAllowedEmailForCreatedUserTx(
-  tx: Prisma.TransactionClient,
-  input: {
-    actor: OnboardingActor;
-    email: string;
-    role: Role;
-    userId: string;
-  },
-): Promise<AllowedEmailAudit | null> {
-  if (input.role === "ADMIN") return null;
-
-  const now = new Date();
-  const existingAllowed = await tx.allowedEmail.findUnique({
-    where: { email: input.email },
-    select: { id: true, email: true, role: true, claimedAt: true, claimedById: true },
-  });
-
-  if (existingAllowed) {
-    if (existingAllowed.claimedAt && existingAllowed.claimedById) return null;
-
-    const claimed = await tx.allowedEmail.update({
-      where: { id: existingAllowed.id },
-      data: { role: input.role, claimedAt: now, claimedById: input.userId },
-      select: { id: true, email: true, role: true, claimedAt: true, claimedById: true },
-    });
-
-    return {
-      id: claimed.id,
-      action: "claimed",
-      after: allowedEmailAuditAfter(claimed, "direct_user_create"),
-    };
-  }
-
-  const entry = await tx.allowedEmail.create({
-    data: {
-      email: input.email,
-      role: input.role,
-      createdById: input.actor.id,
-      claimedAt: now,
-      claimedById: input.userId,
-    },
-    select: { id: true, email: true, role: true, claimedAt: true, claimedById: true },
-  });
-
-  return {
-    id: entry.id,
-    action: "created",
-    after: allowedEmailAuditAfter(entry, "direct_user_create"),
-  };
-}
-
-export async function createDirectUserAccount(input: {
-  actor: OnboardingActor;
-  name: string;
-  email: string;
-  passwordHash: string;
-  role: Role;
-  locationId?: string | null;
-}) {
-  if (input.role === "COLLABORATOR") {
-    throw new HttpError(400, "Collaborators must register from an administrator invitation");
-  }
-  const email = normalizeOnboardingEmail(input.email);
-
-  const result = await db.$transaction(async (tx) => {
-    const created = await tx.user.create({
-      data: {
-        name: input.name,
-        email,
-        passwordHash: input.passwordHash,
-        forcePasswordChange: true,
-        role: input.role,
-        staffingType: shiftWorkerTypeForRole(input.role),
-        locationId: input.locationId ?? null,
-      },
-      include: {
-        location: { select: { name: true } },
-      },
-    });
-
-    const allowedEmailAudit = await claimAllowedEmailForCreatedUserTx(tx, {
-      actor: input.actor,
-      email,
-      role: input.role,
-      userId: created.id,
-    });
-
-    return { created, allowedEmailAudit };
-  });
-
-  await createAuditEntry({
-    actorId: input.actor.id,
-    actorRole: input.actor.role,
-    entityType: "user",
-    entityId: result.created.id,
-    action: "created",
-    after: {
-      name: result.created.name,
-      email: result.created.email,
-      role: result.created.role,
-      staffingType: result.created.staffingType,
-      locationId: result.created.locationId,
-      forcePasswordChange: true,
-    },
-  });
-
-  if (result.allowedEmailAudit) {
-    await createAuditEntry({
-      actorId: input.actor.id,
-      actorRole: input.actor.role,
-      entityType: "allowed_email",
-      entityId: result.allowedEmailAudit.id,
-      action: result.allowedEmailAudit.action,
-      after: result.allowedEmailAudit.after,
-    });
-  }
-
-  return result as { created: CreatedUser; allowedEmailAudit: AllowedEmailAudit | null };
-}
-
-export async function createDirectUserAccountsBulk(input: {
-  actor: OnboardingActor;
-  users: Array<{
-    name: string;
-    email: string;
-    passwordHash: string;
-    role: Role;
-    locationId?: string | null;
-  }>;
-}) {
-  if (input.users.some((entry) => entry.role === "ADMIN" || entry.role === "COLLABORATOR")) {
-    throw new HttpError(403, "Bulk onboarding can only create staff or student users");
-  }
-
-  const normalized = input.users.map((entry) => ({
-    ...entry,
-    email: normalizeOnboardingEmail(entry.email),
-    locationId: entry.locationId ?? null,
-  }));
-  const emailList = normalized.map((entry) => entry.email);
-  const uniqueEmails = new Set(emailList);
-  if (uniqueEmails.size !== emailList.length) {
-    throw new HttpError(400, "Duplicate emails in this batch");
-  }
-
-  const existingUsers = await db.user.findMany({
-    where: { email: { in: emailList } },
-    select: { email: true },
-  });
-  if (existingUsers.length > 0) {
-    throw new HttpError(409, "One or more users already exist");
-  }
-
-  const result = await db.$transaction(async (tx) => {
-    const created: CreatedUser[] = [];
-    const allowedEmailAudits: AllowedEmailAudit[] = [];
-
-    for (const entry of normalized) {
-      const user = await tx.user.create({
-        data: {
-          name: entry.name,
-          email: entry.email,
-          passwordHash: entry.passwordHash,
-          forcePasswordChange: true,
-          role: entry.role,
-          staffingType: shiftWorkerTypeForRole(entry.role),
-          locationId: entry.locationId,
-        },
-        include: {
-          location: { select: { name: true } },
-        },
-      });
-      created.push(user);
-
-      const allowedEmailAudit = await claimAllowedEmailForCreatedUserTx(tx, {
-        actor: input.actor,
-        email: entry.email,
-        role: entry.role,
-        userId: user.id,
-      });
-      if (allowedEmailAudit) allowedEmailAudits.push(allowedEmailAudit);
-    }
-
-    return { created, allowedEmailAudits };
-  });
-
-  await createAuditEntries([
-    ...result.created.map((created) => ({
-      actorId: input.actor.id,
-      actorRole: input.actor.role,
-      entityType: "user",
-      entityId: created.id,
-      action: "created",
-      after: {
-        name: created.name,
-        email: created.email,
-        role: created.role,
-        staffingType: created.staffingType,
-        locationId: created.locationId,
-        forcePasswordChange: true,
-        source: "bulk_direct_user_create",
-      },
-    })),
-    ...result.allowedEmailAudits.map((entry) => ({
-      actorId: input.actor.id,
-      actorRole: input.actor.role,
-      entityType: "allowed_email",
-      entityId: entry.id,
-      action: entry.action,
-      after: entry.after,
-    })),
-  ]);
-
-  return result;
 }
 
 export async function createAllowedEmailInvite(input: {

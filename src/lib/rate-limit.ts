@@ -10,16 +10,17 @@
  */
 
 import { Ratelimit } from "@upstash/ratelimit";
+import { HttpError } from "./http";
 import { Redis } from "@upstash/redis";
 
-export type RateLimitConfig = {
+type RateLimitConfig = {
   /** Maximum requests allowed in the window. */
   max: number;
   /** Window duration in milliseconds. */
   windowMs: number;
 };
 
-export type RateLimitResult = {
+type RateLimitResult = {
   allowed: boolean;
   remaining: number;
   resetAt: number;
@@ -148,8 +149,6 @@ export function getClientIp(req: Request): string {
  *
  * Caller decides the bucket key - usually `${scope}:${user.id}` for user-scoped
  * limits or `${scope}:${ip}` for unauthenticated routes.
- *
- * Lazy import of HttpError to avoid an import cycle.
  */
 export async function enforceRateLimit(
   key: string,
@@ -157,7 +156,6 @@ export async function enforceRateLimit(
 ): Promise<void> {
   const result = await checkRateLimit(key, config);
   if (!result.allowed) {
-    const { HttpError } = await import("./http");
     const retryAfterSec = Math.max(1, Math.ceil((result.resetAt - Date.now()) / 1000));
     throw new HttpError(429, `Too many requests. Try again in ${retryAfterSec}s.`);
   }

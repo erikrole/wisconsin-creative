@@ -18,7 +18,7 @@ const MAX_DELIVERY_TOKENS_PER_BLAST_RECIPIENT = 2;
 const MAX_BLAST_PUSH_TOKEN_ROWS =
   MAX_BLAST_RECIPIENTS * MAX_ACTIVE_TOKENS_PER_BLAST_RECIPIENT;
 
-export type CreateBlastInput = {
+type CreateBlastInput = {
   title: string;
   body: string;
   severity: BlastSeverity;
@@ -27,7 +27,7 @@ export type CreateBlastInput = {
   spec: BlastTargetSpec;
 };
 
-export type CreateBlastResult = {
+type CreateBlastResult = {
   id: string;
   recipientCount: number;
   targetSummary: string;
@@ -297,7 +297,7 @@ export async function cancelBlast(blastId: string, actor: { id: string }): Promi
   });
 }
 
-export type ActiveBlastForUser = {
+type ActiveBlastForUser = {
   id: string;
   title: string;
   body: string;

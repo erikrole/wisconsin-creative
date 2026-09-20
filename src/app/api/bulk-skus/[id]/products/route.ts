@@ -12,17 +12,15 @@ import { requirePermission } from "@/lib/rbac";
 import { createBulkSkuProductSchema } from "@/lib/validation";
 
 export const GET = withAuth<{ id: string }>(async (_req, { params }) => {
-  const family = await db.bulkSku.findUnique({
-    where: { id: params.id },
-    select: { id: true },
-  });
+  const [family, products] = await Promise.all([
+    db.bulkSku.findUnique({ where: { id: params.id }, select: { id: true } }),
+    db.bulkSkuProduct.findMany({
+      where: { bulkSkuId: params.id },
+      include: { _count: { select: { units: true } } },
+      orderBy: [{ active: "desc" }, { name: "asc" }],
+    }),
+  ]);
   if (!family) throw new HttpError(404, "Item family not found");
-
-  const products = await db.bulkSkuProduct.findMany({
-    where: { bulkSkuId: params.id },
-    include: { _count: { select: { units: true } } },
-    orderBy: [{ active: "desc" }, { name: "asc" }],
-  });
 
   return ok({ data: products });
 });

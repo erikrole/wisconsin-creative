@@ -8,6 +8,7 @@ import type {
   ScheduleChangeKind,
 } from "@/lib/schedule-change-history-types";
 import { shiftWorkerSlotLabel } from "@/lib/shift-display";
+import { unique } from "@/lib/utils";
 
 type ScheduleChangeHistoryInput = {
   eventIds: string[];
@@ -60,10 +61,6 @@ const REVIEW_ACTION_EXCEPTIONS = new Set([
 ]);
 
 const RECENT_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
-
-function unique(values: string[]) {
-  return [...new Set(values)];
-}
 
 function jsonObject(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value)

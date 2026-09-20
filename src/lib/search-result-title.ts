@@ -1,4 +1,4 @@
-export type SearchAssetIdentity = {
+type SearchAssetIdentity = {
   assetTag?: string | null;
   name?: string | null;
   brand?: string | null;

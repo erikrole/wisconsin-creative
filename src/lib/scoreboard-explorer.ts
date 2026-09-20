@@ -4,7 +4,7 @@ export type TeamScoreboardSortKey = "events" | "wins" | "rate";
 export type TeamScoreboardFilterKey = "sportCode" | "venue" | "opponent" | "site";
 export type TeamScoreboardFilterState = Record<TeamScoreboardFilterKey, string>;
 
-export const TEAM_SCOREBOARD_FILTER_KEYS: TeamScoreboardFilterKey[] = [
+const TEAM_SCOREBOARD_FILTER_KEYS: TeamScoreboardFilterKey[] = [
   "sportCode",
   "venue",
   "opponent",

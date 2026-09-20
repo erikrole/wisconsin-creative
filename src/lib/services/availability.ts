@@ -70,6 +70,12 @@ export type AvailabilityResult = {
   }>;
 };
 
+export function hasBlockingAvailabilityIssue(
+  result: Pick<AvailabilityResult, "conflicts" | "shortages" | "unavailableAssets">,
+) {
+  return result.conflicts.length > 0 || result.shortages.length > 0 || result.unavailableAssets.length > 0;
+}
+
 const serializedBlockingStatuses = [
   BookingStatus.BOOKED,
   BookingStatus.PENDING_PICKUP,
@@ -525,7 +531,7 @@ export async function checkBulkShortages(
     .filter((item) => item.available < item.requested);
 }
 
-export type BulkAvailabilityEntry = {
+type BulkAvailabilityEntry = {
   onHand: number;
   committed: number;
   available: number;

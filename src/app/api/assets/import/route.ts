@@ -5,6 +5,7 @@ import { HttpError, ok } from "@/lib/http";
 import { requirePermission } from "@/lib/rbac";
 import { createAuditEntry } from "@/lib/audit";
 import { isBlobUrl } from "@/lib/blob";
+import { buildAssetTagSortFields } from "@/lib/item-asset-tag-sort";
 
 const mappingSchema = z.record(z.string().min(1), z.string().min(1));
 
@@ -304,7 +305,7 @@ function buildAssetData(
   };
 
   return {
-    assetTag: row.assetTag,
+    ...buildAssetTagSortFields(row.assetTag),
     name: row.name || null,
     type: row.type,
     brand: row.brand,
@@ -513,8 +514,8 @@ export const POST = withAuth(async (req, { user }) => {
   );
 
   // 3. Split rows into creates vs updates, and separate bulk items
-  const toCreate: Array<ReturnType<typeof buildAssetData>> = [];
-  const toUpdate: Array<{ id: string; data: Record<string, unknown> }> = [];
+  const toCreate: Array<{ row: NormalizedRow; data: ReturnType<typeof buildAssetData> }> = [];
+  const toUpdate: Array<{ row: NormalizedRow; id: string; data: Record<string, unknown> }> = [];
   const bulkRows: Array<{ row: NormalizedRow; locationId: string }> = [];
   const seenCreateAssetTags = new Set<string>();
   const seenCreateScanValues = new Set<string>();
@@ -565,8 +566,7 @@ export const POST = withAuth(async (req, { user }) => {
         : Object.fromEntries(
             Object.entries(updateDataWithImage).filter(([key]) => key !== "imageUrl"),
           );
-      toUpdate.push({ id: existing.id, data: updateData });
-      updatedCount += 1;
+      toUpdate.push({ row, id: existing.id, data: updateData });
     } else {
       if (seenCreateAssetTags.has(row.assetTag)) {
         importErrors.push({
@@ -588,111 +588,220 @@ export const POST = withAuth(async (req, { user }) => {
       }
       seenCreateAssetTags.add(row.assetTag);
       for (const value of rowScanValues) seenCreateScanValues.add(value);
-      toCreate.push(buildAssetData(row, locationId, departmentId));
-      createdCount += 1;
+      toCreate.push({ row, data: buildAssetData(row, locationId, departmentId) });
     }
   }
 
-  // 4-6. Atomic: create assets, update existing, create kits + memberships
-  const kitNames = [...new Set(validRows.filter((r) => r.kitName).map((r) => r.kitName))];
-  let kitsCreated = 0;
+  // 4-6. Batched writes.
+  //
+  // ATOMICITY CHANGE: this phase used to run as one interactive transaction
+  // covering the whole file, so a large CSV held a single transaction open for
+  // thousands of round trips (and a late failure rolled the entire import
+  // back). Writes are now grouped and chunked: atomicity is per batch, not
+  // per file. A batch commits or rolls back as a unit, and a failed batch
+  // reports every row it contained as "not applied" in `errors` while the
+  // remaining batches still run. Callers therefore have to read `errors` to
+  // know what landed; `created`/`updated`/`bulkCreated` count applied rows only.
+  //
+  // 200 rows per batch: Neon round trips dominate here, and at this size a
+  // pure-insert batch is one createMany and an all-distinct update batch is
+  // 200 updateMany statements — short enough to stay inside the serverless
+  // timeout and the transaction timeout budget, while keeping the number of
+  // transactions (and their commit overhead) an order of magnitude below the
+  // row count.
+  const IMPORT_BATCH_SIZE = 200;
+  const KIT_BATCH_SIZE = 100;
+  const MEMBERSHIP_BATCH_SIZE = 500;
 
-  await db.$transaction(async (tx) => {
-    // 4. Create new assets
-    if (toCreate.length > 0) {
-      await tx.asset.createMany({ data: toCreate });
+  function chunk<T>(items: T[], size: number): T[][] {
+    const out: T[][] = [];
+    for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+    return out;
+  }
+
+  function recordBatchFailure(rows: NormalizedRow[], stage: string, err: unknown) {
+    const message = err instanceof Error ? err.message : "unknown";
+    for (const row of rows) {
+      importErrors.push({
+        line: row.line,
+        assetTag: row.assetTag,
+        error: `${stage} batch failed, row not applied: ${message}`,
+      });
     }
+  }
 
-    // 5. Update existing assets
-    for (const { id, data } of toUpdate) {
-      await tx.asset.update({ where: { id }, data });
+  // 4. Create new assets — one createMany per batch.
+  for (const batch of chunk(toCreate, IMPORT_BATCH_SIZE)) {
+    try {
+      await db.$transaction(async (tx) => {
+        await tx.asset.createMany({ data: batch.map((entry) => entry.data) });
+      });
+      createdCount += batch.length;
+    } catch (err) {
+      recordBatchFailure(batch.map((entry) => entry.row), "Asset create", err);
     }
+  }
 
-    // 5b. Create BulkSku + BulkStockBalance for bulk rows
-    for (const { row, locationId } of bulkRows) {
-      const binQr = row.primaryScanCode || `bg://bulk/${row.assetTag}`;
-      try {
-        const sku = await tx.bulkSku.upsert({
-          where: { locationId_binQrCodeValue: { locationId, binQrCodeValue: binQr } },
-          create: {
-            name: row.name || row.assetTag,
-            category: row.type || "consumable",
-            unit: "each",
-            locationId,
-            binQrCodeValue: binQr,
-            imageUrl: row.imageUrl || null,
-          },
-          update: {
-            name: row.name || row.assetTag,
-            category: row.type || "consumable",
-            ...(row.imageUrl ? { imageUrl: row.imageUrl } : {}),
-          },
-        });
-        await tx.bulkStockBalance.upsert({
-          where: { bulkSkuId_locationId: { bulkSkuId: sku.id, locationId } },
-          create: { bulkSkuId: sku.id, locationId, onHandQuantity: row.quantity },
-          update: { onHandQuantity: { increment: row.quantity } },
-        });
-        bulkCreatedCount += 1;
-      } catch (err) {
-        importErrors.push({ line: row.line, assetTag: row.assetTag, error: `BulkSku creation failed: ${err instanceof Error ? err.message : "unknown"}` });
-      }
+  // 5. Update existing assets. Rows whose update payload is byte-identical
+  // collapse into a single updateMany; distinct payloads still need their own
+  // statement, but they now share a bounded transaction instead of one
+  // file-long one.
+  type UpdateOp = { data: Record<string, unknown>; ids: string[]; rows: NormalizedRow[] };
+  const updateGroups = new Map<string, UpdateOp>();
+  for (const entry of toUpdate) {
+    const key = JSON.stringify(Object.entries(entry.data).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
+    const group = updateGroups.get(key);
+    if (group) {
+      group.ids.push(entry.id);
+      group.rows.push(entry.row);
+    } else {
+      updateGroups.set(key, { data: entry.data, ids: [entry.id], rows: [entry.row] });
     }
+  }
+  const updateOps: UpdateOp[] = [];
+  for (const group of updateGroups.values()) {
+    for (const idChunk of chunk(group.ids.map((id, index) => ({ id, row: group.rows[index]! })), IMPORT_BATCH_SIZE)) {
+      updateOps.push({
+        data: group.data,
+        ids: idChunk.map((item) => item.id),
+        rows: idChunk.map((item) => item.row),
+      });
+    }
+  }
+  const updateBatches: UpdateOp[][] = [];
+  let pendingUpdates: UpdateOp[] = [];
+  let pendingUpdateRows = 0;
+  for (const op of updateOps) {
+    if (pendingUpdates.length > 0 && pendingUpdateRows + op.ids.length > IMPORT_BATCH_SIZE) {
+      updateBatches.push(pendingUpdates);
+      pendingUpdates = [];
+      pendingUpdateRows = 0;
+    }
+    pendingUpdates.push(op);
+    pendingUpdateRows += op.ids.length;
+  }
+  if (pendingUpdates.length > 0) updateBatches.push(pendingUpdates);
 
-    // 6. Kit creation + membership
-    if (kitNames.length > 0) {
-      const kitUpsertResults: Array<{ id: string }> = [];
-      const validKitEntries: string[] = [];
-
-      for (const kitName of kitNames) {
-        const firstRow = validRows.find((r) => r.kitName === kitName && r.locationName);
-        const kitLocationId = firstRow ? locationMap.get(firstRow.locationName) : null;
-        if (!kitLocationId) continue;
-        const kit = await tx.kit.upsert({
-          where: { name_locationId: { name: kitName, locationId: kitLocationId } },
-          create: { name: kitName, locationId: kitLocationId },
-          update: {},
-        });
-        kitUpsertResults.push(kit);
-        validKitEntries.push(kitName);
-      }
-
-      kitsCreated = kitUpsertResults.length;
-
-      if (kitUpsertResults.length > 0) {
-        // Look up all assets that belong to kits
-        const kitRowSerials = validRows.filter((r) => r.kitName).map((r) => r.serialNumber);
-        const kitAssets = await tx.asset.findMany({
-          where: { serialNumber: { in: kitRowSerials } },
-          select: { id: true, serialNumber: true },
-        });
-        const assetBySerial = new Map(kitAssets.map((a) => [a.serialNumber, a.id]));
-
-        // Build kit name → kit id map
-        const kitMap = new Map<string, string>();
-        for (let i = 0; i < validKitEntries.length; i++) {
-          const entry = validKitEntries[i]!; // in-bounds by loop condition
-          const result = kitUpsertResults[i]!; // parallel array, same length
-          kitMap.set(entry, result.id);
+  for (const batch of updateBatches) {
+    try {
+      await db.$transaction(async (tx) => {
+        for (const op of batch) {
+          await tx.asset.updateMany({ where: { id: { in: op.ids } }, data: op.data });
         }
-
-        // Create all kit memberships
-        const memberships: Array<{ kitId: string; assetId: string }> = [];
-        for (const row of validRows) {
-          if (!row.kitName) continue;
-          const kitId = kitMap.get(row.kitName);
-          const assetId = assetBySerial.get(row.serialNumber);
-          if (kitId && assetId) {
-            memberships.push({ kitId, assetId });
-          }
-        }
-
-        if (memberships.length > 0) {
-          await tx.kitMembership.createMany({ data: memberships, skipDuplicates: true });
-        }
-      }
+      });
+      updatedCount += batch.reduce((total, op) => total + op.ids.length, 0);
+    } catch (err) {
+      recordBatchFailure(batch.flatMap((op) => op.rows), "Asset update", err);
     }
+  }
+
+  // 5b. Create BulkSku + BulkStockBalance for bulk rows. Prisma has no batched
+  // upsert, so these stay two statements per row; chunking keeps any one
+  // transaction bounded.
+  for (const batch of chunk(bulkRows, IMPORT_BATCH_SIZE)) {
+    let batchCreated = 0;
+    try {
+      await db.$transaction(async (tx) => {
+        batchCreated = 0;
+        for (const { row, locationId } of batch) {
+          const binQr = row.primaryScanCode || `bg://bulk/${row.assetTag}`;
+          const sku = await tx.bulkSku.upsert({
+            where: { locationId_binQrCodeValue: { locationId, binQrCodeValue: binQr } },
+            create: {
+              name: row.name || row.assetTag,
+              category: row.type || "consumable",
+              unit: "each",
+              locationId,
+              binQrCodeValue: binQr,
+              imageUrl: row.imageUrl || null,
+            },
+            update: {
+              name: row.name || row.assetTag,
+              category: row.type || "consumable",
+              ...(row.imageUrl ? { imageUrl: row.imageUrl } : {}),
+            },
+          });
+          await tx.bulkStockBalance.upsert({
+            where: { bulkSkuId_locationId: { bulkSkuId: sku.id, locationId } },
+            create: { bulkSkuId: sku.id, locationId, onHandQuantity: row.quantity },
+            update: { onHandQuantity: { increment: row.quantity } },
+          });
+          batchCreated += 1;
+        }
+      });
+      bulkCreatedCount += batchCreated;
+    } catch (err) {
+      recordBatchFailure(batch.map((entry) => entry.row), "Bulk SKU", err);
+    }
+  }
+
+  // 6. Kit creation + membership. Kit rows are pre-indexed by kit name, so
+  // resolving a kit's location is a Map hit instead of a scan of every valid
+  // row (this loop used to be O(rows x kits)).
+  const kitRowByName = new Map<string, NormalizedRow>();
+  for (const row of validRows) {
+    if (!row.kitName || !row.locationName) continue;
+    if (!kitRowByName.has(row.kitName)) kitRowByName.set(row.kitName, row);
+  }
+  const kitEntries = [...kitRowByName.entries()].flatMap(([kitName, row]) => {
+    const kitLocationId = locationMap.get(row.locationName);
+    return kitLocationId ? [{ kitName, kitLocationId, row }] : [];
   });
+  let kitsCreated = 0;
+  const kitMap = new Map<string, string>();
+
+  for (const batch of chunk(kitEntries, KIT_BATCH_SIZE)) {
+    try {
+      const upserted = await db.$transaction(async (tx) => {
+        const results: Array<{ kitName: string; id: string }> = [];
+        for (const { kitName, kitLocationId } of batch) {
+          const kit = await tx.kit.upsert({
+            where: { name_locationId: { name: kitName, locationId: kitLocationId } },
+            create: { name: kitName, locationId: kitLocationId },
+            update: {},
+          });
+          results.push({ kitName, id: kit.id });
+        }
+        return results;
+      });
+      for (const result of upserted) kitMap.set(result.kitName, result.id);
+      kitsCreated += upserted.length;
+    } catch (err) {
+      recordBatchFailure(batch.map((entry) => entry.row), "Kit", err);
+    }
+  }
+
+  if (kitMap.size > 0) {
+    // Look up all assets that belong to kits
+    const kitRowSerials = validRows.filter((r) => r.kitName).map((r) => r.serialNumber);
+    const kitAssets = await db.asset.findMany({
+      where: { serialNumber: { in: kitRowSerials } },
+      select: { id: true, serialNumber: true },
+    });
+    const assetBySerial = new Map(kitAssets.map((a) => [a.serialNumber, a.id]));
+
+    // Create all kit memberships
+    const memberships: Array<{ kitId: string; assetId: string; row: NormalizedRow }> = [];
+    for (const row of validRows) {
+      if (!row.kitName) continue;
+      const kitId = kitMap.get(row.kitName);
+      const assetId = assetBySerial.get(row.serialNumber);
+      if (kitId && assetId) {
+        memberships.push({ kitId, assetId, row });
+      }
+    }
+
+    for (const batch of chunk(memberships, MEMBERSHIP_BATCH_SIZE)) {
+      try {
+        await db.kitMembership.createMany({
+          data: batch.map(({ kitId, assetId }) => ({ kitId, assetId })),
+          skipDuplicates: true,
+        });
+      } catch (err) {
+        recordBatchFailure(batch.map((entry) => entry.row), "Kit membership", err);
+      }
+    }
+  }
 
   // 7. Defer image re-hosting to the rehost-images cron.
   // Re-hosting external CDN images to Blob inline used to run here in batches,

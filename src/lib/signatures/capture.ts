@@ -5,7 +5,7 @@ export type SignatureCanvasSize = {
   height: number;
 };
 
-export type SignatureCanvasViewport = {
+type SignatureCanvasViewport = {
   offsetX: number;
   offsetY: number;
   scale: number;

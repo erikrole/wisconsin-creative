@@ -17,6 +17,9 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
   requireRole(user.role, ["ADMIN", "STAFF", "STUDENT"]);
   const { id } = params;
 
+  // Deliberately sequential. `tests/calendar-travel-auth.test.ts` pins that an
+  // unknown event id 404s *before* the roster is listed, so the existence check
+  // gates the read rather than racing it.
   const event = await db.calendarEvent.findUnique({
     where: { id },
     select: { id: true },

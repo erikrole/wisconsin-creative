@@ -16,12 +16,9 @@ import {
   staleBookingError,
 } from "@/lib/booking-concurrency";
 import { assertSupportedReservationPickupLocation } from "@/lib/services/reservation-pickup-location";
+import { sortedStrings } from "@/lib/utils";
 
 type BookingPatchBody = z.infer<typeof updateBookingSchema>;
-
-function sortedStrings(values: string[]) {
-  return [...values].sort((a, b) => a.localeCompare(b));
-}
 
 function sameDateInstant(value: string, current: Date | string) {
   const requested = new Date(value).getTime();

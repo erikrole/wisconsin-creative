@@ -1,9 +1,9 @@
 import { HttpError } from "@/lib/http";
 
-export const WORKING_COPY_MUTATION_MESSAGE =
+const WORKING_COPY_MUTATION_MESSAGE =
   "This event has unpublished Schedule changes. Review or discard the private working schedule before changing live assignments.";
 
-export const LIVE_SCHEDULE_MUTATION_RETIRED_MESSAGE =
+const LIVE_SCHEDULE_MUTATION_RETIRED_MESSAGE =
   "Live schedule edits are retired. Open the Event and use its private working schedule editor.";
 
 export const SCHEDULE_CLAIM_PAUSED_MESSAGE =

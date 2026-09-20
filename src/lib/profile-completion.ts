@@ -1,6 +1,6 @@
 import type { GraduationTermValue, StudentYearValue } from "@/lib/student-profile";
 
-export const PROFILE_COMPLETION_STEPS = ["EMAIL", "PHONES", "WISCARD", "STUDENT", "APPAREL", "PHOTO"] as const;
+const PROFILE_COMPLETION_STEPS = ["EMAIL", "PHONES", "WISCARD", "STUDENT", "APPAREL", "PHOTO"] as const;
 
 export type ProfileCompletionStep = (typeof PROFILE_COMPLETION_STEPS)[number];
 export type ProfileCompletionField =
@@ -15,7 +15,7 @@ export type ProfileCompletionField =
   | "shoeSize"
   | "photo";
 
-export type ProfileCompletionProfile = {
+type ProfileCompletionProfile = {
   id: string;
   name: string;
   role: "ADMIN" | "STAFF" | "STUDENT" | "COLLABORATOR";
@@ -60,7 +60,7 @@ const INTERNAL_OPERATIONAL_FIELDS: ProfileCompletionField[] = [
   "wiscard",
 ];
 
-export function applicableProfileFields(role: ProfileCompletionProfile["role"]): ProfileCompletionField[] {
+function applicableProfileFields(role: ProfileCompletionProfile["role"]): ProfileCompletionField[] {
   if (role === "COLLABORATOR") return ["photo"];
   const fields: ProfileCompletionField[] = [
     "campusEmail",
@@ -105,7 +105,7 @@ export function isCampusLoginEmail(email: string): boolean {
   return email.trim().toLowerCase().endsWith("@wisc.edu");
 }
 
-export function isAthleticsEmail(email: string | null | undefined): boolean {
+function isAthleticsEmail(email: string | null | undefined): boolean {
   return Boolean(email?.trim().toLowerCase().endsWith("@athletics.wisc.edu"));
 }
 

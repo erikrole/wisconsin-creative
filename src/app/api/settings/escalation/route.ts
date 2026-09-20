@@ -9,6 +9,7 @@ import {
   normalizeCheckoutEscalationConfig,
   overdueResponderConfigKey,
 } from "@/lib/checkout-escalation-policy";
+import { unique } from "@/lib/utils";
 
 const patchEscalationSchema = z.union([
   z.object({
@@ -122,7 +123,7 @@ export const PATCH = withAuth(async (req, { user }) => {
   }
 
   if ("locationId" in body) {
-    const responderUserIds = [...new Set(body.responderUserIds)];
+    const responderUserIds = unique(body.responderUserIds);
     const [location, eligibleCount, existing] = await Promise.all([
       db.location.findFirst({ where: { id: body.locationId, active: true }, select: { id: true, name: true } }),
       db.user.count({

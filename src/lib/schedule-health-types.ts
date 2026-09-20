@@ -1,13 +1,13 @@
 import type { ScheduleChangeHistorySnapshot } from "@/lib/schedule-change-history-types";
 import type { ScheduleDataQualityIssue } from "@/lib/schedule-data-quality";
 
-export type ScheduleHealthQueue = {
+type ScheduleHealthQueue = {
   count: number;
   eventCount?: number;
   eventIds?: string[];
 };
 
-export type ScheduleHealthNextCall = {
+type ScheduleHealthNextCall = {
   eventId: string | null;
   summary: string | null;
   startsAt: string | null;
@@ -20,7 +20,7 @@ export type ScheduleGearAssignmentStatus =
   | "checked_out"
   | "missing";
 
-export type ScheduleGearAssignmentReadiness = {
+type ScheduleGearAssignmentReadiness = {
   eventId: string;
   assignmentId: string;
   userId: string;
@@ -29,7 +29,7 @@ export type ScheduleGearAssignmentReadiness = {
   linkType: "assignment" | "event" | "missing";
 };
 
-export type ScheduleGearEventReadiness = {
+type ScheduleGearEventReadiness = {
   eventId: string;
   counts: {
     ready: number;
@@ -42,7 +42,7 @@ export type ScheduleGearEventReadiness = {
   assignmentIds: string[];
 };
 
-export type ScheduleGearReadinessSnapshot = {
+type ScheduleGearReadinessSnapshot = {
   events: Record<string, ScheduleGearEventReadiness>;
   assignments: Record<string, ScheduleGearAssignmentReadiness>;
   queues: {

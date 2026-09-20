@@ -59,7 +59,7 @@ const MHKY_2026_27_ENTRIES = signatureRosterEntrySchema.array().parse(
   })),
 );
 
-export type OfficialSignatureRosterSeed = {
+type OfficialSignatureRosterSeed = {
   sourceKey: string;
   sourceUrl: string;
   parserVersion: string;

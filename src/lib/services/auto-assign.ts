@@ -25,7 +25,7 @@ import { getAutoFillPreview } from "@/lib/services/auto-fill-preview";
 
 /* ── Main export ─────────────────────────────────────── */
 
-export type AutoAssignResult = {
+type AutoAssignResult = {
   assigned: number;
   conflicts: number;
   skipped: number;

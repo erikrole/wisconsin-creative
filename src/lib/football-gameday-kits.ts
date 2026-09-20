@@ -14,7 +14,7 @@ export const FOOTBALL_GAMEDAY_KIT_ROLES = [
 
 export type FootballGamedayKitRole = (typeof FOOTBALL_GAMEDAY_KIT_ROLES)[number];
 
-export const FOOTBALL_GAMEDAY_KIT_ROLE_LABELS: Record<FootballGamedayKitRole, string> = {
+const FOOTBALL_GAMEDAY_KIT_ROLE_LABELS: Record<FootballGamedayKitRole, string> = {
   SLOW1: "Slow 1",
   SLOW2: "Slow 2",
   BENCH: "Bench",
@@ -31,7 +31,7 @@ export const FOOTBALL_GAMEDAY_KIT_ROLE_OPTIONS = FOOTBALL_GAMEDAY_KIT_ROLES.map(
 
 const ROLE_SET = new Set<string>(FOOTBALL_GAMEDAY_KIT_ROLES);
 
-export function isFootballGamedayKitRole(value: string | null | undefined): value is FootballGamedayKitRole {
+function isFootballGamedayKitRole(value: string | null | undefined): value is FootballGamedayKitRole {
   return Boolean(value && ROLE_SET.has(value));
 }
 
@@ -40,7 +40,7 @@ export function footballGamedayKitRoleLabel(role: string | null | undefined) {
   return FOOTBALL_GAMEDAY_KIT_ROLE_LABELS[role];
 }
 
-export function footballGamedayKitRoleOrder(role: string | null | undefined) {
+function footballGamedayKitRoleOrder(role: string | null | undefined) {
   if (!isFootballGamedayKitRole(role)) return FOOTBALL_GAMEDAY_KIT_ROLES.length;
   return FOOTBALL_GAMEDAY_KIT_ROLES.indexOf(role);
 }

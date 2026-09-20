@@ -16,7 +16,7 @@ import { releaseReservationManagedAssignmentTx } from "@/lib/services/reservatio
 import { revokeCompanionUser } from "@/lib/companion-store";
 import { refreshCompanionProjection } from "@/lib/services/companion-projection";
 
-export type UserDeactivationResult = {
+type UserDeactivationResult = {
   cancelledIds: string[];
   directReportsCleared: number;
 };

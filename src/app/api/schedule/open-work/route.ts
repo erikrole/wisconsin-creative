@@ -1,17 +1,7 @@
-import { ShiftArea } from "@prisma/client";
 import { withAuth } from "@/lib/api";
-import { ok, HttpError } from "@/lib/http";
+import { ok } from "@/lib/http";
 import { requirePermission } from "@/lib/rbac";
-import { getScheduleOpenWork } from "@/lib/services/schedule-open-work";
-import { AREAS } from "@/types/areas";
-
-function parseAreaFilter(value: string | null): ShiftArea | undefined {
-  if (!value) return undefined;
-  if (!(AREAS as readonly string[]).includes(value)) {
-    throw new HttpError(400, "area must be VIDEO, PHOTO, GRAPHICS, SOCIAL, COMMS, or LIVE_PRODUCTION");
-  }
-  return value as ShiftArea;
-}
+import { getScheduleOpenWork, parseAreaFilter } from "@/lib/services/schedule-open-work";
 
 export const GET = withAuth(async (req, { user }) => {
   requirePermission(user.role, "shift_trade", "view");

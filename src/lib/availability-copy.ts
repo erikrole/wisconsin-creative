@@ -11,7 +11,7 @@ type UpcomingCommitment = {
   bookingTitle?: string;
 };
 
-export type AvailabilityConflictLike = {
+type AvailabilityConflictLike = {
   conflictingBookingTitle?: string | null;
   conflictingBookingRequesterName?: string | null;
   conflictingBookingKind?: string | null;
@@ -20,7 +20,7 @@ export type AvailabilityConflictLike = {
   endsAt: string | Date;
 };
 
-export type AvailabilityRiskLike = {
+type AvailabilityRiskLike = {
   code?: string | null;
   severity?: string | null;
   message?: string | null;
@@ -41,7 +41,7 @@ function dateTimeFormatter() {
   });
 }
 
-export function formatAvailabilityDateTime(value: string | Date) {
+function formatAvailabilityDateTime(value: string | Date) {
   return dateTimeFormatter().format(value instanceof Date ? value : new Date(value));
 }
 
@@ -138,7 +138,7 @@ export function availabilityBlockedItemMessage(
   return `${requester} ${verb} the ${item} until ${formatAvailabilityDeadline(endsAt)}`;
 }
 
-export function availabilityUnavailableItemMessage(status: string, itemName: string) {
+function availabilityUnavailableItemMessage(status: string, itemName: string) {
   const item = itemName.trim() || "This item";
   switch (status.toUpperCase()) {
     case "MAINTENANCE":
@@ -156,7 +156,7 @@ export function availabilityUnavailableItemMessage(status: string, itemName: str
   }
 }
 
-export function availabilityShortageMessage(
+function availabilityShortageMessage(
   shortage: { requested: number; available: number },
   itemName?: string,
 ) {
@@ -280,6 +280,26 @@ export function availabilityRiskTitle(risks: AvailabilityRiskLike[] | undefined)
   return risks?.map(availabilityRiskMessage).join(" · ") || "Availability notice";
 }
 
+export function primaryRisk<T extends { severity: "warning" | "critical" }>(risks: T[] | undefined) {
+  if (!risks || risks.length === 0) return undefined;
+  return risks.find((risk) => risk.severity === "critical") ?? risks[0];
+}
+
+export function riskLabel(risks: Array<{ message: string; severity: "warning" | "critical" }> | undefined) {
+  const risk = primaryRisk(risks);
+  if (!risk) return null;
+  const message = availabilityRiskMessage(risk);
+  return risks && risks.length > 1 ? `${message} +${risks.length - 1}` : message;
+}
+
+export function riskTitle(risks: Array<{ message: string; severity: "warning" | "critical" }> | undefined) {
+  return availabilityRiskTitle(risks);
+}
+
+export function statusText(status: string) {
+  return status.replace(/_/g, " ").toLowerCase();
+}
+
 /**
  * Names the next commitment and, when the requested window is close to it,
  * states the return-by time implied by the serialized turnaround buffer.
@@ -317,10 +337,6 @@ export function upcomingCommitmentTitle(commitment: UpcomingCommitment) {
   return commitment.bookingTitle
     ? `Needed next for ${commitment.bookingTitle}`
     : "Needed next by another booking";
-}
-
-export function turnaroundBadgeLabel(severity: "warning" | "critical") {
-  return severity === "critical" ? "Tight timing" : "Turnaround";
 }
 
 export { SERIALIZED_TURNAROUND_BUFFER_MINUTES };

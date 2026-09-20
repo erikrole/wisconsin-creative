@@ -31,6 +31,7 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
     db.notification.create({
       data: {
         userId: booking.requesterUserId,
+        bookingId: booking.id,
         type: "overdue_nudge",
         title,
         body,

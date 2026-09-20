@@ -8,7 +8,7 @@ const LOWERCASE_TITLE_WORDS = new Set([
  * Team abbreviations that are conventionally written as all caps.
  * Keep this explicit so ordinary team names such as Iowa still title-case.
  */
-export const TEAM_ABBREVIATION_TERMS = new Set([
+const TEAM_ABBREVIATION_TERMS = new Set([
   "ASU", "BYU", "CSU", "ECU", "ETSU", "FAU", "FGCU", "FIU", "LSU", "LIU", "NIU", "NDSU", "ODU",
   "OSU", "SDSU", "SFA", "SIU", "SIUE", "SMU", "TCU", "UAB", "UCF", "UCLA", "UIC", "UMBC", "UMKC",
   "UNLV", "USC", "USF", "UTEP", "UTRGV", "UTSA", "VCU", "WKU", "WSU",
@@ -27,7 +27,7 @@ export const STATE_ABBREVIATION_TERMS = new Set([
  * Sport codes are handled separately via SPORT_CODE_SET. Only add terms that are never a
  * normal English word in lowercase, otherwise ordinary titles get shouted at.
  */
-export const ALWAYS_UPPERCASE_TERMS = new Set([
+const ALWAYS_UPPERCASE_TERMS = new Set([
   // Conference and governing bodies
   "B1G", "NCAA", "BTN",
   // Volleyball organizations
@@ -67,7 +67,7 @@ export function normalizeTeamAbbreviations(value: string): string {
 }
 
 /** Standardize an operational title while preserving UW sport codes and camel-cased product names. */
-export function normalizeOperationalTitle(value: string): string {
+function normalizeOperationalTitle(value: string): string {
   const title = value.trim().replace(/\s+/g, " ");
   const words = [...title.matchAll(WORD_PATTERN)];
 

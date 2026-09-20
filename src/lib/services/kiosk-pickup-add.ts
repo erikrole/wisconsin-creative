@@ -8,17 +8,17 @@ import { checkAvailability } from "@/lib/services/availability";
 import { MAX_EQUIPMENT_SELECTIONS_PER_REQUEST } from "@/lib/request-limits";
 import { kioskRosterUserWhere } from "@/lib/user-visibility";
 
-export type AddedPickupItem = {
+type AddedPickupItem = {
   id: string;
   name: string;
   tagName: string;
 };
 
-export type AddReservationPickupSerializedResult =
+type AddReservationPickupSerializedResult =
   | { success: true; addedToPlan: true; item: AddedPickupItem }
   | { success: false; error: string; errorCode: "unavailable" | "conflict" };
 
-export type PickupAddPreflight =
+type PickupAddPreflight =
   | { ok: true; item: AddedPickupItem }
   | { ok: false; error: string; errorCode: "unavailable" | "conflict" };
 
@@ -48,7 +48,7 @@ export const kioskPickupPlanActorSelect = {
   },
 } as const;
 
-export type KioskPickupPlanActor = Prisma.UserGetPayload<{ select: typeof kioskPickupPlanActorSelect }>;
+type KioskPickupPlanActor = Prisma.UserGetPayload<{ select: typeof kioskPickupPlanActorSelect }>;
 
 /**
  * Remaining custody window for a leftover pickup add. Past overlaps should

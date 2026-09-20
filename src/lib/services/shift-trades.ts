@@ -109,7 +109,7 @@ async function notify(
 }
 
 /** Who is performing a trade mutation. Role gates staff-on-behalf actions. */
-export type TradeActor = { id: string; role?: string | null };
+type TradeActor = { id: string; role?: string | null };
 export type TradeApprovalActor = { id: string; role: Role } | null;
 
 type TradePushJob = {

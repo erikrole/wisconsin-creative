@@ -5,7 +5,7 @@ import type { GuideListItem } from "@/lib/guides";
 // buried in a guide without making every keystroke score huge strings.
 export const BODY_MATCH_CHARS = 800;
 
-export type ResourceSearchEntry = {
+type ResourceSearchEntry = {
   guide: GuideListItem;
   typeLabel: string;
   /** Space-joined haystack handed to cmdk for fuzzy matching. */
@@ -70,7 +70,7 @@ export function splitFeaturedGuides(guides: GuideListItem[]): {
 
 export type SectionNavLink = { slug: string; title: string };
 
-export type SectionNavItem = SectionNavLink & { id: string; current: boolean };
+type SectionNavItem = SectionNavLink & { id: string; current: boolean };
 
 export type SectionNav = {
   /** Typed-focus label shared by the section, or null when there is no section. */

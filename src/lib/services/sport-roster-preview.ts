@@ -14,8 +14,9 @@ import { normalizeSportCode, sportLabel } from "@/lib/sports";
 import { visibleActiveUserWhere } from "@/lib/user-visibility";
 import { DEFAULT_SPORT_AUTO_ASSIGN_POLICY } from "@/lib/sport-auto-assign-policy";
 import { loadSportAutoAssignPolicies } from "@/lib/services/sport-auto-assign-policies";
+import { unique } from "@/lib/utils";
 
-export type SportRosterMember = {
+type SportRosterMember = {
   id: string;
   name: string;
   role: string;
@@ -24,7 +25,7 @@ export type SportRosterMember = {
   defaultTraveler: boolean;
 };
 
-export type SportRosterPreviewEntry = {
+type SportRosterPreviewEntry = {
   sportCode: string;
   label: string;
   policy: SportAutoAssignPolicy;
@@ -42,7 +43,7 @@ export type SportRosterPreviewResponse = {
 };
 
 export async function getSportRosterPreview(rawCodes: string[]): Promise<SportRosterPreviewResponse> {
-  const codes = [...new Set(rawCodes.map(normalizeSportCode).filter(Boolean))].sort();
+  const codes = unique(rawCodes.map(normalizeSportCode).filter(Boolean)).sort();
   if (codes.length === 0) return { sports: [], emptySportCodes: [], heldSportCodes: [] };
 
   const policies = await loadSportAutoAssignPolicies(codes);

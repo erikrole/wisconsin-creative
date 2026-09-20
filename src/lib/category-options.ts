@@ -1,6 +1,6 @@
 import type { CategoryOption } from "@/types/category";
 
-export type CategoryPathOption = {
+type CategoryPathOption = {
   value: string;
   label: string;
   keywords: string[];

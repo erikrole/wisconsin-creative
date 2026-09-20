@@ -14,13 +14,13 @@ export type SignatureCropBounds = {
   height: number;
 };
 
-export type SignaturePoint = { x: number; y: number };
+type SignaturePoint = { x: number; y: number };
 
-export type SignatureCurveSegment =
+type SignatureCurveSegment =
   | { type: "L"; to: SignaturePoint }
   | { type: "Q"; control: SignaturePoint; to: SignaturePoint };
 
-export type SignatureCurve = {
+type SignatureCurve = {
   start: SignaturePoint;
   segments: SignatureCurveSegment[];
 };
@@ -38,7 +38,7 @@ type SignatureBounds = {
  * signature (for example, the dot in an initial), but remove an isolated
  * corner mark when there is other substantive ink.
  */
-export function removeAccidentalSignatureStrokes(
+function removeAccidentalSignatureStrokes(
   strokes: SignatureStroke[],
   settings: Pick<SignaturePenSettings, "strokeWidth" | "cropPadding">,
 ): SignatureStroke[] {
@@ -91,7 +91,7 @@ export function buildSignatureCurve(points: readonly SignaturePoint[]): Signatur
   return { start, segments };
 }
 
-export function normalizeSignatureStrokes(
+function normalizeSignatureStrokes(
   strokes: SignatureStroke[],
 ): SignatureStroke[] {
   if (strokes.length < 1 || strokes.length > SIGNATURE_MAX_STROKES) {
@@ -168,7 +168,7 @@ function signatureBoundsGap(left: SignatureBounds, right: SignatureBounds): numb
   return Math.hypot(horizontalGap, verticalGap);
 }
 
-export function computeSignatureCropBounds(
+function computeSignatureCropBounds(
   strokes: SignatureStroke[],
   settings: SignaturePenSettings,
 ): SignatureCropBounds {
@@ -190,7 +190,7 @@ export function computeSignatureCropBounds(
   return { x: minX, y: minY, width, height };
 }
 
-export function formatSignatureNumber(value: number): string {
+function formatSignatureNumber(value: number): string {
   return Number(value.toFixed(3)).toString();
 }
 
@@ -211,10 +211,10 @@ export function signaturePathData(
   return commands.join(" ");
 }
 
-export const SIGNATURE_REFERENCE_CROP_WIDTH = 640;
-export const SIGNATURE_REFERENCE_CROP_HEIGHT = 256;
+const SIGNATURE_REFERENCE_CROP_WIDTH = 640;
+const SIGNATURE_REFERENCE_CROP_HEIGHT = 256;
 export const SIGNATURE_STROKE_SCALE_MIN = 0.5;
-export const SIGNATURE_STROKE_SCALE_MAX = 2;
+const SIGNATURE_STROKE_SCALE_MAX = 2;
 
 type SignatureExportLimits = Pick<SignaturePenSettings, "maxWidth" | "maxHeight">;
 
@@ -251,7 +251,7 @@ function escapeSignatureAttribute(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
 }
 
-export type SignatureSvgSource = {
+type SignatureSvgSource = {
   svg: string;
   width: number;
   height: number;
@@ -323,7 +323,7 @@ export const SIGNATURE_PEN_SAMPLE_STROKES: SignatureStroke[] = [
   },
 ];
 
-export const SIGNATURE_EXPORT_MIN_WIDTH = 1_000;
+const SIGNATURE_EXPORT_MIN_WIDTH = 1_000;
 
 export type SignatureExportSize = { width: number; height: number; scale: number };
 

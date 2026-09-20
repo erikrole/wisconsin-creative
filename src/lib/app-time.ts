@@ -155,25 +155,6 @@ export function formatAppWindow(
 }
 
 /**
- * A calendar date the way a worker reads it, in the app's timezone.
- *
- * The timed sibling of `formatAllDayDate`. Server code has no timezone of its
- * own, so a bare `toLocaleDateString` renders UTC and pushes an evening event
- * onto the following day.
- */
-export function formatAppDate(
-  value: Date | string,
-  timeZone: string = env.appTimezone,
-): string {
-  return toDate(value).toLocaleDateString("en-US", {
-    timeZone,
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-/**
  * The calendar date of an all-day boundary.
  *
  * All-day events are stored as encoded dates at UTC midnight (see

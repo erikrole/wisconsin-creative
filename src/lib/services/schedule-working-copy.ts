@@ -24,6 +24,7 @@ import { checkTimeConflict } from "@/lib/services/shift-assignments";
 import { getCandidateScoresForTarget } from "@/lib/services/candidate-scoring";
 import { evaluateAvailabilityPreferences } from "@/lib/student-availability";
 import type { PendingCrewClaim, PendingCrewReviewUser, PendingCrewTrade } from "@/lib/crew-pending-review";
+import { unique } from "@/lib/utils";
 
 const pendingReviewUserSelect = {
   id: true,
@@ -313,9 +314,9 @@ async function editorResponse(
     )
     : published;
   const defaultWindow = await resolveWorkingScheduleDefaultWindow(group, tx);
-  const assignedUserIds = [...new Set(
+  const assignedUserIds = unique(
     working.slots.flatMap((slot) => slot.assignment ? [slot.assignment.userId] : []),
-  )];
+  );
   const assignedUsers = assignedUserIds.length > 0
     ? await tx.user.findMany({
       where: { id: { in: assignedUserIds } },
@@ -688,7 +689,7 @@ export async function mutateWorkingSchedule(
       // Staff and collaborators follow the event window. This command changes
       // only Student slots and their personal overrides.
       const assignedSlots = beforePayload.slots.filter((slot) => slot.workerType === "ST" && slot.assignment);
-      const userIds = [...new Set(assignedSlots.map((slot) => slot.assignment!.userId))];
+      const userIds = unique(assignedSlots.map((slot) => slot.assignment!.userId));
       const users = userIds.length > 0
         ? await tx.user.findMany({
           where: { id: { in: userIds } },
@@ -941,7 +942,7 @@ export async function changeWorkingScheduleHistory(
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
 
-export type WorkingScheduleRebaseSummary = {
+type WorkingScheduleRebaseSummary = {
   adoptedSlots: number;
   droppedSlots: number;
   /** Staged slots removed because an adopted live slot already holds that person. */

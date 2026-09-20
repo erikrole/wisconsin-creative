@@ -5,7 +5,7 @@ import { deferPush, sendPushToUser } from "@/lib/services/notifications";
 import { validateFirmwareSourceUrl } from "@/lib/firmware-watch-targets";
 import { visibleActiveUserWhere } from "@/lib/user-visibility";
 
-export type FirmwareRelease = {
+type FirmwareRelease = {
   version: string;
   releaseDate: Date | null;
 };
@@ -30,16 +30,27 @@ type FirmwareFetch = (
   init?: RequestInit & { timeoutMs?: number },
 ) => Promise<Response>;
 
-export type FirmwareWatchResult = {
+type FirmwareWatchResult = {
   checked: number;
   changed: number;
   baselined: number;
   failed: number;
+  /** Targets left untouched because the wall-clock deadline was reached. */
+  skipped: number;
   notificationsCreated: number;
   errors: Array<{ targetId: string; product: string; error: string }>;
 };
 
-export function parseFirmwareRelease(
+/**
+ * Each target costs one external fetch with an 8s timeout. Serially that is up
+ * to 100 x 8s, well past any function budget, so targets run in waves and the
+ * poll stops cleanly at a wall-clock deadline instead of being killed.
+ * Mirrors the CONCURRENCY/DEADLINE_MS pattern in the rehost-images cron.
+ */
+const CONCURRENCY = 5;
+const DEADLINE_MS = 30_000;
+
+function parseFirmwareRelease(
   sourceType: FirmwareSourceType,
   html: string,
 ): FirmwareRelease {
@@ -105,11 +116,24 @@ export async function pollFirmwareWatchTargets(args: {
     changed: 0,
     baselined: 0,
     failed: 0,
+    skipped: 0,
     notificationsCreated: 0,
     errors: [],
   };
 
-  for (const target of targets) {
+  const start = Date.now();
+  for (let i = 0; i < targets.length; i += CONCURRENCY) {
+    if (Date.now() - start > DEADLINE_MS) {
+      result.skipped = targets.length - i;
+      result.checked = i;
+      break;
+    }
+    await Promise.all(targets.slice(i, i + CONCURRENCY).map((target) => checkTarget(target)));
+  }
+
+  return result;
+
+  async function checkTarget(target: FirmwareWatchTargetRow) {
     try {
       validateFirmwareSourceUrl(target.sourceType, target.sourceUrl);
       const release = await fetchFirmwareRelease(target, fetcher);
@@ -130,7 +154,7 @@ export async function pollFirmwareWatchTargets(args: {
 
       if (!wasBaselined) {
         result.baselined += 1;
-        continue;
+        return;
       }
 
       if (changed) {
@@ -154,8 +178,6 @@ export async function pollFirmwareWatchTargets(args: {
       });
     }
   }
-
-  return result;
 }
 
 async function fetchFirmwareRelease(

@@ -1,9 +1,9 @@
-export type SportCallTimeDefaults = {
+type SportCallTimeDefaults = {
   shiftStartOffset: number;
   shiftEndOffset: number;
 };
 
-export type CalendarEventTiming = {
+type CalendarEventTiming = {
   startsAt: Date;
   endsAt: Date;
   allDay?: boolean | null;

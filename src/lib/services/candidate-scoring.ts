@@ -1,4 +1,4 @@
-import { Role, ShiftArea, ShiftAssignmentStatus, ShiftWorkerType, type Prisma } from "@prisma/client";
+import { Role, ShiftArea, ShiftAssignmentStatus, ShiftWorkerType } from "@prisma/client";
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
 import { ACTIVE_ASSIGNMENT_STATUSES, allowsOverlappingShifts } from "@/lib/shift-constants";
@@ -22,7 +22,7 @@ export type CandidateScoringShift = {
   sportCode?: string | null;
 };
 
-export type CandidateScoringAssignment = {
+type CandidateScoringAssignment = {
   id: string;
   status: ShiftAssignmentStatus;
   callStartsAt?: Date | null;
@@ -434,5 +434,3 @@ export async function loadCandidateScoringUsersForRange(args: {
 
   return candidates;
 }
-
-export type CandidateScoresQuery = Prisma.PromiseReturnType<typeof getCandidateScoresForShift>;

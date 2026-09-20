@@ -1,13 +1,13 @@
 import type { CandidateScoreBucket, CandidateScoreSignal } from "@/lib/candidate-scoring-types";
 
-export type ScheduleTemplateSlotCount = {
+type ScheduleTemplateSlotCount = {
   area: string;
   workerType: string;
   expected: number;
   current: number;
 };
 
-export type ScheduleTemplateMissingSlot = {
+type ScheduleTemplateMissingSlot = {
   area: string;
   workerType: string;
   count: number;
@@ -15,7 +15,7 @@ export type ScheduleTemplateMissingSlot = {
   endsAt: string;
 };
 
-export type ScheduleTemplateExtraSlot = {
+type ScheduleTemplateExtraSlot = {
   area: string;
   workerType: string;
   count: number;

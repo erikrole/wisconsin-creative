@@ -52,7 +52,7 @@ export type CompanionProjection = {
   }>;
 };
 
-export type CompanionProjectionResponse = Omit<CompanionProjection, "kioskDevices"> & {
+type CompanionProjectionResponse = Omit<CompanionProjection, "kioskDevices"> & {
   kioskDevices: CompanionProjection["kioskDevices"];
   kioskAccess: "available" | "restricted";
 };

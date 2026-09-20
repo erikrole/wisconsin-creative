@@ -10,6 +10,8 @@ import { startOfDayInAppTz } from "@/lib/app-time";
 import { displayBookingTitle } from "@/lib/booking-display-title";
 import { hasCollaboratorCapability } from "@/lib/collaborator-access";
 import { studentCallTimeAppliesToEvent } from "@/lib/shift-call-windows";
+import { gearStatusForBooking, gearStatusPriority } from "@/lib/booking-status-display";
+import { unique } from "@/lib/utils";
 
 const DASHBOARD_LIMIT = { max: 30, windowMs: 60_000 };
 
@@ -102,28 +104,6 @@ function bookingEventIds(c: {
   const shiftEventId = c.shiftAssignment?.shift.shiftGroup.eventId;
   if (shiftEventId) ids.add(shiftEventId);
   return [...ids];
-}
-
-function gearStatusForBooking(status: string) {
-  if (status === "OPEN") return "checked_out";
-  if (status === "PENDING_PICKUP") return "pickup_ready";
-  if (status === "BOOKED") return "reserved";
-  return "draft";
-}
-
-function gearStatusPriority(status: string) {
-  switch (status) {
-    case "pickup_ready":
-      return 4;
-    case "checked_out":
-      return 3;
-    case "reserved":
-      return 2;
-    case "draft":
-      return 1;
-    default:
-      return 0;
-  }
 }
 
 export const GET = withAuth(async (req, { user }) => {
@@ -508,7 +488,7 @@ export const GET = withAuth(async (req, { user }) => {
     _count: { id: number };
   }>, "lostBulkUnits", partialFailures);
 
-  const shiftEventIds = [...new Set(myShiftsRaw.map((a) => a.shift.shiftGroup.event.id))];
+  const shiftEventIds = unique(myShiftsRaw.map((a) => a.shift.shiftGroup.event.id));
   const lostSkuIds = lostBulkUnitsRaw.map((r) => r.bulkSkuId);
 
   // Run the two post-parallel dependent queries concurrently

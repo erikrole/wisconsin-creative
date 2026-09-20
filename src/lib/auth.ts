@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import { cache } from "react";
 import { after } from "next/server";
 import { cookies } from "next/headers";
 import { Role, ShiftWorkerType } from "@prisma/client";
@@ -146,7 +147,14 @@ export async function destroySession() {
   await clearRolePreviewCookie();
 }
 
-export async function requireAuth(): Promise<AuthUser> {
+/**
+ * Resolve the signed-in user for this request. Wrapped in React `cache` so the
+ * app layout and the page it renders share one session lookup per request
+ * instead of each hitting the database; outside a server render it is a plain call.
+ */
+export const requireAuth = cache(loadAuthenticatedUser);
+
+async function loadAuthenticatedUser(): Promise<AuthUser> {
   const cookieStore = await cookies();
   const token = cookieStore.get(env.sessionCookieName)?.value;
 

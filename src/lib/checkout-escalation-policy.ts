@@ -14,7 +14,7 @@ export type CheckoutEscalationConfig = {
   maxOperationalNotificationsPerDueDate: number;
 };
 
-export const DEFAULT_CHECKOUT_ESCALATION_CONFIG: CheckoutEscalationConfig = {
+const DEFAULT_CHECKOUT_ESCALATION_CONFIG: CheckoutEscalationConfig = {
   maxRequesterNotificationsPerDueDate: 5,
   maxOperationalNotificationsPerDueDate: 20,
 };
@@ -35,7 +35,7 @@ export function normalizeCheckoutEscalationConfig(raw: unknown): CheckoutEscalat
   };
 }
 
-export type CheckoutEscalationRuleLike = {
+type CheckoutEscalationRuleLike = {
   hoursFromDue: number;
   type: string;
   enabled?: boolean;

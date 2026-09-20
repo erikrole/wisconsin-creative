@@ -1,10 +1,10 @@
 import type { AdminFixTodayQueue, AdminFixTodaySeverity } from "@/lib/admin-fix-today";
 
-export type OpsCheckLane = "operations" | "hygiene";
+type OpsCheckLane = "operations" | "hygiene";
 
 export type OpsCheckSeverity = AdminFixTodaySeverity;
 
-export type OpsCheckSample = {
+type OpsCheckSample = {
   id: string;
   label: string;
   detail: string;
@@ -23,7 +23,7 @@ export type OpsCheck = {
   samples: OpsCheckSample[];
 };
 
-export type OpsCheckTotals = {
+type OpsCheckTotals = {
   openItems: number;
   activeChecks: number;
   checksNeedingWork: number;
@@ -32,7 +32,7 @@ export type OpsCheckTotals = {
 
 // Wire shape of /api/inventory-hygiene. The hygiene route only ships key/title/
 // description/count/samples; severity and repair routing live in HYGIENE_CHECK_META.
-export type HygieneIssuePayload = {
+type HygieneIssuePayload = {
   key: string;
   title: string;
   description: string;
@@ -60,9 +60,9 @@ type HygieneCheckMeta = {
 
 // The hygiene feed's low-bulk-stock check duplicates Fix Today's low-batteries
 // check and the Battery Ops cockpit itself; the merged queue keeps only one.
-export const DUPLICATE_HYGIENE_CHECK_KEYS = new Set(["low-bulk-stock"]);
+const DUPLICATE_HYGIENE_CHECK_KEYS = new Set(["low-bulk-stock"]);
 
-export const HYGIENE_CHECK_META: Record<string, HygieneCheckMeta> = {
+const HYGIENE_CHECK_META: Record<string, HygieneCheckMeta> = {
   "duplicate-scan-identity": {
     severity: "critical",
     priority: 1,

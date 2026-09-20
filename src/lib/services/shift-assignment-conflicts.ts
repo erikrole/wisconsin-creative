@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
 
-export type ShiftAssignmentConflictRefresh = {
+type ShiftAssignmentConflictRefresh = {
   id: string;
   hasConflict: boolean;
   conflictNote: string | null;

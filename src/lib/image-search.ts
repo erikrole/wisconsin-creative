@@ -1,8 +1,9 @@
 import { Redis } from "@upstash/redis";
+import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
 import { BH_HERO_IMAGE_SIZE, isBlockedBhImageUrl, toBhStaticImageUrl } from "@/lib/bhphoto-image";
 import { env } from "@/lib/env";
 
-export type ImageSearchProvider = "brave" | "none";
+type ImageSearchProvider = "brave" | "none";
 
 export type ImageSearchResult = {
   id: string;
@@ -15,7 +16,7 @@ export type ImageSearchResult = {
   height: number | null;
 };
 
-export type ImageSearchOutcome =
+type ImageSearchOutcome =
   | { status: "ok"; provider: "brave"; results: ImageSearchResult[] }
   | { status: "unconfigured"; provider: "none"; results: [] }
   | { status: "quota"; provider: "brave"; results: [] }
@@ -198,7 +199,7 @@ async function searchBrave(query: string): Promise<ImageSearchOutcome> {
   url.searchParams.set("spellcheck", "1");
 
   try {
-    const res = await fetch(url, {
+    const res = await fetchWithTimeout(url, {
       headers: {
         Accept: "application/json",
         "Accept-Encoding": "gzip",

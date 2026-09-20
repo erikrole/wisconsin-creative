@@ -26,7 +26,7 @@ export const RESOURCE_TYPE_DESCRIPTIONS: Record<ResourceType, string> = {
   GENERAL: "Focused guide material that does not fit a narrower type.",
 };
 
-export const RESOURCE_TYPE_CATEGORY_DEFAULTS: Record<ResourceType, string> = {
+const RESOURCE_TYPE_CATEGORY_DEFAULTS: Record<ResourceType, string> = {
   CONTACTS: "Contacts",
   BUILDING_NUMBERS: "Building Numbers",
   MEDIA_DRIVE: "Media Drive",
@@ -52,7 +52,7 @@ export const RESOURCE_TYPE_OPTIONS = [
   ResourceType.GENERAL,
 ] as const;
 
-export const KNOWLEDGE_BASE_CATEGORY_SUGGESTIONS = [
+const KNOWLEDGE_BASE_CATEGORY_SUGGESTIONS = [
   "Contacts",
   "Building Numbers",
   "Media Drive",

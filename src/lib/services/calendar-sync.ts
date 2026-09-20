@@ -20,10 +20,10 @@ export { extractSportInfo, isHomeLocationText };
 export const WRITE_CHUNK_SIZE = 500;
 
 /** Abort a source fetch that hangs — morning-refresh has more work to do. */
-export const ICS_FETCH_TIMEOUT_MS = 20_000;
+const ICS_FETCH_TIMEOUT_MS = 20_000;
 
 /** Reject absurdly large feed responses before buffering them. */
-export const ICS_MAX_RESPONSE_BYTES = 10 * 1024 * 1024;
+const ICS_MAX_RESPONSE_BYTES = 10 * 1024 * 1024;
 
 /**
  * Unescape ICS text values per RFC 5545 §3.3.11.
@@ -208,7 +208,7 @@ export type SyncEventError = {
   reason: string;
 };
 
-export type SyncEventSample = {
+type SyncEventSample = {
   uid: string;
   summary: string;
   dtstart: string;
@@ -750,19 +750,4 @@ export async function syncCalendarSource(sourceId: string): Promise<SyncResult> 
   }
 
   return { added, updated, cancelled, skipped, errors, diagnostics };
-}
-
-/**
- * Sync all enabled calendar sources.
- */
-export async function syncAllCalendarSources() {
-  const sources = await db.calendarSource.findMany({ where: { enabled: true } });
-  const results: Array<{ sourceId: string; name: string } & SyncResult> = [];
-
-  for (const source of sources) {
-    const result = await syncCalendarSource(source.id);
-    results.push({ sourceId: source.id, name: source.name, ...result });
-  }
-
-  return results;
 }

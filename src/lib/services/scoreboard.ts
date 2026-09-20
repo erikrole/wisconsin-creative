@@ -13,8 +13,10 @@ import {
   type WorkedEventBounds,
 } from "@/lib/services/game-record";
 import type { CalendarEventResult, CalendarEventSite, Prisma } from "@prisma/client";
+import { siteLabel, trimmedOrNull, winRate } from "@/lib/scoreboard-display";
+import { unique } from "@/lib/utils";
 
-export const SCOREBOARD_SEASON_KEY = "2026-27";
+const SCOREBOARD_SEASON_KEY = "2026-27";
 export const SCOREBOARD_SCOPE = {
   key: SCOREBOARD_SEASON_KEY,
   label: "Current season",
@@ -24,9 +26,9 @@ export const SCOREBOARD_SCOPE = {
 } as const;
 
 export type ScoreboardResult = Extract<CalendarEventResult, "WIN" | "LOSS" | "TIE">;
-export type ScoreboardSite = CalendarEventSite | null;
+type ScoreboardSite = CalendarEventSite | null;
 
-export type ScoreboardFilters = {
+type ScoreboardFilters = {
   sportCode?: string;
   result?: ScoreboardResult;
   site?: CalendarEventSite;
@@ -86,38 +88,15 @@ export type ScoreboardPage = {
   limit: number;
 };
 
-const SITE_LABELS: Record<Exclude<CalendarEventSite, never>, string> = {
-  HOME: "Home",
-  AWAY: "Away",
-  NEUTRAL: "Neutral",
-};
-
 const SITE_ORDER: Array<CalendarEventSite | null> = ["HOME", "AWAY", "NEUTRAL", null];
 const SHIFT_AREA_ORDER = new Map<string, number>(AREAS.map((area, index) => [area, index]));
 
-function trimmedOrNull(value: string | null): string | null {
-  const trimmed = value?.trim() ?? "";
-  return trimmed || null;
-}
-
 function orderedUniqueShiftAreas(areas: string[]): string[] {
-  return [...new Set(areas)].sort((a, b) => {
+  return unique(areas).sort((a, b) => {
     const orderDelta = (SHIFT_AREA_ORDER.get(a) ?? Number.MAX_SAFE_INTEGER)
       - (SHIFT_AREA_ORDER.get(b) ?? Number.MAX_SAFE_INTEGER);
     return orderDelta || a.localeCompare(b);
   });
-}
-
-function siteLabel(site: CalendarEventSite | null): string {
-  return site ? SITE_LABELS[site] : "Unknown site";
-}
-
-function winRate(wins: number, losses: number, ties: number): number | null {
-  const games = wins + losses + ties;
-  if (games === 0) return null;
-  // A tie counts as half a win, matching the conventional winning percentage
-  // while keeping the displayed record itself as W-L-T when ties exist.
-  return Math.round(((wins + ties / 2) / games) * 1000) / 10;
 }
 
 function bucketLabel(dimension: "sport" | "opponent" | "site" | "venue", key: string | null): string {

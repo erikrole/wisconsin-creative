@@ -13,7 +13,7 @@ import { Prisma } from "@prisma/client";
  *
  * Format: `${kind}-${4-digit zero-padded sequence}` (e.g. `CO-0042`).
  */
-export type BookingRefKind = "CO" | "RV";
+type BookingRefKind = "CO" | "RV";
 
 export async function nextBookingRef(
   tx: Prisma.TransactionClient,

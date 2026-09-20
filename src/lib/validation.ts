@@ -41,7 +41,7 @@ export const moneyDecimalSchema = z.number()
     message: "Enter a value with no more than two decimal places",
   });
 
-export function normalizeHttpUrl(value: string): string {
+function normalizeHttpUrl(value: string): string {
   const trimmed = value.trim();
   const withScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
   let parsed: URL;
@@ -215,11 +215,6 @@ export const createCheckoutSchema = z.object({
 })
   .refine(eventIdsExclusive, eventIdsExclusiveMsg)
   .refine(hasSelectedEquipmentOrSourceReservation, equipmentRequiredMsg);
-
-export const startScanSessionSchema = z.object({
-  phase: z.enum(["CHECKOUT", "CHECKIN"]),
-  deviceContext: z.string().max(500).optional()
-});
 
 export const scanSchema = z.object({
   phase: z.enum(["CHECKOUT", "CHECKIN"]),
@@ -407,8 +402,6 @@ export const resetPasswordAccountSchema = z.object({
   token: z.string().min(1)
 });
 
-export const roleSchema = z.nativeEnum(Role);
-
 export const slackHandleSchema = z.string()
   .trim()
   .max(80)
@@ -551,7 +544,7 @@ export const updateBookingEventsSchema = z.object({
   eventIds: eventIdsListSchema,
 });
 
-export const sportShiftConfigSchema = z.object({
+const sportShiftConfigSchema = z.object({
   area: z.nativeEnum(ShiftArea),
   homeCount: z.number().int().min(0).max(20).optional(),
   awayCount: z.number().int().min(0).max(20).optional(),
@@ -646,32 +639,8 @@ export const createShiftSchema = z.object({
   notes: z.string().max(5000).optional(),
 });
 
-export const updateShiftSchema = z.object({
-  startsAt: z.string().optional(),
-  endsAt: z.string().optional(),
-  callStartsAt: z.string().optional().nullable(),
-  callEndsAt: z.string().optional().nullable(),
-  notes: z.string().max(5000).optional(),
-});
-
 export const updateShiftGroupSchema = z.object({
   notes: z.string().max(5000).optional(),
-});
-
-export const assignShiftSchema = z.object({
-  shiftId: z.string().cuid(),
-  userId: z.string().cuid(),
-  callStartsAt: z.string().optional().nullable(),
-  callEndsAt: z.string().optional().nullable(),
-  callNote: z.string().max(500).optional().nullable(),
-  notes: z.string().max(5000).optional(),
-});
-
-export const updateShiftAssignmentSchema = z.object({
-  callStartsAt: z.string().optional().nullable(),
-  callEndsAt: z.string().optional().nullable(),
-  callNote: z.string().max(500).optional().nullable(),
-  notes: z.string().max(5000).optional().nullable(),
 });
 
 export const requestShiftSchema = z.object({
@@ -692,11 +661,6 @@ export const studentAreaSchema = z.object({
   userId: z.string().cuid(),
   area: z.nativeEnum(ShiftArea),
   isPrimary: z.boolean().default(false),
-});
-
-export const updateUserSchedulingSchema = z.object({
-  phone: z.string().max(20).optional().nullable(),
-  primaryArea: z.nativeEnum(ShiftArea).optional().nullable(),
 });
 
 const internalAllowedEmailSchema = z.object({
@@ -835,9 +799,9 @@ export const resourceImportRequestSchema = z.object({
 // ── Blasts ──────────────────────────────────────────────
 
 /** One blast may not name more people than a sender could plausibly have picked. */
-export const MAX_BLAST_TARGET_USERS = 200;
+const MAX_BLAST_TARGET_USERS = 200;
 
-export const blastTargetSchema = z.discriminatedUnion("kind", [
+const blastTargetSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("EVENT_CREW"),
     eventId: databaseIdSchema,

@@ -12,10 +12,6 @@ function resourceAssetBlobAuth(): ResourceAssetBlobAuth {
   return { token };
 }
 
-export function isResourceAssetStorageConfigured(): boolean {
-  return Boolean(env.resourceAssetBlobReadWriteToken);
-}
-
 export function assertResourceAssetStorageConfigured(): string {
   return resourceAssetBlobAuth().token;
 }

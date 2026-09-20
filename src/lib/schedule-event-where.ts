@@ -1,7 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { startOfTodayInAppTz } from "@/lib/app-time";
 
-export type ScheduleEventWhereInput = {
+type ScheduleEventWhereInput = {
   parsedStartDate?: Date | null;
   parsedEndDate?: Date | null;
   includePast: boolean;

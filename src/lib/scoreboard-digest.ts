@@ -1,7 +1,7 @@
 import { calendarDate } from "@/lib/format";
 import type { ScoreboardBucket, ScoreboardEvent, UserScoreboard } from "@/lib/services/scoreboard";
 
-export type ScoreboardMonth = { key: string; label: string; games: ScoreboardEvent[] };
+type ScoreboardMonth = { key: string; label: string; games: ScoreboardEvent[] };
 export type ScoreboardStreak = {
   count: number;
   result: ScoreboardEvent["result"];

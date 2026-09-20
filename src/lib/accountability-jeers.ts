@@ -6,7 +6,7 @@ type AccountabilityJeerPerson = {
   lastIncidentAt: string;
 };
 
-export const ACCOUNTABILITY_JEERS = [
+const ACCOUNTABILITY_JEERS = [
   "Punctuality called about checkout; the clock sent it to voicemail.",
   "Checkout-to-return keeps follow-through on a long commute.",
   "Your due-date diplomacy deserves a tiny summit.",
@@ -61,7 +61,7 @@ export const ACCOUNTABILITY_JEERS = [
 
 const JEER_DECK_VERSION = "accountability-jeers:v1";
 
-export function accountabilityLeaderboardFingerprint(
+function accountabilityLeaderboardFingerprint(
   leaderboard: ReadonlyArray<AccountabilityJeerPerson>,
 ) {
   return JSON.stringify(

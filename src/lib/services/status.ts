@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
  * real-time allocation data. CHECKED_OUT, PENDING_PICKUP, and RESERVED are never stored
  * on the Asset row — they're derived from active bookings.
  */
-export type EffectiveStatus =
+type EffectiveStatus =
   | "AVAILABLE"
   | "CHECKED_OUT"
   | "PENDING_PICKUP"

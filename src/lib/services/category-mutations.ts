@@ -5,7 +5,7 @@ import { isSerializationConflict } from "@/lib/serialization";
 const MAX_CATEGORY_TREE_DEPTH = 25;
 const CATEGORY_MUTATION_ATTEMPTS = 2;
 
-export type CategoryGraphNode = {
+type CategoryGraphNode = {
   id: string;
   name: string;
   parentId: string | null;

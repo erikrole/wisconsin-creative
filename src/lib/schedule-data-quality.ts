@@ -1,4 +1,5 @@
-export type ScheduleDataQualityEvent = {
+import { unique } from "@/lib/utils";
+type ScheduleDataQualityEvent = {
   id: string;
   startsAt: Date | string;
   endsAt: Date | string;
@@ -21,7 +22,7 @@ export type ScheduleDataQualityEvent = {
   archivedAt?: Date | string | null;
 };
 
-export type ScheduleDataQualityReason =
+type ScheduleDataQualityReason =
   | "missing_sport"
   | "missing_opponent"
   | "missing_venue"
@@ -37,7 +38,7 @@ export type ScheduleDataQualityIssue = {
   assignmentId?: string;
 };
 
-export type ScheduleDataQualitySummary = {
+type ScheduleDataQualitySummary = {
   count: number;
   eventCount: number;
   eventIds: string[];
@@ -117,7 +118,7 @@ export function summarizeScheduleDataQuality(
   now = new Date(),
 ): ScheduleDataQualitySummary {
   const issues = events.flatMap((event) => getScheduleDataQuality(event, now));
-  const eventIds = [...new Set(issues.map((issue) => issue.eventId))];
+  const eventIds = unique(issues.map((issue) => issue.eventId));
   return {
     count: issues.length,
     eventCount: eventIds.length,

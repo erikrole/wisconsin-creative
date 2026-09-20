@@ -5,8 +5,8 @@ import { postTradeSchema } from "@/lib/validation";
 import { listTrades, postTrade } from "@/lib/services/shift-trades";
 import { createAuditEntry } from "@/lib/audit";
 import type { ShiftTradeStatus } from "@prisma/client";
-import { AREAS, type Area } from "@/types/areas";
 import { enforceRateLimit, SCHEDULE_MUTATION_LIMIT } from "@/lib/rate-limit";
+import { parseAreaFilter } from "@/lib/services/schedule-open-work";
 
 const TRADE_STATUS_FILTERS = ["OPEN", "CLAIMED", "COMPLETED", "CANCELLED"] as const;
 
@@ -16,14 +16,6 @@ function parseStatusFilter(value: string | null): ShiftTradeStatus | undefined {
     throw new HttpError(400, "status must be OPEN, CLAIMED, COMPLETED, or CANCELLED");
   }
   return value as ShiftTradeStatus;
-}
-
-function parseAreaFilter(value: string | null): Area | undefined {
-  if (!value) return undefined;
-  if (!(AREAS as readonly string[]).includes(value)) {
-    throw new HttpError(400, "area must be VIDEO, PHOTO, GRAPHICS, SOCIAL, COMMS, or LIVE_PRODUCTION");
-  }
-  return value as Area;
 }
 
 export const GET = withAuth(async (req, { user }) => {

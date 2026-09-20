@@ -17,6 +17,7 @@ import { canViewHiddenUsers } from "@/lib/user-visibility";
 import { buildUserDirectoryQuery, type UserDirectoryFilters } from "@/lib/user-directory-query";
 import { MAX_BULK_BADGE_TARGETS } from "@/lib/request-limits";
 import { optionalSportCodeSchema } from "@/lib/validation";
+import { unique } from "@/lib/utils";
 
 const customBadgeDefinitionSchema = z.object({
   name: z.string().trim().min(2).max(80),
@@ -77,7 +78,7 @@ export const POST = withAuth(async (req, { user }) => {
   }
 
   const body = bulkAwardSchema.parse(await req.json());
-  const explicitUserIds = body.userIds ? Array.from(new Set(body.userIds)) : null;
+  const explicitUserIds = body.userIds ? unique(body.userIds) : null;
   const selectionFilters: UserDirectoryFilters = explicitUserIds ? {} : body.filters;
   const includeHidden = selectionFilters.includeHidden && canViewHiddenUsers(user);
   const { where } = buildUserDirectoryQuery(user, {

@@ -9,7 +9,11 @@ import { buildDerivedStatusWhere, enrichAssetsWithStatusFromLoaded } from "@/lib
 import { buildActiveBulkUnitAllocationMap } from "@/lib/bulk-unit-status";
 import { summarizeItemFamilyState } from "@/lib/item-family-state";
 import { parseDerivedBulkUnitQr } from "@/lib/bulk-unit-qr";
-import { compareItemAssetTags, getAssetTagSearchAliases } from "@/lib/item-asset-tag-sort";
+import {
+  buildAssetTagSortFields,
+  compareItemAssetTags,
+  getAssetTagSearchAliases,
+} from "@/lib/item-asset-tag-sort";
 import { databaseIdSchema, moneyDecimalSchema, nullableHttpUrlSchema } from "@/lib/validation";
 import { AssetStatus, BookingKind, BookingStatus, Prisma } from "@prisma/client";
 import {
@@ -102,25 +106,42 @@ type BulkListItem = {
   isFavorited?: boolean;
 };
 
+/**
+ * Popularity ranking is derived from scan/booking history in Node, so those
+ * branches still have to materialize their candidate set. Cap that scan so a
+ * growing catalog cannot blow the serverless memory/timeout budget. The default
+ * asset-tag sort no longer loads anything beyond the requested page.
+ */
+const POPULARITY_SORT_SCAN_LIMIT = 5000;
+
+/** Prisma orderBy for the operational asset-tag sort, paginated in Postgres. */
+function operationalAssetTagOrderBy(descending: boolean): Prisma.AssetOrderByWithRelationInput[] {
+  const direction = descending ? ("desc" as const) : ("asc" as const);
+  return [{ assetTagSortKey: direction }, { assetTag: direction }];
+}
+
+/**
+ * Default Items sort. `assetTagSortKey` is a persisted flattening of
+ * `compareItemAssetTags` (see src/lib/item-asset-tag-sort.ts and migration
+ * 0151_asset_tag_sort_key), so Postgres can apply take/skip against an index
+ * instead of loading every matching asset and sorting it in Node.
+ */
 async function loadOperationallySortedAssets(
   where: Prisma.AssetWhereInput,
   descending: boolean,
   offset: number,
   limit: number
 ): Promise<[AssetListRow[], number]> {
-  const [rows, total] = await Promise.all([
+  return Promise.all([
     db.asset.findMany({
       where,
       include: assetInclude,
-      orderBy: { assetTag: "asc" },
+      orderBy: operationalAssetTagOrderBy(descending),
+      take: limit,
+      skip: offset,
     }),
     db.asset.count({ where }),
   ]);
-
-  rows.sort((a, b) => compareItemAssetTags(a.assetTag, b.assetTag));
-  if (descending) rows.reverse();
-
-  return [rows.slice(offset, offset + limit), total];
 }
 
 function readItemKindFilter(value: string | null): ItemKindFilter {
@@ -764,12 +785,25 @@ export const GET = withAuth(async (req, { user }) => {
   const shouldUseUnifiedAssetTagPagination = (shouldUseOperationalAssetTagSort || shouldUsePopularitySort) && bulkWhere !== null;
 
   if (shouldUseUnifiedAssetTagPagination) {
+    // Assets and bulk SKUs live in different tables and are interleaved by
+    // asset tag / SKU name, so the merged page cannot be produced by one SQL
+    // ORDER BY. For the asset-tag sort we can still bound the asset side: a row
+    // outside the first `offset + limit` assets in sort order can never land
+    // inside the first `offset + limit` rows of the merged order, so the slice
+    // below is exact. Popularity ranking is computed in Node and therefore
+    // still needs a scan, now capped at POPULARITY_SORT_SCAN_LIMIT.
+    const unifiedAssetTake = shouldUsePopularitySort
+      ? POPULARITY_SORT_SCAN_LIMIT
+      : offset + limit;
     const [allAssets, assetTotal, bulkSkus] = await Promise.all([
       includeSerializedRows
         ? db.asset.findMany({
             where,
             include: assetInclude,
-            orderBy: { assetTag: "asc" },
+            orderBy: shouldUsePopularitySort
+              ? { assetTag: "asc" }
+              : operationalAssetTagOrderBy(sortKey === "-assetTag"),
+            take: unifiedAssetTake,
           })
         : Promise.resolve([]),
       includeSerializedRows ? db.asset.count({ where }) : Promise.resolve(0),
@@ -818,11 +852,14 @@ export const GET = withAuth(async (req, { user }) => {
   } else {
     if (includeSerializedRows) {
       if (shouldUsePopularitySort) {
+        // Popularity is scored in Node from scan/booking history, so this
+        // branch still materializes candidates; the scan is capped.
         const [allAssets, assetTotal] = await Promise.all([
           db.asset.findMany({
             where,
             include: assetInclude,
             orderBy: { assetTag: "asc" },
+            take: POPULARITY_SORT_SCAN_LIMIT,
           }),
           db.asset.count({ where }),
         ]);
@@ -1156,7 +1193,7 @@ export const POST = withAuth(async (req, { user }) => {
   try {
     asset = await db.asset.create({
       data: {
-        assetTag: body.assetTag,
+        ...buildAssetTagSortFields(body.assetTag),
         name: body.name ?? null,
         type: body.type,
         brand: body.brand,

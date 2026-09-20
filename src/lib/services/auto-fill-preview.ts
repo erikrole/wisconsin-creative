@@ -20,6 +20,7 @@ import { loadSportAutoAssignPolicies, loadTravelRosterCounts } from "@/lib/servi
 import { ACTIVE_ASSIGNMENT_STATUSES } from "@/lib/shift-constants";
 import { shiftWorkerLabel, shiftWorkerTypeForProfile } from "@/lib/shift-display";
 import { visibleActiveUserWhere } from "@/lib/user-visibility";
+import { pluralWord } from "@/lib/format";
 
 type PreviewShift = {
   id: string;
@@ -76,10 +77,6 @@ function formatAreaLabel(area: string) {
   return area.charAt(0) + area.slice(1).toLowerCase();
 }
 
-function plural(count: number, singular: string, pluralValue = `${singular}s`) {
-  return count === 1 ? singular : pluralValue;
-}
-
 function buildSkippedSlot(shift: PreviewShift, scores: CandidateRecommendation[], usersById: Map<string, PreviewUser>, usedUserIds: Set<string>, eventSportCode: string | null): AutoFillPreviewSkippedSlot {
   const visibleScores = scores.filter((score) => usersById.has(score.userId));
   const rosterScores = visibleScores.filter((score) => isSportRosterEligible(score, eventSportCode));
@@ -120,7 +117,7 @@ function buildSkippedSlot(shift: PreviewShift, scores: CandidateRecommendation[]
   }
 
   const reasonDetails = [
-    `${visibleScores.length} active ${plural(visibleScores.length, "candidate")} considered.`,
+    `${visibleScores.length} active ${pluralWord(visibleScores.length, "candidate")} considered.`,
     eventSportCode && visibleScores.length > rosterScores.length
       ? `${visibleScores.length - rosterScores.length} are not on the ${eventSportCode} roster.`
       : null,
@@ -128,7 +125,7 @@ function buildSkippedSlot(shift: PreviewShift, scores: CandidateRecommendation[]
       ? `${rosterScores.length - schedulingClassScores.length} did not match the ${workerLabelLower} scheduling class.`
       : null,
     schedulingClassScores.length > areaFitScores.length
-      ? `${schedulingClassScores.length - areaFitScores.length} ${workerLabelLower} ${plural(schedulingClassScores.length - areaFitScores.length, "candidate")} lacked ${areaLabel} area fit.`
+      ? `${schedulingClassScores.length - areaFitScores.length} ${workerLabelLower} ${pluralWord(schedulingClassScores.length - areaFitScores.length, "candidate")} lacked ${areaLabel} area fit.`
       : null,
     approvedTimeOffBlockCount > 0
       ? `${approvedTimeOffBlockCount} blocked by approved time off.`

@@ -8,6 +8,7 @@ import { requirePermission } from "@/lib/rbac";
 import { enforceRateLimit, REPORT_EXPORT_LIMIT } from "@/lib/rate-limit";
 import {
   getAccountabilityReport,
+  getCachedAccountabilityReport,
   getCurrentAcademicYearStart,
   type AccountabilityIncidentState,
   type AccountabilitySort,
@@ -88,17 +89,19 @@ export const GET = withAuth(async (req, { user }) => {
 
   if (wantsCsv) {
     requirePermission(user.role, "accountability", "manage_exclusions");
+    await enforceRateLimit(`report:export:${user.id}`, REPORT_EXPORT_LIMIT);
   }
 
-  const report = await getAccountabilityReport(parseFilters(searchParams));
+  const report = await getCachedAccountabilityReport(parseFilters(searchParams));
 
   if (wantsCsv) {
-    await enforceRateLimit(`report:export:${user.id}`, REPORT_EXPORT_LIMIT);
     return new NextResponse(`${toCsv(report)}\n`, {
       headers: {
         "Cache-Control": "private, no-store",
         "Content-Type": "text/csv; charset=utf-8",
         "Content-Disposition": `attachment; filename="accountability-${report.academicYear?.label ?? "all-time"}.csv"`,
+        "X-Exported-Count": String(report.leaderboard.length),
+        "X-Total-Count": String(report.leaderboard.length),
       },
     });
   }

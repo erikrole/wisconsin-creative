@@ -37,16 +37,16 @@ export const ACADEMIC_TERMS = [
   { id: "FALL", label: "Fall semester", startsOn: "08-20", endsOn: "12-20" },
 ] as const;
 
-export type AcademicTerm = (typeof ACADEMIC_TERMS)[number];
+type AcademicTerm = (typeof ACADEMIC_TERMS)[number];
 
 /**
  * The athletics season rolls over on July 1: a "full season" scope runs from
  * today through the next June 30, which is how coaches and staff talk about a
  * year of coverage.
  */
-export const SEASON_ROLLOVER_MONTH_DAY = "07-01";
+const SEASON_ROLLOVER_MONTH_DAY = "07-01";
 
-export type AssignmentWindow = {
+type AssignmentWindow = {
   period: AssignmentPeriodValue;
   /** Inclusive lower bound: midnight of today in the app timezone. */
   rangeStartsAt: string;
@@ -60,17 +60,13 @@ export type AssignmentWindow = {
 
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-export const ASSIGNMENT_PERIOD_LABELS: Record<AssignmentPeriodValue, string> = {
+const ASSIGNMENT_PERIOD_LABELS: Record<AssignmentPeriodValue, string> = {
   week: "This week",
   month: "This month",
   semester: "This semester",
   season: "Full season",
   custom: "Custom range",
 };
-
-export function isAssignmentPeriod(value: string): value is AssignmentPeriod {
-  return (ASSIGNMENT_PERIODS as readonly string[]).includes(value);
-}
 
 function dayKey(year: number, monthDay: string) {
   return `${year}-${monthDay}`;
@@ -101,7 +97,7 @@ function compareMonthDay(key: string, monthDay: string) {
   return key.slice(5).localeCompare(monthDay);
 }
 
-export function formatWindowDate(key: string) {
+function formatWindowDate(key: string) {
   const { month, day } = parseDayKey(key);
   return `${MONTH_LABELS[month - 1] ?? month} ${day}`;
 }

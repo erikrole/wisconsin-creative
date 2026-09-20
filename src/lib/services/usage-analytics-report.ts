@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 
-export const USAGE_ANALYTICS_PERIODS = [7, 30, 90] as const;
+const USAGE_ANALYTICS_PERIODS = [7, 30, 90] as const;
 
 export function parseUsageAnalyticsPeriod(value: string | null | undefined): number {
   const parsed = Number.parseInt(value ?? "", 10);

@@ -1,7 +1,7 @@
 import type { CalendarEntry } from "@/app/(app)/schedule/_components/types";
 import type { ScheduleHealthSnapshot } from "@/lib/schedule-health-types";
 
-export const SCHEDULE_QUEUE_VALUES = [
+const SCHEDULE_QUEUE_VALUES = [
   "needs-staffing",
   "conflicts",
   "pending-requests",

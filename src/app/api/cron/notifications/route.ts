@@ -31,7 +31,14 @@ export const GET = withCron(async () => {
     return fallback;
   }
 
-  const overdue = valueOrFallback("overdue", overdueResult, { scanned: 0, notificationsCreated: 0 });
+  // `remaining` / `truncated` say how many open checkouts the sweep's 500-row cap
+  // left unscanned, so a backlog shows up in the cron response instead of vanishing.
+  const overdue = valueOrFallback("overdue", overdueResult, {
+    scanned: 0,
+    notificationsCreated: 0,
+    remaining: 0,
+    truncated: false,
+  });
   const licenseNags = valueOrFallback("licenseNags", licenseNagResult, { nagged: 0 });
   const licenseExpiry = valueOrFallback("licenseExpiry", expiryResult, { warned: 0 });
 

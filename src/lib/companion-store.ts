@@ -36,7 +36,7 @@ type CompanionDeviceRecord = CompanionSessionRecord & {
 
 let redis: Redis | null | undefined;
 
-export function getCompanionRedis(): Redis {
+function getCompanionRedis(): Redis {
   if (redis !== undefined) {
     if (!redis) throw new HttpError(503, "Companion updates are not configured.");
     return redis;
@@ -242,10 +242,6 @@ export async function registerCompanionDevice(
     [String(session.epoch), token, JSON.stringify(record)],
   );
   if (registered !== 1) throw new HttpError(401, "Companion credential expired.");
-}
-
-export async function unregisterCompanionDevice(token: string): Promise<void> {
-  await getCompanionRedis().hdel(DEVICE_HASH_KEY, token);
 }
 
 export async function listCompanionDevices(): Promise<CompanionDeviceRecord[]> {

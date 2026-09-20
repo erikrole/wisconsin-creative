@@ -18,7 +18,7 @@ export const RESERVATION_PICKUP_LOCATION_ERROR =
  * Pickup counters that share kit membership and kit calling.
  * Camp Randall and Camp Randall Stadium are the same gear room.
  */
-export const KIT_SHARED_PICKUP_LOCATION_GROUPS = [
+const KIT_SHARED_PICKUP_LOCATION_GROUPS = [
   ["Camp Randall", "Camp Randall Stadium"],
 ] as const;
 
@@ -26,7 +26,7 @@ function normalizeLocationName(name: string) {
   return name.trim().replace(/\s+/g, " ").toLowerCase();
 }
 
-export function kitPickupGroupKey(name: string) {
+function kitPickupGroupKey(name: string) {
   const normalized = normalizeLocationName(name);
   for (const group of KIT_SHARED_PICKUP_LOCATION_GROUPS) {
     if (group.some((alias) => normalizeLocationName(alias) === normalized)) {

@@ -1,6 +1,6 @@
 import { del, get, put, type GetBlobResult } from "@vercel/blob";
 
-export type SignatureArtifactKind = "png" | "svg";
+type SignatureArtifactKind = "png" | "svg";
 
 type SignatureBlobAuthOptions = Pick<Parameters<typeof put>[2], "token" | "oidcToken" | "storeId">;
 
@@ -20,10 +20,6 @@ export function isPrivateSignatureStorageConfigured(): boolean {
     process.env.SIGNATURE_BLOB_READ_WRITE_TOKEN ||
       (process.env.VERCEL_OIDC_TOKEN && process.env.SIGNATURE_BLOB_STORE_ID),
   );
-}
-
-export function assertPrivateSignatureStorageConfigured(): void {
-  privateSignatureBlobAuth();
 }
 
 export function buildSignatureArtifactPath(

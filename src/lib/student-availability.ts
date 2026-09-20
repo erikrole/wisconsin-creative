@@ -27,7 +27,7 @@ export type AvailabilityWindow = {
   endsAt: Date;
 };
 
-export type AvailabilityConflict = {
+type AvailabilityConflict = {
   block: AvailabilityBlockLike;
   note: string;
   intent: AvailabilityIntent;
@@ -35,7 +35,7 @@ export type AvailabilityConflict = {
   blocking: boolean;
 };
 
-export type AvailabilityPreferenceEvaluation = {
+type AvailabilityPreferenceEvaluation = {
   conflicts: AvailabilityConflict[];
   blocking: AvailabilityConflict | null;
   advisory: AvailabilityConflict | null;
@@ -90,7 +90,7 @@ export function dateOnly(value: Date | string | null | undefined): string | null
   return value.slice(0, 10);
 }
 
-export function timeOverlaps(startA: string, endA: string, startB: string, endB: string): boolean {
+function timeOverlaps(startA: string, endA: string, startB: string, endB: string): boolean {
   return startA < endB && endA > startB;
 }
 

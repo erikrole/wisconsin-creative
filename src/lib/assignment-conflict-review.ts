@@ -1,19 +1,19 @@
 export type ReviewFilter = "all" | "conflicts" | "open" | "clean";
 export type CandidateConflictFilter = "all" | "conflicts" | "clean";
 
-export type AssignmentConflictLike = {
+type AssignmentConflictLike = {
   hasConflict?: boolean | null;
 };
 
-export type ShiftConflictLike = {
+type ShiftConflictLike = {
   assignments: AssignmentConflictLike[];
 };
 
-export type EventConflictLike = {
+type EventConflictLike = {
   shifts: ShiftConflictLike[];
 };
 
-export type AssignmentReviewSummary = {
+type AssignmentReviewSummary = {
   events: number;
   totalSlots: number;
   assigned: number;
@@ -50,7 +50,7 @@ export function summarizeAssignmentReview(events: EventConflictLike[]): Assignme
   return summary;
 }
 
-export function eventMatchesAssignmentReviewFilter(
+function eventMatchesAssignmentReviewFilter(
   event: EventConflictLike,
   filter: ReviewFilter,
 ): boolean {

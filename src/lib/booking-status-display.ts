@@ -2,7 +2,7 @@ export type BookingDisplayKind = "CHECKOUT" | "RESERVATION";
 
 export type BookingStatusBadgeVariant = "gray" | "blue" | "green" | "purple" | "red" | "orange";
 
-export type BookingStatusDisplay = {
+type BookingStatusDisplay = {
   label: string;
   variant: BookingStatusBadgeVariant;
 };
@@ -45,9 +45,9 @@ export function bookingStatusLabel(status: string, kind?: BookingDisplayKind): s
     case "BOOKED":
       return "Reserved";
     case "PENDING_PICKUP":
-      return "Pending Pickup";
+      return "Pending pickup";
     case "OPEN":
-      return "Checked Out";
+      return "Checked out";
     case "COMPLETED":
       return "Completed";
     case "CANCELLED":
@@ -82,7 +82,7 @@ export function bookingStatusDisplay(status: string, kind?: BookingDisplayKind):
   };
 }
 
-export function bookingStatusDotColor(variant: BookingStatusBadgeVariant): string {
+function bookingStatusDotColor(variant: BookingStatusBadgeVariant): string {
   return DOT_BY_VARIANT[variant];
 }
 
@@ -137,5 +137,33 @@ function terminalStatusClasses(status: string): Pick<BookingStatusVisual, "rowCl
       return { rowClass: "", titleClass: "text-muted-foreground" };
     default:
       return { rowClass: "", titleClass: "" };
+  }
+}
+
+// ── Gear status for shift/dashboard payloads ─────────────
+
+type GearStatus = "checked_out" | "pickup_ready" | "reserved" | "draft";
+
+/** Collapse a booking status into the coarse gear state shown on shift cards. */
+export function gearStatusForBooking(status: string): GearStatus {
+  if (status === "OPEN") return "checked_out";
+  if (status === "PENDING_PICKUP") return "pickup_ready";
+  if (status === "BOOKED") return "reserved";
+  return "draft";
+}
+
+/** Higher wins when a shift has several bookings: pickup-ready outranks a draft. */
+export function gearStatusPriority(status: string): number {
+  switch (status) {
+    case "pickup_ready":
+      return 4;
+    case "checked_out":
+      return 3;
+    case "reserved":
+      return 2;
+    case "draft":
+      return 1;
+    default:
+      return 0;
   }
 }

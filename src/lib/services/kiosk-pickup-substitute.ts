@@ -8,15 +8,10 @@ import { findAssetByScanValue } from "@/lib/services/kiosk-scan";
 import { assertKioskPickupPlanActor, kioskPickupPlanActorSelect, remainingPickupAllocationWindow } from "@/lib/services/kiosk-pickup-add";
 import { kioskRosterUserWhere } from "@/lib/user-visibility";
 
-export type PickupNamedItem = {
+type PickupNamedItem = {
   id: string;
   name: string;
   tagName: string;
-};
-
-export type PickupSubstitutionCandidate = {
-  scanned: PickupNamedItem;
-  reserved: PickupNamedItem;
 };
 
 type RemainingSerializedItem = {
@@ -84,56 +79,6 @@ export function choosePickupSubstitutionCandidate(
   if (sameType.length > 1) return closestRemaining(sameType, scanned);
 
   return null;
-}
-
-export async function findPickupSubstitutionCandidate(args: {
-  bookingId: string;
-  scanned: { id: string; name: string | null; assetTag: string; type: string; categoryId: string | null };
-}): Promise<PickupSubstitutionCandidate | null> {
-  const booking = await db.booking.findUnique({
-    where: { id: args.bookingId },
-    select: {
-      kind: true,
-      status: true,
-      serializedItems: {
-        select: {
-          assetId: true,
-          allocationStatus: true,
-          asset: {
-            select: {
-              id: true,
-              assetTag: true,
-              name: true,
-              type: true,
-              categoryId: true,
-            },
-          },
-        },
-      },
-      scanEvents: {
-        where: { success: true, phase: "CHECKOUT", assetId: { not: null } },
-        select: { assetId: true },
-      },
-    },
-  });
-  if (!booking || booking.kind !== BookingKind.RESERVATION || booking.status !== BookingStatus.BOOKED) {
-    return null;
-  }
-
-  const alreadyScannedAssetIds = new Set(
-    booking.scanEvents.map((event) => event.assetId).filter((assetId): assetId is string => !!assetId),
-  );
-  const reserved = choosePickupSubstitutionCandidate(
-    booking.serializedItems,
-    args.scanned,
-    alreadyScannedAssetIds,
-  );
-  if (!reserved) return null;
-
-  return {
-    scanned: namedItem(args.scanned),
-    reserved: namedItem(reserved.asset),
-  };
 }
 
 export async function substituteReservationPickupItem(args: {

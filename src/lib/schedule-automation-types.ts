@@ -1,8 +1,8 @@
 import type { ScheduleQueue } from "@/lib/schedule-queues";
 
-export type ScheduleAutomationTone = "critical" | "attention" | "good" | "neutral";
+type ScheduleAutomationTone = "critical" | "attention" | "good" | "neutral";
 
-export type ScheduleAutomationAction = {
+type ScheduleAutomationAction = {
   label: string;
   href?: string;
   queue?: ScheduleQueue;

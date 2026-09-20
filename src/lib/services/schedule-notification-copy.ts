@@ -17,7 +17,7 @@ export function areaLabel(area: string): string {
   return AREA_LABELS[area] ?? area;
 }
 
-export type ScheduleChangeCopy = {
+type ScheduleChangeCopy = {
   /** Reuses the existing notification types so stored rows and iOS keep working. */
   type: string;
   title: string;

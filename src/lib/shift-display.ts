@@ -1,7 +1,7 @@
 import type { Role, ShiftWorkerType } from "@prisma/client";
 
 export type ShiftWorkerKind = ShiftWorkerType;
-export type ShiftUserRoleKind = Role | string | null | undefined;
+type ShiftUserRoleKind = Role | string | null | undefined;
 export type ShiftWorkerProfile = {
   role?: ShiftUserRoleKind;
   staffingType?: ShiftWorkerType | string | null | undefined;

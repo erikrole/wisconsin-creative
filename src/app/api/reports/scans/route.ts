@@ -2,21 +2,12 @@ import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api";
 import { csvField } from "@/lib/csv";
 import { HttpError, ok, parsePagination } from "@/lib/http";
+import { parseOptionalDateParam } from "@/lib/api-dates";
 import { enforceRateLimit, REPORT_EXPORT_LIMIT } from "@/lib/rate-limit";
 import { requirePermission } from "@/lib/rbac";
 import { getScanHistoryReport, getScanHistoryReportExport } from "@/lib/services/reports";
 
 const SCAN_PHASES = new Set(["CHECKOUT", "CHECKIN"]);
-
-function parseOptionalDate(searchParams: URLSearchParams, name: string) {
-  const value = searchParams.get(name);
-  if (!value) return null;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    throw new HttpError(400, `Invalid ${name}`);
-  }
-  return value;
-}
 
 function parseOptionalPhase(searchParams: URLSearchParams) {
   const phase = searchParams.get("phase");
@@ -45,8 +36,8 @@ export const GET = withAuth(async (req, { user }) => {
   requirePermission(user.role, "report", "view");
   const { searchParams } = new URL(req.url);
   const { limit, offset } = parsePagination(searchParams);
-  const startDate = parseOptionalDate(searchParams, "startDate");
-  const endDate = parseOptionalDate(searchParams, "endDate");
+  const startDate = parseOptionalDateParam(searchParams, "startDate");
+  const endDate = parseOptionalDateParam(searchParams, "endDate");
   const phase = parseOptionalPhase(searchParams);
 
   if (startDate && endDate && new Date(startDate) > new Date(endDate)) {

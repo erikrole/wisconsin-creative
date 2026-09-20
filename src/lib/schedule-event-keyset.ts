@@ -2,7 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { parseOptionalDate } from "@/lib/api-dates";
 import { HttpError } from "@/lib/http";
 
-export type ScheduleEventKeyset =
+type ScheduleEventKeyset =
   | { direction: "before"; startsAt: Date; id: string | null }
   | { direction: "after"; startsAt: Date; id: string | null };
 

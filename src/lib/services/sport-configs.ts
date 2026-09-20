@@ -1,7 +1,7 @@
 import { Prisma, ShiftArea } from "@prisma/client";
 import { db } from "@/lib/db";
 
-export type SportShiftConfigInput = {
+type SportShiftConfigInput = {
   area: ShiftArea;
   homeCount?: number;
   awayCount?: number;

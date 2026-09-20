@@ -6,6 +6,8 @@ import { withSerializationRetry } from "@/lib/serialization";
 import { normalizeBookingTitle } from "@/lib/title-normalization";
 import { checkAvailability } from "@/lib/services/availability";
 import { bookingInclude } from "./bookings-helpers";
+import { eventIdsFor, sameStrings, combinedNotes } from "./consolidation-shared";
+import { unique } from "@/lib/utils";
 
 const mergeInclude = {
   events: { select: { eventId: true } },
@@ -46,22 +48,6 @@ type CheckoutMergeOptions = {
   endsAt?: Date;
   sourceReservationId?: string | null;
 };
-
-function eventIdsFor(booking: CheckoutMergeCandidate) {
-  return (booking.events.length > 0
-    ? booking.events.map((event) => event.eventId)
-    : booking.eventId ? [booking.eventId] : []
-  ).sort();
-}
-
-function sameStrings(left: string[], right: string[]) {
-  return left.length === right.length && left.every((value, index) => value === right[index]);
-}
-
-function combinedNotes(bookings: CheckoutMergeCandidate[]) {
-  const notes = [...new Set(bookings.map((booking) => booking.notes?.trim()).filter(Boolean))];
-  return notes.length > 0 ? notes.join("\n\n") : null;
-}
 
 function sourceReservationKey(sourceReservationId: string | null) {
   return sourceReservationId ?? "__direct_event_checkout__";
@@ -311,7 +297,7 @@ export async function previewCheckoutMerge(
   ids: string[],
   options: Pick<CheckoutMergeOptions, "allowContextOverrides"> = {},
 ) {
-  const uniqueIds = [...new Set(ids)];
+  const uniqueIds = unique(ids);
   if (uniqueIds.length < 2 || uniqueIds.length > 25) {
     throw new HttpError(400, "Select between 2 and 25 checkouts to merge");
   }
@@ -403,7 +389,7 @@ export async function mergeCheckouts(args: {
   if (args.actorRole !== Role.ADMIN && args.actorRole !== Role.STAFF) {
     throw new HttpError(403, "Only staff can merge checkouts");
   }
-  const uniqueIds = [...new Set(args.ids)];
+  const uniqueIds = unique(args.ids);
   if (uniqueIds.length < 2 || uniqueIds.length > 25) {
     throw new HttpError(400, "Select between 2 and 25 checkouts to merge");
   }

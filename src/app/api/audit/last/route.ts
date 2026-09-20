@@ -3,6 +3,7 @@ import { withAuth } from "@/lib/api";
 import { ok } from "@/lib/http";
 import { db } from "@/lib/db";
 import { enforceRateLimit } from "@/lib/rate-limit";
+import { unique } from "@/lib/utils";
 
 /**
  * Entity types STAFF may query. Restricted to settings-surface types so
@@ -53,7 +54,7 @@ export const POST = withAuth(async (req, { user }) => {
     return ok({ data: {} });
   }
 
-  const ids = Array.from(new Set(body.entityIds));
+  const ids = unique(body.entityIds);
 
   // Resolve all requested IDs in two bounded queries. The aggregate finds the
   // newest timestamp per entity; the second query fetches those rows with

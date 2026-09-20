@@ -16,28 +16,13 @@ import {
   headResourceAsset,
 } from "@/lib/resource-assets-storage";
 
-export const RESOURCE_ASSET_ROOT_PATH = "brand-assets";
+const RESOURCE_ASSET_ROOT_PATH = "brand-assets";
 export const RESOURCE_ASSET_MAX_BYTES = 250 * 1024 * 1024;
-export const RESOURCE_ASSET_MAX_NAME_LENGTH = 180;
-export const RESOURCE_ASSET_UPLOAD_TTL_MS = 30 * 60 * 1000;
-export const RESOURCE_ASSET_VERSION_NOTE_MAX_LENGTH = 500;
+const RESOURCE_ASSET_MAX_NAME_LENGTH = 180;
+const RESOURCE_ASSET_UPLOAD_TTL_MS = 30 * 60 * 1000;
+const RESOURCE_ASSET_VERSION_NOTE_MAX_LENGTH = 500;
 
-export const RESOURCE_ASSET_KIND_LABELS: Record<ResourceAssetKind, string> = {
-  [ResourceAssetKind.LOGO]: "Logo",
-  [ResourceAssetKind.FONT]: "Font",
-  [ResourceAssetKind.GRAPHIC_ELEMENT]: "Graphic element",
-  [ResourceAssetKind.TEMPLATE]: "Template",
-  [ResourceAssetKind.COLOR_REFERENCE]: "Color and reference",
-  [ResourceAssetKind.PHOTO]: "Photography",
-  [ResourceAssetKind.VIDEO]: "Video",
-  [ResourceAssetKind.DOCUMENT]: "Document",
-  [ResourceAssetKind.OTHER]: "Other",
-};
-
-export const RESOURCE_ASSET_KIND_OPTIONS = Object.values(ResourceAssetKind).map((value) => ({
-  value,
-  label: RESOURCE_ASSET_KIND_LABELS[value],
-}));
+export { RESOURCE_ASSET_KIND_LABELS, RESOURCE_ASSET_KIND_OPTIONS } from "./resource-assets-client";
 
 const ALLOWED_CONTENT_TYPES = new Set([
   "application/illustrator",
@@ -149,8 +134,6 @@ export const createResourceAssetFolderSchema = z.object({
 export const restoreResourceAssetVersionSchema = z.object({
   versionId: z.string().trim().min(1).max(100),
 });
-
-export const resourceAssetKindQuerySchema = z.nativeEnum(ResourceAssetKind).nullable().optional();
 
 export function normalizeResourceAssetContentType(contentType: string | null | undefined): string {
   return ((contentType ?? "").split(";", 1)[0] ?? "").trim().toLowerCase() || "application/octet-stream";

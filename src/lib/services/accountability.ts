@@ -5,14 +5,31 @@ import {
   Prisma,
   Role,
 } from "@prisma/client";
+import { revalidateTag, unstable_cache } from "next/cache";
 import { createAuditEntryTx } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { HttpError } from "@/lib/http";
 import { loadCheckoutPolicies } from "@/lib/services/checkout-policies";
+import { unique } from "@/lib/utils";
 
 const MIN_CHECKOUTS_FOR_RATE = 3;
 const HOUR_MS = 3_600_000;
+
+/** Cache tag for every filter variant of the accountability report. */
+export const ACCOUNTABILITY_REPORT_TAG = "accountability-report";
+/** Short enough that a checkout or return shows up on the next look. */
+const ACCOUNTABILITY_REPORT_TTL_SECONDS = 60;
+
+/**
+ * Hard ceiling on booking rows pulled into memory for one report.
+ *
+ * A full academic year at current volume is a few thousand person checkouts, so
+ * this only bites on the unbounded "all time" scope. Per-person checkout and
+ * completed totals come from Postgres aggregates rather than these rows, so a
+ * truncated read shortens incident history without skewing the return record.
+ */
+const BOOKING_SCAN_LIMIT = 5000;
 
 export type AccountabilityIncidentState = "all" | "active" | "resolved" | "extended";
 export type AccountabilityUserState = "all" | "active" | "inactive";
@@ -61,7 +78,7 @@ export function getCurrentAcademicYearStart(now: Date = new Date()) {
   return month >= 7 ? year : year - 1;
 }
 
-export function getAcademicYearWindow(startYear: number | null) {
+function getAcademicYearWindow(startYear: number | null) {
   if (startYear === null) return null;
   return {
     start: localMidnightUtc(startYear, 7, 1),
@@ -70,6 +87,8 @@ export function getAcademicYearWindow(startYear: number | null) {
 }
 
 type RankedPerson = {
+  userId: string;
+  name: string;
   lateEventCount: number;
   totalLateHours: number;
   lastIncidentAt: string;
@@ -81,26 +100,34 @@ type RankedPerson = {
  */
 function rankComparator(sort: AccountabilitySort) {
   return (a: RankedPerson, b: RankedPerson) => {
-    if (sort === "time") {
-      return (
-        b.totalLateHours - a.totalLateHours ||
-        b.lateEventCount - a.lateEventCount ||
-        b.lastIncidentAt.localeCompare(a.lastIncidentAt)
-      );
-    }
-    if (sort === "recent") {
-      return (
-        b.lastIncidentAt.localeCompare(a.lastIncidentAt) ||
-        b.lateEventCount - a.lateEventCount ||
-        b.totalLateHours - a.totalLateHours
-      );
-    }
-    return (
-      b.lateEventCount - a.lateEventCount ||
-      b.totalLateHours - a.totalLateHours ||
-      b.lastIncidentAt.localeCompare(a.lastIncidentAt)
-    );
+    const tied =
+      sort === "time"
+        ? b.totalLateHours - a.totalLateHours ||
+          b.lateEventCount - a.lateEventCount ||
+          b.lastIncidentAt.localeCompare(a.lastIncidentAt)
+        : sort === "recent"
+          ? b.lastIncidentAt.localeCompare(a.lastIncidentAt) ||
+            b.lateEventCount - a.lateEventCount ||
+            b.totalLateHours - a.totalLateHours
+          : b.lateEventCount - a.lateEventCount ||
+            b.totalLateHours - a.totalLateHours ||
+            b.lastIncidentAt.localeCompare(a.lastIncidentAt);
+    return tied || a.name.localeCompare(b.name) || a.userId.localeCompare(b.userId);
   };
+}
+
+const INCIDENT_STATE_RANK = {
+  active: 0,
+  extended: 1,
+  resolved: 2,
+} as const;
+
+function incidentOccurredAt(incident: {
+  returnedAt: string | null;
+  extendedAt: string | null;
+  dueAt: string;
+}) {
+  return incident.returnedAt ?? incident.extendedAt ?? incident.dueAt;
 }
 
 function median(values: number[]) {
@@ -112,7 +139,18 @@ function median(values: number[]) {
     : sorted[middle]!;
 }
 
-const accountabilityBookingInclude = {
+/**
+ * Exactly the columns the leaderboard/spotlight math reads. Item names are not
+ * here on purpose: they are only needed for incidents that survive ranking, and
+ * `loadIncidentItemSummaries` fetches those in one narrow second pass.
+ */
+const accountabilityBookingSelect = {
+  id: true,
+  title: true,
+  status: true,
+  custodyScope: true,
+  endsAt: true,
+  completedAt: true,
   requester: {
     select: {
       id: true,
@@ -124,14 +162,22 @@ const accountabilityBookingInclude = {
   },
   location: { select: { id: true, name: true } },
   accountabilityExclusion: {
-    include: {
-      excludedBy: { select: { id: true, name: true } },
-      restoredBy: { select: { id: true, name: true } },
+    select: {
+      reason: true,
+      note: true,
+      excludedAt: true,
+      restoredAt: true,
+      excludedBy: { select: { name: true } },
     },
   },
   dueDateChanges: {
+    select: { id: true, changedAt: true, previousEndsAt: true, nextEndsAt: true },
     orderBy: { changedAt: "asc" as const },
   },
+} satisfies Prisma.BookingSelect;
+
+const incidentItemSelect = {
+  id: true,
   serializedItems: {
     select: { asset: { select: { assetTag: true, name: true } } },
   },
@@ -142,17 +188,20 @@ const accountabilityBookingInclude = {
       bulkSku: { select: { name: true } },
     },
   },
-} satisfies Prisma.BookingInclude;
+} satisfies Prisma.BookingSelect;
 
-type AccountabilityBooking = Prisma.BookingGetPayload<{
-  include: typeof accountabilityBookingInclude;
+type IncidentItemBooking = Prisma.BookingGetPayload<{
+  select: typeof incidentItemSelect;
 }>;
 
-function itemSummary(booking: AccountabilityBooking) {
-  const serialized = booking.serializedItems.map(
+function itemSummary(booking: {
+  serializedItems?: IncidentItemBooking["serializedItems"] | null;
+  bulkItems?: IncidentItemBooking["bulkItems"] | null;
+}) {
+  const serialized = (booking.serializedItems ?? []).map(
     (item) => item.asset.assetTag || item.asset.name || "Unknown item",
   );
-  const bulk = booking.bulkItems
+  const bulk = (booking.bulkItems ?? [])
     .filter((item) => Math.max(item.checkedOutQuantity, item.plannedQuantity) > 0)
     .map(
       (item) =>
@@ -161,19 +210,21 @@ function itemSummary(booking: AccountabilityBooking) {
   return [...serialized, ...bulk].join(", ");
 }
 
+async function loadIncidentItemSummaries(bookingIds: string[]) {
+  const uniqueIds = unique(bookingIds);
+  if (uniqueIds.length === 0) return new Map<string, string>();
+
+  const rows = await db.booking.findMany({
+    where: { id: { in: uniqueIds } },
+    select: incidentItemSelect,
+  });
+  return new Map(rows.map((row) => [row.id, itemSummary(row)]));
+}
+
 export async function getAccountabilityReport(
   filters: AccountabilityFilters,
   now: Date = new Date(),
 ) {
-  const [policies, locations] = await Promise.all([
-    loadCheckoutPolicies(),
-    db.location.findMany({
-      where: { bookings: { some: { kind: "CHECKOUT" } } },
-      select: { id: true, name: true },
-      orderBy: { name: "asc" },
-    }),
-  ]);
-  const graceMs = policies.gracePeriodHours * HOUR_MS;
   const window = getAcademicYearWindow(filters.startYear);
   const where: Prisma.BookingWhereInput = {
     kind: "CHECKOUT",
@@ -195,17 +246,77 @@ export async function getAccountabilityReport(
         : {}),
   };
 
-  const bookings = await db.booking.findMany({
-    where,
-    include: accountabilityBookingInclude,
-    orderBy: [{ endsAt: "desc" }, { id: "desc" }],
-  });
+  // Active exclusions never count toward a person's totals, so the Postgres
+  // aggregates below share this narrowing with the in-memory pass.
+  const includedWhere: Prisma.BookingWhereInput = {
+    AND: [
+      where,
+      {
+        OR: [
+          { accountabilityExclusion: { is: null } },
+          { accountabilityExclusion: { restoredAt: { not: null } } },
+        ],
+      },
+    ],
+  };
+  const completedInWindowWhere: Prisma.BookingWhereInput = {
+    AND: [
+      includedWhere,
+      {
+        status: BookingStatus.COMPLETED,
+        completedAt: { not: null },
+        ...(window ? { endsAt: { gte: window.start, lt: window.end } } : {}),
+      },
+    ],
+  };
+
+  const [policies, locationRows, scanned, checkoutCounts, completedCounts] = await Promise.all([
+    loadCheckoutPolicies(),
+    // DISTINCT ON (location_id) in Postgres -- `distinct` matching the orderBy
+    // prefix is pushed down, unlike the old `location.bookings.some` subquery.
+    db.booking.findMany({
+      where: { kind: "CHECKOUT" },
+      distinct: ["locationId"],
+      orderBy: { locationId: "asc" },
+      select: { location: { select: { id: true, name: true } } },
+    }),
+    db.booking.findMany({
+      where,
+      select: accountabilityBookingSelect,
+      orderBy: [{ endsAt: "desc" }, { id: "desc" }],
+      // One over the ceiling so truncation is detectable without a count query.
+      take: BOOKING_SCAN_LIMIT + 1,
+    }),
+    db.booking.groupBy({
+      by: ["requesterUserId"],
+      where: includedWhere,
+      _count: { _all: true },
+    }),
+    db.booking.groupBy({
+      by: ["requesterUserId"],
+      where: completedInWindowWhere,
+      _count: { _all: true },
+    }),
+  ]);
+
+  const truncated = scanned.length > BOOKING_SCAN_LIMIT;
+  const bookings = truncated ? scanned.slice(0, BOOKING_SCAN_LIMIT) : scanned;
+  const locations = Array.from(
+    new Map(locationRows.map((row) => [row.location.id, row.location])).values(),
+  ).sort((a, b) => a.name.localeCompare(b.name));
+  const checkoutCountByUser = new Map(
+    checkoutCounts.map((row) => [row.requesterUserId, row._count._all]),
+  );
+  const completedCountByUser = new Map(
+    completedCounts.map((row) => [row.requesterUserId, row._count._all]),
+  );
+  const graceMs = policies.gracePeriodHours * HOUR_MS;
 
   const excluded = bookings
     .filter((booking) => booking.accountabilityExclusion?.restoredAt === null)
     .map((booking) => ({
       bookingId: booking.id,
-      bookingTitle: booking.title,
+      bookingTitle: booking.title.trim() || "Untitled checkout",
       requester: booking.requester.name,
       dueAt: booking.endsAt.toISOString(),
       reason: booking.accountabilityExclusion!.reason,
@@ -215,8 +326,9 @@ export async function getAccountabilityReport(
     }));
 
   const included = bookings.filter(
-    (booking) => booking.accountabilityExclusion?.restoredAt !== null ||
-      !booking.accountabilityExclusion,
+    (booking) =>
+      booking.custodyScope !== BookingCustodyScope.SHARED &&
+      (booking.accountabilityExclusion?.restoredAt !== null || !booking.accountabilityExclusion),
   );
 
   type PersonAccumulator = {
@@ -225,9 +337,9 @@ export async function getAccountabilityReport(
     avatarUrl: string | null;
     active: boolean;
     primaryArea: string | null;
-    checkoutCount: number;
-    completedCount: number;
-    onTimeCount: number;
+    /** Completed-but-late checkouts, counted regardless of the incident filter. */
+    lateCompletedCount: number;
+    activeLateCheckoutCount: number;
     incidents: Array<{
       incidentId: string;
       bookingId: string;
@@ -258,12 +370,10 @@ export async function getAccountabilityReport(
       avatarUrl: booking.requester.avatarUrl,
       active: booking.requester.active,
       primaryArea: booking.requester.primaryArea,
-      checkoutCount: 0,
-      completedCount: 0,
-      onTimeCount: 0,
+      lateCompletedCount: 0,
+      activeLateCheckoutCount: 0,
       incidents: [],
     };
-    person.checkoutCount += 1;
 
     if (finalDueInWindow) {
       const effectiveDue = booking.endsAt.getTime() + graceMs;
@@ -272,18 +382,15 @@ export async function getAccountabilityReport(
           ? booking.completedAt?.getTime()
           : now.getTime();
 
-      if (booking.status === BookingStatus.COMPLETED && comparisonTime !== undefined) {
-        person.completedCount += 1;
-        if (comparisonTime <= effectiveDue) person.onTimeCount += 1;
-      }
-
       if (comparisonTime !== undefined && comparisonTime > effectiveDue) {
         const state = booking.status === BookingStatus.OPEN ? "active" : "resolved";
+        if (state === "active") person.activeLateCheckoutCount += 1;
+        else person.lateCompletedCount += 1;
         if (!filters.incidentState || filters.incidentState === "all" || filters.incidentState === state) {
           person.incidents.push({
             incidentId: `${booking.id}:${state}`,
             bookingId: booking.id,
-            title: booking.title,
+            title: booking.title.trim() || "Untitled checkout",
             dueAt: booking.endsAt.toISOString(),
             returnedAt: booking.completedAt?.toISOString() ?? null,
             extendedAt: null,
@@ -291,7 +398,7 @@ export async function getAccountabilityReport(
             lateHours: Math.max(1, Math.ceil((comparisonTime - effectiveDue) / HOUR_MS)),
             state,
             location: booking.location,
-            itemSummary: itemSummary(booking),
+            itemSummary: "",
           });
         }
       }
@@ -304,7 +411,7 @@ export async function getAccountabilityReport(
         person.incidents.push({
           incidentId: change.id,
           bookingId: booking.id,
-          title: booking.title,
+          title: booking.title.trim() || "Untitled checkout",
           dueAt: change.previousEndsAt.toISOString(),
           returnedAt: null,
           extendedAt: change.changedAt.toISOString(),
@@ -315,7 +422,7 @@ export async function getAccountabilityReport(
           ),
           state: "extended",
           location: booking.location,
-          itemSummary: itemSummary(booking),
+          itemSummary: "",
         });
       }
     }
@@ -323,39 +430,64 @@ export async function getAccountabilityReport(
     byPerson.set(person.userId, person);
   }
 
-  const leaderboard = Array.from(byPerson.values())
+  const ranked = Array.from(byPerson.values())
     .filter((person) => person.incidents.length > 0)
     .map((person) => {
       const lateHours = person.incidents.map((incident) => incident.lateHours);
       const lastIncidentAt = person.incidents
-        .map((incident) => incident.returnedAt ?? incident.extendedAt ?? incident.dueAt)
+        .map((incident) => incidentOccurredAt(incident))
         .sort()
         .at(-1)!;
+      // Totals come from Postgres so they stay exact even when the row scan is
+      // capped. On-time returns are completed minus completed-but-late, which
+      // avoids a column-to-column comparison Prisma cannot express in a where.
+      const completedCount = completedCountByUser.get(person.userId) ?? 0;
+      const onTimeCount = Math.max(0, completedCount - person.lateCompletedCount);
+      const rateCount = completedCount + person.activeLateCheckoutCount;
       return {
         userId: person.userId,
         name: person.name,
         avatarUrl: person.avatarUrl,
         active: person.active,
         primaryArea: person.primaryArea,
-        checkoutCount: person.checkoutCount,
-        completedCount: person.completedCount,
+        checkoutCount: checkoutCountByUser.get(person.userId) ?? 0,
+        completedCount,
         lateEventCount: person.incidents.length,
         activeOverdueCount: person.incidents.filter((incident) => incident.state === "active").length,
         totalLateHours: lateHours.reduce((sum, hours) => sum + hours, 0),
         medianLateHours: median(lateHours),
         worstLateHours: Math.max(...lateHours),
         onTimeRate:
-          person.completedCount >= MIN_CHECKOUTS_FOR_RATE
-            ? Math.round((person.onTimeCount / person.completedCount) * 100)
+          rateCount >= MIN_CHECKOUTS_FOR_RATE
+            ? Math.round((onTimeCount / rateCount) * 100)
             : null,
         lastIncidentAt,
-        incidents: person.incidents.sort((a, b) => b.lateHours - a.lateHours),
+        incidents: person.incidents.sort((a, b) =>
+          INCIDENT_STATE_RANK[a.state] - INCIDENT_STATE_RANK[b.state] ||
+          incidentOccurredAt(b).localeCompare(incidentOccurredAt(a)) ||
+          b.lateHours - a.lateHours ||
+          a.incidentId.localeCompare(b.incidentId),
+        ),
       };
     })
     .sort(rankComparator(filters.sort ?? "events"));
 
+  const itemSummaries = await loadIncidentItemSummaries(
+    ranked.flatMap((person) => person.incidents.map((incident) => incident.bookingId)),
+  );
+  const leaderboard = ranked.map((person) => ({
+    ...person,
+    incidents: person.incidents.map((incident) => ({
+      ...incident,
+      itemSummary: itemSummaries.get(incident.bookingId) ?? "",
+    })),
+  }));
+
   return {
     generatedAt: now.toISOString(),
+    /** True when the booking scan hit BOOKING_SCAN_LIMIT and older history was dropped. */
+    truncated,
+    scanLimit: BOOKING_SCAN_LIMIT,
     academicYear:
       filters.startYear === null
         ? null
@@ -384,6 +516,30 @@ export async function getAccountabilityReport(
   };
 }
 
+/**
+ * Request-path entry point. The report is a pure read over a whole academic
+ * year, and the page refetches it on every filter change, so it is cached per
+ * filter set for a minute and tagged for explicit busting.
+ *
+ * Exclusion changes revalidate the tag directly. Ordinary booking churn
+ * (checkout, return, due-date change) has no single mutation path worth wiring
+ * up, so those changes land via the 60 s TTL instead.
+ */
+export function getCachedAccountabilityReport(filters: AccountabilityFilters) {
+  const cacheKey = [
+    ACCOUNTABILITY_REPORT_TAG,
+    String(filters.startYear ?? "all"),
+    filters.locationId ?? "any-location",
+    filters.incidentState ?? "all",
+    filters.userState ?? "all",
+    filters.sort ?? "events",
+  ];
+  return unstable_cache(() => getAccountabilityReport(filters), cacheKey, {
+    revalidate: ACCOUNTABILITY_REPORT_TTL_SECONDS,
+    tags: [ACCOUNTABILITY_REPORT_TAG],
+  })();
+}
+
 export async function excludeBookingFromAccountability(input: {
   bookingId: string;
   reason: AccountabilityExclusionReason;
@@ -391,7 +547,7 @@ export async function excludeBookingFromAccountability(input: {
   actorId: string;
   actorRole: Role;
 }) {
-  return db.$transaction(
+  const exclusion = await db.$transaction(
     async (tx) => {
       const booking = await tx.booking.findUnique({
         where: { id: input.bookingId },
@@ -445,6 +601,10 @@ export async function excludeBookingFromAccountability(input: {
     },
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
   );
+  // Exclusions are the one mutation path that changes the report's inputs
+  // through a single owned route pair, so bust the tag instead of waiting.
+  revalidateTag(ACCOUNTABILITY_REPORT_TAG);
+  return exclusion;
 }
 
 export async function restoreBookingToAccountability(input: {
@@ -452,7 +612,7 @@ export async function restoreBookingToAccountability(input: {
   actorId: string;
   actorRole: Role;
 }) {
-  return db.$transaction(
+  const restored = await db.$transaction(
     async (tx) => {
       const existing = await tx.bookingAccountabilityExclusion.findUnique({
         where: { bookingId: input.bookingId },
@@ -489,4 +649,6 @@ export async function restoreBookingToAccountability(input: {
     },
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
   );
+  revalidateTag(ACCOUNTABILITY_REPORT_TAG);
+  return restored;
 }

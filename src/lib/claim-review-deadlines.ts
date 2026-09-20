@@ -23,7 +23,7 @@ export const CLAIM_AUTO_APPROVE_LEAD_MS = 24 * 60 * 60_000;
 const ESCALATE_FRACTION = 1 / 3;
 const AUTO_APPROVE_FRACTION = 2 / 3;
 
-export type ClaimReviewDeadlines = {
+type ClaimReviewDeadlines = {
   escalateAt: Date;
   autoApproveAt: Date;
 };

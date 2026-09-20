@@ -2,7 +2,8 @@ import { Role } from "@prisma/client";
 import type { Prisma } from "@prisma/client";
 import type { AuthUser } from "@/lib/auth";
 
-function parseEmailList(value: string | undefined): Set<string> {
+/** Parse a comma-separated env var into a lowercased email set. */
+export function parseEmailList(value: string | undefined): Set<string> {
   return new Set(
     (value ?? "")
       .split(",")

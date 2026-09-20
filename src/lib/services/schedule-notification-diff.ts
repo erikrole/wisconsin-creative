@@ -37,7 +37,7 @@ export type ScheduleWorkerChange =
     noteChanged: boolean;
   };
 
-export type ScheduleNotificationDiff = {
+type ScheduleNotificationDiff = {
   /** True when at least one worker has something worth being told. */
   changed: boolean;
   byUser: Map<string, ScheduleWorkerChange[]>;

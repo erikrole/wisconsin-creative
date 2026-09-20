@@ -53,5 +53,3 @@ export function getQueryPersistOptions() {
     },
   };
 }
-
-export const queryCacheMaxAge = QUERY_CACHE_MAX_AGE;

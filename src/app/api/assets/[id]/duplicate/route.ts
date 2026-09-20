@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { HttpError, ok } from "@/lib/http";
 import { requirePermission } from "@/lib/rbac";
 import { createAuditEntry } from "@/lib/audit";
+import { buildAssetTagSortFields } from "@/lib/item-asset-tag-sort";
 import { Prisma } from "@prisma/client";
 
 export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
@@ -27,7 +28,7 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
     try {
       duplicate = await db.asset.create({
         data: {
-          assetTag: newTag,
+          ...buildAssetTagSortFields(newTag),
           name: source.name,
           type: source.type,
           brand: source.brand,

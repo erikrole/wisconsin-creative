@@ -8,18 +8,18 @@ import {
 } from "@/lib/collaborator-access";
 import { env } from "@/lib/env";
 
-export const ROLE_PREVIEW_COOKIE = "gear_tracker_role_preview";
-export const ROLE_PREVIEW_TTL_SECONDS = 2 * 60 * 60;
-export const ROLE_PREVIEW_ROLES = [Role.STAFF, Role.STUDENT, Role.COLLABORATOR] as const;
-export const ROLE_PREVIEW_COLLABORATOR_AFFILIATIONS = [
+const ROLE_PREVIEW_COOKIE = "gear_tracker_role_preview";
+const ROLE_PREVIEW_TTL_SECONDS = 2 * 60 * 60;
+const ROLE_PREVIEW_ROLES = [Role.STAFF, Role.STUDENT, Role.COLLABORATOR] as const;
+const ROLE_PREVIEW_COLLABORATOR_AFFILIATIONS = [
   { key: "BIG_TEN_NETWORK", displayName: "Big Ten Network", badgeLabel: "BTN" },
   { key: "LEARFIELD", displayName: "Learfield", badgeLabel: "Learfield" },
 ] as const;
 
 export type RolePreviewRole = (typeof ROLE_PREVIEW_ROLES)[number];
-export type RolePreviewCollaboratorAffiliation = (typeof ROLE_PREVIEW_COLLABORATOR_AFFILIATIONS)[number]["key"];
+type RolePreviewCollaboratorAffiliation = (typeof ROLE_PREVIEW_COLLABORATOR_AFFILIATIONS)[number]["key"];
 
-export type RolePreviewState = {
+type RolePreviewState = {
   role: RolePreviewRole;
   capabilities: CollaboratorCapability[];
   collaboratorAffiliation?: RolePreviewCollaboratorAffiliation;
@@ -196,7 +196,7 @@ export async function clearRolePreviewCookie() {
   cookieStore.delete(ROLE_PREVIEW_COOKIE);
 }
 
-export function isRolePreviewControlRequest(req: Request) {
+function isRolePreviewControlRequest(req: Request) {
   const pathname = new URL(req.url).pathname;
   return pathname === "/api/admin/role-preview" && (req.method === "POST" || req.method === "DELETE");
 }

@@ -27,7 +27,6 @@ import {
   normalizeSignatureName,
   penSettingsSchema,
   signatureAdHocMemberSchema,
-  signatureCreativeStaffCollectionSchema,
   signatureRosterEntrySchema,
   type CaptureSaveRequest,
   type SignatureImportedSportCode,
@@ -968,51 +967,6 @@ export async function applySignatureRosterSnapshot(input: {
   return result;
 }
 
-export async function ensureSignatureCreativeStaffCollection(input: {
-  actor: Actor;
-  season: string;
-}) {
-  const { season } = signatureCreativeStaffCollectionSchema.parse({ season: input.season });
-  try {
-    return await withSerializationRetry(() => db.$transaction(async (tx) => {
-      const existing = await tx.signatureCollection.findUnique({
-        where: { sportCode_season: { sportCode: SIGNATURE_CREATIVE_STAFF_SPORT_CODE, season } },
-        select: { id: true, sportCode: true, season: true, status: true, collectionVersion: true },
-      });
-      if (existing) return { ...existing, created: false };
-
-      const created = await tx.signatureCollection.create({
-        data: {
-          sportCode: SIGNATURE_CREATIVE_STAFF_SPORT_CODE,
-          season,
-          penSettings: signatureJson(DEFAULT_SIGNATURE_PEN_SETTINGS),
-          createdById: input.actor.id,
-          updatedById: input.actor.id,
-        },
-        select: { id: true, sportCode: true, season: true, status: true, collectionVersion: true },
-      });
-      await createAuditEntryTx(tx, {
-        actorId: input.actor.id,
-        actorRole: input.actor.role,
-        entityType: "SignatureCollection",
-        entityId: created.id,
-        action: "CREATE",
-        after: { sportCode: created.sportCode, season: created.season, collectionVersion: created.collectionVersion },
-      });
-      return { ...created, created: true };
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }));
-  } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-      const existing = await db.signatureCollection.findUnique({
-        where: { sportCode_season: { sportCode: SIGNATURE_CREATIVE_STAFF_SPORT_CODE, season } },
-        select: { id: true, sportCode: true, season: true, status: true, collectionVersion: true },
-      });
-      if (existing) return { ...existing, created: false };
-    }
-    throw error;
-  }
-}
-
 export async function createAdHocSignatureMember(input: {
   actor: Actor;
   season: string;
@@ -1139,15 +1093,31 @@ export async function syncSignatureCreativeStaff(input: {
     let updated = 0;
     let changed = false;
 
+    // Roster sync writes are batched: every new member goes out in one
+    // createMany, and reactivations/renames are grouped by the exact value
+    // written so each distinct target costs one updateMany instead of one
+    // round trip per user. Every field written before is still written.
+    const memberCreates: Prisma.SignatureMemberCreateManyInput[] = [];
+    const memberUpdateGroups = new Map<
+      string,
+      { ids: string[]; data: { name: string; normalizedName: string; title: string | null; active: true } }
+    >();
+
     for (const user of users) {
       const current = existingByUser.get(user.id);
       if (current) {
         const needsUpdate = !current.active || current.name !== user.name || current.title !== user.title;
         if (needsUpdate) {
-          await tx.signatureMember.update({
-            where: { id: current.id },
-            data: { name: user.name, normalizedName: normalizeSignatureName(user.name), title: user.title, active: true },
-          });
+          const data = {
+            name: user.name,
+            normalizedName: normalizeSignatureName(user.name),
+            title: user.title,
+            active: true as const,
+          };
+          const key = `${data.name}\u0000${data.normalizedName}\u0000${data.title ?? ""}`;
+          const group = memberUpdateGroups.get(key);
+          if (group) group.ids.push(current.id);
+          else memberUpdateGroups.set(key, { ids: [current.id], data });
           updated += 1;
           if (!current.active) reactivated += 1;
           changed = true;
@@ -1155,21 +1125,26 @@ export async function syncSignatureCreativeStaff(input: {
         continue;
       }
 
-      await tx.signatureMember.create({
-        data: {
-          collectionId: collection.id,
-          sourceExternalId: `${CREATIVE_STAFF_SOURCE_PREFIX}${user.id}`,
-          name: user.name,
-          normalizedName: normalizeSignatureName(user.name),
-          roleGroup: SignatureMemberGroup.CREATIVE_STAFF,
-          title: user.title,
-          required: true,
-          active: true,
-          linkedUserId: user.id,
-        },
+      memberCreates.push({
+        collectionId: collection.id,
+        sourceExternalId: `${CREATIVE_STAFF_SOURCE_PREFIX}${user.id}`,
+        name: user.name,
+        normalizedName: normalizeSignatureName(user.name),
+        roleGroup: SignatureMemberGroup.CREATIVE_STAFF,
+        title: user.title,
+        required: true,
+        active: true,
+        linkedUserId: user.id,
       });
       added += 1;
       changed = true;
+    }
+
+    if (memberCreates.length > 0) {
+      await tx.signatureMember.createMany({ data: memberCreates });
+    }
+    for (const group of memberUpdateGroups.values()) {
+      await tx.signatureMember.updateMany({ where: { id: { in: group.ids } }, data: group.data });
     }
 
     const stale = existing.filter((member) => member.active && (!member.linkedUserId || !activeUserIds.has(member.linkedUserId)));
@@ -1194,12 +1169,20 @@ export async function syncSignatureCreativeStaff(input: {
       select: { id: true, normalizedName: true, linkedUserId: true },
     });
     let linkedTeamMembers = 0;
+    // One updateMany per link target instead of per member: the same person can
+    // own an unlinked roster row in several sport collections for the season.
+    const relinkTargets = new Map<string, string[]>();
     for (const member of teamMembers) {
       const matchedUser = uniquelyNamedUsers.get(member.normalizedName);
       if (!matchedUser || member.linkedUserId === matchedUser.id || member.linkedUserId) continue;
+      const ids = relinkTargets.get(matchedUser.id);
+      if (ids) ids.push(member.id);
+      else relinkTargets.set(matchedUser.id, [member.id]);
+    }
+    for (const [linkedUserId, ids] of relinkTargets) {
       const linked = await tx.signatureMember.updateMany({
-        where: { id: member.id, linkedUserId: null },
-        data: { linkedUserId: matchedUser.id },
+        where: { id: { in: ids }, linkedUserId: null },
+        data: { linkedUserId },
       });
       if (linked.count > 0) {
         linkedTeamMembers += linked.count;

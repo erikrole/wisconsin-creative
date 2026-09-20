@@ -48,7 +48,7 @@ export function summarizeGuideContent(content: unknown, maxLength = 180): string
   return summarizeText(text, maxLength);
 }
 
-export function summarizeText(text: string, maxLength = 180): string {
+function summarizeText(text: string, maxLength = 180): string {
   const normalized = text.replace(WHITESPACE_RE, " ").trim();
   if (normalized.length <= maxLength) return normalized;
   return `${normalized.slice(0, maxLength).trimEnd()}...`;
@@ -191,7 +191,7 @@ export function markdownToPlainText(markdown: string): string {
     .replace(/```[\s\S]*?```/g, " ")
     .replace(/`([^`]+)`/g, "$1")
     .replace(/^\s{0,3}(?:-{3,}|\*{3,}|_{3,})\s*$/gm, " ")
-    .replace(/^>\s?\[!(?:note|tip|important|warning|caution)\]\s*/gim, "")
+    .replace(/^>\s?\\?\[!(?:note|tip|shortcut|important|warning|caution)\]\s*/gim, "")
     .replace(/^#{1,6}\s+/gm, "")
     .replace(/^>\s?/gm, "")
     .replace(/^\s*[-*+]\s+/gm, "")
@@ -208,6 +208,21 @@ export function summarizeMarkdown(markdown: string, maxLength = 180): string {
 export function legacyGuideMarkdown(markdown: string | null | undefined, content: unknown): string {
   if (markdown?.trim()) return markdown.trim();
   return blockNoteToMarkdown(content);
+}
+
+/** Drop a leading ATX h1 that restates the resource title so the page does not render it twice. */
+export function omitDuplicateLeadHeading(markdown: string, title: string): string {
+  const trimmed = markdown.trim();
+  const match = trimmed.match(/^#\s+(.+?)\s*(?:\n|$)/);
+  if (!match) return trimmed;
+  const lead = markdownHeadingText(match[1] ?? "").toLowerCase();
+  const expected = markdownHeadingText(title).toLowerCase();
+  if (!lead || lead !== expected) return trimmed;
+  return trimmed.slice(match[0].length).trim();
+}
+
+export function isCopyFenceLanguage(language: string | undefined): boolean {
+  return language === "copy" || language === "path";
 }
 
 export function markdownHeadings(markdown: string) {

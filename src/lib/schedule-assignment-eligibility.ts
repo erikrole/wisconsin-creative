@@ -17,7 +17,7 @@
 import type { CandidateRecommendation } from "@/lib/candidate-scoring-types";
 
 /** Scoring emits this reason only when the candidate covers the event's sport. */
-export const SPORT_ROSTER_REASON_CODE = "sport_roster";
+const SPORT_ROSTER_REASON_CODE = "sport_roster";
 
 export function isSportRosterEligible(
   score: Pick<CandidateRecommendation, "reasons">,

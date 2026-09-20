@@ -16,7 +16,7 @@ export type RankableGuide = {
   updatedAt: Date | string;
 };
 
-export function guidePersonalizationScore(guide: RankableGuide, audience: GuideAudience): number {
+function guidePersonalizationScore(guide: RankableGuide, audience: GuideAudience): number {
   let score = 0;
 
   if (guide.targetRoles.length === 0) score += 5;

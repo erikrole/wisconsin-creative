@@ -9,6 +9,7 @@ import { csvField } from "@/lib/csv";
 import { buildDerivedBulkUnitQrValue } from "@/lib/bulk-unit-qr";
 import { bulkUnitLabelExportQuerySchema, markBulkUnitLabelsSchema } from "@/lib/validation";
 import { createAuditEntry } from "@/lib/audit";
+import { unique } from "@/lib/utils";
 
 function fileSlug(name: string): string {
   const slug = name
@@ -71,7 +72,7 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
   requirePermission(user.role, "bulk_sku", "adjust");
   const { id } = params;
   const body = markBulkUnitLabelsSchema.parse(await req.json());
-  const unitNumbers = Array.from(new Set(body.unitNumbers));
+  const unitNumbers = unique(body.unitNumbers);
   const batchId = randomUUID();
 
   const result = await db.$transaction(async (tx) => {

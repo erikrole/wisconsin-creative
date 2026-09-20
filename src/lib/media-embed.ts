@@ -11,9 +11,9 @@
 // hostile string can only ever resolve to a trusted player origin or fall back to a
 // plain link.
 
-export type EmbedProvider = "youtube" | "vimeo";
+type EmbedProvider = "youtube" | "vimeo";
 
-export type ParsedEmbed = {
+type ParsedEmbed = {
   src: string;
   provider: EmbedProvider;
   title: string;

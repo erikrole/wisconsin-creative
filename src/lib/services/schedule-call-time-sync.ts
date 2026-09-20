@@ -8,6 +8,7 @@ import { availabilityConflictNote } from "@/lib/student-availability";
 import { buildSchedulePublicationSnapshot } from "@/lib/services/schedule-publication";
 import { updateShiftAssignmentConflictsTx } from "@/lib/services/shift-assignment-conflicts";
 import { shiftWorkerTypeForProfile } from "@/lib/shift-display";
+import { unique } from "@/lib/utils";
 
 const activeAssignmentStatuses = ACTIVE_ASSIGNMENT_STATUSES as ShiftAssignmentStatus[];
 
@@ -80,19 +81,19 @@ type SyncEvent = {
   shiftGroup: SyncGroup | null;
 };
 
-export type CurrentCallTimeSyncOptions = {
+type CurrentCallTimeSyncOptions = {
   now?: Date;
   actor?: { id: string; role: Role } | null;
   dryRun?: boolean;
   overrideExistingCallTimes?: boolean;
 };
 
-export type PublishedCallTimeChange = {
+type PublishedCallTimeChange = {
   shiftGroupId: string;
   affectedUserIds: string[];
 };
 
-export type CurrentCallTimeSyncSummary = {
+type CurrentCallTimeSyncSummary = {
   eventsMatched: number;
   groupsInspected: number;
   groupsUpdated: number;
@@ -200,7 +201,7 @@ export async function syncCurrentSportCallTimes(
   const now = options.now ?? new Date();
   const dryRun = options.dryRun === true;
   const overrideExistingCallTimes = options.overrideExistingCallTimes === true;
-  const uniqueCodes = [...new Set(sportCodes)];
+  const uniqueCodes = unique(sportCodes);
   if (uniqueCodes.length === 0) {
     return {
       eventsMatched: 0,
@@ -376,7 +377,7 @@ export async function syncCurrentSportCallTimes(
         });
       }
 
-      const affectedUserIds = [...new Set(changedAssignments.map((assignment) => assignment.userId))];
+      const affectedUserIds = unique(changedAssignments.map((assignment) => assignment.userId));
       if (group.publishedAt && changedAssignments.length > 0) {
         if (!dryRun) {
           await tx.shiftAssignment.updateMany({

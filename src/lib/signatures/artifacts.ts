@@ -6,7 +6,7 @@ import type { SignaturePenSettings, SignatureStroke } from "./types";
 
 export { buildSignatureSvg };
 
-export type SignatureArtifactBundle = {
+type SignatureArtifactBundle = {
   svg: string;
   png: Buffer;
   pngHash: string;

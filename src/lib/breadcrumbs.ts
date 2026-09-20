@@ -10,6 +10,19 @@ import {
 const SEGMENT_OVERRIDE: Record<string, { label: string; href?: string }> = {
   events: { label: "Schedule", href: "/schedule" },
   "bulk-inventory": { label: "Item family operations", href: "/items" },
+  "allowed-emails": { label: "Registration access" },
+  "collaborator-access": { label: "Collaborator access" },
+  "checkout-policies": { label: "Checkout policies" },
+  "reservation-rules": { label: "Reservation rules" },
+  "calendar-sources": { label: "Calendar sources" },
+  "venue-mappings": { label: "Venue mappings" },
+  bookings: { label: "Booking extensions" },
+  escalation: { label: "Overdue escalation" },
+  "kiosk-devices": { label: "Kiosks" },
+  database: { label: "Database diagnostics" },
+  "app-activity": { label: "App activity" },
+  "data-export": { label: "Data exports" },
+  audit: { label: "Audit log" },
 };
 
 export type SiblingItem = {
@@ -115,7 +128,20 @@ export function visibleSiblingsForRole(
   );
 }
 
-export type BreadcrumbItemData = { href: string; label: string; isPage: boolean };
+type BreadcrumbItemData = { href: string; label: string; isPage: boolean };
+
+/**
+ * Top-level section trails (Home + current page) restate the sidebar and the
+ * page title. Keep breadcrumbs for nested, create, and entity-detail routes.
+ */
+export function shouldShowBreadcrumbs(
+  items: BreadcrumbItemData[],
+  onDetailPage: boolean,
+): boolean {
+  if (items.length <= 1) return false;
+  if (!onDetailPage && items.length === 2) return false;
+  return true;
+}
 
 /**
  * Turn a pathname into the ordered crumb list, dropping dynamic ID segments

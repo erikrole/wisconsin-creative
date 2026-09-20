@@ -5,6 +5,7 @@ import { summarizeScheduleDataQuality } from "@/lib/schedule-data-quality";
 import { buildScheduleEventWhere } from "@/lib/schedule-event-where";
 import type { ScheduleGearAssignmentStatus, ScheduleHealthSnapshot } from "@/lib/schedule-health-types";
 import { getScheduleChangeHistory } from "@/lib/services/schedule-change-history";
+import { unique } from "@/lib/utils";
 
 type ScheduleHealthInput = {
   userId: string;
@@ -41,7 +42,7 @@ function eventIdsFor(assignments: Array<{ shift: { shiftGroup: { eventId: string
 }
 
 function uniqueEventIdsFor(assignments: Array<{ shift: { shiftGroup: { eventId: string } } }>) {
-  return [...new Set(assignments.map((assignment) => assignment.shift.shiftGroup.eventId))];
+  return unique(assignments.map((assignment) => assignment.shift.shiftGroup.eventId));
 }
 
 function formatNextCallLabel(startsAt: Date | null, allDay: boolean) {

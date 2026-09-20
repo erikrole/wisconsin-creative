@@ -2,12 +2,12 @@ import type { Prisma } from "@prisma/client";
 import { normalizeAllDayToUtcMidnight } from "@/lib/app-time";
 import { ACTIVE_ASSIGNMENT_STATUSES } from "@/lib/shift-constants";
 
-export type ScheduleWindow = {
+type ScheduleWindow = {
   startsAt: Date;
   endsAt: Date;
 };
 
-export type ScheduleEventTiming = {
+type ScheduleEventTiming = {
   startsAt: Date;
   endsAt: Date;
   allDay?: boolean | null;
@@ -22,7 +22,7 @@ export type ScheduleShiftTiming = ScheduleWindow & {
   } | null;
 };
 
-export type ScheduleAssignmentTiming = {
+type ScheduleAssignmentTiming = {
   callStartsAt?: Date | null;
   callEndsAt?: Date | null;
   shift: ScheduleShiftTiming;
@@ -90,7 +90,7 @@ export function scheduleWindowDurationHours(window: ScheduleWindow): number {
  * whose stored shift boundaries are narrower than their event date span from
  * being omitted by the query.
  */
-export function expandScheduleWindow(window: ScheduleWindow, days = 1): ScheduleWindow {
+function expandScheduleWindow(window: ScheduleWindow, days = 1): ScheduleWindow {
   const paddingMs = days * DAY_MS;
   return {
     startsAt: new Date(window.startsAt.getTime() - paddingMs),

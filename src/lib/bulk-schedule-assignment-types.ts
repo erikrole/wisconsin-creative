@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { CandidateRecommendation, CandidateScoreSignal } from "@/lib/candidate-scoring-types";
 import { ASSIGNMENT_PERIOD_VALUES } from "@/lib/schedule-assignment-window";
 import { normalizeSportCode } from "@/lib/sports";
+import { unique } from "@/lib/utils";
 
 const isoDate = z.string().datetime({ offset: true });
 
@@ -31,7 +32,7 @@ export const bulkAssignmentScopeSchema = z.object({
   sportCodes: z.array(z.string().trim().min(1).max(40))
     .max(MAX_BULK_ASSIGNMENT_SPORTS)
     .default([])
-    .transform((codes) => [...new Set(codes.map(normalizeSportCode))].sort()),
+    .transform((codes) => unique(codes.map(normalizeSportCode)).sort()),
   rangeStartsAt: isoDate,
   rangeEndsAt: isoDate,
   area: z.nativeEnum(ShiftArea).nullable().default(null),
@@ -50,7 +51,7 @@ export const bulkAssignmentScopeSchema = z.object({
   }
 });
 
-export const bulkAssignmentProposalSchema = z.object({
+const bulkAssignmentProposalSchema = z.object({
   proposalId: z.string().min(1).max(240),
   shiftGroupId: z.string().min(1),
   shiftId: z.string().min(1),
@@ -65,8 +66,7 @@ export const bulkAssignmentApplySchema = z.object({
 });
 
 export type BulkAssignmentScope = z.infer<typeof bulkAssignmentScopeSchema>;
-export type BulkAssignmentScopeInput = z.input<typeof bulkAssignmentScopeSchema>;
-export type BulkAssignmentProposalInput = z.infer<typeof bulkAssignmentProposalSchema>;
+type BulkAssignmentProposalInput = z.infer<typeof bulkAssignmentProposalSchema>;
 export type BulkAssignmentApplyInput = z.infer<typeof bulkAssignmentApplySchema>;
 
 export type BulkAssignmentPreviewProposal = BulkAssignmentProposalInput & {
@@ -129,7 +129,7 @@ export type BulkAssignmentPreviewEvent = {
  * One worker's share of a proposed batch: the "who is getting added, and to how
  * many shifts" answer staff want before they apply anything.
  */
-export type BulkAssignmentPreviewPerson = {
+type BulkAssignmentPreviewPerson = {
   userId: string;
   userName: string;
   userRole: string;

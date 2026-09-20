@@ -7,12 +7,20 @@ import { pathToFileURL } from "node:url";
 
 export const SESSION_SECRET_KEY = "SESSION_SECRET";
 export const SESSION_COOKIE_NAME_KEY = "SESSION_COOKIE_NAME";
+export const DATABASE_URL_KEY = "DATABASE_URL";
 export const MIN_SESSION_SECRET_LENGTH = 32;
 const GENERATED_SESSION_SECRET_BYTES = 32;
 const DEFAULT_SESSION_COOKIE_NAME = "gear-tracker-session";
+const DEVELOPMENT_ENV_FILES = [
+  ".env.development.local",
+  ".env.local",
+  ".env.development",
+  ".env",
+];
 
 if (isMainModule()) {
   try {
+    assertDevelopmentDatabaseUrl();
     const result = ensureDevelopmentSessionSecret();
     if (result.status === "generated") {
       console.log(
@@ -114,8 +122,63 @@ export function ensureDevelopmentSessionCookieName({
   return { status: "generated", path: developmentEnvPath };
 }
 
+export function resolveDevelopmentDatabaseUrl({
+  rootDir = process.cwd(),
+  environment = process.env,
+} = {}) {
+  if (isValidDatabaseUrl(environment[DATABASE_URL_KEY])) {
+    return { status: "process" };
+  }
+
+  for (const fileName of DEVELOPMENT_ENV_FILES) {
+    const filePath = join(rootDir, fileName);
+    if (!existsSync(filePath)) continue;
+
+    const databaseUrl = readDotenvValue(
+      readFileSync(filePath, "utf8"),
+      DATABASE_URL_KEY,
+    );
+    if (isValidDatabaseUrl(databaseUrl)) {
+      return { status: "file", path: filePath };
+    }
+  }
+
+  return { status: "missing" };
+}
+
+export function assertDevelopmentDatabaseUrl({
+  rootDir = process.cwd(),
+  environment = process.env,
+} = {}) {
+  if (environment.NODE_ENV === "production") {
+    return { status: "skipped", reason: "production" };
+  }
+
+  const result = resolveDevelopmentDatabaseUrl({ rootDir, environment });
+  if (result.status === "missing") {
+    throw new Error(
+      "DATABASE_URL is missing for local Next development. Run npm run dev:preview for the guarded Preview environment, or set DATABASE_URL in .env.development.local.",
+    );
+  }
+
+  return result;
+}
+
 export function isValidSessionSecret(value) {
   return typeof value === "string" && value.length >= MIN_SESSION_SECRET_LENGTH;
+}
+
+export function isValidDatabaseUrl(value) {
+  if (typeof value !== "string" || value.trim() === "" || value.trim() === "[SENSITIVE]") {
+    return false;
+  }
+
+  try {
+    const url = new URL(value);
+    return (url.protocol === "postgres:" || url.protocol === "postgresql:") && Boolean(url.hostname);
+  } catch {
+    return false;
+  }
 }
 
 export function readDotenvValue(contents, key) {

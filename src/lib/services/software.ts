@@ -5,6 +5,7 @@ import { HttpError } from "@/lib/http";
 import { withSerializationRetry } from "@/lib/serialization";
 import { decryptSoftwareSecret, encryptSoftwareSecret } from "@/lib/software-vault-crypto";
 import { canViewSoftwareCredential, type SoftwareCredentialAudience } from "@/lib/software-vault-access";
+import { unique } from "@/lib/utils";
 
 const softwareCredentialListSelect = {
   id: true,
@@ -118,7 +119,7 @@ export async function createSoftwareCredential(data: {
   password: string;
   visibleTo: readonly SoftwareCredentialAudience[];
 }, actor: SoftwareCredentialActor) {
-  const normalizedVisibleTo = [...new Set(data.visibleTo)] as SoftwareCredentialAudience[];
+  const normalizedVisibleTo = unique(data.visibleTo) as SoftwareCredentialAudience[];
   if (normalizedVisibleTo.length === 0) throw new HttpError(400, "Choose at least one software audience.");
 
   const accountEmailCiphertext = encryptSoftwareSecret(data.accountEmail);
@@ -173,7 +174,7 @@ export async function updateSoftwareCredential(
 ) {
   const normalizedVisibleTo = data.visibleTo === undefined
     ? undefined
-    : [...new Set(data.visibleTo)] as SoftwareCredentialAudience[];
+    : unique(data.visibleTo) as SoftwareCredentialAudience[];
   if (normalizedVisibleTo?.length === 0) throw new HttpError(400, "Choose at least one software audience.");
   const accountEmailCiphertext = data.accountEmail === undefined
     ? undefined

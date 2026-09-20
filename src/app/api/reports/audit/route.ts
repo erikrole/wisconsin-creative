@@ -2,19 +2,10 @@ import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api";
 import { csvField } from "@/lib/csv";
 import { HttpError, ok, parsePagination } from "@/lib/http";
+import { parseOptionalDateParam } from "@/lib/api-dates";
 import { enforceRateLimit, REPORT_EXPORT_LIMIT } from "@/lib/rate-limit";
 import { requirePermission } from "@/lib/rbac";
 import { getAuditReport, getAuditReportExport } from "@/lib/services/reports";
-
-function parseOptionalDate(searchParams: URLSearchParams, name: string) {
-  const value = searchParams.get(name);
-  if (!value) return null;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    throw new HttpError(400, `Invalid ${name}`);
-  }
-  return value;
-}
 
 function buildAuditReportCsv(rows: Awaited<ReturnType<typeof getAuditReportExport>>["data"]) {
   const headers = ["Timestamp", "Actor", "Action", "Entity Type", "Entity ID"];
@@ -33,8 +24,8 @@ export const GET = withAuth(async (req, { user }) => {
   requirePermission(user.role, "report", "audit");
   const { searchParams } = new URL(req.url);
   const { limit, offset } = parsePagination(searchParams);
-  const startDate = parseOptionalDate(searchParams, "startDate");
-  const endDate = parseOptionalDate(searchParams, "endDate");
+  const startDate = parseOptionalDateParam(searchParams, "startDate");
+  const endDate = parseOptionalDateParam(searchParams, "endDate");
   const action = searchParams.get("action");
 
   if (startDate && endDate && new Date(startDate) > new Date(endDate)) {

@@ -1,4 +1,5 @@
 import { ON_TIME_GRACE_MS } from "./types";
+import { unique } from "@/lib/utils";
 
 export const automaticCheckoutRuleKeys = [
   "checkout_family_batteries",
@@ -419,7 +420,7 @@ function localParts(date: Date, timeZone: string) {
 }
 
 function longestConsecutiveMonthRun(monthKeys: Iterable<string>) {
-  const indexes = [...new Set(monthKeys)]
+  const indexes = unique(monthKeys)
     .map((key) => {
       const parts = key.split("-").map(Number);
       const year = parts[0] ?? 1970;

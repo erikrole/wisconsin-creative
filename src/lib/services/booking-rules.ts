@@ -82,6 +82,26 @@ export function getAllowedBookingActions(
 }
 
 /**
+ * Columns `requireBookingAction` returns.
+ *
+ * Covers the policy inputs (kind/status/ownership/custody) plus the fields the
+ * two callers that consume the returned row read: `endsAt` and `title` in
+ * `POST /api/bookings/[id]/nudge`, and `title` in
+ * `POST /api/checkouts/[id]/checkin-report`. Every other caller discards the
+ * result. Widen this only alongside a caller that needs the extra column.
+ */
+const BOOKING_ACTION_SELECT = {
+  id: true,
+  kind: true,
+  status: true,
+  requesterUserId: true,
+  createdBy: true,
+  custodyScope: true,
+  title: true,
+  endsAt: true,
+} as const;
+
+/**
  * Load a booking and enforce that the given action is permitted.
  * Throws HttpError if booking not found or action denied.
  */
@@ -91,7 +111,10 @@ export async function requireBookingAction(
   action: string,
   expectedKind?: BookingKind
 ) {
-  const booking = await db.booking.findUnique({ where: { id: bookingId } });
+  const booking = await db.booking.findUnique({
+    where: { id: bookingId },
+    select: BOOKING_ACTION_SELECT,
+  });
 
   if (!booking) {
     throw new HttpError(404, "Booking not found");

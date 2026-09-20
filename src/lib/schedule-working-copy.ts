@@ -3,7 +3,7 @@ import { z } from "zod";
 
 const isoDate = z.string().datetime({ offset: true });
 
-export const workingAssignmentSchema = z.object({
+const workingAssignmentSchema = z.object({
   sourceAssignmentId: z.string().min(1).nullable(),
   source: z.nativeEnum(ShiftAssignmentSource).optional(),
   userId: z.string().min(1),
@@ -15,7 +15,7 @@ export const workingAssignmentSchema = z.object({
   bookingCount: z.number().int().min(0),
 });
 
-export const workingSlotSchema = z.object({
+const workingSlotSchema = z.object({
   key: z.string().min(1),
   sourceShiftId: z.string().min(1).nullable(),
   area: z.nativeEnum(ShiftArea),
@@ -125,7 +125,7 @@ export type WorkingScheduleDefaultWindow = {
  */
 export const WORKING_SCHEDULE_HISTORY_LIMIT = 50;
 
-export const workingScheduleHistoryEntrySchema = z.object({
+const workingScheduleHistoryEntrySchema = z.object({
   id: z.string().min(1),
   actorId: z.string().min(1),
   commandType: z.string().min(1),
@@ -287,7 +287,7 @@ export const workingScheduleCommandSchema = z.discriminatedUnion("type", [
 
 export type WorkingScheduleCommand = z.infer<typeof workingScheduleCommandSchema>;
 
-export type WorkingScheduleChanges = {
+type WorkingScheduleChanges = {
   addedSlots: number;
   removedSlots: number;
   convertedSlots: number;

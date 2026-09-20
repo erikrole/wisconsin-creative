@@ -8,6 +8,7 @@ import { HttpError, parsePagination } from "@/lib/http";
 import { displayBookingTitle } from "@/lib/booking-display-title";
 import { optionalSportCodeSchema } from "@/lib/validation";
 import { bookingInclude } from "./bookings-helpers";
+import { unique } from "@/lib/utils";
 
 const bookingListInclude = {
   location: { select: { id: true, name: true } },
@@ -55,7 +56,7 @@ function parseStatusListParam(value: string | null): BookingStatus[] | undefined
   const rawStatuses = value.split(",").map((status) => status.trim()).filter(Boolean);
   if (rawStatuses.length === 0) return undefined;
 
-  const statuses = Array.from(new Set(rawStatuses));
+  const statuses = unique(rawStatuses);
   for (const status of statuses) {
     if (!Object.values(BookingStatus).includes(status as BookingStatus)) {
       throw new HttpError(400, `Invalid booking status: ${status}`);

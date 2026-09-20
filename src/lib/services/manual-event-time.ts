@@ -7,6 +7,7 @@ import { updateShiftAssignmentConflictsTx } from "@/lib/services/shift-assignmen
 import { availabilityConflictNote } from "@/lib/student-availability";
 import { workingSchedulePayloadSchema } from "@/lib/schedule-working-copy";
 import { HttpError } from "@/lib/http";
+import { unique } from "@/lib/utils";
 
 const activeAssignmentStatuses = ACTIVE_ASSIGNMENT_STATUSES as ShiftAssignmentStatus[];
 
@@ -69,7 +70,7 @@ const eventScheduleSelect = {
 
 type EventSchedule = Prisma.ShiftGroupGetPayload<{ select: typeof eventScheduleSelect }>;
 
-export type ManualEventScheduleShift = {
+type ManualEventScheduleShift = {
   shiftGroupId: string;
   affectedUserIds: string[];
   published: boolean;
@@ -274,7 +275,7 @@ export async function shiftManualEventScheduleTx(
     });
   }
 
-  const affectedUserIds = [...new Set(movedAssignments.map((assignment) => assignment.userId))];
+  const affectedUserIds = unique(movedAssignments.map((assignment) => assignment.userId));
   await createAuditEntryTx(tx, {
     actorId: args.actor.id,
     actorRole: args.actor.role,

@@ -14,8 +14,8 @@ const BULK_LOSS_REPORT_EXPORT_LIMIT = 5000;
 const UTILIZATION_REPORT_EXPORT_LIMIT = 5000;
 const CHECKOUT_CUSTODY_REPORT_STATUSES = [BookingStatus.OPEN, BookingStatus.COMPLETED] as const;
 
-export const UTILIZATION_REPORT_PERIODS = [30, 90, 365] as const;
-export const UTILIZATION_REPORT_DEFAULT_PERIOD = 90;
+const UTILIZATION_REPORT_PERIODS = [30, 90, 365] as const;
+const UTILIZATION_REPORT_DEFAULT_PERIOD = 90;
 const UTILIZATION_IDLE_LIST_LIMIT = 25;
 const UTILIZATION_TOP_USED_LIMIT = 10;
 const EMPTY_EFFECTIVE_STATUS_COUNTS = {
@@ -363,7 +363,7 @@ type UtilizationReportExportAsset = Prisma.AssetGetPayload<{
   select: typeof utilizationReportExportAssetSelect;
 }>;
 
-export type UtilizationExportCustodyStat = {
+type UtilizationExportCustodyStat = {
   checkouts: number;
   custodyDays: number;
   lastCheckedOutAt: string;
@@ -1426,7 +1426,7 @@ async function getBatteryAuditReport(filters: BulkLossReportFilters = {}) {
   };
 }
 
-export type BulkLossReportFilters = {
+type BulkLossReportFilters = {
   categoryId?: string | null;
   locationId?: string | null;
 };
@@ -1793,8 +1793,8 @@ export async function getBulkLossReportExport(filters: BulkLossReportFilters = {
   };
 }
 
-export const BADGE_REPORT_PERIODS = [30, 90, 365] as const;
-export const BADGE_REPORT_DEFAULT_PERIOD = 30;
+const BADGE_REPORT_PERIODS = [30, 90, 365] as const;
+const BADGE_REPORT_DEFAULT_PERIOD = 30;
 
 export function parseBadgeReportPeriod(value: string | null | undefined) {
   const parsed = Number.parseInt(value ?? "", 10);

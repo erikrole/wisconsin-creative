@@ -81,7 +81,7 @@ const PAGINATION_DEFAULT_LIMIT = 50;
 const PAGINATION_MAX_LIMIT = 200;
 const PAGINATION_MAX_OFFSET = 10_000;
 
-export type PaginationParams = {
+type PaginationParams = {
   limit: number;
   offset: number;
 };

@@ -6,6 +6,7 @@ import {
   updateCheckoutReturnLiveActivityTokens,
 } from "@/lib/push/apns";
 import { BookingKind, BookingStatus } from "@prisma/client";
+import { unique } from "@/lib/utils";
 
 const CHECKOUT_RETURN_ACTIVITY = "checkout_return";
 const DEFAULT_LEAD_MS = 30 * 60_000;
@@ -45,7 +46,7 @@ async function recordCheckoutReturnLiveActivityStartIfEligible(args: {
   candidateTokens: string[];
   now: Date;
 }): Promise<boolean> {
-  const candidateTokens = [...new Set(args.candidateTokens)];
+  const candidateTokens = unique(args.candidateTokens);
   if (candidateTokens.length === 0) return false;
 
   return db.$transaction(async (tx) => {
@@ -123,8 +124,8 @@ async function dispatchCheckoutReturnLiveActivityEnds(
 
   const tokens = rows.map((row) => row.token);
   const { accepted, revoked } = await endCheckoutReturnLiveActivityTokens(tokens);
-  const completedTokens = [...new Set([...accepted, ...revoked])];
-  const bookingIds = [...new Set(rows.map((row) => row.bookingId))];
+  const completedTokens = unique([...accepted, ...revoked]);
+  const bookingIds = unique(rows.map((row) => row.bookingId));
   const endedAt = new Date();
 
   if (completedTokens.length > 0) {

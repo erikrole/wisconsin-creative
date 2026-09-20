@@ -54,8 +54,6 @@ export const checkoutAvailabilityBody = z.object({
   startsAt: z.string().datetime({ offset: true }),
   endsAt: z.string().datetime({ offset: true }),
 });
-export type CheckoutAvailabilityBody = z.infer<typeof checkoutAvailabilityBody>;
-
 export const activeCheckoutUpdateBody = z.object({
   actorId: cuidish,
   title: z.string().trim().min(1).max(160).optional(),
@@ -63,14 +61,10 @@ export const activeCheckoutUpdateBody = z.object({
 }).refine((body) => body.title !== undefined || body.endsAt !== undefined, {
   message: "Title or return time is required",
 });
-export type ActiveCheckoutUpdateBody = z.infer<typeof activeCheckoutUpdateBody>;
-
 export const activeCheckoutAddItemBody = z.object({
   actorId: cuidish,
   scanValue: z.string().trim().min(1, "Scan value required"),
 });
-export type ActiveCheckoutAddItemBody = z.infer<typeof activeCheckoutAddItemBody>;
-
 export const activeCheckoutRemoveItemBody = z.object({
   actorId: cuidish,
   assetId: cuidish.optional(),
@@ -83,13 +77,9 @@ export const activeCheckoutRemoveItemBody = z.object({
 }, {
   message: "Provide either assetId or bulkSkuId plus unitNumber",
 });
-export type ActiveCheckoutRemoveItemBody = z.infer<typeof activeCheckoutRemoveItemBody>;
-
 export const checkinCompleteBody = z.object({
   actorId: cuidish,
 });
-export type CheckinCompleteBody = z.infer<typeof checkinCompleteBody>;
-
 const scanBody = z.object({
   scanValue: z.string().trim().min(1, "Scan value required"),
   actorId: cuidish.optional(),
@@ -108,8 +98,6 @@ export const resolveKioskScanBody = z.object({
   scanValue: z.string().trim().min(1, "Scan value required").max(256),
   userId: cuidish.optional(),
 });
-export type ResolveKioskScanBody = z.infer<typeof resolveKioskScanBody>;
-
 export const pickupConfirmBody = z.object({
   actorId: cuidish,
   requestId: z.string().max(64).optional(),
@@ -117,19 +105,14 @@ export const pickupConfirmBody = z.object({
   // source reservation stays BOOKED until a later pickup finishes the rest.
   partial: z.boolean().optional().default(false),
 });
-export type PickupConfirmBody = z.infer<typeof pickupConfirmBody>;
-
 export const pickupSubstituteBody = z.object({
   actorId: cuidish,
   scanValue: z.string().trim().min(1, "Scan value required"),
   reservedAssetId: cuidish,
 });
-export type PickupSubstituteBody = z.infer<typeof pickupSubstituteBody>;
-
 export const activateBody = z.object({
   code: z
     .string()
     .trim()
     .regex(/^\d{6}$/, "Invalid activation code format"),
 });
-export type ActivateBody = z.infer<typeof activateBody>;

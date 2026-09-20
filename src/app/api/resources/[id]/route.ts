@@ -30,17 +30,13 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
   const body = updateGuideSchema.parse(await req.json());
   const before = await getGuide(params.id);
   const updated = await updateGuide(params.id, body, user.role, user.id);
-  const markOnly =
-    body.markVerified === true &&
-    Object.keys(body).every((key) => key === "markVerified" || key === "expectedUpdatedAt");
-  const action = markOnly ? "resource_verified" : "resource_updated";
 
   await createAuditEntry({
     actorId: user.id,
     actorRole: user.role,
     entityType: "resource",
     entityId: params.id,
-    action,
+    action: "resource_updated",
     before: {
       title: before.title,
       type: before.type,

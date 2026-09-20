@@ -6,6 +6,7 @@ import { sendPushToUser } from "@/lib/services/notifications";
 import { visibleActiveUserWhere } from "@/lib/user-visibility";
 // Retry once on conflict — covers the rare two-students-tap-the-last-slot race.
 import { withSerializationRetry } from "@/lib/serialization";
+import { unique } from "@/lib/utils";
 
 const MAX_SLOTS = 2;
 
@@ -309,7 +310,7 @@ export async function bulkCreateCodes(
     .map((l) => l.trim())
     .filter(Boolean);
   // Dedupe within the paste — repeated rows count as skipped, not a unique-constraint 500.
-  const codes = [...new Set(lines)];
+  const codes = unique(lines);
 
   if (codes.length === 0) throw new HttpError(400, "No codes provided.");
   if (codes.some((c) => c.length > 120)) {
@@ -444,14 +445,14 @@ export async function processExpiryWarnings() {
   });
   if (admins.length === 0) return { warned: 0 };
 
-  let warned = 0;
-
   // Dedupe on the CURRENT month so admins are re-warned monthly until the
   // license is renewed or retired (keying on the expiry month fires only once ever).
   const yearMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
 
-  for (const code of expiring) {
-    if (!code.expiresAt) continue;
+  // One row per (code, admin). Built up front so the whole fanout costs one
+  // dedupe read and one insert instead of two queries per pair.
+  const candidates = expiring.flatMap((code) => {
+    if (!code.expiresAt) return [];
     const isExpired = code.expiresAt < now;
     const daysLeft = Math.ceil((code.expiresAt.getTime() - now.getTime()) / 86_400_000);
 
@@ -460,37 +461,57 @@ export async function processExpiryWarnings() {
       : `Photo Mechanic license expiring in ${daysLeft}d`;
     const body = `${code.label ?? code.code}${code.label ? ` (${code.code})` : ""} · Renew soon to avoid disruption.`;
 
-    for (const admin of admins) {
-      const dedupeKey = `license-expiry-${code.id}-${yearMonth}-${admin.id}`;
-      try {
-        const existing = await db.notification.findUnique({ where: { dedupeKey } });
-        if (existing) continue;
+    return admins.map((admin) => ({
+      codeId: code.id,
+      userId: admin.id,
+      title,
+      body,
+      type: isExpired ? "license_expired" : "license_expiring_soon",
+      payload: { type: "license_expiry", licenseCodeId: code.id, href: "/licenses" },
+      dedupeKey: `license-expiry-${code.id}-${yearMonth}-${admin.id}`,
+    }));
+  });
+  if (candidates.length === 0) return { warned: 0 };
 
-        await db.notification.create({
-          data: {
-            userId: admin.id,
-            type: isExpired ? "license_expired" : "license_expiring_soon",
-            title,
-            body,
-            payload: { type: "license_expiry", licenseCodeId: code.id, href: "/licenses" },
-            channel: "IN_APP",
-            sentAt: now,
-            dedupeKey,
-          },
-        });
+  let warned = 0;
 
-        await sendPushToUser(admin.id, {
-          title,
-          body,
-            payload: { type: "license_expiry", licenseCodeId: code.id, href: "/licenses" },
-          category: "licenseExpiry",
-        });
+  try {
+    const existing = await db.notification.findMany({
+      where: { dedupeKey: { in: candidates.map((candidate) => candidate.dedupeKey) } },
+      select: { dedupeKey: true },
+    });
+    const existingKeys = new Set(existing.map((row) => row.dedupeKey));
+    const pending = candidates.filter((candidate) => !existingKeys.has(candidate.dedupeKey));
+    if (pending.length === 0) return { warned: 0 };
 
-        warned++;
-      } catch (err) {
-        console.error(`[LICENSE_EXPIRY] Failed for code ${code.id} admin ${admin.id}:`, err);
-      }
-    }
+    const created = await db.notification.createMany({
+      data: pending.map((candidate) => ({
+        userId: candidate.userId,
+        type: candidate.type,
+        title: candidate.title,
+        body: candidate.body,
+        payload: candidate.payload,
+        channel: "IN_APP" as const,
+        sentAt: now,
+        dedupeKey: candidate.dedupeKey,
+      })),
+      skipDuplicates: true,
+    });
+    warned = created.count;
+
+    // Push is best-effort: one slow or failing device must not stall the rest.
+    await Promise.allSettled(pending.map((candidate) =>
+      sendPushToUser(candidate.userId, {
+        title: candidate.title,
+        body: candidate.body,
+        payload: candidate.payload,
+        category: "licenseExpiry",
+      }).catch((err) => {
+        console.error(`[LICENSE_EXPIRY] Failed for code ${candidate.codeId} admin ${candidate.userId}:`, err);
+      }),
+    ));
+  } catch (err) {
+    console.error(`[LICENSE_EXPIRY] Failed for ${candidates.length} pending warnings:`, err);
   }
 
   return { warned };
@@ -512,43 +533,58 @@ export async function processLicenseNags() {
     select: { id: true, userId: true, claimedAt: true, licenseCodeId: true },
   });
 
+  const title = "Still using Photo Mechanic?";
+  const body = "You've had a license for 2+ days. Return it from the app if you're done so someone else can use it.";
+
+  const candidates = overdueClaims.flatMap((claim) => claim.userId
+    ? [{
+      userId: claim.userId,
+      licenseCodeId: claim.licenseCodeId,
+      payload: { type: "license_nag", licenseCodeId: claim.licenseCodeId, href: "/licenses" },
+      dedupeKey: `license-nag-${claim.licenseCodeId}-${claim.claimedAt.toISOString()}`,
+    }]
+    : []);
+  if (candidates.length === 0) return { nagged: 0 };
+
   let nagged = 0;
 
-  for (const claim of overdueClaims) {
-    if (!claim.userId) continue;
+  try {
+    const existing = await db.notification.findMany({
+      where: { dedupeKey: { in: candidates.map((candidate) => candidate.dedupeKey) } },
+      select: { dedupeKey: true },
+    });
+    const existingKeys = new Set(existing.map((row) => row.dedupeKey));
+    const pending = candidates.filter((candidate) => !existingKeys.has(candidate.dedupeKey));
+    if (pending.length === 0) return { nagged: 0 };
 
-    const title = "Still using Photo Mechanic?";
-    const body = "You've had a license for 2+ days. Return it from the app if you're done so someone else can use it.";
-    const dedupeKey = `license-nag-${claim.licenseCodeId}-${claim.claimedAt.toISOString()}`;
-
-    try {
-      const existing = await db.notification.findUnique({ where: { dedupeKey } });
-      if (existing) continue;
-
-      await db.notification.create({
-        data: {
-          userId: claim.userId,
-          type: "license_held_2d",
-          title,
-          body,
-          payload: { type: "license_nag", licenseCodeId: claim.licenseCodeId, href: "/licenses" },
-          channel: "IN_APP",
-          sentAt: new Date(),
-          dedupeKey,
-        },
-      });
-
-      await sendPushToUser(claim.userId, {
+    const created = await db.notification.createMany({
+      data: pending.map((candidate) => ({
+        userId: candidate.userId,
+        type: "license_held_2d",
         title,
         body,
-            payload: { type: "license_nag", licenseCodeId: claim.licenseCodeId, href: "/licenses" },
-        category: "licenseExpiry",
-      });
+        payload: candidate.payload,
+        channel: "IN_APP" as const,
+        sentAt: new Date(),
+        dedupeKey: candidate.dedupeKey,
+      })),
+      skipDuplicates: true,
+    });
+    nagged = created.count;
 
-      nagged++;
-    } catch (err) {
-      console.error(`[LICENSE_NAGS] Failed for code ${claim.licenseCodeId}:`, err);
-    }
+    // Push is best-effort: one slow or failing device must not stall the rest.
+    await Promise.allSettled(pending.map((candidate) =>
+      sendPushToUser(candidate.userId, {
+        title,
+        body,
+        payload: candidate.payload,
+        category: "licenseExpiry",
+      }).catch((err) => {
+        console.error(`[LICENSE_NAGS] Failed for code ${candidate.licenseCodeId}:`, err);
+      }),
+    ));
+  } catch (err) {
+    console.error(`[LICENSE_NAGS] Failed for ${candidates.length} pending nags:`, err);
   }
 
   return { nagged };

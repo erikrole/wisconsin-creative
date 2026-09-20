@@ -73,7 +73,7 @@ export function callWindowSourceLabel(source: CallWindowSource): string {
   return "Default";
 }
 
-export function formatCallWindowTime(isoString: string): string {
+function formatCallWindowTime(isoString: string): string {
   return new Date(isoString).toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",

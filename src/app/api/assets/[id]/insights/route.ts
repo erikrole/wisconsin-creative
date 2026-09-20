@@ -4,6 +4,7 @@ import { ok } from "@/lib/http";
 import { requirePermission } from "@/lib/rbac";
 import { NextResponse } from "next/server";
 import type { WindowStats } from "@/app/(app)/items/[id]/types";
+import { unique } from "@/lib/utils";
 
 /* ── Helpers ─────────────────────────────────────────────── */
 
@@ -227,7 +228,7 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
     return NextResponse.json({ error: "Asset not found" }, { status: 404 });
   }
 
-  const bookingIds = Array.from(new Set(rawBookings.map((r) => r.booking.id)));
+  const bookingIds = unique(rawBookings.map((r) => r.booking.id));
   const completionLogs = bookingIds.length > 0
     ? await db.auditLog.findMany({
         where: {

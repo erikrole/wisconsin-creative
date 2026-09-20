@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { HttpError, ok } from "@/lib/http";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { requirePermission } from "@/lib/rbac";
+import { unique } from "@/lib/utils";
 
 const ITEM_CHANGE_LIMIT = { max: 180, windowMs: 60_000 };
 const MAX_CHANGE_ROWS = 100;
@@ -39,10 +40,6 @@ function parseDate(value: string): Date {
 function latestDate(dates: Date[]): Date {
   if (dates.length === 0) return EMPTY_CURSOR_DATE;
   return new Date(Math.max(...dates.map((date) => date.getTime())));
-}
-
-function unique(values: string[]): string[] {
-  return [...new Set(values.filter(Boolean))];
 }
 
 export const GET = withAuth(async (req, { user }) => {

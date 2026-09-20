@@ -6,6 +6,7 @@ import { enforceRateLimit, SETTINGS_MUTATION_LIMIT } from "@/lib/rate-limit";
 import { createAuditEntry } from "@/lib/audit";
 import { recomputeFutureAssignmentAvailabilityConflictsForUser } from "@/lib/services/availability-conflict-recompute";
 import { z } from "zod";
+import { parseDateOnly, assertBlockShape, normalizedTimes } from "../_shared";
 
 const updateBlockSchema = z.object({
   kind:             z.enum(["WEEKLY", "AD_HOC"]).default("WEEKLY"),
@@ -23,50 +24,6 @@ const updateBlockSchema = z.object({
   semesterEndsOn:   z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD").optional().nullable(),
   reviewNote:       z.string().trim().max(500).optional().nullable(),
 });
-
-function parseDateOnly(value: string | null | undefined): Date | null {
-  return value ? new Date(`${value}T00:00:00.000Z`) : null;
-}
-
-function assertBlockShape(body: z.infer<typeof updateBlockSchema>) {
-  if (body.startsAt >= body.endsAt) {
-    throw new HttpError(400, "Start time must be before end time");
-  }
-  if (body.kind === "WEEKLY") {
-    if (body.dayOfWeek === null || body.dayOfWeek === undefined) {
-      throw new HttpError(400, "Day of week is required for weekly availability");
-    }
-    if (body.date) {
-      throw new HttpError(400, "Weekly availability cannot include an ad hoc date");
-    }
-    if (body.dateEndsOn || body.allDay) {
-      throw new HttpError(400, "Date ranges and all-day availability are only available for one-time entries");
-    }
-  }
-  if (body.kind === "AD_HOC") {
-    if (!body.date) {
-      throw new HttpError(400, "Date is required for ad hoc availability");
-    }
-    if (body.dayOfWeek !== null && body.dayOfWeek !== undefined) {
-      throw new HttpError(400, "Ad hoc availability cannot include a day of week");
-    }
-    if (body.dateEndsOn && body.date > body.dateEndsOn) {
-      throw new HttpError(400, "End date must be on or after the start date");
-    }
-  }
-  if (body.semesterStartsOn && body.semesterEndsOn && body.semesterStartsOn > body.semesterEndsOn) {
-    throw new HttpError(400, "Semester end date must be on or after start date");
-  }
-  if (body.intent !== "TIME_OFF" && body.status && body.status !== "APPROVED") {
-    throw new HttpError(400, "Only time-off requests can be pending or denied");
-  }
-}
-
-function normalizedTimes(body: z.infer<typeof updateBlockSchema>) {
-  return body.allDay
-    ? { startsAt: "00:00", endsAt: "23:59" }
-    : { startsAt: body.startsAt, endsAt: body.endsAt };
-}
 
 async function findOwnedBlock(id: string, blockId: string) {
   const block = await db.studentAvailabilityBlock.findUnique({

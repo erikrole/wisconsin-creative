@@ -4,21 +4,19 @@ import { participatedEventWhere } from "@/lib/services/event-worker";
 import type { CalendarEventSite, Prisma } from "@prisma/client";
 
 /** Wins, losses, and ties over some slice of games. */
-export type WinLoss = {
+type WinLoss = {
   wins: number;
   losses: number;
   ties: number;
 };
 
 /** W-L-T totals plus the dimensions worth counting them by. */
-export type GameRecord = WinLoss & {
+type GameRecord = WinLoss & {
   /** Count of completed 2026–27 Schedule events with an active assignment. */
   eventsWorked: number;
   bySport: Array<WinLoss & { sportCode: string | null }>;
   bySite: Array<WinLoss & { site: CalendarEventSite | null }>;
 };
-
-export const EMPTY_GAME_RECORD: GameRecord = { eventsWorked: 0, wins: 0, losses: 0, ties: 0, bySport: [], bySite: [] };
 
 /**
  * Profile records start with the 2026-27 operating season. Resolve the fixed
@@ -33,7 +31,7 @@ export type WorkedEventBounds = {
   endsAt: Date;
 };
 
-export const WORKED_EVENT_SCOPE: WorkedEventBounds = {
+const WORKED_EVENT_SCOPE: WorkedEventBounds = {
   startsAt: GAME_RECORD_START_DATE,
   endsAt: GAME_RECORD_END_DATE,
 };

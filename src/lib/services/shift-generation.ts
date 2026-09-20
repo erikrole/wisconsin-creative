@@ -2,6 +2,7 @@ import { Prisma, ShiftArea, ShiftWorkerType } from "@prisma/client";
 import { db } from "@/lib/db";
 import { sportDefaultShiftWindow } from "@/lib/schedule-defaults";
 import { getNonGameScheduleDefaults } from "@/lib/services/non-game-schedule-defaults";
+import { unique } from "@/lib/utils";
 
 const WRITE_CHUNK_SIZE = 500;
 
@@ -209,7 +210,7 @@ export async function generateShiftsForEvents(opts: {
   }
 
   // Load all active sport configs in one query
-  const sportCodes = [...new Set(events.filter((e) => e.sportCode).map((e) => e.sportCode!))];
+  const sportCodes = unique(events.filter((e) => e.sportCode).map((e) => e.sportCode!));
   const [sportConfigs, nonGameDefaults] = await Promise.all([
     db.sportConfig.findMany({
       where: { sportCode: { in: sportCodes }, active: true },
@@ -400,7 +401,7 @@ export async function regenerateShiftsForEvent(eventId: string): Promise<{
   return { added: newShifts.length };
 }
 
-export type SportDefaultRebaseSummary = {
+type SportDefaultRebaseSummary = {
   eventsMatched: number;
   groupsCreated: number;
   groupsRebased: number;

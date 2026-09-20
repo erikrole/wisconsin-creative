@@ -1,9 +1,9 @@
-export type ScheduleTimelineEventAnchor = {
+type ScheduleTimelineEventAnchor = {
   id: string;
   offset: number;
 };
 
-export type ScheduleTimelineDayAnchor = {
+type ScheduleTimelineDayAnchor = {
   value: number;
   offset: number;
 };
@@ -13,7 +13,7 @@ export type ScheduleTimelineSnapshot = {
   day: ScheduleTimelineDayAnchor | null;
 };
 
-export type ScheduleTimelineTarget =
+type ScheduleTimelineTarget =
   | { kind: "event"; id: string; offset: number }
   | { kind: "day"; value: number; offset: number };
 

@@ -21,8 +21,17 @@ import {
   shiftClaimAreaEligibilityReason,
   shiftClaimEligibilityReason,
 } from "@/lib/shift-claim-eligibility";
+import { AREAS } from "@/types/areas";
 
 const ACTIVE_STATUSES = ACTIVE_ASSIGNMENT_STATUSES as ShiftAssignmentStatus[];
+
+export function parseAreaFilter(value: string | null): ShiftArea | undefined {
+  if (!value) return undefined;
+  if (!(AREAS as readonly string[]).includes(value)) {
+    throw new HttpError(400, "area must be VIDEO, PHOTO, GRAPHICS, SOCIAL, COMMS, or LIVE_PRODUCTION");
+  }
+  return value as ShiftArea;
+}
 
 type OpenWorkFilters = {
   userId: string;

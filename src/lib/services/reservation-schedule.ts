@@ -6,6 +6,7 @@ import { shiftWorkerTypeForProfile } from "@/lib/shift-display";
 import { evaluateAvailabilityPreferences, type AvailabilityBlockLike } from "@/lib/student-availability";
 import { checkTimeConflict } from "@/lib/services/shift-assignments";
 import { buildSchedulePublicationSnapshot } from "@/lib/services/schedule-publication";
+import { unique } from "@/lib/utils";
 
 const reservationScheduleGroupSelect = {
   id: true,
@@ -55,35 +56,6 @@ const reservationScheduleShiftSelect = {
   callEndsAt: true,
 } satisfies Prisma.ShiftSelect;
 
-export const reservationScheduleRequesterSelect = {
-  role: true,
-  staffingType: true,
-  primaryArea: true,
-  areaAssignments: {
-    select: {
-      area: true,
-      isPrimary: true,
-    },
-  },
-  availabilityBlocks: {
-    select: {
-      kind: true,
-      intent: true,
-      status: true,
-      dayOfWeek: true,
-      date: true,
-      dateEndsOn: true,
-      allDay: true,
-      startsAt: true,
-      endsAt: true,
-      label: true,
-      semesterLabel: true,
-      semesterStartsOn: true,
-      semesterEndsOn: true,
-    },
-  },
-} satisfies Prisma.UserSelect;
-
 const reservationAssignmentContextSelect = {
   id: true,
   userId: true,
@@ -122,7 +94,7 @@ export type ReservationScheduleRequester = {
   availabilityBlocks: AvailabilityBlockLike[];
 };
 
-export type ReservationAssignmentContext = Prisma.ShiftAssignmentGetPayload<{
+type ReservationAssignmentContext = Prisma.ShiftAssignmentGetPayload<{
   select: typeof reservationAssignmentContextSelect;
 }>;
 
@@ -137,7 +109,7 @@ export type ReservationScheduleAssignment = {
   hasConflict: boolean;
 };
 
-export type ReservationScheduleRelease = {
+type ReservationScheduleRelease = {
   assignmentId: string | null;
   eventId: string | null;
   released: boolean;
@@ -146,14 +118,14 @@ export type ReservationScheduleRelease = {
   reason: "not_reservation_managed" | "other_reservation" | "working_copy" | "released";
 };
 
-export type ReservationScheduleReconciliation = {
+type ReservationScheduleReconciliation = {
   status: "scheduled" | "already_scheduled" | "not_applicable" | "needs_review" | "blocked_working_copy";
   assignment: ReservationScheduleAssignment | null;
   releasedAssignmentId: string | null;
   reason?: string;
 };
 
-export const RESERVATION_ASSIGNMENT_NOTE = "Auto-assigned from an event gear reservation";
+const RESERVATION_ASSIGNMENT_NOTE = "Auto-assigned from an event gear reservation";
 
 function preferredAreas(requester: ReservationScheduleRequester) {
   const areas = [
@@ -163,7 +135,7 @@ function preferredAreas(requester: ReservationScheduleRequester) {
       .map((assignment) => assignment.area),
     ...requester.areaAssignments.map((assignment) => assignment.area),
   ];
-  return [...new Set(areas.filter((area): area is ShiftArea => Boolean(area)))];
+  return unique(areas.filter((area): area is ShiftArea => Boolean(area)));
 }
 
 function effectiveReservationShiftWindow(

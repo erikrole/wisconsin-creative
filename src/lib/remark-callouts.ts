@@ -8,12 +8,16 @@
 // The marker is stripped and the blockquote is tagged with
 // `guide-alert guide-alert-<type>` so the reader renders it as a callout card.
 // This keeps Markdown as the source of truth and needs no new editor primitive.
+//
+// `shortcut` is a house kind on top of GitHub's five alerts. Keep this list in
+// sync with src/lib/editor-snippets.ts and ios GuideCallout.
 
-export const CALLOUT_TYPES = ["note", "tip", "important", "warning", "caution"] as const;
+export const CALLOUT_TYPES = ["note", "tip", "shortcut", "important", "warning", "caution"] as const;
 
 export type CalloutType = (typeof CALLOUT_TYPES)[number];
 
-const MARKER_RE = /^\[!(note|tip|important|warning|caution)\][ \t]*/i;
+const MARKER_RE = new RegExp(`^\\\\?\\[!(${CALLOUT_TYPES.join("|")})\\][ \\t]*`, "i");
+const CLASS_RE = new RegExp(`guide-alert-(${CALLOUT_TYPES.join("|")})`);
 
 type MdastNode = {
   type: string;
@@ -67,6 +71,6 @@ export function remarkCallouts() {
 export function parseCalloutType(className: string | undefined): CalloutType | null {
   if (!className) return null;
   if (!className.includes("guide-alert")) return null;
-  const match = className.match(/guide-alert-(note|tip|important|warning|caution)/);
+  const match = className.match(CLASS_RE);
   return match ? (match[1] as CalloutType) : null;
 }

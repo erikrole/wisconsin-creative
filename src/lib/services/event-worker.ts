@@ -13,13 +13,13 @@ import { ACTIVE_ASSIGNMENT_STATUSES } from "@/lib/shift-constants";
  */
 
 /** One person on one event, however that participation was recorded. */
-export type EventParticipant = {
+type EventParticipant = {
   id: string;
   name: string;
   avatarUrl: string | null;
 };
 
-export type EventWorkerRow = {
+type EventWorkerRow = {
   id: string;
   note: string | null;
   createdAt: string;

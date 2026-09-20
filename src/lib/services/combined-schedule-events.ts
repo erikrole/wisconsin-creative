@@ -42,8 +42,6 @@ const eventSelect = Prisma.validator<Prisma.CalendarEventSelect>()({
 
 type CombineEvent = Prisma.CalendarEventGetPayload<{ select: typeof eventSelect }>;
 
-export type CombinedScheduleEventPreview = ReturnType<typeof buildPreview>;
-
 function normalizedVenue(event: CombineEvent) {
   if (event.locationId) return `location:${event.locationId}`;
   const raw = event.rawLocationText

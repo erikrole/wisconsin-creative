@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
 import { ResourceType, Role, ShiftArea } from "@prisma/client";
@@ -19,7 +20,7 @@ import {
  * find a phrase buried in a typical guide, small enough that a 100-guide hub
  * payload stays light even when individual guides are tens of KB of markdown.
  */
-export const GUIDE_SEARCH_TEXT_CHARS = 2000;
+const GUIDE_SEARCH_TEXT_CHARS = 2000;
 
 function compactSearchText(plainText: string): string {
   return plainText
@@ -29,7 +30,7 @@ function compactSearchText(plainText: string): string {
     .slice(0, GUIDE_SEARCH_TEXT_CHARS);
 }
 
-function slugify(title: string): string {
+export function slugify(title: string): string {
   return title
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
@@ -37,22 +38,18 @@ function slugify(title: string): string {
 }
 
 async function uniqueSlug(base: string, excludeId?: string): Promise<string> {
-  let candidate = base;
-  let suffix = 1;
-
-  while (true) {
-    const existing = await db.resource.findUnique({
-      where: { slug: candidate },
-      select: { id: true },
-    });
-
-    if (!existing || existing.id === excludeId) {
-      return candidate;
-    }
-
-    suffix += 1;
-    candidate = `${base}-${suffix}`;
+  // One query for every slug in this family instead of a findUnique per collision.
+  const taken = await db.resource.findMany({
+    where: { OR: [{ slug: base }, { slug: { startsWith: `${base}-` } }], ...(excludeId ? { NOT: { id: excludeId } } : {}) },
+    select: { slug: true },
+  });
+  const used = new Set(taken.map((row) => row.slug));
+  if (!used.has(base)) return base;
+  for (let suffix = 2; suffix <= 1000; suffix += 1) {
+    const candidate = `${base}-${suffix}`;
+    if (!used.has(candidate)) return candidate;
   }
+  return `${base}-${randomUUID().slice(0, 8)}`;
 }
 
 export type GuideListItem = {
@@ -265,7 +262,6 @@ export async function updateGuide(
     featuredRank?: number | null;
     published?: boolean;
     expectedUpdatedAt?: string;
-    markVerified?: boolean;
   },
   editorRole: Role,
   editorId: string,
@@ -306,7 +302,6 @@ export async function updateGuide(
     slug = await uniqueSlug(base, id);
   }
 
-  const verifiedAt = patch.markVerified ? new Date() : undefined;
   const nextFeatured = patch.featured ?? guide.featured;
   const shouldUpdateFeaturedRank =
     patch.featured !== undefined || patch.featuredRank !== undefined;
@@ -330,11 +325,6 @@ export async function updateGuide(
       ...(patch.featured !== undefined && { featured: patch.featured }),
       ...(shouldUpdateFeaturedRank && { featuredRank: nextFeaturedRank }),
       ...(patch.published !== undefined && { published: patch.published }),
-      ...(verifiedAt !== undefined && {
-        lastVerifiedAt: verifiedAt,
-        lastVerifiedById: editorId,
-        updatedAt: verifiedAt,
-      }),
     },
     include: {
       author: { select: { id: true, name: true } },

@@ -6,10 +6,11 @@ import { ACTIVE_ASSIGNMENT_STATUSES } from "@/lib/shift-constants";
 import { OFFICIAL_RECORD_EVENT_EXCLUSION } from "@/lib/services/game-record";
 import { participatedByAnyoneWhere } from "@/lib/services/event-worker";
 import { SCOREBOARD_SCOPE } from "@/lib/services/scoreboard";
+import { SITE_LABELS, trimmedOrNull, winRate as rate } from "@/lib/scoreboard-display";
 
-export const TEAM_SCOREBOARD_MINIMUM_RATE_GAMES = 3;
+const TEAM_SCOREBOARD_MINIMUM_RATE_GAMES = 3;
 
-export type TeamScoreboardFilters = {
+type TeamScoreboardFilters = {
   sportCode?: string;
   venue?: string;
   opponent?: string;
@@ -22,7 +23,7 @@ export type TeamScoreboardPersonIdentity = {
   avatarUrl: string | null;
 };
 
-export type TeamScoreboardSummary = {
+type TeamScoreboardSummary = {
   contributors: number;
   eventsCovered: number;
   eventCredits: number;
@@ -43,7 +44,7 @@ export type TeamScoreboardPersonSummary = {
   winRate: number | null;
 };
 
-export type TeamScoreboardPersonSport = TeamScoreboardPersonSummary & {
+type TeamScoreboardPersonSport = TeamScoreboardPersonSummary & {
   key: string | null;
   label: string;
 };
@@ -61,7 +62,7 @@ export type TeamScoreboardBreakdown = TeamScoreboardSummary & {
   label: string;
 };
 
-export type TeamScoreboardSport = TeamScoreboardBreakdown;
+type TeamScoreboardSport = TeamScoreboardBreakdown;
 
 export type TeamScoreboardFacet = {
   key: string;
@@ -205,26 +206,10 @@ type TeamScoreboardBreakdownMaps = Record<
   Map<string | null, MutableTeamBreakdown>
 >;
 
-const SITE_LABELS: Record<CalendarEventSite, string> = {
-  HOME: "Home",
-  AWAY: "Away",
-  NEUTRAL: "Neutral",
-};
-
 const SITE_ORDER: Array<CalendarEventSite | null> = ["HOME", "AWAY", "NEUTRAL", null];
-
-function rate(wins: number, losses: number, ties: number): number | null {
-  const games = wins + losses + ties;
-  return games > 0 ? Math.round(((wins + ties / 2) / games) * 1000) / 10 : null;
-}
 
 function labelForSport(key: string | null): string {
   return key ? sportLabel(key) : "Unknown sport";
-}
-
-function trimmedOrNull(value: string | null): string | null {
-  const trimmed = value?.trim() ?? "";
-  return trimmed || null;
 }
 
 function dimensionKey(event: EventDimensions, dimension: TeamScoreboardDimension): string | null {

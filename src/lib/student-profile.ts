@@ -8,7 +8,7 @@ export const STUDENT_YEAR_OPTIONS = [
 
 export type StudentYearValue = (typeof STUDENT_YEAR_OPTIONS)[number]["value"];
 
-export const GRADUATION_TERM_OPTIONS = [
+const GRADUATION_TERM_OPTIONS = [
   { value: "SPRING", label: "Spring" },
   { value: "SUMMER", label: "Summer" },
   { value: "FALL", label: "Fall" },

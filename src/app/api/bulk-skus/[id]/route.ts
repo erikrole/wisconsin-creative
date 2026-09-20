@@ -163,10 +163,14 @@ async function loadActiveBulkUnitAllocationMap(unitIds: string[]) {
 export const DELETE = withAuth<{ id: string }>(async (_req, { user, params }) => {
   requirePermission(user.role, "bulk_sku", "delete");
 
-  const sku = await db.bulkSku.findUnique({ where: { id: params.id } });
+  // Independent reads: the existence check and the history check never feed
+  // each other, so issue them together and keep the 404-before-409 order.
+  const [sku, bookingCount] = await Promise.all([
+    db.bulkSku.findUnique({ where: { id: params.id } }),
+    db.bookingBulkItem.count({ where: { bulkSkuId: params.id } }),
+  ]);
   if (!sku) throw new HttpError(404, "Bulk SKU not found");
 
-  const bookingCount = await db.bookingBulkItem.count({ where: { bulkSkuId: params.id } });
   if (bookingCount > 0) {
     throw new HttpError(409, "Cannot delete: this SKU has booking history.");
   }

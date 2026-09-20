@@ -5,6 +5,7 @@ import { ACTIVE_ASSIGNMENT_STATUSES } from "@/lib/shift-constants";
 import { GUIDE_AREA_LABELS } from "@/lib/guide-categories";
 import { shiftWorkerLabel } from "@/lib/shift-display";
 import { visibleActiveUserWhere } from "@/lib/user-visibility";
+import { unique } from "@/lib/utils";
 
 export const MAX_BLAST_RECIPIENTS = 500;
 
@@ -17,7 +18,7 @@ export type BlastTargetSpec =
   | { kind: "USERS"; userIds: string[] }
   | { kind: "DYNAMIC"; areas?: ShiftArea[]; workerTypes?: ShiftWorkerType[]; sportCodes?: string[] };
 
-export type BlastTargetUser = {
+type BlastTargetUser = {
   id: string;
   name: string;
   role: Role;
@@ -25,7 +26,7 @@ export type BlastTargetUser = {
   staffingType: ShiftWorkerType;
 };
 
-export type ResolvedBlastTarget = {
+type ResolvedBlastTarget = {
   userIds: string[];
   /** Frozen at send time onto `Blast.targetSummary`. */
   summary: string;
@@ -132,7 +133,7 @@ export async function resolveBlastTargets(spec: BlastTargetSpec): Promise<Resolv
       break;
     }
     case "USERS": {
-      const ids = [...new Set(spec.userIds)];
+      const ids = unique(spec.userIds);
       idFilter = { id: { in: ids } };
       summary = `${ids.length} selected ${ids.length === 1 ? "person" : "people"}`;
       break;

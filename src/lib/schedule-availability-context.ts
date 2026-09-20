@@ -5,7 +5,7 @@ import {
   type AvailabilityWindow,
 } from "@/lib/student-availability";
 
-export type ScheduleAvailabilityContext = {
+type ScheduleAvailabilityContext = {
   state: "blocked" | "advisory" | "preferred";
   label: string;
   detail: string;

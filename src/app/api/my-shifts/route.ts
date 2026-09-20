@@ -6,28 +6,8 @@ import { shiftWorkerLabel } from "@/lib/shift-display";
 import { startOfTodayInAppTz } from "@/lib/app-time";
 import { isShiftAssignmentAcknowledged } from "@/lib/schedule-publication-types";
 import { studentCallTimeAppliesToEvent } from "@/lib/shift-call-windows";
-
-function gearStatusForBooking(status: string) {
-  if (status === "OPEN") return "checked_out";
-  if (status === "PENDING_PICKUP") return "pickup_ready";
-  if (status === "BOOKED") return "reserved";
-  return "draft";
-}
-
-function gearStatusPriority(status: string) {
-  switch (status) {
-    case "pickup_ready":
-      return 4;
-    case "checked_out":
-      return 3;
-    case "reserved":
-      return 2;
-    case "draft":
-      return 1;
-    default:
-      return 0;
-  }
-}
+import { gearStatusForBooking, gearStatusPriority } from "@/lib/booking-status-display";
+import { unique } from "@/lib/utils";
 
 /**
  * GET /api/my-shifts
@@ -118,7 +98,7 @@ export const GET = withAuth(async (req, { user }) => {
   // For each assignment, check if that same person has gear linked to the event.
   // This must follow `targetUserId`, not the caller: pointed at somebody else's
   // shifts it would otherwise attach the viewer's own bookings to their rows.
-  const eventIds = [...new Set(assignments.map((a) => a.shift.shiftGroup.event.id))];
+  const eventIds = unique(assignments.map((a) => a.shift.shiftGroup.event.id));
   const assignmentIds = assignments.map((a) => a.id);
 
   const gearBookings = eventIds.length > 0

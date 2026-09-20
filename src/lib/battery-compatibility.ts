@@ -1,13 +1,14 @@
-export const DEFAULT_LOW_BATTERY_THRESHOLD = 10;
+import { unique } from "@/lib/utils";
+const DEFAULT_LOW_BATTERY_THRESHOLD = 10;
 
-export type BatteryCameraLike = {
+type BatteryCameraLike = {
   brand?: string | null;
   model?: string | null;
   type?: string | null;
   categoryName?: string | null;
 };
 
-export type BatterySkuLike = {
+type BatterySkuLike = {
   id: string;
   name: string;
   category?: string | null;
@@ -17,14 +18,14 @@ export type BatterySkuLike = {
   minThreshold?: number | null;
 };
 
-export type BatteryCompatibilityRule = {
+type BatteryCompatibilityRule = {
   id: string;
   label: string;
   cameraModelTerms: string[];
   batteryTerms: string[];
 };
 
-export type BatteryAvailabilityAlert = {
+type BatteryAvailabilityAlert = {
   ruleId: string;
   label: string;
   cameraModels: string[];
@@ -33,13 +34,13 @@ export type BatteryAvailabilityAlert = {
   threshold: number;
 };
 
-export type BatteryCompatibilitySummary = BatteryAvailabilityAlert & {
+type BatteryCompatibilitySummary = BatteryAvailabilityAlert & {
   cameraCount: number;
   batterySkuNames: string[];
   isLow: boolean;
 };
 
-export const BATTERY_COMPATIBILITY_RULES: BatteryCompatibilityRule[] = [
+const BATTERY_COMPATIBILITY_RULES: BatteryCompatibilityRule[] = [
   {
     id: "sony-np-fz100",
     label: "Sony NP-FZ100 batteries",
@@ -87,7 +88,7 @@ function haystack(parts: Array<string | null | undefined>) {
   return parts.filter(Boolean).join(" ").toLowerCase();
 }
 
-export function isBatteryCamera(asset: BatteryCameraLike) {
+function isBatteryCamera(asset: BatteryCameraLike) {
   const text = haystack([asset.type, asset.categoryName, asset.brand, asset.model]);
   return /\b(cameras?|camcorder|cinema|mirrorless|dslr|bod(?:y|ies))\b/.test(text);
 }
@@ -127,7 +128,7 @@ export function getBatteryCompatibilitySummaries(args: {
 
     const availableQuantity = matchingSkus.reduce((sum, sku) => sum + quantityForSku(sku), 0);
     const threshold = thresholdForSkus(matchingSkus);
-    const cameraModels = [...new Set(matchingCameras.map((camera) => camera.model).filter((model): model is string => !!model))];
+    const cameraModels = unique(matchingCameras.map((camera) => camera.model).filter((model): model is string => !!model));
 
     return [{
       ruleId: rule.id,

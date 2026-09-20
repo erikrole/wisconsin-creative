@@ -16,7 +16,7 @@ import {
 } from "./types";
 import { getOfficialSignatureRosterSeed } from "./official-rosters";
 
-export const UW_BADGERS_ORIGIN = "https://uwbadgers.com";
+const UW_BADGERS_ORIGIN = "https://uwbadgers.com";
 const ALLOWED_HOSTS = new Set(["uwbadgers.com", "www.uwbadgers.com"]);
 const MAX_SOURCE_BYTES = 5 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 10_000;
@@ -273,7 +273,7 @@ export function normalizedRosterHash(
   return createHash("sha256").update(JSON.stringify({ parserVersion, entries: canonical }), "utf8").digest("hex");
 }
 
-export type UWBadgersRosterSnapshot = {
+type UWBadgersRosterSnapshot = {
   sourceKey: string;
   sourceUrl: string;
   parserVersion: string;

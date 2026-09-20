@@ -1,3 +1,5 @@
+import { unique } from "@/lib/utils";
+
 function getRequired(key: string): string {
   const value = process.env[key];
   if (!value) {
@@ -67,7 +69,7 @@ export const env = {
     const origins = configured
       ? configured.split(",").map((origin) => origin.trim()).filter(Boolean)
       : [this.appUrl];
-    return [...new Set(origins)];
+    return unique(origins);
   },
   /** Optional — enables Sentry error tracking */
   get sentryDsn() {

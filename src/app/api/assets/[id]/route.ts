@@ -9,6 +9,7 @@ import { createAuditEntry } from "@/lib/audit";
 import { canonicalFirmwareIdentity } from "@/lib/firmware-watch-targets";
 import { databaseIdSchema, moneyDecimalSchema, nullableHttpUrlSchema } from "@/lib/validation";
 import { sanitizeCollaboratorPickerAsset } from "@/lib/collaborator-gear";
+import { buildAssetTagSortFields } from "@/lib/item-asset-tag-sort";
 
 const nullableTrimmedString = (max = 500) =>
   z.preprocess(
@@ -331,6 +332,8 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
   try {
     const updateData: Prisma.AssetUpdateInput = {
       ...body,
+      // Keep the persisted operational sort key in step with the tag.
+      ...(body.assetTag !== undefined ? buildAssetTagSortFields(body.assetTag) : {}),
       ...(body.purchaseDate !== undefined
         ? { purchaseDate: body.purchaseDate ? new Date(body.purchaseDate) : null }
         : {}),

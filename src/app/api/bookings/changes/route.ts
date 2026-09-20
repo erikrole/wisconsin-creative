@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { HttpError, ok } from "@/lib/http";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { requirePermission, requirePermissionOrCollaboratorCapability } from "@/lib/rbac";
+import { unique } from "@/lib/utils";
 
 const BOOKING_CHANGE_LIMIT = { max: 180, windowMs: 60_000 };
 const MAX_CHANGE_ROWS = 100;
@@ -143,7 +144,7 @@ export const GET = withAuth(async (req, { user }) => {
     }),
   ]);
 
-  const auditBookingIds = [...new Set(auditRows.map((row) => row.entityId).filter(Boolean))];
+  const auditBookingIds = unique(auditRows.map((row) => row.entityId).filter(Boolean));
   const visibleAuditBookings = auditBookingIds.length > 0
     ? await db.booking.findMany({
         where: { ...visibleBookingWhere, id: { in: auditBookingIds } },

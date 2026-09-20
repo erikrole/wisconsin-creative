@@ -1,6 +1,7 @@
-export const CALENDAR_SOURCE_STALE_AFTER_HOURS = 30;
+import { pluralize } from "@/lib/format";
+const CALENDAR_SOURCE_STALE_AFTER_HOURS = 30;
 
-export type CalendarSourceFreshnessState =
+type CalendarSourceFreshnessState =
   | "disabled"
   | "error"
   | "never-synced"
@@ -15,7 +16,7 @@ export type CalendarSourceFreshnessInput = {
   lastError: string | null;
 };
 
-export type ScheduleSourceEntry = {
+type ScheduleSourceEntry = {
   source: { id?: string | null; name: string } | null;
 };
 
@@ -47,16 +48,12 @@ function parseTimestamp(value: string | Date | null): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-function plural(count: number, singular: string, pluralValue = `${singular}s`) {
-  return `${count} ${count === 1 ? singular : pluralValue}`;
-}
-
 function visibleRowDetail(manualEvents: number, importedEvents: number) {
   if (manualEvents > 0 && importedEvents > 0) {
-    return `${plural(manualEvents, "manual event")} and ${plural(importedEvents, "imported event")} visible.`;
+    return `${pluralize(manualEvents, "manual event")} and ${pluralize(importedEvents, "imported event")} visible.`;
   }
-  if (manualEvents > 0) return `${plural(manualEvents, "manual event")} visible.`;
-  if (importedEvents > 0) return `${plural(importedEvents, "imported event")} visible.`;
+  if (manualEvents > 0) return `${pluralize(manualEvents, "manual event")} visible.`;
+  if (importedEvents > 0) return `${pluralize(importedEvents, "imported event")} visible.`;
   return "No visible events in the current Schedule view.";
 }
 
@@ -159,7 +156,7 @@ export function buildScheduleSourceSignal(
       status,
       severity: "attention",
       label: "Calendar source error",
-      detail: `${visibleDetail} ${plural(stateCounts.error, "enabled source")} has sync errors.`,
+      detail: `${visibleDetail} ${pluralize(stateCounts.error, "enabled source")} has sync errors.`,
       variant: "red",
       manualEvents,
       importedEvents,
@@ -176,8 +173,8 @@ export function buildScheduleSourceSignal(
   const staleLikeCount = stateCounts.stale + stateCounts["never-synced"];
   if (staleLikeCount > 0) {
     const staleParts = [
-      stateCounts.stale > 0 ? plural(stateCounts.stale, "stale source") : "",
-      stateCounts["never-synced"] > 0 ? plural(stateCounts["never-synced"], "never-synced source") : "",
+      stateCounts.stale > 0 ? pluralize(stateCounts.stale, "stale source") : "",
+      stateCounts["never-synced"] > 0 ? pluralize(stateCounts["never-synced"], "never-synced source") : "",
     ].filter(Boolean);
     return {
       status,
@@ -222,7 +219,7 @@ export function buildScheduleSourceSignal(
       severity: "ok",
       label: manualEvents > 0 ? "Manual + calendar" : "Calendar fresh",
       detail: sourceCount > 0
-        ? `${visibleDetail} ${plural(stateCounts.healthy, "enabled source")} fresh.`
+        ? `${visibleDetail} ${pluralize(stateCounts.healthy, "enabled source")} fresh.`
         : `${visibleDetail} No configured source metadata was returned.`,
       variant: "green",
       manualEvents,
@@ -242,7 +239,7 @@ export function buildScheduleSourceSignal(
     severity: manualEvents > 0 ? "neutral" : "ok",
     label: manualEvents > 0 ? "Manual schedule" : "No visible events",
     detail: sourceCount > 0
-      ? `${visibleDetail} ${plural(stateCounts.healthy, "enabled source")} fresh.`
+      ? `${visibleDetail} ${pluralize(stateCounts.healthy, "enabled source")} fresh.`
       : `${visibleDetail} No calendar sources are configured.`,
     variant: manualEvents > 0 ? "gray" : "green",
     manualEvents,

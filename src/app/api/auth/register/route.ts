@@ -9,6 +9,7 @@ import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { createAuditEntriesTx, createAuditEntry } from "@/lib/audit";
 import { capabilitiesForActor, collaboratorPolicyMetadataForActor, compatibilityCollaboratorProfile } from "@/lib/collaborator-access";
 import { collaboratorPolicyActorSelect } from "@/lib/services/collaborator-policies";
+import { unique } from "@/lib/utils";
 
 // Registration is invitation-gated (allowlist), so the IP ceiling is sized for
 // an onboarding wave from a shared network rather than for abuse defense.
@@ -79,10 +80,10 @@ export const POST = withHandler(async (req) => {
       });
 
       if (allowedEntry.role === "STUDENT") {
-        const areas = Array.from(new Set([
+        const areas = unique([
           ...(allowedEntry.preloadedAreas ?? []),
           ...(allowedEntry.preloadedPrimaryArea ? [allowedEntry.preloadedPrimaryArea] : []),
-        ]));
+        ]);
         const primaryArea = preloadedPrimaryArea ?? areas[0] ?? null;
         const assignmentAudits: Array<{
           actorId: string;
@@ -116,7 +117,7 @@ export const POST = withHandler(async (req) => {
           });
         }
 
-        for (const sportCode of Array.from(new Set(allowedEntry.preloadedSportCodes ?? []))) {
+        for (const sportCode of unique(allowedEntry.preloadedSportCodes ?? [])) {
           const assignment = await tx.studentSportAssignment.create({
             data: {
               userId: created.id,

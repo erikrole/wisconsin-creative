@@ -1,4 +1,4 @@
-export type SchedulePublicationStatus = "draft" | "published" | "changed";
+type SchedulePublicationStatus = "draft" | "published" | "changed";
 
 export type SchedulePublicationSnapshotItem = {
   shiftId: string;

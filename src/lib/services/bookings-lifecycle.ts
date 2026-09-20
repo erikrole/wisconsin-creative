@@ -61,6 +61,8 @@ import {
   type ReservationScheduleRequester,
 } from "@/lib/services/reservation-schedule";
 import { assertBookingSnapshot } from "@/lib/booking-concurrency";
+import { isBookingAllocationConstraintError } from "@/lib/prisma-errors";
+import { unique } from "@/lib/utils";
 
 type CreateBookingInput = {
   /** Internal kiosk completion receipt, committed atomically with custody. */
@@ -229,7 +231,7 @@ async function assertNumberedPickupPlanLimit(
 
   const numberedSkus = await tx.bulkSku.findMany({
     where: {
-      id: { in: [...new Set(bulkItems.map((item) => item.bulkSkuId))] },
+      id: { in: unique(bulkItems.map((item) => item.bulkSkuId)) },
       trackByNumber: true,
     },
     select: { id: true },
@@ -301,39 +303,6 @@ function assertValidMaxConcurrentReservations(input: CreateBookingInput) {
   if (!Number.isFinite(cap) || !Number.isInteger(cap) || cap < 1 || cap > 50) {
     throw new HttpError(400, "maxConcurrentReservations must be a whole number between 1 and 50");
   }
-}
-
-function prismaErrorText(error: unknown) {
-  const message = error instanceof Error ? error.message : "";
-  const meta = typeof error === "object" && error && "meta" in error
-    ? JSON.stringify((error as { meta?: unknown }).meta ?? {})
-    : "";
-  return `${message} ${meta}`;
-}
-
-function isBookingAllocationConstraintError(error: unknown) {
-  if (!error || typeof error !== "object") return false;
-  const code = (error as { code?: unknown }).code;
-  const text = prismaErrorText(error);
-
-  if (code === "23P01" || text.includes("asset_allocations_no_overlap")) {
-    return true;
-  }
-
-  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) {
-    return false;
-  }
-
-  if (error.code === "P2002") {
-    const target = (error.meta?.target as string[] | string | undefined) ?? "";
-    const targetStr = Array.isArray(target) ? target.join(",") : String(target);
-    return (
-      targetStr.includes("asset_allocations_asset_id_active_unique") ||
-      targetStr.includes("asset_id")
-    );
-  }
-
-  return error.code === "P2004" && text.includes("asset_allocations");
 }
 
 function handleBookingMutationRace(error: unknown): never {
@@ -1522,10 +1491,10 @@ export async function forceCheckoutReservation(args: {
     const availableSet = new Set(availableNumbers);
     const preferredNumbers = (stagedUnitNumbersBySku.get(item.bulkSkuId) ?? [])
       .filter((unitNumber) => availableSet.has(unitNumber));
-    const selectedNumbers = [...new Set([
+    const selectedNumbers = unique([
       ...preferredNumbers,
       ...availableNumbers.filter((unitNumber) => !preferredNumbers.includes(unitNumber)),
-    ])].slice(0, item.quantity);
+    ]).slice(0, item.quantity);
 
     if (selectedNumbers.length !== item.quantity) {
       throw new HttpError(

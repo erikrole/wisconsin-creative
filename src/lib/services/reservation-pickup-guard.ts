@@ -1,7 +1,7 @@
 import { BookingKind, BookingStatus, type Prisma } from "@prisma/client";
 import { HttpError } from "@/lib/http";
 
-export type LeftoverReservationPickup = {
+type LeftoverReservationPickup = {
   id: string;
   refNumber: string | null;
   title: string;

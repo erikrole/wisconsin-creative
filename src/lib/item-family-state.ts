@@ -18,11 +18,11 @@ type ItemFamilyLike<TUnit extends UnitLike> = {
   balances: BalanceLike[];
 };
 
-export type EffectiveItemFamilyUnit<TUnit extends UnitLike> = Omit<TUnit, "status"> & {
+type EffectiveItemFamilyUnit<TUnit extends UnitLike> = Omit<TUnit, "status"> & {
   status: BulkUnitStatus;
 };
 
-export type ItemFamilyState<TUnit extends UnitLike> = {
+type ItemFamilyState<TUnit extends UnitLike> = {
   effectiveUnits: Array<EffectiveItemFamilyUnit<TUnit>>;
   balanceOnHandQuantity: number;
   onHandQuantity: number;

@@ -3,11 +3,11 @@ type WebMcpUser = {
   capabilities?: string[];
 };
 
-export type WebMcpToolResult = {
+type WebMcpToolResult = {
   content: [{ type: "text"; text: string }];
 };
 
-export type WebMcpTool = {
+type WebMcpTool = {
   name: string;
   title?: string;
   description: string;
@@ -53,9 +53,9 @@ export const WEBMCP_ITEM_TYPES = [
   "quantity-tracked",
 ] as const;
 
-export type WebMcpItemType = (typeof WEBMCP_ITEM_TYPES)[number];
+type WebMcpItemType = (typeof WEBMCP_ITEM_TYPES)[number];
 
-export const WEBMCP_PAGE_DEFINITIONS = [
+const WEBMCP_PAGE_DEFINITIONS = [
   { key: "dashboard", label: "Dashboard", href: "/" },
   { key: "schedule", label: "Schedule", href: "/schedule" },
   { key: "events", label: "Events", href: "/events" },
@@ -75,7 +75,7 @@ export const WEBMCP_PAGE_DEFINITIONS = [
   { key: "settings", label: "Settings", href: "/settings" },
 ] as const;
 
-export type WebMcpPageKey = (typeof WEBMCP_PAGE_DEFINITIONS)[number]["key"];
+type WebMcpPageKey = (typeof WEBMCP_PAGE_DEFINITIONS)[number]["key"];
 
 const INTERNAL_PAGE_KEYS: WebMcpPageKey[] = [
   "dashboard",
@@ -134,7 +134,7 @@ export function getWebMcpContext(): WebMcpModelContext | null {
     ?? null;
 }
 
-export function webMcpTextResult(value: unknown): WebMcpToolResult {
+function webMcpTextResult(value: unknown): WebMcpToolResult {
   return {
     content: [{
       type: "text",

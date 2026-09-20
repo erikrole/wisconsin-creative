@@ -16,8 +16,9 @@ import { createAuditEntryTx } from "@/lib/audit";
 import { dispatchScheduleAssignmentNotifications } from "@/lib/services/notifications";
 import { shiftClaimAreaEligibilityReason } from "@/lib/shift-claim-eligibility";
 import { formatAllDayDate, formatAppDateTime } from "@/lib/app-time";
+import { unique } from "@/lib/utils";
 
-export type RoleSlotOutcome = {
+type RoleSlotOutcome = {
   requestedShiftId: string;
   targetShiftId: string;
   originalWorkerType: ShiftWorkerType;
@@ -27,7 +28,7 @@ export type RoleSlotOutcome = {
   reusedMatchingSlot: boolean;
 };
 
-export type ShiftApprovalActor = { id: string; role: Role } | null;
+type ShiftApprovalActor = { id: string; role: Role } | null;
 
 const assignableShiftSelect = {
   id: true,
@@ -150,10 +151,65 @@ async function resolveAssignableShiftForUser(
   };
 }
 
+export const timeConflictCandidateInclude = {
+  user: { select: { role: true } },
+  shift: { select: {
+    ...assignableShiftSelect,
+    shiftGroup: { select: { event: { select: {
+      startsAt: true, endsAt: true, allDay: true, summary: true,
+    } } } },
+  } },
+} satisfies Prisma.ShiftAssignmentInclude;
+
+export type TimeConflictCandidate = Prisma.ShiftAssignmentGetPayload<{
+  include: typeof timeConflictCandidateInclude;
+}>;
+
 /**
- * Check if a user already has an active shift assignment during the given time window.
- * Optionally exclude a specific assignment (for swap scenarios).
+ * Load the conflict candidates for a whole set of users in one query.
+ *
+ * Callers that would otherwise run {@link checkTimeConflict} once per slot pass
+ * every user id and the union of the slot windows, then recheck each slot in
+ * memory with {@link findTimeConflictAmong}. A wider window only widens the raw
+ * prefilter, and the effective-window recheck is unchanged, so the per-slot
+ * answer is the same as the per-slot query's.
  */
+export async function loadTimeConflictCandidates(
+  tx: Prisma.TransactionClient,
+  userIds: string[],
+  window: { startsAt: Date; endsAt: Date },
+): Promise<TimeConflictCandidate[]> {
+  const uniqueUserIds = unique(userIds);
+  if (uniqueUserIds.length === 0) return [];
+  const where = buildShiftAssignmentOverlapWhere({ userId: uniqueUserIds[0]!, window });
+  return tx.shiftAssignment.findMany({
+    where: { ...where, userId: { in: uniqueUserIds } },
+    include: timeConflictCandidateInclude,
+  });
+}
+
+/**
+ * In-memory form of {@link findTimeConflict} over prefetched candidates.
+ * Same message text and same first-match ordering as the per-slot query.
+ */
+export function findTimeConflictAmong(
+  candidates: TimeConflictCandidate[],
+  args: {
+    userId: string;
+    startsAt: Date;
+    endsAt: Date;
+    excludeAssignmentId?: string;
+    details?: "staff-release";
+  },
+): string | null {
+  const requestedWindow = { startsAt: args.startsAt, endsAt: args.endsAt };
+  const scoped = candidates.filter((candidate) =>
+    candidate.userId === args.userId
+    && candidate.id !== args.excludeAssignmentId
+    && ACTIVE_ASSIGNMENT_STATUSES.includes(candidate.status));
+  return matchTimeConflict(scoped, requestedWindow, args.details);
+}
+
 /**
  * Non-throwing form of {@link checkTimeConflict}, returning the conflict
  * message or null. Publish preflight needs to gather every blocker in one pass
@@ -177,13 +233,16 @@ export async function findTimeConflict(
       window: requestedWindow,
       excludeAssignmentId,
     }),
-    include: { user: { select: { role: true } }, shift: { select: {
-      ...assignableShiftSelect,
-      shiftGroup: { select: { event: { select: {
-        startsAt: true, endsAt: true, allDay: true, summary: true,
-      } } } },
-    } } },
+    include: timeConflictCandidateInclude,
   });
+  return matchTimeConflict(conflicts, requestedWindow, details);
+}
+
+function matchTimeConflict(
+  conflicts: TimeConflictCandidate[],
+  requestedWindow: { startsAt: Date; endsAt: Date },
+  details?: "staff-release",
+): string | null {
   for (const conflict of conflicts) {
     if (allowsOverlappingShifts(conflict.user?.role)) continue;
     const window = effectiveAssignmentWindow(conflict);
@@ -210,6 +269,10 @@ export async function findTimeConflict(
   return null;
 }
 
+/**
+ * Check if a user already has an active shift assignment during the given time window.
+ * Optionally exclude a specific assignment (for swap scenarios).
+ */
 export async function checkTimeConflict(
   tx: Prisma.TransactionClient,
   userId: string,
@@ -235,7 +298,7 @@ export async function directAssignShift(
   return result.assignment;
 }
 
-export async function directAssignShiftWithOutcome(
+async function directAssignShiftWithOutcome(
   shiftId: string,
   userId: string,
   assignedBy: string,
@@ -418,12 +481,6 @@ export async function repairRoleSlotMismatch(assignmentId: string) {
 
     return { assignment: repaired, outcome };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
-}
-
-export async function requestShift(shiftId: string, userId: string) {
-  void shiftId;
-  void userId;
-  throw new HttpError(410, "Shift requests are retired. Claim open shifts instead.");
 }
 
 /**
@@ -664,45 +721,6 @@ export async function initiateSwap(
       include: {
         user: { select: { id: true, name: true, role: true, staffingType: true, primaryArea: true } },
       },
-    });
-  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
-}
-
-/**
- * Remove an assignment (sets to DECLINED).
- * Only active or requested assignments can be removed — terminal statuses are immutable.
- */
-export async function removeAssignment(assignmentId: string) {
-  const REMOVABLE_STATUSES: ShiftAssignmentStatus[] = [
-    "DIRECT_ASSIGNED",
-    "APPROVED",
-    "REQUESTED",
-  ];
-
-  return db.$transaction(async (tx) => {
-    const assignment = await tx.shiftAssignment.findUnique({
-      where: { id: assignmentId },
-      include: { shift: { select: { shiftGroup: { select: { workingCopy: { select: { version: true } } } } } } },
-    });
-    if (!assignment) throw new HttpError(404, "Assignment not found");
-    assertNoWorkingCopy(assignment.shift?.shiftGroup?.workingCopy);
-    if (!REMOVABLE_STATUSES.includes(assignment.status)) {
-      throw new HttpError(400, "This assignment cannot be removed in its current state");
-    }
-
-    // A removed assignment must not stay advertised on the Trade Board —
-    // the poster no longer holds the shift a claimer would be taking over.
-    await tx.shiftTrade.updateMany({
-      where: {
-        shiftAssignmentId: assignmentId,
-        status: { in: ["OPEN", "CLAIMED"] },
-      },
-      data: { status: "CANCELLED", resolvedAt: new Date() },
-    });
-
-    return tx.shiftAssignment.update({
-      where: { id: assignmentId },
-      data: { status: "DECLINED" },
     });
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }

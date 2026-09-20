@@ -4,6 +4,7 @@ import { HttpError } from "@/lib/http";
 import type { SchedulePublicationSnapshot } from "@/lib/schedule-publication-types";
 import { createAuditEntryTx } from "@/lib/audit";
 import { studentCallTimeAppliesToEvent } from "@/lib/shift-call-windows";
+import { unique } from "@/lib/utils";
 
 const publishedScheduleSelect = {
   id: true,
@@ -57,11 +58,11 @@ function publishedScheduleWhere(eventId?: string, upcomingOnly = false): Prisma.
 
 async function hydratePublishedGroups(groups: PublishedGroup[]) {
   const snapshots = groups.map((group) => readSnapshot(group.lastPublishedSnapshot));
-  const userIds = [...new Set(
+  const userIds = unique(
     snapshots.flatMap((snapshot) =>
       snapshot.shifts.flatMap((shift) => shift.assignments.map((assignment) => assignment.userId)),
     ),
-  )];
+  );
   const users = userIds.length > 0
     ? await db.user.findMany({
         where: { id: { in: userIds } },

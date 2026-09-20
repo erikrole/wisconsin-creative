@@ -23,9 +23,31 @@ function formatExplicitDuration(ms: number): string {
   return "less than a minute";
 }
 
+// ── Counts / numbers ─────────────────────────────────────
+
+/** "1 item", "3 items" — count with its singular/plural noun */
+export function pluralize(count: number, singular: string, plural = `${singular}s`) {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
+/** Just the noun form for a count: "item" or "items" */
+export function pluralWord(count: number, singular: string, plural = `${singular}s`) {
+  return count === 1 ? singular : plural;
+}
+
+/** Zero-pad a number to two digits: 7 → "07" */
+export function pad2(value: number) {
+  return String(value).padStart(2, "0");
+}
+
+/** Whole-number percent from a 0–1 ratio: 0.256 → "26%" */
+export function formatPercent(value: number) {
+  return `${Math.round(value * 100)}%`;
+}
+
 // ── Urgency / countdown ──────────────────────────────────
 
-export type UrgencyLevel = "overdue" | "critical" | "warning" | "normal";
+type UrgencyLevel = "overdue" | "critical" | "warning" | "normal";
 
 export function getUrgency(startsAt: string, endsAt: string, now: Date): UrgencyLevel {
   const end = new Date(endsAt).getTime();
@@ -178,7 +200,7 @@ export function formatDateTime(iso: string) {
 }
 
 /** Explicit overdue elapsed: "3 days 2 hours overdue" */
-export function formatOverdueElapsed(endsAt: string, now: Date): string {
+function formatOverdueElapsed(endsAt: string, now: Date): string {
   const diff = now.getTime() - new Date(endsAt).getTime();
   if (diff <= 0) return "";
   return `${formatExplicitDuration(diff)} overdue`;
@@ -273,6 +295,16 @@ export function formatDayLabel(dateStr: string, now: Date, allDay = false): stri
   if (date >= todayStart && date < tomorrowStart) return "Today";
   if (date >= tomorrowStart && date < dayAfterTomorrow) return "Tomorrow";
   return date.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
+}
+
+/** "None", "45min", "1 hr", "2 hrs", or "1h 30m" for a call-time offset in minutes. */
+export function formatMinutes(minutes: number): string {
+  if (minutes === 0) return "None";
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  if (hours === 0) return `${remainder}min`;
+  if (remainder === 0) return hours === 1 ? "1 hr" : `${hours} hrs`;
+  return `${hours}h ${remainder}m`;
 }
 
 /** "Mar 11 – Mar 14" or "Mar 11" if same day */

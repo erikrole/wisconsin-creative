@@ -4,6 +4,7 @@ import {
 } from "@prisma/client";
 import { HttpError } from "@/lib/http";
 import type { BulkRequest } from "@/lib/services/availability";
+import { unique } from "@/lib/utils";
 
 /* ── Shared include constants ── */
 
@@ -62,14 +63,14 @@ export const bookingInclude = {
 /* ── Helpers ── */
 
 export function dedupeIds(ids: string[]) {
-  return [...new Set(ids)];
+  return unique(ids);
 }
 
 /* ── Equipment diff helpers for granular audit ── */
 
 export type AuditJson = Record<string, string | number | boolean | null | string[] | { bulkSkuId: string; quantity: number }[]>;
 
-export type EquipmentAuditEntry = {
+type EquipmentAuditEntry = {
   action: string;
   beforeJson: AuditJson;
   afterJson: AuditJson;

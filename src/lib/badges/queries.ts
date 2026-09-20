@@ -74,12 +74,6 @@ export async function listActiveBadgeDefinitions(where?: { trigger?: string }) {
   });
 }
 
-export async function countEarnedBadges(userId: string) {
-  return db.studentBadge.count({
-    where: { userId },
-  });
-}
-
 export async function listEarnedBadgesSince(args: {
   userId: string;
   after: Date;
@@ -234,7 +228,7 @@ export async function ensureManualBadgeDefinition(customDefinition: CustomBadgeD
   return definition;
 }
 
-export async function getBadgePeerVisibility() {
+async function getBadgePeerVisibility() {
   const config = await db.systemConfig.findUnique({
     where: { key: "badges.peerVisible" },
     select: { value: true },

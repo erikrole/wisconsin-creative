@@ -120,7 +120,7 @@ export async function getSportSetup(): Promise<SportSetupResponse> {
   return { sports, people };
 }
 
-export type MatchSportSetupResult = {
+type MatchSportSetupResult = {
   sourceSportCode: string;
   targetSportCode: string;
   policy: SportAutoAssignPolicy;

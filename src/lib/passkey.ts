@@ -16,8 +16,8 @@ import { createSession, randomHex, tokenHash, verifyPassword } from "@/lib/auth"
 import { capabilitiesForActor, collaboratorPolicyMetadataForActor, compatibilityCollaboratorProfile, requireActiveCollaboratorPolicy } from "@/lib/collaborator-access";
 import { collaboratorPolicyActorSelect } from "@/lib/services/collaborator-policies";
 
-export const PASSKEY_CEREMONY_COOKIE = "passkey_ceremony";
-export const PASSKEY_CEREMONY_TTL_MS = 5 * 60 * 1000;
+const PASSKEY_CEREMONY_COOKIE = "passkey_ceremony";
+const PASSKEY_CEREMONY_TTL_MS = 5 * 60 * 1000;
 
 type PasskeyRegistrationResponse = RegistrationResponseJSON;
 type PasskeyAuthenticationResponse = AuthenticationResponseJSON;

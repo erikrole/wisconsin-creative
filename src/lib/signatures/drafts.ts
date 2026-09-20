@@ -1,9 +1,9 @@
-export const SIGNATURE_DRAFT_TTL_MS = 24 * 60 * 60 * 1_000;
+const SIGNATURE_DRAFT_TTL_MS = 24 * 60 * 60 * 1_000;
 
 export type SignatureDraftPoint = { x: number; y: number };
 export type SignatureDraftStroke = { points: SignatureDraftPoint[] };
 
-export type SignatureDraftRecord = {
+type SignatureDraftRecord = {
   key: string;
   userId: string;
   collectionId: string;
@@ -17,7 +17,7 @@ export type SignatureDraftRecord = {
   expiresAt: number;
 };
 
-export type SignatureDraftIdentity = Pick<
+type SignatureDraftIdentity = Pick<
   SignatureDraftRecord,
   "userId" | "collectionId" | "memberId" | "settingsVersion"
 >;
@@ -155,7 +155,7 @@ async function findFreshSignatureDraft(
     .sort((left, right) => right.savedAt - left.savedAt)[0] ?? null;
 }
 
-export async function deleteSignatureDraft(key: string): Promise<void> {
+async function deleteSignatureDraft(key: string): Promise<void> {
   const db = await openDraftDb();
   try {
     await new Promise<void>((resolve, reject) => {

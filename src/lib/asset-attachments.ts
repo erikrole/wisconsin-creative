@@ -1,6 +1,6 @@
-export type AttachmentKind = "sd-card" | "camera-rig" | "misc-part";
+type AttachmentKind = "sd-card" | "camera-rig" | "misc-part";
 
-export type AttachmentLike = {
+type AttachmentLike = {
   id?: string;
   assetTag: string;
   name?: string | null;
@@ -12,13 +12,13 @@ export type AttachmentLike = {
   status?: string | null;
 };
 
-export type AttachmentCandidateState =
+type AttachmentCandidateState =
   | "available"
   | "self"
   | "already-attached"
   | "already-child";
 
-export type AttachmentGroup = {
+type AttachmentGroup = {
   key: AttachmentKind;
   label: string;
   description: string;
@@ -65,7 +65,7 @@ export function getAttachmentKind(item: AttachmentLike): AttachmentKind {
   return "misc-part";
 }
 
-export function getAttachmentKindLabel(kind: AttachmentKind): string {
+function getAttachmentKindLabel(kind: AttachmentKind): string {
   switch (kind) {
     case "sd-card":
       return "SD Cards";
@@ -76,7 +76,7 @@ export function getAttachmentKindLabel(kind: AttachmentKind): string {
   }
 }
 
-export function getAttachmentKindDescription(kind: AttachmentKind): string {
+function getAttachmentKindDescription(kind: AttachmentKind): string {
   switch (kind) {
     case "sd-card":
       return "Camera-slot media that stays tied to this camera.";

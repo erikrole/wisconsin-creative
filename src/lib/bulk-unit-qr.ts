@@ -1,12 +1,12 @@
 import { MAX_BULK_UNIT_NUMBER } from "@/lib/request-limits";
 
-export type DerivedBulkUnitQrSku = {
+type DerivedBulkUnitQrSku = {
   id: string;
   binQrCodeValue: string | null;
   trackByNumber?: boolean | null;
 };
 
-export type DerivedBulkUnitQrMatch = {
+type DerivedBulkUnitQrMatch = {
   bulkSkuId: string;
   binQrCodeValue: string;
   unitNumber: number;

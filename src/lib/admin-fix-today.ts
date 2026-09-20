@@ -10,14 +10,14 @@ const DEFAULT_BULK_THRESHOLD = 1;
 
 export type AdminFixTodaySeverity = "critical" | "warning" | "info";
 
-export type AdminFixTodaySample = {
+type AdminFixTodaySample = {
   id: string;
   label: string;
   detail: string;
   href: string;
 };
 
-export type AdminFixTodaySection = {
+type AdminFixTodaySection = {
   key: string;
   title: string;
   description: string;

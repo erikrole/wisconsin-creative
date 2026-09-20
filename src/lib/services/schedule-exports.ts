@@ -8,7 +8,7 @@ import { shiftWorkerLabel, shiftWorkerLabelForProfile, shiftWorkerSlotLabel, typ
 import { getSchedulePublicationState } from "@/lib/services/schedule-publication";
 import { studentCallTimeAppliesToEvent } from "@/lib/shift-call-windows";
 
-export const SCHEDULE_EXPORT_TYPES = [
+const SCHEDULE_EXPORT_TYPES = [
   "roster",
   "hours",
   "open-slots",
@@ -17,9 +17,9 @@ export const SCHEDULE_EXPORT_TYPES = [
   "gear-readiness",
 ] as const;
 
-export type ScheduleExportType = (typeof SCHEDULE_EXPORT_TYPES)[number];
+type ScheduleExportType = (typeof SCHEDULE_EXPORT_TYPES)[number];
 
-export type ScheduleExportInput = {
+type ScheduleExportInput = {
   type: ScheduleExportType;
   parsedStartDate: Date;
   parsedEndDate: Date;
@@ -28,7 +28,7 @@ export type ScheduleExportInput = {
   now?: Date;
 };
 
-export type ScheduleExportResult = {
+type ScheduleExportResult = {
   csv: string;
   filename: string;
   exportedCount: number;

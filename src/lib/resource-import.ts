@@ -7,6 +7,7 @@ import { requirePermission } from "@/lib/rbac";
 import { withSerializationRetry } from "@/lib/serialization";
 import type { z } from "zod";
 import { resourceImportManifestSchema } from "@/lib/validation";
+import { slugify } from "@/lib/guides";
 import {
   downloadImportImage, MAX_IMPORT_TOTAL_IMAGE_BYTES, uploadImportImage,
   validateImportImage, validateImportImageUrl,
@@ -31,10 +32,6 @@ const RESOURCE_IMPORT_SELECT = {
 } as const;
 type Existing = Prisma.ResourceGetPayload<{ select: typeof RESOURCE_IMPORT_SELECT }>;
 type ResourceClient = Prisma.TransactionClient | typeof db;
-
-function slugify(title: string): string {
-  return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "guide";
-}
 
 async function uniqueSlug(client: ResourceClient, base: string): Promise<string> {
   for (let suffix = 1; suffix <= 100; suffix += 1) {
@@ -122,7 +119,7 @@ export async function previewResourceImport(input: ImportInput) {
   return {
     importKey: manifest.importKey, sourceLabel: manifest.sourceLabel ?? null,
     operation: existing ? "update" : "create", resourceId: existing?.id ?? null,
-    slug: existing?.slug ?? await uniqueSlug(db, slugify(manifest.title)),
+    slug: existing?.slug ?? await uniqueSlug(db, (slugify(manifest.title) || "guide")),
     expectedUpdatedAt: existing?.updatedAt.toISOString() ?? null,
     markdownLength: manifest.markdown.length, imageCount: manifest.images.length, missingImageKeys,
     proposed: resourceData(manifest, manifest.markdown, existing),
@@ -170,7 +167,7 @@ export async function importResource(input: ImportInput) {
     assertVersion(existing, manifest);
     const guide = existing
       ? await tx.resource.update({ where: { id: existing.id }, data, include: RESOURCE_INCLUDE })
-      : await tx.resource.create({ data: { ...data, slug: await uniqueSlug(tx, slugify(manifest.title)), content: [], authorId: input.actorId }, include: RESOURCE_INCLUDE });
+      : await tx.resource.create({ data: { ...data, slug: await uniqueSlug(tx, (slugify(manifest.title) || "guide")), content: [], authorId: input.actorId }, include: RESOURCE_INCLUDE });
     await createAuditEntryTx(tx, {
       actorId: input.actorId, actorRole: input.actorRole, entityType: "resource", entityId: guide.id,
       action: existing ? "resource_updated" : "resource_created",

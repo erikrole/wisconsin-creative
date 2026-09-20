@@ -47,7 +47,7 @@ type FutureActiveAssignment = Prisma.ShiftAssignmentGetPayload<{
   select: typeof futureActiveAssignmentSelect;
 }>;
 
-export type AvailabilityConflictRecomputeResult = {
+type AvailabilityConflictRecomputeResult = {
   checked: number;
   updated: number;
 };

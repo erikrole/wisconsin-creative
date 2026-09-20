@@ -1,6 +1,6 @@
 import type { NotificationCategory } from "@/lib/services/notification-prefs";
 
-export type WorkerScheduleNotificationEvent =
+type WorkerScheduleNotificationEvent =
   | "assigned"
   | "requested"
   | "approved"
@@ -10,30 +10,6 @@ export type WorkerScheduleNotificationEvent =
   | "personal_call_time_changed";
 
 export type GearPrepNotificationSource = "assignment" | "manual_nudge";
-
-export type ScheduleDigestQueue =
-  | "needs-staffing"
-  | "conflicts"
-  | "unacknowledged"
-  | "gear-gaps"
-  | "trade-approval"
-  | "stale-source";
-
-export type StaffScheduleDigestInput = {
-  openSlots?: number;
-  conflictedAssignments?: number;
-  unacknowledgedWorkers?: number;
-  missingGear?: number;
-  claimedTrades?: number;
-  staleSources?: number;
-};
-
-export type StaffScheduleDigestCandidate = {
-  queue: ScheduleDigestQueue;
-  count: number;
-  title: string;
-  href: string;
-};
 
 const ACTIVE_WORKER_SCHEDULE_EVENTS = new Set<WorkerScheduleNotificationEvent>([
   "assigned",
@@ -112,26 +88,4 @@ export function scheduleMyShiftsNotificationPayload(args: {
     startDate: new Date(args.rangeStartsAt).toISOString(),
     endDate: new Date(args.rangeEndsAt).toISOString(),
   };
-}
-
-export function scheduleQueueHref(queue: ScheduleDigestQueue) {
-  return `/schedule?queue=${queue}`;
-}
-
-export function buildStaffScheduleDigestCandidates(
-  input: StaffScheduleDigestInput,
-): StaffScheduleDigestCandidate[] {
-  const rows: Array<[ScheduleDigestQueue, number | undefined, string]> = [
-    ["needs-staffing", input.openSlots, "Open schedule slots"],
-    ["conflicts", input.conflictedAssignments, "Assignment conflicts"],
-    ["unacknowledged", input.unacknowledgedWorkers, "Unacknowledged workers"],
-    ["gear-gaps", input.missingGear, "Gear gaps"],
-    ["trade-approval", input.claimedTrades, "Claimed trades"],
-    ["stale-source", input.staleSources, "Stale calendar sources"],
-  ];
-
-  return rows.flatMap(([queue, count, title]) => {
-    if (!count || count < 1) return [];
-    return [{ queue, count, title, href: scheduleQueueHref(queue) }];
-  });
 }

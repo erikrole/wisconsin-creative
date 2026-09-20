@@ -36,6 +36,7 @@ import {
   type CheckoutEscalationRecipientKind,
   type CheckoutEscalationStageType,
 } from "@/lib/checkout-escalation-policy";
+import { unique } from "@/lib/utils";
 
 /**
  * Defers a push send past the response without letting the serverless
@@ -282,6 +283,7 @@ async function persistCheckoutEscalation(args: {
     await db.notification.create({
       data: {
         userId: args.recipient.id,
+        bookingId: args.checkout.id,
         type: args.rule.type,
         title: args.title,
         body: args.body,
@@ -498,7 +500,7 @@ export async function processCheckoutEscalationStage(args: {
 
   const [existing, locationResponderConfig] = await Promise.all([
     db.notification.findMany({
-      where: { dedupeKey: { startsWith: `${checkout.id}:` } },
+      where: { bookingId: checkout.id },
       select: { dedupeKey: true, payload: true },
     }),
     db.systemConfig.findUnique({ where: { key: overdueResponderConfigKey(checkout.locationId) } }),
@@ -516,10 +518,25 @@ export async function processCheckoutEscalationStage(args: {
   return { status: notificationsCreated > 0 ? "sent" as const : "deduped" as const, notificationsCreated };
 }
 
-/** Daily repair sweep. Durable per-checkout workflows own normal delivery. */
-export async function processOverdueNotifications(): Promise<{ scanned: number; notificationsCreated: number }> {
+/** How many open checkouts one repair sweep will look at. */
+const OVERDUE_SWEEP_LIMIT = 500;
+
+/**
+ * Daily repair sweep. Durable per-checkout workflows own normal delivery.
+ *
+ * Scans at most `OVERDUE_SWEEP_LIMIT` open checkouts, oldest due date first.
+ * `remaining` is how many open checkouts the cap left unscanned this run, and
+ * `truncated` is simply `remaining > 0` — callers surface both so a
+ * backlog is visible instead of silently dropped.
+ */
+export async function processOverdueNotifications(): Promise<{
+  scanned: number;
+  notificationsCreated: number;
+  remaining: number;
+  truncated: boolean;
+}> {
   const now = new Date();
-  const [openCheckouts, rules, policies, config, operationsUsers, responderConfigs] = await Promise.all([
+  const [openCheckouts, rules, policies, config, operationsUsers, responderConfigs, openCheckoutCount] = await Promise.all([
     db.booking.findMany({
       where: { kind: "CHECKOUT", status: "OPEN" },
       select: {
@@ -534,7 +551,7 @@ export async function processOverdueNotifications(): Promise<{ scanned: number; 
         endsAt: true,
         requester: { select: { id: true, name: true, email: true } },
       },
-      take: 500,
+      take: OVERDUE_SWEEP_LIMIT,
       orderBy: { endsAt: "asc" },
     }),
     getEscalationRules(),
@@ -545,23 +562,23 @@ export async function processOverdueNotifications(): Promise<{ scanned: number; 
       where: { key: { startsWith: "overdue_responders:" } },
       select: { key: true, value: true },
     }),
+    db.booking.count({ where: { kind: "CHECKOUT", status: "OPEN" } }),
   ]);
-  if (openCheckouts.length === 0) return { scanned: 0, notificationsCreated: 0 };
+  const remaining = Math.max(0, openCheckoutCount - openCheckouts.length);
+  const truncated = remaining > 0;
+  if (openCheckouts.length === 0) return { scanned: 0, notificationsCreated: 0, remaining, truncated };
 
   const bookingIds = openCheckouts.map((checkout) => checkout.id);
   const existingRows = await db.notification.findMany({
-    where: { OR: bookingIds.map((id) => ({ dedupeKey: { startsWith: `${id}:` } })) },
-    select: { dedupeKey: true, payload: true },
+    where: { bookingId: { in: bookingIds } },
+    select: { bookingId: true, dedupeKey: true, payload: true },
   });
   const existingByBooking = new Map<string, ExistingEscalationNotification[]>();
   for (const row of existingRows) {
-    const bookingId = row.payload && typeof row.payload === "object"
-      ? (row.payload as Record<string, unknown>).bookingId
-      : null;
-    if (typeof bookingId !== "string") continue;
-    const rows = existingByBooking.get(bookingId) ?? [];
+    if (typeof row.bookingId !== "string") continue;
+    const rows = existingByBooking.get(row.bookingId) ?? [];
     rows.push(row);
-    existingByBooking.set(bookingId, rows);
+    existingByBooking.set(row.bookingId, rows);
   }
   const respondersByLocation = new Map(
     responderConfigs.map((row) => [row.key.slice("overdue_responders:".length), responderUserIds(row.value)]),
@@ -582,7 +599,7 @@ export async function processOverdueNotifications(): Promise<{ scanned: number; 
       now,
     });
   }
-  return { scanned: openCheckouts.length, notificationsCreated };
+  return { scanned: openCheckouts.length, notificationsCreated, remaining, truncated };
 }
 
 /**
@@ -1247,7 +1264,7 @@ export async function notifyPublishedShiftGroupWorkers(
   shiftGroupId: string,
   userIds: string[],
 ): Promise<void> {
-  const uniqueUserIds = [...new Set(userIds)];
+  const uniqueUserIds = unique(userIds);
   if (uniqueUserIds.length === 0) return;
   const [group, users] = await Promise.all([
     db.shiftGroup.findUnique({
@@ -1475,6 +1492,7 @@ export async function createReservationLifecycleNotification(args: {
     await db.notification.create({
       data: {
         userId: requesterUserId,
+        bookingId,
         type,
         title,
         body,
@@ -1522,6 +1540,7 @@ export async function notifyItemReport(args: {
   // Batch-create all notifications in one INSERT
   const notifData = supervisors.map((s) => ({
     userId: s.id,
+    bookingId: args.bookingId,
     type: notifType,
     title,
     body,
@@ -1566,75 +1585,6 @@ export async function notifyItemReport(args: {
   await Promise.allSettled(emailPromises);
 }
 
-/**
- * Notifies all ADMIN users when a bulk SKU stock drops to or below its min threshold.
- * Deduped: only one notification per SKU per 24 hours.
- */
-export async function notifyLowStock(args: {
-  bulkSkuId: string;
-  skuName: string;
-  onHandQuantity: number;
-  minThreshold: number;
-}) {
-  const admins = await db.user.findMany({
-    where: visibleActiveUserWhere({ role: "ADMIN" }),
-    select: { id: true },
-  });
-
-  if (admins.length === 0) return;
-
-  const now = new Date();
-  const title = `Low stock: ${args.skuName}`;
-  const body = `${args.onHandQuantity} remaining (threshold: ${args.minThreshold}). Restock soon.`;
-
-  // dedupeKey is globally unique, so the key must carry a time bucket — a
-  // constant key plus skipDuplicates silences every future re-alert after
-  // the first one, not just re-alerts within the 24h window.
-  const dayStamp = now.toISOString().slice(0, 10);
-
-  // 24h re-alert window: prefix match covers both day-stamped keys and
-  // legacy un-stamped ones, per admin.
-  const recentNotifs = await db.notification.findMany({
-    where: {
-      dedupeKey: { startsWith: `low_stock:${args.bulkSkuId}:` },
-      createdAt: { gte: new Date(now.getTime() - 24 * 60 * 60 * 1000) },
-    },
-    select: { dedupeKey: true },
-  });
-  const recentlyNotifiedAdminIds = new Set(
-    recentNotifs
-      .map((n) => n.dedupeKey?.split(":")[2])
-      .filter((id): id is string => Boolean(id)),
-  );
-
-  // Batch-create notifications for admins that haven't been notified recently
-  const notifData = admins
-    .filter((a) => !recentlyNotifiedAdminIds.has(a.id))
-    .map((a) => ({
-      userId: a.id,
-      type: "low_stock",
-      title,
-      body,
-      payload: {
-        bulkSkuId: args.bulkSkuId,
-        skuName: args.skuName,
-        onHandQuantity: args.onHandQuantity,
-        minThreshold: args.minThreshold,
-        href: `/items?search=${encodeURIComponent(args.skuName)}`,
-      },
-      channel: "IN_APP" as const,
-      sentAt: now,
-      dedupeKey: `low_stock:${args.bulkSkuId}:${a.id}:${dayStamp}`,
-    }));
-
-  if (notifData.length > 0) {
-    try {
-      await db.notification.createMany({ data: notifData, skipDuplicates: true });
-    } catch (err) {
-      console.error(`[NOTIFY] Failed to batch-create low-stock notifications:`, err);
-    }
-  }
-}
 
 function formatRelative(dueAt: Date, now: Date): string {
   const diffMs = now.getTime() - dueAt.getTime();

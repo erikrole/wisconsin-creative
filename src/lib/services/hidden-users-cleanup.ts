@@ -3,9 +3,9 @@ import { db } from "@/lib/db";
 import { deactivateUserWithCleanup } from "@/lib/services/user-deactivation";
 
 const MS_PER_DAY = 86_400_000;
-export const MAX_APPLIED_HIDDEN_USER_CLEANUP = 3;
+const MAX_APPLIED_HIDDEN_USER_CLEANUP = 3;
 
-export type HiddenUsersCleanupInput = {
+type HiddenUsersCleanupInput = {
   actor: {
     id: string;
     role: Role;
@@ -25,7 +25,7 @@ type HiddenUserCandidate = {
   lastActiveAt: Date | null;
 };
 
-export type HiddenUsersCleanupResult = {
+type HiddenUsersCleanupResult = {
   dryRun: boolean;
   cutoff: string;
   scanned: number;

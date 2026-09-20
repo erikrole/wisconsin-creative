@@ -2,17 +2,18 @@ import * as webpush from "web-push";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { notificationOpenPath } from "@/lib/notification-destination";
+import { unique } from "@/lib/utils";
 
 const WEB_PUSH_TTL_SECONDS = 24 * 60 * 60;
 const WEB_PUSH_TIMEOUT_MS = 5_000;
 
-export type WebPushMessage = {
+type WebPushMessage = {
   title: string;
   body?: string | null;
   payload?: Record<string, unknown>;
 };
 
-export type WebPushDelivery = {
+type WebPushDelivery = {
   devices: number;
   delivered: number;
   revoked: number;
@@ -81,7 +82,7 @@ export async function sendWebPushToUsers(
   userIds: string[],
   message: WebPushMessage,
 ): Promise<Map<string, WebPushDelivery>> {
-  const uniqueUserIds = [...new Set(userIds)];
+  const uniqueUserIds = unique(userIds);
   const deliveries = new Map(uniqueUserIds.map((userId) => [userId, emptyDelivery()]));
   const configuration = readConfiguration();
   if (!configuration || uniqueUserIds.length === 0) return deliveries;

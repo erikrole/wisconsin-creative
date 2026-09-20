@@ -1,11 +1,8 @@
+import { pad2 } from "@/lib/format";
 const MS_PER_DAY = 86_400_000;
 
 function parseLicenseExpiry(expiresAt: string) {
   return new Date(expiresAt);
-}
-
-function pad(value: number) {
-  return String(value).padStart(2, "0");
 }
 
 /**
@@ -13,7 +10,7 @@ function pad(value: number) {
  * Read their UTC date parts instead of treating the encoded instant as a
  * moment in the viewer's timezone.
  */
-export function licenseExpiryAsLocalDate(expiresAt: string): Date {
+function licenseExpiryAsLocalDate(expiresAt: string): Date {
   const encoded = parseLicenseExpiry(expiresAt);
   return new Date(encoded.getUTCFullYear(), encoded.getUTCMonth(), encoded.getUTCDate());
 }
@@ -23,8 +20,8 @@ export function licenseExpiryInputValue(expiresAt: string): string {
   if (Number.isNaN(encoded.getTime())) return "";
   return [
     encoded.getUTCFullYear(),
-    pad(encoded.getUTCMonth() + 1),
-    pad(encoded.getUTCDate()),
+    pad2(encoded.getUTCMonth() + 1),
+    pad2(encoded.getUTCDate()),
   ].join("-");
 }
 
@@ -54,5 +51,5 @@ export function encodeLicenseExpiryDate(dateValue: string): string {
 }
 
 export function localDateKey(now = new Date()): string {
-  return [now.getFullYear(), pad(now.getMonth() + 1), pad(now.getDate())].join("-");
+  return [now.getFullYear(), pad2(now.getMonth() + 1), pad2(now.getDate())].join("-");
 }

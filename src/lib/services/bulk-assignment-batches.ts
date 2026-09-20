@@ -18,15 +18,16 @@ import { createAuditEntriesTx } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
 import { finalizeBulkScheduleAssignment } from "@/lib/services/bulk-schedule-assignment";
+import { unique } from "@/lib/utils";
 
 export const BULK_ASSIGNMENT_CANCEL_ACTION = "schedule_bulk_assignment_cancelled";
-export const BULK_ASSIGNMENT_AUDIT_ENTITY = "schedule_bulk_assignment";
+const BULK_ASSIGNMENT_AUDIT_ENTITY = "schedule_bulk_assignment";
 
 const DEFAULT_BATCH_LIMIT = 20;
 
-export type BulkAssignmentBatchStatus = "PENDING" | "RELEASED" | "PARTIAL" | "BLOCKED" | "CANCELLED";
+type BulkAssignmentBatchStatus = "PENDING" | "RELEASED" | "PARTIAL" | "BLOCKED" | "CANCELLED";
 
-export type BulkAssignmentBatchEvent = {
+type BulkAssignmentBatchEvent = {
   shiftGroupId: string;
   eventId: string | null;
   summary: string | null;
@@ -104,7 +105,7 @@ export async function listBulkAssignmentBatches(limit = DEFAULT_BATCH_LIMIT): Pr
   if (batches.length === 0) return [];
 
   const actors = await db.user.findMany({
-    where: { id: { in: [...new Set(batches.map((batch) => batch.createdById))] } },
+    where: { id: { in: unique(batches.map((batch) => batch.createdById)) } },
     select: { id: true, name: true },
   });
   const actorNameById = new Map(actors.map((actor) => [actor.id, actor.name]));
@@ -156,7 +157,7 @@ export async function listBulkAssignmentBatches(limit = DEFAULT_BATCH_LIMIT): Pr
   });
 }
 
-export type CancelBulkAssignmentResult = {
+type CancelBulkAssignmentResult = {
   batchId: string;
   cancelledEvents: number;
   /** Events left alone because someone edited or released them after staging. */

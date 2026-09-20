@@ -1,16 +1,16 @@
-export type ShowroomNavItem = {
+type ShowroomNavItem = {
   href: string;
   label: string;
   description: string;
 };
 
-export type ShowroomMetric = {
+type ShowroomMetric = {
   label: string;
   value: string;
   tone: "red" | "blue" | "green" | "orange" | "purple" | "gray";
 };
 
-export type ShowroomMockupRow = {
+type ShowroomMockupRow = {
   title: string;
   eyebrow: string;
   detail: string;

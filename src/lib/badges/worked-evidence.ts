@@ -15,13 +15,13 @@ import type { ShiftBadgeEvidence } from "./automatic-rules";
  */
 
 /** How a worked event came to be on record. */
-export type WorkedEvidenceSource = "ASSIGNMENT" | "ADDED";
+type WorkedEvidenceSource = "ASSIGNMENT" | "ADDED";
 
 /**
  * Shift evidence that remembers where it came from, so recognition can tell
  * work the schedule recorded from work an admin recorded after the fact.
  */
-export type WorkedShiftEvidence = ShiftBadgeEvidence & { source: WorkedEvidenceSource };
+type WorkedShiftEvidence = ShiftBadgeEvidence & { source: WorkedEvidenceSource };
 
 type EvidenceClient = Pick<typeof db, "shiftAssignment" | "eventWorker"> | Prisma.TransactionClient;
 
@@ -178,7 +178,7 @@ export async function loadWorkedShiftEvidence(
 }
 
 /** Users whose worked record changed recently enough to re-evaluate. */
-export type RecentlyWorkedEventUser = {
+type RecentlyWorkedEventUser = {
   userId: string;
   hasAddedWorker: boolean;
   hasBackfilledAssignment: boolean;
@@ -235,12 +235,4 @@ export async function recentlyWorkedEventUsers(
     });
   }
   return [...users.values()];
-}
-
-/** Backward-compatible user-id projection for callers that only need counts. */
-export async function usersWithRecentlyWorkedEvents(
-  since: Date,
-  now: Date = new Date(),
-): Promise<string[]> {
-  return (await recentlyWorkedEventUsers(since, now)).map(({ userId }) => userId);
 }

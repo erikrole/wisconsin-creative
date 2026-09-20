@@ -10,10 +10,7 @@ import {
   parseBookingSnapshotHeader,
   staleBookingError,
 } from "@/lib/booking-concurrency";
-
-function sortedStrings(values: string[]) {
-  return [...values].sort((a, b) => a.localeCompare(b));
-}
+import { sortedStrings } from "@/lib/utils";
 
 function currentEventIds(detail: Awaited<ReturnType<typeof getBookingDetail>>) {
   if (detail.events && detail.events.length > 0) {

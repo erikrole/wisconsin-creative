@@ -18,7 +18,7 @@ export type NotificationCategory =
   | "trade"
   | "gearPrep";
 
-export type NotificationPrefs = {
+type NotificationPrefs = {
   pausedUntil: string | null;
   channels: { email: boolean; push: boolean };
   badges: boolean;

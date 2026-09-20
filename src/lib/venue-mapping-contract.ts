@@ -1,4 +1,4 @@
-export type VenueMappingOrderCandidate = {
+type VenueMappingOrderCandidate = {
   pattern: string;
   priority?: number | null;
   createdAt?: Date | string | null;
@@ -14,7 +14,7 @@ export function isValidVenueMappingPattern(pattern: string) {
   }
 }
 
-export function compareVenueMappings(
+function compareVenueMappings(
   a: VenueMappingOrderCandidate,
   b: VenueMappingOrderCandidate,
 ) {

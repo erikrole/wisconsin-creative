@@ -6,6 +6,8 @@ import { createAuditEntryTx } from "@/lib/audit";
 import { withSerializationRetry } from "@/lib/serialization";
 import { normalizeBookingTitle } from "@/lib/title-normalization";
 import { bookingInclude } from "./bookings-helpers";
+import { eventIdsFor, sameStrings, combinedNotes } from "./consolidation-shared";
+import { unique } from "@/lib/utils";
 
 const mergeInclude = {
   events: { select: { eventId: true } },
@@ -16,21 +18,6 @@ const mergeInclude = {
 } satisfies Prisma.BookingInclude;
 
 type MergeCandidate = Prisma.BookingGetPayload<{ include: typeof mergeInclude }>;
-
-function eventIdsFor(candidate: MergeCandidate) {
-  return candidate.events.length > 0
-    ? candidate.events.map((event) => event.eventId).sort()
-    : candidate.eventId ? [candidate.eventId] : [];
-}
-
-function sameStrings(left: string[], right: string[]) {
-  return left.length === right.length && left.every((value, index) => value === right[index]);
-}
-
-function combinedNotes(bookings: MergeCandidate[]) {
-  const notes = [...new Set(bookings.map((booking) => booking.notes?.trim()).filter(Boolean))];
-  return notes.length > 0 ? notes.join("\n\n") : null;
-}
 
 function validateMergeCandidates(bookings: MergeCandidate[], requestedIds: string[]) {
   if (bookings.length !== requestedIds.length) {
@@ -84,9 +71,9 @@ function validateMergeCandidates(bookings: MergeCandidate[], requestedIds: strin
 
 function mergeSummary(bookings: MergeCandidate[], requestedIds: string[]) {
   const { ordered, canonical, eventIds } = validateMergeCandidates(bookings, requestedIds);
-  const serializedAssetIds = [...new Set(ordered.flatMap((booking) =>
+  const serializedAssetIds = unique(ordered.flatMap((booking) =>
     booking.serializedItems.map((item) => item.assetId),
-  ))];
+  ));
   const bulkBySku = new Map<string, number>();
   for (const item of ordered.flatMap((booking) => booking.bulkItems)) {
     bulkBySku.set(item.bulkSkuId, (bulkBySku.get(item.bulkSkuId) ?? 0) + item.plannedQuantity);
@@ -104,7 +91,7 @@ function mergeSummary(bookings: MergeCandidate[], requestedIds: string[]) {
 }
 
 export async function previewReservationMerge(ids: string[]) {
-  const uniqueIds = [...new Set(ids)];
+  const uniqueIds = unique(ids);
   if (uniqueIds.length < 2 || uniqueIds.length > 25) {
     throw new HttpError(400, "Select between 2 and 25 reservations to merge");
   }
@@ -132,7 +119,7 @@ export async function mergeReservations(args: {
   if (args.actorRole !== Role.ADMIN && args.actorRole !== Role.STAFF) {
     throw new HttpError(403, "Only staff can merge reservations");
   }
-  const uniqueIds = [...new Set(args.ids)];
+  const uniqueIds = unique(args.ids);
   if (uniqueIds.length < 2 || uniqueIds.length > 25) {
     throw new HttpError(400, "Select between 2 and 25 reservations to merge");
   }

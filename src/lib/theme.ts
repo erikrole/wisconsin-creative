@@ -1,10 +1,10 @@
-export const THEME_STORAGE_KEY = "theme";
+const THEME_STORAGE_KEY = "theme";
 const THEME_CHANGE_EVENT = "gear-tracker:theme-change";
 
 export const THEME_CHOICES = ["light", "dark", "system"] as const;
 
 export type ThemeChoice = (typeof THEME_CHOICES)[number];
-export type ResolvedTheme = "light" | "dark";
+type ResolvedTheme = "light" | "dark";
 
 type ThemeTransition = {
   finished?: Promise<void>;
@@ -81,7 +81,7 @@ export function readStoredThemeChoice(): ThemeChoice {
   }
 }
 
-export function writeStoredThemeChoice(choice: ThemeChoice) {
+function writeStoredThemeChoice(choice: ThemeChoice) {
   try {
     if (choice === "system") {
       window.localStorage.removeItem(THEME_STORAGE_KEY);

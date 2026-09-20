@@ -26,13 +26,13 @@ export const nonGameScheduleDefaultsSchema = z.object({
 
 export type NonGameScheduleDefaults = z.infer<typeof nonGameScheduleDefaultsSchema>;
 
-export const DEFAULT_NON_GAME_SCHEDULE_DEFAULTS: NonGameScheduleDefaults = {
+const DEFAULT_NON_GAME_SCHEDULE_DEFAULTS: NonGameScheduleDefaults = {
   shiftStartOffset: 60,
   shiftEndOffset: 60,
   shiftConfigs: Object.values(ShiftArea).map((area) => ({ area, staffCount: 0, studentCount: 0 })),
 };
 
-export function normalizeNonGameScheduleDefaults(value: Prisma.JsonValue | null | undefined): NonGameScheduleDefaults {
+function normalizeNonGameScheduleDefaults(value: Prisma.JsonValue | null | undefined): NonGameScheduleDefaults {
   const parsed = nonGameScheduleDefaultsSchema.safeParse(value);
   if (!parsed.success) return DEFAULT_NON_GAME_SCHEDULE_DEFAULTS;
   const byArea = new Map(parsed.data.shiftConfigs.map((row) => [row.area, row]));

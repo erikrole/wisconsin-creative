@@ -2,15 +2,15 @@ import { z } from "zod";
 
 export const SIGNATURE_MBB_SPORT_CODE = "MBB" as const;
 export const SIGNATURE_FOOTBALL_SPORT_CODE = "FB" as const;
-export const SIGNATURE_VOLLEYBALL_SPORT_CODE = "VB" as const;
+const SIGNATURE_VOLLEYBALL_SPORT_CODE = "VB" as const;
 export const SIGNATURE_MENS_HOCKEY_SPORT_CODE = "MHKY" as const;
 export const SIGNATURE_WOMENS_HOCKEY_SPORT_CODE = "WHKY" as const;
-export const SIGNATURE_WBB_SPORT_CODE = "WBB" as const;
-export const SIGNATURE_WRESTLING_SPORT_CODE = "WRES" as const;
+const SIGNATURE_WBB_SPORT_CODE = "WBB" as const;
+const SIGNATURE_WRESTLING_SPORT_CODE = "WRES" as const;
 export const SIGNATURE_CREATIVE_STAFF_SPORT_CODE = "CREATIVE" as const;
 export const SIGNATURE_ADMINISTRATION_SPORT_CODE = "ADMIN" as const;
 export const SIGNATURE_AD_HOC_SPORT_CODE = "ADHOC" as const;
-export type SignatureRosterSourceConfig = {
+type SignatureRosterSourceConfig = {
   sourceKey: string;
   parserVersion: string;
   rosterPath: string;
@@ -107,7 +107,7 @@ export const SIGNATURE_SPORT_REGISTRY = {
 } as const;
 
 type SignatureSportRegistry = typeof SIGNATURE_SPORT_REGISTRY;
-export type SignatureCollectionSportCode = keyof SignatureSportRegistry;
+type SignatureCollectionSportCode = keyof SignatureSportRegistry;
 export type SignatureImportedSportCode = {
   [SportCode in SignatureCollectionSportCode]:
     SignatureSportRegistry[SportCode] extends { source: SignatureRosterSourceConfig } ? SportCode : never;
@@ -117,10 +117,6 @@ export const SIGNATURE_IMPORTED_SPORT_CODES = Object.keys(SIGNATURE_SPORT_REGIST
   .filter((sportCode) => "source" in SIGNATURE_SPORT_REGISTRY[sportCode as SignatureCollectionSportCode]) as [
   SignatureImportedSportCode,
   ...SignatureImportedSportCode[],
-];
-export const SIGNATURE_COLLECTION_SPORT_CODES = Object.keys(SIGNATURE_SPORT_REGISTRY) as [
-  SignatureCollectionSportCode,
-  ...SignatureCollectionSportCode[],
 ];
 export const DEFAULT_SIGNATURE_SEASON = "2026-27";
 
@@ -142,7 +138,6 @@ export function isStandaloneSignatureCollection(sportCode: string): boolean {
   return isStandaloneStaffSignatureCollection(sportCode) || sportCode === SIGNATURE_AD_HOC_SPORT_CODE;
 }
 
-export const SIGNATURE_SOURCE_KEY = getSignatureRosterSourceConfig(SIGNATURE_MBB_SPORT_CODE).sourceKey;
 export const SIGNATURE_PARSER_VERSION = getSignatureRosterSourceConfig(SIGNATURE_MBB_SPORT_CODE).parserVersion;
 export const SIGNATURE_MAX_PAYLOAD_BYTES = 1_000_000;
 // Printed names and slow Pencil input can legitimately produce many pen lifts
@@ -152,7 +147,7 @@ export const SIGNATURE_MAX_STROKES = 128;
 export const SIGNATURE_MAX_POINTS_PER_STROKE = 10_000;
 export const SIGNATURE_MAX_COORDINATE = 5_000;
 
-export const SIGNATURE_MEMBER_GROUPS = [
+const SIGNATURE_MEMBER_GROUPS = [
   "PLAYER",
   "COACHING_STAFF",
   "CREATIVE_STAFF",
@@ -179,12 +174,12 @@ export const DEFAULT_SIGNATURE_PEN_SETTINGS: SignaturePenSettings = {
   maxHeight: 900,
 };
 
-export const signaturePointSchema = z.object({
+const signaturePointSchema = z.object({
   x: z.number().finite().min(0).max(SIGNATURE_MAX_COORDINATE),
   y: z.number().finite().min(0).max(SIGNATURE_MAX_COORDINATE),
 });
 
-export const signatureStrokeSchema = z.object({
+const signatureStrokeSchema = z.object({
   points: z
     .array(signaturePointSchema)
     .min(1)
@@ -221,21 +216,12 @@ export const signatureRosterEntrySchema = z.object({
 
 export type SignatureRosterEntry = z.infer<typeof signatureRosterEntrySchema>;
 
-export const signatureSeasonSchema = z
+const signatureSeasonSchema = z
   .string()
   .regex(/^\d{4}-\d{2}$/, "Season must use YYYY-YY format");
 
-export const signatureCollectionInputSchema = z.object({
-  sportCode: z.enum(SIGNATURE_COLLECTION_SPORT_CODES),
-  season: signatureSeasonSchema,
-});
-
 export const signatureRosterImportSchema = z.object({
   sportCode: z.enum(SIGNATURE_IMPORTED_SPORT_CODES),
-  season: signatureSeasonSchema,
-});
-
-export const signatureCreativeStaffCollectionSchema = z.object({
   season: signatureSeasonSchema,
 });
 

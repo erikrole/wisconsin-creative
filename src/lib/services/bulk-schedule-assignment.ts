@@ -53,6 +53,7 @@ import { evaluateAvailabilityPreferences } from "@/lib/student-availability";
 import { shiftWorkerTypeForProfile } from "@/lib/shift-display";
 import { buildWorkingSchedulePayload } from "@/lib/services/schedule-working-copy";
 import { createBulkScheduleAssignmentNotifications } from "@/lib/services/notifications";
+import { unique } from "@/lib/utils";
 
 const MAX_BULK_EVENTS = 200;
 
@@ -145,7 +146,7 @@ type ReadyEvent = {
 
 type ReleaseResult = { at: Date; runId: string };
 
-export type EnqueueBulkRelease = (args: {
+type EnqueueBulkRelease = (args: {
   shiftGroupId: string;
   version: number;
   now: Date;
@@ -461,9 +462,9 @@ export async function getBulkAssignmentPreview(rawScope: BulkAssignmentScope): P
     .map(([sportCode]) => sportCode);
   const { events: rawEvents, heldEventCount } = await loadScopeEvents(scope, heldCodes);
   const travelRosterCounts = await loadTravelRosterCounts(
-    [...new Set(rawEvents.filter((event) => event.isHome === false)
+    unique(rawEvents.filter((event) => event.isHome === false)
       .map((event) => event.sportCode)
-      .filter((code): code is string => Boolean(code)))],
+      .filter((code): code is string => Boolean(code))),
   );
   const readyStates: ReadyEvent[] = [];
   const events: BulkAssignmentPreviewEvent[] = [];
@@ -747,14 +748,14 @@ export async function applyBulkScheduleAssignment(
     const groups = await tx.shiftGroup.findMany({ where: { id: { in: groupIds } }, select: bulkShiftGroupSelect });
     if (groups.length !== groupIds.length) throw new HttpError(409, "One or more selected events changed. Review the preview again.");
     const groupById = new Map(groups.map((group) => [group.id, group]));
-    const liveSportCodes = [...new Set(groups.map((group) => group.event.sportCode).filter((code): code is string => Boolean(code)))];
+    const liveSportCodes = unique(groups.map((group) => group.event.sportCode).filter((code): code is string => Boolean(code)));
     const livePolicies = await loadSportAutoAssignPolicies(liveSportCodes);
     const liveTravelCounts = await loadTravelRosterCounts(
-      [...new Set(groups.filter((group) => group.event.isHome === false)
+      unique(groups.filter((group) => group.event.isHome === false)
         .map((group) => group.event.sportCode)
-        .filter((code): code is string => Boolean(code)))],
+        .filter((code): code is string => Boolean(code))),
     );
-    const userIds = [...new Set([...grouped.values()].flat().map((proposal) => proposal.userId))];
+    const userIds = unique([...grouped.values()].flat().map((proposal) => proposal.userId));
     const users = await tx.user.findMany({
       where: { id: { in: userIds } },
       select: {

@@ -3,8 +3,8 @@ import { db } from "@/lib/db";
 import type { SyncResult } from "@/lib/services/calendar-sync";
 import { visibleActiveUserWhere } from "@/lib/user-visibility";
 
-export const CALENDAR_SYNC_HEALTH_CONFIG_KEY = "calendar_sync_health";
-export const CALENDAR_SYNC_FAILURE_NOTIFY_THRESHOLD = 3;
+const CALENDAR_SYNC_HEALTH_CONFIG_KEY = "calendar_sync_health";
+const CALENDAR_SYNC_FAILURE_NOTIFY_THRESHOLD = 3;
 
 type CalendarSyncSourceHealth = {
   sourceName?: string;
@@ -18,7 +18,7 @@ type CalendarSyncHealthState = {
   sources?: Record<string, CalendarSyncSourceHealth>;
 };
 
-export type CalendarSyncHealthUpdate = {
+type CalendarSyncHealthUpdate = {
   sourceId: string;
   sourceName: string;
   consecutiveFailures: number;
@@ -38,7 +38,7 @@ function truncate(value: string, max = 280) {
   return value.length > max ? `${value.slice(0, max - 1)}...` : value;
 }
 
-export function calendarSyncHardError(result: Pick<SyncResult, "error">) {
+function calendarSyncHardError(result: Pick<SyncResult, "error">) {
   return typeof result.error === "string" && result.error.trim()
     ? result.error.trim()
     : null;

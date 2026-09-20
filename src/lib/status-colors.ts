@@ -2,10 +2,10 @@
 export function statusLabelEquipment(status: string): string {
   switch (status) {
     case "AVAILABLE": return "Available";
-    case "CHECKED_OUT": return "Checked Out";
-    case "PENDING_PICKUP": return "Pending Pickup";
+    case "CHECKED_OUT": return "Checked out";
+    case "PENDING_PICKUP": return "Pending pickup";
     case "RESERVED": return "Reserved";
-    case "MAINTENANCE": return "In Maintenance";
+    case "MAINTENANCE": return "Maintenance";
     case "RETIRED": return "Retired";
     default: return status;
   }
