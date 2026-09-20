@@ -20,7 +20,7 @@ import { AccessoriesSection } from "./ItemSettingsTab";
 import useItemData from "./_hooks/use-item-data";
 import useItemActions from "./_hooks/use-item-actions";
 import { useItemChangeSync } from "@/hooks/use-item-change-sync";
-import { useUrlState } from "@/hooks/use-url-state";
+import { parseDetailTab, serializeDetailTab, useUrlState } from "@/hooks/use-url-state";
 import { ItemHeader } from "./_components/ItemHeader";
 import { BulkSkuDetailExperience } from "../../bulk-inventory/[id]/BulkSkuDetailExperience";
 import { BULK_ID_PREFIX } from "../lib/item-href";
@@ -41,10 +41,6 @@ const tabDefs: Array<{ key: TabKey; label: string }> = [
   { key: "settings", label: "Settings" },
 ];
 
-function parseItemDetailTab(raw: string | null): TabKey {
-  return tabDefs.some((tab) => tab.key === raw) ? (raw as TabKey) : "info";
-}
-
 // Collaborators reach item detail through the sanitized gear catalog. Insights
 // names the people who booked the asset, History is the admin-only audit feed,
 // and Settings is internal configuration -- all three are denied server-side, so
@@ -54,10 +50,6 @@ const COLLABORATOR_ITEM_TABS: ReadonlySet<TabKey> = new Set<TabKey>(["info", "ca
 function visibleItemTabs(role: string | null | undefined) {
   if (role !== "COLLABORATOR") return tabDefs;
   return tabDefs.filter((tab) => COLLABORATOR_ITEM_TABS.has(tab.key));
-}
-
-function serializeDetailTab(tab: TabKey): string | null {
-  return tab === "info" ? null : tab;
 }
 
 function buildImageSearchSeed(asset: AssetDetail) {
@@ -90,7 +82,11 @@ export default function ItemDetailsPage() {
 }
 
 function SerializedItemDetailsPage({ id }: { id: string }) {
-  const [activeTab, setActiveTab] = useUrlState<TabKey>("tab", parseItemDetailTab, serializeDetailTab);
+  const [activeTab, setActiveTab] = useUrlState<TabKey>(
+    "tab",
+    (raw) => parseDetailTab(raw, tabDefs, "info"),
+    (tab) => serializeDetailTab(tab, "info"),
+  );
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [addAnotherOpen, setAddAnotherOpen] = useState(false);
@@ -185,7 +181,7 @@ function SerializedItemDetailsPage({ id }: { id: string }) {
     return (
       <div className="mx-auto w-full max-w-7xl">
         {/* Header skeleton */}
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between mb-8">
+        <div className="mb-5 flex flex-col gap-4 border-b border-border/50 pb-5 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex gap-4 items-center">
             <Skeleton className="size-[80px] rounded-lg shrink-0" />
             <div className="flex flex-col gap-2">

@@ -64,7 +64,7 @@ export function DetailPageHeader({
   return (
     <header
       className={cn(
-        "mb-4 rounded-lg border border-border/50 bg-card px-4 py-4 shadow-xs sm:px-5",
+        "mb-5 border-b border-border/50 pb-5",
         className
       )}
     >

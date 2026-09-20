@@ -24,8 +24,9 @@ import { handleAuthRedirect, isAbortError, parseJsonSafely } from "@/lib/errors"
 import {
   availabilityConflictMessage,
   availabilityRiskBadgeLabel,
-  availabilityRiskMessage,
-  availabilityRiskTitle,
+  primaryRisk,
+  riskLabel,
+  riskTitle,
   upcomingCommitmentLabel,
   upcomingCommitmentTitle,
 } from "@/lib/availability-copy";
@@ -74,22 +75,6 @@ type BulkTurnaroundRiskInfo = {
   gapMinutes: number;
   plannedQuantity: number;
 };
-
-function primaryRisk<T extends { severity: "warning" | "critical" }>(risks: T[] | undefined) {
-  if (!risks || risks.length === 0) return undefined;
-  return risks.find((risk) => risk.severity === "critical") ?? risks[0];
-}
-
-function riskLabel(risks: Array<{ message: string; severity: "warning" | "critical" }> | undefined) {
-  const risk = primaryRisk(risks);
-  if (!risk) return null;
-  const message = availabilityRiskMessage(risk);
-  return risks && risks.length > 1 ? `${message} +${risks.length - 1}` : message;
-}
-
-function riskTitle(risks: Array<{ message: string; severity: "warning" | "critical" }> | undefined) {
-  return availabilityRiskTitle(risks);
-}
 
 export default function BookingEquipmentTab({
   booking,
@@ -336,7 +321,7 @@ export default function BookingEquipmentTab({
 	              aria-label="Search equipment"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-8 pl-8"
+              className="h-10 pl-8"
             />
           </div>
         </div>

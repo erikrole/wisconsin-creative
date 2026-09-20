@@ -110,14 +110,14 @@ export default function CategoriesPage() {
 
   return (
     <SettingsPageShell
-      title="Categories"
+      href="/settings/categories"
       description="Organize inventory under categories and subcategories to make equipment easier to find and manage."
+      actions={
+        <Button className="h-10" onClick={() => { setAdding(true); setAddError(""); }}>
+          Add category
+        </Button>
+      }
     >
-        <div className="flex justify-end mb-3">
-          <Button onClick={() => { setAdding(true); setAddError(""); }}>
-            Add new category
-          </Button>
-        </div>
 
         <Card>
           <CardHeader>

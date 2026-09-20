@@ -10,7 +10,7 @@ import {
   type FetchErrorKind,
 } from "@/lib/errors";
 
-export type UseFetchOptions<T> = {
+type UseFetchOptions<T> = {
   /** The URL to fetch. When it changes, a new request is made. */
   url: string;
   /**
@@ -33,7 +33,7 @@ export type UseFetchOptions<T> = {
   refetchOnMount?: boolean | "always";
 };
 
-export type UseFetchResult<T> = {
+type UseFetchResult<T> = {
   data: T | null;
   loading: boolean;
   refreshing: boolean;

@@ -141,7 +141,7 @@ export default function AllowedEmailsPage() {
 
   if (loading) {
     return (
-      <SettingsPageShell title="Allowed Emails" description={description} mainClassName="flex flex-col gap-3">
+      <SettingsPageShell href="/settings/allowed-emails" description={description} mainClassName="flex flex-col gap-3">
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="flex items-center gap-4 rounded-md border p-4">
                 <Skeleton className="h-5 w-48" />
@@ -155,7 +155,7 @@ export default function AllowedEmailsPage() {
   if (error) {
     const Icon = error === "network" ? WifiOff : AlertTriangle;
     return (
-      <SettingsPageShell title="Allowed Emails" description={description}>
+      <SettingsPageShell href="/settings/allowed-emails" description={description}>
             <Card>
               <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
                 <Icon className="size-10 text-muted-foreground" />
@@ -180,7 +180,7 @@ export default function AllowedEmailsPage() {
   }
 
   return (
-    <SettingsPageShell title="Allowed Emails" description={description} mainClassName="flex flex-col gap-4">
+    <SettingsPageShell href="/settings/allowed-emails" description={description} mainClassName="flex flex-col gap-4">
         {/* Onboarding overview */}
         <OperationalStatusRail
           orientation={{

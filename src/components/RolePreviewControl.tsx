@@ -134,9 +134,9 @@ export function RolePreviewControl({ user }: { user: CurrentUser }) {
       <DropdownMenuTrigger asChild>
         <Button
           type="button"
-          variant="outline"
+          variant="ghost"
           size="sm"
-          className="h-10 gap-1.5 text-xs max-md:px-2"
+          className="h-10 gap-1.5 text-xs text-muted-foreground hover:text-foreground max-md:px-2"
           aria-label="Preview as another role"
           disabled={pending}
         >

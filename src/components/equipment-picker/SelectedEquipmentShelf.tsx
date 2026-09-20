@@ -15,7 +15,7 @@ import {
   availabilityConflictMessage,
   availabilityRiskBadgeLabel,
   availabilityRiskMessage,
-  availabilityRiskTitle,
+  riskTitle,
   upcomingCommitmentLabel,
   upcomingCommitmentTitle,
 } from "@/lib/availability-copy";
@@ -37,10 +37,6 @@ type SelectedEquipmentShelfProps = {
   onRemoveAsset: (id: string) => void;
   onRemoveBulk: (bulkSkuId: string) => void;
 };
-
-function riskTitle(risks: Array<{ message: string; severity: "warning" | "critical" }> | undefined) {
-  return availabilityRiskTitle(risks);
-}
 
 export function SelectedEquipmentShelf({
   totalSelected,

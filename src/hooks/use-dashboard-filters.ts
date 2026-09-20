@@ -4,11 +4,12 @@ import { useCallback, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import type { DashboardData } from "@/app/(app)/dashboard-types";
 
-export type UseDashboardFiltersResult = {
+type UseDashboardFiltersResult = {
   activeSport: string | null;
   activeLocation: string | null;
   setActiveSport: (sport: string | null) => void;
   setActiveLocation: (loc: string | null) => void;
+  setFilters: (next: { sport?: string | null; location?: string | null }) => void;
   clearFilters: () => void;
   availableSports: string[];
   availableLocations: string[];
@@ -48,6 +49,20 @@ export function useDashboardFilters(data: DashboardData | null): UseDashboardFil
       params.set(key, value);
     } else {
       params.delete(key);
+    }
+    const qs = params.toString();
+    router.replace(qs ? `/?${qs}` : "/", { scroll: false });
+  }, [searchParams, router]);
+
+  const setFilters = useCallback((next: { sport?: string | null; location?: string | null }) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if ("sport" in next) {
+      if (next.sport) params.set("sport", next.sport);
+      else params.delete("sport");
+    }
+    if ("location" in next) {
+      if (next.location) params.set("location", next.location);
+      else params.delete("location");
     }
     const qs = params.toString();
     router.replace(qs ? `/?${qs}` : "/", { scroll: false });
@@ -120,6 +135,7 @@ export function useDashboardFilters(data: DashboardData | null): UseDashboardFil
     activeLocation,
     setActiveSport,
     setActiveLocation,
+    setFilters,
     clearFilters,
     availableSports,
     availableLocations,

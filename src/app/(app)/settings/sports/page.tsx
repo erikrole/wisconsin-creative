@@ -1,10 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { WifiOff, AlertTriangle, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useFetch } from "@/hooks/use-fetch";
 import { handleAuthRedirect, classifyError, isAbortError, parseJsonSafely } from "@/lib/errors";
@@ -13,6 +11,8 @@ import { AREAS, SPORT_GROUPS, defaultShiftConfigs } from "./types";
 import ShiftConfigTable from "./ShiftConfigTable";
 import NonGameScheduleCard from "./NonGameScheduleCard";
 import { SettingsPageShell } from "../SettingsPageShell";
+import { SettingsJumpNav } from "../_components/SettingsJumpNav";
+import EmptyState from "@/components/EmptyState";
 import { SportSetupWizard } from "@/components/schedule/SportSetupWizard";
 import type { SportSetupResponse } from "@/lib/services/sport-setup";
 
@@ -285,7 +285,7 @@ export default function SportsSettingsPage() {
   /* ---------- Loading skeleton ---------- */
   if (loading) {
     return (
-      <SettingsPageShell title="Sports" description={description} mainClassName="flex flex-col gap-4">
+      <SettingsPageShell href="/settings/sports" description={description} mainClassName="flex flex-col gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="rounded-md border p-4 flex flex-col gap-3">
               <div className="flex items-center justify-between">
@@ -301,37 +301,36 @@ export default function SportsSettingsPage() {
 
   /* ---------- Error state ---------- */
   if (error) {
-    const Icon = error === "network" ? WifiOff : AlertTriangle;
     return (
-      <SettingsPageShell title="Sports" description={description}>
-          <Card className="mx-auto max-w-md">
-            <CardContent className="flex flex-col items-center gap-4 py-10 text-center">
-              <Icon className="size-10 text-muted-foreground" />
-              <div>
-                <p className="font-semibold">
-                  {error === "network" ? "Connection failed" : "Something went wrong"}
-                </p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {error === "network"
-                    ? "Could not reach the server. Check your connection and try again."
-                    : "Something went wrong loading sports configuration."}
-                </p>
-              </div>
-              <Button variant="outline" onClick={reload}>
-                <RotateCcw className="mr-2 size-4" />
-                Retry
-              </Button>
-            </CardContent>
-          </Card>
+      <SettingsPageShell href="/settings/sports" description={description}>
+          <EmptyState
+            inline
+            icon={error === "network" ? "wifi-off" : "calendar"}
+            title={error === "network" ? "You are offline" : "Could not load sports"}
+            description={
+              error === "network"
+                ? "Could not reach the server. Check your connection and try again."
+                : "Something went wrong loading sports configuration."
+            }
+            actionLabel="Retry"
+            onAction={reload}
+          />
       </SettingsPageShell>
     );
   }
 
   /* ---------- Normal render ---------- */
   return (
-    <SettingsPageShell title="Sports" description={description}>
+    <SettingsPageShell href="/settings/sports" description={description}>
       <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/60 bg-card/80 p-3 shadow-sm">
+        <SettingsJumpNav
+          items={[
+            { href: "#sport-setup", label: "Auto assign" },
+            { href: "#non-game", label: "Non-game" },
+            { href: "#sports", label: "Sports" },
+          ]}
+        />
+        <div id="sport-setup" className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/60 bg-card/80 p-3 shadow-xs">
           <div className="min-w-0">
             <p className="text-sm font-medium">Auto assign setup</p>
             <p className="mt-0.5 text-xs text-muted-foreground">
@@ -360,8 +359,11 @@ export default function SportsSettingsPage() {
           }}
         />
 
-        <NonGameScheduleCard />
-        <ShiftConfigTable
+        <div id="non-game">
+          <NonGameScheduleCard />
+        </div>
+        <div id="sports">
+          <ShiftConfigTable
           configs={configs}
           sportSetup={sportSetup ?? null}
           onOpenSetup={(sportCode) => {
@@ -376,6 +378,7 @@ export default function SportsSettingsPage() {
           onSave={saveConfig}
           onDiscard={discardConfig}
         />
+        </div>
       </div>
     </SettingsPageShell>
   );

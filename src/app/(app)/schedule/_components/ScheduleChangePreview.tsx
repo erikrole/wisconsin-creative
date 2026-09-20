@@ -20,7 +20,9 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { formatDateTime } from "@/lib/format";
+import { describeScheduleChange } from "@/app/(app)/events/[id]/_activity";
 import type { ScheduleChangeItem, ScheduleChangeKind } from "@/lib/schedule-change-history-types";
+import { ScheduleSyncDiff } from "./ScheduleSyncDiff";
 import type { CalendarEntry } from "./types";
 import { scheduleEventTitleParts } from "./types";
 
@@ -39,7 +41,7 @@ const FILTER_CONFIG: Record<ScheduleChangePreviewFilter, {
 }> = {
   all: {
     title: "Recent activity",
-    description: "Crew assignments and calendar sync changes, newest first.",
+    description: "Crew assignments plus time, date, opponent, venue, and new events from calendar sync.",
     emptyTitle: "No recent changes",
     emptyDescription: "New assignments and synced calendar updates will appear here.",
     icon: HistoryIcon,
@@ -54,17 +56,16 @@ const FILTER_CONFIG: Record<ScheduleChangePreviewFilter, {
       "republished",
       "event_created",
       "event_updated",
-      "event_visibility_updated",
     ]),
   },
   calendar: {
     title: "Synced calendar changes",
-    description: "Calendar event changes recorded in the last 24 hours.",
+    description: "Time, date, opponent, venue, and new events from calendar sync. TV and listing noise stay off this list.",
     emptyTitle: "No calendar changes",
     emptyDescription: "New or updated calendar events will appear here after the next sync.",
     icon: CalendarDaysIcon,
     windowMs: DAILY_ACTIVITY_WINDOW_MS,
-    kinds: new Set(["event_created", "event_updated", "event_visibility_updated"]),
+    kinds: new Set(["event_created", "event_updated"]),
   },
   assignee: {
     title: "Assignee changes",
@@ -89,7 +90,7 @@ function recentItems(
 }
 
 function changeIcon(kind: ScheduleChangeKind) {
-  if (kind === "event_created" || kind === "event_updated" || kind === "event_visibility_updated") {
+  if (kind === "event_created" || kind === "event_updated") {
     return CalendarClockIcon;
   }
   if (kind === "assignment_assigned" || kind === "pickup_claimed") return UserPlusIcon;
@@ -158,11 +159,16 @@ export function ScheduleChangePreview({
             <div className="space-y-2">
               {visibleItems.map((item) => {
                 const entry = entryById.get(item.eventId);
+                const described = describeScheduleChange(item);
                 const ChangeIcon = changeIcon(item.kind);
-                const targetLabel = item.target.label ?? (item.detail && item.detail !== "Working copy" ? item.detail : null);
                 const workingCopy = item.detail === "Working copy";
                 const changeEventLabel = eventLabel(entry);
                 const changeEventDate = eventDateLabel(entry);
+                const changeLine = item.kind === "event_created"
+                  ? described.headline
+                  : described.supporting && described.supporting !== "The specific fields were not recorded."
+                    ? described.supporting
+                    : described.headline;
 
                 return (
                   <article
@@ -174,13 +180,12 @@ export function ScheduleChangePreview({
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <p className="text-sm font-semibold">{item.label}</p>
+                        <p className="min-w-0 text-sm font-semibold">
+                          <ScheduleSyncDiff text={changeLine} />
+                        </p>
                         {workingCopy ? <Badge variant="gray" size="sm">Working copy</Badge> : null}
                         {item.needsReview ? <Badge variant="orange" size="sm">Needs review</Badge> : null}
                       </div>
-                      {targetLabel ? (
-                        <p className="mt-1 truncate text-xs text-muted-foreground">{targetLabel}</p>
-                      ) : null}
                       <p className="mt-2 truncate text-xs font-medium text-foreground">{changeEventLabel}</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">
                         {changeEventDate ? `${changeEventDate} · ` : ""}

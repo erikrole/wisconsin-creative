@@ -125,7 +125,7 @@ export function InlineTitle({
         role="button"
         tabIndex={0}
         aria-label={`${value || placeholder} — click to edit`}
-        className={`${className} cursor-pointer hover:bg-muted/60 rounded px-1 -mx-1 transition-colors`}
+        className={`${className} cursor-pointer rounded px-1 -mx-1 transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`}
         onClick={() => setEditing(true)}
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setEditing(true); }}
         title="Click to edit"

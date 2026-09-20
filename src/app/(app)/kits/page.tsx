@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useState, type ReactNode } from "react";
-import { useUrlState } from "@/hooks/use-url-state";
+import { useUrlState, serializeOptionalString } from "@/hooks/use-url-state";
 import { toast } from "sonner";
 import {
   ArchiveIcon,
@@ -47,6 +47,7 @@ import { footballGamedayKitRoleLabel } from "@/lib/football-gameday-kits";
 import { sportLabel } from "@/lib/sports";
 import { type KitRow, useKitsQuery } from "./hooks/use-kits-query";
 import { NewKitSheet } from "./new-kit-sheet";
+import { pluralize } from "@/lib/format";
 
 type Location = { id: string; name: string };
 type KitSortColumn = "name" | "memberCount" | "updatedAt";
@@ -60,11 +61,6 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
 
 function parseStringParam(value: string | null) {
   return value ?? "";
-}
-
-function serializeOptionalString(value: string) {
-  const trimmed = value.trim();
-  return trimmed ? trimmed : null;
 }
 
 function parseArchivedParam(value: string | null) {
@@ -97,10 +93,6 @@ function getKitCounts(kit: KitRow) {
   const serialized = kit._count.members;
   const bulk = kit._count.bulkMembers;
   return { serialized, bulk, total: serialized + bulk };
-}
-
-function pluralize(count: number, singular: string, plural = `${singular}s`) {
-  return `${count} ${count === 1 ? singular : plural}`;
 }
 
 function formatContentDetail(kit: KitRow) {

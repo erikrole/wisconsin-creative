@@ -29,7 +29,7 @@ export type BookingChangeSyncStatus = {
 
 const initialSyncStatus: BookingChangeSyncStatus = {
   state: "idle",
-  label: "Sync starting",
+  label: "Checking sync",
   description: "Booking freshness check has not completed yet.",
   lastCheckedAt: null,
 };

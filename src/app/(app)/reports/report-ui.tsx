@@ -445,6 +445,13 @@ export function ReportSectionCard({
   );
 }
 
+/** "Mar 11" style label for a chart's `YYYY-MM-DD` day bucket. */
+export function formatDateLabel(dateStr: unknown) {
+  if (typeof dateStr !== "string") return String(dateStr);
+  const d = new Date(dateStr + "T00:00:00");
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 export function ReportChartCard({
   children,
   className,

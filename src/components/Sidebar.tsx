@@ -4,7 +4,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { getInitials } from "@/lib/avatar";
 import {
   applyThemeChoice,
   readStoredThemeChoice,
@@ -14,7 +13,7 @@ import {
   THEME_CHOICES,
   type ThemeChoice,
 } from "@/lib/theme";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/UserAvatar";
 import {
   SunIcon,
   MoonIcon,
@@ -30,7 +29,6 @@ import {
   SettingsIcon,
   HelpCircleIcon,
   LogOutIcon,
-  BellIcon,
   KeyIcon,
   WrenchIcon,
   ShieldAlertIcon,
@@ -38,21 +36,34 @@ import {
   PenToolIcon,
   AwardIcon,
   TrophyIcon,
+  ChevronsUpDownIcon,
+  UserIcon,
 } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { resolveActiveShellHref } from "@/lib/shell-navigation";
+import { cn } from "@/lib/utils";
 
 type NavItem = {
   label: string;
@@ -70,6 +81,17 @@ const COLLABORATOR_NAV_CAPABILITY: Partial<Record<string, string>> = {
   "/licenses": "SOFTWARE_VAULT_VIEW",
 };
 
+const COLLABORATOR_NAV_HREFS = [
+  "/",
+  "/schedule",
+  "/scoreboard",
+  "/items",
+  "/bookings",
+  "/users",
+  "/licenses",
+  "/settings",
+] as const;
+
 type NavGroup = {
   label?: string;
   staffOnly?: boolean;
@@ -81,15 +103,23 @@ const navGroups: NavGroup[] = [
     items: [
       { label: "Dashboard", href: "/", icon: LayoutGridIcon },
       { label: "Schedule", href: "/schedule", icon: CalendarIcon },
-      { label: "Scoreboard", href: "/scoreboard", icon: TrophyIcon },
       { label: "Items", href: "/items", icon: LayersIcon },
       { label: "Bookings", href: "/bookings", icon: BookOpenIcon },
+    ],
+  },
+  {
+    label: "Team",
+    items: [
+      { label: "Scoreboard", href: "/scoreboard", icon: TrophyIcon },
       { label: "Accountability", href: "/accountability", icon: ShieldAlertIcon },
+      { label: "Users", href: "/users", icon: UsersIcon },
+    ],
+  },
+  {
+    label: "Library",
+    items: [
       { label: "Resources", href: "/resources", icon: ScrollTextIcon },
       { label: "Software", href: "/licenses", icon: KeyIcon },
-      { label: "Users", href: "/users", icon: UsersIcon },
-      { label: "Notifications", href: "/notifications", icon: BellIcon },
-      { label: "Settings", href: "/settings", icon: SettingsIcon },
     ],
   },
   {
@@ -102,6 +132,11 @@ const navGroups: NavGroup[] = [
       { label: "Blasts", href: "/blasts", icon: MegaphoneIcon },
       { label: "Kits", href: "/kits", icon: BoxIcon },
       { label: "Reports", href: "/reports", icon: BarChart3Icon },
+    ],
+  },
+  {
+    items: [
+      { label: "Settings", href: "/settings", icon: SettingsIcon },
     ],
   },
 ];
@@ -120,7 +155,6 @@ type AppSidebarProps = {
   isLoggingOut?: boolean;
   overdueBadgeCount?: number;
   dueTodayBadgeCount?: number;
-  unreadNotifications?: number;
 };
 
 function useTheme() {
@@ -146,22 +180,27 @@ function useTheme() {
   return { theme, setTheme };
 }
 
+const navButtonClass = (isActive: boolean) =>
+  cn(
+    "brand-identity rounded-md border-l-0 pl-2 font-medium tracking-[-0.01em] transition-[background-color,color,scale] duration-150 active:scale-[0.96] group-data-[collapsible=icon]:rounded-md group-data-[collapsible=icon]:pl-2!",
+    isActive
+      ? "bg-white/[0.10] font-bold text-white hover:bg-white/[0.12] hover:text-white data-[active=true]:bg-white/[0.10] data-[active=true]:font-bold data-[active=true]:text-white"
+      : "text-white/55 hover:bg-white/[0.06] hover:text-white/90",
+  );
+
 export default function AppSidebar({
   user,
   onSignOut,
   isLoggingOut = false,
   overdueBadgeCount = 0,
   dueTodayBadgeCount = 0,
-  unreadNotifications = 0,
 }: AppSidebarProps) {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
-  const { isMobile, setOpenMobile } = useSidebar();
+  const { isMobile, setOpenMobile, state } = useSidebar();
   const canUseAdminNav = user?.role === "ADMIN" || user?.role === "STAFF";
   const isCollaborator = user?.role === "COLLABORATOR";
   const collaboratorCapabilities = new Set(user?.capabilities ?? []);
-
-  const userInitials = user ? getInitials(user.name) : "?";
 
   const visibleGroups = navGroups
     .filter((g) => !g.staffOnly || canUseAdminNav)
@@ -171,11 +210,16 @@ export default function AppSidebar({
         .filter((item) => !item.requiredRole || item.requiredRole === user?.role)
         .filter((item) => {
           if (!isCollaborator) return true;
-          if (!["/", "/schedule", "/scoreboard", "/items", "/bookings", "/users", "/notifications", "/licenses"].includes(item.href)) return false;
+          if (!(COLLABORATOR_NAV_HREFS as readonly string[]).includes(item.href)) return false;
           const requiredCapability = COLLABORATOR_NAV_CAPABILITY[item.href];
           return !requiredCapability || collaboratorCapabilities.has(requiredCapability);
         })
-        .map((item) => isCollaborator && item.href === "/bookings" ? { ...item, label: "My Gear" } : item),
+        .map((item) => {
+          if (!isCollaborator) return item;
+          if (item.href === "/bookings") return { ...item, label: "My Gear" };
+          if (item.href === "/users") return { ...item, label: "People" };
+          return item;
+        }),
     }))
     .filter((group) => group.items.length > 0);
 
@@ -188,227 +232,214 @@ export default function AppSidebar({
     if (isMobile) setOpenMobile(false);
   }, [isMobile, pathname, setOpenMobile]);
 
+  const roleCaption = user?.role === "COLLABORATOR"
+    ? user.collaboratorPolicy?.displayName ?? "External collaborator"
+    : user?.role === "ADMIN"
+      ? "Admin"
+      : user?.role === "STAFF"
+        ? "Staff"
+        : user?.role === "STUDENT"
+          ? "Student"
+          : "Student";
+
   return (
-    <Sidebar collapsible="icon" className="border-r-0">
+    <Sidebar collapsible="icon">
       {user && (
-        <SidebarHeader className="pb-0 pt-4">
-          {/* ── Brand lockup ── */}
-          <div className="flex items-center gap-3 px-4 pb-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2">
+        <SidebarHeader className="pb-1 pt-3">
+          <Link
+            prefetch={false}
+            href="/"
+            aria-label="Wisconsin Creative home"
+            className="flex items-center gap-2.5 rounded-md px-3 py-1.5 no-underline outline-none transition-colors hover:bg-white/[0.05] focus-visible:ring-2 focus-visible:ring-white/30 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
+          >
             <Image
               src="/Badgers.png"
-              alt="Wisconsin Badgers"
+              alt=""
               width={28}
               height={28}
               className="size-7 shrink-0 object-contain"
               priority
             />
             <div className="min-w-0 group-data-[collapsible=icon]:hidden">
-              <p
-              className="text-[11px] tracking-[0.16em] text-white/60 uppercase leading-none mb-[3px]"
-                style={{ fontFamily: "var(--font-mono)" }}
-              >
+              <p className="brand-identity mb-[3px] text-[10px] font-medium leading-none tracking-[0.16em] text-white/50 uppercase">
                 UW Athletics
               </p>
-              <p
-                className="text-[13.5px] text-white leading-none"
-                style={{ fontFamily: "var(--font-heading)", fontWeight: 800 }}
-              >
+              <p className="brand-identity text-[13px] font-[800] leading-none tracking-[-0.02em] text-white">
                 Wisconsin Creative
               </p>
             </div>
-          </div>
-
-          {/* Divider */}
-          <div className="mx-3 mb-2 h-px bg-white/[0.07] group-data-[collapsible=icon]:mx-2" />
-
-          {/* ── User card ── */}
-          <SidebarMenu className="pb-1 px-2 group-data-[collapsible=icon]:items-center">
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                size="lg"
-                tooltip={user.name}
-                className="hover:bg-white/[0.05] active:bg-white/[0.05] data-[active=true]:bg-white/[0.05] group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-full"
-              >
-                <Link
-                  prefetch={false}
-                  href={`/users/${user.id}`}
-                  className="flex items-center gap-2.5 group-data-[collapsible=icon]:gap-0"
-                >
-                  <Avatar className="size-7 shrink-0 ring-1 ring-white/[0.15] bg-white/[0.08] group-data-[collapsible=icon]:mx-auto">
-                    {user.avatarUrl && <AvatarImage src={user.avatarUrl} alt={user.name} />}
-                    <AvatarFallback
-                      className="bg-transparent text-white/80 text-[length:var(--text-2xs)] font-bold"
-                      style={{ fontFamily: "var(--font-heading)" }}
-                    >
-                      {userInitials}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
-                    <p
-                      className="text-[12px] text-white/90 truncate leading-tight"
-                      style={{ fontFamily: "var(--font-heading)", fontWeight: 600 }}
-                    >
-                      {user.name}
-                    </p>
-                    <p
-                      className={`text-[11px] text-white/60 truncate leading-tight mt-[2px] tracking-[0.1em] ${user.role === "COLLABORATOR" ? "" : "uppercase"}`}
-                      style={{ fontFamily: "var(--font-mono)" }}
-                    >
-                      {user.role === "COLLABORATOR"
-                        ? user.collaboratorPolicy?.displayName ?? "External collaborator"
-                        : user.role ?? "Student"}
-                    </p>
-                  </div>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
+          </Link>
         </SidebarHeader>
       )}
 
-      {/* ── Navigation groups ── */}
       <SidebarContent className="py-1">
         <nav aria-label="Workspace navigation">
-        {visibleGroups.map((group, groupIdx) => (
-          <div key={groupIdx}>
-            {groupIdx > 0 && (
-              <div className="px-3 py-3 group-data-[collapsible=icon]:px-2">
-                {/* Expanded: label flanked by rules */}
-                <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
-                  <div className="h-px flex-1 bg-white/[0.1]" />
-                  <span
-                    className="text-[11px] font-medium uppercase tracking-[0.14em] text-white/70 select-none"
-                    style={{ fontFamily: "var(--font-mono)" }}
+          {visibleGroups.map((group, groupIdx) => (
+            <div key={group.label ?? group.items.map((item) => item.href).join("-")}>
+              {!group.label && groupIdx > 0 && (
+                <SidebarSeparator className="mx-3 my-2 bg-white/[0.08] group-data-[collapsible=icon]:mx-2" />
+              )}
+              <SidebarGroup className="px-2 py-0.5 group-data-[collapsible=icon]:px-1">
+                {group.label && (
+                  <SidebarGroupLabel
+                    className="brand-identity h-8 px-2 text-[11px] font-medium tracking-[0.14em] text-white/45 uppercase group-data-[collapsible=icon]:hidden"
                   >
                     {group.label}
-                  </span>
-                  <div className="h-px flex-1 bg-white/[0.1]" />
-                </div>
-                {/* Collapsed: just a rule */}
-                <div className="hidden group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:block group-data-[collapsible=icon]:h-px group-data-[collapsible=icon]:w-6 group-data-[collapsible=icon]:bg-white/[0.12]" />
-              </div>
-            )}
+                  </SidebarGroupLabel>
+                )}
+                <SidebarMenu className="gap-px">
+                  {group.items.map((item) => {
+                    const href = item.href;
+                    const isActive = activeHref === href;
+                    const Icon = item.icon;
+                    const badgeCfg =
+                      href === "/bookings" && overdueBadgeCount > 0
+                        ? { count: overdueBadgeCount, suffix: "overdue", tone: "red" as const }
+                        : href === "/bookings" && dueTodayBadgeCount > 0
+                        ? { count: dueTodayBadgeCount, suffix: "due today", tone: "orange" as const }
+                        : null;
+                    const badgeCount = badgeCfg?.count ?? 0;
+                    const badgeLabel = item.badge;
+                    const tooltipBase = badgeCfg
+                      ? `${item.label} · ${badgeCfg.count} ${badgeCfg.suffix}`
+                      : item.label;
 
-            <SidebarGroup className="px-2 py-0">
-              <SidebarMenu className="gap-px">
-                {group.items.map((item) => {
-                  const href = item.href;
-                  const isActive = activeHref === href;
-                  const Icon = item.icon;
-
-                  const badgeCfg =
-                    href === "/bookings" && overdueBadgeCount > 0
-                      ? { count: overdueBadgeCount, suffix: "overdue", tone: "red" as const }
-                      : href === "/bookings" && dueTodayBadgeCount > 0
-                      ? { count: dueTodayBadgeCount, suffix: "due today", tone: "orange" as const }
-                      : href === "/notifications" && unreadNotifications > 0
-                      ? { count: unreadNotifications, suffix: "unread", tone: "red" as const }
-                      : null;
-                  const badgeCount = badgeCfg?.count ?? 0;
-                  const badgeLabel = item.badge;
-                  const tooltipBase = badgeCfg
-                    ? `${item.label} · ${badgeCfg.count} ${badgeCfg.suffix}`
-                    : item.label;
-
-                  return (
-                    <SidebarMenuItem key={item.label}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={isActive}
-                        tooltip={tooltipBase}
-                        className={
-                          isActive
-                            ? "data-[active=true]:bg-[var(--wi-red)]/12 data-[active=true]:text-white border-l-2 border-l-[var(--wi-red)] rounded-r-md rounded-l-none pl-[calc(0.5rem-2px)] transition-[background-color,border-color,color,scale] duration-150 active:scale-[0.96] group-data-[collapsible=icon]:rounded-md group-data-[collapsible=icon]:border-l-transparent group-data-[collapsible=icon]:bg-white/[0.08] group-data-[collapsible=icon]:pl-2!"
-                            : "text-white/50 hover:text-white/90 hover:bg-white/[0.055] border-l-2 border-l-transparent rounded-r-md rounded-l-none pl-[calc(0.5rem-2px)] transition-[background-color,border-color,color,scale] duration-150 active:scale-[0.96] group-data-[collapsible=icon]:rounded-md group-data-[collapsible=icon]:pl-2!"
-                        }
-                      >
-                        <Link prefetch={false} href={href} aria-current={isActive ? "page" : undefined}>
-                          <Icon className={isActive ? "text-white" : "text-white/55 group-hover/menu-item:text-white/80"} />
-                          <span style={{ fontFamily: "var(--font-heading)", fontWeight: 500 }}>
-                            {item.label}
-                          </span>
-                        </Link>
-                      </SidebarMenuButton>
-
-                      {badgeCount > 0 && (
-                        <SidebarMenuBadge
-                          className={
-                            badgeCfg?.tone === "orange"
-                              ? "bg-[var(--orange-bg)] text-[var(--orange-text)] text-[length:var(--text-2xs)] font-semibold min-w-[18px] h-[18px] flex items-center justify-center rounded-full px-1"
-                              : "bg-[var(--wi-red)] text-white text-[length:var(--text-2xs)] font-semibold min-w-[18px] h-[18px] flex items-center justify-center rounded-full px-1"
-                          }
+                    return (
+                      <SidebarMenuItem key={item.label}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={isActive}
+                          tooltip={tooltipBase}
+                          className={navButtonClass(isActive)}
                         >
-                          <span className="sr-only">
-                            {badgeCfg!.count} {badgeCfg!.suffix}
-                          </span>
-                          <span aria-hidden="true">{badgeCount > 99 ? "99+" : badgeCount}</span>
-                        </SidebarMenuBadge>
-                      )}
-                      {!badgeCount && badgeLabel && (
-                        <SidebarMenuBadge className="bg-white/[0.08] text-white/40 text-[9px] font-medium h-[16px] flex items-center justify-center rounded px-1 tracking-wide">
-                          {badgeLabel}
-                        </SidebarMenuBadge>
-                      )}
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarGroup>
-          </div>
-        ))}
+                          <Link prefetch={false} href={href} aria-current={isActive ? "page" : undefined}>
+                            <Icon className={isActive ? "text-white" : "text-white/55 group-hover/menu-item:text-white/80"} />
+                            <span>{item.label}</span>
+                          </Link>
+                        </SidebarMenuButton>
+
+                        {badgeCount > 0 && (
+                          <SidebarMenuBadge
+                            className={
+                              badgeCfg?.tone === "orange"
+                                ? "bg-[var(--orange-bg)] text-[var(--orange-text)] text-[length:var(--text-2xs)] font-semibold min-w-[18px] h-[18px] flex items-center justify-center rounded-full px-1"
+                                : "bg-[var(--wi-red)] text-white text-[length:var(--text-2xs)] font-semibold min-w-[18px] h-[18px] flex items-center justify-center rounded-full px-1"
+                            }
+                          >
+                            <span className="sr-only">
+                              {badgeCfg!.count} {badgeCfg!.suffix}
+                            </span>
+                            <span aria-hidden="true">{badgeCount > 99 ? "99+" : badgeCount}</span>
+                          </SidebarMenuBadge>
+                        )}
+                        {!badgeCount && badgeLabel && (
+                          <SidebarMenuBadge className="bg-white/[0.08] text-white/40 text-[9px] font-medium h-[16px] flex items-center justify-center rounded px-1 tracking-wide">
+                            {badgeLabel}
+                          </SidebarMenuBadge>
+                        )}
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroup>
+            </div>
+          ))}
         </nav>
       </SidebarContent>
 
-      {/* ── Footer: theme toggle + logout ── */}
-      <SidebarFooter className="border-t border-white/[0.07] py-2">
-        <div className="flex items-center justify-center px-3 py-1 group-data-[collapsible=icon]:hidden">
-          <ToggleGroup
-            type="single"
-            value={theme}
-            onValueChange={(v) => {
-              if (v) setTheme(v as ThemeChoice);
-            }}
-            className="bg-white/[0.06] rounded-md p-0.5"
-          >
-            {THEME_CHOICES.map((val, i) => (
-              <ToggleGroupItem
-                key={val}
-                value={val}
-                aria-label={`${val.charAt(0).toUpperCase() + val.slice(1)} theme`}
-                className="min-h-10 min-w-10 text-white/60 px-2.5 py-1 text-xs hover:bg-transparent hover:text-white/85 data-[state=on]:bg-white/[0.12] data-[state=on]:text-white/95 data-[state=on]:shadow-none data-[state=on]:rounded"
-              >
-                {i === 0 ? <SunIcon className="size-3.5" /> : i === 1 ? <MoonIcon className="size-3.5" /> : <MonitorIcon className="size-3.5" />}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-        </div>
-        <SidebarMenu className="px-2">
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              tooltip="Help & support"
-              className="text-white/55 transition-[background-color,color,scale] duration-150 hover:bg-white/[0.05] hover:text-white/85 active:scale-[0.96]"
-            >
-              <a href="mailto:erole@athletics.wisc.edu?subject=Wisconsin%20Creative%20help">
-                <HelpCircleIcon />
-                <span>Help</span>
-              </a>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              tooltip={isLoggingOut ? "Logging out…" : "Log out"}
-              onClick={onSignOut}
-              disabled={isLoggingOut}
-              className="cursor-pointer text-white/35 transition-[background-color,color,scale] duration-150 hover:bg-white/[0.05] hover:text-white/75 active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <LogOutIcon />
-              <span>{isLoggingOut ? "Logging out…" : "Log out"}</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
+      {user && (
+        <SidebarFooter className="border-t border-white/[0.07] p-2">
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <SidebarMenuButton
+                    size="lg"
+                    tooltip={user.name}
+                    aria-label="Account menu"
+                    className="h-12 text-white/90 hover:bg-white/[0.06] hover:text-white data-[state=open]:bg-white/[0.08] group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:rounded-full"
+                  >
+                    <UserAvatar
+                      name={user.name}
+                      avatarUrl={user.avatarUrl}
+                      className="ring-1 ring-white/15"
+                    />
+                    <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
+                      <p className="brand-identity truncate text-[12px] font-bold leading-tight tracking-[-0.01em] text-white">
+                        {user.name}
+                      </p>
+                      <p
+                        className="mt-[2px] truncate text-[11px] leading-tight tracking-[0.02em] text-white/50"
+                        style={{ fontFamily: "var(--font-mono)" }}
+                      >
+                        {roleCaption}
+                      </p>
+                    </div>
+                    <ChevronsUpDownIcon className="ml-auto size-4 text-white/35 group-data-[collapsible=icon]:hidden" />
+                  </SidebarMenuButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  side="right"
+                  align="end"
+                  sideOffset={8}
+                  className="w-64"
+                >
+                  <DropdownMenuLabel className="font-normal">
+                    <p className="brand-identity truncate font-bold text-foreground">{user.name}</p>
+                    <p className="truncate text-xs font-normal text-muted-foreground">{user.email}</p>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild className="min-h-10">
+                    <Link prefetch={false} href={`/users/${user.id}`}>
+                      <UserIcon />
+                      Profile
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="min-h-10">
+                    <a href="mailto:erole@athletics.wisc.edu?subject=Wisconsin%20Creative%20help">
+                      <HelpCircleIcon />
+                      Help
+                    </a>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <div className="px-2 py-1.5" onPointerDown={(event) => event.preventDefault()}>
+                    <p className="mb-1.5 text-xs font-medium text-muted-foreground">Theme</p>
+                    <ToggleGroup
+                      type="single"
+                      value={theme}
+                      onValueChange={(value) => {
+                        if (value) setTheme(value as ThemeChoice);
+                      }}
+                      className="w-full rounded-md border border-border bg-muted/40 p-0.5"
+                    >
+                      {THEME_CHOICES.map((val, i) => (
+                        <ToggleGroupItem
+                          key={val}
+                          value={val}
+                          aria-label={`${val.charAt(0).toUpperCase() + val.slice(1)} theme`}
+                          className="min-h-10 min-w-10 flex-1 px-2 text-xs"
+                        >
+                          {i === 0 ? <SunIcon className="size-3.5" /> : i === 1 ? <MoonIcon className="size-3.5" /> : <MonitorIcon className="size-3.5" />}
+                        </ToggleGroupItem>
+                      ))}
+                    </ToggleGroup>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    variant="destructive"
+                    className="min-h-10 cursor-pointer"
+                    disabled={isLoggingOut}
+                    onSelect={() => onSignOut?.()}
+                  >
+                    <LogOutIcon />
+                    {isLoggingOut ? "Logging out…" : "Log out"}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarFooter>
+      )}
     </Sidebar>
   );
 }

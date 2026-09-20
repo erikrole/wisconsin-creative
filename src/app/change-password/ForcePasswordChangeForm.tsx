@@ -11,17 +11,12 @@ import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { useFormSubmit } from "@/hooks/use-form-submit";
 import { AccountUsernameField, passwordRulesAttribute } from "@/components/auth/AccountUsernameField";
+import { validatePassword } from "@/lib/password-rules";
 
 type PasswordPayload = {
   currentPassword: string;
   newPassword: string;
 };
-
-function validatePassword(password: string): string {
-  if (!password) return "Password is required";
-  if (password.length < 8) return "Must be at least 8 characters";
-  return "";
-}
 
 export default function ForcePasswordChangeForm({ email }: { email: string }) {
   const router = useRouter();

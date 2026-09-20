@@ -25,11 +25,12 @@ import { ArrowDown, ArrowUp, ArrowUpDown, Award, ClipboardList, Download, ImageO
 import { useFetch } from "@/hooks/use-fetch";
 import { PageHeader } from "@/components/PageHeader";
 import { FadeUp } from "@/components/ui/motion";
-import { useUrlState } from "@/hooks/use-url-state";
+import { useUrlState, serializeOptionalString } from "@/hooks/use-url-state";
 import { SPORT_CODES } from "@/lib/sports";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { OperationalMetricCard } from "@/components/OperationalFeedback";
 import { OperationalStatusRail, type OperationalStatusRailItem } from "@/components/OperationalStatusRail";
+import { RosterRelatedLinks } from "./_components/RosterRelatedLinks";
 
 const LIMIT = 50;
 const ROLE_VALUES = new Set<string>(["ADMIN", "STAFF", "STUDENT", "COLLABORATOR"]);
@@ -52,11 +53,6 @@ const SPORT_VALUES = new Set<string>(SPORT_CODES.map((sport) => sport.code));
 
 function parseStringParam(raw: string | null): string {
   return raw?.trim() ?? "";
-}
-
-function serializeOptionalString(value: string): string | null {
-  const trimmed = value.trim();
-  return trimmed ? trimmed : null;
 }
 
 function parseRoleParam(raw: string | null): string {
@@ -567,7 +563,9 @@ export default function UsersPage() {
         ) : users.length === 0 ? (
           <EmptyState
             icon="users"
-            title={hasFilters ? "No users match your filters" : "No users yet"}
+            title={hasFilters
+              ? (isCollaboratorDirectory ? "No people match your filters" : "No users match your filters")
+              : (isCollaboratorDirectory ? "No people yet" : "No users yet")}
             description={
               hasFilters
                 ? "Try adjusting your search or filters."
@@ -633,6 +631,10 @@ export default function UsersPage() {
             )}
           </div>
         )}
+      </div>
+
+      <div className="mt-6">
+        <RosterRelatedLinks canOpenStaffTools={canEdit} />
       </div>
     </FadeUp>
   );

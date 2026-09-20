@@ -228,7 +228,7 @@ export default function EscalationSettingsPage() {
 
   if (loading) {
     return (
-      <SettingsPageShell title="Escalation" description={description}>
+      <SettingsPageShell href="/settings/escalation" description={description}>
           <Card className="mb-1">
             <CardHeader><CardTitle>Notification Triggers</CardTitle></CardHeader>
             <div className="px-4 pb-4 flex flex-col gap-3">
@@ -269,7 +269,7 @@ export default function EscalationSettingsPage() {
   if (error) {
     const Icon = error === "network" ? WifiOff : AlertTriangle;
     return (
-      <SettingsPageShell title="Escalation" description={description}>
+      <SettingsPageShell href="/settings/escalation" description={description}>
           <Card>
             <div className="flex flex-col items-center justify-center gap-4 py-12 px-4 text-center">
               <Icon className="size-10 text-muted-foreground" />
@@ -294,13 +294,13 @@ export default function EscalationSettingsPage() {
   }
 
   return (
-    <SettingsPageShell title="Escalation" description={description}>
+    <SettingsPageShell href="/settings/escalation" description={description}>
         {/* Rules table */}
         <Card className="mb-1">
           <CardHeader>
             <CardTitle>Notification Triggers</CardTitle>
             <p className="text-xs text-muted-foreground mt-1 m-0">
-              Toggle who is notified at each timing. Timings are fixed to the schedule defined in product spec D-009.
+              Toggle requester and admin notifications. Gear ops is fixed by overdue policy, not a switch. Timings follow product spec D-009.
             </p>
           </CardHeader>
           <Table>
@@ -333,7 +333,7 @@ export default function EscalationSettingsPage() {
                   </TableCell>
                   <TableCell>
                     <span className="text-xs text-muted-foreground">
-                      {rule.type === "checkout_overdue_4h" || rule.type === "checkout_overdue_24h" ? "Yes" : "No"}
+                      {rule.type === "checkout_overdue_4h" || rule.type === "checkout_overdue_24h" ? "Always" : "Never"}
                     </span>
                   </TableCell>
                   <TableCell>

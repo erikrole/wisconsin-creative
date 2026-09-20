@@ -922,11 +922,40 @@ export default function UserBadgesTab({
     refetchOnFocus: false,
   });
 
-  const galleryBadges = useMemo(() => {
-    if (!data) return [];
-    return data.badges.filter(
-      (badge) => badge.earned || (badge.active && !isHiddenUntilEarnedBadge(badge.key)),
-    );
+  // One pass over the catalog. The gallery list and the four summary-band
+  // counts all key off the same three predicates, so splitting them into
+  // separate filters just re-walked every badge five times per render.
+  const {
+    galleryBadges,
+    earnedBadges,
+    automaticGoals,
+    automaticGoalsEarned,
+    hiddenSurpriseCount,
+  } = useMemo(() => {
+    const gallery: UserBadge[] = [];
+    const earned: UserBadge[] = [];
+    const goals: UserBadge[] = [];
+    let goalsEarned = 0;
+    let hiddenSurprise = 0;
+
+    for (const badge of data?.badges ?? []) {
+      const hiddenUntilEarned = isHiddenUntilEarnedBadge(badge.key);
+      if (badge.earned || (badge.active && !hiddenUntilEarned)) gallery.push(badge);
+      if (badge.earned) earned.push(badge);
+      if (badge.active && !isManualBadge(badge) && !hiddenUntilEarned) {
+        goals.push(badge);
+        if (badge.earned) goalsEarned += 1;
+      }
+      if (!badge.earned && badge.active && hiddenUntilEarned) hiddenSurprise += 1;
+    }
+
+    return {
+      galleryBadges: gallery,
+      earnedBadges: earned,
+      automaticGoals: goals,
+      automaticGoalsEarned: goalsEarned,
+      hiddenSurpriseCount: hiddenSurprise,
+    };
   }, [data]);
 
   const shelves = useMemo(
@@ -952,14 +981,6 @@ export default function UserBadgesTab({
     );
   }
 
-  const earnedBadges = data.badges.filter((badge) => badge.earned);
-  const automaticGoals = data.badges.filter(
-    (badge) => badge.active && !isManualBadge(badge) && !isHiddenUntilEarnedBadge(badge.key),
-  );
-  const automaticGoalsEarned = automaticGoals.filter((badge) => badge.earned).length;
-  const hiddenSurpriseCount = data.badges.filter(
-    (badge) => !badge.earned && badge.active && isHiddenUntilEarnedBadge(badge.key),
-  ).length;
   const filteredShelfCount = shelves.filter(
     (shelf) => filterBadges(shelf.badges, filter).length > 0,
   ).length;
@@ -1026,7 +1047,7 @@ export default function UserBadgesTab({
             aria-label="Filter badges"
           >
             {(Object.keys(filterLabels) as BadgeFilter[]).map((key) => (
-              <ToggleGroupItem key={key} value={key} aria-label={`Show ${filterLabels[key].toLowerCase()} badges`}>
+              <ToggleGroupItem key={key} value={key} className="h-10 px-3" aria-label={`Show ${filterLabels[key].toLowerCase()} badges`}>
                 {filterLabels[key]}
               </ToggleGroupItem>
             ))}

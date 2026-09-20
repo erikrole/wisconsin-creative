@@ -1,16 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ResourceType } from "@prisma/client";
-import { ArrowLeftIcon, ArrowRightIcon, CheckCircle2Icon, PencilIcon } from "lucide-react";
-import { toast } from "sonner";
+import { ArrowLeftIcon, ArrowRightIcon, PencilIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MarkdownReader } from "@/components/resources/MarkdownReader";
 import { useFetch } from "@/hooks/use-fetch";
-import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
-import { legacyGuideMarkdown, markdownHeadings } from "@/lib/guide-content";
+import { legacyGuideMarkdown, markdownHeadings, omitDuplicateLeadHeading } from "@/lib/guide-content";
 import { inferResourceTypeFromCategory, RESOURCE_TYPE_LABELS } from "@/lib/guide-categories";
 import type { GuideListItem } from "@/lib/guides";
 import { buildSectionNav, type SectionNav } from "@/lib/resource-search";
@@ -26,8 +24,6 @@ type Guide = {
   published: boolean;
   content: unknown;
   author: { id: string; name: string };
-  lastVerifiedAt: Date | string | null;
-  lastVerifiedBy: { id: string; name: string } | null;
   updatedAt: Date | string;
 };
 
@@ -39,41 +35,65 @@ type Props = {
 
 type TocItem = { id: string; level: number; text: string };
 
-type ResourceVerifyResponse = {
-  data?: {
-    updatedAt?: string;
-  };
-};
-
 function TableOfContents({ items, activeId }: { items: TocItem[]; activeId: string | null }) {
+  const listRef = useRef<HTMLDivElement>(null);
+  const [indicator, setIndicator] = useState({ y: 0, height: 0, ready: false });
+
   const scrollToHeading = useCallback((id: string) => {
     const node = document.getElementById(id);
     if (node) node.scrollIntoView({ behavior: "smooth", block: "start" });
   }, []);
 
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    if (!list || !activeId) {
+      setIndicator((current) => (current.ready ? { ...current, ready: false } : current));
+      return;
+    }
+    const button = list.querySelector<HTMLElement>(`[data-toc-id="${CSS.escape(activeId)}"]`);
+    if (!button) return;
+    setIndicator({
+      y: button.offsetTop,
+      height: button.offsetHeight,
+      ready: true,
+    });
+    const panel = list.closest(".guide-toc");
+    if (panel instanceof HTMLElement) {
+      const panelRect = panel.getBoundingClientRect();
+      const buttonRect = button.getBoundingClientRect();
+      if (buttonRect.top < panelRect.top) {
+        panel.scrollTop -= panelRect.top - buttonRect.top;
+      } else if (buttonRect.bottom > panelRect.bottom) {
+        panel.scrollTop += buttonRect.bottom - panelRect.bottom;
+      }
+    }
+  }, [activeId, items]);
+
   if (items.length === 0) return null;
 
   return (
-    <nav aria-label="Table of contents" className="hidden xl:block">
-      <div className="guide-toc sticky top-8">
-        <p
-          className="mb-4 text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
-        >
-          On this page
-        </p>
-        <div className="flex flex-col gap-1">
+    <nav aria-label="On this page" className="guide-toc-column hidden min-h-0 self-stretch xl:block">
+      <div className="guide-toc">
+        <p className="guide-toc-label">On this page</p>
+        <div ref={listRef} className="guide-toc-list">
+          <span
+            aria-hidden="true"
+            className={cn("guide-toc-indicator", indicator.ready && "guide-toc-indicator-ready")}
+            style={{
+              transform: `translateY(${indicator.y}px)`,
+              height: indicator.height,
+            }}
+          />
           {items.map((item) => (
             <button
               key={item.id}
+              type="button"
+              data-toc-id={item.id}
               onClick={() => scrollToHeading(item.id)}
               className={cn(
-                "guide-toc-link min-h-10 w-full rounded-md px-2 py-2 text-left text-sm leading-snug outline-none transition-[background-color,color,scale] hover:text-foreground active:scale-[0.96] focus-visible:ring-2 focus-visible:ring-ring",
-                item.level === 1 && "font-semibold",
-                item.level === 2 && "pl-4",
-                item.level === 3 && "pl-7",
-                activeId === item.id
-                  ? "guide-toc-link-active font-semibold text-foreground"
-                  : "text-muted-foreground/70",
+                "guide-toc-link outline-none transition-[color,scale] hover:text-foreground active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring",
+                item.level === 3 && "guide-toc-link-h3",
+                activeId === item.id && "guide-toc-link-active",
               )}
             >
               {item.text}
@@ -89,24 +109,20 @@ function SiblingNav({ nav }: { nav: SectionNav }) {
   if (nav.siblings.length === 0) return null;
 
   return (
-    <nav aria-label="In this section" className="hidden shrink-0 2xl:block 2xl:w-[220px]">
-      <div className="guide-section-nav sticky top-8">
-        <p
-          className="mb-4 text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
-        >
+    <nav aria-label="In this section" className="hidden shrink-0 self-stretch 2xl:block 2xl:w-[220px]">
+      <div className="guide-section-nav">
+        <p className="guide-section-nav-label">
           {nav.typeLabel ?? "In this section"}
         </p>
-        <div className="flex flex-col gap-1">
+        <div className="guide-section-nav-list">
           {nav.siblings.map((item) => (
             <Link
               key={item.id}
               href={`/resources/${item.slug}`}
               aria-current={item.current ? "page" : undefined}
               className={cn(
-                "guide-section-link min-h-10 rounded-md px-2 py-2 text-sm leading-snug outline-none transition-[background-color,color,scale] hover:text-foreground active:scale-[0.96] focus-visible:ring-2 focus-visible:ring-ring",
-                item.current
-                  ? "guide-section-link-active font-semibold text-foreground"
-                  : "text-muted-foreground/70",
+                "guide-section-link outline-none transition-[background-color,color,scale] hover:text-foreground active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring",
+                item.current && "guide-section-link-active",
               )}
             >
               {item.title}
@@ -159,12 +175,12 @@ function PrevNext({ nav }: { nav: SectionNav }) {
 }
 
 export function GuideReader({ guide, canEdit, slug }: Props) {
-  const [updatedAt, setUpdatedAt] = useState<Date | string>(guide.updatedAt);
-  const [verifying, setVerifying] = useState(false);
-  const verifyingRef = useRef(false);
   const markdown = useMemo(
-    () => legacyGuideMarkdown(guide.markdown, guide.content),
-    [guide.content, guide.markdown],
+    () => omitDuplicateLeadHeading(
+      legacyGuideMarkdown(guide.markdown, guide.content),
+      guide.title,
+    ),
+    [guide.content, guide.markdown, guide.title],
   );
   const headings = useMemo(() => markdownHeadings(markdown), [markdown]);
   const [activeHeadingId, setActiveHeadingId] = useState<string | null>(null);
@@ -177,39 +193,6 @@ export function GuideReader({ guide, canEdit, slug }: Props) {
     () => buildSectionNav(guideList ?? [], guide.id),
     [guideList, guide.id],
   );
-
-  async function markVerified() {
-    if (verifyingRef.current) return;
-    verifyingRef.current = true;
-    setVerifying(true);
-    try {
-      const res = await fetch(`/api/resources/${guide.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          markVerified: true,
-          expectedUpdatedAt: new Date(updatedAt).toISOString(),
-        }),
-      });
-      if (handleAuthRedirect(res)) return;
-      if (!res.ok) {
-        toast.error(await parseErrorMessage(res, "Failed to mark guide verified"));
-        return;
-      }
-      const json = await parseJsonSafely<ResourceVerifyResponse>(res);
-      if (!json?.data?.updatedAt) {
-        toast.error("Guide was verified, but the response was incomplete. Refresh and try again.");
-        return;
-      }
-      setUpdatedAt(json.data.updatedAt);
-      toast.success("Guide marked verified");
-    } catch {
-      toast.error("Network error. Try again.");
-    } finally {
-      verifyingRef.current = false;
-      setVerifying(false);
-    }
-  }
 
   useEffect(() => {
     if (headings.length === 0) return;
@@ -275,7 +258,7 @@ export function GuideReader({ guide, canEdit, slug }: Props) {
             )}
             <span className="text-xs text-muted-foreground">
               Updated{" "}
-              {new Date(updatedAt).toLocaleDateString("en-US", {
+              {new Date(guide.updatedAt).toLocaleDateString("en-US", {
                 month: "long",
                 day: "numeric",
                 year: "numeric",
@@ -284,26 +267,12 @@ export function GuideReader({ guide, canEdit, slug }: Props) {
           </div>
         </div>
         {canEdit && (
-          <div className="flex flex-wrap gap-2 sm:justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-10 shrink-0 active:scale-[0.96] transition-transform"
-              loading={verifying}
-              disabled={verifying}
-              onClick={markVerified}
-            >
-              {!verifying && <CheckCircle2Icon data-icon="inline-start" />}
-              Mark verified
-            </Button>
-            <Button asChild variant="outline" size="sm" className="h-10 shrink-0 active:scale-[0.96] transition-transform">
-              <Link href={`/resources/${slug}/edit`}>
-                <PencilIcon data-icon="inline-start" />
-                Edit
-              </Link>
-            </Button>
-          </div>
+          <Button asChild variant="outline" size="sm" className="h-10 shrink-0">
+            <Link href={`/resources/${slug}/edit`}>
+              <PencilIcon data-icon="inline-start" />
+              Edit
+            </Link>
+          </Button>
         )}
       </div>
 

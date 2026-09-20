@@ -80,63 +80,14 @@ export function useUrlState<T>(
   return [value, setValue];
 }
 
-/**
- * Sync a Set<string> to a URL parameter (multi-value via repeated keys).
- *
- * @example
- * ```ts
- * const [statuses, setStatuses] = useUrlSetState("status");
- * // URL: ?status=OPEN&status=BOOKED
- * ```
- */
-export function useUrlSetState(
-  key: string,
-): [Set<string>, (value: Set<string> | ((prev: Set<string>) => Set<string>)) => void] {
-  const searchParams = useSearchParams();
-  const searchSignature = searchParams.toString();
-  const lastObservedSearchSignatureRef = useRef(searchSignature);
-  const skipNextWriteRef = useRef(false);
-
-  const [value, setValue] = useState<Set<string>>(
-    () => new Set(searchParams.getAll(key).filter(Boolean))
-  );
-
-  useEffect(() => {
-    if (lastObservedSearchSignatureRef.current === searchSignature) return;
-    lastObservedSearchSignatureRef.current = searchSignature;
-
-    const nextValue = new Set(searchParams.getAll(key).filter(Boolean));
-    setValue((current) => {
-      if (setsEqual(current, nextValue)) return current;
-      skipNextWriteRef.current = true;
-      return nextValue;
-    });
-  }, [key, searchParams, searchSignature]);
-
-  // Sync to URL
-  useEffect(() => {
-    if (skipNextWriteRef.current) {
-      skipNextWriteRef.current = false;
-      return;
-    }
-
-    const url = new URL(window.location.href);
-    url.searchParams.delete(key);
-    value.forEach((v) => url.searchParams.append(key, v));
-
-    const newUrl = url.searchParams.toString()
-      ? `${url.pathname}?${url.searchParams.toString()}`
-      : url.pathname;
-
-    if (newUrl !== `${window.location.pathname}${window.location.search}`) {
-      window.history.replaceState(null, "", newUrl);
-    }
-  }, [key, value]);
-
-  return [value, setValue];
+/** Trim a URL param value; empty after trimming serializes as absent. */
+export function serializeOptionalString(value: string): string | null {
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
 }
 
-function setsEqual(a: Set<string>, b: Set<string>) {
+/** Shallow equality for two string sets (order-insensitive). */
+export function setsEqual(a: Set<string>, b: Set<string>) {
   if (a.size !== b.size) return false;
   for (const value of a) {
     if (!b.has(value)) return false;
@@ -162,4 +113,16 @@ export function useDebounce<T>(value: T, delay: number): T {
   }, [value, delay]);
 
   return debounced;
+}
+
+// ── Detail-page tab URL codec ────────────────────────────
+
+/** Resolve a `?tab=` value against the known tab defs, falling back to the default tab. */
+export function parseDetailTab<K extends string>(raw: string | null, tabDefs: ReadonlyArray<{ key: K }>, fallback: K): K {
+  return tabDefs.some((tab) => tab.key === raw) ? (raw as K) : fallback;
+}
+
+/** Omit the default tab from the URL so the canonical detail link stays clean. */
+export function serializeDetailTab<K extends string>(tab: K, defaultTab: K): string | null {
+  return tab === defaultTab ? null : tab;
 }

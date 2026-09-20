@@ -1,3 +1,20 @@
+import { sportLabel } from "@/lib/sports";
+
+type EventSummaryShape = {
+  sportCode?: string | null;
+  opponent?: string | null;
+  isHome?: boolean | null;
+  summary: string;
+};
+
+/** "Volleyball vs Opponent" / "Volleyball at Opponent", or the raw summary when there's no opponent. */
+export function eventSummaryLabel(ev: EventSummaryShape) {
+  if (ev.opponent) {
+    return `${ev.sportCode ? `${sportLabel(ev.sportCode)} ` : ""}${ev.isHome === false ? "at" : "vs"} ${ev.opponent}`;
+  }
+  return ev.summary;
+}
+
 export type AvailabilityWarningCounts = {
   conflictCount: number;
   upcomingCommitmentCount: number;

@@ -125,7 +125,11 @@ export function DashboardBookingRow({
                 <span className="font-bold">{timingDateTime}</span>
               </span>
             </TooltipTrigger>
-            <TooltipContent>{formatEventDateTime(booking.startsAt, booking.endsAt)}</TooltipContent>
+            <TooltipContent>
+              {showPickupBadge
+                ? `${timingPrefix} ${timingDateTime}`
+                : formatEventDateTime(booking.startsAt, booking.endsAt)}
+            </TooltipContent>
           </Tooltip>
         )}
       </div>

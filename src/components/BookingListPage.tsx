@@ -7,6 +7,7 @@ const BookingDetailsSheet = lazy(() => import("@/components/BookingDetailsSheet"
 import { toast } from "sonner";
 import { SkeletonTable } from "@/components/Skeleton";
 import EmptyState from "@/components/EmptyState";
+import { PageHeader } from "@/components/PageHeader";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -644,11 +645,7 @@ export default function BookingListPage({
 
   return (
     <>
-      {!hideHeader && (
-        <div className="flex items-center justify-between mb-6 max-md:mb-4 max-md:flex-col max-md:items-start max-md:gap-3">
-          <h1 className="text-[30px] tracking-[-0.03em] leading-none m-0 max-md:text-[22px]">{config.labelPlural}</h1>
-        </div>
-      )}
+      {!hideHeader && <PageHeader title={config.labelPlural} />}
 
       {/* ════════ Filter bar + list ════════ */}
       <Card>
@@ -697,7 +694,7 @@ export default function BookingListPage({
               {config.kind === "RESERVATION" && (
                 <>
                   <Select value={bulkLocationId} onValueChange={setBulkLocationId} disabled={bulkActionBusy}>
-                    <SelectTrigger className="h-9 w-[180px] bg-background" aria-label="Pickup location for selected reservations">
+                    <SelectTrigger className="h-10 w-[180px] bg-background" aria-label="Pickup location for selected reservations">
                       <SelectValue placeholder="Pickup location" />
                     </SelectTrigger>
                     <SelectContent>
@@ -708,7 +705,7 @@ export default function BookingListPage({
                     Apply location
                   </Button>
                   <Select value={bulkRequesterId} onValueChange={setBulkRequesterId} disabled={bulkActionBusy}>
-                    <SelectTrigger className="h-9 w-[180px] bg-background" aria-label="Requester for selected reservations">
+                    <SelectTrigger className="h-10 w-[180px] bg-background" aria-label="Requester for selected reservations">
                       <SelectValue placeholder="Transfer to…" />
                     </SelectTrigger>
                     <SelectContent>
@@ -873,10 +870,20 @@ export default function BookingListPage({
                 <Pagination>
                   <PaginationContent>
                     <PaginationItem>
-                      <PaginationPrevious onClick={() => changePage(page - 1)} aria-disabled={page === 0} className={page === 0 ? "h-10 pointer-events-none opacity-50" : "h-10 cursor-pointer"} />
+                    <PaginationPrevious
+                      onClick={() => { if (page > 0) changePage(page - 1); }}
+                      aria-disabled={page === 0}
+                      tabIndex={page === 0 ? -1 : undefined}
+                      className={page === 0 ? "h-10 pointer-events-none opacity-50" : "h-10 cursor-pointer"}
+                    />
                     </PaginationItem>
                     <PaginationItem>
-                      <PaginationNext onClick={() => changePage(page + 1)} aria-disabled={page >= totalPages - 1} className={page >= totalPages - 1 ? "h-10 pointer-events-none opacity-50" : "h-10 cursor-pointer"} />
+                    <PaginationNext
+                      onClick={() => { if (page < totalPages - 1) changePage(page + 1); }}
+                      aria-disabled={page >= totalPages - 1}
+                      tabIndex={page >= totalPages - 1 ? -1 : undefined}
+                      className={page >= totalPages - 1 ? "h-10 pointer-events-none opacity-50" : "h-10 cursor-pointer"}
+                    />
                     </PaginationItem>
                   </PaginationContent>
                 </Pagination>

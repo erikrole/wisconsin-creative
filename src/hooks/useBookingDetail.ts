@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { BookingDetail } from "@/components/booking-details/types";
 import { handleAuthRedirect, parseJsonSafely } from "@/lib/errors";
 
-export type BookingError = "not-found" | "network" | "auth" | "server" | null;
+type BookingError = "not-found" | "network" | "auth" | "server" | null;
 
 async function fetchBooking(id: string, signal?: AbortSignal): Promise<BookingDetail> {
   const res = await fetch(`/api/bookings/${id}`, { signal });

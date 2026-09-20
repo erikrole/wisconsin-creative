@@ -13,6 +13,7 @@ import {
   type FetchErrorKind,
 } from "@/lib/errors";
 import { formatDateShort } from "@/lib/format";
+import { siteLabel } from "@/lib/scoreboard-display";
 import {
   currentStreak,
   gamesLabel,
@@ -93,13 +94,6 @@ function emptyDimensionLabel(dimension: Dimension, isFiltered: boolean): string 
   return "No venues with a resolved game yet.";
 }
 
-function siteLabel(site: ScoreboardEvent["site"]): string {
-  if (site === "HOME") return "Home";
-  if (site === "AWAY") return "Away";
-  if (site === "NEUTRAL") return "Neutral";
-  return "Site unknown";
-}
-
 /** Where a game was played, readable without parsing the sentence. */
 function SiteIcon({ site }: { site: ScoreboardEvent["site"] }) {
   const className = "size-3 shrink-0 text-muted-foreground/70";
@@ -151,27 +145,25 @@ function FormStrip({ games }: { games: ScoreboardEvent[] }) {
   const streak = currentStreak(games);
 
   return (
-    <div className="flex items-center justify-between gap-4 border-t pt-4">
-      <div>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-          Last {games.length}
-        </p>
-        {streak ? (
-          <p
-            className="mt-0.5 text-xs font-medium"
-            style={{ color: streak.result === "WIN" ? "var(--green-text)" : streak.result === "LOSS" ? "var(--red-text)" : "var(--orange-text)" }}
-          >
-            {streak.label}
-          </p>
-        ) : null}
-      </div>
-      <div className="flex items-center gap-1.5" aria-hidden="true">
+    <div className="flex flex-wrap items-center gap-2">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+        Last {games.length}
+      </p>
+      <div className="flex items-center gap-1" aria-hidden="true">
         {games.map((game) => (
           <Badge key={game.id} variant={resultVariant(game.result)} size="sm" className="w-6 justify-center rounded-md">
             {resultShortLabel(game.result)}
           </Badge>
         ))}
       </div>
+      {streak ? (
+        <p
+          className="text-xs font-medium"
+          style={{ color: streak.result === "WIN" ? "var(--green-text)" : streak.result === "LOSS" ? "var(--red-text)" : "var(--orange-text)" }}
+        >
+          {streak.label}
+        </p>
+      ) : null}
       <span className="sr-only">
         Last {games.length} games, newest first: {games.map((game) => resultSpokenLabel(game.result)).join(", ")}
         {streak ? `. ${streak.label}.` : ""}
@@ -200,49 +192,48 @@ function SeasonCard({
     isFiltered,
     seasonResolvedGames,
   });
+  const highlights = isFiltered ? [] : scoreboardHighlights(scoreboard);
 
   return (
-    <div className="flex flex-col gap-4 rounded-xl border bg-card p-5 sm:p-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-            {scoreboard.scope.label}
-          </p>
-          <div className="mt-1.5 flex items-baseline gap-3">
-            <p className="text-4xl font-bold tracking-tight tabular-nums">{recordLabel(scoreboard.summary)}</p>
-            <span className="text-sm text-muted-foreground">record</span>
+    <div className="overflow-hidden rounded-lg border border-border/50 bg-card">
+      <div className="flex flex-col gap-3 p-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              {scoreboard.scope.label}
+            </p>
+            <div className="mt-1 flex items-baseline gap-2">
+              <p className="text-2xl font-semibold tabular-nums">{recordLabel(scoreboard.summary)}</p>
+              <span className="text-sm text-muted-foreground">record</span>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-lg font-semibold tabular-nums">{rateLabel(scoreboard.summary.winRate)}</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Win rate</p>
           </div>
         </div>
-        <div className="text-right">
-          <p className="text-xl font-semibold tabular-nums">{rateLabel(scoreboard.summary.winRate)}</p>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Win rate</p>
+
+        <RecordMeter wins={scoreboard.summary.wins} losses={scoreboard.summary.losses} ties={scoreboard.summary.ties} />
+
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-muted-foreground">{sentence}</p>
+          {showsForm && form.length > 0 ? <FormStrip games={form} /> : null}
         </div>
       </div>
 
-      <RecordMeter wins={scoreboard.summary.wins} losses={scoreboard.summary.losses} ties={scoreboard.summary.ties} />
-
-      {showsForm && form.length > 0 ? <FormStrip games={form} /> : null}
-
-      <p className="text-xs text-muted-foreground">{sentence}</p>
-    </div>
-  );
-}
-
-function Highlights({ scoreboard }: { scoreboard: UserScoreboard }) {
-  const highlights = scoreboardHighlights(scoreboard);
-  if (highlights.length === 0) return null;
-
-  return (
-    <div className="grid gap-3 sm:grid-cols-3">
-      {highlights.map((highlight) => (
-        <div key={highlight.id} className="rounded-xl border bg-muted/25 p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-            {highlight.label}
-          </p>
-          <p className="mt-2 truncate text-sm font-semibold" title={highlight.value}>{highlight.value}</p>
-          <p className="mt-1 truncate text-xs tabular-nums text-muted-foreground">{highlight.detail}</p>
+      {highlights.length > 0 ? (
+        <div className="grid divide-y divide-border/50 border-t border-border/50 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          {highlights.map((highlight) => (
+            <div key={highlight.id} className="px-4 py-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                {highlight.label}
+              </p>
+              <p className="mt-1 truncate text-sm font-semibold" title={highlight.value}>{highlight.value}</p>
+              <p className="mt-0.5 truncate text-xs tabular-nums text-muted-foreground">{highlight.detail}</p>
+            </div>
+          ))}
         </div>
-      ))}
+      ) : null}
     </div>
   );
 }
@@ -476,30 +467,32 @@ function GamesCard({
 /** The real layout in grey: a spinner says "wait", this says what is coming. */
 function ScoreboardSkeleton() {
   return (
-    <div className="flex flex-col gap-5">
-      <div className="rounded-xl border p-5 sm:p-6">
-        <Skeleton className="h-3 w-32" />
-        <Skeleton className="mt-3 h-9 w-32" />
-        <Skeleton className="mt-4 h-2.5 w-full rounded-full" />
-        <div className="mt-3 flex justify-between">
-          <Skeleton className="h-3 w-16" />
-          <Skeleton className="h-3 w-16" />
-          <Skeleton className="h-3 w-16" />
-        </div>
-        <Skeleton className="mt-5 h-3 w-72 max-w-full" />
-      </div>
-      <div className="grid gap-3 sm:grid-cols-3">
-        {[0, 1, 2].map((tile) => (
-          <div key={tile} className="rounded-xl border p-4">
-            <Skeleton className="h-3 w-20" />
-            <Skeleton className="mt-2 h-4 w-28" />
-            <Skeleton className="mt-2 h-3 w-16" />
+    <div className="flex flex-col gap-4">
+      <div className="overflow-hidden rounded-lg border border-border/50">
+        <div className="p-4">
+          <Skeleton className="h-3 w-32" />
+          <Skeleton className="mt-2 h-7 w-24" />
+          <Skeleton className="mt-3 h-2.5 w-full rounded-full" />
+          <div className="mt-3 flex justify-between">
+            <Skeleton className="h-3 w-16" />
+            <Skeleton className="h-3 w-16" />
+            <Skeleton className="h-3 w-16" />
           </div>
-        ))}
+          <Skeleton className="mt-3 h-3 w-72 max-w-full" />
+        </div>
+        <div className="grid border-t border-border/50 sm:grid-cols-3">
+          {[0, 1, 2].map((tile) => (
+            <div key={tile} className="px-4 py-3">
+              <Skeleton className="h-3 w-20" />
+              <Skeleton className="mt-2 h-4 w-28" />
+              <Skeleton className="mt-1 h-3 w-16" />
+            </div>
+          ))}
+        </div>
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
         {[0, 1].map((card) => (
-          <div key={card} className="rounded-xl border p-4">
+          <div key={card} className="rounded-lg border border-border/50 p-4">
             <Skeleton className="h-8 w-full" />
             <div className="mt-4 flex flex-col gap-4">
               {[0, 1, 2, 3].map((row) => <Skeleton key={row} className="h-9 w-full" />)}
@@ -742,7 +735,7 @@ function UserScoreboardExplorer({
   ].filter((filter): filter is OperationalActiveFilter => filter !== null);
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-4">
       <OperationalToolbar>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <ToggleGroup
@@ -795,7 +788,7 @@ function UserScoreboardExplorer({
       </OperationalToolbar>
 
       <ScoreboardDataRegion refreshing={refreshing}>
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-4">
           <SeasonCard
             scoreboard={data}
             games={events}
@@ -805,10 +798,6 @@ function UserScoreboardExplorer({
             isFiltered={hasFilters}
             seasonResolvedGames={seasonResolvedGames}
           />
-
-          {/* Orientation, not analysis: once the reader has narrowed to one sport or
-              one result, they are past the point these three facts help with. */}
-          {hasFilters ? null : <Highlights scoreboard={data} />}
 
           <div className="grid items-start gap-4 lg:grid-cols-2">
             <BreakdownCard

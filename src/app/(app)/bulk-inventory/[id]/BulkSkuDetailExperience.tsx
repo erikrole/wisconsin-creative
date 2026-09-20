@@ -13,7 +13,7 @@ import { BulkSkuOverviewCard } from "./BulkSkuOverviewCard";
 import useBulkSkuData from "./_hooks/use-bulk-sku-data";
 import { useInvalidateItemCatalog } from "@/hooks/use-item-cache-invalidation";
 import { useItemChangeSync } from "@/hooks/use-item-change-sync";
-import { useUrlState } from "@/hooks/use-url-state";
+import { parseDetailTab, serializeDetailTab, useUrlState } from "@/hooks/use-url-state";
 import ActivityFeed from "../../items/[id]/ItemHistoryTab";
 
 const BulkSkuUnitsTab = dynamic(() => import("./BulkSkuUnitsTab"), { ssr: false });
@@ -30,14 +30,6 @@ const allTabDefs: Array<{ key: TabKey; label: string }> = [
   { key: "settings", label: "Settings" },
 ];
 
-function parseBulkDetailTab(raw: string | null): TabKey {
-  return allTabDefs.some((tab) => tab.key === raw) ? (raw as TabKey) : "info";
-}
-
-function serializeDetailTab(tab: TabKey): string | null {
-  return tab === "info" ? null : tab;
-}
-
 export function BulkSkuDetailExperience({
   id,
   operationsHref,
@@ -45,7 +37,11 @@ export function BulkSkuDetailExperience({
   id: string;
   operationsHref?: string;
 }) {
-  const [activeTab, setActiveTab] = useUrlState<TabKey>("tab", parseBulkDetailTab, serializeDetailTab);
+  const [activeTab, setActiveTab] = useUrlState<TabKey>(
+    "tab",
+    (raw) => parseDetailTab(raw, allTabDefs, "info"),
+    (tab) => serializeDetailTab(tab, "info"),
+  );
 
   const { sku, setSku, fetchError, refreshing, canEdit, loadSku } = useBulkSkuData(id);
   const invalidateItemCatalog = useInvalidateItemCatalog();

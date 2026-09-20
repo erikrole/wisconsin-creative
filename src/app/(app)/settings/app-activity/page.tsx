@@ -123,7 +123,7 @@ export default function AppActivityPage() {
   if (error && !data) {
     return (
       <SettingsPageShell
-        title="App activity"
+        href="/settings/app-activity"
         description="Owner-only adoption and client identity for the signed-in app."
       >
         <Card>
@@ -148,7 +148,7 @@ export default function AppActivityPage() {
 
   return (
     <SettingsPageShell
-      title="App activity"
+      href="/settings/app-activity"
       description="Owner-only adoption, device, iOS, build, and release-channel visibility. App use means the client reported an app-open event."
     >
       <div className="flex flex-col gap-4">
@@ -383,7 +383,7 @@ function UserActivityRow({ user, now }: { user: AppActivityUser; now: Date }) {
 function AppActivityLoading() {
   return (
     <SettingsPageShell
-      title="App activity"
+      href="/settings/app-activity"
       description="Owner-only adoption and client identity for the signed-in app."
     >
       <div className="flex flex-col gap-4">

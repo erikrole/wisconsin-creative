@@ -77,7 +77,7 @@ export function FormCombobox({
           aria-expanded={open}
           aria-invalid={ariaInvalid || undefined}
           aria-describedby={ariaDescribedBy}
-          className={cn("h-9 w-full justify-between text-sm font-normal", triggerClassName)}
+          className={cn("w-full justify-between text-sm font-normal", triggerClassName)}
         >
           {selected ? (
             selected.label
@@ -184,7 +184,7 @@ export function CategoryCombobox({
           aria-expanded={open}
           aria-invalid={ariaInvalid || undefined}
           aria-describedby={ariaDescribedBy}
-          className={cn("h-9 w-full justify-between text-sm font-normal", triggerClassName)}
+          className={cn("w-full justify-between text-sm font-normal", triggerClassName)}
         >
           {selectedCat ? (
             selectedCat.label
@@ -307,7 +307,7 @@ export function BulkSkuCombobox({
           aria-expanded={open}
           aria-invalid={ariaInvalid || undefined}
           aria-describedby={ariaDescribedBy}
-          className={cn("h-9 w-full justify-between text-sm font-normal", triggerClassName)}
+          className={cn("w-full justify-between text-sm font-normal", triggerClassName)}
         >
           {selected ? (
             selected.name

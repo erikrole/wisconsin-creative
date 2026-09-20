@@ -2,10 +2,8 @@
 
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { AlertTriangle, BellOff, CalendarClock, Mail, PackageCheck, Repeat2, ShoppingBag, Smartphone, Tag, WifiOff } from "lucide-react";
+import { BellOff, CalendarClock, Mail, PackageCheck, Repeat2, ShoppingBag, Smartphone, Tag } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
@@ -17,6 +15,8 @@ import {
   parseErrorMessage,
 } from "@/lib/errors";
 import { SettingsPageShell } from "../SettingsPageShell";
+import { SettingsPrefRow } from "../_components/SettingsPrefRow";
+import EmptyState from "@/components/EmptyState";
 import { WebPushSettings } from "@/components/notifications/WebPushSettings";
 
 type Prefs = {
@@ -142,7 +142,7 @@ export default function NotificationsSettingsPage() {
 
   if (loading) {
     return (
-      <SettingsPageShell title="Notifications" description={description} mainClassName="flex flex-col gap-3">
+      <SettingsPageShell href="/settings/notifications" description={description} mainClassName="flex flex-col gap-3">
             <Skeleton className="h-32 w-full rounded-md" />
             <Skeleton className="h-44 w-full rounded-md" />
       </SettingsPageShell>
@@ -150,20 +150,16 @@ export default function NotificationsSettingsPage() {
   }
 
   if (error || !prefs) {
-    const Icon = error === "network" ? WifiOff : AlertTriangle;
     return (
-      <SettingsPageShell title="Notifications" description={description}>
-            <Card>
-              <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
-                <Icon className="size-10 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">
-                  {error === "network"
-                    ? "Could not connect to the server."
-                    : "Failed to load your preferences."}
-                </p>
-                <Button variant="outline" onClick={reload}>Retry</Button>
-              </CardContent>
-            </Card>
+      <SettingsPageShell href="/settings/notifications" description={description}>
+            <EmptyState
+              inline
+              icon={error === "network" ? "wifi-off" : "bell"}
+              title={error === "network" ? "You are offline" : "Could not load notifications"}
+              description={error === "network" ? "Could not connect to the server." : "Failed to load your preferences."}
+              actionLabel="Retry"
+              onAction={reload}
+            />
       </SettingsPageShell>
     );
   }
@@ -172,7 +168,7 @@ export default function NotificationsSettingsPage() {
   const isPaused = !!pausedLabel;
 
   return (
-    <SettingsPageShell title="Notifications" description={description} mainClassName="flex flex-col gap-4">
+    <SettingsPageShell href="/settings/notifications" description={description} mainClassName="flex flex-col gap-4">
         {/* Pause */}
         <Card>
           <CardHeader>
@@ -221,7 +217,7 @@ export default function NotificationsSettingsPage() {
             <CardTitle className="text-base">Delivery channels</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-1">
-            <ChannelRow
+            <SettingsPrefRow
               icon={<Mail className="size-4" />}
               label="Email"
               description="Send notifications to your registered email address."
@@ -230,7 +226,7 @@ export default function NotificationsSettingsPage() {
               disabled={saving || isPaused}
             />
             <div className="border-t border-border my-1" />
-            <ChannelRow
+            <SettingsPrefRow
               icon={<Smartphone className="size-4" />}
               label="Push"
               description="Send push notifications to the iOS app or an enrolled browser."
@@ -253,7 +249,7 @@ export default function NotificationsSettingsPage() {
             <CardTitle className="text-base">Notification types</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-1">
-            <ChannelRow
+            <SettingsPrefRow
               icon={<ShoppingBag className="size-4" />}
               label="Checkout due reminders"
               description="Notified before a checkout is due back."
@@ -262,7 +258,7 @@ export default function NotificationsSettingsPage() {
               disabled={saving}
             />
             <div className="border-t border-border my-1" />
-            <ChannelRow
+            <SettingsPrefRow
               icon={<ShoppingBag className="size-4" />}
               label="Checkout overdue alerts"
               description="Notified when a checkout is past its due date."
@@ -271,7 +267,7 @@ export default function NotificationsSettingsPage() {
               disabled={saving}
             />
             <div className="border-t border-border my-1" />
-            <ChannelRow
+            <SettingsPrefRow
               icon={<Tag className="size-4" />}
               label="Reservation updates"
               description="Confirmation, pickup-ready, and cancellation notices for your reservations."
@@ -280,7 +276,7 @@ export default function NotificationsSettingsPage() {
               disabled={saving}
             />
             <div className="border-t border-border my-1" />
-            <ChannelRow
+            <SettingsPrefRow
               icon={<Tag className="size-4" />}
               label="License expiry reminders"
               description="Notified when a license you hold is approaching expiry."
@@ -289,7 +285,7 @@ export default function NotificationsSettingsPage() {
               disabled={saving}
             />
             <div className="border-t border-border my-1" />
-            <ChannelRow
+            <SettingsPrefRow
               icon={<CalendarClock className="size-4" />}
               label="Schedule updates"
               description="Published shift assignments, approvals, removals, and call-time changes."
@@ -298,7 +294,7 @@ export default function NotificationsSettingsPage() {
               disabled={saving}
             />
             <div className="border-t border-border my-1" />
-            <ChannelRow
+            <SettingsPrefRow
               icon={<Repeat2 className="size-4" />}
               label="Trade updates"
               description="Claimed, approved, declined, completed, and expired shift trades."
@@ -307,7 +303,7 @@ export default function NotificationsSettingsPage() {
               disabled={saving}
             />
             <div className="border-t border-border my-1" />
-            <ChannelRow
+            <SettingsPrefRow
               icon={<PackageCheck className="size-4" />}
               label="Gear prep nudges"
               description="Staff-triggered reminders to reserve or prepare gear for an assigned shift."
@@ -326,36 +322,5 @@ export default function NotificationsSettingsPage() {
           <a href="/notifications" className="underline">notifications inbox</a>.
         </p>
     </SettingsPageShell>
-  );
-}
-
-function ChannelRow({
-  icon,
-  label,
-  description,
-  checked,
-  onChange,
-  disabled,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  description: string;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-  disabled?: boolean;
-}) {
-  const id = `notif-${label.toLowerCase()}`;
-  const name = id.replace(/[^a-z0-9]+/g, "-");
-  return (
-    <div className="flex items-start justify-between gap-4 py-2">
-      <div className="flex gap-3 min-w-0">
-        <span className="text-muted-foreground mt-0.5">{icon}</span>
-        <div className="min-w-0">
-          <Label htmlFor={id} className="font-medium cursor-pointer">{label}</Label>
-          <p className="text-xs text-muted-foreground m-0 mt-0.5">{description}</p>
-        </div>
-      </div>
-      <Switch id={id} name={name} checked={checked} onCheckedChange={onChange} disabled={disabled} />
-    </div>
   );
 }

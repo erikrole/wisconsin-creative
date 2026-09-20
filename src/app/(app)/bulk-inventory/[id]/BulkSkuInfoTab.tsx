@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Check, X, ExternalLink, QrCode } from "lucide-react";
 import { useInvalidateItemCatalog } from "@/hooks/use-item-cache-invalidation";
 import { Spinner } from "@/components/ui/spinner";
@@ -11,24 +12,13 @@ import { Button } from "@/components/ui/button";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { useSaveField } from "@/components/SaveableField";
 import type { BulkSkuDetail } from "./types";
+import { normalizeExternalUrl } from "@/lib/external-url";
 
 type DepartmentOption = { id: string; name: string };
 
-function normalizeExternalUrl(value: string): string {
-  const trimmed = value.trim();
-  if (!trimmed) return "";
-  const withScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
-  let parsed: URL;
-  try {
-    parsed = new URL(withScheme);
-  } catch {
-    throw new Error("Enter a valid http or https URL");
-  }
-  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-    throw new Error("Enter a valid http or https URL");
-  }
-  return parsed.toString();
-}
+const DEPARTMENTS_QUERY_KEY = ["departments"] as const;
+// Stable identity so the default never re-triggers dependent memos.
+const EMPTY_DEPARTMENTS: DepartmentOption[] = [];
 
 function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -76,15 +66,20 @@ export function BulkSkuInfoTab({
   onFieldSaved: (partial: Partial<BulkSkuDetail>) => void;
   onManageQr: () => void;
 }) {
-  const [departments, setDepartments] = useState<DepartmentOption[]>([]);
+  // Departments are an administrative list that changes rarely, so cache them
+  // for the session instead of refetching on every mount. useQuery also gives
+  // the request an abort signal, which the raw effect fetch never had.
+  const { data: departments = EMPTY_DEPARTMENTS } = useQuery<DepartmentOption[]>({
+    queryKey: DEPARTMENTS_QUERY_KEY,
+    queryFn: async ({ signal }) => {
+      const res = await fetch("/api/departments", { signal });
+      if (!res.ok) return [];
+      const json = await parseJsonSafely<{ data?: DepartmentOption[] }>(res);
+      return json?.data ?? [];
+    },
+    staleTime: 30 * 60_000,
+  });
   const invalidateItemCatalog = useInvalidateItemCatalog();
-
-  useEffect(() => {
-    fetch("/api/departments")
-      .then((res) => res.ok ? parseJsonSafely<{ data?: DepartmentOption[] }>(res) : null)
-      .then((json) => { if (json?.data) setDepartments(json.data); })
-      .catch(() => {});
-  }, []);
 
   async function patchField(field: string, value: unknown) {
     const res = await fetch(`/api/bulk-skus/${sku.id}`, {

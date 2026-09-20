@@ -143,7 +143,7 @@ export type ScheduleFilters = {
   clearAll: () => void;
 };
 
-export type UseScheduleDataResult = {
+type UseScheduleDataResult = {
   entries: CalendarEntry[];
   filteredEntries: CalendarEntry[];
   groupedEntries: [string, CalendarEntry[]][];

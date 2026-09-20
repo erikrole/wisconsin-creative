@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, ChevronUp, MoreHorizontal, RotateCcw } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { ChevronDown, ChevronUp, SearchIcon, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import MetricCard from "../reports/MetricCard";
 import {
@@ -20,6 +21,11 @@ import {
   ReportToolbar,
   ReportToolbarGroup,
 } from "../reports/report-ui";
+import {
+  getReportExportCompletionToast,
+  getReportExportFilename,
+  readReportExportFailureMessage,
+} from "../reports/report-export";
 import { AccountabilitySpotlight } from "./AccountabilitySpotlight";
 import { UserAvatar } from "@/components/UserAvatar";
 import { Badge } from "@/components/ui/badge";
@@ -38,12 +44,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FadeUp } from "@/components/ui/motion";
 import {
@@ -63,8 +64,10 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { handleAuthRedirect, parseJsonSafely } from "@/lib/errors";
-import { formatRelativeTime } from "@/lib/format";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { handleAuthRedirect, isAbortError, parseJsonSafely } from "@/lib/errors";
+import { formatRelativeTime, pluralize } from "@/lib/format";
+import { syncUrl } from "@/lib/url-sync";
 import { cn } from "@/lib/utils";
 import { useFetch } from "@/hooks/use-fetch";
 
@@ -104,6 +107,8 @@ type SortKey = "events" | "time" | "recent";
 
 type AccountabilityReport = {
   generatedAt: string;
+  truncated?: boolean;
+  scanLimit?: number;
   academicYear: { startYear: number; label: string; start: string; end: string } | null;
   methodology: {
     gracePeriodHours: number;
@@ -145,6 +150,12 @@ const REASONS = [
   ["OTHER", "Other"],
 ] as const;
 
+const REASON_LABELS = Object.fromEntries(REASONS) as Record<string, string>;
+
+const INCIDENT_STATES = new Set(["all", "active", "resolved", "extended"]);
+const USER_STATES = new Set(["all", "active", "inactive"]);
+const SORTS = new Set(["events", "time", "recent"]);
+
 const INCIDENT_STATE_LABELS: Record<string, string> = {
   active: "Active overdue",
   resolved: "Resolved late returns",
@@ -177,6 +188,59 @@ function areaLabel(area: string | null) {
   return area ? area.replaceAll("_", " ") : "No area";
 }
 
+function allowedValue(value: string | null, allowed: Set<string>, fallback: string) {
+  return value && allowed.has(value) ? value : fallback;
+}
+
+function academicYearValue(value: string | null, currentStartYear: number) {
+  if (value === "all") return "all";
+  if (value && /^\d{4}$/.test(value)) {
+    const year = Number(value);
+    if (year >= 2000 && year <= 2100) return String(year);
+  }
+  return String(currentStartYear);
+}
+
+async function downloadAccountabilityCsv(queryUrl: string) {
+  try {
+    const separator = queryUrl.includes("?") ? "&" : "?";
+    const res = await fetch(`${queryUrl}${separator}format=csv`);
+    if (handleAuthRedirect(res, "/accountability")) return;
+    if (!res.ok) {
+      toast.error(await readReportExportFailureMessage(res, "Accountability ranking"));
+      return;
+    }
+
+    const blob = await res.blob();
+    const filename = getReportExportFilename(
+      res.headers.get("Content-Disposition"),
+      "accountability.csv",
+    );
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    const exportedCount = Number.parseInt(res.headers.get("X-Exported-Count") ?? "", 10);
+    const completionToast = getReportExportCompletionToast({
+      reportLabel: "Accountability ranking",
+      rowCount: Number.isFinite(exportedCount) ? exportedCount : 0,
+      scopeLabel: "ranked people",
+      total: res.headers.get("X-Total-Count"),
+      truncated: res.headers.get("X-Truncated") === "true",
+    });
+    if (completionToast.variant === "warning") toast.warning(completionToast.message);
+    else toast.success(completionToast.message);
+  } catch (err) {
+    if (isAbortError(err)) return;
+    toast.error("Accountability CSV export failed. Check your connection and try again.");
+  }
+}
+
 function OnTimeRate({ person }: { person: Person }) {
   if (person.onTimeRate === null) {
     return (
@@ -185,7 +249,7 @@ function OnTimeRate({ person }: { person: Person }) {
           <span className="cursor-default text-xs text-muted-foreground">Not rated</span>
         </TooltipTrigger>
         <TooltipContent>
-          Needs more completed checkouts before an on-time rate is meaningful
+          Needs 3 completed checkouts or currently overdue checkouts before an on-time rate is meaningful
         </TooltipContent>
       </Tooltip>
     );
@@ -208,25 +272,30 @@ function OnTimeRate({ person }: { person: Person }) {
 
 function IncidentStateBadge({ incident }: { incident: Incident }) {
   if (incident.state === "active") return <Badge variant="red">Currently overdue</Badge>;
-  if (incident.state === "extended") {
-    return (
-      <Badge variant="orange">
-        Extended {formatDate(incident.extendedAt!)} to {formatDate(incident.extendedTo!)}
-      </Badge>
-    );
-  }
-  return <Badge variant="secondary">Returned {formatDate(incident.returnedAt!)}</Badge>;
+  if (incident.state === "extended") return <Badge variant="orange">Extended after overdue</Badge>;
+  return <Badge variant="secondary">Returned</Badge>;
 }
 
-export default function AccountabilityClient() {
-  const now = new Date();
-  const currentStartYear = now.getMonth() >= 6 ? now.getFullYear() : now.getFullYear() - 1;
+export default function AccountabilityClient({
+  currentStartYear,
+}: {
+  currentStartYear: number;
+}) {
+  const searchParams = useSearchParams();
+  const { data: currentUser } = useCurrentUser();
   const [clock, setClock] = useState(() => new Date());
-  const [year, setYear] = useState(String(currentStartYear));
-  const [locationId, setLocationId] = useState("all");
-  const [incidentState, setIncidentState] = useState("all");
-  const [userState, setUserState] = useState("all");
-  const [sort, setSort] = useState<SortKey>("events");
+  const [year, setYear] = useState(() => academicYearValue(searchParams.get("year"), currentStartYear));
+  const [locationId, setLocationId] = useState(() => searchParams.get("locationId") || "all");
+  const [incidentState, setIncidentState] = useState(() =>
+    allowedValue(searchParams.get("state"), INCIDENT_STATES, "all"),
+  );
+  const [userState, setUserState] = useState(() =>
+    allowedValue(searchParams.get("users"), USER_STATES, "all"),
+  );
+  const [sort, setSort] = useState<SortKey>(
+    () => allowedValue(searchParams.get("sort"), SORTS, "events") as SortKey,
+  );
+  const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [excludeTarget, setExcludeTarget] = useState<Incident | null>(null);
   const [reason, setReason] = useState("TEST_DATA");
@@ -239,6 +308,34 @@ export default function AccountabilityClient() {
     return () => clearInterval(id);
   }, []);
 
+  useEffect(() => {
+    syncUrl({
+      year,
+      locationId: locationId === "all" ? "" : locationId,
+      state: incidentState === "all" ? "" : incidentState,
+      users: userState === "all" ? "" : userState,
+      sort: sort === "events" ? "" : sort,
+    });
+  }, [incidentState, locationId, sort, userState, year]);
+
+  function changeYear(next: string) {
+    setYear(next);
+    setExpanded(new Set());
+  }
+  function changeLocation(next: string | null) {
+    setLocationId(next ?? "all");
+  }
+  function changeIncidentState(next: string) {
+    setIncidentState(next);
+    setExpanded(new Set());
+  }
+  function changeUserState(next: string) {
+    setUserState(next);
+  }
+  function changeSort(next: SortKey) {
+    setSort(next);
+  }
+
   const queryUrl = useMemo(() => {
     const params = new URLSearchParams({ year, state: incidentState, users: userState, sort });
     if (locationId !== "all") params.set("locationId", locationId);
@@ -250,6 +347,12 @@ export default function AccountabilityClient() {
     transform: (json) => json as unknown as AccountabilityReport,
     keepPreviousData: true,
   });
+
+  useEffect(() => {
+    if (!data) return;
+    const exists = locationId === "all" || data.locations.some((location) => location.id === locationId);
+    if (!exists) setLocationId("all");
+  }, [data, locationId]);
 
   const years = Array.from({ length: 5 }, (_, index) => currentStartYear - index);
 
@@ -310,8 +413,16 @@ export default function AccountabilityClient() {
   }
 
   function exportCsv() {
-    const separator = queryUrl.includes("?") ? "&" : "?";
-    window.location.assign(`${queryUrl}${separator}format=csv`);
+    void downloadAccountabilityCsv(queryUrl);
+  }
+
+  function revealYou(userId: string) {
+    setQuery("");
+    window.setTimeout(() => {
+      const targets = document.querySelectorAll<HTMLElement>(`[data-accountability-person="${userId}"]`);
+      const visible = [...targets].find((node) => node.getClientRects().length > 0) ?? targets[0];
+      visible?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 0);
   }
 
   if (loading && !data) return <ReportLoadingState metricCount={4} rows={6} />;
@@ -332,27 +443,49 @@ export default function AccountabilityClient() {
   const rankByTime = sort === "time";
   const canManageExclusions = data.capabilities.canManageExclusions;
   const excluded = data.excluded ?? [];
+  const currentUserId = currentUser?.id ?? null;
+  const normalizedQuery = query.trim().toLowerCase();
+  const visibleLeaderboard = normalizedQuery
+    ? leaderboard.filter((person) => person.name.toLowerCase().includes(normalizedQuery))
+    : leaderboard;
+  const yourIndex = currentUserId
+    ? leaderboard.findIndex((person) => person.userId === currentUserId)
+    : -1;
+  const yourRank = yourIndex >= 0 ? yourIndex + 1 : null;
+  const hasScopeFilters =
+    year !== String(currentStartYear) ||
+    locationId !== "all" ||
+    incidentState !== "all" ||
+    userState !== "all";
+  const locationOptions = data.locations;
 
   const activeFilters = [
+    ...(year !== String(currentStartYear)
+      ? [{
+          key: "year",
+          label: year === "all" ? "All time" : `Year: ${data.academicYear?.label ?? year}`,
+          onRemove: () => changeYear(String(currentStartYear)),
+        }]
+      : []),
     ...(locationId !== "all"
       ? [{
           key: "location",
-          label: `Location: ${data.locations.find((entry) => entry.id === locationId)?.name ?? locationId}`,
-          onRemove: () => setLocationId("all"),
+          label: `Location: ${locationOptions.find((entry) => entry.id === locationId)?.name ?? locationId}`,
+          onRemove: () => changeLocation(null),
         }]
       : []),
     ...(incidentState !== "all"
       ? [{
           key: "state",
           label: `Incidents: ${INCIDENT_STATE_LABELS[incidentState]}`,
-          onRemove: () => setIncidentState("all"),
+          onRemove: () => changeIncidentState("all"),
         }]
       : []),
     ...(userState !== "all"
       ? [{
           key: "users",
           label: `Users: ${USER_STATE_LABELS[userState]}`,
-          onRemove: () => setUserState("all"),
+          onRemove: () => changeUserState("all"),
         }]
       : []),
   ];
@@ -366,14 +499,25 @@ export default function AccountabilityClient() {
         now={clock}
         onRefresh={reload}
         exportAction={
-          data.capabilities.canExport ? (
-            <ReportExportButton
-              ariaLabel="Export the ranked accountability rows as CSV"
-              label="Export ranking"
-              disabled={leaderboard.length === 0}
-              onClick={exportCsv}
-            />
-          ) : null
+          <div className="flex items-center gap-2">
+            {yourRank ? (
+              <Button
+                variant="outline"
+                className="h-10"
+                onClick={() => revealYou(currentUserId!)}
+              >
+                {`You’re #${yourRank}`}
+              </Button>
+            ) : null}
+            {data.capabilities.canExport ? (
+              <ReportExportButton
+                ariaLabel="Export the ranked accountability rows as CSV"
+                label="Export ranking"
+                disabled={leaderboard.length === 0}
+                onClick={exportCsv}
+              />
+            ) : null}
+          </div>
         }
       >
         <ReportToolbarGroup label="Rank by">
@@ -381,15 +525,15 @@ export default function AccountabilityClient() {
             ariaLabel="Accountability ranking"
             value={sort}
             options={[
-              { value: "events", label: "Volume" },
+              { value: "events", label: "Events" },
               { value: "time", label: "Time" },
-              { value: "recent", label: "Recent" },
+              { value: "recent", label: "Latest" },
             ]}
-            onChange={(next) => setSort(next as SortKey)}
+            onChange={(next) => changeSort(next as SortKey)}
           />
         </ReportToolbarGroup>
-        <Select value={year} onValueChange={setYear}>
-          <SelectTrigger size="sm" className="w-[150px]" aria-label="Academic year">
+        <Select value={year} onValueChange={changeYear}>
+          <SelectTrigger size="sm" className="w-[132px]" aria-label="Academic year">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -401,20 +545,20 @@ export default function AccountabilityClient() {
             <SelectItem value="all">All time</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={locationId} onValueChange={setLocationId}>
+        <Select value={locationId} onValueChange={(next) => changeLocation(next === "all" ? null : next)}>
           <SelectTrigger size="sm" className="w-[170px]" aria-label="Location">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All locations</SelectItem>
-            {data.locations.map((location) => (
+            {locationOptions.map((location) => (
               <SelectItem key={location.id} value={location.id}>
                 {location.name}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-        <Select value={incidentState} onValueChange={setIncidentState}>
+        <Select value={incidentState} onValueChange={changeIncidentState}>
           <SelectTrigger size="sm" className="w-[190px]" aria-label="Incident state">
             <SelectValue />
           </SelectTrigger>
@@ -425,7 +569,7 @@ export default function AccountabilityClient() {
             <SelectItem value="extended">Extended after overdue</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={userState} onValueChange={setUserState}>
+        <Select value={userState} onValueChange={changeUserState}>
           <SelectTrigger size="sm" className="w-[175px]" aria-label="User status">
             <SelectValue />
           </SelectTrigger>
@@ -435,6 +579,16 @@ export default function AccountabilityClient() {
             <SelectItem value="inactive">Inactive users</SelectItem>
           </SelectContent>
         </Select>
+        <div className="relative w-[220px] shrink-0">
+          <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Find a person"
+            aria-label="Find a person on the leaderboard"
+            className="h-10 pl-9"
+          />
+        </div>
       </ReportToolbar>
 
       <ReportDataRegion refreshing={refreshing}>
@@ -444,6 +598,7 @@ export default function AccountabilityClient() {
           scopeLabel={scopeLabel}
           now={clock}
           jeers={data.spotlightJeers}
+          currentUserId={currentUserId}
         />
 
       <ReportMetricGrid>
@@ -478,25 +633,46 @@ export default function AccountabilityClient() {
         ) : null}
       </ReportMetricGrid>
 
+      {data.truncated ? (
+        <ReportMetaLine
+          className="mb-4 text-xs"
+          items={[
+            `Showing the ${(data.scanLimit ?? 0).toLocaleString()} most recent checkouts. Older history is left out of the incident lists; checkout and return totals still cover everything.`,
+          ]}
+        />
+      ) : null}
+
       <ReportSectionCard
         title="Full leaderboard"
-        description={`Open history for the receipts. The return record is the escape route. ${data.methodology.ranking}.`}
+        description="Open history for the receipts. The return record is the escape route."
         className="mb-4"
         contentClassName="p-0"
       >
         {leaderboard.length === 0 ? (
           <div className="p-4">
             <ReportEmptyState
-              icon="check"
-              title="No one made the board. Nice work."
-              description="Try another academic year or broaden the filters if you are looking for history."
+              icon={hasScopeFilters ? "search" : "check"}
+              title={hasScopeFilters ? "No one matches these filters" : "No one made the board. Nice work."}
+              description={
+                hasScopeFilters
+                  ? "Broaden the year, location, incident, or user filters to look through more history."
+                  : "Keep returning gear on time and this ranking stays empty."
+              }
+            />
+          </div>
+        ) : visibleLeaderboard.length === 0 ? (
+          <div className="p-4">
+            <ReportEmptyState
+              icon="search"
+              title={`No one named “${query.trim()}”`}
+              description="Clear the search to see the full ranking."
             />
           </div>
         ) : (
           <>
             <div className="hidden xl:block">
               <Table className="table-fixed">
-                <TableHeader>
+                <TableHeader className="sticky top-0 z-10 bg-card">
                   <TableRow>
                     <TableHead className="w-[34%]">Person</TableHead>
                     <TableHead
@@ -514,13 +690,14 @@ export default function AccountabilityClient() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {leaderboard.map((person, index) => (
+                  {visibleLeaderboard.map((person) => (
                     <PersonRows
                       key={person.userId}
                       person={person}
-                      rank={index + 1}
+                      rank={leaderboard.findIndex((row) => row.userId === person.userId) + 1}
                       rankByTime={rankByTime}
                       now={clock}
+                      isYou={person.userId === currentUserId}
                       expanded={expanded.has(person.userId)}
                       onToggle={() => toggle(person.userId)}
                       onExclude={canManageExclusions ? setExcludeTarget : undefined}
@@ -531,13 +708,14 @@ export default function AccountabilityClient() {
             </div>
 
             <div className="xl:hidden">
-              {leaderboard.map((person, index) => (
+              {visibleLeaderboard.map((person) => (
                 <PersonMobileCard
                   key={person.userId}
                   person={person}
-                  rank={index + 1}
+                  rank={leaderboard.findIndex((row) => row.userId === person.userId) + 1}
                   rankByTime={rankByTime}
                   now={clock}
+                  isYou={person.userId === currentUserId}
                   expanded={expanded.has(person.userId)}
                   onToggle={() => toggle(person.userId)}
                   onExclude={canManageExclusions ? setExcludeTarget : undefined}
@@ -565,13 +743,13 @@ export default function AccountabilityClient() {
                 >
                   <div className="min-w-0">
                     <ReportTableLink href={`/checkouts/${entry.bookingId}`}>
-                      {entry.bookingTitle}
+                      {entry.bookingTitle || "Untitled checkout"}
                     </ReportTableLink>
                     <ReportMetaLine
                       className="text-sm"
                       items={[
                         entry.requester,
-                        entry.reason.replaceAll("_", " ").toLowerCase(),
+                        REASON_LABELS[entry.reason] ?? entry.reason.replaceAll("_", " ").toLowerCase(),
                         `excluded by ${entry.excludedBy}`,
                       ]}
                     />
@@ -607,8 +785,9 @@ export default function AccountabilityClient() {
             <p className="mt-2">
               Extending an already-late checkout records a separate late event against the prior due
               time. On-time rate appears after {data.methodology.minimumCheckoutsForRate} completed
-              checkouts. Admin-reviewed data-quality exclusions affect this page only and never
-              remove custody history.
+              checkouts or currently overdue checkouts, and currently overdue gear counts as not on
+              time. Admin-reviewed data-quality exclusions affect this page only and never remove
+              custody history.
             </p>
           </div>
         </CollapsibleContent>
@@ -626,7 +805,9 @@ export default function AccountabilityClient() {
               <div>
                 <DialogTitle>Exclude checkout from accountability</DialogTitle>
                 <DialogDescription>
-                  This keeps the checkout and all custody evidence intact.
+                  {excludeTarget
+                    ? `${excludeTarget.title} stays in custody history. This only removes it from the leaderboard.`
+                    : "This keeps the checkout and all custody evidence intact."}
                 </DialogDescription>
               </div>
             </DialogHeader>
@@ -691,10 +872,6 @@ function PersonSubline({ person, now }: { person: Person; now: Date }) {
   );
 }
 
-function pluralize(value: number, singular: string, plural = `${singular}s`) {
-  return `${value} ${value === 1 ? singular : plural}`;
-}
-
 function returnRateBarColor(rate: number) {
   const clampedRate = Math.min(100, Math.max(50, rate));
   const greenShare = Math.round(((clampedRate - 50) / 50) * 100);
@@ -703,16 +880,16 @@ function returnRateBarColor(rate: number) {
 
 function LateEventsSummary({
   person,
-  rankByTime,
   className,
 }: {
   person: Person;
-  rankByTime: boolean;
   className?: string;
 }) {
   return (
     <div className={cn("flex flex-col items-end gap-1", className)}>
-      <Badge variant={rankByTime ? "secondary" : "red"}>{person.lateEventCount}</Badge>
+      <Badge variant={person.activeOverdueCount > 0 ? "red" : "secondary"}>
+        {person.lateEventCount}
+      </Badge>
       <span
         className={cn(
           "text-xs",
@@ -805,23 +982,14 @@ function IncidentActions({
   onExclude: (incident: Incident) => void;
 }) {
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-10"
-          aria-label={`Actions for ${incident.title}`}
-        >
-          <MoreHorizontal className="size-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem onSelect={() => onExclude(incident)}>
-          Exclude from accountability
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <Button
+      variant="outline"
+      className="h-10"
+      onClick={() => onExclude(incident)}
+      aria-label={`Exclude ${incident.title} from accountability`}
+    >
+      Exclude
+    </Button>
   );
 }
 
@@ -862,6 +1030,11 @@ function IncidentHistory({
                 items={[
                   incident.location.name,
                   `Due ${formatDate(incident.dueAt)}`,
+                  incident.state === "extended" && incident.extendedAt && incident.extendedTo
+                    ? `Extended ${formatDate(incident.extendedAt)} to ${formatDate(incident.extendedTo)}`
+                    : incident.returnedAt
+                      ? `Returned ${formatDate(incident.returnedAt)}`
+                      : null,
                   incident.itemSummary || null,
                 ]}
               />
@@ -885,6 +1058,7 @@ function PersonRows({
   rank,
   rankByTime,
   now,
+  isYou,
   expanded,
   onToggle,
   onExclude,
@@ -893,6 +1067,7 @@ function PersonRows({
   rank: number;
   rankByTime: boolean;
   now: Date;
+  isYou: boolean;
   expanded: boolean;
   onToggle: () => void;
   onExclude?: (incident: Incident) => void;
@@ -902,7 +1077,11 @@ function PersonRows({
 
   return (
     <>
-      <TableRow>
+      <TableRow
+        id={`accountability-person-${person.userId}`}
+        data-accountability-person={person.userId}
+        className={cn(isYou && "bg-muted/40")}
+      >
         <TableCell className="py-3">
           <div className="flex items-center gap-3">
             <span className="w-5 shrink-0 text-center text-sm text-muted-foreground tabular-nums">
@@ -915,18 +1094,21 @@ function PersonRows({
               className="shrink-0"
             />
             <div className="min-w-0">
-              <Link
-                href={`/users/${person.userId}`}
-                className="brand-identity font-semibold hover:underline"
-              >
-                {person.name}
-              </Link>
+              <div className="flex min-w-0 items-center gap-2">
+                <Link
+                  href={`/users/${person.userId}`}
+                  className="brand-identity truncate font-semibold hover:underline"
+                >
+                  {person.name}
+                </Link>
+                {isYou ? <Badge variant="secondary" size="sm">You</Badge> : null}
+              </div>
               <PersonSubline person={person} now={now} />
             </div>
           </div>
         </TableCell>
         <TableCell className="py-3">
-          <LateEventsSummary person={person} rankByTime={rankByTime} />
+          <LateEventsSummary person={person} />
         </TableCell>
         <TableCell className="py-3">
           <LateTimeSummary person={person} rankByTime={rankByTime} />
@@ -967,6 +1149,7 @@ function PersonMobileCard({
   rank,
   rankByTime,
   now,
+  isYou,
   expanded,
   onToggle,
   onExclude,
@@ -975,6 +1158,7 @@ function PersonMobileCard({
   rank: number;
   rankByTime: boolean;
   now: Date;
+  isYou: boolean;
   expanded: boolean;
   onToggle: () => void;
   onExclude?: (incident: Incident) => void;
@@ -983,7 +1167,11 @@ function PersonMobileCard({
   const historyId = `accountability-history-mobile-${person.userId}`;
 
   return (
-    <ReportMobileCard className="gap-3 py-4">
+    <ReportMobileCard
+      id={`accountability-person-mobile-${person.userId}`}
+      data-accountability-person={person.userId}
+      className={cn("gap-3 py-4", isYou && "bg-muted/40")}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <UserAvatar
@@ -1001,13 +1189,20 @@ function PersonMobileCard({
               >
                 {person.name}
               </Link>
+              {isYou ? <Badge variant="secondary" size="sm">You</Badge> : null}
             </div>
             <PersonSubline person={person} now={now} />
           </div>
         </div>
-        <Badge className="shrink-0" variant={rankByTime ? "secondary" : "red"}>
-          {person.lateEventCount} late
-        </Badge>
+        {person.activeOverdueCount > 0 ? (
+          <Badge className="shrink-0" variant="red">
+            {person.activeOverdueCount} overdue now
+          </Badge>
+        ) : (
+          <Badge className="shrink-0" variant="secondary">
+            {person.lateEventCount} late
+          </Badge>
+        )}
       </div>
       <div className="grid grid-cols-3 overflow-hidden rounded-md border bg-muted/20">
         <div className="min-w-0 px-3 py-2.5">

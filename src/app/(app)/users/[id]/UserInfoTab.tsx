@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AlertCircle, Check, ChevronsUpDown, ClockIcon, Copy, InfoIcon, RefreshCw, X } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Select,
@@ -51,8 +52,8 @@ import {
   anticipatedGraduationValue,
   parseAnticipatedGraduation,
 } from "@/lib/student-profile";
+import { formatDateFull } from "@/lib/format";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-
 type ApiEnvelope<T = unknown> = {
   data?: T;
   error?: string;
@@ -121,7 +122,7 @@ function TextInputField({
         }}
         placeholder={placeholder}
         disabled={!canEdit}
-        className="h-8 text-sm"
+        className="h-10 text-sm"
       />
     </SaveableField>
   );
@@ -159,7 +160,7 @@ function SelectInputField({
         }}
         disabled={!canEdit}
       >
-        <SelectTrigger size="sm" className="text-sm" aria-label={label}>
+        <SelectTrigger className="h-10 text-sm" aria-label={label}>
           <SelectValue placeholder={emptyLabel || "None"} />
         </SelectTrigger>
         <SelectContent><SelectGroup>
@@ -219,7 +220,7 @@ function DateInputField({
         onChange={(e) => setDraft(e.target.value)}
         onBlur={commit}
         disabled={!canEdit}
-        className="h-8 text-sm"
+        className="h-10 text-sm"
       />
     </SaveableField>
   );
@@ -389,12 +390,14 @@ function DirectReportField({
 
 function SizeMiniSelect({
   label,
+  ariaLabel,
   value,
   options,
   canEdit,
   onSave,
 }: {
   label: string;
+  ariaLabel: string;
   value: string;
   options: readonly { value: string; label: string }[];
   canEdit: boolean;
@@ -407,14 +410,14 @@ function SizeMiniSelect({
 
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-      <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+      <span className="text-[11px] text-muted-foreground">
         {label}
         {status === "saving" && " · saving"}
         {status === "saved" && " · saved"}
         {status === "error" && " · error"}
       </span>
       <Select value={value || "__none__"} onValueChange={(next) => save(next === "__none__" ? null : next)} disabled={!canEdit}>
-        <SelectTrigger size="sm" aria-label={label}><SelectValue placeholder="Select" /></SelectTrigger>
+        <SelectTrigger className="h-10" aria-label={ariaLabel}><SelectValue placeholder="Select" /></SelectTrigger>
         <SelectContent><SelectGroup>
           <SelectItem value="__none__">Not set</SelectItem>
           {choices.map((choice) => <SelectItem key={choice.value} value={choice.value}>{choice.label}</SelectItem>)}
@@ -436,124 +439,142 @@ function SizesRow({
   onPatch: (payload: Record<string, unknown>) => Promise<void>;
 }) {
   return (
-    <div className="px-3 py-2 border-t flex flex-col gap-1">
-      <span className="text-xs text-muted-foreground">Sizes</span>
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
-        <SizeMiniSelect
-          label="Top fit"
-          value={user.topSizeFit ?? ""}
-          options={APPAREL_FIT_OPTIONS}
-          canEdit={canEdit}
-          onSave={(v) => onPatch({ topSizeFit: v })}
-        />
-        <SizeMiniSelect
-          label={isStudent ? "Clothing size" : "Top size"}
-          value={user.topSize ?? ""}
-          options={TOP_SIZE_OPTIONS.map((value) => ({ value, label: value }))}
-          canEdit={canEdit}
-          onSave={(v) => onPatch({ topSize: v })}
-        />
-        {!isStudent && (
+    <>
+      <SaveableField label="Clothing" className="items-start">
+        <div className={cn("grid gap-2", isStudent ? "grid-cols-2" : "grid-cols-3")}>
           <SizeMiniSelect
-            label="Bottom size"
-            value={user.bottomSize ?? ""}
+            label="Fit"
+            ariaLabel="Top fit"
+            value={user.topSizeFit ?? ""}
+            options={APPAREL_FIT_OPTIONS}
+            canEdit={canEdit}
+            onSave={(v) => onPatch({ topSizeFit: v })}
+          />
+          <SizeMiniSelect
+            label={isStudent ? "Size" : "Top"}
+            ariaLabel={isStudent ? "Clothing size" : "Top size"}
+            value={user.topSize ?? ""}
             options={TOP_SIZE_OPTIONS.map((value) => ({ value, label: value }))}
             canEdit={canEdit}
-            onSave={(v) => onPatch({ bottomSize: v })}
+            onSave={(v) => onPatch({ topSize: v })}
           />
-        )}
-        <SizeMiniSelect
-          label="Shoe sizing"
-          value={user.shoeSizeSystem ?? ""}
-          options={SHOE_SYSTEM_OPTIONS}
-          canEdit={canEdit}
-          onSave={(v) => onPatch({ shoeSizeSystem: v })}
-        />
-        <SizeMiniSelect
-          label="Shoe size"
-          value={user.shoeSize ?? ""}
-          options={(user.shoeSizeSystem === "US_MENS" ? MENS_SHOE_SIZE_OPTIONS : WOMENS_SHOE_SIZE_OPTIONS).map((value) => ({ value, label: value }))}
-          canEdit={canEdit}
-          onSave={(v) => onPatch({ shoeSize: v })}
-        />
-      </div>
-    </div>
+          {!isStudent && (
+            <SizeMiniSelect
+              label="Bottom"
+              ariaLabel="Bottom size"
+              value={user.bottomSize ?? ""}
+              options={TOP_SIZE_OPTIONS.map((value) => ({ value, label: value }))}
+              canEdit={canEdit}
+              onSave={(v) => onPatch({ bottomSize: v })}
+            />
+          )}
+        </div>
+      </SaveableField>
+      <SaveableField label="Shoes" className="items-start">
+        <div className="grid grid-cols-2 gap-2">
+          <SizeMiniSelect
+            label="Sizing"
+            ariaLabel="Shoe sizing"
+            value={user.shoeSizeSystem ?? ""}
+            options={SHOE_SYSTEM_OPTIONS}
+            canEdit={canEdit}
+            onSave={(v) => onPatch({ shoeSizeSystem: v })}
+          />
+          <SizeMiniSelect
+            label="Size"
+            ariaLabel="Shoe size"
+            value={user.shoeSize ?? ""}
+            options={(user.shoeSizeSystem === "US_MENS" ? MENS_SHOE_SIZE_OPTIONS : WOMENS_SHOE_SIZE_OPTIONS).map((value) => ({ value, label: value }))}
+            canEdit={canEdit}
+            onSave={(v) => onPatch({ shoeSize: v })}
+          />
+        </div>
+      </SaveableField>
+    </>
   );
 }
 
-const MONTH_OPTIONS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
+function formatBirthdayInput(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 4);
+  if (!digits) return "";
+  if (digits.length <= 2) return digits;
+  return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+}
+
+function birthdayDisplay(user: Pick<UserDetail, "birthdayMonth" | "birthdayDay">): string {
+  if (!user.birthdayMonth || !user.birthdayDay) return "";
+  return `${String(user.birthdayMonth).padStart(2, "0")}/${String(user.birthdayDay).padStart(2, "0")}`;
+}
+
+function parseBirthdayInput(value: string): { month: number; day: number } | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const match = /^(\d{1,2})\/(\d{1,2})$/.exec(formatBirthdayInput(trimmed));
+  if (!match) throw new Error("Enter birthday as MM/DD");
+  const month = Number(match[1]);
+  const day = Number(match[2]);
+  const daysInMonth = new Date(Date.UTC(2000, month, 0)).getUTCDate();
+  if (month < 1 || month > 12 || day < 1 || day > daysInMonth) {
+    throw new Error("Enter a valid birthday");
+  }
+  return { month, day };
+}
 
 function BirthdayField({
   user,
   canEdit,
-  canViewBirthYear,
   onPatch,
 }: {
   user: UserDetail;
   canEdit: boolean;
-  canViewBirthYear: boolean;
   onPatch: (payload: Record<string, unknown>) => Promise<void>;
 }) {
-  const [month, setMonth] = useState(user.birthdayMonth ? String(user.birthdayMonth) : "");
-  const [day, setDay] = useState(user.birthdayDay ? String(user.birthdayDay) : "");
-  const [year, setYear] = useState(user.birthYear ? String(user.birthYear) : "");
-  const [saving, setSaving] = useState(false);
+  const initial = birthdayDisplay(user);
+  const [draft, setDraft] = useState(initial);
+  const { status, save } = useSaveField(onPatch);
+  const id = useId();
 
   useEffect(() => {
-    setMonth(user.birthdayMonth ? String(user.birthdayMonth) : "");
-    setDay(user.birthdayDay ? String(user.birthdayDay) : "");
-    setYear(user.birthYear ? String(user.birthYear) : "");
-  }, [user.birthdayMonth, user.birthdayDay, user.birthYear]);
+    setDraft(initial);
+  }, [initial]);
 
-  const dirty = month !== (user.birthdayMonth ? String(user.birthdayMonth) : "")
-    || day !== (user.birthdayDay ? String(user.birthdayDay) : "")
-    || (canViewBirthYear && year !== (user.birthYear ? String(user.birthYear) : ""));
-
-  async function saveBirthday() {
-    if ((month && !day) || (!month && day)) {
-      toast.error("Choose both a birthday month and day");
+  const commit = useCallback(() => {
+    const formatted = formatBirthdayInput(draft);
+    if (formatted === initial) return;
+    if (!formatted) {
+      save({ birthdayMonth: null, birthdayDay: null });
       return;
     }
-    setSaving(true);
     try {
-      await onPatch({
-        birthdayMonth: month ? Number(month) : null,
-        birthdayDay: day ? Number(day) : null,
-        ...(canViewBirthYear ? { birthYear: year ? Number(year) : null } : {}),
-      });
-    } finally {
-      setSaving(false);
+      const parsed = parseBirthdayInput(formatted);
+      if (!parsed) {
+        save({ birthdayMonth: null, birthdayDay: null });
+        return;
+      }
+      save({ birthdayMonth: parsed.month, birthdayDay: parsed.day });
+    } catch (error) {
+      setDraft(initial);
+      toast.error(error instanceof Error ? error.message : "Enter birthday as MM/DD");
     }
-  }
+  }, [draft, initial, save]);
 
   return (
-    <SaveableField label="Birthday" ariaLabel="birthday" className="items-start">
-      <div className={cn("grid grid-cols-2 gap-2", canViewBirthYear ? "sm:grid-cols-[1.5fr_0.8fr_1fr_auto]" : "sm:grid-cols-[1.5fr_0.8fr_auto]")}>
-        <Select value={month || "__none__"} onValueChange={(value) => setMonth(value === "__none__" ? "" : value)} disabled={!canEdit || saving}>
-          <SelectTrigger size="sm" aria-label="Birthday month"><SelectValue placeholder="Month" /></SelectTrigger>
-          <SelectContent><SelectGroup>
-            <SelectItem value="__none__">Month</SelectItem>
-            {MONTH_OPTIONS.map((label, index) => <SelectItem key={label} value={String(index + 1)}>{label}</SelectItem>)}
-          </SelectGroup></SelectContent>
-        </Select>
-        <Select value={day || "__none__"} onValueChange={(value) => setDay(value === "__none__" ? "" : value)} disabled={!canEdit || saving}>
-          <SelectTrigger size="sm" aria-label="Birthday day"><SelectValue placeholder="Day" /></SelectTrigger>
-          <SelectContent><SelectGroup>
-            <SelectItem value="__none__">Day</SelectItem>
-            {Array.from({ length: 31 }, (_, index) => String(index + 1)).map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}
-          </SelectGroup></SelectContent>
-        </Select>
-        {canViewBirthYear && (
-          <Input type="number" inputMode="numeric" min={1900} max={2100} value={year} onChange={(event) => setYear(event.target.value.slice(0, 4))} placeholder="Year" aria-label="Birth year" disabled={!canEdit || saving} className="h-8" />
-        )}
-        <Button type="button" className="h-10" onClick={saveBirthday} disabled={!canEdit || !dirty || saving}>
-          {saving && <Spinner data-icon="inline-start" />}
-          Save
-        </Button>
-      </div>
+    <SaveableField label="Birthday" status={status} htmlFor={id}>
+      <Input
+        id={id}
+        inputMode="numeric"
+        autoComplete="bday"
+        aria-label="Birthday month and day"
+        value={draft}
+        onChange={(event) => setDraft(formatBirthdayInput(event.target.value))}
+        onBlur={commit}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") event.currentTarget.blur();
+        }}
+        placeholder="MM/DD"
+        disabled={!canEdit}
+        className="h-10 text-sm"
+      />
     </SaveableField>
   );
 }
@@ -588,22 +609,22 @@ function WiscardFields({
         : "idle";
 
   return (
-    <SaveableField label="Wiscard number" status={status} htmlFor={cardId}>
-      <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-        <Input
-          id={cardId}
-          inputMode="numeric"
-          autoComplete="off"
-          value={cardDraft}
-          onChange={(event) => setCardDraft(event.target.value.replace(/\D/g, "").slice(0, 10))}
-          onBlur={() => { if (cardDraft !== cardNumber) void cardSave.save(cardDraft); }}
-          onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }}
-          placeholder="XXXXXXXXXX"
-          disabled={!canEdit}
-          className="h-8 text-sm"
-        />
-        <div className="flex min-w-0 items-center gap-1.5">
-          <label htmlFor={issueId} className="whitespace-nowrap text-xs text-muted-foreground">Issue code</label>
+    <SaveableField label="Wiscard" status={status} htmlFor={cardId}>
+      <div className="flex items-center gap-1.5">
+        <div className="flex min-w-0 flex-1">
+          <Input
+            id={cardId}
+            inputMode="numeric"
+            autoComplete="off"
+            aria-label="Wiscard number"
+            value={cardDraft}
+            onChange={(event) => setCardDraft(event.target.value.replace(/\D/g, "").slice(0, 10))}
+            onBlur={() => { if (cardDraft !== cardNumber) void cardSave.save(cardDraft); }}
+            onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }}
+            placeholder="XXXXXXXXXX"
+            disabled={!canEdit}
+            className="h-10 min-w-0 flex-1 rounded-r-none border-r-0 text-sm"
+          />
           <Input
             id={issueId}
             inputMode="numeric"
@@ -615,17 +636,17 @@ function WiscardFields({
             onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }}
             placeholder="X"
             disabled={!canEdit}
-            className="h-8 w-14 min-w-0 text-sm"
+            className="h-10 w-12 shrink-0 rounded-l-none px-0 text-center text-sm tabular-nums"
           />
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button type="button" aria-label="Where to find the Wiscard issue code" className="inline-flex size-10 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                <InfoIcon />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>Issue code can be found in the bottom right of your Wiscard</TooltipContent>
-          </Tooltip>
         </div>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button type="button" aria-label="Where to find the Wiscard issue code" className="inline-flex size-10 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              <InfoIcon />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>Issue code can be found in the bottom right of your Wiscard</TooltipContent>
+        </Tooltip>
       </div>
     </SaveableField>
   );
@@ -665,6 +686,7 @@ export default function UserInfoTab({
   const [addingSport, setAddingSport] = useState(false);
   const [addingArea, setAddingArea] = useState(false);
   const [selectedCollaboratorPolicyId, setSelectedCollaboratorPolicyId] = useState(user.collaboratorPolicy?.id ?? "");
+  const [revealedCollaboratorAffiliation, setRevealedCollaboratorAffiliation] = useState(user.role === "COLLABORATOR");
   const sportBusyRef = useRef(false);
   const areaBusyRef = useRef(false);
 
@@ -691,7 +713,8 @@ export default function UserInfoTab({
 
   useEffect(() => {
     setSelectedCollaboratorPolicyId(user.collaboratorPolicy?.id ?? "");
-  }, [user.collaboratorPolicy?.id]);
+    if (user.role === "COLLABORATOR") setRevealedCollaboratorAffiliation(true);
+  }, [user.collaboratorPolicy?.id, user.role]);
 
   // Fields a user can edit on their own profile (mirrors updateProfileSchema).
   const SELF_EDITABLE_FIELDS = new Set([
@@ -732,6 +755,7 @@ export default function UserInfoTab({
 
   async function changeRole(newRole: string) {
     if (newRole === "COLLABORATOR" && !selectedCollaboratorPolicyId) {
+      setRevealedCollaboratorAffiliation(true);
       const message = "Select an active affiliation before assigning the Collaborator role.";
       toast.error(message);
       throw new Error(message);
@@ -878,14 +902,15 @@ export default function UserInfoTab({
   const assignedSportCodes = new Set((user.sportAssignments ?? []).map((sa) => sa.sportCode));
 
   const assignedAreas = new Set((user.areaAssignments ?? []).map((aa) => aa.area));
+  const showCollaboratorAffiliation = isAdmin && (user.role === "COLLABORATOR" || revealedCollaboratorAffiliation);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4 mt-3.5">
+    <div className="mt-3.5 flex flex-col gap-4">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(16rem,1fr)]">
       <div className="flex flex-col gap-4">
-        {/* Profile Card */}
-      <Card>
+        <Card id="contact" className="scroll-mt-16">
         <CardHeader>
-          <CardTitle>Profile</CardTitle>
+          <CardTitle>Contact</CardTitle>
         </CardHeader>
         <CardContent className="p-0 py-1">
           <TextInputField
@@ -895,14 +920,14 @@ export default function UserInfoTab({
             onSave={(v) => patchUser({ name: v })}
           />
           <TextInputField
-            label="Campus Email"
+            label="Campus email"
             value={user.email}
             canEdit={canEditProfile}
             onSave={(v) => patchUser({ email: v })}
             type="email"
           />
           <TextInputField
-            label="Athletics Email"
+            label="Athletics email"
             value={user.athleticsEmail || ""}
             placeholder="name@athletics.wisc.edu"
             canEdit={canEditProfile || canEditSelf}
@@ -910,7 +935,7 @@ export default function UserInfoTab({
             type="email"
           />
           <TextInputField
-            label="Personal Phone"
+            label="Personal phone"
             value={formatPhoneInput(user.personalPhone || "")}
             placeholder="(XXX) XXX-XXXX"
             canEdit={canEditProfile || canEditSelf}
@@ -919,7 +944,7 @@ export default function UserInfoTab({
             formatInput={formatPhoneInput}
           />
           <TextInputField
-            label="Work Phone"
+            label="Work phone"
             value={formatPhoneInput(user.workPhone || "")}
             placeholder={user.workPhoneNotApplicable ? "No work phone" : "(XXX) XXX-XXXX"}
             canEdit={canEditProfile || canEditSelf}
@@ -933,6 +958,14 @@ export default function UserInfoTab({
             canEdit={canEditProfile || canEditSelf}
             onPatch={patchUser}
           />
+        </CardContent>
+      </Card>
+
+      <Card id="work" className="scroll-mt-16">
+        <CardHeader>
+          <CardTitle>Work</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0 py-1">
           <SelectInputField
             label="Role"
             value={user.role}
@@ -940,7 +973,7 @@ export default function UserInfoTab({
             canEdit={canEditRole}
             onSave={changeRole}
           />
-          {isAdmin && (
+          {showCollaboratorAffiliation && (
             <SelectInputField
               label="Collaborator affiliation"
               value={selectedCollaboratorPolicyId}
@@ -963,16 +996,9 @@ export default function UserInfoTab({
                 }
               }}
               allowEmpty={user.role !== "COLLABORATOR"}
-              emptyLabel="Select before assigning"
+              emptyLabel="Only needed for Collaborator"
             />
           )}
-          <SelectInputField
-            label="Scheduling class"
-            value={user.staffingType}
-            options={STAFFING_TYPE_OPTIONS}
-            canEdit={canEditStaffingClass}
-            onSave={(v) => patchUser({ staffingType: v })}
-          />
           {locationsError && (
             <Alert variant="destructive" className="mx-3 my-2 w-auto">
               <AlertCircle className="size-4" />
@@ -1011,7 +1037,7 @@ export default function UserInfoTab({
             />
           )}
           <SelectInputField
-            label="Primary Area"
+            label="Primary area"
             value={user.primaryArea || ""}
             options={AREA_OPTIONS}
             canEdit={canEditProfile}
@@ -1019,15 +1045,6 @@ export default function UserInfoTab({
             allowEmpty
             emptyLabel="Not assigned"
           />
-        </CardContent>
-      </Card>
-
-      {/* Details Card — fields migrated from the team Sheet */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Details</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0 py-1">
           {!targetIsStudent && (
             <TextInputField
               label="Title"
@@ -1038,7 +1055,7 @@ export default function UserInfoTab({
             />
           )}
           <DateInputField
-            label="Start Date"
+            label="Start date"
             value={user.startDate}
             canEdit={canEditProfile || canEditSelf}
             onSave={(iso) => patchUser({ startDate: iso })}
@@ -1054,7 +1071,7 @@ export default function UserInfoTab({
                 emptyLabel="Select year"
               />
               <SelectInputField
-                label="Anticipated Graduation"
+                label="Anticipated graduation"
                 value={anticipatedGraduationValue(user.graduationTerm, user.gradYear)}
                 options={ANTICIPATED_GRADUATION_OPTIONS}
                 canEdit={canEditProfile || canEditSelf}
@@ -1079,7 +1096,6 @@ export default function UserInfoTab({
           <BirthdayField
             user={user}
             canEdit={canEditProfile || canEditSelf}
-            canViewBirthYear={isSelf || isAdmin}
             onPatch={patchUser}
           />
           <SizesRow
@@ -1088,13 +1104,16 @@ export default function UserInfoTab({
             canEdit={canEditProfile || canEditSelf}
             onPatch={patchUser}
           />
+          {user.createdAt && (
+            <SaveableField label="Member since">
+              <p className="m-0 text-sm">{formatDateFull(user.createdAt)}</p>
+            </SaveableField>
+          )}
         </CardContent>
       </Card>
 
-      {/* My Hours Card — only shown for own profile */}
       {isSelf && <MyHoursCard />}
 
-      {/* Calendar Subscription — only shown for own profile */}
       {isSelf && (
         <CalendarSubscriptionCard
           initialToken={user.icsToken ?? null}
@@ -1103,12 +1122,21 @@ export default function UserInfoTab({
       )}
       </div>
 
-      {/* Assignments Card */}
-      <Card>
+      <Card id="assignments" className="scroll-mt-16">
         <CardHeader>
           <CardTitle>Assignments</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
+          <div className="py-1">
+            <SelectInputField
+              label="Schedule as"
+              value={user.staffingType}
+              options={STAFFING_TYPE_OPTIONS}
+              canEdit={canEditStaffingClass}
+              onSave={(v) => patchUser({ staffingType: v })}
+            />
+          </div>
+          <div className="px-6 pb-6 pt-2">
           {/* Sport Assignments — Multi-select */}
           <h3 className="text-sm font-semibold mb-2">Sports</h3>
           {canEditAssignments ? (
@@ -1279,8 +1307,10 @@ export default function UserInfoTab({
               ))}
             </div>
           )}
+          </div>
         </CardContent>
       </Card>
+      </div>
 
     </div>
   );
@@ -1295,25 +1325,24 @@ type MyHoursData = {
   shiftCountMonth: number;
 };
 
-async function fetchMyHours(): Promise<MyHoursData | null> {
+async function fetchMyHours(): Promise<MyHoursData> {
   const r = await fetch("/api/shifts/my-hours");
-  if (handleAuthRedirect(r)) return null;
-  if (!r.ok) return null;
+  if (handleAuthRedirect(r)) throw new Error("Signed out");
+  if (!r.ok) throw new Error("Failed to load hours");
   const j = await parseJsonSafely<ApiEnvelope<MyHoursData>>(r);
-  return j?.data ?? null;
+  if (!j?.data) throw new Error("Failed to load hours");
+  return j.data;
 }
 
 function MyHoursCard() {
-  const { data: hours } = useQuery({
+  const { data: hours, isPending, isError, refetch } = useQuery({
     queryKey: ["shifts", "my-hours"],
     queryFn: fetchMyHours,
     staleTime: 5 * 60_000,
   });
 
-  if (!hours || (hours.shiftCountWeek === 0 && hours.shiftCountMonth === 0)) return null;
-
   return (
-    <Card>
+    <Card id="hours" className="scroll-mt-16">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <ClockIcon className="size-4" />
@@ -1321,20 +1350,40 @@ function MyHoursCard() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <div className="text-2xl font-bold">{hours.thisWeek}h</div>
-            <div className="text-xs text-muted-foreground">
-              This week ({hours.shiftCountWeek} shift{hours.shiftCountWeek !== 1 ? "s" : ""})
+        {isPending ? (
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-2">
+              <Skeleton className="h-8 w-16" />
+              <Skeleton className="h-3 w-28" />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Skeleton className="h-8 w-16" />
+              <Skeleton className="h-3 w-32" />
             </div>
           </div>
-          <div>
-            <div className="text-2xl font-bold">{hours.thisMonth}h</div>
-            <div className="text-xs text-muted-foreground">
-              This month ({hours.shiftCountMonth} shift{hours.shiftCountMonth !== 1 ? "s" : ""})
+        ) : isError ? (
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="m-0 text-sm text-muted-foreground">Hours could not load.</p>
+            <Button type="button" variant="outline" className="h-10 shrink-0" onClick={() => void refetch()}>
+              Retry hours
+            </Button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <div className="text-2xl font-bold tabular-nums">{hours?.thisWeek ?? 0}h</div>
+              <div className="text-xs text-muted-foreground">
+                This week ({hours?.shiftCountWeek ?? 0} shift{(hours?.shiftCountWeek ?? 0) !== 1 ? "s" : ""})
+              </div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold tabular-nums">{hours?.thisMonth ?? 0}h</div>
+              <div className="text-xs text-muted-foreground">
+                This month ({hours?.shiftCountMonth ?? 0} shift{(hours?.shiftCountMonth ?? 0) !== 1 ? "s" : ""})
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -1391,7 +1440,7 @@ function CalendarSubscriptionCard({
   }
 
   return (
-    <Card>
+    <Card id="calendar" className="scroll-mt-16">
       <CardHeader>
         <CardTitle>Calendar subscription</CardTitle>
       </CardHeader>
@@ -1406,7 +1455,7 @@ function CalendarSubscriptionCard({
               <Input
                 readOnly
                 value={feedUrl ?? ""}
-                className="h-8 text-xs font-mono"
+                className="h-10 text-xs font-mono"
                 onFocus={(e) => e.target.select()}
               />
               <Button variant="outline" className="h-10" onClick={() => void copyUrl()} title="Copy URL">

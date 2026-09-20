@@ -30,6 +30,7 @@ import {
   type SettingsSection,
 } from "@/lib/nav-sections";
 import { SettingsCommand } from "./SettingsCommand";
+import { settingsSectionIcon } from "./_components/settings-meta";
 import { useCurrentUser } from "@/hooks/use-current-user";
 
 const LAST_TAB_STORAGE_KEY = "settings:last-tab";
@@ -40,6 +41,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
   const { data: currentUser, isLoading } = useCurrentUser();
   const role = currentUser?.role ?? null;
   const canViewOwnerReport = currentUser?.canViewUsageAnalytics === true;
+  const currentSection = findSettingsSection(pathname);
 
   useEffect(() => {
     if (!isLoading && !currentUser) router.replace("/login");
@@ -65,22 +67,23 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
     }
   }, [pathname]);
 
-  // Render shell immediately to avoid blank flicker on every settings nav.
   return (
     <>
-      <div className="flex items-end justify-between gap-4 mb-0">
-        <PageHeader title="Settings" className="mb-0" />
-        <div className="pb-2">
-          <SettingsCommand visibleSections={visibleSections} />
-        </div>
+      <div className="mb-5 flex items-center justify-between gap-4">
+        <PageHeader
+          title="Settings"
+          description={currentSection ? undefined : "Personal preferences and operational configuration."}
+          className="mb-0"
+        />
+        <SettingsCommand visibleSections={visibleSections} />
       </div>
 
       <SettingsMobilePicker pathname={pathname} groupedSections={groupedSections} />
 
-      <div className="grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-[232px_minmax(0,1fr)] xl:items-start">
+      <div className="grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-[220px_minmax(0,1fr)] xl:items-start">
         <SettingsRail pathname={pathname} groupedSections={groupedSections} />
 
-        <main className="min-w-0">
+        <div className="min-w-0">
           <SettingsRouteContent
             pathname={pathname}
             role={role}
@@ -89,7 +92,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
           >
             {children}
           </SettingsRouteContent>
-        </main>
+        </div>
       </div>
     </>
   );
@@ -110,15 +113,13 @@ function SettingsRouteContent({
 }) {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-[260px_1fr] gap-8 items-start max-lg:grid-cols-1 max-lg:gap-4">
-        <div className="sticky top-20 max-lg:static flex flex-col gap-2">
-          <Skeleton className="h-7 w-32" />
-          <Skeleton className="h-4 w-56" />
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
+          <Skeleton className="h-7 w-40" />
+          <Skeleton className="h-4 w-72" />
         </div>
-        <div className="min-w-0 flex flex-col gap-3">
-          <Skeleton className="h-9 w-full max-w-md" />
-          <Skeleton className="h-32 w-full" />
-        </div>
+        <Skeleton className="h-40 w-full rounded-lg" />
+        <Skeleton className="h-56 w-full rounded-lg" />
       </div>
     );
   }
@@ -195,11 +196,8 @@ function SettingsRail({
   return (
     <aside className="sticky top-20 hidden max-h-[calc(100vh-6rem)] overflow-y-auto xl:block">
       <SectionNav aria-label="Settings sections" orientation="vertical">
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
           <div>
-            <div className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Settings
-            </div>
             <SectionNavLink
               href="/settings"
               active={pathname === "/settings"}
@@ -211,12 +209,13 @@ function SettingsRail({
 
           {groupedSections.map(({ group, sections }) => (
             <div key={group}>
-              <div className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <div className="px-2.5 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                 {group}
               </div>
               <div className="flex flex-col gap-0.5">
                 {sections.map((section) => {
                   const active = isActiveSection(pathname, section.href);
+                  const Icon = settingsSectionIcon(section.href);
                   return (
                     <SectionNavLink
                       key={section.href}
@@ -224,7 +223,9 @@ function SettingsRail({
                       title={section.description}
                       active={active}
                       orientation="vertical"
+                      className="gap-2"
                     >
+                      <Icon className="size-3.5 shrink-0 opacity-70" />
                       {section.label}
                     </SectionNavLink>
                   );

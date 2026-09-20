@@ -64,14 +64,14 @@ export default function DatabasePage() {
 
   return (
     <SettingsPageShell
-      title="Database diagnostics"
+      href="/settings/database"
       description="Run a bounded baseline check for known tables, enums, columns, extensions, and migration records. Passing does not replace the migration health and deploy checks."
+      actions={
+        <Button onClick={runCheck} loading={loading} className="h-10">
+          Run diagnostics
+        </Button>
+      }
     >
-        <div className="flex justify-end mb-3">
-          <Button onClick={runCheck} loading={loading}>
-            {loading ? "Checking\u2026" : "Run diagnostics"}
-          </Button>
-        </div>
 
         {error && (
           <Card className="mb-1">

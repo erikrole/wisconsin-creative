@@ -102,7 +102,7 @@ export function ActiveBookingCard({
 }) {
   const isPendingPickup = kind === "CHECKOUT" && booking.status === "PENDING_PICKUP";
   const title = kind === "CHECKOUT"
-    ? isPendingPickup ? "Pending Pickup" : "Active Checkout"
+    ? isPendingPickup ? "Pending pickup" : "Active checkout"
     : "Active Reservation";
   const activityLabel = kind === "CHECKOUT"
     ? isPendingPickup ? "Pending pickup" : "Checked out"

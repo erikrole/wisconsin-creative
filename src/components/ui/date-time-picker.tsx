@@ -1,5 +1,6 @@
 "use client"
 
+import { pad2 } from "@/lib/format";
 import * as React from "react"
 import { format } from "date-fns"
 import { CalendarIcon } from "lucide-react"
@@ -14,10 +15,6 @@ import {
 } from "@/components/ui/popover"
 import { NativeSelect } from "@/components/ui/native-select"
 import { clampToQuarterHour } from "@/lib/quarter-hour"
-
-function pad(n: number) {
-  return String(n).padStart(2, "0")
-}
 
 type DateTimePickerProps = {
   id?: string
@@ -117,7 +114,7 @@ function DateTimePicker({
             onChange={(e) => handleTimeChange(hours, Number(e.target.value))}
           >
             {minuteOptions.map((m) => (
-              <option key={m} value={m}>{pad(m)}</option>
+              <option key={m} value={m}>{pad2(m)}</option>
             ))}
           </NativeSelect>
         </div>

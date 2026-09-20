@@ -29,9 +29,11 @@ import {
 import { AREA_OPTIONS } from "@/app/(app)/users/types";
 import { PROFILE_COMPLETION_QUERY_KEY } from "@/hooks/use-profile-completion";
 import { SettingsPageShell } from "../SettingsPageShell";
+import { SettingsSaveBar } from "../_components/SettingsSaveBar";
 import { formatPhoneInput } from "@/lib/profile-phone";
 import { syncCachedUserLists } from "@/lib/user-list-cache";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { isDirty } from "@/lib/utils";
 
 type Profile = {
   id: string;
@@ -60,12 +62,6 @@ function toForm(p: Profile): FormState {
     athleticsEmail: p.athleticsEmail ?? "",
     slackHandle: p.slackHandle ?? "",
   };
-}
-
-function isDirty(local: FormState, base: FormState): boolean {
-  return (Object.keys(local) as (keyof FormState)[]).some(
-    (k) => local[k] !== base[k]
-  );
 }
 
 export default function ProfileSettingsPage() {
@@ -227,7 +223,7 @@ export default function ProfileSettingsPage() {
 
   if (loading) {
     return (
-      <SettingsPageShell title="Profile" description="Your name, contact info, area, and profile photo.">
+      <SettingsPageShell href="/settings/profile">
         <div className="flex flex-col gap-4">
           <Skeleton className="h-24 w-full rounded-lg" />
           <Skeleton className="h-64 w-full rounded-lg" />
@@ -241,7 +237,7 @@ export default function ProfileSettingsPage() {
       ? "Could not reach the server. Check your connection."
       : "Could not load profile.";
     return (
-      <SettingsPageShell title="Profile" description="Your name, contact info, area, and profile photo.">
+      <SettingsPageShell href="/settings/profile">
         <EmptyState
           inline
           icon={error === "network" ? "wifi-off" : "users"}
@@ -255,7 +251,7 @@ export default function ProfileSettingsPage() {
   }
 
   return (
-    <SettingsPageShell title="Profile" description="Your name, contact info, area, and profile photo.">
+    <SettingsPageShell href="/settings/profile">
       <div className="flex flex-col gap-4">
         {/* Avatar card */}
         <Card>
@@ -433,21 +429,30 @@ export default function ProfileSettingsPage() {
                 disabled={saving}
               />
               <p className="text-xs text-muted-foreground">
-                Your UW Athletics email -- separate from your login email.
+                Your UW Athletics email — separate from your login email.
               </p>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="profile-slack">Slack handle</Label>
+              <Input
+                id="profile-slack"
+                name="slackHandle"
+                autoComplete="off"
+                value={form.slackHandle ?? ""}
+                onChange={(e) => setField("slackHandle", e.target.value)}
+                placeholder="@handle"
+                disabled={saving}
+              />
             </div>
             </>}
 
-            {/* Save */}
-            <div className="flex justify-end pt-1">
-              <Button
-                onClick={handleSave}
-                disabled={!dirty || saving}
-              >
-                {saving && <Loader2 className="size-4 animate-spin" />}
-                {saving ? "Saving…" : dirty ? "Save changes" : "Saved"}
-              </Button>
-            </div>
+            <SettingsSaveBar
+              dirty={Boolean(dirty)}
+              saving={saving}
+              onReset={() => { setLocal(null); setNameError(null); }}
+              onSave={() => { void handleSave(); }}
+            />
           </CardContent>
         </Card>
       </div>

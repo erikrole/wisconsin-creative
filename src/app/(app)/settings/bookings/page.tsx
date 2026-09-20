@@ -12,6 +12,7 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { PlusIcon, Trash2Icon } from "lucide-react";
 import { handleAuthRedirect, isAbortError, parseErrorMessage } from "@/lib/errors";
 import { SettingsPageShell } from "../SettingsPageShell";
+import { SettingsSaveBar } from "../_components/SettingsSaveBar";
 
 type Preset = { label: string; minutes: number };
 
@@ -114,16 +115,13 @@ export default function BookingSettingsPage() {
 
   return (
     <SettingsPageShell
-      title="Booking extensions"
+      href="/settings/bookings"
       description="Configure the preset buttons shown when extending a booking's due date."
       mainClassName="flex flex-col gap-6"
     >
         <Card>
-          <CardHeader className="flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
+          <CardHeader>
             <CardTitle>Extend due date presets</CardTitle>
-            <Button onClick={save} disabled={!dirty || saving} className="min-h-10">
-              {saving ? "Saving..." : dirty ? "Save changes" : "Saved"}
-            </Button>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -199,6 +197,16 @@ export default function BookingSettingsPage() {
                     description="Users will only see the custom due-date option until a preset is added."
                   />
                 )}
+
+                <SettingsSaveBar
+                  dirty={dirty}
+                  saving={saving}
+                  onReset={() => {
+                    setPresets(settingsData?.presets ?? []);
+                    setDirty(false);
+                  }}
+                  onSave={() => { void save(); }}
+                />
               </div>
             )}
           </CardContent>

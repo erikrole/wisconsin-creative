@@ -236,8 +236,8 @@ export default function BookingDetailPage({
   if (loading) {
     return (
       <div className="flex flex-col gap-6">
-        {/* Header card skeleton */}
-        <div className="rounded-lg border border-border/50 bg-card px-4 py-4 shadow-xs sm:px-5">
+        {/* Header skeleton */}
+        <div className="mb-5 border-b border-border/50 pb-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="flex gap-4">
               <Skeleton className="size-20 rounded-full shrink-0" />
@@ -354,8 +354,9 @@ export default function BookingDetailPage({
             <Button className="h-10"
               onClick={handleExtend}
               disabled={!extendDate || !!actions.actionLoading}
+              loading={actions.actionLoading === "extend"}
             >
-              {actions.actionLoading === "extend" ? "Saving..." : "Save"}
+              Save
             </Button>
             <Button className="h-10"
               variant="outline"

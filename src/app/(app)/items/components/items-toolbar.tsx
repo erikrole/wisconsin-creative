@@ -21,7 +21,7 @@ import { DEFAULT_ITEMS_SORT_ID, type ItemTypeFilter } from "../hooks/use-url-fil
 
 const STATUS_OPTIONS = [
   { value: "AVAILABLE", label: "Available" },
-  { value: "CHECKED_OUT", label: "Checked Out" },
+  { value: "CHECKED_OUT", label: "Checked out" },
   { value: "PENDING_PICKUP", label: "Pending pickup" },
   { value: "RESERVED", label: "Reserved" },
   { value: "MAINTENANCE", label: "Maintenance" },
@@ -203,7 +203,7 @@ export function ItemsToolbar({
           value={search}
           onValueChange={onSearchChange}
           placeholder="Search tag, model, serial, location"
-          aria-label="Search items"
+          aria-label="Search items by tag, model, serial, or location"
         />
 
         <div className="flex flex-wrap items-center gap-2">
@@ -256,6 +256,7 @@ export function ItemsToolbar({
             className="h-10 gap-1.5 active:scale-[0.96] transition-transform"
             onClick={() => setFiltersOpen((open) => !open)}
             aria-expanded={filtersOpen}
+            aria-label={activeFilterCount > 0 ? `Filters, ${activeFilterCount} active` : "Filters"}
           >
             <SlidersHorizontal className="size-3.5" />
             Filters

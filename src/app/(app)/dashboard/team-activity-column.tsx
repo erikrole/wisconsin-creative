@@ -29,7 +29,7 @@ import { DashboardLayoutItem, DashboardStateSurface } from "./dashboard-motion";
 
 type HomeAwayFilter = VenueFilter;
 
-const PENDING_PICKUPS_HREF = "/bookings?tab=reservations";
+const PENDING_PICKUPS_HREF = "/bookings?tab=checkouts&status=PENDING_PICKUP";
 
 type Props = {
   data: DashboardData;

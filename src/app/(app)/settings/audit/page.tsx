@@ -268,7 +268,7 @@ export default function AuditLogPage() {
   const description = "A real-time feed of every create, update, and delete action across the system. Visible to admins only.";
 
   return (
-    <SettingsPageShell title="Audit Log" description={description} mainClassName="flex flex-col gap-4">
+    <SettingsPageShell href="/settings/audit" description={description} mainClassName="flex flex-col gap-4">
       {/* Retention banner */}
       {retentionDays && (
         <p className="text-xs text-muted-foreground">

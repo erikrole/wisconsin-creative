@@ -764,13 +764,23 @@ export function WorkingCrewEditor({
 
   useEffect(() => {
     if (!data?.hasWorkingCopy) return;
-    const timer = window.setInterval(async () => {
-      if (actingRef.current) return;
-      const latest = await loadEditor();
-      if (latest?.hasWorkingCopy && latest.basePublishedVersion < latest.publishedVersion) {
-        await refreshFromLive(latest, true);
-      }
-      onPublished();
+    let polling = false;
+    const timer = window.setInterval(() => {
+      if (actingRef.current || polling) return;
+      polling = true;
+      void (async () => {
+        try {
+          const latest = await loadEditor();
+          if (latest?.hasWorkingCopy && latest.basePublishedVersion < latest.publishedVersion) {
+            await refreshFromLive(latest, true);
+          }
+          onPublished();
+        } catch {
+          // A failed background refresh is retried on the next tick; the editor keeps its last good state.
+        } finally {
+          polling = false;
+        }
+      })();
     }, 15_000);
     return () => window.clearInterval(timer);
   }, [data?.hasWorkingCopy, loadEditor, onPublished, refreshFromLive]);

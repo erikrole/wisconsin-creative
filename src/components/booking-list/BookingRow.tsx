@@ -47,7 +47,15 @@ export function BookingTableRow({
           "cursor-pointer",
           sv.rowClass,
         )}
+        tabIndex={0}
+        aria-label={`View booking: ${item.title}`}
         onClick={onClick}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            onClick();
+          }
+        }}
       >
         {selectable && (
           <TableCell className="w-11" onClick={(event) => event.stopPropagation()}>
@@ -59,15 +67,7 @@ export function BookingTableRow({
           </TableCell>
         )}
         <TableCell>
-          <button
-            type="button"
-            className="flex w-full flex-col gap-1 rounded-sm bg-transparent text-left outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-            aria-label={`View booking: ${item.title}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              onClick();
-            }}
-          >
+          <div className="flex w-full flex-col gap-1">
             <span
               className={cn("leading-snug", sv.titleClass)}
               style={{ fontFamily: "var(--font-heading)", fontWeight: 600, fontSize: "13.5px" }}
@@ -85,7 +85,7 @@ export function BookingTableRow({
                 </span>
               )}
             </span>
-          </button>
+          </div>
         </TableCell>
         <TableCell className="hidden md:table-cell">
           <div className="flex flex-col gap-px">

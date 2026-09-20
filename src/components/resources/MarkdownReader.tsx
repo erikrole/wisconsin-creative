@@ -4,6 +4,7 @@ import {
   CheckIcon,
   CopyIcon,
   InfoIcon,
+  KeyboardIcon,
   LightbulbIcon,
   LinkIcon,
   MessageSquareWarningIcon,
@@ -19,7 +20,8 @@ import remarkGfm from "remark-gfm";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import { useCopyFeedback } from "@/hooks/use-copy-feedback";
-import { headingId, markdownHeadingId, markdownHeadingText } from "@/lib/guide-content";
+import { headingId, isCopyFenceLanguage, markdownHeadingId, markdownHeadingText } from "@/lib/guide-content";
+import { isKeyboardShortcut, splitShortcutKeys, spokenShortcut } from "@/lib/guide-keyboard";
 import { parseEmbed } from "@/lib/media-embed";
 import { type CalloutType, parseCalloutType, remarkCallouts } from "@/lib/remark-callouts";
 import { cn } from "@/lib/utils";
@@ -27,6 +29,7 @@ import { cn } from "@/lib/utils";
 const CALLOUT_META: Record<CalloutType, { label: string; icon: LucideIcon }> = {
   note: { label: "Note", icon: InfoIcon },
   tip: { label: "Tip", icon: LightbulbIcon },
+  shortcut: { label: "Shortcut", icon: KeyboardIcon },
   important: { label: "Important", icon: MessageSquareWarningIcon },
   warning: { label: "Warning", icon: TriangleAlertIcon },
   caution: { label: "Caution", icon: OctagonAlertIcon },
@@ -135,6 +138,48 @@ function Callout({ type, children }: { type: CalloutType; children: ReactNode })
   );
 }
 
+function KeyboardShortcut({ text }: { text: string }) {
+  const keys = splitShortcutKeys(text);
+  return (
+    <span className="guide-kbd-combo" role="img" aria-label={`Keyboard shortcut ${spokenShortcut(text)}`}>
+      {keys.map((key, index) => (
+        <kbd key={`${key}-${index}`} className="guide-kbd" aria-hidden="true">
+          {key}
+        </kbd>
+      ))}
+    </span>
+  );
+}
+
+function CopyableSnippet({ text }: { text: string }) {
+  const { copiedKey, copy: copyWithFeedback } = useCopyFeedback(1400);
+  const copied = copiedKey === "snippet";
+
+  async function copy() {
+    const value = text.trim();
+    if (!value) return;
+    const result = await copyWithFeedback(value, "snippet");
+    if (result === "failed") {
+      toast.error("Could not copy", {
+        description: "Select the visible text and copy it manually.",
+      });
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      className="guide-copy-snippet"
+      onClick={copy}
+      aria-label={copied ? "Copied" : `Copy ${text.trim()}`}
+      aria-pressed={copied}
+    >
+      <code className="guide-copy-snippet-value">{text.trim()}</code>
+      <span className="guide-copy-snippet-action">{copied ? "Copied" : "Copy"}</span>
+    </button>
+  );
+}
+
 function SafeEmbed({ url }: { url: string }) {
   const embed = parseEmbed(url);
 
@@ -214,7 +259,19 @@ export function MarkdownReader({ markdown }: Props) {
         <p className="guide-markdown-paragraph">{children}</p>
       ),
       ul: ({ children }) => <ul className="guide-markdown-list list-disc">{children}</ul>,
-      ol: ({ children }) => <ol className="guide-markdown-list list-decimal">{children}</ol>,
+      ol: ({ children, start }) => (
+        <ol
+          className="guide-markdown-list guide-markdown-steps"
+          start={start}
+          style={
+            start && Number(start) !== 1
+              ? { counterReset: `guide-step ${Number(start) - 1}` }
+              : undefined
+          }
+        >
+          {children}
+        </ol>
+      ),
       li: ({ children }) => <li className="guide-markdown-list-item">{children}</li>,
       a: ({ children, href }) => (
         <a
@@ -226,22 +283,31 @@ export function MarkdownReader({ markdown }: Props) {
           {children}
         </a>
       ),
-      code: ({ children, className }) => (
-        <code
-          className={cn(
-            "guide-markdown-inline-code",
-            className,
-          )}
-        >
-          {children}
-        </code>
-      ),
+      code: ({ children, className }) => {
+        const text = reactNodeText(children);
+        if (!className?.includes("language-") && isKeyboardShortcut(text)) {
+          return <KeyboardShortcut text={text} />;
+        }
+        return (
+          <code
+            className={cn(
+              "guide-markdown-inline-code",
+              className,
+            )}
+          >
+            {children}
+          </code>
+        );
+      },
       pre: ({ children }) => {
         const language = preLanguage(children);
         if (language === "embed" || language === "video") {
           return <SafeEmbed url={reactNodeText(children).trim()} />;
         }
         const text = reactNodeText(children);
+        if (isCopyFenceLanguage(language) && text.trim()) {
+          return <CopyableSnippet text={text} />;
+        }
         return (
           <div className="guide-code-block-wrap">
             <CopyReferenceButton text={text} />

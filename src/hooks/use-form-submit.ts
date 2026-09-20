@@ -12,9 +12,9 @@ import { toast } from "sonner";
 
 export type FormState = "idle" | "submitting" | "success" | "error";
 
-export type FieldErrors = Record<string, string>;
+type FieldErrors = Record<string, string>;
 
-export type UseFormSubmitOptions<TInput, TOutput = unknown> = {
+type UseFormSubmitOptions<TInput, TOutput = unknown> = {
   /** Zod schema for client-side validation (optional — skip for server-only validation). */
   schema?: ZodSchema<TInput>;
   /** The API endpoint URL. */
@@ -35,7 +35,7 @@ export type UseFormSubmitOptions<TInput, TOutput = unknown> = {
   onError?: (kind: "validation" | "network" | "server" | "auth", message?: string) => void;
 };
 
-export type UseFormSubmitResult<TInput> = {
+type UseFormSubmitResult<TInput> = {
   /** Current form state. */
   state: FormState;
   /** Whether the form is currently submitting (convenience alias). */

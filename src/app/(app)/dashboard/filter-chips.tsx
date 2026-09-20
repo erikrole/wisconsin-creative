@@ -56,6 +56,7 @@ type Props = {
   activeLocation: string | null;
   setActiveSport: (sport: string | null) => void;
   setActiveLocation: (loc: string | null) => void;
+  setFilters: (next: { sport?: string | null; location?: string | null }) => void;
   clearFilters: () => void;
   hasActiveFilter: boolean;
 };
@@ -67,6 +68,7 @@ export function FilterChips({
   activeLocation,
   setActiveSport,
   setActiveLocation,
+  setFilters,
   clearFilters,
   hasActiveFilter,
 }: Props) {
@@ -110,9 +112,8 @@ export function FilterChips({
   }, []);
 
   const handleApplyPreset = useCallback((preset: FilterPreset) => {
-    setActiveSport(preset.sport);
-    setActiveLocation(preset.location);
-  }, [setActiveSport, setActiveLocation]);
+    setFilters({ sport: preset.sport, location: preset.location });
+  }, [setFilters]);
 
   const isCurrentPresetSaved = presets.some(
     (p) => p.sport === activeSport && p.location === activeLocation

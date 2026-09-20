@@ -279,7 +279,7 @@ export default function BookingsPage() {
     statusOptions: isPastScope
       ? PAST_STATUS_OPTIONS
       : [
-          { value: "OPEN", label: "Checked Out" },
+          { value: "OPEN", label: "Checked out" },
           { value: "PENDING_PICKUP", label: "Pending pickup" },
         ],
     defaultTieToEvent: true,
@@ -297,7 +297,7 @@ export default function BookingsPage() {
     kind: "ALL",
     apiBase: "/api/bookings",
     label: "booking",
-    labelPlural: "All Bookings",
+    labelPlural: "Bookings",
     actionLabel: "",
     actionLabelProgress: "",
     requesterLabel: "Requested by",

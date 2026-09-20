@@ -88,7 +88,7 @@ export default function AppearancePage() {
 
   return (
     <SettingsPageShell
-      title="Appearance"
+      href="/settings/appearance"
       description="Choose how the app looks. Saved on this device only, so set it again on your phone or other browsers."
       mainClassName="flex flex-col gap-4"
     >
@@ -141,8 +141,8 @@ export default function AppearancePage() {
                     onClick={() => pickScale(c.value)}
                     aria-pressed={isActive}
                     aria-label={`Text size: ${c.label}`}
-                    className={`relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col items-center gap-1 rounded-lg border px-3 py-3 transition-colors hover:bg-muted/50 ${
-                      isActive ? "border-[var(--wi-red)] bg-muted/40" : "border-border"
+                    className={`relative flex min-h-16 flex-col items-center gap-1 rounded-lg border px-3 py-3 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                      isActive ? "border-primary bg-muted/40" : "border-border"
                     }`}
                   >
                     {isActive && <Check aria-hidden="true" className="absolute right-2 top-2 size-3" />}
@@ -201,15 +201,15 @@ function ChoiceCard({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex flex-col items-start gap-2 rounded-lg border p-4 text-left transition-colors hover:bg-muted/50 ${
-        active ? "border-[var(--wi-red)] bg-muted/40" : "border-border"
+      className={`relative flex min-h-[5.5rem] flex-col items-start gap-2 rounded-lg border p-4 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+        active ? "border-primary bg-muted/40" : "border-border"
       }`}
     >
       <div className="flex items-center gap-2 w-full">
         <span className="text-foreground">{icon}</span>
         <span className="font-semibold">{label}</span>
         {active && (
-          <span className="ml-auto text-xs text-[var(--wi-red)] font-medium">Active</span>
+          <span className="ml-auto text-xs font-medium text-primary">Active</span>
         )}
       </div>
       <p className="text-xs text-muted-foreground m-0">{description}</p>

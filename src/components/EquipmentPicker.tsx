@@ -62,8 +62,10 @@ import { AssetImage } from "@/components/AssetImage";
 import {
   availabilityConflictMessage,
   availabilityRiskBadgeLabel,
-  availabilityRiskMessage,
-  availabilityRiskTitle,
+  primaryRisk,
+  riskLabel,
+  riskTitle,
+  statusText,
   upcomingCommitmentLabel,
   upcomingCommitmentTitle,
 } from "@/lib/availability-copy";
@@ -149,26 +151,6 @@ export type EquipmentPickerProps = {
 };
 
 export { type BulkTurnaroundRiskInfo, type ConflictInfo, type TurnaroundRiskInfo, type UpcomingCommitmentInfo };
-
-function primaryRisk<T extends { severity: "warning" | "critical" }>(risks: T[] | undefined) {
-  if (!risks || risks.length === 0) return undefined;
-  return risks.find((risk) => risk.severity === "critical") ?? risks[0];
-}
-
-function riskLabel(risks: Array<{ message: string; severity: "warning" | "critical" }> | undefined) {
-  const risk = primaryRisk(risks);
-  if (!risk) return null;
-  const message = availabilityRiskMessage(risk);
-  return risks && risks.length > 1 ? `${message} +${risks.length - 1}` : message;
-}
-
-function riskTitle(risks: Array<{ message: string; severity: "warning" | "critical" }> | undefined) {
-  return availabilityRiskTitle(risks);
-}
-
-function statusText(status: string) {
-  return status.replace(/_/g, " ").toLowerCase();
-}
 
 function getBulkAvailable(sku: PickerBulkSku) {
   return getBulkAvailableQuantity(sku);

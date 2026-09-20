@@ -1,22 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import {
-  ArrowRight,
-  Bell,
-  CalendarDays,
-  Database,
-  Monitor,
-  Package,
-  RotateCcw,
-  Users,
-} from "lucide-react";
-import type { ComponentType } from "react";
+import { ArrowRight, RotateCcw, SearchIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { FadeUp } from "@/components/ui/motion";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import EmptyState from "@/components/EmptyState";
 import {
   SETTINGS_GROUP_ORDER,
   SETTINGS_SECTIONS,
@@ -24,46 +15,18 @@ import {
   type SettingsGroup,
   type SettingsSection,
 } from "@/lib/nav-sections";
+import { SETTINGS_GROUP_META, settingsSectionIcon } from "./_components/settings-meta";
 import { useCurrentUser } from "@/hooks/use-current-user";
 
 const STORAGE_KEY = "settings:last-tab";
 const VALID_HREFS = new Set(SETTINGS_SECTIONS.map((section) => section.href));
-
-const GROUP_META: Record<SettingsGroup, {
-  description: string;
-  icon: ComponentType<{ className?: string }>;
-}> = {
-  Personal: {
-    description: "Preferences that follow the signed-in user.",
-    icon: Bell,
-  },
-  People: {
-    description: "Access, sport context, and roster defaults.",
-    icon: Users,
-  },
-  Inventory: {
-    description: "The taxonomy and ownership labels that make gear findable.",
-    icon: Package,
-  },
-  Scheduling: {
-    description: "Calendar inputs, venues, booking presets, and overdue rules.",
-    icon: CalendarDays,
-  },
-  Devices: {
-    description: "Hardware endpoints used by self-serve workflows.",
-    icon: Monitor,
-  },
-  System: {
-    description: "Diagnostics and low-level operational checks.",
-    icon: Database,
-  },
-};
 
 export default function SettingsPage() {
   const { data: currentUser, isLoading: loading } = useCurrentUser();
   const role = currentUser?.role;
   const canViewOwnerReport = currentUser?.canViewUsageAnalytics === true;
   const [lastHref, setLastHref] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     try {
@@ -78,12 +41,23 @@ export default function SettingsPage() {
     role ? SETTINGS_SECTIONS.filter((section) => isSectionVisible(section, role, canViewOwnerReport)) : []
   ), [canViewOwnerReport, role]);
 
+  const filteredSections = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return visibleSections;
+    return visibleSections.filter((section) => (
+      [section.label, section.description, section.group, ...(section.keywords ?? [])]
+        .join(" ")
+        .toLowerCase()
+        .includes(q)
+    ));
+  }, [query, visibleSections]);
+
   const groupedSections = useMemo(() => (
     SETTINGS_GROUP_ORDER.map((group) => ({
       group,
-      sections: visibleSections.filter((section) => section.group === group),
+      sections: filteredSections.filter((section) => section.group === group),
     })).filter(({ sections }) => sections.length > 0)
-  ), [visibleSections]);
+  ), [filteredSections]);
 
   const lastSection = lastHref
     ? visibleSections.find((section) => section.href === lastHref) ?? null
@@ -93,10 +67,10 @@ export default function SettingsPage() {
     return (
       <FadeUp>
         <div className="flex flex-col gap-4">
-          <Skeleton className="h-20 w-full rounded-md" />
+          <Skeleton className="h-10 w-full max-w-md rounded-md" />
           <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
             {Array.from({ length: 4 }).map((_, index) => (
-              <Skeleton key={index} className="h-40 w-full rounded-md" />
+              <Skeleton key={index} className="h-36 w-full rounded-md" />
             ))}
           </div>
         </div>
@@ -107,82 +81,94 @@ export default function SettingsPage() {
   return (
     <div className="flex flex-col gap-5">
       <FadeUp>
-        <section className="rounded-lg border bg-card p-4 shadow-xs">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="min-w-0 flex flex-col gap-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-xl font-semibold text-balance">Choose a settings area</h2>
-              </div>
-              <p className="max-w-3xl text-sm text-muted-foreground text-pretty">
-                Only settings available to your account appear here. Browse by domain or search by the task you need to complete.
-              </p>
-            </div>
-            {lastSection && (
-              <Button asChild variant="outline" size="sm" className="min-h-10">
-                <Link href={lastSection.href}>
-                  <RotateCcw className="size-4" />
-                  Resume {lastSection.label}
-                </Link>
-              </Button>
-            )}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative min-w-0 flex-1">
+            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              id="settings-directory-search"
+              name="settingsDirectorySearch"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Find a setting — try allowlist, kiosk, or overdue"
+              className="h-10 pl-9"
+              aria-label="Find a setting — try allowlist, kiosk, or overdue"
+            />
           </div>
-        </section>
+          {lastSection ? (
+            <Button asChild variant="outline" className="h-10">
+              <Link href={lastSection.href}>
+                <RotateCcw className="size-4" />
+                Resume {lastSection.label}
+              </Link>
+            </Button>
+          ) : null}
+        </div>
       </FadeUp>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        {groupedSections.map(({ group, sections }, index) => (
-          <FadeUp key={group} className="h-full" delay={index * 0.08}>
-            <SettingsGroupCard group={group} sections={sections} />
-          </FadeUp>
-        ))}
-      </div>
+      {groupedSections.length === 0 ? (
+        <EmptyState
+          icon="search"
+          title={`No settings match “${query.trim()}”`}
+          description="Try a different term, or clear search to browse every area."
+          actionLabel="Clear search"
+          onAction={() => setQuery("")}
+          compact
+        />
+      ) : (
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          {groupedSections.map(({ group, sections }, index) => (
+            <FadeUp key={group} className="min-w-0" delay={index * 0.05}>
+              <SettingsGroupList group={group} sections={sections} />
+            </FadeUp>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-function SettingsGroupCard({
+function SettingsGroupList({
   group,
   sections,
 }: {
   group: SettingsGroup;
   sections: SettingsSection[];
 }) {
-  const meta = GROUP_META[group];
+  const meta = SETTINGS_GROUP_META[group];
   const Icon = meta.icon;
 
   return (
-    <Card className="h-full min-w-0 overflow-hidden">
-      <CardHeader className="border-b bg-muted/30 p-4">
-        <div className="flex min-w-0 items-start gap-3">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-background text-muted-foreground shadow-xs">
-            <Icon className="size-4" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <CardTitle className="text-base leading-tight text-balance">{group}</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground text-pretty">{meta.description}</p>
-          </div>
+    <section className="min-w-0">
+      <div className="mb-2 flex items-start gap-2.5 px-1">
+        <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+        <div className="min-w-0">
+          <h2 className="text-sm font-semibold">{group}</h2>
+          <p className="m-0 text-xs text-muted-foreground text-pretty">{meta.description}</p>
         </div>
-      </CardHeader>
-
-      <CardContent className="p-0">
+      </div>
+      <div className="overflow-hidden rounded-lg border bg-card shadow-xs">
         <div className="divide-y">
-          {sections.map((section) => (
-            <Link
-              key={section.href}
-              href={section.href}
-              className="group flex min-h-16 items-center gap-3 px-4 py-3 no-underline transition-[background-color,scale] hover:bg-muted/50 active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-            >
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
+          {sections.map((section) => {
+            const SectionIcon = settingsSectionIcon(section.href);
+            return (
+              <Link
+                key={section.href}
+                href={section.href}
+                className="group flex min-h-16 items-center gap-3 px-3 py-3 no-underline transition-[background-color,scale] hover:bg-muted/50 active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+              >
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted/60 text-muted-foreground">
+                  <SectionIcon className="size-4" />
+                </span>
+                <div className="min-w-0 flex-1">
                   <div className="font-medium text-foreground">{section.label}</div>
+                  <div className="mt-0.5 text-sm text-muted-foreground text-pretty">{section.description}</div>
                 </div>
-                <div className="mt-0.5 text-sm text-muted-foreground text-pretty">{section.description}</div>
-              </div>
-              <ArrowRight className="size-4 shrink-0 text-muted-foreground opacity-60 transition-[color,opacity,translate] group-hover:translate-x-0.5 group-hover:text-foreground group-hover:opacity-100" />
-            </Link>
-          ))}
+                <ArrowRight className="size-4 shrink-0 text-muted-foreground opacity-60 transition-[color,opacity,translate] group-hover:translate-x-0.5 group-hover:text-foreground group-hover:opacity-100" />
+              </Link>
+            );
+          })}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }

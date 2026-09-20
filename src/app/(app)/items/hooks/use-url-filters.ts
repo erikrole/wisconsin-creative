@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { SortingState } from "@tanstack/react-table";
+import { setsEqual } from "@/hooks/use-url-state";
 
 export type ItemTypeFilter = "all" | "serialized" | "unit-tracked" | "quantity-tracked";
 
@@ -59,14 +60,6 @@ function readSorting(params: URLSearchParams): SortingState {
   const order = params.get("order");
   if (sort) return [{ id: sort, desc: order === "desc" }];
   return defaultItemsSorting();
-}
-
-function setsEqual(a: Set<string>, b: Set<string>) {
-  if (a.size !== b.size) return false;
-  for (const value of a) {
-    if (!b.has(value)) return false;
-  }
-  return true;
 }
 
 function sortingEqual(a: SortingState, b: SortingState) {
@@ -177,7 +170,55 @@ export function useUrlFilters() {
     if (newUrl !== currentUrl) router.replace(newUrl, { scroll: false });
   }, [search, statusFilter, locationFilter, categoryFilter, brandFilter, departmentFilter, itemType, showAccessories, favoritesOnly, sorting, pathname, router]);
 
+  // A user action must win over the one-render URL rehydration guard. Without
+  // this reset, clearing a freshly URL-synced search can update the visible
+  // list while the old query remains in the address bar.
+  const markLocalChange = useCallback(() => {
+    skipNextWriteRef.current = false;
+  }, []);
+  const setLocalSearch = useCallback((value: string) => {
+    markLocalChange();
+    setSearch(value);
+  }, [markLocalChange]);
+  const setLocalStatusFilter = useCallback((value: Set<string>) => {
+    markLocalChange();
+    setStatusFilter(value);
+  }, [markLocalChange]);
+  const setLocalLocationFilter = useCallback((value: Set<string>) => {
+    markLocalChange();
+    setLocationFilter(value);
+  }, [markLocalChange]);
+  const setLocalCategoryFilter = useCallback((value: Set<string>) => {
+    markLocalChange();
+    setCategoryFilter(value);
+  }, [markLocalChange]);
+  const setLocalBrandFilter = useCallback((value: Set<string>) => {
+    markLocalChange();
+    setBrandFilter(value);
+  }, [markLocalChange]);
+  const setLocalDepartmentFilter = useCallback((value: Set<string>) => {
+    markLocalChange();
+    setDepartmentFilter(value);
+  }, [markLocalChange]);
+  const setLocalItemType = useCallback((value: ItemTypeFilter) => {
+    markLocalChange();
+    setItemType(value);
+  }, [markLocalChange]);
+  const setLocalShowAccessories = useCallback((value: boolean) => {
+    markLocalChange();
+    setShowAccessories(value);
+  }, [markLocalChange]);
+  const setLocalFavoritesOnly = useCallback((value: boolean) => {
+    markLocalChange();
+    setFavoritesOnly(value);
+  }, [markLocalChange]);
+  const setLocalSorting = useCallback((value: SortingState) => {
+    markLocalChange();
+    setSorting(value);
+  }, [markLocalChange]);
+
   const clearAllFilters = useCallback(() => {
+    markLocalChange();
     setSearch("");
     setStatusFilter(new Set());
     setLocationFilter(new Set());
@@ -187,7 +228,7 @@ export function useUrlFilters() {
     setFavoritesOnly(false);
     setShowAccessories(false);
     setItemType("all");
-  }, []);
+  }, [markLocalChange]);
 
   // Stable serialized keys for dependency tracking
   const statusKey = [...statusFilter].sort().join(",");
@@ -218,16 +259,16 @@ export function useUrlFilters() {
     departmentKey,
     sortKey,
     // Actions
-    setItemType,
-    setFavoritesOnly,
-    setShowAccessories,
-    setSearch,
-    setStatusFilter,
-    setLocationFilter,
-    setCategoryFilter,
-    setBrandFilter,
-    setDepartmentFilter,
-    setSorting,
+    setItemType: setLocalItemType,
+    setFavoritesOnly: setLocalFavoritesOnly,
+    setShowAccessories: setLocalShowAccessories,
+    setSearch: setLocalSearch,
+    setStatusFilter: setLocalStatusFilter,
+    setLocationFilter: setLocalLocationFilter,
+    setCategoryFilter: setLocalCategoryFilter,
+    setBrandFilter: setLocalBrandFilter,
+    setDepartmentFilter: setLocalDepartmentFilter,
+    setSorting: setLocalSorting,
     clearAllFilters,
   };
 }

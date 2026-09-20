@@ -58,16 +58,16 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Aperture, AudioLines, Award, AlertCircle, BadgeCheck, BatteryCharging, Binoculars, Briefcase, Cable, CalendarDays, CameraIcon, ChevronDown, CloudRain, Copy, Flame, GraduationCap, Handshake, KeyRound, LifeBuoy, MoonStar, PackageCheck, Shield, ShieldCheck, ShoppingCart, TrashIcon, Trophy, UserCheck, UserRound } from "lucide-react";
+import { Aperture, AudioLines, Award, AlertCircle, BadgeCheck, BatteryCharging, Binoculars, Cable, CameraIcon, ChevronDown, CloudRain, Copy, Flame, Handshake, KeyRound, LifeBuoy, MoonStar, PackageCheck, Shield, ShieldCheck, ShoppingCart, TrashIcon, Trophy, UserCheck, UserRound } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { badgeRarityVariant, customBadgeIconOptions, getBadgeRarity, manualAwardGuidance, type BadgeRarity, type CustomBadgeIcon } from "@/lib/badges/display";
 import { cn } from "@/lib/utils";
-import { formatDateFull } from "@/lib/format";
 import { FadeUp } from "@/components/ui/motion";
 import { handleAuthRedirect, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
-import { useUrlState } from "@/hooks/use-url-state";
+import { parseDetailTab, serializeDetailTab, useUrlState } from "@/hooks/use-url-state";
 import { ProfileCompletionNotice } from "@/components/profile-completion/ProfileCompletionNotice";
 import { AvatarCropDialog } from "./AvatarCropDialog";
+import { ProfileRelatedLinks } from "./_components/ProfileRelatedLinks";
 import { useQueryClient } from "@tanstack/react-query";
 import { syncCachedUserLists } from "@/lib/user-list-cache";
 import { formatAnticipatedGraduation } from "@/lib/student-profile";
@@ -224,21 +224,17 @@ const tabDefs: Array<{ key: TabKey; label: string }> = [
   { key: "badges", label: "Badges" },
 ];
 
-function parseUserDetailTab(raw: string | null): TabKey {
-  return tabDefs.some((tab) => tab.key === raw) ? (raw as TabKey) : "info";
-}
-
-function serializeDetailTab(tab: TabKey): string | null {
-  return tab === "info" ? null : tab;
-}
-
 /* ── Main Page ─────────────────────────────────────────── */
 
 export default function UserDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { setBreadcrumbLabel } = useBreadcrumbLabel();
 
-  const [activeTab, setActiveTab] = useUrlState<TabKey>("tab", parseUserDetailTab, serializeDetailTab);
+  const [activeTab, setActiveTab] = useUrlState<TabKey>(
+    "tab",
+    (raw) => parseDetailTab(raw, tabDefs, "info"),
+    (tab) => serializeDetailTab(tab, "info"),
+  );
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null);
   const [togglingActive, setTogglingActive] = useState(false);
@@ -574,8 +570,8 @@ export default function UserDetailPage() {
   if (!user) {
     return (
       <div className="flex flex-col gap-6">
-        {/* Header skeleton — matches the DetailPageHeader card so the shell does not shift on load */}
-        <div className="rounded-lg border border-border/50 bg-card px-4 py-4 shadow-xs sm:px-5">
+        {/* Header skeleton — matches the DetailPageHeader identity row */}
+        <div className="mb-5 border-b border-border/50 pb-5">
           <div className="flex gap-4">
             <Skeleton className="size-16 shrink-0 rounded-full" />
             <div className="flex flex-1 flex-col gap-2">
@@ -593,7 +589,7 @@ export default function UserDetailPage() {
             {[72, 56, 44, 60, 48, 52].map((w, i) => (
               <div key={i} className="flex items-center gap-3">
                 <Skeleton className="h-4 w-[120px] shrink-0" />
-                <Skeleton className="h-8 flex-1" style={{ maxWidth: `${w}%` }} />
+                <Skeleton className="h-10 flex-1" style={{ maxWidth: `${w}%` }} />
               </div>
             ))}
           </div>
@@ -654,6 +650,13 @@ export default function UserDetailPage() {
             ) : null
           }
         />
+        <div className="mx-auto mt-6 max-w-2xl">
+          <ProfileRelatedLinks
+            userId={profile.id}
+            isSelf={isSelf}
+            canOpenStaffTools={false}
+          />
+        </div>
       </FadeUp>
     );
   }
@@ -733,74 +736,22 @@ export default function UserDetailPage() {
             />
           )
         }
-        title={profile.name}
-        subtitle={profile.email}
-        meta={
-          <>
-            {profile.role !== "STUDENT" && profile.title && (
-              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Briefcase className="size-3 shrink-0" />
-                {profile.title}
-              </p>
-            )}
-            {profile.role === "STUDENT" && (() => {
-              const y = deriveStudentYear(profile.gradYear, profile.studentYearOverride);
-              if (!y) return null;
-              const label = STUDENT_YEAR_OPTIONS.find((o) => o.value === y)?.label ?? y;
-              const anticipatedGraduation = formatAnticipatedGraduation(
-                profile.graduationTerm,
-                profile.gradYear,
-              );
-              return (
-                <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <GraduationCap className="size-3 shrink-0" />
-                  {label}
-                  {anticipatedGraduation ? ` · ${anticipatedGraduation}` : ""}
-                </p>
-              );
-            })()}
-            {(profile.directReport || profile.directReportName) && (
-              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <UserRound className="size-3 shrink-0" />
-                Reports to{" "}
-                {profile.directReport ? (
-                  <Link
-                    href={`/users/${profile.directReport.id}`}
-                    className="hover:underline"
-                  >
-                    {profile.directReport.name}
-                  </Link>
-                ) : (
-                  <span>{profile.directReportName} <span className="text-[11px] text-muted-foreground">(external)</span></span>
-                )}
-              </p>
-            )}
-            {profile.createdAt && (
-              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <CalendarDays className="size-3 shrink-0" />
-                Member since {formatDateFull(profile.createdAt)}
-              </p>
-            )}
-            {profile.gameRecord && profile.gameRecord.wins + profile.gameRecord.losses + profile.gameRecord.ties > 0 && (
-              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Trophy className="size-3 shrink-0" />
-                {profile.gameRecord.wins}–{profile.gameRecord.losses}{profile.gameRecord.ties > 0 ? `–${profile.gameRecord.ties}` : ""} on official games
-              </p>
-            )}
-            {profile.gameRecord && profile.gameRecord.eventsWorked > 0 && (
-              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <CalendarDays className="size-3 shrink-0" />
-                {profile.gameRecord.eventsWorked} events worked in 2026–27
-              </p>
-            )}
-          </>
-        }
-        actions={
+        status={
           <>
             <RoleBadge role={profile.role} />
+            {profile.collaboratorPolicy?.affiliation.displayName ? (
+              <Badge variant="outline">{profile.collaboratorPolicy.affiliation.displayName}</Badge>
+            ) : null}
             {profile.active === false && (
               <Badge variant="outline" className="text-muted-foreground">Inactive</Badge>
             )}
+          </>
+        }
+        title={profile.name}
+        subtitle={profileHeaderSubtitle(profile)}
+        sideBySideAt="sm"
+        actions={
+          <>
             {(isSelf || currentUserRole === "ADMIN") && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -841,6 +792,10 @@ export default function UserDetailPage() {
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
+            <ProfileHeaderFacts
+              profile={profile}
+              onOpenScoreboard={() => switchTab("scoreboard")}
+            />
           </>
         }
       />
@@ -1072,14 +1027,13 @@ export default function UserDetailPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => switchTab(v as TabKey)}>
-        <TabsList className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm overflow-x-auto scrollbar-hide">
+        <TabsList
+          aria-label="Profile sections"
+          className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm overflow-x-auto scrollbar-hide"
+        >
           {availableTabs.map((tab) => (
-            <TabsTrigger
-              key={tab.key}
-              value={tab.key}
-              className="relative shrink-0 gap-1.5 border-b-transparent data-[state=active]:border-b-transparent after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-[var(--wi-red)] after:opacity-0 after:transition-opacity data-[state=active]:after:opacity-100"
-            >
-              <span style={{ fontFamily: "var(--font-heading)", fontWeight: 500 }}>{tab.label}</span>
+            <TabsTrigger key={tab.key} value={tab.key} className="shrink-0">
+              {tab.label}
             </TabsTrigger>
           ))}
         </TabsList>
@@ -1120,6 +1074,48 @@ export default function UserDetailPage() {
           onAwardRequest={handleAwardRequest}
         />
       )}
+
+      <div className="mt-6">
+        <ProfileRelatedLinks
+          userId={user.id}
+          isSelf={isSelf}
+          canOpenStaffTools={isStaffOrAdmin}
+        />
+      </div>
     </FadeUp>
+  );
+}
+
+function profileHeaderSubtitle(profile: UserDetail): string | null {
+  if (profile.role === "STUDENT") {
+    const year = deriveStudentYear(profile.gradYear, profile.studentYearOverride);
+    const yearLabel = year ? STUDENT_YEAR_OPTIONS.find((option) => option.value === year)?.label ?? year : null;
+    const anticipatedGraduation = formatAnticipatedGraduation(profile.graduationTerm, profile.gradYear);
+    return [yearLabel, anticipatedGraduation].filter(Boolean).join(" · ") || null;
+  }
+  return profile.title || null;
+}
+
+function ProfileHeaderFacts({
+  profile,
+  onOpenScoreboard,
+}: {
+  profile: UserDetail;
+  onOpenScoreboard: () => void;
+}) {
+  const record = profile.gameRecord;
+  const hasOfficialRecord = Boolean(record && record.wins + record.losses + record.ties > 0);
+  const hasEvents = Boolean(record && record.eventsWorked > 0);
+  if (!hasOfficialRecord && !hasEvents) return null;
+  if (!record) return null;
+
+  return (
+    <Button type="button" variant="outline" className="h-10" onClick={onOpenScoreboard}>
+      <Trophy />
+      {hasOfficialRecord
+        ? `${record.wins}–${record.losses}${record.ties > 0 ? `–${record.ties}` : ""}`
+        : `${record.eventsWorked} events`}
+      {hasOfficialRecord && hasEvents ? ` · ${record.eventsWorked} events` : ""}
+    </Button>
   );
 }

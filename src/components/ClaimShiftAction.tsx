@@ -74,7 +74,7 @@ export function ClaimShiftAction({
           type="button"
           variant="ghost"
           size="sm"
-          className={cn("text-xs text-muted-foreground", compact ? "h-8 px-2" : "h-9 px-2")}
+          className={cn("text-xs text-muted-foreground", compact ? "h-8 px-2" : "h-10 px-2")}
           disabled={acting !== null}
           onClick={(event) => {
             event.stopPropagation();
@@ -118,7 +118,7 @@ export function ClaimShiftAction({
       type="button"
       variant="outline"
       size="sm"
-      className={cn(compact ? "h-8 px-2 text-xs" : "h-9 text-xs", className)}
+      className={cn(compact ? "h-8 px-2 text-xs" : "h-10 text-xs", className)}
       disabled={acting !== null}
       onClick={(event) => {
         event.stopPropagation();

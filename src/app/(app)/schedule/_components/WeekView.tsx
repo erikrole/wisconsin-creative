@@ -500,11 +500,13 @@ export function WeekView({
       {!loading && entries.length === 0 && (
         <EmptyState
           icon="calendar"
-          title={hasFilters ? "No events match these filters" : "No events this week"}
+          title={hasFilters ? "No events match these filters" : isThisWeek ? "Nothing scheduled this week" : "No events this week"}
           description={
             hasFilters
               ? "Try another week or clear schedule filters."
-              : "Try navigating to a different week."
+              : isThisWeek
+                ? "Nothing is on the schedule for this week."
+                : "Try navigating to a different week."
           }
           actionLabel={hasFilters ? "Clear filters" : undefined}
           onAction={hasFilters ? onClearFilters : undefined}

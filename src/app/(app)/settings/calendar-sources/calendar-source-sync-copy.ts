@@ -1,3 +1,4 @@
+import { pluralize } from "@/lib/format";
 export type CalendarSourceSyncResult = {
   added?: number;
   updated?: number;
@@ -21,10 +22,6 @@ function count(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
-function plural(value: number, singular: string, pluralForm = `${singular}s`) {
-  return `${value} ${value === 1 ? singular : pluralForm}`;
-}
-
 function eventSummary(result: CalendarSourceSyncResult) {
   const added = count(result.added);
   const refreshed = count(result.updated);
@@ -32,10 +29,10 @@ function eventSummary(result: CalendarSourceSyncResult) {
   const skipped = count(result.skipped);
   const parts: string[] = [];
 
-  if (added > 0) parts.push(plural(added, "event") + " added");
-  if (refreshed > 0) parts.push(plural(refreshed, "event") + " refreshed");
-  if (cancelled > 0) parts.push(plural(cancelled, "event") + " cancelled");
-  if (skipped > 0) parts.push(plural(skipped, "event") + " skipped");
+  if (added > 0) parts.push(pluralize(added, "event") + " added");
+  if (refreshed > 0) parts.push(pluralize(refreshed, "event") + " refreshed");
+  if (cancelled > 0) parts.push(pluralize(cancelled, "event") + " cancelled");
+  if (skipped > 0) parts.push(pluralize(skipped, "event") + " skipped");
 
   return parts.length > 0 ? parts.join(", ") : "no event changes";
 }
@@ -51,7 +48,7 @@ function shiftSummary(result: CalendarSourceSyncResult) {
     return "No new shifts needed.";
   }
 
-  return `Created ${plural(groupsCreated, "shift group")} and ${plural(shiftsCreated, "shift")}.`;
+  return `Created ${pluralize(groupsCreated, "shift group")} and ${pluralize(shiftsCreated, "shift")}.`;
 }
 
 export function calendarSourceSyncToast(
@@ -87,7 +84,7 @@ export function calendarSourceHealthErrorFromSync(result: CalendarSourceSyncResu
   if (result.error) return result.error;
   const skipped = count(result.skipped);
   if (skipped > 0 || (result.errors?.length ?? 0) > 0) {
-    return `${plural(skipped, "event")} skipped during the last sync.`;
+    return `${pluralize(skipped, "event")} skipped during the last sync.`;
   }
   return null;
 }

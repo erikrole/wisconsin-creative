@@ -14,7 +14,7 @@ export function OperationalToolbar({
   return (
     <div
       className={cn(
-        "flex w-full flex-col gap-2 rounded-lg bg-background/45 p-2 shadow-[0_1px_0_rgba(15,23,42,0.05)] backdrop-blur supports-[backdrop-filter]:bg-background/35",
+        "flex w-full min-w-0 flex-col gap-2",
         className,
       )}
       {...props}
@@ -47,7 +47,7 @@ export function OperationalActiveFilterChips({
           type="button"
           variant="ghost"
           size="sm"
-          className="relative h-10 max-w-full min-w-0 gap-1.5 rounded-md border border-border/60 bg-background/70 px-2.5 text-xs font-medium text-foreground shadow-[0_1px_0_rgba(15,23,42,0.05)] transition-[background-color,border-color,color,scale] after:absolute after:inset-x-2.5 after:bottom-0 after:h-0.5 after:rounded-t-full after:bg-primary/55 hover:border-border hover:bg-foreground/[0.04] active:scale-[0.96]"
+          className="h-10 max-w-full min-w-0 gap-1.5 rounded-md border border-border/60 bg-background px-2.5 text-xs font-medium text-foreground transition-[background-color,border-color,color,scale] hover:border-border hover:bg-foreground/[0.04] active:scale-[0.96]"
           onClick={filter.onRemove}
           aria-label={`Remove ${filter.label} filter`}
         >

@@ -27,6 +27,7 @@ import {
 import { handleAuthRedirect, isAbortError, parseErrorMessage, parseJsonSafely } from "@/lib/errors";
 import { isPasskeyCancellation, passkeyErrorMessage, passkeyStorageLabel } from "@/lib/passkey-client";
 import { SettingsPageShell } from "../SettingsPageShell";
+import { SettingsJumpNav } from "../_components/SettingsJumpNav";
 
 type Session = {
   id: string;
@@ -289,10 +290,17 @@ export default function SecuritySettingsPage() {
   const revoking = revokingId !== null || revokingAll;
 
   return (
-    <SettingsPageShell title="Security" description="Manage passkeys, your password, and active sessions.">
+    <SettingsPageShell href="/settings/security">
       <div className="flex flex-col gap-4">
+        <SettingsJumpNav
+          items={[
+            { href: "#passkeys", label: "Passkeys" },
+            { href: "#password", label: "Password" },
+            { href: "#sessions", label: "Sessions" },
+          ]}
+        />
         {/* Passkeys */}
-        <Card>
+        <Card id="passkeys">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Passkeys</CardTitle>
             <p className="text-sm text-muted-foreground">
@@ -408,8 +416,7 @@ export default function SecuritySettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Change password */}
-        <Card>
+        <Card id="password">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Change password</CardTitle>
           </CardHeader>
@@ -474,17 +481,15 @@ export default function SecuritySettingsPage() {
                 </Label>
               </div>
               <div className="flex justify-end">
-                <Button type="submit" disabled={saving || !currentPassword || !newPassword || !confirmPassword}>
-                  {saving && <Loader2 className="size-4 animate-spin" />}
-                  {saving ? "Saving…" : "Change password"}
+                <Button type="submit" disabled={saving || !currentPassword || !newPassword || !confirmPassword} loading={saving}>
+                  Change password
                 </Button>
               </div>
             </form>
           </CardContent>
         </Card>
 
-        {/* Active sessions */}
-        <Card>
+        <Card id="sessions">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between gap-4">
               <CardTitle className="text-base">Active sessions</CardTitle>

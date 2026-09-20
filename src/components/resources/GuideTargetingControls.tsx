@@ -19,6 +19,7 @@ type Props = {
   targetRoles: Role[];
   targetAreas: ShiftArea[];
   disabled?: boolean;
+  embedded?: boolean;
   onFeaturedChange: (value: boolean) => void;
   onFeaturedRankChange: (value: number | null) => void;
   onTargetRolesChange: (value: Role[]) => void;
@@ -36,13 +37,14 @@ export function GuideTargetingControls({
   targetRoles,
   targetAreas,
   disabled,
+  embedded = false,
   onFeaturedChange,
   onFeaturedRankChange,
   onTargetRolesChange,
   onTargetAreasChange,
 }: Props) {
   return (
-    <section className="rounded-lg border bg-card p-4">
+    <section className={embedded ? "flex flex-col gap-4" : "rounded-lg border bg-card p-4"}>
       <div className="flex flex-col gap-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">

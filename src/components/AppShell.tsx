@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { SearchIcon, ClipboardCheckIcon, CalendarCheckIcon, BellIcon, UserIcon, LayoutGridIcon, LayersIcon, BookOpenIcon, ArrowRightIcon } from "lucide-react";
 import AppSidebar from "./Sidebar";
@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import PageBreadcrumb from "@/components/PageBreadcrumb";
 import { BreadcrumbProvider } from "@/components/BreadcrumbContext";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import {
   CommandDialog,
   CommandInput,
@@ -29,6 +29,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { type CurrentUser, useCurrentUser } from "@/hooks/use-current-user";
 import { RECENT_SEARCHES_STORAGE_KEY, clearLocalTraces } from "@/lib/local-traces";
 import { handleAuthRedirect, parseJsonSafely } from "@/lib/errors";
+import { mapGuideSearchResult, type GuideSearchHit } from "@/lib/guide-search-result";
 import { getVisiblePageSearchResults, type PageSearchResult } from "@/lib/search-pages";
 import { assetSearchTitle } from "@/lib/search-result-title";
 import { cn } from "@/lib/utils";
@@ -44,7 +45,7 @@ import {
 import { RolePreviewBanner, RolePreviewControl } from "@/components/RolePreviewControl";
 
 type EntitySearchResult = {
-  type: "item" | "checkout" | "reservation" | "user";
+  type: "item" | "checkout" | "reservation" | "user" | "guide";
   id: string;
   title: string;
   subtitle: string;
@@ -53,6 +54,8 @@ type EntitySearchResult = {
   // Item-specific fields for status display
   computedStatus?: string;
   activeBooking?: { requesterName: string; requesterAvatarUrl?: string | null; isOverdue: boolean; endsAt?: string } | null;
+  status?: string;
+  searchText?: string;
 };
 
 type SearchResult = EntitySearchResult | PageSearchResult;
@@ -121,6 +124,7 @@ const SEARCH_RESULT_SOURCES = {
   checkouts: "Checkouts",
   reservations: "Reservations",
   users: "Users",
+  guides: "Guides",
 } as const;
 
 type BottomNavItem = {
@@ -143,7 +147,6 @@ const collaboratorBottomNavItems: BottomNavItem[] = [
   { label: "My Gear", href: "/bookings", icon: BookOpenIcon, badge: "overdue" as const },
   { label: "Items", href: "/items", icon: LayersIcon },
   { label: "People", href: "/users", icon: UserIcon },
-  { label: "Notifications", href: "/notifications", icon: BellIcon },
 ];
 
 const COLLABORATOR_ROUTE_CAPABILITY: Array<{ matches: (pathname: string) => boolean; capability: string }> = [
@@ -160,15 +163,107 @@ function collaboratorCanVisit(pathname: string, user: CurrentUser): boolean {
     || pathname === "/profile"
     || pathname === "/scoreboard"
     || pathname.startsWith("/scoreboard/")
+    || pathname === "/settings"
     || pathname === "/settings/profile"
     || pathname === "/settings/security"
     || pathname === "/settings/notifications"
+    || pathname === "/settings/appearance"
     || pathname === `/users/${user.id}`
     || pathname === "/notifications"
     || pathname.startsWith("/notifications/");
   if (alwaysAllowed) return true;
   const route = COLLABORATOR_ROUTE_CAPABILITY.find((entry) => entry.matches(pathname));
   return Boolean(route && user.capabilities?.includes(route.capability));
+}
+
+function AppTopBar({
+  isCollaborator,
+  onSearch,
+  unreadNotifications,
+  user,
+}: {
+  isCollaborator: boolean;
+  onSearch: () => void;
+  unreadNotifications: number;
+  user: CurrentUser;
+}) {
+  const { isMobile, open, openMobile } = useSidebar();
+  const sidebarLabel = isMobile
+    ? (openMobile ? "Close navigation" : "Open navigation")
+    : (open ? "Collapse sidebar" : "Expand sidebar");
+  const notificationLabel = unreadNotifications > 0
+    ? `Notifications (${unreadNotifications} unread)`
+    : "Notifications";
+
+  return (
+    <header
+      data-app-shell-header
+      className="flex h-12 items-center gap-2 overflow-visible border-b border-border/70 bg-card/90 px-3 backdrop-blur-md supports-[backdrop-filter]:bg-card/80 max-md:gap-1.5 max-md:px-2 md:px-4"
+    >
+      <SidebarTrigger
+        aria-label={sidebarLabel}
+        title={sidebarLabel}
+        className="shrink-0 text-foreground hover:bg-muted hover:text-foreground max-md:size-11"
+      />
+      {!isCollaborator && (
+        <button
+          className="flex h-10 min-h-10 max-w-2xl flex-1 items-center gap-2 rounded-md border border-border/80 bg-background px-3 text-[13px] text-muted-foreground transition-[border-color,background-color,color,box-shadow] duration-150 hover:border-foreground/25 hover:text-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 max-md:hidden [&_svg]:shrink-0"
+          onClick={onSearch}
+          type="button"
+          aria-keyshortcuts="Meta+K Control+K"
+          aria-label="Search items, bookings, people, pages, and guides (⌘K)"
+        >
+          <SearchIcon className="size-4" />
+          <span className="min-w-0 flex-1 truncate text-left">Search items, bookings, people, pages, and guides</span>
+          <kbd className="pointer-events-none ml-auto hidden h-5 items-center rounded border border-border bg-muted/80 px-1.5 font-sans text-[10px] font-medium text-muted-foreground sm:inline-flex">
+            ⌘K
+          </kbd>
+        </button>
+      )}
+      <div className="ml-auto flex items-center gap-0.5">
+        {!isCollaborator && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="hidden size-10 text-muted-foreground hover:text-foreground max-md:inline-flex max-md:size-11"
+                onClick={onSearch}
+                aria-label="Search items, bookings, people, pages, and guides"
+              >
+                <SearchIcon className="size-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Search (⌘K)</TooltipContent>
+          </Tooltip>
+        )}
+        <RolePreviewControl user={user} />
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative size-10 overflow-visible text-muted-foreground hover:text-foreground max-md:size-11 [&_a]:no-underline"
+              asChild
+            >
+              <Link prefetch={false} href="/notifications" aria-label={notificationLabel}>
+                <BellIcon className="size-[18px]" />
+                {unreadNotifications > 0 && (
+                  <span
+                    className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[length:var(--text-2xs)] font-bold leading-4 text-destructive-foreground tabular-nums ring-2 ring-card"
+                    aria-hidden="true"
+                  >
+                    {unreadNotifications > 99 ? "99+" : unreadNotifications}
+                  </span>
+                )}
+              </Link>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{notificationLabel}</TooltipContent>
+        </Tooltip>
+      </div>
+    </header>
+  );
 }
 
 export default function AppShell({
@@ -219,9 +314,38 @@ export default function AppShell({
     if (!rewardUserId || isRolePreview) return;
 
     const cursorKey = `gear-tracker:badge-reward-cursor:${rewardUserId}`;
+    // Reward polling is ambient chrome. It starts at 15s and backs off while
+    // nothing is being awarded so an idle tab stops hammering the route, then
+    // snaps back to 15s the moment an award lands or the tab is refocused.
+    const BASE_POLL_MS = 15_000;
+    const MAX_POLL_MS = 120_000;
+    const controller = new AbortController();
     let stopped = false;
     let loading = false;
     let memoryCursor: string | null = null;
+    let pollDelayMs = BASE_POLL_MS;
+    let pollTimer: number | undefined;
+
+    function resetPollDelay() {
+      pollDelayMs = BASE_POLL_MS;
+    }
+
+    // A burst read (mount or refocus) is not evidence that the account is
+    // idle, so its empty responses must not carry backoff into the steady
+    // cadence. Always resume the fast interval after one.
+    function startSteadyPolling() {
+      resetPollDelay();
+      scheduleNextPoll();
+    }
+
+    function scheduleNextPoll() {
+      if (stopped) return;
+      window.clearTimeout(pollTimer);
+      pollTimer = window.setTimeout(async () => {
+        await loadEarnedBadges();
+        scheduleNextPoll();
+      }, pollDelayMs);
+    }
 
     async function loadEarnedBadges() {
       if (loading || document.visibilityState === "hidden") return;
@@ -235,7 +359,7 @@ export default function AppShell({
           // Keep polling with the in-memory cursor when storage is unavailable.
         }
         const search = after ? `?after=${encodeURIComponent(after)}` : "";
-        const response = await fetch(`/api/badges/recent${search}`);
+        const response = await fetch(`/api/badges/recent${search}`, { signal: controller.signal });
         if (response.status === 400 && after) {
           memoryCursor = null;
           try { localStorage.removeItem(cursorKey); } catch { /* storage unavailable */ }
@@ -251,6 +375,11 @@ export default function AppShell({
         }
 
         const awards = Array.isArray(json?.data?.awards) ? json.data.awards : [];
+        if (awards.length > 0) {
+          resetPollDelay();
+        } else {
+          pollDelayMs = Math.min(pollDelayMs * 2, MAX_POLL_MS);
+        }
         if (awards.length > 0 && !stopped) {
           setEarnedBadgeQueue((current) => {
             const seen = new Set(current.map((badge) => badge.id));
@@ -285,23 +414,27 @@ export default function AppShell({
       }
       if (!hasRewardCursor()) return;
       try {
-        await fetch("/api/badges/events/app-open", { method: "POST" });
+        await fetch("/api/badges/events/app-open", { method: "POST", signal: controller.signal });
       } catch {
         // Easter eggs are ambient. Reward polling continues normally.
       }
       await loadEarnedBadges();
     }
 
-    void refreshBadgeRewards();
-    const interval = window.setInterval(loadEarnedBadges, 15_000);
+    void refreshBadgeRewards().then(startSteadyPolling);
     const onVisibilityChange = () => {
-      if (document.visibilityState === "visible") void refreshBadgeRewards();
+      if (document.visibilityState !== "visible") return;
+      // A refocus is a fresh signal that the user is here: drop back to the
+      // fast cadence before re-reading.
+      resetPollDelay();
+      void refreshBadgeRewards().then(startSteadyPolling);
     };
     document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
       stopped = true;
-      window.clearInterval(interval);
+      window.clearTimeout(pollTimer);
+      controller.abort();
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
     // Deliberately keyed on identity alone. An app open is a foreground event,
@@ -397,6 +530,14 @@ export default function AppShell({
   const [cmdOpen, setCmdOpen] = useState(false);
   const [cmdQuery, setCmdQuery] = useState("");
   const [cmdResults, setCmdResults] = useState<SearchResult[]>([]);
+  const cmdGroups = useMemo(() => {
+    const groups = { page: [] as PageSearchResult[], guide: [] as EntitySearchResult[], item: [] as EntitySearchResult[], checkout: [] as EntitySearchResult[], reservation: [] as EntitySearchResult[], user: [] as EntitySearchResult[] };
+    for (const result of cmdResults) {
+      if (result.type === "page") groups.page.push(result);
+      else if (result.type in groups) groups[result.type as Exclude<keyof typeof groups, "page">].push(result);
+    }
+    return groups;
+  }, [cmdResults]);
   const [cmdLoading, setCmdLoading] = useState(false);
   const [cmdError, setCmdError] = useState<"network" | "server" | null>(null);
   const [cmdPartialFailures, setCmdPartialFailures] = useState<string[]>([]);
@@ -405,14 +546,16 @@ export default function AppShell({
   useEffect(() => {
     if (isCollaborator) return;
     function handleKeyDown(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+      if ((e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "K")) {
+        const onSettings = pathname.startsWith("/settings");
+        if (onSettings) return;
         e.preventDefault();
-        setCmdOpen(true);
+        setCmdOpen((open) => !open);
       }
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isCollaborator]);
+  }, [isCollaborator, pathname]);
 
   // Live search when query changes
   useEffect(() => {
@@ -436,11 +579,12 @@ export default function AppShell({
     const timer = setTimeout(async () => {
       const encoded = encodeURIComponent(q);
       try {
-        const [itemsRes, checkoutsRes, reservationsRes, usersRes] = await Promise.allSettled([
+        const [itemsRes, checkoutsRes, reservationsRes, usersRes, guidesRes] = await Promise.allSettled([
           fetch(`/api/assets?q=${encoded}&limit=8`, { signal: controller.signal }),
           fetch(`/api/checkouts?q=${encoded}&status_in=OPEN,PENDING_PICKUP&limit=8`, { signal: controller.signal }),
           fetch(`/api/reservations?q=${encoded}&status=BOOKED&limit=8`, { signal: controller.signal }),
           fetch(`/api/users?q=${encoded}&limit=5`, { signal: controller.signal }),
+          fetch(`/api/resources?q=${encoded}`, { signal: controller.signal }),
         ]);
         if (controller.signal.aborted) return;
         const merged: SearchResult[] = getVisiblePageSearchResults(
@@ -454,6 +598,7 @@ export default function AppShell({
         if (checkoutsRes.status === "fulfilled" && handleAuthRedirect(checkoutsRes.value, pathname)) return;
         if (reservationsRes.status === "fulfilled" && handleAuthRedirect(reservationsRes.value, pathname)) return;
         if (usersRes.status === "fulfilled" && handleAuthRedirect(usersRes.value, pathname)) return;
+        if (guidesRes.status === "fulfilled" && handleAuthRedirect(guidesRes.value, pathname)) return;
 
         if (itemsRes.status === "fulfilled" && itemsRes.value.ok) {
           const json = await parseJsonSafely<ApiSearchList<AssetSearchItem>>(itemsRes.value);
@@ -508,10 +653,25 @@ export default function AppShell({
         } else {
           failures.push(SEARCH_RESULT_SOURCES.users);
         }
+        if (guidesRes.status === "fulfilled" && guidesRes.value.ok) {
+          const json = await parseJsonSafely<ApiSearchList<GuideSearchHit>>(guidesRes.value);
+          const data = json?.data;
+          if (!data) failures.push(SEARCH_RESULT_SOURCES.guides);
+          let guideCount = 0;
+          for (const guide of (data ?? [])) {
+            const mapped = mapGuideSearchResult(guide);
+            if (!mapped) continue;
+            merged.push(mapped);
+            guideCount += 1;
+            if (guideCount >= 8) break;
+          }
+        } else {
+          failures.push(SEARCH_RESULT_SOURCES.guides);
+        }
         if (!controller.signal.aborted) {
           setCmdResults(merged);
           setCmdPartialFailures(failures);
-          setCmdError(failures.length === 4 && merged.length === 0 ? "server" : null);
+          setCmdError(failures.length === Object.keys(SEARCH_RESULT_SOURCES).length && merged.length === 0 ? "server" : null);
           setCmdLoading(false);
         }
       } catch (err) {
@@ -607,7 +767,7 @@ export default function AppShell({
       )}
 
       {!isCollaborator && <CommandDialog open={cmdOpen} onOpenChange={(open) => { setCmdOpen(open); if (!open) { setCmdQuery(""); setCmdResults([]); setCmdError(null); setCmdPartialFailures([]); } }}>
-        <CommandInput placeholder="Search tag, borrower, page, setting, report..." value={cmdQuery} onValueChange={setCmdQuery} />
+        <CommandInput placeholder="Search tag, borrower, guide, page, setting, report..." value={cmdQuery} onValueChange={setCmdQuery} />
         <CommandList>
           {!cmdQuery.trim() && recentSearches.length > 0 && (
             <CommandGroup heading="Recent searches">
@@ -630,7 +790,7 @@ export default function AppShell({
             <CommandEmpty>{cmdError === "network" ? "Search is offline. Check your connection and try again." : "Search is temporarily unavailable. Try the page shortcut or search again."}</CommandEmpty>
           )}
           {!cmdLoading && !cmdError && cmdQuery.trim() && cmdResults.length === 0 && (
-            <CommandEmpty>No matches. Try a tag, borrower, page name, setting, or report.</CommandEmpty>
+            <CommandEmpty>No matches. Try a tag, borrower, guide, page name, setting, or report.</CommandEmpty>
           )}
           {!cmdLoading && !cmdError && cmdPartialFailures.length > 0 && cmdResults.length > 0 && (
             <OperationalPartialResultsAlert
@@ -642,9 +802,9 @@ export default function AppShell({
               title="Some result types did not load"
             />
           )}
-          {cmdResults.filter((r) => r.type === "page").length > 0 && (
+          {cmdGroups.page.length > 0 && (
             <CommandGroup heading="Go to">
-              {cmdResults.filter((r): r is PageSearchResult => r.type === "page").map((r) => (
+              {cmdGroups.page.map((r) => (
                 <CommandItem key={r.id} value={`${r.title} ${r.subtitle} ${r.href} ${r.keywords.join(" ")}`} onSelect={() => handleCmdSelect(r.href)} className="gap-3">
                   <ArrowRightIcon className="size-4 shrink-0 text-muted-foreground" />
                   <div className="min-w-0">
@@ -655,21 +815,44 @@ export default function AppShell({
               ))}
             </CommandGroup>
           )}
-          {cmdResults.filter((r) => r.type === "item").length > 0 && (
+          {cmdGroups.guide.length > 0 && (
+            <CommandGroup heading="Guides">
+              {cmdGroups.guide.map((r) => {
+                const subtitle = [r.subtitle, r.status === "DRAFT" ? "Draft" : null].filter(Boolean).join(" · ");
+                return (
+                  <CommandItem
+                    key={r.id}
+                    value={`${r.title} ${subtitle} ${r.searchText ?? ""} ${r.href}`}
+                    onSelect={() => handleCmdSelect(r.href)}
+                    className="gap-3"
+                  >
+                    <BookOpenIcon className="size-4 shrink-0 text-muted-foreground" />
+                    <div className="min-w-0">
+                      <div className="truncate font-medium">{r.title}</div>
+                      {subtitle && <div className="truncate text-xs text-muted-foreground">{subtitle}</div>}
+                    </div>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          )}
+          {cmdGroups.item.length > 0 && (
             <CommandGroup heading="Items">
-              {cmdResults.filter((r): r is EntitySearchResult => r.type === "item").map((r) => {
+              {cmdGroups.item.map((r) => {
                 const status = r.computedStatus ?? "AVAILABLE";
                 const isOverdue = r.activeBooking?.isOverdue ?? false;
                 const badgeStyle = isOverdue ? STATUS_STYLES.red.badge
                   : status === "CHECKED_OUT" ? STATUS_STYLES.blue.badge
+                  : status === "PENDING_PICKUP" ? STATUS_STYLES.orange.badge
                   : status === "RESERVED" ? STATUS_STYLES.purple.badge
                   : status === "MAINTENANCE" ? STATUS_STYLES.orange.badge
                   : status === "RETIRED" ? STATUS_STYLES.gray.badge
                   : STATUS_STYLES.green.badge;
                 const statusLabel = isOverdue ? "Overdue"
-                  : status === "CHECKED_OUT" ? "Checked Out"
+                  : status === "CHECKED_OUT" ? "Checked out"
+                  : status === "PENDING_PICKUP" ? "Pending pickup"
                   : status === "RESERVED" ? "Reserved"
-                  : status === "MAINTENANCE" ? "In maintenance"
+                  : status === "MAINTENANCE" ? "Maintenance"
                   : status === "RETIRED" ? "Retired"
                   : "Available";
                 const showHolder = !!r.activeBooking && (isOverdue || status === "CHECKED_OUT" || status === "RESERVED");
@@ -700,11 +883,11 @@ export default function AppShell({
               })}
             </CommandGroup>
           )}
-          {cmdResults.filter((r) => r.type === "checkout").length > 0 && (
+          {cmdGroups.checkout.length > 0 && (
             <>
               <CommandSeparator />
               <CommandGroup heading="Checkouts">
-                {cmdResults.filter((r): r is EntitySearchResult => r.type === "checkout").map((r) => (
+                {cmdGroups.checkout.map((r) => (
                   <CommandItem key={r.id} value={`${r.title} ${r.subtitle}`} onSelect={() => handleCmdSelect(r.href)}>
                     <ClipboardCheckIcon className="mr-2 size-4 shrink-0 text-muted-foreground" />
                     <div className="min-w-0">
@@ -716,11 +899,11 @@ export default function AppShell({
               </CommandGroup>
             </>
           )}
-          {cmdResults.filter((r) => r.type === "reservation").length > 0 && (
+          {cmdGroups.reservation.length > 0 && (
             <>
               <CommandSeparator />
               <CommandGroup heading="Reservations">
-                {cmdResults.filter((r): r is EntitySearchResult => r.type === "reservation").map((r) => (
+                {cmdGroups.reservation.map((r) => (
                   <CommandItem key={r.id} value={`${r.title} ${r.subtitle}`} onSelect={() => handleCmdSelect(r.href)}>
                     <CalendarCheckIcon className="mr-2 size-4 shrink-0 text-muted-foreground" />
                     <div className="min-w-0">
@@ -732,11 +915,11 @@ export default function AppShell({
               </CommandGroup>
             </>
           )}
-          {cmdResults.filter((r) => r.type === "user").length > 0 && (
+          {cmdGroups.user.length > 0 && (
             <>
               <CommandSeparator />
               <CommandGroup heading="Users">
-                {cmdResults.filter((r): r is EntitySearchResult => r.type === "user").map((r) => (
+                {cmdGroups.user.map((r) => (
                   <CommandItem key={r.id} value={`${r.title} ${r.subtitle}`} onSelect={() => handleCmdSelect(r.href)}>
                     <UserIcon className="mr-2 size-4 shrink-0 text-muted-foreground" />
                     <div className="min-w-0">
@@ -768,77 +951,26 @@ export default function AppShell({
         isLoggingOut={loggingOut}
         overdueBadgeCount={overdueBadgeCount}
         dueTodayBadgeCount={dueTodayBadgeCount}
-        unreadNotifications={unreadNotifications}
       />
 
-      {!online && (
-        <div className="fixed top-0 left-0 right-0 z-[var(--z-offline)] bg-[var(--orange)] text-black text-center px-4 py-1.5 text-[var(--text-sm)] font-[var(--weight-semibold)]" role="status">
-          You&apos;re offline. Changes will sync when connected.
-        </div>
-      )}
-
       <div className="flex flex-1 flex-col min-w-0 max-md:pl-[env(safe-area-inset-left,0px)] max-md:pr-[env(safe-area-inset-right,0px)] print:ml-0">
+        {!online && (
+          <div className="bg-[var(--orange)] px-4 py-1.5 text-center text-[var(--text-sm)] font-[var(--weight-semibold)] text-black" role="status">
+            You&apos;re offline. Changes will sync when connected.
+          </div>
+        )}
         <div className="sticky top-0 z-40 print:hidden">
           <RolePreviewBanner user={user} />
-          <header
-            data-app-shell-header
-            className="h-12 bg-card border-b border-black/[0.06] flex items-center px-6 gap-3 max-md:px-3 max-md:gap-2"
-          >
-          <SidebarTrigger className="shrink-0 text-foreground hover:bg-card hover:text-foreground" />
-          {/* Search trigger (desktop + mobile) */}
-          {!isCollaborator && <button
-            className="flex-1 max-w-[400px] flex items-center gap-2 w-full py-2 px-3 border border-border rounded-lg bg-background cursor-pointer transition-colors text-[13px] text-muted-foreground hover:border-primary max-md:hidden [&_svg]:shrink-0 [&_svg]:text-muted-foreground"
-            onClick={() => setCmdOpen(true)}
-            type="button"
-            aria-label="Search items, checkouts, reservations, users (⌘K)"
-          >
-            <SearchIcon className="size-4" />
-            <span>Search... (⌘K)</span>
-          </button>}
-          {!isCollaborator && <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="hidden max-md:flex relative p-2 no-underline text-muted-foreground rounded-lg transition-colors hover:bg-black/5 hover:text-foreground max-md:p-2.5 max-md:min-w-[44px] max-md:min-h-[44px] max-md:items-center max-md:justify-center"
-                onClick={() => setCmdOpen(true)}
-                aria-label="Search"
-              >
-                <SearchIcon className="size-5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Search (⌘K)</TooltipContent>
-          </Tooltip>}
-          <div className="flex items-center gap-1 ml-auto">
-            <RolePreviewControl user={user} />
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative p-2 no-underline text-muted-foreground rounded-lg transition-colors hover:bg-black/5 hover:text-foreground max-md:p-2.5 max-md:min-w-[44px] max-md:min-h-[44px] max-md:flex max-md:items-center max-md:justify-center [&_a]:no-underline" asChild>
-                  <Link prefetch={false} href="/notifications" aria-label={unreadNotifications > 0 ? `Notifications (${unreadNotifications} unread)` : "Notifications"}>
-                    <BellIcon className="size-5" />
-                    {unreadNotifications > 0 && (
-                      <span className="absolute top-0.5 right-0.5 bg-destructive text-destructive-foreground text-[length:var(--text-2xs)] font-bold rounded-full px-[5px] min-w-4 h-4 leading-4 text-center tabular-nums" aria-hidden="true">{unreadNotifications > 99 ? "99+" : unreadNotifications}</span>
-                    )}
-                  </Link>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Notifications</TooltipContent>
-            </Tooltip>
-          </div>
-          </header>
+          <AppTopBar
+            isCollaborator={isCollaborator}
+            onSearch={() => setCmdOpen(true)}
+            unreadNotifications={unreadNotifications}
+            user={user}
+          />
         </div>
         <BreadcrumbProvider>
-          <main id="main-content" className="py-7 px-8 flex-1 max-md:p-4 max-md:pb-[calc(96px+env(safe-area-inset-bottom,0px))] print:pb-0">
-            <div
-              data-app-shell-breadcrumb-frame={pathname === "/schedule" ? "" : undefined}
-              className={cn(
-                pathname === "/schedule"
-                  && cn(
-                    "sticky z-[35] -mx-8 bg-background/95 px-8 backdrop-blur supports-[backdrop-filter]:bg-background/90 max-md:-mx-4 max-md:px-4",
-                    isRolePreview ? "top-[5.5rem]" : "top-12",
-                  ),
-              )}
-            >
+          <main id="main-content" className="flex-1 px-8 py-5 max-md:p-4 max-md:pb-[calc(96px+env(safe-area-inset-bottom,0px))] print:pb-0">
+            <div data-app-shell-breadcrumb-frame={pathname === "/schedule" ? "" : undefined}>
               <PageBreadcrumb />
             </div>
             {children}
@@ -847,7 +979,7 @@ export default function AppShell({
       </div>
 
       {/* Mobile bottom nav */}
-      <nav aria-label="Mobile navigation" className="hidden max-md:block fixed inset-x-0 bottom-0 z-[var(--z-overlay)] border-t border-border/70 bg-card/95 px-2 pb-[calc(6px+env(safe-area-inset-bottom,0px))] pt-2 shadow-[0_-10px_28px_rgba(15,23,42,0.10)] backdrop-blur supports-[backdrop-filter]:bg-card/90 print:hidden">
+      <nav aria-label="Mobile navigation" className="hidden max-md:block fixed inset-x-0 bottom-0 z-[var(--z-overlay)] border-t border-border/70 bg-card/95 px-2 pb-[calc(6px+env(safe-area-inset-bottom,0px))] pt-1.5 shadow-[0_-10px_28px_rgba(15,23,42,0.10)] backdrop-blur supports-[backdrop-filter]:bg-card/90 print:hidden">
         <div className="mx-auto grid max-w-[460px] gap-1" style={{ gridTemplateColumns: `repeat(${visibleBottomNavItems.length}, minmax(0, 1fr))` }}>
           {visibleBottomNavItems.map((item) => {
             const isActive =
@@ -863,13 +995,13 @@ export default function AppShell({
                 aria-current={isActive ? "page" : undefined}
                 aria-label={badgeCount > 0 ? `${item.label}, ${badgeCount} overdue` : item.label}
                 className={cn(
-                  "group relative flex min-h-[58px] min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 py-1.5 text-[9.5px] font-semibold leading-none text-muted-foreground no-underline outline-none transition-[background-color,color,box-shadow,scale] duration-150 [-webkit-tap-highlight-color:transparent] hover:bg-muted/70 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card active:scale-[0.96]",
-                  isActive && "bg-muted text-foreground shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]",
+                  "group relative flex min-h-[52px] min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-1 py-1 text-[11px] font-medium leading-none text-muted-foreground no-underline outline-none transition-[background-color,color,box-shadow,scale] duration-150 [-webkit-tap-highlight-color:transparent] hover:bg-muted/70 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card active:scale-[0.96]",
+                  isActive && "bg-muted text-foreground",
                 )}
               >
                 <span
                   className={cn(
-                    "relative flex size-7 items-center justify-center rounded-full transition-[background-color,color,box-shadow,scale] duration-150",
+                    "relative flex size-7 items-center justify-center rounded-full transition-[background-color,color] duration-150",
                     isActive
                       ? "bg-[var(--wi-red)]/10 text-[var(--wi-red)]"
                       : "text-muted-foreground group-hover:text-foreground",
@@ -878,12 +1010,12 @@ export default function AppShell({
                 >
                   <Icon className="size-[18px]" />
                   {badgeCount > 0 && (
-                    <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[9px] font-bold leading-4 text-destructive-foreground tabular-nums shadow-sm">
+                    <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[9px] font-bold leading-4 text-destructive-foreground tabular-nums">
                       {badgeCount > 99 ? "99+" : badgeCount}
                     </span>
                   )}
                 </span>
-                <span className={cn("max-w-full truncate tracking-normal", isActive && "text-[var(--wi-red)]")}>
+                <span className={cn("max-w-full truncate tracking-normal", isActive && "text-foreground")}>
                   {item.label}
                 </span>
               </Link>

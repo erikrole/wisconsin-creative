@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeftIcon,
+  BookOpenIcon,
   Building2Icon,
   ClipboardListIcon,
   FolderTreeIcon,
@@ -85,6 +86,7 @@ const GUIDE_TEMPLATES: GuideTemplate[] = [
 
 Use this Guide for phone numbers, escalation contacts, vendor contacts, and internal owners.
 
+> [!IMPORTANT]
 > Keep this current. Put the owner in the table so people know who can fix stale contact details.
 
 ## Emergency
@@ -126,6 +128,7 @@ ACCOUNT-OR-REFERENCE
 
 Use this Guide for building phone numbers, room numbers, elevator or dock notes, and location-specific reference details.
 
+> [!WARNING]
 > Keep access-sensitive details limited to what staff and students are allowed to use.
 
 ## Quick lookup
@@ -161,9 +164,10 @@ BUILDING OR LOCATION - 0000 - purpose
     category: "Media Drive",
     title: "Media Drive overview",
     icon: HardDriveIcon,
-    markdown: `# Media Drive overview
+    markdown: `Use this Guide as the map for the Media Drive, the server that houses Creative files.
 
-Use this Guide as the map for the Media Drive, the server that houses Creative files.
+> [!IMPORTANT]
+> Connect to the UW network or VPN before you try to mount the drive.
 
 ## What lives here
 
@@ -175,8 +179,8 @@ Use this Guide as the map for the Media Drive, the server that houses Creative f
 
 ## Root paths
 
-\`\`\`text
-smb://media-drive/share
+\`\`\`copy
+smb://ath01-nas.uwia.wisc.edu/users/
 \`\`\`
 
 ## Folder map
@@ -189,7 +193,11 @@ smb://media-drive/share
 
 ## Access
 
+> [!NOTE]
 > Include how to request access, VPN or building-network requirements, and who approves access changes.
+
+> [!SHORTCUT]
+> \`⌘K\` — Finder’s Connect to Server window.
 
 ## Related exact paths
 
@@ -227,6 +235,7 @@ smb://server/share/folder
 
 ## Access notes
 
+> [!NOTE]
 > Include who approves access, where requests should go, and any VPN or building-network requirements.
 
 ## Naming rules
@@ -254,6 +263,9 @@ smb://server/share/folder
 
 Describe the trigger or workflow this SOP covers.
 
+> [!IMPORTANT]
+> Do not skip the checks below. Later steps depend on the right access and source files.
+
 ## Before you start
 
 | Check | Required value |
@@ -267,6 +279,12 @@ Describe the trigger or workflow this SOP covers.
 1. First step
 2. Second step
 3. Final handoff or confirmation step
+
+> [!TIP]
+> Share a faster way or a useful default that is not required to finish.
+
+> [!SHORTCUT]
+> \`⌘S\` — Save before you hand off.
 
 ## Copyable values
 
@@ -318,7 +336,11 @@ What people see or report.
 Paste error text, server path, command, or reference value here
 \`\`\`
 
+> [!WARNING]
 > Note anything risky before someone repeats this fix.
+
+> [!CAUTION]
+> Stop here if the next step can damage gear, files, or a live deliverable.
 
 ## Escalate when
 
@@ -331,6 +353,53 @@ Paste error text, server path, command, or reference value here
 | --- | --- |
 | Maintainer | Name/team |
 | Last verified | YYYY-MM-DD |`,
+  },
+  {
+    id: "how-to",
+    label: "How-to",
+    type: ResourceType.HOW_TO,
+    category: "How-To",
+    title: "How-to",
+    icon: BookOpenIcon,
+    markdown: `Write this as a sequence someone can follow without guessing. Put the required setup first, then numbered steps, then the exceptions.
+
+> [!IMPORTANT]
+> What must already be true before step 1 — network, account, software, or files.
+
+## Before you start
+
+- Tool or app:
+- Files or path:
+- Time this usually takes:
+
+## Steps
+
+1. First action, written as a verb.
+
+![Screenshot of the control you just used](https://example.com/step-1.png)
+
+2. Next action. Mention the exact menu, button, or field.
+3. Confirm it worked.
+
+\`\`\`copy
+smb://server/share
+\`\`\`
+
+> [!SHORTCUT]
+> \`⌘K\` — Faster way to open the same window.
+> \`⇧⌘G\` — Go to Folder
+
+> [!TIP]
+> A useful default or habit that is not required.
+
+> [!WARNING]
+> The most likely way this goes wrong, and how to recover.
+
+## Done when
+
+- Visible result:
+- Where the file or handoff lives:
+`,
   },
 ];
 

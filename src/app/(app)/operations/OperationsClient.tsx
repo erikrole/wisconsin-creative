@@ -36,6 +36,7 @@ import {
 } from "@/lib/ops-checks";
 import type { OperationalHealthState } from "@/lib/operational-health";
 import { cn } from "@/lib/utils";
+import { pluralize } from "@/lib/format";
 
 type BatteryTotals = {
   total: number;
@@ -80,10 +81,6 @@ function formatGeneratedAt(value: string) {
     hour: "numeric",
     minute: "2-digit",
   }).format(new Date(value));
-}
-
-function pluralize(count: number, singular: string, plural = `${singular}s`) {
-  return `${count} ${count === 1 ? singular : plural}`;
 }
 
 export default function OperationsClient({ isAdmin }: { isAdmin: boolean }) {

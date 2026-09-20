@@ -132,7 +132,7 @@ export function CollaboratorHome({ name, capabilities, readOnly = false }: { nam
                       {bookings.map((booking) => {
                         const state = bookingState(booking);
                         return (
-                          <Link key={booking.id} href="/bookings" className="flex min-h-14 items-center gap-3 px-4 py-3 no-underline transition-colors hover:bg-muted/50">
+                          <Link key={booking.id} href={`/bookings?tab=${booking.kind === "RESERVATION" ? "reservations" : "checkouts"}&highlight=${booking.id}`} className="flex min-h-14 items-center gap-3 px-4 py-3 no-underline transition-colors hover:bg-muted/50">
                             <div className="min-w-0 flex-1">
                               <p className="truncate text-sm font-medium text-foreground">{booking.title}</p>
                               <p className="text-xs text-muted-foreground tabular-nums">{state.detail} · {booking.location.name}</p>

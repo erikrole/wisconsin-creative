@@ -76,7 +76,13 @@ export function OverdueBanner({ overdueCount, overdueItems, now, onSelectBooking
                   className="size-10 shrink-0 text-muted-foreground hover:bg-[var(--red-bg)] hover:text-[var(--red-text)]"
                   disabled={nudgedIds.has(item.bookingId) || nudgingId === item.bookingId}
                   onClick={() => handleNudge(item.bookingId)}
-                  aria-label={`Nudge ${item.requesterName}`}
+                  aria-label={
+                    nudgingId === item.bookingId
+                      ? `Sending nudge to ${item.requesterName}`
+                      : nudgedIds.has(item.bookingId)
+                        ? `Nudge sent to ${item.requesterName}`
+                        : `Nudge ${item.requesterName}`
+                  }
                 >
                   <AnimatePresence initial={false} mode="popLayout">
                     <motion.span

@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { pluralize } from "@/lib/format";
 
 type OperationalTone = "red" | "orange" | "green" | "blue" | "purple" | "muted";
 
@@ -30,10 +31,6 @@ export type OperationalMetricDelta = {
   /** Which direction reads as good. "neutral" renders without color. */
   goodDirection?: "up" | "down" | "neutral";
 };
-
-function pluralize(count: number, singular: string, plural = `${singular}s`) {
-  return `${count} ${count === 1 ? singular : plural}`;
-}
 
 function formatDeltaText(delta: OperationalMetricDelta) {
   if (delta.percent === null) {

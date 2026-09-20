@@ -7,18 +7,12 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
-import { REPORT_SEMANTIC_CHART_COLORS, ReportChartCard } from "../report-ui";
+import { REPORT_SEMANTIC_CHART_COLORS, ReportChartCard, formatDateLabel } from "../report-ui";
 
 const scanConfig: ChartConfig = {
   success: { label: "Success", color: REPORT_SEMANTIC_CHART_COLORS.available },
   fail: { label: "Failed", color: REPORT_SEMANTIC_CHART_COLORS.problem },
 };
-
-function formatDateLabel(dateStr: unknown) {
-  if (typeof dateStr !== "string") return String(dateStr);
-  const d = new Date(dateStr + "T00:00:00");
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
 
 export function DailyScanVolumeChart({
   dailyScans,

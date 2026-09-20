@@ -156,9 +156,3 @@ export type ConflictData = {
 export type TabKey = "details" | "equipment" | "history";
 
 export type HistoryFilter = "all" | "booking" | "equipment";
-
-export type CheckinProgress = {
-  returned: number;
-  total: number;
-  percent: number;
-};

@@ -161,7 +161,7 @@ export function statusBadge(asset: Asset) {
       return (
         <AssigneeStatus
           color={color}
-          label={isOverdue ? "Overdue" : "Checked Out"}
+          label={isOverdue ? "Overdue" : "Checked out"}
           name={activeBooking?.requesterName}
           avatarUrl={activeBooking?.requesterAvatarUrl}
           endsAt={activeBooking?.endsAt}

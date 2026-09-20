@@ -4,6 +4,7 @@ import type { SportConfig } from "./types";
 import { SPORT_AUTO_ASSIGN_POLICY_LABELS } from "@/lib/sport-auto-assign-policy";
 import type { SportSetupEntry, SportSetupResponse } from "@/lib/services/sport-setup";
 import { AREAS, AREA_LABELS, SPORT_GROUPS } from "./types";
+import { formatMinutes } from "@/lib/format";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -21,14 +22,6 @@ import {
 /** Generate call-time options: 0, 15, 30, 45, 60 ... 240 minutes */
 const CALL_TIME_OPTIONS = [0, 15, 30, 45, 60, 90, 120, 150, 180, 210, 240];
 
-function formatMinutes(mins: number): string {
-  if (mins === 0) return "None";
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  if (h === 0) return `${m}min`;
-  if (m === 0) return h === 1 ? "1 hr" : `${h} hrs`;
-  return `${h}h ${m}m`;
-}
 
 function coverageInputName(sportCode: string, area: string, field: string): string {
   return `sportCoverage.${sportCode}.${area}.${field}`;
@@ -135,10 +128,11 @@ export default function ShiftConfigTable({
                         type="button"
                         className="h-10 px-3 text-xs"
                         disabled={Boolean(saving)}
+                        loading={saving === `${primaryCode}-save`}
                         onClick={() => onSave(primaryCode)}
                       >
                         <SaveIcon data-icon="inline-start" />
-                        {saving === `${primaryCode}-save` ? "Saving..." : "Save"}
+                        Save
                       </Button>
                     </>
                   )}

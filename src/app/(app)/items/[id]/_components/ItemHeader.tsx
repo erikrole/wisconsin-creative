@@ -30,7 +30,7 @@ function StatusLine({ asset }: { asset: AssetDetail }) {
   if (s === "CHECKED_OUT" && b) {
     const href = `/checkouts/${b.id}`;
     const isOverdue = new Date(b.endsAt) < new Date();
-    const label = isOverdue ? "Overdue" : "Checked Out";
+    const label = isOverdue ? "Overdue" : "Checked out";
     return (
       <Badge variant={isOverdue ? "red" : "blue"} className="gap-1 px-1.5 py-1 pr-2 text-xs" asChild>
         <Link href={href} className="no-underline" title={`${label} by ${b.requesterName}`}>
@@ -44,9 +44,9 @@ function StatusLine({ asset }: { asset: AssetDetail }) {
     const href = b.kind === "RESERVATION" ? `/reservations/${b.id}` : `/checkouts/${b.id}`;
     return (
       <Badge variant="orange" className="gap-1 px-1.5 py-1 pr-2 text-xs" asChild>
-        <Link href={href} className="no-underline" title={`Pending Pickup by ${b.requesterName}`}>
+        <Link href={href} className="no-underline" title={`Pending pickup by ${b.requesterName}`}>
           <UserAvatar name={b.requesterName} avatarUrl={b.requesterAvatarUrl} size="xs" />
-          Pending Pickup
+          Pending pickup
         </Link>
       </Badge>
     );
@@ -61,7 +61,7 @@ function StatusLine({ asset }: { asset: AssetDetail }) {
       </Badge>
     );
   }
-  if (s === "MAINTENANCE") return <Badge variant="orange" className="px-2.5 py-1 text-xs">Needs maintenance</Badge>;
+  if (s === "MAINTENANCE") return <Badge variant="orange" className="px-2.5 py-1 text-xs">Maintenance</Badge>;
   if (s === "RETIRED") return <Badge variant="gray" className="px-2.5 py-1 text-xs">Retired</Badge>;
   return <Badge variant="gray" className="px-2.5 py-1 text-xs">{s}</Badge>;
 }
@@ -340,6 +340,7 @@ export function ItemHeader({
                 onClick={onToggleFavorite}
                 disabled={actionBusy}
                 aria-label={asset.isFavorited ? "Remove from favorites" : "Add to favorites"}
+                aria-pressed={asset.isFavorited}
               >
                 <Star
                   className={`size-3.5 ${

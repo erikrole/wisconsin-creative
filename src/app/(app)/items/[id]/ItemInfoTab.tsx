@@ -41,6 +41,7 @@ import type { AssetDetail, CategoryOption } from "./types";
 import { SaveableField, useSaveField, FieldGroup } from "@/components/SaveableField";
 import { CategoryCombobox } from "@/components/FormCombobox";
 import { useConfirm } from "@/components/ConfirmDialog";
+import { externalUrlHost, normalizeExternalUrl } from "@/lib/external-url";
 
 /* ── Text Input Field ──────────────────────────────────── */
 
@@ -256,30 +257,6 @@ function CurrencyInputField({
 
 /* ── Link Field (with open/copy buttons) ───────────────── */
 
-function normalizeExternalUrl(value: string): string {
-  const trimmed = value.trim();
-  if (!trimmed) return "";
-  const withScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
-  let parsed: URL;
-  try {
-    parsed = new URL(withScheme);
-  } catch {
-    throw new Error("Enter a valid http or https URL");
-  }
-  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-    throw new Error("Enter a valid http or https URL");
-  }
-  return parsed.toString();
-}
-
-function getExternalUrlHost(value: string): string {
-  try {
-    return normalizeExternalUrl(value).replace(/^https?:\/\//, "").split("/")[0]?.replace(/^www\./, "") ?? "";
-  } catch {
-    return "";
-  }
-}
-
 function getNormalizedExternalUrl(value: string): string {
   try {
     return normalizeExternalUrl(value);
@@ -312,7 +289,7 @@ function LinkField({
   }, [value]);
 
   const isDirty = draft.trim() !== value;
-  const sourceHost = getExternalUrlHost(value);
+  const sourceHost = externalUrlHost(value);
   const openUrl = value ? getNormalizedExternalUrl(value) : "";
 
   async function commit() {
@@ -858,10 +835,12 @@ function FirmwareWatchPanel({
               {canEdit && (
                 <Button
                   type="button"
+                  className="h-10"
                   onClick={() => saveVersion(draftVersion)}
                   disabled={saveInstalledVersion.isSaving}
+                  loading={saveInstalledVersion.isSaving}
                 >
-                  {saveInstalledVersion.isSaving ? "Saving..." : "Save"}
+                  Save
                 </Button>
               )}
             </DialogFooter>
@@ -1102,7 +1081,7 @@ export function QRModal({
                 value={qrDraft}
                 onChange={(e) => setQrDraft(e.target.value)}
                 placeholder="Paste or type QR code..."
-                className="h-9 flex-1 font-mono"
+                className="flex-1 font-mono"
                 disabled={saving}
                 aria-busy={saving}
                 onKeyDown={(e) => {
@@ -1111,8 +1090,8 @@ export function QRModal({
                 }}
                 autoFocus
               />
-              <Button className="h-10" onClick={saveManualQR} disabled={saving}>
-                {saving ? "Saving..." : "Save"}
+              <Button className="h-10" onClick={saveManualQR} disabled={saving} loading={saving}>
+                Save
               </Button>
               <Button
                 variant="outline"

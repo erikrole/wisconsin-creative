@@ -130,11 +130,11 @@ export function OperationalStatusRail({
   ) : null;
 
   return (
-    <section className={cn("border-y border-border/50", className)}>
+    <section className={cn(feed ? "border-0" : "border-y border-border/50", className)}>
       <Collapsible open={open} onOpenChange={setOpen}>
         <div className={cn(
-          "flex flex-col gap-2 px-1 py-2 lg:flex-row",
-          feed ? "lg:items-start" : "lg:items-center",
+          "flex gap-1 px-1",
+          feed ? "items-start py-0.5" : "flex-col gap-2 py-2 lg:flex-row lg:items-center",
         )}>
           {orientation?.href ? (
             <Link
@@ -171,8 +171,11 @@ export function OperationalStatusRail({
               <Button
                 type="button"
                 variant="ghost"
-                size="lg"
-                className="self-end px-2.5 text-xs font-semibold text-muted-foreground lg:self-auto"
+                size={feed ? "sm" : "lg"}
+                className={cn(
+                  "shrink-0 px-2 text-xs font-medium text-muted-foreground",
+                  feed ? "mt-0 h-10" : "self-end lg:self-auto",
+                )}
                 aria-label={open
                   ? `Hide ${detailsLabel.toLowerCase()}`
                   : hiddenCount > 0

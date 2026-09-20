@@ -8,8 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Check, X, CalendarIcon } from "lucide-react";
 import { clampToQuarterHour } from "@/lib/quarter-hour";
-
-function pad(n: number) { return String(n).padStart(2, "0"); }
+import { pad2 } from "@/lib/format";
 
 const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => i);
 const MINUTE_OPTIONS = [0, 15, 30, 45];
@@ -156,7 +155,7 @@ export function InlineDateField({
                 onChange={(e) => handleTimeChange(h, Number(e.target.value))}
               >
                 {MINUTE_OPTIONS.map((mn) => (
-                  <option key={mn} value={mn}>{pad(mn)}</option>
+                  <option key={mn} value={mn}>{pad2(mn)}</option>
                 ))}
               </NativeSelect>
             </div>

@@ -23,7 +23,7 @@ type Props = {
   activeSport: string | null;
   hasActiveFilter: boolean;
   now: Date;
-  acting: boolean;
+  actingId: string | null;
   onSelectBooking: (id: string) => void;
   onDeleteDraft: (draftId: string) => void;
   onCreateBooking?: (ctx: CreateBookingContext) => void;
@@ -35,7 +35,7 @@ export function MyGearColumn({
   activeSport,
   hasActiveFilter,
   now,
-  acting,
+  actingId,
   onSelectBooking,
   onDeleteDraft,
   onCreateBooking,
@@ -164,7 +164,11 @@ export function MyGearColumn({
               const displayDate = studentCallWindow?.startsAt ?? s.event.startsAt;
               return (
                 <div key={s.id} className="group flex min-h-16 w-full items-center justify-between gap-3 px-4 py-2.5 transition-colors hover:bg-muted/45 [&+&]:border-t [&+&]:border-border/40">
-                  <div className="flex flex-col gap-0.5 min-w-0">
+                  <Link
+                    href={`/events/${s.event.id}`}
+                    className="flex min-w-0 flex-1 flex-col gap-0.5 rounded-sm no-underline outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                    aria-label={`Open ${s.event.sportCode ? `${sportLabel(s.event.sportCode)} ` : ""}${eventTitle}`}
+                  >
                     <span className="text-sm font-bold text-foreground truncate">
                       {s.event.sportCode && <span className="text-xs font-bold mr-1">{sportLabel(s.event.sportCode)}</span>}
                       <span className="text-muted-foreground font-normal">{eventTitle}</span>
@@ -174,7 +178,7 @@ export function MyGearColumn({
                       {studentCallWindow && !isFullDayDefault && `, Call ${formatCallTime(studentCallWindow)}`}
                       {s.event.locationName && ` \u00B7 ${s.event.locationName}`}
                     </span>
-                  </div>
+                  </Link>
                   <div className="flex items-center gap-2 shrink-0">
                     {gearLabel ? (
                       <>
@@ -235,18 +239,17 @@ export function MyGearColumn({
                         </span>
                       </div>
                       <div className="flex gap-1.5 shrink-0">
-                        {d.kind === "RESERVATION" && (
-                          <Button variant="outline" size="sm" className="h-10" asChild>
-                            <Link href={`/reservations?draftId=${d.id}`}>
-                              Continue
-                            </Link>
-                          </Button>
-                        )}
+                        <Button variant="outline" size="sm" className="h-10" asChild>
+                          <Link href={d.kind === "CHECKOUT" ? `/checkouts/new?draftId=${d.id}` : `/reservations/new?draftId=${d.id}`}>
+                            Continue
+                          </Link>
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"
                           className="h-10"
-                          disabled={acting}
+                          loading={actingId === d.id}
+                          disabled={actingId !== null && actingId !== d.id}
                           onClick={() => onDeleteDraft(d.id)}
                         >
                           Delete

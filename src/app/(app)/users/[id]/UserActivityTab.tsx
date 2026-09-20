@@ -147,13 +147,14 @@ export default function UserActivityTab({ userId }: { userId: string }) {
           onValueChange={(v) => {
             if (v) setFilter(v as Filter);
           }}
-          className="h-7"
+          aria-label="Filter activity"
+          className="h-10"
         >
           {FILTER_OPTIONS.map(({ key, label }) => (
             <ToggleGroupItem
               key={key}
               value={key}
-              className="h-6 text-xs px-2.5"
+              className="h-10 px-3"
             >
               {label}
             </ToggleGroupItem>

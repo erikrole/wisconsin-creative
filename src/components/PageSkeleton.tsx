@@ -44,23 +44,3 @@ export function PageSkeleton({
     </>
   );
 }
-
-/** Compact list skeleton (no PageHeader). */
-export function ListSkeleton({ rows = 8 }: { rows?: number }) {
-  return (
-    <Card>
-      <CardContent className="py-4 flex flex-col gap-3">
-        {Array.from({ length: rows }, (_, i) => (
-          <div key={i} className="flex items-center gap-3">
-            <Skeleton className="size-9 rounded-md" />
-            <div className="flex-1 flex flex-col gap-1.5">
-              <Skeleton className="h-4" style={{ width: `${50 + (i % 3) * 15}%` }} />
-              <Skeleton className="h-3" style={{ width: `${30 + (i % 2) * 10}%` }} />
-            </div>
-            <Skeleton className="h-5 w-16 rounded-full" />
-          </div>
-        ))}
-      </CardContent>
-    </Card>
-  );
-}

@@ -210,8 +210,8 @@ export default function VenueMappingsPage() {
 
   return (
     <SettingsPageShell
-      title="Venue Mappings"
-      description="Map raw venue text from calendar feeds to one of your locations. Home-location matches flag events as home games for shift coverage. Manage locations on the Locations tab."
+      href="/settings/venue-mappings"
+      description="Map raw venue text from calendar feeds to one of your locations. Home-location matches flag events as home games for shift coverage."
     >
         <Card>
           <CardHeader className="flex-row items-center justify-between gap-3">

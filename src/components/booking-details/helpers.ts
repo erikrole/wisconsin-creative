@@ -32,11 +32,6 @@ export const HIDDEN_AUDIT_FIELDS = new Set([
   "updatedAt", "createdAt", "id", "organizationId",
 ]);
 
-/** Audit log fields that contain IDs — show "set"/"removed"/"changed" instead of raw values */
-export const ID_AUDIT_FIELDS = new Set([
-  "categoryId", "departmentId", "locationId", "requesterUserId",
-]);
-
 export const EQUIPMENT_ACTIONS = new Set([
   "booking.items_added",
   "booking.items_removed",

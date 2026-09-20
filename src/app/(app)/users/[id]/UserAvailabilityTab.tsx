@@ -355,7 +355,7 @@ function AvailabilityForm({ userId, initial, initialKind = "WEEKLY", onSaved, on
                 if (next === "TIME_OFF" && !canReview) setStatus("PENDING");
               }}
             >
-              <SelectTrigger id={intentId} size="sm">
+              <SelectTrigger id={intentId} className="h-10">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -378,7 +378,7 @@ function AvailabilityForm({ userId, initial, initialKind = "WEEKLY", onSaved, on
                 if (next === "WEEKLY") setAllDay(false);
               }}
             >
-              <SelectTrigger id={kindId} size="sm">
+              <SelectTrigger id={kindId} className="h-10">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -391,7 +391,7 @@ function AvailabilityForm({ userId, initial, initialKind = "WEEKLY", onSaved, on
             <div className="flex flex-col gap-1.5">
               <Label htmlFor={dayId} className="text-xs">Day</Label>
               <Select name="availability-day" value={dayOfWeek} onValueChange={setDayOfWeek}>
-                <SelectTrigger id={dayId} size="sm">
+                <SelectTrigger id={dayId} className="h-10">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -415,19 +415,19 @@ function AvailabilityForm({ userId, initial, initialKind = "WEEKLY", onSaved, on
                     setDate(next);
                     if (dateEndsOn && next > dateEndsOn) setDateEndsOn(next);
                   }}
-                  className="h-8 text-sm"
+                  className="h-10 text-sm"
                   required
                 />
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor={dateEndId} className="text-xs">Through <span className="font-normal text-muted-foreground">(optional)</span></Label>
-                <Input id={dateEndId} name="availability-date-end" type="date" value={dateEndsOn} min={date || undefined} onChange={(e) => setDateEndsOn(e.target.value)} className="h-8 text-sm" />
+                <Input id={dateEndId} name="availability-date-end" type="date" value={dateEndsOn} min={date || undefined} onChange={(e) => setDateEndsOn(e.target.value)} className="h-10 text-sm" />
               </div>
             </>
           )}
           <div className="flex flex-col gap-1.5">
             <Label htmlFor={labelId} className="text-xs">Label</Label>
-            <Input id={labelId} name="availability-label" value={label} onChange={(e) => setLabel(e.target.value)} placeholder={kind === "WEEKLY" ? "COMM 201" : "Exam"} className="h-8 text-sm" maxLength={80} />
+            <Input id={labelId} name="availability-label" value={label} onChange={(e) => setLabel(e.target.value)} placeholder={kind === "WEEKLY" ? "COMM 201" : "Exam"} className="h-10 text-sm" maxLength={80} />
           </div>
         </div>
 
@@ -446,7 +446,7 @@ function AvailabilityForm({ userId, initial, initialKind = "WEEKLY", onSaved, on
             <div className="flex flex-col gap-1.5">
               <Label htmlFor={statusId} className="text-xs">Review status</Label>
               <Select name="availability-status" value={status} onValueChange={(value) => setStatus(value as AvailabilityStatus)}>
-                <SelectTrigger id={statusId} size="sm">
+                <SelectTrigger id={statusId} className="h-10">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -463,16 +463,16 @@ function AvailabilityForm({ userId, initial, initialKind = "WEEKLY", onSaved, on
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_1fr]">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor={startId} className="text-xs">Start time</Label>
-              <Input id={startId} name="availability-start" type="time" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} className="h-8 text-sm" required />
+              <Input id={startId} name="availability-start" type="time" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} className="h-10 text-sm" required />
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor={endId} className="text-xs">End time</Label>
-              <Input id={endId} name="availability-end" type="time" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} className="h-8 text-sm" required />
+              <Input id={endId} name="availability-end" type="time" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} className="h-10 text-sm" required />
             </div>
             {kind === "WEEKLY" && (
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor={semesterId} className="text-xs">Term label <span className="font-normal text-muted-foreground">(optional)</span></Label>
-                <Input id={semesterId} name="availability-semester-label" value={semesterLabel} onChange={(e) => setSemesterLabel(e.target.value)} placeholder="Fall 2026" className="h-8 text-sm" maxLength={40} />
+                <Input id={semesterId} name="availability-semester-label" value={semesterLabel} onChange={(e) => setSemesterLabel(e.target.value)} placeholder="Fall 2026" className="h-10 text-sm" maxLength={40} />
               </div>
             )}
           </div>
@@ -491,11 +491,11 @@ function AvailabilityForm({ userId, initial, initialKind = "WEEKLY", onSaved, on
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor={semesterStartId} className="text-xs">Starts</Label>
-              <Input id={semesterStartId} name="availability-semester-start" type="date" value={semesterStartsOn} onChange={(e) => setSemesterStartsOn(e.target.value)} className="h-8 text-sm" />
+              <Input id={semesterStartId} name="availability-semester-start" type="date" value={semesterStartsOn} onChange={(e) => setSemesterStartsOn(e.target.value)} className="h-10 text-sm" />
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor={semesterEndId} className="text-xs">Ends</Label>
-              <Input id={semesterEndId} name="availability-semester-end" type="date" value={semesterEndsOn} min={semesterStartsOn || undefined} onChange={(e) => setSemesterEndsOn(e.target.value)} className="h-8 text-sm" />
+              <Input id={semesterEndId} name="availability-semester-end" type="date" value={semesterEndsOn} min={semesterStartsOn || undefined} onChange={(e) => setSemesterEndsOn(e.target.value)} className="h-10 text-sm" />
             </div>
           </div>
         )}
@@ -860,7 +860,7 @@ export default function UserAvailabilityTab({
       </Card>
 
       {canEdit && !showForm && !editing && (
-        <Button variant="outline" className="w-fit" onClick={() => openNewForm("WEEKLY")}>
+        <Button variant="outline" className="h-10 w-fit" onClick={() => openNewForm("WEEKLY")}>
           <CalendarPlusIcon className="size-4" />
           Add another class time
         </Button>

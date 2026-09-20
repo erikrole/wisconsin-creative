@@ -6,6 +6,7 @@ import { X } from "lucide-react"
 import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
+import { overlayCloseButtonAbsolute, overlayScrim } from "@/components/ui/control-styles"
 
 function Sheet({ ...props }: React.ComponentProps<typeof DialogPrimitive.Root>) {
   return <DialogPrimitive.Root data-slot="sheet" {...props} />
@@ -30,17 +31,14 @@ function SheetOverlay({
   return (
     <DialogPrimitive.Overlay
       data-slot="sheet-overlay"
-      className={cn(
-        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px]",
-        className,
-      )}
+      className={cn(overlayScrim, className)}
       {...props}
     />
   )
 }
 
 const sheetContentVariants = cva(
-  "bg-background fixed z-50 flex flex-col shadow-xl transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
+  "bg-background fixed z-50 flex flex-col shadow-xl transition ease-[cubic-bezier(0.32,0.72,0,1)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-200 data-[state=open]:duration-300 motion-reduce:transition-none",
   {
     variants: {
       side: {
@@ -76,7 +74,7 @@ function SheetContent({
         {children}
         <DialogPrimitive.Close
           data-slot="sheet-close-button"
-          className="absolute right-4 top-3 flex size-10 items-center justify-center rounded-md text-muted-foreground outline-none transition-[background-color,color,box-shadow] hover:bg-muted hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/30 disabled:pointer-events-none"
+          className={overlayCloseButtonAbsolute}
         >
           <X className="size-4" />
           <span className="sr-only">Close</span>

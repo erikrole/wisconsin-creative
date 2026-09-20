@@ -5,6 +5,7 @@ import { Drawer as DrawerPrimitive } from "vaul"
 import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { overlayCloseButtonAbsolute, overlayScrim } from "@/components/ui/control-styles"
 
 function Drawer({
   ...props
@@ -37,7 +38,7 @@ function DrawerOverlay({
   return (
     <DrawerPrimitive.Overlay
       data-slot="drawer-overlay"
-      className={cn("fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px]", className)}
+      className={cn(overlayScrim, className)}
       {...props}
     />
   )
@@ -63,7 +64,7 @@ function DrawerContent({
         {children}
         <DrawerPrimitive.Close
           data-slot="drawer-close-button"
-          className="absolute right-3 top-3 flex size-10 items-center justify-center rounded-md text-muted-foreground/80 opacity-70 outline-none transition-[background-color,color,box-shadow,opacity] hover:bg-muted hover:text-foreground hover:opacity-100 focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none"
+          className={overlayCloseButtonAbsolute}
         >
           <X className="size-4" />
           <span className="sr-only">Close</span>

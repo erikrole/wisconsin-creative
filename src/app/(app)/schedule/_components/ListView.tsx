@@ -1503,6 +1503,7 @@ export function ListView({
                   {groupEntries.map((entry) => {
               const isExpanded = expandedRowIds.has(entry.id);
               const canExpand = entry.shifts.length > 0 || (isStaff && Boolean(entry.shiftGroupId));
+              const detailId = `schedule-event-${entry.id}-details`;
               const isAssignedToMe = currentUserId ? userHasShift(entry, currentUserId) : false;
               const shiftStatus = currentUserId
                 ? userShiftStatus(entry, currentUserId)
@@ -1517,7 +1518,7 @@ export function ListView({
               const cardSummary = (
                 <>
                   <div className="flex items-start justify-between gap-2 mb-1">
-                    <span className="font-semibold text-sm flex items-center gap-1.5 leading-tight">
+                    <span className="font-semibold text-sm flex min-w-0 items-center gap-1.5 leading-tight">
                       {canExpand && (
                         isExpanded ? (
                           <ChevronDownIcon className="size-3.5 text-muted-foreground shrink-0 mt-0.5" />
@@ -1531,7 +1532,7 @@ export function ListView({
                       >
                         {eventStartLabel(entry)}
                       </span>
-                      {titleParts.title}
+                      <span className="min-w-0 truncate">{titleParts.title}</span>
                     </span>
                     <div className="flex items-center gap-1 flex-shrink-0">
                       {myShiftsOnly && shiftStatus === "Pending" && (
@@ -1607,6 +1608,7 @@ export function ListView({
                       className="w-full px-4 py-3 pr-14 text-left"
                       onClick={() => toggleExpandedRow(entry.id)}
                       aria-expanded={isExpanded}
+                      aria-controls={detailId}
                     >
                       {cardSummary}
                     </button>
@@ -1629,9 +1631,13 @@ export function ListView({
                     </div>
                   )}
 
-                  {isExpanded && canExpand && (
-                    <div className="border-t border-border/40 px-4 py-3 pl-8">
-                      {isStaff && entry.shiftGroupId ? (
+                  {canExpand && (
+                    <div
+                      id={detailId}
+                      hidden={!isExpanded}
+                      className="border-t border-border/40 px-4 py-3 pl-8"
+                    >
+                      {isExpanded && (isStaff && entry.shiftGroupId ? (
                         <WorkingCrewEditor
                           entry={{
                             shiftGroupId: entry.shiftGroupId,
@@ -1655,7 +1661,7 @@ export function ListView({
                           onSelectGroup={() => onSelectGroup(entry.shiftGroupId)}
                           compact
                         />
-                      )}
+                      ))}
                     </div>
                   )}
                 </div>
@@ -1816,14 +1822,12 @@ function EventRows({
         className={cn(
           "group/row border-l-[3px] transition-colors",
           venueTone.railClass,
-          hasShifts ? "cursor-pointer" : "",
           isExpanded
             ? "bg-muted/20"
             : isAssignedToMe
               ? "bg-primary/5 hover:bg-primary/10"
               : "hover:bg-muted/10",
         )}
-        onClick={hasShifts ? onToggle : undefined}
       >
         <td className="border-b border-border/20 px-2 py-1.5">
           <div className={cn("grid min-h-12 items-center gap-2", EVENT_GRID_CLASS)}>
@@ -1834,10 +1838,7 @@ function EventRows({
                   aria-label={isExpanded ? "Collapse shifts" : "Expand shifts"}
                   aria-expanded={isExpanded}
                   className="relative flex size-10 items-center justify-center rounded-md text-muted-foreground transition-[background-color,color,scale] hover:bg-muted hover:text-foreground active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onToggle();
-                  }}
+                  onClick={onToggle}
                 >
                   {isExpanded ? <ChevronDownIcon className="size-4" /> : <ChevronRightIcon className="size-4" />}
                 </button>
@@ -1853,7 +1854,6 @@ function EventRows({
               <Link
                 href={`/events/${entry.id}`}
                 className="flex min-h-10 items-center truncate rounded-sm text-sm font-semibold outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
-                onClick={(e) => e.stopPropagation()}
               >
                 {titleParts.title}
               </Link>

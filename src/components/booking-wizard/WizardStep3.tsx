@@ -8,7 +8,6 @@ import {
   AlertCircleIcon,
   CalendarIcon,
 } from "lucide-react";
-import { sportLabel } from "@/lib/sports";
 import { VENUE_TONES, venueBadgeVariant, venueToneFromIsHome } from "@/lib/venue-tone";
 import { formatChipTime, formatDateTime } from "@/lib/format";
 import { formatCalendarEventDateRange } from "@/lib/calendar-event-dates";
@@ -16,7 +15,7 @@ import type { BulkSelection, EquipmentPickerSelectionState, PickerAsset } from "
 import type { FormUser, Location, BulkSkuOption } from "@/components/booking-list/types";
 import type { FormState } from "@/components/create-booking/types";
 import { MAX_SCROLL_HEIGHT } from "./constants";
-import { buildAvailabilityReview, getTurnaroundWarningTotal } from "./flow-summary";
+import { buildAvailabilityReview, eventSummaryLabel, getTurnaroundWarningTotal } from "./flow-summary";
 
 type WizardConfig = {
   kind: "RESERVATION";
@@ -41,13 +40,6 @@ type Props = {
 
 function eventDateLabel(ev: FormState["selectedEvents"][number]) {
   return ev.allDay ? formatCalendarEventDateRange(ev) : formatChipTime(ev.startsAt);
-}
-
-function eventSummaryLabel(ev: FormState["selectedEvents"][number]) {
-  if (ev.opponent) {
-    return `${ev.sportCode ? `${sportLabel(ev.sportCode)} ` : ""}${ev.isHome === false ? "at" : "vs"} ${ev.opponent}`;
-  }
-  return ev.summary;
 }
 
 function SummaryRow({

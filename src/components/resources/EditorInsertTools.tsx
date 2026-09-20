@@ -1,7 +1,18 @@
 "use client";
 
 import { insertMarkdown$, usePublisher } from "@mdxeditor/editor";
-import { AlertCircle, ChevronDown, Video } from "lucide-react";
+import {
+  AlertCircle,
+  ChevronDown,
+  Copy,
+  Info,
+  Keyboard,
+  Lightbulb,
+  MessageSquareWarning,
+  OctagonAlert,
+  TriangleAlert,
+  Video,
+} from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,11 +33,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   buildCalloutSnippet,
+  buildCopySnippet,
   buildEmbedSnippet,
   CALLOUT_LABELS,
   CALLOUT_TYPES,
+  type CalloutType,
 } from "@/lib/editor-snippets";
 import { parseEmbed } from "@/lib/media-embed";
+
+const CALLOUT_ICONS: Record<CalloutType, typeof Info> = {
+  NOTE: Info,
+  TIP: Lightbulb,
+  SHORTCUT: Keyboard,
+  IMPORTANT: MessageSquareWarning,
+  WARNING: TriangleAlert,
+  CAUTION: OctagonAlert,
+};
 
 /**
  * Toolbar affordances for the guide editor: insert callout templates and
@@ -45,11 +67,15 @@ export function InsertCalloutMenu() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
-        {CALLOUT_TYPES.map((type) => (
-          <DropdownMenuItem key={type} onSelect={() => insertMarkdown(buildCalloutSnippet(type))}>
-            {CALLOUT_LABELS[type]}
-          </DropdownMenuItem>
-        ))}
+        {CALLOUT_TYPES.map((type) => {
+          const Icon = CALLOUT_ICONS[type];
+          return (
+            <DropdownMenuItem key={type} onSelect={() => insertMarkdown(buildCalloutSnippet(type))}>
+              <Icon className="size-4" />
+              {CALLOUT_LABELS[type]}
+            </DropdownMenuItem>
+          );
+        })}
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -123,6 +149,73 @@ export function InsertVideoEmbedButton() {
               Cancel
             </Button>
             <Button type="button" onClick={handleInsert} disabled={!url.trim()}>
+              Insert
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+export function InsertCopySnippetButton() {
+  const insertMarkdown = usePublisher(insertMarkdown$);
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState("");
+
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (!next) setValue("");
+  };
+
+  const handleInsert = () => {
+    const next = value.trim();
+    if (!next) return;
+    insertMarkdown(buildCopySnippet(next));
+    handleOpenChange(false);
+  };
+
+  return (
+    <>
+      <Button
+        type="button"
+        variant="ghost"
+        className="h-10 gap-1 px-2"
+        title="Insert copyable path or string"
+        onClick={() => setOpen(true)}
+      >
+        <Copy className="size-4" />
+        Copyable
+      </Button>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Insert copyable string</DialogTitle>
+            <DialogDescription>
+              Paste a server path, rename string, or other value people should copy in one tap.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-2">
+            <Label htmlFor="copy-snippet">Path or string</Label>
+            <Input
+              id="copy-snippet"
+              placeholder="smb://server/share"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleInsert();
+                }
+              }}
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={handleInsert} disabled={!value.trim()}>
               Insert
             </Button>
           </DialogFooter>

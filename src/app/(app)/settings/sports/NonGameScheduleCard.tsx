@@ -11,18 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { useFetch } from "@/hooks/use-fetch";
 import { handleAuthRedirect, parseJsonSafely } from "@/lib/errors";
+import { formatMinutes } from "@/lib/format";
 import { AREAS, AREA_LABELS, type Area, type NonGameScheduleDefaults } from "./types";
 
 const CALL_TIME_OPTIONS = [0, 15, 30, 45, 60, 90, 120, 150, 180, 210, 240];
 
-function formatMinutes(minutes: number) {
-  if (minutes === 0) return "None";
-  const hours = Math.floor(minutes / 60);
-  const remainder = minutes % 60;
-  if (hours === 0) return `${remainder}min`;
-  if (remainder === 0) return hours === 1 ? "1 hr" : `${hours} hrs`;
-  return `${hours}h ${remainder}m`;
-}
 
 export default function NonGameScheduleCard() {
   const { data, loading, error, reload } = useFetch<NonGameScheduleDefaults>({
@@ -101,9 +94,9 @@ export default function NonGameScheduleCard() {
             <p className="mt-1 text-xs text-muted-foreground">Used when an event has no opponent, including meetings, shoots, and special coverage.</p>
           </div>
           {draft ? (
-            <Button className="h-10" disabled={saving} onClick={save}>
+            <Button className="h-10" disabled={saving} loading={saving} onClick={save}>
               <SaveIcon data-icon="inline-start" />
-              {saving ? "Saving..." : "Save"}
+              Save
             </Button>
           ) : null}
         </div>

@@ -26,6 +26,7 @@ import { formatCalendarEventDateRange } from "@/lib/calendar-event-dates";
 import { cn } from "@/lib/utils";
 import { MAX_LINKED_EVENTS_PER_BOOKING } from "@/lib/request-limits";
 import { minimumBookingEndDate } from "@/lib/quarter-hour";
+import { eventSummaryLabel } from "./flow-summary";
 import { VENUE_TONES, venueBadgeVariant, venueToneFromIsHome } from "@/lib/venue-tone";
 import {
   toLocalDateTimeValue,
@@ -73,13 +74,6 @@ function eventDateLabel(ev: CalendarEvent, includeYear = false) {
     : includeYear
       ? formatDateTime(ev.startsAt)
       : formatChipTime(ev.startsAt);
-}
-
-function eventSummaryLabel(ev: CalendarEvent) {
-  if (ev.opponent) {
-    return `${ev.sportCode ? `${sportLabel(ev.sportCode)} ` : ""}${ev.isHome === false ? "at" : "vs"} ${ev.opponent}`;
-  }
-  return ev.summary;
 }
 
 function Field({
@@ -160,7 +154,7 @@ export function WizardStep1({
               {contextBadgeLabel}
             </Badge>
           </div>
-          <div className="flex h-9 items-center gap-2 rounded-md border border-border/70 bg-background px-3">
+          <div className="flex h-10 items-center gap-2 rounded-md border border-border/70 bg-background px-3">
             <Switch
               id="booking-link-to-event"
               aria-label="Link to event"

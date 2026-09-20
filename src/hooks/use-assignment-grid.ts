@@ -42,7 +42,7 @@ export type GridColumn = {
   label: string;
 };
 
-export type UseAssignmentGridResult = {
+type UseAssignmentGridResult = {
   events: GridEvent[];
   columns: GridColumn[];
   loading: boolean;

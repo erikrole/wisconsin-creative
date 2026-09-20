@@ -11,17 +11,12 @@ import {
   REPORT_CHART_COLORS,
   REPORT_SEMANTIC_CHART_COLORS,
   ReportChartCard,
+  formatDateLabel,
 } from "../report-ui";
 
 const trendConfig: ChartConfig = {
   count: { label: "Checkouts", color: REPORT_SEMANTIC_CHART_COLORS.active },
 };
-
-function formatDateLabel(dateStr: unknown) {
-  if (typeof dateStr !== "string") return String(dateStr);
-  const d = new Date(dateStr + "T00:00:00");
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
 
 export function CheckoutTrendChart({
   dailyTrend,

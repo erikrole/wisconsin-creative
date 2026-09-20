@@ -48,6 +48,7 @@ function InternalDashboardPage() {
     fastStats,
     fetchError,
     refreshing,
+    refreshBusy,
     statsSyncIssue,
     lastRefreshed,
     loadData,
@@ -192,7 +193,7 @@ function InternalDashboardPage() {
       detail: "Scheduled pickup has passed without a kiosk handoff.",
       icon: ClockAlertIcon,
       tone: "warning" as const,
-      href: "/bookings?tab=reservations",
+      href: "/bookings?tab=checkouts&status=PENDING_PICKUP",
     }] : []),
     ...(stats.checkedOut > 0 ? [{
       id: "checked-out",
@@ -212,6 +213,15 @@ function InternalDashboardPage() {
       tone: "neutral" as const,
       href: "/bookings?tab=reservations",
     }] : []),
+    ...(data && data.staleReservations.total > 0 ? [{
+      id: "stale-reservations",
+      label: "Stale reservations",
+      value: data.staleReservations.total,
+      detail: "Reservations past their event window that still need cleanup.",
+      icon: ClockAlertIcon,
+      tone: "warning" as const,
+      href: "/bookings?tab=reservations&filter=overdue",
+    }] : []),
   ] : [];
 
   return (
@@ -226,7 +236,9 @@ function InternalDashboardPage() {
             label={bookingSync.label}
             size="sm"
             title={bookingSync.description}
-            className="h-6 px-2 text-[11px] font-bold shadow-[0_0_14px_rgba(34,197,94,0.2)]"
+            className={bookingSync.state === "active"
+              ? "h-6 px-2 text-[11px] font-bold shadow-[0_0_14px_rgba(34,197,94,0.2)]"
+              : "h-6 px-2 text-[11px] font-bold"}
             labelClassName="font-bold"
           />
         )}
@@ -249,7 +261,7 @@ function InternalDashboardPage() {
                 size="sm"
                 className="h-10"
                 onClick={() => loadData()}
-                disabled={refreshing}
+                disabled={refreshBusy}
                 aria-label="Refresh dashboard"
               >
                 <RefreshCwIcon className={`size-3.5 ${refreshing ? "animate-spin" : ""}`} data-icon="inline-start" />
@@ -285,7 +297,7 @@ function InternalDashboardPage() {
             <div className="grid grid-cols-2 gap-2 lg:grid-cols-5">
               <OperationalMetricCard label="Overdue" value={stats.overdue} tone={stats.overdue > 0 ? "red" : "muted"} href="/checkouts?filter=overdue" />
               <OperationalMetricCard label="Due today" value={stats.dueToday} tone={stats.dueToday > 0 ? "orange" : "muted"} href="/bookings?tab=checkouts&filter=due-today" />
-              <OperationalMetricCard label="Pending pickup" value={pendingPickupTotal} tone={pendingPickupTotal > 0 ? "orange" : "muted"} href="/bookings?tab=reservations" />
+              <OperationalMetricCard label="Pending pickup" value={pendingPickupTotal} tone={pendingPickupTotal > 0 ? "orange" : "muted"} href="/bookings?tab=checkouts&status=PENDING_PICKUP" />
               <OperationalMetricCard label="Checked out" value={stats.checkedOut} tone="blue" href="/bookings?tab=checkouts&status=OPEN" />
               <OperationalMetricCard label="Reserved" value={stats.reserved} tone="purple" href="/bookings?tab=reservations" />
             </div>
@@ -294,7 +306,7 @@ function InternalDashboardPage() {
       )}
 
       {/* ══════ Welcome Banner (first-run) ══════ */}
-      {isFirstRun && (
+      {isFirstRun && isStaff && (
         <div className="relative bg-card border border-border rounded-xl mb-4 overflow-hidden animate-[empty-fade-in_0.4s_ease-out]">
           {/* Red accent stripe */}
           <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-[var(--wi-red)]" aria-hidden="true" />
@@ -343,11 +355,11 @@ function InternalDashboardPage() {
 
       <AnimatePresence initial={false}>
         {/* ══════ Overdue Banner ══════ */}
-        {overdueCount !== null && overdueCount > 0 && (
+        {data && overdueCount !== null && overdueCount > 0 && (
           <DashboardStateSurface key="overdue" layout>
             <OverdueBanner
               overdueCount={overdueCount}
-              overdueItems={data?.overdueItems ?? []}
+              overdueItems={data.overdueItems}
               now={now}
               onSelectBooking={setSelectedBookingId}
               canAction={roleKnown && !isStudent}
@@ -385,7 +397,7 @@ function InternalDashboardPage() {
               activeSport={filters.activeSport}
               hasActiveFilter={filters.hasActiveFilter}
               now={now}
-              acting={acting !== null}
+              actingId={acting}
               onSelectBooking={setSelectedBookingId}
               onDeleteDraft={handleDeleteDraft}
               onCreateBooking={handleCreateBooking}

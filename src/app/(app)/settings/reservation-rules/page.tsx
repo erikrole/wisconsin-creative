@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +12,9 @@ import EmptyState from "@/components/EmptyState";
 import { useFetch } from "@/hooks/use-fetch";
 import { handleAuthRedirect, isAbortError, parseErrorMessage } from "@/lib/errors";
 import { SettingsPageShell } from "../SettingsPageShell";
+import { SettingsSaveBar } from "../_components/SettingsSaveBar";
 import type { ReservationRules } from "@/lib/services/reservation-rules";
+import { isDirty } from "@/lib/utils";
 
 type FormState = {
   advanceWindowDays: string;
@@ -27,12 +28,6 @@ function toForm(r: ReservationRules): FormState {
     noShowExpiryHours: String(r.noShowExpiryHours),
     maxConcurrentReservations: r.maxConcurrentReservations === null ? "" : String(r.maxConcurrentReservations),
   };
-}
-
-function isDirty(a: FormState, b: FormState): boolean {
-  return a.advanceWindowDays !== b.advanceWindowDays
-    || a.noShowExpiryHours !== b.noShowExpiryHours
-    || a.maxConcurrentReservations !== b.maxConcurrentReservations;
 }
 
 export default function ReservationRulesPage() {
@@ -149,7 +144,7 @@ export default function ReservationRulesPage() {
 
   if (loading && !form) {
     return (
-      <SettingsPageShell title="Reservation Rules" description="Advance booking window, no-show expiry, and concurrent reservation cap.">
+      <SettingsPageShell href="/settings/reservation-rules">
         <Skeleton className="h-64 w-full rounded-lg" />
       </SettingsPageShell>
     );
@@ -157,7 +152,7 @@ export default function ReservationRulesPage() {
 
   if (!form) {
     return (
-      <SettingsPageShell title="Reservation Rules" description="Advance booking window, no-show expiry, and concurrent reservation cap.">
+      <SettingsPageShell href="/settings/reservation-rules">
         <EmptyState
           inline
           icon={error === "network" ? "wifi-off" : "calendar"}
@@ -171,7 +166,7 @@ export default function ReservationRulesPage() {
   }
 
   return (
-    <SettingsPageShell title="Reservation Rules" description="Advance booking window, no-show expiry, and concurrent reservation cap.">
+    <SettingsPageShell href="/settings/reservation-rules">
       {error && (
         <Alert className="mb-4">
           <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
@@ -253,16 +248,7 @@ export default function ReservationRulesPage() {
             </div>
 
             {saveError && <Alert variant="destructive"><AlertDescription>{saveError}</AlertDescription></Alert>}
-            <div className="flex flex-wrap items-center justify-end gap-3 pt-1">
-              <p role="status" className="mr-auto text-sm text-muted-foreground">
-                {saving ? "Saving changes…" : dirty ? "Unsaved changes" : "All changes saved"}
-              </p>
-              <Button type="button" variant="outline" className="h-10" onClick={resetChanges} disabled={!dirty || saving}>Reset changes</Button>
-              <Button type="submit" className="h-10" disabled={!dirty || saving} aria-busy={saving}>
-                {saving && <Loader2 aria-hidden="true" className="size-4 animate-spin" />}
-                {dirty ? "Save changes" : "Saved"}
-              </Button>
-            </div>
+            <SettingsSaveBar dirty={dirty} saving={saving} onReset={resetChanges} />
           </CardContent>
         </Card>
       </form>

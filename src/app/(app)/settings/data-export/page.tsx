@@ -111,7 +111,7 @@ export default function DataExportPage() {
 
   return (
     <SettingsPageShell
-      title="Data Export"
+      href="/settings/data-export"
       description="Download a CSV snapshot of any data set. Exports are capped at 5,000 rows and include all records visible to your role."
     >
       <div className="flex flex-col gap-3">

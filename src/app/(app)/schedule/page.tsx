@@ -371,11 +371,12 @@ function InternalSchedulePage() {
   return (
     <FadeUp>
       {/*
-        The title and filters stay put while the timeline runs beneath them, so
-        scrolling back through the season always has a frame of reference. Its
-        measured bottom edge feeds `--schedule-sticky-bottom`, which the day
-        headers stick below and the today anchor scrolls to -- otherwise both
-        would land underneath this bar or the app-shell header above it.
+        The title, filters, and recent-activity strip stay put while the
+        timeline runs beneath them, so scrolling back through the season always
+        has a frame of reference. Its measured bottom edge feeds
+        `--schedule-sticky-bottom`, which the day headers stick below and the
+        today anchor scrolls to -- otherwise both would land underneath this
+        bar or the app-shell header above it.
       */}
       {/*
         Sentinel: once this scrolls out of view the bar is pinned, which CSS
@@ -473,6 +474,24 @@ function InternalSchedulePage() {
           fillingWindow={data.fillingWindow}
           sourceSignal={data.sourceSignal}
         />
+
+        {!data.loading && !data.loadError && <ScheduleReadiness
+          entries={data.entries}
+          filteredEntries={data.filteredEntries}
+          currentUserId={data.currentUserId}
+          openTradeCount={data.openTradeCount}
+          health={data.scheduleHealth}
+          sourceSignal={data.sourceSignal}
+          digest={data.scheduleAutomation}
+          isStaff={isStaff}
+          canReviewClaims={canReviewClaims}
+          combineSuggestion={isStaff ? leadingCombineSuggestion : null}
+          onShowQueue={showQueue}
+          onOpenTradeBoard={openTradeBoard}
+          onReviewCombine={reviewCombineSuggestion}
+          onDismissCombine={dismissCombineSuggestion}
+          onReviewPendingCrew={openCrewSheet}
+        />}
       </div>
 
       {(data.loadError || data.refreshError || data.healthUnavailable) && !data.loading && (
@@ -489,25 +508,6 @@ function InternalSchedulePage() {
         </Alert>
       )}
 
-      {!data.loading && !data.loadError && <ScheduleReadiness
-        entries={data.entries}
-        filteredEntries={data.filteredEntries}
-        currentUserId={data.currentUserId}
-        openTradeCount={data.openTradeCount}
-        health={data.scheduleHealth}
-        sourceSignal={data.sourceSignal}
-        digest={data.scheduleAutomation}
-        isStaff={isStaff}
-        canReviewClaims={canReviewClaims}
-        combineSuggestion={isStaff ? leadingCombineSuggestion : null}
-        onShowQueue={showQueue}
-        onOpenTradeBoard={openTradeBoard}
-        onReviewCombine={reviewCombineSuggestion}
-        onDismissCombine={dismissCombineSuggestion}
-        onReviewPendingCrew={openCrewSheet}
-      />}
-
-      {/* Calendar View */}
       {canDisplaySchedule && data.filters.viewMode === "calendar" && (
         <CalendarView
           entries={data.filteredEntries}
@@ -551,7 +551,7 @@ function InternalSchedulePage() {
           loadData={data.loadData}
           myShiftsOnly={data.filters.myShiftsOnly}
           setMyShiftsOnly={data.filters.setMyShiftsOnly}
-          clearFilters={data.filters.clearAll}
+          clearFilters={clearBrowseFilters}
           timelineTruncated={data.timelineTruncated}
           isTimeline={data.isTimeline}
           hasMorePast={data.hasMorePast}

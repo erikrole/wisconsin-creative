@@ -780,7 +780,7 @@ export default function OnboardingDialog({
                       <div className="flex items-center gap-2">
                         <Label htmlFor="onboard-bulk-role" className="text-xs font-normal text-muted-foreground whitespace-nowrap">Role for all</Label>
                         <Select name="bulkInvitationRole" value={inviteRole} onValueChange={(value) => setInviteRole(value as InviteRole)} disabled={inviting}>
-                          <SelectTrigger id="onboard-bulk-role" className="h-9 w-[130px]">
+                          <SelectTrigger id="onboard-bulk-role" className="w-[130px]">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>

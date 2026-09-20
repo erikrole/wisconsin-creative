@@ -1,6 +1,7 @@
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
+import { fieldChrome } from "@/components/ui/control-styles"
 
 function NativeSelect({
   className,
@@ -11,9 +12,8 @@ function NativeSelect({
     <select
       data-slot="native-select"
       className={cn(
-        "border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base md:text-sm shadow-xs outline-none transition-[color,box-shadow] disabled:cursor-not-allowed disabled:opacity-50",
-        "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
-        "aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40",
+        "flex h-10 w-full min-w-0 cursor-pointer rounded-md border px-3 py-1 text-base md:text-sm",
+        fieldChrome,
         className,
       )}
       {...props}

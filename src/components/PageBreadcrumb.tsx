@@ -29,6 +29,7 @@ import {
   getRecentEntities,
   isQuietBreadcrumbRoute,
   saveRecentEntity,
+  shouldShowBreadcrumbs,
   visibleSiblingsForRole,
   type RecentEntity,
   type SiblingItem,
@@ -42,14 +43,13 @@ const HOME_CRUMB_COMPACT_THRESHOLD = 3;
 const breadcrumbItemClass = "min-w-0";
 const separatorClass = "text-muted-foreground/35 [&>svg]:size-3";
 const crumbControlClass = cn(
-  "group relative inline-flex min-h-10 min-w-0 items-center gap-1 rounded-md px-2 py-1 text-sm font-medium text-muted-foreground no-underline outline-none",
+  "group relative inline-flex min-h-10 min-w-0 items-center gap-1 rounded-md px-1.5 py-1 text-sm font-medium text-muted-foreground no-underline outline-none",
   "transition-[background-color,color,box-shadow,scale] duration-150 hover:bg-foreground/[0.04] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.96]",
   "max-md:min-h-11 max-md:px-2 [&_svg]:size-3.5 [&_svg]:shrink-0",
 );
 const crumbPageClass = cn(
-  "relative inline-flex min-h-10 min-w-0 items-center rounded-md px-2 py-1 text-sm font-semibold text-foreground outline-none",
-  "after:absolute after:inset-x-2 after:bottom-1 after:h-0.5 after:rounded-full after:bg-primary/55",
-  "max-md:min-h-11 max-md:px-2 max-md:after:bottom-1.5 [&_svg]:size-3.5 [&_svg]:shrink-0",
+  "brand-identity relative inline-flex min-h-10 min-w-0 items-center rounded-md px-1.5 py-1 text-sm font-medium text-foreground outline-none",
+  "max-md:min-h-11 max-md:px-2 [&_svg]:size-3.5 [&_svg]:shrink-0",
 );
 
 export default function PageBreadcrumb() {
@@ -83,7 +83,7 @@ export default function PageBreadcrumb() {
     }
   }, [entityLabel, pathname, firstSegment, hasDynamicSegment]);
 
-  if (allItems.length <= 1) return null;
+  if (!shouldShowBreadcrumbs(allItems, onDetailPage)) return null;
 
   const shouldCollapse = !expanded && allItems.length > COLLAPSE_THRESHOLD;
   const visibleItems: typeof allItems = shouldCollapse
@@ -94,13 +94,8 @@ export default function PageBreadcrumb() {
   const compactHome = visibleItems.length >= HOME_CRUMB_COMPACT_THRESHOLD;
 
   return (
-    <Breadcrumb className={cn("flex min-w-0 items-center print:hidden", isQuietRoute ? "mb-0" : "mb-5")}>
-      <BreadcrumbList
-        className={cn(
-          "min-w-0 gap-0 rounded-lg bg-background/45 px-0 py-0.5 shadow-[0_1px_0_rgba(15,23,42,0.05)] backdrop-blur supports-[backdrop-filter]:bg-background/35 sm:gap-0.5",
-          isQuietRoute && "bg-transparent py-0 shadow-none backdrop-blur-none supports-[backdrop-filter]:bg-transparent",
-        )}
-      >
+    <Breadcrumb className={cn("flex min-w-0 items-center print:hidden", isQuietRoute ? "mb-0" : "mb-3")}>
+      <BreadcrumbList className="min-w-0 gap-0 px-0 py-0 sm:gap-0.5">
         {visibleItems.map((item, i) => {
           const siblingItems = SIBLING_MAP[item.href];
           const visibleSiblings = siblingItems
@@ -134,7 +129,7 @@ export default function PageBreadcrumb() {
                     className={cn(
                       crumbPageClass,
                       CRUMB_MAX_WIDTH,
-                      isQuietRoute && "px-1 after:inset-x-1",
+                      isQuietRoute && "px-1",
                     )}
                   >
                     <span className="truncate">{item.label}</span>

@@ -265,7 +265,7 @@ export function CombineEventsDialog({
               <p className="text-muted-foreground">{preview.secondary.summary}</p>
             </div>
             {preview.secondary.draftSlotCount > 0 && (
-              <p className="rounded-md border border-orange-500/25 bg-orange-500/10 px-3 py-2 text-orange-800 dark:text-orange-200">
+              <p className="rounded-md border border-[var(--orange-text)]/25 bg-[var(--orange-bg)] px-3 py-2 text-[var(--orange-text)]">
                 Retire {preview.secondary.draftSlotCount} empty draft slot{preview.secondary.draftSlotCount === 1 ? "" : "s"}. No assigned or published crew is removed.
               </p>
             )}

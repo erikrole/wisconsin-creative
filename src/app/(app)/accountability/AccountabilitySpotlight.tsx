@@ -21,6 +21,8 @@ type SpotlightPerson = {
   lastIncidentAt: string;
 };
 
+const RANK_LABELS = ["1st", "2nd", "3rd"] as const;
+
 function formatHours(hours: number) {
   if (hours < 24) return `${hours}h`;
   const days = Math.floor(hours / 24);
@@ -47,12 +49,14 @@ export function AccountabilitySpotlight({
   scopeLabel,
   now,
   jeers,
+  currentUserId,
 }: {
   people: SpotlightPerson[];
   sort: SortKey;
   scopeLabel: string;
   now: Date;
   jeers: string[];
+  currentUserId?: string | null;
 }) {
   const reduceMotion = useReducedMotion();
   const podium = people.slice(0, 3);
@@ -110,6 +114,7 @@ export function AccountabilitySpotlight({
                 const rank = index + 1;
                 const score = scoreFor(person, sort, now);
                 const isLeader = rank === 1;
+                const isYou = currentUserId === person.userId;
 
                 return (
                   <motion.article
@@ -120,7 +125,7 @@ export function AccountabilitySpotlight({
                     exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -6, scale: 0.98 }}
                     transition={{
                       duration: reduceMotion ? 0.12 : 0.24,
-                      delay: reduceMotion ? 0 : index * 0.045,
+                      delay: reduceMotion ? 0 : index * 0.03,
                       ease: [0.16, 1, 0.3, 1],
                     }}
                     className={cn(
@@ -128,6 +133,7 @@ export function AccountabilitySpotlight({
                       isLeader
                         ? "border-[color-mix(in_oklch,var(--red)_28%,var(--border))] bg-[color-mix(in_oklch,var(--red-bg)_58%,var(--card))]"
                         : "bg-card",
+                      isYou && "ring-1 ring-ring/40",
                     )}
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -139,7 +145,7 @@ export function AccountabilitySpotlight({
                           className="shrink-0"
                         />
                         <div className="min-w-0">
-                          <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                          <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                             {isLeader ? (
                               <motion.span
                                 initial={reduceMotion ? false : { rotate: -12, scale: 0.8 }}
@@ -155,7 +161,7 @@ export function AccountabilitySpotlight({
                             ) : (
                               <MedalIcon className="size-4" aria-hidden="true" />
                             )}
-                            Rank {rank}
+                            {RANK_LABELS[index]}
                           </div>
                           <Link
                             href={`/users/${person.userId}`}
@@ -163,6 +169,11 @@ export function AccountabilitySpotlight({
                           >
                             {person.name}
                           </Link>
+                          {isYou ? (
+                            <Badge variant="secondary" size="sm" className="mt-1">
+                              You
+                            </Badge>
+                          ) : null}
                         </div>
                       </div>
                       {person.activeOverdueCount > 0 ? (

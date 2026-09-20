@@ -12,7 +12,7 @@ import {
 import { handleAuthRedirect, parseJsonSafely } from "@/lib/errors";
 import { useAuthenticatedQueryUserId } from "@/components/QueryProvider";
 
-export const DASHBOARD_KEY = ["dashboard"] as const;
+const DASHBOARD_KEY = ["dashboard"] as const;
 export const DASHBOARD_STATS_KEY = ["dashboard-stats"] as const;
 const UNRESOLVED_USER_KEY = "unresolved";
 
@@ -77,18 +77,19 @@ export async function fetchDashboardStats(signal?: AbortSignal): Promise<Dashboa
   return json.data;
 }
 
-export type UseDashboardDataResult = {
+type UseDashboardDataResult = {
   data: DashboardData | null;
   fastStats: DashboardStats | null;
   fetchError: false | "auth" | "network" | "server";
   refreshing: boolean;
+  refreshBusy: boolean;
   statsSyncIssue: DashboardStatsSyncIssue;
   lastRefreshed: Date | null;
   loadData: () => void;
   setData: React.Dispatch<React.SetStateAction<DashboardData | null>>;
 };
 
-export type DashboardStatsSyncIssue = null | {
+type DashboardStatsSyncIssue = null | {
   label: string;
   description: string;
 };
@@ -218,6 +219,7 @@ export function useDashboardData(): UseDashboardDataResult {
     fastStats: userId ? statsData ?? null : null,
     fetchError,
     refreshing: (isFetching && !isLoading) || isStatsFetching,
+    refreshBusy: isFetching && !isLoading,
     statsSyncIssue,
     lastRefreshed: Math.max(dataUpdatedAt, statsUpdatedAt) > 0
       ? new Date(Math.max(dataUpdatedAt, statsUpdatedAt))

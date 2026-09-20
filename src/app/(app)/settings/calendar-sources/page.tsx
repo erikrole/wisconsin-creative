@@ -270,16 +270,17 @@ export default function CalendarSourcesPage() {
 
   return (
     <SettingsPageShell
-      title="Calendar Sources"
-      description="Manage ICS calendar feeds for event syncing. Events are automatically imported and used for shift scheduling."
+      href="/settings/calendar-sources"
+      description="ICS calendar feeds for event sync. Automatic sync runs daily in morning refresh."
+      mainClassName="flex flex-col gap-4"
+      actions={
+        !showAdd ? (
+          <Button className="h-10" onClick={() => setShowAdd(true)}>
+            Add source
+          </Button>
+        ) : undefined
+      }
     >
-        <div className="flex gap-2">
-          {!showAdd && (
-            <Button className="h-10" onClick={() => setShowAdd(true)}>
-              Add source
-            </Button>
-          )}
-        </div>
 
         <Alert>
           <RefreshCw className="size-4" />

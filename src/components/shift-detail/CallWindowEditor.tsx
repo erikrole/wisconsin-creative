@@ -247,8 +247,8 @@ export function CallWindowEditor({
               <Button className="h-10" type="button" variant="outline" disabled={saving} onClick={() => setOpen(false)}>
                 Cancel
               </Button>
-              <Button className="h-10" type="button" disabled={saving} onClick={saveDraft}>
-                {saving ? "Saving..." : "Save"}
+              <Button className="h-10" type="button" disabled={saving} loading={saving} onClick={saveDraft}>
+                Save
               </Button>
             </div>
           </div>

@@ -17,6 +17,7 @@ import {
   type SettingsSection,
 } from "@/lib/nav-sections";
 import { Button } from "@/components/ui/button";
+import { settingsSectionIcon } from "./_components/settings-meta";
 
 /**
  * ⌘K / Ctrl+K palette over the visible settings sections. Receives only the
@@ -39,11 +40,12 @@ export function SettingsCommand({ visibleSections }: { visibleSections: Readonly
       );
       if (isCmdK || (isSlash && !inField)) {
         e.preventDefault();
+        e.stopImmediatePropagation();
         setOpen((v) => !v);
       }
     }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
   }, []);
 
   function go(href: string) {
@@ -51,7 +53,6 @@ export function SettingsCommand({ visibleSections }: { visibleSections: Readonly
     router.push(href);
   }
 
-  // Group the visible sections in the configured order.
   const grouped = SETTINGS_GROUP_ORDER.map((group) => ({
     group,
     sections: visibleSections.filter((s) => s.group === group),
@@ -75,25 +76,41 @@ export function SettingsCommand({ visibleSections }: { visibleSections: Readonly
       </Button>
 
       <CommandDialog open={open} onOpenChange={setOpen}>
-        <CommandInput placeholder="Search settings — try 'allowlist', 'cron', 'home venue'…" />
+        <CommandInput placeholder="Search settings — try 'allowlist', 'kiosk', 'home venue'…" />
         <CommandList>
           <CommandEmpty>No matching settings page.</CommandEmpty>
+          <CommandGroup heading="Settings">
+            <CommandItem
+              value="overview control map settings home"
+              onSelect={() => go("/settings")}
+              className="min-h-11 transition-[background-color,color]"
+            >
+              <div className="flex min-w-0 flex-col gap-0.5">
+                <span className="font-medium">Overview</span>
+                <span className="truncate text-xs text-muted-foreground">Browse every settings area available to you.</span>
+              </div>
+            </CommandItem>
+          </CommandGroup>
           {grouped.map(({ group, sections }) => (
             <CommandGroup key={group} heading={group}>
-              {sections.map((s) => (
-                <CommandItem
-                  key={s.href}
-                  value={`${s.label} ${s.description} ${(s.keywords ?? []).join(" ")}`}
-                  onSelect={() => go(s.href)}
-                  className="min-h-11 transition-[background-color,color]"
-                >
-                  <div className="flex flex-col gap-0.5 min-w-0">
-                    <span className="font-medium">{s.label}</span>
-                    <span className="text-xs text-muted-foreground truncate">{s.description}</span>
-                  </div>
-                  <CommandShortcut>{s.href.replace("/settings/", "")}</CommandShortcut>
-                </CommandItem>
-              ))}
+              {sections.map((s) => {
+                const Icon = settingsSectionIcon(s.href);
+                return (
+                  <CommandItem
+                    key={s.href}
+                    value={`${s.label} ${s.description} ${(s.keywords ?? []).join(" ")}`}
+                    onSelect={() => go(s.href)}
+                    className="min-h-11 transition-[background-color,color]"
+                  >
+                    <Icon className="size-4 shrink-0 text-muted-foreground" />
+                    <div className="flex min-w-0 flex-col gap-0.5">
+                      <span className="font-medium">{s.label}</span>
+                      <span className="truncate text-xs text-muted-foreground">{s.description}</span>
+                    </div>
+                    <CommandShortcut>{s.href.replace("/settings/", "")}</CommandShortcut>
+                  </CommandItem>
+                );
+              })}
             </CommandGroup>
           ))}
         </CommandList>

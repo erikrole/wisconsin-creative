@@ -7,7 +7,7 @@ export const OPERATIONAL_POLLING_IDLE_MS = 2 * 60_000;
 const ACTIVITY_RECORD_THROTTLE_MS = 15_000;
 const ACTIVITY_EVENTS = ["pointerdown", "pointermove", "keydown", "touchstart", "wheel"] as const;
 
-export type OperationalPollingState = "active" | "idle" | "hidden" | "offline" | "disabled";
+type OperationalPollingState = "active" | "idle" | "hidden" | "offline" | "disabled";
 
 type PollingStateInput = {
   enabled: boolean;

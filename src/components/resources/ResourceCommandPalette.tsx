@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   BookOpenIcon,
@@ -29,9 +29,8 @@ function formatUpdated(value: Date | string) {
 }
 
 /**
- * ⌘K / Ctrl+K instant search over the loaded Resources guides plus quick jumps to
- * the Contacts and Sport assignments reference views. Filtering is client-side over
- * the already-fetched list, so there is no extra network round trip.
+ * In-page Quick find over the loaded Resources guides plus jumps to Contacts
+ * and Sport assignments. Cmd/Ctrl+K stays with the app-wide search palette.
  */
 export function ResourceCommandPalette({
   guides,
@@ -43,17 +42,6 @@ export function ResourceCommandPalette({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if ((e.key === "k" || e.key === "K") && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        setOpen((v) => !v);
-      }
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
 
   const searchable = useMemo(() => buildResourceSearchIndex(guides), [guides]);
   const recent = useMemo(() => selectRecentEntries(searchable, RECENT_COUNT), [searchable]);
@@ -80,10 +68,7 @@ export function ResourceCommandPalette({
         aria-label="Quick find a guide"
       >
         <SearchIcon data-icon="inline-start" />
-        <span className="truncate">Quick find</span>
-        <kbd className="ml-auto hidden shrink-0 items-center gap-0.5 rounded border bg-muted px-1.5 py-0.5 font-mono text-[10px] md:inline-flex">
-          ⌘K
-        </kbd>
+        <span className="hidden sm:inline">Quick find</span>
       </Button>
 
       <CommandDialog open={open} onOpenChange={setOpen}>

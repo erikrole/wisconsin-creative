@@ -38,6 +38,7 @@ import {
   getReportExportFilename,
   readReportExportFailureMessage,
 } from "../report-export";
+import { formatPercent } from "@/lib/format";
 
 type SkuLoss = {
   skuName: string;
@@ -134,10 +135,6 @@ type ReportData = {
   recentLosses: RecentLoss[];
   batteryAudit: BatteryAudit;
 };
-
-function formatPercent(value: number) {
-  return `${Math.round(value * 100)}%`;
-}
 
 async function downloadMissingUnitsCsv(query: string) {
   try {

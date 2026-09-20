@@ -12,8 +12,7 @@ interface PageHeaderProps {
 
 /**
  * Standardized page header for all routes.
- * Gotham Black title, optional description, right-aligned actions.
- * Consistent 32px (mb-8) bottom spacing.
+ * Gotham Black title via the global h1 scale, optional description, right-aligned actions.
  */
 export function PageHeader({
   title,
@@ -23,13 +22,13 @@ export function PageHeader({
   className,
 }: PageHeaderProps) {
   return (
-    <div
+    <header
       className={cn(
-        "flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between mb-8",
+        "mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between",
         className
       )}
     >
-      <div className="min-w-0 flex-1 border-l-[3px] border-l-[var(--wi-red)] pl-3">
+      <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-2.5">
           <h1 className="min-w-0 break-words text-wrap-balance">{title}</h1>
           {titleAccessory && <div className="shrink-0">{titleAccessory}</div>}
@@ -39,10 +38,10 @@ export function PageHeader({
         )}
       </div>
       {children && (
-        <div className="flex items-center gap-2 shrink-0 mt-3 sm:mt-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           {children}
         </div>
       )}
-    </div>
+    </header>
   );
 }

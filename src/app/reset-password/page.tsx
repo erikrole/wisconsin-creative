@@ -14,12 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useFormSubmit } from "@/hooks/use-form-submit";
 import { AccountUsernameField, passwordRulesAttribute } from "@/components/auth/AccountUsernameField";
 import { parseJsonSafely } from "@/lib/errors";
-
-function validatePassword(password: string): string {
-  if (!password) return "Password is required";
-  if (password.length < 8) return "Must be at least 8 characters";
-  return "";
-}
+import { validatePassword } from "@/lib/password-rules";
 
 function ResetPasswordForm() {
   const searchParams = useSearchParams();

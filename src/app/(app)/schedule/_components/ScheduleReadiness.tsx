@@ -19,7 +19,10 @@ import { OperationalStatusRail } from "@/components/OperationalStatusRail";
 import type { CombinedScheduleEventSuggestion } from "@/lib/combined-schedule-event-suggestions";
 import type { ScheduleHealthSnapshot } from "@/lib/schedule-health-types";
 import type { ScheduleChangeKind } from "@/lib/schedule-change-history-types";
-import { recentScheduleActivityItems } from "@/lib/schedule-recent-activity";
+import {
+  recentScheduleActivityItems,
+  recentScheduleSyncItems,
+} from "@/lib/schedule-recent-activity";
 import type { ScheduleSourceSignal } from "@/lib/calendar-source-freshness";
 import type { ScheduleQueue } from "@/lib/schedule-queues";
 import { filterEntriesForScheduleQueue } from "@/lib/schedule-queues";
@@ -161,7 +164,8 @@ export function ScheduleReadiness({
   const recentCalendarChanges = recentActivityCount(health, CALENDAR_ACTIVITY_KINDS);
   const recentAssigneeChanges = recentActivityCount(health, ASSIGNEE_ACTIVITY_KINDS);
   const recentChanges = recentScheduleActivityItems(health);
-  const recentActivity = coalesceScheduleChanges(recentChanges);
+  const recentSyncChanges = recentScheduleSyncItems(health);
+  const recentActivity = coalesceScheduleChanges(recentSyncChanges);
   const releaseFailures = isStaff
     ? filteredEntries.filter((entry) => entry.autoReleaseError && !entry.archivedAt && !entry.eventArchivedAt)
     : [];
@@ -318,7 +322,7 @@ export function ScheduleReadiness({
   return (
     <>
       <OperationalStatusRail
-        className="mb-3"
+        className="mt-0.5"
         items={[]}
         feed={(
           <ScheduleRecentActivity

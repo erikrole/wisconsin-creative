@@ -17,11 +17,12 @@ import { PageHeader } from "@/components/PageHeader";
 import { FadeUp } from "@/components/ui/motion";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { handleAuthRedirect, parseJsonSafely } from "@/lib/errors";
+import { mapGuideSearchResult, type GuideSearchHit } from "@/lib/guide-search-result";
 import { getVisiblePageSearchResults, type PageSearchResult } from "@/lib/search-pages";
 import { assetSearchTitle } from "@/lib/search-result-title";
 
 type EntitySearchResult = {
-  type: "item" | "checkout" | "reservation" | "user";
+  type: "item" | "checkout" | "reservation" | "user" | "guide";
   id: string;
   title: string;
   subtitle: string;
@@ -66,12 +67,13 @@ const SEARCH_RESULT_SOURCES = {
   checkouts: "Checkouts",
   reservations: "Reservations",
   users: "Users",
+  guides: "Guides",
 } as const;
 
 function formatStatusLabel(status: string): string {
   switch (status) {
     case "PENDING_PICKUP": return "Pending pickup";
-    case "OPEN": return "Checked Out";
+    case "OPEN": return "Checked out";
     case "BOOKED": return "Reserved";
     case "DRAFT": return "Draft";
     case "COMPLETED": return "Completed";
@@ -116,8 +118,8 @@ export default function SearchPage() {
   }, []);
 
   // NOTE (GAP-11): This page intentionally uses raw fetch() instead of useFetch.
-  // The search fans out to 4 endpoints in parallel (assets, checkouts, reservations,
-  // users) with a shared AbortController, then merges results into a unified list.
+  // The search fans out to 5 endpoints in parallel (assets, checkouts, reservations,
+  // users, guides) with a shared AbortController, then merges results into a unified list.
   // useFetch is single-URL and doesn't support coordinated multi-endpoint abort/merge.
   // Caching is also undesirable here — search results should always be fresh for the
   // current query string.
@@ -141,11 +143,12 @@ export default function SearchPage() {
     const canPreserveResults = resultsQueryRef.current === trimmed && resultsRef.current.length > 0;
 
     try {
-      const [itemsRes, checkoutsRes, reservationsRes, usersRes] = await Promise.allSettled([
+      const [itemsRes, checkoutsRes, reservationsRes, usersRes, guidesRes] = await Promise.allSettled([
         fetch(`/api/assets?q=${encoded}&limit=10`, { signal: controller.signal }),
         fetch(`/api/checkouts?q=${encoded}&status_in=OPEN,PENDING_PICKUP&limit=10`, { signal: controller.signal }),
         fetch(`/api/reservations?q=${encoded}&status=BOOKED&limit=10`, { signal: controller.signal }),
         fetch(`/api/users?q=${encoded}&limit=10`, { signal: controller.signal }),
+        fetch(`/api/resources?q=${encoded}`, { signal: controller.signal }),
       ]);
 
       const merged: SearchResult[] = getVisiblePageSearchResults(
@@ -160,6 +163,7 @@ export default function SearchPage() {
       if (checkoutsRes.status === "fulfilled" && handleAuthRedirect(checkoutsRes.value, "/search")) return;
       if (reservationsRes.status === "fulfilled" && handleAuthRedirect(reservationsRes.value, "/search")) return;
       if (usersRes.status === "fulfilled" && handleAuthRedirect(usersRes.value, "/search")) return;
+      if (guidesRes.status === "fulfilled" && handleAuthRedirect(guidesRes.value, "/search")) return;
 
       if (itemsRes.status === "fulfilled" && itemsRes.value.ok) {
         const json = await parseJsonSafely<ApiSearchList<AssetSearchItem>>(itemsRes.value);
@@ -232,12 +236,29 @@ export default function SearchPage() {
         failures.push(SEARCH_RESULT_SOURCES.users);
       }
 
+      if (guidesRes.status === "fulfilled" && guidesRes.value.ok) {
+        const json = await parseJsonSafely<ApiSearchList<GuideSearchHit>>(guidesRes.value);
+        const data = json?.data;
+        if (!data) failures.push(SEARCH_RESULT_SOURCES.guides);
+        let guideCount = 0;
+        for (const guide of (data ?? [])) {
+          const mapped = mapGuideSearchResult(guide);
+          if (!mapped) continue;
+          merged.push(mapped);
+          guideCount += 1;
+          if (guideCount >= 10) break;
+        }
+      } else {
+        failures.push(SEARCH_RESULT_SOURCES.guides);
+      }
+
       if (canPreserveResults && failures.length > 0) {
         const failedResultTypes = new Set<SearchResult["type"]>();
         if (failures.includes(SEARCH_RESULT_SOURCES.items)) failedResultTypes.add("item");
         if (failures.includes(SEARCH_RESULT_SOURCES.checkouts)) failedResultTypes.add("checkout");
         if (failures.includes(SEARCH_RESULT_SOURCES.reservations)) failedResultTypes.add("reservation");
         if (failures.includes(SEARCH_RESULT_SOURCES.users)) failedResultTypes.add("user");
+        if (failures.includes(SEARCH_RESULT_SOURCES.guides)) failedResultTypes.add("guide");
 
         for (const previous of resultsRef.current) {
           if (
@@ -250,7 +271,7 @@ export default function SearchPage() {
       }
 
       if (!controller.signal.aborted) {
-        if (failures.length === 4 && merged.length === 0) {
+        if (failures.length === Object.keys(SEARCH_RESULT_SOURCES).length && merged.length === 0) {
           if (canPreserveResults) {
             setPartialFailures(Object.values(SEARCH_RESULT_SOURCES));
           } else {
@@ -294,6 +315,7 @@ export default function SearchPage() {
 
   const grouped = {
     page: results.filter((r) => r.type === "page"),
+    guide: results.filter((r) => r.type === "guide"),
     item: results.filter((r) => r.type === "item"),
     checkout: results.filter((r) => r.type === "checkout"),
     reservation: results.filter((r) => r.type === "reservation"),
@@ -302,6 +324,7 @@ export default function SearchPage() {
 
   const sectionLabels: Record<string, string> = {
     page: "Go to",
+    guide: "Guides",
     item: "Items",
     checkout: "Checkouts",
     reservation: "Reservations",
@@ -309,6 +332,7 @@ export default function SearchPage() {
   };
 
   const sectionViewAllHrefs: Record<string, string> = {
+    guide: `/resources?q=${encodeURIComponent(query.trim())}`,
     item: `/items?q=${encodeURIComponent(query.trim())}`,
     checkout: `/bookings?tab=checkouts&q=${encodeURIComponent(query.trim())}`,
     reservation: `/bookings?tab=reservations&q=${encodeURIComponent(query.trim())}`,
@@ -326,10 +350,10 @@ export default function SearchPage() {
           name="global-search-query"
           ref={inputRef}
           containerClassName="min-w-0 flex-1"
-          placeholder="Search items, checkouts, reservations, users..."
+          placeholder="Search items, checkouts, reservations, users, and guides..."
           value={query}
           onValueChange={setQuery}
-          aria-label="Search items, checkouts, reservations, users"
+          aria-label="Search items, checkouts, reservations, users, and guides"
         />
         {loading && results.length > 0 && (
           <span className="inline-flex shrink-0 items-center gap-2 text-sm text-muted-foreground" role="status">
@@ -386,7 +410,7 @@ export default function SearchPage() {
       )}
 
       {!loading && !searchError && searched && results.length === 0 && (
-        <EmptyState icon="search" title="No results found" description={`Nothing matched "${query}". Try a tag, borrower, page name, setting, or report.`} />
+        <EmptyState icon="search" title="No results found" description={`Nothing matched "${query}". Try a tag, borrower, guide, page name, setting, or report.`} />
       )}
 
       {results.length > 0 && (
@@ -394,7 +418,7 @@ export default function SearchPage() {
           className={`flex flex-col gap-6 transition-opacity ${loading ? "opacity-60" : ""}`}
           aria-busy={loading}
         >
-          {(["page", "item", "checkout", "reservation", "user"] as const).map((type) => {
+          {(["page", "guide", "item", "checkout", "reservation", "user"] as const).map((type) => {
             const items = grouped[type];
             if (items.length === 0) return null;
             return (

@@ -23,6 +23,7 @@ import { classifyError, parseErrorMessage, parseJsonSafely } from "@/lib/errors"
 import { AUTH_EMAIL_DOMAIN_NOTE, shouldSuggestWiscEmail } from "@/lib/auth-email-guidance";
 import { isPasskeyCancellation, passkeyErrorMessage } from "@/lib/passkey-client";
 import { AccountUsernameField, passwordRulesAttribute } from "@/components/auth/AccountUsernameField";
+import { validatePassword, validatePasswordConfirmation } from "@/lib/password-rules";
 
 type LoginResponse = {
   user?: {
@@ -48,18 +49,6 @@ function validateName(name: string): string {
 function validateEmail(email: string): string {
   if (!email) return "Email is required";
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "Invalid email format";
-  return "";
-}
-
-function validatePassword(password: string): string {
-  if (!password) return "Password is required";
-  if (password.length < 8) return "Must be at least 8 characters";
-  return "";
-}
-
-function validateConfirmation(password: string, confirmation: string): string {
-  if (!confirmation) return "Confirm your password";
-  if (password !== confirmation) return "Passwords do not match";
   return "";
 }
 
@@ -144,7 +133,7 @@ export default function LoginForm() {
       name: () => validateName(name),
       email: () => validateEmail(email),
       password: () => validatePassword(password),
-      confirmPassword: () => validateConfirmation(password, confirmPassword),
+      confirmPassword: () => validatePasswordConfirmation(password, confirmPassword),
     };
     const msg = validators[field]?.() ?? "";
     setFieldErrors((prev) => ({ ...prev, [field]: msg }));
@@ -228,7 +217,7 @@ export default function LoginForm() {
     const nameErr = validateName(name);
     const emailErr = validateEmail(email);
     const passErr = validatePassword(password);
-    const confirmationErr = validateConfirmation(password, confirmPassword);
+    const confirmationErr = validatePasswordConfirmation(password, confirmPassword);
     if (nameErr || emailErr || passErr || confirmationErr) {
       setFieldErrors({ name: nameErr, email: emailErr, password: passErr, confirmPassword: confirmationErr });
       if (nameErr) nameRef.current?.focus();

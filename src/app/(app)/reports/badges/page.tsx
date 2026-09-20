@@ -15,7 +15,7 @@ import {
 import { FadeUp } from "@/components/ui/motion";
 import { useFetch } from "@/hooks/use-fetch";
 import { formatBadgeCategoryLabel, formatBadgeSourceLabel } from "@/lib/badges/display";
-import { formatDateFull } from "@/lib/format";
+import { formatDateFull, formatPercent } from "@/lib/format";
 import {
   downloadReportCsv,
   ReportEmptyState,
@@ -117,10 +117,6 @@ function downloadCsv(data: BadgeReportData) {
     rowCount: data.recentAwards.length,
     scopeLabel: "visible recent award rows",
   });
-}
-
-function formatPercent(value: number) {
-  return `${Math.round(value * 100)}%`;
 }
 
 function RecentAwardMobileCard({ award }: { award: RecentBadgeAward }) {

@@ -191,7 +191,7 @@ export default function DepartmentsSettingsPage() {
 
   if (loading) {
     return (
-      <SettingsPageShell title="Departments" description={description} mainClassName="flex flex-col gap-3">
+      <SettingsPageShell href="/settings/departments" description={description} mainClassName="flex flex-col gap-3">
             {Array.from({ length: 4 }).map((_, i) => (
               <Skeleton key={i} className="h-12 w-full rounded-md" />
             ))}
@@ -202,7 +202,7 @@ export default function DepartmentsSettingsPage() {
   if (error) {
     const Icon = error === "network" ? WifiOff : AlertTriangle;
     return (
-      <SettingsPageShell title="Departments" description={description}>
+      <SettingsPageShell href="/settings/departments" description={description}>
             <Card>
               <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
                 <Icon className="size-10 text-muted-foreground" />
@@ -220,7 +220,7 @@ export default function DepartmentsSettingsPage() {
   const inactive = items.filter((department) => !department.active);
 
   return (
-    <SettingsPageShell title="Departments" description={description} mainClassName="flex flex-col gap-4">
+    <SettingsPageShell href="/settings/departments" description={description} mainClassName="flex flex-col gap-4">
           <div className="flex justify-end">
             {!showAdd && (
               <Button className="h-10" onClick={() => setShowAdd(true)}>

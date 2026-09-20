@@ -386,18 +386,18 @@ export default function KioskDevicesPage() {
 
   return (
     <SettingsPageShell
-      title="Kiosk Devices"
+      href="/settings/kiosk-devices"
       description="Manage iPad kiosk stations for self-serve gear checkout."
       mainClassName="flex flex-col gap-4"
+      actions={
+        !showAdd ? (
+          <Button onClick={() => setShowAdd(true)} className="min-h-10">
+            <Plus className="size-4" />
+            Add kiosk
+          </Button>
+        ) : undefined
+      }
     >
-        <div className="flex justify-end">
-          {!showAdd && (
-            <Button onClick={() => setShowAdd(true)} className="min-h-10">
-              <Plus className="size-4 mr-1.5" />
-              Add Kiosk
-            </Button>
-          )}
-        </div>
 
       {/* Add form */}
       {showAdd && (

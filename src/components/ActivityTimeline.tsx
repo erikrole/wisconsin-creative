@@ -209,7 +209,8 @@ const FIELD_LABELS: Record<string, string> = {
 const STATUS_LABELS: Record<string, string> = {
   DRAFT: "Draft",
   BOOKED: "Reserved",
-  OPEN: "Checked Out",
+  PENDING_PICKUP: "Pending pickup",
+  OPEN: "Checked out",
   COMPLETED: "Completed",
   CANCELLED: "Cancelled",
 };

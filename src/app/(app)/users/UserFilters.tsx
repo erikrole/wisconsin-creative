@@ -171,7 +171,7 @@ export default function UserFilters({
             placeholder={directoryMode ? "Search by name" : "Search name or email"}
             value={draftSearch}
             onChange={(e) => setDraftSearch(e.target.value)}
-            aria-label="Search users"
+            aria-label={directoryMode ? "Search by name" : "Search name or email"}
           />
           <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center justify-center pl-3 text-muted-foreground/80 peer-disabled:opacity-50">
             <SearchIcon size={16} />

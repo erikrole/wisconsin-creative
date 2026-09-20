@@ -47,8 +47,13 @@ export function BookingFilters({
   users,
   onClearAll,
 }: BookingFiltersProps) {
+  const specialFilterLabel = specialFilter === "overdue"
+    ? "Overdue"
+    : config.kind === "RESERVATION"
+      ? "Event day"
+      : "Due today";
   const title = specialFilter
-    ? specialFilter === "overdue" ? "Overdue" : "Due today"
+    ? specialFilterLabel
     : statusFilter
       ? config.statusOptions.find((s) => s.value === statusFilter)?.label ?? "Filtered"
       : config.scopeLabel ?? "All";
@@ -56,7 +61,7 @@ export function BookingFilters({
     ...(specialFilter
       ? [{
         key: "special",
-        label: `View: ${specialFilter === "overdue" ? "Overdue" : "Due today"}`,
+        label: `View: ${specialFilterLabel}`,
         onRemove: () => onSpecialFilterChange(""),
       }]
       : []),
@@ -126,10 +131,10 @@ export function BookingFilters({
                 size="sm"
                 className="relative h-10 gap-1.5 rounded-md border border-primary/20 bg-primary/[0.06] px-3 text-xs text-foreground shadow-[0_1px_0_rgba(15,23,42,0.05)] transition-[background-color,border-color,color,scale] after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-t-full after:bg-primary/60 hover:bg-primary/[0.08] active:scale-[0.96]"
                 onClick={() => onSpecialFilterChange("")}
-                aria-label={`Clear ${specialFilter === "overdue" ? "overdue" : "due today"} filter`}
+                aria-label={`Clear ${specialFilterLabel.toLowerCase()} filter`}
               >
                 <span className="font-medium">Showing:</span>
-                <span className="font-semibold">{specialFilter === "overdue" ? "Overdue" : "Due today"}</span>
+                <span className="font-semibold">{specialFilterLabel}</span>
                 <XIcon className="size-3 text-muted-foreground" aria-hidden="true" />
               </Button>
             ) : (

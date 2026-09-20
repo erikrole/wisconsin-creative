@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, Archive, History, Plus, RefreshCw, RotateCcw, Save } from "lucide-react";
+import { AlertTriangle, Archive, History, Plus, RotateCcw, Save } from "lucide-react";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useFetch } from "@/hooks/use-fetch";
 import { parseErrorMessage } from "@/lib/errors";
 import { SettingsPageShell } from "../SettingsPageShell";
+import EmptyState from "@/components/EmptyState";
 
 type Capability =
   | "GEAR_CATALOG_VIEW"
@@ -108,11 +109,11 @@ export default function CollaboratorAccessPage() {
 
   return (
     <SettingsPageShell
-      title="Collaborator Access"
+      href="/settings/collaborator-access"
       description="Control what each external affiliation can see and do. Privacy and custody boundaries stay locked."
+      actions={<CreateAffiliation onCreated={reload} />}
       mainClassName="flex flex-col gap-4"
     >
-      <div className="flex justify-end"><CreateAffiliation onCreated={reload} /></div>
       <Alert>
         <AlertTriangle className="size-4" />
         <AlertTitle>Default deny</AlertTitle>
@@ -125,7 +126,21 @@ export default function CollaboratorAccessPage() {
           <Skeleton className="h-72" />
         </div>
       ) : error ? (
-        <Card><CardContent className="flex flex-col items-center gap-3 py-12"><p>Collaborator policies could not be loaded.</p><Button variant="outline" onClick={reload}><RefreshCw />Retry</Button></CardContent></Card>
+        <EmptyState
+          inline
+          icon="users"
+          title="Could not load collaborator access"
+          description="Retry before changing affiliation policies."
+          actionLabel="Retry"
+          onAction={reload}
+        />
+      ) : policies.length === 0 ? (
+        <EmptyState
+          inline
+          icon="users"
+          title="No collaborator affiliations"
+          description="Create an affiliation to decide what outside partners can see and do."
+        />
       ) : (
         <div className="grid gap-4 xl:grid-cols-2">
           {policies.map((policy) => <PolicyCard key={`${policy.id}:${policy.version}`} policy={policy} onChanged={reload} />)}
@@ -143,6 +158,12 @@ function PolicyCard({ policy, onChanged }: { policy: Policy; onChanged: () => vo
   const [capabilities, setCapabilities] = useState<Capability[]>(policy.capabilities);
   const [saving, setSaving] = useState(false);
   const [history, setHistory] = useState<Revision[] | null>(null);
+  const dirty =
+    name !== policy.affiliation.displayName
+    || badge !== policy.affiliation.badgeLabel
+    || status !== policy.status
+    || capabilities.length !== policy.capabilities.length
+    || capabilities.some((capability) => !policy.capabilities.includes(capability));
 
   function toggleCapability(key: Capability, checked: boolean) {
     if (checked) {
@@ -291,7 +312,7 @@ function PolicyCard({ policy, onChanged }: { policy: Policy; onChanged: () => vo
         </div>
         <div className="flex flex-wrap justify-between gap-2">
           <div className="flex gap-2"><Button variant="outline" onClick={loadHistory}><History />History</Button><Button variant="outline" onClick={archive} disabled={status !== "SUSPENDED"}><Archive />Archive</Button></div>
-          <Button onClick={save} disabled={saving}><Save />{saving ? "Saving…" : "Save policy"}</Button>
+          <Button onClick={save} disabled={saving || !dirty} loading={saving}><Save />Save policy</Button>
         </div>
         {history && (
           <div className="grid gap-2 rounded-md border p-3">

@@ -138,12 +138,6 @@ export function coverageVariant(pct: number): BadgeProps["variant"] {
   return "red";
 }
 
-export function coverageDot(pct: number): string {
-  if (pct >= 100) return "var(--badge-green-bg, #22c55e)";
-  if (pct > 0) return "var(--badge-orange-bg, #f59e0b)";
-  return "var(--badge-red-bg, #ef4444)";
-}
-
 /** Get Monday of the week containing the given date. */
 export function getMonday(d: Date): Date {
   const result = new Date(d);

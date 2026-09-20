@@ -638,11 +638,20 @@ export default function ItemsPage() {
                 className="hidden h-10 min-w-[86px] sm:flex"
                 onClick={() => setShowGapWizard(true)}
                 disabled={!canFillGaps}
+                title={!canFillGaps ? "Category and department lists must load first" : undefined}
               >
                 Fill gaps
               </Button>
               <Button variant="outline" size="sm" className="h-10 min-w-[76px]" asChild><Link href="/import">Import</Link></Button>
-              <Button size="sm" className="h-10 min-w-[92px]" onClick={openBlankCreate} disabled={!canCreateItem}>Add item</Button>
+              <Button
+                size="sm"
+                className="h-10 min-w-[92px]"
+                onClick={openBlankCreate}
+                disabled={!canCreateItem}
+                title={!canCreateItem ? "Location and category lists must load first" : undefined}
+              >
+                Add item
+              </Button>
             </>
           )}
         </div>

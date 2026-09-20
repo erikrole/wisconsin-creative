@@ -3,6 +3,7 @@
 import { ItemThumbnailStack } from "@/components/ItemThumbnailStack";
 import { UserAvatarGroup, type UserAvatarGroupUser } from "@/components/UserAvatarGroup";
 import type { ItemThumb, EventSummary } from "../dashboard-types";
+import { AREA_LABELS } from "@/types/areas";
 
 export function GearAvatarStack({ items, totalCount }: { items: ItemThumb[]; totalCount: number }) {
   return (
@@ -18,15 +19,6 @@ export function GearAvatarStack({ items, totalCount }: { items: ItemThumb[]; tot
     />
   );
 }
-
-const AREA_LABELS: Record<string, string> = {
-  VIDEO: "Video",
-  PHOTO: "Photo",
-  GRAPHICS: "Graphics",
-  SOCIAL: "Social",
-  COMMS: "Comms",
-  LIVE_PRODUCTION: "Live Production",
-};
 
 export function ShiftAvatarStack({ assignedUsers }: { assignedUsers: EventSummary["assignedUsers"] }) {
   if (assignedUsers.length === 0) return null;
