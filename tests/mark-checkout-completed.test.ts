@@ -97,18 +97,6 @@ describe("markCheckoutCompleted", () => {
     };
   }
 
-  it("uses SERIALIZABLE isolation", async () => {
-    mockTx.booking.findUnique.mockResolvedValue(openCheckout());
-    mockTx.booking.update.mockResolvedValue({});
-    mockTx.assetAllocation.updateMany.mockResolvedValue({});
-    mockTx.scanSession.updateMany.mockResolvedValue({});
-    mockTx.auditLog.create.mockResolvedValue({});
-
-    await markCheckoutCompleted("b-1", "actor-1");
-
-    expectSerializableIsolation(transactionCalls, 0);
-  });
-
   it("throws 404 when checkout not found", async () => {
     mockTx.booking.findUnique.mockResolvedValue(null);
     await expect(markCheckoutCompleted("bad-id", "actor-1")).rejects.toThrow("Checkout not found");
@@ -152,6 +140,7 @@ describe("markCheckoutCompleted", () => {
       })
     );
     expect(endCheckoutReturnLiveActivities).toHaveBeenCalledWith("b-1");
+    expectSerializableIsolation(transactionCalls, 0);
   });
 
   it("closes open checkin scan sessions", async () => {

@@ -1,6 +1,7 @@
-import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { source } from "./_helpers/source";
+import { walkFiles } from "./_helpers/source-tree";
 
 /**
  * `docs/DESIGN_LANGUAGE.md` requires action targets of at least 40px on web.
@@ -16,24 +17,6 @@ import { describe, expect, it } from "vitest";
  */
 
 const ROOTS = ["src/app", "src/components"];
-
-/**
- * Form fields, not action buttons. `Input` and `SelectTrigger` are both h-9, so
- * raising a combobox alone misaligns every form row it shares with them. Moving
- * the whole form-field baseline to 40px is a real change with app-wide visual
- * impact; it needs its own slice and proof, not a side effect of a button sweep.
- * Tracked in `tasks/design-language-route-conformance-checklist.md`.
- */
-const FORM_FIELD_EXCEPTIONS = ["src/components/FormCombobox.tsx"];
-
-function tsxFiles(dir: string, acc: string[] = []): string[] {
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) tsxFiles(full, acc);
-    else if (full.endsWith(".tsx")) acc.push(full);
-  }
-  return acc;
-}
 
 /**
  * Reads `<Button ...>` opening tags, tracking brace depth and string state so a
@@ -91,10 +74,9 @@ describe("Operational target baseline", () => {
     const offenders: string[] = [];
 
     for (const root of ROOTS) {
-      for (const file of tsxFiles(root)) {
+      for (const file of walkFiles(root, (name) => name.endsWith(".tsx"), `tsx:${root}`)) {
         if (file.includes(`${path.sep}ui${path.sep}`)) continue;
-        if (FORM_FIELD_EXCEPTIONS.includes(file)) continue;
-        for (const tag of undersizedControls(readFileSync(file, "utf8"))) {
+        for (const tag of undersizedControls(source(file))) {
           offenders.push(`${file}: ${tag.replace(/\s+/g, " ").slice(0, 100)}`);
         }
       }
@@ -103,14 +85,14 @@ describe("Operational target baseline", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("keeps the form-field exception honest", () => {
-    // FormCombobox composes its trigger class through cn(), so the generic
-    // opening-tag scanner intentionally skips its expression className. Keep
-    // the exception tied to the actual form-field height instead of requiring
-    // a false positive from that scanner.
-    const combobox = readFileSync("src/components/FormCombobox.tsx", "utf8");
-    expect(combobox).toContain('"h-9 w-full justify-between');
-    expect(readFileSync("src/components/ui/input.tsx", "utf8")).toContain("h-9");
+  it("locks the shared form-field baseline at 40px", () => {
+    const combobox = source("src/components/FormCombobox.tsx");
+    expect(combobox).not.toContain('"h-9 w-full justify-between');
+    expect(combobox).toContain('"w-full justify-between text-sm font-normal"');
+    expect(source("src/components/ui/input.tsx")).toContain("flex h-10 w-full");
+    expect(source("src/components/ui/native-select.tsx")).toContain("flex h-10 w-full");
+    expect(source("src/components/ui/select.tsx")).toContain('size === "default" && "h-10"');
+    expect(source("src/components/ui/button.tsx")).toContain('default: "h-10 px-4 py-2');
   });
 
   it("detects an undersized control rather than passing vacuously", () => {

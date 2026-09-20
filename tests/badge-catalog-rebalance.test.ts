@@ -1,10 +1,5 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
-
-function source(relativeFile: string) {
-  return readFileSync(path.join(process.cwd(), relativeFile), "utf8");
-}
+import { source } from "./_helpers/source";
 
 const migration = source("prisma/migrations/0100_badge_catalog_rebalance/migration.sql");
 const seed = source("prisma/seed.mjs");

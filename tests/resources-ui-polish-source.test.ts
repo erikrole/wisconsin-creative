@@ -1,7 +1,5 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-
-const source = (path: string) => readFileSync(path, "utf8");
+import { source } from "./_helpers/source";
 
 describe("Resources interaction-detail contracts", () => {
   it("uses the shared tactile scale and 40px layout targets across the Guide library", () => {
@@ -20,15 +18,22 @@ describe("Resources interaction-detail contracts", () => {
     expect(page).not.toContain("hover:shadow-sm");
     expect(page).toContain("group-hover:translate-x-0.5 group-hover:text-foreground");
     expect(page).toContain("hover:no-underline");
-    expect(page).toContain('className="min-h-32 border-border/80"');
+    expect(page).toContain("resource-featured");
+    expect(page).toContain("resource-tile");
+    expect(page).toContain("resource-index-row");
+    expect(page).toContain("resource-mark");
   });
 
-  it("keeps guide surfaces title-first without secondary metadata", () => {
+  it("keeps guide surfaces title-first with a one-line purpose", () => {
     const page = source("src/app/(app)/resources/page.tsx");
     const guideSurfaces = page.slice(page.indexOf("function GuideCard"), page.indexOf("function SectionHeader"));
 
-    expect(guideSurfaces).toContain("CardTitle");
-    expect(guideSurfaces).not.toContain("guide.summary");
+    expect(guideSurfaces).toContain("guide.title");
+    expect(guideSurfaces).toContain("guide.summary");
+    expect(guideSurfaces).toContain("resource-featured-summary");
+    expect(guideSurfaces).toContain("resource-tile-summary");
+    expect(guideSurfaces).toContain("resource-index-summary");
+    expect(guideSurfaces).toContain("line-clamp-1");
     expect(guideSurfaces).not.toContain("audienceLabel");
     expect(guideSurfaces).not.toContain("guide.author.name");
     expect(guideSurfaces).not.toContain("formatShortDate");
@@ -41,8 +46,20 @@ describe("Resources interaction-detail contracts", () => {
 
     expect(reader).toContain("transition-[background-color,color,scale]");
     expect(reader).toContain("focus-visible:ring-2 focus-visible:ring-ring");
-    expect(reader.match(/className="h-10 shrink-0 active:scale-\[0\.96\] transition-transform"/g)).toHaveLength(2);
+    expect(reader).toContain('className="h-10 shrink-0"');
     expect(reader).toContain("flex min-h-11 flex-col gap-1");
+  });
+
+  it("pins the reader TOC in a stretched column so it can travel with the article", () => {
+    const reader = source("src/app/(app)/resources/[slug]/_components/GuideReader.tsx");
+    const css = source("src/app/globals.css");
+
+    expect(reader).toContain("guide-toc-column");
+    expect(reader).toContain("self-stretch");
+    expect(reader).toContain("guide-toc-indicator");
+    expect(css).toContain(".guide-reader-grid {\n  align-items: stretch;");
+    expect(css).toContain("position: sticky;\n  top: 5rem;");
+    expect(css).not.toContain(".guide-reader-grid {\n  align-items: start;");
   });
 
   it("animates copy-state icons without replaying them on initial render", () => {

@@ -1,9 +1,5 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-
-function source(path: string) {
-  return readFileSync(path, "utf8");
-}
+import { source } from "./_helpers/source";
 
 const filters = source("src/app/(app)/schedule/_components/ScheduleFilters.tsx");
 const readiness = source("src/app/(app)/schedule/_components/ScheduleReadiness.tsx");
@@ -56,23 +52,38 @@ describe("schedule browse fixes", () => {
   });
 
   it("leads the readiness rail with recent crew and calendar activity", () => {
-    // Standing queue counts (crew needed, gear gaps, data quality) stay in
-    // Details. The visible strip is recent shift changes, calendar syncs, and
-    // a quiet row for unreleased crew or a combine suggestion.
+    // Standing queue counts stay in Details. The default strip is skinny
+    // icon+count indicators; click reveals crew, combine, or sync diffs.
     expect(readiness).toContain("<ScheduleRecentActivity");
     expect(readiness).toContain("feed={(");
     expect(readiness).toContain("items={[]}");
     expect(readiness).toContain("recentScheduleActivityItems(health)");
-    expect(readiness).toContain("coalesceScheduleChanges(recentChanges)");
+    expect(readiness).toContain("recentScheduleSyncItems(health)");
+    expect(readiness).toContain("coalesceScheduleChanges(recentSyncChanges)");
     expect(readiness).not.toContain("Nothing needs attention");
     const activity = source("src/app/(app)/schedule/_components/ScheduleRecentActivity.tsx");
     expect(activity).toContain("Crew not released");
     expect(activity).toContain("May share a crew");
-    expect(activity).toContain("No recent crew or calendar changes");
+    expect(activity).toContain("Schedule updates");
+    expect(activity).toContain('aria-expanded={active}');
+    expect(activity).toContain("toggle(\"updates\")");
+    expect(activity).toContain("<ScheduleSyncDiff");
+    expect(activity).toContain("No recent schedule updates");
+    expect(activity).not.toContain('variant="red"');
+    expect(activity).not.toContain('variant="blue"');
+    const syncDiff = source("src/app/(app)/schedule/_components/ScheduleSyncDiff.tsx");
+    expect(syncDiff).toContain("bg-[var(--red-bg)] text-[var(--red-text)] line-through");
+    expect(syncDiff).toContain("bg-[var(--green-bg)] font-medium text-[var(--green-text)]");
+    const rail = source("src/components/OperationalStatusRail.tsx");
+    expect(rail).toContain('feed ? "border-0" : "border-y border-border/50"');
     expect(page).not.toContain("2 related events may share a crew");
     expect(page).not.toContain("changes have not been released");
     expect(page).toContain("combineSuggestion={isStaff ? leadingCombineSuggestion : null}");
     expect(page).toContain("onReviewPendingCrew={openCrewSheet}");
+    const stickyStart = page.indexOf("data-schedule-sticky-frame");
+    const listStart = page.indexOf("{canDisplaySchedule && data.filters.viewMode === \"calendar\"");
+    expect(page.indexOf("<ScheduleReadiness", stickyStart)).toBeGreaterThan(stickyStart);
+    expect(page.indexOf("<ScheduleReadiness", stickyStart)).toBeLessThan(listStart);
   });
 
   it("scopes control-room readiness metrics to staff", () => {

@@ -523,6 +523,16 @@ describe("reports routes", () => {
     expect(getCheckoutReportExport).not.toHaveBeenCalled();
   });
 
+  it("bounds checkout report lookback before calling the service", async () => {
+    const res = await getCheckoutReportRoute(
+      authedGet("/api/reports/checkouts?days=999999"),
+      { params: Promise.resolve({}) },
+    );
+
+    expect(res.status).toBe(400);
+    expect(getCheckoutReport).not.toHaveBeenCalled();
+  });
+
   it("rejects invalid scan phases before calling the report service", async () => {
     const res = await getScanReport(
       authedGet("/api/reports/scans?phase=RETURN"),

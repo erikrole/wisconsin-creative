@@ -1,9 +1,6 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-
-function source(path: string): string {
-  return readFileSync(path, "utf8");
-}
+import { source } from "./_helpers/source";
 
 function between(text: string, start: string, end: string): string {
   const startIndex = text.indexOf(start);

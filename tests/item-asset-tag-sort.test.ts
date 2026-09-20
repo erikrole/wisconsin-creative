@@ -1,24 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { compareItemAssetTags, getAssetTagSearchAliases, getItemAssetTagSortKey } from "@/lib/item-asset-tag-sort";
+import {
+  buildItemAssetTagSortKey,
+  compareItemAssetTags,
+  getAssetTagSearchAliases,
+} from "@/lib/item-asset-tag-sort";
 
 describe("item asset tag sorting", () => {
-  it("uses the equipment family instead of operational prefixes", () => {
-    expect(getItemAssetTagSortKey("FB 70-200 1")).toBe("70-200 1");
-    expect(getItemAssetTagSortKey("MBB 28-75 1")).toBe("28-75 1");
-    expect(getItemAssetTagSortKey("FB A7 V 1")).toBe("A7 V 1");
-    expect(getItemAssetTagSortKey("FB Wireless Flash")).toBe("Wireless Flash");
-    expect(getItemAssetTagSortKey("FX6 2")).toBe("FX6 2");
-    expect(getItemAssetTagSortKey("70200 4")).toBe("70-200 4");
-    expect(getItemAssetTagSortKey("100400 2")).toBe("100-400 2");
-  });
-
-  it("does not strip broad words unless the remainder is a known equipment tag", () => {
-    expect(getItemAssetTagSortKey("Video Assist 1")).toBe("Video Assist 1");
-    expect(getItemAssetTagSortKey("Photo Printer 1")).toBe("Photo Printer 1");
-    expect(getItemAssetTagSortKey("Video FX6 1")).toBe("FX6 1");
-    expect(getItemAssetTagSortKey("Creative 70-200 1")).toBe("70-200 1");
-  });
-
   it("sorts prefixed department/team rows with their asset-tag family", () => {
     const tags = [
       "FX6 1",
@@ -108,5 +95,54 @@ describe("item asset tag sorting", () => {
     expect(getAssetTagSearchAliases("70200")).toEqual(["70200", "70-200"]);
     expect(getAssetTagSearchAliases("70-200")).toEqual(["70-200", "70200"]);
     expect(getAssetTagSearchAliases("FB 100400")).toEqual(["FB 100400", "FB 100-400"]);
+  });
+});
+
+/**
+ * `assets.asset_tag_sort_key` (migration 0151) lets the Items list default sort
+ * paginate in Postgres. Ordering by that persisted key has to reproduce
+ * `compareItemAssetTags` or the list silently changes order, so this corpus
+ * covers every branch of the normalization: team prefixes, department
+ * prefixes, equipment starters, compact vs hyphenated families, trailing
+ * hyphen units, mixed case, multi-digit units, and unit-less tags.
+ */
+describe("persisted asset tag sort key", () => {
+  const CORPUS = [
+    "FB 70-200 1", "MBB 28-75 1", "FB A7 V 1", "FB Wireless Flash", "FX6 2",
+    "70200 4", "100400 2", "Video Assist 1", "Photo Printer 1", "Video FX6 1",
+    "Creative 70-200 1", "70-200 10", "70-200 2", "SONY FX3", "Monitor Battery",
+    "DEMO-CAM-001", "FB 16-35 1", "MBB 70-180 1", "FB FX3 1", "FX3 2",
+    "70-200 1", "70-200 3", "FB 70-200 2", "FB 70-200 3", "100-400 1",
+    "XC Sandisk 128", "WSOC A7 3", "Tripod", "Tripod 2", "Tripod 10",
+    "Aputure 120d 1", "aputure 120D 2", "DJI RS3 1", "GOLF Canon R5 1",
+    "SB 24-70 1", "VB Godox 1", "Anton/Bauer 1", "anton/bauer 2", "FS7 1",
+    "FX30 4", "A9 III 1", "Dell Monitor 1", "Photo A7 1", "Creative Insta360 1",
+    "Video 5D 2", "Impact Stand 12", "Impact Stand 2", "item-9", "item-10",
+    "item-2", "Cage", "70-200-2", "70-200-10",
+  ];
+
+  it("orders exactly like compareItemAssetTags", () => {
+    const byComparator = [...CORPUS].sort(compareItemAssetTags);
+    // Byte comparison, matching the COLLATE "C" column the migration creates.
+    const bySortKey = [...CORPUS].sort((a, b) => {
+      const keyA = buildItemAssetTagSortKey(a);
+      const keyB = buildItemAssetTagSortKey(b);
+      if (keyA !== keyB) return keyA < keyB ? -1 : 1;
+      return a < b ? -1 : a > b ? 1 : 0;
+    });
+
+    expect(bySortKey).toEqual(byComparator);
+  });
+
+  it("is deterministic and never empty", () => {
+    for (const tag of CORPUS) {
+      expect(buildItemAssetTagSortKey(tag)).toBe(buildItemAssetTagSortKey(tag));
+      expect(buildItemAssetTagSortKey(tag).length).toBeGreaterThan(0);
+    }
+    expect(buildItemAssetTagSortKey("")).toBe(["", "0", "0".repeat(12), "", "", ""].join("\u0001"));
+  });
+
+  it("collapses whitespace the same way the tag normalizer does", () => {
+    expect(buildItemAssetTagSortKey("  FB   70-200   1 ")).toBe(buildItemAssetTagSortKey("FB 70-200 1"));
   });
 });

@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
-import path from "node:path";
-
-const source = (file: string) => readFileSync(path.join(process.cwd(), file), "utf8");
+import { source } from "./_helpers/source";
 
 describe("iOS kiosk intent routing", () => {
   it("retains every supported entry source and consumes pending scans once", () => {

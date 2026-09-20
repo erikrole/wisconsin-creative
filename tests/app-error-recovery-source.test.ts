@@ -1,9 +1,5 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-
-function source(path: string) {
-  return readFileSync(path, "utf8");
-}
+import { source } from "./_helpers/source";
 
 describe("app error recovery surfaces", () => {
   it("renders all app error boundaries through the shared recovery panel", () => {

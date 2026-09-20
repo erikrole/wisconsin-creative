@@ -198,6 +198,7 @@ describe("upsertSportConfig", () => {
       })
     );
     expect(result!.shiftConfigs).toHaveLength(1);
+    expectSerializableIsolation(transactionCalls, 0);
   });
 
   it("stores separate staff and student counts while preserving legacy totals", async () => {
@@ -235,15 +236,6 @@ describe("upsertSportConfig", () => {
         }),
       })
     );
-  });
-
-  it("uses SERIALIZABLE isolation", async () => {
-    mockTx.sportConfig.upsert.mockResolvedValue({ id: "sc-1" });
-    mockTx.sportConfig.findUnique.mockResolvedValue({ id: "sc-1", shiftConfigs: [] });
-
-    await upsertSportConfig("FB", true, []);
-
-    expectSerializableIsolation(transactionCalls, 0);
   });
 
   it("passes shiftStartOffset and shiftEndOffset when provided", async () => {

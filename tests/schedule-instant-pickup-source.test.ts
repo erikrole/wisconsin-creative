@@ -1,10 +1,6 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { getAllowedRoles } from "@/lib/permissions";
-
-function source(path: string) {
-  return readFileSync(path, "utf8");
-}
+import { source } from "./_helpers/source";
 
 /**
  * Student claims are approval-first on both paths: an open Student slot becomes

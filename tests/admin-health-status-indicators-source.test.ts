@@ -1,9 +1,5 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-
-function source(path: string) {
-  return readFileSync(path, "utf8");
-}
+import { source } from "./_helpers/source";
 
 describe("admin health status indicators", () => {
   it("uses a static, labeled status dot", () => {

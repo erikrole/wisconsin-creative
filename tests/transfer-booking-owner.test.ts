@@ -76,11 +76,6 @@ beforeEach(() => {
 });
 
 describe("transferBookingOwner", () => {
-  it("uses SERIALIZABLE isolation", async () => {
-    await transferBookingOwner(activeBooking().id, "staff-1", { targetUserId: targetUser.id });
-    expectSerializableIsolation(transactionCalls, 0);
-  });
-
   it("BUG: rejects an owner transfer when the snapshot changed before the transaction", async () => {
     await expect(transferBookingOwner(
       activeBooking().id,
@@ -123,6 +118,7 @@ describe("transferBookingOwner", () => {
         }),
       }),
     );
+    expectSerializableIsolation(transactionCalls, 0);
   });
 
   it("allows a student owner to transfer their own booking", async () => {

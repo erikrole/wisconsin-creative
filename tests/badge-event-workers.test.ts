@@ -19,7 +19,6 @@ import { shiftAutomaticRuleCounts } from "@/lib/badges/automatic-rules";
 import {
   loadWorkedShiftEvidence,
   recentlyWorkedEventUsers,
-  usersWithRecentlyWorkedEvents,
 } from "@/lib/badges/worked-evidence";
 
 const TZ = "America/Chicago";
@@ -217,9 +216,9 @@ describe("usersWithRecentlyWorkedEvents", () => {
     mocks.workerFindMany.mockResolvedValue([{ userId: "user-2" }, { userId: "user-3" }]);
 
     const since = new Date("2026-10-30T12:00:00.000Z");
-    const users = await usersWithRecentlyWorkedEvents(since, NOW);
+    const users = await recentlyWorkedEventUsers(since, NOW);
 
-    expect(users.sort()).toEqual(["user-1", "user-2", "user-3"]);
+    expect(users.map((u) => u.userId).sort()).toEqual(["user-1", "user-2", "user-3"]);
     expect(mocks.workerFindMany.mock.calls[0]![0].where.event).toEqual({
       endsAt: { lt: NOW, gte: since },
       status: "CONFIRMED",

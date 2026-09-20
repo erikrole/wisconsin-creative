@@ -1,9 +1,5 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-
-function source(path: string) {
-  return readFileSync(path, "utf8");
-}
+import { source } from "./_helpers/source";
 
 describe("Schedule interaction-detail contracts", () => {
   it("keeps primary and secondary Schedule commands on the 40px baseline", () => {

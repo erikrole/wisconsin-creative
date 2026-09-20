@@ -1,10 +1,5 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
-
-function source(relativeFile: string) {
-  return readFileSync(path.join(process.cwd(), relativeFile), "utf8");
-}
+import { source } from "./_helpers/source";
 
 describe("shift trade and request withdrawal contract", () => {
   it("exposes authenticated PATCH routes with the correct permissions", () => {

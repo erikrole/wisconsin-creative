@@ -26,6 +26,11 @@ vi.mock("@sentry/nextjs", () => ({
   captureException: vi.fn(),
 }));
 
+vi.mock("@/lib/rate-limit", () => ({
+  checkRateLimit: vi.fn(async () => ({ allowed: true })),
+  enforceRateLimit: vi.fn(),
+}));
+
 import { requireAuth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { GET as getUsersExport } from "@/app/api/users/export/route";
@@ -178,6 +183,120 @@ describe("user PII scope hardening", () => {
     expect(body).toContain("111-111-1111");
     expect(body).toContain("staff-athletics@test.com");
     expect(body).toContain("222-222-2222");
+  });
+
+  it("disables caching for the users CSV export", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(adminUser);
+    mockExportUsers();
+
+    const res = await getUsersExport(makeGetRequest("/api/users/export"), noParams);
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("cache-control")).toBe("private, no-store");
+  });
+
+  it("honors the collaborator export filter", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(adminUser);
+    mockExportUsers();
+
+    await getUsersExport(makeGetRequest("/api/users/export?role=COLLABORATOR"), noParams);
+
+    expect(db.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { AND: expect.arrayContaining([{ role: "COLLABORATOR" }]) } }),
+    );
+  });
+
+  it("ignores an invalid area consistently with the directory instead of passing it to Prisma", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(adminUser);
+    mockExportUsers();
+
+    await getUsersExport(makeGetRequest("/api/users/export?area=INVALID"), noParams);
+
+    expect(JSON.stringify(vi.mocked(db.user.findMany).mock.calls[0])).not.toContain("INVALID");
+  });
+
+  it("normalizes location filters consistently with the directory", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(adminUser);
+    mockExportUsers();
+
+    await getUsersExport(makeGetRequest("/api/users/export?locationId=%20main%20"), noParams);
+
+    expect(db.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { AND: expect.arrayContaining([{ locationId: "main" }]) } }),
+    );
+  });
+
+  it("bounds user export reads and marks truncated output", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(adminUser);
+    const person = {
+      id: "a", name: "Person", role: "STUDENT" as const, email: "person@example.com", athleticsEmail: null,
+      phone: null, title: "Assistant", gradYear: null, studentYearOverride: null, primaryArea: null,
+      startDate: null, topSize: null, bottomSize: null, shoeSize: null, active: true,
+      createdAt: new Date("2026-01-01"), location: null, sportAssignments: [], areaAssignments: [],
+      directReport: null, directReportName: null,
+    };
+    vi.mocked(db.user.findMany).mockResolvedValue(users(Array.from({ length: 5001 }, () => person)));
+
+    const response = await getUsersExport(makeGetRequest("/api/users/export"), noParams);
+
+    expect(db.user.findMany).toHaveBeenCalledWith(expect.objectContaining({ take: 5001 }));
+    expect(response.headers.get("x-exported-count")).toBe("5000");
+    expect(response.headers.get("x-truncated")).toBe("true");
+    expect((await response.text()).split("\n")).toHaveLength(5001);
+  });
+
+  it("does not mark exactly 5000 users truncated", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(adminUser);
+    const person = {
+      id: "a", name: "Person", role: "STUDENT" as const, email: "person@example.com", athleticsEmail: null,
+      phone: null, title: "Assistant", gradYear: null, studentYearOverride: null, primaryArea: null,
+      startDate: null, topSize: null, bottomSize: null, shoeSize: null, active: true,
+      createdAt: new Date("2026-01-01"), location: null, sportAssignments: [], areaAssignments: [],
+      directReport: null, directReportName: null,
+    };
+    vi.mocked(db.user.findMany).mockResolvedValue(users(Array.from({ length: 5000 }, () => person)));
+
+    const response = await getUsersExport(makeGetRequest("/api/users/export"), noParams);
+
+    expect(response.headers.get("x-truncated")).toBeNull();
+  });
+
+  it("keeps collaborator private fields out of Staff exports while preserving CSV columns", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(staffUser);
+    const collaborator = {
+      id: "a", name: "Person", role: "COLLABORATOR" as const, email: "private@example.com", athleticsEmail: null,
+      phone: null, title: "Assistant", gradYear: null, studentYearOverride: null, primaryArea: null,
+      startDate: null, topSize: "secret-size", bottomSize: null, shoeSize: null, active: true,
+      createdAt: new Date("2026-01-01"), location: null, sportAssignments: [], areaAssignments: [],
+      directReport: null, directReportName: "Private Manager",
+    };
+    vi.mocked(db.user.findMany).mockResolvedValue(users([collaborator]));
+
+    const response = await getUsersExport(makeGetRequest("/api/users/export"), noParams);
+    const body = await response.text();
+
+    expect(body).toContain("Person,COLLABORATOR");
+    expect(body).not.toContain("private@example.com");
+    expect(body).not.toContain("secret-size");
+    expect(body).not.toContain("Private Manager");
+    const [header, row] = body.split("\n");
+    expect(row!.split(",")).toHaveLength(header!.split(",").length);
+  });
+
+  it("preserves full collaborator exports for admins", async () => {
+    vi.mocked(requireAuth).mockResolvedValue(adminUser);
+    const collaborator = {
+      id: "a", name: "Person", role: "COLLABORATOR" as const, email: "private@example.com", athleticsEmail: null,
+      phone: null, title: "Assistant", gradYear: null, studentYearOverride: null, primaryArea: null,
+      startDate: null, topSize: null, bottomSize: null, shoeSize: null, active: true,
+      createdAt: new Date("2026-01-01"), location: null, sportAssignments: [], areaAssignments: [],
+      directReport: null, directReportName: null,
+    };
+    vi.mocked(db.user.findMany).mockResolvedValue(users([collaborator]));
+
+    const response = await getUsersExport(makeGetRequest("/api/users/export"), noParams);
+
+    expect(await response.text()).toContain("private@example.com");
   });
 
   it("blocks org chart reporting hierarchy from STUDENT callers", async () => {

@@ -1,7 +1,5 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-
-const source = (file: string) => readFileSync(file, "utf8");
+import { source } from "./_helpers/source";
 
 describe("native Schedule MVP parity", () => {
   it("does not crash when one person has two shifts on the same event", () => {

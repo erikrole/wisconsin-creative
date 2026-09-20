@@ -67,7 +67,7 @@ function primaryControl(page: Page, path: string): Locator {
     case "/items":
       return page.getByRole("textbox", { name: "Search items" });
     case "/search":
-      return page.getByRole("textbox", { name: "Search items, checkouts, reservations, users" });
+      return page.getByRole("textbox", { name: "Search items, checkouts, reservations, users, and guides" });
     case "/schedule":
       return role === "STUDENT"
         ? page.getByRole("button", { name: /Trade Board/ })
@@ -147,7 +147,7 @@ test("a direct role-restricted Settings URL fails closed", async ({ page }) => {
 test("Search keeps available results visible when one read source fails", async ({ page }) => {
   const errors = watchRuntimeErrors(page);
   await page.route("**/api/assets?*", (route) => route.fulfill({ status: 503, body: "unavailable" }));
-  for (const endpoint of ["checkouts", "reservations", "users"]) {
+  for (const endpoint of ["checkouts", "reservations", "users", "resources"]) {
     await page.route(`**/api/${endpoint}?*`, (route) => route.fulfill({
       status: 200,
       contentType: "application/json",

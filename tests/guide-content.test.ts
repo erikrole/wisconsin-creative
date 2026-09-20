@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   blockNoteToMarkdown,
   extractGuideText,
+  isCopyFenceLanguage,
   markdownHeadings,
   markdownToPlainText,
+  omitDuplicateLeadHeading,
   summarizeGuideContent,
   summarizeMarkdown,
 } from "@/lib/guide-content";
@@ -25,6 +27,13 @@ describe("markdownToPlainText preview cleanup", () => {
     expect(text).toContain("Phase 1");
     expect(text).toContain("Do not unplug the drive.");
     expect(text).toContain("Pick your selects first.");
+  });
+
+  it("strips shortcut callout markers from previews", () => {
+    const text = markdownToPlainText("> [!SHORTCUT]\n> `⌘K` opens Quick find.");
+    expect(text).not.toContain("[!SHORTCUT]");
+    expect(text).toContain("⌘K");
+    expect(text).toContain("opens Quick find.");
   });
 
   it("summarizes clean prose without markdown artifacts", () => {
@@ -181,5 +190,28 @@ describe("guide content text extraction", () => {
         text: "Server Paths",
       },
     ]);
+  });
+});
+
+describe("omitDuplicateLeadHeading", () => {
+  it("strips a lead h1 that restates the resource title", () => {
+    const markdown = "# Color Correction 101\n\nConfirm Premiere’s color settings.";
+    expect(omitDuplicateLeadHeading(markdown, "Color Correction 101")).toBe(
+      "Confirm Premiere’s color settings.",
+    );
+  });
+
+  it("keeps a lead h1 that does not match the title", () => {
+    const markdown = "# Phase 1\n\nPlug in the card.";
+    expect(omitDuplicateLeadHeading(markdown, "Photo Mechanic")).toBe(markdown);
+  });
+});
+
+describe("isCopyFenceLanguage", () => {
+  it("treats copy and path fences as copyable", () => {
+    expect(isCopyFenceLanguage("copy")).toBe(true);
+    expect(isCopyFenceLanguage("path")).toBe(true);
+    expect(isCopyFenceLanguage("text")).toBe(false);
+    expect(isCopyFenceLanguage("embed")).toBe(false);
   });
 });

@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   buildReportCsv,
+  escapeReportCsvValue,
   formatReportExportSuccess,
   getReportExportCompletionToast,
   getReportExportFilename,
@@ -11,6 +12,18 @@ import {
 } from "@/app/(app)/reports/report-export";
 
 describe("report export helpers", () => {
+  it.each(["  =SUM(A1:A2)", "\n@SUM(A1)", " \t+1"])("escapes whitespace-prefixed report formula %j", (value) => {
+    expect(escapeReportCsvValue(value)).toBe(`"'${value}"`);
+  });
+
+  it("warns about incomplete report downloads even without a total", () => {
+    expect(getReportExportCompletionToast({ reportLabel: "Audit", rowCount: 5000, truncated: true }).variant).toBe("warning");
+  });
+
+  it.each(["null", "[]", "42", '"private failure"'])("uses fallback copy for non-object JSON %s", async (body) => {
+    expect(await readReportExportFailureMessage(new Response(body, { status: 502 }), "Audit")).toBe("Audit CSV export failed (502).");
+  });
+
   it("builds formula-safe CSV output", () => {
     expect(buildReportCsv([
       ["Name", "Formula"],

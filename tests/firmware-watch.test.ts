@@ -123,6 +123,7 @@ describe("firmware watch polling", () => {
       changed: 0,
       baselined: 1,
       failed: 0,
+      skipped: 0,
       notificationsCreated: 0,
       errors: [],
     });

@@ -1,9 +1,5 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-
-function source(path: string): string {
-  return readFileSync(path, "utf8");
-}
+import { source } from "./_helpers/source";
 
 describe("native booking extend concurrency contract", () => {
   it("sends the visible booking snapshot and decodes the authoritative response", () => {

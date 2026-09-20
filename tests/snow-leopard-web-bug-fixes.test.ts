@@ -1,9 +1,5 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-
-function source(relativePath: string) {
-  return readFileSync(`${process.cwd()}/${relativePath}`, "utf8");
-}
+import { source } from "./_helpers/source";
 
 describe("Snow Leopard website bug regressions", () => {
   it("keeps booking list extensions on the optimistic-lock contract", () => {

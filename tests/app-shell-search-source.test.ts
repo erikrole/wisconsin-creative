@@ -34,6 +34,9 @@ describe("app shell quick search source", () => {
     expect(source).toContain("failures.push(SEARCH_RESULT_SOURCES.checkouts)");
     expect(source).toContain("failures.push(SEARCH_RESULT_SOURCES.reservations)");
     expect(source).toContain("failures.push(SEARCH_RESULT_SOURCES.users)");
+    expect(source).toContain("failures.push(SEARCH_RESULT_SOURCES.guides)");
+    expect(source).toContain("/api/resources?q=");
+    expect(source).toContain('heading="Guides"');
     expect(source).toContain("<OperationalPartialResultsAlert");
     expect(source).toContain('failureLabel="Unavailable result types"');
     expect(source).not.toContain("Some result types could not load. Showing available matches.");

@@ -1,7 +1,5 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-
-const source = (path: string) => readFileSync(path, "utf8");
+import { source } from "./_helpers/source";
 
 describe("native Schedule staff authoring redesign", () => {
   it("makes Add Shift event-aware with explicit slot and schedule decisions", () => {

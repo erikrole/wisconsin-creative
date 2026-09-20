@@ -4,10 +4,13 @@ import { tmpdir } from "node:os";
 
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  assertDevelopmentDatabaseUrl,
   ensureDevelopmentSessionCookieName,
   ensureDevelopmentSessionSecret,
+  isValidDatabaseUrl,
   isValidSessionSecret,
   readDotenvValue,
+  resolveDevelopmentDatabaseUrl,
 } from "../scripts/ensure-dev-env.mjs";
 import { assertNextBuildSafe } from "../scripts/guard-next-build.mjs";
 import {
@@ -33,6 +36,37 @@ function createTemporaryRoot() {
 }
 
 describe("development environment bootstrap", () => {
+  it("fails before starting a database-backed dev server when DATABASE_URL is missing", () => {
+    expect(() =>
+      assertDevelopmentDatabaseUrl({
+        rootDir: createTemporaryRoot(),
+        environment: { NODE_ENV: "development" },
+      }),
+    ).toThrow("Run npm run dev:preview");
+  });
+
+  it("accepts an injected database URL or a local development file", () => {
+    const root = createTemporaryRoot();
+    writeFileSync(
+      join(root, ".env.development.local"),
+      "DATABASE_URL=postgresql://user:pass@preview.example.test/gear-tracker\n",
+    );
+
+    expect(isValidDatabaseUrl("postgresql://user:pass@preview.example.test/gear-tracker")).toBe(true);
+    expect(isValidDatabaseUrl("[SENSITIVE]")).toBe(false);
+    expect(resolveDevelopmentDatabaseUrl({ rootDir: root, environment: {} })).toEqual({
+      status: "file",
+      path: join(root, ".env.development.local"),
+    });
+    expect(assertDevelopmentDatabaseUrl({
+      rootDir: createTemporaryRoot(),
+      environment: {
+        NODE_ENV: "development",
+        DATABASE_URL: "postgresql://user:pass@preview.example.test/gear-tracker",
+      },
+    })).toEqual({ status: "process" });
+  });
+
   it("BUG: creates a development override when the Vercel local secret is too short", () => {
     const root = createTemporaryRoot();
     writeFileSync(join(root, ".env.local"), 'SESSION_SECRET="short"\n');

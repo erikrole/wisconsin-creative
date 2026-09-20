@@ -1,8 +1,5 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-
-const source = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
+import { source } from "./_helpers/source";
 
 describe("shared checkout custody contracts", () => {
   it("lets staff designate an ownerless travel-case reservation at creation", () => {

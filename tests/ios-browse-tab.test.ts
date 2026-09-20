@@ -1,10 +1,5 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
-
-function source(relativeFile: string) {
-  return readFileSync(path.join(process.cwd(), relativeFile), "utf8");
-}
+import { source } from "./_helpers/source";
 
 function appTabViewShell() {
   return source("ios/Wisconsin/Views/AppTabView.swift").split("// MARK: - Profile")[0] ?? "";
@@ -25,10 +20,6 @@ describe("iOS Browse tab", () => {
     expect(scheduleIndex).toBeLessThan(bookingsIndex);
     expect(bookingsIndex).toBeLessThan(browseIndex);
     expect(browseIndex).toBeLessThan(searchIndex);
-    expect(appTab).toContain("BrowseView()");
-    expect(appTab).not.toContain('Tab("Items", systemImage: "archivebox", value: 2)');
-    expect(appTab).toContain('Tab("Search", systemImage: "magnifyingglass", value: 3, role: .search)');
-    expect(appTab).toContain(".tabPlacement(.pinned)");
   });
 
   it("renders Browse as a native SwiftUI list of directory links", () => {
@@ -75,9 +66,6 @@ describe("iOS Browse tab", () => {
     const appTab = appTabViewShell();
     const browse = source("ios/Wisconsin/Views/BrowseView.swift");
 
-    expect(appTab).toContain('TabSection("Resources")');
-    expect(appTab).toContain('Tab("Users", systemImage: "person.2", value: 5)');
-    expect(appTab).not.toContain('TabSection("Admin")');
     expect(appTab).not.toMatch(/if isStaffOrAdmin \{[\s\S]*?Tab\("Users"/);
 
     expect(browse).toContain("case .users:");

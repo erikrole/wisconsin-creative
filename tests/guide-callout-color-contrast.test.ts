@@ -5,7 +5,7 @@ type Oklab = { lightness: number; a: number; b: number };
 type Rgb = { red: number; green: number; blue: number };
 
 const css = readFileSync("src/app/globals.css", "utf8");
-const calloutTypes = ["note", "tip", "important", "warning", "caution"] as const;
+const calloutTypes = ["note", "tip", "shortcut", "important", "warning", "caution"] as const;
 
 function accent(type: (typeof calloutTypes)[number], dark: boolean): Oklab {
   const prefix = dark ? '\\[data-theme="dark"\\] ' : "(?:^|\\n)";

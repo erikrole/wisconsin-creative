@@ -9,10 +9,7 @@ import {
   isHiddenUntilEarnedBadge,
   RARITY_PROVING_PERIOD_MS,
 } from "@/lib/badges/display";
-
-function source(relativeFile: string) {
-  return readFileSync(path.join(process.cwd(), relativeFile), "utf8");
-}
+import { source } from "./_helpers/source";
 
 /** Every icon name the seeded catalog and the custom-badge picker can produce. */
 function catalogIconNames(): string[] {

@@ -1,10 +1,5 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
-
-function source(relativeFile: string) {
-  return readFileSync(path.join(process.cwd(), relativeFile), "utf8");
-}
+import { source } from "./_helpers/source";
 
 const hook = source("src/hooks/use-schedule-data.ts");
 const filters = source("src/app/(app)/schedule/_components/ScheduleFilters.tsx");
@@ -126,10 +121,15 @@ describe("schedule timeline", () => {
     expect(timelinePosition).toContain("availableEventIds.has(event.id)");
   });
 
-  it("pins the header and filters so the timeline runs beneath them", () => {
+  it("pins the header, filters, and activity strip so the timeline runs beneath them", () => {
     expect(page).toContain('style={{ top: "var(--schedule-sticky-top, 0px)" }}');
     expect(page).toContain('--schedule-sticky-bottom');
     expect(page).toContain("data-schedule-sticky-frame");
+    const stickyStart = page.indexOf("data-schedule-sticky-frame");
+    const listStart = page.indexOf("{canDisplaySchedule && data.filters.viewMode === \"calendar\"");
+    expect(page.indexOf("<ScheduleFilters", stickyStart)).toBeGreaterThan(stickyStart);
+    expect(page.indexOf("<ScheduleReadiness", stickyStart)).toBeGreaterThan(stickyStart);
+    expect(page.indexOf("<ScheduleReadiness", stickyStart)).toBeLessThan(listStart);
     // Day headers stack below both sticky frames, and the anchor lands there too.
     expect(listView).toContain('style={{ top: "var(--schedule-sticky-bottom, 0px)" }}');
     expect(listView).toContain('scrollMarginTop: "var(--schedule-sticky-bottom, 0px)"');
@@ -139,10 +139,9 @@ describe("schedule timeline", () => {
     expect(appShell).toContain("data-app-shell-header");
     expect(appShell).toContain("sticky top-0 z-40");
     expect(appShell).toContain('data-app-shell-breadcrumb-frame={pathname === "/schedule" ? "" : undefined}');
-    // The frame's offset moved onto its own clause so the role-preview banner
-    // can push it down; the default is still flush under the 48px header.
-    expect(appShell).toContain('"sticky z-[35]');
-    expect(appShell).toContain('isRolePreview ? "top-[5.5rem]" : "top-12"');
+    // Top-level Schedule hides breadcrumbs, so the command bar sits under the
+    // 48px app header. The empty frame still exists for height measurement.
+    expect(appShell).not.toContain('"sticky z-[35]');
     expect(page).toContain("sticky z-30");
     expect(listView).toContain("sticky z-10");
     expect(page).toContain('[data-app-shell-header]');

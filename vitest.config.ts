@@ -10,6 +10,8 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    // Worker threads start faster than forked processes for this many small files.
+    pool: "threads",
     include: ["tests/**/*.test.ts", "tests/**/*.test.mjs"],
     setupFiles: ["tests/_setup.ts"],
     coverage: {

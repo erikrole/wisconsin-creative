@@ -1,10 +1,6 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { calendarDate } from "@/lib/format";
-
-function source(path: string) {
-  return readFileSync(path, "utf8");
-}
+import { source } from "./_helpers/source";
 
 const models = source("ios/Wisconsin/Models/ScheduleModels.swift");
 const eventDetail = source("ios/Wisconsin/Views/EventDetailSheet.swift");

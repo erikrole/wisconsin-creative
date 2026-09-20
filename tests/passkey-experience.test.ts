@@ -1,10 +1,8 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { WebAuthnError } from "@simplewebauthn/browser";
 import { isPasskeyCancellation, passkeyErrorMessage, passkeyStorageLabel } from "@/lib/passkey-client";
 import { describeEnrollingClient } from "@/lib/passkey";
-
-const source = (path: string) => readFileSync(path, "utf8");
+import { source } from "./_helpers/source";
 
 function webAuthnError(code: string, name: string) {
   const cause = new Error("underlying");

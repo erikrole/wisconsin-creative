@@ -1,9 +1,6 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-
-function source(path: string) {
-  return readFileSync(path, "utf8");
-}
+import { source } from "./_helpers/source";
 
 function sourceForMigratedPage(page: string) {
   const files = page === "src/app/(app)/licenses/page.tsx"

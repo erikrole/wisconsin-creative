@@ -5,6 +5,7 @@ vi.mock("@/lib/auth", () => ({ requireAuth: vi.fn() }));
 vi.mock("@/lib/services/accountability", () => ({
   getCurrentAcademicYearStart: vi.fn(() => 2026),
   getAccountabilityReport: vi.fn(),
+  getCachedAccountabilityReport: vi.fn(),
   excludeBookingFromAccountability: vi.fn(),
   restoreBookingToAccountability: vi.fn(),
 }));
@@ -18,7 +19,7 @@ vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
 import { requireAuth } from "@/lib/auth";
 import {
   excludeBookingFromAccountability,
-  getAccountabilityReport,
+  getCachedAccountabilityReport,
   restoreBookingToAccountability,
 } from "@/lib/services/accountability";
 import { GET } from "@/app/api/accountability/route";
@@ -63,7 +64,7 @@ const leaderboard = [
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(requireAuth).mockResolvedValue(admin);
-  vi.mocked(getAccountabilityReport).mockResolvedValue({
+  vi.mocked(getCachedAccountabilityReport).mockResolvedValue({
     academicYear: { startYear: 2026, label: "2026-27" },
     methodology: {},
     metrics: {
@@ -91,7 +92,7 @@ describe("accountability routes", () => {
     expect(body.metrics.excludedRecords).toBe(1);
     expect(body.excluded).toEqual([{ bookingId: "excluded-1", note: "Bad import" }]);
     expect(body.spotlightJeers).toHaveLength(3);
-    expect(getAccountabilityReport).toHaveBeenCalledWith({
+    expect(getCachedAccountabilityReport).toHaveBeenCalledWith({
       startYear: 2025,
       locationId: undefined,
       incidentState: "resolved",
@@ -106,7 +107,7 @@ describe("accountability routes", () => {
       noParams,
     );
     expect(response.status).toBe(200);
-    expect(getAccountabilityReport).toHaveBeenCalledWith(
+    expect(getCachedAccountabilityReport).toHaveBeenCalledWith(
       expect.objectContaining({ sort: "time" }),
     );
 
@@ -123,7 +124,7 @@ describe("accountability routes", () => {
       noParams,
     );
     expect(response.status).toBe(200);
-    expect(getAccountabilityReport).toHaveBeenCalledWith(
+    expect(getCachedAccountabilityReport).toHaveBeenCalledWith(
       expect.objectContaining({ incidentState: "extended" }),
     );
   });
@@ -170,7 +171,7 @@ describe("accountability routes", () => {
     const response = await GET(new Request("https://app.example.com/api/accountability"), noParams);
 
     expect(response.status).toBe(403);
-    expect(getAccountabilityReport).not.toHaveBeenCalled();
+    expect(getCachedAccountabilityReport).not.toHaveBeenCalled();
   });
 
   it("keeps CSV export admin-only and rejects it before report work", async () => {
@@ -181,7 +182,42 @@ describe("accountability routes", () => {
     );
 
     expect(response.status).toBe(403);
-    expect(getAccountabilityReport).not.toHaveBeenCalled();
+    expect(getCachedAccountabilityReport).not.toHaveBeenCalled();
+  });
+
+  it("rate-limits admin CSV export before building the ranking", async () => {
+    const { enforceRateLimit } = await import("@/lib/rate-limit");
+    const order: string[] = [];
+    vi.mocked(enforceRateLimit).mockImplementation(async () => {
+      order.push("limit");
+    });
+    vi.mocked(getCachedAccountabilityReport).mockImplementation(async () => {
+      order.push("report");
+      return {
+        academicYear: { startYear: 2026, label: "2026-27" },
+        methodology: {},
+        metrics: {
+          peopleNeedingAttention: 1,
+          lateEvents: 2,
+          activeOverdue: 1,
+          totalLateHours: 8,
+          excludedRecords: 1,
+        },
+        locations: [],
+        leaderboard,
+        excluded: [],
+      } as never;
+    });
+
+    const response = await GET(
+      new Request("https://app.example.com/api/accountability?format=csv"),
+      noParams,
+    );
+
+    expect(response.status).toBe(200);
+    expect(order).toEqual(["limit", "report"]);
+    expect(response.headers.get("X-Exported-Count")).toBe("3");
+    expect(response.headers.get("Content-Type")).toContain("text/csv");
   });
 
   it("creates and restores exclusions with ADMIN identity", async () => {

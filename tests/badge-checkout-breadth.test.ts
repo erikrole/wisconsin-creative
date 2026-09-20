@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -8,12 +6,9 @@ import {
   type CheckoutBadgeEvidence,
 } from "@/lib/badges/automatic-rules";
 import { isHiddenUntilEarnedBadge } from "@/lib/badges/display";
+import { source } from "./_helpers/source";
 
 const TZ = "America/Chicago";
-
-function source(relativeFile: string) {
-  return readFileSync(path.join(process.cwd(), relativeFile), "utf8");
-}
 
 function category(name: string, parent?: string) {
   return { id: `cat-${parent ?? name}`, name, parent: parent ? { name: parent } : null };

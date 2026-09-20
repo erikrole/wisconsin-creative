@@ -1,7 +1,5 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-
-const source = (path: string) => readFileSync(path, "utf8");
+import { source } from "./_helpers/source";
 
 describe("Bookings interaction-detail contracts", () => {
   it("keeps scope, view, creation, recovery, and pagination controls on the 40px baseline", () => {

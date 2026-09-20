@@ -26,9 +26,10 @@ describe("working-copy mutation guard", () => {
 
   it("guards every live assignment mutation in the assignment service", () => {
     const source = readFileSync("src/lib/services/shift-assignments.ts", "utf8");
-    // Direct assign, remove, swap, acknowledge, and decline all reach live rows.
+    // Direct assign, swap, acknowledge, and decline all reach live rows.
+    // (`removeAssignment` was deleted 2026-09-20 — the DELETE route is a 410 stub.)
     const guardCount = source.match(/assertNoWorkingCopy\(/g)?.length ?? 0;
-    expect(guardCount).toBeGreaterThanOrEqual(6);
+    expect(guardCount).toBeGreaterThanOrEqual(5);
   });
 
   it("keeps reservation-backed assignment out of a group with an open draft", () => {

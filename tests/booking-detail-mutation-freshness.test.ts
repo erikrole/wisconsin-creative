@@ -1,13 +1,9 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   BOOKING_SNAPSHOT_HEADER,
   parseBookingSnapshotHeader,
 } from "@/lib/booking-concurrency";
-
-function source(relativePath: string) {
-  return readFileSync(`${process.cwd()}/${relativePath}`, "utf8");
-}
+import { source } from "./_helpers/source";
 
 describe("booking detail mutation freshness contracts", () => {
   it("uses an application-owned snapshot header while accepting legacy native clients", () => {

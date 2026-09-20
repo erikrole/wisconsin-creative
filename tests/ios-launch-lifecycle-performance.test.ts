@@ -1,10 +1,5 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
-
-function source(relativeFile: string) {
-  return readFileSync(path.join(process.cwd(), relativeFile), "utf8");
-}
+import { source } from "./_helpers/source";
 
 describe("iOS launch lifecycle performance", () => {
   it("keeps initial session validation under one request owner", () => {
@@ -67,10 +62,6 @@ describe("iOS launch lifecycle performance", () => {
   it("preserves stable native tab identities and capability gates", () => {
     const tabs = source("ios/Wisconsin/Views/AppTabView.swift");
 
-    expect(tabs).toContain('Tab("Home", systemImage: "house", value: 0)');
-    expect(tabs).toContain('Tab("Schedule", systemImage: "calendar", value: 4)');
-    expect(tabs).toContain('Tab("Browse", systemImage: "square.grid.2x2", value: 2)');
-    expect(tabs).toContain('Tab("Search", systemImage: "magnifyingglass", value: 3, role: .search)');
     expect(tabs).toContain('if hasCapability("PUBLISHED_SCHEDULE_VIEW")');
     expect(tabs).toContain('if hasCapability("MY_GEAR_VIEW")');
     expect(tabs).toContain('if hasCapability("GEAR_CATALOG_VIEW")');

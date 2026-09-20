@@ -74,16 +74,6 @@ beforeEach(() => {
 // cancelBooking
 // ═══════════════════════════════════════════════════════════════════════════════
 describe("cancelBooking", () => {
-  it("uses SERIALIZABLE isolation", async () => {
-    mockTx.booking.findUnique.mockResolvedValue({
-      id: "b-1", kind: "CHECKOUT", status: "PENDING_PICKUP",
-    });
-
-    await cancelBooking("b-1", "actor-1");
-
-    expectSerializableIsolation(transactionCalls, 0);
-  });
-
   it("sets a staged checkout to CANCELLED and deactivates allocations", async () => {
     mockTx.booking.findUnique.mockResolvedValue({
       id: "b-1", kind: "CHECKOUT", status: "PENDING_PICKUP",
@@ -101,6 +91,7 @@ describe("cancelBooking", () => {
       data: { active: false },
     });
     expect(endCheckoutReturnLiveActivities).not.toHaveBeenCalled();
+    expectSerializableIsolation(transactionCalls, 0);
   });
 
   it("cancels open scan sessions", async () => {
@@ -217,16 +208,6 @@ describe("cancelBooking", () => {
 // cancelReservation
 // ═══════════════════════════════════════════════════════════════════════════════
 describe("cancelReservation", () => {
-  it("uses SERIALIZABLE isolation", async () => {
-    mockTx.booking.findUnique.mockResolvedValue({
-      id: "r-1", kind: "RESERVATION", status: "BOOKED",
-    });
-
-    await cancelReservation("r-1", "actor-1");
-
-    expectSerializableIsolation(transactionCalls, 0);
-  });
-
   it("cancels a BOOKED reservation", async () => {
     mockTx.booking.findUnique.mockResolvedValue({
       id: "r-1", kind: "RESERVATION", status: "BOOKED",
@@ -239,6 +220,7 @@ describe("cancelReservation", () => {
       where: { id: "r-1" },
       data: { status: "CANCELLED" },
     });
+    expectSerializableIsolation(transactionCalls, 0);
   });
 
   it("throws 404 when not found", async () => {

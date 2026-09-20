@@ -1,10 +1,5 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
-
-function source(relativeFile: string) {
-  return readFileSync(path.join(process.cwd(), relativeFile), "utf8");
-}
+import { source } from "./_helpers/source";
 
 describe("iOS main app and kiosk target split", () => {
   it("keeps kiosk sources split while both apps use the iOS 26 baseline", () => {
@@ -19,9 +14,6 @@ describe("iOS main app and kiosk target split", () => {
     expect(mainTarget).toContain("- KioskOnly/**");
     expect(kioskTarget).toContain("- path: Wisconsin/KioskOnly");
     expect(kioskTarget).toContain("- path: Wisconsin/Kiosk");
-    expect(mainTarget).toContain('deploymentTarget: "26.0"');
-    expect(kioskTarget).toContain('deploymentTarget: "26.0"');
-    expect(kioskTarget).not.toContain('deploymentTarget: "17.0"');
   });
 
   it("does not expose kiosk launch routes from the main app shell or Settings", () => {

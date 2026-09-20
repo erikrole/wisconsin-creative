@@ -1,7 +1,5 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-
-const source = (path: string) => readFileSync(path, "utf8");
+import { source } from "./_helpers/source";
 
 describe("combined Schedule events source contract", () => {
   it("keeps combine preview-first, suggested, and reversible in the Schedule control room", () => {

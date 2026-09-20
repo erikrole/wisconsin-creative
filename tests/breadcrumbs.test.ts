@@ -11,6 +11,7 @@ import {
   isDynamicSegment,
   isQuietBreadcrumbRoute,
   saveRecentEntity,
+  shouldShowBreadcrumbs,
   visibleSiblingsForRole,
   type SiblingItem,
 } from "@/lib/breadcrumbs";
@@ -65,11 +66,13 @@ describe("formatSegment", () => {
   it("uses overrides where the label diverges from title-casing", () => {
     expect(formatSegment("events")).toBe("Schedule");
     expect(formatSegment("bulk-inventory")).toBe("Item family operations");
+    expect(formatSegment("allowed-emails")).toBe("Registration access");
+    expect(formatSegment("kiosk-devices")).toBe("Kiosks");
     expect(formatSegment("scan")).toBe("Scan");
   });
 
   it("title-cases hyphenated segments by default", () => {
-    expect(formatSegment("checkout-policies")).toBe("Checkout Policies");
+    expect(formatSegment("checkout-policies")).toBe("Checkout policies");
     expect(formatSegment("onboarding-status")).toBe("Onboarding Status");
   });
 });
@@ -119,7 +122,7 @@ describe("buildBreadcrumbItems", () => {
     expect(items).toEqual([
       { href: "/", label: "Home", isPage: false },
       { href: "/settings", label: "Settings", isPage: false },
-      { href: "/settings/allowed-emails", label: "Allowed Emails", isPage: true },
+      { href: "/settings/allowed-emails", label: "Registration access", isPage: true },
     ]);
   });
 
@@ -140,6 +143,28 @@ describe("isQuietBreadcrumbRoute", () => {
     expect(isQuietBreadcrumbRoute("/checkouts/new")).toBe(true);
     expect(isQuietBreadcrumbRoute("/reservations/new")).toBe(true);
     expect(isQuietBreadcrumbRoute("/items")).toBe(false);
+  });
+});
+
+describe("shouldShowBreadcrumbs", () => {
+  it("hides Home-only and top-level section trails", () => {
+    expect(shouldShowBreadcrumbs([{ href: "/", label: "Home", isPage: true }], false)).toBe(false);
+    expect(shouldShowBreadcrumbs([
+      { href: "/", label: "Home", isPage: false },
+      { href: "/items", label: "Items", isPage: true },
+    ], false)).toBe(false);
+  });
+
+  it("keeps nested, create, and entity-detail trails", () => {
+    expect(shouldShowBreadcrumbs([
+      { href: "/", label: "Home", isPage: false },
+      { href: "/settings", label: "Settings", isPage: false },
+      { href: "/settings/categories", label: "Categories", isPage: true },
+    ], false)).toBe(true);
+    expect(shouldShowBreadcrumbs([
+      { href: "/", label: "Home", isPage: false },
+      { href: "/items", label: "Items", isPage: false },
+    ], true)).toBe(true);
   });
 });
 
@@ -191,6 +216,12 @@ describe("recent entities storage", () => {
 
     store.set(RECENT_STORAGE_KEY, JSON.stringify({ href: "/items/1" }));
     expect(getRecentEntities("items")).toEqual([]);
+  });
+
+  it("repairs corrupt recent storage on the next visit", () => {
+    store.set(RECENT_STORAGE_KEY, "{broken");
+    saveRecentEntity({ href: "/items/a", label: "Camera", section: "items" });
+    expect(getRecentEntities("items")).toHaveLength(1);
   });
 
   it("drops malformed entries instead of rendering them", () => {

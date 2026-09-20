@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  buildStaffScheduleDigestCandidates,
   categoryForScheduleNotificationType,
   scheduleMyShiftsNotificationPayload,
   scheduleNotificationPayload,
@@ -76,18 +75,5 @@ describe("schedule notification policy", () => {
       startDate: "2026-08-01T00:00:00.000Z",
       endDate: "2026-08-31T23:59:59.999Z",
     });
-  });
-
-  it("builds staff digest candidates without sending a recurring digest", () => {
-    expect(buildStaffScheduleDigestCandidates({
-      openSlots: 3,
-      conflictedAssignments: 0,
-      unacknowledgedWorkers: 2,
-      missingGear: 1,
-    })).toEqual([
-      { queue: "needs-staffing", count: 3, title: "Open schedule slots", href: "/schedule?queue=needs-staffing" },
-      { queue: "unacknowledged", count: 2, title: "Unacknowledged workers", href: "/schedule?queue=unacknowledged" },
-      { queue: "gear-gaps", count: 1, title: "Gear gaps", href: "/schedule?queue=gear-gaps" },
-    ]);
   });
 });

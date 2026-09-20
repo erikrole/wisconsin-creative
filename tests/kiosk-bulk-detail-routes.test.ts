@@ -21,7 +21,6 @@ const mocks = vi.hoisted(() => ({
   badgeOnScanResult: vi.fn(),
   badgeOnCheckoutOpened: vi.fn(),
   earnedBadgesSince: vi.fn(),
-  findPickupSubstitutionCandidate: vi.fn(),
   preflightReservationPickupSerializedAdd: vi.fn(),
   addAndStageReservationPickupSerialized: vi.fn(),
 }));
@@ -88,10 +87,6 @@ vi.mock("@/lib/services/kiosk-pickup-add", () => ({
   addAndStageReservationPickupSerialized: mocks.addAndStageReservationPickupSerialized,
 }));
 
-vi.mock("@/lib/services/kiosk-pickup-substitute", () => ({
-  findPickupSubstitutionCandidate: mocks.findPickupSubstitutionCandidate,
-}));
-
 vi.mock("@/lib/services/bulk-unit-scans", () => ({
   scanKioskPickupBulkUnit: mocks.scanKioskPickupBulkUnit,
   stageKioskReservationPickupBulkUnit: mocks.stageKioskReservationPickupBulkUnit,
@@ -141,7 +136,6 @@ beforeEach(() => {
   mocks.bookingSerializedItemFindFirst.mockResolvedValue(null);
   mocks.scanEventFindFirst.mockResolvedValue(null);
   mocks.stageKioskReservationPickupBulkUnit.mockResolvedValue({ handled: false });
-  mocks.findPickupSubstitutionCandidate.mockResolvedValue(null);
   mocks.preflightReservationPickupSerializedAdd.mockResolvedValue({
     ok: true,
     item: { id: "asset-755", name: "Manfrotto 755CX3 Tripod", tagName: "Manfrotto 755CX3 Tripod" },
@@ -824,7 +818,6 @@ describe("kiosk pickup serialized scan guard", () => {
       error: "FX3 1 already picked up",
       errorCode: "duplicate",
     });
-    expect(mocks.findPickupSubstitutionCandidate).not.toHaveBeenCalled();
     expect(mocks.scanEventCreate).not.toHaveBeenCalled();
   });
 

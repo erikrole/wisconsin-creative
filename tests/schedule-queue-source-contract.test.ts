@@ -1,10 +1,6 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { SCHEDULE_QUEUE_META } from "@/lib/schedule-queues";
-
-function source(path: string) {
-  return readFileSync(path, "utf8");
-}
+import { source } from "./_helpers/source";
 
 describe("schedule queue source contract", () => {
   it("keeps schedule queue state URL-backed", () => {

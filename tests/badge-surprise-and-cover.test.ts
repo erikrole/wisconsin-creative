@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -8,10 +6,7 @@ import {
   type TradeBadgeEvidence,
 } from "@/lib/badges/automatic-rules";
 import { isHiddenUntilEarnedBadge } from "@/lib/badges/display";
-
-function source(relativeFile: string) {
-  return readFileSync(path.join(process.cwd(), relativeFile), "utf8");
-}
+import { source } from "./_helpers/source";
 
 function trade(overrides: {
   postedBy?: string | null;

@@ -1,6 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { BookingKind, BookingStatus } from "@prisma/client";
 
 vi.mock("@/lib/db", () => ({
@@ -19,10 +17,7 @@ vi.mock("@/lib/db", () => ({
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
 import { listBookings } from "@/lib/services/bookings-queries";
-
-function source(relativeFile: string) {
-  return readFileSync(path.join(process.cwd(), relativeFile), "utf8");
-}
+import { source } from "./_helpers/source";
 
 describe("listBookings status filters", () => {
   beforeEach(() => {

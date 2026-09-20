@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
-import path from "node:path";
-function source(file: string) { return readFileSync(path.join(process.cwd(), file), "utf8"); }
+import { source } from "./_helpers/source";
 
 describe("item transfer client and provenance contract", () => {
   it("offers real transfers only on active, manageable checkout rows", () => {

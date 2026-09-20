@@ -1,17 +1,13 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
 import { decryptSoftwareSecret, encryptSoftwareSecret } from "../src/lib/software-vault-crypto";
 import { canViewSoftwareCredential } from "../src/lib/software-vault-access";
 import {
   createSoftwareCredentialSchema,
   updateSoftwareCredentialSchema,
 } from "../src/lib/software-vault-validation";
+import { source } from "./_helpers/source";
 
 const originalVaultKey = process.env.SOFTWARE_VAULT_KEY;
-
-function source(path: string) {
-  return readFileSync(path, "utf8");
-}
 
 beforeEach(() => {
   process.env.SOFTWARE_VAULT_KEY = Buffer.alloc(32, 7).toString("base64");

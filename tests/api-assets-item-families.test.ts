@@ -300,8 +300,56 @@ describe("/api/assets item-family rows", () => {
       "Video FX6 2",
     ]);
     expect(body.total).toBe(11);
+    // The asset side is now ordered and bounded in Postgres by the persisted
+    // operational sort key (migration 0151); only the asset/bulk interleave is
+    // still merged in Node.
     expect(mocks.assetFindMany).toHaveBeenCalledWith(expect.objectContaining({
-      orderBy: { assetTag: "asc" },
+      orderBy: [{ assetTagSortKey: "asc" }, { assetTag: "asc" }],
+      take: 10,
+    }));
+  });
+
+  it("paginates the serialized-only default sort entirely in Postgres", async () => {
+    mocks.assetFindMany.mockResolvedValue([
+      assetRow("70-200-1", "70-200 1"),
+      assetRow("70-200-2", "70-200 2"),
+    ]);
+    mocks.assetCount.mockResolvedValue(4200);
+
+    const res = await getAssets(
+      request("/api/assets?sort=assetTag&item_type=serialized&limit=25&offset=50"),
+      { params: Promise.resolve({}) },
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.total).toBe(4200);
+    // No in-memory sort or slice: the page comes straight off the indexed
+    // asset_tag_sort_key column (migration 0151).
+    expect(mocks.assetFindMany).toHaveBeenCalledWith(expect.objectContaining({
+      orderBy: [{ assetTagSortKey: "asc" }, { assetTag: "asc" }],
+      take: 25,
+      skip: 50,
+    }));
+    expect(body.data.map((asset: { assetTag: string }) => asset.assetTag)).toEqual([
+      "70-200 1",
+      "70-200 2",
+    ]);
+  });
+
+  it("reverses the persisted sort key for descending asset-tag pages", async () => {
+    mocks.assetFindMany.mockResolvedValue([assetRow("fx6-1", "FX6 1")]);
+    mocks.assetCount.mockResolvedValue(1);
+
+    await getAssets(
+      request("/api/assets?sort=assetTag&order=desc&item_type=serialized&limit=25&offset=0"),
+      { params: Promise.resolve({}) },
+    );
+
+    expect(mocks.assetFindMany).toHaveBeenCalledWith(expect.objectContaining({
+      orderBy: [{ assetTagSortKey: "desc" }, { assetTag: "desc" }],
+      take: 25,
+      skip: 0,
     }));
   });
 

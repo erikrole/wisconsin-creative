@@ -1,6 +1,5 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { source } from "./_helpers/source";
 
 /**
  * The Resources area is three destinations that sit together in the iPad
@@ -13,9 +12,6 @@ import { describe, expect, it } from "vitest";
  * family. Per-surface behaviour lives in `ios-guides-native-page.test.ts` and
  * `ios-licenses-native-page.test.ts`.
  */
-
-const source = (relativeFile: string) =>
-  readFileSync(path.join(process.cwd(), relativeFile), "utf8");
 
 const guides = () => source("ios/Wisconsin/Views/GuidesView.swift");
 const licenses = () => source("ios/Wisconsin/Views/LicensesView.swift");

@@ -1,10 +1,6 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { formatScheduleReleaseCountdown } from "@/lib/schedule-release";
-
-function source(path: string) {
-  return readFileSync(path, "utf8");
-}
+import { source } from "./_helpers/source";
 
 describe("schedule release notification notice", () => {
   it("explains the notification timer from the accepted contract", () => {

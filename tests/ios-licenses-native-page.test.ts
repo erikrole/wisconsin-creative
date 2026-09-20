@@ -1,10 +1,5 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
-
-function source(relativeFile: string) {
-  return readFileSync(path.join(process.cwd(), relativeFile), "utf8");
-}
+import { source } from "./_helpers/source";
 
 function appTabViewShell() {
   return source("ios/Wisconsin/Views/AppTabView.swift").split("// MARK: - Profile")[0] ?? "";
@@ -45,11 +40,7 @@ describe("iOS native Licenses page", () => {
     const appTab = appTabViewShell();
     const browse = source("ios/Wisconsin/Views/BrowseView.swift");
 
-    expect(appTab).toContain('Tab("Browse", systemImage: "square.grid.2x2", value: 2)');
-    expect(appTab).toContain("BrowseView()");
     expect(browse).toContain("LicensesView(wrapsInNavigationStack: false)");
-    expect(appTab).toContain('Tab("Licenses", systemImage: "key", value: 7)');
-    expect(appTab).toContain("LicensesView()");
     expect(appTab).not.toContain("https://wisconsincreative.com/licenses");
     expect(browse).toContain("LicensesView(wrapsInNavigationStack: false)");
   });

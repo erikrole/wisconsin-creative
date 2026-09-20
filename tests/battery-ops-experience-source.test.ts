@@ -1,9 +1,5 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-
-function source(path: string) {
-  return readFileSync(path, "utf8");
-}
+import { source } from "./_helpers/source";
 
 describe("Battery Ops experience source contract", () => {
   it("keeps numbered counts unit-derived and exposes explicit operational actions", () => {

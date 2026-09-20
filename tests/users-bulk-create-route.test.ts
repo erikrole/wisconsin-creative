@@ -5,10 +5,6 @@ vi.mock("@/lib/auth", () => ({
   hashPassword: vi.fn(async (password: string) => `hashed:${password}`),
 }));
 
-vi.mock("@/lib/services/onboarding-lifecycle", () => ({
-  createDirectUserAccountsBulk: vi.fn(),
-}));
-
 vi.mock("@/lib/rate-limit", () => ({
   enforceRateLimit: vi.fn(),
   SETTINGS_MUTATION_LIMIT: { points: 60, duration: 60 },
@@ -20,7 +16,6 @@ vi.mock("@sentry/nextjs", () => ({
 
 import { requireAuth, hashPassword } from "@/lib/auth";
 import { enforceRateLimit, SETTINGS_MUTATION_LIMIT } from "@/lib/rate-limit";
-import { createDirectUserAccountsBulk } from "@/lib/services/onboarding-lifecycle";
 import { POST } from "@/app/api/users/bulk-create/route";
 
 const adminUser = {
@@ -75,7 +70,6 @@ describe("POST /api/users/bulk-create", () => {
     expect(body.error).toBe("Temporary-password bulk onboarding has been retired. Add emails to the allowlist so users can register and set their own passwords.");
     expect(enforceRateLimit).toHaveBeenCalledWith("users:bulk-create:admin-1", SETTINGS_MUTATION_LIMIT);
     expect(hashPassword).not.toHaveBeenCalled();
-    expect(createDirectUserAccountsBulk).not.toHaveBeenCalled();
   });
 
   it("keeps auth, role, and rate-limit checks around the retired endpoint", async () => {
@@ -95,6 +89,5 @@ describe("POST /api/users/bulk-create", () => {
     expect(body.error).toBe("Temporary-password bulk onboarding has been retired. Add emails to the allowlist so users can register and set their own passwords.");
     expect(enforceRateLimit).toHaveBeenCalledWith("users:bulk-create:staff-1", SETTINGS_MUTATION_LIMIT);
     expect(hashPassword).not.toHaveBeenCalled();
-    expect(createDirectUserAccountsBulk).not.toHaveBeenCalled();
   });
 });

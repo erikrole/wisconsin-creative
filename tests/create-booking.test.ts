@@ -200,11 +200,6 @@ beforeEach(() => {
 });
 
 describe("createBooking", () => {
-  it("uses SERIALIZABLE isolation", async () => {
-    await createBooking(baseInput());
-    expectSerializableIsolation(transactionCalls, 0);
-  });
-
   it("rejects checkout creation without kiosk custody source before opening a transaction", async () => {
     await expect(createBooking(baseInput({ custodySource: undefined }))).rejects.toMatchObject({
       status: 403,
@@ -222,6 +217,7 @@ describe("createBooking", () => {
         data: expect.objectContaining({ kind: "CHECKOUT", status: "OPEN" }),
       })
     );
+    expectSerializableIsolation(transactionCalls, 0);
   });
 
   it("creates a RESERVATION with BOOKED status", async () => {

@@ -73,12 +73,10 @@ vi.mock("@/lib/db", () => {
 import { db } from "@/lib/db";
 import {
   directAssignShift,
-  requestShift,
   approveRequest,
   declineRequest,
   initiateSwap,
   repairRoleSlotMismatch,
-  removeAssignment,
 } from "@/lib/services/shift-assignments";
 
 const mockTx = (db as unknown as { _mockTx: ShiftAssignmentsTx })._mockTx;
@@ -132,6 +130,7 @@ describe("directAssignShift", () => {
     });
 
     const result = await directAssignShift(shift.id, "user-1", "admin-1");
+    expectSerializableIsolation(transactionCalls, 0);
 
     expect(mockTx.shiftAssignment.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -144,17 +143,6 @@ describe("directAssignShift", () => {
       })
     );
     expect(result.id).toBe("sa-1");
-  });
-
-  it("uses SERIALIZABLE isolation", async () => {
-    mockTx.shift.findUnique.mockResolvedValue(shift);
-    mockTx.shiftAssignment.findFirst.mockResolvedValue(null);
-    mockTx.shiftAssignment.updateMany.mockResolvedValue({ count: 0 });
-    mockTx.shiftAssignment.create.mockResolvedValue({ id: "sa-1" });
-
-    await directAssignShift(shift.id, "user-1", "admin-1");
-
-    expectSerializableIsolation(transactionCalls, 0);
   });
 
   it("throws 404 when shift not found", async () => {
@@ -575,18 +563,6 @@ describe("repairRoleSlotMismatch", () => {
   });
 });
 
-// ══════��════════════════��═════════════════════════════════════════════════════
-// requestShift
-// ═══════��═════════════════════════════════════════════════════════════════════
-describe("requestShift", () => {
-  it("rejects new shift requests because open shifts are claimed directly", async () => {
-    await expect(requestShift("shift-1", "student-1")).rejects.toThrow(
-      "Shift requests are retired. Claim open shifts instead."
-    );
-    expect(mockTx.shiftAssignment.create).not.toHaveBeenCalled();
-  });
-});
-
 // ═══��════════════════════════════════════════════════════���════════════════════
 // approveRequest
 // ��═══════════════════════════════��═════════════════════════════════════════��══
@@ -619,6 +595,7 @@ describe("approveRequest", () => {
     });
 
     const result = await approveRequest(assignment.id);
+    expectSerializableIsolation(transactionCalls, 0);
 
     expect(mockTx.shiftAssignment.update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -630,24 +607,6 @@ describe("approveRequest", () => {
       })
     );
     expect(result.status).toBe("APPROVED");
-  });
-
-  it("uses SERIALIZABLE isolation", async () => {
-    const assignment = {
-      ...makeShiftAssignment({ status: "REQUESTED" }),
-      shift,
-      user: eligibleStudent,
-    };
-    mockTx.shiftAssignment.findUnique.mockResolvedValue(assignment);
-    mockTx.shiftAssignment.findFirst
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(null);
-    mockTx.shiftAssignment.updateMany.mockResolvedValue({ count: 0 });
-    mockTx.shiftAssignment.update.mockResolvedValue({ ...assignment, status: "APPROVED" });
-
-    await approveRequest(assignment.id);
-
-    expectSerializableIsolation(transactionCalls, 0);
   });
 
   it("throws 404 when assignment not found", async () => {
@@ -791,6 +750,7 @@ describe("declineRequest", () => {
     });
 
     await declineRequest(assignment.id);
+    expectSerializableIsolation(transactionCalls, 0);
 
     expect(mockTx.shiftAssignment.update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -799,16 +759,6 @@ describe("declineRequest", () => {
     );
     expect(notificationMocks.dispatchScheduleAssignmentNotifications)
       .toHaveBeenCalledWith(assignment.id, "declined");
-  });
-
-  it("uses SERIALIZABLE isolation", async () => {
-    const assignment = makeShiftAssignment({ status: "REQUESTED" });
-    mockTx.shiftAssignment.findUnique.mockResolvedValue(assignment);
-    mockTx.shiftAssignment.update.mockResolvedValue({ ...assignment, status: "DECLINED" });
-
-    await declineRequest(assignment.id);
-
-    expectSerializableIsolation(transactionCalls, 0);
   });
 
   it("throws 404 when assignment not found", async () => {
@@ -851,6 +801,7 @@ describe("initiateSwap", () => {
     });
 
     await initiateSwap(assignment.id, "target-1", "admin-1");
+    expectSerializableIsolation(transactionCalls, 0);
 
     expect(mockTx.shiftAssignment.update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -868,21 +819,6 @@ describe("initiateSwap", () => {
         }),
       })
     );
-  });
-
-  it("uses SERIALIZABLE isolation", async () => {
-    const assignment = {
-      ...makeShiftAssignment({ status: "DIRECT_ASSIGNED" }),
-      shift,
-    };
-    mockTx.shiftAssignment.findUnique.mockResolvedValue(assignment);
-    mockTx.shiftAssignment.findFirst.mockResolvedValue(null);
-    mockTx.shiftAssignment.update.mockResolvedValue({});
-    mockTx.shiftAssignment.create.mockResolvedValue({ id: "sa-new" });
-
-    await initiateSwap(assignment.id, "target-1", "admin-1");
-
-    expectSerializableIsolation(transactionCalls, 0);
   });
 
   it("throws 404 when assignment not found", async () => {
@@ -952,98 +888,6 @@ describe("initiateSwap", () => {
     mockTx.shiftAssignment.create.mockResolvedValue({ id: "sa-new" });
 
     await initiateSwap(assignment.id, "target-1", "admin-1");
-
-    expect(mockTx.shiftTrade.updateMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({
-          shiftAssignmentId: assignment.id,
-          status: { in: ["OPEN", "CLAIMED"] },
-        }),
-        data: expect.objectContaining({ status: "CANCELLED" }),
-      })
-    );
-  });
-});
-
-// ��═════════════════════════════════════════════════════════���══════════════════
-// removeAssignment
-// ═════════════════════════════════���═══════════════════════════════════════════
-describe("removeAssignment", () => {
-  it("removes a DIRECT_ASSIGNED assignment", async () => {
-    const assignment = makeShiftAssignment({ status: "DIRECT_ASSIGNED" });
-    mockTx.shiftAssignment.findUnique.mockResolvedValue(assignment);
-    mockTx.shiftAssignment.update.mockResolvedValue({
-      ...assignment,
-      status: "DECLINED",
-    });
-
-    await removeAssignment(assignment.id);
-
-    expect(mockTx.shiftAssignment.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: { status: "DECLINED" },
-      })
-    );
-  });
-
-  it("removes an APPROVED assignment", async () => {
-    const assignment = makeShiftAssignment({ status: "APPROVED" });
-    mockTx.shiftAssignment.findUnique.mockResolvedValue(assignment);
-    mockTx.shiftAssignment.update.mockResolvedValue({ ...assignment, status: "DECLINED" });
-
-    await removeAssignment(assignment.id);
-
-    expect(mockTx.shiftAssignment.update).toHaveBeenCalled();
-  });
-
-  it("removes a REQUESTED assignment", async () => {
-    const assignment = makeShiftAssignment({ status: "REQUESTED" });
-    mockTx.shiftAssignment.findUnique.mockResolvedValue(assignment);
-    mockTx.shiftAssignment.update.mockResolvedValue({ ...assignment, status: "DECLINED" });
-
-    await removeAssignment(assignment.id);
-
-    expect(mockTx.shiftAssignment.update).toHaveBeenCalled();
-  });
-
-  it("uses SERIALIZABLE isolation", async () => {
-    const assignment = makeShiftAssignment({ status: "DIRECT_ASSIGNED" });
-    mockTx.shiftAssignment.findUnique.mockResolvedValue(assignment);
-    mockTx.shiftAssignment.update.mockResolvedValue({ ...assignment, status: "DECLINED" });
-
-    await removeAssignment(assignment.id);
-
-    expectSerializableIsolation(transactionCalls, 0);
-  });
-
-  it("throws 404 when assignment not found", async () => {
-    mockTx.shiftAssignment.findUnique.mockResolvedValue(null);
-
-    await expect(removeAssignment("bad-id")).rejects.toThrow("Assignment not found");
-  });
-
-  it("throws 400 for SWAPPED status (terminal)", async () => {
-    mockTx.shiftAssignment.findUnique.mockResolvedValue(
-      makeShiftAssignment({ status: "SWAPPED" })
-    );
-
-    await expect(removeAssignment("sa-1")).rejects.toThrow("cannot be removed");
-  });
-
-  it("throws 400 for DECLINED status (terminal)", async () => {
-    mockTx.shiftAssignment.findUnique.mockResolvedValue(
-      makeShiftAssignment({ status: "DECLINED" })
-    );
-
-    await expect(removeAssignment("sa-1")).rejects.toThrow("cannot be removed");
-  });
-
-  it("cancels open trades so the board stops advertising a removed shift", async () => {
-    const assignment = makeShiftAssignment({ status: "DIRECT_ASSIGNED" });
-    mockTx.shiftAssignment.findUnique.mockResolvedValue(assignment);
-    mockTx.shiftAssignment.update.mockResolvedValue({ ...assignment, status: "DECLINED" });
-
-    await removeAssignment(assignment.id);
 
     expect(mockTx.shiftTrade.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({

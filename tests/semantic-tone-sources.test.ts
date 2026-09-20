@@ -1,12 +1,7 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { VENUE_TONES, venueToneFromIsHome } from "@/lib/venue-tone";
-
-function source(relativeFile: string) {
-  return readFileSync(path.join(process.cwd(), relativeFile), "utf8");
-}
+import { source } from "./_helpers/source";
 
 /** Every iOS view that shows an event rail or a crew-coverage pill. */
 const IOS_VENUE_CALL_SITES = [

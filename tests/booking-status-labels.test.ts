@@ -12,12 +12,12 @@ import {
 
 describe("booking status labels", () => {
   it("renders pending pickup as a first-class checkout state", () => {
-    expect(bookingStatusLabel("PENDING_PICKUP", "CHECKOUT")).toBe("Pending Pickup");
-    expect(statusLabel("PENDING_PICKUP", "CHECKOUT")).toBe("Pending Pickup");
+    expect(bookingStatusLabel("PENDING_PICKUP", "CHECKOUT")).toBe("Pending pickup");
+    expect(statusLabel("PENDING_PICKUP", "CHECKOUT")).toBe("Pending pickup");
     expect(statusBadgeVariant("PENDING_PICKUP", "CHECKOUT")).toBe("orange");
     expect(getStatusVisual("PENDING_PICKUP", false, "CHECKOUT")).toMatchObject({
       dot: "var(--orange)",
-      label: "Pending Pickup",
+      label: "Pending pickup",
     });
   });
 
@@ -43,7 +43,7 @@ describe("booking status labels", () => {
       variant: "purple",
     });
     expect(bookingStatusDisplay("OPEN", "CHECKOUT")).toEqual({
-      label: "Checked Out",
+      label: "Checked out",
       variant: "blue",
     });
     expect(getStatusVisual("OPEN", true, "CHECKOUT")).toMatchObject({
@@ -69,9 +69,9 @@ describe("booking status labels", () => {
   it("keeps global search status copy aligned with booking labels", () => {
     const source = readFileSync(join(process.cwd(), "src/app/(app)/search/page.tsx"), "utf8");
 
-    expect(source).toContain('case "OPEN": return "Checked Out"');
+    expect(source).toContain('case "OPEN": return "Checked out"');
     expect(source).toContain('case "BOOKED": return "Reserved"');
-    expect(source).not.toContain('case "OPEN": return "Checked out"');
+    expect(source).not.toContain('case "OPEN": return "Checked Out"');
     expect(source).not.toContain('case "BOOKED": return "Booked"');
   });
 });

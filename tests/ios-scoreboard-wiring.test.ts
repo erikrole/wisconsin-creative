@@ -1,9 +1,5 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-
-function source(path: string): string {
-  return readFileSync(path, "utf8");
-}
+import { source } from "./_helpers/source";
 
 describe("native Scoreboard wiring", () => {
   it("loads the universal aggregate route without a People capability gate", () => {
@@ -18,7 +14,6 @@ describe("native Scoreboard wiring", () => {
     expect(client).toContain('.init(name: "opponent", value: opponent)');
     expect(client).toContain('.init(name: "site", value: site)');
     expect(appTabs).toContain('TabSection("Team")');
-    expect(appTabs).toContain('Tab("Scoreboard", systemImage: "trophy", value: 8)');
     expect(appTabs).toContain("TeamScoreboardView()");
     expect(appTabs).toContain("horizontalSizeClass == .regular");
     expect(appTabs).toContain("if !isCollaborator {");

@@ -3,7 +3,6 @@ import {
   startOfTodayInAppTz,
   startOfDayInAppTz,
   normalizeAllDayToUtcMidnight,
-  formatAppDate,
   formatAllDayDate,
   appTzDateKey,
   appTzDayRange,
@@ -64,13 +63,7 @@ describe("normalizeAllDayToUtcMidnight", () => {
   });
 });
 
-describe("formatAppDate / formatAllDayDate", () => {
-  it("reads a timed instant in Central, not UTC", () => {
-    // 7pm CDT on Aug 23 is already Aug 24 in UTC.
-    const evening = new Date("2026-08-24T00:00:00Z");
-    expect(formatAppDate(evening, "America/Chicago")).toBe("Sun, Aug 23");
-  });
-
+describe("formatAllDayDate", () => {
   it("reads an all-day boundary in UTC, where it was encoded", () => {
     // All-day events are stored at UTC midnight of their calendar date.
     // Reading this one in Central would report Aug 22.

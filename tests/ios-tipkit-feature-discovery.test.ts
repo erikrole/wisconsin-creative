@@ -1,7 +1,5 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-
-const source = (path: string) => readFileSync(path, "utf8");
+import { source } from "./_helpers/source";
 
 describe("native TipKit feature discovery", () => {
   const app = source("ios/Wisconsin/App/WisconsinApp.swift");

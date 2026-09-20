@@ -1,8 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { readFileSync } from "node:fs";
 import { copyTextToClipboard } from "@/lib/clipboard";
-
-const source = (path: string) => readFileSync(path, "utf8");
+import { source } from "./_helpers/source";
 
 const clipboardConsumers = [
   "src/app/(app)/settings/kiosk-devices/page.tsx",

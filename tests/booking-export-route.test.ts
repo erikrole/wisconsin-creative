@@ -86,4 +86,19 @@ describe("booking export route", () => {
       take: 5000,
     }));
   });
+
+  it("disables caching for the exported CSV", async () => {
+    const res = await call("");
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("cache-control")).toBe("private, no-store");
+  });
+
+  it("uses stable timestamp ties in capped exports", async () => {
+    await call("");
+
+    expect(db.booking.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    }));
+  });
 });

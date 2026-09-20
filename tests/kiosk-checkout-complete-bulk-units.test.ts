@@ -76,6 +76,8 @@ vi.mock("@/lib/services/bookings-helpers", () => ({
 
 vi.mock("@/lib/services/availability", () => ({
   checkAvailability: mocks.checkAvailability,
+  hasBlockingAvailabilityIssue: (result: { conflicts: unknown[]; shortages: unknown[]; unavailableAssets: unknown[] }) =>
+    result.conflicts.length > 0 || result.shortages.length > 0 || result.unavailableAssets.length > 0,
 }));
 
 vi.mock("@/lib/badges", () => ({

@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyBulkShortageRecovery,
   buildAvailabilityReview,
+  eventSummaryLabel,
   getAvailabilityWarningTotal,
   getStep2PrimaryActionLabel,
 } from "@/components/booking-wizard/flow-summary";
@@ -145,10 +146,12 @@ describe("WizardStep1 event selection contract", () => {
   });
 
   it("uses full event summaries for non-game linked events with sport metadata", () => {
-    expect(wizardStep1Source).toContain("function eventSummaryLabel(ev: CalendarEvent)");
-    expect(wizardStep1Source).toContain("return ev.summary;");
     expect(wizardStep1Source).toContain("const eventLabel = `${eventDateLabel(ev, true)} ${eventSummaryLabel(ev)}`");
     expect(wizardStep1Source).not.toContain("ev.opponent ?? (ev.sportCode ? sportLabel(ev.sportCode) : ev.summary)");
+    // eventSummaryLabel itself now lives in the shared flow-summary module.
+    expect(eventSummaryLabel({ summary: "Practice", opponent: null })).toBe("Practice");
+    expect(eventSummaryLabel({ summary: "Practice", opponent: "Marquette", sportCode: "VB", isHome: false }))
+      .toBe("Volleyball at Marquette");
   });
 });
 

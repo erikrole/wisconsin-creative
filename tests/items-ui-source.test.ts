@@ -1,7 +1,5 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-
-const source = (path: string) => readFileSync(path, "utf8");
+import { source } from "./_helpers/source";
 
 describe("Items design-language contracts", () => {
   it("keeps item-type and advanced-filter targets at the 40px baseline", () => {
@@ -25,7 +23,7 @@ describe("Items design-language contracts", () => {
   it("uses Add item for both creation entry points", () => {
     const page = source("src/app/(app)/items/page.tsx");
 
-    expect(page).toContain(">Add item</Button>");
+    expect(page).toMatch(/>\s*Add item\s*<\/Button>/);
     expect(page).toContain('actionLabel={canOfferCreateItem ? "Add item" : undefined}');
     expect(page).not.toContain(">New item</Button>");
     expect(page).not.toContain('"New item"');

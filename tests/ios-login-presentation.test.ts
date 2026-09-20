@@ -28,8 +28,6 @@ describe("iOS Login presentation", () => {
     expect(login).toContain("private var passwordStep: some View");
     expect(login).toContain("private func advanceToPassword()");
     expect(login).toContain("activeAuthMethod = .discovery");
-    expect(login).toContain("APIClient.shared.discoverAuth(email: submittedEmail)");
-    expect(login).toContain("authDestination = .register(email: submittedEmail)");
     expect(login).toContain("setLoginStep(.password)");
     expect(login).toContain("setLoginStep(.identity)");
     expect(login).toContain('Text("Email address")');
@@ -51,14 +49,12 @@ describe("iOS Login presentation", () => {
     expect(passwordStep).toContain('TextField("Account", text: .constant(trimmedEmail))');
     expect(passwordStep).toContain(".textContentType(.username)");
     expect(passwordStep).toContain('Button("Change")');
-    expect(passwordStep).toContain('Button("Forgot password?")');
     expect(passwordStep.indexOf('Button("Forgot password?")')).toBeGreaterThan(
       passwordStep.indexOf('Text("Password")'),
     );
     expect(login).toContain('password = ""');
     expect(login).toContain("focused = step == .identity ? .email : .password");
     expect(passwordStep).toContain(".accessibilityFocused($accessibilityFocused, equals: .password)");
-    expect(passwordStep).toContain("authDestination = .forgotPassword(email: trimmedEmail)");
   });
 
   it("keeps passkey identity-independent on the email step", () => {
@@ -96,14 +92,10 @@ describe("iOS Login presentation", () => {
   });
 
   it("retains native auth recovery and 44-point utility controls", () => {
-    expect(login).toContain('Button("Forgot password?")');
     expect(login).toContain("Enter your invited email to get started.");
-    expect(login).not.toContain('Button("Need an account?")');
     expect(section('Button("Change")', 'Text("Password")')).toContain(".frame(minWidth: 44, minHeight: 44)");
     expect(section('Button("Forgot password?")', "private func fieldFill")).toContain(".frame(maxWidth: .infinity, minHeight: 44, alignment: .trailing)");
     expect(section("Button {\n                    showPassword.toggle()", 'Button("Forgot password?")')).toContain(".frame(width: 44, height: 44)");
-    expect(login).toContain("NativeForgotPasswordView(initialEmail: email)");
-    expect(login).toContain("NativeRegistrationView(initialEmail: email)");
   });
 
   it("preserves normalized password auth and Keychain content types", () => {

@@ -1,23 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
+import { apiRouteSources } from "./_helpers/source-tree";
 import { PERMISSIONS } from "@/lib/permissions";
-
-const API_ROOT = path.join(process.cwd(), "src/app/api");
-
-function routeFiles(dir: string): string[] {
-  return readdirSync(dir).flatMap((entry) => {
-    const fullPath = path.join(dir, entry);
-    const stat = statSync(fullPath);
-    if (stat.isDirectory()) return routeFiles(fullPath);
-    return entry === "route.ts" ? [fullPath] : [];
-  });
-}
 
 describe("route RBAC permission contract", () => {
   it("only references defined resource/action permissions", () => {
-    const calls = routeFiles(API_ROOT).flatMap((file) => {
-      const source = readFileSync(file, "utf8");
+    const calls = apiRouteSources().flatMap(({ file, text: source }) => {
       return Array.from(
         source.matchAll(/requirePermission\s*\([^,]+,\s*["']([^"']+)["']\s*,\s*["']([^"']+)["']/g),
         (match) => ({

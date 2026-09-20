@@ -6,6 +6,14 @@ import {
 } from "@/app/(app)/settings/data-export/export-download";
 
 describe("data export download helpers", () => {
+  it("warns about incomplete settings downloads even without a total", () => {
+    expect(getExportCompletionToast("Users", true, null).variant).toBe("warning");
+  });
+
+  it.each(["null", "[]", "42", '"private failure"'])("uses fallback copy for non-object JSON %s", async (body) => {
+    expect(await readExportFailureMessage(new Response(body, { status: 502 }), "Users")).toBe("Users export failed (502).");
+  });
+
   it("uses quoted filenames from content disposition", () => {
     expect(getExportFilename('attachment; filename="items-export-2026-06-02.csv"', "items-export.csv"))
       .toBe("items-export-2026-06-02.csv");

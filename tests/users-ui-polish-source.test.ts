@@ -1,7 +1,5 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-
-const source = (path: string) => readFileSync(path, "utf8");
+import { source } from "./_helpers/source";
 
 describe("Users interaction-detail contracts", () => {
   it("keeps directory commands, sort controls, recovery, and pagination on the 40px baseline", () => {

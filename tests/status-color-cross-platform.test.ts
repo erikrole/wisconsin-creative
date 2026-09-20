@@ -1,13 +1,8 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { bookingStatusBadgeVariant } from "@/lib/booking-status-display";
 import { statusBadgeVariant, statusBadgeVariantEquipment } from "@/lib/status-colors";
-
-function source(relativeFile: string) {
-  return readFileSync(path.join(process.cwd(), relativeFile), "utf8");
-}
+import { source } from "./_helpers/source";
 
 /**
  * Extracts a Swift `switch` that maps enum cases to `StatusTone` values, e.g.

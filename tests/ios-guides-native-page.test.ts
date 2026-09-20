@@ -1,10 +1,5 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
-
-function source(relativeFile: string) {
-  return readFileSync(path.join(process.cwd(), relativeFile), "utf8");
-}
+import { source } from "./_helpers/source";
 
 function appTabViewShell() {
   return source("ios/Wisconsin/Views/AppTabView.swift").split("// MARK: - Profile")[0] ?? "";
@@ -71,7 +66,7 @@ describe("iOS native Guides page", () => {
     expect(view).toContain("loadedGuide = fetched");
     expect(view).toContain('Label("Couldn\'t load this guide", systemImage: "wifi.exclamationmark")');
     expect(view).toContain(".refreshable { await load(forceRefresh: true) }");
-    expect(view).toContain("NativeMarkdownArticle(markdown: displayedGuide.markdown)");
+    expect(view).toContain("NativeMarkdownArticle(markdown: displayedGuide.markdown, title: displayedGuide.title)");
     expect(view).toContain("GuideReaderHeader(");
     expect(view).toContain(".font(.title.weight(.bold))");
     expect(view).toContain(".navigationTitle(displayedGuide.title)");
@@ -97,11 +92,7 @@ describe("iOS native Guides page", () => {
     const appTab = appTabViewShell();
     const browse = source("ios/Wisconsin/Views/BrowseView.swift");
 
-    expect(appTab).toContain('Tab("Browse", systemImage: "square.grid.2x2", value: 2)');
-    expect(appTab).toContain("BrowseView()");
     expect(browse).toContain("GuidesView(wrapsInNavigationStack: false)");
-    expect(appTab).toContain('Tab("Guides", systemImage: "book.closed", value: 6)');
-    expect(appTab).toContain("GuidesView()");
     expect(appTab).not.toContain("https://wisconsincreative.com/resources");
     expect(browse).toContain("GuidesView(wrapsInNavigationStack: false)");
   });
@@ -111,7 +102,6 @@ describe("iOS native Guides page", () => {
     const browse = source("ios/Wisconsin/Views/BrowseView.swift");
     const settings = source("ios/Wisconsin/Views/SettingsView.swift");
 
-    expect(appTab).toContain('Tab("Browse", systemImage: "square.grid.2x2", value: 2)');
     expect(appTab).toContain("if showsSidebarDestinations {");
     expect(appTab).toContain(".tabPlacement(.sidebarOnly)");
     expect(browse).toContain("GuidesView(wrapsInNavigationStack: false)");

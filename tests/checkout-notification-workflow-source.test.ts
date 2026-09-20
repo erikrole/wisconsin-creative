@@ -1,10 +1,5 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
-
-function source(file: string) {
-  return readFileSync(path.join(process.cwd(), file), "utf8");
-}
+import { source } from "./_helpers/source";
 
 describe("checkout notification workflow source contract", () => {
   it("schedules the durable workflow anywhere return Live Activity timing is scheduled", () => {

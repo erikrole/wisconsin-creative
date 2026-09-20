@@ -17,7 +17,7 @@ vi.mock("@/lib/services/checkout-policies", () => ({
 }));
 vi.mock("@/lib/db", () => ({
   db: {
-    booking: { findMany: vi.fn(), findUnique: vi.fn() },
+    booking: { findMany: vi.fn(), findUnique: vi.fn(), count: vi.fn() },
     escalationRule: { findMany: vi.fn() },
     systemConfig: { findUnique: vi.fn(), findMany: vi.fn() },
     user: { findMany: vi.fn(), findUnique: vi.fn() },
@@ -55,6 +55,7 @@ function checkout(hoursOverdue: number, custodyScope: "PERSON" | "SHARED" = "PER
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(db.escalationRule.findMany).mockResolvedValue(rules as never);
+  vi.mocked(db.booking.count).mockResolvedValue(1 as never);
   vi.mocked(db.notification.findMany).mockResolvedValue([]);
   vi.mocked(db.notification.create).mockResolvedValue({ id: "notification-1" } as never);
   vi.mocked(db.deviceToken.findMany).mockResolvedValue([]);
@@ -82,7 +83,7 @@ describe("checkout escalation repair sweep", () => {
 
     const result = await processOverdueNotifications();
 
-    expect(result).toEqual({ scanned: 1, notificationsCreated: 2 });
+    expect(result).toEqual({ scanned: 1, notificationsCreated: 2, remaining: 0, truncated: false });
     const createdTypes = vi.mocked(db.notification.create).mock.calls.map((call) => call[0].data.type);
     expect(createdTypes).toEqual(["checkout_overdue_4h", "checkout_overdue_4h"]);
     expect(vi.mocked(db.notification.create).mock.calls.map((call) => call[0].data.userId))
@@ -105,7 +106,7 @@ describe("checkout escalation repair sweep", () => {
 
     const result = await processOverdueNotifications();
 
-    expect(result).toEqual({ scanned: 1, notificationsCreated: 2 });
+    expect(result).toEqual({ scanned: 1, notificationsCreated: 2, remaining: 0, truncated: false });
     const operationalRows = vi.mocked(db.notification.create).mock.calls.filter((call) =>
       call[0].data.payload && (call[0].data.payload as Record<string, unknown>).recipientKind !== "requester"
     );
@@ -117,10 +118,57 @@ describe("checkout escalation repair sweep", () => {
 
     const result = await processOverdueNotifications();
 
-    expect(result).toEqual({ scanned: 1, notificationsCreated: 1 });
+    expect(result).toEqual({ scanned: 1, notificationsCreated: 1, remaining: 0, truncated: false });
     const call = vi.mocked(db.notification.create).mock.calls[0]![0].data;
     expect(call.userId).toBe("staff-responder");
     expect(call.body).toContain('Shared checkout "Camera kit"');
     expect(call.payload).toMatchObject({ recipientKind: "responder" });
+  });
+
+  it("looks existing rows up by bookingId in one query, not a LIKE fan-out", async () => {
+    const checkouts = Array.from({ length: 3 }, (_, i) => ({ ...checkout(10), id: `booking-${i}` }));
+    vi.mocked(db.booking.findMany).mockResolvedValue(checkouts as never);
+    vi.mocked(db.booking.count).mockResolvedValue(3 as never);
+
+    await processOverdueNotifications();
+
+    expect(vi.mocked(db.notification.findMany)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(db.notification.findMany).mock.calls[0]![0]).toMatchObject({
+      where: { bookingId: { in: ["booking-0", "booking-1", "booking-2"] } },
+    });
+    expect(JSON.stringify(vi.mocked(db.notification.findMany).mock.calls[0]![0])).not.toContain("startsWith");
+  });
+
+  it("stamps the owning booking on every escalation row", async () => {
+    vi.mocked(db.booking.findMany).mockResolvedValue([checkout(10)] as never);
+
+    await processOverdueNotifications();
+
+    for (const call of vi.mocked(db.notification.create).mock.calls) {
+      expect(call[0].data.bookingId).toBe("booking-1");
+    }
+  });
+
+  it("reports the unscanned backlog when more open checkouts exist than the cap scans", async () => {
+    vi.mocked(db.booking.findMany).mockResolvedValue([checkout(10)] as never);
+    vi.mocked(db.booking.count).mockResolvedValue(642 as never);
+
+    const result = await processOverdueNotifications();
+
+    expect(result.scanned).toBe(1);
+    expect(result.remaining).toBe(641);
+    expect(result.truncated).toBe(true);
+  });
+
+  it("reports no backlog when nothing is open", async () => {
+    vi.mocked(db.booking.findMany).mockResolvedValue([] as never);
+    vi.mocked(db.booking.count).mockResolvedValue(0 as never);
+
+    expect(await processOverdueNotifications()).toEqual({
+      scanned: 0,
+      notificationsCreated: 0,
+      remaining: 0,
+      truncated: false,
+    });
   });
 });

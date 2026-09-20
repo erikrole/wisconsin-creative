@@ -1,9 +1,5 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-
-function source(path: string) {
-  return readFileSync(path, "utf8");
-}
+import { source } from "./_helpers/source";
 
 describe("Resources UI ownership contracts", () => {
   it("provides URL-backed filtering plus quick-find navigation", () => {
@@ -14,6 +10,8 @@ describe("Resources UI ownership contracts", () => {
     expect(page).toContain("onValueChange={setSearchParam}");
     expect(page).toContain('aria-label="Filter resources"');
     expect(palette).toContain("Quick find");
+    expect(palette).not.toContain("e.metaKey");
+    expect(palette).not.toContain("⌘K");
   });
 
   it("does not turn failed guide or reference loads into empty directories", () => {

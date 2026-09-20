@@ -1,7 +1,5 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-
-const source = (path: string) => readFileSync(path, "utf8");
+import { source } from "./_helpers/source";
 
 const CREW_ROW = "ios/Wisconsin/Views/Components/CrewRow.swift";
 const EVENT_DETAIL = "ios/Wisconsin/Views/EventDetailSheet.swift";

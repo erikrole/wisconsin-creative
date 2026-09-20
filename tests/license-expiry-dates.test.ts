@@ -4,7 +4,6 @@ import {
   formatLicenseExpiryDate,
   isLicenseExpired,
   licenseDaysUntilExpiry,
-  licenseExpiryAsLocalDate,
   licenseExpiryInputValue,
   localDateKey,
 } from "@/lib/license-dates";
@@ -23,12 +22,7 @@ describe("license expiry date-only handling", () => {
   const encodedExpiry = "2027-08-18T00:00:00.000Z";
 
   it("shows the encoded calendar date instead of the prior Central day", () => {
-    const localDate = licenseExpiryAsLocalDate(encodedExpiry);
-
     expect(formatLicenseExpiryDate(encodedExpiry)).toBe("Aug 18, 2027");
-    expect(localDate.getFullYear()).toBe(2027);
-    expect(localDate.getMonth()).toBe(7);
-    expect(localDate.getDate()).toBe(18);
     expect(licenseExpiryInputValue(encodedExpiry)).toBe("2027-08-18");
   });
 

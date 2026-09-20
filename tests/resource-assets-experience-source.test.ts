@@ -1,7 +1,5 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-
-const source = (path: string) => readFileSync(path, "utf8");
+import { source } from "./_helpers/source";
 
 describe("Brand asset experience source contracts", () => {
   it("adds version notes and personal favorites without seeding content", () => {
@@ -84,7 +82,7 @@ describe("Brand asset experience source contracts", () => {
     expect(component).toContain("<Table>");
     expect(component).toContain('label={`Actions for ${asset.name}`}');
     expect(component).toContain('placeholder="Search in Brand assets"');
-    expect(page).toContain('description={resourceTab === "brand-assets" ? undefined');
+    expect(page).toContain('<ResourceSectionSwitcher active={resourceTab} />');
   });
 
   it("keeps nested folders reachable and offers drop-to-upload and column sorting", () => {

@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { bookingStatusDisplay, bookingStatusVisual } from "@/lib/booking-status-display";
 import {
@@ -8,10 +6,7 @@ import {
   venueMappingMatches,
 } from "@/lib/venue-mapping-contract";
 import { getAllowedBookingActions } from "@/lib/booking-action-policy";
-
-function source(relativePath: string) {
-  return readFileSync(join(process.cwd(), relativePath), "utf8");
-}
+import { source } from "./_helpers/source";
 
 describe("documented decision contracts", () => {
   it("D-025 keeps booking status labels display-only and kind-aware", () => {
@@ -24,7 +19,7 @@ describe("documented decision contracts", () => {
       variant: "purple",
     });
     expect(bookingStatusDisplay("OPEN", "CHECKOUT")).toMatchObject({
-      label: "Checked Out",
+      label: "Checked out",
       variant: "blue",
     });
     expect(bookingStatusVisual("OPEN", { overdue: true, kind: "CHECKOUT" })).toMatchObject({

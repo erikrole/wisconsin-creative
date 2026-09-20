@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   clampToQuarterHour,
@@ -6,10 +5,7 @@ import {
   nextQuarterHourAfter,
   roundUpToQuarterHour,
 } from "@/lib/quarter-hour";
-
-function source(relativePath: string) {
-  return readFileSync(`${process.cwd()}/${relativePath}`, "utf8");
-}
+import { source } from "./_helpers/source";
 
 describe("web return-time quarter-hour contract", () => {
   it("rounds forward across an hour without moving an exact boundary", () => {

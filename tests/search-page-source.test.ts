@@ -18,6 +18,9 @@ describe("full search page source", () => {
     expect(source).toContain("failures.push(SEARCH_RESULT_SOURCES.checkouts)");
     expect(source).toContain("failures.push(SEARCH_RESULT_SOURCES.reservations)");
     expect(source).toContain("failures.push(SEARCH_RESULT_SOURCES.users)");
+    expect(source).toContain("failures.push(SEARCH_RESULT_SOURCES.guides)");
+    expect(source).toContain("/api/resources?q=");
+    expect(source).toContain("guide: results.filter((r) => r.type === \"guide\")");
     expect(source).toContain("<OperationalPartialResultsAlert");
     expect(source).toContain('failureLabel="Unavailable result types"');
     expect(source).toContain('actionLabel="Retry"');

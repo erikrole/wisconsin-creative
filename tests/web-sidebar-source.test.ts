@@ -1,10 +1,5 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
-
-function source(relativeFile: string) {
-  return readFileSync(path.join(process.cwd(), relativeFile), "utf8");
-}
+import { source } from "./_helpers/source";
 
 describe("web sidebar source contract", () => {
   it("keeps lookup out of the web sidebar because desktop search is text-first", () => {
@@ -18,12 +13,12 @@ describe("web sidebar source contract", () => {
 
   it("keeps personal Settings reachable outside admin-only navigation", () => {
     const sidebar = source("src/components/Sidebar.tsx");
-    const settingsIndex = sidebar.indexOf('{ label: "Settings", href: "/settings", icon: SettingsIcon }');
-    const operationsGroupIndex = sidebar.indexOf('label: "Operations"');
+    const settingsEntry = '{ label: "Settings", href: "/settings", icon: SettingsIcon }';
+    const staffItems = sidebar.match(/staffOnly: true,\s*items: \[([\s\S]*?)\],\s*\},/);
 
-    expect(settingsIndex).toBeGreaterThan(-1);
-    expect(operationsGroupIndex).toBeGreaterThan(-1);
-    expect(settingsIndex).toBeLessThan(operationsGroupIndex);
+    expect(sidebar).toContain(settingsEntry);
+    expect(staffItems?.[1]).toContain("Kits");
+    expect(staffItems?.[1]).not.toContain("Settings");
   });
 
   it("promotes Accountability into primary internal navigation", () => {
@@ -124,11 +119,12 @@ describe("web sidebar source contract", () => {
     expect(primitive).toContain("group-data-[collapsible=icon]:size-10!");
   });
 
-  it("keeps profile navigation in the sidebar identity card", () => {
+  it("keeps profile navigation in the sidebar account menu", () => {
     const appShell = source("src/components/AppShell.tsx");
     const sidebar = source("src/components/Sidebar.tsx");
 
     expect(sidebar).toContain('href={`/users/${user.id}`}');
+    expect(sidebar).toContain('aria-label="Account menu"');
     expect(appShell).not.toContain('aria-label="My profile"');
     expect(appShell).not.toContain("<TooltipContent>Profile</TooltipContent>");
   });
@@ -162,10 +158,32 @@ describe("web sidebar source contract", () => {
     expect(appLayout).toContain("!user.preview && <ProductUsageTracker />");
   });
 
+  it("groups destinations and keeps notifications in the top bar only", () => {
+    const sidebar = source("src/components/Sidebar.tsx");
+    const appShell = source("src/components/AppShell.tsx");
+
+    expect(sidebar).toContain('label: "Team"');
+    expect(sidebar).toContain('label: "Library"');
+    expect(sidebar).not.toContain('{ label: "Notifications"');
+    expect(sidebar).not.toContain("unreadNotifications");
+    expect(appShell).toContain('href="/notifications"');
+    expect(appShell).toContain("Search items, bookings, people, pages, and guides");
+  });
+
   it("uses collaborator affiliation identity instead of a generic external label", () => {
     const sidebar = source("src/components/Sidebar.tsx");
 
     expect(sidebar).toContain("user.collaboratorPolicy?.displayName");
     expect(sidebar).toContain('"External collaborator"');
+  });
+
+  it("sets sidebar identity type with Gotham via brand-identity, not inline heading families", () => {
+    const sidebar = source("src/components/Sidebar.tsx");
+
+    expect(sidebar).toContain("brand-identity");
+    expect(sidebar).toContain("font-[800]");
+    expect(sidebar).toContain("font-bold");
+    expect(sidebar).not.toContain('fontFamily: "var(--font-heading)"');
+    expect(sidebar).not.toContain("fontWeight: isActive ? 600");
   });
 });

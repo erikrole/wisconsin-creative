@@ -149,4 +149,22 @@ describe("collaborator booking route hardening", () => {
     expect(requireBookingAction).not.toHaveBeenCalled();
     expect(db.auditLog.findMany).not.toHaveBeenCalled();
   });
+
+  it("rejects booking audit cursors outside the requested booking", async () => {
+    const staffUser = { ...collaborator, role: Role.STAFF, affiliation: undefined, collaboratorProfile: undefined, capabilities: undefined };
+    vi.mocked(requireAuth).mockResolvedValue(staffUser as unknown as Awaited<ReturnType<typeof requireAuth>>);
+    vi.mocked(db.auditLog.findFirst).mockResolvedValue(null);
+
+    const response = await getAuditLogs(
+      new Request(`https://app.example.com/api/bookings/${privateDetail.id}/audit-logs?cursor=other-log`, {
+        headers: { host: "app.example.com" },
+      }),
+      { params: Promise.resolve({ id: privateDetail.id }) },
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error).toContain("Invalid audit cursor");
+    expect(db.auditLog.findMany).not.toHaveBeenCalled();
+  });
 });

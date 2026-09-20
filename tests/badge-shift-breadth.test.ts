@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -7,12 +5,9 @@ import {
   shiftAutomaticRuleCounts,
   type ShiftBadgeEvidence,
 } from "@/lib/badges/automatic-rules";
+import { source } from "./_helpers/source";
 
 const TZ = "America/Chicago";
-
-function source(relativeFile: string) {
-  return readFileSync(path.join(process.cwd(), relativeFile), "utf8");
-}
 
 function assignment(overrides: {
   start: string;

@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -10,10 +8,7 @@ import {
   automaticTradeRuleKeys,
 } from "@/lib/badges/automatic-rules";
 import { isHiddenUntilEarnedBadge } from "@/lib/badges/display";
-
-function source(relativeFile: string) {
-  return readFileSync(path.join(process.cwd(), relativeFile), "utf8");
-}
+import { source } from "./_helpers/source";
 
 const seed = source("prisma/seed.mjs");
 const migration = source("prisma/migrations/0127_badge_catalog_expansion/migration.sql");

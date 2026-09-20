@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import path from "node:path";
+import { apiRouteSources } from "./_helpers/source-tree";
 
-const API_ROOT = path.join(process.cwd(), "src/app/api");
 const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"] as const;
 const WRAPPER_NAMES = ["withAuth", "withKiosk", "withHandler", "withCron"] as const;
 const PUBLIC_HANDLER_ROUTES: Record<string, string[]> = {
@@ -87,15 +87,6 @@ const PUBLIC_ROUTE_SAFETY: Record<string, RegExp[]> = {
     /\bgetClientIp\s*\(/,
   ],
 };
-
-function routeFiles(dir: string): string[] {
-  return readdirSync(dir).flatMap((entry) => {
-    const fullPath = path.join(dir, entry);
-    const stat = statSync(fullPath);
-    if (stat.isDirectory()) return routeFiles(fullPath);
-    return entry === "route.ts" ? [fullPath] : [];
-  });
-}
 
 type ExportedMethod = {
   method: string;
@@ -219,16 +210,16 @@ function wrapperNamesForExpression(expression: string) {
 
 describe("API route wrapper contract", () => {
   it("keeps the API route inventory discoverable", () => {
-    const inventory = routeFiles(API_ROOT).map((file) => path.relative(process.cwd(), file)).sort();
-    const missingMethodExports = inventory.filter((file) => exportedMethods(readFileSync(file, "utf8")).length === 0);
+    const routes = apiRouteSources();
+    const inventory = routes.map((route) => route.relative);
+    const missingMethodExports = routes.filter((route) => exportedMethods(route.text).length === 0).map((route) => route.relative);
 
     expect(inventory.length).toBeGreaterThan(150);
     expect(missingMethodExports).toEqual([]);
   });
 
   it("wraps every exported HTTP method with the shared API wrappers", () => {
-    const nakedExports = routeFiles(API_ROOT).flatMap((file) => {
-      const source = readFileSync(file, "utf8");
+    const nakedExports = apiRouteSources().flatMap(({ file, text: source }) => {
       return exportedMethods(source)
         .filter(({ expression }) => wrapperNamesForExpression(resolvedExpression(source, expression)).length === 0)
         .map(({ method }) => `${path.relative(process.cwd(), file)}:${method}`);
@@ -238,8 +229,7 @@ describe("API route wrapper contract", () => {
   });
 
   it("keeps public, kiosk, and cron wrappers on expected route families", () => {
-    const wrapperDrift = routeFiles(API_ROOT).flatMap((file) => {
-      const source = readFileSync(file, "utf8");
+    const wrapperDrift = apiRouteSources().flatMap(({ file, text: source }) => {
       const relativeFile = path.relative(process.cwd(), file);
       return exportedMethods(source).flatMap(({ method, expression }) => {
         const wrappers = wrapperNamesForExpression(resolvedExpression(source, expression));
@@ -263,8 +253,7 @@ describe("API route wrapper contract", () => {
   });
 
   it("keeps every public withHandler route explicitly allowlisted and abuse-controlled", () => {
-    const publicRoutes = routeFiles(API_ROOT).flatMap((file) => {
-      const source = readFileSync(file, "utf8");
+    const publicRoutes = apiRouteSources().flatMap(({ file, text: source }) => {
       const relativeFile = path.relative(process.cwd(), file);
       return exportedMethods(source)
         .filter(({ expression }) => wrapperNamesForExpression(resolvedExpression(source, expression)).includes("withHandler"))

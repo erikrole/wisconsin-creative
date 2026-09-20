@@ -1,10 +1,6 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { QUARTER_HOUR_MINUTES, roundUpToQuarterHour } from "@/lib/quarter-hour";
-
-function source(relativePath: string) {
-  return readFileSync(`${process.cwd()}/${relativePath}`, "utf8");
-}
+import { source } from "./_helpers/source";
 
 describe("web Event and Schedule quarter-hour contract", () => {
   it("rounds an explicitly saved time forward without moving a quarter-hour boundary", () => {

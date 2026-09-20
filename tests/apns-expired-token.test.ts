@@ -3,6 +3,10 @@ import { generateKeyPairSync } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const connect = vi.hoisted(() => vi.fn());
+// One EC key for the whole file: generating it per test dominated the runtime.
+const APNS_P8_KEY = Buffer.from(
+  generateKeyPairSync("ec", { namedCurve: "prime256v1" }).privateKey.export({ type: "pkcs8", format: "pem" }),
+).toString("base64");
 vi.mock("http2", () => ({ default: { connect, constants: { NGHTTP2_CANCEL: 8 } } }));
 
 type Response = { status: number; reason?: string };
@@ -34,8 +38,7 @@ beforeEach(() => {
   vi.stubEnv("APNS_KEY_ID", "test-key");
   vi.stubEnv("APNS_TEAM_ID", "test-team");
   vi.stubEnv("APNS_BUNDLE_ID", "test.app");
-  const { privateKey } = generateKeyPairSync("ec", { namedCurve: "prime256v1" });
-  vi.stubEnv("APNS_P8_KEY", Buffer.from(privateKey.export({ type: "pkcs8", format: "pem" })).toString("base64"));
+  vi.stubEnv("APNS_P8_KEY", APNS_P8_KEY);
   vi.spyOn(console, "warn").mockImplementation(() => {});
   vi.spyOn(console, "error").mockImplementation(() => {});
 });

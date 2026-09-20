@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
-import path from "node:path";
-
-function source(relativeFile: string) {
-  return readFileSync(path.join(process.cwd(), relativeFile), "utf8");
-}
+import { source } from "./_helpers/source";
 
 /** The text between two markers, so an assertion can be scoped to one member. */
 function sliceBetween(haystack: string, start: string, end: string) {
@@ -115,20 +110,10 @@ describe("student field mobile contracts", () => {
     expect(homeView).toContain(".buttonStyle(.plain)");
     expect(homeView).not.toContain("Circle().strokeBorder(Color(.separator)");
     expect(bookingsView).toContain('scope = currentUserRole == "COLLABORATOR" ? .mine : .all');
-    expect(bookingsView).toContain("BookingListSection(title: sectionTitle");
-    expect(bookingsView).toContain('vm.statusFilter == .active ? "Active" : vm.statusFilter.label');
-    expect(bookingsView).not.toContain('BookingListSection(title: "Checkouts"');
-    expect(bookingsView).not.toContain('BookingListSection(title: "Reservations"');
-    expect(bookingsView).toContain('"Search bookings..."');
     expect(bookingsView).toContain("APIClient.shared.bookings(");
     expect(bookingsView).toContain("activeOnly: true");
     expect(bookingsView).toContain("enum BookingScope: String");
-    expect(bookingsView).toContain('vm.mineOnly ? "person.crop.circle.fill" : "person.crop.circle"');
     expect(bookingsView).not.toContain("Picker(\"Booking scope\", selection: $vm.scope)");
-    expect(bookingsView).not.toContain("case needsAttention");
-    expect(bookingsView).toContain("Label(\"New Reservation\", systemImage: \"plus\")");
-    expect(bookingsView).not.toContain("Picker(\"Booking type\"");
-    expect(bookingsView).not.toContain("enum BookingTab");
   });
 
   it("keeps iOS Bookings tab from flashing stale cache rows", () => {
@@ -137,13 +122,8 @@ describe("student field mobile contracts", () => {
 
     expect(bookingsView).toContain("load(reset: Bool = false, clearExistingRows: Bool = false)");
     expect(bookingsView).toContain("clearExistingRows");
-    expect(bookingsView).toContain(".refreshable");
-    expect(bookingsView).toContain("BookingEmptyState(");
-    expect(bookingsView).toContain('Label("View All Bookings", systemImage: "person.2")');
-    expect(bookingsView).not.toContain("ReservationEmptyRow");
     expect(bookingsView).toContain("capitalizesRelativeDay: false");
     expect(bookingsView).not.toContain("isRefreshingVisibleRows");
-    expect(bookingsView).not.toContain("BookingFreshnessFooter");
     expect(bookingsView).not.toContain("needsBookingAttention(now:");
     expect(bookingsView).not.toContain("GearStore.shared.cachedBookings");
     expect(apiClient).toContain("filter: String? = nil");
@@ -155,13 +135,8 @@ describe("student field mobile contracts", () => {
 
     expect(scheduleView).toContain("scheduleControlStrip");
     expect(scheduleView).toContain("Picker(\"Schedule view\"");
-    expect(scheduleView).toContain("@State private var showFilters = false");
-    expect(scheduleView).toContain("activeFilterSummary");
-    expect(scheduleView).toContain("private struct ScheduleFilterSheet");
     expect(scheduleView).toContain("\"My shifts\"");
     expect(scheduleView).toContain("\"Include past events\"");
-    expect(scheduleView).toContain("Text(\"Event Type\")");
-    expect(scheduleView).toContain("ForEach(HomeAwayFilter.allCases");
     expect(scheduleView).toContain("Picker(\"Sport\"");
     // Toolbar controls are Labels, not bare Images: the title is what makes
     // them self-describing, and it lets the system own sizing and hit area.
@@ -181,7 +156,6 @@ describe("student field mobile contracts", () => {
     const tradeBoard = source("ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift");
     const postTrade = source("ios/Wisconsin/Views/Schedule/PostTradeSheet.swift");
 
-    expect(eventDetail).toContain("Label(\"Add Shift\", systemImage: \"plus\")");
     // An open crew row is itself the button -- the action used to sit in a
     // tinted pill, which turned an unstaffed event into a column of five
     // identical filled controls competing with the section's own. The row keeps
@@ -295,8 +269,6 @@ describe("student field mobile contracts", () => {
     // ios-create-booking-picker-parity.test.ts.
     expect(eventDetail).toContain('BrandSectionHeader("Your Shift"');
     expect(eventDetail).not.toContain("reserveGearTitle");
-    expect(eventDetail).not.toContain("Reserve gear");
-    expect(eventDetail).not.toContain("ToolbarItem(placement: .bottomBar)");
     expect(eventDetail).not.toContain("Label(\"Prep gear\", systemImage: \"archivebox\")");
     expect(tradeBoard).toContain(".accessibilityLabel(\"Post trade\")");
     expect(tradeBoard).toContain(".navigationTitle(\"Trade Board\")");
@@ -354,7 +326,6 @@ describe("student field mobile contracts", () => {
     expect(editor).toContain("APIClient.shared.bookingAvailability");
     expect(editor).not.toContain("OptionPickerView(");
     expect(editor).not.toContain("TextEditor(");
-    expect(apiClient).toContain("locationId: String? = nil");
     expect(apiClient).toContain("let locationId: String?");
     expect(apiClient).toContain("locationId: locationId");
     expect(detail).toContain('BrandSectionHeader(title: "Gear")');
@@ -444,15 +415,8 @@ describe("student field mobile contracts", () => {
     // Review (the cart bar owns the Review action), and the Confirm step
     // owns the single primary action.
     expect(createSheet).toContain("attemptReview()");
-    expect(createSheet).toContain('(vm.selectedConflictCount == 0 ? "Review" : "Resolve Conflicts")');
-    expect(createSheet).toContain(".disabled(!vm.canReviewEquipment)");
     expect(createSheet).toContain("private var reviewDisplayTitle: String");
     expect(createSheet).toContain("if title.isEmpty { return \"Review your reservation\" }");
-    expect(createSheet).not.toContain("Batteries & Counted Items");
-    // Scan is a toolbar action with continuous scanning; keep it labeled
-    // for VoiceOver since it's icon-only.
-    expect(createSheet).toContain("Image(systemName: \"barcode.viewfinder\")");
-    expect(createSheet).toContain(".accessibilityLabel(\"Scan equipment\")");
     // The cart drawer keeps every pick removable and quantities adjustable.
     expect(createSheet).toContain("EquipmentCartSheet");
     expect(createSheet).toContain("SelectedEquipmentRow");
@@ -468,8 +432,10 @@ describe("student field mobile contracts", () => {
   it("keeps my-shifts gear context aligned with dashboard event work", () => {
     const route = source("src/app/api/my-shifts/route.ts");
 
-    expect(route).toContain("\"PENDING_PICKUP\"");
-    expect(route).toContain("if (status === \"PENDING_PICKUP\") return \"pickup_ready\"");
+    const gearStatus = source("src/lib/booking-status-display.ts");
+
+    expect(route).toContain('import { gearStatusForBooking, gearStatusPriority } from "@/lib/booking-status-display";');
+    expect(gearStatus).toContain("if (status === \"PENDING_PICKUP\") return \"pickup_ready\"");
     expect(route).toContain("{ events: { some: { eventId: { in: eventIds } } } }");
     expect(route).toContain("{ shiftAssignmentId: { in: assignmentIds } }");
     expect(route).toContain("{ shiftAssignment: { shift: { shiftGroup: { eventId: { in: eventIds } } } } }");

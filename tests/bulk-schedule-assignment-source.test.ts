@@ -43,9 +43,21 @@ describe("bulk schedule assignment contracts", () => {
     const assignPage = read("src/app/(app)/schedule/assign/_components/AssignPageClient.tsx");
     const scheduleHook = read("src/hooks/use-schedule-data.ts");
 
-    expect(dialog).toContain("review every proposed worker, then apply");
+    expect(dialog).toContain('type Step = "scope" | "review"');
+    expect(dialog).toContain("1. Scope");
+    expect(dialog).toContain("2. Review");
+    expect(dialog).toContain("Who is getting added");
+    expect(dialog).toContain("Nothing ready to stage");
+    expect(dialog).toContain("Allow incomplete crews");
+    expect(dialog).toContain("Include events");
+    expect(dialog).toContain("stayed out");
+    expect(dialog).toContain("Build preview");
     expect(dialog).toContain("/api/schedule/bulk-assignment/preview");
     expect(dialog).toContain("/api/schedule/bulk-assignment/apply");
+    expect(dialog).not.toContain("Review needed");
+    expect(dialog).not.toContain("Score {");
+    expect(dialog).not.toContain("Nothing to assign in this scope");
+    expect(dialog).not.toContain("Nothing selected");
     expect(assignPage).toContain("AutoAssignDialog");
     expect(scheduleHook).toContain('query.get("myShifts") === "true"');
     expect(scheduleHook).toContain('query.get("startDate")');
@@ -106,8 +118,14 @@ describe("bulk schedule assignment contracts", () => {
     expect(service).toContain("eventsPartiallyCrewed");
     expect(service).toContain("eventsPendingChanges");
     expect(dialog).toContain("Full crews only");
-    expect(dialog).toContain("would release short a position");
+    expect(dialog).toContain("setRequireFullCrew(true)");
+    expect(dialog).toContain("Events that cannot be filled completely are held back.");
+    expect(dialog).toContain("Events may be filled partway.");
+    expect(dialog).toContain("Couldn't fill every open slot");
+    expect(dialog).toContain("Allow incomplete crews");
     expect(dialog).toContain("skipped for unreleased staff changes");
+    expect(dialog).toContain("sportsGroupedByProgram");
+    expect(dialog).toContain('heading={program === "men" ? "Men" : "Women"}');
   });
 
   it("keeps a staged batch cancellable until its release fires", () => {
@@ -226,8 +244,10 @@ describe("bulk schedule assignment contracts", () => {
     const dialog = read("src/components/schedule/AutoAssignDialog.tsx");
     const wizard = read("src/components/schedule/SportSetupWizard.tsx");
 
-    expect(dialog).toContain("ten minutes to cancel before workers are notified");
-    expect(dialog).toContain("a sport on hold is skipped whatever you pick here");
+    expect(dialog).toContain("Workers are notified after a ten-minute cancel window");
+    expect(dialog).toContain("nothing notifies workers until release");
+    expect(dialog).toContain("Nothing ready to stage");
+    expect(dialog).toContain("Couldn't fill every open slot");
     expect(wizard).toContain("take effect the next time Auto assign runs");
     expect(wizard).toContain("Skip leaves a sport exactly as it is");
     expect(wizard).toContain("\n                Skip\n              </Button>");

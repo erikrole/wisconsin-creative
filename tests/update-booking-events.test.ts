@@ -94,11 +94,6 @@ beforeEach(() => {
 });
 
 describe("updateBookingEvents", () => {
-  it("uses SERIALIZABLE isolation", async () => {
-    await updateBookingEvents("reservation-1", "student-1", ["event-late", "event-early"]);
-    expectSerializableIsolation(transactionCalls, 0);
-  });
-
   it("BUG: rejects event links when the edited snapshot changed before the transaction", async () => {
     await expect(updateBookingEvents(
       "reservation-1",
@@ -139,6 +134,7 @@ describe("updateBookingEvents", () => {
         }),
       }),
     );
+    expectSerializableIsolation(transactionCalls, 0);
   });
 
   it("allows five linked events when relinking an active booking", async () => {

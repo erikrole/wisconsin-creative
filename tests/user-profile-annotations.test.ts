@@ -8,9 +8,12 @@ const schema = readFileSync("prisma/schema.prisma", "utf8");
 
 describe("annotated user profile contract", () => {
   it("uses split Wiscard fields and keeps Slack hidden", () => {
-    expect(info).toContain('label="Wiscard number"');
+    expect(info).toContain('label="Wiscard"');
+    expect(info).toContain('aria-label="Wiscard number"');
+    expect(info).toContain('aria-label="Issue code"');
     expect(info).toContain("Issue code can be found in the bottom right of your Wiscard");
-    expect(info).not.toContain('label="Slack"');
+    expect(info).not.toContain('label="Slack handle"');
+    expect(info).not.toContain('label="Slack profile"');
     expect(info).not.toContain('label="Slack Profile URL"');
     expect(schema).toContain("slackHandle");
     expect(schema).toContain("slackProfileUrl");
@@ -24,14 +27,19 @@ describe("annotated user profile contract", () => {
   });
 
   it("standardizes sizing, removes direct-report linkage badges, and adds birthday", () => {
-    expect(info).toContain('label="Top fit"');
-    expect(info).toContain('label="Shoe sizing"');
+    expect(info).toContain('ariaLabel="Top fit"');
+    expect(info).toContain('label="Clothing"');
+    expect(info).toContain('label="Shoes"');
+    expect(info).toContain('ariaLabel="Shoe sizing"');
     expect(info).not.toContain(">Linked</Badge>");
-    expect(info).toContain('<SaveableField label="Birthday"');
+    expect(info).toContain('label="Birthday"');
+    expect(info).toContain('placeholder="MM/DD"');
+    expect(info).not.toContain("birthdayIso");
     expect(schema).toContain("birthYear");
     expect(info).toContain("options={TOP_SIZE_OPTIONS.map");
     expect(info).not.toContain("String(24 + index * 2)");
-    expect(info).toContain("canViewBirthYear={isSelf || isAdmin}");
+    expect(info).not.toContain("canViewBirthYear");
+    expect(info).not.toContain('aria-label="Birth year"');
   });
 
   it("lets users crop, zoom, and reposition profile photos before upload", () => {

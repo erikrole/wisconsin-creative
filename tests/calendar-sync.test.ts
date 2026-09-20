@@ -289,17 +289,6 @@ describe("SyncResult type shape", () => {
     expect(result.errors[0]!.operation).toBe("create");
   });
 
-  it("allows optional error field for fetch-level failures", () => {
-    const result: SyncResult = {
-      added: 0,
-      updated: 0,
-      cancelled: 0,
-      skipped: 0,
-      errors: [],
-      error: "HTTP 503: Service Unavailable",
-    };
-    expect(result.error).toBeTruthy();
-  });
 });
 
 // ── Per-event error isolation logic (simulation) ──

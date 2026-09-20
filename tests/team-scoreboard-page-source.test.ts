@@ -1,9 +1,5 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-
-function source(file: string) {
-  return readFileSync(file, "utf8");
-}
+import { source } from "./_helpers/source";
 
 describe("team Scoreboard page source contract", () => {
   it("renders a first-class aggregate page with recoverable states and team semantics", () => {

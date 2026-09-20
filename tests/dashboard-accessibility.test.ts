@@ -57,7 +57,8 @@ describe("dashboard accessibility contracts", () => {
 
     expect(page).toContain("titleAccessory={(");
     expect(page).toContain("shadow-[0_0_14px_rgba(34,197,94,0.2)]");
-    expect(page).toContain('className="h-6 px-2 text-[11px] font-bold');
+    expect(page).toContain('className={bookingSync.state === "active"');
+    expect(page).toContain('"h-6 px-2 text-[11px] font-bold');
     expect(header).toContain("titleAccessory?: React.ReactNode");
     expect(header).toContain("{titleAccessory &&");
   });

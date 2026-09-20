@@ -1,8 +1,5 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
-
-const source = (file: string) => readFileSync(path.join(process.cwd(), file), "utf8");
+import { source } from "./_helpers/source";
 
 describe("iOS kiosk credential generation", () => {
   it("tags every request and rejects responses from a replaced credential", () => {

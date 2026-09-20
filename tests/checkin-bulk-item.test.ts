@@ -104,12 +104,6 @@ describe("checkinBulkItem", () => {
     checkedInQuantity: 3,
   });
 
-  it("uses SERIALIZABLE isolation", async () => {
-    mockTx.booking.findUnique.mockResolvedValue(openCheckout([bulkItem]));
-    await checkinBulkItem("b-1", "actor-1", "bi-1", 2);
-    expectSerializableIsolation(transactionCalls, 0);
-  });
-
   it("increments checkedInQuantity", async () => {
     mockTx.booking.findUnique.mockResolvedValue(openCheckout([bulkItem]));
 
@@ -123,6 +117,7 @@ describe("checkinBulkItem", () => {
         data: { checkedInQuantity: 5 },
       })
     );
+    expectSerializableIsolation(transactionCalls, 0);
   });
 
   it("returns stock to location balance", async () => {

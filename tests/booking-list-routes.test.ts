@@ -38,15 +38,10 @@ vi.mock("@/lib/audit", () => ({
 
 vi.mock("@/lib/services/notifications", () => ({
   createReservationLifecycleNotification: vi.fn(),
-  notifyLowStock: vi.fn(),
 }));
 
 vi.mock("@/lib/services/checkout-policies", () => ({
   loadCheckoutPolicies: vi.fn(),
-}));
-
-vi.mock("@/lib/services/event-defaults", () => ({
-  resolveEventDefaults: vi.fn(),
 }));
 
 vi.mock("@/lib/services/reservation-rules", () => ({
@@ -62,7 +57,6 @@ import { requireAuth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { createBooking, listBookings } from "@/lib/services/bookings";
 import { loadCheckoutPolicies } from "@/lib/services/checkout-policies";
-import { resolveEventDefaults } from "@/lib/services/event-defaults";
 import { loadReservationRules } from "@/lib/services/reservation-rules";
 import { createReservationLifecycleNotification } from "@/lib/services/notifications";
 import { deferCompanionProjectionRefreshForCommittedMutation } from "@/lib/services/companion-projection-publisher";
@@ -470,7 +464,6 @@ describe("booking list routes", () => {
 
     expect(res.status).toBe(403);
     expect(body.error).toBe("Create a reservation in app/web. Direct checkout is only available at a kiosk.");
-    expect(resolveEventDefaults).not.toHaveBeenCalled();
     expect(createBooking).not.toHaveBeenCalled();
   });
 });

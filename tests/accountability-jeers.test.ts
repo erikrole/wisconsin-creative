@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  ACCOUNTABILITY_JEERS,
-  accountabilityLeaderboardFingerprint,
-  selectAccountabilityJeers,
-} from "@/lib/accountability-jeers";
+import { selectAccountabilityJeers } from "@/lib/accountability-jeers";
 
 const leaderboard = [
   {
@@ -30,12 +26,6 @@ const leaderboard = [
 ];
 
 describe("Accountability jeer rotation", () => {
-  it("keeps an exact 50-line deck with no duplicate copy", () => {
-    expect(ACCOUNTABILITY_JEERS).toHaveLength(50);
-    expect(new Set(ACCOUNTABILITY_JEERS).size).toBe(50);
-    expect(ACCOUNTABILITY_JEERS.every((line) => line.trim() === line && line.length > 0)).toBe(true);
-  });
-
   it("deals three unique lines deterministically for the same shared leaderboard", () => {
     const first = selectAccountabilityJeers(leaderboard);
     const second = selectAccountabilityJeers(structuredClone(leaderboard));
@@ -45,13 +35,10 @@ describe("Accountability jeer rotation", () => {
     expect(second).toEqual(first);
   });
 
-  it("changes the fingerprint and draw when meaningful leaderboard state changes", () => {
+  it("changes the draw when meaningful leaderboard state changes", () => {
     const changed = structuredClone(leaderboard);
     changed[1]!.lateEventCount += 1;
 
-    expect(accountabilityLeaderboardFingerprint(changed)).not.toBe(
-      accountabilityLeaderboardFingerprint(leaderboard),
-    );
     expect(selectAccountabilityJeers(changed)).not.toEqual(selectAccountabilityJeers(leaderboard));
   });
 

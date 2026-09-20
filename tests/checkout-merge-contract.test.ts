@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
-
-function source(path: string) {
-  return readFileSync(path, "utf8");
-}
+import { source } from "./_helpers/source";
 
 describe("checkout merge source contracts", () => {
   it("keeps the merge transaction tied to custody and history rows", () => {

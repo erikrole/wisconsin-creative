@@ -121,6 +121,7 @@ describe("morning refresh cron route", () => {
       changed: 1,
       baselined: 0,
       failed: 0,
+      skipped: 0,
       notificationsCreated: 2,
       errors: [],
     });
@@ -314,6 +315,81 @@ describe("morning refresh cron route", () => {
       sourceName: "UW Badgers",
       result: expect.objectContaining({ error: "HTTP 500" }),
     }));
+  });
+
+  it("syncs calendar sources with bounded concurrency and reports carry-over", async () => {
+    mockDb.calendarSource.findMany.mockResolvedValue(
+      Array.from({ length: 7 }, (_, i) => ({ id: `source-${i}`, name: `Source ${i}` })),
+    );
+    let inFlight = 0;
+    let peakInFlight = 0;
+    vi.mocked(syncCalendarSource).mockImplementation(async () => {
+      inFlight += 1;
+      peakInFlight = Math.max(peakInFlight, inFlight);
+      await new Promise((resolve) => setTimeout(resolve, 1));
+      inFlight -= 1;
+      return { added: 0, updated: 0, cancelled: 0, skipped: 0, errors: [] };
+    });
+
+    const res = await GET(request(), { params: Promise.resolve({}) });
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    // Serial would peak at 1; unbounded would peak at 7.
+    expect(peakInFlight).toBeGreaterThan(1);
+    expect(peakInFlight).toBeLessThanOrEqual(3);
+    expect(body.syncResults).toHaveLength(7);
+    expect(body.sourcesProcessed).toBe(7);
+    expect(body.sourcesSkipped).toBe(0);
+    expect(body.shiftBadgeUsersRemaining).toBe(0);
+    expect(body.deadlineExceeded).toBe(false);
+  });
+
+  it("stops the source loop at the deadline and carries the rest over", async () => {
+    mockDb.calendarSource.findMany.mockResolvedValue(
+      Array.from({ length: 9 }, (_, i) => ({ id: `source-${i}`, name: `Source ${i}` })),
+    );
+    // Each batch burns more than the 8s budget, so only the first one runs.
+    const realNow = Date.now;
+    let ticks = 0;
+    vi.spyOn(Date, "now").mockImplementation(() => realNow() + (ticks += 5000));
+
+    const res = await GET(request(), { params: Promise.resolve({}) });
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.syncResults.length).toBeLessThan(9);
+    expect(body.sourcesSkipped).toBeGreaterThan(0);
+    expect(body.syncResults.length + body.sourcesSkipped).toBe(9);
+    expect(body.deadlineExceeded).toBe(true);
+  });
+
+  it("evaluates shift badges with bounded concurrency", async () => {
+    vi.mocked(badgesEnabled).mockReturnValue(true);
+    vi.mocked(recentlyWorkedEventUsers).mockResolvedValue(
+      Array.from({ length: 12 }, (_, i) => ({
+        userId: `user-${i}`,
+        hasAddedWorker: false,
+        hasBackfilledAssignment: false,
+      })),
+    );
+    let inFlight = 0;
+    let peakInFlight = 0;
+    vi.mocked(badges.onShiftsWorked).mockImplementation(async () => {
+      inFlight += 1;
+      peakInFlight = Math.max(peakInFlight, inFlight);
+      await new Promise((resolve) => setTimeout(resolve, 1));
+      inFlight -= 1;
+      return undefined as never;
+    });
+
+    const res = await GET(request(), { params: Promise.resolve({}) });
+    const body = await res.json();
+
+    expect(peakInFlight).toBeGreaterThan(1);
+    expect(peakInFlight).toBeLessThanOrEqual(5);
+    expect(body.shiftBadgeUsers).toBe(12);
+    expect(body.shiftBadgeUsersRemaining).toBe(0);
   });
 
   it("reports automation digest failures without blocking other daily maintenance", async () => {

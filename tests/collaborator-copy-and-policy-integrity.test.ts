@@ -1,10 +1,5 @@
-import fs from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
-
-function source(relativePath: string) {
-  return fs.readFileSync(path.join(process.cwd(), relativePath), "utf8");
-}
+import { source } from "./_helpers/source";
 
 describe("collaborator affiliation-neutral copy and policy integrity", () => {
   it("does not present shared collaborator surfaces as BTN-only", () => {

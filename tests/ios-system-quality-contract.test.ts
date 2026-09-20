@@ -1,9 +1,5 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
-
-const source = (relativeFile: string) =>
-  readFileSync(path.join(process.cwd(), relativeFile), "utf8");
+import { source } from "./_helpers/source";
 
 describe("iOS system quality contracts", () => {
   it("parses guide Markdown once per article and gives blocks stable source identities", () => {
@@ -12,8 +8,9 @@ describe("iOS system quality contracts", () => {
 
     // Parsed once in the article initializer, never per block on every draw.
     expect(guides).toContain("private let blocks: [GuideBlock]");
-    expect(guides).toContain("init(markdown: String)");
+    expect(guides).toContain("init(markdown: String, title: String = \"\")");
     expect(guides).toContain("let parsed = GuideMarkdown.parse(markdown)");
+    expect(guides).toContain("GuideMarkdown.omittingDuplicateLeadHeading");
     expect(guides).not.toContain("private var blocks: [GuideBlock]");
 
     // Source position is the block identity, so a document that repeats a block

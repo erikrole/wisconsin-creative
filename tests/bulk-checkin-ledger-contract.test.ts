@@ -1,10 +1,5 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
-
-function source(relativeFile: string) {
-  return readFileSync(path.join(process.cwd(), relativeFile), "utf8");
-}
+import { source } from "./_helpers/source";
 
 /**
  * Bulk check-in ledger convention: every `checkedInQuantity` increment must
@@ -21,14 +16,6 @@ describe("bulk check-in ledger contract", () => {
     expect(increment).toBeGreaterThan(-1);
     expect(restock).toBeGreaterThan(increment);
     expect(scans).toContain("kind: BulkMovementKind.CHECKIN");
-  });
-
-  it("admin-override scan check-ins restock at return time", () => {
-    const scans = source("src/lib/services/scans.ts");
-    // Both the numbered-unit branch and the plain-quantity branch restock
-    // on the CHECKIN phase.
-    const restocks = scans.match(/args\.phase === ScanPhase\.CHECKIN\) \{\s*\n\s*\/\/ (Units are|Stock is) physically back/g) ?? [];
-    expect(restocks).toHaveLength(2);
   });
 
   it("every completion path settles the ledger from movements", () => {

@@ -1,7 +1,5 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-
-const source = (file: string) => readFileSync(file, "utf8");
+import { source } from "./_helpers/source";
 
 describe("student shift claim surfaces", () => {
   it("keeps one approval-aware action in Schedule disclosure and Event detail", () => {

@@ -253,6 +253,17 @@ describe("GET /api/users", () => {
     );
     expect(body.data[0].lastActiveAt).toBe("2026-05-13T14:00:00.000Z");
   });
+
+  it.each(["name", "name_desc", "role", "created"])("uses a unique directory tiebreaker for %s", async (sort) => {
+    const res = await GET(
+      new Request(`https://app.example.com/api/users?sort=${sort}`),
+      { params: Promise.resolve({}) },
+    );
+
+    expect(res.status).toBe(200);
+    const order = vi.mocked(db.user.findMany).mock.calls.at(-1)?.[0]?.orderBy as unknown[];
+    expect(order.at(-1)).toEqual({ id: "asc" });
+  });
 });
 
 describe("GET /api/users/[id]", () => {

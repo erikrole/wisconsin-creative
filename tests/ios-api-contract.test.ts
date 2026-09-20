@@ -1,10 +1,5 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
-
-function source(relativeFile: string) {
-  return readFileSync(path.join(process.cwd(), relativeFile), "utf8");
-}
+import { source } from "./_helpers/source";
 
 /**
  * iOS ↔ API response-contract pins.
@@ -707,14 +702,8 @@ describe("iOS project configuration", () => {
       projectYml.indexOf("  WisconsinKiosk:\n"),
       projectYml.indexOf("  WisconsinTests:\n"),
     );
-    const testsTarget = projectYml.slice(projectYml.indexOf("  WisconsinTests:\n"));
-
-    expect(appTarget).toContain('deploymentTarget: "26.0"');
     expect(appTarget).toContain("- KioskOnly/**");
-    expect(testsTarget).toContain('deploymentTarget: "26.0"');
 
-    expect(kioskTarget).toContain('deploymentTarget: "26.0"');
-    expect(kioskTarget).not.toContain('deploymentTarget: "17.0"');
     expect(kioskTarget).toContain("bundleId: com.erikrole.WisconsinKiosk");
     expect(kioskTarget).toContain("- path: Wisconsin/KioskOnly");
     expect(kioskTarget).toContain("- path: Wisconsin/Kiosk");

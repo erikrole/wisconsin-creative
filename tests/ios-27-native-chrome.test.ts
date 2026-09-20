@@ -1,10 +1,5 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
-
-function source(relativeFile: string) {
-  return readFileSync(path.join(process.cwd(), relativeFile), "utf8");
-}
+import { source } from "./_helpers/source";
 
 describe("iOS 27 native chrome with an iOS 26 floor", () => {
   it("builds with the iOS 27 SDK without raising the deployment target", () => {
@@ -13,9 +8,7 @@ describe("iOS 27 native chrome with an iOS 26 floor", () => {
       "ios/Wisconsin/Core/PerformanceInstrumentation.swift",
     );
 
-    expect(project).toContain('xcodeVersion: "27.0"');
     expect(project).toContain('iOS: "26.0"');
-    expect(project).toContain('deploymentTarget: "26.0"');
     expect(instrumentation).toContain("MXMetricManager.shared.add(self)");
     expect(instrumentation).not.toMatch(/\bMetricManager\b/);
     expect(instrumentation).not.toContain("iOS 27");

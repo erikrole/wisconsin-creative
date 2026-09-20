@@ -33,6 +33,7 @@ const { dbMock, tx } = vi.hoisted(() => {
       findMany: vi.fn(),
       count: vi.fn(),
       create: vi.fn(),
+      createMany: vi.fn(),
       update: vi.fn(),
       updateMany: vi.fn(),
       deleteMany: vi.fn(),
@@ -86,7 +87,7 @@ vi.mock("@/lib/signatures/storage", () => ({
   getPrivateSignatureArtifact: vi.fn(),
 }));
 
-import { applySignatureRosterSnapshot, cleanupPendingSignatureArtifacts, createAdHocSignatureMember, createSignatureRosterPreview, deleteSignatureCollection, ensureSignatureCreativeStaffCollection, getReadySignatureArtifact, getSignatureCollection, getSignatureCollectionZip, getSignatureMemberCaptureBootstrap, listSignatureCollections, removeSignatureCapture, removeSignatureMemberFromRoster, resetSignatureCollection, saveSignatureCapture, signatureArtifactFilename, syncSignatureCreativeStaff, updateSignatureMemberRequired } from "@/lib/services/signatures";
+import { applySignatureRosterSnapshot, cleanupPendingSignatureArtifacts, createAdHocSignatureMember, createSignatureRosterPreview, deleteSignatureCollection, getReadySignatureArtifact, getSignatureCollection, getSignatureCollectionZip, getSignatureMemberCaptureBootstrap, listSignatureCollections, removeSignatureCapture, removeSignatureMemberFromRoster, resetSignatureCollection, saveSignatureCapture, signatureArtifactFilename, syncSignatureCreativeStaff, updateSignatureMemberRequired } from "@/lib/services/signatures";
 import { createAuditEntryTx } from "@/lib/audit";
 import { renderSignatureArtifacts } from "@/lib/signatures/artifacts";
 import { deletePrivateSignatureArtifacts, getPrivateSignatureArtifact, uploadPrivateSignatureArtifact } from "@/lib/signatures/storage";
@@ -1562,28 +1563,6 @@ describe("signature readiness requirements", () => {
 });
 
 describe("Creative staff roster sync", () => {
-  it("creates a standalone Creative staff collection", async () => {
-    tx.signatureCollection.findUnique.mockResolvedValue(null);
-    tx.signatureCollection.create.mockResolvedValue({
-      id: "creative-collection-1",
-      sportCode: "CREATIVE",
-      season: "2026-27",
-      status: SignatureCollectionStatus.OPEN,
-      collectionVersion: 1,
-    });
-
-    await expect(ensureSignatureCreativeStaffCollection({ actor, season: "2026-27" })).resolves.toMatchObject({
-      id: "creative-collection-1",
-      sportCode: "CREATIVE",
-      season: "2026-27",
-      created: true,
-    });
-    expect(tx.signatureCollection.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ sportCode: "CREATIVE", season: "2026-27" }),
-      select: expect.any(Object),
-    });
-  });
-
   it("adds active full-time staff identified by area or creative job title", async () => {
     tx.signatureCollection.findUnique.mockResolvedValue({ id: "collection-1", sportCode: "CREATIVE", status: SignatureCollectionStatus.OPEN, collectionVersion: 4, settingsVersion: 2 });
     tx.user.findMany.mockResolvedValue([{ id: "user-jerry", name: "Jerry Mao", title: "Creative Director" }]);
@@ -1591,7 +1570,7 @@ describe("Creative staff roster sync", () => {
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([{ id: "member-1" }]);
-    tx.signatureMember.create.mockResolvedValue({ id: "member-1" });
+    tx.signatureMember.createMany.mockResolvedValue({ count: 1 });
     tx.signatureCapture.createMany.mockResolvedValue({ count: 1 });
     tx.signatureCollection.update.mockResolvedValue({ collectionVersion: 5 });
 
@@ -1606,13 +1585,18 @@ describe("Creative staff roster sync", () => {
       unchanged: false,
     });
 
-    expect(tx.signatureMember.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        sourceExternalId: "creative-staff:user-jerry",
-        linkedUserId: "user-jerry",
-        roleGroup: "CREATIVE_STAFF",
-        required: true,
-      }),
+    // New members go out in a single createMany, not one create per user.
+    expect(tx.signatureMember.create).not.toHaveBeenCalled();
+    expect(tx.signatureMember.createMany).toHaveBeenCalledTimes(1);
+    expect(tx.signatureMember.createMany).toHaveBeenCalledWith({
+      data: [
+        expect.objectContaining({
+          sourceExternalId: "creative-staff:user-jerry",
+          linkedUserId: "user-jerry",
+          roleGroup: "CREATIVE_STAFF",
+          required: true,
+        }),
+      ],
     });
     expect(tx.user.findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: expect.objectContaining({
@@ -1625,6 +1609,41 @@ describe("Creative staff roster sync", () => {
         ]),
       }),
     }));
+  });
+
+  it("writes one createMany for every new member and one updateMany per reactivation group", async () => {
+    tx.signatureCollection.findUnique.mockResolvedValue({ id: "collection-1", sportCode: "CREATIVE", status: SignatureCollectionStatus.OPEN, collectionVersion: 4, settingsVersion: 2 });
+    tx.user.findMany.mockResolvedValue([
+      { id: "user-a", name: "Ann Lee", title: "Creative Director" },
+      { id: "user-b", name: "Bo Ray", title: "Digital Media Producer" },
+      { id: "user-c", name: "Cam Fox", title: "Creative Producer" },
+    ]);
+    tx.signatureMember.findMany
+      .mockResolvedValueOnce([
+        { id: "member-c", linkedUserId: "user-c", required: true, active: false, name: "Cam Fox", title: "Creative Producer" },
+      ])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: "member-a" }, { id: "member-b" }, { id: "member-c" }]);
+    tx.signatureMember.createMany.mockResolvedValue({ count: 2 });
+    tx.signatureMember.updateMany.mockResolvedValue({ count: 1 });
+    tx.signatureCapture.createMany.mockResolvedValue({ count: 2 });
+    tx.signatureCollection.update.mockResolvedValue({ collectionVersion: 5 });
+
+    await expect(syncSignatureCreativeStaff({
+      actor,
+      collectionId: "collection-1",
+      expectedCollectionVersion: 4,
+    })).resolves.toMatchObject({ added: 2, reactivated: 1, updated: 1, activeCount: 3 });
+
+    expect(tx.signatureMember.create).not.toHaveBeenCalled();
+    expect(tx.signatureMember.update).not.toHaveBeenCalled();
+    expect(tx.signatureMember.createMany).toHaveBeenCalledTimes(1);
+    expect(tx.signatureMember.createMany.mock.calls[0]![0].data).toHaveLength(2);
+    expect(tx.signatureMember.updateMany).toHaveBeenCalledTimes(1);
+    expect(tx.signatureMember.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ["member-c"] } },
+      data: { name: "Cam Fox", normalizedName: "cam fox", title: "Creative Producer", active: true },
+    });
   });
 
   it("is version-checked and leaves an unchanged roster idempotent", async () => {
@@ -1644,6 +1663,7 @@ describe("Creative staff roster sync", () => {
 
     expect(tx.signatureCollection.update).not.toHaveBeenCalled();
     expect(tx.signatureMember.create).not.toHaveBeenCalled();
+    expect(tx.signatureMember.createMany).not.toHaveBeenCalled();
   });
 
   it("links an exact uniquely named team staff member to the Creative Staff identity", async () => {
@@ -1663,8 +1683,10 @@ describe("Creative staff roster sync", () => {
       unchanged: false,
     });
 
+    // Relinks are grouped by target user: one updateMany per user, not per row.
+    expect(tx.signatureMember.updateMany).toHaveBeenCalledTimes(1);
     expect(tx.signatureMember.updateMany).toHaveBeenCalledWith({
-      where: { id: "team-member", linkedUserId: null },
+      where: { id: { in: ["team-member"] }, linkedUserId: null },
       data: { linkedUserId: "user-1" },
     });
   });

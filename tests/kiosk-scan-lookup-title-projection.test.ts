@@ -78,4 +78,21 @@ describe("POST /api/kiosk/scan-lookup title projection", () => {
 
     expect(body.item.bookingTitle).toBe("Women's Soccer vs USC");
   });
+
+  it("rate limits kiosk scan lookup by device before item lookup", async () => {
+    mocks.findAsset.mockResolvedValue({
+      id: "asset-1",
+      assetTag: "CAM-1",
+      name: "Camera",
+      status: "AVAILABLE",
+      category: { name: "Camera" },
+    });
+
+    const res = await POST(request(), { params: Promise.resolve({}) });
+
+    expect(res.status).toBe(200);
+    expect(mocks.rateLimit).toHaveBeenCalledWith("kiosk:scan-lookup:kiosk-1", { max: 120, windowMs: 60_000 });
+    expect(mocks.rateLimit).toHaveBeenCalledWith("kiosk:scan-lookup:kiosk-1:hour", { max: 1_000, windowMs: 60 * 60_000 });
+    expect(mocks.findAsset).toHaveBeenCalledWith("CAM-1", expect.any(Object));
+  });
 });

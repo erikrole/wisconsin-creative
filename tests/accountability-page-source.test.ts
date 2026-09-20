@@ -1,10 +1,5 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
-
-function source(relativeFile: string) {
-  return readFileSync(path.join(process.cwd(), relativeFile), "utf8");
-}
+import { source } from "./_helpers/source";
 
 describe("Accountability dashboard source contract", () => {
   it("frames the page as the leaderboard people should avoid", () => {
@@ -66,7 +61,11 @@ describe("Accountability dashboard source contract", () => {
     expect(client).toContain("data.capabilities.canExport ?");
     expect(client).toContain("data.capabilities.canManageExclusions");
     expect(client).toContain("canManageExclusions ? setExcludeTarget : undefined");
-    expect(client).toContain("Admin-reviewed data-quality exclusions");
+    expect(client).toContain("Find a person");
+    expect(client).toContain("You’re #");
+    expect(client).toContain("syncUrl(");
+    expect(client).toContain("currently overdue checkouts");
+    expect(client).toContain('label: "Events"');
     expect(client).not.toContain("<BarChart");
   });
 });

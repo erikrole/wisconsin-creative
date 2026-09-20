@@ -12,10 +12,7 @@ vi.mock("@/lib/db", () => ({
 }));
 vi.mock("@/lib/services/notifications", () => ({ notifyScheduleChanges }));
 
-import {
-  flushScheduleNotifications,
-  sweepDueScheduleNotifications,
-} from "@/lib/services/schedule-notification-flush";
+import { flushScheduleNotifications } from "@/lib/services/schedule-notification-flush";
 
 const NOW = new Date("2026-10-15T12:00:00.000Z");
 
@@ -246,31 +243,5 @@ describe("flushScheduleNotifications", () => {
 
     expect(await flushScheduleNotifications("group-1", { now: NOW }))
       .toMatchObject({ status: "delivered", userIds: ["user-1"] });
-  });
-});
-
-describe("sweepDueScheduleNotifications", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    update.mockResolvedValue({});
-    notifyScheduleChanges.mockResolvedValue({ notified: [] });
-  });
-
-  it("delivers flushes whose timer never fired", async () => {
-    findMany.mockResolvedValue([{ id: "group-1" }, { id: "group-2" }]);
-    findUnique.mockResolvedValue(group({ lastPublishedSnapshot: markFor([]) }));
-
-    const outcomes = await sweepDueScheduleNotifications({ now: NOW });
-
-    expect(findMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: { notifyAfter: { not: null, lte: NOW } },
-    }));
-    expect(outcomes).toHaveLength(2);
-    expect(outcomes.every((outcome) => outcome.status === "delivered")).toBe(true);
-  });
-
-  it("does nothing when no group is waiting", async () => {
-    findMany.mockResolvedValue([]);
-    expect(await sweepDueScheduleNotifications({ now: NOW })).toEqual([]);
   });
 });

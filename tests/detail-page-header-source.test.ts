@@ -1,7 +1,5 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-
-const source = (path: string) => readFileSync(path, "utf8");
+import { source } from "./_helpers/source";
 
 const DETAIL_HEADER_CONSUMERS = [
   "src/app/(app)/users/[id]/page.tsx",
@@ -20,13 +18,12 @@ describe("Detail page header contracts", () => {
   });
 
   it("does not let a detail route re-fork the header shell", () => {
-    // The exact shell string these four had each reimplemented by hand.
-    const shell = "rounded-lg border border-border/50 bg-card px-4 py-4 shadow-xs sm:px-5";
+    const shell = "mb-5 border-b border-border/50 pb-5";
     expect(source("src/components/DetailPageHeader.tsx")).toContain(shell);
 
     // The primitive owns the header element. A consumer may still echo the
-    // shell classes on a loading skeleton so the card does not jump on load,
-    // but it must not render a competing <header> of its own.
+    // identity-row classes on a loading skeleton so the layout does not jump
+    // on load, but it must not render a competing <header> of its own.
     for (const path of DETAIL_HEADER_CONSUMERS) {
       expect(source(path), path).not.toMatch(/<header[\s>]/);
     }

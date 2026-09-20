@@ -32,6 +32,7 @@ vi.mock("@/lib/rate-limit", () => ({
 }));
 
 import { GET as getKioskStudent } from "@/app/api/kiosk/student/[userId]/route";
+import { GET as kioskHeartbeat } from "@/app/api/kiosk/heartbeat/route";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -144,5 +145,16 @@ describe("kiosk student bulk summaries", () => {
     for (const call of mocks.bookingFindMany.mock.calls) {
       expect(call[0].where).not.toHaveProperty("locationId");
     }
+  });
+
+  it("rate limits kiosk heartbeat and student lookups", async () => {
+    mocks.bookingFindMany.mockResolvedValue([]);
+
+    await kioskHeartbeat(new Request("http://test"), { params: Promise.resolve({}) });
+    await getKioskStudent(new Request("http://test"), { params: Promise.resolve({ userId: "user-1" }) });
+
+    expect(mocks.enforceRateLimit).toHaveBeenCalledWith("kiosk:heartbeat:kiosk-1", { max: 1, windowMs: 60_000 });
+    expect(mocks.enforceRateLimit).toHaveBeenCalledWith("kiosk:student:kiosk-1:203.0.113.10", { max: 120, windowMs: 60_000 });
+    expect(mocks.enforceRateLimit).toHaveBeenCalledWith("kiosk:student:kiosk-1:203.0.113.10:user-1", { max: 30, windowMs: 60_000 });
   });
 });

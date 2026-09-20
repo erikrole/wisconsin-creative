@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const dbMock = vi.hoisted(() => ({
@@ -20,8 +19,7 @@ vi.mock("@/lib/rate-limit", () => ({
 import { checkRateLimit } from "@/lib/rate-limit";
 import { POST as resetAccount } from "@/app/api/auth/reset-password/account/route";
 import { GET as changePasswordWellKnown } from "@/app/.well-known/change-password/route";
-
-const source = (path: string) => readFileSync(path, "utf8");
+import { source } from "./_helpers/source";
 
 function request(body: Record<string, unknown>) {
   return new Request("https://app.example.com/api/auth/reset-password/account", {

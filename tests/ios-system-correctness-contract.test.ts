@@ -1,8 +1,5 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
-
-const source = (file: string) => readFileSync(path.join(process.cwd(), file), "utf8");
+import { source } from "./_helpers/source";
 
 describe("iOS system correctness request ownership", () => {
   it("lets only the current student-hub scan route mutate kiosk flow state", () => {

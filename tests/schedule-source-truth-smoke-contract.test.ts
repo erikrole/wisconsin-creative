@@ -1,9 +1,6 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-
-function source(path: string) {
-  return readFileSync(path, "utf8");
-}
+import { source } from "./_helpers/source";
 
 describe("schedule source-of-truth and browser smoke contracts", () => {
   it("keeps the authenticated launch browser gate configured and scoped", () => {
@@ -230,10 +227,11 @@ describe("schedule source-of-truth and browser smoke contracts", () => {
     expect(readiness).toContain('label: "Synced calendar"');
     expect(readiness).toContain('label: "Assignee changes"');
     expect(readiness).toContain("value: sourceNeedsAttention || healthWarnings > 0 ? \"Check\"");
-    // Queue totals stay in Details. The visible strip is recent crew and
-    // calendar activity rather than standing Crew needed / Gear gaps counts.
+    // Queue totals stay in Details. The visible strip is quiet activity
+    // badges rather than standing Crew needed / Gear gaps counts.
     expect(readiness).toContain("<ScheduleRecentActivity");
     expect(readiness).toContain("feed={(");
+    expect(readiness).toContain("recentScheduleSyncItems(health)");
     expect(readiness).not.toContain("Nothing needs attention");
     expect(readiness).toContain("<ScheduleSourceStatus signal={sourceSignal} />");
     expect(readiness).not.toContain('label: "Next call"');

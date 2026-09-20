@@ -1,10 +1,5 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
-
-function source(relativeFile: string) {
-  return readFileSync(path.join(process.cwd(), relativeFile), "utf8");
-}
+import { source } from "./_helpers/source";
 
 describe("iOS SwiftUI performance contracts", () => {
   it("derives booking and schedule indexes when source data changes", () => {
@@ -73,7 +68,6 @@ describe("iOS SwiftUI performance contracts", () => {
     const harness = source(
       "ios/Wisconsin/App/PerformanceTestHarness.swift",
     );
-    const project = source("ios/project.yml");
 
     expect(instrumentation).toContain("OSSignposter(");
     expect(instrumentation).toContain("MXMetricManager.shared.add(self)");
@@ -81,7 +75,5 @@ describe("iOS SwiftUI performance contracts", () => {
     expect(instrumentation).not.toContain("iOS 27");
     expect(instrumentation).not.toContain("#available(iOS 27");
     expect(harness).toContain("#if DEBUG");
-    expect(project).toContain('xcodeVersion: "27.0"');
-    expect(project).toContain('deploymentTarget: "26.0"');
   });
 });

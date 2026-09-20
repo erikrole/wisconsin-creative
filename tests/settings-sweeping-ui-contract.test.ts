@@ -1,9 +1,5 @@
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-
-function source(path: string) {
-  return readFileSync(path, "utf8");
-}
+import { source } from "./_helpers/source";
 
 describe("Settings sweeping UI contracts", () => {
   it("uses one content rail and grouped mobile page discovery", () => {
@@ -24,6 +20,12 @@ describe("Settings sweeping UI contracts", () => {
     expect(nav).toContain('label: "Booking extensions"');
     expect(nav).toContain('label: "Overdue escalation"');
     expect(nav).toContain('label: "Database diagnostics"');
+    expect(nav).toContain('group: "Booking"');
+    expect(nav).toContain('group: "Schedule"');
+    expect(nav).toContain('href: "/settings/sports"');
+    expect(nav).toContain('group: "Schedule"');
+    expect(nav).toContain("relatedHrefs");
+    expect(nav).toContain("export function getRelatedSettingsSections");
   });
 
   it("does not render failed extension loads as an empty configuration", () => {

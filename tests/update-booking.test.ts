@@ -162,14 +162,6 @@ beforeEach(() => {
 // updateReservation
 // ═══════════════════════════════════════════════════════════════════════════════
 describe("updateReservation", () => {
-  it("uses SERIALIZABLE isolation", async () => {
-    mockTx.booking.findUnique.mockResolvedValue(makeExistingReservation());
-
-    await updateReservation("r-1", "actor-1", { title: "Updated" });
-
-    expectSerializableIsolation(transactionCalls, 0);
-  });
-
   it("BUG: rejects a snapshot that became stale before the transaction write", async () => {
     mockTx.booking.findUnique.mockResolvedValue(makeExistingReservation());
 
@@ -195,6 +187,7 @@ describe("updateReservation", () => {
         data: expect.objectContaining({ title: "New Title" }),
       })
     );
+    expectSerializableIsolation(transactionCalls, 0);
   });
 
   it("normalizes reservation titles before storing and auditing them", async () => {
@@ -438,14 +431,6 @@ describe("updateReservation", () => {
 // updateCheckout
 // ═══════════════════════════════════════════════════════════════════════════════
 describe("updateCheckout", () => {
-  it("uses SERIALIZABLE isolation", async () => {
-    mockTx.booking.findUnique.mockResolvedValue(makeExistingCheckout());
-
-    await updateCheckout("c-1", "actor-1", { title: "Updated" });
-
-    expectSerializableIsolation(transactionCalls, 0);
-  });
-
   it("BUG: rejects a checkout snapshot that became stale before the transaction write", async () => {
     mockTx.booking.findUnique.mockResolvedValue(makeExistingCheckout());
 
@@ -471,6 +456,7 @@ describe("updateCheckout", () => {
         data: expect.objectContaining({ title: "New Title", endsAt: newEnd }),
       })
     );
+    expectSerializableIsolation(transactionCalls, 0);
   });
 
   it("normalizes checkout titles before storing them", async () => {

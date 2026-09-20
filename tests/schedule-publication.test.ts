@@ -20,6 +20,7 @@ vi.mock("@/lib/db", () => {
     shift: {
       update: vi.fn(),
       create: vi.fn(),
+      createManyAndReturn: vi.fn(),
       deleteMany: vi.fn(),
     },
     shiftGroupWorkingCopy: {
@@ -66,6 +67,7 @@ const mockTx = (db as typeof db & {
     shift: {
       update: ReturnType<typeof vi.fn>;
       create: ReturnType<typeof vi.fn>;
+      createManyAndReturn: ReturnType<typeof vi.fn>;
       deleteMany: ReturnType<typeof vi.fn>;
     };
     shiftGroupWorkingCopy: {
@@ -390,7 +392,7 @@ describe("publishShiftGroup", () => {
     };
     mockTx.shiftGroup.findUnique.mockResolvedValue(group);
     mockTx.shift.update.mockResolvedValue({ id: "shift-1" });
-    mockTx.shift.create.mockResolvedValue({ id: "shift-new" });
+    mockTx.shift.createManyAndReturn.mockResolvedValue([{ id: "shift-new" }]);
     mockTx.shiftGroupWorkingCopy.deleteMany.mockResolvedValue({ count: 1 });
     mockTx.shiftGroup.update.mockImplementation(async ({ data }) => ({
       ...group,
@@ -402,8 +404,11 @@ describe("publishShiftGroup", () => {
     const result = await publishShiftGroup("group-1", "staff-1", 2);
 
     expectSerializableIsolation(transactionCalls, 0);
-    expect(mockTx.shift.create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ area: "PHOTO", workerType: "FT" }),
+    // Added slots are inserted as one createManyAndReturn, not a create per slot.
+    expect(mockTx.shift.create).not.toHaveBeenCalled();
+    expect(mockTx.shift.createManyAndReturn).toHaveBeenCalledTimes(1);
+    expect(mockTx.shift.createManyAndReturn).toHaveBeenCalledWith(expect.objectContaining({
+      data: [expect.objectContaining({ area: "PHOTO", workerType: "FT" })],
     }));
     expect(mockTx.shiftGroupWorkingCopy.deleteMany).toHaveBeenCalledWith({
       where: { shiftGroupId: "group-1", version: 2 },
@@ -681,7 +686,7 @@ describe("publishShiftGroup", () => {
     mockTx.shiftGroup.findUnique
       .mockResolvedValueOnce(group)
       .mockResolvedValueOnce(group);
-    mockTx.shift.create.mockResolvedValue({ id: "shift-new" });
+    mockTx.shift.createManyAndReturn.mockResolvedValue([{ id: "shift-new" }]);
     mockTx.shiftAssignment.updateMany.mockResolvedValue({ count: 0 });
     mockTx.shiftAssignment.create.mockResolvedValue({ id: "assignment-new" });
     mockTx.user.findMany.mockResolvedValue([{
@@ -700,8 +705,11 @@ describe("publishShiftGroup", () => {
 
     const result = await publishShiftGroup("group-1", "staff-1", 2);
 
-    expect(mockTx.shift.create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ area: "PHOTO", workerType: "FT" }),
+    // Added slots are inserted as one createManyAndReturn, not a create per slot.
+    expect(mockTx.shift.create).not.toHaveBeenCalled();
+    expect(mockTx.shift.createManyAndReturn).toHaveBeenCalledTimes(1);
+    expect(mockTx.shift.createManyAndReturn).toHaveBeenCalledWith(expect.objectContaining({
+      data: [expect.objectContaining({ area: "PHOTO", workerType: "FT" })],
     }));
     expect(mockTx.shiftAssignment.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({
@@ -709,6 +717,10 @@ describe("publishShiftGroup", () => {
         userId: "user-1",
         callNote: "Bring the wireless kit",
       }),
+    }));
+    // Draft assignments share one conflict read keyed by userId, not one per slot.
+    expect(mockTx.shiftAssignment.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ userId: { in: ["user-1"] } }),
     }));
     expect(result.affectedUserIds).toEqual(["user-1"]);
   });
@@ -834,7 +846,7 @@ describe("publishShiftGroup", () => {
       })),
     ]);
     mockTx.shift.update.mockResolvedValue({ id: "shift-1" });
-    mockTx.shift.create.mockResolvedValue({ id: "shift-5" });
+    mockTx.shift.createManyAndReturn.mockResolvedValue([{ id: "shift-5" }]);
     mockTx.shiftAssignment.updateMany.mockResolvedValue({ count: 0 });
     mockTx.shiftAssignment.create.mockResolvedValue({ id: "assignment-5" });
     mockTx.shiftGroupWorkingCopy.deleteMany.mockResolvedValue({ count: 1 });
@@ -1183,6 +1195,7 @@ describe("publish preflight", () => {
     await expect(publishShiftGroup("group-1", "staff-1", 3)).rejects.toMatchObject({ status: 409 });
 
     expect(mockTx.shift.create).not.toHaveBeenCalled();
+    expect(mockTx.shift.createManyAndReturn).not.toHaveBeenCalled();
     expect(mockTx.shiftAssignment.create).not.toHaveBeenCalled();
   });
 

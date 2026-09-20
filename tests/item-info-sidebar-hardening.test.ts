@@ -19,12 +19,13 @@ describe("item info sidebar hardening", () => {
 
   it("normalizes product links and keeps source context visible", () => {
     const source = readFileSync("src/app/(app)/items/[id]/ItemInfoTab.tsx", "utf8");
+    const helper = readFileSync("src/lib/external-url.ts", "utf8");
 
-    expect(source).toContain("function normalizeExternalUrl");
-    expect(source).toContain("new URL(withScheme)");
-    expect(source).toContain('parsed.protocol !== "http:" && parsed.protocol !== "https:"');
-    expect(source).toContain('`https://${trimmed}`');
-    expect(source).toContain("function getExternalUrlHost");
+    expect(source).toContain('import { externalUrlHost, normalizeExternalUrl } from "@/lib/external-url";');
+    expect(helper).toContain("new URL(withScheme)");
+    expect(helper).toContain('parsed.protocol !== "http:" && parsed.protocol !== "https:"');
+    expect(helper).toContain('`https://${trimmed}`');
+    expect(helper).toContain("export function externalUrlHost");
     expect(source).toContain("sourceHost &&");
     expect(source).toContain('copyWithFeedback(openUrl, "link")');
     expect(source).not.toContain("navigator.clipboard.writeText(openUrl)");

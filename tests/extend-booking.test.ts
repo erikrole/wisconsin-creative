@@ -104,11 +104,6 @@ afterEach(() => {
 });
 
 describe("extendBooking", () => {
-  it("uses SERIALIZABLE isolation", async () => {
-    await extendBooking("b-1", "actor-1", newEnd);
-    expectSerializableIsolation(transactionCalls, 0);
-  });
-
   it("BUG: rejects a snapshot that became stale before extension writes", async () => {
     await expect(extendBooking(
       "b-1",
@@ -136,6 +131,7 @@ describe("extendBooking", () => {
         data: { endsAt: newEnd },
       })
     );
+    expectSerializableIsolation(transactionCalls, 0);
   });
 
   it("creates audit log with before/after", async () => {
