@@ -14,7 +14,7 @@ describe("deployment build memory", () => {
 
   it("caps the deployment build heap below the standard Vercel limit", () => {
     expect(vercelConfig.buildCommand).toBe(
-      "NODE_OPTIONS=--max-old-space-size=2048 npm run build",
+      "NODE_OPTIONS=--max-old-space-size=3072 npm run build",
     );
   });
 });
