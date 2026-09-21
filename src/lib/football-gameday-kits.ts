@@ -15,13 +15,13 @@ export const FOOTBALL_GAMEDAY_KIT_ROLES = [
 export type FootballGamedayKitRole = (typeof FOOTBALL_GAMEDAY_KIT_ROLES)[number];
 
 const FOOTBALL_GAMEDAY_KIT_ROLE_LABELS: Record<FootballGamedayKitRole, string> = {
-  SLOW1: "Slow 1",
-  SLOW2: "Slow 2",
-  BENCH: "Bench",
-  ROAM1: "Roam 1",
-  ROAM2: "Roam 2",
-  ROAM3: "Roam 3",
-  ROAM4: "Roam 4",
+  SLOW1: "SLOW1",
+  SLOW2: "SLOW2",
+  BENCH: "BENCH",
+  ROAM1: "ROAM1",
+  ROAM2: "ROAM2",
+  ROAM3: "ROAM3",
+  ROAM4: "ROAM4",
 };
 
 export const FOOTBALL_GAMEDAY_KIT_ROLE_OPTIONS = FOOTBALL_GAMEDAY_KIT_ROLES.map((role) => ({

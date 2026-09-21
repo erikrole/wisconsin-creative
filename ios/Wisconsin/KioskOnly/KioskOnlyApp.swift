@@ -863,7 +863,7 @@ enum KioskFixtures {
     static func kitsJSON() -> String {
         """
         {"data":[
-          {"id":"kit-slow-1","name":"Slow 1","sportCode":"FB","gamedayRole":"SLOW1","contents":6},
+          {"id":"kit-slow-1","name":"SLOW1","sportCode":"FB","gamedayRole":"SLOW1","contents":6},
           {"id":"kit-high-2","name":"High 2","sportCode":"FB","contents":5}
         ],"suggestedKitId":"kit-slow-1"}
         """
@@ -872,7 +872,7 @@ enum KioskFixtures {
     static func kitDetailJSON() -> String {
         """
         {"data":{
-          "id":"kit-slow-1","name":"Slow 1","sportCode":"FB",
+          "id":"kit-slow-1","name":"SLOW1","sportCode":"FB",
           "members":[
             {"id":"a-1","assetTag":"FX6-1","name":"Sony FX6"},
             {"id":"a-2","assetTag":"LENS-70","name":"70-200"}

@@ -203,7 +203,7 @@ export function NewKitSheet({
                 setName(e.target.value);
                 if (fieldErrors.name || formError) clearErrors();
               }}
-              placeholder="e.g., Slow 1"
+              placeholder="e.g., SLOW1"
               disabled={submitting}
               aria-invalid={!!fieldErrors.name}
               aria-describedby={fieldErrors.name ? "kit-name-error" : undefined}
@@ -333,7 +333,7 @@ export function NewKitSheet({
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                One Slow 1, Slow 2, Bench, or Roam kit at this pickup. Duplicate copies batteries, not the job.
+                One SLOW1, SLOW2, BENCH, or ROAM kit at this pickup. Duplicate copies batteries, not the job.
               </p>
               {fieldErrors.gamedayRole && (
                 <p id="kit-job-error" className="text-sm text-destructive">
