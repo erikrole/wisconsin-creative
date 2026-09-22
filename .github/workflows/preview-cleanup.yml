@@ -3,6 +3,11 @@ on:
   schedule:
     - cron: '23 10 * * *'
   workflow_dispatch:
+    inputs:
+      apply:
+        description: "Apply eligible cleanup (also requires PREVIEW_CLEANUP_ENABLED)"
+        type: boolean
+        default: false
 permissions:
   contents: read
   pull-requests: read
@@ -12,7 +17,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   cleanup:
-    if: vars.PREVIEW_CLEANUP_ENABLED == 'true' && github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && (vars.PREVIEW_CLEANUP_ENABLED == 'true' || github.event_name == 'workflow_dispatch')
     environment: preview-infrastructure
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -27,8 +32,15 @@ jobs:
           cache: npm
       - run: npm install --global npm@11.17.0
       - run: npm ci
-      - run: node scripts/cleanup-previews.mjs --apply
+      - name: Inspect or apply retention decisions
+        run: |
+          if [ "$APPLY_CLEANUP" = "true" ]; then
+            node scripts/cleanup-previews.mjs --apply
+          else
+            node scripts/cleanup-previews.mjs
+          fi
         env:
+          APPLY_CLEANUP: ${{ vars.PREVIEW_CLEANUP_ENABLED == 'true' && (github.event_name != 'workflow_dispatch' || inputs.apply) }}
           GITHUB_TOKEN: ${{ github.token }}
           NEON_API_KEY: ${{ secrets.NEON_PREVIEW_API_KEY }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_PREVIEW_TOKEN }}
