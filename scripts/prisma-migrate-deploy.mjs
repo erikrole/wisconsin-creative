@@ -40,16 +40,19 @@ async function main() {
     return [name, readFileSync(migrationPath, "utf8")];
   }));
   const checksums = Object.fromEntries(migrations.map((name) => [name, hashSql(sources[name])]));
-  const baseline = await loadMigrationBaseline(sql, checksums);
+  const rows = await readMigrationRows(sql);
+  const baseline = await loadMigrationBaseline(sql, checksums, rows);
+  // The same history policy applies before either transport. A successful
+  // Prisma process must not silently bypass legacy or duplicate evidence.
+  const preflightPending = assertFallbackHistory(checksums, rows, baseline);
   if (baseline) {
     console.warn(`Using ${baseline.id}: legacy provenance exceptions remain recorded, not reclassified as verified SQL.`);
-    const pending = assertFallbackHistory(checksums, await readMigrationRows(sql), baseline);
-    const plans = pending.map((name) => buildFallbackTransaction(name, sources[name], checksums, baseline));
+    const plans = preflightPending.map((name) => buildFallbackTransaction(name, sources[name], checksums, baseline));
     for (const plan of plans) {
-      console.log(`Applying ${plan.name} atomically on checkpoint-verified Preview`);
+      console.log(`Applying ${plan.name} atomically on checkpoint ${baseline.id}`);
       await applyFallbackMigration(sql, plan);
     }
-    console.log(`Preview applied ${plans.length} migration(s).`);
+    console.log(`Checkpoint ${baseline.id} applied ${plans.length} migration(s).`);
     return;
   }
 
@@ -106,8 +109,8 @@ function hashSql(source) {
 export function assertFallbackHistory(checksums, rows, baseline = null) {
   const health = evaluateMigrationHealth(Object.keys(checksums).sort(), rows, checksums, baseline);
   if (health.unresolvedFailed.length || health.appliedDbOnly.length
-    || health.checksumMismatches.length || health.unverifiedChecksums.length) {
-    throw new Error("Refusing Neon HTTP fallback: migration history is failed, missing locally, or has unverified/changed checksums. Run db:migrate:health and reconcile before retrying.");
+    || health.checksumMismatches.length || health.unverifiedChecksums.length || health.unexpectedDuplicates.length) {
+    throw new Error("Refusing migration deploy: migration history is failed, missing locally, duplicated, or has unverified/changed checksums. Run db:migrate:health and reconcile before retrying.");
   }
   return health.pending;
 }
@@ -146,6 +149,11 @@ export function buildFallbackTransaction(name, source, checksums, baseline = nul
               AND NOT (current_setting('wc.baseline_ids')::jsonb ? m.id)))) THEN
             RAISE EXCEPTION 'Migration history changed or needs reconciliation; no SQL applied';
           END IF;
+          IF EXISTS (SELECT 1 FROM _prisma_migrations m WHERE m.rolled_back_at IS NULL AND m.finished_at IS NOT NULL
+            GROUP BY m.migration_name HAVING count(*) > 1 AND bool_or(NOT (
+              ${sqlLiteralForReceiptIds(baseline)}::jsonb ? m.id))) THEN
+            RAISE EXCEPTION 'Unexpected duplicate migration receipts; no SQL applied';
+          END IF;
           IF EXISTS (SELECT 1 FROM _prisma_migrations WHERE rolled_back_at IS NULL
             AND migration_name = current_setting('wc.migration_name')) THEN
             RAISE EXCEPTION 'Migration already recorded; re-read history before retrying';
@@ -159,6 +167,10 @@ export function buildFallbackTransaction(name, source, checksums, baseline = nul
           WHERE id = $1`, values: [id, statements.length] },
     ],
   };
+}
+
+function sqlLiteralForReceiptIds(baseline) {
+  return `'${JSON.stringify(baseline?.receipts.map((row) => row.id) ?? []).replaceAll("'", "''")}'`;
 }
 
 export async function applyFallbackMigration(sql, plan) {

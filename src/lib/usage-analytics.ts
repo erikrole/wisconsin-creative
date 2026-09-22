@@ -45,7 +45,7 @@ export function canViewUsageAnalytics(user: Pick<AuthUser, "email">): boolean {
 }
 
 function analyticsSecret(): string | null {
-  return process.env.USAGE_ANALYTICS_HASH_SECRET ?? process.env.SESSION_SECRET ?? null;
+  return process.env.USAGE_ANALYTICS_HASH_SECRET || process.env.SESSION_SECRET || null;
 }
 
 export function pseudonymousAnalyticsKey(value: string, occurredAt = new Date()): string | null {

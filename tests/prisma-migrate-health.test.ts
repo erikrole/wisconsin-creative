@@ -148,6 +148,12 @@ describe("applied migration SQL evidence", () => {
     expect(health.ok).toBe(false);
     expect(health.checksumMismatches).toEqual([localMigrations[0]]);
   });
+
+  it("rejects duplicate completed receipts even when both hashes match", () => {
+    const health = check([...rows(), applied(localMigrations[0])]);
+    expect(health.ok).toBe(false);
+    expect(health.unexpectedDuplicates).toEqual([localMigrations[0]]);
+  });
 });
 
 describe("live allocation protection", () => {

@@ -2,6 +2,10 @@
   "name": "creative-ops",
   "version": "2026.04.08.1",
   "private": true,
+  "engines": {
+    "node": "22.x"
+  },
+  "packageManager": "npm@11.17.0",
   "browserslist": {
     "production": [
       "Chrome >= 111",
@@ -19,8 +23,8 @@
   },
   "overrides": {
     "esbuild": "0.28.1",
-    "fast-uri": "3.1.5",
-    "js-yaml": "4.3.1",
+    "fast-uri": "3.1.8",
+    "js-yaml": "4.3.2",
     "minimatch@3.1.5": {
       "brace-expansion": "1.1.18"
     },
@@ -37,23 +41,29 @@
       ".": "$postcss",
       "nanoid": "3.3.18"
     },
-    "sharp": "0.35.3",
+    "sharp": "0.35.4",
     "undici": "7.29.0",
     "@workflow/core": {
       "nanoid": "5.1.16"
+    },
+    "@xmldom/xmldom": "0.9.12",
+    "browserslist": "4.28.9",
+    "baseline-browser-mapping": "2.11.0",
+    "devalue": "5.9.1",
+    "@prisma/config@6.19.3": {
+      "deepmerge-ts": "8.0.2"
     }
   },
   "scripts": {
-    "predev": "node scripts/ensure-dev-env.mjs",
-    "dev": "next dev",
-    "dev:preview": "npx --yes vercel@latest env run -e preview --project wisconsin-creative --scope erikrole -- node scripts/start-preview-dev.mjs",
-    "auth:local": "npx --yes vercel@latest env run -e preview --project wisconsin-creative --scope erikrole -- node scripts/bootstrap-local-session.mjs",
+    "dev": "node scripts/preview.mjs dev",
+    "dev:preview": "node scripts/preview.mjs dev",
+    "auth:local": "node scripts/preview.mjs auth",
     "postinstall": "prisma generate",
-    "build": "node scripts/guard-next-build.mjs && node scripts/prisma-migrate-deploy.mjs && next build",
-    "build:app": "node scripts/guard-next-build.mjs && next build",
+    "build": "node scripts/run-next.mjs build",
+    "build:app": "node scripts/run-next.mjs build:app",
     "migrate": "node scripts/prisma-migrate-deploy.mjs",
-    "analyze": "node scripts/guard-next-build.mjs && ANALYZE=true next build",
-    "start": "next start",
+    "analyze": "node scripts/run-next.mjs analyze",
+    "start": "node scripts/run-next.mjs start",
     "lint": "eslint .",
     "lint:summary": "node scripts/lint-summary.mjs",
     "codemap": "node scripts/generate-codemaps.mjs",
@@ -70,7 +80,7 @@
     "db:migrate:check": "node scripts/check-migration-prefixes.mjs",
     "db:migrate:guard": "node scripts/check-schema-migration-pair.mjs",
     "db:check:dupe-allocations": "node --env-file=.env scripts/check-dupe-allocations.mjs",
-    "db:setup": "node --env-file=.env scripts/setup-db.mjs",
+    "db:setup": "node scripts/bootstrap-empty-database.mjs",
     "db:seed": "node prisma/seed.mjs",
     "demo:seed:app-review": "node --env-file=.env scripts/seed-app-review-demo.mjs",
     "demo:cleanup:app-review": "APP_REVIEW_DEMO_MODE=cleanup node --env-file=.env scripts/seed-app-review-demo.mjs",
@@ -95,7 +105,16 @@
     "audit:ios": "bash scripts/ios-audit-inventory.sh",
     "audit:ios:gaps": "bash scripts/ios-audit-inventory.sh --gaps",
     "verify:skills": "python3 -B scripts/verify-skills.py",
-    "eval:skills": "python3 -B scripts/evaluate-skills.py"
+    "eval:skills": "python3 -B scripts/evaluate-skills.py",
+    "preview:setup": "node scripts/preview.mjs setup",
+    "preview:attach": "node scripts/preview.mjs attach",
+    "preview:status": "node scripts/preview.mjs status",
+    "preview:doctor": "node scripts/preview.mjs doctor",
+    "preview:migrate": "node scripts/preview.mjs migrate",
+    "preview:pin": "node scripts/preview.mjs pin",
+    "preview:unpin": "node scripts/preview.mjs unpin",
+    "preview:cleanup": "node scripts/cleanup-previews.mjs",
+    "review:refresh": "node scripts/refresh-review.mjs"
   },
   "dependencies": {
     "@fontsource/barlow": "^5.2.8",
@@ -117,6 +136,7 @@
     "@upstash/redis": "^1.38.0",
     "@vercel/analytics": "1.6.1",
     "@vercel/blob": "^2.4.1",
+    "@vercel/functions": "3.9.7",
     "@vercel/speed-insights": "2.0.0",
     "barcode-detector": "^3.2.0",
     "bcryptjs": "^3.0.3",
@@ -127,7 +147,7 @@
     "geist": "^1.7.2",
     "lucide-react": "^0.577.0",
     "motion": "^12.40.0",
-    "next": "^15.5.21",
+    "next": "^15.5.25",
     "postcss": "^8.5.25",
     "qrcode": "^1.5.4",
     "radix-ui": "^1.5.0",
@@ -159,7 +179,7 @@
     "@types/web-push": "^3.6.4",
     "@vitest/coverage-v8": "^3.2.6",
     "eslint": "^9.39.4",
-    "eslint-config-next": "^15.5.16",
+    "eslint-config-next": "^15.5.25",
     "plist": "^5.0.0",
     "prisma": "^6.19.3",
     "typescript": "5.9.3",

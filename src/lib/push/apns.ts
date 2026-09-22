@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import http2 from "http2";
+import { isPreviewEnvironment } from "@/lib/environment-safety";
 
 const APNS_PROD_HOST = "https://api.push.apple.com";
 const APNS_SANDBOX_HOST = "https://api.sandbox.push.apple.com";
@@ -266,6 +267,7 @@ async function sendBatch(
 }
 
 function isConfigured(topic: string): boolean {
+  if (isPreviewEnvironment()) return false;
   return !!(
     process.env.APNS_KEY_ID &&
     process.env.APNS_TEAM_ID &&

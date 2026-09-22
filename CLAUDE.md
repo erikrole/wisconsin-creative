@@ -17,6 +17,10 @@
 - Do not update `tasks/lessons.md` for every correction. Promote only reusable, non-obvious lessons supported by verified evidence, and place dated context in `tasks/archive/lessons-history-2026.md`.
 - When a user corrects scope or product language, follow the correction immediately and update affected contracts or docs when the change is durable.
 
+## Preview handoff
+
+Use [docs/PREVIEW_ENVIRONMENTS.md](docs/PREVIEW_ENVIRONMENTS.md) for the shared Claude/Cursor/Codex branch environment. Run `preview:setup`, `dev:preview`, then `auth:local`; use the printed URL. Do not pull production variables or create a new database for an existing branch.
+
 ## Verification routing
 
 - Use [docs/RELEASE_VERIFICATION.md](docs/RELEASE_VERIFICATION.md) for closeout gates.

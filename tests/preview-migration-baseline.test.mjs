@@ -37,7 +37,7 @@ describe("explicit Preview checkpoint", () => {
   it("never loads Preview exceptions on Production or a new database", async () => {
     const sql = { query: vi.fn().mockResolvedValue([{ ...previewTarget, branch: "br-gentle-sky-aisuwcsf" }]) };
     expect(await loadMigrationBaseline(sql, baseline.checksums)).toBeNull();
-    expect(sql.query).toHaveBeenCalledOnce(); // no migration table needed here
+    expect(sql.query).toHaveBeenCalledTimes(2); // signed-child discovery checks for metadata, never authorizes this copied target
   });
 
   it("requires the persisted checkpoint on Preview", async () => {
@@ -67,6 +67,7 @@ describe("explicit Preview checkpoint", () => {
   it("does not let the baseline excuse new bad, failed, or duplicate receipts", () => {
     for (const row of [
       { ...baseline.receipts[0], id: "new" },
+      { ...baseline.receipts.find((row) => row.migration_name === "0032_add_guides" && row.finished_at), id: "third-valid-0032" },
       { id: "new", migration_name: baseline.reviewedPending[0], checksum: "manual", finished_at: "now" },
       { id: "new", migration_name: "unknown", checksum: "a".repeat(64), finished_at: "now" },
       { id: "new", migration_name: baseline.reviewedPending[0], checksum: baseline.checksums[baseline.reviewedPending[0]], finished_at: null },

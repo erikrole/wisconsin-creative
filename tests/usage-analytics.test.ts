@@ -49,6 +49,17 @@ beforeEach(() => {
 });
 
 describe("private usage analytics", () => {
+  it("uses the isolated session secret when an inherited analytics secret is explicitly blanked", () => {
+    const previous = process.env.SESSION_SECRET;
+    try {
+      process.env.SESSION_SECRET = "preview-only-session-secret";
+      process.env.USAGE_ANALYTICS_HASH_SECRET = "";
+      expect(pseudonymousAnalyticsKey("synthetic-person")).toMatch(/^[a-f0-9]{64}$/);
+    } finally {
+      if (previous === undefined) delete process.env.SESSION_SECRET;
+      else process.env.SESSION_SECRET = previous;
+    }
+  });
   it("does not grant access from ADMIN role alone", async () => {
     process.env.USAGE_ANALYTICS_OWNER_EMAILS = "someone-else@example.com";
     expect(canViewUsageAnalytics(owner)).toBe(false);

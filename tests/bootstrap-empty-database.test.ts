@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
-import path from "node:path";
+import { spawnSync } from "node:child_process";
 // The bootstrapper is a plain ESM Node script with exported guards for regression coverage.
 // @ts-expect-error no declaration file for local .mjs script modules
 import { assertBootstrapSafe, generateBaselineSql } from "../scripts/bootstrap-empty-database.mjs";
@@ -19,10 +18,10 @@ describe("empty database bootstrap", () => {
     expect(sql).not.toContain("postgresql://");
   });
 
-  it("keeps the timestamp exclusion compatible with Prisma's timestamp columns", () => {
-    const source = readFileSync(path.join(process.cwd(), "scripts/bootstrap-empty-database.mjs"), "utf8");
-    expect(source).toContain("tsrange(starts_at, ends_at, '[)')");
-    expect(source).not.toContain("tstzrange(starts_at, ends_at, '[)')");
-    expect(source).toContain("await sql.transaction(");
+  it("refuses the retired bootstrap before connecting or fabricating migration receipts", () => {
+    const result = spawnSync(process.execPath, ["scripts/bootstrap-empty-database.mjs"], { encoding: "utf8" });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("bootstrap is retired");
+    expect(result.stderr).toContain("preview:setup");
   });
 });

@@ -6,8 +6,8 @@ import { downloadImportImage, uploadImportImage, validateImportImage, validateIm
 const png = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 0]);
 const file = () => new File([png], "test.png", { type: "image/png" });
 const signal = () => AbortSignal.timeout(1000);
-beforeEach(() => vi.clearAllMocks());
-afterEach(() => vi.unstubAllGlobals());
+beforeEach(() => { vi.clearAllMocks(); vi.stubEnv("BLOB_READ_WRITE_TOKEN", "test-public-store"); });
+afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
 describe("image origin restrictions", () => {
   it.each([

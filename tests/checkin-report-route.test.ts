@@ -25,6 +25,7 @@ vi.mock("@/lib/audit", () => ({
 }));
 
 vi.mock("@/lib/blob", () => ({
+  publicBlobAuth: () => ({ token: "test-public-store" }),
   validateImage: vi.fn(() => null),
   deleteImage: vi.fn(async () => undefined),
   isBlobUrl: vi.fn(() => true),

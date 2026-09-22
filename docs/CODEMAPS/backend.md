@@ -105,7 +105,7 @@
 | `src/lib/admin-fix-today.ts` | 408 |
 | `src/lib/api-dates.ts` | 38 |
 | `src/lib/api-handler.ts` | 63 |
-| `src/lib/api.ts` | 141 |
+| `src/lib/api.ts` | 143 |
 | `src/lib/app-time.ts` | 199 |
 | `src/lib/asset-attachments.ts` | 166 |
 | `src/lib/asset-image.ts` | 26 |
@@ -119,7 +119,7 @@
 | `src/lib/avatar.ts` | 44 |
 | `src/lib/battery-compatibility.ts` | 146 |
 | `src/lib/bhphoto-image.ts` | 67 |
-| `src/lib/blob.ts` | 160 |
+| `src/lib/blob.ts` | 170 |
 | `src/lib/booking-action-policy.ts` | 215 |
 | `src/lib/booking-actions.ts` | 14 |
 | `src/lib/booking-availability-window.ts` | 31 |
@@ -145,15 +145,16 @@
 | `src/lib/collaborator-gear.ts` | 151 |
 | `src/lib/combined-schedule-event-suggestions.ts` | 93 |
 | `src/lib/companion-projection-contract.ts` | 70 |
-| `src/lib/companion-store.ts` | 301 |
+| `src/lib/companion-store.ts` | 302 |
 | `src/lib/crew-pending-review.ts` | 44 |
 | `src/lib/cron.ts` | 35 |
 | `src/lib/crypto.ts` | 17 |
 | `src/lib/csv.ts` | 17 |
-| `src/lib/db.ts` | 18 |
+| `src/lib/db.ts` | 32 |
 | `src/lib/editor-snippets.ts` | 52 |
 | `src/lib/email.ts` | 129 |
-| `src/lib/env.ts` | 124 |
+| `src/lib/env.ts` | 125 |
+| `src/lib/environment-safety.ts` | 17 |
 | `src/lib/equipment-guidance.ts` | 127 |
 | `src/lib/equipment-section-filters.ts` | 87 |
 | `src/lib/equipment-sections.ts` | 155 |
@@ -192,6 +193,7 @@
 | `src/lib/passkey.ts` | 371 |
 | `src/lib/password-rules.ts` | 16 |
 | `src/lib/permissions.ts` | 225 |
+| `src/lib/preview-activity.ts` | 23 |
 | `src/lib/prisma-errors.ts` | 38 |
 | `src/lib/profile-completion-events.ts` | 6 |
 | `src/lib/profile-completion.ts` | 159 |
@@ -200,7 +202,7 @@
 | `src/lib/public-showroom.ts` | 444 |
 | `src/lib/quarter-hour.ts` | 27 |
 | `src/lib/query-client.ts` | 56 |
-| `src/lib/rate-limit.ts` | 215 |
+| `src/lib/rate-limit.ts` | 216 |
 | `src/lib/rbac.ts` | 59 |
 | `src/lib/remark-callouts.ts` | 77 |
 | `src/lib/request-limits.ts` | 17 |
@@ -209,7 +211,7 @@
 | `src/lib/resource-assets-client.ts` | 20 |
 | `src/lib/resource-assets-storage.ts` | 71 |
 | `src/lib/resource-assets.ts` | 848 |
-| `src/lib/resource-import-images.ts` | 102 |
+| `src/lib/resource-import-images.ts` | 104 |
 | `src/lib/resource-import.ts` | 186 |
 | `src/lib/resource-search.ts` | 124 |
 | `src/lib/role-preview.ts` | 226 |

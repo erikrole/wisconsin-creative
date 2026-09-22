@@ -1,14 +1,15 @@
 import { del, get, put, type GetBlobResult } from "@vercel/blob";
+import { isPreviewEnvironment, isolatedIntegrationValue } from "@/lib/environment-safety";
 
 type SignatureArtifactKind = "png" | "svg";
 
 type SignatureBlobAuthOptions = Pick<Parameters<typeof put>[2], "token" | "oidcToken" | "storeId">;
 
 function privateSignatureBlobAuth(): SignatureBlobAuthOptions {
-  const token = process.env.SIGNATURE_BLOB_READ_WRITE_TOKEN;
+  const token = isolatedIntegrationValue("SIGNATURE_BLOB_READ_WRITE_TOKEN");
   if (token) return { token };
 
-  const storeId = process.env.SIGNATURE_BLOB_STORE_ID;
+  const storeId = isPreviewEnvironment() ? "" : process.env.SIGNATURE_BLOB_STORE_ID;
   const oidcToken = process.env.VERCEL_OIDC_TOKEN;
   if (storeId && oidcToken) return { storeId, oidcToken };
 
@@ -17,8 +18,8 @@ function privateSignatureBlobAuth(): SignatureBlobAuthOptions {
 
 export function isPrivateSignatureStorageConfigured(): boolean {
   return Boolean(
-    process.env.SIGNATURE_BLOB_READ_WRITE_TOKEN ||
-      (process.env.VERCEL_OIDC_TOKEN && process.env.SIGNATURE_BLOB_STORE_ID),
+    isolatedIntegrationValue("SIGNATURE_BLOB_READ_WRITE_TOKEN") ||
+      (!isPreviewEnvironment() && process.env.VERCEL_OIDC_TOKEN && process.env.SIGNATURE_BLOB_STORE_ID),
   );
 }
 

@@ -1,6 +1,14 @@
 import { put, del } from "@vercel/blob";
 import { toBhStaticImageUrl } from "@/lib/bhphoto-image";
 import { assertPublicHost } from "@/lib/security/ssrf";
+import { env } from "@/lib/env";
+import { HttpError } from "@/lib/http";
+
+export function publicBlobAuth(): { token: string } {
+  const token = env.blobReadWriteToken;
+  if (!token) throw new HttpError(503, "Image storage is not configured.");
+  return { token };
+}
 
 const ALLOWED_TYPES = new Set([
   "image/jpeg",
@@ -76,6 +84,7 @@ export async function uploadImage(
   const pathname = `assets/${assetId}/${Date.now()}.${ext}`;
 
   const blob = await put(pathname, file.stream(), {
+    ...publicBlobAuth(),
     access: "public",
     contentType: file.type,
   });
@@ -137,6 +146,7 @@ export async function downloadImageToBlob(
 
     const pathname = `assets/${assetId}/${Date.now()}.${ext}`;
     const blob = await put(pathname, Buffer.from(body), {
+      ...publicBlobAuth(),
       access: "public",
       contentType: contentType || `image/${ext === "jpg" ? "jpeg" : ext}`,
     });
@@ -155,5 +165,5 @@ function extFromUrl(url: string): string | null {
 }
 
 export async function deleteImage(url: string): Promise<void> {
-  await del(url);
+  await del(url, publicBlobAuth());
 }

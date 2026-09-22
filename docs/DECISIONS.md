@@ -1543,3 +1543,12 @@ These are non-negotiable integrity constraints. Every feature must preserve them
   - A person who shot Slow 1 last week sees this week’s Slow 1 kit first.
   - Kiosk walk-up checkout can start from the same named plan without replacing scan custody.
 - Reference: `docs/AREA_KITS.md`, `docs/AREA_RESERVATIONS.md`, `docs/AREA_KIOSK.md`, `tasks/kits-gameday-expansion-plan-2026-09-16.md`, and migrations `0149_kit_sport_code` and `0150_kit_gameday_role`.
+
+## D-063: Branch-Owned Previews and One Automatic Production Build
+- Date: 2026-09-22
+- Status: Accepted; live foundations verified, source shipping and automated cutover pending
+- Decision: Main requires a PR with `validate` and `postgres-integrity`, with zero mandatory human reviewers. Production deploys automatically once. Review retains its domain and data but refreshes only on explicit request.
+- Decision: Claude, Cursor and Codex share a sanitized database and isolated file stores per named Git branch. Trusted main-branch CI owns provisioning keys and signed provenance; app builds receive only branch credentials. Encrypted development settings in the no-deploy resource project provide authenticated cross-machine handoff.
+- Guardrails: Existing plans, production/review data and historical migration receipts are preserved. No production PII enters the template. Outbound delivery is disabled in previews. Cleanup requires confirmed branch absence, no open PR or pin, seven days without use, signed ownership and an atomic claim coordinated with local agents.
+- Consequences: Separate local outputs and process locks prevent build/dev corruption; actual-port authentication prevents stale-cookie handoffs. Preview Redis-dependent Companion features remain unavailable until isolated Redis is configured. Production pooling changes require source deployment.
+- Reference: [Preview environments](PREVIEW_ENVIRONMENTS.md), [Prisma + Neon runbook](PRISMA_NEON_RUNBOOK.md), and [implementation ledger](../tasks/infrastructure-hardening-plan-2026-09-22.md).

@@ -1,6 +1,6 @@
 # Prisma + Neon Runbook
 
-Last updated: 2026-09-17
+Last updated: 2026-09-22
 
 ## Connection Rules
 
@@ -27,42 +27,27 @@ Last updated: 2026-09-17
 
 ## Vercel sensitive variables
 
-### Preview isolation — 2026-09-07
+### Branch isolation and reconciled history — 2026-09-22
 
-The default Preview runtime and migration URLs now target Neon branch
-`preview-default` (`br-morning-surf-aiuyphxx`), with compute
-`ep-winter-leaf-ai0eekhl` at 0.25–1 CU and five-minute autosuspend. This is a
-production data clone, not a sanitized fixture. Production endpoint ownership
-and credentials were not changed.
+The canonical local and hosted workflow is [PREVIEW_ENVIRONMENTS.md](PREVIEW_ENVIRONMENTS.md).
+It uses sanitized children in a separate Neon project, each with its own pooled
+runtime and direct migration URL. The old production-data clone and its env
+rewriting launcher are legacy compatibility, not the supported startup path.
+Never pull production variables to get a local preview running.
 
-Preview uses `DATABASE_URL_UNPOOLED`, not a generic `DIRECT_URL`, so the Neon
-integration's branch-specific migration URL can override the default. Never
-share a Production `DIRECT_URL` into Preview: it takes precedence over the
-branch-specific unpooled URL. Preview also has a separate session secret.
+Production, review, and sanitized-template exact-target checkpoints preserve
+original migration receipts and freeze catalog fingerprints plus known provenance
+exceptions. Production/template retain the historical unknown checksums and the
+0071 SQL-version exception; review retains 93 receipts from an old Prisma-only
+bootstrap whose historical SQL was not executed. These remain explicit exceptions,
+not retrospectively verified migration execution. New children require signed
+branch/template provenance. All other unknown, changed, duplicate, failed or
+DB-only receipts fail before any migration writer is invoked.
 
-Local `npm run dev:preview` still needs the `gear-tracker` database on that
-Preview compute. The Vercel Preview env currently injects the empty default
-`neondb` pathname; `scripts/start-preview-dev.mjs` rewrites that local process
-to `/gear-tracker` and refuses the production Neon endpoint
-`ep-flat-firefly-ai889avp`. Do not copy a production credential into the local
-shell to work around this. Authenticated local Preview sessions are minted with
-`npm run auth:local`, documented in [TESTING.md](TESTING.md).
-
-Production APNs, web-push private key, Redis, and all three Blob write tokens
-are now scoped to Production only. Preview push and uploads need dedicated test
-credentials before those features can be exercised; Redis consumers use their
-existing fallback or fail-closed behavior. Blob write tokens were also removed
-from Development scope. Existing deployments retain their original variables
-until redeployed or retired; this settings change is not proof of their isolation.
-
-Seven overrides were removed for `codex/macos-companion-v1.0.0` and
-`feat/approval-first-shift-claims`, whose tips are contained in main. Eight other
-branches retain overrides because they have open PRs or divergent commits. No
-Git branches, Neon branches, deployments, or stored artifacts were deleted.
-
-Speed Insights 2.0.0 is wired into the root layout locally. Production collection
-requires deployment and a browser/network read-back; dashboard enablement alone
-does not prove telemetry delivery.
+Forward repairs 0153 and 0154 are applied and health-verified on production,
+review, template and the acceptance child. They restore two foreign keys, the
+booking reference sequence where missing, required resource targeting arrays and
+the scan mismatch index. Existing sequences and original receipts are preserved.
 
 Vercel Production and Preview variables marked Sensitive are intentionally
 non-readable after creation. Local `vercel env pull`/`vercel env run` output may
@@ -91,7 +76,9 @@ npm run build
 - `db:migrate:check` verifies local migration folder shape, required `migration.sql` files, and prefix uniqueness.
 - `db:migrate:status` and `db:migrate:health` run the repo's Neon-backed health checker. They compare local migration folders with live `_prisma_migrations`, fail on pending local migrations, unresolved failed rows, applied DB rows missing locally, missing/invalid SQL checksums, and checksum mismatches, and verify the newest local migration is applied. Rolled-back attempts are excluded from checksum comparisons. They also verify the validated, usable `asset_allocations_no_overlap` exclusion constraint and its active half-open `tsrange` definition.
 - `db:migrate:deploy` resolves `DIRECT_URL` or `DATABASE_URL_UNPOOLED`, exports
-  the result to Prisma as `DIRECT_URL`, and runs `prisma migrate deploy` first.
+  the result to Prisma as `DIRECT_URL`, and validates complete history before any writer. Approved checkpoint targets
+  apply pending forward SQL atomically through the HTTP path. Other validated
+  targets run `prisma migrate deploy`.
   If Prisma exits with the known blank schema-engine error or P1001/P1011 against
   Neon, the wrapper checks complete migration history before using atomic HTTP
   transactions. Each migration, its receipt, and its completion update commit
@@ -130,10 +117,9 @@ Raw `prisma migrate status` is not the source of truth in this repo because the 
   path. Other SQL PostgreSQL refuses inside a transaction fails atomically. Split
   enum additions from later use; do not work around transaction errors by executing
   statements individually. Missing `_prisma_migrations` requires the isolated
-  bootstrap path, not automatic metadata creation on an unknown target.
-- The stricter fallback will refuse the currently audited production legacy
-  receipts until reconciliation. The normal Prisma deploy path is unchanged.
-  This is a release boundary, not evidence that existing application reads fail.
+  sanitized-template provisioning path, not automatic metadata creation on an unknown target.
+- Approved exact-target checkpoints reconcile the reviewed legacy history without
+  changing receipts. A different target or newly unknown history still fails closed.
 
 Implementation references: [Neon transaction API](https://neon.com/docs/serverless/serverless-driver)
 and [Prisma migration advisory-lock discussion/source pointer](https://github.com/prisma/prisma-engines/issues/5755).
@@ -166,15 +152,12 @@ provenance or replace a production-clone rehearsal.
 The 2026-09-07 Neon clone rehearsal failed closed on the legacy receipt checks;
 no forward migrations were applied. Original historical receipts remain intact.
 
-## Bootstrap procedure
+## Retired bootstrap
 
-The historical migration chain begins with PostgreSQL constraints against tables that predate migration tracking, so `prisma migrate deploy` cannot initialize a brand-new empty database. For a new isolated environment only, use the guarded bootstrap:
-
-```bash
-EMPTY_DATABASE_BOOTSTRAP=confirm \
-EMPTY_DATABASE_EXPECTED_HOST=<exact-direct-neon-host> \
-DIRECT_URL=<direct-neon-url> \
-npm run db:bootstrap:empty
-```
-
-The command refuses any target containing application tables, generates the current schema from an offline Prisma empty-to-datamodel diff, restores Prisma-inexpressible exclusion/partial/trigram indexes, and reconciles local migration checksums. It must never be used on production, a database with user data, or as a substitute for normal incremental migrations.
+`db:bootstrap:empty` and `db:setup` now refuse live initialization. The historical
+Prisma-only bootstrap stamped receipts without executing all PostgreSQL SQL.
+Do not recreate that state or rewrite receipts. Use the sanitized template and
+signed child provisioner for previews. An operator building a replacement template
+must restore the complete PostgreSQL schema, extensions and original receipts,
+seed synthetic data separately, audit the catalog and approve a new exact-target
+checkpoint. The offline schema generator remains only for disposable CI fixtures.

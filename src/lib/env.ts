@@ -1,4 +1,5 @@
 import { unique } from "@/lib/utils";
+import { isPreviewEnvironment, isolatedIntegrationValue } from "@/lib/environment-safety";
 
 function getRequired(key: string): string {
   const value = process.env[key];
@@ -31,11 +32,11 @@ export const env = {
   },
   /** Optional — enables Vercel Cron auth for /api/cron/* routes */
   get cronSecret() {
-    return process.env.CRON_SECRET || "";
+    return isPreviewEnvironment() ? "" : process.env.CRON_SECRET || "";
   },
   /** Optional — enables email delivery via Resend. Falls back to console.log */
   get resendApiKey() {
-    return process.env.RESEND_API_KEY || "";
+    return isPreviewEnvironment() ? "" : process.env.RESEND_API_KEY || "";
   },
   /** From address for transactional email */
   get emailFrom() {
@@ -50,7 +51,7 @@ export const env = {
     return process.env.WEB_PUSH_VAPID_PUBLIC_KEY || "";
   },
   get webPushVapidPrivateKey() {
-    return process.env.WEB_PUSH_VAPID_PRIVATE_KEY || "";
+    return isPreviewEnvironment() ? "" : process.env.WEB_PUSH_VAPID_PRIVATE_KEY || "";
   },
   get webPushSubject() {
     return process.env.WEB_PUSH_SUBJECT || "";
@@ -77,11 +78,11 @@ export const env = {
   },
   /** Optional — enables Vercel Blob image uploads */
   get blobReadWriteToken() {
-    return process.env.BLOB_READ_WRITE_TOKEN || "";
+    return isolatedIntegrationValue("BLOB_READ_WRITE_TOKEN");
   },
   /** Optional — required for authenticated Brand assets uploads/downloads. */
   get resourceAssetBlobReadWriteToken() {
-    return process.env.RESOURCE_ASSET_BLOB_READ_WRITE_TOKEN || "";
+    return isolatedIntegrationValue("RESOURCE_ASSET_BLOB_READ_WRITE_TOKEN");
   },
   /** Optional. Enables Brave-backed product image search */
   get braveSearchApiKey() {

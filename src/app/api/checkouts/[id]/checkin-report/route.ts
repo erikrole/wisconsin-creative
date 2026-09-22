@@ -6,7 +6,7 @@ import { requireBookingAction } from "@/lib/services/booking-rules";
 import { createAuditEntry } from "@/lib/audit";
 import { checkinReportSchema } from "@/lib/validation";
 import { notifyItemReport } from "@/lib/services/notifications";
-import { deleteImage, imageExtensionForType, isBlobUrl, validateImage } from "@/lib/blob";
+import { deleteImage, imageExtensionForType, isBlobUrl, validateImage, publicBlobAuth } from "@/lib/blob";
 import { put } from "@vercel/blob";
 
 const REPORT_DEDUP_WINDOW_MS = 5_000;
@@ -44,6 +44,7 @@ async function uploadReportImage(file: File, bookingId: string, assetId: string)
     `checkin-reports/${bookingId}/${assetId}/${Date.now()}.${ext}`,
     file.stream(),
     {
+      ...publicBlobAuth(),
       access: "public",
       contentType: file.type,
     },

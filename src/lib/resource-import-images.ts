@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { BlobNotFoundError, head, put } from "@vercel/blob";
 import { HttpError } from "@/lib/http";
+import { publicBlobAuth } from "@/lib/blob";
 
 export const MAX_IMPORT_IMAGE_BYTES = 10 * 1024 * 1024;
 export const MAX_IMPORT_TOTAL_IMAGE_BYTES = 20 * 1024 * 1024;
@@ -84,7 +85,7 @@ export async function uploadImportImage(file: File, importKey: string, key: stri
   const extension = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp", "image/gif": "gif" }[file.type];
   const pathname = `resources/imports/${namespace}/${key}-${digest}.${extension}`;
   try {
-    const existing = await head(pathname, { abortSignal: signal });
+    const existing = await head(pathname, { ...publicBlobAuth(), abortSignal: signal });
     if (existing.size !== bytes.length || existing.contentType !== file.type) {
       throw new HttpError(409, `Stored image ${key} does not match its content identity`);
     }
@@ -93,6 +94,7 @@ export async function uploadImportImage(file: File, importKey: string, key: stri
     if (!(error instanceof BlobNotFoundError)) throw error;
   }
   const blob = await put(pathname, bytes, {
+    ...publicBlobAuth(),
     access: "public", contentType: file.type, addRandomSuffix: false,
     // Same identity means identical bytes, including concurrent retries.
     allowOverwrite: true, abortSignal: signal,

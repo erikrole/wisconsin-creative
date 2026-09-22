@@ -4,14 +4,15 @@ import { Redis } from "@upstash/redis";
 import { env } from "@/lib/env";
 import { HttpError } from "@/lib/http";
 import type { CompanionRole } from "@/lib/companion-projection-contract";
+import { cacheNamespace, isolatedIntegrationValue } from "@/lib/environment-safety";
 
 const SESSION_TTL_SECONDS = 90 * 24 * 60 * 60;
-const SESSION_PREFIX = "gear-tracker:companion:session:v1:";
-const USER_SESSION_PREFIX = "gear-tracker:companion:user-sessions:v1:";
-const USER_EPOCH_PREFIX = "gear-tracker:companion:user-epoch:v1:";
-const DEVICE_HASH_KEY = "gear-tracker:companion:devices:v1";
-const PROJECTION_KEY = "gear-tracker:companion:projection:v1";
-const PROJECTION_REVISION_KEY = "gear-tracker:companion:projection-revision:v1";
+const SESSION_PREFIX = cacheNamespace("gear-tracker:companion:session:v1:");
+const USER_SESSION_PREFIX = cacheNamespace("gear-tracker:companion:user-sessions:v1:");
+const USER_EPOCH_PREFIX = cacheNamespace("gear-tracker:companion:user-epoch:v1:");
+const DEVICE_HASH_KEY = cacheNamespace("gear-tracker:companion:devices:v1");
+const PROJECTION_KEY = cacheNamespace("gear-tracker:companion:projection:v1");
+const PROJECTION_REVISION_KEY = cacheNamespace("gear-tracker:companion:projection-revision:v1");
 
 type CompanionTokenPayload = {
   version: 1;
@@ -42,8 +43,8 @@ function getCompanionRedis(): Redis {
     return redis;
   }
 
-  const url = process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN;
+  const url = isolatedIntegrationValue("UPSTASH_REDIS_REST_URL") || isolatedIntegrationValue("KV_REST_API_URL");
+  const token = isolatedIntegrationValue("UPSTASH_REDIS_REST_TOKEN") || isolatedIntegrationValue("KV_REST_API_TOKEN");
   redis = url && token ? new Redis({ url, token }) : null;
   if (!redis) throw new HttpError(503, "Companion updates are not configured.");
   return redis;

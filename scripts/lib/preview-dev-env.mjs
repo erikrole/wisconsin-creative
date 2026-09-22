@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { isIP } from "node:net";
 
 import { readDotenvValue } from "../ensure-dev-env.mjs";
 
@@ -29,7 +30,7 @@ const DATABASE_URL_KEYS = ["DATABASE_URL", "DIRECT_URL", "DATABASE_URL_UNPOOLED"
 
 export function isLoopbackHostname(hostname) {
   const normalized = String(hostname ?? "").replace(/^\[|\]$/g, "").toLowerCase();
-  return normalized === "localhost" || normalized === "::1" || normalized.startsWith("127.");
+  return normalized === "localhost" || normalized === "::1" || (isIP(normalized) === 4 && normalized.startsWith("127."));
 }
 
 export function isLocalPostgresHost(hostname) {
@@ -45,7 +46,9 @@ export function parseConnectionUrl(value, label = "database URL") {
     throw new Error(`${label} is missing or marked [SENSITIVE]. Use vercel env run so the real Preview URL is injected.`);
   }
   try {
-    return new URL(value);
+    const url = new URL(value);
+    if (!["postgres:", "postgresql:"].includes(url.protocol) || !url.hostname) throw new Error("Invalid PostgreSQL protocol");
+    return url;
   } catch {
     throw new Error(`${label} is not a valid URL.`);
   }

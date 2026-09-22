@@ -1,0 +1,2323 @@
+{
+  "id": "review-2026-09-22",
+  "target": {
+    "branch": "br-broad-mouse-aid7tu0s",
+    "database": "neondb",
+    "endpoint": "ep-little-voice-aiuepzzf"
+  },
+  "catalogVersion": 2,
+  "catalogHash": "a40e0be779f0de2b1d94157a6f6ecd8963fd3a6329678e01d8123f279656f41e",
+  "approval": {
+    "date": "2026-09-22",
+    "scope": "Exact-target Review checkpoint for manual refreshes; 158 original receipts preserved. 93 bootstrap receipts remain unknown execution provenance.",
+    "evidence": "Independent catalog/receipt/source audit. All 362 declared index signatures present. Required forward repair: missing booking reference sequence, nullable resource-target arrays, missing0079 scan mismatch index. Aggregate preflight: zero null arrays, orphans, unexpected reference formats, sort mismatches or missing imported raw times; no existing numeric booking references. Both0153 foreign keys already match. Preserve live FK action differences, alternate index names and enum order."
+  },
+  "checksums": {
+    "0001_manual_constraints": "8f629a04487ee56e8f76fd356f7d2cf9d5b1c1e16205b7c95c4aaf35a2032522",
+    "0002_source_reservation_id": "258ecf6b8638db280f6e9a067202e8f85e8fb98a369a8bef65d1bfe25abdfffb",
+    "0003_phase1_models": "bebb721bb06573241cc200f626d47b1a4574d36462dc77cc60b8ae6fe40c5816",
+    "0004_event_booking_linkage": "9d3c29306a8785bb403a063dcc626e92bd79277aea68d4f6f2da26c02d975078",
+    "0005_add_categories": "88416b167f304aaf41f9a4c11beaa465c071836d5a3a7bbc67c9c618f5fa3a37",
+    "0006_asset_policy_toggles": "44b43848cbce8983acbaf6d089c97ebb2c09b8de69222b67a5b8d3c38c7d3100",
+    "0007_numbered_bulk_unit_tracking": "ac73068f564a72649789ce8c634a814587f545454a85b7eef7cf1338b11cf78b",
+    "0008_escalation_config": "67a59edf867bab7475ac5ef3f6cd5c09f473cdf89ce5cd373758092ceb79772b",
+    "0009_item_bundling": "253d98c780eb7ac7f806a123db6fec3c83dbb1a4adfed94691f03481dd2cdf39",
+    "0009_shift_calendar": "340cfa4d6160be72f3fb3ad07d95e7b241141072db983cf328ee099b18fb38de",
+    "0010_favorite_items": "2f701947d4e22f8e5d93ba496053f686fd1bacac80c2fc29823102c039174c59",
+    "0011_booking_ref_number": "1da580b55578b793b6a05d6364a5ac1992a37b8e75be826365ad951385089492",
+    "0012_add_password_reset_token": "d4344a9045734883143c2637c494e9098758e5c92990c15cae4839821f5f7712",
+    "0013_shift_assignment_booking_link": "441b8968b28e3d0e67488e4a69de5174af5a23d043e678a99d184c8573745809",
+    "0014_add_user_avatar_url": "a5996a7b7ebe5faa2da0655ec4ee66562dfc9c5d9399f9e378513ecae4271685",
+    "0015_make_serial_number_optional": "46ed3aedcea0de62b79a529e752fda2aca11b56405b942b11afa24ace989f2e7",
+    "0016_add_user_active_field": "cd5e7699c846a5818c427015409262f56fc1107948f3b7ef09ab6d27caa5849e",
+    "0017_add_source_payload": "9b623119ad86e82e0d758663e59554c22159712ba2621525407a820be4e0c0d3",
+    "0018_add_booking_kit_id": "a43e6db90497771d10a24908e32d6466dadf6f4fd51f98b69cd14d99e14f0cdc",
+    "0019_add_location_is_home_venue": "f0edaf1e79b7c3967a8d98d95d149215b1aacae7e837c3629ac79299ef145227",
+    "0020_add_performance_indexes": "4fdb48f5364a0fe68b4b0df40d4e42f2e560b35b616b5914c869ac2262e2f4a0",
+    "0021_add_trigram_search_indexes": "d3308f74cf32c75fc0acdbda04da3d0284d11adb2733addaa9d46e80a60417fe",
+    "0022_add_booking_photos": "1f516aafea379fc239b5351b8920a1fb978185d31b286987889e768f1acb8d92",
+    "0023_add_checkin_item_reports": "e0252c5bbc67581c5422df816d573f92f144a133031da12683553662f358f18c",
+    "0024_add_calendar_event_is_hidden": "321b9658891392e49d0a3f25c6f65c7eb06ecc577808504516d00391cc50ae01",
+    "0025_consolidate_departments": "cf404ea83a3d78a95af20ec23548b2d0ad26e1cf471f1556a54704a33cd16fd7",
+    "0026_add_allowed_emails": "4385c78fd944b752af60343bad62f1099d16194444bf19a2fae91fb338268292",
+    "0027_seed_allowed_emails": "720b2637261e2656864418292ee98091093b24701eb9933e4835c20468054082",
+    "0028_add_bulk_sku_images_and_kit_bulk_members": "9eeeaaa8f8258859261dde25730bc0e1085bdf9b588f5623eba0b1933367c257",
+    "0029_add_kiosk_devices": "05601f19e7ae1437e65329cdcc664d51514ffbb6e1795c695e5a5b9acba92e40",
+    "0030_add_sport_call_times": "c191163776c16056850076e2ecc277674da2d772fdf72c527611d51b23f9a634",
+    "0031_add_bulk_stock_balance_location_index": "1b3f13945e26be257d186376230c97b96810cf5d9c9dc387a1b7d233f396d544",
+    "0032_add_guides": "70682496557c320f6aa120f48bc2bcf9e14689dfc2387ae7b9ac7f83242a2f55",
+    "0033_harden_bulk_item_quantities": "b082c64f5d2c2bac4977253e62a9fa95237a5f8fe4a0ebcbe29729fd4d89573e",
+    "0034_add_student_availability": "7ae3e17b99a010fc5f2ff1e154a840d9f40e50e873ac685bfab953e397a9f62b",
+    "0035_add_shift_assignment_conflict": "707619a6bbf530e8516e27afbacc61ae53941bd73cec20788840ca8087a9cc91",
+    "0036_add_travel_roster": "7a5eb9f02248964a02f4d77fadedf40c8257cad4999f52f1e8decd83e30ac5c8",
+    "0037_add_shift_archiving": "d12d01244c6c328d095b60026d694578b46e274211a58f784da50a0e79d9f398",
+    "0038_add_bulk_sku_fields": "8e4c5996a740f4dfe645c77a89842f19a83f18bf819461752aa72b118d678b10",
+    "0039_add_pending_pickup_status": "9d91c7fa913f416a36167a99bac351d835923f999fea31231ea0a8e03cb5fc3e",
+    "0040_add_device_tokens": "634d93d70735c7f8f7e2ce13fad0003c86210cfb1fcf0a662ec1916008ace243",
+    "0041_reseed_escalation_rules": "d7a7a3cdc28dcdd7f06e15229ac8c88fa0cb68f96ff66c0a5595e161ebfed4e2",
+    "0042_booking_events": "65a2e50962d8f2736df421bef54d585dabe58a8b4754dc86925b9ff11175bcdc",
+    "0043_license_codes": "867d89df3c518462fbe44991b8dce5c86fdbad1093d4d6544fafc989b19aaa0c",
+    "0044_license_claim_user_set_null": "72eb8a149c66be41d4aab7fc3a3de3d2281d0a571df5f2ee063164cd01becca1",
+    "0045_drop_guide_order": "55c61816e95c8319348c48a21e99daf483d30e058224ef6d37cc37e916729b20",
+    "0046_user_notification_prefs": "87e8b88a7825391cc0f83f0784b830bab60aff741678ce58092d69f9c3137987",
+    "0047_user_ics_token": "987db98009d815cd38bdc41aeac56afe1ed97de003552074271d17dd4de5071f",
+    "0048_user_profile_fields": "fcffbdbe2be903e102a540ffa85256dc1483006a742a05656eb06b4e20feffcb",
+    "0049_add_operational_indexes": "775acd5a7d09ebf0758fdb3d11aacc01e83a6d6eceff5f5607dc328cbd8237fc",
+    "0050_audit_log_created_at_index": "91539e812ac1b967b94d391d0338f164d54870009d89cb73ea5bf6ab643f4eea",
+    "0051_checkin_report_image_url": "09cfbe97d3a52e29e3419d40959d6a546af53922c3838895a4647c66fcc33271",
+    "0052_calendar_source_sync_lease": "fe71cc50d08beb4c3c347585f9543357f93b6da76a2a39738c3f028dafd1dd09",
+    "0053_user_force_password_change": "489a84699d23ac8e193892218879712356e72547b59daec4b025c1f70e972773",
+    "0054_booking_search_trigram_indexes": "54c7ab5713577ec08d6bd936f1ab353cfb0e8c6c837955e34faf3fcaf1a749a7",
+    "0055_add_badges": "eeb39af1ff42100430571333ffd6303050f9cab02a43c6a7f2ff8fe54d7ce03e",
+    "0056_add_scan_badge_counter_type": "e4e34c3346a56e364038bb70ee93c02095249f5c075963a04f42955c0eb4f519",
+    "0057_add_guide_markdown": "1016d2ccaae5cbe96797e0d36278d577031dceefac622185e7d656d3d66cf5af",
+    "0058_guide_personalization": "839936fdc404b2f5fdcb84547e3ba02af038288e410dd0950ba7f00e6356584a",
+    "0059_add_user_slack_handle": "09754782dc787bf39e54e79370bbb5a77aa01d385fc80ad232b2339467efcd38",
+    "0060_add_user_slack_profile_url": "81e045504cf3d8bcda4ae9aed8b651b123d7ac602a2e0346de0855cac5cbc21c",
+    "0061_add_guide_freshness": "2094241b8c57caf886169dea11e137037056b663f6ef43d2d851ac02428be5fb",
+    "0062_kiosk_session_expires_at": "6b81f04045e09874b4a67a33c3bf05dfe49057c580804853fedcc2594d0532fa",
+    "0063_allow_manual_calendar_events_source_null": "8e33aae62500ff76baebc0ad4bb424dba3f119d27524e756fa7d40ad254aeea3",
+    "0064_seed_badge_definitions": "e681e5aece854ecd7fadf216cf340d20fbb0d02d8a15b3aa0291fbb22a6a5c86",
+    "0065_add_booking_completed_at": "e1911c80655eb6507e45782ba2ef384768a25f960dabcd5f2b97b5faf4198d8e",
+    "0066_retire_shift_badges": "8894336411f6626a7805124c18753814611ecd590e1b78b4e8934b62a128c605",
+    "0067_add_user_last_active": "bbe074a2bb4fde30921f6ae85fec554776e8cff182dab76db304bb42040b2560",
+    "0068_rename_guides_to_resources": "6e793bb57739a65a8eca79810638b571b5e78e66ad9a0a61729ab66af231884d",
+    "0069_add_asset_image_rehost_attempts": "e71ff611dc18b73c256f5faf13dc50f88a1674f2478e61836cb2d660c7242d5e",
+    "0070_add_event_edit_locks_and_archive": "34fbbd4fa38817fb8b3340f9d7ee6e79d354e37ac7133019bd89aed8caeaa0cf",
+    "0071_add_event_subtitle": "f329338f02a10fcde9b18222d829e3370b73aa7561612641d3caadf440eb5fd3",
+    "0072_add_event_location_locked": "c8364f9b454b7d96a42dcfef70352e8fbae8c01dc7eb393697509205d07645e7",
+    "0073_shift_staffing_mvp": "c48f99943750b29403b2f3efff7a34fc4c11343f45d967edc684ba8264545152",
+    "0074_student_availability_ad_hoc": "33c45dcec12b53a91ff987cb108407ff6b4849c7c1b703a41b540a481bc4d513",
+    "0075_add_firmware_watch_targets": "55557308ea3aa381aa4309958e28daffb3864bf8dab01881ed775804197d6a04",
+    "0076_add_firmware_watch_support_mode": "84eda9afef652d75f3d126a77cc8b2fd1a6060634fb53860dcdc3e41fe968fa0",
+    "0077_add_bulk_sku_image_rehost_attempts": "4ae0c19bc2e387fc6af50170fdf85a86146f44a3fc4320cd7b75fb9c54406b3c",
+    "0077_bulk_unit_label_tracking": "10cbdec06d9dcaa765c64bc9bda1255fa70e0dc5e44c40ef2de629147e775318",
+    "0078_fix_scan_events_phase_enum": "4da8abf23396b73813fbc4bf0e97115ee3bbfb8bdf567ec796dec26147626b10",
+    "0079_user_wiscard_and_scan_location_evidence": "6a99c40dd477bd5b99ca8ef1dc9e8f240b788d8630181fbd347da79c863fa965",
+    "0080_schedule_publish_ack_contract": "d7ab86b8809183c72c4ea5ca283cce8b1a8b53a739ab0c9030afba6f365498aa",
+    "0081_schedule_preferences_time_off": "898b07879dcd7b586abdec0cfbd5f50fe4ec925c6a32eae823337da5d945e3fa",
+    "0082_user_staffing_type": "ad981e76412b6611884cdb2c7b4635e168ea7919d6a9dda4aa6614107703b3e3",
+    "0083_hide_smoke_users": "dad9ba8bee9b22547c1bc9cc84158b43365f1cd19dbba39a9742a0699836a0f1",
+    "0084_unique_active_bulk_unit_allocation": "7329a3760e62393a582d3ee72dad7f69e16e11eb0d8110b61abc22a2853b2c1c",
+    "0085_item_family_favorites": "0db122645ce49f3a38c5682851a5e2200a41abb901def22639bd703817371dae",
+    "0086_booking_pickup_kiosk": "4063b299b6666e05c580b0b21a535df649537b150c59381a7f19d0d67fb9ee96",
+    "0087_resource_type": "50787b6eaca6cf50c69a6c786d96700c1400a740dcb7f8c7f361260a8f2706a7",
+    "0088_checkout_live_activity_tokens": "e51c7a35eb57932f5de5745f21469f9a5747f0876fe6c9ac58a1270cac3dd3f7",
+    "0089_kiosk_activation_code_expiry": "9613b433e591e193ff0427ff6cecd06f4e730be42dfead3958b8cbe61d85114f",
+    "0090_drop_premier_event_columns": "c41f36142add54793073f83119b8d64dbceb1b06bb255dae33cd367dc757a046",
+    "0091_checkout_live_activity_push_to_start": "40c5fe293eb9726f0fd06469091f124ce16532e26364bf5960cf24bb5e08a7ad",
+    "0092_profile_completion_fields": "d598c291bb8da8a6958d38b5ebd3a48a85e2b4ef3313546719872274f2779bd0",
+    "0093_item_family_products": "e4fac90e6bb933eb68a8e28b712fa9dd784b857518138360ea4a919460732493",
+    "0094_user_birthday_and_live_production": "e838a8434dd44a356108b213efb5bdf04e3d353caa84965fe7ba9418d21b8e7e",
+    "0095_btn_collaborator_enums": "d248acd1146d14f6cc78a33f118cdae96da8aa473d5eb85110309f3985611f01",
+    "0096_btn_collaborator_access": "d543eef130da16216a9cbfc798515bb1eda1aa9c97afba04b121bc9afcbfe699",
+    "0097_student_graduation_term": "eb514f5bf1fce6bbf0470b12c6958b7839b58f04af28e4252a024d20a5df301e",
+    "0098_affiliation_policy_editor": "d46e3ae42254221f52b2e56a4de8a684e51f28b0ec81b73a10ec375c63ad02f6",
+    "0099_shift_group_working_copy": "d5e5ac8baeacb4ac065eb203ef3f281b2e97f4229a0ec067d59363e82923d7af",
+    "0100_badge_catalog_rebalance": "389646a8070ed7eff3852d0588588eecb15128f991cdcafd391be80b169aaf55",
+    "0101_accountability_exclusions": "7e4e0815d6f880835b89dcd5a8a8f3647cc8ab3baf0a263ae07b5312fea309c9",
+    "0102_booking_due_date_history": "c537c34fab3c8ba41ef3d7949d1999e0b5eafe1a5e22c5096d8f9f4af810f934",
+    "0103_collaborator_people_directory": "f8019aec38a40c705ffe43ff6f2da7be875d9822958f2974f4b94ad5be977363",
+    "0104_kiosk_build_identity": "86c720da6de1c27452d7684b49bc7d42959a62374cf826e7349ee2f6a5c0bc18",
+    "0104_license_claim_history_integrity": "aee54d72405cab369cf52f973036975f6ac84267bdb7f62a6103589035358faa",
+    "0105_blast_notifications": "31fbf8ed1e8c87b5d2494dd5968cf115e23b6c013f556521be0fb9e36a422fc1",
+    "0105_license_expiry_timestamp_parity": "f1b3e3a5edbb4e25ceeef332989d3c5708eafd5484a89391809760580960dd12",
+    "0106_calendar_event_results": "9ccf08506142b668908fd940048a3574f46c1300bc6a93a58c30aa53f021b395",
+    "0106_passkey_auth": "f679200260d22a289c3f4744693ca6c46c854237e649831756f52c9ca64a2317",
+    "0107_shift_assignment_source": "41adbbc7e2861b3f909b8f7abcea4bad724876d2b555b40035ee32e7e4a00c2c",
+    "0108_social_pending_invite_profile": "3cfc2c5e1bfaa83bc19a70cd40a4403e9dbf27c7b8617983a11d309ac6e77ed0",
+    "0109_schedule_timed_release": "90e9ef079b5599fac90317c4779d95be50bc7ffea2768dc2e3680d3cd5e1d0cd",
+    "0110_badge_rewards": "4bf8b69b677a88e2d257f7b97eb9652639fb0dc839a334c0ed4969168679dabb",
+    "0111_checkout_overdue_notification_policy": "03f9c56f0674f417b8b74da7971c3f32185cb3dd2705c33a3d7ef9cf71dc4799",
+    "0112_private_usage_analytics": "1f317a831264586571f4bbc981fa61fa44692715fc087ca1f0ee4518c03bf75e",
+    "0113_signature_capture": "ac01f5ff34548e731d62f9f94c88760d8e063cd05b3a1a108ec1be58279b6449",
+    "0114_signature_creative_staff": "5aedd9ee8633e5ac8774d7c2828e02b233dfd927c3a6ee3f49179e5cce606c82",
+    "0115_signature_athlete_profiles": "c63966a6943c0f78136c594f195ac85c0dda099fe246265f1119bd47ef27b9ef",
+    "0116_bulk_schedule_assignment": "571e3efeb18fd613868ae480b2634e16b439ca56ec0a4ce1ad8a705a00301d6d",
+    "0117_badge_shift_breadth": "8d4316460a643b2092608eea8538d2f91c2fdf11ce506f7074495258d9d386eb",
+    "0118_badge_checkout_breadth": "7a94567031f71adea58dfe9d8b885bea33e584ce0086a9c5d0c6cd64cad8053d",
+    "0119_badge_return_moment": "56c911f55e8d2c87ec8d9ff8de884f1d196174a58a25d0722656a122b5e6bac1",
+    "0120_badge_app_open_eggs": "535f8dc2aeb2269b8a1c6d3c652055f78279a8e6a6eec546ecd03bc249784723",
+    "0121_calendar_event_results_backfill": "4b7f77f24a37607055f9ea132235c2c7f3c5696e7be49fc6005f5b82158fb8ed",
+    "0122_badge_short_notice": "dc567c881e8d35ca8b81889e115a3e9a68adeb85adc08b22943af361c64e59fd",
+    "0123_calendar_event_summary_reclean": "31996426d86bab653348103ae9ff2e2f3e387935ca0cbdc59e7ae3c7e4572335",
+    "0124_calendar_event_site": "e071b66bc2b1418c4b6a451120454ce73b891a4483e28ef189b3bf4336bfebe9",
+    "0125_software_credentials": "b8debcbf66333da3b82f1eebac391c53b64df1d18e34a95f515864621d112f82",
+    "0126_software_credential_visibility": "9a53d2962330acade5d053f7942ca9da49a71337dfd620a616d67e1792862a0d",
+    "0127_badge_catalog_expansion": "7c21075f56ecb0401b633dae314ea3665f65db7b81f19b13110ff4cdf7b16161",
+    "0128_student_availability_date_ranges": "9ffe9ef330ec2663471714cb39cd87562295430581b3ed924aec703ebfc772b8",
+    "0129_app_activity_report": "53becd0581149068fcc8c5b9b68ee4e6cbf5fa876376608ec9f8f7df4db9b906",
+    "0130_schedule_notification_debounce": "f1823f471455775ccdcd1c06317daf6714dfc7025a53d18a2bfa45da7a92368a",
+    "0131_event_credits": "37d9949b84378648e213ef38d6fec220f75f77df44e411cd32c64e8634c79063",
+    "0132_calendar_event_ties": "91fd34e2f9a6a542a810cd727a42fa0eba00aae163763319964683cee229c2ad",
+    "0133_calendar_event_ties_backfill": "d533203b25ffe86d21e9bb7083cd7fce19e30bedbc5239bc66a643a94113f663",
+    "0134_event_workers_rename": "e4bba3dec18534edd61a3bd5d93a56170ecbaf1dc4ea79eae029a36f5967ad68",
+    "0135_brand_asset_library": "14b39d375fc682abcc73114fe36ebf9dfac6255f16054a4e200be0174abc57bc",
+    "0136_brand_asset_experience": "225db52908c09a08493deb14a2b5d6ac1a545b07af63579dc3e82a0da7a8eb98",
+    "0137_web_push_subscriptions": "b51c7941c12cdf345f543fc39c8a62182bf04cb78f2e95deff7c81ec899355b1",
+    "0138_sport_auto_assign_policy": "b6a5e1d48ada7569c446cf4c27a0fe8ac8cae4c88fc88527cec3ef6d039d958e",
+    "0139_football_game_day_roles": "ec77981a44cbfeacf4f2b91dc14c3ad49d6e012fca94f6fe078fbdc91be1f8f9",
+    "0139_schedule_working_copy_undo_redo": "cbea9491be98908451d3f0fdaeba450d58aa1f4ae111c33649509dd0e4d8984a",
+    "0140_varsity_season_ownership": "5f2579cf902f283a94e93d0854000e4668e1697d83eb4b921a2e9dbd4f87b6fe",
+    "0141_event_checkout_assignments": "0d745163af401be8526f709eb9fec523147ac262844fee9b14fee72fbc40df90",
+    "0142_combined_schedule_events": "18552bb2c51c8fba351744b02f3bbf68a089179e139ab2fc63b628a682addd6b",
+    "0143_shared_checkout_custody": "a874fa8562484a9cf4ac8ae25e92ee6b1376aad19ea88fd84f09f812e70d42a2",
+    "0144_restore_asset_allocation_overlap_guard": "2d394a2612727589e82686022b75349909d200789d38645369e284e965f408b7",
+    "0145_restore_declared_lookup_indexes": "0baec91b50c7b459d16ab56148fe0484a67b88864613c18d5c4f6588ee4469c8",
+    "0146_resource_import_key": "46ef032193813fb9e5b5337a0561404c43ef59a40da326f527502bf8f7801391",
+    "0147_badge_mvp_repair": "c0086bef17e8bea9decf51c6c85257a707d533ff3a60faeeda91f72d886b6b7b",
+    "0148_event_timing_lock": "c34a436d06735865568fe60f4ba421f9f45b8b749855051b1e79f7698b405f6a",
+    "0149_kit_sport_code": "787609bd37b7b8ffeee20ec6132978942bbdc0e23fac7392fdce3a5e3ed9d2f9",
+    "0150_kit_gameday_role": "79a11aa03dc28ace8077ea66272273e924041c2ba20b4173ec3c2157c4248e1a",
+    "0151_asset_tag_sort_key": "55f3794c448fd682a28d6c035a14be8e01d372ec8d9725e34a16993c93f7d4ab",
+    "0152_notification_booking_id": "03d6e9d74536e0223e2b824e903f3a8867ab6d954d7e673d3eb109aa0527e8de",
+    "0153_restore_bulk_item_and_notification_foreign_keys": "005391a9fe9e0fdc614ce4256dde65ccc8bd51a18a21cd8a191d812f824938a2",
+    "0154_restore_bootstrap_only_postgres_objects": "cbe94ec0cb132ee24f0693319c3f7680b7e53d184cdb4c938551235aca71b696"
+  },
+  "receipts": [
+    {
+      "id": "11b65832-d025-4f44-a46f-4305f9884012",
+      "logs": null,
+      "checksum": "8f629a04487ee56e8f76fd356f7d2cf9d5b1c1e16205b7c95c4aaf35a2032522",
+      "started_at": "2026-07-11T16:22:57.678+00:00",
+      "finished_at": "2026-07-11T16:22:57.678+00:00",
+      "migration_name": "0001_manual_constraints",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "1a4d5391-13fa-4a3b-a925-f246e10e3571",
+      "logs": null,
+      "checksum": "258ecf6b8638db280f6e9a067202e8f85e8fb98a369a8bef65d1bfe25abdfffb",
+      "started_at": "2026-07-11T16:22:57.712+00:00",
+      "finished_at": "2026-07-11T16:22:57.712+00:00",
+      "migration_name": "0002_source_reservation_id",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "8276af0c-db59-416a-900f-105ccaba6c7c",
+      "logs": null,
+      "checksum": "bebb721bb06573241cc200f626d47b1a4574d36462dc77cc60b8ae6fe40c5816",
+      "started_at": "2026-07-11T16:22:57.745+00:00",
+      "finished_at": "2026-07-11T16:22:57.745+00:00",
+      "migration_name": "0003_phase1_models",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "c4ee915a-064c-4717-b49f-4e2b973a8267",
+      "logs": null,
+      "checksum": "9d3c29306a8785bb403a063dcc626e92bd79277aea68d4f6f2da26c02d975078",
+      "started_at": "2026-07-11T16:22:57.775+00:00",
+      "finished_at": "2026-07-11T16:22:57.775+00:00",
+      "migration_name": "0004_event_booking_linkage",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "7229dcb8-c7e7-4127-99cc-6a132547bc5b",
+      "logs": null,
+      "checksum": "88416b167f304aaf41f9a4c11beaa465c071836d5a3a7bbc67c9c618f5fa3a37",
+      "started_at": "2026-07-11T16:22:57.872+00:00",
+      "finished_at": "2026-07-11T16:22:57.872+00:00",
+      "migration_name": "0005_add_categories",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "461c8e59-e4ef-4816-84f8-1a937c780667",
+      "logs": null,
+      "checksum": "44b43848cbce8983acbaf6d089c97ebb2c09b8de69222b67a5b8d3c38c7d3100",
+      "started_at": "2026-07-11T16:22:57.907+00:00",
+      "finished_at": "2026-07-11T16:22:57.907+00:00",
+      "migration_name": "0006_asset_policy_toggles",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "a0547a23-12dc-4d2c-8ab7-0c1e78cdf3ee",
+      "logs": null,
+      "checksum": "ac73068f564a72649789ce8c634a814587f545454a85b7eef7cf1338b11cf78b",
+      "started_at": "2026-07-11T16:22:57.94+00:00",
+      "finished_at": "2026-07-11T16:22:57.94+00:00",
+      "migration_name": "0007_numbered_bulk_unit_tracking",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "8569dd93-a924-43c9-8546-5d61e1ec96ee",
+      "logs": null,
+      "checksum": "67a59edf867bab7475ac5ef3f6cd5c09f473cdf89ce5cd373758092ceb79772b",
+      "started_at": "2026-07-11T16:22:57.971+00:00",
+      "finished_at": "2026-07-11T16:22:57.971+00:00",
+      "migration_name": "0008_escalation_config",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "8720b8a2-773a-44db-98d9-9d002e815c96",
+      "logs": null,
+      "checksum": "253d98c780eb7ac7f806a123db6fec3c83dbb1a4adfed94691f03481dd2cdf39",
+      "started_at": "2026-07-11T16:22:58.003+00:00",
+      "finished_at": "2026-07-11T16:22:58.003+00:00",
+      "migration_name": "0009_item_bundling",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "ac4282bc-835d-4cba-bdf1-86193b9e2686",
+      "logs": null,
+      "checksum": "340cfa4d6160be72f3fb3ad07d95e7b241141072db983cf328ee099b18fb38de",
+      "started_at": "2026-07-11T16:22:58.032+00:00",
+      "finished_at": "2026-07-11T16:22:58.032+00:00",
+      "migration_name": "0009_shift_calendar",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "e3fc90f1-ceb7-44b5-b57c-8c8d22b829dc",
+      "logs": null,
+      "checksum": "2f701947d4e22f8e5d93ba496053f686fd1bacac80c2fc29823102c039174c59",
+      "started_at": "2026-07-11T16:22:58.063+00:00",
+      "finished_at": "2026-07-11T16:22:58.063+00:00",
+      "migration_name": "0010_favorite_items",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "baf32e46-88f2-42fc-b6bd-727155875a24",
+      "logs": null,
+      "checksum": "1da580b55578b793b6a05d6364a5ac1992a37b8e75be826365ad951385089492",
+      "started_at": "2026-07-11T16:22:58.096+00:00",
+      "finished_at": "2026-07-11T16:22:58.096+00:00",
+      "migration_name": "0011_booking_ref_number",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "cd443776-07f2-48c3-9707-5cb0f48f3eaf",
+      "logs": null,
+      "checksum": "d4344a9045734883143c2637c494e9098758e5c92990c15cae4839821f5f7712",
+      "started_at": "2026-07-11T16:22:58.209+00:00",
+      "finished_at": "2026-07-11T16:22:58.209+00:00",
+      "migration_name": "0012_add_password_reset_token",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "8abdb975-6c06-42ee-bce6-bc7bcd413f4d",
+      "logs": null,
+      "checksum": "441b8968b28e3d0e67488e4a69de5174af5a23d043e678a99d184c8573745809",
+      "started_at": "2026-07-11T16:22:58.245+00:00",
+      "finished_at": "2026-07-11T16:22:58.245+00:00",
+      "migration_name": "0013_shift_assignment_booking_link",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "50082250-05a2-4c77-8ad9-d0ec4b8c1ab1",
+      "logs": null,
+      "checksum": "a5996a7b7ebe5faa2da0655ec4ee66562dfc9c5d9399f9e378513ecae4271685",
+      "started_at": "2026-07-11T16:22:58.275+00:00",
+      "finished_at": "2026-07-11T16:22:58.275+00:00",
+      "migration_name": "0014_add_user_avatar_url",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "089baf0a-10f0-4c91-8fe7-7dbbe98c82d2",
+      "logs": null,
+      "checksum": "46ed3aedcea0de62b79a529e752fda2aca11b56405b942b11afa24ace989f2e7",
+      "started_at": "2026-07-11T16:22:58.395+00:00",
+      "finished_at": "2026-07-11T16:22:58.395+00:00",
+      "migration_name": "0015_make_serial_number_optional",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "02635bc8-d03d-4893-832f-dfa7e5334758",
+      "logs": null,
+      "checksum": "cd5e7699c846a5818c427015409262f56fc1107948f3b7ef09ab6d27caa5849e",
+      "started_at": "2026-07-11T16:22:58.427+00:00",
+      "finished_at": "2026-07-11T16:22:58.427+00:00",
+      "migration_name": "0016_add_user_active_field",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "30b9b6c8-3073-47a1-af38-6dc2eb156d92",
+      "logs": null,
+      "checksum": "9b623119ad86e82e0d758663e59554c22159712ba2621525407a820be4e0c0d3",
+      "started_at": "2026-07-11T16:22:58.46+00:00",
+      "finished_at": "2026-07-11T16:22:58.46+00:00",
+      "migration_name": "0017_add_source_payload",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "aea63845-19c3-4a53-b7fe-ebb642f58294",
+      "logs": null,
+      "checksum": "a43e6db90497771d10a24908e32d6466dadf6f4fd51f98b69cd14d99e14f0cdc",
+      "started_at": "2026-07-11T16:22:58.49+00:00",
+      "finished_at": "2026-07-11T16:22:58.49+00:00",
+      "migration_name": "0018_add_booking_kit_id",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "bfc0b4b9-0d11-4608-9535-979bdc06b282",
+      "logs": null,
+      "checksum": "f0edaf1e79b7c3967a8d98d95d149215b1aacae7e837c3629ac79299ef145227",
+      "started_at": "2026-07-11T16:22:58.521+00:00",
+      "finished_at": "2026-07-11T16:22:58.521+00:00",
+      "migration_name": "0019_add_location_is_home_venue",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "358ad963-c077-4a86-ade6-ac3b9443a4b1",
+      "logs": null,
+      "checksum": "4fdb48f5364a0fe68b4b0df40d4e42f2e560b35b616b5914c869ac2262e2f4a0",
+      "started_at": "2026-07-11T16:22:58.555+00:00",
+      "finished_at": "2026-07-11T16:22:58.555+00:00",
+      "migration_name": "0020_add_performance_indexes",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "f61fff58-7ac6-4349-83c7-0e3322d02dda",
+      "logs": null,
+      "checksum": "d3308f74cf32c75fc0acdbda04da3d0284d11adb2733addaa9d46e80a60417fe",
+      "started_at": "2026-07-11T16:22:58.596+00:00",
+      "finished_at": "2026-07-11T16:22:58.596+00:00",
+      "migration_name": "0021_add_trigram_search_indexes",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "cc2b7339-a0c1-44d5-8673-87a3f1365079",
+      "logs": null,
+      "checksum": "1f516aafea379fc239b5351b8920a1fb978185d31b286987889e768f1acb8d92",
+      "started_at": "2026-07-11T16:22:58.627+00:00",
+      "finished_at": "2026-07-11T16:22:58.627+00:00",
+      "migration_name": "0022_add_booking_photos",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "8277da4a-bcc2-4e2b-b20e-5e182712b75b",
+      "logs": null,
+      "checksum": "e0252c5bbc67581c5422df816d573f92f144a133031da12683553662f358f18c",
+      "started_at": "2026-07-11T16:22:58.725+00:00",
+      "finished_at": "2026-07-11T16:22:58.725+00:00",
+      "migration_name": "0023_add_checkin_item_reports",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "9a78ef5a-caea-4207-9915-2c35513098f7",
+      "logs": null,
+      "checksum": "321b9658891392e49d0a3f25c6f65c7eb06ecc577808504516d00391cc50ae01",
+      "started_at": "2026-07-11T16:22:58.756+00:00",
+      "finished_at": "2026-07-11T16:22:58.756+00:00",
+      "migration_name": "0024_add_calendar_event_is_hidden",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "cd46bd89-aa8b-471f-801f-255d63e3e53b",
+      "logs": null,
+      "checksum": "cf404ea83a3d78a95af20ec23548b2d0ad26e1cf471f1556a54704a33cd16fd7",
+      "started_at": "2026-07-11T16:22:58.787+00:00",
+      "finished_at": "2026-07-11T16:22:58.787+00:00",
+      "migration_name": "0025_consolidate_departments",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "55e69b69-1acd-400f-ac9b-90787e7be858",
+      "logs": null,
+      "checksum": "4385c78fd944b752af60343bad62f1099d16194444bf19a2fae91fb338268292",
+      "started_at": "2026-07-11T16:22:58.816+00:00",
+      "finished_at": "2026-07-11T16:22:58.816+00:00",
+      "migration_name": "0026_add_allowed_emails",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "39f3449a-fa78-421a-9957-63087d8a75fe",
+      "logs": null,
+      "checksum": "720b2637261e2656864418292ee98091093b24701eb9933e4835c20468054082",
+      "started_at": "2026-07-11T16:22:58.927+00:00",
+      "finished_at": "2026-07-11T16:22:58.927+00:00",
+      "migration_name": "0027_seed_allowed_emails",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "406f64bc-2904-4731-906a-a7421198acdd",
+      "logs": null,
+      "checksum": "9eeeaaa8f8258859261dde25730bc0e1085bdf9b588f5623eba0b1933367c257",
+      "started_at": "2026-07-11T16:22:58.957+00:00",
+      "finished_at": "2026-07-11T16:22:58.957+00:00",
+      "migration_name": "0028_add_bulk_sku_images_and_kit_bulk_members",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "7020d59e-c65a-4112-9512-efa07ea825a9",
+      "logs": null,
+      "checksum": "05601f19e7ae1437e65329cdcc664d51514ffbb6e1795c695e5a5b9acba92e40",
+      "started_at": "2026-07-11T16:22:58.989+00:00",
+      "finished_at": "2026-07-11T16:22:58.989+00:00",
+      "migration_name": "0029_add_kiosk_devices",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "551a2b90-4731-47aa-a121-09847dec35cf",
+      "logs": null,
+      "checksum": "c191163776c16056850076e2ecc277674da2d772fdf72c527611d51b23f9a634",
+      "started_at": "2026-07-11T16:22:59.023+00:00",
+      "finished_at": "2026-07-11T16:22:59.023+00:00",
+      "migration_name": "0030_add_sport_call_times",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "ccb1e4ba-0975-417d-b849-53e04c37ad3e",
+      "logs": null,
+      "checksum": "1b3f13945e26be257d186376230c97b96810cf5d9c9dc387a1b7d233f396d544",
+      "started_at": "2026-07-11T16:22:59.052+00:00",
+      "finished_at": "2026-07-11T16:22:59.052+00:00",
+      "migration_name": "0031_add_bulk_stock_balance_location_index",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "7f9191a0-0e14-4a67-9ce2-dce30ca6e44c",
+      "logs": null,
+      "checksum": "70682496557c320f6aa120f48bc2bcf9e14689dfc2387ae7b9ac7f83242a2f55",
+      "started_at": "2026-07-11T16:22:59.082+00:00",
+      "finished_at": "2026-07-11T16:22:59.082+00:00",
+      "migration_name": "0032_add_guides",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "f71b4e4a-aaa7-4223-ae4d-ed34a877b2a4",
+      "logs": null,
+      "checksum": "b082c64f5d2c2bac4977253e62a9fa95237a5f8fe4a0ebcbe29729fd4d89573e",
+      "started_at": "2026-07-11T16:22:59.116+00:00",
+      "finished_at": "2026-07-11T16:22:59.116+00:00",
+      "migration_name": "0033_harden_bulk_item_quantities",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "82e28cff-05f6-4ec4-8e31-5d59759b13fe",
+      "logs": null,
+      "checksum": "7ae3e17b99a010fc5f2ff1e154a840d9f40e50e873ac685bfab953e397a9f62b",
+      "started_at": "2026-07-11T16:22:59.148+00:00",
+      "finished_at": "2026-07-11T16:22:59.148+00:00",
+      "migration_name": "0034_add_student_availability",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "04c0a0c2-d952-441e-9c78-86b9c756149e",
+      "logs": null,
+      "checksum": "707619a6bbf530e8516e27afbacc61ae53941bd73cec20788840ca8087a9cc91",
+      "started_at": "2026-07-11T16:22:59.249+00:00",
+      "finished_at": "2026-07-11T16:22:59.249+00:00",
+      "migration_name": "0035_add_shift_assignment_conflict",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "979c10d2-b2f5-40b7-b484-a0ce12916d73",
+      "logs": null,
+      "checksum": "7a5eb9f02248964a02f4d77fadedf40c8257cad4999f52f1e8decd83e30ac5c8",
+      "started_at": "2026-07-11T16:22:59.279+00:00",
+      "finished_at": "2026-07-11T16:22:59.279+00:00",
+      "migration_name": "0036_add_travel_roster",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "127eea33-9334-4251-84cb-ae757a805b6c",
+      "logs": null,
+      "checksum": "d12d01244c6c328d095b60026d694578b46e274211a58f784da50a0e79d9f398",
+      "started_at": "2026-07-11T16:22:59.31+00:00",
+      "finished_at": "2026-07-11T16:22:59.31+00:00",
+      "migration_name": "0037_add_shift_archiving",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "22bd7258-e1d6-421b-97b6-4ecb12577980",
+      "logs": null,
+      "checksum": "8e4c5996a740f4dfe645c77a89842f19a83f18bf819461752aa72b118d678b10",
+      "started_at": "2026-07-11T16:22:59.34+00:00",
+      "finished_at": "2026-07-11T16:22:59.34+00:00",
+      "migration_name": "0038_add_bulk_sku_fields",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "341c191f-6cab-4323-8084-2288cd8079b4",
+      "logs": null,
+      "checksum": "9d91c7fa913f416a36167a99bac351d835923f999fea31231ea0a8e03cb5fc3e",
+      "started_at": "2026-07-11T16:22:59.441+00:00",
+      "finished_at": "2026-07-11T16:22:59.441+00:00",
+      "migration_name": "0039_add_pending_pickup_status",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "bc24afdf-74ef-4c30-823e-9767bbb9b6b7",
+      "logs": null,
+      "checksum": "634d93d70735c7f8f7e2ce13fad0003c86210cfb1fcf0a662ec1916008ace243",
+      "started_at": "2026-07-11T16:22:59.471+00:00",
+      "finished_at": "2026-07-11T16:22:59.471+00:00",
+      "migration_name": "0040_add_device_tokens",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "4ed4806b-5d0e-486c-bd29-938db5896e93",
+      "logs": null,
+      "checksum": "d7a7a3cdc28dcdd7f06e15229ac8c88fa0cb68f96ff66c0a5595e161ebfed4e2",
+      "started_at": "2026-07-11T16:22:59.499+00:00",
+      "finished_at": "2026-07-11T16:22:59.499+00:00",
+      "migration_name": "0041_reseed_escalation_rules",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "38af0f86-4adb-4a07-9a12-047254e99e84",
+      "logs": null,
+      "checksum": "65a2e50962d8f2736df421bef54d585dabe58a8b4754dc86925b9ff11175bcdc",
+      "started_at": "2026-07-11T16:22:59.531+00:00",
+      "finished_at": "2026-07-11T16:22:59.531+00:00",
+      "migration_name": "0042_booking_events",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "3e6ad445-af7e-4d7c-a7ae-492ee087d596",
+      "logs": null,
+      "checksum": "867d89df3c518462fbe44991b8dce5c86fdbad1093d4d6544fafc989b19aaa0c",
+      "started_at": "2026-07-11T16:22:59.562+00:00",
+      "finished_at": "2026-07-11T16:22:59.562+00:00",
+      "migration_name": "0043_license_codes",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "5afa59dc-874b-4889-bdcb-316c63b3758c",
+      "logs": null,
+      "checksum": "72eb8a149c66be41d4aab7fc3a3de3d2281d0a571df5f2ee063164cd01becca1",
+      "started_at": "2026-07-11T16:22:59.592+00:00",
+      "finished_at": "2026-07-11T16:22:59.592+00:00",
+      "migration_name": "0044_license_claim_user_set_null",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "a9bf8ea7-bd49-450a-8dff-16837419caa8",
+      "logs": null,
+      "checksum": "55c61816e95c8319348c48a21e99daf483d30e058224ef6d37cc37e916729b20",
+      "started_at": "2026-07-11T16:22:59.622+00:00",
+      "finished_at": "2026-07-11T16:22:59.622+00:00",
+      "migration_name": "0045_drop_guide_order",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "71fd0c3f-80c3-4a94-8be2-23f834c8411d",
+      "logs": null,
+      "checksum": "87e8b88a7825391cc0f83f0784b830bab60aff741678ce58092d69f9c3137987",
+      "started_at": "2026-07-11T16:22:59.653+00:00",
+      "finished_at": "2026-07-11T16:22:59.653+00:00",
+      "migration_name": "0046_user_notification_prefs",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "ac26577c-19fb-4963-9b65-73fc457dbdf3",
+      "logs": null,
+      "checksum": "987db98009d815cd38bdc41aeac56afe1ed97de003552074271d17dd4de5071f",
+      "started_at": "2026-07-11T16:22:59.685+00:00",
+      "finished_at": "2026-07-11T16:22:59.685+00:00",
+      "migration_name": "0047_user_ics_token",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "6a3fcf90-8646-41a0-a3b9-e5b3ca65d009",
+      "logs": null,
+      "checksum": "fcffbdbe2be903e102a540ffa85256dc1483006a742a05656eb06b4e20feffcb",
+      "started_at": "2026-07-11T16:22:59.799+00:00",
+      "finished_at": "2026-07-11T16:22:59.799+00:00",
+      "migration_name": "0048_user_profile_fields",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "316502a9-4fc9-4504-90e0-fc075835fe0e",
+      "logs": null,
+      "checksum": "775acd5a7d09ebf0758fdb3d11aacc01e83a6d6eceff5f5607dc328cbd8237fc",
+      "started_at": "2026-07-11T16:22:59.844+00:00",
+      "finished_at": "2026-07-11T16:22:59.844+00:00",
+      "migration_name": "0049_add_operational_indexes",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "860c0238-1c69-4cf4-99e5-dfa848197b85",
+      "logs": null,
+      "checksum": "91539e812ac1b967b94d391d0338f164d54870009d89cb73ea5bf6ab643f4eea",
+      "started_at": "2026-07-11T16:22:59.874+00:00",
+      "finished_at": "2026-07-11T16:22:59.874+00:00",
+      "migration_name": "0050_audit_log_created_at_index",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "de975cb3-ab2f-47d0-b3c9-7f60bae8f0d9",
+      "logs": null,
+      "checksum": "09cfbe97d3a52e29e3419d40959d6a546af53922c3838895a4647c66fcc33271",
+      "started_at": "2026-07-11T16:22:59.97+00:00",
+      "finished_at": "2026-07-11T16:22:59.97+00:00",
+      "migration_name": "0051_checkin_report_image_url",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "81df663b-cee3-4487-acc3-63c65bca309c",
+      "logs": null,
+      "checksum": "fe71cc50d08beb4c3c347585f9543357f93b6da76a2a39738c3f028dafd1dd09",
+      "started_at": "2026-07-11T16:22:59.999+00:00",
+      "finished_at": "2026-07-11T16:22:59.999+00:00",
+      "migration_name": "0052_calendar_source_sync_lease",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "d1a0466f-a5f0-43e9-bbcf-1f2a1bafdaa5",
+      "logs": null,
+      "checksum": "489a84699d23ac8e193892218879712356e72547b59daec4b025c1f70e972773",
+      "started_at": "2026-07-11T16:23:00.03+00:00",
+      "finished_at": "2026-07-11T16:23:00.03+00:00",
+      "migration_name": "0053_user_force_password_change",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "319ca85c-c6be-4433-a3de-203de29d3131",
+      "logs": null,
+      "checksum": "54c7ab5713577ec08d6bd936f1ab353cfb0e8c6c837955e34faf3fcaf1a749a7",
+      "started_at": "2026-07-11T16:23:00.065+00:00",
+      "finished_at": "2026-07-11T16:23:00.065+00:00",
+      "migration_name": "0054_booking_search_trigram_indexes",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "f7e41413-906f-4dcf-b68c-424068050fb0",
+      "logs": null,
+      "checksum": "eeb39af1ff42100430571333ffd6303050f9cab02a43c6a7f2ff8fe54d7ce03e",
+      "started_at": "2026-07-11T16:23:00.095+00:00",
+      "finished_at": "2026-07-11T16:23:00.095+00:00",
+      "migration_name": "0055_add_badges",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "02c44491-b630-4b3f-83c1-5bb9cf33cf1a",
+      "logs": null,
+      "checksum": "e4e34c3346a56e364038bb70ee93c02095249f5c075963a04f42955c0eb4f519",
+      "started_at": "2026-07-11T16:23:00.124+00:00",
+      "finished_at": "2026-07-11T16:23:00.124+00:00",
+      "migration_name": "0056_add_scan_badge_counter_type",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "d8652343-fe56-4022-8c09-85e305c3fc70",
+      "logs": null,
+      "checksum": "1016d2ccaae5cbe96797e0d36278d577031dceefac622185e7d656d3d66cf5af",
+      "started_at": "2026-07-11T16:23:00.161+00:00",
+      "finished_at": "2026-07-11T16:23:00.161+00:00",
+      "migration_name": "0057_add_guide_markdown",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "7d228e91-b29e-4b56-8e25-a1a7d44b755b",
+      "logs": null,
+      "checksum": "839936fdc404b2f5fdcb84547e3ba02af038288e410dd0950ba7f00e6356584a",
+      "started_at": "2026-07-11T16:23:00.199+00:00",
+      "finished_at": "2026-07-11T16:23:00.199+00:00",
+      "migration_name": "0058_guide_personalization",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "05d2c080-7a72-4309-b285-055dc20a819d",
+      "logs": null,
+      "checksum": "09754782dc787bf39e54e79370bbb5a77aa01d385fc80ad232b2339467efcd38",
+      "started_at": "2026-07-11T16:23:00.299+00:00",
+      "finished_at": "2026-07-11T16:23:00.299+00:00",
+      "migration_name": "0059_add_user_slack_handle",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "e4789db3-2a36-4b8a-9a31-8c71659658eb",
+      "logs": null,
+      "checksum": "81e045504cf3d8bcda4ae9aed8b651b123d7ac602a2e0346de0855cac5cbc21c",
+      "started_at": "2026-07-11T16:23:00.33+00:00",
+      "finished_at": "2026-07-11T16:23:00.33+00:00",
+      "migration_name": "0060_add_user_slack_profile_url",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "a7e24207-bd5b-4706-8e8c-f4e1e3a7428e",
+      "logs": null,
+      "checksum": "2094241b8c57caf886169dea11e137037056b663f6ef43d2d851ac02428be5fb",
+      "started_at": "2026-07-11T16:23:00.361+00:00",
+      "finished_at": "2026-07-11T16:23:00.361+00:00",
+      "migration_name": "0061_add_guide_freshness",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "598a12d2-16fe-409a-b2be-2144b59d395c",
+      "logs": null,
+      "checksum": "6b81f04045e09874b4a67a33c3bf05dfe49057c580804853fedcc2594d0532fa",
+      "started_at": "2026-07-11T16:23:00.392+00:00",
+      "finished_at": "2026-07-11T16:23:00.392+00:00",
+      "migration_name": "0062_kiosk_session_expires_at",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "a0f4f6ae-2f08-46a3-80a7-4796a5ffb6bf",
+      "logs": null,
+      "checksum": "8e33aae62500ff76baebc0ad4bb424dba3f119d27524e756fa7d40ad254aeea3",
+      "started_at": "2026-07-11T16:23:00.491+00:00",
+      "finished_at": "2026-07-11T16:23:00.491+00:00",
+      "migration_name": "0063_allow_manual_calendar_events_source_null",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "03441f96-9732-4fc9-a431-20eb9026d1c2",
+      "logs": null,
+      "checksum": "e681e5aece854ecd7fadf216cf340d20fbb0d02d8a15b3aa0291fbb22a6a5c86",
+      "started_at": "2026-07-11T16:23:00.523+00:00",
+      "finished_at": "2026-07-11T16:23:00.523+00:00",
+      "migration_name": "0064_seed_badge_definitions",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "d30fe109-4a3e-461d-af24-bc8478e7e013",
+      "logs": null,
+      "checksum": "e1911c80655eb6507e45782ba2ef384768a25f960dabcd5f2b97b5faf4198d8e",
+      "started_at": "2026-07-11T16:23:00.554+00:00",
+      "finished_at": "2026-07-11T16:23:00.554+00:00",
+      "migration_name": "0065_add_booking_completed_at",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "bbc88c7c-b40f-4843-b720-33c0c506edca",
+      "logs": null,
+      "checksum": "8894336411f6626a7805124c18753814611ecd590e1b78b4e8934b62a128c605",
+      "started_at": "2026-07-11T16:23:00.583+00:00",
+      "finished_at": "2026-07-11T16:23:00.583+00:00",
+      "migration_name": "0066_retire_shift_badges",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "e4ccc787-6ef3-476a-b68b-bcf564cf249d",
+      "logs": null,
+      "checksum": "bbe074a2bb4fde30921f6ae85fec554776e8cff182dab76db304bb42040b2560",
+      "started_at": "2026-07-11T16:23:00.613+00:00",
+      "finished_at": "2026-07-11T16:23:00.613+00:00",
+      "migration_name": "0067_add_user_last_active",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "e1f32b1a-d389-4cab-98ef-479bf1364271",
+      "logs": null,
+      "checksum": "6e793bb57739a65a8eca79810638b571b5e78e66ad9a0a61729ab66af231884d",
+      "started_at": "2026-07-11T16:23:00.642+00:00",
+      "finished_at": "2026-07-11T16:23:00.642+00:00",
+      "migration_name": "0068_rename_guides_to_resources",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "789d1cd4-5469-4265-8685-228bf48d3dac",
+      "logs": null,
+      "checksum": "e71ff611dc18b73c256f5faf13dc50f88a1674f2478e61836cb2d660c7242d5e",
+      "started_at": "2026-07-11T16:23:00.678+00:00",
+      "finished_at": "2026-07-11T16:23:00.678+00:00",
+      "migration_name": "0069_add_asset_image_rehost_attempts",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "b6d395d9-e4e1-4372-8b2e-3fa689656a23",
+      "logs": null,
+      "checksum": "34fbbd4fa38817fb8b3340f9d7ee6e79d354e37ac7133019bd89aed8caeaa0cf",
+      "started_at": "2026-07-11T16:23:00.721+00:00",
+      "finished_at": "2026-07-11T16:23:00.721+00:00",
+      "migration_name": "0070_add_event_edit_locks_and_archive",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "c04fd569-93aa-49f5-8d48-2b2cb6bcaca0",
+      "logs": null,
+      "checksum": "f329338f02a10fcde9b18222d829e3370b73aa7561612641d3caadf440eb5fd3",
+      "started_at": "2026-07-11T16:23:00.823+00:00",
+      "finished_at": "2026-07-11T16:23:00.823+00:00",
+      "migration_name": "0071_add_event_subtitle",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "1916c1bb-2ddd-450a-8b2e-f09ec9950b95",
+      "logs": null,
+      "checksum": "c8364f9b454b7d96a42dcfef70352e8fbae8c01dc7eb393697509205d07645e7",
+      "started_at": "2026-07-11T16:23:00.858+00:00",
+      "finished_at": "2026-07-11T16:23:00.858+00:00",
+      "migration_name": "0072_add_event_location_locked",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "37601363-63d6-4734-80c9-e48c8b2ac559",
+      "logs": null,
+      "checksum": "c48f99943750b29403b2f3efff7a34fc4c11343f45d967edc684ba8264545152",
+      "started_at": "2026-07-11T16:23:00.888+00:00",
+      "finished_at": "2026-07-11T16:23:00.888+00:00",
+      "migration_name": "0073_shift_staffing_mvp",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "b1c9fd57-37bc-41dd-8bf0-bdd3f03c79a7",
+      "logs": null,
+      "checksum": "33c45dcec12b53a91ff987cb108407ff6b4849c7c1b703a41b540a481bc4d513",
+      "started_at": "2026-07-11T16:23:00.92+00:00",
+      "finished_at": "2026-07-11T16:23:00.92+00:00",
+      "migration_name": "0074_student_availability_ad_hoc",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "7709d9af-d9a0-4f48-ba1f-1d79c94c4a08",
+      "logs": null,
+      "checksum": "55557308ea3aa381aa4309958e28daffb3864bf8dab01881ed775804197d6a04",
+      "started_at": "2026-07-11T16:23:01.016+00:00",
+      "finished_at": "2026-07-11T16:23:01.016+00:00",
+      "migration_name": "0075_add_firmware_watch_targets",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "c369c7b1-f39a-4af3-9e9e-f3d1231f822d",
+      "logs": null,
+      "checksum": "84eda9afef652d75f3d126a77cc8b2fd1a6060634fb53860dcdc3e41fe968fa0",
+      "started_at": "2026-07-11T16:23:01.047+00:00",
+      "finished_at": "2026-07-11T16:23:01.047+00:00",
+      "migration_name": "0076_add_firmware_watch_support_mode",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "8de34588-b51c-4f4e-aa8d-905f5aa181b1",
+      "logs": null,
+      "checksum": "4ae0c19bc2e387fc6af50170fdf85a86146f44a3fc4320cd7b75fb9c54406b3c",
+      "started_at": "2026-07-11T16:23:01.076+00:00",
+      "finished_at": "2026-07-11T16:23:01.076+00:00",
+      "migration_name": "0077_add_bulk_sku_image_rehost_attempts",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "72c4d64b-716d-4317-b212-15b9b7a91e67",
+      "logs": null,
+      "checksum": "10cbdec06d9dcaa765c64bc9bda1255fa70e0dc5e44c40ef2de629147e775318",
+      "started_at": "2026-07-11T16:23:01.107+00:00",
+      "finished_at": "2026-07-11T16:23:01.107+00:00",
+      "migration_name": "0077_bulk_unit_label_tracking",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "8777c700-f925-4c2b-894a-34062dc110b1",
+      "logs": null,
+      "checksum": "4da8abf23396b73813fbc4bf0e97115ee3bbfb8bdf567ec796dec26147626b10",
+      "started_at": "2026-07-11T16:23:01.145+00:00",
+      "finished_at": "2026-07-11T16:23:01.145+00:00",
+      "migration_name": "0078_fix_scan_events_phase_enum",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "66f68826-1678-4cd2-979f-ee79d72cf479",
+      "logs": null,
+      "checksum": "6a99c40dd477bd5b99ca8ef1dc9e8f240b788d8630181fbd347da79c863fa965",
+      "started_at": "2026-07-11T16:23:01.178+00:00",
+      "finished_at": "2026-07-11T16:23:01.178+00:00",
+      "migration_name": "0079_user_wiscard_and_scan_location_evidence",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "21b8c065-c000-4fe0-ad38-dc7c098db4d8",
+      "logs": null,
+      "checksum": "d7ab86b8809183c72c4ea5ca283cce8b1a8b53a739ab0c9030afba6f365498aa",
+      "started_at": "2026-07-11T16:23:01.212+00:00",
+      "finished_at": "2026-07-11T16:23:01.212+00:00",
+      "migration_name": "0080_schedule_publish_ack_contract",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "3bc9c079-e01a-4747-9790-3d6f9a0c1f8d",
+      "logs": null,
+      "checksum": "898b07879dcd7b586abdec0cfbd5f50fe4ec925c6a32eae823337da5d945e3fa",
+      "started_at": "2026-07-11T16:23:01.245+00:00",
+      "finished_at": "2026-07-11T16:23:01.245+00:00",
+      "migration_name": "0081_schedule_preferences_time_off",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "64b160cf-bd6e-415a-a298-22bf5543a8c9",
+      "logs": null,
+      "checksum": "ad981e76412b6611884cdb2c7b4635e168ea7919d6a9dda4aa6614107703b3e3",
+      "started_at": "2026-07-11T16:23:01.351+00:00",
+      "finished_at": "2026-07-11T16:23:01.351+00:00",
+      "migration_name": "0082_user_staffing_type",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "2551ce82-485d-4163-b18e-61f5287923cf",
+      "logs": null,
+      "checksum": "dad9ba8bee9b22547c1bc9cc84158b43365f1cd19dbba39a9742a0699836a0f1",
+      "started_at": "2026-07-11T16:23:01.379+00:00",
+      "finished_at": "2026-07-11T16:23:01.379+00:00",
+      "migration_name": "0083_hide_smoke_users",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "559ac4bf-aae4-4054-a521-f89c078f2754",
+      "logs": null,
+      "checksum": "7329a3760e62393a582d3ee72dad7f69e16e11eb0d8110b61abc22a2853b2c1c",
+      "started_at": "2026-07-11T16:23:01.408+00:00",
+      "finished_at": "2026-07-11T16:23:01.408+00:00",
+      "migration_name": "0084_unique_active_bulk_unit_allocation",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "65a9496f-44e3-4610-9233-8f9c8705349e",
+      "logs": null,
+      "checksum": "0db122645ce49f3a38c5682851a5e2200a41abb901def22639bd703817371dae",
+      "started_at": "2026-07-11T16:23:01.439+00:00",
+      "finished_at": "2026-07-11T16:23:01.439+00:00",
+      "migration_name": "0085_item_family_favorites",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "51656380-becf-48bc-a4c5-5e09a6fd4267",
+      "logs": null,
+      "checksum": "4063b299b6666e05c580b0b21a535df649537b150c59381a7f19d0d67fb9ee96",
+      "started_at": "2026-07-11T16:23:01.54+00:00",
+      "finished_at": "2026-07-11T16:23:01.54+00:00",
+      "migration_name": "0086_booking_pickup_kiosk",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "c19f78f0-bbc8-4b2a-804b-465441b15edb",
+      "logs": null,
+      "checksum": "50787b6eaca6cf50c69a6c786d96700c1400a740dcb7f8c7f361260a8f2706a7",
+      "started_at": "2026-07-11T16:23:01.571+00:00",
+      "finished_at": "2026-07-11T16:23:01.571+00:00",
+      "migration_name": "0087_resource_type",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "09b69775-317a-4d0b-bf6a-1a112863837f",
+      "logs": null,
+      "checksum": "e51c7a35eb57932f5de5745f21469f9a5747f0876fe6c9ac58a1270cac3dd3f7",
+      "started_at": "2026-07-11T16:23:01.6+00:00",
+      "finished_at": "2026-07-11T16:23:01.6+00:00",
+      "migration_name": "0088_checkout_live_activity_tokens",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "820b8317-551d-4f35-af27-7750d60d88ca",
+      "logs": null,
+      "checksum": "9613b433e591e193ff0427ff6cecd06f4e730be42dfead3958b8cbe61d85114f",
+      "started_at": "2026-07-11T16:23:01.631+00:00",
+      "finished_at": "2026-07-11T16:23:01.631+00:00",
+      "migration_name": "0089_kiosk_activation_code_expiry",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "936dfb7a-d244-4cd9-8a7b-ceb32a0bf862",
+      "logs": null,
+      "checksum": "c41f36142add54793073f83119b8d64dbceb1b06bb255dae33cd367dc757a046",
+      "started_at": "2026-07-11T16:23:01.663+00:00",
+      "finished_at": "2026-07-11T16:23:01.663+00:00",
+      "migration_name": "0090_drop_premier_event_columns",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "035d0f79-0b90-4a9e-95b8-442214c6a76a",
+      "logs": null,
+      "checksum": "40c5fe293eb9726f0fd06469091f124ce16532e26364bf5960cf24bb5e08a7ad",
+      "started_at": "2026-07-11T16:23:01.692+00:00",
+      "finished_at": "2026-07-11T16:23:01.692+00:00",
+      "migration_name": "0091_checkout_live_activity_push_to_start",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "c551ad5f-243f-4605-947a-cdac3bb63b6e",
+      "logs": null,
+      "checksum": "d598c291bb8da8a6958d38b5ebd3a48a85e2b4ef3313546719872274f2779bd0",
+      "started_at": "2026-07-17T12:25:33.866101+00:00",
+      "finished_at": "2026-07-17T12:25:33.964098+00:00",
+      "migration_name": "0092_profile_completion_fields",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "677d9ef9-050c-4ac1-a57d-6f0017279d19",
+      "logs": null,
+      "checksum": "e4fac90e6bb933eb68a8e28b712fa9dd784b857518138360ea4a919460732493",
+      "started_at": "2026-07-17T12:25:33.970843+00:00",
+      "finished_at": "2026-07-17T12:25:34.041456+00:00",
+      "migration_name": "0093_item_family_products",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "355e9721-e893-490b-88fc-d8ed2abf5bdc",
+      "logs": null,
+      "checksum": "e838a8434dd44a356108b213efb5bdf04e3d353caa84965fe7ba9418d21b8e7e",
+      "started_at": "2026-07-17T12:25:34.046816+00:00",
+      "finished_at": "2026-07-17T12:25:34.066122+00:00",
+      "migration_name": "0094_user_birthday_and_live_production",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "c0802e08-6a94-45b7-becc-163972f86711",
+      "logs": null,
+      "checksum": "d248acd1146d14f6cc78a33f118cdae96da8aa473d5eb85110309f3985611f01",
+      "started_at": "2026-07-17T12:25:34.071405+00:00",
+      "finished_at": "2026-07-17T12:25:34.088433+00:00",
+      "migration_name": "0095_btn_collaborator_enums",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "282ef440-ef26-472e-8854-a9cf23a8894d",
+      "logs": null,
+      "checksum": "d543eef130da16216a9cbfc798515bb1eda1aa9c97afba04b121bc9afcbfe699",
+      "started_at": "2026-07-17T12:25:34.093936+00:00",
+      "finished_at": "2026-07-17T12:25:34.16088+00:00",
+      "migration_name": "0096_btn_collaborator_access",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "42c39ce7-abb3-4e9b-a887-4f7231522eda",
+      "logs": null,
+      "checksum": "eb514f5bf1fce6bbf0470b12c6958b7839b58f04af28e4252a024d20a5df301e",
+      "started_at": "2026-07-17T12:25:34.166719+00:00",
+      "finished_at": "2026-07-17T12:25:34.181398+00:00",
+      "migration_name": "0097_student_graduation_term",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "73cb6fbf-309c-4bc1-a3a9-72db3921cc31",
+      "logs": null,
+      "checksum": "d46e3ae42254221f52b2e56a4de8a684e51f28b0ec81b73a10ec375c63ad02f6",
+      "started_at": "2026-07-17T12:25:34.186879+00:00",
+      "finished_at": "2026-07-17T12:25:34.265278+00:00",
+      "migration_name": "0098_affiliation_policy_editor",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "7957f35f-1afe-4a93-b477-304f075c3d04",
+      "logs": null,
+      "checksum": "d5e5ac8baeacb4ac065eb203ef3f281b2e97f4229a0ec067d59363e82923d7af",
+      "started_at": "2026-07-23T12:52:09.869+00:00",
+      "finished_at": "2026-07-23T12:52:09.869+00:00",
+      "migration_name": "0099_shift_group_working_copy",
+      "rolled_back_at": null,
+      "applied_steps_count": 9
+    },
+    {
+      "id": "977eb77c-cead-4cbc-a31c-6c538f4e87fd",
+      "logs": null,
+      "checksum": "389646a8070ed7eff3852d0588588eecb15128f991cdcafd391be80b169aaf55",
+      "started_at": "2026-07-23T12:52:10.057+00:00",
+      "finished_at": "2026-07-23T12:52:10.057+00:00",
+      "migration_name": "0100_badge_catalog_rebalance",
+      "rolled_back_at": null,
+      "applied_steps_count": 4
+    },
+    {
+      "id": "f9d74a3d-a542-4f2a-a951-18d2b0a9a46c",
+      "logs": null,
+      "checksum": "7e4e0815d6f880835b89dcd5a8a8f3647cc8ab3baf0a263ae07b5312fea309c9",
+      "started_at": "2026-07-23T12:52:10.515+00:00",
+      "finished_at": "2026-07-23T12:52:10.515+00:00",
+      "migration_name": "0101_accountability_exclusions",
+      "rolled_back_at": null,
+      "applied_steps_count": 9
+    },
+    {
+      "id": "986ae2dc-7e3f-489b-8d44-c7cab31c5f8f",
+      "logs": null,
+      "checksum": "c537c34fab3c8ba41ef3d7949d1999e0b5eafe1a5e22c5096d8f9f4af810f934",
+      "started_at": "2026-08-24T14:49:35.382134+00:00",
+      "finished_at": "2026-08-24T14:49:35.474643+00:00",
+      "migration_name": "0102_booking_due_date_history",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "94db6c29-39cd-46b3-bfc5-09f873280f13",
+      "logs": null,
+      "checksum": "f8019aec38a40c705ffe43ff6f2da7be875d9822958f2974f4b94ad5be977363",
+      "started_at": "2026-08-24T14:49:35.478983+00:00",
+      "finished_at": "2026-08-24T14:49:35.532185+00:00",
+      "migration_name": "0103_collaborator_people_directory",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "51f145e9-65f6-491d-b7fd-a6fb00880b07",
+      "logs": null,
+      "checksum": "86c720da6de1c27452d7684b49bc7d42959a62374cf826e7349ee2f6a5c0bc18",
+      "started_at": "2026-08-24T14:49:35.53644+00:00",
+      "finished_at": "2026-08-24T14:49:35.548765+00:00",
+      "migration_name": "0104_kiosk_build_identity",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "b3c41cf7-8df3-4a77-b48f-d9db85b970f2",
+      "logs": null,
+      "checksum": "aee54d72405cab369cf52f973036975f6ac84267bdb7f62a6103589035358faa",
+      "started_at": "2026-08-24T14:49:35.552847+00:00",
+      "finished_at": "2026-08-24T14:49:35.622646+00:00",
+      "migration_name": "0104_license_claim_history_integrity",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "c2a3ec5f-ed51-4f8e-8916-339babfbc7dc",
+      "logs": null,
+      "checksum": "31fbf8ed1e8c87b5d2494dd5968cf115e23b6c013f556521be0fb9e36a422fc1",
+      "started_at": "2026-08-24T14:49:35.62675+00:00",
+      "finished_at": "2026-08-24T14:49:35.673372+00:00",
+      "migration_name": "0105_blast_notifications",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "7e53fa38-0201-4b4d-9bab-d91f44219caf",
+      "logs": null,
+      "checksum": "f1b3e3a5edbb4e25ceeef332989d3c5708eafd5484a89391809760580960dd12",
+      "started_at": "2026-08-24T14:49:35.677342+00:00",
+      "finished_at": "2026-08-24T14:49:35.725189+00:00",
+      "migration_name": "0105_license_expiry_timestamp_parity",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "6e785a0b-d373-448a-b745-433e8a8db9d9",
+      "logs": null,
+      "checksum": "9ccf08506142b668908fd940048a3574f46c1300bc6a93a58c30aa53f021b395",
+      "started_at": "2026-08-24T14:49:35.729576+00:00",
+      "finished_at": "2026-08-24T14:49:35.743213+00:00",
+      "migration_name": "0106_calendar_event_results",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "d9e3605d-5eee-4377-a69a-c0b65a079a5d",
+      "logs": null,
+      "checksum": "f679200260d22a289c3f4744693ca6c46c854237e649831756f52c9ca64a2317",
+      "started_at": "2026-08-24T14:49:35.747925+00:00",
+      "finished_at": "2026-08-24T14:49:35.779291+00:00",
+      "migration_name": "0106_passkey_auth",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "9c835cf2-62ee-48e3-abac-4ebc9a556db3",
+      "logs": null,
+      "checksum": "41adbbc7e2861b3f909b8f7abcea4bad724876d2b555b40035ee32e7e4a00c2c",
+      "started_at": "2026-08-24T14:49:35.783063+00:00",
+      "finished_at": "2026-08-24T14:49:35.795846+00:00",
+      "migration_name": "0107_shift_assignment_source",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "1b7fd3d0-73e1-4aae-a0b7-89d5af7a244c",
+      "logs": null,
+      "checksum": "3cfc2c5e1bfaa83bc19a70cd40a4403e9dbf27c7b8617983a11d309ac6e77ed0",
+      "started_at": "2026-08-24T14:49:35.799611+00:00",
+      "finished_at": "2026-08-24T14:49:35.813498+00:00",
+      "migration_name": "0108_social_pending_invite_profile",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "710ae25d-c7fa-488e-b5a1-1ee30977b0c9",
+      "logs": null,
+      "checksum": "90e9ef079b5599fac90317c4779d95be50bc7ffea2768dc2e3680d3cd5e1d0cd",
+      "started_at": "2026-08-24T14:49:35.817733+00:00",
+      "finished_at": "2026-08-24T14:49:35.829977+00:00",
+      "migration_name": "0109_schedule_timed_release",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "59fe0a2c-f1a8-4802-b235-dda95cb5f89b",
+      "logs": null,
+      "checksum": "4bf8b69b677a88e2d257f7b97eb9652639fb0dc839a334c0ed4969168679dabb",
+      "started_at": "2026-08-24T14:49:35.833906+00:00",
+      "finished_at": "2026-08-24T14:49:35.905974+00:00",
+      "migration_name": "0110_badge_rewards",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "c10d7308-31c8-4d1a-8130-902ed741a769",
+      "logs": null,
+      "checksum": "03f9c56f0674f417b8b74da7971c3f32185cb3dd2705c33a3d7ef9cf71dc4799",
+      "started_at": "2026-08-24T14:49:35.909758+00:00",
+      "finished_at": "2026-08-24T14:49:35.934533+00:00",
+      "migration_name": "0111_checkout_overdue_notification_policy",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "2648d16d-2126-4a07-99ce-9481bf73b987",
+      "logs": null,
+      "checksum": "1f317a831264586571f4bbc981fa61fa44692715fc087ca1f0ee4518c03bf75e",
+      "started_at": "2026-08-24T14:49:35.938316+00:00",
+      "finished_at": "2026-08-24T14:49:35.96058+00:00",
+      "migration_name": "0112_private_usage_analytics",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "2c2d2723-02b8-41c0-8f61-9cb9135668ef",
+      "logs": null,
+      "checksum": "ac01f5ff34548e731d62f9f94c88760d8e063cd05b3a1a108ec1be58279b6449",
+      "started_at": "2026-08-24T14:49:35.964447+00:00",
+      "finished_at": "2026-08-24T14:49:36.052025+00:00",
+      "migration_name": "0113_signature_capture",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "a2531bde-2309-491b-bd1a-335a2aa9601f",
+      "logs": null,
+      "checksum": "5aedd9ee8633e5ac8774d7c2828e02b233dfd927c3a6ee3f49179e5cce606c82",
+      "started_at": "2026-08-24T14:49:36.056633+00:00",
+      "finished_at": "2026-08-24T14:49:36.067271+00:00",
+      "migration_name": "0114_signature_creative_staff",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "a8d4a9fe-452a-4f3f-9bd1-28910f52bb96",
+      "logs": null,
+      "checksum": "c63966a6943c0f78136c594f195ac85c0dda099fe246265f1119bd47ef27b9ef",
+      "started_at": "2026-08-24T14:49:36.070908+00:00",
+      "finished_at": "2026-08-24T14:49:36.081413+00:00",
+      "migration_name": "0115_signature_athlete_profiles",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "168392ca-c2df-4645-9fa9-781798f9c70d",
+      "logs": null,
+      "checksum": "571e3efeb18fd613868ae480b2634e16b439ca56ec0a4ce1ad8a705a00301d6d",
+      "started_at": "2026-08-24T14:49:36.085451+00:00",
+      "finished_at": "2026-08-24T14:49:36.116199+00:00",
+      "migration_name": "0116_bulk_schedule_assignment",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "0c5f6f80-4c87-4ac1-ac48-15e83fbd9394",
+      "logs": null,
+      "checksum": "8d4316460a643b2092608eea8538d2f91c2fdf11ce506f7074495258d9d386eb",
+      "started_at": "2026-08-24T14:49:36.120201+00:00",
+      "finished_at": "2026-08-24T14:49:36.133394+00:00",
+      "migration_name": "0117_badge_shift_breadth",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "8ac99dcf-93cd-4b42-859c-d180c47d7c8c",
+      "logs": null,
+      "checksum": "7a94567031f71adea58dfe9d8b885bea33e584ce0086a9c5d0c6cd64cad8053d",
+      "started_at": "2026-08-24T14:49:36.137554+00:00",
+      "finished_at": "2026-08-24T14:49:36.153548+00:00",
+      "migration_name": "0118_badge_checkout_breadth",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "50eec0bb-a043-422c-a682-6388343fd7ba",
+      "logs": null,
+      "checksum": "56c911f55e8d2c87ec8d9ff8de884f1d196174a58a25d0722656a122b5e6bac1",
+      "started_at": "2026-08-24T14:49:36.157792+00:00",
+      "finished_at": "2026-08-24T14:49:36.168939+00:00",
+      "migration_name": "0119_badge_return_moment",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "d4dab73b-cd52-4f49-8388-4ca93339ca8d",
+      "logs": null,
+      "checksum": "535f8dc2aeb2269b8a1c6d3c652055f78279a8e6a6eec546ecd03bc249784723",
+      "started_at": "2026-08-24T14:49:36.173337+00:00",
+      "finished_at": "2026-08-24T14:49:36.184292+00:00",
+      "migration_name": "0120_badge_app_open_eggs",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "21793800-756b-4c3a-af4d-e6e6959b1204",
+      "logs": null,
+      "checksum": "4b7f77f24a37607055f9ea132235c2c7f3c5696e7be49fc6005f5b82158fb8ed",
+      "started_at": "2026-08-24T14:49:36.188346+00:00",
+      "finished_at": "2026-08-24T14:49:36.198403+00:00",
+      "migration_name": "0121_calendar_event_results_backfill",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "73ad582f-55a5-444d-9f68-ef193f78267c",
+      "logs": null,
+      "checksum": "dc567c881e8d35ca8b81889e115a3e9a68adeb85adc08b22943af361c64e59fd",
+      "started_at": "2026-08-24T14:49:36.20239+00:00",
+      "finished_at": "2026-08-24T14:49:36.212921+00:00",
+      "migration_name": "0122_badge_short_notice",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "2327a419-46e4-4b3c-b780-6d84c3066f92",
+      "logs": null,
+      "checksum": "31996426d86bab653348103ae9ff2e2f3e387935ca0cbdc59e7ae3c7e4572335",
+      "started_at": "2026-08-24T14:49:36.216841+00:00",
+      "finished_at": "2026-08-24T14:49:36.22848+00:00",
+      "migration_name": "0123_calendar_event_summary_reclean",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "162e8ef9-959f-4155-a051-92d8265caa7e",
+      "logs": null,
+      "checksum": "e071b66bc2b1418c4b6a451120454ce73b891a4483e28ef189b3bf4336bfebe9",
+      "started_at": "2026-08-24T14:49:36.232228+00:00",
+      "finished_at": "2026-08-24T14:49:36.242316+00:00",
+      "migration_name": "0124_calendar_event_site",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "34c9d30b-2680-4d9e-b134-c1a93dc92211",
+      "logs": null,
+      "checksum": "b8debcbf66333da3b82f1eebac391c53b64df1d18e34a95f515864621d112f82",
+      "started_at": "2026-08-24T14:49:36.246208+00:00",
+      "finished_at": "2026-08-24T14:49:36.264115+00:00",
+      "migration_name": "0125_software_credentials",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "e20532c0-7a28-4149-b35a-cf256ed34295",
+      "logs": null,
+      "checksum": "9a53d2962330acade5d053f7942ca9da49a71337dfd620a616d67e1792862a0d",
+      "started_at": "2026-08-24T14:49:36.267839+00:00",
+      "finished_at": "2026-08-24T14:49:36.278823+00:00",
+      "migration_name": "0126_software_credential_visibility",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "a937cd20-e3e5-45c4-9e7e-605ae2dacab9",
+      "logs": null,
+      "checksum": "7c21075f56ecb0401b633dae314ea3665f65db7b81f19b13110ff4cdf7b16161",
+      "started_at": "2026-08-24T14:49:36.283061+00:00",
+      "finished_at": "2026-08-24T14:49:36.311486+00:00",
+      "migration_name": "0127_badge_catalog_expansion",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "ed88b133-1ab1-4c2b-b156-24a0ec125ad6",
+      "logs": null,
+      "checksum": "9ffe9ef330ec2663471714cb39cd87562295430581b3ed924aec703ebfc772b8",
+      "started_at": "2026-08-24T14:49:36.315261+00:00",
+      "finished_at": "2026-08-24T14:49:36.329033+00:00",
+      "migration_name": "0128_student_availability_date_ranges",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "37320941-0cf5-447b-9a9c-eaf6aa47b39b",
+      "logs": null,
+      "checksum": "53becd0581149068fcc8c5b9b68ee4e6cbf5fa876376608ec9f8f7df4db9b906",
+      "started_at": "2026-08-24T14:49:36.332699+00:00",
+      "finished_at": "2026-08-24T14:49:36.352294+00:00",
+      "migration_name": "0129_app_activity_report",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "d97cd2b4-79fe-4bc9-b716-5237bec07cb1",
+      "logs": null,
+      "checksum": "f1823f471455775ccdcd1c06317daf6714dfc7025a53d18a2bfa45da7a92368a",
+      "started_at": "2026-08-24T14:49:36.356036+00:00",
+      "finished_at": "2026-08-24T14:49:36.368812+00:00",
+      "migration_name": "0130_schedule_notification_debounce",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "0366eaae-43ef-47b4-9a3b-8054e5716d9c",
+      "logs": null,
+      "checksum": "37d9949b84378648e213ef38d6fec220f75f77df44e411cd32c64e8634c79063",
+      "started_at": "2026-08-24T14:49:36.372794+00:00",
+      "finished_at": "2026-08-24T14:49:36.397923+00:00",
+      "migration_name": "0131_event_credits",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "98895cd1-0288-40a9-ae60-5e198e7490ba",
+      "logs": null,
+      "checksum": "91fd34e2f9a6a542a810cd727a42fa0eba00aae163763319964683cee229c2ad",
+      "started_at": "2026-08-24T14:49:36.401809+00:00",
+      "finished_at": "2026-08-24T14:49:36.411953+00:00",
+      "migration_name": "0132_calendar_event_ties",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "4b642b9a-075f-4aca-964b-9fbcb2515725",
+      "logs": null,
+      "checksum": "d533203b25ffe86d21e9bb7083cd7fce19e30bedbc5239bc66a643a94113f663",
+      "started_at": "2026-08-24T14:49:36.415951+00:00",
+      "finished_at": "2026-08-24T14:49:36.426059+00:00",
+      "migration_name": "0133_calendar_event_ties_backfill",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "8259715e-c970-481b-bb7c-d777ab50a627",
+      "logs": null,
+      "checksum": "e4bba3dec18534edd61a3bd5d93a56170ecbaf1dc4ea79eae029a36f5967ad68",
+      "started_at": "2026-08-24T20:03:38.992439+00:00",
+      "finished_at": "2026-08-24T20:03:39.083772+00:00",
+      "migration_name": "0134_event_workers_rename",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "b07e9fb3-09ba-4c0d-a76a-7cde9fea3182",
+      "logs": null,
+      "checksum": "14b39d375fc682abcc73114fe36ebf9dfac6255f16054a4e200be0174abc57bc",
+      "started_at": "2026-08-27T18:25:14.739848+00:00",
+      "finished_at": "2026-08-27T18:25:14.937265+00:00",
+      "migration_name": "0135_brand_asset_library",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "d5d8ae1a-bc5e-4add-846a-41d621298ee3",
+      "logs": null,
+      "checksum": "225db52908c09a08493deb14a2b5d6ac1a545b07af63579dc3e82a0da7a8eb98",
+      "started_at": "2026-08-27T18:25:14.94265+00:00",
+      "finished_at": "2026-08-27T18:25:14.972151+00:00",
+      "migration_name": "0136_brand_asset_experience",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "b992c4a7-1e42-4266-9fb4-3c08c628084b",
+      "logs": null,
+      "checksum": "b51c7941c12cdf345f543fc39c8a62182bf04cb78f2e95deff7c81ec899355b1",
+      "started_at": "2026-08-28T21:41:59.284607+00:00",
+      "finished_at": "2026-08-28T21:41:59.430451+00:00",
+      "migration_name": "0137_web_push_subscriptions",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "509c4861-63c5-489d-bcd7-325f1958ffb5",
+      "logs": null,
+      "checksum": "b6a5e1d48ada7569c446cf4c27a0fe8ac8cae4c88fc88527cec3ef6d039d958e",
+      "started_at": "2026-08-28T21:41:59.433986+00:00",
+      "finished_at": "2026-08-28T21:41:59.470456+00:00",
+      "migration_name": "0138_sport_auto_assign_policy",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "17349381-1260-4260-8d4d-e410a576f912",
+      "logs": null,
+      "checksum": "ec77981a44cbfeacf4f2b91dc14c3ad49d6e012fca94f6fe078fbdc91be1f8f9",
+      "started_at": "2026-09-03T14:43:45.340244+00:00",
+      "finished_at": "2026-09-03T14:43:45.42239+00:00",
+      "migration_name": "0139_football_game_day_roles",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "ffae5586-4453-42df-8a64-f9c5cf6af629",
+      "logs": null,
+      "checksum": "cbea9491be98908451d3f0fdaeba450d58aa1f4ae111c33649509dd0e4d8984a",
+      "started_at": "2026-08-30T16:42:18.01168+00:00",
+      "finished_at": "2026-08-30T16:42:18.088103+00:00",
+      "migration_name": "0139_schedule_working_copy_undo_redo",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "e56566f2-7c64-4a5a-93e2-29977ce1b889",
+      "logs": null,
+      "checksum": "5f2579cf902f283a94e93d0854000e4668e1697d83eb4b921a2e9dbd4f87b6fe",
+      "started_at": "2026-09-03T14:43:45.427761+00:00",
+      "finished_at": "2026-09-03T14:43:45.537684+00:00",
+      "migration_name": "0140_varsity_season_ownership",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "a23fc5f3-a112-47e9-817c-d31d131f792b",
+      "logs": null,
+      "checksum": "0d745163af401be8526f709eb9fec523147ac262844fee9b14fee72fbc40df90",
+      "started_at": "2026-09-03T14:43:45.542457+00:00",
+      "finished_at": "2026-09-03T14:43:45.581362+00:00",
+      "migration_name": "0141_event_checkout_assignments",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "6aecf6aa-f78a-4899-92e2-7965ffb6581e",
+      "logs": null,
+      "checksum": "18552bb2c51c8fba351744b02f3bbf68a089179e139ab2fc63b628a682addd6b",
+      "started_at": "2026-09-03T19:39:14.216993+00:00",
+      "finished_at": "2026-09-03T19:39:14.314923+00:00",
+      "migration_name": "0142_combined_schedule_events",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "97310de3-c93b-4bdf-b277-2b48cb6335c8",
+      "logs": null,
+      "checksum": "a874fa8562484a9cf4ac8ae25e92ee6b1376aad19ea88fd84f09f812e70d42a2",
+      "started_at": "2026-09-03T20:39:02.640538+00:00",
+      "finished_at": "2026-09-03T20:39:02.692098+00:00",
+      "migration_name": "0143_shared_checkout_custody",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "cb513f22-fd8f-4176-bbb8-ff590a24863e",
+      "logs": null,
+      "checksum": "2d394a2612727589e82686022b75349909d200789d38645369e284e965f408b7",
+      "started_at": "2026-09-08T18:56:46.689521+00:00",
+      "finished_at": "2026-09-08T18:56:46.745073+00:00",
+      "migration_name": "0144_restore_asset_allocation_overlap_guard",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "50c2982d-f031-4adc-aab7-416fb555ccb1",
+      "logs": null,
+      "checksum": "0baec91b50c7b459d16ab56148fe0484a67b88864613c18d5c4f6588ee4469c8",
+      "started_at": "2026-09-08T18:56:46.748523+00:00",
+      "finished_at": "2026-09-08T18:56:46.782422+00:00",
+      "migration_name": "0145_restore_declared_lookup_indexes",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "33b84e5d-cf8f-4c29-80bf-7723b01573d1",
+      "logs": null,
+      "checksum": "46ef032193813fb9e5b5337a0561404c43ef59a40da326f527502bf8f7801391",
+      "started_at": "2026-09-10T22:49:47.429053+00:00",
+      "finished_at": "2026-09-10T22:49:47.487991+00:00",
+      "migration_name": "0146_resource_import_key",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "0eaa600e-46d4-45a3-82ee-677d69dd08a5",
+      "logs": null,
+      "checksum": "c0086bef17e8bea9decf51c6c85257a707d533ff3a60faeeda91f72d886b6b7b",
+      "started_at": "2026-09-18T18:15:37.708346+00:00",
+      "finished_at": "2026-09-18T18:15:37.876202+00:00",
+      "migration_name": "0147_badge_mvp_repair",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "5bb5e774-418b-4174-9292-e85888067cc7",
+      "logs": null,
+      "checksum": "c34a436d06735865568fe60f4ba421f9f45b8b749855051b1e79f7698b405f6a",
+      "started_at": "2026-09-18T18:15:37.879252+00:00",
+      "finished_at": "2026-09-18T18:15:37.924869+00:00",
+      "migration_name": "0148_event_timing_lock",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "650b7961-5ce2-4741-81a4-af4f8248e9c1",
+      "logs": null,
+      "checksum": "787609bd37b7b8ffeee20ec6132978942bbdc0e23fac7392fdce3a5e3ed9d2f9",
+      "started_at": "2026-09-18T18:15:37.927764+00:00",
+      "finished_at": "2026-09-18T18:15:37.948323+00:00",
+      "migration_name": "0149_kit_sport_code",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "bff8ebf1-8b2d-4034-a70f-25bbfbb2f9a6",
+      "logs": null,
+      "checksum": "79a11aa03dc28ace8077ea66272273e924041c2ba20b4173ec3c2157c4248e1a",
+      "started_at": "2026-09-18T18:15:37.951105+00:00",
+      "finished_at": "2026-09-18T18:15:37.980999+00:00",
+      "migration_name": "0150_kit_gameday_role",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "53eb8390-8af5-4c0c-b2b8-17e804244e7e",
+      "logs": null,
+      "checksum": "55f3794c448fd682a28d6c035a14be8e01d372ec8d9725e34a16993c93f7d4ab",
+      "started_at": "2026-09-20T23:54:05.838164+00:00",
+      "finished_at": "2026-09-20T23:54:05.968904+00:00",
+      "migration_name": "0151_asset_tag_sort_key",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    },
+    {
+      "id": "3baa6328-06de-41ec-8350-02d7a7b3cc0c",
+      "logs": null,
+      "checksum": "03d6e9d74536e0223e2b824e903f3a8867ab6d954d7e673d3eb109aa0527e8de",
+      "started_at": "2026-09-20T23:54:05.972928+00:00",
+      "finished_at": "2026-09-20T23:54:06.008639+00:00",
+      "migration_name": "0152_notification_booking_id",
+      "rolled_back_at": null,
+      "applied_steps_count": 1
+    }
+  ],
+  "exceptions": [
+    {
+      "id": "11b65832-d025-4f44-a46f-4305f9884012",
+      "name": "0001_manual_constraints",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "1a4d5391-13fa-4a3b-a925-f246e10e3571",
+      "name": "0002_source_reservation_id",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "8276af0c-db59-416a-900f-105ccaba6c7c",
+      "name": "0003_phase1_models",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "c4ee915a-064c-4717-b49f-4e2b973a8267",
+      "name": "0004_event_booking_linkage",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "7229dcb8-c7e7-4127-99cc-6a132547bc5b",
+      "name": "0005_add_categories",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "461c8e59-e4ef-4816-84f8-1a937c780667",
+      "name": "0006_asset_policy_toggles",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "a0547a23-12dc-4d2c-8ab7-0c1e78cdf3ee",
+      "name": "0007_numbered_bulk_unit_tracking",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "8569dd93-a924-43c9-8546-5d61e1ec96ee",
+      "name": "0008_escalation_config",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "8720b8a2-773a-44db-98d9-9d002e815c96",
+      "name": "0009_item_bundling",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "ac4282bc-835d-4cba-bdf1-86193b9e2686",
+      "name": "0009_shift_calendar",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "e3fc90f1-ceb7-44b5-b57c-8c8d22b829dc",
+      "name": "0010_favorite_items",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "baf32e46-88f2-42fc-b6bd-727155875a24",
+      "name": "0011_booking_ref_number",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "cd443776-07f2-48c3-9707-5cb0f48f3eaf",
+      "name": "0012_add_password_reset_token",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "8abdb975-6c06-42ee-bce6-bc7bcd413f4d",
+      "name": "0013_shift_assignment_booking_link",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "50082250-05a2-4c77-8ad9-d0ec4b8c1ab1",
+      "name": "0014_add_user_avatar_url",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "089baf0a-10f0-4c91-8fe7-7dbbe98c82d2",
+      "name": "0015_make_serial_number_optional",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "02635bc8-d03d-4893-832f-dfa7e5334758",
+      "name": "0016_add_user_active_field",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "30b9b6c8-3073-47a1-af38-6dc2eb156d92",
+      "name": "0017_add_source_payload",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "aea63845-19c3-4a53-b7fe-ebb642f58294",
+      "name": "0018_add_booking_kit_id",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "bfc0b4b9-0d11-4608-9535-979bdc06b282",
+      "name": "0019_add_location_is_home_venue",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "358ad963-c077-4a86-ade6-ac3b9443a4b1",
+      "name": "0020_add_performance_indexes",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "f61fff58-7ac6-4349-83c7-0e3322d02dda",
+      "name": "0021_add_trigram_search_indexes",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "cc2b7339-a0c1-44d5-8673-87a3f1365079",
+      "name": "0022_add_booking_photos",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "8277da4a-bcc2-4e2b-b20e-5e182712b75b",
+      "name": "0023_add_checkin_item_reports",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "9a78ef5a-caea-4207-9915-2c35513098f7",
+      "name": "0024_add_calendar_event_is_hidden",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "cd46bd89-aa8b-471f-801f-255d63e3e53b",
+      "name": "0025_consolidate_departments",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "55e69b69-1acd-400f-ac9b-90787e7be858",
+      "name": "0026_add_allowed_emails",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "39f3449a-fa78-421a-9957-63087d8a75fe",
+      "name": "0027_seed_allowed_emails",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "406f64bc-2904-4731-906a-a7421198acdd",
+      "name": "0028_add_bulk_sku_images_and_kit_bulk_members",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "7020d59e-c65a-4112-9512-efa07ea825a9",
+      "name": "0029_add_kiosk_devices",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "551a2b90-4731-47aa-a121-09847dec35cf",
+      "name": "0030_add_sport_call_times",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "ccb1e4ba-0975-417d-b849-53e04c37ad3e",
+      "name": "0031_add_bulk_stock_balance_location_index",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "7f9191a0-0e14-4a67-9ce2-dce30ca6e44c",
+      "name": "0032_add_guides",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "f71b4e4a-aaa7-4223-ae4d-ed34a877b2a4",
+      "name": "0033_harden_bulk_item_quantities",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "82e28cff-05f6-4ec4-8e31-5d59759b13fe",
+      "name": "0034_add_student_availability",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "04c0a0c2-d952-441e-9c78-86b9c756149e",
+      "name": "0035_add_shift_assignment_conflict",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "979c10d2-b2f5-40b7-b484-a0ce12916d73",
+      "name": "0036_add_travel_roster",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "127eea33-9334-4251-84cb-ae757a805b6c",
+      "name": "0037_add_shift_archiving",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "22bd7258-e1d6-421b-97b6-4ecb12577980",
+      "name": "0038_add_bulk_sku_fields",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "341c191f-6cab-4323-8084-2288cd8079b4",
+      "name": "0039_add_pending_pickup_status",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "bc24afdf-74ef-4c30-823e-9767bbb9b6b7",
+      "name": "0040_add_device_tokens",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "4ed4806b-5d0e-486c-bd29-938db5896e93",
+      "name": "0041_reseed_escalation_rules",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "38af0f86-4adb-4a07-9a12-047254e99e84",
+      "name": "0042_booking_events",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "3e6ad445-af7e-4d7c-a7ae-492ee087d596",
+      "name": "0043_license_codes",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "5afa59dc-874b-4889-bdcb-316c63b3758c",
+      "name": "0044_license_claim_user_set_null",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "a9bf8ea7-bd49-450a-8dff-16837419caa8",
+      "name": "0045_drop_guide_order",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "71fd0c3f-80c3-4a94-8be2-23f834c8411d",
+      "name": "0046_user_notification_prefs",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "ac26577c-19fb-4963-9b65-73fc457dbdf3",
+      "name": "0047_user_ics_token",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "6a3fcf90-8646-41a0-a3b9-e5b3ca65d009",
+      "name": "0048_user_profile_fields",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "316502a9-4fc9-4504-90e0-fc075835fe0e",
+      "name": "0049_add_operational_indexes",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "860c0238-1c69-4cf4-99e5-dfa848197b85",
+      "name": "0050_audit_log_created_at_index",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "de975cb3-ab2f-47d0-b3c9-7f60bae8f0d9",
+      "name": "0051_checkin_report_image_url",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "81df663b-cee3-4487-acc3-63c65bca309c",
+      "name": "0052_calendar_source_sync_lease",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "d1a0466f-a5f0-43e9-bbcf-1f2a1bafdaa5",
+      "name": "0053_user_force_password_change",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "319ca85c-c6be-4433-a3de-203de29d3131",
+      "name": "0054_booking_search_trigram_indexes",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "f7e41413-906f-4dcf-b68c-424068050fb0",
+      "name": "0055_add_badges",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "02c44491-b630-4b3f-83c1-5bb9cf33cf1a",
+      "name": "0056_add_scan_badge_counter_type",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "d8652343-fe56-4022-8c09-85e305c3fc70",
+      "name": "0057_add_guide_markdown",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "7d228e91-b29e-4b56-8e25-a1a7d44b755b",
+      "name": "0058_guide_personalization",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "05d2c080-7a72-4309-b285-055dc20a819d",
+      "name": "0059_add_user_slack_handle",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "e4789db3-2a36-4b8a-9a31-8c71659658eb",
+      "name": "0060_add_user_slack_profile_url",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "a7e24207-bd5b-4706-8e8c-f4e1e3a7428e",
+      "name": "0061_add_guide_freshness",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "598a12d2-16fe-409a-b2be-2144b59d395c",
+      "name": "0062_kiosk_session_expires_at",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "a0f4f6ae-2f08-46a3-80a7-4796a5ffb6bf",
+      "name": "0063_allow_manual_calendar_events_source_null",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "03441f96-9732-4fc9-a431-20eb9026d1c2",
+      "name": "0064_seed_badge_definitions",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "d30fe109-4a3e-461d-af24-bc8478e7e013",
+      "name": "0065_add_booking_completed_at",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "bbc88c7c-b40f-4843-b720-33c0c506edca",
+      "name": "0066_retire_shift_badges",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "e4ccc787-6ef3-476a-b68b-bcf564cf249d",
+      "name": "0067_add_user_last_active",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "e1f32b1a-d389-4cab-98ef-479bf1364271",
+      "name": "0068_rename_guides_to_resources",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "789d1cd4-5469-4265-8685-228bf48d3dac",
+      "name": "0069_add_asset_image_rehost_attempts",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "b6d395d9-e4e1-4372-8b2e-3fa689656a23",
+      "name": "0070_add_event_edit_locks_and_archive",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "c04fd569-93aa-49f5-8d48-2b2cb6bcaca0",
+      "name": "0071_add_event_subtitle",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "1916c1bb-2ddd-450a-8b2e-f09ec9950b95",
+      "name": "0072_add_event_location_locked",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "37601363-63d6-4734-80c9-e48c8b2ac559",
+      "name": "0073_shift_staffing_mvp",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "b1c9fd57-37bc-41dd-8bf0-bdd3f03c79a7",
+      "name": "0074_student_availability_ad_hoc",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "7709d9af-d9a0-4f48-ba1f-1d79c94c4a08",
+      "name": "0075_add_firmware_watch_targets",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "c369c7b1-f39a-4af3-9e9e-f3d1231f822d",
+      "name": "0076_add_firmware_watch_support_mode",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "8de34588-b51c-4f4e-aa8d-905f5aa181b1",
+      "name": "0077_add_bulk_sku_image_rehost_attempts",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "72c4d64b-716d-4317-b212-15b9b7a91e67",
+      "name": "0077_bulk_unit_label_tracking",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "8777c700-f925-4c2b-894a-34062dc110b1",
+      "name": "0078_fix_scan_events_phase_enum",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "66f68826-1678-4cd2-979f-ee79d72cf479",
+      "name": "0079_user_wiscard_and_scan_location_evidence",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "21b8c065-c000-4fe0-ad38-dc7c098db4d8",
+      "name": "0080_schedule_publish_ack_contract",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "3bc9c079-e01a-4747-9790-3d6f9a0c1f8d",
+      "name": "0081_schedule_preferences_time_off",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "64b160cf-bd6e-415a-a298-22bf5543a8c9",
+      "name": "0082_user_staffing_type",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "2551ce82-485d-4163-b18e-61f5287923cf",
+      "name": "0083_hide_smoke_users",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "559ac4bf-aae4-4054-a521-f89c078f2754",
+      "name": "0084_unique_active_bulk_unit_allocation",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "65a9496f-44e3-4610-9233-8f9c8705349e",
+      "name": "0085_item_family_favorites",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "51656380-becf-48bc-a4c5-5e09a6fd4267",
+      "name": "0086_booking_pickup_kiosk",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "c19f78f0-bbc8-4b2a-804b-465441b15edb",
+      "name": "0087_resource_type",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "09b69775-317a-4d0b-bf6a-1a112863837f",
+      "name": "0088_checkout_live_activity_tokens",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "820b8317-551d-4f35-af27-7750d60d88ca",
+      "name": "0089_kiosk_activation_code_expiry",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "936dfb7a-d244-4cd9-8a7b-ceb32a0bf862",
+      "name": "0090_drop_premier_event_columns",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    },
+    {
+      "id": "035d0f79-0b90-4a9e-95b8-442214c6a76a",
+      "name": "0091_checkout_live_activity_push_to_start",
+      "provenance": "unknown",
+      "note": "Prisma schema bootstrap stamped this receipt without executing the historical SQL. Git d5c32591 contains the matching bootstrap recorder and SQL checksum."
+    }
+  ],
+  "reviewedPending": [
+    "0153_restore_bulk_item_and_notification_foreign_keys",
+    "0154_restore_bootstrap_only_postgres_objects"
+  ]
+}
