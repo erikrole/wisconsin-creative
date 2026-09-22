@@ -37,7 +37,7 @@ describe("schedule source-of-truth and browser smoke contracts", () => {
     expect(authSetup).toContain("storageState({ path: AUTH_FILE })");
     expect(authSetup).toContain("npm run auth:local");
     expect(config).toContain("loadLocalPlaywrightEnv");
-    expect(packageJson.scripts?.["auth:local"]).toContain("bootstrap-local-session.mjs");
+    expect(packageJson.scripts?.["auth:local"]).toBe("node scripts/preview.mjs auth");
 
     for (const route of [
       'path: "/"',

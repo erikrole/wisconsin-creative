@@ -40,3 +40,35 @@ export const catalogSnapshotSql = `SELECT jsonb_build_object(
   'views', (SELECT jsonb_agg(jsonb_build_object('name',c.relname,'kind',c.relkind,'definition',pg_get_viewdef(c.oid)) ORDER BY c.relname)
     FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('v','m'))
 ) AS catalog`;
+
+// V1 is immutable because existing approvals use its digest. V2 also covers
+// database objects Prisma cannot describe; counters and data are not structure.
+export const catalogSnapshotV2Sql = `SELECT catalog || jsonb_build_object(
+  'catalogVersion', 2,
+  'tableAccess', (SELECT jsonb_agg(jsonb_build_object('name',c.relname,'forceRls',c.relforcerowsecurity) ORDER BY c.relname)
+    FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+    WHERE n.nspname='public' AND c.relkind IN ('r','p') AND c.relname <> '_prisma_migrations'),
+  'collations', (SELECT jsonb_agg(jsonb_build_object('table',c.relname,'column',a.attname,'schema',cn.nspname,'collation',co.collname) ORDER BY c.relname,a.attname)
+    FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid JOIN pg_namespace n ON n.oid=c.relnamespace
+    JOIN pg_collation co ON co.oid=a.attcollation JOIN pg_namespace cn ON cn.oid=co.collnamespace
+    WHERE n.nspname='public' AND c.relkind IN ('r','p') AND c.relname <> '_prisma_migrations' AND a.attnum>0 AND NOT a.attisdropped),
+  'triggerState', (SELECT jsonb_agg(jsonb_build_object('table',c.relname,'name',t.tgname,'enabled',t.tgenabled) ORDER BY c.relname,t.tgname)
+    FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid JOIN pg_namespace n ON n.oid=c.relnamespace
+    WHERE n.nspname='public' AND NOT t.tgisinternal),
+  'functions', (SELECT jsonb_agg(jsonb_build_object('name',p.proname,'arguments',pg_get_function_identity_arguments(p.oid),
+    'definition',pg_get_functiondef(p.oid),'configuration',p.proconfig,'securityDefiner',p.prosecdef) ORDER BY p.proname,pg_get_function_identity_arguments(p.oid))
+    FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+    WHERE n.nspname='public' AND p.prokind IN ('f','p') AND NOT EXISTS
+      (SELECT 1 FROM pg_depend d WHERE d.classid='pg_proc'::regclass AND d.objid=p.oid AND d.deptype='e')),
+  'sequences', (SELECT jsonb_agg(jsonb_build_object('name',c.relname,'type',format_type(s.seqtypid,NULL),'start',s.seqstart,
+    'increment',s.seqincrement,'min',s.seqmin,'max',s.seqmax,'cache',s.seqcache,'cycle',s.seqcycle) ORDER BY c.relname)
+    FROM pg_sequence s JOIN pg_class c ON c.oid=s.seqrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public'),
+  'extensions', (SELECT jsonb_agg(jsonb_build_object('name',e.extname,'schema',n.nspname,'version',e.extversion) ORDER BY e.extname)
+    FROM pg_extension e JOIN pg_namespace n ON n.oid=e.extnamespace WHERE e.extname IN ('btree_gist','pg_trgm'))
+) AS catalog FROM (${catalogSnapshotSql}) v1`;
+
+export function catalogSql(version = 1) {
+  if (version === 1) return catalogSnapshotSql;
+  if (version === 2) return catalogSnapshotV2Sql;
+  throw new Error(`Unsupported catalog version: ${version}`);
+}

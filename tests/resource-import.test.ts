@@ -100,11 +100,12 @@ function mockTransaction(tx: ReturnType<typeof transactionClient>) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.stubEnv("BLOB_READ_WRITE_TOKEN", "test-public-store");
   vi.mocked(head).mockRejectedValue(new BlobNotFoundError());
   vi.mocked(put).mockResolvedValue({ url: "https://blob.example/diagram.png" } as never);
   vi.mocked(db.resource.findUnique).mockResolvedValue(null as never);
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
 describe("resource import manifest", () => {
   it("rejects duplicate image keys and undeclared placeholders", () => {

@@ -99,24 +99,13 @@ npm run test:e2e:smoke
 
 ### Local Preview identity bootstrap
 
-Use this path for authenticated local Preview work on `http://127.0.0.1:3000`. Do not mint session rows by hand, and do not point Playwright at production.
-
-```bash
-npm run dev:preview
-npm run auth:local
-```
-
-`npm run dev:preview` keeps Preview variables in memory, replaces a short provider `SESSION_SECRET` with the gitignored local development secret, retargets Preview's empty default `neondb` database to `gear-tracker`, refuses the production Neon endpoint, and overlays local Preview flags from `.env.development.local`. Unless that file explicitly sets `BADGES_ENABLED=false`, local Preview starts with badges on.
-
-`npm run auth:local` then:
-
-1. Refuses Vercel production env, production Neon, and non-loopback app URLs.
-2. Uses the hidden `admin@creative.local` smoke identity only.
-3. Signs in through `POST /api/auth/login` and writes Playwright storage to ignored `test-results/playwright/auth/user.json`.
-4. Stores `PLAYWRIGHT_EMAIL`, `PLAYWRIGHT_PASSWORD`, `PLAYWRIGHT_ROLE`, `PLAYWRIGHT_BASE_URL`, and `PLAYWRIGHT_TARGET_ISOLATED=1` in gitignored `.env.development.local`.
-5. Probes `GET /api/me` and prints identity fields without passwords, tokens, or secrets.
-
-If the stored smoke password is missing or rejected, the script rotates that hidden `@creative.local` password on the isolated Preview or local database only. Playwright loads those gitignored values automatically for local runs and still ignores them in CI. Session cookies expire after 12 hours; rerun `npm run auth:local` or the Playwright auth setup to refresh them. Expired server sessions now clear the cookie instead of leaving a stale `gear-tracker-session` value in the browser.
+Follow [PREVIEW_ENVIRONMENTS.md](PREVIEW_ENVIRONMENTS.md). `preview:setup` verifies
+and attaches the current branch's sanitized environment; `dev:preview` prints the
+actual port; `auth:local` uses the recorded server and branch-specific cookie.
+It signs in as hidden synthetic `admin@creative.local`, writes ignored Playwright
+state and local test settings, then probes `/api/me`. A rejected managed-preview
+password fails rather than rotating another agent's credentials. Sessions expire
+after 12 hours; rerun `auth:local` to refresh. Never point the harness at production.
 
 The harness rejects `wisconsincreative.com` and its known legacy production host even if the isolation flag is set. Set comma-separated `PLAYWRIGHT_PRODUCTION_HOSTS` when another hostname must be treated as production. Do not commit auth state, weaken normal auth, seed production, or use production credentials.
 

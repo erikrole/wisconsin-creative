@@ -57,18 +57,21 @@ closes physical custody. The signed-in web scan surface is lookup-only.
 
 ## Run it locally
 
+Use Node 22 and a named feature branch. The branch's managed environment is
+shared across Claude, Cursor, and Codex:
+
 ```bash
-cp .env.example .env
-npm install
-npm run prisma:generate
-npm run db:migrate:check
-npm run dev
+npm ci
+npm run preview:setup
+npm run dev:preview
+# In a second terminal:
+npm run auth:local
 ```
 
-For Neon connection setup, incremental migrations, production drift checks, or
-an isolated empty database, follow
-[`docs/PRISMA_NEON_RUNBOOK.md`](docs/PRISMA_NEON_RUNBOOK.md). Do not create a
-new `init` migration against the existing migration chain.
+See [Preview environments and handoffs](docs/PREVIEW_ENVIRONMENTS.md) for first
+provisioning, Vercel sign-in, ports, retention, and the current rollout boundary.
+For incremental migrations and recovery, use
+[the Prisma + Neon runbook](docs/PRISMA_NEON_RUNBOOK.md).
 
 ## Verify changes
 
@@ -90,8 +93,9 @@ closeout matrix lives in
 
 ## Deployment and releases
 
-Vercel remains the deployment system: Git-connected changes produce preview
-deployments, and `main` is the production line. GitHub Releases are deliberate
+Vercel deploys `main` to production. The review site refreshes manually. Managed
+PR previews use isolated branch resources; activation is tracked in the
+[preview runbook](docs/PREVIEW_ENVIRONMENTS.md). GitHub Releases are deliberate
 CalVer milestone records, not a second production trigger.
 
 Release versions use `YYYY.M.N`, where `N` increments within the calendar

@@ -24,6 +24,7 @@
 | `@upstash/redis` | `^1.38.0` |
 | `@vercel/analytics` | `1.6.1` |
 | `@vercel/blob` | `^2.4.1` |
+| `@vercel/functions` | `3.9.7` |
 | `@vercel/speed-insights` | `2.0.0` |
 | `barcode-detector` | `^3.2.0` |
 | `bcryptjs` | `^3.0.3` |
@@ -34,7 +35,7 @@
 | `geist` | `^1.7.2` |
 | `lucide-react` | `^0.577.0` |
 | `motion` | `^12.40.0` |
-| `next` | `^15.5.21` |
+| `next` | `^15.5.25` |
 | `postcss` | `^8.5.25` |
 | `qrcode` | `^1.5.4` |
 | `radix-ui` | `^1.5.0` |
@@ -69,7 +70,7 @@
 | `@types/web-push` | `^3.6.4` |
 | `@vitest/coverage-v8` | `^3.2.6` |
 | `eslint` | `^9.39.4` |
-| `eslint-config-next` | `^15.5.16` |
+| `eslint-config-next` | `^15.5.25` |
 | `plist` | `^5.0.0` |
 | `prisma` | `^6.19.3` |
 | `typescript` | `5.9.3` |
@@ -77,13 +78,13 @@
 
 ## Scripts
 
-- `analyze`: `node scripts/guard-next-build.mjs && ANALYZE=true next build`
+- `analyze`: `node scripts/run-next.mjs analyze`
 - `audit:ios`: `bash scripts/ios-audit-inventory.sh`
 - `audit:ios:gaps`: `bash scripts/ios-audit-inventory.sh --gaps`
 - `audit:item-data`: `node --env-file=.env scripts/audit-item-data.mjs`
-- `auth:local`: `npx --yes vercel@latest env run -e preview --project wisconsin-creative --scope erikrole -- node scripts/bootstrap-local-session.mjs`
-- `build`: `node scripts/guard-next-build.mjs && node scripts/prisma-migrate-deploy.mjs && next build`
-- `build:app`: `node scripts/guard-next-build.mjs && next build`
+- `auth:local`: `node scripts/preview.mjs auth`
+- `build`: `node scripts/run-next.mjs build`
+- `build:app`: `node scripts/run-next.mjs build:app`
 - `cleanup:item-data`: `node --env-file=.env scripts/cleanup-item-data.mjs`
 - `codemap`: `node scripts/generate-codemaps.mjs`
 - `codemap:check`: `node scripts/generate-codemaps.mjs --check`
@@ -98,11 +99,11 @@
 - `db:migrate:raw`: `prisma migrate dev --create-only`
 - `db:migrate:status`: `node scripts/prisma-migrate-health.mjs`
 - `db:seed`: `node prisma/seed.mjs`
-- `db:setup`: `node --env-file=.env scripts/setup-db.mjs`
+- `db:setup`: `node scripts/bootstrap-empty-database.mjs`
 - `demo:cleanup:app-review`: `APP_REVIEW_DEMO_MODE=cleanup node --env-file=.env scripts/seed-app-review-demo.mjs`
 - `demo:seed:app-review`: `node --env-file=.env scripts/seed-app-review-demo.mjs`
-- `dev`: `next dev`
-- `dev:preview`: `npx --yes vercel@latest env run -e preview --project wisconsin-creative --scope erikrole -- node scripts/start-preview-dev.mjs`
+- `dev`: `node scripts/preview.mjs dev`
+- `dev:preview`: `node scripts/preview.mjs dev`
 - `drift:ios`: `bash scripts/ios-drift-check.sh`
 - `drift:ios:warn`: `bash scripts/ios-drift-check.sh --warn`
 - `eval:skills`: `python3 -B scripts/evaluate-skills.py`
@@ -116,13 +117,21 @@
 - `lint:summary`: `node scripts/lint-summary.mjs`
 - `migrate`: `node scripts/prisma-migrate-deploy.mjs`
 - `postinstall`: `prisma generate`
-- `predev`: `node scripts/ensure-dev-env.mjs`
+- `preview:attach`: `node scripts/preview.mjs attach`
+- `preview:cleanup`: `node scripts/cleanup-previews.mjs`
+- `preview:doctor`: `node scripts/preview.mjs doctor`
+- `preview:migrate`: `node scripts/preview.mjs migrate`
+- `preview:pin`: `node scripts/preview.mjs pin`
+- `preview:setup`: `node scripts/preview.mjs setup`
+- `preview:status`: `node scripts/preview.mjs status`
+- `preview:unpin`: `node scripts/preview.mjs unpin`
 - `prisma:generate`: `prisma generate`
 - `prisma:migrate`: `prisma migrate dev`
 - `release`: `bash scripts/release.sh`
+- `review:refresh`: `node scripts/refresh-review.mjs`
 - `smoke:collaborator`: `node scripts/collaborator-deploy-smoke.mjs`
 - `smoke:deploy`: `node scripts/deploy-smoke.mjs`
-- `start`: `next start`
+- `start`: `node scripts/run-next.mjs start`
 - `test`: `vitest run`
 - `test:coverage`: `vitest run --coverage`
 - `test:e2e:smoke`: `playwright test`

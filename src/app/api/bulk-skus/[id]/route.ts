@@ -7,6 +7,7 @@ import { createAuditEntry } from "@/lib/audit";
 import { buildActiveBulkUnitAllocationMap } from "@/lib/bulk-unit-status";
 import { summarizeItemFamilyState } from "@/lib/item-family-state";
 import { sanitizeCollaboratorBulkItem } from "@/lib/collaborator-gear";
+import { Prisma } from "@prisma/client";
 
 export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
   requirePermissionOrCollaboratorCapability(user, "bulk_sku", "view", "GEAR_CATALOG_VIEW");
@@ -175,7 +176,16 @@ export const DELETE = withAuth<{ id: string }>(async (_req, { user, params }) =>
     throw new HttpError(409, "Cannot delete: this SKU has booking history.");
   }
 
-  await db.bulkSku.delete({ where: { id: params.id } });
+  try {
+    await db.bulkSku.delete({ where: { id: params.id } });
+  } catch (error) {
+    // A booking can acquire the SKU between the friendly read and delete.
+    // The foreign key is authoritative; report the losing race as a conflict.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
+      throw new HttpError(409, "Cannot delete: this item is now referenced by another record. Archive it instead.");
+    }
+    throw error;
+  }
 
   await createAuditEntry({
     actorId: user.id,

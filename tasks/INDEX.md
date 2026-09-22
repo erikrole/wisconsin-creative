@@ -37,6 +37,8 @@ Audit files intentionally remain at root for now because the repo audit skills r
 
 ## Active Follow-up Ledgers
 
+- `infrastructure-hardening-plan-2026-09-22.md` - Vercel/Neon repairs, branch previews, cross-agent handoff and pending source/cutover gates.
+
 - `ios-entry-point-hardening-plan-2026-09-16.md` - one destination map for quick actions, Control Center, deep links, and every notification family.
 
 - `schedule-mvp-parity-plan-2026-09-16.md` - Schedule web/iOS trust pass plus UI polish: claim pause, ended-event publish recovery, native Publish now, combined-event read collapse, multi-shift display, and trade-count honesty.

@@ -77,6 +77,7 @@ export function evaluateMigrationHealth(localMigrations, migrationRows, localChe
   if (baseline) assertBaselineFiles(baseline, localChecksums);
   const exceptions = new Map((baseline?.exceptions ?? []).map((entry) => [entry.id, entry]));
   const frozenRows = new Map((baseline?.receipts ?? []).map((row) => [row.id, row]));
+  const completedByName = new Map();
 
   for (const row of migrationRows) {
     const migrationName = row.migration_name;
@@ -86,6 +87,9 @@ export function evaluateMigrationHealth(localMigrations, migrationRows, localChe
     }
 
     if (row.finished_at) {
+      const completed = completedByName.get(migrationName) ?? [];
+      completed.push(row);
+      completedByName.set(migrationName, completed);
       appliedNames.add(migrationName);
       if (localMigrations.includes(migrationName)) {
         const exception = exceptions.get(row.id);
@@ -113,12 +117,16 @@ export function evaluateMigrationHealth(localMigrations, migrationRows, localChe
   ).length;
 
   const problems = [];
+  const unexpectedDuplicates = [...completedByName].filter(([, rows]) => rows.length > 1
+    && rows.some((row) => !row.id || canonical(frozenRows.get(row.id)) !== canonical(row)))
+    .map(([name]) => name).sort();
   if (pending.length > 0) problems.push(`${pending.length} pending local migration(s)`);
   if (unresolvedFailed.length > 0) problems.push(`${unresolvedFailed.length} unresolved failed migration row(s)`);
   if (appliedDbOnly.length > 0) problems.push(`${appliedDbOnly.length} applied DB migration(s) missing locally`);
   if (!newestLocalApplied) problems.push(`newest local migration is not applied: ${newestLocal}`);
   if (checksumMismatches.size > 0) problems.push(`${checksumMismatches.size} applied migration checksum mismatch(es)`);
   if (unverifiedChecksums.size > 0) problems.push(`${unverifiedChecksums.size} applied migration checksum(s) unverified`);
+  if (unexpectedDuplicates.length > 0) problems.push(`${unexpectedDuplicates.length} unexpected duplicate migration receipt(s)`);
 
   return {
     ok: problems.length === 0,
@@ -128,6 +136,7 @@ export function evaluateMigrationHealth(localMigrations, migrationRows, localChe
     appliedDbOnly,
     pending,
     unresolvedFailed,
+    unexpectedDuplicates,
     rolledBack,
     checksumMismatches: [...checksumMismatches].sort(),
     unverifiedChecksums: [...unverifiedChecksums].sort(),
@@ -153,6 +162,7 @@ function printHealthReport(health) {
   printList("Rolled-back rows", health.rolledBack);
   printList("Applied SQL checksum mismatches", health.checksumMismatches);
   printList("Unverified applied SQL checksums", health.unverifiedChecksums);
+  printList("Unexpected duplicate receipts", health.unexpectedDuplicates);
   printList("Preview baseline: original SQL provenance UNKNOWN", health.baselinedUnknown);
   printList("Preview baseline: verified historical SQL version differs from local", health.baselinedHistorical);
 

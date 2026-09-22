@@ -9,7 +9,7 @@ const withBundleAnalyzer = bundleAnalyzer({
 
 const isVercelDeployment = process.env.VERCEL === "1";
 
-const nextConfig: NextConfig = {
+const baseConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   compress: true,
@@ -95,8 +95,13 @@ const nextConfig: NextConfig = {
   },
 };
 
+const development = process.env.WC_NEXT_MODE === "dev" || process.env.NODE_ENV === "development";
+const nextConfig: NextConfig = {
+  ...baseConfig,
+  distDir: isVercelDeployment ? ".next" : development ? ".next/dev" : ".next/build",
+  typescript: { ...baseConfig.typescript, tsconfigPath: development ? "tsconfig.dev.json" : "tsconfig.json" },
+};
 const config = withWorkflow(withBundleAnalyzer(nextConfig));
-
 export default withSentryConfig(config, {
   // Upload source maps only when SENTRY_AUTH_TOKEN is set (CI/Vercel)
   silent: !process.env.SENTRY_AUTH_TOKEN,

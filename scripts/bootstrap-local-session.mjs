@@ -95,16 +95,17 @@ function persistLocalPlaywrightEnv({
   email,
   password,
   role,
+  baseURL,
 }) {
   const filePath = join(rootDir, ".env.development.local");
   writeDotenvValue(filePath, "PLAYWRIGHT_EMAIL", email);
   writeDotenvValue(filePath, "PLAYWRIGHT_PASSWORD", password);
   writeDotenvValue(filePath, "PLAYWRIGHT_ROLE", role);
-  writeDotenvValue(filePath, "PLAYWRIGHT_BASE_URL", DEFAULT_BASE_URL);
+  writeDotenvValue(filePath, "PLAYWRIGHT_BASE_URL", baseURL);
   writeDotenvValue(filePath, "PLAYWRIGHT_TARGET_ISOLATED", "1");
 }
 
-function parseSessionCookie(setCookieHeaders, cookieName) {
+export function parseSessionCookie(setCookieHeaders, cookieName, baseURL = DEFAULT_BASE_URL) {
   const match = setCookieHeaders.find((header) => header.startsWith(`${cookieName}=`));
   if (!match) return null;
   const parts = match.split(";").map((part) => part.trim());
@@ -114,16 +115,16 @@ function parseSessionCookie(setCookieHeaders, cookieName) {
   return {
     name: cookieName,
     value,
-    domain: "127.0.0.1",
+    domain: new URL(baseURL).hostname,
     path: "/",
     expires: Number.isFinite(expires) ? expires / 1000 : Math.floor(Date.now() / 1000) + 12 * 60 * 60,
     httpOnly: true,
-    secure: false,
+    secure: new URL(baseURL).protocol === "https:",
     sameSite: "Lax",
   };
 }
 
-function writeStorageState(rootDir, cookie) {
+function writeStorageState(rootDir, cookie, baseURL) {
   const authFile = join(rootDir, AUTH_FILE);
   mkdirSync(dirname(authFile), { recursive: true });
   writeFileSync(
@@ -131,7 +132,7 @@ function writeStorageState(rootDir, cookie) {
     `${JSON.stringify(
       {
         cookies: [cookie],
-        origins: [{ origin: "http://127.0.0.1:3000", localStorage: [] }],
+        origins: [{ origin: new URL(baseURL).origin, localStorage: [] }],
       },
       null,
       2,
@@ -217,10 +218,12 @@ async function main() {
       email: target.email,
       password,
       role: target.role || identity.role,
+      baseURL: target.baseURL,
     });
   } else if (loginResult && loginResult.response.status !== 401) {
     throw new Error(`Login failed with ${loginResult.response.status}.`);
   } else {
+    if (process.env.WC_PREVIEW_BRANCH) throw new Error("Managed preview login failed; rerun preview:setup to refresh credentials. Refusing a password rotation that would break another agent's handoff.");
     password = await rotateLocalSmokePassword(sql, identity.id);
     passwordSource = "rotated";
     persistLocalPlaywrightEnv({
@@ -228,6 +231,7 @@ async function main() {
       email: target.email,
       password,
       role: target.role || identity.role,
+      baseURL: target.baseURL,
     });
     try {
       loginResult = await login(target.baseURL, target.email, password);
@@ -257,12 +261,12 @@ async function main() {
   const setCookie = typeof loginResult.response.headers.getSetCookie === "function"
     ? loginResult.response.headers.getSetCookie()
     : [loginResult.response.headers.get("set-cookie")].filter(Boolean);
-  const cookie = parseSessionCookie(setCookie, target.cookieName);
+  const cookie = parseSessionCookie(setCookie, target.cookieName, target.baseURL);
   if (!cookie) {
     throw new Error("Login succeeded but did not return a session cookie.");
   }
 
-  const storageState = writeStorageState(rootDir, cookie);
+  const storageState = writeStorageState(rootDir, cookie, target.baseURL);
   const me = await readCurrentUser(target.baseURL, target.cookieName, cookie.value);
   const meUser = me.body?.user ?? me.body?.data ?? me.body;
 

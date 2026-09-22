@@ -1,0 +1,46 @@
+name: Managed previews
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: preview-infrastructure
+  queue: max
+  cancel-in-progress: false
+
+jobs:
+  preview:
+    if: >-
+      vars.MANAGED_PREVIEWS_ENABLED == 'true' &&
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    environment: preview-infrastructure
+    timeout-minutes: 25
+    steps:
+      # Always use trusted default-branch orchestration. Forks receive no secrets.
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm install --global npm@11.17.0 vercel@59.11.7
+      - run: npm ci
+      - name: Provision and upload exact validated PR
+        run: node scripts/preview-ci.mjs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          NEON_API_KEY: ${{ secrets.NEON_PREVIEW_API_KEY }}
+          PREVIEW_SIGNING_KEY: ${{ secrets.PREVIEW_SIGNING_KEY }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_PREVIEW_TOKEN }}

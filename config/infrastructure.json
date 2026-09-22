@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "repository": "erikrole/wisconsin-creative",
+  "vercel": {
+    "teamId": "team_TZ21VO3n7kpESrZGYA2z4qNo",
+    "productionProjectId": "prj_cEFq9iZQ5KrMz20wOQMFnhFMEcZ9",
+    "reviewProjectId": "prj_QrspKH6nzpq4qoXkAHfcZqHVaWxi",
+    "resourceProjectId": "prj_CZ5zAePf5kDttfhrxJs5J5SEzSzI",
+    "cliVersion": "59.11.7"
+  },
+  "preview": {
+    "projectId": "floral-fog-52897668",
+    "templateBranchId": "br-late-feather-auptprel",
+    "templateBaselineId": "sanitized-template-2026-09-22",
+    "database": "gear-tracker",
+    "ownerRole": "preview_owner",
+    "branchPrefix": "wc-preview-",
+    "cleanupGraceDays": 7,
+    "provisioningVersion": 1,
+    "attestationPublicKey": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAp7uYZTI5/XEwZvwAmpcw/ns1DSnqZ6KUWQAjsc9ujHE=\n-----END PUBLIC KEY-----\n"
+  }
+}

@@ -12,6 +12,7 @@
 import { Ratelimit } from "@upstash/ratelimit";
 import { HttpError } from "./http";
 import { Redis } from "@upstash/redis";
+import { cacheNamespace, isolatedIntegrationValue } from "@/lib/environment-safety";
 
 type RateLimitConfig = {
   /** Maximum requests allowed in the window. */
@@ -67,8 +68,8 @@ let redis: Redis | null | undefined;
 
 function getRedis(): Redis | null {
   if (redis !== undefined) return redis;
-  const url = process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN;
+  const url = isolatedIntegrationValue("UPSTASH_REDIS_REST_URL") || isolatedIntegrationValue("KV_REST_API_URL");
+  const token = isolatedIntegrationValue("UPSTASH_REDIS_REST_TOKEN") || isolatedIntegrationValue("KV_REST_API_TOKEN");
   if (!url || !token) {
     redis = null;
     return redis;
@@ -103,7 +104,7 @@ function getLimiter(config: RateLimitConfig): Ratelimit | null {
       redis: client,
       limiter: Ratelimit.slidingWindow(config.max, `${windowSec} s`),
       analytics: false,
-      prefix: "gear-tracker:rl",
+      prefix: cacheNamespace("gear-tracker:rl"),
       ephemeralCache,
     });
     limiterCache.set(cacheKey, limiter);

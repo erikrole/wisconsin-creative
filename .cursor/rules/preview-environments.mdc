@@ -1,0 +1,5 @@
+---
+description: Shared local and hosted preview contract
+alwaysApply: true
+---
+Read AGENTS.md and docs/PREVIEW_ENVIRONMENTS.md. Reuse the current Git branch's managed environment with `npm run preview:setup`, `npm run dev:preview`, and `npm run auth:local`. Use the printed port. Never copy production credentials, reset shared data, or run raw Next commands around the process locks. Handoff the branch name and preview URL, never secret values.

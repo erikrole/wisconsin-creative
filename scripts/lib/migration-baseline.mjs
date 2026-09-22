@@ -1,6 +1,6 @@
-import { createHash } from "node:crypto";
+import { createHash, verify } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { catalogSnapshotSql } from "./migration-catalog.mjs";
+import { catalogSql } from "./migration-catalog.mjs";
 
 export const previewTarget = Object.freeze({
   branch: "br-morning-surf-aiuyphxx", endpoint: "ep-winter-leaf-ai0eekhl", database: "gear-tracker",
@@ -18,10 +18,47 @@ export function canonical(value) {
 export function digest(value) { return createHash("sha256").update(canonical(value)).digest("hex"); }
 export function sqlLiteral(value) { return `'${String(value).replaceAll("'", "''")}'`; }
 
-export function readApprovedBaseline() {
-  const manifest = JSON.parse(readFileSync(new URL("../baselines/preview-2026-09-11.json", import.meta.url), "utf8"));
-  if (manifest.id !== "preview-2026-09-11" || canonical(manifest.target) !== canonical(previewTarget)) {
-    throw new Error("Unrecognized Preview baseline target");
+const approvedTargets = Object.freeze({
+  "preview-2026-09-11": previewTarget,
+  "production-2026-09-22": { branch: "br-gentle-sky-aisuwcsf", endpoint: "ep-flat-firefly-ai889avp", database: "gear-tracker" },
+  "review-2026-09-22": { branch: "br-broad-mouse-aid7tu0s", endpoint: "ep-little-voice-aiuepzzf", database: "neondb" },
+  // The sanitized template target is recorded separately after schema-only
+  // restoration. Its approval never authorizes a copied child automatically.
+  "sanitized-template-2026-09-22": { branch: "br-late-feather-auptprel", endpoint: "ep-falling-art-aueftqbs", database: "gear-tracker" },
+});
+
+export function readInfrastructureConfig() {
+  return JSON.parse(readFileSync(new URL("../../config/infrastructure.json", import.meta.url), "utf8"));
+}
+
+export function validateChildManifest(manifest, config = readInfrastructureConfig()) {
+  const { signature, ...payload } = manifest;
+  if (!signature || !verify(null, Buffer.from(canonical(payload)), config.preview.attestationPublicKey, Buffer.from(signature, "base64"))) {
+    throw new Error("Preview child attestation signature is invalid");
+  }
+  const parent = readApprovedBaseline(config.preview.templateBaselineId);
+  const approval = manifest.approval;
+  if (approval?.kind !== "sanitized-child" || approval.projectId !== config.preview.projectId
+    || approval.parentBranchId !== config.preview.templateBranchId || approval.templateBaselineHash !== digest(parent)
+    || approval.provisioningVersion !== config.preview.provisioningVersion
+    || !approval.gitBranch || manifest.target.branch === parent.target.branch
+    || manifest.target.database !== config.preview.database || manifest.catalogVersion !== 2
+    || canonical(manifest.exceptions) !== canonical(parent.exceptions)) {
+    throw new Error("Preview child lineage does not match the approved sanitized template");
+  }
+  assertBaselineFiles(parent, manifest.checksums);
+  const inherited = new Map(manifest.receipts.map((row) => [row.id, row]));
+  for (const receipt of parent.receipts) {
+    if (canonical(inherited.get(receipt.id)) !== canonical(receipt)) throw new Error("Preview child altered inherited migration history");
+  }
+  return manifest;
+}
+
+export function readApprovedBaseline(id = "preview-2026-09-11") {
+  if (!Object.hasOwn(approvedTargets, id)) throw new Error("Unrecognized baseline ID");
+  const manifest = JSON.parse(readFileSync(new URL(`../baselines/${id}.json`, import.meta.url), "utf8"));
+  if (manifest.id !== id || canonical(manifest.target) !== canonical(approvedTargets[id])) {
+    throw new Error("Unrecognized baseline target");
   }
   return manifest;
 }
@@ -35,7 +72,7 @@ export function assertBaselineFiles(manifest, checksums) {
 // A checkpoint is an explicit exception, never fabricated proof of old SQL.
 // Pin every historical row, including rolled-back attempts, not only bad hashes.
 export function validateBaseline(manifest, identity, record, checksums, rows) {
-  if (canonical(identity) !== canonical(previewTarget) || canonical(manifest.target) !== canonical(previewTarget)) {
+  if (canonical(identity) !== canonical(manifest.target)) {
     throw new Error("Preview baseline cannot authorize this database target");
   }
   if (!record || record.manifest_hash !== digest(manifest) || canonical(record.manifest) !== canonical(manifest)) {
@@ -58,10 +95,17 @@ export async function readMigrationRows(sql) {
 export async function loadMigrationBaseline(sql, checksums, rows = null) {
   const [identity] = await sql.query(identitySql);
   // A copy of the checkpoint on Production or a new Neon branch is not approval.
-  if (canonical(identity) !== canonical(previewTarget)) return null;
+  const id = Object.keys(approvedTargets).find((key) => canonical(identity) === canonical(approvedTargets[key]));
   const [table] = await sql.query("SELECT to_regclass('wc_migration_meta.baselines') AS name");
   if (!table.name) return null;
-  const manifest = readApprovedBaseline();
+  if (!id) {
+    const records = await sql.query("SELECT manifest_hash, manifest FROM wc_migration_meta.baselines WHERE manifest->'target'->>'branch'=$1", [identity.branch]);
+    if (records.length === 0) return null;
+    if (records.length !== 1) throw new Error("Multiple checkpoints claim this preview target");
+    const manifest = validateChildManifest(records[0].manifest);
+    return validateBaseline(manifest, identity, records[0], checksums, rows ?? await readMigrationRows(sql));
+  }
+  const manifest = readApprovedBaseline(id);
   const records = await sql.query("SELECT manifest_hash, manifest FROM wc_migration_meta.baselines WHERE id=$1", [manifest.id]);
   return validateBaseline(manifest, identity, records[0], checksums, rows ?? await readMigrationRows(sql));
 }
@@ -71,9 +115,9 @@ export async function loadMigrationBaseline(sql, checksums, rows = null) {
 export function baselineGuardBody(manifest, { installing = false } = {}) {
   const payload = `${sqlLiteral(JSON.stringify(manifest))}::jsonb`;
   return `
-    IF current_setting('neon.branch_id',true) IS DISTINCT FROM ${sqlLiteral(previewTarget.branch)}
-      OR current_setting('neon.endpoint_id',true) IS DISTINCT FROM ${sqlLiteral(previewTarget.endpoint)}
-      OR current_database() IS DISTINCT FROM ${sqlLiteral(previewTarget.database)} THEN
+    IF current_setting('neon.branch_id',true) IS DISTINCT FROM ${sqlLiteral(manifest.target.branch)}
+      OR current_setting('neon.endpoint_id',true) IS DISTINCT FROM ${sqlLiteral(manifest.target.endpoint)}
+      OR current_database() IS DISTINCT FROM ${sqlLiteral(manifest.target.database)} THEN
       RAISE EXCEPTION 'Preview baseline target mismatch; no SQL applied';
     END IF;
     LOCK TABLE public._prisma_migrations IN SHARE ROW EXCLUSIVE MODE;
@@ -86,7 +130,7 @@ export function baselineGuardBody(manifest, { installing = false } = {}) {
     IF (SELECT count(*) FROM public._prisma_migrations) <> ${manifest.receipts.length} THEN
       RAISE EXCEPTION 'History changed since baseline review; no SQL applied';
     END IF;
-    IF (SELECT encode(sha256(convert_to(catalog::text,'UTF8')),'hex') FROM (${catalogSnapshotSql}) s)
+    IF (SELECT encode(sha256(convert_to(catalog::text,'UTF8')),'hex') FROM (${catalogSql(manifest.catalogVersion ?? 1)}) s)
       IS DISTINCT FROM ${sqlLiteral(manifest.catalogHash)} THEN
       RAISE EXCEPTION 'Schema changed since baseline review; no SQL applied';
     END IF;` : `
@@ -98,7 +142,8 @@ export function baselineGuardBody(manifest, { installing = false } = {}) {
 }
 
 export function buildBaselineInstall(manifest, checksums) {
-  if (canonical(manifest) !== canonical(readApprovedBaseline())) throw new Error("Unapproved baseline manifest");
+  if (manifest.approval?.kind === "sanitized-child") validateChildManifest(manifest);
+  else if (canonical(manifest) !== canonical(readApprovedBaseline(manifest.id))) throw new Error("Unapproved baseline manifest");
   assertBaselineFiles(manifest, checksums);
   return [
     "SET LOCAL lock_timeout='5s'",

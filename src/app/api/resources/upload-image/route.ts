@@ -3,7 +3,7 @@ import { requirePermission } from "@/lib/rbac";
 import { put } from "@vercel/blob";
 import { ok, HttpError } from "@/lib/http";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { isAllowedImageType, hasValidImageMagic } from "@/lib/blob";
+import { isAllowedImageType, hasValidImageMagic, publicBlobAuth } from "@/lib/blob";
 
 const UPLOAD_LIMIT = { max: 30, windowMs: 5 * 60_000 };
 
@@ -44,6 +44,7 @@ export const POST = withAuth(async (req, { user }) => {
   }
 
   const blob = await put(`resources/${Date.now()}-${sanitizeFileName(file.name)}`, file, {
+    ...publicBlobAuth(),
     access: "public",
   });
 

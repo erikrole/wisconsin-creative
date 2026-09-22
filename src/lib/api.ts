@@ -5,6 +5,7 @@ import { HttpError } from "@/lib/http";
 import { failRequest, tagRequestJsonParseErrors } from "@/lib/api-handler";
 import { deferCompanionProjectionRefresh } from "@/lib/services/companion-projection-publisher";
 import { isRolePreviewBlockedRequest, readRolePreviewFromRequest } from "@/lib/role-preview";
+import { recordPreviewActivity } from "@/lib/preview-activity";
 
 export { withHandler } from "@/lib/api-handler";
 
@@ -90,6 +91,7 @@ export function withAuth<P extends Record<string, string> = Record<string, strin
         assertSameOrigin(req);
       }
       const user = await requireAuth();
+      await recordPreviewActivity();
       if (user.forcePasswordChange && !isForcePasswordAllowed(req)) {
         throw new HttpError(403, "Password change required before continuing");
       }

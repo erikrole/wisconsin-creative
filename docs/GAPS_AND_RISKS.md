@@ -12,6 +12,10 @@
 
 No open pending decisions are currently tracked here. Accepted decisions and their rationale live in [DECISIONS.md](DECISIONS.md). Add a pending decision here only when it has an unresolved owner, consequence, or product/architecture choice.
 
+## Infrastructure rollout — 2026-09-22
+
+Review duplicate automatic builds are removed; main protection, sanitized preview resources, encrypted handoff and production/review migration repairs are live. Source remains uncommitted. Managed workflow activation, native-preview cutover and production pooling deployment remain open in [the infrastructure ledger](../tasks/infrastructure-hardening-plan-2026-09-22.md). Preview Redis is intentionally absent: rate limits use their fallback and Companion sync fails closed. The dependency patch clears all high/critical audit findings; four moderate findings remain in the Vitest mocker chain and qs. Production still needs deployment of the patched lockfile. The Vercel automation token expires 2027-09-22. No existing plan was upgraded.
+
 ## Open Gaps
 
 | ID | Description | Owner Area | Status | Notes |

@@ -1,6 +1,6 @@
 import { withAuth } from "@/lib/api";
 import { HttpError, ok } from "@/lib/http";
-import { validateImage, deleteImage, imageExtensionForType, isBlobUrl } from "@/lib/blob";
+import { validateImage, deleteImage, imageExtensionForType, isBlobUrl, publicBlobAuth } from "@/lib/blob";
 import { put } from "@vercel/blob";
 import { db } from "@/lib/db";
 import { createAuditEntry } from "@/lib/audit";
@@ -42,6 +42,7 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
   const ext = imageExtensionForType(file.type);
   const pathname = `avatars/${id}/${Date.now()}.${ext}`;
   const blob = await put(pathname, file.stream(), {
+    ...publicBlobAuth(),
     access: "public",
     contentType: file.type,
   });

@@ -62,7 +62,7 @@ describe("fallback history preflight", () => {
       { migration_name: name, checksum: "manual", finished_at: "now" },
       { migration_name: name, checksum: "b".repeat(64), finished_at: "now" },
     ]) {
-      expect(() => assertFallbackHistory(manifest, [row])).toThrow("Refusing Neon HTTP fallback");
+      expect(() => assertFallbackHistory(manifest, [row])).toThrow("Refusing migration deploy");
     }
   });
 
