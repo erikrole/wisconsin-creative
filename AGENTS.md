@@ -54,6 +54,12 @@ If a conflict could change behavior, reconcile it using the current request and 
 - A Swift source refactor requires both an Xcode build and the web-side source-contract tests that inspect Swift files.
 - For explicit Xcode projects, register new Swift files in the project file and verify the target membership.
 
+### macOS menu bar app
+
+- The GearOps menu bar app (`macos/`) is a first-class client, not a side project. Fixes and polish to it carry the same bar as web and iOS work: root-cause fixes, tests, and verification — not best-effort follow-ups.
+- When a change touches a contract the menu bar app consumes (companion projection, companion auth, APNs invalidation, shared assets), check and fix the macOS client in the same slice.
+- Respect D-047 guardrails: no timers or database-backed fallback reads in the macOS client.
+
 ### Simulator policy
 
 - Use `platform=iOS Simulator,name=iPhone 16 Pro` as the default iOS build and UI-verification destination for both `Wisconsin` and `WisconsinKiosk`.
@@ -83,6 +89,7 @@ If a conflict could change behavior, reconcile it using the current request and 
 | Web or TypeScript | focused tests, `npx tsc --noEmit --pretty false`, lint, and `npm run build:app` |
 | API or schema | service/route tests, migration checks, `npm run build:app`, and full deploy-shaped build only in a controlled migration-safe environment |
 | Native iOS | `xcodebuild` for the affected target, plus affected source-contract tests and any required generic-device build |
+| macOS menu bar app | `xcodebuild -project macos/GearOps.xcodeproj -scheme GearOps build` (and `test` when behavior changes), plus `tests/macos-gearops-*.test.ts` and affected `tests/companion-*.test.ts` |
 | Authenticated UI flow | local authenticated browser proof for the changed route or an explicit statement of why that proof is unavailable |
 | User-facing UI change | a `gt-ui-review` review page: matched before/after captures where the two columns differ only by the change, measured differences when claimed, and the verification above. Local HTML is sufficient; external publishing requires existing authorization. If a trustworthy baseline is unavailable, label after-only evidence and the missing comparison rather than inventing a before |
 

@@ -171,3 +171,11 @@ Staff currently open the web control room to answer two frequent questions: how 
 - Added `script/build_and_run.sh` plus `.codex/environments/environment.toml` so the macOS project has a repeatable kill/build/run/verify path. `./script/build_and_run.sh --verify` passes.
 - Current proof: `xcodebuild ... test` reports 63 passed native tests; the macOS source/security contracts report 29 passed tests; `npm run verify:docs`, `bash -n script/build_and_run.sh`, and `git diff --check` pass.
 - Remaining gates: the local replacement is Developer ID signed but not notarized or stapled (`spctl` reports `source=Unnotarized Developer ID`); authenticated projection data, real APNs delivery, and direct visual status-item interaction were not manufactured or claimed.
+
+## Follow-up execution: 2026-09-22 1.0.5 polish
+
+- Overdue timing is past tense. The Companion data row uses a refresh accessory. Booking detail supports Esc and Return, has a Copy Ref button, and resets scroll per route. Booking cards have a context menu. Open-booking deep links use `BookingDeepLink`. The timing and severity-colour helpers are deduplicated, and the post-rename Settings copy is fixed.
+- Added the Debug-only capture fixture `GearOpsFixture.swift` (`GEAROPS_FIXTURE=glance`, optional `GEAROPS_FIXTURE_ROUTE=open:<id>`). It uses no Keychain, network, or notification access. A source contract keeps it out of Release.
+- Release config disables code-coverage instrumentation, which previously shipped in the installed binary (523 `__profc` symbols, now 0). The version is now 1.0.5 (6).
+- Proof: 82 native tests pass and 54 macOS/companion source contracts pass. The signed Release build passes `codesign --verify --deep --strict`. It is installed at `~/Applications/Wisconsin Creative.app` and relaunched; the live session restored and the menu bar shows the count. The 1.0.4 bundle is backed up in the session scratchpad. Matched glance captures are in `tasks/archive/proofs/gearops-menu-bar-polish-2026-09-22/`.
+- Remaining gates: notarization and stapling, recorded interaction proof for keyboard and context menu, and real APNs delivery.

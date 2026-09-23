@@ -10,7 +10,7 @@ enum GearOpsLayout {
     static let glanceKiosks = 4
 }
 
-private enum ExtraRoute: Equatable {
+private enum ExtraRoute: Hashable {
     case open(id: String)
     case pickup(id: String)
 }
@@ -26,7 +26,18 @@ struct MenuBarContentView: View {
     @State private var showsAllPickups = false
     @State private var showsAllOpenBookings = false
     @State private var showsAllKiosks = false
-    @State private var selectedRoute: ExtraRoute?
+    @State private var selectedRoute: ExtraRoute? = MenuBarContentView.fixtureRoute
+
+    /// `GEAROPS_FIXTURE_ROUTE=open:<id>` opens a booking detail for captures.
+    private static var fixtureRoute: ExtraRoute? {
+        #if DEBUG
+        guard GearOpsFixture.isActive,
+              let raw = ProcessInfo.processInfo.environment["GEAROPS_FIXTURE_ROUTE"] else { return nil }
+        if raw.hasPrefix("open:") { return .open(id: String(raw.dropFirst(5))) }
+        if raw.hasPrefix("pickup:") { return .pickup(id: String(raw.dropFirst(7))) }
+        #endif
+        return nil
+    }
 
     private let minimumContentHeight: CGFloat = 180
     private let maximumContentHeight: CGFloat = 500
@@ -99,6 +110,9 @@ struct MenuBarContentView: View {
                         measuredContentHeight = newHeight
                     }
                 }
+                // A fresh scroll position per route, so opening a booking
+                // from the bottom of the list starts at its header.
+                .id(selectedRoute)
                 .frame(height: resolvedContentHeight)
                 .animation(reduceMotion ? nil : .smooth(duration: 0.22), value: resolvedContentHeight)
                 Divider()
@@ -168,7 +182,7 @@ struct MenuBarContentView: View {
             if let booking = model.openBookings.first(where: { $0.id == id }) {
                 ExtraBookingDetail(
                     title: booking.title,
-                    timing: "Due \(booking.endsAt.operationalDateTimeLabel(now: now, capitalizesRelativeDay: false))",
+                    timing: booking.dueLabel(at: now),
                     tone: booking.isOverdue(at: now) ? .red : .blue,
                     isOverdue: booking.isOverdue(at: now),
                     requester: booking.requester,
@@ -187,7 +201,7 @@ struct MenuBarContentView: View {
                 ?? model.activeBookingActivity.first(where: { $0.id == id }) {
                 ExtraBookingDetail(
                     title: booking.title,
-                    timing: pickupTiming(booking, at: now),
+                    timing: booking.pickupLabel(at: now),
                     tone: .orange,
                     isOverdue: false,
                     requester: booking.requester,
@@ -219,14 +233,6 @@ struct MenuBarContentView: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private func pickupTiming(_ booking: BookingActivitySnapshot, at now: Date) -> String {
-        let when = booking.startsAt.operationalDateTimeLabel(now: now, capitalizesRelativeDay: false)
-        if booking.kind == .reservation, booking.status == .booked, booking.startsAt < now {
-            return "Pickup was due \(when)"
-        }
-        return "Pickup \(when)"
     }
 
     private func openBookingsList(at now: Date) -> some View {
@@ -296,7 +302,11 @@ struct MenuBarContentView: View {
 
     private func bookingRows<S: Sequence>(_ bookings: S, at now: Date) -> some View where S.Element == OpenBooking {
         ForEach(Array(bookings)) { booking in
-            OpenBookingRow(booking: booking, now: now) {
+            OpenBookingRow(
+                booking: booking,
+                now: now,
+                onOpenWeb: { model.openBooking(booking) }
+            ) {
                 selectedRoute = .open(id: booking.id)
             }
         }
@@ -318,7 +328,11 @@ struct MenuBarContentView: View {
 
                 LazyVStack(spacing: 8) {
                     ForEach(visibleItems(bookings, cap: GearOpsLayout.glancePickups, expanded: showsAllPickups)) { booking in
-                        PickupBookingRow(booking: booking, now: now) {
+                        PickupBookingRow(
+                            booking: booking,
+                            now: now,
+                            onOpenWeb: { model.openBooking(booking) }
+                        ) {
                             selectedRoute = .pickup(id: booking.id)
                         }
                     }
@@ -342,8 +356,8 @@ struct MenuBarContentView: View {
                 Label(model.healthLabel, systemImage: model.healthSeverity.symbol)
                     .font(.caption.weight(.semibold))
                     .symbolRenderingMode(.hierarchical)
-                     .foregroundStyle(healthColor)
-                     .animation(reduceMotion ? nil : .smooth(duration: 0.2), value: model.healthSeverity)
+                    .foregroundStyle(model.healthSeverity.color)
+                    .animation(reduceMotion ? nil : .smooth(duration: 0.2), value: model.healthSeverity)
             }
             // Health is one grouped surface so the popover reads as two kinds
             // of content: actionable booking cards, then a status panel.
@@ -352,8 +366,10 @@ struct MenuBarContentView: View {
                     title: "Companion data",
                     detail: apiHealthDetail(at: now),
                     severity: model.companionHealthSeverity,
-                    // `refresh()` coalesces re-entry itself, so the row keeps its
-                    // affordance instead of dropping the chevron mid-refresh.
+                    // `refresh()` coalesces re-entry itself, so the row stays
+                    // tappable mid-refresh and shows progress in place of the
+                    // refresh glyph. A chevron would promise navigation.
+                    accessory: model.isRefreshing ? .progress : .refresh,
                     action: { Task { await model.refresh() } }
                 )
                 rowSeparator
@@ -481,34 +497,20 @@ struct MenuBarContentView: View {
             .accessibilityHeading(.h2)
     }
 
-    private var healthColor: Color {
-        switch model.healthSeverity {
-        case .healthy: .green
-        case .attention: .orange
-        case .critical: .red
-        }
-    }
-
     private func apiHealthDetail(at now: Date) -> String {
         if model.countDataIsPartial { return "Fresh totals not confirmed" }
-        if model.snapshot == nil { return "Unavailable" }
-        return model.snapshot.map { "Last synced " + $0.freshnessLabel(at: now).replacingOccurrences(of: "Updated ", with: "") }
-            ?? "Unavailable"
+        guard let snapshot = model.snapshot else { return "Unavailable" }
+        return "Last synced " + snapshot.freshnessLabel(at: now).replacingOccurrences(of: "Updated ", with: "")
     }
 }
 
 private struct PickupBookingRow: View {
     let booking: BookingActivitySnapshot
     let now: Date
+    let onOpenWeb: () -> Void
     let action: () -> Void
 
-    private var timingLabel: String {
-        let when = booking.startsAt.operationalDateTimeLabel(now: now, capitalizesRelativeDay: false)
-        if booking.kind == .reservation, booking.status == .booked, booking.startsAt < now {
-            return "Pickup was due \(when)"
-        }
-        return "Pickup \(when)"
-    }
+    private var timingLabel: String { booking.pickupLabel(at: now) }
 
     var body: some View {
         BookingGlanceCard(
@@ -524,6 +526,8 @@ private struct PickupBookingRow: View {
             help: booking.title,
             accessibilityLabel: "\(booking.title), \(timingLabel), \(booking.requester.name), \(booking.location.name)",
             accessibilityHint: "Shows details and items",
+            refNumber: nil,
+            onOpenWeb: onOpenWeb,
             action: action
         )
     }
@@ -532,12 +536,11 @@ private struct PickupBookingRow: View {
 private struct OpenBookingRow: View {
     let booking: OpenBooking
     let now: Date
+    let onOpenWeb: () -> Void
     let action: () -> Void
 
     private var isOverdue: Bool { booking.isOverdue(at: now) }
-    private var timingLabel: String {
-        "Due \(booking.endsAt.operationalDateTimeLabel(now: now, capitalizesRelativeDay: false))"
-    }
+    private var timingLabel: String { booking.dueLabel(at: now) }
 
     var body: some View {
         BookingGlanceCard(
@@ -553,6 +556,8 @@ private struct OpenBookingRow: View {
             help: booking.refNumber.map { "\(booking.title) · \($0)" } ?? booking.title,
             accessibilityLabel: "\(isOverdue ? "Overdue, " : "")\(booking.title), \(booking.requester.name), \(booking.location.name), \(timingLabel)",
             accessibilityHint: "Shows details and items",
+            refNumber: booking.refNumber,
+            onOpenWeb: onOpenWeb,
             action: action
         )
     }
@@ -573,11 +578,25 @@ private struct BookingGlanceCard: View {
     let help: String
     let accessibilityLabel: String
     let accessibilityHint: String
+    let refNumber: String?
+    let onOpenWeb: () -> Void
     let action: () -> Void
 
     @State private var isHovering = false
 
     var body: some View {
+        card.contextMenu {
+            Button("Show Details", action: action)
+            Button("Open in Wisconsin Creative", action: onOpenWeb)
+            if let refNumber, !refNumber.isEmpty {
+                Divider()
+                Button("Copy Reference \(refNumber)") { Pasteboard.copy(refNumber) }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var card: some View {
         if #available(macOS 26.0, *) {
             cardButton
                 .glassEffect(
@@ -675,6 +694,8 @@ private struct ExtraBookingDetail: View {
             }
             .buttonStyle(.link)
             .font(.callout.weight(.semibold))
+            .keyboardShortcut(.cancelAction)
+            .help("Back to all bookings (Esc)")
             .accessibilityLabel(backLabel)
 
             HStack(alignment: .top, spacing: 12) {
@@ -749,9 +770,18 @@ private struct ExtraBookingDetail: View {
                 }
             }
 
-            Button("Open in Wisconsin Creative", action: onOpenWeb)
-                .buttonStyle(.link)
-                .font(.callout)
+            HStack(spacing: 8) {
+                Button(action: onOpenWeb) {
+                    Label("Open in Wisconsin Creative", systemImage: "arrow.up.forward.app")
+                }
+                .buttonStyle(.borderedProminent)
+                .keyboardShortcut(.defaultAction)
+                .help("Open this booking in your browser (Return)")
+                if let refNumber, !refNumber.isEmpty {
+                    CopyReferenceButton(refNumber: refNumber)
+                }
+            }
+            .controlSize(.regular)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -794,9 +824,16 @@ private struct ExtraItemRow: View {
 }
 
 private struct HealthRow: View {
+    enum Accessory {
+        case chevron
+        case refresh
+        case progress
+    }
+
     let title: String
     let detail: String
     let severity: GearOpsHealthSeverity
+    var accessory: Accessory = .chevron
     var action: (() -> Void)?
 
     @State private var isHovering = false
@@ -825,9 +862,10 @@ private struct HealthRow: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.trailing)
             if action != nil {
-                Image(systemName: "chevron.right")
-                    .font(.caption2.weight(.semibold))
+                accessoryView
                     .foregroundStyle(isHovering ? .secondary : .tertiary)
+                    .frame(width: 12)
+                    .accessibilityHidden(true)
             }
         }
         .font(.callout)
@@ -836,12 +874,54 @@ private struct HealthRow: View {
         .contentShape(.rect)
     }
 
-    private var color: Color {
-        switch severity {
-        case .healthy: .green
-        case .attention: .orange
-        case .critical: .red
+    @ViewBuilder
+    private var accessoryView: some View {
+        switch accessory {
+        case .chevron:
+            Image(systemName: "chevron.right")
+                .font(.caption2.weight(.semibold))
+        case .refresh:
+            Image(systemName: "arrow.clockwise")
+                .font(.caption2.weight(.semibold))
+        case .progress:
+            ProgressView()
+                .controlSize(.mini)
         }
+    }
+
+    private var color: Color { severity.color }
+}
+
+/// Reference numbers are what staff read aloud or paste into a search, so the
+/// detail view offers a one-click copy with brief confirmation.
+private struct CopyReferenceButton: View {
+    let refNumber: String
+
+    @State private var didCopy = false
+
+    var body: some View {
+        Button {
+            Pasteboard.copy(refNumber)
+            didCopy = true
+            Task {
+                try? await Task.sleep(for: .seconds(1.5))
+                didCopy = false
+            }
+        } label: {
+            Label(didCopy ? "Copied" : "Copy Ref", systemImage: didCopy ? "checkmark" : "doc.on.doc")
+                .contentTransition(.symbolEffect(.replace))
+        }
+        .buttonStyle(.bordered)
+        .help("Copy \(refNumber)")
+        .accessibilityLabel(didCopy ? "Copied reference \(refNumber)" : "Copy reference \(refNumber)")
+    }
+}
+
+private enum Pasteboard {
+    @MainActor
+    static func copy(_ string: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(string, forType: .string)
     }
 }
 
@@ -909,6 +989,16 @@ private struct KioskRow: View {
         case .stale: .secondary
         case .offline: .red
         case .inactive: .secondary
+        }
+    }
+}
+
+private extension GearOpsHealthSeverity {
+    var color: Color {
+        switch self {
+        case .healthy: .green
+        case .attention: .orange
+        case .critical: .red
         }
     }
 }
