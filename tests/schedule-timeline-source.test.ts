@@ -213,6 +213,8 @@ describe("schedule timeline", () => {
     expect(listView).toContain("const observer = new ResizeObserver(schedule);");
     expect(listView).toContain('[data-schedule-sticky-frame]');
     expect(listView).toContain("max-md:bottom-[calc(5.75rem+env(safe-area-inset-bottom,0px))]");
+    expect(listView).toContain("bg-white");
+    expect(listView).toContain("text-black");
   });
 
   it("separates ordinary past crew history from older archived records", () => {

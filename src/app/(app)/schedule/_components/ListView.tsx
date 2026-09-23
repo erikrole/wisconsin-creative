@@ -1746,7 +1746,7 @@ export function ListView({
           <Button
             variant="secondary"
             onClick={scrollToToday}
-            className="pointer-events-auto h-10 gap-1.5 rounded-full border border-border/60 px-4 shadow-lg"
+            className="pointer-events-auto h-10 gap-1.5 rounded-full border border-white/20 bg-white px-4 text-black shadow-lg hover:bg-white/90 hover:text-black"
           >
             {todayDirection === "up" ? (
               <ArrowUpIcon className="size-3.5" />

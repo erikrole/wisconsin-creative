@@ -1,0 +1,35 @@
+{
+  "title": "Jump to today contrast",
+  "eyebrow": "Web · Schedule · Wisconsin Creative",
+  "lede": "The floating Jump to today control uses a white pill with black text so it reads clearly against the dark Schedule timeline.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "Baseline",
+      "note": "Before is the operator crop of the secondary gray pill on the dark Schedule surface. Authenticated after capture was blocked: branch preview setup failed with a database fetch error in this environment. After evidence is the class change in ListView (bg-white text-black).",
+      "shots": [
+        {
+          "tag": "Before",
+          "title": "Low-contrast secondary pill",
+          "image": "before.png",
+          "cap": "Jump to today uses the secondary gray fill and light text on the near-black page."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Higher-contrast floating CTA",
+      "was": "variant secondary with border-border/60 — mid-gray fill, light text.",
+      "now": "White fill, black text, light border, soft hover keep the pill readable on dark Schedule."
+    }
+  ],
+  "verification": [
+    "tests/schedule-timeline-source.test.ts — pass (pins Jump to today plus bg-white / text-black)",
+    "Authenticated Preview after capture: blocked (preview:setup database fetch failed)",
+    "npm run build:app: not run for this one-line style change"
+  ],
+  "notes": [
+    "Matched after screenshot still needed once the branch preview database is reachable."
+  ]
+}
