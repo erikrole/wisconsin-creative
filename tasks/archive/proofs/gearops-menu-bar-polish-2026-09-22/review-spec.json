@@ -1,0 +1,66 @@
+{
+  "title": "GearOps Menu Bar Polish",
+  "eyebrow": "macOS · Wisconsin Creative 1.0.5 (6)",
+  "lede": "Staff glance at the menu bar popover to see what is overdue and act on one booking. This pass fixes a misleading deadline label, makes the refresh row look like a refresh control, and makes booking detail work from the keyboard with a one-click copy of the reference number.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "Popover glance",
+      "note": "Same Debug fixture (GEAROPS_FIXTURE=glance), same hour-anchored clock, dark appearance, 380×635 pt window, scroll at top. The before build is HEAD 7993e967 plus only the capture harness; its patch hash is in before/glance.capture.json.",
+      "pairs": [
+        {
+          "title": "Glance",
+          "sub": "Waiting for pickup, open bookings, system health.",
+          "before": "before/glance.png",
+          "beforeCap": "The overdue row reads \"Due today at 6:00 PM\" at 9 PM, which sounds like a future deadline. The Companion data row has a chevron, suggesting it opens something, but clicking it refreshes.",
+          "after": "after/glance.png",
+          "afterCap": "The overdue row reads \"Was due today at 6:00 PM\". The Companion data row shows a refresh glyph, which becomes a spinner while it refreshes.",
+          "beforeEvidence": "before/glance.capture.json",
+          "afterEvidence": "after/glance.capture.json"
+        }
+      ]
+    },
+    {
+      "heading": "Booking detail (not a matched pair)",
+      "note": "After-only comparison. The detail view is 11 pt taller because of the new action row (479 pt before, 490 pt after), so the builder cannot pair these captures. Both images and receipts are here: before/detail.png and after/detail.png."
+    }
+  ],
+  "changes": [
+    {
+      "h": "Overdue rows said \"Due\"",
+      "was": "An overdue checkout showed \"Due today at 6:00 PM\" in red, which reads like a deadline still ahead.",
+      "now": "Once a booking is overdue, the row and the detail view say \"Was due …\". The label logic moved to Models.swift and has unit tests."
+    },
+    {
+      "h": "The refresh row looked like navigation",
+      "was": "Companion data had a chevron, but clicking it refreshed instead of opening anything.",
+      "now": "It shows a refresh glyph, and a small spinner while a refresh is in flight."
+    },
+    {
+      "h": "Booking detail was mouse-only",
+      "was": "Getting back to the list meant clicking \"All bookings\", and the web action was a small link at the bottom. Opening a booking kept the list's scroll position.",
+      "now": "Esc goes back and Return opens the booking in the browser. There is a Copy Ref button that confirms the copy, and the view scrolls to the top when a booking opens."
+    },
+    {
+      "h": "No right-click actions on booking cards",
+      "was": "Booking cards had no context menu.",
+      "now": "Right-clicking a card offers Show Details, Open in Wisconsin Creative, and Copy Reference."
+    },
+    {
+      "h": "Hygiene",
+      "was": "The open-booking link was built by string interpolation. Timing and health-colour code was duplicated. Settings copy was left over from the rename (\"Wisconsin Creative … never writes to Wisconsin Creative\"). Release binaries included coverage instrumentation.",
+      "now": "The link uses the shared, query-encoded BookingDeepLink builder. Each helper exists once. The copy is rewritten. Release builds turn coverage off (523 → 0 __profc symbols)."
+    }
+  ],
+  "verification": [
+    "xcodebuild test (GearOps scheme): 82 tests, 0 failures, including new due-label, pickup-label, and fixture-validity tests",
+    "vitest tests/macos-gearops-*.test.ts + tests/companion-*.test.ts: 54 passed, including new detail-keyboard and debug-only-fixture contracts",
+    "Signed Release build (Developer ID, hardened runtime): codesign --verify --deep --strict passes, and the binary contains no GEAROPS_FIXTURE string",
+    "Installed to ~/Applications and launched: one process, the session restored from Keychain, and the menu bar shows the live count"
+  ],
+  "notes": [
+    "Captures come from a Debug fixture window with a title bar, not the real popover. They prove presentation only, not live projection data.",
+    "The installed build is Developer ID signed but not notarized, the same as 1.0.4. spctl reports Unnotarized Developer ID.",
+    "Esc, Return, the context menu, and the copy confirmation were checked by build and source contract, not by recorded interaction."
+  ]
+}

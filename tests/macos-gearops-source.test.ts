@@ -388,8 +388,8 @@ describe("GearOps macOS menu bar contracts", () => {
     expect(view.indexOf("pendingPickupsList")).toBeLessThan(view.indexOf("systemHealth"));
     expect(view).toContain('sectionTitle("Open bookings")');
     expect(view).toContain('sectionTitle("Waiting for pickup")');
-    expect(view).toContain("OpenBookingRow(booking: booking, now: now)");
-    expect(view).toContain("PickupBookingRow(booking: booking, now: now)");
+    expect(view).toContain("OpenBookingRow(");
+    expect(view).toContain("PickupBookingRow(");
     expect(view).not.toContain("MetricCard");
   });
 
@@ -425,8 +425,11 @@ describe("GearOps macOS menu bar contracts", () => {
     expect(view).toContain("avatarUrl: booking.requester.avatarUrl");
     expect(view).toContain("StatusRail(tone:");
     expect(view).toContain("size: 40");
-    expect(view).toContain("operationalDateTimeLabel(now: now, capitalizesRelativeDay: false)");
-    expect(view).toContain("Pickup was due");
+    expect(models).toContain("operationalDateTimeLabel(now: now, capitalizesRelativeDay: false)");
+    expect(models).toContain("Pickup was due");
+    expect(models).toContain("Was due");
+    expect(view).toContain("booking.dueLabel(at: now)");
+    expect(view).toContain("booking.pickupLabel(at: now)");
     expect(view).toContain("Brand.Radius.md");
     expect(view).not.toContain("frame(width: 3, height: 42)");
     expect(view).not.toContain("Waiting since");
@@ -437,6 +440,28 @@ describe("GearOps macOS menu bar contracts", () => {
     expect(avatar).toContain("initialsCircle");
     expect(avatar).toContain(".clipShape(Circle())");
     expect(models).toContain("let avatarUrl: String?");
+  });
+
+  it("keeps booking detail keyboard-first with copyable references", () => {
+    const view = source("macos/GearOps/MenuBarContentView.swift");
+    const model = source("macos/GearOps/GearOpsModel.swift");
+
+    expect(view).toContain(".keyboardShortcut(.cancelAction)");
+    expect(view).toContain(".id(selectedRoute)");
+    expect(view).toContain("CopyReferenceButton(refNumber:");
+    expect(view).toContain(".contextMenu {");
+    expect(view).toContain("accessory: model.isRefreshing ? .progress : .refresh");
+    expect(model).toContain("BookingDeepLink.bookingURL(id: booking.id, kind: .checkout)");
+    expect(model).not.toContain("highlight=\\(booking.id)");
+  });
+
+  it("compiles the capture fixture only into debug builds", () => {
+    const fixture = source("macos/GearOps/GearOpsFixture.swift");
+    const app = source("macos/GearOps/GearOpsApp.swift");
+
+    expect(fixture.trimStart().startsWith("#if DEBUG")).toBe(true);
+    expect(fixture.trimEnd().endsWith("#endif")).toBe(true);
+    expect(app).toMatch(/#if DEBUG\s+if GearOpsFixture\.isActive/);
   });
 
   it("never falls through from the external projection to Neon-backed reads", () => {

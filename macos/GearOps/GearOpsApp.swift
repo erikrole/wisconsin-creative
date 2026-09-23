@@ -3,12 +3,13 @@ import SwiftUI
 
 enum GearOpsWindow {
     static let settings = "settings"
+    static let fixture = "fixture"
 }
 
 @main
 struct GearOpsApp: App {
     @NSApplicationDelegateAdaptor(GearOpsAppDelegate.self) private var appDelegate
-    @State private var model = GearOpsModel()
+    @State private var model = GearOpsApp.makeModel()
     @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
@@ -59,5 +60,23 @@ struct GearOpsApp: App {
                 .keyboardShortcut(",", modifiers: .command)
             }
         }
+
+        #if DEBUG
+        // Capture surface for `GEAROPS_FIXTURE=glance`: the popover content in
+        // an ordinary window, since a menu bar extra cannot be opened by script.
+        Window("Wisconsin Creative Fixture", id: GearOpsWindow.fixture) {
+            MenuBarContentView(model: model)
+        }
+        .windowResizability(.contentSize)
+        .defaultLaunchBehavior(GearOpsFixture.isActive ? .presented : .suppressed)
+        #endif
+    }
+
+    @MainActor
+    private static func makeModel() -> GearOpsModel {
+        #if DEBUG
+        if GearOpsFixture.isActive { return GearOpsFixture.makeModel() }
+        #endif
+        return GearOpsModel()
     }
 }

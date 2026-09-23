@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		055F4B0AC9B46FA4D636A436 /* GearOpsFixture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B86234D8CAF9A7591CFF289 /* GearOpsFixture.swift */; };
 		12F954F7DF3DE2AF1D1D244E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 52BE26BCA53BFA17CE2331EA /* Assets.xcassets */; };
 		3819EF82C0CDD842A4EB5663 /* GearOpsClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD50E8F0C4AF83EA7C947D7C /* GearOpsClient.swift */; };
 		42F9933796384A03AFFA4E27 /* Health.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C9EB2C7AC640C2978C0DCB2 /* Health.swift */; };
@@ -55,6 +56,7 @@
 		4E865EC1D3FEAB5F9B4C5D4A /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
 		509274ABE0FA7D0BD3CA1D0D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		52BE26BCA53BFA17CE2331EA /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		5B86234D8CAF9A7591CFF289 /* GearOpsFixture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GearOpsFixture.swift; sourceTree = "<group>"; };
 		62B91FAB211BD782021996F5 /* BrandScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrandScene.swift; sourceTree = "<group>"; };
 		645A0D5508191987C2B49246 /* WisconsinCreativeIconTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WisconsinCreativeIconTests.swift; sourceTree = "<group>"; };
 		696B6C89830D0610E053FC91 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
@@ -101,6 +103,7 @@
 				3DB213E7BC6DC532FB07619F /* CompanionPushBridge.swift */,
 				CB2E396E0DD7D90FDF196A04 /* GearOpsApp.swift */,
 				AD50E8F0C4AF83EA7C947D7C /* GearOpsClient.swift */,
+				5B86234D8CAF9A7591CFF289 /* GearOpsFixture.swift */,
 				C95649353663B9CE02034E7D /* GearOpsModel.swift */,
 				7C9EB2C7AC640C2978C0DCB2 /* Health.swift */,
 				696B6C89830D0610E053FC91 /* LoginView.swift */,
@@ -273,6 +276,7 @@
 				CB125D495C4907162C5D0FF4 /* CompanionPushBridge.swift in Sources */,
 				51EF592216310A42F7EE3710 /* GearOpsApp.swift in Sources */,
 				3819EF82C0CDD842A4EB5663 /* GearOpsClient.swift in Sources */,
+				055F4B0AC9B46FA4D636A436 /* GearOpsFixture.swift in Sources */,
 				43734FB645FE39D54CC518A6 /* GearOpsModel.swift in Sources */,
 				42F9933796384A03AFFA4E27 /* Health.swift in Sources */,
 				FCF5D1DE7E1ADC35DC743C7C /* LoginView.swift in Sources */,
@@ -303,7 +307,7 @@
 				CODE_SIGN_ENTITLEMENTS = GearOps/Supporting/GearOps.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = T26T3G8C7Q;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = GearOps/Supporting/Info.plist;
@@ -312,7 +316,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 1.0.4;
+				MARKETING_VERSION = 1.0.5;
 				PRODUCT_BUNDLE_IDENTIFIER = com.erikrole.GearOps;
 				PRODUCT_MODULE_NAME = GearOps;
 				PRODUCT_NAME = "Wisconsin Creative";
@@ -347,7 +351,7 @@
 				CODE_SIGN_ENTITLEMENTS = GearOps/Supporting/GearOps.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = T26T3G8C7Q;
 				INFOPLIST_FILE = GearOps/Supporting/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -355,7 +359,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 1.0.4;
+				MARKETING_VERSION = 1.0.5;
 				PRODUCT_BUNDLE_IDENTIFIER = com.erikrole.GearOps;
 				PRODUCT_MODULE_NAME = GearOps;
 				PRODUCT_NAME = "Wisconsin Creative";
@@ -440,6 +444,7 @@
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
 				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_CODE_COVERAGE = NO;
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_ENABLE_OBJC_WEAK = YES;
@@ -468,6 +473,7 @@
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_CODE_COVERAGE = NO;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
