@@ -2,6 +2,12 @@ import path from "node:path";
 
 import { defineConfig } from "vitest/config";
 
+// Worker threads share this process's ICU timezone, and assigning
+// `process.env.TZ` inside a worker does not change it. Pin the product's
+// Central zone before workers start so date tests match on CI (UTC) and
+// on developer machines alike.
+process.env.TZ = "America/Chicago";
+
 export default defineConfig({
   resolve: {
     alias: {
