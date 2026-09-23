@@ -958,6 +958,30 @@ final class GearOpsModelTests: XCTestCase {
         return defaults
     }
 
+
+    func testOpenBookingDueLabelTurnsPastTenseOnceOverdue() {
+        let due = Date(timeIntervalSince1970: 1_800_000_000)
+        let booking = makeOpenBooking(endsAt: due)
+
+        XCTAssertTrue(booking.dueLabel(at: due.addingTimeInterval(-60)).hasPrefix("Due "))
+        XCTAssertTrue(booking.dueLabel(at: due.addingTimeInterval(60)).hasPrefix("Was due "))
+    }
+
+    func testPickupLabelFlagsMissedReservationPickup() {
+        let start = Date(timeIntervalSince1970: 1_799_000_000)
+        let reservation = makeBookingActivity(status: .booked, kind: .reservation, startsAt: start)
+        let pending = makeBookingActivity(status: .pendingPickup, kind: .checkout, startsAt: start)
+
+        XCTAssertTrue(reservation.pickupLabel(at: start.addingTimeInterval(60)).hasPrefix("Pickup was due "))
+        XCTAssertTrue(reservation.pickupLabel(at: start.addingTimeInterval(-60)).hasPrefix("Pickup "))
+        XCTAssertFalse(pending.pickupLabel(at: start.addingTimeInterval(60)).hasPrefix("Pickup was due"))
+    }
+#if DEBUG
+
+    func testCaptureFixtureProjectionIsValid() throws {
+        try GearOpsFixture.projection(anchoredAt: Date(timeIntervalSince1970: 1_800_000_000)).validate()
+    }
+#endif
 }
 
 private final class ProjectionGETURLProtocol: URLProtocol, @unchecked Sendable {

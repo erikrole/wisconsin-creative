@@ -528,7 +528,10 @@ final class GearOpsModel {
     }
 
     func openBooking(_ booking: OpenBooking) {
-        open(path: "/bookings?tab=checkouts&highlight=\(booking.id)")
+        // Open bookings are checkouts; share the notification deep-link builder
+        // so the id is query-encoded rather than interpolated into a path.
+        guard let url = BookingDeepLink.bookingURL(id: booking.id, kind: .checkout) else { return }
+        open(url: url)
     }
 
     func openBooking(_ booking: BookingActivitySnapshot) {
@@ -805,6 +808,27 @@ final class GearOpsModel {
             }
         }
     }
+
+    #if DEBUG
+    /// Installs a capture fixture synchronously, without notifications or
+    /// persistence side effects beyond the fixture's in-memory defaults.
+    func loadFixture(user: GearOpsUser, projection: CompanionProjection) {
+        self.user = user
+        snapshot = GearOpsSnapshot(
+            stats: projection.stats,
+            pendingPickupTotal: projection.pendingPickupTotal,
+            receivedAt: projection.generatedAt,
+            partialFailures: []
+        )
+        openBookings = projection.openBookings
+        openBookingTotal = projection.openBookings.count
+        activeBookingActivity = projection.bookingActivity.sorted(using: KeyPathComparator(\.startsAt))
+        kioskDevices = projection.kioskDevices
+        kioskAccess = KioskAccessState(rawValue: projection.kioskAccess) ?? .failed
+        installedProjection = projection
+        isRestoring = false
+    }
+    #endif
 
     private func persistCache() {
         guard let user else { return }

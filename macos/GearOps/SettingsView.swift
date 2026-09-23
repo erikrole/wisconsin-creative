@@ -148,7 +148,7 @@ private struct NotificationSettingsTab: View {
                 Toggle("Booking alerts", isOn: $settings.isEnabled)
                     .toggleStyle(.switch)
             } footer: {
-                Text("Alerts are silent by default and open the affected booking in Wisconsin Creative. Wisconsin Creative never changes custody from this app.")
+                Text("Alerts are silent by default and open the affected booking in Wisconsin Creative. This app never changes custody.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -273,7 +273,7 @@ private struct AccountSettingsTab: View {
             } header: {
                 Text("Status")
             } footer: {
-                Text("Wisconsin Creative reads a cached projection. It never writes to Wisconsin Creative.")
+                Text("This app shows a cached status snapshot and never changes anything in Wisconsin Creative.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

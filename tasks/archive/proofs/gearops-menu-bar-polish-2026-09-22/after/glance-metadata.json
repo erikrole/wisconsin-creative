@@ -1,0 +1,23 @@
+{
+  "sourceRevision": "7993e967e53a30caf5902f25f0f763fc4cd5fbb9",
+  "sourcePatchSha256": "46246457eaaf970ab6645f95ab0a38f43f03935c29e8e1d94714b350a893c567",
+  "settings": {
+    "device": "MacBook Pro, macOS 27.0 (Darwin 27.0.0), Debug build, fixture window",
+    "viewport": [
+      380,
+      635
+    ],
+    "fixture": "GEAROPS_FIXTURE=glance (GearOpsFixture.swift, hour-anchored clock)",
+    "role": "STAFF (fixture user)",
+    "route": "popover glance",
+    "appearance": "dark",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "2026-09-22 21:00-22:00 local hour anchor",
+    "scroll": [
+      0,
+      0
+    ]
+  }
+}

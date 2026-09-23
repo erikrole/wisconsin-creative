@@ -190,6 +190,12 @@ struct OpenBooking: Codable, Equatable, Identifiable, Sendable {
     var items: [ItemReference] { serializedItems + bulkItems }
     var itemCount: Int { items.count }
     func isOverdue(at now: Date = .now) -> Bool { endsAt < now }
+
+    /// Past-tense once overdue, so the row never reads as a future deadline.
+    func dueLabel(at now: Date = .now) -> String {
+        let when = endsAt.operationalDateTimeLabel(now: now, capitalizesRelativeDay: false)
+        return isOverdue(at: now) ? "Was due \(when)" : "Due \(when)"
+    }
 }
 
 struct OpenBookingsPage: Decodable, Sendable {
@@ -288,6 +294,14 @@ struct BookingActivitySnapshot: Codable, Equatable, Identifiable, Sendable {
 
     var items: [OpenBooking.ItemReference] { serializedItems + bulkItems }
     var itemCount: Int { items.count }
+
+    func pickupLabel(at now: Date = .now) -> String {
+        let when = startsAt.operationalDateTimeLabel(now: now, capitalizesRelativeDay: false)
+        if kind == .reservation, status == .booked, startsAt < now {
+            return "Pickup was due \(when)"
+        }
+        return "Pickup \(when)"
+    }
 
     func isWaitingForPickup(at now: Date = .now) -> Bool {
         status == .pendingPickup || (kind == .reservation && status == .booked && startsAt <= now)
