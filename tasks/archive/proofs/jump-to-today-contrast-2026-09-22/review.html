@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jump to today contrast</title>
+<style>
+  :root {
+    --ground:#EEF0F4; --surface:#FFFFFF; --raised:#F7F8FA;
+    --ink:#14171C; --muted:#5B6472; --faint:#8B95A3;
+    --line:#D8DDE5; --accent:#C5050C; --good:#1B7F3B; --warn:#A65A00;
+    --shadow:0 1px 2px rgba(20,23,28,.06), 0 8px 24px rgba(20,23,28,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#131519; --surface:#1B1E24; --raised:#22262E;
+      --ink:#E9ECF1; --muted:#9AA4B2; --faint:#727D8C;
+      --line:#2C313A; --accent:#F2545B; --good:#4ADE80; --warn:#F0A64A;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#131519; --surface:#1B1E24; --raised:#22262E;
+    --ink:#E9ECF1; --muted:#9AA4B2; --faint:#727D8C;
+    --line:#2C313A; --accent:#F2545B; --good:#4ADE80; --warn:#F0A64A;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; background:var(--ground); color:var(--ink);
+    font-family:"Public Sans", ui-sans-serif, system-ui, sans-serif;
+    font-size:16px; line-height:1.6; -webkit-font-smoothing:antialiased;
+  }
+  .wrap { max-width:1080px; margin:0 auto; padding:56px 24px 96px; }
+  .eyebrow {
+    font-family:"IBM Plex Mono", ui-monospace, monospace; font-size:.72rem;
+    letter-spacing:.14em; text-transform:uppercase; color:var(--accent); margin:0 0 14px;
+  }
+  h1 {
+    font-family:"Archivo Narrow", Arial Narrow, sans-serif; font-weight:700;
+    font-size:clamp(2.4rem,6vw,3.9rem); line-height:1.02; letter-spacing:-.015em;
+    margin:0 0 18px; text-wrap:balance;
+  }
+  .lede { font-size:1.12rem; color:var(--muted); max-width:60ch; margin:0; }
+  .rule { height:2px; background:var(--accent); width:64px; margin:34px 0 0; border:0; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:14px; margin:44px 0 0; }
+  .stat { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:20px; box-shadow:var(--shadow); }
+  .stat .k { font-family:"IBM Plex Mono", monospace; font-size:.68rem; letter-spacing:.12em;
+             text-transform:uppercase; color:var(--faint); margin:0 0 10px; }
+  .stat .v { font-family:"Archivo Narrow", sans-serif; font-weight:700; font-size:2.15rem;
+             line-height:1; margin:0 0 6px; font-variant-numeric:tabular-nums; }
+  .stat .n { font-size:.86rem; color:var(--muted); margin:0; line-height:1.45; }
+  .down { color:var(--good); }
+  h2 { font-family:"Archivo Narrow", sans-serif; font-weight:700;
+       font-size:1.9rem; letter-spacing:-.01em; margin:72px 0 6px; }
+  .sec-note { color:var(--muted); margin:0 0 26px; font-size:.95rem; }
+  .pair { margin:0 0 40px; }
+  .pair-head h3 { font-family:"Archivo Narrow",sans-serif; font-weight:600; font-size:1.2rem; margin:0 0 2px; }
+  .pair-head p { margin:0 0 16px; color:var(--muted); font-size:.92rem; }
+  .shots { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  figure { margin:0; display:flex; flex-direction:column; gap:10px; }
+  figure img { width:100%; height:auto; display:block; border-radius:14px;
+               border:1px solid var(--line); box-shadow:var(--shadow); background:var(--surface); }
+  figcaption { font-size:.85rem; color:var(--muted); line-height:1.5; }
+  .tag { font-family:"IBM Plex Mono",monospace; font-size:.66rem; letter-spacing:.12em;
+         text-transform:uppercase; padding:4px 9px; border-radius:5px; align-self:flex-start; font-weight:600; }
+  .tag-before { background:color-mix(in srgb, var(--muted) 14%, transparent); color:var(--muted); }
+  .tag-after { background:color-mix(in srgb, var(--accent) 13%, transparent); color:var(--accent); }
+  .change { border-top:1px solid var(--line); padding:22px 0 4px; }
+  .change h3 { font-family:"Archivo Narrow",sans-serif; font-weight:600; font-size:1.18rem; margin:0 0 14px; }
+  .ba { display:grid; grid-template-columns:1fr 1fr; gap:26px; }
+  .ba p { margin:6px 0 0; font-size:.93rem; color:var(--muted); }
+  .lbl { font-family:"IBM Plex Mono",monospace; font-size:.64rem; letter-spacing:.13em;
+         text-transform:uppercase; font-weight:600; }
+  .lbl-b { color:var(--faint); }
+  .lbl-a { color:var(--accent); }
+  .panel { background:var(--surface); border:1px solid var(--line); border-radius:12px;
+           padding:24px 26px; box-shadow:var(--shadow); }
+  .panel ul { margin:0; padding-left:19px; }
+  .panel li { margin:0 0 9px; font-size:.94rem; }
+  .panel li:last-child { margin-bottom:0; }
+  code { font-family:"IBM Plex Mono",monospace; font-size:.86em; background:var(--raised);
+         border:1px solid var(--line); padding:1px 5px; border-radius:4px; }
+  .flag { border-left:3px solid var(--warn); }
+  @media (max-width:720px) {
+    .wrap { padding:36px 16px 64px; }
+    .ba { grid-template-columns:1fr; gap:16px; }
+  }
+</style></head><body>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Web · Schedule · Wisconsin Creative</p>
+    <h1>Jump to today contrast</h1>
+    <p class="lede">The floating Jump to today control uses a white pill with black text so it reads clearly against the dark Schedule timeline.</p>
+    <hr class="rule">
+  </header>
+  
+  
+  <h2>Baseline</h2>
+  <p class="sec-note">Before is the operator crop of the secondary gray pill on the dark Schedule surface. Authenticated after capture was blocked: branch preview setup failed with a database fetch error in this environment. After evidence is the class change in ListView (bg-white text-black).</p>
+  
+  
+      <figure>
+        <span class="tag tag-after">Before</span>
+        <img src="data:image/png;base64,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T8Ki0FqVgXT66ae7q666qpD/VpkV5A8//LA76qijWmUJvn/GjBluiy228N/wLuu8Chvyfeyxx7r77ruv7GmULldlvJQ+iT4qiPCUrAz9TEIV6bjjjnMHHXSQW7BggdN6FWnq1Kn+i4tV2KrCxh577OFuueWWrt7orcKGrkXDnlXxZnFV8VJFffSDDfp/JWuhimGWhEafp556yp+FCc/ixYtLntX4Yvvss4874ogj3AknnBB/e/rSSy91n376qbvhhhucju+3337unnvucaeeeqr/lvXtt9/u3nzzTXfBBRe4TTbZxL3wwgtOZfQbNNq+6KKL3PXXX+8Fc9ttt3WvvvqqW7JkiXvvvffGncDhhx/u9FG69tpr/W/ZnHjiid7Wvvvu631vuumm7rXXXnN33nmne+ONNyq1sddee7lDDz3Ubbjhhm7ZsmXut99+a7C/zTbbuAMPPNDtvPPO/trvv/9+d9ddd7kddtjBnXbaae7KK690b731li+jF0Wvu+4698QTT7i77767wU6njSripZOPQTpOj6dEbem3V7oNJBMdNfavv/7af7Ru+0ucVmYRDVHmzp3bcL4bb7yx22CDDXx+Hd9qq63ckUce6RucfmHvrLPOcmeeeaZvqBJF9TY0RFHS42HZO/vss93333/vHnjgAbfTTju5Sy65JLMnITF65513fFnZeuyxx7z4LFq0yNtQD+Tee+/153DFFVe4OXPm+LzpP2VtbLfddu68885z66+/vvehpUTG0pprrunPW2J66623urffftudfPLJbvPNN/diI0YSLku6zi233NLns315l4oXfrMnoYXwJCwKrXXz0qCJi4TmlVdeif1q3cRnxx13jPf3ekUvuelOrrmPq6++2r+J/fnnn/seiOaePvvsM7f11ls3nMbLL7/s56VuvPFGd+GFF7pZs2a5PffcsyGPNnRN6jEpLV261NuUuB1zzDHu/fff9z2x2267zQubhkAHH3ywz5v+U9bGAQcc4M3Il3px5557rvvuu+9i0xLQ5557zp1//vn+2tWT+/HHH93uu+/ue2TPPPOM22233eIXRHfddVcvtq+//npsI+9KN/GS18cg5UN4CtZWFXctDU2aRcdOw8THtkMtP/roI+/q448/9ksNxSx9+OGHbp111rFNv9R5WtIwST8Butlmm9mutkt9lUC9rhdffDHO98sv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" alt="Low-contrast secondary pill">
+        <figcaption>Jump to today uses the secondary gray fill and light text on the near-black page.</figcaption>
+      </figure>
+  <h2>What changed, and why</h2>
+  <div class="change">
+    <h3>Higher-contrast floating CTA</h3>
+    <div class="ba">
+      <div><span class="lbl lbl-b">Was</span><p>variant secondary with border-border/60 — mid-gray fill, light text.</p></div>
+      <div><span class="lbl lbl-a">Now</span><p>White fill, black text, light border, soft hover keep the pill readable on dark Schedule.</p></div>
+    </div>
+  </div>
+  <h2>Verification</h2><div class="panel"><ul><li>tests/schedule-timeline-source.test.ts — pass (pins Jump to today plus bg-white / text-black)</li><li>Authenticated Preview after capture: blocked (preview:setup database fetch failed)</li><li>npm run build:app: not run for this one-line style change</li></ul></div>
+  <h2>Things to know</h2><div class="panel flag"><ul><li>Matched after screenshot still needed once the branch preview database is reachable.</li></ul></div>
+</div>
+</body></html>
