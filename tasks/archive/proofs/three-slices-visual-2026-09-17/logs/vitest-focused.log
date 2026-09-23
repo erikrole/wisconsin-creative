@@ -1,0 +1,47 @@
+npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+
+ RUN  v3.2.6 /Users/role/Code/wisconsin-creative
+
+······································································································x···························································
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/badge-evaluator.test.ts > badge evaluator checkout events > counts on-time returns from completedAt even when later edits move updatedAt
+AssertionError: expected "spy" to be called with arguments: [ { where: { …(3) }, …(1) } ]
+
+Received: 
+
+  1st spy call:
+
+@@ -17,10 +17,11 @@
+        "endsAt": true,
+        "startsAt": true,
+        "updatedAt": true,
+      },
+      "where": {
++       "custodyScope": "PERSON",
+        "kind": "CHECKOUT",
+        "requesterUserId": "user-1",
+        "status": "COMPLETED",
+      },
+    },
+
+
+Number of calls: 1
+
+ ❯ tests/badge-evaluator.test.ts:781:37
+    779|     });
+    780| 
+    781|     expect(mockTx.booking.findMany).toHaveBeenCalledWith({
+       |                                     ^
+    782|       where: {
+    783|         requesterUserId: "user-1",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 16 passed (17)
+      Tests  1 failed | 161 passed (162)
+   Start at  06:00:25
+   Duration  721ms (transform 1.05s, setup 162ms, collect 1.83s, tests 112ms, environment 1ms, prepare 802ms)
+

@@ -1,0 +1,69 @@
+Loaded env from /Users/role/Code/wisconsin-creative/.env.development.local
+Loaded env from /Users/role/Code/wisconsin-creative/.env.local
+{
+  "host": "ep-winter-leaf-ai0eekhl.c-4.us-east-1.aws.neon.tech",
+  "db": "/gear-tracker",
+  "cookieNamePresent": true,
+  "cookieName": "gear-tracker-session",
+  "sessionSecretLength": 64
+}
+{
+  "liveSessions": 43,
+  "users": [
+    {
+      "id": "cmotbr3cz0001kv8jfsrg0ank",
+      "email_local": "admin",
+      "email_domain": "creative.local",
+      "role": "ADMIN",
+      "active": true,
+      "hidden_from_roster": true,
+      "force_password_change": false,
+      "has_password": true,
+      "last_active_at": "2026-09-14T19:12:37.488Z"
+    },
+    {
+      "id": "cmn68h6lf0003l40446kldcos",
+      "email_local": "test",
+      "email_domain": "user.com",
+      "role": "ADMIN",
+      "active": false,
+      "hidden_from_roster": true,
+      "force_password_change": false,
+      "has_password": true,
+      "last_active_at": null
+    },
+    {
+      "id": "cmq4ndwxo0009la04jkvhsgzb",
+      "email_local": "beta-smoke-direct-1780889095012",
+      "email_domain": "example.com",
+      "role": "STUDENT",
+      "active": false,
+      "hidden_from_roster": true,
+      "force_password_change": false,
+      "has_password": true,
+      "last_active_at": "2026-06-08T08:32:35.320Z"
+    },
+    {
+      "id": "cmq4nekce000ela04qdvo70b8",
+      "email_local": "beta-smoke-invite-1780889095012",
+      "email_domain": "example.com",
+      "role": "STUDENT",
+      "active": false,
+      "hidden_from_roster": true,
+      "force_password_change": false,
+      "has_password": true,
+      "last_active_at": null
+    },
+    {
+      "id": "cmm727v1j0001z00l744c3oqt",
+      "email_local": "test",
+      "email_domain": "email.com",
+      "role": "STUDENT",
+      "active": false,
+      "hidden_from_roster": true,
+      "force_password_change": false,
+      "has_password": true,
+      "last_active_at": null
+    }
+  ]
+}

@@ -1,0 +1,99 @@
+{
+  "title": "Schedule recent activity strip",
+  "eyebrow": "Web \u00b7 Wisconsin Creative",
+  "lede": "The Schedule chrome no longer leads with standing Crew needed / Gear gaps / Data quality badges or full-width combine and unreleased-crew banners. It shows recent crew and calendar changes, with those exceptions as quiet rows.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "Visual comparison",
+      "note": "Not a matched pair. The before image is the operator crop of the noisy chrome on 2026-09-18. The after captures are authenticated local Preview at 127.0.0.1:3000/schedule as Erik Role ADMIN. Viewports and page chrome differ; do not treat pixel deltas as measured.",
+      "shots": [
+        {
+          "tag": "Before",
+          "title": "Noisy banners and badges",
+          "image": "before-noisy-chrome.png",
+          "cap": "Combine banner, destructive unreleased-crew Alert, and Crew needed 817 / Gear gaps 165 / Data quality 268 on the default strip."
+        },
+        {
+          "tag": "After",
+          "title": "Quiet recent activity",
+          "image": "after-activity-strip.png",
+          "cap": "Recent activity lists the unreleased Hockey crew, the Cross Country combine suggestion, and newest calendar sync rows. Standing queue totals are gone from the default strip."
+        },
+        {
+          "tag": "After",
+          "title": "Pinned above today",
+          "image": "after-pinned-today.png",
+          "wide": true,
+          "cap": "The strip sits in the sticky Schedule frame. Today (Fri, Sep 18) lands directly under it without scrolling to the oldest event."
+        },
+        {
+          "tag": "After",
+          "title": "Stays put while the list scrolls",
+          "image": "after-pinned-scrolled.png",
+          "wide": true,
+          "cap": "Scrolling into later September keeps Recent activity pinned. Jump to today appears because today left the timeline viewport."
+        },
+        {
+          "tag": "Before",
+          "title": "Expanded activity list",
+          "image": "before-expanded-strip.png",
+          "wide": true,
+          "cap": "Operator crop of the expanded Recent activity list before quiet badges and sync filtering."
+        },
+        {
+          "tag": "After",
+          "title": "Quiet badges by default",
+          "image": "after-quiet-badges.png",
+          "wide": true,
+          "cap": "Default strip is skinny Crew not released / May share a crew / Schedule updates chips above Today."
+        },
+        {
+          "tag": "After",
+          "title": "Red/green schedule diffs",
+          "image": "after-red-green-diffs.png",
+          "wide": true,
+          "cap": "Opening Schedule updates shows time and date moves with old values struck in red and new values in green. TV and promo-label noise are gone."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Default strip is activity, not standing queues",
+      "was": "Tone-sorted badges capped at three, so Crew needed / Gear gaps / Data quality occupied the chrome on every visit.",
+      "now": "Newest crew and calendar-sync rows occupy the strip. Queue totals stay in Details."
+    },
+    {
+      "h": "Exceptions are quiet rows",
+      "was": "A full-width orange combine banner and a destructive Alert for every unreleased crew sat above the list.",
+      "now": "One unreleased-crew row and one combine row share the activity list, with Review still opening the existing crew sheet or combine preview."
+    },
+    {
+      "h": "The strip sits above the scroll block",
+      "was": "Recent activity lived in the document flow above the list, so a today-anchored timeline hid it until you scrolled to the oldest events.",
+      "now": "It pins with the title and filters. Day headers and the today anchor measure the combined sticky bottom, so the timeline runs underneath."
+    },
+    {
+      "h": "Red/green schedule diffs",
+      "was": "Expanded sync rows were plain text from \u2192 to lines.",
+      "now": "Old values are struck in red and new values are green, matching ActivityTimeline field diffs."
+    }
+  ],
+  "verification": [
+    "Focused tests (schedule-recent-activity, schedule-ui-review-fixes, schedule-source-truth-smoke-contract, operational-status-rail-source, combined-schedule-events-source, plus related schedule source contracts): pass",
+    "npx tsc --noEmit --pretty false: pass",
+    "eslint on the touched files: pass",
+    "npm run build:app: pass",
+    "git diff --check on the touched files: pass",
+    "npm run verify:docs after npm run codemap: pass",
+    "Authenticated local Preview /schedule as Erik Role ADMIN: activity strip is inside the sticky frame, visible with Today (Fri Sep 18) below it; after scrolling to Sep 20\u201324 the strip stays at the same viewport top and Jump to today appears.",
+    "Authenticated Preview /schedule: quiet badges by default; Schedule updates expands to red/green Start/End diffs only."
+  ],
+  "notes": [
+    "Before and after are not matched viewports. The before image is the operator crop of the problem; after is Preview desktop.",
+    "Preview change-history newest rows are from Sep 5\u20137, so the strip shows calendar updates with date labels rather than minutes-ago assignment edits.",
+    "The strip now pins with the title and filters, so programmatic scroll-into-view of the activity section is no longer required to see it on a today-anchored list.",
+    "The local Preview server was left running at http://127.0.0.1:3000."
+  ]
+}

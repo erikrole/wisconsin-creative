@@ -1,0 +1,89 @@
+{
+  "title": "Resources landing rebuild",
+  "eyebrow": "Web · Resources",
+  "lede": "The Guides home is now an editorial handbook index: a featured lead, type-grouped titles, one search row, and a tools strip. The old identical icon-card grid is gone.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "Home",
+      "note": "Authenticated Preview, ADMIN Erik Role, dark appearance, Cursor Chromium. Before is the user-captured landing. After is the rebuilt index at 1920×1080. These are not hash-bound matched captures. Next.js issue overlay is HMR chrome.",
+      "shots": [
+        {
+          "tag": "Before",
+          "title": "Icon-card grid",
+          "image": "before-landing.png",
+          "wide": true,
+          "cap": "Featured was one more small card. Two search fields sat side by side. The SMB path competed with New guide in the header. Contacts and assignments were extra cards."
+        },
+        {
+          "tag": "After",
+          "title": "Editorial index",
+          "image": "after-landing-home.png",
+          "wide": true,
+          "cap": "Photo Mechanic is a large featured lead. Remaining guides group by How-to, Media Drive, and General. One search field plus compact ⌘K. Path, Contacts, and Assignments sit in a tools strip."
+        }
+      ]
+    },
+    {
+      "heading": "Related states",
+      "note": "Same Preview session. No matched befores for these states.",
+      "shots": [
+        {
+          "tag": "After",
+          "title": "List layout",
+          "image": "after-landing-list.png",
+          "wide": true,
+          "cap": "List stacks titles under type headers. URL is ?layout=list. Featured lead stays."
+        },
+        {
+          "tag": "After",
+          "title": "How-to filter",
+          "image": "after-landing-howto.png",
+          "wide": true,
+          "cap": "Jump chip sets filter=how-to. Chip, Clear all, and 3 of 5 guides count appear. Photo Mechanic returns to the filtered list."
+        },
+        {
+          "tag": "After",
+          "title": "Contacts directory",
+          "image": "after-landing-contacts.png",
+          "wide": true,
+          "cap": "filter=contacts still opens the live team directory with role/area/cleanup filters. Brand assets tab was smoke-checked separately."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Editorial lead",
+      "was": "Featured was one more small icon card in a three-column grid.",
+      "now": "The first featured guide is a large title with a Featured · type kicker and an Open guide action."
+    },
+    {
+      "h": "Type-grouped index",
+      "was": "Every guide used the same muted book-icon card, so How-to and Media Drive looked identical.",
+      "now": "Guides group under How-to, Media Drive, and General with Gotham titles and hairline rows or two-column tiles."
+    },
+    {
+      "h": "Quieter chrome",
+      "was": "Header packed tabs, New guide, and the SMB path. Two search fields sat side by side.",
+      "now": "Header is title, section switcher, and New guide. One search field plus compact ⌘K. Jump chips for How-to, Media Drive, Contacts, and Assignments. Path and directories live in a tools strip."
+    }
+  ],
+  "verification": [
+    "Authenticated Preview, ADMIN Erik Role, 1920×1080, /resources.",
+    "Home: featured lead, type groups, jump chips, tools strip, New guide, Guides/Brand assets switcher.",
+    "List toggle wrote ?layout=list and stacked titles.",
+    "How-to chip wrote filter=how-to and listed three how-tos.",
+    "Contacts filter still loads the live directory (33 people).",
+    "Brand assets tab still switches off the guides toolbar.",
+    "Focused tests: tests/resources-ui-polish-source.test.ts, tests/resources-ui-ownership-contract.test.ts, tests/resources-filters.test.ts. 17 passed across the earlier run; 12 re-run after the last showType tweak.",
+    "eslint on page.tsx and ResourceCommandPalette.tsx: pass.",
+    "npm run build:app skipped while Preview occupies 127.0.0.1:3000."
+  ],
+  "notes": [
+    "URL contracts for filter, q, sort, layout, tab, view, and area are unchanged. Cards remains the default layout.",
+    "Contacts, sport assignments, and Brand assets interiors were not redesigned.",
+    "Phone-width web is smoke coverage; native iOS Guides list is unchanged.",
+    "Unrelated dirty work was left untouched."
+  ]
+}

@@ -1,0 +1,111 @@
+{
+  "title": "Shared page chrome",
+  "eyebrow": "Web · Wisconsin Creative",
+  "lede": "Authenticated pages now open on a Gotham title and the work, without a decorative red rail, a restated Home trail, or a frosted toolbar shell.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "Side by side",
+      "note": "Matched Cursor IDE Chromium captures at 1372×1160 CSS pixels (PNGs 2744×2320), ADMIN, dark appearance, authenticated local Preview at 127.0.0.1:3000. Before patch 735f9267…; after patch 7ceb78e2… on HEAD f7733f57.",
+      "pairs": [
+        {
+          "title": "Dashboard",
+          "sub": "Title and overdue rails.",
+          "before": "before-dashboard.png",
+          "beforeCap": "Dashboard carried a 3px Wisconsin-red title rail that competed with the overdue checkout rails below it.",
+          "after": "after-dashboard.png",
+          "afterCap": "The title sits in Gotham with no brand rail. Red remains on overdue status only.",
+          "beforeEvidence": "before-dashboard.capture.json",
+          "afterEvidence": "after-dashboard.capture.json"
+        },
+        {
+          "title": "Items",
+          "sub": "List header and toolbar.",
+          "before": "before-items.png",
+          "beforeCap": "Home › Items restated the sidebar and title. The red rail sat above a frosted filter capsule.",
+          "after": "after-items.png",
+          "afterCap": "The page opens on Items. Search, All / Standard / Units / Quantity, and Filters sit as controls without a glass shell.",
+          "beforeEvidence": "before-items.capture.json",
+          "afterEvidence": "after-items.capture.json"
+        },
+        {
+          "title": "Bookings",
+          "sub": "Checkouts list.",
+          "before": "before-bookings.png",
+          "beforeCap": "Home › Bookings and a red title rail sat above Checkouts. Overdue cards already used red borders for status.",
+          "after": "after-bookings.png",
+          "afterCap": "The title and Checkouts tabs lead. Overdue red stays on the cards, not the page heading.",
+          "beforeEvidence": "before-bookings.capture.json",
+          "afterEvidence": "after-bookings.capture.json"
+        },
+        {
+          "title": "Settings / Categories",
+          "sub": "Nested wayfinding kept.",
+          "before": "before-settings.png",
+          "beforeCap": "Home › Settings › Categories sat in a glass trail with an underline on Categories. Settings search sat above the title row.",
+          "after": "after-settings.png",
+          "afterCap": "The nested trail remains as quiet text. Categories is Gotham without an underline. Search sits on the Settings title row. Active section-nav uses Gotham.",
+          "beforeEvidence": "before-settings.capture.json",
+          "afterEvidence": "after-settings.capture.json"
+        }
+      ]
+    },
+    {
+      "heading": "After only",
+      "note": "Schedule had an Auto assign dialog open during the baseline pass, so there is no trustworthy before. Item detail was not recaptured after the identity-row change.",
+      "shots": [
+        {
+          "tag": "After",
+          "title": "Schedule list",
+          "image": "after-schedule.png",
+          "wide": true,
+          "cap": "No Home › Schedule trail. Gotham title, unfilled List / Week / Calendar toolbar, and today pinned under the sticky frame. The breadcrumb measurement slot is still present at 0 height."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Gotham is identity, not the whole UI",
+      "was": "Page titles already used the global h1 (Gotham Black). Current crumbs and active section labels used Geist, and some local h1s carried inert size/weight utilities.",
+      "now": "Titles stay on the global h1 scale. Current crumbs and active SectionNav labels use .brand-identity. Controls stay Geist. BookingListPage and SettingsPageShell no longer restyle headings with inert Tailwind."
+    },
+    {
+      "h": "Red is status, not a title rail",
+      "was": "PageHeader drew a 3px left rail in Wisconsin red on every list title, including next to overdue rails.",
+      "now": "PageHeader is a semantic header with no decorative rail. Overdue and other status rails keep red."
+    },
+    {
+      "h": "Top-level breadcrumbs are gone",
+      "was": "Home › Items and Home › Bookings restated the sidebar selection and the page title.",
+      "now": "shouldShowBreadcrumbs hides length ≤ 1 and non-detail length === 2. Nested Settings/Reports trails, create routes, and entity detail stay."
+    },
+    {
+      "h": "Toolbars and section nav are unfilled",
+      "was": "OperationalToolbar, PageBreadcrumb, and SectionNav shared frosted glass and backdrop-filter.",
+      "now": "The toolbar is a control row. Breadcrumbs are a quiet text trail. SectionNav has no glass; the active item still uses the existing indicator plus Gotham."
+    },
+    {
+      "h": "Detail identity is a row, not a card",
+      "was": "DetailPageHeader sat in a rounded bordered card with shadow.",
+      "now": "The identity row uses mb-5 and a hairline rule. Skeletons on item, booking, and user detail match that shape."
+    }
+  ],
+  "verification": [
+    "Focused tests: tests/page-chrome-source.test.ts, tests/breadcrumbs.test.ts (shouldShowBreadcrumbs), tests/detail-page-header-source.test.ts, tests/schedule-timeline-source.test.ts (breadcrumb frame no longer sticky z-35). Earlier batch: 10 files / 87 tests pass.",
+    "npx tsc --noEmit --pretty false: pass",
+    "eslint on the touched chrome files: pass",
+    "git diff --check on the touched chrome files: pass",
+    "npm run build:app: skipped. Preview was already bound to 127.0.0.1:3000; the repo guard refuses a Next compile while that port is in use.",
+    "Authenticated Preview as Erik Role ADMIN, dark appearance: Dashboard, Items, Bookings, Settings/categories, and Schedule. Nested Settings crumbs remain; top-level Home trails are gone.",
+    "Keyboard: crumb controls keep min-h-10 and focus-visible:ring-2 in source. No dedicated focus screenshot."
+  ],
+  "notes": [
+    "Schedule is after-only because Auto assign was open on the baseline capture.",
+    "Item-detail after was not captured; the identity-row change is locked in source tests and skeleton markup.",
+    "The Settings after shot includes a leftover Next.js 1 issue overlay from an HMR recover. It is not product chrome.",
+    "Appearance was system-resolved dark on some befores and explicit Dark on some afters. All compared shots are dark.",
+    "Unrelated dirty work (schedule activity, settings sub-pages, archived proofs) was left untouched.",
+    "Do not run npm run build while Preview occupies :3000."
+  ]
+}

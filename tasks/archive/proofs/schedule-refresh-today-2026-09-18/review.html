@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Schedule refresh opens on today</title>
+<style>
+  :root {
+    --ground:#EEF0F4; --surface:#FFFFFF; --raised:#F7F8FA;
+    --ink:#14171C; --muted:#5B6472; --faint:#8B95A3;
+    --line:#D8DDE5; --accent:#C5050C; --good:#1B7F3B; --warn:#A65A00;
+    --shadow:0 1px 2px rgba(20,23,28,.06), 0 8px 24px rgba(20,23,28,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#131519; --surface:#1B1E24; --raised:#22262E;
+      --ink:#E9ECF1; --muted:#9AA4B2; --faint:#727D8C;
+      --line:#2C313A; --accent:#F2545B; --good:#4ADE80; --warn:#F0A64A;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#131519; --surface:#1B1E24; --raised:#22262E;
+    --ink:#E9ECF1; --muted:#9AA4B2; --faint:#727D8C;
+    --line:#2C313A; --accent:#F2545B; --good:#4ADE80; --warn:#F0A64A;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; background:var(--ground); color:var(--ink);
+    font-family:"Public Sans", ui-sans-serif, system-ui, sans-serif;
+    font-size:16px; line-height:1.6; -webkit-font-smoothing:antialiased;
+  }
+  .wrap { max-width:1080px; margin:0 auto; padding:56px 24px 96px; }
+  .eyebrow {
+    font-family:"IBM Plex Mono", ui-monospace, monospace; font-size:.72rem;
+    letter-spacing:.14em; text-transform:uppercase; color:var(--accent); margin:0 0 14px;
+  }
+  h1 {
+    font-family:"Archivo Narrow", Arial Narrow, sans-serif; font-weight:700;
+    font-size:clamp(2.4rem,6vw,3.9rem); line-height:1.02; letter-spacing:-.015em;
+    margin:0 0 18px; text-wrap:balance;
+  }
+  .lede { font-size:1.12rem; color:var(--muted); max-width:60ch; margin:0; }
+  .rule { height:2px; background:var(--accent); width:64px; margin:34px 0 0; border:0; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:14px; margin:44px 0 0; }
+  .stat { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:20px; box-shadow:var(--shadow); }
+  .stat .k { font-family:"IBM Plex Mono", monospace; font-size:.68rem; letter-spacing:.12em;
+             text-transform:uppercase; color:var(--faint); margin:0 0 10px; }
+  .stat .v { font-family:"Archivo Narrow", sans-serif; font-weight:700; font-size:2.15rem;
+             line-height:1; margin:0 0 6px; font-variant-numeric:tabular-nums; }
+  .stat .n { font-size:.86rem; color:var(--muted); margin:0; line-height:1.45; }
+  .down { color:var(--good); }
+  h2 { font-family:"Archivo Narrow", sans-serif; font-weight:700;
+       font-size:1.9rem; letter-spacing:-.01em; margin:72px 0 6px; }
+  .sec-note { color:var(--muted); margin:0 0 26px; font-size:.95rem; }
+  .pair { margin:0 0 40px; }
+  .pair-head h3 { font-family:"Archivo Narrow",sans-serif; font-weight:600; font-size:1.2rem; margin:0 0 2px; }
+  .pair-head p { margin:0 0 16px; color:var(--muted); font-size:.92rem; }
+  .shots { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  figure { margin:0; display:flex; flex-direction:column; gap:10px; }
+  figure img { width:100%; height:auto; display:block; border-radius:14px;
+               border:1px solid var(--line); box-shadow:var(--shadow); background:var(--surface); }
+  figcaption { font-size:.85rem; color:var(--muted); line-height:1.5; }
+  .tag { font-family:"IBM Plex Mono",monospace; font-size:.66rem; letter-spacing:.12em;
+         text-transform:uppercase; padding:4px 9px; border-radius:5px; align-self:flex-start; font-weight:600; }
+  .tag-before { background:color-mix(in srgb, var(--muted) 14%, transparent); color:var(--muted); }
+  .tag-after { background:color-mix(in srgb, var(--accent) 13%, transparent); color:var(--accent); }
+  .change { border-top:1px solid var(--line); padding:22px 0 4px; }
+  .change h3 { font-family:"Archivo Narrow",sans-serif; font-weight:600; font-size:1.18rem; margin:0 0 14px; }
+  .ba { display:grid; grid-template-columns:1fr 1fr; gap:26px; }
+  .ba p { margin:6px 0 0; font-size:.93rem; color:var(--muted); }
+  .lbl { font-family:"IBM Plex Mono",monospace; font-size:.64rem; letter-spacing:.13em;
+         text-transform:uppercase; font-weight:600; }
+  .lbl-b { color:var(--faint); }
+  .lbl-a { color:var(--accent); }
+  .panel { background:var(--surface); border:1px solid var(--line); border-radius:12px;
+           padding:24px 26px; box-shadow:var(--shadow); }
+  .panel ul { margin:0; padding-left:19px; }
+  .panel li { margin:0 0 9px; font-size:.94rem; }
+  .panel li:last-child { margin-bottom:0; }
+  code { font-family:"IBM Plex Mono",monospace; font-size:.86em; background:var(--raised);
+         border:1px solid var(--line); padding:1px 5px; border-radius:4px; }
+  .flag { border-left:3px solid var(--warn); }
+  @media (max-width:720px) {
+    .wrap { padding:36px 16px 64px; }
+    .ba { grid-template-columns:1fr; gap:16px; }
+  }
+</style></head><body>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Web · Wisconsin Creative</p>
+    <h1>Schedule refresh opens on today</h1>
+    <p class="lede">A refresh of My shifts no longer dumps the timeline at May with a date header overlapping its first row. It opens on today, with past above and upcoming below.</p>
+    <hr class="rule">
+  </header>
+  <div class="stats">
+    <div class="stat">
+      <p class="k">Reload land</p>
+      <p class="v down">Today</p>
+      <p class="n">Fri, Sep 18 instead of Fri, May 15</p>
+    </div></div>
+  
+  <h2>Visual comparison</h2>
+  <p class="sec-note">Before is the reporter screenshot of the broken refresh (May 15, overlapping Softball row). After is authenticated /schedule?myShifts=true in the local preview after the fix. Viewport and chrome differ, so this is not a pixel-matched pair.</p>
+  
+  
+  <h2>What changed, and why</h2>
+  <div class="change">
+    <h3>Reload position</h3>
+    <div class="ba">
+      <div><span class="lbl lbl-b">Was</span><p>Refresh restored raw window.scrollY, including 0 from the error boundary and loading skeleton, so the list opened at the archive floor.</p></div>
+      <div><span class="lbl lbl-a">Now</span><p>Refresh restores the visible event only when it is still in this window. Otherwise it opens on today.</p></div>
+    </div>
+  </div>
+  <div class="change">
+    <h3>Older-event loading</h3>
+    <div class="ba">
+      <div><span class="lbl lbl-b">Was</span><p>The past sentinel sat in view on first paint and walked every older page until May, while a sticky day header overlapped the first row.</p></div>
+      <div><span class="lbl lbl-a">Now</span><p>Older pages load after the reader scrolls toward them. My shifts still fills remaining pages in the background without yanking the view to the top.</p></div>
+    </div>
+  </div>
+  <h2>Verification</h2><div class="panel"><ul><li>npx vitest run tests/schedule-timeline-source.test.ts: 26 passed</li><li>npx tsc --noEmit --pretty false: pass</li><li>eslint on ListView, schedule page, and use-schedule-data: pass</li><li>Authenticated local preview /schedule?myShifts=true: Today (Fri, Sep 18) is in view with past above and upcoming below. DOM todayTop 524px, scrollY 1324. First DOM day is still May 15 above the fold, not the landing point.</li></ul></div>
+  <h2>Things to know</h2><div class="panel flag"><ul><li>before-may.png is the reporter capture. after-today.png is the post-fix preview.</li><li>Calendar source stale and schedule health unavailable were present in the preview and are unrelated to this landing bug.</li><li>A sliver of the previous event can still peek under the sticky toolbar; that is leftover sticky-frame overlap, not the May refresh.</li></ul></div>
+</div>
+</body></html>

@@ -1,0 +1,104 @@
+{
+  "title": "Settings control room",
+  "eyebrow": "Web · Wisconsin Creative",
+  "lede": "Settings is now a searchable control room: icon rail, Booking vs Schedule, matching titles, related jumps, and stable save bars.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "Side by side",
+      "note": "Matched Cursor IDE Chromium captures at 1372×1160 CSS pixels (PNGs 2744×2320), ADMIN, dark appearance, authenticated local Preview at 127.0.0.1:3000. Parallel page-chrome work is also visible in the global sidebar (account at the bottom, Notifications no longer in the rail). Settings-specific change is the inner control room.",
+      "pairs": [
+        {
+          "title": "Overview",
+          "sub": "Directory and grouping.",
+          "before": "before-overview.png",
+          "beforeCap": "Choose a settings area. Sports lived under People. Checkout policies sat in Inventory. Reservation, calendars, locations, and overdue lived together as Scheduling. No in-page filter.",
+          "after": "after-overview.png",
+          "afterCap": "Searchable directory with Resume. Booking and Schedule are separate groups. Sports moved under Schedule. Icon tiles plus an icon rail.",
+          "beforeEvidence": "before-overview.capture.json",
+          "afterEvidence": "after-overview.capture.json"
+        },
+        {
+          "title": "Appearance",
+          "sub": "Personal theme.",
+          "before": "before-appearance.png",
+          "beforeCap": "Theme and text size with a text rail and no related-page jump.",
+          "after": "after-appearance.png",
+          "afterCap": "Same picker, icon rail, matching title, and a Related link to Notifications.",
+          "beforeEvidence": "before-appearance.capture.json",
+          "afterEvidence": "after-appearance.capture.json"
+        }
+      ]
+    },
+    {
+      "heading": "After only",
+      "note": "The Profile baseline landed on the loading skeleton, so it is not a trustworthy loaded-form comparison. Sports, Checkout policies, Notifications, and overview filter had no matched before.",
+      "shots": [
+        {
+          "tag": "After",
+          "title": "Overview filter",
+          "image": "after-filter-kiosk.png",
+          "wide": true,
+          "cap": "Typing kiosk reduces the directory to Kiosks. Resume stays available."
+        },
+        {
+          "tag": "After",
+          "title": "Profile",
+          "image": "after-profile.png",
+          "wide": true,
+          "cap": "Loaded form with Slack handle, stable Saved bar, and Related jumps to Security and Notifications."
+        },
+        {
+          "tag": "After",
+          "title": "Notifications",
+          "image": "after-notifications.png",
+          "wide": true,
+          "cap": "Quiet hours, delivery channels, and type rows with related Appearance."
+        },
+        {
+          "tag": "After",
+          "title": "Sports",
+          "image": "after-sports.png",
+          "wide": true,
+          "cap": "Schedule-group tab with on-page jump nav for Auto assign, Non-game, and Sports."
+        },
+        {
+          "tag": "After",
+          "title": "Checkout policies",
+          "image": "after-checkout-policies.png",
+          "wide": true,
+          "cap": "Booking-group loan rules with a stable save bar and related Reservation, Overdue, and Extensions links."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Settings is a directory, not a dump of tabs",
+      "was": "Overview listed every page in mixed People / Inventory / Scheduling groups. Finding Kiosks or overdue meant scanning the rail.",
+      "now": "In-page filter plus Resume. Booking and Schedule are separate jobs. Sports sits with calendars and locations."
+    },
+    {
+      "h": "Each tab shares one shell",
+      "was": "Titles drifted from nav labels. Long pages had no jump. Related work lived in other groups with no cross-links.",
+      "now": "Titles come from SETTINGS_SECTIONS. Related links sit under every tab. Sports and Security get on-page jump nav."
+    },
+    {
+      "h": "Saves and empty states say what they mean",
+      "was": "Some forms swapped button labels while saving. Profile omitted Slack. Collaborator empty/dirty states were easy to misread.",
+      "now": "Shared save bars keep Saved / Save changes / Saving stable. Profile writes slackHandle. Empty and dirty states stay explicit."
+    }
+  ],
+  "verification": [
+    "Authenticated Preview as Erik Role ADMIN at http://127.0.0.1:3000. Overview filter, Profile loaded form, Appearance, Notifications, Sports jump nav, and Checkout policies dirty/reset save bar were exercised in the Cursor browser.",
+    "Focused source tests: tests/settings-ui-polish-source.test.ts, tests/settings-sweeping-ui-contract.test.ts, tests/breadcrumbs.test.ts.",
+    "npx tsc --noEmit --pretty false and npm run lint run after the review page.",
+    "npm run build:app was not run because Preview next dev already owns port 3000."
+  ],
+  "notes": [
+    "Route URLs and role gates did not change. App activity remains owner-only and off the default rail.",
+    "Profile first paint is still slow enough that a snapshot can land on skeletons; wait for the form before judging the page.",
+    "The Settings directory filter and the global ⌘K palette are separate. A leftover palette from a prior shortcut can sit over the overview until Escape.",
+    "Parallel uncommitted page-chrome work is visible in these captures and was preserved."
+  ]
+}

@@ -1,0 +1,85 @@
+{
+  "title": "Snow Leopard high-traffic polish",
+  "eyebrow": "Web · Wisconsin Creative",
+  "lede": "A bug-fix and quality-of-life pass across Dashboard, Schedule, Bookings, Items, Settings, and app chrome. Status copy is sentence case, high-traffic actions keep 40px targets, and recovery paths name the actual work.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "After-only authenticated Preview",
+      "note": "No matched before/after pair. The working tree already contained unrelated chrome, settings, and schedule work, so HEAD is not a trustworthy baseline. Captures are ADMIN, dark appearance, authenticated local Preview at 127.0.0.1:3000.",
+      "shots": [
+        {
+          "tag": "After",
+          "title": "Dashboard",
+          "image": "after-dashboard.png",
+          "wide": true,
+          "cap": "Checking sync without a green glow. Overdue banner has rows. Shift titles are links. Notification count sits on the bell. Sidebar role caption is Admin, not ADMIN."
+        },
+        {
+          "tag": "After",
+          "title": "Bookings · All",
+          "image": "after-bookings.png",
+          "wide": true,
+          "cap": "Heading is Bookings, not Active all bookings. Status badges are sentence case (Checked out). Search names title or requester."
+        },
+        {
+          "tag": "After",
+          "title": "Items",
+          "image": "after-items.png",
+          "wide": true,
+          "cap": "Search accessible name matches the field. Filters and Favorites are 40px. Items list was still loading in this capture."
+        },
+        {
+          "tag": "After",
+          "title": "Schedule list",
+          "image": "after-schedule.png",
+          "wide": true,
+          "cap": "List / Week / Calendar toolbar and Checking sources. Timeline rows were still loading in this capture. Next.js issue badge is HMR/dev overlay, not product chrome."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Pending pickup goes to checkouts",
+      "was": "Dashboard pending-pickup links opened the reservations tab.",
+      "now": "Pending pickup opens /bookings?tab=checkouts&status=PENDING_PICKUP."
+    },
+    {
+      "h": "Sync does not look live before it is",
+      "was": "Idle label was Sync starting with an always-on green glow.",
+      "now": "Initial label is Checking sync. Green glow applies only while state is active."
+    },
+    {
+      "h": "Sentence-case status and role",
+      "was": "Detail badges and search used title case; sidebar CSS uppercased Admin to ADMIN.",
+      "now": "Checked out, Pending pickup, and Maintenance match the list language. Role caption is Admin without an uppercase class."
+    },
+    {
+      "h": "Settings ⌘K is one palette",
+      "was": "Global search and settings search both handled Meta+K.",
+      "now": "AppShell skips /settings. SettingsCommand captures the shortcut. CommandDialog hides the overlapping Close control."
+    },
+    {
+      "h": "Empty and recovery copy names the work",
+      "was": "All-tab empty said active all bookings. Week empty told people to leave today. Settings search had no Clear.",
+      "now": "All tab says bookings. This week empty stays on this week. Settings empty has Clear search."
+    }
+  ],
+  "verification": [
+    "Focused vitest: 9 files / 82 tests pass (dashboard pending-pickup, status labels, decision contracts, sidebar, settings polish, pending-action, operational loading, dashboard motion, booking realtime, dashboard stats/fast-count, settings sweeping, status-color, schedule review/timeline).",
+    "npx tsc --noEmit --pretty false: pass",
+    "git diff --check on touched polish files: pass",
+    "npm run build:app: skipped. Preview already owns 127.0.0.1:3000.",
+    "Authenticated Preview as Erik Role ADMIN, dark: Dashboard, Bookings All, Items, Schedule, Settings directory. Settings search aria-label matches placeholder. Notifications (20 unread) is the accessible name. Shift rows expose Open {event} links. Checking sync has no green glow.",
+    "Dashboard error boundary fired once after a debug useEffect was inserted after early returns (Rules of Hooks). Moved the log above those returns and Retry restored the page.",
+    "Schedule list was still skeleton in the after capture; ListView nested-control and week-empty copy are locked in source. Items after capture was also still loading rows.",
+    "Debug instrumentation remains in AppShell, SettingsCommand, and dashboard page until this pass is confirmed."
+  ],
+  "notes": [
+    "After-only because the checkout already contained unrelated dirty work; do not treat HEAD as the pre-change baseline.",
+    "The Next.js issue overlay in some captures is Cursor-browser hydration (data-cursor-ref) plus HMR, not product chrome.",
+    "Do not run npm run build while Preview occupies :3000.",
+    "Unrelated dirty work (schedule activity feed, user profile, auto-assign, archived proofs) was left in place."
+  ]
+}

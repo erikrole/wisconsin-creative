@@ -1,0 +1,116 @@
+{
+  "title": "Accountability leaderboard",
+  "eyebrow": "Web · Wisconsin Creative",
+  "lede": "The late-return board now tells the truth about overdue gear, keeps filters in the URL, and lets you find yourself without leaving the ranking.",
+  "stats": [
+    {
+      "k": "Return record",
+      "v": "69% → 64%",
+      "n": "Nolan’s on-time rate dropped once currently overdue checkouts count as not on time. Same live inventory, same 2026-27 year."
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Leaderboard",
+      "note": "Cursor IDE Chromium, 1372×1160 CSS pixels (PNGs 2744×2320), ADMIN, dark, authenticated Preview at 127.0.0.1:3000. Before is the loaded page on HEAD f7733f57 before this patch. After is the same HEAD plus accountability patch 10299c19. After URL is /accountability?year=2026 because year now persists; that is an intended change, so this is not a hash-validated pair.",
+      "shots": [
+        {
+          "tag": "Before",
+          "title": "Loaded leaderboard before",
+          "image": "before-page.png",
+          "wide": true,
+          "cap": "Rank by Volume / Time / Recent. Return records of 69% and 80% sit next to 1 checkout overdue now. No search, no You’re #N, red badges on resolved rows too, RANK 1/2/3 labels on the podium."
+        },
+        {
+          "tag": "After",
+          "title": "Loaded leaderboard after",
+          "image": "after-page.png",
+          "wide": true,
+          "cap": "Rank by Events / Time / Latest. Find a person and You’re #12 sit in the toolbar. Nolan is 64%, Trey 76%. David’s count is a quiet gray 4 because the gear is back. Podium reads 1st / 2nd / 3rd."
+        }
+      ]
+    },
+    {
+      "heading": "Find yourself",
+      "note": "After-only: the signed-in jump and local search did not exist on the baseline. Same viewport, role, and live 2026-27 inventory.",
+      "shots": [
+        {
+          "tag": "After",
+          "title": "You’re #12",
+          "image": "after-you.png",
+          "wide": true,
+          "cap": "You’re #12 jumps to Erik Role. The row keeps rank 12, shows a You badge, 92% return record, and 1 checkout overdue now. Sticky header stays put while the list scrolls."
+        },
+        {
+          "tag": "After",
+          "title": "Person search",
+          "image": "after-search.png",
+          "wide": true,
+          "cap": "Search Erik filters the table to one row without changing the spotlight, metrics, or excluded-record count. Rank 12 is preserved."
+        }
+      ]
+    },
+    {
+      "heading": "Receipts",
+      "note": "After-only. The intended before-receipts capture was lost (a Settings page was saved in that slot and discarded). Do not treat this as a matched pair.",
+      "shots": [
+        {
+          "tag": "After",
+          "title": "Incident history",
+          "image": "after-receipts.png",
+          "wide": true,
+          "cap": "Expanded history leads with the live overdue checkout. Exclude is a labeled button. Dates and late duration sit in the meta row, not as extra badges."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "On-time rate includes overdue gear",
+      "was": "Return record used completed checkouts only, so a person with overdue gear could still show 100% or a high green bar.",
+      "now": "After three episodes, on-time rate is on-time completed checkouts divided by completed plus currently overdue PERSON checkouts. Open overdue work counts as not on time."
+    },
+    {
+      "h": "Filters stay in the URL",
+      "was": "Year, location, incident state, user state, and sort lived only in React state, so a refresh or shared link reset the board.",
+      "now": "Those filters sync to the query string. The current academic year is written as year=2026 when it is selected. Person search stays local and does not change rank, metrics, or the spotlight."
+    },
+    {
+      "h": "You can find yourself",
+      "was": "Eighteen rows and no way to jump to the signed-in viewer.",
+      "now": "You’re #N jumps to the row. A You badge marks it. Find a person filters the table in place."
+    },
+    {
+      "h": "Red means gear is still out",
+      "was": "Every late-event count used a red badge, including All returned rows.",
+      "now": "Red badges are reserved for people who still have overdue gear. Resolved counts stay quiet gray."
+    },
+    {
+      "h": "CSV stays on the page",
+      "was": "Export ranking assigned window.location and navigated away.",
+      "now": "ADMIN CSV downloads in place through the shared report-export path. Rate limit and permission run before report work."
+    },
+    {
+      "h": "Receipts and ranking labels",
+      "was": "Rank by Volume / Time / Recent. Incident badges competed with dates. Exclude was easy to miss. Active overdue receipts could sit under resolved ones.",
+      "now": "Rank by Events / Time / Latest. Active overdue receipts sort first. Exclude is a labeled button. Item summaries load only for incident rows so the warm path stays under a second."
+    }
+  ],
+  "verification": [
+    "Focused tests: tests/accountability-service.test.ts, tests/accountability-routes.test.ts, tests/accountability-page-source.test.ts. 32 tests across 4 files, then the page-source file again at 5/5, all pass.",
+    "npx tsc --noEmit --pretty false: pass",
+    "eslint on the accountability page, client, spotlight, API route, and service: pass",
+    "git diff --check on those accountability paths: pass",
+    "npm run build:app: skipped. Preview was already bound to 127.0.0.1:3000; the repo guard refuses a Next compile while that port is in use.",
+    "Authenticated Preview as Erik Role ADMIN, dark appearance, /accountability then /accountability?year=2026. Live board: 18 people, 39 late events, 9 currently overdue. Nolan 64% with overdue gear; David 80% with a gray count after returns. You’re #12 lands on Erik Role at 92%. Search Erik keeps the spotlight and metrics. Exclude on FB vs Notre Dame (Neutral) is a labeled button. CSV download was exercised in-session and stayed on the page.",
+    "Warm GET /api/accountability ~761ms after the two-phase item-summary load. One later resource was ~7.3s, likely a compile, not the warm path."
+  ],
+  "notes": [
+    "Receipts are after-only because the baseline capture in that slot was a Settings page and was discarded.",
+    "Before and after page shots are not a hash-validated pair: after writes year=2026 into the URL.",
+    "The before screenshot predates the accountability patch; its capture receipt was recorded later and uses the after patch hash as workspace provenance, not as proof that the before pixels came from that patch.",
+    "Unrelated dirty work (schedule activity, settings sub-pages, app chrome) was left untouched. A sidebar hydration warning from data-cursor-ref is from that other work.",
+    "Do not run npm run build while Preview occupies :3000.",
+    "Person search is local only and is not written to the URL."
+  ]
+}

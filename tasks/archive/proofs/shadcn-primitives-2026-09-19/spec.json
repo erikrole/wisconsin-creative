@@ -1,0 +1,99 @@
+{
+  "title": "High-use shadcn primitives",
+  "eyebrow": "Web · Wisconsin Creative",
+  "lede": "Shared field, overlay, menu, table, and toggle primitives now share press/focus chrome, 40px compact hit areas, origin-aware menus, and sentence-case table headers.",
+  "stats": [
+    {
+      "k": "Surfaces",
+      "v": "Items list",
+      "n": "Authenticated /items in Cursor Chromium, 1372×1160, dark, ADMIN."
+    },
+    {
+      "k": "Visible change",
+      "v": "Status",
+      "n": "Table headers dropped forced uppercase. STATUS is now Status."
+    },
+    {
+      "k": "Close target",
+      "v": "40×40",
+      "n": "Add Item sheet close measured 40×40 CSS pixels after the pass."
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Items list",
+      "note": "Matched Cursor IDE Chromium captures at 1372×1160 CSS pixels, ADMIN, dark appearance, authenticated local Preview at 127.0.0.1:3000. HEAD f7733f57. After photos finished loading; the before capture raced item-image decode, so thumbnails are not part of the claimed change.",
+      "pairs": [
+        {
+          "title": "Inventory table",
+          "sub": "Buttons, badges, search, checkboxes, and table headers.",
+          "before": "before-items.png",
+          "beforeCap": "STATUS was forced uppercase by the shared TableHead class while Name, Category, Department, and Location stayed sentence case from sort buttons.",
+          "after": "after-items.png",
+          "afterCap": "Status is sentence case with the other headers. Search, segmented All/Standard/Units/Quantity, badges, and row checkboxes keep the same layout.",
+          "beforeEvidence": "before-items.capture.json",
+          "afterEvidence": "after-items.capture.json"
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Field chrome is one contract",
+      "was": "Input, Textarea, NativeSelect, and SelectTrigger used near-copies of focus/invalid styles with drifting transitions and disabled treatment.",
+      "now": "Shared fieldChrome covers hover, focus, invalid, and disabled states so a text field and a select in the same row match."
+    },
+    {
+      "h": "Press, focus, and reduced motion",
+      "was": "Buttons already scaled on press. Duration, cursor, and reduced-motion were inconsistent across toggles, menus, and overlays.",
+      "now": "Buttons, toggles, and overlay close controls use a 150ms press scale, 40px close targets, and motion-reduce safety. Menus and selects open from their trigger origin."
+    },
+    {
+      "h": "Compact controls keep a 40px hit area",
+      "was": "Checkbox, radio, and switch visuals were 16–20px with no expanded hit target.",
+      "now": "They keep their compact visuals and expand to a 40px hit area. Switch is a slightly larger 24×44 track. Form fields stay h-9 until a dedicated field-baseline slice."
+    },
+    {
+      "h": "Sentence-case table headers",
+      "was": "TableHead forced uppercase tracking-wider, so some headers shouted (STATUS) next to sentence-case sort labels.",
+      "now": "Headers are sentence case and medium weight, matching the design-language table rule."
+    },
+    {
+      "h": "Overlays and tooltips",
+      "was": "Dialog titles could sit under the close control. Sheets opened over 500ms. Tooltips always waited 200ms.",
+      "now": "Dialogs cap height and pad titles away from the 40px close control. Sheets open in 300ms. After the first tooltip, the next one skips delay."
+    }
+  ],
+  "verification": [
+    {
+      "name": "Focused tests",
+      "pass": true,
+      "detail": "tests/shadcn-primitives-source.test.ts and tests/operational-target-baseline.test.ts — 12 passed."
+    },
+    {
+      "name": "TypeScript",
+      "pass": true,
+      "detail": "npx tsc --noEmit --pretty false"
+    },
+    {
+      "name": "Lint / whitespace",
+      "pass": true,
+      "detail": "eslint on changed primitive files; git diff --check on primitives, DESIGN_LANGUAGE, and the new test."
+    },
+    {
+      "name": "Authenticated browser",
+      "pass": true,
+      "detail": "ADMIN session on 127.0.0.1:3000/items. Keyboard/CDP: table header text-transform none; sheet close 40×40; field chrome transition includes border-color and background-color. Next.js overlay showed a one-time HMR hydration mismatch on TooltipProvider skipDelayDuration after live reload; a full navigation cleared the list."
+    },
+    {
+      "name": "build:app",
+      "pass": false,
+      "detail": "Not run. scripts/guard-next-build.mjs refuses a Next build while 127.0.0.1:3000 is in use, and that server was kept running for the authenticated captures."
+    }
+  ],
+  "notes": [
+    "Default Button and Input heights stay h-9. Raising the form-field baseline to 40px is still its own slice.",
+    "Icon-sm / icon-xs and dense row icons remain the documented density exception.",
+    "Add Item sheet close was measured at 40×40 after the pass; the after sheet screenshot did not keep the panel in frame, so that overlay is CDP proof rather than a matched pair."
+  ]
+}

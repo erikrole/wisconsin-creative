@@ -1,0 +1,6 @@
+npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+
+> creative-ops@2026.04.08.1 ios:project:check
+> node scripts/check-ios-project.mjs
+
+OK: XcodeGen output matches checked-in iOS project files

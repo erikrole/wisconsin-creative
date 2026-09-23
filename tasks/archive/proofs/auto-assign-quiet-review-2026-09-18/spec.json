@@ -1,0 +1,52 @@
+{
+  "title": "Auto assign Review outcome",
+  "eyebrow": "Web · Wisconsin Creative",
+  "lede": "Review answers one question: what is ready to stage. When nothing is, it names the blockers in product language and offers the next action.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "Empty Review",
+      "note": "Local Preview at 127.0.0.1:3000/schedule, Creative Admin ADMIN, dark appearance, All sports · this week · Full crews only. Not a pixel-matched pair: before is the prior quiet-empty Review; after is the outcome-first Review.",
+      "shots": [
+        {
+          "tag": "Before",
+          "title": "Raw engine reasons",
+          "image": "before-confusing-empty.png",
+          "cap": "Empty Review listed skip strings like Only 3 of 4 open slots could be filled, with a vague Full crews only held everything back line."
+        },
+        {
+          "tag": "After",
+          "title": "Outcome and next action",
+          "image": "after-outcome-review.png",
+          "cap": "Nothing ready to stage, counted blocker groups, and Allow incomplete crews when Full crews only held events back."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Outcome first",
+      "was": "A stats strip (0 people · 0 assignments · 0 ready · 8 not ready) plus engine-reason bullets.",
+      "now": "One sentence: Nothing ready to stage, with the scope that was checked."
+    },
+    {
+      "h": "Blockers are actionable",
+      "was": "Strings like Only 3 of 4 open slots could be filled and No eligible candidate had an area fit.",
+      "now": "Grouped as Couldn't fill every open slot, No crew schedule yet, Nothing open in this filter, with a short what-to-do line."
+    },
+    {
+      "h": "One clear next step",
+      "was": "Only Change scope, plus a disabled Apply.",
+      "now": "Allow incomplete crews rebuilds with Full crews only off when that was the holdup. Apply is hidden until there is something to stage."
+    }
+  ],
+  "verification": [
+    "vitest tests/bulk-schedule-assignment-source.test.ts — 21 passed",
+    "eslint AutoAssignDialog.tsx — clean",
+    "tsc --noEmit — clean",
+    "Authenticated Playwright capture of Review empty state on local Preview"
+  ],
+  "notes": [
+    "Ready path still leads with who is getting added when proposals exist; not re-captured in this empty-scope proof."
+  ]
+}

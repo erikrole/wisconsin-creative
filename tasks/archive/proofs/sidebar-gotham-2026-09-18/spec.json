@@ -1,0 +1,58 @@
+{
+  "title": "Sidebar Gotham",
+  "eyebrow": "Web · Wisconsin Creative",
+  "lede": "Sidebar identity type uses Gotham at real shipped weights: lockup, destinations, group labels, and the account name. Role captions stay Geist Mono.",
+  "stats": [
+    {
+      "k": "Computed family",
+      "v": "Gotham",
+      "n": "Measured on lockup, destinations, groups, and account name."
+    },
+    {
+      "k": "Weights",
+      "v": "800 / 700 / 500",
+      "n": "Black lockup, Bold active, Medium idle. No synthesized 600."
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Side by side",
+      "note": "Matched Cursor IDE Chromium crops of the left rail from 1372×1160 CSS pixel captures (PNG crops 500×2320), ADMIN, dark appearance, authenticated local Preview at 127.0.0.1:3000, route /users/cmm5m2zbr0000520lb6tx5o08. Full-page main-column scroll differed; the crops isolate the rail.",
+      "pairs": [
+        {
+          "title": "Destination rail",
+          "sub": "Identity type.",
+          "before": "before-rail.png",
+          "beforeCap": "Labels requested Gotham via inline --font-heading, but active/name used weight 600 (no Gotham face) and group labels sat in Geist Mono.",
+          "after": "after-rail.png",
+          "afterCap": "Lockup, destinations, group labels, and account name use .brand-identity. Active Users is Gotham Bold. ADMIN stays Geist Mono.",
+          "beforeEvidence": "before-rail.capture.json",
+          "afterEvidence": "after-rail.capture.json"
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Destinations read as Gotham",
+      "was": "Nav labels used inline heading family at 500/600. Body font-synthesis: none cannot fake 600, so active type looked closer to Geist.",
+      "now": "Buttons use .brand-identity. Idle is Gotham Medium (500). Active is Gotham Bold (700)."
+    },
+    {
+      "h": "Lockup and groups match the identity face",
+      "was": "UW Athletics and Team/Library/Operations were Geist Mono. The product name used inline heading family at 800.",
+      "now": "The overline, wordmark, and group labels are Gotham Medium/Black. Role captions stay Geist Mono."
+    }
+  ],
+  "verification": [
+    "Focused vitest: tests/web-sidebar-source.test.ts — 16 passed.",
+    "npx tsc --noEmit passed.",
+    "Authenticated Chromium: computed font-family Gotham on lockup (800), idle destinations (500), active Users then Accountability (700), group labels (500), account name (700). ADMIN remained Geist Mono. Account menu opened with Enter (Profile, Help, theme, Log out). Users and Accountability navigation worked. Settings received focus; Enter did not change the route in this session.",
+    "npm run build:app was not run; the local preview server owns .next."
+  ],
+  "notes": [
+    "Phone-width web and light appearance were not recaptured. The sidebar stays Wisconsin dark in both themes.",
+    "A Next.js issues badge stayed on the Users profile during capture; it was not diagnosed as part of this type change.",
+    "Unrelated dirty settings, schedule, and page-chrome work was left untouched."
+  ]
+}

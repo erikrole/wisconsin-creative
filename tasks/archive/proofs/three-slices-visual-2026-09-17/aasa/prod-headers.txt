@@ -1,0 +1,24 @@
+HTTP/2 200 
+accept-ranges: bytes
+access-control-allow-origin: *
+age: 28078
+cache-control: public, max-age=0, must-revalidate
+content-disposition: inline
+content-type: application/json
+cross-origin-opener-policy: same-origin
+cross-origin-resource-policy: same-origin
+date: Thu, 17 Sep 2026 11:00:27 GMT
+etag: "6f7640eb9a698ad9f90a3749f6deddef"
+permissions-policy: camera=(self), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=(), magnetometer=(), gyroscope=(), accelerometer=(), autoplay=(self), encrypted-media=(), fullscreen=(self), picture-in-picture=(), display-capture=(), midi=(), screen-wake-lock=(), web-share=(self), tools=(self)
+referrer-policy: strict-origin-when-cross-origin
+server: Vercel
+strict-transport-security: max-age=63072000; includeSubDomains; preload
+vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch
+x-content-type-options: nosniff
+x-dns-prefetch-control: on
+x-frame-options: DENY
+x-matched-path: /.well-known/apple-app-site-association
+x-vercel-cache: HIT
+x-vercel-id: cle1::ts9rz-1789642827004-bddd7a171f48
+content-length: 65
+

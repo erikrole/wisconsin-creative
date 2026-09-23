@@ -1,0 +1,100 @@
+{
+  "title": "40px form-field baseline",
+  "eyebrow": "Web · Wisconsin Creative",
+  "lede": "Default Input, NativeSelect, SelectTrigger, Button, and FormCombobox triggers now share a 40px height so a text field, select, and action in the same row line up without per-page overrides.",
+  "stats": [
+    {
+      "k": "Kiosk add row",
+      "v": "36 → 40px",
+      "n": "Name input, Location select, Create, and Cancel all measured 36px before and 40px after."
+    },
+    {
+      "k": "Profile fields",
+      "v": "36 → 40px",
+      "n": "Name input and Primary Area select measured 36px before and 40px after."
+    },
+    {
+      "k": "Density exceptions",
+      "v": "Kept",
+      "n": "size=sm/xs and icon-sm/icon-xs stay compact. SelectTrigger size=sm stays 32px in dense tables."
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Form rows",
+      "note": "Matched Cursor IDE Chromium captures at 1372×1160 CSS pixels, ADMIN, dark appearance, authenticated local Preview at 127.0.0.1:3000. HEAD f7733f57. Before photos used the prior primitive-interaction dirty tree with field defaults still h-9. After photos apply the 40px field baseline. Next.js overlay chrome was hidden on the after kiosk/profile frames and is not part of the claimed change.",
+      "pairs": [
+        {
+          "title": "Kiosk add row",
+          "sub": "Input, Select, and default Buttons in one row.",
+          "before": "before-kiosk-form.png",
+          "beforeCap": "Name, Location, Create, and Cancel sat at 36px. They lined up with each other, but they sat under the 40px operational target.",
+          "after": "after-kiosk-form.png",
+          "afterCap": "The same row is 40px. The text field, select, and actions still share one height.",
+          "beforeEvidence": "before-kiosk-form.capture.json",
+          "afterEvidence": "after-kiosk-form.capture.json"
+        },
+        {
+          "title": "Profile identity fields",
+          "sub": "Stacked inputs and a select using primitive defaults.",
+          "before": "before-profile.png",
+          "beforeCap": "Name and Primary Area rendered at the shared 36px field default.",
+          "after": "after-profile.png",
+          "afterCap": "The same fields are 40px and line up with the existing 40px Change photo, Remove, Reset, and Saved controls.",
+          "beforeEvidence": "before-profile.capture.json",
+          "afterEvidence": "after-profile.capture.json"
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Shared field default is 40px",
+      "was": "Input, NativeSelect, and default SelectTrigger were h-9 (36px). FormCombobox was locked to h-9 so it would not misalign those fields. Many pages papered over this with className=h-10.",
+      "now": "Those primitives default to h-10. FormCombobox inherits the default Button height. A form row lines up without a local override."
+    },
+    {
+      "h": "Default buttons match the fields",
+      "was": "Default Button was h-9; size=lg was already h-10, so raising the default alone would collapse the size ladder.",
+      "now": "Default Button is h-10. size=lg is h-11 (44px) so it stays distinct. sm, xs, icon-sm, and icon-xs remain density exceptions."
+    },
+    {
+      "h": "Local h-9 holdouts follow the baseline",
+      "was": "ItemInfoTab QR entry, Onboarding bulk-role Select, the booking wizard Link-to-event chip, and non-compact ClaimShiftAction still forced 36px.",
+      "now": "Those controls inherit or set 40px. Compact ClaimShiftAction stays h-8."
+    }
+  ],
+  "verification": [
+    {
+      "name": "Focused tests",
+      "pass": true,
+      "detail": "tests/shadcn-primitives-source.test.ts and tests/operational-target-baseline.test.ts — 12 passed."
+    },
+    {
+      "name": "TypeScript",
+      "pass": true,
+      "detail": "npx tsc --noEmit --pretty false"
+    },
+    {
+      "name": "Lint / whitespace",
+      "pass": true,
+      "detail": "No linter errors on the edited files. git diff --check clean on this slice."
+    },
+    {
+      "name": "Authenticated UI",
+      "pass": true,
+      "detail": "Measured /settings/kiosk-devices add row and /settings/profile fields at 36px before and 40px after in Cursor Chromium. Overlay close and compact size=sm controls were not restyled."
+    },
+    {
+      "name": "build:app",
+      "pass": false,
+      "detail": "Skipped: scripts/guard-next-build.mjs refuses while 127.0.0.1:3000 is in use. Left the shared preview running."
+    }
+  ],
+  "notes": [
+    "size=sm SelectTriggers in dense Settings tables (sports shift config, accountability filters) stay 32px on purpose.",
+    "Pages that already passed className=h-10 do not change visually; the default now matches them.",
+    "npm run verify:docs was not rerun; generated codemaps were already dirty from unrelated work.",
+    "Not committed."
+  ]
+}

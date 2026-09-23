@@ -1,0 +1,17 @@
+HTTP/1.1 200 OK
+Server: AppleHttpServer/7b3d349ae60c243cdd677edbde3e93e460f75820
+Date: Thu, 17 Sep 2026 11:00:27 GMT
+Content-Type: application/json
+Content-Length: 65
+Apple-From: https://wisconsincreative.com/.well-known/apple-app-site-association
+Apple-Origin-Format: json
+Cache-Control: max-age=21600,public
+Vary: Accept-Encoding
+X-B3-TraceId: 600a7619bffaaebf
+Strict-Transport-Security: max-age=31536000
+Age: 0
+Via: https/1.1 uschi7-3p-pst-006.ts.apple.com (acdn/331.16659), https/1.1 uschi7-3p-pac-006.ts.apple.com (acdn/331.16659), https/1.1 uschi7-3p-pfe-010.ts.apple.com (acdn/331.16659), https/1.1 ussfj2-edge-mx-005.ts.apple.com (acdn/331.16659), https/1.1 ussfj2-edge-fx-004.ts.apple.com (acdn/331.16659)
+X-Cache: hit-stale, hit-stale, miss, hit-stale, miss
+CDNUUID: 8d55d64e-78be-4bca-9e33-eba5623eabfc-886010559
+Connection: keep-alive
+
