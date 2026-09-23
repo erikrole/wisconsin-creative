@@ -4,7 +4,7 @@
 - Area: Public Showroom
 - Owner: Wisconsin Athletics Creative Product
 - Created: 2026-07-01
-- Last Updated: 2026-08-03
+- Last Updated: 2026-09-23
 - Status: Active
 - Version: V1
 
@@ -26,6 +26,7 @@ Make `/about` a shareable public overview for Wisconsin Creative. It should expl
 - `/about/security` - trust model, access control, auditability, and reliability controls.
 - `/about/field-work` - native iOS, kiosk, scanner, and game-day handoffs.
 - `/privacy` - public privacy policy for App Store Connect and stakeholder review.
+- `/qrcode` - QR Studio, a static client-only QR code generator. Redirects to `/qrcode/index.html` in `public/qrcode/`, which is generated from the QR Studio source by its `scripts/export-web.js`; do not edit the copy here.
 
 ## Acceptance Criteria
 - [x] AC-1: `/about` and all public subpages render without authentication.
@@ -35,9 +36,10 @@ Make `/about` a shareable public overview for Wisconsin Creative. It should expl
 - [x] AC-5: `/` and authenticated app shell behavior remain unchanged.
 - [x] AC-6: Public pages have route metadata, keyboard-reachable navigation, and mobile-safe layouts.
 - [x] AC-7: `/privacy` renders without authentication and does not fetch authenticated data.
+- [ ] AC-8: `/qrcode` opens QR Studio without authentication, outside the nonce-CSP middleware, under its own `default-src 'none'` / `connect-src 'none'` policy; script URLs are content-hashed so the service worker's cache-first `.js` rule cannot serve stale code. Pending deploy proof.
 
 ## Verification
-- `npx vitest run tests/public-showroom-content.test.ts`
+- `npx vitest run tests/public-showroom-content.test.ts tests/qrcode-static-tool.test.ts`
 - `npx tsc --noEmit --pretty false`
 - `npm run codemap`
 - `npm run verify:docs`
@@ -47,6 +49,7 @@ Make `/about` a shareable public overview for Wisconsin Creative. It should expl
 - Browser smoke `/about`, `/about/features`, `/about/tech-stack`, `/about/security`, `/about/field-work`, `/login`, and protected `/`.
 
 ## Change Log
+- 2026-09-23: Added `/qrcode`, the public QR Studio tool (branded, scan-checked QR codes for links, Wi-Fi, email, phone, SMS, contacts and text). Static files in `public/qrcode/`; `/qrcode` redirects to the dotted `index.html` path so the nonce middleware is not involved. The page makes no network requests and stores its library only in the visitor's browser. `tests/qrcode-static-tool.test.ts` guards the redirect, CSP, content-hashed script URLs and the folder's contents.
 - 2026-08-03: Fixed the desktop public-header wordmark contrast. The logo link now explicitly uses the white text token required by the dark header, and the public-showroom content contract guards that relationship.
 - 2026-07-10: Removed the public showroom's decorative hero atmosphere, repeated oversized card shadows, tinted icon tiles, and max-radius mockup framing. The static routes, factual copy, product mockups, and Wisconsin visual identity remain unchanged; shared status indicators now use a static labeled dot rather than a pulsing halo.
 - 2026-07-08: Added `src/app/robots.ts` (`Disallow: /` for all user agents), closing a P2 finding from `tasks/security-headers-audit.md` that predated the public showroom. The site is invite-only and now App Store Unlisted; `/about` and `/privacy` are for direct-link stakeholder/reviewer sharing, not search discovery.
