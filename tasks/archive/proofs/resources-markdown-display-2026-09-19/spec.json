@@ -1,0 +1,88 @@
+{
+  "title": "Guide Markdown how-to conventions",
+  "eyebrow": "Web · Resources",
+  "lede": "Guides now read as how-tos: copyable paths, screenshots between numbered steps, shortcut callouts that carry their payload, and side-by-side before/after photos. Duplicate page titles and task-list checkboxes are gone.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "After only",
+      "note": "No trustworthy before PNG for this second convention pass. Captures are Cursor IDE Chromium at ~1372×1160 CSS pixels (1× PNGs), ADMIN Erik Role, dark appearance, authenticated local Preview at 127.0.0.1:3000 on 2026-09-19. The Next.js 1-issue overlay is HMR chrome, not product UI.",
+      "shots": [
+        {
+          "tag": "After",
+          "title": "Media Drive · copyable path",
+          "image": "after-media-drive-copy.png",
+          "wide": true,
+          "cap": "The SMB address is a one-tap copy control, not a terminal. Important stays a purple card. Step 1 starts the Finder sequence, with the screenshot as its own figure after the step."
+        },
+        {
+          "tag": "After",
+          "title": "Photo Mechanic · How-to steps",
+          "image": "after-photo-mechanic-steps.png",
+          "wide": true,
+          "cap": "Photo Mechanic is typed How-to. Phase 1 is a contiguous numbered list. Single keys and ⌘ combos are chips with no plus separators. The page title is not repeated as a Markdown h1."
+        },
+        {
+          "tag": "After",
+          "title": "Color Correction · before/after pair",
+          "image": "after-color-correction-pairs.png",
+          "wide": true,
+          "cap": "Two images authored in one paragraph render as a two-column before/after pair. Captions stay under each frame. The lead Markdown title that restated Color Correction 101 is stripped."
+        },
+        {
+          "tag": "After",
+          "title": "Photo Naming · copyable patterns",
+          "image": "after-photo-naming-copy.png",
+          "wide": true,
+          "cap": "Naming patterns are copyable strings. Field names stay ordinary inline code, not keyboard chips. The Important card carries the hyphen-separated rule."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Copyable paths and rename strings",
+      "was": "Server paths and rename templates lived in inline code or a terminal-styled fence, so people retyped them.",
+      "now": "A fenced <code>```copy</code> / <code>```path</code> block renders as a one-tap copy control on web and iOS. The editor toolbar inserts it with Copyable."
+    },
+    {
+      "h": "Screenshots sit between steps",
+      "was": "Images nested inside list items, or H3s used as fake step numbers, so badges and numbering broke.",
+      "now": "Figures are their own block. A following <code>2.</code> / <code>3.</code> continues the sequence through the list start value and CSS counters."
+    },
+    {
+      "h": "Callouts carry the payload",
+      "was": "A Shortcut card sometimes only pointed at a table below, and iOS flattened tables inside quotes.",
+      "now": "Shortcut, tip, and warning cards contain the actual shortcuts and recovery copy. Keyboard chips have no plus separators."
+    },
+    {
+      "h": "How-to page hygiene",
+      "was": "Several guides opened with a Markdown h1 that duplicated the page title. Video Captioning used GFM task lists. Photo Mechanic was not typed How-to.",
+      "now": "A matching lead h1 is stripped. Task lists are ordinary bullets. Photo Mechanic is How-to. How-to and Media Drive templates follow the same conventions."
+    },
+    {
+      "h": "Before/after photos",
+      "was": "Paired stills stacked as separate figures with Pre/Post headings.",
+      "now": "Two images in one paragraph lay out as a two-column pair. Color Correction 101 has four verified pairs."
+    }
+  ],
+  "verification": [
+    "Focused tests: tests/guide-content.test.ts, tests/guide-markdown-contract.test.ts, tests/markdown-reader.test.ts, tests/editor-snippets.test.ts, tests/guide-keyboard.test.ts, tests/guide-callout-color-contrast.test.ts, tests/ios-system-quality-contract.test.ts, tests/ios-guides-native-page.test.ts, tests/ios-api-contract.test.ts. 75 + 52 tests pass across those files.",
+    "npx tsc --noEmit --pretty false: pass",
+    "eslint on the touched TypeScript files: pass",
+    "git diff --check on the touched source and docs: pass",
+    "Authenticated Preview as Erik Role ADMIN, dark appearance: Media Drive, Photo Mechanic (HOW_TO), Color Correction 101 (4 CSS grid pairs, no body h1), Video Captioning (copyable captions path, no task-list checkboxes), Photo Naming (copyable patterns), Media Drive editor Copyable toolbar button. Copy-button click was skipped after approval prompt.",
+    "Preview-DB PATCH /api/resources for five published guides returned 200 on 2026-09-20T02:08Z. Photo Mechanic type is HOW_TO.",
+    "Native iOS: GuideMarkdown.swift copy fences and duplicate-title omit, GuidesView.swift copy card. Source-contract tests pass. xcodebuild and iPhone 16 Pro runtime visual proof were not run.",
+    "npm run build:app: skipped. Preview occupies 127.0.0.1:3000, and the repo guard refuses a Next compile while that port is in use."
+  ],
+  "notes": [
+    "After-only because no matched before capture exists for this convention pass.",
+    "Preview-DB Markdown updates are live in local Preview and are not git-tracked. Production wisconsincreative.com still has the older copies.",
+    "Football Clip Naming is production-only and was not rewritten.",
+    "Live WYSIWYG callout rendering in the editor remains out of scope.",
+    "The Media Drive after shot includes a leftover Next.js 1-issue overlay from HMR. It is not product chrome.",
+    "Unrelated dirty work was left untouched.",
+    "Do not run npm run build while Preview occupies :3000."
+  ]
+}

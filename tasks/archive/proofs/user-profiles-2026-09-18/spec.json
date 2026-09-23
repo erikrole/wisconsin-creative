@@ -1,0 +1,80 @@
+{
+  "title": "User profiles identity page",
+  "eyebrow": "Web · Wisconsin Creative",
+  "lede": "User profiles keep the same tab URLs. Identity lives in the header, Info splits Contact / Work / Assignments, Slack is editable, and Activity/Badges filters sit on the 40px baseline.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "Side by side",
+      "note": "Matched Cursor IDE Chromium captures at 1372×1160 CSS pixels (PNGs 2744×2320), ADMIN Erik Role, dark appearance, authenticated local Preview at 127.0.0.1:3000. Parallel page-chrome work is visible in the global sidebar.",
+      "pairs": [
+        {
+          "title": "Info",
+          "sub": "Identity and contact.",
+          "before": "before-info.png",
+          "beforeCap": "Header stacked role, email, and a duplicated 0–1 record. One Details card. Wisconsin-red tab underline. Slack hidden.",
+          "after": "after-info.png",
+          "afterCap": "Staff status, title subtitle, area/location/reports-to, Scoreboard jump. Contact includes Slack. Jump chips. Work starts below. Assignments stay on the right.",
+          "beforeEvidence": "before-info.capture.json",
+          "afterEvidence": "after-info.capture.json"
+        }
+      ]
+    },
+    {
+      "heading": "After only",
+      "note": "Scoreboard, Activity, and Badges had no matched before. Roster related links sit below the fold, so the list viewport matched the baseline byte-for-byte and is omitted. Availability was not captured because this Admin profile is not Student-scheduling-class.",
+      "shots": [
+        {
+          "tag": "After",
+          "title": "Scoreboard",
+          "image": "after-scoreboard.png",
+          "wide": true,
+          "cap": "Record stays on the tab. Header Scoreboard jump does not duplicate the hero. Related links sit under the tab."
+        },
+        {
+          "tag": "After",
+          "title": "Activity",
+          "image": "after-activity.png",
+          "wide": true,
+          "cap": "All / Account / Bookings / Equipment filters on the 40px baseline."
+        },
+        {
+          "tag": "After",
+          "title": "Badges",
+          "image": "after-badges.png",
+          "wide": true,
+          "cap": "All / Earned / Locked / Manual / Rare filters on the 40px baseline."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "The header is identity, Scoreboard is a jump",
+      "was": "Role, email, and the 0–1 record competed with the Scoreboard tab.",
+      "now": "Status is role/affiliation/inactive. Subtitle is title or student year. Area, location, and reports-to sit with a Scoreboard CTA."
+    },
+    {
+      "h": "Info is Contact, Work, and Assignments",
+      "was": "One Details dump. Slack lived only in Settings. Empty Collaborator affiliation looked like a missing field.",
+      "now": "On-page jumps. Slack handle and Slack profile are on Contact. Affiliation copy says it is only needed for Collaborator. Hours stay visible with retry."
+    },
+    {
+      "h": "Filters and fields hit 40px",
+      "was": "Activity chips were 24–28px. Availability inputs were 32px. Size and birthday selects used sm triggers.",
+      "now": "Activity, Availability, and Badges filters and Info fields use 40px targets. Related jumps sit under roster and profile."
+    }
+  ],
+  "verification": [
+    "Focused source tests: users-profile-overhaul-source, user-profile-annotations, user-profile-phone-fields, users-sweeping-ui-contract, user-detail-location-options-state, operator-qol.",
+    "npx tsc --noEmit --pretty false passed.",
+    "eslint on changed Users files passed.",
+    "Authenticated Preview as ADMIN Erik Role at 127.0.0.1:3000. Info loaded Contact/Work/Assignments, Slack fields, Scoreboard jump, Hours jump to #hours. Scoreboard, Activity (Account filter focused), and Badges tabs loaded. Roster related links: Org chart, Onboarding status, Team Scoreboard, Schedule.",
+    "npm run build:app was not run because Preview next dev owns port 3000.",
+    "Availability tab not exercised in browser; this profile is not ST. AppLayout hydration overlay is pre-existing page-chrome work, not this slice."
+  ],
+  "notes": [
+    "Tab URLs, role gates, and collaborator minimized profiles are unchanged.",
+    "Proof contains live campus contact data and should stay private in the archive."
+  ]
+}

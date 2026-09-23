@@ -1,0 +1,3 @@
+ERROR: The operation failed because the device was still locked. (com.apple.dt.CoreDeviceError error 10003 (0x2713))
+       ----------------------------------------
+           The device has not been unlocked recently (com.apple.dt.RemotePairingError error 1016 (0x3F8))

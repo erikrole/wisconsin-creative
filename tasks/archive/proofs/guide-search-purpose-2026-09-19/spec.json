@@ -1,0 +1,74 @@
+{
+  "title": "Guides in global search, purpose on library tiles",
+  "eyebrow": "Web · Resources · Search",
+  "lede": "⌘K and /search now return matching guides, Resources no longer steals the shortcut, and library tiles show a one-line purpose from the existing summary.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "Resources library",
+      "note": "After-only authenticated Preview, ADMIN, 1440×900, light appearance. A matched before for this slice was not captured; the previous landing proofs show cards/list without purpose lines but at a different viewport.",
+      "shots": [
+        {
+          "tag": "After",
+          "title": "Cards with purpose",
+          "image": "after-resources-cards.png",
+          "wide": true,
+          "cap": "Featured Photo Mechanic lead and type-grouped tiles each show one truncated purpose line. Quick find is a labeled button with no ⌘K. The top-bar search copy includes guides."
+        },
+        {
+          "tag": "After",
+          "title": "List with purpose",
+          "image": "after-resources-list.png",
+          "wide": true,
+          "cap": "List rows keep title plus a single ellipsized purpose line. Featured lead stays. URL is ?layout=list."
+        }
+      ]
+    },
+    {
+      "heading": "Global search",
+      "note": "Same Preview session. Query photo.",
+      "shots": [
+        {
+          "tag": "After",
+          "title": "⌘K includes Guides",
+          "image": "after-cmdk-guides.png",
+          "wide": true,
+          "cap": "On /resources, ⌘K opens the app-wide palette. Searching photo returns a Guides group with type and purpose, plus page hits like Software."
+        },
+        {
+          "tag": "After",
+          "title": "/search includes Guides",
+          "image": "after-search-guides.png",
+          "wide": true,
+          "cap": "/search?q=photo lists Guides (2) with How-to/General purpose lines, then Items."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Guides are findable from anywhere",
+      "was": "⌘K and /search only hit pages, items, bookings, and users. Resources captured ⌘K for a local palette.",
+      "now": "Both search surfaces fan out to GET /api/resources?q=. Hits open /resources/[slug]. Resources Quick find stays an in-page button."
+    },
+    {
+      "h": "Tiles say what the guide is for",
+      "was": "Featured, cards, and list were title-first with type marks and no purpose.",
+      "now": "Each surface shows the existing one-line summary. Author, date, and audience stay off the tiles."
+    }
+  ],
+  "verification": [
+    "Authenticated local Preview, ADMIN, Chromium 1440×900. Login via Playwright auth setup; no production mutation.",
+    "Resources cards: 5 purpose lines. List: 4 purpose lines. Quick find kbd count 0.",
+    "⌘K on /resources opened the app-wide palette. Query photo showed Guides group and Photo Mechanic + Lightroom Ingest Guide with How-to purpose.",
+    "/search?q=photo showed Guides (2) plus page and item hits. Console errors: none.",
+    "Focused tests: tests/guide-search-result.test.ts, tests/app-shell-search-source.test.ts, tests/search-page-source.test.ts, tests/resources-ui-polish-source.test.ts, tests/resources-ui-ownership-contract.test.ts, tests/web-sidebar-source.test.ts.",
+    "npx tsc --noEmit and eslint on the touched files passed.",
+    "npm run build:app was not run because Preview already occupies :3000."
+  ],
+  "notes": [
+    "After-only evidence. No hash-bound before/after pair: this slice started on an already dirty landing.",
+    "Native iOS Search and Guides list are unchanged. iOS rows stay title-first without summary.",
+    "Next.js HMR overlay is visible in captures and is not product chrome."
+  ]
+}

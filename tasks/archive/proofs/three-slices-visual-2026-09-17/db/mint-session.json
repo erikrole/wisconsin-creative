@@ -1,0 +1,23 @@
+Loaded env from /Users/role/Code/wisconsin-creative/.env.development.local
+Loaded env from /Users/role/Code/wisconsin-creative/.env.local
+{
+  "dbHost": "ep-winter-leaf-ai0eekhl.c-4.us-east-1.aws.neon.tech",
+  "dbName": "/gear-tracker",
+  "cookieName": "gear-tracker-session",
+  "sessionIdPrefix": "sms_bedf",
+  "expiresAt": "2026-09-17T23:16:08.067Z",
+  "identity": {
+    "emailLocal": "admin",
+    "role": "ADMIN",
+    "hidden": true,
+    "forcePasswordChange": false
+  },
+  "apiMe": {
+    "status": 200,
+    "idSuffix": "rg0ank",
+    "name": "Creative Admin",
+    "role": "ADMIN",
+    "emailLocal": "admin"
+  },
+  "storageState": "test-results/playwright/auth/user.json"
+}

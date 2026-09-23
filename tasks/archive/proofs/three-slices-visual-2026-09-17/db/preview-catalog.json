@@ -1,0 +1,186 @@
+Loaded env from /Users/role/Code/wisconsin-creative/.env.development.local
+Loaded env from /Users/role/Code/wisconsin-creative/.env.local
+{
+  "target": "preview-gear-tracker",
+  "env": "preview",
+  "sources": {
+    "DATABASE_URL": {
+      "label": "DATABASE_URL",
+      "present": true,
+      "protocol": "postgresql:",
+      "host": "ep-winter-leaf-ai0eekhl-pooler.c-4.us-east-1.aws.neon.tech",
+      "db": "/neondb"
+    },
+    "DATABASE_URL_UNPOOLED": {
+      "label": "DATABASE_URL_UNPOOLED",
+      "present": true,
+      "protocol": "postgresql:",
+      "host": "ep-winter-leaf-ai0eekhl.c-4.us-east-1.aws.neon.tech",
+      "db": "/neondb"
+    },
+    "DIRECT_URL": {
+      "label": "DIRECT_URL",
+      "present": false
+    }
+  },
+  "using": {
+    "label": "using",
+    "present": true,
+    "protocol": "postgresql:",
+    "host": "ep-winter-leaf-ai0eekhl.c-4.us-east-1.aws.neon.tech",
+    "db": "/gear-tracker"
+  }
+}
+{
+  "appliedCount": 154,
+  "latest": [
+    {
+      "migration_name": "0147_badge_mvp_repair",
+      "finished_at": "2026-09-17T03:12:10.328Z"
+    },
+    {
+      "migration_name": "0146_resource_import_key",
+      "finished_at": "2026-09-12T04:07:54.413Z"
+    },
+    {
+      "migration_name": "0145_restore_declared_lookup_indexes",
+      "finished_at": "2026-09-12T04:07:48.130Z"
+    },
+    {
+      "migration_name": "0144_restore_asset_allocation_overlap_guard",
+      "finished_at": "2026-09-12T04:07:40.290Z"
+    },
+    {
+      "migration_name": "0143_shared_checkout_custody",
+      "finished_at": "2026-09-03T20:35:13.087Z"
+    }
+  ],
+  "migrations0147ish": [
+    {
+      "migration_name": "0147_badge_mvp_repair",
+      "finished_at": "2026-09-17T03:12:10.328Z",
+      "rolled_back_at": null,
+      "checksum": "c0086bef17e8bea9decf51c6c85257a707d533ff3a60faeeda91f72d886b6b7b"
+    },
+    {
+      "migration_name": "0127_badge_catalog_expansion",
+      "finished_at": "2026-08-21T12:38:09.021Z",
+      "rolled_back_at": null,
+      "checksum": "7c21075f56ecb0401b633dae314ea3665f65db7b81f19b13110ff4cdf7b16161"
+    },
+    {
+      "migration_name": "0117_badge_shift_breadth",
+      "finished_at": "2026-08-19T12:28:04.067Z",
+      "rolled_back_at": null,
+      "checksum": "8d4316460a643b2092608eea8538d2f91c2fdf11ce506f7074495258d9d386eb"
+    },
+    {
+      "migration_name": "0118_badge_checkout_breadth",
+      "finished_at": "2026-08-19T12:28:04.067Z",
+      "rolled_back_at": null,
+      "checksum": "7a94567031f71adea58dfe9d8b885bea33e584ce0086a9c5d0c6cd64cad8053d"
+    },
+    {
+      "migration_name": "0122_badge_short_notice",
+      "finished_at": "2026-08-19T12:28:04.067Z",
+      "rolled_back_at": null,
+      "checksum": "dc567c881e8d35ca8b81889e115a3e9a68adeb85adc08b22943af361c64e59fd"
+    },
+    {
+      "migration_name": "0120_badge_app_open_eggs",
+      "finished_at": "2026-08-19T12:28:04.067Z",
+      "rolled_back_at": null,
+      "checksum": "535f8dc2aeb2269b8a1c6d3c652055f78279a8e6a6eec546ecd03bc249784723"
+    },
+    {
+      "migration_name": "0119_badge_return_moment",
+      "finished_at": "2026-08-19T12:28:04.067Z",
+      "rolled_back_at": null,
+      "checksum": "56c911f55e8d2c87ec8d9ff8de884f1d196174a58a25d0722656a122b5e6bac1"
+    },
+    {
+      "migration_name": "0110_badge_rewards",
+      "finished_at": "2026-08-10T15:07:40.744Z",
+      "rolled_back_at": null,
+      "checksum": "4bf8b69b677a88e2d257f7b97eb9652639fb0dc839a334c0ed4969168679dabb"
+    },
+    {
+      "migration_name": "0100_badge_catalog_rebalance",
+      "finished_at": "2026-07-22T19:30:39.759Z",
+      "rolled_back_at": null,
+      "checksum": "389646a8070ed7eff3852d0588588eecb15128f991cdcafd391be80b169aaf55"
+    },
+    {
+      "migration_name": "0066_retire_shift_badges",
+      "finished_at": "2026-05-13T18:35:16.796Z",
+      "rolled_back_at": null,
+      "checksum": "8894336411f6626a7805124c18753814611ecd590e1b78b4e8934b62a128c605"
+    },
+    {
+      "migration_name": "0064_seed_badge_definitions",
+      "finished_at": "2026-05-12T20:24:35.954Z",
+      "rolled_back_at": null,
+      "checksum": "e681e5aece854ecd7fadf216cf340d20fbb0d02d8a15b3aa0291fbb22a6a5c86"
+    },
+    {
+      "migration_name": "0056_add_scan_badge_counter_type",
+      "finished_at": "2026-05-10T00:39:28.574Z",
+      "rolled_back_at": null,
+      "checksum": "e4e34c3346a56e364038bb70ee93c02095249f5c075963a04f42955c0eb4f519"
+    },
+    {
+      "migration_name": "0055_add_badges",
+      "finished_at": "2026-05-10T00:39:28.559Z",
+      "rolled_back_at": null,
+      "checksum": "eeb39af1ff42100430571333ffd6303050f9cab02a43c6a7f2ff8fe54d7ce03e"
+    }
+  ],
+  "catalog": [
+    {
+      "key": "category_collector",
+      "name": "Category Collector",
+      "rule_key": "category_collector",
+      "threshold": "5",
+      "active": true,
+      "trigger": "checkout:opened"
+    },
+    {
+      "key": "crew_checkout",
+      "name": "Crew Checkout",
+      "rule_key": "checkout_for_shift",
+      "threshold": "5",
+      "active": true,
+      "trigger": "checkout:opened"
+    },
+    {
+      "key": "plan_ahead",
+      "name": "Plan Ahead",
+      "rule_key": "checkout_from_reservation",
+      "threshold": "5",
+      "active": true,
+      "trigger": "checkout:opened"
+    },
+    {
+      "key": "result_site_sweep",
+      "name": "Three-Site Scoreboard",
+      "rule_key": "shift_result_sites",
+      "threshold": "1",
+      "active": true,
+      "trigger": "shift:completed"
+    }
+  ],
+  "awards": [
+    {
+      "key": "category_collector",
+      "awards": 14
+    },
+    {
+      "key": "plan_ahead",
+      "awards": 2
+    },
+    {
+      "key": "result_site_sweep",
+      "awards": 3
+    }
+  ]
+}

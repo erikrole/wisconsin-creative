@@ -1,0 +1,42 @@
+{
+  "title": "Schedule refresh opens on today",
+  "eyebrow": "Web · Wisconsin Creative",
+  "lede": "A refresh of My shifts no longer dumps the timeline at May with a date header overlapping its first row. It opens on today, with past above and upcoming below.",
+  "stats": [
+    {
+      "k": "Reload land",
+      "v": "Today",
+      "n": "Fri, Sep 18 instead of Fri, May 15",
+      "tone": "good"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Visual comparison",
+      "note": "Before is the reporter screenshot of the broken refresh (May 15, overlapping Softball row). After is authenticated /schedule?myShifts=true in the local preview after the fix. Viewport and chrome differ, so this is not a pixel-matched pair."
+    }
+  ],
+  "changes": [
+    {
+      "h": "Reload position",
+      "was": "Refresh restored raw window.scrollY, including 0 from the error boundary and loading skeleton, so the list opened at the archive floor.",
+      "now": "Refresh restores the visible event only when it is still in this window. Otherwise it opens on today."
+    },
+    {
+      "h": "Older-event loading",
+      "was": "The past sentinel sat in view on first paint and walked every older page until May, while a sticky day header overlapped the first row.",
+      "now": "Older pages load after the reader scrolls toward them. My shifts still fills remaining pages in the background without yanking the view to the top."
+    }
+  ],
+  "verification": [
+    "npx vitest run tests/schedule-timeline-source.test.ts: 26 passed",
+    "npx tsc --noEmit --pretty false: pass",
+    "eslint on ListView, schedule page, and use-schedule-data: pass",
+    "Authenticated local preview /schedule?myShifts=true: Today (Fri, Sep 18) is in view with past above and upcoming below. DOM todayTop 524px, scrollY 1324. First DOM day is still May 15 above the fold, not the landing point."
+  ],
+  "notes": [
+    "before-may.png is the reporter capture. after-today.png is the post-fix preview.",
+    "Calendar source stale and schedule health unavailable were present in the preview and are unrelated to this landing bug.",
+    "A sliver of the previous event can still peek under the sticky toolbar; that is leftover sticky-frame overlap, not the May refresh."
+  ]
+}

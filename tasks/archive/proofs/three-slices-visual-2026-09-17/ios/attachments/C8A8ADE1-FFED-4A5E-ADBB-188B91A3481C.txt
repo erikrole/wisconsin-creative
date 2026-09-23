@@ -1,0 +1,133 @@
+Application, 0x102e6bd40, pid: 53875, label: 'Creative' <App element pid: 53875>
+  Window (Main), 0x102e6bac0, {{0.0, 0.0}, {402.0, 874.0}} <AX element pid: 53875, elementOrHash.elementID: 4410803200.4>
+    Other, 0x102e69a40, {{0.0, 0.0}, {402.0, 874.0}} <AX element pid: 53875, elementOrHash.elementID: 4522456064.5>
+      Other, 0x102e697c0, {{0.0, 0.0}, {402.0, 874.0}} <AX element pid: 53875, elementOrHash.elementID: 4524723968.6>
+        Other, 0x102e6b700, {{0.0, 0.0}, {402.0, 874.0}} <AX element pid: 53875, elementOrHash.elementID: 4410802176.7>
+          Other, 0x102e6b840, {{0.0, 0.0}, {402.0, 874.0}} <AX element pid: 53875, elementOrHash.elementID: 4666560096.8>
+            Other, 0x105f19900, {{0.0, 0.0}, {402.0, 874.0}} <AX element pid: 53875, elementOrHash.elementID: 4532110848.9>
+              NavigationBar, 0x105f19b80, {{0.0, 62.0}, {402.0, 54.0}}, identifier: 'Bucky' <AX element pid: 53875, elementOrHash.elementID: 4531290880.11>
+                Other, 0x105f18f00, {{20.0, 66.0}, {39.3, 36.0}} <AX element pid: 53875, elementOrHash.elementID: 4411044352.14>
+                  Other, 0x105f19040, {{20.0, 66.0}, {39.3, 36.0}} <AX element pid: 53875, elementOrHash.elementID: 4666556576.19>
+                    Button, 0x105f192c0, {{20.0, 66.0}, {39.3, 36.0}}, identifier: 'gearshape', label: 'Settings' <AX element pid: 53875, elementOrHash.elementID: 4666557696.22>
+                StaticText, 0x105f19400, {{176.3, 73.7}, {49.3, 20.7}}, label: 'Bucky' <AX element pid: 53875, elementOrHash.elementID: 4412150144.15>
+                Other, 0x105f19180, {{313.0, 66.0}, {69.0, 36.0}} <AX element pid: 53875, elementOrHash.elementID: 4411037952.16>
+                  Other, 0x105f19540, {{313.0, 66.0}, {69.0, 36.0}} <AX element pid: 53875, elementOrHash.elementID: 4666566496.20>
+                    Button, 0x105f1bac0, {{313.0, 66.0}, {69.0, 36.0}}, label: 'Close' <AX element pid: 53875, elementOrHash.elementID: 4666557376.23>
+              Other, 0x105f1bc00, {{0.0, 0.0}, {402.0, 874.0}} <AX element pid: 53875, elementOrHash.elementID: 4412307456.12>
+                Other, 0x105f1b840, {{0.0, 0.0}, {402.0, 874.0}} <AX element pid: 53875, elementOrHash.elementID: 4412153280.17>
+                  Other, 0x105f18640, {{0.0, 0.0}, {402.0, 874.0}} <AX element pid: 53875, elementOrHash.elementID: 4410917760.21>
+                    Other, 0x105f1a300, {{0.0, 0.0}, {402.0, 874.0}} <AX element pid: 53875, elementOrHash.elementID: 4666556896.24>
+                      CollectionView, 0x105f18500, {{0.0, 0.0}, {402.0, 874.0}} <AX element pid: 53875, elementOrHash.elementID: 4521541632.25>
+                        Other, 0x105f1b480, {{-16.0, -1632.0}, {434.0, 1908.7}} <AX element pid: 53875, elementOrHash.elementID: 4664215040.26>
+                        Other, 0x105f18780, {{0.0, 0.0}, {402.0, 874.0}} <AX element pid: 53875, elementOrHash.elementID: 4411250368.27>
+                          Other, 0x105f1a580, {{0.0, 0.0}, {402.0, 136.0}} <AX element pid: 53875, elementOrHash.elementID: 4412151488.37>
+                        Other, 0x105f1aa80, {{0.0, 0.0}, {402.0, 874.0}} <AX element pid: 53875, elementOrHash.elementID: 4411249472.28>
+                        Cell, 0x105f1a940, {{16.0, 151.0}, {370.0, 108.0}} <AX element pid: 53875, elementOrHash.elementID: 4411045632.29>
+                          Other, 0x105f1abc0, {{16.0, 151.0}, {370.0, 108.0}} <AX element pid: 53875, elementOrHash.elementID: 4661334528.38>
+                            Other, 0x105f1ad00, {{16.0, 151.0}, {370.0, 108.0}} <AX element pid: 53875, elementOrHash.elementID: 4521706368.47>
+                              Other, 0x105f1be80, {{16.0, 151.0}, {370.0, 108.0}} <AX element pid: 53875, elementOrHash.elementID: 4410919552.55>
+                                Other, 0x105f1b200, {{16.0, 151.0}, {370.0, 108.0}} <AX element pid: 53875, elementOrHash.elementID: 4699766784.62>
+                          Other, 0x105f1b0c0, {{16.0, 151.0}, {370.0, 108.0}} <AX element pid: 53875, elementOrHash.elementID: 4521705472.39>
+                            Other, 0x105f1af80, {{16.0, 151.0}, {370.0, 108.0}} <AX element pid: 53875, elementOrHash.elementID: 4410282496.48>
+                              Other, 0x105f1a6c0, {{16.0, 151.0}, {370.0, 108.0}} <AX element pid: 53875, elementOrHash.elementID: 4666558176.56>
+                                StaticText, 0x105f1a1c0, {{104.0, 172.0}, {128.0, 24.0}}, label: 'Bucky Badger' <AX element pid: 53875, elementOrHash.elementID: 4666558656.63>
+                                StaticText, 0x105f1ae40, {{47.5, 192.5}, {27.0, 25.0}}, label: 'BB' <AX element pid: 53875, elementOrHash.elementID: 4666559616.64>
+                                StaticText, 0x105f19e00, {{104.0, 200.0}, {172.3, 38.0}}, label: 'Production Coordinator · Live Production' <AX element pid: 53875, elementOrHash.elementID: 4666565856.65>
+                                StaticText, 0x105f19a40, {{332.3, 198.3}, {29.7, 13.3}}, label: 'Staff' <AX element pid: 53875, elementOrHash.elementID: 4666557056.66>
+                        Other, 0x105f197c0, {{-16.0, 276.7}, {434.0, 412.3}} <AX element pid: 53875, elementOrHash.elementID: 4664215552.30>
+                        Cell, 0x105f1b980, {{16.0, 294.0}, {370.0, 377.3}} <AX element pid: 53875, elementOrHash.elementID: 4662427648.31>
+                          Other, 0x105f1b700, {{16.0, 294.0}, {370.0, 377.3}} <AX element pid: 53875, elementOrHash.elementID: 4661337088.40>
+                            Other, 0x105f1b5c0, {{16.0, 294.0}, {370.0, 377.3}} <AX element pid: 53875, elementOrHash.elementID: 4521707264.49>
+                              Other, 0x105f1b340, {{16.0, 294.0}, {370.0, 377.3}} <AX element pid: 53875, elementOrHash.elementID: 4410920448.57>
+                                Other, 0x105f18dc0, {{16.0, 294.0}, {370.0, 377.3}} <AX element pid: 53875, elementOrHash.elementID: 4699766944.67>
+                          Other, 0x105f1a440, {{16.0, 294.0}, {370.0, 377.3}} <AX element pid: 53875, elementOrHash.elementID: 4521705920.41>
+                            Other, 0x10663c000, {{16.0, 294.0}, {370.0, 377.3}} <AX element pid: 53875, elementOrHash.elementID: 4410284032.50>
+                              Other, 0x10663c140, {{16.0, 294.0}, {370.0, 377.3}} <AX element pid: 53875, elementOrHash.elementID: 4662001280.58>
+                                StaticText, 0x10663c280, {{30.0, 308.0}, {306.7, 35.7}}, label: 'Next Up, Upcoming pickups, reservations, shifts, and due work.' <AX element pid: 53875, elementOrHash.elementID: 4666556416.68>
+                                  StaticText, 0x10663c3c0, {{30.0, 308.0}, {64.0, 20.3}}, label: 'Next Up' <AX element pid: 53875, elementOrHash.elementID: 4666559296.79>
+                                  StaticText, 0x10663c500, {{30.0, 329.3}, {306.7, 14.3}}, label: 'Upcoming pickups, reservations, shifts, and due work.' <AX element pid: 53875, elementOrHash.elementID: 4666559456.80>
+                                Button, 0x10663c640, {{30.0, 363.7}, {342.0, 44.0}}, label: 'Football fall camp — video, Camp Randall Creative Desk, Due Thu 9:06 AM' <AX element pid: 53875, elementOrHash.elementID: 4666559776.69>
+                                  Other, 0x10663c780, {{30.0, 363.7}, {4.0, 44.0}} <AX element pid: 53875, elementOrHash.elementID: 4666558016.81>
+                                  StaticText, 0x10663c8c0, {{76.0, 368.5}, {135.0, 16.0}}, label: 'Football fall camp — video' <AX element pid: 53875, elementOrHash.elementID: 4666558976.82>
+                                  Image, 0x10663ca00, {{48.3, 378.7}, {13.3, 14.0}}, identifier: 'shippingbox.fill', label: 'Box' <AX element pid: 53875, elementOrHash.elementID: 4666558336.83>
+                                  StaticText, 0x10663cb40, {{252.0, 378.5}, {99.7, 14.3}}, label: 'Due Thu 9:06 AM' <AX element pid: 53875, elementOrHash.elementID: 4666566016.84>
+                                  StaticText, 0x10663cc80, {{76.0, 388.5}, {138.0, 14.3}}, label: 'Camp Randall Creative Desk' <AX element pid: 53875, elementOrHash.elementID: 4666557856.85>
+                                  Image, 0x10663cdc0, {{365.7, 381.0}, {5.7, 9.7}}, identifier: 'chevron.right', label: 'Forward' <AX element pid: 53875, elementOrHash.elementID: 4666558496.86>
+                                Button, 0x10663cf00, {{30.0, 424.0}, {342.0, 44.0}}, label: 'Volleyball vs Nebraska, Thursday, September 17, 11:00 AM' <AX element pid: 53875, elementOrHash.elementID: 4524676096.70>
+                                  Other, 0x10663d040, {{30.0, 424.0}, {4.0, 44.0}} <AX element pid: 53875, elementOrHash.elementID: 4666572576.87>
+                                  StaticText, 0x10663d180, {{76.0, 428.9}, {183.0, 16.0}}, label: 'Volleyball vs Nebraska' <AX element pid: 53875, elementOrHash.elementID: 4524679296.88>
+                                  Image, 0x10663d2c0, {{48.3, 440.0}, {13.3, 12.0}}, identifier: 'calendar', label: 'Calendar' <AX element pid: 53875, elementOrHash.elementID: 4524684256.89>
+                                  StaticText, 0x10663d400, {{300.0, 438.9}, {51.7, 14.3}}, label: '11:00 AM' <AX element pid: 53875, elementOrHash.elementID: 4524683616.90>
+                                  StaticText, 0x10663d540, {{76.0, 448.9}, {137.0, 14.3}}, label: 'Thursday, September 17' <AX element pid: 53875, elementOrHash.elementID: 4524678976.91>
+                                  Image, 0x10663d680, {{365.7, 441.3}, {5.7, 9.7}}, identifier: 'chevron.right', label: 'Forward' <AX element pid: 53875, elementOrHash.elementID: 4524686176.92>
+                                Button, 0x10663d7c0, {{30.0, 484.3}, {342.0, 44.3}}, label: 'Volleyball vs Nebraska, Thursday, September 17, 11:00 AM' <AX element pid: 53875, elementOrHash.elementID: 4661999680.71>
+                                  Other, 0x10663d900, {{30.0, 484.3}, {4.0, 44.3}} <AX element pid: 53875, elementOrHash.elementID: 4524683936.93>
+                                  StaticText, 0x10663da40, {{76.0, 489.3}, {183.0, 16.0}}, label: 'Volleyball vs Nebraska' <AX element pid: 53875, elementOrHash.elementID: 4409998656.94>
+                                  Image, 0x10663db80, {{48.3, 500.3}, {13.3, 12.0}}, identifier: 'calendar', label: 'Calendar' <AX element pid: 53875, elementOrHash.elementID: 4524675136.95>
+                                  StaticText, 0x10663dcc0, {{300.0, 499.3}, {51.7, 14.3}}, label: '11:00 AM' <AX element pid: 53875, elementOrHash.elementID: 4661998080.96>
+                                  StaticText, 0x10663de00, {{76.0, 509.3}, {137.0, 14.3}}, label: 'Thursday, September 17' <AX element pid: 53875, elementOrHash.elementID: 4409998816.97>
+                                  Image, 0x10663df40, {{365.7, 501.7}, {5.7, 9.7}}, identifier: 'chevron.right', label: 'Forward' <AX element pid: 53875, elementOrHash.elementID: 4661997920.98>
+                                Button, 0x10663e080, {{30.0, 545.0}, {342.0, 44.0}}, label: 'Football vs Ohio State, Friday, September 18, 12:00 PM' <AX element pid: 53875, elementOrHash.elementID: 4661995840.72>
+                                  Other, 0x10663e1c0, {{30.0, 545.0}, {4.0, 44.0}} <AX element pid: 53875, elementOrHash.elementID: 4661999520.99>
+                                  StaticText, 0x10663e300, {{76.0, 549.7}, {181.3, 16.0}}, label: 'Football vs Ohio State' <AX element pid: 53875, elementOrHash.elementID: 4661998880.100>
+                                  Image, 0x10663e440, {{48.3, 561.0}, {13.3, 12.0}}, identifier: 'calendar', label: 'Calendar' <AX element pid: 53875, elementOrHash.elementID: 4661999200.101>
+                                  StaticText, 0x10663e580, {{299.0, 559.7}, {52.7, 14.3}}, label: '12:00 PM' <AX element pid: 53875, elementOrHash.elementID: 4661997600.102>
+                                  StaticText, 0x10663e6c0, {{76.0, 569.7}, {119.7, 14.3}}, label: 'Friday, September 18' <AX element pid: 53875, elementOrHash.elementID: 4661998720.103>
+                                  Image, 0x10663e800, {{365.7, 562.0}, {5.7, 9.7}}, identifier: 'chevron.right', label: 'Forward' <AX element pid: 53875, elementOrHash.elementID: 4661996960.104>
+                                Button, 0x10663e940, {{30.0, 605.3}, {342.0, 44.0}}, label: 'Football vs Ohio State — photo, Camp Randall Creative Desk, Sat 6:06 AM' <AX element pid: 53875, elementOrHash.elementID: 4661992000.73>
+                                  Other, 0x10663ea80, {{30.0, 605.3}, {4.0, 44.0}} <AX element pid: 53875, elementOrHash.elementID: 4661994880.105>
+                                  StaticText, 0x10663ebc0, {{76.0, 610.1}, {169.3, 16.0}}, label: 'Football vs Ohio State — photo' <AX element pid: 53875, elementOrHash.elementID: 4662001120.106>
+                                  Image, 0x10663ed00, {{48.3, 620.3}, {13.3, 14.0}}, identifier: 'shippingbox.fill', label: 'Box' <AX element pid: 53875, elementOrHash.elementID: 4661993760.107>
+                                  StaticText, 0x10663ee40, {{281.3, 620.1}, {70.3, 14.3}}, label: 'Sat 6:06 AM' <AX element pid: 53875, elementOrHash.elementID: 4662000960.108>
+                                  StaticText, 0x10663ef80, {{76.0, 630.1}, {160.0, 14.3}}, label: 'Camp Randall Creative Desk' <AX element pid: 53875, elementOrHash.elementID: 4662001440.109>
+                                  Image, 0x10663f0c0, {{365.7, 622.3}, {5.7, 9.7}}, identifier: 'chevron.right', label: 'Forward' <AX element pid: 53875, elementOrHash.elementID: 4661997280.110>
+                        Other, 0x10663f200, {{-16.0, 688.7}, {434.0, 121.3}} <AX element pid: 53875, elementOrHash.elementID: 4664216064.32>
+                        Cell, 0x10663f340, {{16.0, 706.3}, {370.0, 86.3}} <AX element pid: 53875, elementOrHash.elementID: 4662428928.33>
+                          Other, 0x10663f480, {{16.0, 706.3}, {370.0, 86.3}} <AX element pid: 53875, elementOrHash.elementID: 4661338112.42>
+                            Other, 0x10663f5c0, {{16.0, 706.3}, {370.0, 86.3}} <AX element pid: 53875, elementOrHash.elementID: 4521707712.51>
+                          Other, 0x10663f700, {{16.0, 706.3}, {370.0, 86.3}} <AX element pid: 53875, elementOrHash.elementID: 4521706816.43>
+                            Other, 0x10663f840, {{16.0, 706.3}, {370.0, 86.3}} <AX element pid: 53875, elementOrHash.elementID: 4410285568.52>
+                              Other, 0x10663f980, {{16.0, 706.3}, {370.0, 86.3}} <AX element pid: 53875, elementOrHash.elementID: 4661987520.59>
+                                Button, 0x10663fac0, {{16.0, 706.3}, {370.0, 86.3}}, label: 'Scoreboard, Season record, events worked, and venue history' <AX element pid: 53875, elementOrHash.elementID: 4661989440.74>
+                                  StaticText, 0x10663fc00, {{32.0, 721.3}, {316.0, 56.3}}, label: 'Scoreboard, Season record, events worked, and venue history' <AX element pid: 53875, elementOrHash.elementID: 4661988800.111>
+                                    StaticText, 0x10663fd40, {{78.0, 724.3}, {82.0, 18.0}}, label: 'Scoreboard' <AX element pid: 53875, elementOrHash.elementID: 4661987040.122>
+                                    Image, 0x10663fe80, {{32.0, 732.7}, {34.0, 34.0}}, identifier: 'trophy', label: 'Trophy Cup' <AX element pid: 53875, elementOrHash.elementID: 4661987200.123>
+                                    StaticText, 0x106640000, {{78.0, 744.3}, {202.0, 30.3}}, label: 'Season record, events worked, and venue history' <AX element pid: 53875, elementOrHash.elementID: 4661987360.124>
+                                  Image, 0x106640140, {{360.7, 743.3}, {7.0, 12.0}}, identifier: 'chevron.forward' <AX element pid: 53875, elementOrHash.elementID: 4661997440.112>
+                        Other, 0x106640280, {{-16.0, 810.3}, {434.0, 266.7}} <AX element pid: 53875, elementOrHash.elementID: 4666470400.34>
+                        Cell, 0x1066403c0, {{16.0, 827.7}, {370.0, 231.7}} <AX element pid: 53875, elementOrHash.elementID: 4662436608.35>
+                          Other, 0x106640500, {{16.0, 827.7}, {370.0, 231.7}} <AX element pid: 53875, elementOrHash.elementID: 4666464768.44>
+                            Other, 0x106640640, {{16.0, 827.7}, {370.0, 231.7}} <AX element pid: 53875, elementOrHash.elementID: 4521716224.53>
+                              Other, 0x106640780, {{16.0, 827.7}, {370.0, 231.7}} <AX element pid: 53875, elementOrHash.elementID: 4410924032.60>
+                                Other, 0x1066408c0, {{16.0, 827.7}, {370.0, 231.7}} <AX element pid: 53875, elementOrHash.elementID: 4699767104.75>
+                          Other, 0x106640a00, {{16.0, 827.7}, {370.0, 231.7}} <AX element pid: 53875, elementOrHash.elementID: 4521737088.45>
+                            Other, 0x106640b40, {{16.0, 827.7}, {370.0, 231.7}} <AX element pid: 53875, elementOrHash.elementID: 4664231424.54>
+                              Other, 0x106640c80, {{16.0, 827.7}, {370.0, 231.7}} <AX element pid: 53875, elementOrHash.elementID: 4661988640.61>
+                                Other, 0x106640dc0, {{30.0, 842.3}, {342.0, 30.2}} <AX element pid: 53875, elementOrHash.elementID: 4661986880.76>
+                                  Image, 0x106640f00, {{31.3, 842.7}, {12.0, 13.3}}, identifier: 'trophy', label: 'Trophy Cup' <AX element pid: 53875, elementOrHash.elementID: 4661986560.113>
+                                  StaticText, 0x106641040, {{50.7, 842.3}, {50.3, 14.3}}, label: 'BADGES' <AX element pid: 53875, elementOrHash.elementID: 4661986400.114>
+                                  Button, 0x106641180, {{273.0, 845.0}, {99.0, 24.3}}, label: 'See all badges' <AX element pid: 53875, elementOrHash.elementID: 4661988000.115>
+                                    StaticText, 0x1066412c0, {{273.0, 845.0}, {99.0, 24.3}}, label: 'See all' <AX element pid: 53875, elementOrHash.elementID: 4661995680.125>
+                                    Image, 0x106641400, {{288.0, 850.0}, {14.3, 14.3}}, identifier: 'square.grid.2x2', label: 'Grid View' <AX element pid: 53875, elementOrHash.elementID: 4661988320.126>
+                                  StaticText, 0x106641540, {{30.0, 859.2}, {46.7, 13.3}}, label: '2 earned' <AX element pid: 53875, elementOrHash.elementID: 4661986720.116>
+                                ScrollView, 0x106641680, {{30.0, 884.7}, {342.0, 92.0}} <AX element pid: 53875, elementOrHash.elementID: 4410241024.77>
+                                  Other, 0x1066417c0, {{30.0, 884.7}, {166.0, 92.0}} <AX element pid: 53875, elementOrHash.elementID: 4666473984.117>
+                                    Button, 0x106641900, {{32.5, 888.7}, {77.0, 84.3}}, label: 'Camp Randall Regular, earned, Nov 14, 2026' <AX element pid: 53875, elementOrHash.elementID: 4661986080.127>
+                                      Image, 0x106641a40, {{45.0, 888.7}, {52.0, 52.0}}, identifier: 'trophy.fill', label: 'Trophy Cup, Filled' <AX element pid: 53875, elementOrHash.elementID: 4661985760.130>
+                                      StaticText, 0x106641b80, {{32.5, 946.7}, {77.0, 26.3}}, label: 'Camp Randall Regular' <AX element pid: 53875, elementOrHash.elementID: 4661985920.131>
+                                    Button, 0x106641cc0, {{128.7, 888.7}, {52.7, 84.3}}, label: 'First Shift, earned, Sep 5, 2026' <AX element pid: 53875, elementOrHash.elementID: 4661993440.128>
+                                      Image, 0x106641e00, {{129.0, 888.7}, {52.0, 52.0}}, identifier: 'trophy.fill', label: 'Trophy Cup, Filled' <AX element pid: 53875, elementOrHash.elementID: 4661987840.132>
+                                      StaticText, 0x106641f40, {{128.7, 946.7}, {52.7, 26.3}}, label: 'First Shift' <AX element pid: 53875, elementOrHash.elementID: 4661988160.133>
+                                Button, 0x106642080, {{30.0, 1009.3}, {342.0, 28.0}}, label: 'Closest badge: Road Warrior, 0 of 1', value: 0% <AX element pid: 53875, elementOrHash.elementID: 4661985600.78>
+                                  StaticText, 0x1066421c0, {{30.0, 1011.5}, {52.0, 13.3}}, label: 'CLOSEST' <AX element pid: 53875, elementOrHash.elementID: 4661985280.118>
+                                  StaticText, 0x106642300, {{90.0, 1009.2}, {93.3, 18.0}}, label: 'Road Warrior' <AX element pid: 53875, elementOrHash.elementID: 4661985440.119>
+                                  StaticText, 0x106642440, {{352.7, 1011.0}, {19.3, 14.3}}, label: '0/1' <AX element pid: 53875, elementOrHash.elementID: 4661987680.120>
+                                  ProgressIndicator, 0x106642580, {{30.0, 1033.3}, {342.0, 4.0}}, value: 0% <AX element pid: 53875, elementOrHash.elementID: 4661993600.121>
+                                    ProgressIndicator, 0x1066426c0, {{30.0, 1023.3}, {342.0, 24.0}}, value: 0% <AX element pid: 53875, elementOrHash.elementID: 4666467840.129>
+                        Other, 0x106642800, {{369.0, 116.0}, {30.0, 696.0}}, label: 'Vertical scroll bar, 2 pages', value: 0% <AX element pid: 53875, elementOrHash.elementID: 4532123136.36>
+                          Other, 0x106642940, {{396.0, 802.0}, {3.0, 7.0}} <AX element pid: 53875, elementOrHash.elementID: 4412159552.46>
+                        Other, 0x106642a80, {{369.0, 116.0}, {30.0, 696.0}}, label: 'Vertical scroll bar, 2 pages', value: 0% <AX element pid: 53875, elementOrHash.elementID: 4532123136.36>
+                          Other, 0x106642bc0, {{396.0, 802.0}, {3.0, 7.0}} <AX element pid: 53875, elementOrHash.elementID: 4412159552.46>
+              Toolbar, 0x106642d00, {{0.0, 0.0}, {402.0, 874.0}}, identifier: 'Toolbar', label: 'Toolbar' <AX element pid: 53875, elementOrHash.elementID: 4532111360.13>
+                Other, 0x106642e40, {{0.0, 0.0}, {402.0, 874.0}} <AX element pid: 53875, elementOrHash.elementID: 4532111872.18>
+            Other, 0x106642f80, {{0.0, 62.0}, {402.0, 778.0}} <AX element pid: 53875, elementOrHash.elementID: 4412300736.10>

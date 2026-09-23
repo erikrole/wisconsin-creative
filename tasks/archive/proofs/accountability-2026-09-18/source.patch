@@ -1,0 +1,1360 @@
+diff --git a/docs/AREA_REPORTS.md b/docs/AREA_REPORTS.md
+index b223be96..e9ebb40d 100644
+--- a/docs/AREA_REPORTS.md
++++ b/docs/AREA_REPORTS.md
+@@ -3,7 +3,7 @@
+ ## Document Control
+ - Area: Reports & Analytics
+ - Owner: Wisconsin Athletics Creative Product
+-- Last Updated: 2026-09-03
++- Last Updated: 2026-09-18
+ - Status: Active
+ - Version: V1
+ 
+@@ -138,12 +138,12 @@ Provide staff and admin with analytics dashboards to track checkout/reservation
+ - **Type:** Team-visible late-return leaderboard with expandable checkout evidence. ADMIN retains the intervention and reversible data-quality workflow.
+ - **Ranking:** Selectable through `sort`. `events` (default) ranks by late-event count, then total late hours, then most recent incident; `time` ranks by total late hours first; `recent` ranks by most recent incident first. The page frames rank 1 as the "wrong leaderboard" with a gentle jeer, not recognition or an award.
+ - **Time:** Defaults to the current July 1-June 30 academic year, with four prior years and all-time available.
+-- **Filters:** Academic year, location, active/resolved/overdue-extension incident state, and active/inactive user state. Non-default filters surface as removable toolbar chips.
+-- **Metrics:** People on the board, late events, total late time, and currently overdue checkouts. ADMIN also sees excluded-record count.
+-- **Presentation:** Shares the report kit (`ReportToolbar`, `MetricCard`, `ReportDataRegion`, `ReportSectionCard`, mobile cards). A responsive top-three spotlight uses avatars, concise wrong-leaderboard copy, and one-shot reduced-motion-safe transitions when ranking changes. Its three unique jeers are dealt from a source-owned 50-line deck using the stable ordered leaderboard fingerprint, so every internal viewer sees the same set, reloads keep it fixed, and meaningful membership, order, or incident changes rotate it. The full desktop leaderboard reduces each person to five scan targets: identity, late-event count plus active-overdue state, total/typical/worst late-time pattern, a prominent return-record percentage, and an explicit 40px history disclosure. Return-rate bars clamp to full red at 50% and below, interpolate continuously through the middle rates, and reach full green at 100%. Below `xl`, the same hierarchy becomes cards instead of a squeezed table. Expanded checkout evidence stays grouped as complete incident records with booking identity, due context, late duration, return state, and ADMIN action together.
+-- **Semantics:** Only `PERSON` custody contributes to the person leaderboard. `OPEN` rows use current time; `COMPLETED` rows use `completedAt`. Both compare against `endsAt + checkout_policies.gracePeriodHours`. An extension made after the prior due time plus grace is a separate late episode, even when the new due time prevents a later late return. On-time rate appears only after three completed checkouts. `SHARED` travel-case/truck custody remains visible in operational checkout/overdue reports but is never attributed to the retained requester in Accountability.
++- **Filters:** Academic year, location, active/resolved/overdue-extension incident state, and active/inactive user state. Non-default filters, including a non-current year or all-time, surface as removable toolbar chips. Filter state is kept in the URL. A local person search finds a name without changing rank, metrics, or the shared spotlight.
++- **Metrics:** People on the board, late events, total late time, and currently overdue checkouts. ADMIN also sees excluded-record count. Signed-in viewers who appear on the board get a jump control to their row.
++- **Presentation:** Shares the report kit (`ReportToolbar`, `MetricCard`, `ReportDataRegion`, `ReportSectionCard`, mobile cards). A responsive top-three spotlight uses avatars, concise wrong-leaderboard copy, and one-shot reduced-motion-safe transitions when ranking changes. Its three unique jeers are dealt from a source-owned 50-line deck using the stable ordered leaderboard fingerprint, so every internal viewer sees the same set, reloads keep it fixed, and meaningful membership, order, or incident changes rotate it. The full desktop leaderboard reduces each person to five scan targets: identity, late-event count plus active-overdue state, total/typical/worst late-time pattern, a prominent return-record percentage, and an explicit 40px history disclosure. Return-rate bars clamp to full red at 50% and below, interpolate continuously through the middle rates, and reach full green at 100%. Red late-event badges are reserved for people who still have overdue gear. Below `xl`, the same hierarchy becomes cards instead of a squeezed table. Expanded checkout evidence stays grouped as complete incident records with booking identity, due context, late duration, return state, and ADMIN action together. Active overdue receipts sort first, then recency.
++- **Semantics:** Only `PERSON` custody contributes to the person leaderboard. `OPEN` rows use current time; `COMPLETED` rows use `completedAt`. Both compare against `endsAt + checkout_policies.gracePeriodHours`. An extension made after the prior due time plus grace is a separate late episode, even when the new due time prevents a later late return. On-time rate appears after three completed or currently overdue checkouts in the window, and currently overdue checkouts count as not on time. `SHARED` travel-case/truck custody remains visible in operational checkout/overdue reports but is never attributed to the retained requester in Accountability.
+ - **Data:** `GET /api/accountability` returns the shared ranking, the shared `spotlightJeers` draw, and server-owned capability flags. STAFF/STUDENT responses receive the same jeer set as ADMIN for identical leaderboard state while continuing to omit exclusion rows, notes, and excluded-record metrics. `POST /api/accountability/exclusions` and `DELETE /api/accountability/exclusions/{bookingId}` remain ADMIN-only.
+-- **Export:** ADMIN-only `GET /api/accountability?format=csv` exports the filtered person-level ranking in the on-screen sort order through the shared report-export rate limit. Non-admin export attempts fail before report work. Columns cover rank, identity, late events, active overdue, total/median/worst late hours, total and completed checkouts, on-time rate, and last incident.
++- **Export:** ADMIN-only `GET /api/accountability?format=csv` exports the filtered person-level ranking in the on-screen sort order through the shared report-export rate limit, which is enforced before report work. The client downloads the file in place with the same completion toast pattern as other reports. Non-admin export attempts fail before report work. Columns cover rank, identity, late events, active overdue, total/median/worst late hours, total and completed checkouts, on-time rate, and last incident.
+ - **Cleanup:** ADMIN exclusions require a reason, retain the booking and all custody evidence, write audit evidence in the same SERIALIZABLE transaction, and can be restored.
+ 
+ ## Native iOS surface
+@@ -217,6 +217,7 @@ Provide staff and admin with analytics dashboards to track checkout/reservation
+ - [x] AC-21: Accountability keeps its friendly wrong-leaderboard spotlight while the full ranking uses a five-concept desktop summary, prominent continuously colored return record, responsive card fallback, explicit 40px history controls, and grouped incident evidence without changing rank or custody semantics.
+ 
+ ## Change Log
++- 2026-09-18: Accountability now counts currently overdue checkouts against on-time rate, keeps filter state in the URL, downloads CSV in place, highlights the signed-in viewer, and searches the ranking locally. Active overdue receipts sort first. Item summaries load only for incident rows. Focused tests pass locally; authenticated browser proof is in `tasks/archive/proofs/accountability-2026-09-18/`.
+ - 2026-09-07: Client CSV escaping now protects whitespace-prefixed formulas. Download completion retains warning severity when truncation metadata lacks a total, and JSON null/non-object error bodies use the standard failure message. Focused regressions pass locally; authenticated browser and deployment remain unverified.
+ - 2026-09-07: Checkout report JSON and CSV requests now require a whole-number days value from 1 through 366; partially numeric and fractional values no longer silently select a different reporting window. Missing or empty days retains the 30-day default. Acceptance: focused route regressions pass locally; authenticated runtime and deployment remain unverified.
+ - 2026-09-03: **Accountability now excludes shared travel-case custody.** `SHARED` checkouts remain operational custody and report activity, but they do not create person-level late-return incidents, totals, badge progress, or CSV ranking evidence for the retained requester. Personal checkout semantics are unchanged. Migration `0143_shared_checkout_custody` is applied; compatible deployment and authenticated report proof remain open.
+diff --git a/src/app/(app)/accountability/AccountabilityClient.tsx b/src/app/(app)/accountability/AccountabilityClient.tsx
+index 212cddab..693567bd 100644
+--- a/src/app/(app)/accountability/AccountabilityClient.tsx
++++ b/src/app/(app)/accountability/AccountabilityClient.tsx
+@@ -2,7 +2,8 @@
+ 
+ import Link from "next/link";
+ import { useEffect, useMemo, useRef, useState } from "react";
+-import { ChevronDown, ChevronUp, MoreHorizontal, RotateCcw } from "lucide-react";
++import { useSearchParams } from "next/navigation";
++import { ChevronDown, ChevronUp, SearchIcon, RotateCcw } from "lucide-react";
+ import { toast } from "sonner";
+ import MetricCard from "../reports/MetricCard";
+ import {
+@@ -20,6 +21,11 @@ import {
+   ReportToolbar,
+   ReportToolbarGroup,
+ } from "../reports/report-ui";
++import {
++  getReportExportCompletionToast,
++  getReportExportFilename,
++  readReportExportFailureMessage,
++} from "../reports/report-export";
+ import { AccountabilitySpotlight } from "./AccountabilitySpotlight";
+ import { UserAvatar } from "@/components/UserAvatar";
+ import { Badge } from "@/components/ui/badge";
+@@ -38,12 +44,7 @@ import {
+   DialogHeader,
+   DialogTitle,
+ } from "@/components/ui/dialog";
+-import {
+-  DropdownMenu,
+-  DropdownMenuContent,
+-  DropdownMenuItem,
+-  DropdownMenuTrigger,
+-} from "@/components/ui/dropdown-menu";
++import { Input } from "@/components/ui/input";
+ import { Label } from "@/components/ui/label";
+ import { FadeUp } from "@/components/ui/motion";
+ import {
+@@ -63,8 +64,10 @@ import {
+ } from "@/components/ui/table";
+ import { Textarea } from "@/components/ui/textarea";
+ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+-import { handleAuthRedirect, parseJsonSafely } from "@/lib/errors";
++import { useCurrentUser } from "@/hooks/use-current-user";
++import { handleAuthRedirect, isAbortError, parseJsonSafely } from "@/lib/errors";
+ import { formatRelativeTime } from "@/lib/format";
++import { syncUrl } from "@/lib/url-sync";
+ import { cn } from "@/lib/utils";
+ import { useFetch } from "@/hooks/use-fetch";
+ 
+@@ -145,6 +148,12 @@ const REASONS = [
+   ["OTHER", "Other"],
+ ] as const;
+ 
++const REASON_LABELS = Object.fromEntries(REASONS) as Record<string, string>;
++
++const INCIDENT_STATES = new Set(["all", "active", "resolved", "extended"]);
++const USER_STATES = new Set(["all", "active", "inactive"]);
++const SORTS = new Set(["events", "time", "recent"]);
++
+ const INCIDENT_STATE_LABELS: Record<string, string> = {
+   active: "Active overdue",
+   resolved: "Resolved late returns",
+@@ -177,6 +186,59 @@ function areaLabel(area: string | null) {
+   return area ? area.replaceAll("_", " ") : "No area";
+ }
+ 
++function allowedValue(value: string | null, allowed: Set<string>, fallback: string) {
++  return value && allowed.has(value) ? value : fallback;
++}
++
++function academicYearValue(value: string | null, currentStartYear: number) {
++  if (value === "all") return "all";
++  if (value && /^\d{4}$/.test(value)) {
++    const year = Number(value);
++    if (year >= 2000 && year <= 2100) return String(year);
++  }
++  return String(currentStartYear);
++}
++
++async function downloadAccountabilityCsv(queryUrl: string) {
++  try {
++    const separator = queryUrl.includes("?") ? "&" : "?";
++    const res = await fetch(`${queryUrl}${separator}format=csv`);
++    if (handleAuthRedirect(res, "/accountability")) return;
++    if (!res.ok) {
++      toast.error(await readReportExportFailureMessage(res, "Accountability ranking"));
++      return;
++    }
++
++    const blob = await res.blob();
++    const filename = getReportExportFilename(
++      res.headers.get("Content-Disposition"),
++      "accountability.csv",
++    );
++    const url = URL.createObjectURL(blob);
++    const link = document.createElement("a");
++    link.href = url;
++    link.download = filename;
++    document.body.appendChild(link);
++    link.click();
++    document.body.removeChild(link);
++    URL.revokeObjectURL(url);
++
++    const exportedCount = Number.parseInt(res.headers.get("X-Exported-Count") ?? "", 10);
++    const completionToast = getReportExportCompletionToast({
++      reportLabel: "Accountability ranking",
++      rowCount: Number.isFinite(exportedCount) ? exportedCount : 0,
++      scopeLabel: "ranked people",
++      total: res.headers.get("X-Total-Count"),
++      truncated: res.headers.get("X-Truncated") === "true",
++    });
++    if (completionToast.variant === "warning") toast.warning(completionToast.message);
++    else toast.success(completionToast.message);
++  } catch (err) {
++    if (isAbortError(err)) return;
++    toast.error("Accountability CSV export failed. Check your connection and try again.");
++  }
++}
++
+ function OnTimeRate({ person }: { person: Person }) {
+   if (person.onTimeRate === null) {
+     return (
+@@ -185,7 +247,7 @@ function OnTimeRate({ person }: { person: Person }) {
+           <span className="cursor-default text-xs text-muted-foreground">Not rated</span>
+         </TooltipTrigger>
+         <TooltipContent>
+-          Needs more completed checkouts before an on-time rate is meaningful
++          Needs 3 completed checkouts or currently overdue checkouts before an on-time rate is meaningful
+         </TooltipContent>
+       </Tooltip>
+     );
+@@ -208,25 +270,30 @@ function OnTimeRate({ person }: { person: Person }) {
+ 
+ function IncidentStateBadge({ incident }: { incident: Incident }) {
+   if (incident.state === "active") return <Badge variant="red">Currently overdue</Badge>;
+-  if (incident.state === "extended") {
+-    return (
+-      <Badge variant="orange">
+-        Extended {formatDate(incident.extendedAt!)} to {formatDate(incident.extendedTo!)}
+-      </Badge>
+-    );
+-  }
+-  return <Badge variant="secondary">Returned {formatDate(incident.returnedAt!)}</Badge>;
++  if (incident.state === "extended") return <Badge variant="orange">Extended after overdue</Badge>;
++  return <Badge variant="secondary">Returned</Badge>;
+ }
+ 
+-export default function AccountabilityClient() {
+-  const now = new Date();
+-  const currentStartYear = now.getMonth() >= 6 ? now.getFullYear() : now.getFullYear() - 1;
++export default function AccountabilityClient({
++  currentStartYear,
++}: {
++  currentStartYear: number;
++}) {
++  const searchParams = useSearchParams();
++  const { data: currentUser } = useCurrentUser();
+   const [clock, setClock] = useState(() => new Date());
+-  const [year, setYear] = useState(String(currentStartYear));
+-  const [locationId, setLocationId] = useState("all");
+-  const [incidentState, setIncidentState] = useState("all");
+-  const [userState, setUserState] = useState("all");
+-  const [sort, setSort] = useState<SortKey>("events");
++  const [year, setYear] = useState(() => academicYearValue(searchParams.get("year"), currentStartYear));
++  const [locationId, setLocationId] = useState(() => searchParams.get("locationId") || "all");
++  const [incidentState, setIncidentState] = useState(() =>
++    allowedValue(searchParams.get("state"), INCIDENT_STATES, "all"),
++  );
++  const [userState, setUserState] = useState(() =>
++    allowedValue(searchParams.get("users"), USER_STATES, "all"),
++  );
++  const [sort, setSort] = useState<SortKey>(
++    () => allowedValue(searchParams.get("sort"), SORTS, "events") as SortKey,
++  );
++  const [query, setQuery] = useState("");
+   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+   const [excludeTarget, setExcludeTarget] = useState<Incident | null>(null);
+   const [reason, setReason] = useState("TEST_DATA");
+@@ -239,6 +306,34 @@ export default function AccountabilityClient() {
+     return () => clearInterval(id);
+   }, []);
+ 
++  useEffect(() => {
++    syncUrl({
++      year,
++      locationId: locationId === "all" ? "" : locationId,
++      state: incidentState === "all" ? "" : incidentState,
++      users: userState === "all" ? "" : userState,
++      sort: sort === "events" ? "" : sort,
++    });
++  }, [incidentState, locationId, sort, userState, year]);
++
++  function changeYear(next: string) {
++    setYear(next);
++    setExpanded(new Set());
++  }
++  function changeLocation(next: string | null) {
++    setLocationId(next ?? "all");
++  }
++  function changeIncidentState(next: string) {
++    setIncidentState(next);
++    setExpanded(new Set());
++  }
++  function changeUserState(next: string) {
++    setUserState(next);
++  }
++  function changeSort(next: SortKey) {
++    setSort(next);
++  }
++
+   const queryUrl = useMemo(() => {
+     const params = new URLSearchParams({ year, state: incidentState, users: userState, sort });
+     if (locationId !== "all") params.set("locationId", locationId);
+@@ -251,6 +346,12 @@ export default function AccountabilityClient() {
+     keepPreviousData: true,
+   });
+ 
++  useEffect(() => {
++    if (!data) return;
++    const exists = locationId === "all" || data.locations.some((location) => location.id === locationId);
++    if (!exists) setLocationId("all");
++  }, [data, locationId]);
++
+   const years = Array.from({ length: 5 }, (_, index) => currentStartYear - index);
+ 
+   function toggle(userId: string) {
+@@ -310,8 +411,16 @@ export default function AccountabilityClient() {
+   }
+ 
+   function exportCsv() {
+-    const separator = queryUrl.includes("?") ? "&" : "?";
+-    window.location.assign(`${queryUrl}${separator}format=csv`);
++    void downloadAccountabilityCsv(queryUrl);
++  }
++
++  function revealYou(userId: string) {
++    setQuery("");
++    window.setTimeout(() => {
++      const targets = document.querySelectorAll<HTMLElement>(`[data-accountability-person="${userId}"]`);
++      const visible = [...targets].find((node) => node.getClientRects().length > 0) ?? targets[0];
++      visible?.scrollIntoView({ behavior: "smooth", block: "center" });
++    }, 0);
+   }
+ 
+   if (loading && !data) return <ReportLoadingState metricCount={4} rows={6} />;
+@@ -332,27 +441,49 @@ export default function AccountabilityClient() {
+   const rankByTime = sort === "time";
+   const canManageExclusions = data.capabilities.canManageExclusions;
+   const excluded = data.excluded ?? [];
++  const currentUserId = currentUser?.id ?? null;
++  const normalizedQuery = query.trim().toLowerCase();
++  const visibleLeaderboard = normalizedQuery
++    ? leaderboard.filter((person) => person.name.toLowerCase().includes(normalizedQuery))
++    : leaderboard;
++  const yourIndex = currentUserId
++    ? leaderboard.findIndex((person) => person.userId === currentUserId)
++    : -1;
++  const yourRank = yourIndex >= 0 ? yourIndex + 1 : null;
++  const hasScopeFilters =
++    year !== String(currentStartYear) ||
++    locationId !== "all" ||
++    incidentState !== "all" ||
++    userState !== "all";
++  const locationOptions = data.locations;
+ 
+   const activeFilters = [
++    ...(year !== String(currentStartYear)
++      ? [{
++          key: "year",
++          label: year === "all" ? "All time" : `Year: ${data.academicYear?.label ?? year}`,
++          onRemove: () => changeYear(String(currentStartYear)),
++        }]
++      : []),
+     ...(locationId !== "all"
+       ? [{
+           key: "location",
+-          label: `Location: ${data.locations.find((entry) => entry.id === locationId)?.name ?? locationId}`,
+-          onRemove: () => setLocationId("all"),
++          label: `Location: ${locationOptions.find((entry) => entry.id === locationId)?.name ?? locationId}`,
++          onRemove: () => changeLocation(null),
+         }]
+       : []),
+     ...(incidentState !== "all"
+       ? [{
+           key: "state",
+           label: `Incidents: ${INCIDENT_STATE_LABELS[incidentState]}`,
+-          onRemove: () => setIncidentState("all"),
++          onRemove: () => changeIncidentState("all"),
+         }]
+       : []),
+     ...(userState !== "all"
+       ? [{
+           key: "users",
+           label: `Users: ${USER_STATE_LABELS[userState]}`,
+-          onRemove: () => setUserState("all"),
++          onRemove: () => changeUserState("all"),
+         }]
+       : []),
+   ];
+@@ -366,14 +497,25 @@ export default function AccountabilityClient() {
+         now={clock}
+         onRefresh={reload}
+         exportAction={
+-          data.capabilities.canExport ? (
+-            <ReportExportButton
+-              ariaLabel="Export the ranked accountability rows as CSV"
+-              label="Export ranking"
+-              disabled={leaderboard.length === 0}
+-              onClick={exportCsv}
+-            />
+-          ) : null
++          <div className="flex items-center gap-2">
++            {yourRank ? (
++              <Button
++                variant="outline"
++                className="h-10"
++                onClick={() => revealYou(currentUserId!)}
++              >
++                {`You’re #${yourRank}`}
++              </Button>
++            ) : null}
++            {data.capabilities.canExport ? (
++              <ReportExportButton
++                ariaLabel="Export the ranked accountability rows as CSV"
++                label="Export ranking"
++                disabled={leaderboard.length === 0}
++                onClick={exportCsv}
++              />
++            ) : null}
++          </div>
+         }
+       >
+         <ReportToolbarGroup label="Rank by">
+@@ -381,15 +523,15 @@ export default function AccountabilityClient() {
+             ariaLabel="Accountability ranking"
+             value={sort}
+             options={[
+-              { value: "events", label: "Volume" },
++              { value: "events", label: "Events" },
+               { value: "time", label: "Time" },
+-              { value: "recent", label: "Recent" },
++              { value: "recent", label: "Latest" },
+             ]}
+-            onChange={(next) => setSort(next as SortKey)}
++            onChange={(next) => changeSort(next as SortKey)}
+           />
+         </ReportToolbarGroup>
+-        <Select value={year} onValueChange={setYear}>
+-          <SelectTrigger size="sm" className="w-[150px]" aria-label="Academic year">
++        <Select value={year} onValueChange={changeYear}>
++          <SelectTrigger size="sm" className="w-[132px]" aria-label="Academic year">
+             <SelectValue />
+           </SelectTrigger>
+           <SelectContent>
+@@ -401,20 +543,20 @@ export default function AccountabilityClient() {
+             <SelectItem value="all">All time</SelectItem>
+           </SelectContent>
+         </Select>
+-        <Select value={locationId} onValueChange={setLocationId}>
++        <Select value={locationId} onValueChange={(next) => changeLocation(next === "all" ? null : next)}>
+           <SelectTrigger size="sm" className="w-[170px]" aria-label="Location">
+             <SelectValue />
+           </SelectTrigger>
+           <SelectContent>
+             <SelectItem value="all">All locations</SelectItem>
+-            {data.locations.map((location) => (
++            {locationOptions.map((location) => (
+               <SelectItem key={location.id} value={location.id}>
+                 {location.name}
+               </SelectItem>
+             ))}
+           </SelectContent>
+         </Select>
+-        <Select value={incidentState} onValueChange={setIncidentState}>
++        <Select value={incidentState} onValueChange={changeIncidentState}>
+           <SelectTrigger size="sm" className="w-[190px]" aria-label="Incident state">
+             <SelectValue />
+           </SelectTrigger>
+@@ -425,7 +567,7 @@ export default function AccountabilityClient() {
+             <SelectItem value="extended">Extended after overdue</SelectItem>
+           </SelectContent>
+         </Select>
+-        <Select value={userState} onValueChange={setUserState}>
++        <Select value={userState} onValueChange={changeUserState}>
+           <SelectTrigger size="sm" className="w-[175px]" aria-label="User status">
+             <SelectValue />
+           </SelectTrigger>
+@@ -435,6 +577,16 @@ export default function AccountabilityClient() {
+             <SelectItem value="inactive">Inactive users</SelectItem>
+           </SelectContent>
+         </Select>
++        <div className="relative w-[220px] shrink-0">
++          <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
++          <Input
++            value={query}
++            onChange={(event) => setQuery(event.target.value)}
++            placeholder="Find a person"
++            aria-label="Find a person on the leaderboard"
++            className="h-10 pl-9"
++          />
++        </div>
+       </ReportToolbar>
+ 
+       <ReportDataRegion refreshing={refreshing}>
+@@ -444,6 +596,7 @@ export default function AccountabilityClient() {
+           scopeLabel={scopeLabel}
+           now={clock}
+           jeers={data.spotlightJeers}
++          currentUserId={currentUserId}
+         />
+ 
+       <ReportMetricGrid>
+@@ -480,23 +633,35 @@ export default function AccountabilityClient() {
+ 
+       <ReportSectionCard
+         title="Full leaderboard"
+-        description={`Open history for the receipts. The return record is the escape route. ${data.methodology.ranking}.`}
++        description="Open history for the receipts. The return record is the escape route."
+         className="mb-4"
+         contentClassName="p-0"
+       >
+         {leaderboard.length === 0 ? (
+           <div className="p-4">
+             <ReportEmptyState
+-              icon="check"
+-              title="No one made the board. Nice work."
+-              description="Try another academic year or broaden the filters if you are looking for history."
++              icon={hasScopeFilters ? "search" : "check"}
++              title={hasScopeFilters ? "No one matches these filters" : "No one made the board. Nice work."}
++              description={
++                hasScopeFilters
++                  ? "Broaden the year, location, incident, or user filters to look through more history."
++                  : "Keep returning gear on time and this ranking stays empty."
++              }
++            />
++          </div>
++        ) : visibleLeaderboard.length === 0 ? (
++          <div className="p-4">
++            <ReportEmptyState
++              icon="search"
++              title={`No one named “${query.trim()}”`}
++              description="Clear the search to see the full ranking."
+             />
+           </div>
+         ) : (
+           <>
+             <div className="hidden xl:block">
+               <Table className="table-fixed">
+-                <TableHeader>
++                <TableHeader className="sticky top-0 z-10 bg-card">
+                   <TableRow>
+                     <TableHead className="w-[34%]">Person</TableHead>
+                     <TableHead
+@@ -514,13 +679,14 @@ export default function AccountabilityClient() {
+                   </TableRow>
+                 </TableHeader>
+                 <TableBody>
+-                  {leaderboard.map((person, index) => (
++                  {visibleLeaderboard.map((person) => (
+                     <PersonRows
+                       key={person.userId}
+                       person={person}
+-                      rank={index + 1}
++                      rank={leaderboard.findIndex((row) => row.userId === person.userId) + 1}
+                       rankByTime={rankByTime}
+                       now={clock}
++                      isYou={person.userId === currentUserId}
+                       expanded={expanded.has(person.userId)}
+                       onToggle={() => toggle(person.userId)}
+                       onExclude={canManageExclusions ? setExcludeTarget : undefined}
+@@ -531,13 +697,14 @@ export default function AccountabilityClient() {
+             </div>
+ 
+             <div className="xl:hidden">
+-              {leaderboard.map((person, index) => (
++              {visibleLeaderboard.map((person) => (
+                 <PersonMobileCard
+                   key={person.userId}
+                   person={person}
+-                  rank={index + 1}
++                  rank={leaderboard.findIndex((row) => row.userId === person.userId) + 1}
+                   rankByTime={rankByTime}
+                   now={clock}
++                  isYou={person.userId === currentUserId}
+                   expanded={expanded.has(person.userId)}
+                   onToggle={() => toggle(person.userId)}
+                   onExclude={canManageExclusions ? setExcludeTarget : undefined}
+@@ -565,13 +732,13 @@ export default function AccountabilityClient() {
+                 >
+                   <div className="min-w-0">
+                     <ReportTableLink href={`/checkouts/${entry.bookingId}`}>
+-                      {entry.bookingTitle}
++                      {entry.bookingTitle || "Untitled checkout"}
+                     </ReportTableLink>
+                     <ReportMetaLine
+                       className="text-sm"
+                       items={[
+                         entry.requester,
+-                        entry.reason.replaceAll("_", " ").toLowerCase(),
++                        REASON_LABELS[entry.reason] ?? entry.reason.replaceAll("_", " ").toLowerCase(),
+                         `excluded by ${entry.excludedBy}`,
+                       ]}
+                     />
+@@ -607,8 +774,9 @@ export default function AccountabilityClient() {
+             <p className="mt-2">
+               Extending an already-late checkout records a separate late event against the prior due
+               time. On-time rate appears after {data.methodology.minimumCheckoutsForRate} completed
+-              checkouts. Admin-reviewed data-quality exclusions affect this page only and never
+-              remove custody history.
++              checkouts or currently overdue checkouts, and currently overdue gear counts as not on
++              time. Admin-reviewed data-quality exclusions affect this page only and never remove
++              custody history.
+             </p>
+           </div>
+         </CollapsibleContent>
+@@ -626,7 +794,9 @@ export default function AccountabilityClient() {
+               <div>
+                 <DialogTitle>Exclude checkout from accountability</DialogTitle>
+                 <DialogDescription>
+-                  This keeps the checkout and all custody evidence intact.
++                  {excludeTarget
++                    ? `${excludeTarget.title} stays in custody history. This only removes it from the leaderboard.`
++                    : "This keeps the checkout and all custody evidence intact."}
+                 </DialogDescription>
+               </div>
+             </DialogHeader>
+@@ -703,16 +873,16 @@ function returnRateBarColor(rate: number) {
+ 
+ function LateEventsSummary({
+   person,
+-  rankByTime,
+   className,
+ }: {
+   person: Person;
+-  rankByTime: boolean;
+   className?: string;
+ }) {
+   return (
+     <div className={cn("flex flex-col items-end gap-1", className)}>
+-      <Badge variant={rankByTime ? "secondary" : "red"}>{person.lateEventCount}</Badge>
++      <Badge variant={person.activeOverdueCount > 0 ? "red" : "secondary"}>
++        {person.lateEventCount}
++      </Badge>
+       <span
+         className={cn(
+           "text-xs",
+@@ -805,23 +975,14 @@ function IncidentActions({
+   onExclude: (incident: Incident) => void;
+ }) {
+   return (
+-    <DropdownMenu>
+-      <DropdownMenuTrigger asChild>
+-        <Button
+-          variant="ghost"
+-          size="icon"
+-          className="size-10"
+-          aria-label={`Actions for ${incident.title}`}
+-        >
+-          <MoreHorizontal className="size-4" />
+-        </Button>
+-      </DropdownMenuTrigger>
+-      <DropdownMenuContent align="end">
+-        <DropdownMenuItem onSelect={() => onExclude(incident)}>
+-          Exclude from accountability
+-        </DropdownMenuItem>
+-      </DropdownMenuContent>
+-    </DropdownMenu>
++    <Button
++      variant="outline"
++      className="h-10"
++      onClick={() => onExclude(incident)}
++      aria-label={`Exclude ${incident.title} from accountability`}
++    >
++      Exclude
++    </Button>
+   );
+ }
+ 
+@@ -862,6 +1023,11 @@ function IncidentHistory({
+                 items={[
+                   incident.location.name,
+                   `Due ${formatDate(incident.dueAt)}`,
++                  incident.state === "extended" && incident.extendedAt && incident.extendedTo
++                    ? `Extended ${formatDate(incident.extendedAt)} to ${formatDate(incident.extendedTo)}`
++                    : incident.returnedAt
++                      ? `Returned ${formatDate(incident.returnedAt)}`
++                      : null,
+                   incident.itemSummary || null,
+                 ]}
+               />
+@@ -885,6 +1051,7 @@ function PersonRows({
+   rank,
+   rankByTime,
+   now,
++  isYou,
+   expanded,
+   onToggle,
+   onExclude,
+@@ -893,6 +1060,7 @@ function PersonRows({
+   rank: number;
+   rankByTime: boolean;
+   now: Date;
++  isYou: boolean;
+   expanded: boolean;
+   onToggle: () => void;
+   onExclude?: (incident: Incident) => void;
+@@ -902,7 +1070,11 @@ function PersonRows({
+ 
+   return (
+     <>
+-      <TableRow>
++      <TableRow
++        id={`accountability-person-${person.userId}`}
++        data-accountability-person={person.userId}
++        className={cn(isYou && "bg-muted/40")}
++      >
+         <TableCell className="py-3">
+           <div className="flex items-center gap-3">
+             <span className="w-5 shrink-0 text-center text-sm text-muted-foreground tabular-nums">
+@@ -915,18 +1087,21 @@ function PersonRows({
+               className="shrink-0"
+             />
+             <div className="min-w-0">
+-              <Link
+-                href={`/users/${person.userId}`}
+-                className="brand-identity font-semibold hover:underline"
+-              >
+-                {person.name}
+-              </Link>
++              <div className="flex min-w-0 items-center gap-2">
++                <Link
++                  href={`/users/${person.userId}`}
++                  className="brand-identity truncate font-semibold hover:underline"
++                >
++                  {person.name}
++                </Link>
++                {isYou ? <Badge variant="secondary" size="sm">You</Badge> : null}
++              </div>
+               <PersonSubline person={person} now={now} />
+             </div>
+           </div>
+         </TableCell>
+         <TableCell className="py-3">
+-          <LateEventsSummary person={person} rankByTime={rankByTime} />
++          <LateEventsSummary person={person} />
+         </TableCell>
+         <TableCell className="py-3">
+           <LateTimeSummary person={person} rankByTime={rankByTime} />
+@@ -967,6 +1142,7 @@ function PersonMobileCard({
+   rank,
+   rankByTime,
+   now,
++  isYou,
+   expanded,
+   onToggle,
+   onExclude,
+@@ -975,6 +1151,7 @@ function PersonMobileCard({
+   rank: number;
+   rankByTime: boolean;
+   now: Date;
++  isYou: boolean;
+   expanded: boolean;
+   onToggle: () => void;
+   onExclude?: (incident: Incident) => void;
+@@ -983,7 +1160,11 @@ function PersonMobileCard({
+   const historyId = `accountability-history-mobile-${person.userId}`;
+ 
+   return (
+-    <ReportMobileCard className="gap-3 py-4">
++    <ReportMobileCard
++      id={`accountability-person-mobile-${person.userId}`}
++      data-accountability-person={person.userId}
++      className={cn("gap-3 py-4", isYou && "bg-muted/40")}
++    >
+       <div className="flex items-start justify-between gap-3">
+         <div className="flex min-w-0 items-center gap-3">
+           <UserAvatar
+@@ -1001,13 +1182,20 @@ function PersonMobileCard({
+               >
+                 {person.name}
+               </Link>
++              {isYou ? <Badge variant="secondary" size="sm">You</Badge> : null}
+             </div>
+             <PersonSubline person={person} now={now} />
+           </div>
+         </div>
+-        <Badge className="shrink-0" variant={rankByTime ? "secondary" : "red"}>
+-          {person.lateEventCount} late
+-        </Badge>
++        {person.activeOverdueCount > 0 ? (
++          <Badge className="shrink-0" variant="red">
++            {person.activeOverdueCount} overdue now
++          </Badge>
++        ) : (
++          <Badge className="shrink-0" variant="secondary">
++            {person.lateEventCount} late
++          </Badge>
++        )}
+       </div>
+       <div className="grid grid-cols-3 overflow-hidden rounded-md border bg-muted/20">
+         <div className="min-w-0 px-3 py-2.5">
+diff --git a/src/app/(app)/accountability/AccountabilitySpotlight.tsx b/src/app/(app)/accountability/AccountabilitySpotlight.tsx
+index 553c5a89..86314adb 100644
+--- a/src/app/(app)/accountability/AccountabilitySpotlight.tsx
++++ b/src/app/(app)/accountability/AccountabilitySpotlight.tsx
+@@ -21,6 +21,8 @@ type SpotlightPerson = {
+   lastIncidentAt: string;
+ };
+ 
++const RANK_LABELS = ["1st", "2nd", "3rd"] as const;
++
+ function formatHours(hours: number) {
+   if (hours < 24) return `${hours}h`;
+   const days = Math.floor(hours / 24);
+@@ -47,12 +49,14 @@ export function AccountabilitySpotlight({
+   scopeLabel,
+   now,
+   jeers,
++  currentUserId,
+ }: {
+   people: SpotlightPerson[];
+   sort: SortKey;
+   scopeLabel: string;
+   now: Date;
+   jeers: string[];
++  currentUserId?: string | null;
+ }) {
+   const reduceMotion = useReducedMotion();
+   const podium = people.slice(0, 3);
+@@ -110,6 +114,7 @@ export function AccountabilitySpotlight({
+                 const rank = index + 1;
+                 const score = scoreFor(person, sort, now);
+                 const isLeader = rank === 1;
++                const isYou = currentUserId === person.userId;
+ 
+                 return (
+                   <motion.article
+@@ -120,7 +125,7 @@ export function AccountabilitySpotlight({
+                     exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -6, scale: 0.98 }}
+                     transition={{
+                       duration: reduceMotion ? 0.12 : 0.24,
+-                      delay: reduceMotion ? 0 : index * 0.045,
++                      delay: reduceMotion ? 0 : index * 0.03,
+                       ease: [0.16, 1, 0.3, 1],
+                     }}
+                     className={cn(
+@@ -128,6 +133,7 @@ export function AccountabilitySpotlight({
+                       isLeader
+                         ? "border-[color-mix(in_oklch,var(--red)_28%,var(--border))] bg-[color-mix(in_oklch,var(--red-bg)_58%,var(--card))]"
+                         : "bg-card",
++                      isYou && "ring-1 ring-ring/40",
+                     )}
+                   >
+                     <div className="flex items-start justify-between gap-3">
+@@ -139,7 +145,7 @@ export function AccountabilitySpotlight({
+                           className="shrink-0"
+                         />
+                         <div className="min-w-0">
+-                          <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
++                          <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                             {isLeader ? (
+                               <motion.span
+                                 initial={reduceMotion ? false : { rotate: -12, scale: 0.8 }}
+@@ -155,7 +161,7 @@ export function AccountabilitySpotlight({
+                             ) : (
+                               <MedalIcon className="size-4" aria-hidden="true" />
+                             )}
+-                            Rank {rank}
++                            {RANK_LABELS[index]}
+                           </div>
+                           <Link
+                             href={`/users/${person.userId}`}
+@@ -163,6 +169,11 @@ export function AccountabilitySpotlight({
+                           >
+                             {person.name}
+                           </Link>
++                          {isYou ? (
++                            <Badge variant="secondary" size="sm" className="mt-1">
++                              You
++                            </Badge>
++                          ) : null}
+                         </div>
+                       </div>
+                       {person.activeOverdueCount > 0 ? (
+diff --git a/src/app/(app)/accountability/page.tsx b/src/app/(app)/accountability/page.tsx
+index dad53fcc..bb6179e7 100644
+--- a/src/app/(app)/accountability/page.tsx
++++ b/src/app/(app)/accountability/page.tsx
+@@ -1,8 +1,11 @@
++import { Suspense } from "react";
+ import { redirect } from "next/navigation";
+ import { PageHeader } from "@/components/PageHeader";
+ import { requireAuth } from "@/lib/auth";
+ import { HttpError } from "@/lib/http";
+ import { requirePermission } from "@/lib/rbac";
++import { getCurrentAcademicYearStart } from "@/lib/services/accountability";
++import { ReportLoadingState } from "../reports/report-ui";
+ import AccountabilityClient from "./AccountabilityClient";
+ 
+ export default async function AccountabilityPage() {
+@@ -19,9 +22,10 @@ export default async function AccountabilityPage() {
+       <PageHeader
+         title="Accountability"
+         description="The leaderboard nobody wants to join. Return gear on time and disappear from it."
+-        className="mb-5"
+       />
+-      <AccountabilityClient />
++      <Suspense fallback={<ReportLoadingState metricCount={4} rows={6} />}>
++        <AccountabilityClient currentStartYear={getCurrentAcademicYearStart()} />
++      </Suspense>
+     </>
+   );
+ }
+diff --git a/src/app/api/accountability/route.ts b/src/app/api/accountability/route.ts
+index f741499e..3730a45d 100644
+--- a/src/app/api/accountability/route.ts
++++ b/src/app/api/accountability/route.ts
+@@ -88,17 +88,19 @@ export const GET = withAuth(async (req, { user }) => {
+ 
+   if (wantsCsv) {
+     requirePermission(user.role, "accountability", "manage_exclusions");
++    await enforceRateLimit(`report:export:${user.id}`, REPORT_EXPORT_LIMIT);
+   }
+ 
+   const report = await getAccountabilityReport(parseFilters(searchParams));
+ 
+   if (wantsCsv) {
+-    await enforceRateLimit(`report:export:${user.id}`, REPORT_EXPORT_LIMIT);
+     return new NextResponse(`${toCsv(report)}\n`, {
+       headers: {
+         "Cache-Control": "private, no-store",
+         "Content-Type": "text/csv; charset=utf-8",
+         "Content-Disposition": `attachment; filename="accountability-${report.academicYear?.label ?? "all-time"}.csv"`,
++        "X-Exported-Count": String(report.leaderboard.length),
++        "X-Total-Count": String(report.leaderboard.length),
+       },
+     });
+   }
+diff --git a/src/lib/services/accountability.ts b/src/lib/services/accountability.ts
+index 904a82da..896e3e9c 100644
+--- a/src/lib/services/accountability.ts
++++ b/src/lib/services/accountability.ts
+@@ -70,6 +70,8 @@ export function getAcademicYearWindow(startYear: number | null) {
+ }
+ 
+ type RankedPerson = {
++  userId: string;
++  name: string;
+   lateEventCount: number;
+   totalLateHours: number;
+   lastIncidentAt: string;
+@@ -81,28 +83,36 @@ type RankedPerson = {
+  */
+ function rankComparator(sort: AccountabilitySort) {
+   return (a: RankedPerson, b: RankedPerson) => {
+-    if (sort === "time") {
+-      return (
+-        b.totalLateHours - a.totalLateHours ||
+-        b.lateEventCount - a.lateEventCount ||
+-        b.lastIncidentAt.localeCompare(a.lastIncidentAt)
+-      );
+-    }
+-    if (sort === "recent") {
+-      return (
+-        b.lastIncidentAt.localeCompare(a.lastIncidentAt) ||
+-        b.lateEventCount - a.lateEventCount ||
+-        b.totalLateHours - a.totalLateHours
+-      );
+-    }
+-    return (
+-      b.lateEventCount - a.lateEventCount ||
+-      b.totalLateHours - a.totalLateHours ||
+-      b.lastIncidentAt.localeCompare(a.lastIncidentAt)
+-    );
++    const tied =
++      sort === "time"
++        ? b.totalLateHours - a.totalLateHours ||
++          b.lateEventCount - a.lateEventCount ||
++          b.lastIncidentAt.localeCompare(a.lastIncidentAt)
++        : sort === "recent"
++          ? b.lastIncidentAt.localeCompare(a.lastIncidentAt) ||
++            b.lateEventCount - a.lateEventCount ||
++            b.totalLateHours - a.totalLateHours
++          : b.lateEventCount - a.lateEventCount ||
++            b.totalLateHours - a.totalLateHours ||
++            b.lastIncidentAt.localeCompare(a.lastIncidentAt);
++    return tied || a.name.localeCompare(b.name) || a.userId.localeCompare(b.userId);
+   };
+ }
+ 
++const INCIDENT_STATE_RANK = {
++  active: 0,
++  extended: 1,
++  resolved: 2,
++} as const;
++
++function incidentOccurredAt(incident: {
++  returnedAt: string | null;
++  extendedAt: string | null;
++  dueAt: string;
++}) {
++  return incident.returnedAt ?? incident.extendedAt ?? incident.dueAt;
++}
++
+ function median(values: number[]) {
+   if (values.length === 0) return 0;
+   const sorted = [...values].sort((a, b) => a - b);
+@@ -144,15 +154,32 @@ const accountabilityBookingInclude = {
+   },
+ } satisfies Prisma.BookingInclude;
+ 
+-type AccountabilityBooking = Prisma.BookingGetPayload<{
+-  include: typeof accountabilityBookingInclude;
++const incidentItemSelect = {
++  id: true,
++  serializedItems: {
++    select: { asset: { select: { assetTag: true, name: true } } },
++  },
++  bulkItems: {
++    select: {
++      plannedQuantity: true,
++      checkedOutQuantity: true,
++      bulkSku: { select: { name: true } },
++    },
++  },
++} satisfies Prisma.BookingSelect;
++
++type IncidentItemBooking = Prisma.BookingGetPayload<{
++  select: typeof incidentItemSelect;
+ }>;
+ 
+-function itemSummary(booking: AccountabilityBooking) {
+-  const serialized = booking.serializedItems.map(
++function itemSummary(booking: {
++  serializedItems?: IncidentItemBooking["serializedItems"] | null;
++  bulkItems?: IncidentItemBooking["bulkItems"] | null;
++}) {
++  const serialized = (booking.serializedItems ?? []).map(
+     (item) => item.asset.assetTag || item.asset.name || "Unknown item",
+   );
+-  const bulk = booking.bulkItems
++  const bulk = (booking.bulkItems ?? [])
+     .filter((item) => Math.max(item.checkedOutQuantity, item.plannedQuantity) > 0)
+     .map(
+       (item) =>
+@@ -161,19 +188,21 @@ function itemSummary(booking: AccountabilityBooking) {
+   return [...serialized, ...bulk].join(", ");
+ }
+ 
++async function loadIncidentItemSummaries(bookingIds: string[]) {
++  const uniqueIds = [...new Set(bookingIds)];
++  if (uniqueIds.length === 0) return new Map<string, string>();
++
++  const rows = await db.booking.findMany({
++    where: { id: { in: uniqueIds } },
++    select: incidentItemSelect,
++  });
++  return new Map(rows.map((row) => [row.id, itemSummary(row)]));
++}
++
+ export async function getAccountabilityReport(
+   filters: AccountabilityFilters,
+   now: Date = new Date(),
+ ) {
+-  const [policies, locations] = await Promise.all([
+-    loadCheckoutPolicies(),
+-    db.location.findMany({
+-      where: { bookings: { some: { kind: "CHECKOUT" } } },
+-      select: { id: true, name: true },
+-      orderBy: { name: "asc" },
+-    }),
+-  ]);
+-  const graceMs = policies.gracePeriodHours * HOUR_MS;
+   const window = getAcademicYearWindow(filters.startYear);
+   const where: Prisma.BookingWhereInput = {
+     kind: "CHECKOUT",
+@@ -195,17 +224,26 @@ export async function getAccountabilityReport(
+         : {}),
+   };
+ 
+-  const bookings = await db.booking.findMany({
+-    where,
+-    include: accountabilityBookingInclude,
+-    orderBy: [{ endsAt: "desc" }, { id: "desc" }],
+-  });
++  const [policies, locations, bookings] = await Promise.all([
++    loadCheckoutPolicies(),
++    db.location.findMany({
++      where: { bookings: { some: { kind: "CHECKOUT" } } },
++      select: { id: true, name: true },
++      orderBy: { name: "asc" },
++    }),
++    db.booking.findMany({
++      where,
++      include: accountabilityBookingInclude,
++      orderBy: [{ endsAt: "desc" }, { id: "desc" }],
++    }),
++  ]);
++  const graceMs = policies.gracePeriodHours * HOUR_MS;
+ 
+   const excluded = bookings
+     .filter((booking) => booking.accountabilityExclusion?.restoredAt === null)
+     .map((booking) => ({
+       bookingId: booking.id,
+-      bookingTitle: booking.title,
++      bookingTitle: booking.title.trim() || "Untitled checkout",
+       requester: booking.requester.name,
+       dueAt: booking.endsAt.toISOString(),
+       reason: booking.accountabilityExclusion!.reason,
+@@ -215,8 +253,9 @@ export async function getAccountabilityReport(
+     }));
+ 
+   const included = bookings.filter(
+-    (booking) => booking.accountabilityExclusion?.restoredAt !== null ||
+-      !booking.accountabilityExclusion,
++    (booking) =>
++      booking.custodyScope !== BookingCustodyScope.SHARED &&
++      (booking.accountabilityExclusion?.restoredAt !== null || !booking.accountabilityExclusion),
+   );
+ 
+   type PersonAccumulator = {
+@@ -228,6 +267,7 @@ export async function getAccountabilityReport(
+     checkoutCount: number;
+     completedCount: number;
+     onTimeCount: number;
++    activeLateCheckoutCount: number;
+     incidents: Array<{
+       incidentId: string;
+       bookingId: string;
+@@ -261,6 +301,7 @@ export async function getAccountabilityReport(
+       checkoutCount: 0,
+       completedCount: 0,
+       onTimeCount: 0,
++      activeLateCheckoutCount: 0,
+       incidents: [],
+     };
+     person.checkoutCount += 1;
+@@ -279,11 +320,12 @@ export async function getAccountabilityReport(
+ 
+       if (comparisonTime !== undefined && comparisonTime > effectiveDue) {
+         const state = booking.status === BookingStatus.OPEN ? "active" : "resolved";
++        if (state === "active") person.activeLateCheckoutCount += 1;
+         if (!filters.incidentState || filters.incidentState === "all" || filters.incidentState === state) {
+           person.incidents.push({
+             incidentId: `${booking.id}:${state}`,
+             bookingId: booking.id,
+-            title: booking.title,
++            title: booking.title.trim() || "Untitled checkout",
+             dueAt: booking.endsAt.toISOString(),
+             returnedAt: booking.completedAt?.toISOString() ?? null,
+             extendedAt: null,
+@@ -291,7 +333,7 @@ export async function getAccountabilityReport(
+             lateHours: Math.max(1, Math.ceil((comparisonTime - effectiveDue) / HOUR_MS)),
+             state,
+             location: booking.location,
+-            itemSummary: itemSummary(booking),
++            itemSummary: "",
+           });
+         }
+       }
+@@ -304,7 +346,7 @@ export async function getAccountabilityReport(
+         person.incidents.push({
+           incidentId: change.id,
+           bookingId: booking.id,
+-          title: booking.title,
++          title: booking.title.trim() || "Untitled checkout",
+           dueAt: change.previousEndsAt.toISOString(),
+           returnedAt: null,
+           extendedAt: change.changedAt.toISOString(),
+@@ -315,7 +357,7 @@ export async function getAccountabilityReport(
+           ),
+           state: "extended",
+           location: booking.location,
+-          itemSummary: itemSummary(booking),
++          itemSummary: "",
+         });
+       }
+     }
+@@ -323,14 +365,15 @@ export async function getAccountabilityReport(
+     byPerson.set(person.userId, person);
+   }
+ 
+-  const leaderboard = Array.from(byPerson.values())
++  const ranked = Array.from(byPerson.values())
+     .filter((person) => person.incidents.length > 0)
+     .map((person) => {
+       const lateHours = person.incidents.map((incident) => incident.lateHours);
+       const lastIncidentAt = person.incidents
+-        .map((incident) => incident.returnedAt ?? incident.extendedAt ?? incident.dueAt)
++        .map((incident) => incidentOccurredAt(incident))
+         .sort()
+         .at(-1)!;
++      const rateCount = person.completedCount + person.activeLateCheckoutCount;
+       return {
+         userId: person.userId,
+         name: person.name,
+@@ -345,15 +388,31 @@ export async function getAccountabilityReport(
+         medianLateHours: median(lateHours),
+         worstLateHours: Math.max(...lateHours),
+         onTimeRate:
+-          person.completedCount >= MIN_CHECKOUTS_FOR_RATE
+-            ? Math.round((person.onTimeCount / person.completedCount) * 100)
++          rateCount >= MIN_CHECKOUTS_FOR_RATE
++            ? Math.round((person.onTimeCount / rateCount) * 100)
+             : null,
+         lastIncidentAt,
+-        incidents: person.incidents.sort((a, b) => b.lateHours - a.lateHours),
++        incidents: person.incidents.sort((a, b) =>
++          INCIDENT_STATE_RANK[a.state] - INCIDENT_STATE_RANK[b.state] ||
++          incidentOccurredAt(b).localeCompare(incidentOccurredAt(a)) ||
++          b.lateHours - a.lateHours ||
++          a.incidentId.localeCompare(b.incidentId),
++        ),
+       };
+     })
+     .sort(rankComparator(filters.sort ?? "events"));
+ 
++  const itemSummaries = await loadIncidentItemSummaries(
++    ranked.flatMap((person) => person.incidents.map((incident) => incident.bookingId)),
++  );
++  const leaderboard = ranked.map((person) => ({
++    ...person,
++    incidents: person.incidents.map((incident) => ({
++      ...incident,
++      itemSummary: itemSummaries.get(incident.bookingId) ?? "",
++    })),
++  }));
++
+   return {
+     generatedAt: now.toISOString(),
+     academicYear:
+diff --git a/tests/accountability-page-source.test.ts b/tests/accountability-page-source.test.ts
+index 4240181d..0bd0c18a 100644
+--- a/tests/accountability-page-source.test.ts
++++ b/tests/accountability-page-source.test.ts
+@@ -66,7 +66,11 @@ describe("Accountability dashboard source contract", () => {
+     expect(client).toContain("data.capabilities.canExport ?");
+     expect(client).toContain("data.capabilities.canManageExclusions");
+     expect(client).toContain("canManageExclusions ? setExcludeTarget : undefined");
+-    expect(client).toContain("Admin-reviewed data-quality exclusions");
++    expect(client).toContain("Find a person");
++    expect(client).toContain("You’re #");
++    expect(client).toContain("syncUrl(");
++    expect(client).toContain("currently overdue checkouts");
++    expect(client).toContain('label: "Events"');
+     expect(client).not.toContain("<BarChart");
+   });
+ });
+diff --git a/tests/accountability-routes.test.ts b/tests/accountability-routes.test.ts
+index 185fe2da..6e90a62d 100644
+--- a/tests/accountability-routes.test.ts
++++ b/tests/accountability-routes.test.ts
+@@ -184,6 +184,41 @@ describe("accountability routes", () => {
+     expect(getAccountabilityReport).not.toHaveBeenCalled();
+   });
+ 
++  it("rate-limits admin CSV export before building the ranking", async () => {
++    const { enforceRateLimit } = await import("@/lib/rate-limit");
++    const order: string[] = [];
++    vi.mocked(enforceRateLimit).mockImplementation(async () => {
++      order.push("limit");
++    });
++    vi.mocked(getAccountabilityReport).mockImplementation(async () => {
++      order.push("report");
++      return {
++        academicYear: { startYear: 2026, label: "2026-27" },
++        methodology: {},
++        metrics: {
++          peopleNeedingAttention: 1,
++          lateEvents: 2,
++          activeOverdue: 1,
++          totalLateHours: 8,
++          excludedRecords: 1,
++        },
++        locations: [],
++        leaderboard,
++        excluded: [],
++      } as never;
++    });
++
++    const response = await GET(
++      new Request("https://app.example.com/api/accountability?format=csv"),
++      noParams,
++    );
++
++    expect(response.status).toBe(200);
++    expect(order).toEqual(["limit", "report"]);
++    expect(response.headers.get("X-Exported-Count")).toBe("3");
++    expect(response.headers.get("Content-Type")).toContain("text/csv");
++  });
++
+   it("creates and restores exclusions with ADMIN identity", async () => {
+     vi.mocked(excludeBookingFromAccountability).mockResolvedValue({ id: "ex-1" } as never);
+     const postResponse = await POST(
+diff --git a/tests/accountability-service.test.ts b/tests/accountability-service.test.ts
+index 867e36d3..2b28a340 100644
+--- a/tests/accountability-service.test.ts
++++ b/tests/accountability-service.test.ts
+@@ -334,6 +334,119 @@ describe("accountability service", () => {
+     ]);
+   });
+ 
++  it("counts currently overdue checkouts against the on-time rate", async () => {
++    vi.mocked(db.booking.findMany).mockResolvedValue(bookingRows([
++      ...[1, 2, 3].map((day) => ({
++        id: `on-time-${day}`,
++        kind: "CHECKOUT",
++        title: `On time ${day}`,
++        status: "COMPLETED",
++        endsAt: new Date(`2026-08-0${day}T10:00:00.000Z`),
++        completedAt: new Date(`2026-08-0${day}T10:30:00.000Z`),
++        requester: { id: "user-1", name: "Alex Student", active: true, primaryArea: "VIDEO" },
++        location: { id: "main", name: "Main Cage" },
++        accountabilityExclusion: null,
++        dueDateChanges: [],
++        serializedItems: [],
++        bulkItems: [],
++      })),
++      {
++        id: "still-out",
++        kind: "CHECKOUT",
++        title: "Still out",
++        status: "OPEN",
++        endsAt: new Date("2026-08-04T10:00:00.000Z"),
++        completedAt: null,
++        requester: { id: "user-1", name: "Alex Student", active: true, primaryArea: "VIDEO" },
++        location: { id: "main", name: "Main Cage" },
++        accountabilityExclusion: null,
++        dueDateChanges: [],
++        serializedItems: [],
++        bulkItems: [],
++      },
++    ]));
++
++    const report = await getAccountabilityReport(
++      { startYear: 2026 },
++      new Date("2026-08-11T14:30:00.000Z"),
++    );
++
++    expect(report.leaderboard).toHaveLength(1);
++    expect(report.leaderboard[0]).toMatchObject({
++      completedCount: 3,
++      activeOverdueCount: 1,
++      onTimeRate: 75,
++    });
++  });
++
++  it("does not rank shared travel-case custody against the retained requester", async () => {
++    vi.mocked(db.booking.findMany).mockResolvedValue(bookingRows([
++      {
++        id: "shared-late",
++        kind: "CHECKOUT",
++        title: "Football Travel Case",
++        status: "OPEN",
++        custodyScope: "SHARED",
++        endsAt: new Date("2026-08-01T10:00:00.000Z"),
++        completedAt: null,
++        requester: { id: "user-1", name: "Alex Student", active: true, primaryArea: "VIDEO" },
++        location: { id: "main", name: "Main Cage" },
++        accountabilityExclusion: null,
++        dueDateChanges: [],
++        serializedItems: [],
++        bulkItems: [],
++      },
++    ]));
++
++    const report = await getAccountabilityReport(
++      { startYear: 2026 },
++      new Date("2026-08-11T14:30:00.000Z"),
++    );
++    expect(report.leaderboard).toEqual([]);
++  });
++
++  it("puts currently overdue receipts ahead of older resolved history", async () => {
++    vi.mocked(db.booking.findMany).mockResolvedValue(bookingRows([
++      {
++        id: "resolved-old",
++        kind: "CHECKOUT",
++        title: "Returned camera",
++        status: "COMPLETED",
++        endsAt: new Date("2026-08-01T10:00:00.000Z"),
++        completedAt: new Date("2026-08-03T10:00:00.000Z"),
++        requester: { id: "user-1", name: "Alex Student", active: true, primaryArea: "VIDEO" },
++        location: { id: "main", name: "Main Cage" },
++        accountabilityExclusion: null,
++        dueDateChanges: [],
++        serializedItems: [],
++        bulkItems: [],
++      },
++      {
++        id: "active-now",
++        kind: "CHECKOUT",
++        title: "Still out",
++        status: "OPEN",
++        endsAt: new Date("2026-08-10T10:00:00.000Z"),
++        completedAt: null,
++        requester: { id: "user-1", name: "Alex Student", active: true, primaryArea: "VIDEO" },
++        location: { id: "main", name: "Main Cage" },
++        accountabilityExclusion: null,
++        dueDateChanges: [],
++        serializedItems: [],
++        bulkItems: [],
++      },
++    ]));
++
++    const report = await getAccountabilityReport(
++      { startYear: 2026 },
++      new Date("2026-08-11T14:30:00.000Z"),
++    );
++    expect(report.leaderboard[0]?.incidents.map((incident) => incident.state)).toEqual([
++      "active",
++      "resolved",
++    ]);
++  });
++
+   it("does not count an extension made inside the configured grace period", async () => {
+     vi.mocked(db.booking.findMany).mockResolvedValue(bookingRows([
+       {

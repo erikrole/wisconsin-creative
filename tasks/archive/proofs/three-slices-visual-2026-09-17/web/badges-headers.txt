@@ -1,0 +1,20 @@
+HTTP/1.1 307 Temporary Redirect
+X-Frame-Options: DENY
+X-Content-Type-Options: nosniff
+Referrer-Policy: strict-origin-when-cross-origin
+Permissions-Policy: camera=(self), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=(), magnetometer=(), gyroscope=(), accelerometer=(), autoplay=(self), encrypted-media=(), fullscreen=(self), picture-in-picture=(), display-capture=(), midi=(), screen-wake-lock=(), web-share=(self), tools=(self)
+Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Resource-Policy: same-origin
+X-DNS-Prefetch-Control: on
+content-security-policy: default-src 'self'; script-src 'self' 'nonce-FqebETJp1C9weJzbXwv/7A==' 'strict-dynamic' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data: https:; font-src 'self' data:; connect-src 'self' https://vercel.com https://*.public.blob.vercel-storage.com https://*.sentry.io https://*.ingest.sentry.io; worker-src 'self'; manifest-src 'self'; frame-ancestors 'none'; form-action 'self'; base-uri 'none'; object-src 'none'; upgrade-insecure-requests
+Vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch, Accept-Encoding
+link: </_next/static/media/0b78ff376f6b9734-s.p.woff2>; rel=preload; as="font"; crossorigin=""; nonce="FqebETJp1C9weJzbXwv/7A=="; type="font/woff2", </_next/static/media/723e11e5093b8e80.p.woff2>; rel=preload; as="font"; crossorigin=""; nonce="FqebETJp1C9weJzbXwv/7A=="; type="font/woff2", </_next/static/css/app/layout.css?v=1789642831441>; rel=preload; as="style"; nonce="FqebETJp1C9weJzbXwv/7A=="
+location: /login
+Cache-Control: no-store, must-revalidate
+Content-Type: text/html; charset=utf-8
+Date: Thu, 17 Sep 2026 11:00:31 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+Transfer-Encoding: chunked
+

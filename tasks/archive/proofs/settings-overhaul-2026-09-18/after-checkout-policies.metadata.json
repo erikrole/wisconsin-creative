@@ -1,0 +1,23 @@
+{
+  "sourceRevision": "f7733f5711526500668693eed17fc4aa4cdb648d",
+  "sourcePatchSha256": "5da01726507c8d9107fab16599b928d0b8a7e01dbcb364cb96ec03be876f1953",
+  "settings": {
+    "device": "Cursor IDE browser Chromium",
+    "viewport": [
+      1372,
+      1160
+    ],
+    "fixture": "authenticated local preview session, live inventory",
+    "role": "ADMIN",
+    "appearance": "dark",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "live local clock 2026-09-18 evening",
+    "scroll": [
+      0,
+      0
+    ],
+    "route": "/settings/checkout-policies"
+  }
+}

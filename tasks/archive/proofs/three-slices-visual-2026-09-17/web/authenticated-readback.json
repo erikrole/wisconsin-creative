@@ -1,0 +1,69 @@
+{
+  "me": {
+    "status": 200,
+    "role": "ADMIN",
+    "name": "Creative Admin",
+    "emailLocal": "admin"
+  },
+  "events": {
+    "status": 200,
+    "count": 50
+  },
+  "shiftGroups": {
+    "status": 200,
+    "count": 49,
+    "pendingCount": 2,
+    "pending": [
+      {
+        "id": "cms8oos3z000kkt04n7lo51rs",
+        "eventId": "cms8ooryy0001kt04xgl3q8ow",
+        "summary": "Men's Cross Country vs Badger Classic",
+        "claimsPaused": true,
+        "hasWorkingCopy": true,
+        "pendingRelease": null,
+        "endsAt": "2026-09-04T21:50:00.000Z"
+      },
+      {
+        "id": "cmsoe6kbl000fla04e5i10z7l",
+        "eventId": "cmsoe6k300001la042i8l9jw2",
+        "summary": "Men's Hockey vs Robert Morris",
+        "claimsPaused": true,
+        "hasWorkingCopy": true,
+        "pendingRelease": null,
+        "endsAt": "2026-10-04T00:00:00.000Z"
+      }
+    ]
+  },
+  "combined": [
+    {
+      "id": "cms8ooryy0000kt04gvdgwldb",
+      "summary": "Women's Cross Country vs Badger Classic",
+      "combinedCount": 2,
+      "combinedIntoId": null
+    }
+  ],
+  "badges": {
+    "status": 200,
+    "catalogCount": 92,
+    "hasPlanAhead": true,
+    "hasCrewCheckout": true,
+    "hasEventHero": false,
+    "hasAboveAndBeyond": false,
+    "awardCatalogStatus": 200,
+    "awardCatalogCount": 8,
+    "awardCatalogHasEventHero": true,
+    "awardCatalogHasAboveAndBeyond": true
+  },
+  "profile": {
+    "status": 200,
+    "earned": 0,
+    "streakCount": 0,
+    "streakNames": []
+  },
+  "profileCompletion": {
+    "status": 200,
+    "shouldPrompt": false,
+    "isComplete": true,
+    "leakedHiddenFlag": false
+  }
+}

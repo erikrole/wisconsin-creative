@@ -1,0 +1,68 @@
+{
+  "title": "Guide reader TOC stays with the article",
+  "eyebrow": "Web · Resources",
+  "lede": "The right-rail On this page list now stays pinned while you scroll a guide, and the active section marker moves as headings pass.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "Scrolled guide · after only",
+      "note": "No matched before PNG of the scrolled state. Before the fix, align-items: start shrank the TOC column to 292px against a 7148px article, so sticky had no travel and the rail left the viewport. After captures are Cursor IDE Chromium at 1920×1080 CSS pixels, ADMIN Erik Role, dark appearance, authenticated local Preview at 127.0.0.1:3000 on 2026-09-19. Route: /resources/color-correction-101.",
+      "shots": [
+        {
+          "tag": "After",
+          "title": "Pinned at Curve adjustment",
+          "image": "after-toc-scrolled-curve.png",
+          "wide": true,
+          "cap": "Deep in Color Correction 101, On this page stays in the right rail at top: 80px. Curve adjustment is the active item. The article has scrolled past the title."
+        },
+        {
+          "tag": "After",
+          "title": "TOC click to White balance",
+          "image": "after-toc-click-white-balance.png",
+          "wide": true,
+          "cap": "Clicking White balance in the rail scrolled the heading into view (96px from the top) and moved the active marker. The rail stayed pinned."
+        }
+      ]
+    },
+    {
+      "heading": "Top of page · before (unrelated to the scroll bug)",
+      "note": "Captured before the stretch/sticky CSS change. At rest the rail was already visible; the bug only appeared after scrolling.",
+      "shots": [
+        {
+          "tag": "Before",
+          "title": "TOC at rest",
+          "image": "before-toc-top.png",
+          "wide": true,
+          "cap": "The rail sits beside the article at the top of Color Correction 101. This layout at rest is not the failure; the column was only as tall as this list."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Sticky travel",
+      "was": "The reader grid used align-items: start, so the TOC column was only as tall as the list. Sticky had nowhere to travel and the rail scrolled away.",
+      "now": "The grid stretches the TOC column to the article height. The inner panel is position: sticky with top: 5rem so it clears the app header."
+    },
+    {
+      "h": "Active section",
+      "was": "The current heading class toggled, but you could not see it once the rail left the viewport.",
+      "now": "A sliding marker follows the active heading as you scroll or click an On this page row."
+    }
+  ],
+  "verification": [
+    "Authenticated Preview, ADMIN Erik Role, 1920×1080, /resources/color-correction-101.",
+    "After reload: nav height 7148px matched the article grid; align-items stretch; position sticky; top 80px.",
+    "At scrollY 5727 the rail stayed at tocTop 80 with General color correction tips active.",
+    "After scrolling Curve adjustment into view: tocTop 80, active Curve adjustment, indicator translateY(113px).",
+    "TOC click on White balance: tocTop 80, heading top 96, active White balance, scrollY 8485.",
+    "Focused test: tests/resources-ui-polish-source.test.ts (sticky column contract).",
+    "npm run build:app skipped while Preview occupies 127.0.0.1:3000."
+  ],
+  "notes": [
+    "After-only for the scrolled failure because that state was not captured before the CSS change.",
+    "The Next.js issue overlay is HMR chrome, not product UI.",
+    "Unrelated dirty work was left untouched.",
+    "Writing-first editor and Mark verified removal remain separate unfinished work from the prior request."
+  ]
+}

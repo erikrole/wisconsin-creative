@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "f7733f5711526500668693eed17fc4aa4cdb648d",
+  "sourcePatchSha256": "735f926775d01befb500a9f845fe07c2559678fd12e1b617c59b7456c774f2fc",
+  "settings": {
+    "device": "Cursor IDE browser Chromium",
+    "viewport": [
+      1372,
+      1160
+    ],
+    "fixture": "authenticated local preview session, live inventory",
+    "role": "ADMIN",
+    "appearance": "dark",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "live local clock 2026-09-18 evening",
+    "scroll": [
+      0,
+      0
+    ],
+    "route": "/"
+  },
+  "imageSha256": "e16164c15711ea1e9c2537f7b2a1dde7271069ff07bb247bc794f6dda0b9d9d8",
+  "dimensions": [
+    2744,
+    2320
+  ]
+}

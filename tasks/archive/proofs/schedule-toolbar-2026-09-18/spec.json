@@ -1,0 +1,48 @@
+{
+  "title": "Schedule toolbar and filters",
+  "eyebrow": "Web · Wisconsin Creative",
+  "lede": "Staff and students on /schedule get a compact command row, searchable sport, a real Filters panel, and Clear that leaves My shifts alone.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "Visual comparison",
+      "note": "After-only. No trustworthy before capture: the checkout already had Schedule infinite-scroll work, and authenticated /schedule was login-gated (307 to /login) during this pass. Do not treat this page as matched visual proof."
+    }
+  ],
+  "changes": [
+    {
+      "h": "Command row wrapping",
+      "was": "View, a five-way Venue toggle, Sport, a My Shifts switch, and Filters all sat on one wrapping sticky row.",
+      "now": "View, a My shifts pressed button, searchable Sport, Filters, and Clear. Venue moved into the panel."
+    },
+    {
+      "h": "Filters panel",
+      "was": "Nested FilterChips inside a popover for Area and Coverage, with Venue always on the bar.",
+      "now": "Venue, Area, and Coverage are 40px toggle groups. Older records stays a labeled switch with explanation."
+    },
+    {
+      "h": "Clear and My shifts",
+      "was": "Clear all lived only inside the popover and treated student-default My shifts as a filter, so Clear turned their default off.",
+      "now": "Clear is on the bar and resets sport, venue, area, coverage, older records, queue, and date windows. My shifts stays a preference."
+    },
+    {
+      "h": "Recovery",
+      "was": "Date-window deep links had no chip. Week and calendar empty states mentioned filters with no action.",
+      "now": "Date windows get a removable chip. List, week, and calendar empty states can clear the same filters."
+    }
+  ],
+  "changesNote": "Text comparison only. Captures were not available.",
+  "verification": [
+    "npx tsc --noEmit --pretty false: pass",
+    "eslint on the touched Schedule and FilterChip files: pass",
+    "57 focused source tests: pass",
+    "npm run verify:docs after npm run codemap: pass",
+    "git diff --check on the touched files: pass",
+    "Authenticated browser proof: blocked. Local preview now redirects /schedule to /login (307). Earlier in the session it returned 500 from a corrupted .next tree. No session was minted."
+  ],
+  "notes": [
+    "Baseline captures were not taken before this pass.",
+    "FilterChip search is shared: Bookings and Trade Board option lists with eight or more choices also get a search field.",
+    "Restart or sign into the local preview to click through View, Sport search, Filters, Clear, and week/calendar empty recovery."
+  ]
+}

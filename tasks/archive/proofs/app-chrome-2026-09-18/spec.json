@@ -1,0 +1,89 @@
+{
+  "title": "App shell chrome",
+  "eyebrow": "Web · Wisconsin Creative",
+  "lede": "The web top bar is a command strip and the sidebar is a grouped destination rail, with account, theme, help, and log out in one footer menu.",
+  "stats": [
+    {
+      "k": "Nav groups",
+      "v": "Work / Team / Library / Operations",
+      "n": "Settings stays global. Notifications live on the bell."
+    },
+    {
+      "k": "Search",
+      "v": "Command field + ⌘K",
+      "n": "Opens the existing palette. Placeholder names tags, people, pages."
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Side by side",
+      "note": "Matched Cursor IDE Chromium captures at 1372×1160 CSS pixels (PNGs 2744×2320), ADMIN, dark appearance, authenticated local Preview at 127.0.0.1:3000. Chrome comparison on Settings; the visible Settings sub-page differs (Appearance before, Profile after). Before is the live shell immediately before this pass; after patch a7388dcb… on HEAD f7733f57.",
+      "pairs": [
+        {
+          "title": "Top bar and sidebar",
+          "sub": "Settings chrome.",
+          "before": "before-settings.png",
+          "beforeCap": "One unlabeled stack of destinations, Notifications duplicated with the bell, identity and theme competing with nav, and a weak Search… (⌘K) field.",
+          "after": "after-settings.png",
+          "afterCap": "Daily work, Team, Library, and Operations are grouped. Settings sits above an account menu. Search is a command field. The bell owns unread count.",
+          "beforeEvidence": "before-settings.capture.json",
+          "afterEvidence": "after-settings.capture.json"
+        }
+      ]
+    },
+    {
+      "heading": "After only",
+      "note": "Collapsed before was captured on Items and after on Settings, so that pair is not claimed as matched. Phone-width web stayed CSS/source smoke; the Cursor browser viewport remained desktop.",
+      "shots": [
+        {
+          "tag": "After",
+          "title": "Account menu",
+          "image": "after-account-menu.png",
+          "wide": true,
+          "cap": "Profile, Help, theme (40px targets), and Log out open to the right of the footer identity so they do not cover Operations."
+        },
+        {
+          "tag": "After",
+          "title": "Collapsed rail",
+          "image": "after-collapsed.png",
+          "wide": true,
+          "cap": "Brand mark, grouped icons, overdue badge on Bookings, Settings, and the account avatar. Group labels hide instead of wrapping vertically."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Destinations are grouped by job",
+      "was": "Dashboard through Settings sat in one unlabeled list, then Operations. Notifications duplicated the top-bar bell.",
+      "now": "Daily work is first. Team, Library, and Operations are labeled groups. Settings is a global destination. Notifications are top-bar only."
+    },
+    {
+      "h": "Account owns identity actions",
+      "was": "Avatar and name sat above the nav. Theme, Help, and Log out filled the footer as separate controls.",
+      "now": "A compact Badgers lockup leads. The footer identity opens Profile, Help, theme, and Log out. Collaborators also reach Settings."
+    },
+    {
+      "h": "The top bar is a command strip",
+      "was": "A short Search… field, a heavy Preview as outline, and a generic Toggle Sidebar name.",
+      "now": "Search names tags, people, and pages, carries a ⌘K chip, and grows. Preview is ghost. The trigger says Collapse/Expand sidebar or Open/Close navigation."
+    },
+    {
+      "h": "Active and collapsed states are quieter",
+      "was": "A red left rail on every active item, and collapsed badges hanging into the page.",
+      "now": "Active is a filled pill. Collapsed rail is 3.5rem with badges on the icon. Red stays on overdue/unread counts."
+    }
+  ],
+  "verification": [
+    "Focused vitest: tests/web-sidebar-source.test.ts, tests/shell-navigation.test.ts, tests/app-shell-search-source.test.ts passed.",
+    "npx tsc --noEmit passed.",
+    "Authenticated Chromium: expanded Settings chrome, account menu (Profile/Help/theme/Log out), command palette from the top-bar search (query FX3), collapse/expand labels, Bookings overdue badge, Notifications unread on the bell.",
+    "npm run build:app was not run; the local preview server owns .next."
+  ],
+  "notes": [
+    "Phone-width web is CSS/source smoke (max-md search icon, bottom nav, 11px labels). The Cursor browser viewport stayed desktop.",
+    "Light appearance was not recaptured. The sidebar remains Wisconsin dark in both themes.",
+    "Schedule sticky pinning still measures [data-app-shell-header]; header height stayed h-12.",
+    "Unrelated dirty page-chrome and schedule work was left untouched."
+  ]
+}

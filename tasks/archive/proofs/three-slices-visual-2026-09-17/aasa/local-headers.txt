@@ -1,0 +1,16 @@
+HTTP/1.1 200 OK
+X-Frame-Options: DENY
+X-Content-Type-Options: nosniff
+Referrer-Policy: strict-origin-when-cross-origin
+Permissions-Policy: camera=(self), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=(), magnetometer=(), gyroscope=(), accelerometer=(), autoplay=(self), encrypted-media=(), fullscreen=(self), picture-in-picture=(), display-capture=(), midi=(), screen-wake-lock=(), web-share=(self), tools=(self)
+Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Resource-Policy: same-origin
+X-DNS-Prefetch-Control: on
+vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch
+content-type: application/json
+Date: Thu, 17 Sep 2026 11:00:26 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+Transfer-Encoding: chunked
+

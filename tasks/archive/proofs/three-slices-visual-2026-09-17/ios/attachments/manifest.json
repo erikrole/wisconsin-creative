@@ -1,0 +1,323 @@
+[
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE",
+        "deviceName" : "iPhone 16 Pro (27.0)",
+        "exportedFileName" : "0399433D-DF97-4523-ACB3-1A6A36401452.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "event-detail-all-day_0_71AFD320-4A4C-44F8-B9AD-27F4B43FB33D.png",
+        "timestamp" : 1789643198.569
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE",
+        "deviceName" : "iPhone 16 Pro (27.0)",
+        "exportedFileName" : "6DE77AF6-93B2-47E0-BBEC-02F8720BD576.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "event-detail-live_0_800CBC4E-89A0-4C5E-BC03-77439FD59B5B.png",
+        "timestamp" : 1789643176.605
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE",
+        "deviceName" : "iPhone 16 Pro (27.0)",
+        "exportedFileName" : "4033C1B4-4543-4577-9AC9-FA2A3ABD1A73.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "event-detail-ended_0_B4E54410-4B22-49E6-A484-6566E478FCD2.png",
+        "timestamp" : 1789643171.737
+      }
+    ],
+    "testIdentifier" : "EventDetailScreenshotUITests/testEventDetailCaptures()",
+    "testIdentifierURL" : "test://com.apple.xcode/Wisconsin/WisconsinUITests/EventDetailScreenshotUITests/testEventDetailCaptures"
+  },
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE",
+        "deviceName" : "iPhone 16 Pro (27.0)",
+        "exportedFileName" : "C8A8ADE1-FFED-4A5E-ADBB-188B91A3481C.txt",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "App UI hierarchy for com.erikrole_0_357FB815-BE22-423A-83A0-860AFA41DA1B.Wisconsin",
+        "timestamp" : 1789643223.638
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE",
+        "deviceName" : "iPhone 16 Pro (27.0)",
+        "exportedFileName" : "1042DD02-38D8-4136-BF2D-BCE8049AC1F1",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "UI Snapshot 2026-09-17 at 06.07.03 AM",
+        "timestamp" : 1789643223.638
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE",
+        "deviceName" : "iPhone 16 Pro (27.0)",
+        "exportedFileName" : "9E44BC7F-666A-45BF-B8A4-566C0F4636DA.txt",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Debug description for `\"Jordan Lee\" StaticText`_0_2E10A3CC-A8EA-4EA5-AEA9-62646471BC3E.txt",
+        "timestamp" : 1789643223.572
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE",
+        "deviceName" : "iPhone 16 Pro (27.0)",
+        "exportedFileName" : "382F0DFB-F92D-42FA-9CA0-67FD174AFB9A.txt",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Debug description for `\"Jordan Lee\" StaticText`_0_3708597F-FBEA-4AAF-BEF2-C9ED3D0B22EB.txt",
+        "timestamp" : 1789643222.61
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE",
+        "deviceName" : "iPhone 16 Pro (27.0)",
+        "exportedFileName" : "7CB2D369-D6F0-438C-BB10-9308775F323D.txt",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Debug description for `\"Jordan Lee\" StaticText`_0_B127AE32-8E64-47F1-98EA-5F2072C543A1.txt",
+        "timestamp" : 1789643221.636
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE",
+        "deviceName" : "iPhone 16 Pro (27.0)",
+        "exportedFileName" : "F4C1C424-BFB3-4CB7-B6DD-7EB397A55250.txt",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Debug description for `\"Jordan Lee\" StaticText`_0_57681BBC-54AC-4063-A22D-DE7D6107418E.txt",
+        "timestamp" : 1789643220.639
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE",
+        "deviceName" : "iPhone 16 Pro (27.0)",
+        "exportedFileName" : "480171A7-7FFE-4660-B7D3-B7EB791891C8.txt",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Debug description for `\"Jordan Lee\" StaticText`_0_001E0454-3946-485C-81E8-86B9833649C0.txt",
+        "timestamp" : 1789643219.638
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE",
+        "deviceName" : "iPhone 16 Pro (27.0)",
+        "exportedFileName" : "6D03E635-3076-44DE-B3C1-D1ADE2AB7331.txt",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Debug description for `\"Jordan Lee\" StaticText`_0_4C83033F-9A5B-444C-9EC2-30A1C00F9050.txt",
+        "timestamp" : 1789643218.642
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE",
+        "deviceName" : "iPhone 16 Pro (27.0)",
+        "exportedFileName" : "90A6D9C5-EE3D-427D-A771-12F784D70C7C.txt",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Debug description for `\"Jordan Lee\" StaticText`_0_6ED486E2-68B3-4E65-AE1C-11B55EA9F4C7.txt",
+        "timestamp" : 1789643217.645
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE",
+        "deviceName" : "iPhone 16 Pro (27.0)",
+        "exportedFileName" : "AB2D63DA-5397-495E-8CE3-A4CC5814033E.txt",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Debug description for `\"Jordan Lee\" StaticText`_0_95E40FDA-3B87-49D0-A9E8-EC64B184B620.txt",
+        "timestamp" : 1789643216.641
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE",
+        "deviceName" : "iPhone 16 Pro (27.0)",
+        "exportedFileName" : "62253F18-FCC6-4F30-BFA1-3BC50ED900FC.txt",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Debug description for `\"Jordan Lee\" StaticText`_0_4974F0A3-3AAE-477C-BD6E-813BF8B4171C.txt",
+        "timestamp" : 1789643215.635
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE",
+        "deviceName" : "iPhone 16 Pro (27.0)",
+        "exportedFileName" : "056BB649-C3C8-443A-AC96-D56422F7A6A1.txt",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Debug description for `\"Jordan Lee\" StaticText`_0_99803BC4-6038-4A3C-A519-7F233E6577B3.txt",
+        "timestamp" : 1789643214.638
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE",
+        "deviceName" : "iPhone 16 Pro (27.0)",
+        "exportedFileName" : "C9FAA1CD-9AA5-4922-AF17-AAF842A4715B.txt",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Debug description for `\"Jordan Lee\" StaticText`_0_3447C507-7574-4717-9F34-148144A1A2F0.txt",
+        "timestamp" : 1789643213.635
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE",
+        "deviceName" : "iPhone 16 Pro (27.0)",
+        "exportedFileName" : "65C18AE1-4013-4442-BFD6-1646ACAB1D52.txt",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Debug description for `\"Jordan Lee\" StaticText`_0_7A6F4368-1119-4F5F-93B1-F4096FE2EE4C.txt",
+        "timestamp" : 1789643212.628
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE",
+        "deviceName" : "iPhone 16 Pro (27.0)",
+        "exportedFileName" : "4F69E701-C764-4AC2-BB5A-471A273BF07D.txt",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Debug description for `\"Jordan Lee\" StaticText`_0_C5E2720B-6DD8-4C4A-8F9D-9F293E03FF2C.txt",
+        "timestamp" : 1789643211.635
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE",
+        "deviceName" : "iPhone 16 Pro (27.0)",
+        "exportedFileName" : "8BA55AD8-692F-4DDF-A0E5-A7E9465B252D.txt",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Debug description for `\"Jordan Lee\" StaticText`_0_2A96C313-6921-48C1-B92F-39DF70B09F6F.txt",
+        "timestamp" : 1789643210.63
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE",
+        "deviceName" : "iPhone 16 Pro (27.0)",
+        "exportedFileName" : "81AD8881-4AA5-4D65-9C33-95864298FFAA.txt",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Debug description for `\"Jordan Lee\" StaticText`_0_3FC6A2EE-3E15-40EF-9784-6FB4B6C8A531.txt",
+        "timestamp" : 1789643209.618
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE",
+        "deviceName" : "iPhone 16 Pro (27.0)",
+        "exportedFileName" : "CA61EF84-805A-4009-98AA-29FAEF95D331.txt",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Debug description for `\"Jordan Lee\" StaticText`_0_15F53C3B-56D8-47B6-9943-AF3AA1A38875.txt",
+        "timestamp" : 1789643208.618
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE",
+        "deviceName" : "iPhone 16 Pro (27.0)",
+        "exportedFileName" : "FDF970A2-2BCD-43D2-B39C-5BD060F8C68A.txt",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Debug description for `\"Jordan Lee\" StaticText`_0_AB36AF5D-45B9-441A-9B1E-76C37FCF63DF.txt",
+        "timestamp" : 1789643207.622
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE",
+        "deviceName" : "iPhone 16 Pro (27.0)",
+        "exportedFileName" : "416133A1-00ED-4CF4-91B1-4B3C524E786A.txt",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Debug description for `\"Jordan Lee\" StaticText`_0_29B5F610-F8CB-4DC2-B827-9532A9457CF0.txt",
+        "timestamp" : 1789643206.653
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE",
+        "deviceName" : "iPhone 16 Pro (27.0)",
+        "exportedFileName" : "C44B7E84-4410-4D69-8B68-08FCA5FE334F.txt",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Debug description for `\"Jordan Lee\" StaticText`_0_83678F9C-C225-4F9A-80DC-363B142EDBF7.txt",
+        "timestamp" : 1789643205.644
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE",
+        "deviceName" : "iPhone 16 Pro (27.0)",
+        "exportedFileName" : "B3EF359E-9557-401D-B06E-2C1CC283F101.txt",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Debug description for `\"Jordan Lee\" StaticText`_0_D6060FA1-3B03-4610-B589-456013B1CADF.txt",
+        "timestamp" : 1789643204.676
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE",
+        "deviceName" : "iPhone 16 Pro (27.0)",
+        "exportedFileName" : "EC004094-E1F3-4873-A7AE-B92EF50B35B2.mp4",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "Screen Recording 2026-09-17 at 06.06.38 AM.mp4",
+        "timestamp" : 1789643198.84
+      }
+    ],
+    "testIdentifier" : "ProfileScreenshotUITests/testProfileScoreboardEntryCaptures()",
+    "testIdentifierURL" : "test://com.apple.xcode/Wisconsin/WisconsinUITests/ProfileScreenshotUITests/testProfileScoreboardEntryCaptures"
+  },
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE",
+        "deviceName" : "iPhone 16 Pro (27.0)",
+        "exportedFileName" : "881451CB-B02E-46E1-8392-F89DD14C6BE2.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "event-crew-accessibility_0_96579238-4D23-4C39-B4DA-76AD02841D54.png",
+        "timestamp" : 1789643234.332
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE",
+        "deviceName" : "iPhone 16 Pro (27.0)",
+        "exportedFileName" : "BB4E99C1-73CD-4DC0-A582-2B62FD70DFD3.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "event-detail-accessibility_0_EB297C79-2CC5-48CA-887A-B27F19B03E19.png",
+        "timestamp" : 1789643231.762
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE",
+        "deviceName" : "iPhone 16 Pro (27.0)",
+        "exportedFileName" : "C847A508-9AE4-41BB-8029-4F6991E05B8A.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "schedule-accessibility_0_60871B10-28D0-4877-B881-3AA93C218CCB.png",
+        "timestamp" : 1789643229.781
+      }
+    ],
+    "testIdentifier" : "ScheduleScreenshotUITests/testScheduleAccessibilityCaptures()",
+    "testIdentifierURL" : "test://com.apple.xcode/Wisconsin/WisconsinUITests/ScheduleScreenshotUITests/testScheduleAccessibilityCaptures"
+  },
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE",
+        "deviceName" : "iPhone 16 Pro (27.0)",
+        "exportedFileName" : "D4E4BBB4-C840-4A65-99EC-FB7921E9304E.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "schedule-calendar_0_6FDAC6BE-C726-4F3F-9FC1-E17A20E5C040.png",
+        "timestamp" : 1789643249.509
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE",
+        "deviceName" : "iPhone 16 Pro (27.0)",
+        "exportedFileName" : "C35828A9-C5EE-45BF-9483-BD453F1CFB47.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "schedule-bottom_0_A422EAE9-5BA2-4244-A886-11A317236614.png",
+        "timestamp" : 1789643245.213
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE",
+        "deviceName" : "iPhone 16 Pro (27.0)",
+        "exportedFileName" : "C73DE199-0CB5-4BEA-9322-3B0FD61D9E61.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "schedule-mid_0_B8026DC3-1D88-4023-9AF3-E66A67AD1268.png",
+        "timestamp" : 1789643244.129
+      },
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "E055DEBC-12B1-4E0F-BE11-1CFFF4A454DE",
+        "deviceName" : "iPhone 16 Pro (27.0)",
+        "exportedFileName" : "C58275B8-19F5-419B-805A-441A7A853DC0.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "schedule-top_0_66163272-2DF7-4332-8F51-2DBA00886C09.png",
+        "timestamp" : 1789643241.517
+      }
+    ],
+    "testIdentifier" : "ScheduleScreenshotUITests/testScheduleListCaptures()",
+    "testIdentifierURL" : "test://com.apple.xcode/Wisconsin/WisconsinUITests/ScheduleScreenshotUITests/testScheduleListCaptures"
+  }
+]

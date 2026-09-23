@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "f7733f5711526500668693eed17fc4aa4cdb648d",
+  "sourcePatchSha256": "e4fac9fb6923bf01d1743f06b7c91a6883ce289b6c95814b0697e378847cf158",
+  "settings": {
+    "device": "Cursor IDE browser Chromium",
+    "viewport": [
+      1372,
+      1160
+    ],
+    "fixture": "authenticated local preview session, live kiosk devices, Add kiosk form open",
+    "role": "ADMIN",
+    "appearance": "dark",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "live local clock 2026-09-19 morning",
+    "scroll": [
+      0,
+      0
+    ],
+    "route": "/settings/kiosk-devices"
+  },
+  "imageSha256": "942c098ab18ec46a8a674f786c399cef55cba95683f210aab3375644bc2c621c",
+  "dimensions": [
+    1372,
+    1160
+  ]
+}
