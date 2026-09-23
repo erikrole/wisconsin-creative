@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { preparePreviewUpload } from "./lib/preview-upload.mjs";
@@ -20,7 +20,9 @@ if (process.argv.includes("--apply")) {
     const archive = execFileSync("git", ["archive", "--format=tar", commit], { maxBuffer: 256 * 1024 * 1024 });
     if (spawnSync("tar", ["-xf", "-", "-C", source], { input: archive }).status) throw new Error("Could not prepare the exact review source");
     const files = execFileSync("git", ["ls-tree", "-r", "--name-only", "-z", commit], { encoding: "utf8" }).split("\0").filter(Boolean);
-    const trustedConfig = JSON.parse(readFileSync(new URL("../vercel.json", import.meta.url), "utf8"));
+    // The commit is already on origin/main, so its own committed config is the
+    // reviewed one; the working tree may be newer or dirty.
+    const trustedConfig = JSON.parse(execFileSync("git", ["show", `${commit}:vercel.json`], { encoding: "utf8" }));
     upload = preparePreviewUpload(source, trustedConfig, { files });
     const args = ["deploy", upload.path, "--yes", "--prod", "--project", config.vercel.reviewProjectId, "--scope", config.vercel.teamId,
       "--archive=tgz", "--json", "--env", "WC_ENVIRONMENT=review", "--build-env", "WC_ENVIRONMENT=review", "--meta", `reviewCommit=${commit}`];
