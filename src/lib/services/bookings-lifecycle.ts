@@ -780,12 +780,23 @@ export async function createBooking(input: CreateBookingInput) {
             ? BookingStatus.BOOKED
             : BookingStatus.OPEN;
 
-          if (input.shiftAssignmentId && resolvedCustodyScope === BookingCustodyScope.PERSON) {
-            await validateReservationScheduleAssignmentTx(tx, {
-              assignmentId: input.shiftAssignmentId,
-              requesterUserId: input.requesterUserId,
-              eventIds: sortedEventIds,
-            });
+          let resolvedShiftAssignmentId = resolvedCustodyScope === BookingCustodyScope.PERSON
+            ? input.shiftAssignmentId ?? null
+            : null;
+          if (resolvedShiftAssignmentId) {
+            try {
+              await validateReservationScheduleAssignmentTx(tx, {
+                assignmentId: resolvedShiftAssignmentId,
+                requesterUserId: input.requesterUserId,
+                eventIds: sortedEventIds,
+              });
+            } catch (error) {
+              // A pickup inherits the reservation's schedule link rather than
+              // receiving it from a client. A stale link (owner transferred,
+              // shift declined) must not block custody; drop it instead.
+              if (!input.sourceReservationPickup || !(error instanceof HttpError)) throw error;
+              resolvedShiftAssignmentId = null;
+            }
           }
 
           const prefix = input.kind === BookingKind.CHECKOUT ? "CO" : "RV";
@@ -827,7 +838,7 @@ export async function createBooking(input: CreateBookingInput) {
                 sourceReservationId: input.sourceReservationId ?? null,
                 eventId: primaryEventId,
                 sportCode: input.sportCode ?? null,
-                shiftAssignmentId: resolvedCustodyScope === BookingCustodyScope.PERSON ? input.shiftAssignmentId ?? null : null,
+                shiftAssignmentId: resolvedShiftAssignmentId,
                 kitId: input.kitId ?? null,
                 pickupKioskDeviceId: input.pickupKioskDeviceId ?? null
               }
@@ -864,7 +875,7 @@ export async function createBooking(input: CreateBookingInput) {
               input.kind === BookingKind.RESERVATION
               && resolvedCustodyScope === BookingCustodyScope.PERSON
               && primaryEventId
-              && !input.shiftAssignmentId
+              && !resolvedShiftAssignmentId
             ) {
               reservationScheduleAssignment = await assignReservationRequesterToScheduleTx(tx, {
                 bookingId: booking.id,
@@ -1095,7 +1106,7 @@ export async function createBooking(input: CreateBookingInput) {
               sourceReservationId: input.sourceReservationId,
               sourceDraftId: input.sourceDraftId,
               eventIds: sortedEventIds,
-              shiftAssignmentId: reservationScheduleAssignment?.shiftAssignmentId ?? input.shiftAssignmentId ?? null,
+              shiftAssignmentId: reservationScheduleAssignment?.shiftAssignmentId ?? resolvedShiftAssignmentId,
               kitId: input.kitId ?? null,
             },
           });

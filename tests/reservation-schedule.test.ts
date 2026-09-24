@@ -431,4 +431,28 @@ describe("reservation schedule lifecycle hardening", () => {
       data: { shiftAssignmentId: "assignment-1" },
     });
   });
+
+  it("unlinks another person's manual assignment when the reservation owner changes", async () => {
+    tx.shiftAssignment.findUnique.mockResolvedValue(assignmentContext({
+      userId: "original-owner",
+      source: ShiftAssignmentSource.MANUAL,
+    }));
+    tx.shiftAssignment.create.mockResolvedValue(createdAssignment({ id: "assignment-2", userId: "new-owner" }));
+
+    const result = await reconcileReservationScheduleTx(tx as never, {
+      bookingId: "booking-1",
+      requesterUserId: "new-owner",
+      requester: requester(),
+      primaryEventId: eventId,
+      currentAssignmentId: "assignment-1",
+      createdBy: "actor-1",
+    });
+
+    expect(tx.booking.update).toHaveBeenNthCalledWith(1, {
+      where: { id: "booking-1" },
+      data: { shiftAssignmentId: null },
+    });
+    expect(tx.shiftAssignment.update).not.toHaveBeenCalled();
+    expect(result.assignment?.shiftAssignmentId).not.toBe("assignment-1");
+  });
 });
