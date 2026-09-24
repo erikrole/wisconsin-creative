@@ -61,9 +61,10 @@ describe("native Schedule availability and Trade Board redesign", () => {
   it("prevents duplicate trade mutations and preserves recovery", () => {
     const board = source("ios/Wisconsin/Views/Schedule/TradeBoardSheet.swift");
 
-    expect(board).toContain("@State private var pendingActionId: String?");
-    expect(board).toContain("pendingActionId = item.id");
-    expect(board).toContain("pendingActionId = trade.id");
+    // Busy state is per row, and every action reloads the board after.
+    expect(board).toContain("@State private var pendingActionIds: Set<String> = []");
+    expect(board).toContain("guard pendingActionIds.insert(actionId).inserted else { return }");
+    expect(board).toContain("await vm.load(forceRefresh: true)");
     expect(board).toContain(".disabled(isActioning)");
     expect(board).toContain("TradeBoardActionErrorBanner(");
     expect(board).toContain("var tradeLoadError: String?");

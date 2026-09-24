@@ -91,7 +91,7 @@ describe("working schedule slot permissions", () => {
     await expect(response.json()).resolves.toEqual({ data: { workingVersion: 6 } });
     expect(mocks.enqueue).toHaveBeenCalledWith({ shiftGroupId: "group-1", version: 6 });
     expect(mocks.mutate).toHaveBeenCalledWith("group-1", 5, command,
-      { id: "staff-1", role }, expect.objectContaining({ runId: "release-1" }));
+      { id: "staff-1", role }, expect.objectContaining({ runId: "release-1" }), undefined);
     expect(mocks.publish).not.toHaveBeenCalled();
   });
 

@@ -65,6 +65,26 @@ struct ShiftTradeEvent: Codable {
     let endsAt: Date?
     let site: String?
 
+    /// Site first, then `isHome`, the same order `ScheduleEvent.venue` uses,
+    /// so a neutral-site game reads Neutral on the board as it does in the
+    /// Schedule list.
+    var venue: ScheduleVenue {
+        guard let opponent, !opponent.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return .nonGame
+        }
+        switch site?.uppercased() {
+        case "HOME": return .home
+        case "AWAY": return .away
+        case "NEUTRAL": return .neutral
+        default: break
+        }
+        switch isHome {
+        case true: return .home
+        case false: return .away
+        case nil: return .neutral
+        }
+    }
+
     var studentCallTimeAllowed: Bool {
         guard let opponent,
               !opponent.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
@@ -79,7 +99,7 @@ struct ShiftTradeEvent: Codable {
 
     var compactTitle: String {
         if let sportCode, let opponent, !sportCode.isEmpty, !opponent.isEmpty {
-            return "\(sportCode) \(isHome == false ? "at" : "vs") \(opponent)"
+            return "\(sportCode) \(venue == .away ? "at" : "vs") \(opponent)"
         }
         return summary ?? "Shift"
     }
@@ -159,21 +179,36 @@ struct ShiftTradesResponse: Codable {
 struct OpenWorkResponse: Codable {
     let openShifts: [OpenWorkShift]
     let pickupRequests: [OpenWorkPickupRequest]
+    /// The server caps each list; these say a list was cut short, so the
+    /// board can say so instead of silently showing the first page as all.
+    let openShiftsTruncated: Bool
+    let pickupRequestsTruncated: Bool
 
-    init(openShifts: [OpenWorkShift] = [], pickupRequests: [OpenWorkPickupRequest] = []) {
+    init(
+        openShifts: [OpenWorkShift] = [],
+        pickupRequests: [OpenWorkPickupRequest] = [],
+        openShiftsTruncated: Bool = false,
+        pickupRequestsTruncated: Bool = false
+    ) {
         self.openShifts = openShifts
         self.pickupRequests = pickupRequests
+        self.openShiftsTruncated = openShiftsTruncated
+        self.pickupRequestsTruncated = pickupRequestsTruncated
     }
 
     private enum CodingKeys: String, CodingKey {
         case openShifts
         case pickupRequests
+        case openShiftsTruncated
+        case pickupRequestsTruncated
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         openShifts = try container.decodeIfPresent([OpenWorkShift].self, forKey: .openShifts) ?? []
         pickupRequests = try container.decodeIfPresent([OpenWorkPickupRequest].self, forKey: .pickupRequests) ?? []
+        openShiftsTruncated = try container.decodeIfPresent(Bool.self, forKey: .openShiftsTruncated) ?? false
+        pickupRequestsTruncated = try container.decodeIfPresent(Bool.self, forKey: .pickupRequestsTruncated) ?? false
     }
 }
 

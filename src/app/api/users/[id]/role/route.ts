@@ -55,6 +55,9 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
       affiliation: legacyBtn ? "BIG_TEN_NETWORK" : null,
       collaboratorProfile: legacyBtn ? "BTN_STANDARD" : null,
       collaboratorPolicyId,
+      // A collaborator has no shift feed; restoring the role later must not
+      // quietly revive a link shared under the old role.
+      ...(body.role === "COLLABORATOR" ? { icsToken: null } : {}),
     }
   });
 

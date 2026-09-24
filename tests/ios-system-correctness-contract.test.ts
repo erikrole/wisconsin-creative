@@ -80,7 +80,7 @@ describe("iOS system correctness request ownership", () => {
     expect(poll).toContain("guard !Task.isCancelled else { break }");
   });
 
-  it("cancel-replaces an in-flight Schedule load when Include Past changes", () => {
+  it("cancel-replaces an in-flight Schedule reload and fences stale edge loads", () => {
     const schedule = source("ios/Wisconsin/Views/ScheduleView.swift");
     const viewModel = schedule.slice(
       schedule.indexOf("final class ScheduleViewModel"),
@@ -92,24 +92,22 @@ describe("iOS system correctness request ownership", () => {
     expect(viewModel).toMatch(
       /if forceRefresh \{[\s\S]*?loadTask\?\.cancel\(\)[\s\S]*?\} else if isLoading \{[\s\S]*?return/,
     );
-    expect(viewModel).toContain("let requestedIncludePast = includePast");
+    expect(viewModel).toContain("let window = reloadWindow");
     expect(viewModel).toContain("let requestToken = loadRequests.begin()");
-    expect(viewModel).toContain(
-      "await performLoad(includePast: requestedIncludePast, requestToken: requestToken)",
-    );
+    expect(viewModel).toContain("await performLoad(window: window, requestToken: requestToken)");
     expect(viewModel).toContain("await withTaskCancellationHandler {");
     expect(viewModel).toContain("await task.value");
     expect(viewModel).toMatch(/onCancel:\s*\{[\s\S]*?task\.cancel\(\)/);
-    expect(viewModel).toContain(
-      "APIClient.shared.allCalendarEvents(includePast: requestedIncludePast)",
-    );
-    expect(viewModel).toContain(
-      "APIClient.shared.allMyShifts()",
-    );
+    expect(viewModel).toContain("APIClient.shared.allCalendarEvents(window: window)");
+    expect(viewModel).toContain("APIClient.shared.allMyShifts(window: window)");
     expect(viewModel).toContain(
       "guard loadRequests.owns(requestToken), !Task.isCancelled else { return }",
     );
     expect(viewModel).toContain("if loadRequests.owns(requestToken) {");
+    // An edge load that started before a full reload or teardown cannot merge
+    // its weeks into the replacement.
+    expect(viewModel).toContain("windowGeneration += 1");
+    expect(viewModel.match(/windowGeneration == generation/g)?.length).toBeGreaterThanOrEqual(4);
 
     const errorHandler = viewModel.slice(viewModel.indexOf("} catch is CancellationError"));
     expect(errorHandler).toContain(
@@ -123,6 +121,7 @@ describe("iOS system correctness request ownership", () => {
     expect(cancellation).toContain("loadTask?.cancel()");
     expect(cancellation).toContain("loadTask = nil");
     expect(cancellation).toContain("loadRequests.invalidate()");
+    expect(cancellation).toContain("windowGeneration += 1");
     expect(cancellation).toContain("isLoading = false");
 
     const performLoad = viewModel.slice(
@@ -132,7 +131,7 @@ describe("iOS system correctness request ownership", () => {
     const publishGuard =
       "guard loadRequests.owns(requestToken), !Task.isCancelled else { return }";
     expect(performLoad.indexOf(publishGuard)).toBeLessThan(
-      performLoad.indexOf("events = collapsedCombinedScheduleEvents(fetchedEvents)"),
+      performLoad.indexOf("replace(window, with: (fetchedEvents, fetchedShifts))"),
     );
     expect(performLoad.indexOf(publishGuard)).toBeLessThan(
       performLoad.indexOf("GearStore.shared.seedScheduleEvents(fetchedEvents)"),

@@ -267,7 +267,6 @@ final class TradeBoardViewModel {
 
     func pickup(id: String) async throws {
         try await APIClient.shared.pickupOpenShift(id: id)
-        await load()
     }
 
     func claim(id: String) async throws {
@@ -275,27 +274,22 @@ final class TradeBoardViewModel {
         if let idx = trades.firstIndex(where: { $0.id == id }) {
             trades[idx] = updated
         }
-        await load()
     }
 
     func approveTrade(id: String) async throws {
-        _ = try await APIClient.shared.approveShiftTrade(id: id)
-        await load()
+        try await APIClient.shared.approveShiftTrade(id: id)
     }
 
     func declineTrade(id: String) async throws {
-        _ = try await APIClient.shared.declineShiftTrade(id: id)
-        await load()
+        try await APIClient.shared.declineShiftTrade(id: id)
     }
 
     func approveRequest(id: String) async throws {
         try await APIClient.shared.approveShift(assignmentId: id)
-        await load()
     }
 
     func declineRequest(id: String) async throws {
         try await APIClient.shared.declineShift(assignmentId: id)
-        await load()
     }
 
     func cancel(id: String) async throws {
@@ -303,7 +297,6 @@ final class TradeBoardViewModel {
         if let idx = trades.firstIndex(where: { $0.id == id }) {
             trades[idx] = updated
         }
-        await load()
     }
 
     func withdrawClaim(id: String) async throws {
@@ -311,12 +304,10 @@ final class TradeBoardViewModel {
         if let idx = trades.firstIndex(where: { $0.id == id }) {
             trades[idx] = updated
         }
-        await load()
     }
 
     func withdrawRequest(id: String) async throws {
         try await APIClient.shared.withdrawShiftRequest(id: id)
-        await load()
     }
 }
 
@@ -336,11 +327,16 @@ struct TradeBoardSheet: View {
     @State private var tradeToCancel: ShiftTrade?
     @State private var tradeClaimToWithdraw: ShiftTrade?
     @State private var requestToWithdraw: OpenWorkPickupRequest?
+    /// A decline waiting on confirmation. Declining tells a student no, so it
+    /// takes a second tap; approve stays one tap.
+    @State private var pendingDecline: PendingDecline?
     @State private var openShiftToPickup: OpenWorkShift?
     @State private var mineOnly = false
     @State private var showBlocked = false
     @State private var showHistory = false
-    @State private var pendingActionId: String?
+    /// Rows with an action in flight. A set, so finishing one row cannot
+    /// re-enable another row's buttons while its request is still running.
+    @State private var pendingActionIds: Set<String> = []
     @State private var actionError: String?
     @Environment(\.dismiss) private var dismiss
 
@@ -477,6 +473,20 @@ struct TradeBoardSheet: View {
             } message: {
                 Text("This removes your pending request. You will no longer be considered for this shift.")
             }
+            .confirmationDialog(pendingDecline?.title ?? "", isPresented: Binding(
+                get: { pendingDecline != nil },
+                set: { if !$0 { pendingDecline = nil } }
+            ), titleVisibility: .visible) {
+                if let decline = pendingDecline {
+                    Button("Decline", role: .destructive) {
+                        review(id: decline.id, run: decline.run)
+                        pendingDecline = nil
+                    }
+                }
+                Button("Keep Reviewing", role: .cancel) { pendingDecline = nil }
+            } message: {
+                Text("They'll be told the request was declined.")
+            }
         }
     }
 
@@ -603,20 +613,28 @@ struct TradeBoardSheet: View {
                             PickupRequestRow(
                                 request: request,
                                 isReview: true,
-                                isActioning: pendingActionId == request.id,
+                                isActioning: pendingActionIds.contains(request.id),
                                 approveAction: { review(id: request.id) { try await vm.approveRequest(id: request.id) } },
-                                declineAction: { review(id: request.id) { try await vm.declineRequest(id: request.id) } }
+                                declineAction: {
+                                    pendingDecline = PendingDecline(id: request.id, who: request.user.name) {
+                                        try await vm.declineRequest(id: request.id)
+                                    }
+                                }
                             )
                             .tradeBoardCardRow()
                         case .trade(let trade):
                             TradeRow(
                                 trade: trade,
                                 context: .review,
-                                isActioning: pendingActionId == trade.id,
+                                isActioning: pendingActionIds.contains(trade.id),
                                 action: nil,
                                 cancelAction: nil,
                                 approveAction: { review(id: trade.id) { try await vm.approveTrade(id: trade.id) } },
-                                declineAction: { review(id: trade.id) { try await vm.declineTrade(id: trade.id) } }
+                                declineAction: {
+                                    pendingDecline = PendingDecline(id: trade.id, who: trade.claimedBy?.name) {
+                                        try await vm.declineTrade(id: trade.id)
+                                    }
+                                }
                             )
                             .tradeBoardCardRow()
                         }
@@ -635,7 +653,7 @@ struct TradeBoardSheet: View {
                         PickupRequestRow(
                             request: request,
                             isReview: false,
-                            isActioning: pendingActionId == "withdraw-request:\(request.id)",
+                            isActioning: pendingActionIds.contains("withdraw-request:\(request.id)"),
                             withdrawAction: { requestToWithdraw = request }
                         )
                             .tradeBoardCardRow()
@@ -644,7 +662,7 @@ struct TradeBoardSheet: View {
                         TradeRow(
                             trade: trade,
                             context: .waitingOnAdmin,
-                            isActioning: pendingActionId == "withdraw-claim:\(trade.id)",
+                            isActioning: pendingActionIds.contains("withdraw-claim:\(trade.id)"),
                             action: nil,
                             cancelAction: nil,
                             withdrawAction: { tradeClaimToWithdraw = trade }
@@ -665,7 +683,7 @@ struct TradeBoardSheet: View {
                         TradeRow(
                             trade: trade,
                             context: .availableNow,
-                            isActioning: pendingActionId == trade.id,
+                            isActioning: pendingActionIds.contains(trade.id),
                             action: { tradeToConfirm = trade },
                             cancelAction: nil
                         )
@@ -685,11 +703,18 @@ struct TradeBoardSheet: View {
                         OpenWorkShiftRow(
                             item: item,
                             context: .availableNow,
-                            isActioning: pendingActionId == item.id
+                            isActioning: pendingActionIds.contains(item.id)
                         ) {
                             openShiftToPickup = item
                         }
                         .tradeBoardCardRow()
+                    }
+                    if vm.openWork.openShiftsTruncated || vm.openWork.pickupRequestsTruncated {
+                        Text("Showing the first 100 open slots. Narrow by area to see the rest.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .tradeBoardCardRow()
                     }
                 } header: {
                     TradeSectionHeader(
@@ -769,7 +794,7 @@ struct TradeBoardSheet: View {
                     TradeRow(
                         trade: trade,
                         context: .myPost,
-                        isActioning: pendingActionId == trade.id,
+                        isActioning: pendingActionIds.contains(trade.id),
                         action: nil,
                         cancelAction: { tradeToCancel = trade }
                     )
@@ -789,109 +814,85 @@ struct TradeBoardSheet: View {
         }
     }
 
-    private func pickupConfirmedOpenShift() {
-        guard let item = openShiftToPickup else { return }
-        pendingActionId = item.id
+    /// One executor for every board action. The row is busy only while its
+    /// own request runs, and the board reloads afterwards whether the action
+    /// succeeded or not, so a row someone else already resolved disappears
+    /// instead of staying tappable with a stale button.
+    private func runAction(
+        _ actionId: String,
+        _ operation: @escaping () async throws -> Void,
+        onSuccess: @escaping () -> Void = {},
+        finally: @escaping () -> Void = {}
+    ) {
+        guard pendingActionIds.insert(actionId).inserted else { return }
         Task {
-            defer { pendingActionId = nil }
+            defer {
+                pendingActionIds.remove(actionId)
+                finally()
+            }
             do {
-                try await vm.pickup(id: item.id)
+                try await operation()
                 Haptics.success()
-                let when = item.shift.effectiveStartsAt.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
-                onTradeClaimed?(item.shift.area, when)
+                onSuccess()
+            } catch APIError.conflict(let message) {
+                actionError = message.isEmpty ? "This was already resolved. The board has been refreshed." : message
+                Haptics.warning()
             } catch {
                 actionError = error.localizedDescription
                 Haptics.warning()
             }
-            openShiftToPickup = nil
+            await vm.load(forceRefresh: true)
         }
+    }
+
+    private func pickupConfirmedOpenShift() {
+        guard let item = openShiftToPickup else { return }
+        runAction(item.id, { try await vm.pickup(id: item.id) }, onSuccess: {
+            let when = item.shift.effectiveStartsAt.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
+            onTradeClaimed?(item.shift.area, when)
+        }, finally: { openShiftToPickup = nil })
     }
 
     private func claimConfirmedTrade() {
         guard let trade = tradeToConfirm else { return }
-        pendingActionId = trade.id
-        Task {
-            defer { pendingActionId = nil }
-            do {
-                try await vm.claim(id: trade.id)
-                Haptics.success()
-                let when = trade.shiftAssignment.shift.effectiveStartsAt
-                    .formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
-                onTradeClaimed?(trade.shiftAssignment.shift.area, when)
-            } catch {
-                actionError = error.localizedDescription
-                Haptics.warning()
-            }
-            tradeToConfirm = nil
-        }
+        runAction(trade.id, { try await vm.claim(id: trade.id) }, onSuccess: {
+            let when = trade.shiftAssignment.shift.effectiveStartsAt
+                .formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
+            onTradeClaimed?(trade.shiftAssignment.shift.area, when)
+        }, finally: { tradeToConfirm = nil })
     }
 
-    /// One executor for all four review decisions. Each re-loads the board, so a
-    /// row someone else already resolved disappears instead of failing on tap.
+    /// All four review decisions.
     private func review(id: String, run: @escaping () async throws -> Void) {
-        pendingActionId = id
-        Task {
-            defer { pendingActionId = nil }
-            do {
-                try await run()
-                Haptics.success()
-            } catch {
-                actionError = error.localizedDescription
-                Haptics.warning()
-            }
-        }
+        runAction(id, run)
     }
 
     private func cancelConfirmedTrade() {
         guard let trade = tradeToCancel else { return }
-        pendingActionId = trade.id
-        Task {
-            defer { pendingActionId = nil }
-            do {
-                try await vm.cancel(id: trade.id)
-                Haptics.success()
-            } catch {
-                actionError = error.localizedDescription
-                Haptics.warning()
-            }
-            tradeToCancel = nil
-        }
+        runAction(trade.id, { try await vm.cancel(id: trade.id) }, finally: { tradeToCancel = nil })
     }
 
     private func withdrawConfirmedClaim() {
         guard let trade = tradeClaimToWithdraw else { return }
-        let actionId = "withdraw-claim:\(trade.id)"
-        pendingActionId = actionId
-        Task {
-            defer { pendingActionId = nil }
-            do {
-                try await vm.withdrawClaim(id: trade.id)
-                Haptics.success()
-            } catch {
-                actionError = error.localizedDescription
-                Haptics.warning()
-            }
-            tradeClaimToWithdraw = nil
-        }
+        runAction("withdraw-claim:\(trade.id)", { try await vm.withdrawClaim(id: trade.id) }, finally: { tradeClaimToWithdraw = nil })
     }
 
     private func withdrawConfirmedRequest() {
         guard let request = requestToWithdraw else { return }
-        let actionId = "withdraw-request:\(request.id)"
-        pendingActionId = actionId
-        Task {
-            defer { pendingActionId = nil }
-            do {
-                try await vm.withdrawRequest(id: request.id)
-                Haptics.success()
-            } catch {
-                actionError = error.localizedDescription
-                Haptics.warning()
-            }
-            requestToWithdraw = nil
-        }
+        runAction("withdraw-request:\(request.id)", { try await vm.withdrawRequest(id: request.id) }, finally: { requestToWithdraw = nil })
     }
 
+}
+
+private struct PendingDecline {
+    let id: String
+    let who: String?
+    let run: () async throws -> Void
+
+    var title: String {
+        guard let who, !who.isEmpty else { return "Decline this request?" }
+        return "Decline \(who)'s request?"
+    }
 }
 
 private struct TradeSectionHeader: View {
@@ -1035,10 +1036,7 @@ private struct OpenWorkShiftRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            RoundedRectangle(cornerRadius: 2)
-                .fill(shift.classificationColor)
-                .frame(width: 4, height: 76)
-                .accessibilityHidden(true)
+            VenueDot(color: shift.classificationColor)
 
             VStack(alignment: .leading, spacing: 7) {
                 rowHeader(title: shift.displayTitle, badge: context.badge, tone: context.tone)
@@ -1164,15 +1162,15 @@ private struct TradeRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            RoundedRectangle(cornerRadius: 2)
-                .fill(shift.classificationColor)
-                .frame(width: 4, height: 76)
-                .accessibilityHidden(true)
+            VenueDot(color: shift.classificationColor)
 
             VStack(alignment: .leading, spacing: 7) {
                 rowHeader(title: shift.displayTitle, badge: badge, tone: tone)
 
-                Text(shift.dateTimeLine)
+                Text(shift.dateTimeLine(
+                    personalStartsAt: trade.shiftAssignment.callStartsAt,
+                    personalEndsAt: trade.shiftAssignment.callEndsAt
+                ))
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(Color.statusText(.blue))
 
@@ -1310,10 +1308,7 @@ private struct PickupRequestRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            RoundedRectangle(cornerRadius: 2)
-                .fill(shift.classificationColor)
-                .frame(width: 4, height: 76)
-                .accessibilityHidden(true)
+            VenueDot(color: shift.classificationColor)
 
             VStack(alignment: .leading, spacing: 7) {
                 rowHeader(
@@ -1526,21 +1521,40 @@ private extension ShiftTradeShift {
     var displayTitle: String {
         shiftGroup?.event?.compactTitle ?? "Open Shift"
     }
-    var dateTimeLine: String {
-        let day = displayStartsAt.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
-        let start = displayStartsAt.formatted(date: .omitted, time: .shortened)
-        let end = displayEndsAt.formatted(date: .omitted, time: .shortened)
+    var dateTimeLine: String { dateTimeLine(personalStartsAt: nil, personalEndsAt: nil) }
+
+    /// The row's date and time. A poster's personal call window beats the
+    /// slot's, as it does everywhere the server decides; away and neutral
+    /// Student rows still show the event window. An all-day event is a date:
+    /// it is stored at UTC midnight, so it is read in UTC, not shifted a day.
+    func dateTimeLine(personalStartsAt: Date?, personalEndsAt: Date?) -> String {
+        if let event = shiftGroup?.event, event.allDay == true, let startsAt = event.startsAt {
+            var utc = Calendar(identifier: .gregorian)
+            utc.timeZone = TimeZone(identifier: "UTC") ?? .gmt
+            var style = Date.FormatStyle.dateTime.weekday(.abbreviated).month(.abbreviated).day()
+            style.timeZone = utc.timeZone
+            return "\(startsAt.formatted(style)) · All day"
+        }
+        let usesEventWindow = displayStartsAt != effectiveStartsAt
+        let startsAt = usesEventWindow ? displayStartsAt : (personalStartsAt ?? displayStartsAt)
+        let endsAt = usesEventWindow ? displayEndsAt : (personalEndsAt ?? displayEndsAt)
+        let day = startsAt.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
+        let start = startsAt.formatted(date: .omitted, time: .shortened)
+        let end = endsAt.formatted(date: .omitted, time: .shortened)
         return "\(day) · \(start) to \(end)"
     }
     var classificationLabel: String {
-        switch shiftGroup?.event?.isHome {
-        case true: "Home"
-        case false: "Away"
-        case nil: "Neutral or non-game"
+        guard let event = shiftGroup?.event else { return "Neutral or non-game" }
+        switch event.venue {
+        case .home: return "Home"
+        case .away: return "Away"
+        case .neutral: return "Neutral"
+        case .nonGame: return "Non-game"
         }
     }
     var classificationColor: Color {
-        venueRailColor(isHome: shiftGroup?.event?.isHome)
+        guard let event = shiftGroup?.event else { return venueRailColor(isHome: nil) }
+        return Color.statusText(venueTone(event.venue))
     }
 }
 

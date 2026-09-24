@@ -27,27 +27,40 @@ export async function pendingClaimReviewWorkflow(
   claimId: string,
   escalateAtIso: string,
   autoApproveAtIso: string,
+  /**
+   * The trade claim this run was started for. Runs enqueued before this
+   * argument existed arrive without it and keep the status-only check.
+   */
+  claimedAtIso?: string,
 ) {
   "use workflow";
 
   const escalateAt = new Date(escalateAtIso);
   if (escalateAt.getTime() > Date.now()) await sleep(escalateAt);
-  const escalated = await escalatePendingClaimStep(kind, claimId);
+  const escalated = await escalatePendingClaimStep(kind, claimId, claimedAtIso);
   if (escalated.status === "superseded") return escalated;
 
   const autoApproveAt = new Date(autoApproveAtIso);
   if (autoApproveAt.getTime() > Date.now()) await sleep(autoApproveAt);
-  return autoApprovePendingClaimStep(kind, claimId);
+  return autoApprovePendingClaimStep(kind, claimId, claimedAtIso);
 }
 
 /** Is this claim still waiting on a human? */
-async function isStillPending(kind: PendingClaimKind, claimId: string): Promise<boolean> {
+async function isStillPending(
+  kind: PendingClaimKind,
+  claimId: string,
+  claimedAtIso?: string,
+): Promise<boolean> {
   if (kind === "trade") {
     const trade = await db.shiftTrade.findUnique({
       where: { id: claimId },
-      select: { status: true },
+      select: { status: true, claimedAt: true },
     });
-    return trade?.status === "CLAIMED";
+    if (trade?.status !== "CLAIMED") return false;
+    // Withdraw and decline reopen the post, so CLAIMED alone can be a newer
+    // claim than the one this timer was started for. That claim has its own
+    // run on its own deadlines.
+    return claimedAtIso === undefined || trade.claimedAt?.toISOString() === claimedAtIso;
   }
   const assignment = await db.shiftAssignment.findUnique({
     where: { id: claimId },
@@ -56,26 +69,39 @@ async function isStillPending(kind: PendingClaimKind, claimId: string): Promise<
   return assignment?.status === "REQUESTED";
 }
 
-export async function escalatePendingClaimStep(kind: PendingClaimKind, claimId: string) {
+export async function escalatePendingClaimStep(
+  kind: PendingClaimKind,
+  claimId: string,
+  claimedAtIso?: string,
+) {
   "use step";
 
-  if (!await isStillPending(kind, claimId)) {
+  if (!await isStillPending(kind, claimId, claimedAtIso)) {
     return { status: "superseded" as const, kind, claimId };
   }
   await escalatePendingClaim(kind, claimId);
   return { status: "escalated" as const, kind, claimId };
 }
 
-export async function autoApprovePendingClaimStep(kind: PendingClaimKind, claimId: string) {
+export async function autoApprovePendingClaimStep(
+  kind: PendingClaimKind,
+  claimId: string,
+  claimedAtIso?: string,
+) {
   "use step";
 
-  if (!await isStillPending(kind, claimId)) {
+  if (!await isStillPending(kind, claimId, claimedAtIso)) {
     return { status: "superseded" as const, kind, claimId };
   }
 
   try {
-    if (kind === "trade") await approveTrade(claimId);
-    else await approveRequest(claimId);
+    // The claim can still change between the check above and the approval
+    // transaction; pinning it there closes that gap.
+    if (kind === "trade") {
+      await approveTrade(claimId, null, claimedAtIso === undefined ? {} : { expectedClaimedAt: claimedAtIso });
+    } else {
+      await approveRequest(claimId);
+    }
     await reportPendingClaimAutoApproval(kind, claimId, null);
     return { status: "approved" as const, kind, claimId };
   } catch (error) {
@@ -87,7 +113,7 @@ export async function autoApprovePendingClaimStep(kind: PendingClaimKind, claimI
       // check above and the approve call — staff decided, or a second run for a
       // re-claimed post got there first. Reporting "could not be approved" then
       // sends reviewers after work that is already done.
-      if (!await isStillPending(kind, claimId)) {
+      if (!await isStillPending(kind, claimId, claimedAtIso)) {
         return { status: "superseded" as const, kind, claimId };
       }
       await reportPendingClaimAutoApproval(kind, claimId, error.message);

@@ -121,6 +121,31 @@ Replace Asana-based shift scheduling with a native shift calendar in Wisconsin C
 - Sports code mappings (existing — `src/lib/sports.ts`)
 
 ## Change Log
+- 2026-09-23: **Draft identity, pending-claim visibility, hashed feed tokens (local).**
+  - **Drafts:** the working-copy editor reports `draftId` (the draft row's `createdAt`). PATCH, undo/redo, rebase, discard and publish accept `expectedDraftId`, and a mismatch returns 409 inside the version-check transaction. Legacy clients that omit it are unchanged.
+  - **Open Work:** reports `openShiftsTruncated` and `pickupRequestsTruncated` instead of silently capping at 100.
+  - **Shift calendar tokens:** stored as `sha256:` digests, and the feed matches by digest (legacy raw tokens still match). `GET /api/shifts/ics-token` reports `hasToken` and returns a legacy raw token once while upgrading it. `X-ICS-Token-Check` reports whether a held link is current. POST returns the raw token and a canonical `feedUrl` once. `/api/users/[id]` returns only `hasIcsToken` to the owner.
+  - No migration.
+- 2026-09-23: **Schedule and Trade Board stress pass (local).**
+  - **Trades:**
+    - Approve and decline return the full trade shape.
+    - Other students' availability notes are no longer sent to students.
+    - Claim auto-approval and schedule auto-release only fire for the claim or draft they were started for, keyed on `claimedAt` and `autoReleaseRunId`.
+    - Trades on cancelled, archived or hidden events drop off the board and refuse claim/approve with 409.
+    - Approval copies the poster's personal call window to the claimer.
+    - Post, approve, decline and cancel retry serialization conflicts, and return 409 for state conflicts.
+    - Admins see claims awaiting review first.
+  - **Shift-group detail:** for students, it is limited to active assignments plus their own, without other people's email or conflict notes.
+  - **Shift Calendar feed:**
+    - Published crews only.
+    - Revision numbers no longer step back when a trade is cancelled.
+    - The newest 500 shifts are kept rather than the oldest.
+    - The limiter keys on a digest of the token.
+    - The token is revoked on deactivation and when a user becomes a collaborator.
+    - The token is returned only to its owner.
+    - Web asks before rotating the link.
+  - `/api/my-shifts` windows use the list's visibility (not cancelled). No migration.
+- 2026-09-23: **Native Schedule is one master list with a week jump bar (local).** The List/Calendar modes and the filter sheet are replaced. A week strip jumps the list and expands into a month grid. My Shifts and Sport are toolbar toggles, event type is a chip row, and Trade Board shows a native count badge. Crew coverage shows on rows for every role. The list loads week windows, prefetching the future and revealing the past behind a deliberate pull, for every role. `/api/my-shifts` gains an optional `startDate`/`endDate` window, and `/api/calendar-events` gains an `eventId` read so a push opens events outside the loaded weeks. No permission or scheduling-policy change. See `docs/AREA_MOBILE.md`.
 - 2026-09-20: **Publish checks crew conflicts in one read and inserts added slots in one write.** Publishing a schedule ran a conflict query per retimed slot and per draft assignment and a `shift.create` per added slot. Both conflict loops now prefetch candidates for all affected workers over the union of their windows in a single query and recheck each slot's effective window in memory, and added slots are inserted with one `createManyAndReturn`. Conflict messages, blocker ordering, and the within-publish double-book check are unchanged. Acceptance: focused schedule publication tests, TypeScript, and lint passed.
 - 2026-09-20: **Removed the unused `requestShift()` and `removeAssignment()` services.** Open-shift claims go through `handleOpenShiftPickup`, and live-schedule assignment mutations are rejected by `rejectRetiredLiveScheduleMutation`, so neither function had a production caller. Their tests were deleted.
 - 2026-09-18: **Auto assign Review explains blockers and next actions (local).** Empty Review groups why events stayed out and offers Allow incomplete crews when Full crews only held the batch. Authenticated visual proof remains a local gate.

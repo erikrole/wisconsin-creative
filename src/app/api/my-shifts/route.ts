@@ -8,6 +8,7 @@ import { isShiftAssignmentAcknowledged } from "@/lib/schedule-publication-types"
 import { studentCallTimeAppliesToEvent } from "@/lib/shift-call-windows";
 import { gearStatusForBooking, gearStatusPriority } from "@/lib/booking-status-display";
 import { unique } from "@/lib/utils";
+import { assertDateOrder, parseOptionalDate } from "@/lib/api-dates";
 
 /**
  * GET /api/my-shifts
@@ -16,6 +17,8 @@ import { unique } from "@/lib/utils";
  *
  * Query params:
  *   - eventId: (optional) filter to a specific event
+ *   - startDate / endDate: (optional) an event window, for Schedule scrolling
+ *     back into past weeks; without them the route returns upcoming shifts
  *   - userId:  (optional, defaults to the caller) whose shifts to return
  *   - limit:   (optional, default 5) max results
  *   - offset:  (optional, default 0) page offset
@@ -37,6 +40,9 @@ export const GET = withAuth(async (req, { user }) => {
   // Schedule tab already shows who is covering what to everyone -- and a
   // teammate's profile needs them to answer "what is this person up to".
   const targetUserId = url.searchParams.get("userId") || user.id;
+  const windowStart = parseOptionalDate(url.searchParams.get("startDate"), "startDate");
+  const windowEnd = parseOptionalDate(url.searchParams.get("endDate"), "endDate");
+  assertDateOrder(windowStart, windowEnd);
 
   const now = new Date();
 
@@ -48,6 +54,16 @@ export const GET = withAuth(async (req, { user }) => {
       shiftGroup: {
         event: eventId
           ? { id: eventId }
+          : windowStart || windowEnd
+          ? {
+              ...(windowStart ? { endsAt: { gt: windowStart } } : {}),
+              ...(windowEnd ? { startsAt: { lte: windowEnd } } : {}),
+              // The same visibility the Schedule list applies to these weeks
+              // (anything not cancelled), so a tentative event the list shows
+              // still carries your shift.
+              status: { not: "CANCELLED" },
+              archivedAt: null,
+            }
           // Keep a shift on today's events listed until local midnight (endsAt
           // past the start of today), so an all-day shift doesn't vanish at
           // 12:00am and an evening game's shift isn't hidden the moment it ends.

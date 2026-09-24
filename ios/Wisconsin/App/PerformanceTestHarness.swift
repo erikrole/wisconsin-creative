@@ -457,8 +457,8 @@ final class FixtureAPIProtocol: URLProtocol, @unchecked Sendable {
         case "/api/shift-trades": return TradeBoardFixtureAPI.trades
         case "/api/schedule/open-work": return TradeBoardFixtureAPI.openWork
         case "/api/shift-groups": return ScheduleFixtureAPI.shiftGroups(for: request)
-        case "/api/calendar-events": return ScheduleFixtureAPI.calendarEvents
-        case "/api/my-shifts": return ScheduleFixtureAPI.myShifts
+        case "/api/calendar-events": return ScheduleFixtureAPI.calendarEvents(for: request)
+        case "/api/my-shifts": return ScheduleFixtureAPI.myShifts(for: request)
         case "/api/bookings": return BookingFixtureAPI.list(for: request)
         case let path where path.hasPrefix("/api/bookings/"):
             let bookingId = String(path.dropFirst("/api/bookings/".count))
@@ -1710,9 +1710,80 @@ enum ScheduleFixtureAPI {
         """.utf8)
     }
 
+    static func calendarEvents(for request: URLRequest) -> Data {
+        windowed(calendarEvents, request: request, eventOf: { $0 })
+    }
+
+    static func myShifts(for request: URLRequest) -> Data {
+        windowed(myShifts, request: request, eventOf: { $0["event"] as? [String: Any] })
+    }
+
+    /// Applies the Schedule's `startDate`/`endDate` window the way the routes
+    /// do (the event ends after the start and starts by the end), so scrolling
+    /// into earlier or later weeks loads different rows in the harness too.
+    private static func windowed(
+        _ data: Data,
+        request: URLRequest,
+        eventOf: ([String: Any]) -> [String: Any]?
+    ) -> Data {
+        let items = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)?.queryItems ?? []
+        let parser = ISO8601DateFormatter()
+        func date(_ name: String) -> Date? {
+            items.first(where: { $0.name == name })?.value.flatMap { parser.date(from: $0) }
+        }
+        let start = date("startDate")
+        let end = date("endDate")
+        let eventId = items.first(where: { $0.name == "eventId" })?.value
+        if let eventId,
+           let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let rows = object["data"] as? [[String: Any]] {
+            let kept = rows.filter { ($0["id"] as? String) == eventId }
+            return (try? JSONSerialization.data(withJSONObject: ["data": kept, "total": kept.count])) ?? data
+        }
+        guard start != nil || end != nil,
+              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let rows = object["data"] as? [[String: Any]] else { return data }
+        let fractional = ISO8601DateFormatter()
+        fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        func parse(_ value: Any?) -> Date? {
+            guard let text = value as? String else { return nil }
+            return parser.date(from: text) ?? fractional.date(from: text)
+        }
+        let kept = rows.filter { row in
+            guard let event = eventOf(row),
+                  let startsAt = parse(event["startsAt"]),
+                  let endsAt = parse(event["endsAt"]) else { return false }
+            if let start, endsAt <= start { return false }
+            if let end, startsAt > end { return false }
+            return true
+        }
+        let payload: [String: Any] = ["data": kept, "total": kept.count]
+        return (try? JSONSerialization.data(withJSONObject: payload)) ?? data
+    }
+
     static var calendarEvents: Data {
         let events = """
         [
+          { "id": "e20", "summary": "Men's Hockey vs Michigan", "startsAt": "\(at(-20, 19))",
+            "endsAt": "\(at(-20, 22))", "allDay": false, "status": "CONFIRMED",
+            "sportCode": "MHKY", "opponent": "Michigan", "isHome": true,
+            "location": { "id": "loc-kc", "name": "Kohl Center" },
+            "coverage": { "total": 4, "filled": 4, "percentage": 100 } },
+          { "id": "e21", "summary": "Wrestling vs Iowa", "startsAt": "\(at(-9, 19))",
+            "endsAt": "\(at(-9, 21))", "allDay": false, "status": "CONFIRMED",
+            "sportCode": "WRES", "opponent": "Iowa", "isHome": true,
+            "location": { "id": "loc-fh", "name": "UW Field House" },
+            "coverage": { "total": 3, "filled": 3, "percentage": 100 } },
+          { "id": "e22", "summary": "Football at Northwestern", "startsAt": "\(at(12, 11))",
+            "endsAt": "\(at(12, 14, 30))", "allDay": false, "status": "CONFIRMED",
+            "sportCode": "FB", "opponent": "Northwestern", "isHome": false,
+            "location": null, "rawLocationText": "Ryan Field",
+            "coverage": { "total": 8, "filled": 5, "percentage": 63 } },
+          { "id": "e23", "summary": "Men's Basketball vs Marquette", "startsAt": "\(at(52, 19))",
+            "endsAt": "\(at(52, 21, 30))", "allDay": false, "status": "CONFIRMED",
+            "sportCode": "MBB", "opponent": "Marquette", "isHome": true,
+            "location": { "id": "loc-kc", "name": "Kohl Center" },
+            "coverage": { "total": 6, "filled": 2, "percentage": 33 } },
           { "id": "e1", "summary": "Volleyball vs Nebraska", "startsAt": "\(at(0, 11))",
             "endsAt": "\(at(0, 14))", "allDay": false, "status": "CONFIRMED",
             "sportCode": "VB", "opponent": "Nebraska", "isHome": true,
@@ -1768,7 +1839,7 @@ enum ScheduleFixtureAPI {
             "coverage": { "total": 3, "filled": 3, "percentage": 100 } }
         ]
         """
-        return Data("{ \"data\": \(events), \"total\": 9 }".utf8)
+        return Data("{ \"data\": \(events), \"total\": 13 }".utf8)
     }
 
     /// Event detail reads the crew roster from here. Keyed off the requested
@@ -1861,6 +1932,12 @@ enum ScheduleFixtureAPI {
     static var myShifts: Data {
         let shifts = """
         [
+          { "id": "s0", "area": "VIDEO", "workerType": "ST", "startsAt": "\(at(-9, 18))",
+            "endsAt": "\(at(-9, 21))", "status": "COMPLETED",
+            "event": { "id": "e21", "summary": "Wrestling vs Iowa", "startsAt": "\(at(-9, 19))",
+                       "endsAt": "\(at(-9, 21))", "sportCode": "WRES", "isHome": true,
+                       "opponent": "Iowa", "locationId": "loc-fh", "locationName": "UW Field House" },
+            "gear": { "status": "none", "bookings": [] } },
           { "id": "s1", "area": "CAMERA", "workerType": "ST", "startsAt": "\(at(0, 9, 30))",
             "endsAt": "\(at(0, 14, 30))", "status": "ACTIVE",
             "event": { "id": "e1", "summary": "Volleyball vs Nebraska", "startsAt": "\(at(0, 11))",
@@ -1902,7 +1979,9 @@ struct TradeBoardHarnessView: View {
         TradeBoardSheet(
             myShifts: [],
             currentUserId: isStaff ? TradeBoardFixtures.staff.id : TradeBoardFixtures.student.id,
-            currentUserRole: isStaff ? "STAFF" : "STUDENT"
+            // Claim review is Admin-only, so the review-queue scenario signs
+            // in as an Admin.
+            currentUserRole: isStaff ? "ADMIN" : "STUDENT"
         )
         .onAppear {
             session.currentUser = isStaff ? TradeBoardFixtures.staff : TradeBoardFixtures.student
@@ -1915,7 +1994,7 @@ enum TradeBoardFixtures {
         id: "fixture-staff",
         name: "Jordan Lee",
         email: "jordan.lee@wisc.edu",
-        role: "STAFF",
+        role: "ADMIN",
         affiliation: nil,
         collaboratorProfile: nil,
         capabilities: [],

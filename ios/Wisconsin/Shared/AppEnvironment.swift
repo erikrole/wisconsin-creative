@@ -60,6 +60,8 @@ enum AppEnvironment {
 
     static func webcalURL(path: String) -> URL? {
         let normalizedPath = path.hasPrefix("/") ? path : "/\(path)"
-        return URL(string: "webcal://\(canonicalHost)\(normalizedPath)")
+        // The host that issued the token serves its feed; the App Review host
+        // may not share the canonical host's data.
+        return URL(string: "webcal://\(activeAPIHost)\(normalizedPath)")
     }
 }

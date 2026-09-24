@@ -3,7 +3,12 @@ import { venueToneFromEvent } from "@/lib/venue-tone";
 import { source } from "./_helpers/source";
 
 const models = source("ios/Wisconsin/Models/ScheduleModels.swift");
-const scheduleView = source("ios/Wisconsin/Views/ScheduleView.swift");
+// The Schedule surface spans the root view, the list row, and the week strip.
+const scheduleView = [
+  "ios/Wisconsin/Views/ScheduleView.swift",
+  "ios/Wisconsin/Views/Schedule/ScheduleEventRow.swift",
+  "ios/Wisconsin/Views/Schedule/ScheduleWeekStrip.swift",
+].map((file) => source(file)).join("\n");
 const eventDetail = source("ios/Wisconsin/Views/EventDetailSheet.swift");
 const tones = source("ios/Wisconsin/Core/SemanticTones.swift");
 const eventsRoute = source("src/app/api/calendar-events/route.ts");
@@ -53,9 +58,9 @@ describe("iOS Schedule venue parity", () => {
   it("routes every Schedule venue surface through the resolver", () => {
     expect(tones).toContain("func venueTone(_ venue: ScheduleVenue) -> StatusTone");
     expect(tones).toContain("func venueRailColor(for event: ScheduleEvent) -> Color");
-    // Row rail, calendar dot, row label, filter, and Event detail all read it.
-    expect(scheduleView).toContain("venueRailColor(for: event)");
-    expect(scheduleView).toContain("DotInfo(color: venueRailColor(for: event)");
+    // Row dot, strip dot, row label, filter, and Event detail all read it.
+    expect(scheduleView).toContain("VenueDot(color: venueRailColor(for: event))");
+    expect(scheduleView).toMatch(/DotInfo\(\s*color: venueRailColor\(for: event\)/);
     expect(scheduleView).toContain("case .home: return event.venue == .home");
     expect(eventDetail).toContain("venueRailColor(for: event)");
     expect(eventDetail).toContain("switch event.venue {");
@@ -84,8 +89,8 @@ describe("iOS Schedule row restraint", () => {
     expect(eventDetail).toContain("CoverageChip(coverage: coverage, showsLabel: true)");
   });
 
-  it("uses one border treatment for every row", () => {
-    expect(scheduleView).toContain(".strokeBorder(Color.hairline, lineWidth: 0.5)");
+  it("draws rows as grouped cells, not bordered cards", () => {
+    expect(scheduleView).toContain("EventRowGroupPosition(index: index, count: events.count)");
     expect(scheduleView).not.toContain("private var rowStroke:");
     expect(scheduleView).not.toContain("private var rowStrokeWidth");
   });
@@ -93,19 +98,22 @@ describe("iOS Schedule row restraint", () => {
 
 describe("iOS Schedule calendar chrome", () => {
   it("names grey in the dot legend it draws", () => {
-    expect(scheduleView).toContain('LegendDot(color: Color.statusText(.gray), systemImage: "circle.grid.2x2.fill", label: "Other")');
+    expect(scheduleView).toContain('LegendDot(color: Color.statusText(.gray), label: "Other")');
     expect(scheduleView).toContain('.accessibilityLabel("Legend: my shift, home, away, other")');
   });
 
-  it("tells a clear day apart from a filtered one", () => {
-    expect(scheduleView).toContain("private func hiddenEventCount(on date: Date) -> Int");
-    expect(scheduleView).toContain('return "Filters hide " + noun + " on " + dayLabel');
-    expect(scheduleView).toContain('Button("Clear Filters") { onClearFilters() }');
-    expect(scheduleView).toContain("onClearFilters: clearFiltersAction");
+  it("only marks days the filtered list can jump to", () => {
+    // Strip and month-grid marks come from the same filtered groups the list
+    // draws, so a dot always has a row behind it and a filtered-out day reads
+    // as empty rather than promising events the list will not show.
+    expect(scheduleView).toContain("marksByDay: dayMarks(for: groups)");
+    expect(scheduleView).toContain("private func dayMarks(for groups:");
+    expect(scheduleView).toContain('Button("Clear Filters") { clearScheduleFilters() }');
   });
 
   it("does not print a separator with nothing after it", () => {
     // "Away ·" rendered whenever an away or neutral game had no mapped venue.
-    expect(scheduleView).toContain("if venueName != nil { metaDot }");
+    // The meta line now joins only the parts it has.
+    expect(scheduleView).toContain('return parts.isEmpty ? nil : parts.joined(separator: " · ")');
   });
 });

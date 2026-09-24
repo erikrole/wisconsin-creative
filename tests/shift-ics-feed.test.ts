@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import { hashIcsToken } from "@/lib/ics-token";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/db", () => ({
@@ -103,7 +105,10 @@ describe("shift ICS feed hardening", () => {
     expect(res.status).toBe(429);
     expect(res.headers.get("Retry-After")).toBeTruthy();
     expect(checkRateLimit).toHaveBeenCalledWith("shifts:ics:ip:203.0.113.10", { max: 120, windowMs: 60_000 });
-    expect(checkRateLimit).toHaveBeenCalledWith(`shifts:ics:token:${validToken}`, { max: 30, windowMs: 60_000 });
+    // The token limiter keys on a digest, never the raw feed credential.
+    const tokenKey = createHash("sha256").update(validToken).digest("hex").slice(0, 32);
+    expect(checkRateLimit).toHaveBeenCalledWith(`shifts:ics:token:${tokenKey}`, { max: 30, windowMs: 60_000 });
+    expect(checkRateLimit).not.toHaveBeenCalledWith(`shifts:ics:token:${validToken}`, expect.anything());
     expect(db.user.findFirst).not.toHaveBeenCalled();
   });
 
@@ -111,8 +116,9 @@ describe("shift ICS feed hardening", () => {
     const res = await GET(request(), { params: Promise.resolve({ token: validToken }) });
 
     expect(res.status).toBe(200);
+    // Hashed tokens match by digest; pre-hashing tokens still match raw.
     expect(db.user.findFirst).toHaveBeenCalledWith({
-      where: { icsToken: validToken, active: true },
+      where: { icsToken: { in: [hashIcsToken(validToken), validToken] }, active: true },
     });
     expect(db.shiftAssignment.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -122,8 +128,9 @@ describe("shift ICS feed hardening", () => {
           shift: {
             startsAt: { gte: expect.any(Date), lte: expect.any(Date) },
             // Cancelled/archived events must drop out of the feed — that's
-            // how subscribed calendar apps remove them.
-            shiftGroup: { event: { status: "CONFIRMED", archivedAt: null } },
+            // how subscribed calendar apps remove them. Unpublished crews
+            // never reach it.
+            shiftGroup: { publishedAt: { not: null }, event: { status: "CONFIRMED", archivedAt: null } },
           },
         }),
         include: expect.objectContaining({
@@ -146,10 +153,13 @@ describe("shift ICS feed hardening", () => {
               }),
             }),
           }),
-          trades: expect.objectContaining({
-            where: { status: { in: ["OPEN", "CLAIMED"] } },
-          }),
+          // Recent trades of any status, so a cancelled trade still moves the
+          // revision forward instead of back.
+          trades: expect.objectContaining({ take: 3 }),
         }),
+        // Newest first before the cap: a heavy schedule drops old history,
+        // not its furthest-out work.
+        orderBy: { shift: { startsAt: "desc" } },
         take: 500,
       }),
     );

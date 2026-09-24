@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { source } from "./_helpers/source";
+import { scheduleSurfaceSource, source } from "./_helpers/source";
 
 const CREW_ROW = "ios/Wisconsin/Views/Components/CrewRow.swift";
 const EVENT_DETAIL = "ios/Wisconsin/Views/EventDetailSheet.swift";
@@ -48,7 +48,7 @@ describe("iOS crew row standardization", () => {
 
   it("shows the filled count on area headings, like the web crew table", () => {
     const eventDetail = source(EVENT_DETAIL);
-    const schedule = source(SCHEDULE);
+    const schedule = scheduleSurfaceSource();
 
     expect(eventDetail).toContain("CrewAreaHeading(area: area, filled: filledCount, total: shifts.count)");
     expect(eventDetail).toContain("shifts.filter { !$0.isOpen }.count");
@@ -58,7 +58,7 @@ describe("iOS crew row standardization", () => {
   });
 
   it("keeps call times quiet on every crew surface", () => {
-    const schedule = source(SCHEDULE);
+    const schedule = scheduleSurfaceSource();
     const publishedRow = schedule.slice(
       schedule.indexOf("private struct PublishedCrewRow"),
       schedule.indexOf("private struct PublishedEventRowSkeleton"),

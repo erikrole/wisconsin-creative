@@ -7,6 +7,7 @@ import { updateShiftGroupSchema } from "@/lib/validation";
 import { createAuditEntry } from "@/lib/audit";
 import { getSchedulePublicationState } from "@/lib/services/schedule-publication";
 import { studentCallTimeAppliesToEvent } from "@/lib/shift-call-windows";
+import { ACTIVE_ASSIGNMENT_STATUSES } from "@/lib/shift-constants";
 
 export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
   requirePermission(user.role, "shift", "view");
@@ -37,6 +38,9 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
   const staffCanSeeWorkingState = user.role === "ADMIN" || user.role === "STAFF";
   const studentCallTimeVisible = user.role !== "STUDENT"
     || (!group.event.allDay && studentCallTimeAppliesToEvent(group.event));
+  // A student sees who is working, not the staffing ledger: other people's
+  // declined or pending requests, contact details, conflict notes, and who
+  // assigned them stay with staff. Their own rows come back whole.
   const responseGroup = user.role === "STUDENT"
     ? {
         ...groupData,
@@ -44,12 +48,33 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
           ...shift,
           callStartsAt: shift.workerType === "ST" && studentCallTimeVisible ? shift.callStartsAt : null,
           callEndsAt: shift.workerType === "ST" && studentCallTimeVisible ? shift.callEndsAt : null,
-          assignments: shift.assignments.map((assignment) => ({
-            ...assignment,
-            callStartsAt: shift.workerType === "ST" && studentCallTimeVisible ? assignment.callStartsAt : null,
-            callEndsAt: shift.workerType === "ST" && studentCallTimeVisible ? assignment.callEndsAt : null,
-            callNote: shift.workerType === "ST" && studentCallTimeVisible ? assignment.callNote : null,
-          })),
+          assignments: shift.assignments
+            .filter((assignment) =>
+              assignment.userId === user.id
+              || (ACTIVE_ASSIGNMENT_STATUSES as readonly string[]).includes(assignment.status))
+            .map((assignment) => {
+              const callFields = {
+                callStartsAt: shift.workerType === "ST" && studentCallTimeVisible ? assignment.callStartsAt : null,
+                callEndsAt: shift.workerType === "ST" && studentCallTimeVisible ? assignment.callEndsAt : null,
+                callNote: shift.workerType === "ST" && studentCallTimeVisible ? assignment.callNote : null,
+              };
+              if (assignment.userId === user.id) return { ...assignment, ...callFields };
+              return {
+                ...assignment,
+                ...callFields,
+                user: {
+                  id: assignment.user.id,
+                  name: assignment.user.name,
+                  role: assignment.user.role,
+                  staffingType: assignment.user.staffingType,
+                  primaryArea: assignment.user.primaryArea,
+                },
+                hasConflict: false,
+                conflictNote: null,
+                assignedBy: null,
+                assigner: null,
+              };
+            }),
         })),
       }
     : groupData;

@@ -441,7 +441,9 @@ export async function deactivateUserWithCleanup(args: {
           notificationPrefs: Prisma.JsonNull,
           icsToken: null,
         }
-        : { active: false },
+        // Revoke the calendar feed on every deactivation, so a reactivated
+        // account does not quietly resume serving an old shared link.
+        : { active: false, icsToken: null },
     });
 
     const result = {

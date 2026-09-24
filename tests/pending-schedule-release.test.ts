@@ -175,4 +175,81 @@ describe("pending schedule release step", () => {
       data: { autoReleaseError: "Resolve the active trade first." },
     });
   });
+
+  describe("run ownership", () => {
+    // Publish and discard delete the draft, and the next one restarts at
+    // version 1. An old run matching on version alone would publish it early.
+    beforeEach(() => {
+      mocks.findUnique.mockResolvedValue({
+        version: 1,
+        autoReleaseRunId: "run-new",
+        updatedById: "staff-1",
+        updatedBy: { role: "STAFF" },
+        shiftGroup: { event: { endsAt: new Date("2026-09-01T20:00:00.000Z") } },
+      });
+    });
+
+    it("stands down when a recreated draft reuses the version but belongs to a newer run", async () => {
+      await expect(releasePendingScheduleVersion("group-1", 1, undefined, "run-old")).resolves.toEqual({
+        status: "superseded",
+        shiftGroupId: "group-1",
+        expectedVersion: 1,
+      });
+      expect(mocks.publishShiftGroup).not.toHaveBeenCalled();
+    });
+
+    it("records a superseded bulk item for a run that no longer owns the draft", async () => {
+      await releasePendingScheduleVersion("group-1", 1, "batch-1", "run-old");
+      expect(mocks.recordBulkOutcome).toHaveBeenCalledWith(expect.objectContaining({ status: "SUPERSEDED" }));
+    });
+
+    it("releases the draft its own run owns and re-checks ownership inside publish", async () => {
+      mocks.publishShiftGroup.mockResolvedValue({
+        before: { publishedAt: "2026-08-07T12:00:00.000Z" },
+        after: {},
+        publishedSnapshotChanged: false,
+        affectedUserIds: [],
+      });
+
+      await expect(releasePendingScheduleVersion("group-1", 1, undefined, "run-new"))
+        .resolves.toMatchObject({ status: "released" });
+      expect(mocks.publishShiftGroup).toHaveBeenCalledWith(
+        "group-1",
+        "staff-1",
+        1,
+        "STAFF",
+        { expectedAutoReleaseRunId: "run-new" },
+      );
+    });
+
+    it("does not stamp a blocker on a draft another run took over mid-publish", async () => {
+      mocks.findUnique
+        .mockResolvedValueOnce({
+          version: 1,
+          autoReleaseRunId: "run-new",
+          updatedById: "staff-1",
+          updatedBy: { role: "STAFF" },
+          shiftGroup: { event: { endsAt: new Date("2026-09-01T20:00:00.000Z") } },
+        })
+        .mockResolvedValueOnce({ version: 1, autoReleaseRunId: "run-newer" });
+      mocks.publishShiftGroup.mockRejectedValue(
+        new HttpError(409, "This automatic release was superseded by a newer schedule draft."),
+      );
+
+      await expect(releasePendingScheduleVersion("group-1", 1, undefined, "run-new"))
+        .resolves.toMatchObject({ status: "superseded" });
+      expect(mocks.updateMany).not.toHaveBeenCalled();
+    });
+
+    it("scopes a persisted blocker to the owning run", async () => {
+      mocks.publishShiftGroup.mockRejectedValue(new HttpError(409, "Resolve the active trade first."));
+
+      await expect(releasePendingScheduleVersion("group-1", 1, undefined, "run-new"))
+        .resolves.toMatchObject({ status: "blocked" });
+      expect(mocks.updateMany).toHaveBeenCalledWith({
+        where: { shiftGroupId: "group-1", version: 1, autoReleaseRunId: "run-new" },
+        data: { autoReleaseError: "Resolve the active trade first." },
+      });
+    });
+  });
 });

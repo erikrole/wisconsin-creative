@@ -1,6 +1,19 @@
 # Task Queue
 
-Last updated: 2026-09-03
+Last updated: 2026-09-23
+
+---
+## Deferred from the Schedule stress pass (2026-09-23)
+
+Fixed in the pass: see `docs/AREA_MOBILE.md` and `docs/AREA_SHIFTS.md` changelog entries for 2026-09-23. These were found and left open on purpose:
+
+- [x] Event detail: surface pending student claims on open slots. The working-copy editor drops `pendingClaims`, so Admin Approve/Decline from Event detail never renders (BRK-D-05); Trade Board still covers review. Fixed 2026-09-23.
+- [x] Draft identity on working-copy mutations: a stale client holding v1 of an old draft can land an edit on a new v1 draft (BRK-D-02). Needs a draft id on PATCH/publish/discard. Fixed 2026-09-23.
+- [x] Shift Calendar: store `icsToken` hashed and return the raw token only from POST (BRK-C-03 long-term half; the admin exposure is fixed). Fixed 2026-09-23.
+- [x] Web feed URL uses the current origin instead of a canonical public app URL (BRK-C-08). Fixed 2026-09-23.
+- [x] Two devices resetting the feed at once can leave one on a dead link beyond the one-minute re-read window (BRK-C-10). Fixed 2026-09-23.
+- [x] Open Work silently caps at 100 shifts with no total (BRK-B-11); Trade Board rows ignore the poster's personal call time and all-day UTC dates in the time line (BRK-B-13). Fixed 2026-09-23.
+- [ ] Decide whether completed/cancelled trade history on cancelled events should also be hidden (currently only OPEN/CLAIMED are filtered).
 
 ---
 ## In progress: Combined Schedule events (2026-09-03)
