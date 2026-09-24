@@ -96,22 +96,20 @@ struct ItemRowSkeleton: View {
 
 // MARK: - Event list row
 
+/// Matches the Schedule list row: a venue dot, two text lines, time trailing.
+/// The grouped List section supplies the surface.
 struct EventRowSkeleton: View {
     var body: some View {
-        VStack(alignment: .leading, spacing: 7) {
-            Skeleton().frame(width: 200, height: 15)
-            Skeleton().frame(width: 130, height: 12)
-            Skeleton(cornerRadius: 10).frame(width: 88, height: 20)
+        HStack(alignment: .top, spacing: 12) {
+            Skeleton(cornerRadius: 4).frame(width: 8, height: 8).padding(.top, 5)
+            VStack(alignment: .leading, spacing: 7) {
+                Skeleton().frame(width: 190, height: 15)
+                Skeleton().frame(width: 120, height: 12)
+            }
+            Spacer(minLength: 8)
+            Skeleton().frame(width: 52, height: 13)
         }
-        .padding(.vertical, 12)
-        .padding(.horizontal, 14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.cardSurface)
-        .clipShape(RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous)
-                .strokeBorder(Color.hairline, lineWidth: 0.5)
-        )
+        .padding(.vertical, 4)
     }
 }
 

@@ -68,7 +68,8 @@ export type UserDetail = UserRow & {
   wiscardIssueCode: string | null;
   sportAssignments: SportAssignment[];
   areaAssignments: AreaAssignment[];
-  icsToken?: string | null;
+  /** Present only for the viewer's own profile. */
+  hasIcsToken?: boolean;
   /** W-L-T tally across games this user held a shift assignment on. */
   gameRecord?: {
     eventsWorked: number;

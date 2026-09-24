@@ -139,6 +139,39 @@ export const workingScheduleHistoryStackSchema = z.array(workingScheduleHistoryE
 
 export type WorkingScheduleHistoryEntry = z.infer<typeof workingScheduleHistoryEntrySchema>;
 
+/**
+ * Stable identity for one private working copy.
+ *
+ * The working-copy row is keyed by its shift group, and its version restarts at
+ * 1 whenever a draft is recreated after publish or discard, so "version 1" alone
+ * cannot tell an old draft from its replacement. The row's creation instant is
+ * fixed for the life of one draft and changes when a new one is created, which
+ * makes it a migration-free draft identity.
+ */
+export function workingScheduleDraftId(workingCopy: { createdAt: Date } | null | undefined): string | null {
+  return workingCopy ? workingCopy.createdAt.toISOString() : null;
+}
+
+/**
+ * Optional draft identity a client echoes back with a versioned mutation.
+ * Absent means a legacy client and skips the check; `null` or `""` means the
+ * client expects no draft to exist yet.
+ */
+export const expectedWorkingScheduleDraftIdSchema = z.string().max(64).nullable().optional();
+
+/**
+ * Compare a client's expected draft identity with the current working copy.
+ * Call this inside the same transaction as the expected-version check.
+ */
+export function workingScheduleDraftMatches(
+  workingCopy: { createdAt: Date } | null | undefined,
+  expectedDraftId: string | null | undefined,
+): boolean {
+  if (expectedDraftId === undefined) return true;
+  const expected = expectedDraftId === "" ? null : expectedDraftId;
+  return workingScheduleDraftId(workingCopy) === expected;
+}
+
 function titleCaseScheduleWord(value: string) {
   return value.charAt(0) + value.slice(1).toLowerCase();
 }

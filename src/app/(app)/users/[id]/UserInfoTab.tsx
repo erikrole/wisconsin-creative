@@ -37,6 +37,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { Separator } from "@/components/ui/separator";
 import { SaveableField, useSaveField } from "@/components/SaveableField";
 import { OperationalRowActions } from "@/components/OperationalRowActions";
@@ -1116,7 +1117,7 @@ export default function UserInfoTab({
 
       {isSelf && (
         <CalendarSubscriptionCard
-          initialToken={user.icsToken ?? null}
+          initialHasToken={user.hasIcsToken ?? false}
           onTokenChange={onUpdated}
         />
       )}
@@ -1392,22 +1393,52 @@ function MyHoursCard() {
 /* ── Calendar Subscription Card ─────────────────────────── */
 
 function CalendarSubscriptionCard({
-  initialToken,
+  initialHasToken,
   onTokenChange,
 }: {
-  initialToken: string | null;
+  initialHasToken: boolean;
   onTokenChange: () => void;
 }) {
-  const [token, setToken] = useState(initialToken);
+  // The feed token is stored as a hash, so the URL is only known right after
+  // it is created (or once, when a pre-hashing token is upgraded on read).
+  const [hasToken, setHasToken] = useState(initialHasToken);
+  const [feedUrl, setFeedUrl] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
+  const confirm = useConfirm();
 
-  const feedUrl = token
-    ? `${typeof window !== "undefined" ? window.location.origin : ""}/api/shifts/ics/${token}`
-    : null;
   const webcalUrl = feedUrl ? feedUrl.replace(/^https?/, "webcal") : null;
+
+  useEffect(() => {
+    if (!initialHasToken) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch("/api/shifts/ics-token");
+        if (!res.ok || cancelled) return;
+        const json = await parseJsonSafely<ApiEnvelope<{ feedUrl?: string | null }>>(res);
+        if (!cancelled && json?.data?.feedUrl) setFeedUrl(json.data.feedUrl);
+      } catch {
+        // The card still offers Reset without the one-time URL.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [initialHasToken]);
 
   async function generateToken() {
     if (generating) return;
+    // Rotating breaks every existing subscription, so it asks first -- the
+    // same warning the iOS sheet gives.
+    if (hasToken) {
+      const ok = await confirm({
+        title: "Reset private link?",
+        message: "Existing calendar subscriptions will stop updating. You'll need to subscribe again with the new link.",
+        confirmLabel: "Reset link",
+        variant: "danger",
+      });
+      if (!ok) return;
+    }
     setGenerating(true);
     try {
       const res = await fetch("/api/shifts/ics-token", { method: "POST" });
@@ -1416,8 +1447,9 @@ function CalendarSubscriptionCard({
         const msg = await parseErrorMessage(res, "Failed to generate token");
         toast.error(msg);
       } else {
-        const json = await parseJsonSafely<ApiEnvelope<{ token?: string }>>(res);
-        setToken(json?.data?.token ?? null);
+        const json = await parseJsonSafely<ApiEnvelope<{ feedUrl?: string }>>(res);
+        setFeedUrl(json?.data?.feedUrl ?? null);
+        setHasToken(true);
         onTokenChange();
       }
     } catch {
@@ -1445,11 +1477,12 @@ function CalendarSubscriptionCard({
         <CardTitle>Calendar subscription</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
-        {token ? (
+        {feedUrl ? (
           <>
             <p className="text-sm text-muted-foreground">
               Subscribe to your shifts in Apple Calendar, Google Calendar, or any app that supports ICS feeds.
-              The URL stays in sync — no re-subscribing needed.
+              The URL stays in sync — no re-subscribing needed. Copy it now: for your security it is only
+              shown when it is created.
             </p>
             <div className="flex gap-2">
               <Input
@@ -1480,6 +1513,17 @@ function CalendarSubscriptionCard({
                 Rotate URL
               </Button>
             </div>
+          </>
+        ) : hasToken ? (
+          <>
+            <p className="text-sm text-muted-foreground">
+              Your calendar feed is active. The private link is only shown when it is created, so to
+              subscribe another calendar, reset it and subscribe again with the new link.
+            </p>
+            <Button className="h-10" variant="outline" onClick={generateToken} disabled={generating}>
+              {generating ? <RefreshCw className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+              Reset link
+            </Button>
           </>
         ) : (
           <>

@@ -234,7 +234,8 @@ describe("iOS notification authorization lifecycle", () => {
 
     expect(mocks.tx.user.update).toHaveBeenCalledWith({
       where: { id: "user-1" },
-      data: { active: false },
+      // Deactivation also revokes the calendar feed token.
+      data: { active: false, icsToken: null },
     });
   });
 

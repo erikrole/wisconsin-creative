@@ -552,18 +552,32 @@ describe("iOS API contracts — mutation responses match list shapes", () => {
     expect(postSection).toMatch(/shiftGroup\.create\(\{[\s\S]*?include: \{\s*event: \{/);
   });
 
-  it("cancelTrade returns the same relations as post/claim (ShiftTrade requires them)", () => {
+  it("every trade mutation returns the relations ShiftTrade requires", () => {
     const service = source("src/lib/services/shift-trades.ts");
     const models = source("ios/Wisconsin/Models/ShiftTradeModels.swift");
 
     expect(models).toMatch(/struct ShiftTrade[\s\S]*?let postedBy: ShiftTradeUser\b/);
     expect(models).toMatch(/struct ShiftTrade[\s\S]*?let shiftAssignment: ShiftTradeAssignment\b/);
 
-    const cancelSection = service.slice(
-      service.indexOf("export async function cancelTrade"),
-      service.indexOf("export async function listTrades"),
+    const shape = service.slice(
+      service.indexOf("const tradeResponseInclude = {"),
+      service.indexOf("} satisfies Prisma.ShiftTradeInclude;"),
     );
-    expect(cancelSection).toMatch(/shiftTrade\.update\(\{[\s\S]*?include: \{[\s\S]*?shiftAssignment: \{[\s\S]*?postedBy: \{/);
+    expect(shape).toMatch(/shiftAssignment: \{[\s\S]*?shift: \{[\s\S]*?event: true/);
+    expect(shape).toContain("postedBy: { select: { id: true, name: true } }");
+    expect(shape).toContain("claimedBy: { select: { id: true, name: true } }");
+
+    // Approve and decline used to return the bare row, which iOS decoded as
+    // "Unexpected response" after the change had already committed.
+    const fns = ["claimTrade", "withdrawTradeClaim", "approveTrade", "declineTrade", "cancelTrade"];
+    for (const [index, fn] of fns.entries()) {
+      const start = service.indexOf(`export async function ${fn}(`);
+      const end = index + 1 < fns.length
+        ? service.indexOf(`export async function ${fns[index + 1]}(`)
+        : service.indexOf("export async function listTrades");
+      expect(start, fn).toBeGreaterThan(-1);
+      expect(service.slice(start, end), fn).toMatch(/shiftTrade\.update\(\{[\s\S]*?include: tradeResponseInclude/);
+    }
   });
 });
 
@@ -579,7 +593,9 @@ describe("iOS API contracts — Open Work response tolerance", () => {
     expect(service).toContain("pickupRequests: pickupRequests.map");
     expect(apiClient).toContain("let resp: DataWrapper<OpenWorkResponse> = try await perform");
     expect(models).toContain("struct OpenWorkResponse: Codable");
-    expect(models).toContain("init(openShifts: [OpenWorkShift] = [], pickupRequests: [OpenWorkPickupRequest] = [])");
+    expect(models).toContain("openShifts: [OpenWorkShift] = [],\n        pickupRequests: [OpenWorkPickupRequest] = [],");
+    // Additive: the board says when the server capped a list.
+    expect(models).toContain("openShiftsTruncated = try container.decodeIfPresent(Bool.self, forKey: .openShiftsTruncated) ?? false");
     expect(models).toContain("decodeIfPresent([OpenWorkShift].self, forKey: .openShifts) ?? []");
     expect(models).toContain("decodeIfPresent([OpenWorkPickupRequest].self, forKey: .pickupRequests) ?? []");
   });

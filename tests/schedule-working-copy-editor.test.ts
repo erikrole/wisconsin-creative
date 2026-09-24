@@ -79,6 +79,7 @@ describe("working schedule editor read model", () => {
             draftSlot("draft:maddy", "COMMS", "maddy-id"),
           ],
         },
+        createdAt: new Date("2026-07-22T11:00:00.000Z"),
         updatedAt: new Date("2026-07-22T12:00:00.000Z"),
         updatedById: "admin-1",
       },

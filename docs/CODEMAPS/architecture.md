@@ -14,7 +14,7 @@ Wisconsin Creative is a Next.js App Router application with a companion native i
 | API route handlers | 335 |
 | Service files | 91 |
 | Component files | 163 |
-| Test files | 683 |
+| Test files | 688 |
 
 ## Oversized Source Watchlist
 
@@ -32,16 +32,16 @@ Informational only. These are the largest TypeScript and TSX files under `src/`;
 | `src/app/(app)/items/[id]/ItemInfoTab.tsx` | 1582 |
 | `src/app/(app)/resources/page.tsx` | 1574 |
 | `src/app/(app)/bulk-inventory/batteries/page.tsx` | 1554 |
-| `src/app/(app)/users/[id]/UserInfoTab.tsx` | 1499 |
+| `src/app/(app)/users/[id]/UserInfoTab.tsx` | 1543 |
+| `src/lib/services/shift-trades.ts` | 1436 |
 | `src/components/ActivityTimeline.tsx` | 1387 |
-| `src/app/(app)/schedule/_components/WorkingCrewEditor.tsx` | 1352 |
-| `src/lib/services/shift-trades.ts` | 1321 |
+| `src/app/(app)/schedule/_components/WorkingCrewEditor.tsx` | 1356 |
 | `src/app/(app)/items/new-item-sheet/SerializedItemForm.tsx` | 1272 |
 | `src/hooks/use-schedule-data.ts` | 1269 |
 | `src/app/api/assets/route.ts` | 1264 |
 | `src/app/(app)/accountability/AccountabilityClient.tsx` | 1260 |
 | `src/app/(app)/items/new-item-sheet.tsx` | 1222 |
-| `src/lib/services/schedule-working-copy.ts` | 1169 |
+| `src/lib/services/schedule-working-copy.ts` | 1190 |
 
 ## High-Level Data Flow
 

@@ -68,7 +68,9 @@ struct PostTradeSheet: View {
     ) {
         let now = Date()
         let candidates = myShifts
-            .filter { $0.startsAt > now && $0.statusValue == .active }
+            // The server refuses a post once the effective call time has
+            // passed, not the event start, so offer only shifts it will take.
+            .filter { ($0.callStartsAt ?? $0.startsAt) > now && $0.statusValue == .active }
             .map { TradePostCandidate(shift: $0) }
             .sorted { $0.startsAt < $1.startsAt }
         self.candidates = candidates
@@ -211,10 +213,6 @@ struct PostTradeSheet: View {
 
     private func selectedShiftCard(_ candidate: TradePostCandidate) -> some View {
         HStack(spacing: 12) {
-            RoundedRectangle(cornerRadius: 2, style: .continuous)
-                .fill(Color.statusText(.orange))
-                .frame(width: 4, height: 68)
-
             VStack(alignment: .leading, spacing: 4) {
                 Text(candidate.eventTitle)
                     .font(.headline)

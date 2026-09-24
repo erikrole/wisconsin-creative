@@ -76,16 +76,16 @@
 | `src/lib/services/schedule-notification-diff.ts` | 236 |
 | `src/lib/services/schedule-notification-flush.ts` | 164 |
 | `src/lib/services/schedule-notification-policy.ts` | 92 |
-| `src/lib/services/schedule-open-work.ts` | 578 |
-| `src/lib/services/schedule-publication.ts` | 1095 |
+| `src/lib/services/schedule-open-work.ts` | 589 |
+| `src/lib/services/schedule-publication.ts` | 1117 |
 | `src/lib/services/schedule-template-review.ts` | 554 |
-| `src/lib/services/schedule-working-copy.ts` | 1169 |
+| `src/lib/services/schedule-working-copy.ts` | 1190 |
 | `src/lib/services/scoreboard.ts` | 282 |
 | `src/lib/services/shift-assignment-conflicts.ts` | 43 |
 | `src/lib/services/shift-assignments.ts` | 727 |
 | `src/lib/services/shift-generation.ts` | 629 |
 | `src/lib/services/shift-trade-emails.ts` | 56 |
-| `src/lib/services/shift-trades.ts` | 1321 |
+| `src/lib/services/shift-trades.ts` | 1436 |
 | `src/lib/services/signatures.ts` | 2051 |
 | `src/lib/services/software.ts` | 272 |
 | `src/lib/services/sport-auto-assign-policies.ts` | 46 |
@@ -95,7 +95,7 @@
 | `src/lib/services/status.ts` | 444 |
 | `src/lib/services/team-scoreboard.ts` | 598 |
 | `src/lib/services/usage-analytics-report.ts` | 32 |
-| `src/lib/services/user-deactivation.ts` | 569 |
+| `src/lib/services/user-deactivation.ts` | 571 |
 
 ## Key Library Files
 
@@ -139,7 +139,7 @@
 | `src/lib/checkout-escalation-policy.ts` | 117 |
 | `src/lib/checkout-notification-workflow.ts` | 24 |
 | `src/lib/claim-review-deadlines.ts` | 52 |
-| `src/lib/claim-review-workflow.ts` | 41 |
+| `src/lib/claim-review-workflow.ts` | 48 |
 | `src/lib/clipboard.ts` | 19 |
 | `src/lib/collaborator-access.ts` | 164 |
 | `src/lib/collaborator-gear.ts` | 151 |
@@ -172,6 +172,7 @@
 | `src/lib/guide-search-result.ts` | 49 |
 | `src/lib/guides.ts` | 344 |
 | `src/lib/http.ts` | 115 |
+| `src/lib/ics-token.ts` | 26 |
 | `src/lib/image-search-modal.ts` | 59 |
 | `src/lib/image-search.ts` | 240 |
 | `src/lib/item-asset-tag-sort.ts` | 244 |
@@ -240,7 +241,7 @@
 | `src/lib/schedule-timeline-window.ts` | 88 |
 | `src/lib/schedule-window.ts` | 152 |
 | `src/lib/schedule-working-copy-guard.ts` | 24 |
-| `src/lib/schedule-working-copy.ts` | 499 |
+| `src/lib/schedule-working-copy.ts` | 532 |
 | `src/lib/scoreboard-digest.ts` | 172 |
 | `src/lib/scoreboard-display.ts` | 27 |
 | `src/lib/scoreboard-explorer.ts` | 152 |

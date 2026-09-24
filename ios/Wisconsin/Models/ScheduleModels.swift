@@ -420,6 +420,9 @@ struct EventShift: Codable, Identifiable {
     let notes: String?
     let assignments: [ShiftAssignmentRecord]
     let viewerRequest: ViewerShiftRequest?
+    /// Students with a pending claim on this open slot, from the staff draft
+    /// editor. Not on the wire for this type; filled by `eventShifts()`.
+    var pendingClaimNames: [String] = []
 
     private enum CodingKeys: String, CodingKey {
         case id, area, workerType, startsAt, endsAt, callStartsAt, callEndsAt, notes, assignments, viewerRequest
@@ -435,7 +438,8 @@ struct EventShift: Codable, Identifiable {
         callEndsAt: Date? = nil,
         notes: String?,
         assignments: [ShiftAssignmentRecord],
-        viewerRequest: ViewerShiftRequest? = nil
+        viewerRequest: ViewerShiftRequest? = nil,
+        pendingClaimNames: [String] = []
     ) {
         self.id = id
         self.area = area
@@ -447,6 +451,7 @@ struct EventShift: Codable, Identifiable {
         self.notes = notes
         self.assignments = assignments
         self.viewerRequest = viewerRequest
+        self.pendingClaimNames = pendingClaimNames
     }
 
     init(from decoder: Decoder) throws {
@@ -604,6 +609,13 @@ struct WorkingScheduleEditor: Codable, Identifiable {
     let assignedUsers: [WorkingScheduleUser]
     let defaultWindow: WorkingScheduleDefaultWindow?
     let schedule: WorkingSchedulePayload
+    /// Which draft this is. Versions restart at 1 whenever a draft is
+    /// recreated, so every mutation also names the draft it was made against;
+    /// nil when there is no draft, or from a server that predates it.
+    let draftId: String?
+    /// Open-slot claims waiting on an Admin. Optional for servers that
+    /// predate it.
+    let pendingClaims: [WorkingPendingClaim]?
 
     var id: String { shiftGroupId }
     var hasUnpublishedChanges: Bool { hasWorkingCopy && changes.total > 0 }
@@ -640,10 +652,28 @@ struct WorkingScheduleEditor: Codable, Identifiable {
                 callStartsAt: slot.workerType == "ST" ? slot.assignment?.callStartsAt ?? slot.callStartsAt : nil,
                 callEndsAt: slot.workerType == "ST" ? slot.assignment?.callEndsAt ?? slot.callEndsAt : nil,
                 notes: slot.notes,
-                assignments: assignment.map { [$0] } ?? []
+                assignments: assignment.map { [$0] } ?? [],
+                // A claim belongs on an empty live slot, never on one a draft
+                // assignment has already filled (mirrors claimsForWorkingSlot).
+                pendingClaimNames: slot.assignment == nil
+                    ? (pendingClaims ?? [])
+                        .filter { $0.shiftId == slot.sourceShiftId }
+                        .map { $0.user?.name ?? "A student" }
+                    : []
             )
         }
     }
+}
+
+struct WorkingPendingClaim: Codable, Identifiable {
+    struct User: Codable {
+        let id: String
+        let name: String
+    }
+
+    let id: String
+    let shiftId: String?
+    let user: User?
 }
 
 struct SchedulePublicationState: Codable {

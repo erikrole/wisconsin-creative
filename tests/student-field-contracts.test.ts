@@ -133,18 +133,18 @@ describe("student field mobile contracts", () => {
   it("keeps iOS Schedule controls self-describing", () => {
     const scheduleView = source("ios/Wisconsin/Views/ScheduleView.swift");
 
-    expect(scheduleView).toContain("scheduleControlStrip");
-    expect(scheduleView).toContain("Picker(\"Schedule view\"");
-    expect(scheduleView).toContain("\"My shifts\"");
-    expect(scheduleView).toContain("\"Include past events\"");
+    expect(scheduleView).toContain("scheduleHeader(groups: groups)");
+    expect(scheduleView).not.toContain("Picker(\"Schedule view\"");
+    expect(scheduleView).toContain("\"My Shifts\"");
+    expect(scheduleView).toContain("\"Pull for earlier weeks\"");
     expect(scheduleView).toContain("Picker(\"Sport\"");
+    expect(scheduleView).toContain("\"Sport, all sports\"");
     // Toolbar controls are Labels, not bare Images: the title is what makes
     // them self-describing, and it lets the system own sizing and hit area.
     expect(scheduleView).toContain("Label(\n                \"Trade Board\",");
     expect(scheduleView).toContain("arrow.left.arrow.right.circle");
     expect(scheduleView).toContain("Label(\"My Availability\", systemImage: \"calendar.badge.clock\")");
     expect(scheduleView).toContain("Label(\"Shift Calendar\", systemImage: \"calendar.badge.plus\")");
-    expect(scheduleView).toContain("\"Filters, \\(activeFilterCount) active\"");
     expect(scheduleView).toContain("\"Trade Board, \\(openTradeCount) open\"");
     expect(scheduleView).toContain("accessibilityLabel(\"More Schedule actions\")");
     expect(scheduleView).not.toContain("Switch to calendar view");
@@ -204,7 +204,7 @@ describe("student field mobile contracts", () => {
     expect(eventDetail).toContain('BrandSectionHeader("Notes", systemImage: "note.text")');
     expect(eventDetail).toContain("vm.shiftGroup?.notes");
     // Your own shift card agrees with the tint the list row and ShiftRow use.
-    expect(eventDetail).toContain(".brandCard(fill: Color.statusBackground(.blue))");
+    expect(eventDetail).toContain(".brandCard(fill: Color.myShiftSurface)");
     // The pending-changes card says how many people a revert would touch.
     expect(eventDetail).toContain("vm.workingEditor?.affectedWorkerCount");
     // An empty slot is two things and one gutter -- no placeholder avatar

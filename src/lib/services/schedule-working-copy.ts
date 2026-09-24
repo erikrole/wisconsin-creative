@@ -11,6 +11,8 @@ import {
   reconcileWorkingAssignmentSources,
   summarizeWorkingScheduleChanges,
   workingScheduleCommandLabel,
+  workingScheduleDraftId,
+  workingScheduleDraftMatches,
   workingScheduleHistoryStackSchema,
   WORKING_SCHEDULE_HISTORY_LIMIT,
   type WorkingScheduleCommand,
@@ -375,6 +377,9 @@ async function editorResponse(
     publishedAt: group.publishedAt?.toISOString() ?? null,
     publishedVersion: group.publishedVersion,
     workingVersion: group.workingCopy?.version ?? 0,
+    // The version restarts at 1 for every new draft; clients echo this back as
+    // expectedDraftId so a stale "v1" cannot land on a newer draft's "v1".
+    draftId: workingScheduleDraftId(group.workingCopy),
     basePublishedVersion: group.workingCopy?.basePublishedVersion ?? group.publishedVersion,
     hasWorkingCopy: Boolean(group.workingCopy),
     updatedAt: group.workingCopy?.updatedAt.toISOString() ?? null,
@@ -449,11 +454,12 @@ export async function mutateWorkingSchedule(
   command: WorkingScheduleCommand,
   actor: { id: string; role: Role },
   autoRelease?: WorkingScheduleAutoRelease | null,
+  expectedDraftId?: string | null,
 ) {
   return db.$transaction(async (tx) => {
     const group = await findEditorGroup(shiftGroupId, tx);
     const actualVersion = group.workingCopy?.version ?? 0;
-    if (expectedVersion !== actualVersion) {
+    if (expectedVersion !== actualVersion || !workingScheduleDraftMatches(group.workingCopy, expectedDraftId)) {
       throw new HttpError(409, "This schedule changed in another session. Refresh before editing again.");
     }
 
@@ -855,10 +861,14 @@ export async function changeWorkingScheduleHistory(
   action: WorkingScheduleHistoryAction,
   actor: { id: string; role: Role },
   autoRelease?: WorkingScheduleAutoRelease | null,
+  expectedDraftId?: string | null,
 ) {
   return db.$transaction(async (tx) => {
     const group = await findEditorGroup(shiftGroupId, tx);
     const workingCopy = group.workingCopy;
+    if (!workingScheduleDraftMatches(workingCopy, expectedDraftId)) {
+      throw new HttpError(409, "This schedule changed in another session. Refresh before trying again.");
+    }
     if (!workingCopy) {
       throw new HttpError(409, `There is nothing to ${action} for this event.`);
     }
@@ -980,9 +990,13 @@ export async function rebaseWorkingSchedule(
   expectedVersion: number,
   actor: { id: string; role: Role },
   autoRelease?: WorkingScheduleAutoRelease | null,
+  expectedDraftId?: string | null,
 ) {
   return db.$transaction(async (tx) => {
     const group = await findEditorGroup(shiftGroupId, tx);
+    if (!workingScheduleDraftMatches(group.workingCopy, expectedDraftId)) {
+      throw new HttpError(409, "This schedule changed in another session. Refresh before editing again.");
+    }
     if (!group.workingCopy) {
       throw new HttpError(409, "This event has no unpublished changes to refresh.");
     }
@@ -1136,9 +1150,16 @@ export async function discardWorkingSchedule(
   shiftGroupId: string,
   expectedVersion: number,
   actor: { id: string; role: Role },
+  expectedDraftId?: string | null,
 ) {
   return db.$transaction(async (tx) => {
     const group = await findEditorGroup(shiftGroupId, tx);
+    // A client that names the draft it means to discard must not delete a newer
+    // draft that reused the same version, nor treat that draft's absence as
+    // success when it expected one.
+    if (!workingScheduleDraftMatches(group.workingCopy, expectedDraftId)) {
+      throw new HttpError(409, "This schedule changed in another session. Refresh before discarding it.");
+    }
     if (!group.workingCopy) return editorResponse(group, tx);
     if (group.workingCopy.version !== expectedVersion) {
       throw new HttpError(409, "This schedule changed in another session. Refresh before discarding it.");

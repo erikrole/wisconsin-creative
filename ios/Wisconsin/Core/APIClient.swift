@@ -1393,6 +1393,8 @@ final class APIClient {
 
     private func calendarEventPage(
         includePast: Bool,
+        window: DateInterval? = nil,
+        eventId: String? = nil,
         limit: Int,
         offset: Int
     ) async throws -> ScheduleEventsResponse {
@@ -1401,7 +1403,34 @@ final class APIClient {
             .init(name: "offset", value: "\(offset)"),
         ]
         if includePast { items.append(.init(name: "includePast", value: "true")) }
+        if let eventId { items.append(.init(name: "eventId", value: eventId)) }
+        items += Self.windowQueryItems(window)
         return try await perform(request(path: "/api/calendar-events", queryItems: items))
+    }
+
+    /// One Schedule event by id, whatever its date, in the same shape the list
+    /// returns. A combined secondary's id resolves to its canonical row. Nil
+    /// when the event is gone or hidden from this viewer.
+    func scheduleEvent(id: String) async throws -> ScheduleEvent? {
+        let first = try await calendarEventPage(includePast: true, eventId: id, limit: 1, offset: 0).data.first
+        // A server that predates the `eventId` read ignores it and returns the
+        // first list row, which would open the wrong event. Only accept the
+        // event asked for, or the canonical row a combined secondary maps to.
+        guard let first,
+              first.id == id || (first.combinedEvents ?? []).contains(where: { $0.id == id }) else { return nil }
+        return first
+    }
+
+    /// `startDate`/`endDate` for a Schedule window. Both routes read them as
+    /// "overlaps the window": the event ends after the start and starts at or
+    /// before the end.
+    private static func windowQueryItems(_ window: DateInterval?) -> [URLQueryItem] {
+        guard let window else { return [] }
+        let formatter = ISO8601DateFormatter()
+        return [
+            .init(name: "startDate", value: formatter.string(from: window.start)),
+            .init(name: "endDate", value: formatter.string(from: window.end)),
+        ]
     }
 
     func calendarEvents(
@@ -1418,6 +1447,7 @@ final class APIClient {
     /// for the entire schedule. The bounded page size matches the server cap.
     func allCalendarEvents(
         includePast: Bool = false,
+        window: DateInterval? = nil,
         pageSize: Int = 200
     ) async throws -> [ScheduleEvent] {
         let pageSize = min(max(pageSize, 1), 200)
@@ -1429,6 +1459,7 @@ final class APIClient {
             try Task.checkCancellation()
             let response = try await calendarEventPage(
                 includePast: includePast,
+                window: window,
                 limit: pageSize,
                 offset: offset
             )
@@ -1466,7 +1497,63 @@ final class APIClient {
         let response: DataWrapper<WorkingScheduleEditor> = try await perform(
             request(path: "/api/shift-groups/\(shiftGroupId)/working-copy")
         )
-        return response.data
+        return rememberDraft(response.data)
+    }
+
+    // MARK: Draft identity
+
+    /// The draft each shift group's editor last showed. A value of `.some(nil)`
+    /// means "no draft yet"; a missing key means unknown (send nothing).
+    private var draftIds: [String: String?] = [:]
+    private let draftIdsLock = NSLock()
+
+    /// Records which draft an editor response describes, so the next mutation
+    /// can name it. A draft that exists but carries no id comes from a server
+    /// that predates draft identity; the expectation is dropped, not guessed.
+    private func rememberDraft(_ editor: WorkingScheduleEditor) -> WorkingScheduleEditor {
+        draftIdsLock.lock()
+        defer { draftIdsLock.unlock() }
+        if let draftId = editor.draftId {
+            draftIds[editor.shiftGroupId] = .some(draftId)
+        } else if !editor.hasWorkingCopy {
+            draftIds[editor.shiftGroupId] = .some(nil)
+        } else {
+            draftIds[editor.shiftGroupId] = nil
+        }
+        return editor
+    }
+
+    private func expectedDraft(for shiftGroupId: String) -> String?? {
+        draftIdsLock.lock()
+        defer { draftIdsLock.unlock() }
+        return draftIds[shiftGroupId]
+    }
+
+    /// `expectedVersion` plus `expectedDraftId` when the draft is known:
+    /// the id, or an explicit null for "no draft yet".
+    private struct VersionedBody<Extra: Encodable>: Encodable {
+        let expectedVersion: Int
+        let expectedDraft: String??
+        let extra: Extra
+
+        private enum Keys: String, CodingKey { case expectedVersion, expectedDraftId }
+
+        func encode(to encoder: Encoder) throws {
+            try extra.encode(to: encoder)
+            var container = encoder.container(keyedBy: Keys.self)
+            try container.encode(expectedVersion, forKey: .expectedVersion)
+            if let expectedDraft {
+                if let id = expectedDraft {
+                    try container.encode(id, forKey: .expectedDraftId)
+                } else {
+                    try container.encodeNil(forKey: .expectedDraftId)
+                }
+            }
+        }
+    }
+
+    private struct NoExtra: Encodable {
+        func encode(to encoder: Encoder) throws {}
     }
 
     /// Creates a new shift group for an event (STAFF/ADMIN).
@@ -1488,6 +1575,7 @@ final class APIClient {
     /// teammate's profile; if the answer cannot be attributed, return nothing.
     private func myShiftsPage(
         userId: String?,
+        window: DateInterval? = nil,
         limit: Int,
         offset: Int
     ) async throws -> MyShiftsResponse {
@@ -1496,6 +1584,7 @@ final class APIClient {
             .init(name: "offset", value: "\(offset)"),
         ]
         if let userId { items.append(.init(name: "userId", value: userId)) }
+        items += Self.windowQueryItems(window)
         return try await perform(request(path: "/api/my-shifts", queryItems: items))
     }
 
@@ -1510,10 +1599,11 @@ final class APIClient {
     /// first response instead of guessing at more offsets.
     func allMyShifts(
         userId: String? = nil,
+        window: DateInterval? = nil,
         pageSize: Int = 20
     ) async throws -> [MyShift] {
         let pageSize = min(max(pageSize, 1), 20)
-        var response = try await myShiftsPage(userId: userId, limit: pageSize, offset: 0)
+        var response = try await myShiftsPage(userId: userId, window: window, limit: pageSize, offset: 0)
         if let userId, response.userId != userId { return [] }
 
         var shifts = response.data
@@ -1522,7 +1612,7 @@ final class APIClient {
 
         while offset < total, !response.data.isEmpty {
             try Task.checkCancellation()
-            response = try await myShiftsPage(userId: userId, limit: pageSize, offset: offset)
+            response = try await myShiftsPage(userId: userId, window: window, limit: pageSize, offset: offset)
             if let userId, response.userId != userId { return [] }
             shifts.append(contentsOf: response.data)
             offset += response.data.count
@@ -1697,16 +1787,28 @@ final class APIClient {
         return resp.data
     }
 
-    func approveShiftTrade(id: String) async throws -> ShiftTrade {
-        let req = request(path: "/api/shift-trades/\(id)/approve", method: "PATCH")
-        let resp: DataWrapper<ShiftTrade> = try await perform(req)
-        return resp.data
+    /// The board reloads after a decision, so only the status matters. The
+    /// body is not decoded: a success must never read as a failure because
+    /// the server returned a slimmer row than `ShiftTrade` expects.
+    func approveShiftTrade(id: String) async throws {
+        try await sendDecision(path: "/api/shift-trades/\(id)/approve", fallback: "Couldn't approve trade")
     }
 
-    func declineShiftTrade(id: String) async throws -> ShiftTrade {
-        let req = request(path: "/api/shift-trades/\(id)/decline", method: "PATCH")
-        let resp: DataWrapper<ShiftTrade> = try await perform(req)
-        return resp.data
+    func declineShiftTrade(id: String) async throws {
+        try await sendDecision(path: "/api/shift-trades/\(id)/decline", fallback: "Couldn't decline trade")
+    }
+
+    private func sendDecision(path: String, fallback: String) async throws {
+        let req = request(path: path, method: "PATCH")
+        let (data, response, requestBoundary) = try await authenticatedData(for: req)
+        guard let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) else { return }
+        if http.statusCode == 401 {
+            broadcastSessionExpiry(for: requestBoundary)
+            throw APIError.unauthorized
+        }
+        let msg = (try? JSONDecoder().decode(ServerErrorBody.self, from: data))?.error ?? fallback
+        if http.statusCode == 409 { throw APIError.conflict(msg) }
+        throw APIError.serverError(msg)
     }
 
     func cancelShiftTrade(id: String) async throws -> ShiftTrade {
@@ -1899,22 +2001,30 @@ final class APIClient {
     }
 
     func discardWorkingSchedule(shiftGroupId: String, expectedVersion: Int) async throws -> WorkingScheduleEditor {
+        var items: [URLQueryItem] = [.init(name: "expectedVersion", value: "\(expectedVersion)")]
+        if let expected = expectedDraft(for: shiftGroupId) {
+            // An empty value means "I expect no draft yet".
+            items.append(.init(name: "expectedDraftId", value: expected ?? ""))
+        }
         let response: DataWrapper<WorkingScheduleEditor> = try await perform(
             request(
                 path: "/api/shift-groups/\(shiftGroupId)/working-copy",
                 method: "DELETE",
-                queryItems: [.init(name: "expectedVersion", value: "\(expectedVersion)")]
+                queryItems: items
             )
         )
-        return response.data
+        return rememberDraft(response.data)
     }
 
     func publishWorkingSchedule(shiftGroupId: String, expectedVersion: Int) async throws -> WorkingScheduleEditor {
-        struct Body: Encodable { let expectedVersion: Int }
         var req = request(path: "/api/shift-groups/\(shiftGroupId)/publish", method: "POST")
-        req.httpBody = try JSONEncoder().encode(Body(expectedVersion: expectedVersion))
+        req.httpBody = try JSONEncoder().encode(VersionedBody(
+            expectedVersion: expectedVersion,
+            expectedDraft: expectedDraft(for: shiftGroupId),
+            extra: NoExtra()
+        ))
         let response: DataWrapper<WorkingScheduleEditor> = try await perform(req)
-        return response.data
+        return rememberDraft(response.data)
     }
 
     /// Direct-assign a user to a shift (STAFF/ADMIN).
@@ -2082,14 +2192,15 @@ final class APIClient {
         expectedVersion: Int,
         command: WorkingScheduleCommand
     ) async throws -> WorkingScheduleEditor {
-        struct Body: Encodable {
-            let expectedVersion: Int
-            let command: WorkingScheduleCommand
-        }
+        struct Extra: Encodable { let command: WorkingScheduleCommand }
         var req = request(path: "/api/shift-groups/\(shiftGroupId)/working-copy", method: "PATCH")
-        req.httpBody = try JSONEncoder().encode(Body(expectedVersion: expectedVersion, command: command))
+        req.httpBody = try JSONEncoder().encode(VersionedBody(
+            expectedVersion: expectedVersion,
+            expectedDraft: expectedDraft(for: shiftGroupId),
+            extra: Extra(command: command)
+        ))
         let response: DataWrapper<WorkingScheduleEditor> = try await perform(req)
-        return response.data
+        return rememberDraft(response.data)
     }
 
     private func changeWorkingScheduleHistory(
@@ -2097,14 +2208,15 @@ final class APIClient {
         expectedVersion: Int,
         action: String
     ) async throws -> WorkingScheduleEditor {
-        struct Body: Encodable {
-            let expectedVersion: Int
-            let action: String
-        }
+        struct Extra: Encodable { let action: String }
         var req = request(path: "/api/shift-groups/\(shiftGroupId)/working-copy", method: "PATCH")
-        req.httpBody = try JSONEncoder().encode(Body(expectedVersion: expectedVersion, action: action))
+        req.httpBody = try JSONEncoder().encode(VersionedBody(
+            expectedVersion: expectedVersion,
+            expectedDraft: expectedDraft(for: shiftGroupId),
+            extra: Extra(action: action)
+        ))
         let response: DataWrapper<WorkingScheduleEditor> = try await perform(req)
-        return response.data
+        return rememberDraft(response.data)
     }
 
     private func prepareAuthHost(for email: String) {
@@ -2240,13 +2352,35 @@ final class APIClient {
 
     // MARK: - ICS Calendar Feed
 
-    /// Returns the user's existing ICS token, or nil if one hasn't been generated yet.
-    func icsToken() async throws -> String? {
+    /// Whether the user has a feed, plus the raw token when the server can
+    /// still return it. The server stores a hash, so `token` is nil for a
+    /// hashed feed; it is present for a pre-hashing token, once, as the server
+    /// upgrades it. An older server returns only `token`.
+    struct ICSTokenStatus {
+        let token: String?
+        let hasToken: Bool
+        /// Whether `checking` is still the current token; nil when not asked
+        /// or when the server predates the check.
+        let matches: Bool?
+    }
+
+    func icsTokenStatus(checking localToken: String? = nil) async throws -> ICSTokenStatus {
         struct Response: Decodable { let data: TokenData }
-        struct TokenData: Decodable { let token: String? }
-        let req = request(path: "/api/shifts/ics-token")
+        struct TokenData: Decodable {
+            let token: String?
+            let hasToken: Bool?
+            let matches: Bool?
+        }
+        var req = request(path: "/api/shifts/ics-token")
+        if let localToken { req.setValue(localToken, forHTTPHeaderField: "X-ICS-Token-Check") }
         let resp: Response = try await perform(req)
-        return resp.data.token
+        // An older server returns the raw token itself; compare directly.
+        let matches = resp.data.matches ?? localToken.flatMap { local in resp.data.token.map { $0 == local } }
+        return ICSTokenStatus(
+            token: resp.data.token,
+            hasToken: resp.data.hasToken ?? (resp.data.token != nil),
+            matches: matches
+        )
     }
 
     /// Generates (or rotates) the user's ICS token. Returns the new token.

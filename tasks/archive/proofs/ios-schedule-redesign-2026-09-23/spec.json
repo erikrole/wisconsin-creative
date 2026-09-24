@@ -1,0 +1,119 @@
+{
+  "title": "Schedule redesign",
+  "eyebrow": "iOS \u00b7 Wisconsin Creative \u00b7 2026-09-23",
+  "lede": "One master list for everyone. A week jump bar and chips replace the List/Calendar toggle and the filter sheet, and rows drop the bordered card. The list loads week by week: the future is endless, and the past is a deliberate pull.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "Top of list",
+      "note": "Same fixture scenario, device, appearance and scroll (top). Fixture times are relative to launch, so live states and clock differ by a few minutes.",
+      "pairs": [
+        {
+          "title": "Today and Tomorrow",
+          "sub": "Staff fixture user, light mode.",
+          "before": "before/top.png",
+          "beforeCap": "A List/Calendar toggle and a filter icon; bordered cards with a time gutter, a rail and a chevron.",
+          "after": "after/top.png",
+          "afterCap": "A week strip, event type chips, and My Shifts and Sport toggles in the toolbar. Rows are grouped with a bold start time on the right. Your shifts are tinted blue, and Trade Board shows a count badge.",
+          "beforeEvidence": "before/top.capture.json",
+          "afterEvidence": "after/top.capture.json"
+        }
+      ]
+    },
+    {
+      "heading": "New states (after only)",
+      "note": "These states have no direct before equivalent. The old Calendar mode, a month grid above a selected-day list, is shown as the first image for reference.",
+      "shots": [
+        {
+          "image": "before/calendar.png",
+          "tag": "Before",
+          "title": "Old Calendar mode",
+          "cap": "Old Calendar mode: a separate month grid above one day's events."
+        },
+        {
+          "image": "after/calendar.png",
+          "title": "Month grid",
+          "cap": "The month title expands the strip into a grid over the same list. Neighbouring-month days bleed in muted, and tapping a date jumps to it."
+        },
+        {
+          "image": "after/jumped-tomorrow.png",
+          "title": "Day jump",
+          "cap": "Tapping Thursday in the strip. The list scrolls there with the header pinned, the strip highlights the day, and Today appears."
+        },
+        {
+          "image": "after/dark.png",
+          "title": "Dark mode",
+          "cap": "Dark mode, top of list."
+        },
+        {
+          "image": "after/earlier-weeks.png",
+          "title": "Pulled into the past",
+          "cap": "A held pull past the top crosses a haptic threshold, and releasing reveals two past weeks. Sep 14 keeps its tint from your past shift."
+        },
+        {
+          "image": "after/back-to-today.png",
+          "title": "Past folds away",
+          "cap": "Back on today or later and at rest, the past hides again, so a hard flick or a status-bar tap stops on today."
+        },
+        {
+          "image": "after/later-weeks.png",
+          "title": "Endless future",
+          "cap": "Future weeks prefetch ahead of the scroll. Weeks with nothing scheduled keep a short placeholder, so the week bar keeps moving."
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "Two modes became one list",
+      "was": "Calendar mode split the schedule into a month grid plus one day's events.",
+      "now": "One master list stays put. The week strip, or the month grid it expands into, just scrolls the list to a day."
+    },
+    {
+      "h": "Filters were behind a sheet",
+      "was": "My Shifts, event type, sport and past events all lived in a large sheet, with a summary bar afterward.",
+      "now": "My Shifts and Sport are toolbar toggles; event type is a row of chips; sport and past-event filters show as removable chips."
+    },
+    {
+      "h": "Cards looked dated",
+      "was": "Bordered card, time gutter, venue rail, pin icon and chevron on every row.",
+      "now": "Rows sit in rounded day groups under pinned headers, with a venue dot, one meta line, and a bold start time on the right."
+    },
+    {
+      "h": "Your own work",
+      "was": "A blue line with an icon.",
+      "now": "The whole row is tinted blue. A Student call time replaces the end time; area and gear move to Event detail and VoiceOver."
+    },
+    {
+      "h": "Coverage only for staff",
+      "was": "Students saw no crew counts.",
+      "now": "Everyone sees coverage; it is grey when full and tinted when short."
+    },
+    {
+      "h": "No open-work count",
+      "was": "Trade Board only showed a filled icon; a hand-drawn badge had been clipped by the glass toolbar.",
+      "now": "The native toolbar badge shows the count unclipped."
+    },
+    {
+      "h": "Calendar symbols",
+      "was": "The strip and grid drew house, arrow and grid glyphs under each day.",
+      "now": "Plain coloured venue dots."
+    },
+    {
+      "h": "The list dead-ended",
+      "was": "The list held every upcoming event and stopped at the last one. Past events needed a staff-only toggle.",
+      "now": "Week windows load as you scroll. The future prefetches, and the past, open to every role, sits behind a deliberate pull with a haptic. It replaces pull-to-refresh on this list."
+    }
+  ],
+  "verification": [
+    "npm run ios:xcode:verify on iPhone 18 Pro Max (UDID): drift, gap audit, simulator build, XCTest, generic device build.",
+    "ScheduleScreenshotUITests pass, including the new windowed-scrolling test: a flick stops at today, a held pull reveals Sep 14, later weeks load, and the past folds back. EventDetailScreenshotUITests pass too.",
+    "Full Vitest passes except one test from unrelated in-flight notification work (ios-system-hardening-contract APNs count). New: tests/ios-schedule-windowed-scrolling.test.ts. tsc, verify:docs and git diff --check are clean."
+  ],
+  "notes": [
+    "Fixture captures only. Authenticated device, TestFlight and physical-device testing are still to do, including how the pull threshold feels under a real finger.",
+    "The fixture harness now filters events and shifts by the requested window, like the routes do.",
+    "A push deep link to an event outside the loaded weeks still opens 'Event unavailable'. Fetching a single event by id would close that gap.",
+    "Accessibility text sizes were not reworked (D-053)."
+  ]
+}

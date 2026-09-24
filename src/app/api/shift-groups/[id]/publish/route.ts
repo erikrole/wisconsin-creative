@@ -15,9 +15,12 @@ import {
   getWorkingScheduleEventEndsAt,
 } from "@/lib/services/schedule-working-copy";
 import { publishShiftGroup } from "@/lib/services/schedule-publication";
+import { expectedWorkingScheduleDraftIdSchema } from "@/lib/schedule-working-copy";
 
 const publishSchema = z.object({
   expectedVersion: z.number().int().min(1),
+  // The editor's `draftId`; omitted keeps legacy version-only behavior.
+  expectedDraftId: expectedWorkingScheduleDraftIdSchema,
 });
 
 export const GET = withAuth<{ id: string }>(async (_req, { user }) => {
@@ -40,6 +43,7 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
       clearNotificationPending: eventHasEnded,
       manualPublish: true,
       requireWorkingCopy: true,
+      expectedDraftId: body.expectedDraftId,
     },
   );
 

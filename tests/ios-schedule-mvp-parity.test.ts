@@ -16,8 +16,9 @@ describe("native Schedule MVP parity", () => {
     expect(models).toContain("var combinedIntoId: String?");
     expect(models).toContain("func collapsedCombinedScheduleEvents");
     expect(models).toContain("combinedMemberCount");
-    expect(schedule).toContain("collapsedCombinedScheduleEvents(fetchedEvents)");
-    expect(schedule).toContain("events · shared crew");
+    expect(schedule).toContain("collapsedCombinedScheduleEvents(Array(rawEventsById.values))");
+    // The row stays quiet; VoiceOver still names the combined crew.
+    expect(source("ios/Wisconsin/Views/Schedule/ScheduleEventRow.swift")).toContain("events, shared crew");
     expect(calendarRoute).toContain("combinedIntoId: null");
   });
 

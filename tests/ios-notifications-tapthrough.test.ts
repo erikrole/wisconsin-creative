@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { source } from "./_helpers/source";
+import { scheduleSurfaceSource, source } from "./_helpers/source";
 
 function slice(text: string, start: string, end: string) {
   const startIndex = text.indexOf(start);
@@ -43,7 +43,7 @@ describe("iOS notification tap-through contracts", () => {
   it("routes allowed event pushes into Schedule and drops inaccessible collaborator targets", () => {
     const appDelegate = source("ios/Wisconsin/App/AppDelegate.swift");
     const appTab = source("ios/Wisconsin/Views/AppTabView.swift").split("// MARK: - Profile")[0];
-    const schedule = source("ios/Wisconsin/Views/ScheduleView.swift");
+    const schedule = scheduleSurfaceSource();
     const notifications = source("ios/Wisconsin/Views/NotificationsSheet.swift");
     const notificationModels = source("ios/Wisconsin/Models/NotificationModels.swift");
     const router = source("ios/Wisconsin/Core/GearTrackerRoute.swift");

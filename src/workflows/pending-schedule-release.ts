@@ -1,4 +1,4 @@
-import { sleep } from "workflow";
+import { getWorkflowMetadata, sleep } from "workflow";
 import { badges } from "@/lib/badges";
 import { db } from "@/lib/db";
 import { HttpError } from "@/lib/http";
@@ -18,15 +18,21 @@ export async function pendingScheduleReleaseWorkflow(
 ) {
   "use workflow";
 
+  // The version alone does not identify a draft: publish and discard delete
+  // the working copy, and the next one starts again at version 1. The row
+  // records the run that owns its timer, so a superseded run can tell.
+  const { workflowRunId } = getWorkflowMetadata();
   const releaseAt = new Date(releaseAtIso);
   if (releaseAt.getTime() > Date.now()) await sleep(releaseAt);
-  return releasePendingScheduleVersion(shiftGroupId, expectedVersion, batchId);
+  return releasePendingScheduleVersion(shiftGroupId, expectedVersion, batchId, workflowRunId);
 }
 
 export async function releasePendingScheduleVersion(
   shiftGroupId: string,
   expectedVersion: number,
   batchId?: string,
+  /** Omitted only by direct callers; a workflow run always passes its own id. */
+  runId?: string,
 ) {
   "use step";
 
@@ -34,12 +40,13 @@ export async function releasePendingScheduleVersion(
     where: { shiftGroupId },
     select: {
       version: true,
+      autoReleaseRunId: true,
       updatedById: true,
       updatedBy: { select: { role: true } },
       shiftGroup: { select: { event: { select: { endsAt: true } } } },
     },
   });
-  if (!pending || pending.version !== expectedVersion) {
+  const superseded = async () => {
     if (batchId) {
       await recordBulkScheduleReleaseOutcome({
         batchId,
@@ -49,7 +56,12 @@ export async function releasePendingScheduleVersion(
       });
     }
     return { status: "superseded" as const, shiftGroupId, expectedVersion };
-  }
+  };
+  const ownsDraft = (row: { version: number; autoReleaseRunId: string | null } | null) =>
+    row !== null
+    && row.version === expectedVersion
+    && (runId === undefined || row.autoReleaseRunId === runId);
+  if (!pending || !ownsDraft(pending)) return superseded();
 
   try {
     const eventHasEnded = pending.shiftGroup.event.endsAt.getTime() <= Date.now();
@@ -58,7 +70,14 @@ export async function releasePendingScheduleVersion(
       pending.updatedById,
       expectedVersion,
       pending.updatedBy.role,
-      ...(eventHasEnded ? [{ clearNotificationPending: true }] : []),
+      // Re-checked inside the publish transaction: the draft can be discarded
+      // and recreated at the same version between the read above and here.
+      ...(eventHasEnded || runId !== undefined
+        ? [{
+          ...(eventHasEnded ? { clearNotificationPending: true } : {}),
+          ...(runId !== undefined ? { expectedAutoReleaseRunId: runId } : {}),
+        }]
+        : []),
     );
 
     if (eventHasEnded) {
@@ -104,8 +123,19 @@ export async function releasePendingScheduleVersion(
     };
   } catch (error) {
     if (error instanceof HttpError && error.status >= 400 && error.status < 500) {
+      // A blocker on a draft this run no longer owns belongs to nobody; writing
+      // it would stamp a stale error on the newer draft.
+      const current = await db.shiftGroupWorkingCopy.findUnique({
+        where: { shiftGroupId },
+        select: { version: true, autoReleaseRunId: true },
+      });
+      if (!ownsDraft(current)) return superseded();
       await db.shiftGroupWorkingCopy.updateMany({
-        where: { shiftGroupId, version: expectedVersion },
+        where: {
+          shiftGroupId,
+          version: expectedVersion,
+          ...(runId !== undefined ? { autoReleaseRunId: runId } : {}),
+        },
         data: { autoReleaseError: error.message },
       });
       if (batchId) {

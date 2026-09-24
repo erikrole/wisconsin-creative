@@ -4,7 +4,10 @@ import { withAuth } from "@/lib/api";
 import { HttpError, ok } from "@/lib/http";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { requirePermission } from "@/lib/rbac";
-import { workingScheduleCommandSchema } from "@/lib/schedule-working-copy";
+import {
+  expectedWorkingScheduleDraftIdSchema,
+  workingScheduleCommandSchema,
+} from "@/lib/schedule-working-copy";
 import { badges } from "@/lib/badges";
 import {
   discardWorkingSchedule,
@@ -17,28 +20,38 @@ import {
 import { getPublishPreflight, publishShiftGroup } from "@/lib/services/schedule-publication";
 import { enqueuePendingScheduleRelease } from "@/lib/schedule-auto-release";
 
+// `expectedDraftId` pairs with `expectedVersion`: the version restarts at 1 for
+// every new draft, so only the draft identity tells two "v1" drafts apart.
+// Omitted keeps legacy behavior; null or "" means no draft is expected yet.
 const mutateSchema = z.object({
   expectedVersion: z.number().int().min(0),
+  expectedDraftId: expectedWorkingScheduleDraftIdSchema,
   command: workingScheduleCommandSchema,
 });
 
 const historySchema = z.object({
   expectedVersion: z.number().int().min(1),
+  expectedDraftId: expectedWorkingScheduleDraftIdSchema,
   action: z.enum(["undo", "redo"]),
 });
 
 const rebaseSchema = z.object({
   expectedVersion: z.number().int().min(1),
+  expectedDraftId: expectedWorkingScheduleDraftIdSchema,
 });
 
+// Discard reads query parameters, so an empty `expectedDraftId=` is the
+// "no draft expected" form.
 const discardSchema = z.object({
   expectedVersion: z.coerce.number().int().min(1),
+  expectedDraftId: z.string().max(64).optional(),
 });
 
 async function publishEndedWorkingSchedule(
   shiftGroupId: string,
   actor: { id: string; role: Role },
   expectedVersion: number,
+  expectedDraftId: string | null,
 ) {
   try {
     const publication = await publishShiftGroup(
@@ -46,7 +59,7 @@ async function publishEndedWorkingSchedule(
       actor.id,
       expectedVersion,
       actor.role,
-      { clearNotificationPending: true },
+      { clearNotificationPending: true, expectedDraftId },
     );
     await Promise.allSettled(
       publication.affectedUserIds.map((userId) => badges.onShiftsWorked({ userId }, { notify: false })),
@@ -95,10 +108,10 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
       version: body.expectedVersion + 1,
     });
   const data = "action" in body
-    ? await changeWorkingScheduleHistory(params.id, body.expectedVersion, body.action, user, autoRelease)
-    : await mutateWorkingSchedule(params.id, body.expectedVersion, body.command, user, autoRelease);
+    ? await changeWorkingScheduleHistory(params.id, body.expectedVersion, body.action, user, autoRelease, body.expectedDraftId)
+    : await mutateWorkingSchedule(params.id, body.expectedVersion, body.command, user, autoRelease, body.expectedDraftId);
   if (eventHasEnded) {
-    return ok({ data: await publishEndedWorkingSchedule(params.id, user, data.workingVersion) });
+    return ok({ data: await publishEndedWorkingSchedule(params.id, user, data.workingVersion, data.draftId) });
   }
   return ok({ data });
 });
@@ -115,9 +128,9 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
       shiftGroupId: params.id,
       version: body.expectedVersion + 1,
     });
-  const data = await rebaseWorkingSchedule(params.id, body.expectedVersion, user, autoRelease);
+  const data = await rebaseWorkingSchedule(params.id, body.expectedVersion, user, autoRelease, body.expectedDraftId);
   if (eventHasEnded) {
-    return ok({ data: await publishEndedWorkingSchedule(params.id, user, data.workingVersion) });
+    return ok({ data: await publishEndedWorkingSchedule(params.id, user, data.workingVersion, data.draftId) });
   }
   return ok({ data });
 });
@@ -126,5 +139,5 @@ export const DELETE = withAuth<{ id: string }>(async (req, { user, params }) => 
   requirePermission(user.role, "shift", "manage");
   await enforceRateLimit(`shift:working-copy:${user.id}`, { max: 30, windowMs: 60_000 });
   const query = discardSchema.parse(Object.fromEntries(new URL(req.url).searchParams));
-  return ok({ data: await discardWorkingSchedule(params.id, query.expectedVersion, user) });
+  return ok({ data: await discardWorkingSchedule(params.id, query.expectedVersion, user, query.expectedDraftId) });
 });

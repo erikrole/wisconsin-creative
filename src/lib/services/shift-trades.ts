@@ -64,6 +64,59 @@ function staleEffectiveAssignmentWhere(now: Date): Prisma.ShiftAssignmentWhereIn
   };
 }
 
+/**
+ * The relation shape every trade mutation returns. Clients decode all trade
+ * responses into one model that requires `postedBy` and the assignment's shift,
+ * so a bare row reads as "Unexpected response".
+ */
+const tradeResponseInclude = {
+  shiftAssignment: {
+    include: {
+      shift: {
+        include: { shiftGroup: { include: { event: true } } },
+      },
+      user: { select: { id: true, name: true } },
+    },
+  },
+  postedBy: { select: { id: true, name: true } },
+  claimedBy: { select: { id: true, name: true } },
+} satisfies Prisma.ShiftTradeInclude;
+
+/** Event fields that decide whether a trade on it can still move. */
+const tradeEventStateSelect = {
+  status: true,
+  archivedAt: true,
+  isHidden: true,
+} satisfies Prisma.CalendarEventSelect;
+
+/**
+ * Mirrors the open-work board filter: a cancelled, archived, or hidden event
+ * (or an archived crew) no longer has a shift anyone should claim or take over.
+ */
+const liveTradeEventWhere = {
+  shiftAssignment: {
+    shift: {
+      shiftGroup: {
+        archivedAt: null,
+        event: { isHidden: false, archivedAt: null, status: { not: "CANCELLED" } },
+      },
+    },
+  },
+} satisfies Prisma.ShiftTradeWhereInput;
+
+function assertTradeEventLive(shiftGroup: {
+  archivedAt?: Date | null;
+  event?: { status?: string | null; archivedAt?: Date | null; isHidden?: boolean | null } | null;
+} | null | undefined) {
+  const event = shiftGroup?.event;
+  if (event?.status === "CANCELLED") {
+    throw new HttpError(409, "This event was cancelled, so its shift can't be traded");
+  }
+  if (shiftGroup?.archivedAt || event?.archivedAt || event?.isHidden) {
+    throw new HttpError(409, "This event is no longer on the schedule, so its shift can't be traded");
+  }
+}
+
 const availabilityBlockSelect = {
   kind: true,
   intent: true,
@@ -196,7 +249,9 @@ export async function postTrade(
   const pushJobs: TradePushJob[] = [];
   const emailJobs: ShiftTradeEmail[] = [];
 
-  const result = await db.$transaction(async (tx) => {
+  // Every SERIALIZABLE trade mutation retries one lost race, like claim. The
+  // retry re-runs the body, so the side-effect buffers reset first.
+  const result = await withSerializationRetry(() => db.$transaction(async (tx) => {
     const assignment = await tx.shiftAssignment.findUnique({
       where: { id: shiftAssignmentId },
       include: {
@@ -294,7 +349,12 @@ export async function postTrade(
     }
 
     return trade;
-  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }), {
+    onRetry: () => {
+      pushJobs.length = 0;
+      emailJobs.length = 0;
+    },
+  });
 
   await dispatchTradeSideEffects({ pushJobs, emailJobs });
   return result;
@@ -325,7 +385,7 @@ export async function claimTrade(tradeId: string, userId: string) {
                 shiftGroup: {
                   include: {
                     workingCopy: { select: { version: true } },
-                    event: { select: { summary: true } },
+                    event: { select: { summary: true, ...tradeEventStateSelect } },
                   },
                 },
               },
@@ -345,6 +405,7 @@ export async function claimTrade(tradeId: string, userId: string) {
     // Validate claimant doesn't have a conflicting shift during this time
     const shift = trade.shiftAssignment.shift;
     assertNoWorkingCopy(shift.shiftGroup?.workingCopy);
+    assertTradeEventLive(shift.shiftGroup);
     const window = effectiveAssignmentWindow(trade.shiftAssignment);
     assertShiftNotStarted(window.startsAt);
     await checkTimeConflict(tx, userId, window.startsAt, window.endsAt);
@@ -404,18 +465,7 @@ export async function claimTrade(tradeId: string, userId: string) {
         claimedAt: new Date(),
         status: "CLAIMED",
       },
-      include: {
-        shiftAssignment: {
-          include: {
-            shift: {
-              include: { shiftGroup: { include: { event: true } } },
-            },
-            user: { select: { id: true, name: true } },
-          },
-        },
-        postedBy: { select: { id: true, name: true } },
-        claimedBy: { select: { id: true, name: true } },
-      },
+      include: tradeResponseInclude,
     });
 
     const claimerName = claimed.claimedBy?.name ?? "Someone";
@@ -483,6 +533,9 @@ export async function claimTrade(tradeId: string, userId: string) {
     kind: "trade",
     claimId: result.id,
     shiftStartsAt: effectiveAssignmentWindow(result.shiftAssignment).startsAt,
+    // Pins the timer to this claim. Withdraw and decline reopen the post, so a
+    // timer from an earlier claim must not approve a later one early.
+    claimedAt: result.claimedAt,
   });
   return result;
 }
@@ -519,7 +572,7 @@ export async function withdrawTradeClaim(
     });
     if (!trade) throw new HttpError(404, "Trade not found");
     if (trade.status !== "CLAIMED") {
-      throw new HttpError(400, "Only claimed trades can be withdrawn");
+      throw new HttpError(409, "Only claimed trades can be withdrawn");
     }
     if (trade.claimedByUserId !== actor.id) {
       throw new HttpError(403, "You can only withdraw your own trade claim");
@@ -533,18 +586,7 @@ export async function withdrawTradeClaim(
         claimedAt: null,
         status: "OPEN",
       },
-      include: {
-        shiftAssignment: {
-          include: {
-            shift: {
-              include: { shiftGroup: { include: { event: true } } },
-            },
-            user: { select: { id: true, name: true } },
-          },
-        },
-        postedBy: { select: { id: true, name: true } },
-        claimedBy: { select: { id: true, name: true } },
-      },
+      include: tradeResponseInclude,
     });
 
     await createAuditEntryTx(tx, {
@@ -606,13 +648,20 @@ export async function withdrawTradeClaim(
 
 /**
  * Admin approves a claimed trade → executes swap.
+ *
+ * `expectedClaimedAt` pins an automatic approval to the claim its timer was
+ * started for; a human approval omits it and acts on whatever claim is current.
  */
-export async function approveTrade(tradeId: string, actor: TradeApprovalActor = null) {
+export async function approveTrade(
+  tradeId: string,
+  actor: TradeApprovalActor = null,
+  options: { expectedClaimedAt?: string } = {},
+) {
   const emailJobs: ShiftTradeEmail[] = [];
   const pushJobs: TradePushJob[] = [];
   const badgeJobs: Array<Parameters<typeof badges.onTradeCompleted>[0]> = [];
 
-  const result = await db.$transaction(async (tx) => {
+  const result = await withSerializationRetry(() => db.$transaction(async (tx) => {
     const trade = await tx.shiftTrade.findUnique({
       where: { id: tradeId },
       include: {
@@ -623,7 +672,7 @@ export async function approveTrade(tradeId: string, actor: TradeApprovalActor = 
                 shiftGroup: {
                   include: {
                     workingCopy: { select: { version: true } },
-                    event: { select: { id: true, summary: true } },
+                    event: { select: { id: true, summary: true, ...tradeEventStateSelect } },
                   },
                 },
               },
@@ -634,12 +683,19 @@ export async function approveTrade(tradeId: string, actor: TradeApprovalActor = 
     });
     if (!trade) throw new HttpError(404, "Trade not found");
     if (trade.status !== "CLAIMED") {
-      throw new HttpError(400, "Only claimed trades can be approved");
+      throw new HttpError(409, "Only claimed trades can be approved");
     }
     if (!trade.claimedByUserId) {
       throw new HttpError(400, "Trade has no claimer");
     }
+    if (
+      options.expectedClaimedAt !== undefined
+      && trade.claimedAt?.toISOString() !== options.expectedClaimedAt
+    ) {
+      throw new HttpError(409, "This trade was claimed again after the review timer started");
+    }
     assertNoWorkingCopy(trade.shiftAssignment.shift.shiftGroup?.workingCopy);
+    assertTradeEventLive(trade.shiftAssignment.shift.shiftGroup);
     assertShiftNotStarted(effectiveAssignmentWindow(trade.shiftAssignment).startsAt);
 
     await executeSwap(tx, trade.shiftAssignment.id, trade.claimedByUserId, actor?.id ?? null);
@@ -647,6 +703,7 @@ export async function approveTrade(tradeId: string, actor: TradeApprovalActor = 
     const updated = await tx.shiftTrade.update({
       where: { id: tradeId },
       data: { resolvedAt: new Date(), status: "COMPLETED" },
+      include: tradeResponseInclude,
     });
     await createAuditEntryTx(tx, {
       actorId: actor?.id ?? null,
@@ -721,7 +778,13 @@ export async function approveTrade(tradeId: string, actor: TradeApprovalActor = 
     });
 
     return updated;
-  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }), {
+    onRetry: () => {
+      emailJobs.length = 0;
+      pushJobs.length = 0;
+      badgeJobs.length = 0;
+    },
+  });
 
   await Promise.all(badgeJobs.map((event) => badges.onTradeCompleted(event)));
   await dispatchTradeSideEffects({ pushJobs, emailJobs });
@@ -735,7 +798,7 @@ export async function declineTrade(tradeId: string, actor: TradeApprovalActor = 
   const emailJobs: ShiftTradeEmail[] = [];
   const pushJobs: TradePushJob[] = [];
 
-  const result = await db.$transaction(async (tx) => {
+  const result = await withSerializationRetry(() => db.$transaction(async (tx) => {
     const trade = await tx.shiftTrade.findUnique({
       where: { id: tradeId },
       include: {
@@ -750,7 +813,7 @@ export async function declineTrade(tradeId: string, actor: TradeApprovalActor = 
     });
     if (!trade) throw new HttpError(404, "Trade not found");
     if (trade.status !== "CLAIMED") {
-      throw new HttpError(400, "Only claimed trades can be declined");
+      throw new HttpError(409, "Only claimed trades can be declined");
     }
 
     const updated = await tx.shiftTrade.update({
@@ -760,6 +823,7 @@ export async function declineTrade(tradeId: string, actor: TradeApprovalActor = 
         claimedAt: null,
         status: "OPEN",
       },
+      include: tradeResponseInclude,
     });
 
     // Written in the transaction, like approve and withdraw. A decline is the
@@ -819,7 +883,12 @@ export async function declineTrade(tradeId: string, actor: TradeApprovalActor = 
     }
 
     return updated;
-  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }), {
+    onRetry: () => {
+      emailJobs.length = 0;
+      pushJobs.length = 0;
+    },
+  });
 
   await dispatchTradeSideEffects({ pushJobs, emailJobs });
   return result;
@@ -833,7 +902,7 @@ export async function cancelTrade(tradeId: string, actor: TradeActor) {
   const pushJobs: TradePushJob[] = [];
   const emailJobs: ShiftTradeEmail[] = [];
 
-  const result = await db.$transaction(async (tx) => {
+  const result = await withSerializationRetry(() => db.$transaction(async (tx) => {
     const trade = await tx.shiftTrade.findUnique({
       where: { id: tradeId },
       include: {
@@ -850,7 +919,7 @@ export async function cancelTrade(tradeId: string, actor: TradeActor) {
       throw new HttpError(403, "You can only cancel your own trades");
     }
     if (trade.status !== "OPEN" && trade.status !== "CLAIMED") {
-      throw new HttpError(400, "Trade cannot be cancelled in its current state");
+      throw new HttpError(409, "Trade cannot be cancelled in its current state");
     }
 
     const updated = await tx.shiftTrade.update({
@@ -859,20 +928,7 @@ export async function cancelTrade(tradeId: string, actor: TradeActor) {
         resolvedAt: new Date(),
         status: "CANCELLED",
       },
-      // Same relation shape as postTrade/claimTrade — clients decode all
-      // trade mutations into one model, so a bare row breaks them.
-      include: {
-        shiftAssignment: {
-          include: {
-            shift: {
-              include: { shiftGroup: { include: { event: true } } },
-            },
-            user: { select: { id: true, name: true } },
-          },
-        },
-        postedBy: { select: { id: true, name: true } },
-        claimedBy: { select: { id: true, name: true } },
-      },
+      include: tradeResponseInclude,
     });
 
     if (!isPoster) {
@@ -930,11 +986,47 @@ export async function cancelTrade(tradeId: string, actor: TradeActor) {
     }
 
     return updated;
-  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }), {
+    onRetry: () => {
+      pushJobs.length = 0;
+      emailJobs.length = 0;
+    },
+  });
 
   await dispatchTradeSideEffects({ pushJobs, emailJobs });
   return result;
 }
+
+const tradeListInclude = {
+  shiftAssignment: {
+    include: {
+      shift: {
+        include: {
+          shiftGroup: {
+            include: {
+              event: {
+                select: {
+                  id: true,
+                  summary: true,
+                  startsAt: true,
+                  endsAt: true,
+                  allDay: true,
+                  sportCode: true,
+                  opponent: true,
+                  isHome: true,
+                  site: true,
+                },
+              },
+            },
+          },
+        },
+      },
+      user: { select: { id: true, name: true, primaryArea: true } },
+    },
+  },
+  postedBy: { select: { id: true, name: true } },
+  claimedBy: { select: { id: true, name: true } },
+} satisfies Prisma.ShiftTradeInclude;
 
 /**
  * List trades, optionally filtered by status and area.
@@ -968,13 +1060,16 @@ export async function listTrades(filters: {
   }
   const actionableStatuses: ShiftTradeStatus[] = ["OPEN", "CLAIMED"];
   const now = new Date();
+  // Resolved history stays visible; only a post someone could still act on
+  // must be on a future shift of a live event.
   if (filters.status && actionableStatuses.includes(filters.status)) {
     and.push({ shiftAssignment: futureEffectiveAssignmentWhere(now) });
+    and.push(liveTradeEventWhere);
   } else if (!filters.status) {
     and.push({
       OR: [
         { status: { notIn: actionableStatuses } },
-        { shiftAssignment: futureEffectiveAssignmentWhere(now) },
+        { AND: [{ shiftAssignment: futureEffectiveAssignmentWhere(now) }, liveTradeEventWhere] },
       ],
     });
   }
@@ -993,53 +1088,35 @@ export async function listTrades(filters: {
   }
   if (and.length > 0) where.AND = and;
 
-  const data = await db.shiftTrade.findMany({
-    where,
-    take: filters.limit,
-    skip: filters.offset,
-    include: {
-      shiftAssignment: {
-        include: {
-          shift: {
-            include: {
-              shiftGroup: {
-                include: {
-                  event: {
-                    select: {
-                      id: true,
-                      summary: true,
-                      startsAt: true,
-                      endsAt: true,
-                      allDay: true,
-                      sportCode: true,
-                      opponent: true,
-                      isHome: true,
-                      site: true,
-                    },
-                  },
-                },
-              },
-            },
-          },
-          user: { select: { id: true, name: true, primaryArea: true } },
-        },
-      },
-      postedBy: { select: { id: true, name: true } },
-      claimedBy: { select: { id: true, name: true } },
-    },
-    // Actionable before resolved, then newest first. `ShiftTradeStatus` is
-    // declared OPEN, CLAIMED, APPROVED, COMPLETED, CANCELLED, so ascending
-    // status puts everything someone still owes a decision on ahead of history.
-    // Without it an unfiltered page is pure recency, and COMPLETED/CANCELLED
-    // rows accumulate forever — a season in, a claim waiting on Admin falls off
-    // the end of the window and out of the review queue entirely. `id` is the
-    // tiebreaker so offset paging (native "load more") cannot repeat or skip a
-    // row when two trades share a timestamp.
-    orderBy: [{ status: "asc" }, { postedAt: "desc" }, { id: "asc" }],
-  });
+  const include = tradeListInclude;
+  // Actionable before resolved, then newest first. `ShiftTradeStatus` is
+  // declared OPEN, CLAIMED, APPROVED, COMPLETED, CANCELLED, so ascending
+  // status puts everything someone still owes a decision on ahead of history.
+  // Without it an unfiltered page is pure recency, and COMPLETED/CANCELLED
+  // rows accumulate forever — a season in, a claim waiting on Admin falls off
+  // the end of the window and out of the review queue entirely. `id` is the
+  // tiebreaker so offset paging (native "load more") cannot repeat or skip a
+  // row when two trades share a timestamp.
+  const orderBy: Prisma.ShiftTradeOrderByWithRelationInput[] = [
+    { status: "asc" },
+    { postedAt: "desc" },
+    { id: "asc" },
+  ];
+  const data = viewer?.role === "ADMIN" && !filters.status
+    ? await findClaimedFirstPage(where, include, orderBy, filters.limit, filters.offset)
+    : await db.shiftTrade.findMany({
+      where,
+      take: filters.limit,
+      skip: filters.offset,
+      include,
+      orderBy,
+    });
   const total = await db.shiftTrade.count({ where });
+  // Another student's availability — a time-off reason, a standing note — is
+  // for the people deciding the claim, not the rest of the board.
+  const canSeeClaimerAvailability = viewer?.role === "ADMIN" || viewer?.role === "STAFF";
   const availabilityUserIds = new Set<string>();
-  for (const trade of data) {
+  for (const trade of canSeeClaimerAvailability ? data : []) {
     if (trade.status === "CLAIMED" && trade.claimedByUserId) {
       availabilityUserIds.add(trade.claimedByUserId);
     }
@@ -1070,7 +1147,7 @@ export async function listTrades(filters: {
       const viewerAvailabilityContext = filters.userId && trade.postedByUserId !== filters.userId
         ? availabilityContextFromBlocks(viewerBlocks, window)
         : null;
-      const claimedByAvailabilityContext = trade.claimedByUserId
+      const claimedByAvailabilityContext = canSeeClaimerAvailability && trade.claimedByUserId
         ? availabilityContextFromBlocks(usersById.get(trade.claimedByUserId)?.availabilityBlocks ?? [], window)
         : null;
       const viewerEligibilityReason = viewer
@@ -1112,6 +1189,38 @@ export async function listTrades(filters: {
     }),
     total,
   };
+}
+
+/**
+ * One page of the unfiltered board with CLAIMED rows ahead of everything else.
+ * Admin works the review queue from page one; the enum order alone puts every
+ * OPEN post ahead of it. Pages the two slices back to back so offset paging
+ * stays stable across the boundary.
+ */
+async function findClaimedFirstPage(
+  where: Prisma.ShiftTradeWhereInput,
+  include: typeof tradeListInclude,
+  orderBy: Prisma.ShiftTradeOrderByWithRelationInput[],
+  limit: number | undefined,
+  offset: number | undefined,
+) {
+  const skip = offset ?? 0;
+  const claimedWhere: Prisma.ShiftTradeWhereInput = { AND: [where, { status: "CLAIMED" }] };
+  const restWhere: Prisma.ShiftTradeWhereInput = { AND: [where, { status: { not: "CLAIMED" } }] };
+  const claimedCount = await db.shiftTrade.count({ where: claimedWhere });
+  const claimed = skip < claimedCount
+    ? await db.shiftTrade.findMany({ where: claimedWhere, take: limit, skip, include, orderBy })
+    : [];
+  const remaining = limit === undefined ? undefined : limit - claimed.length;
+  if (remaining !== undefined && remaining <= 0) return claimed;
+  const rest = await db.shiftTrade.findMany({
+    where: restWhere,
+    take: remaining,
+    skip: Math.max(0, skip - claimedCount),
+    include,
+    orderBy,
+  });
+  return [...claimed, ...rest];
 }
 
 /**
@@ -1279,6 +1388,12 @@ async function executeSwap(tx: Prisma.TransactionClient, assignmentId: string, t
       status: "DIRECT_ASSIGNED",
       assignedBy: actorId,
       swapFromId: assignmentId,
+      // The poster's personal call window moves with the slot: conflicts and
+      // availability were checked against it, so dropping it would schedule
+      // the claimer for a window nobody validated.
+      callStartsAt: assignment.callStartsAt,
+      callEndsAt: assignment.callEndsAt,
+      callNote: assignment.callNote,
       hasConflict: Boolean(conflictNote),
       conflictNote,
     },

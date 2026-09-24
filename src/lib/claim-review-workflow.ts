@@ -16,18 +16,25 @@ export async function enqueuePendingClaimReview(args: {
   claimId: string;
   /** The claim's effective window start, not the raw shift start. */
   shiftStartsAt: Date;
+  /**
+   * When this claim was filed. A trade can be claimed, withdrawn, and claimed
+   * again; the run acts only while the trade still carries this claim.
+   */
+  claimedAt?: Date | null;
   now?: Date;
 }): Promise<string | null> {
   const deadlines = claimReviewDeadlines(args.shiftStartsAt, args.now);
   if (!deadlines) return null;
 
   try {
-    const run = await start(pendingClaimReviewWorkflow, [
+    const workflowArgs: Parameters<typeof pendingClaimReviewWorkflow> = [
       args.kind,
       args.claimId,
       deadlines.escalateAt.toISOString(),
       deadlines.autoApproveAt.toISOString(),
-    ]);
+    ];
+    if (args.claimedAt) workflowArgs.push(args.claimedAt.toISOString());
+    const run = await start(pendingClaimReviewWorkflow, workflowArgs);
     return run.runId;
   } catch (error) {
     console.error("[Schedule] failed to enqueue claim review", {

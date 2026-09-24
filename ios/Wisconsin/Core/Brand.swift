@@ -301,6 +301,32 @@ extension Color {
 
     /// Hairline stroke tuned for card and divider edges.
     static let hairline = Color(.separator).opacity(0.5)
+
+    /// The surface for "you're working this": the card surface with the blue
+    /// status tone mixed in, opaque so it reads the same on a list cell and on
+    /// a standalone card. `statusBackground(.blue)` is near-white in light mode
+    /// and disappears against a grouped cell.
+    static let myShiftSurface = Color(UIColor { traits in
+        let base = UIColor.secondarySystemGroupedBackground.resolvedColor(with: traits)
+        let blue = UIColor(Color.statusText(.blue)).resolvedColor(with: traits)
+        return base.mixed(with: blue, amount: traits.userInterfaceStyle == .dark ? 0.22 : 0.09)
+    })
+}
+
+private extension UIColor {
+    /// Linear mix of two resolved sRGB colors; `amount` is the share of `other`.
+    func mixed(with other: UIColor, amount: CGFloat) -> UIColor {
+        var r1: CGFloat = 0, g1: CGFloat = 0, b1: CGFloat = 0, a1: CGFloat = 0
+        var r2: CGFloat = 0, g2: CGFloat = 0, b2: CGFloat = 0, a2: CGFloat = 0
+        getRed(&r1, green: &g1, blue: &b1, alpha: &a1)
+        other.getRed(&r2, green: &g2, blue: &b2, alpha: &a2)
+        return UIColor(
+            red: r1 + (r2 - r1) * amount,
+            green: g1 + (g2 - g1) * amount,
+            blue: b1 + (b2 - b1) * amount,
+            alpha: 1
+        )
+    }
 }
 
 // MARK: - Card surface

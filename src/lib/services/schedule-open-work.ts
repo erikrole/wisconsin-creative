@@ -100,6 +100,9 @@ function openShiftSelect() {
             sportCode: true,
             opponent: true,
             isHome: true,
+            // Venue resolves site-first on every client; isHome alone cannot
+            // tell a neutral site from a home game.
+            site: true,
           },
         },
       },
@@ -211,7 +214,8 @@ async function loadOpenShiftRows(filters: OpenWorkFilters) {
     },
     select: openShiftSelect(),
     orderBy: { startsAt: "asc" },
-    take: filters.limit ?? 50,
+    // One extra row tells the caller the list was capped without a count query.
+    take: (filters.limit ?? 50) + 1,
   });
 }
 
@@ -307,13 +311,14 @@ function serializeOpenShift(shift: OpenWorkShift, args: {
 
 export async function getScheduleOpenWork(filters: OpenWorkFilters) {
   const now = filters.now ?? new Date();
+  const limit = filters.limit ?? 50;
   const futureEnd = addDays(now, 120);
   const candidate = await loadCurrentCandidate(filters.userId, now, futureEnd);
   const studentClaimableAreas = filters.role === "STUDENT"
     ? claimableShiftAreas(candidate?.primaryArea)
     : null;
-  const [shifts, pickupRequests] = await Promise.all([
-    loadOpenShiftRows({ ...filters, now, claimableAreas: studentClaimableAreas }),
+  const [shiftRows, pickupRequestRows] = await Promise.all([
+    loadOpenShiftRows({ ...filters, limit, now, claimableAreas: studentClaimableAreas }),
     // Admins see every request because they own review. Everyone else sees only
     // their own — without it, claiming a shift looks like nothing happened.
     db.shiftAssignment.findMany({
@@ -342,11 +347,17 @@ export async function getScheduleOpenWork(filters: OpenWorkFilters) {
           shift: { select: openShiftSelect() },
         },
         orderBy: { createdAt: "asc" },
-        take: filters.limit ?? 50,
+        take: limit + 1,
       }),
   ]);
+  // Both lists are capped. Staff and Admins over a 120-day window can exceed
+  // the cap, so say so instead of silently dropping the tail.
+  const shifts = shiftRows.slice(0, limit);
+  const pickupRequests = pickupRequestRows.slice(0, limit);
 
   return {
+    openShiftsTruncated: shiftRows.length > limit,
+    pickupRequestsTruncated: pickupRequestRows.length > limit,
     openShifts: shifts.map((shift) => serializeOpenShift(shift, {
       userId: filters.userId,
       role: filters.role,

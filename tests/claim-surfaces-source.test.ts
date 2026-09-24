@@ -59,14 +59,15 @@ describe("student shift claim surfaces", () => {
     expect(source("src/app/api/my-shifts/route.ts")).toContain(
       'orderBy: [{ shift: { startsAt: "asc" } }, { id: "asc" }]',
     );
-    expect(schedule).toContain("APIClient.shared.allCalendarEvents(includePast: requestedIncludePast)");
-    expect(schedule).toContain("APIClient.shared.allMyShifts()");
+    // Schedule reads week windows; each window is still drained completely.
+    expect(schedule).toContain("APIClient.shared.allCalendarEvents(window: window)");
+    expect(schedule).toContain("APIClient.shared.allMyShifts(window: window)");
     expect(models).toContain("let viewerRequest: ViewerShiftRequest?");
     expect(eventDetail).toContain("$0.viewerRequest == nil");
     expect(eventDetail).toContain("pendingStudentClaimShifts");
     expect(eventDetail).toContain("claimsPaused");
     expect(schedule).toContain("orderedPersonalShiftsByEvent");
-    expect(schedule).toContain("collapsedCombinedScheduleEvents(fetchedEvents)");
+    expect(schedule).toContain("collapsedCombinedScheduleEvents(Array(rawEventsById.values))");
   });
 
   it("fans out every claim-review notification only to active admins", () => {

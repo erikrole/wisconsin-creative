@@ -4,7 +4,7 @@ import { source } from "./_helpers/source";
 describe("iOS Schedule all-day display", () => {
   it("preserves manual titles and hides call-time chrome for all-day events", () => {
     const models = source("ios/Wisconsin/Models/ScheduleModels.swift");
-    const scheduleView = source("ios/Wisconsin/Views/ScheduleView.swift");
+    const scheduleView = source("ios/Wisconsin/Views/Schedule/ScheduleEventRow.swift");
     const eventDetail = source("ios/Wisconsin/Views/EventDetailSheet.swift");
 
     expect(models).toContain("var displayAllDay: Bool");
@@ -14,8 +14,8 @@ describe("iOS Schedule all-day display", () => {
 
     expect(scheduleView).toContain("scheduleEventDisplayTitle(event)");
     expect(scheduleView).toContain("if event.displayAllDay { return \"All day\" }");
-    // The row's time now leads the card in a gutter rather than sitting in the
-    // meta line, so the all-day substitution lives in `gutterLines`.
+    // The row's time sits in a trailing column, so the all-day substitution
+    // lives in `timeLines`.
     expect(scheduleView).toContain("if event.displayAllDay { return (\"All day\", nil) }");
     expect(scheduleView).not.toContain("return Self.cleanSummary(event.summary)");
 
