@@ -409,6 +409,21 @@ export async function reconcileReservationScheduleTx(
     };
   }
 
+  // A manual or auto-fill assignment stays with the person it was scheduled
+  // for. After an owner transfer the booking must stop pointing at it, or the
+  // pickup checkout inherits a link that fails requester validation.
+  if (
+    current
+    && current.source !== ShiftAssignmentSource.RESERVATION
+    && current.userId !== args.requesterUserId
+  ) {
+    await tx.booking.update({
+      where: { id: args.bookingId },
+      data: { shiftAssignmentId: null },
+    });
+    current = null;
+  }
+
   if (current && current.source !== ShiftAssignmentSource.RESERVATION) {
     const matches = Boolean(
       args.primaryEventId

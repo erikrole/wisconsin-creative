@@ -739,6 +739,64 @@ describe("createBooking", () => {
     }));
   });
 
+  it("drops a stale inherited schedule link instead of blocking a transferred reservation pickup", async () => {
+    mockTx.booking.findUnique.mockResolvedValue({
+      id: "rv-1",
+      kind: BookingKind.RESERVATION,
+      status: BookingStatus.BOOKED,
+      locationId: "loc-1",
+      serializedItems: [{ assetId: "a-1", allocationStatus: "active" }],
+      bulkItems: [],
+    });
+    mockTx.shiftAssignment.findUnique.mockResolvedValue({
+      id: "assignment-original-owner",
+      userId: "original-owner",
+      status: "DIRECT_ASSIGNED",
+      source: "MANUAL",
+      shift: {
+        id: "shift-1",
+        area: "VIDEO",
+        workerType: "ST",
+        shiftGroup: { id: "group-1", eventId: "event-1", publishedAt: null, workingCopy: null },
+      },
+    });
+
+    await createBooking(baseInput({
+      custodySource: "ADMIN_OVERRIDE",
+      adminOverrideReason: "Kiosk unavailable; admin verified the handoff.",
+      sourceReservationId: "rv-1",
+      sourceReservationPickup: true,
+      shiftAssignmentId: "assignment-original-owner",
+      serializedAssetIds: ["a-1"],
+    }));
+
+    expect(mockTx.booking.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ shiftAssignmentId: null }),
+    }));
+  });
+
+  it("still rejects a client-supplied schedule link owned by someone else", async () => {
+    mockTx.shiftAssignment.findUnique.mockResolvedValue({
+      id: "assignment-other",
+      userId: "someone-else",
+      status: "DIRECT_ASSIGNED",
+      source: "MANUAL",
+      shift: {
+        id: "shift-1",
+        area: "VIDEO",
+        workerType: "ST",
+        shiftGroup: { id: "group-1", eventId: "event-1", publishedAt: null, workingCopy: null },
+      },
+    });
+
+    await expect(createBooking(baseInput({
+      kind: BookingKind.RESERVATION,
+      custodySource: undefined,
+      shiftAssignmentId: "assignment-other",
+    }))).rejects.toThrow("different requester");
+    expect(mockTx.booking.create).not.toHaveBeenCalled();
+  });
+
   it("force-checks out only the reservation items that remain after a partial pickup", async () => {
     const startsAt = new Date(Date.now() - 60_000);
     const endsAt = new Date(Date.now() + 60 * 60_000);
