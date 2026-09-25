@@ -463,6 +463,9 @@ struct KioskResolveScanResult: Decodable {
     let message: String?
     let user: KioskUser?
     let expectedRequester: KioskUser?
+    /// Personal owner of gear being returned. Display only — anyone identified
+    /// at the kiosk may return it, so it never restricts identity.
+    let custodyOwner: KioskUser?
     let item: KioskResolvedItem?
     let booking: KioskResolvedBooking?
     let candidates: [KioskScanCandidate]?

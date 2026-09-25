@@ -1,0 +1,23 @@
+{
+  "sourceRevision": "5a29ab69a8d2122621c224ae7f4a6bcbdb3cf173",
+  "sourcePatchSha256": "2cd38f686c49beb25a078ecb58273f0397c637fb8b63f5022a2877c3965c53ab",
+  "settings": {
+    "device": "Playwright Chromium, deviceScaleFactor 2",
+    "viewport": [
+      800,
+      700
+    ],
+    "fixture": "review-travel-card harness; travel GET = [] (empty trip); clip 560x390 CSS px from card container",
+    "role": "staff",
+    "route": "/review-travel-card (temporary)",
+    "appearance": "light",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "n/a",
+    "scroll": [
+      0,
+      0
+    ]
+  }
+}

@@ -626,7 +626,8 @@ struct KioskOperatorHubView: View {
                     targetBooking: result.booking.map { KioskIntentBooking(id: $0.id, title: $0.title, startsAt: $0.startsAt, endsAt: $0.endsAt) },
                     pendingScanValues: [scan],
                     createdAt: Date(),
-                    ambiguity: .none
+                    ambiguity: .none,
+                    custodyOwner: result.custodyOwner
                 )
                 store.setIntent(intent)
                 switch action {

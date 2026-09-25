@@ -1,0 +1,23 @@
+{
+  "sourceRevision": "5a29ab69a8d2122621c224ae7f4a6bcbdb3cf173",
+  "sourcePatchSha256": "b9533f166183859216ec98cd725f14d32200314bdb6aafaccc1eb0b562844ef6",
+  "settings": {
+    "device": "Playwright Chromium, deviceScaleFactor 2",
+    "viewport": [
+      800,
+      900
+    ],
+    "fixture": "review-travel-card harness; roster payload = that revision's getSportRoster output for 7 stored FB rows (Ben/Casey/Kelsey/Jacob default travelers, Drew inactive); travel members = Jacob",
+    "role": "staff",
+    "route": "/review-travel-card (temporary), Add popover open",
+    "appearance": "light",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "n/a",
+    "scroll": [
+      0,
+      0
+    ]
+  }
+}

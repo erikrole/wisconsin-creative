@@ -87,7 +87,7 @@ export const PATCH = withAuth<{ sportCode: string }>(async (req, { user, params 
 
   const assignment = await db.studentSportAssignment.findUnique({
     where: { id: assignmentId },
-    select: { sportCode: true },
+    select: { sportCode: true, defaultTraveler: true },
   });
   if (!assignment || assignment.sportCode !== sportCode) {
     throw new HttpError(404, "Assignment not found");
@@ -105,7 +105,7 @@ export const PATCH = withAuth<{ sportCode: string }>(async (req, { user, params 
     entityType: "student_sport_assignment",
     entityId: assignmentId,
     action: "roster_travel_set",
-    before: { defaultTraveler: !defaultTraveler },
+    before: { defaultTraveler: assignment.defaultTraveler },
     after: { sportCode, userId: updated.userId, defaultTraveler },
   });
 
