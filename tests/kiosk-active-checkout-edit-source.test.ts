@@ -3,14 +3,20 @@ import { source } from "./_helpers/source";
 
 describe("kiosk active checkout edits", () => {
   it("keeps global active checkout mutations kiosk-authenticated, audited, and transactional", () => {
-    const route = source("src/app/api/kiosk/checkout/[id]/route.ts");
+    // Add/remove live in a shared service so the atomic swap reuses them.
+    const route = source("src/app/api/kiosk/checkout/[id]/route.ts")
+      + source("src/lib/services/kiosk-active-checkout-items.ts");
     const schemas = source("src/lib/schemas/kiosk.ts");
 
     expect(route).toContain("export const PATCH = withKiosk");
     expect(route).toContain("export const POST = withKiosk");
     expect(route).toContain("export const DELETE = withKiosk");
     expect(route).toContain("status: \"OPEN\"");
-    const editableCheckoutGuard = route.slice(route.indexOf("async function requireEditableCheckout"), route.indexOf("function activeBulkQuantity"));
+    const editableCheckoutGuard = route.slice(
+      route.indexOf("export async function requireEditableCheckout"),
+      route.indexOf("const NUMBERED_BALANCE_RECONCILIATION_REASON"),
+    );
+    expect(editableCheckoutGuard).toContain('status: "OPEN"');
     expect(editableCheckoutGuard).not.toContain("locationId: args.locationId");
     expect(route).toContain("Prisma.TransactionIsolationLevel.Serializable");
     expect(route).toContain("createAuditEntryTx(tx");
