@@ -7,6 +7,7 @@ import {
   CHECKOUT_ESCALATION_STAGE_TYPES,
   type CheckoutEscalationStageType,
 } from "@/lib/checkout-escalation-policy";
+import { recordJobRun } from "@/lib/services/job-runs";
 
 export async function checkoutOverdueNotificationsWorkflow(
   bookingId: string,
@@ -49,6 +50,7 @@ async function runCheckoutEscalationStage(
       bookingId,
       expectedEndsAtIso,
       stageType,
+      timing.triggerAt,
     );
     if (result.status !== "not_eligible") return result;
   }
@@ -71,11 +73,25 @@ async function processCheckoutEscalationStageStep(
   bookingId: string,
   expectedEndsAtIso: string,
   stageType: CheckoutEscalationStageType,
+  triggerAtIso: string,
 ) {
   "use step";
-  return processCheckoutEscalationStage({
-    bookingId,
-    expectedEndsAt: new Date(expectedEndsAtIso),
-    stageType,
-  });
+  const dueAt = new Date(triggerAtIso);
+  try {
+    const result = await processCheckoutEscalationStage({
+      bookingId,
+      expectedEndsAt: new Date(expectedEndsAtIso),
+      stageType,
+    });
+    await recordJobRun({
+      job: "checkout_escalation",
+      outcome: result.status === "not_eligible" ? "skipped" : "succeeded",
+      dueAt,
+      detail: stageType,
+    });
+    return result;
+  } catch (error) {
+    await recordJobRun({ job: "checkout_escalation", outcome: "failed", dueAt, detail: stageType });
+    throw error;
+  }
 }

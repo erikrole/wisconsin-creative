@@ -167,7 +167,7 @@ describe("checkout consolidation", () => {
     ]);
   });
 
-  it("rejects a returned checkout or a different event context", async () => {
+  it("rejects a different event context", async () => {
     vi.mocked(db.booking.findMany).mockResolvedValue([
       checkout(ids[0]!),
       checkout(ids[1]!, {
@@ -177,7 +177,10 @@ describe("checkout consolidation", () => {
       }),
     ] as never);
 
-    await expect(previewCheckoutMerge(ids)).rejects.toMatchObject({ status: 409 });
+    await expect(previewCheckoutMerge(ids)).rejects.toMatchObject({
+      status: 409,
+      message: "Checkouts must link the same exact events before merging",
+    });
   });
 
   it("rejects a checkout after any item has been returned", async () => {
@@ -188,7 +191,10 @@ describe("checkout consolidation", () => {
       returned,
     ] as never);
 
-    await expect(previewCheckoutMerge(ids)).rejects.toMatchObject({ status: 409 });
+    await expect(previewCheckoutMerge(ids)).rejects.toMatchObject({
+      status: 409,
+      message: "Checkout custody records are not in a mergeable active state",
+    });
   });
 
   it("rejects a checkout with bulk custody that is not fully picked up", async () => {
@@ -199,7 +205,37 @@ describe("checkout consolidation", () => {
       staged,
     ] as never);
 
-    await expect(previewCheckoutMerge(ids)).rejects.toMatchObject({ status: 409 });
+    await expect(previewCheckoutMerge(ids)).rejects.toMatchObject({
+      status: 409,
+      message: "A checkout with staged or partially picked up bulk items cannot be merged",
+    });
+  });
+
+  it("rejects checkouts that are not linked to an event", async () => {
+    vi.mocked(db.booking.findMany).mockResolvedValue([
+      checkout(ids[0]!, { eventId: null, events: [] }),
+      checkout(ids[1]!, { eventId: null, events: [] }),
+    ] as never);
+
+    await expect(previewCheckoutMerge(ids)).rejects.toMatchObject({
+      status: 409,
+      message: "Only event-linked checkouts can be merged",
+    });
+  });
+
+  it("rejects a checkout with a returned numbered unit", async () => {
+    const returned = checkout(ids[1]!);
+    const unit: { checkedInAt: Date | null } = returned.bulkItems[0]!.unitAllocations[0]!;
+    unit.checkedInAt = new Date("2026-09-04T20:00:00.000Z");
+    vi.mocked(db.booking.findMany).mockResolvedValue([
+      checkout(ids[0]!),
+      returned,
+    ] as never);
+
+    await expect(previewCheckoutMerge(ids)).rejects.toMatchObject({
+      status: 409,
+      message: "A checkout with returned or staged numbered units cannot be merged",
+    });
   });
 
   it("still requires the return windows to match", async () => {
@@ -208,7 +244,10 @@ describe("checkout consolidation", () => {
       checkout(ids[1]!, { endsAt: new Date("2026-09-05T05:00:00.000Z") }),
     ] as never);
 
-    await expect(previewCheckoutMerge(ids)).rejects.toMatchObject({ status: 409 });
+    await expect(previewCheckoutMerge(ids)).rejects.toMatchObject({
+      status: 409,
+      message: "Checkout return windows must match before merging",
+    });
   });
 
   it("moves custody-linked rows and cancels only the emptied source checkout", async () => {
@@ -253,6 +292,15 @@ describe("checkout consolidation", () => {
     });
     expect(tx.bookingBulkItem.delete).toHaveBeenCalledWith({
       where: { id: `${ids[1]}-bulk-item` },
+    });
+    expect(createAuditEntryTx).toHaveBeenCalledWith(tx, expect.objectContaining({
+      entityId: ids[1],
+      action: "merged_into_checkout",
+      after: expect.objectContaining({ targetCheckoutId: ids[0] }),
+    }));
+    // Custody moves must not interleave with a concurrent checkout or return.
+    expect(db.$transaction).toHaveBeenCalledWith(expect.any(Function), {
+      isolationLevel: "Serializable",
     });
   });
 

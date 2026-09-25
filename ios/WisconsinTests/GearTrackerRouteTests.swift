@@ -85,4 +85,20 @@ final class GearTrackerRouteTests: XCTestCase {
             .inbox
         )
     }
+
+    func testNotificationSettingsRoutesEverywhere() {
+        XCTAssertEqual(
+            GearTrackerRouteParser.parse(URL(string: "https://wisconsincreative.com/settings/notifications")!),
+            .notificationSettings
+        )
+        XCTAssertEqual(GearTrackerRouteParser.parse(URL(string: "wisconsin://settings/notifications")!), .notificationSettings)
+        // Other settings pages have no native home and stay on the web.
+        XCTAssertNil(GearTrackerRouteParser.parse(URL(string: "https://wisconsincreative.com/settings/calendar-sources")!))
+        XCTAssertEqual(
+            GearTrackerRouteParser.parseNotification(userInfo: ["href": "/settings/notifications"]),
+            .notificationSettings
+        )
+        let url = GearTrackerRouteParser.wisconsinURL(for: .notificationSettings)
+        XCTAssertEqual(url.flatMap(GearTrackerRouteParser.parse), .notificationSettings)
+    }
 }

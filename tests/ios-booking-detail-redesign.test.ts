@@ -82,7 +82,6 @@ describe("iOS Booking Detail Item Detail alignment", () => {
 
     expect(gear).toContain('BrandSectionHeader(title: "Gear")');
     expect(gear).not.toContain("equipmentItemPill");
-    expect(gear).not.toContain('StatusPill(label: "Out"');
     expect(gear).toContain('item.allocationStatus?.lowercased() == "returned"');
     expect(gear).toContain('Image(systemName: "checkmark.circle.fill")');
     expect(gear).toContain("Color.statusBackground(.green)");

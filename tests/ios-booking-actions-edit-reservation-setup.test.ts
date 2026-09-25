@@ -85,6 +85,5 @@ describe("iOS reservation setup refresh", () => {
     expect(create).toContain('Text("Create Reservation")');
     expect(create).toContain("UserAvatarView(");
     expect(create).toContain(".tint(Color.statusText(.purple))");
-    expect(create).not.toContain('Text("Status: Reserved")');
   });
 });

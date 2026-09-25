@@ -1,7 +1,7 @@
 import type { AuthUser } from "@/lib/auth";
 import { createAuditEntry } from "@/lib/audit";
 import { ok } from "@/lib/http";
-import { dispatchScheduleAssignmentNotifications, notifyPickupRequestReviewers } from "@/lib/services/notifications";
+import { deferPush, dispatchScheduleAssignmentNotifications, notifyPickupRequestReviewers } from "@/lib/services/notifications";
 import { enforceRateLimit, SCHEDULE_MUTATION_LIMIT } from "@/lib/rate-limit";
 import { requirePermission } from "@/lib/rbac";
 import { enqueuePendingClaimReview } from "@/lib/claim-review-workflow";
@@ -34,15 +34,17 @@ export async function handleOpenShiftPickup(
 
   // "requested", not "assigned": the student holds nothing until Admin approves,
   // and the copy has to say so.
-  dispatchScheduleAssignmentNotifications(assignment.id, "requested").catch(() => {});
-  notifyPickupRequestReviewers(assignment.id).catch(() => {});
-  enqueuePendingClaimReview({
+  // Deferred past the response but kept alive until they settle; a bare
+  // promise can be frozen mid-send once the response is written.
+  deferPush(dispatchScheduleAssignmentNotifications(assignment.id, "requested").catch(() => {}));
+  deferPush(notifyPickupRequestReviewers(assignment.id).catch(() => {}));
+  deferPush(enqueuePendingClaimReview({
     kind: "request",
     claimId: assignment.id,
     shiftStartsAt: assignment.callStartsAt
       ?? assignment.shift.callStartsAt
       ?? assignment.shift.startsAt,
-  }).catch(() => {});
+  }).then(() => {}, () => {}));
 
   return ok({ data: assignment }, 201);
 }

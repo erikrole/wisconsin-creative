@@ -24,31 +24,45 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
   }
 
   // Create in-app notification for the requester
-  const hours = Math.max(0, Math.round((Date.now() - overdueAt.getTime()) / 3_600_000));
-  const title = "Overdue gear reminder";
-  const body = `"${booking.title}" is ${hours}h overdue. Please return the gear.`;
-  const [, requester] = await Promise.all([
-    db.notification.create({
-      data: {
+  // Counted from the due time, like the automatic "4 hours overdue" stages.
+  const hours = Math.max(1, Math.round((Date.now() - booking.endsAt.getTime()) / 3_600_000));
+  const overdueFor = `${hours} ${hours === 1 ? "hour" : "hours"}`;
+  const title = "Please return your gear";
+  const body = `"${booking.title}" is ${overdueFor} overdue. Staff asked you to return it.`;
+  const pushBody = `It's ${overdueFor} overdue.`;
+  const payload = { bookingId: booking.id, href: `/checkouts/${booking.id}` };
+  // One nudge per booking per UTC hour. A second tap in the same hour is a
+  // no-op success rather than a unique-key 409: the student already has it.
+  const [rows, requester] = await Promise.all([
+    db.notification.createManyAndReturn({
+      data: [{
         userId: booking.requesterUserId,
         bookingId: booking.id,
         type: "overdue_nudge",
         title,
         body,
-        payload: { bookingId: booking.id },
+        payload,
         channel: "IN_APP",
         sentAt: new Date(),
         dedupeKey: `nudge-${booking.id}-${new Date().toISOString().slice(0, 13)}`,
-      },
+      }],
+      skipDuplicates: true,
+      select: { id: true },
     }),
     db.user.findUnique({ where: { id: booking.requesterUserId }, select: { name: true } }),
   ]);
+  const [row] = rows;
+  if (!row) return ok({ success: true, alreadyNudged: true });
 
   deferPush(sendPushToUser(booking.requesterUserId, {
     title,
-    body,
-    payload: { bookingId: booking.id },
+    subtitle: booking.title,
+    body: pushBody,
+    payload,
     category: "checkoutOverdue",
+    notificationId: row.id,
+    // Shares the checkout's slot, replacing its latest reminder.
+    collapseId: `checkout-${booking.id}`,
   }));
 
   await createAuditEntry({

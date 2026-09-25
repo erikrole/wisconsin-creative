@@ -1,0 +1,76 @@
+{
+  "title": "Notification Levels on iOS",
+  "eyebrow": "iOS \u00b7 Wisconsin Creative \u00b7 Notifications Slice 3",
+  "lede": "Profile \u2192 Notifications is where people tune what reaches their phone. It used to offer one on/off switch per type; it now offers Off, Silent, or Standard per type, recurring quiet hours, and more ways to pause.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "Side by side",
+      "note": "Same fixture scenario (notifications, Staff user, pause active), same iPhone 18 Pro Max simulator, dark appearance, default text size. The after fixture also carries the new server fields (role catalog, levels, quiet hours) the screen now reads. The simulator clock is live, so the pause end time differs by the 15 minutes between runs.",
+      "pairs": [
+        {
+          "title": "Top of screen",
+          "sub": "Status, pause, and the new quiet hours.",
+          "before": "raw/before-top.png",
+          "beforeCap": "Pause, then straight into Delivery. No way to silence alerts on a schedule.",
+          "after": "raw/after-top.png",
+          "afterCap": "Quiet hours sit under Pause: a window, the days it starts on, and whether urgent alerts break through.",
+          "beforeEvidence": "raw/before-top-evidence.json",
+          "afterEvidence": "raw/after-top-evidence.json"
+        },
+        {
+          "title": "After one scroll",
+          "sub": "Notification types.",
+          "before": "raw/before-scrolled.png",
+          "beforeCap": "Seven identical switches under one heading. Everything is either on with sound or off.",
+          "after": "raw/after-scrolled.png",
+          "afterCap": "Quiet hours in full, then Delivery, then types grouped by Gear, Schedule, Account, and Admin.",
+          "beforeEvidence": "raw/before-scrolled-evidence.json",
+          "afterEvidence": "raw/after-scrolled-evidence.json"
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "On/off became Off, Silent, or Standard",
+      "was": "A switch per type. Muting schedule chatter meant losing it entirely.",
+      "now": "A menu per type. Silent keeps the alert in Notification Center without sound or lighting the screen; Off also stops that type's email."
+    },
+    {
+      "h": "Quiet hours",
+      "was": "Only a one-off pause, which silenced everything, including overdue gear.",
+      "now": "A weekly window in Central Time. Alerts still arrive, silently; overdue-gear alerts can break through."
+    },
+    {
+      "h": "Types follow the account's role",
+      "was": "The same seven types for everyone, hard-coded in the app.",
+      "now": "The server sends the types this role actually receives, so staff see item reports and admins see review requests, and new types need no app release."
+    },
+    {
+      "h": "More ways to pause",
+      "was": "1 hour, 1 day, or 1 week.",
+      "now": "Adds until tomorrow morning (7 AM) and a custom end time up to 30 days out."
+    },
+    {
+      "h": "Saves send only the change",
+      "was": "Every toggle re-sent the whole preference record.",
+      "now": "Each change sends only that field; time-wheel edits are batched into one save. Against an older server the screen falls back to the previous switches."
+    }
+  ],
+  "verification": [
+    "npm run ios:xcode:verify on the iPhone 18 Pro Max (isolated worktree): XcodeGen drift, simulator build, full XCTest suite, generic device build \u2014 passed",
+    "NotificationPreferenceLevelTests (patch encoding, explicit null resume, tolerant level decoding, Central-time round trip, tomorrow morning) \u2014 5 of 5 passed",
+    "NotificationSettingsScreenshotUITests on the iPhone 18 Pro Max \u2014 before and after both passed; inputs recorded in the hash-bound receipts",
+    "iOS source-contract tests for notifications, settings, and the API model \u2014 112 passed",
+    "npx tsc --noEmit clean; npm run verify:docs current",
+    "Full vitest: the only failures are 11 Schedule contract files broken by a concurrent, uncommitted Schedule refactor; all 15 pass in the worktree without it"
+  ],
+  "notes": [
+    "Both sides show a 'requested item could not be found' row. That's the fixture harness answering a background reload with a 404, not part of this change.",
+    "After-only frames further down the screen: raw/after-scrolled-2.png and raw/after-bottom.png (grouped types and the email-only item-report switch). The before capture has no matching frames.",
+    "The after capture was built in an isolated worktree of HEAD plus this work only, because a concurrent Schedule refactor in the main checkout does not compile yet.",
+    "Fixture captures prove layout only. Saving against a live server, APNs silent delivery, and quiet-hours timing still need a signed-in run against dev:preview and the physical iPhone.",
+    "Not in this slice: opening this screen from the iOS Settings link, a settings shortcut in the inbox, and the /settings/notifications deep link."
+  ]
+}

@@ -28,9 +28,14 @@ vi.mock("@/lib/db", () => ({
       create: vi.fn(),
     },
     notification: {
-      create: vi.fn(),
+      createManyAndReturn: vi.fn(async () => [{ id: "notification-1" }]),
     },
   },
+}));
+
+vi.mock("@/lib/services/notifications", () => ({
+  deferPush: vi.fn(),
+  sendPushToUser: vi.fn(async () => undefined),
 }));
 
 vi.mock("@/lib/rate-limit", async () => {
@@ -52,6 +57,7 @@ vi.mock("@sentry/nextjs", () => ({
 import { requireAuth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { createAuditEntry } from "@/lib/audit";
+import { sendPushToUser } from "@/lib/services/notifications";
 import { POST as createAvailability } from "@/app/api/users/[id]/availability/route";
 import {
   DELETE as deleteAvailability,
@@ -588,8 +594,10 @@ describe("student availability routes", () => {
         reviewedById: "staff-1",
       }),
     });
-    expect(db.notification.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
+    expect(db.notification.createManyAndReturn).toHaveBeenCalledWith({
+      skipDuplicates: true,
+      select: { id: true },
+      data: [expect.objectContaining({
         userId: "student-1",
         type: "time_off_approved",
         title: "Time off approved",
@@ -598,8 +606,9 @@ describe("student availability routes", () => {
           href: "/users/student-1?tab=availability",
         }),
         channel: "IN_APP",
-      }),
+      })],
     });
+    expect(sendPushToUser).toHaveBeenCalledWith("student-1", expect.objectContaining({ category: "timeOff" }));
   });
 
   it("marks existing future assignments conflicted when staff approve overlapping time off", async () => {

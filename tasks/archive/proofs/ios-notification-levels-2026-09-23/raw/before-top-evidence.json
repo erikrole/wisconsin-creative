@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "aaf408d11551d7752adfae612d964fc3abafed2d",
+  "sourcePatchSha256": "26e124e456474e98186c600329044732fbf3c71c740b9617442395611a9d93ac",
+  "settings": {
+    "device": "iPhone 18 Pro Max simulator (7BD40061-5741-4B92-B19C-3950F3C99DC3)",
+    "viewport": [
+      440,
+      956
+    ],
+    "fixture": "GT_PERFORMANCE_SCENARIO=notifications (NotificationSettingsHarnessView, Staff user, pause active)",
+    "role": "staff",
+    "route": "Profile > Notifications",
+    "appearance": "dark",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "live simulator clock; fixture pause ends launch + 1h",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "imageSha256": "ed16351b708b2f2cfae67165e37662b2c1d4d4ef5d737a880230e56f09df75f0",
+  "dimensions": [
+    1320,
+    2868
+  ]
+}

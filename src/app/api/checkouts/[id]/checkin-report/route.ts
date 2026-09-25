@@ -5,7 +5,7 @@ import { BookingKind, ScanPhase, CheckinReportType } from "@prisma/client";
 import { requireBookingAction } from "@/lib/services/booking-rules";
 import { createAuditEntry } from "@/lib/audit";
 import { checkinReportSchema } from "@/lib/validation";
-import { notifyItemReport } from "@/lib/services/notifications";
+import { deferPush, notifyItemReport } from "@/lib/services/notifications";
 import { deleteImage, imageExtensionForType, isBlobUrl, validateImage, publicBlobAuth } from "@/lib/blob";
 import { put } from "@vercel/blob";
 
@@ -138,9 +138,10 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
     await deleteImage(existingReport.imageUrl).catch(() => {});
   }
 
-  // Notify supervisors (fire-and-forget to avoid blocking the response)
+  // Notify supervisors after the response; `deferPush` keeps the function
+  // alive until the emails settle instead of letting it freeze mid-send.
   const itemDesc = `${bookingItem.asset.brand} ${bookingItem.asset.model}`;
-  notifyItemReport({
+  deferPush(notifyItemReport({
     bookingId: id,
     bookingTitle: booking.title,
     assetId,
@@ -152,7 +153,7 @@ export const POST = withAuth<{ id: string }>(async (req, { user, params }) => {
     reporterName: user.name,
   }).catch((err) => {
     console.error("[REPORT] Failed to send supervisor notifications:", err);
-  });
+  }));
 
   await createAuditEntry({
     actorId: user.id,

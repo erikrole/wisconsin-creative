@@ -1,6 +1,7 @@
 import Foundation
 import os
 import UIKit
+import UserNotifications
 
 private let appStatePerformanceLog = Logger(subsystem: "com.erikrole.Wisconsin", category: "Launch")
 
@@ -24,7 +25,15 @@ final class AppState {
     var overdueCount = 0
     var myShiftCount = 0
     var myShiftTodayCount = 0
-    var unreadNotifCount = 0
+    /// Mirrored onto the app icon. The server stamps the unread count on each
+    /// push; syncing here clears it again as the inbox is read.
+    var unreadNotifCount = 0 {
+        didSet {
+            guard unreadNotifCount != oldValue else { return }
+            let count = unreadNotifCount
+            Task { try? await UNUserNotificationCenter.current().setBadgeCount(count) }
+        }
+    }
     var openTradeCount = 0
     var pendingPushBookingId: String?
     var pendingPushEventId: String?
@@ -58,6 +67,8 @@ final class AppState {
     /// this after the selected tab has been restored so Settings opens through
     /// the same native Profile route as the visible gear button.
     var pendingSettingsRoute = false
+    /// Where a pending settings route lands inside Profile.
+    var pendingSettingsDestination: ProfileDestination = .settings
     /// Dashboard hint for landing Schedule on the viewer's own shifts. Set by
     /// the Home Shifts tile, whose count is personal, so the screen it opens
     /// should be scoped the same way. Consumed and cleared by ScheduleView.
@@ -156,6 +167,9 @@ final class AppState {
             pendingTradeBoard = true
         case .inbox:
             pendingNotificationsInbox = true
+        case .notificationSettings:
+            pendingSettingsDestination = .notifications
+            pendingSettingsRoute = true
         }
     }
 
@@ -174,6 +188,7 @@ final class AppState {
         pendingBookingDetailId = nil
         pendingBrowseDestination = nil
         pendingSettingsRoute = false
+        pendingSettingsDestination = .settings
     }
 
     func refresh(forceRefresh: Bool = false) async {
@@ -209,10 +224,12 @@ final class AppState {
             myShiftTodayCount = stats.myShiftsTodayCount ?? 0
             unreadNotifCount = count
             openTradeCount = min(trades.total, 9)
+            Task { await NotificationTelemetry.recordSurfaceLoad("home", startedAt: startedAt, succeeded: true) }
             appStatePerformanceLog.info("launch.appState.refresh result=success durationMs=\(elapsedMilliseconds(since: startedAt), privacy: .public) overdue=\(self.overdueCount, privacy: .public) shifts=\(self.myShiftCount, privacy: .public) shiftsToday=\(self.myShiftTodayCount, privacy: .public) unread=\(self.unreadNotifCount, privacy: .public) openTrades=\(self.openTradeCount, privacy: .public)")
         } catch {
             guard refreshRequests.owns(requestToken), !Task.isCancelled else { return }
             // Non-critical
+            Task { await NotificationTelemetry.recordSurfaceLoad("home", startedAt: startedAt, succeeded: false) }
             appStatePerformanceLog.error("launch.appState.refresh result=failure durationMs=\(elapsedMilliseconds(since: startedAt), privacy: .public)")
         }
     }

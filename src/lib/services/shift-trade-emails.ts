@@ -19,10 +19,10 @@ export async function sendShiftTradeEmail({
 }: ShiftTradeEmail): Promise<boolean> {
   const user = await db.user.findUnique({
     where: { id: userId },
-    select: { email: true, notificationPrefs: true },
+    select: { email: true, active: true, notificationPrefs: true },
   });
 
-  if (!user?.email) return false;
+  if (!user?.active || !user.email) return false;
   const prefs = normalizePrefs(user.notificationPrefs);
   if (!shouldDeliverEmail(prefs)) return false;
   if (!shouldDeliverCategory(prefs, "trade")) return false;

@@ -20,6 +20,9 @@ enum GearTrackerRoute: Equatable {
     case blast(String)
     case tradeBoard
     case inbox
+    /// Profile → Notifications. Opened from the inbox, the app's page in iOS
+    /// Settings, and `/settings/notifications` links.
+    case notificationSettings
 }
 
 enum GearTrackerRouteParser {
@@ -148,6 +151,8 @@ enum GearTrackerRouteParser {
             return URL(string: "wisconsin://schedule?myShifts=true")
         case .inbox:
             return URL(string: "wisconsin://notifications")
+        case .notificationSettings:
+            return URL(string: "wisconsin://settings/notifications")
         }
     }
 
@@ -183,6 +188,8 @@ enum GearTrackerRouteParser {
             return remainder.isEmpty ? nil : .user(remainder)
         case "notifications":
             return .inbox
+        case "settings":
+            return remainder == "notifications" ? .notificationSettings : nil
         default:
             return nil
         }
@@ -222,6 +229,10 @@ enum GearTrackerRouteParser {
             return .licenses
         case "notifications":
             return .inbox
+        case "settings":
+            // Only notification preferences have a native home; other settings
+            // pages stay on the web.
+            return id == "notifications" ? .notificationSettings : nil
         default:
             return nil
         }

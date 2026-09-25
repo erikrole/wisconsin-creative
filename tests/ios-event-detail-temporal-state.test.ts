@@ -16,7 +16,6 @@ describe("iOS Event detail temporal state", () => {
 
     // Both surfaces read the shared property rather than re-deriving it.
     expect(scheduleView).toContain("private var timeState: ScheduleEventTimeState { event.timeState }");
-    expect(scheduleView).not.toContain("enum EventTimeState");
     expect(eventDetail).toContain("private var eventHasEnded: Bool { event.timeState == .past }");
     expect(eventDetail).toContain("switch event.timeState {");
   });

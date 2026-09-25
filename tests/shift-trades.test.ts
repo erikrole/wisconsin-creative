@@ -8,12 +8,13 @@ type ShiftTradesTx = {
   shiftAssignment: Record<"findUnique" | "findFirst" | "create" | "update", MockFn>;
   user: Record<"findUnique", MockFn>;
   auditLog: Record<"create", MockFn>;
+  notification: Record<"createManyAndReturn", MockFn>;
 };
 type ShiftTradesDb = {
   _mockTx: ShiftTradesTx;
   $transaction: MockFn;
   shiftTrade: Record<"findMany" | "count" | "updateMany", MockFn>;
-  notification: Record<"createMany", MockFn>;
+  notification: Record<"createMany" | "createManyAndReturn", MockFn>;
   user: Record<"findMany", MockFn>;
 };
 
@@ -41,6 +42,9 @@ vi.mock("@/lib/db", () => {
     auditLog: {
       create: vi.fn(),
     },
+    notification: {
+      createManyAndReturn: vi.fn(),
+    },
   };
 
   return {
@@ -56,6 +60,7 @@ vi.mock("@/lib/db", () => {
       },
       notification: {
         createMany: vi.fn(),
+        createManyAndReturn: vi.fn(),
       },
       user: {
         findMany: vi.fn(),
@@ -138,6 +143,8 @@ beforeEach(() => {
   vi.setSystemTime(new Date("2026-03-01T12:00:00.000Z"));
   mockDb.user.findMany.mockResolvedValue([]);
   mockDb.notification.createMany.mockResolvedValue({ count: 1 });
+  mockDb.notification.createManyAndReturn.mockResolvedValue([{ id: "notification-1" }]);
+  mockTx.notification.createManyAndReturn.mockResolvedValue([{ id: "notification-1" }]);
   mockTx.user.findUnique.mockResolvedValue(makeUser({
     id: "claimer-1",
     role: "STUDENT",
@@ -434,6 +441,43 @@ describe("claimTrade", () => {
     expect(sendShiftTradeEmail).toHaveBeenCalledTimes(1);
   });
 
+  it("writes claim rows inside the claim transaction, keyed to this claim", async () => {
+    const trade = openTrade();
+    mockTx.shiftTrade.findUnique.mockResolvedValue(trade);
+    mockTx.user.findUnique.mockResolvedValue(makeUser({ primaryArea: "Field" }));
+    mockTx.shiftAssignment.findUnique.mockResolvedValue({ ...trade.shiftAssignment });
+    mockTx.shiftAssignment.update.mockResolvedValue({});
+    mockTx.shiftAssignment.create.mockResolvedValue({});
+    const claimed = claimedTrade(trade);
+    mockTx.shiftTrade.update.mockResolvedValue(claimed);
+
+    await claimTrade(trade.id, "claimer-1");
+
+    const cycle = claimed.claimedAt.toISOString();
+    const keys = mockTx.notification.createManyAndReturn.mock.calls.map((call) => call[0].data[0].dedupeKey);
+    expect(keys).toEqual([
+      `trade_claimed_${trade.id}_${cycle}`,
+      `trade_claim_pending_${trade.id}_${cycle}`,
+    ]);
+    expect(mockTx.notification.createManyAndReturn.mock.calls[0]?.[0].skipDuplicates).toBe(true);
+  });
+
+  it("does not push or email when the claim rows already exist", async () => {
+    const trade = openTrade();
+    mockTx.shiftTrade.findUnique.mockResolvedValue(trade);
+    mockTx.user.findUnique.mockResolvedValue(makeUser({ primaryArea: "Field" }));
+    mockTx.shiftAssignment.findUnique.mockResolvedValue({ ...trade.shiftAssignment });
+    mockTx.shiftAssignment.update.mockResolvedValue({});
+    mockTx.shiftAssignment.create.mockResolvedValue({});
+    mockTx.shiftTrade.update.mockResolvedValue(claimedTrade(trade));
+    mockTx.notification.createManyAndReturn.mockResolvedValue([]);
+
+    await claimTrade(trade.id, "claimer-1");
+
+    expect(sendPushToUser).not.toHaveBeenCalled();
+    expect(sendShiftTradeEmail).not.toHaveBeenCalled();
+  });
+
   it("does not retry a non-conflict failure", async () => {
     const transaction = mockDb.$transaction as unknown as MockFn;
     transaction.mockRejectedValueOnce(new Error("boom"));
@@ -714,7 +758,7 @@ describe("claimTrade", () => {
         title: "Your trade was claimed",
         eventSummary: "Wisconsin vs Iowa",
         area: "Field",
-        body: expect.stringContaining("still scheduled"),
+        body: expect.stringContaining("still on the schedule"),
       })
     );
   });
@@ -801,7 +845,7 @@ describe("approveTrade", () => {
     expect(sendShiftTradeEmail).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: "poster-1",
-        title: "Your trade was approved — you're off the shift",
+        title: "You're off the shift",
         body: expect.stringContaining("no longer on the schedule"),
       })
     );

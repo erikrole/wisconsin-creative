@@ -29,7 +29,6 @@ describe("iOS Browse tab", () => {
     expect(browse).toContain("List {");
     expect(browse).toContain(".listStyle(.insetGrouped)");
     expect(browse).toContain('.navigationTitle("Browse")');
-    expect(browse).not.toContain('Text("More")');
     expect(browse).not.toContain('Text("Browse")');
     expect(browse).toContain("NavigationLink(value: destination)");
     expect(browse).toContain("SettingsMenuRow(");

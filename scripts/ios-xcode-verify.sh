@@ -13,15 +13,15 @@ XCODEBUILD_FLAGS=()
 if [[ "$SCHEME" == "WisconsinKiosk" ]]; then
   SIMULATOR_NAME="${IOS_SIMULATOR_NAME:-iPad (A16)}"
 else
-  SIMULATOR_NAME="${IOS_SIMULATOR_NAME:-iPhone 16 Pro}"
+  SIMULATOR_NAME="${IOS_SIMULATOR_NAME:-iPhone 18 Pro Max}"
 fi
 
 # Resolve a simulator UDID by exact device name.
 #
 # `platform=iOS Simulator,name=<device>,OS=latest` resolves the name against the
 # newest installed runtime only, so a device that exists solely under an older
-# runtime never matches — the iPhone 16 Pro required by AGENTS.md is installed
-# on iOS 26.5 while iOS 27.0 is also present, and the `name=` form fails with
+# runtime never matches — e.g. an iPhone 16 Pro installed only on iOS 26.5
+# while iOS 27.0 is also present, and the `name=` form fails with
 # "Unable to find a device matching the provided destination specifier".
 # Matching UDIDs out of `xcrun simctl list devices available` avoids that:
 # prefer a booted device, otherwise the newest runtime that has one.

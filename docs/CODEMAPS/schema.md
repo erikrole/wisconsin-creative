@@ -1493,7 +1493,7 @@ Indexes and constraints:
 
 ## Model `Notification`
 
-Fields: 13
+Fields: 14
 
 - `id        String              @id @default(cuid())`
 - `userId    String              @map("user_id")`
@@ -1508,6 +1508,7 @@ Fields: 13
 - `bookingId String?             @map("booking_id")`
 - `createdAt DateTime            @default(now()) @map("created_at")`
 - `user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)`
+- `deliveries NotificationDelivery[]`
 
 Indexes and constraints:
 
@@ -1517,6 +1518,65 @@ Indexes and constraints:
 - `@@index([sentAt])`
 - `@@index([bookingId])`
 - `@@map("notifications")`
+
+## Model `NotificationDelivery`
+
+Fields: 9
+
+- `id             String       @id @default(cuid())`
+- `notificationId String       @map("notification_id")`
+- `category       String?`
+- `channel        String`
+- `outcome        String`
+- `reason         String?`
+- `latencyBucket  String?      @map("latency_bucket")`
+- `occurredAt     DateTime     @default(now()) @map("occurred_at")`
+- `notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)`
+
+Indexes and constraints:
+
+- `@@index([occurredAt])`
+- `@@index([category, occurredAt])`
+- `@@index([outcome, occurredAt])`
+- `@@index([notificationId])`
+- `@@map("notification_deliveries")`
+
+## Model `AppDiagnostic`
+
+Fields: 9
+
+- `id          String   @id @default(cuid())`
+- `platform    String`
+- `kind        String`
+- `appVersion  String?  @map("app_version")`
+- `osVersion   String?  @map("os_version")`
+- `signature   String?`
+- `metadata    Json?`
+- `callStack   Json?    @map("call_stack")`
+- `receivedAt  DateTime @default(now()) @map("received_at")`
+
+Indexes and constraints:
+
+- `@@index([receivedAt])`
+- `@@index([kind, receivedAt])`
+- `@@map("app_diagnostics")`
+
+## Model `JobRun`
+
+Fields: 6
+
+- `id             String   @id @default(cuid())`
+- `job            String`
+- `outcome        String`
+- `latenessBucket String?  @map("lateness_bucket")`
+- `detail         String?`
+- `occurredAt     DateTime @default(now()) @map("occurred_at")`
+
+Indexes and constraints:
+
+- `@@index([occurredAt])`
+- `@@index([job, occurredAt])`
+- `@@map("job_runs")`
 
 ## Model `EscalationRule`
 

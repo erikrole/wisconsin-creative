@@ -517,12 +517,18 @@ final class NotificationSettingsScreenshotUITests: XCTestCase {
 
         XCTAssertTrue(app.navigationBars["Notifications"].waitForExistence(timeout: 20),
                       "Notifications never rendered")
-        XCTAssertTrue(app.staticTexts["Push alerts"].waitForExistence(timeout: 15),
+        // The fixture's account pause renders near the top on every layout;
+        // lower rows (Push alerts) are lazily built only once scrolled to.
+        XCTAssertTrue(app.staticTexts["Alerts paused"].waitForExistence(timeout: 15),
                       "Notification preference fixture never rendered")
 
         attach(app, name: "notifications-top")
         app.swipeUp(velocity: .slow)
         attach(app, name: "notifications-scrolled")
+        app.swipeUp(velocity: .slow)
+        attach(app, name: "notifications-scrolled-2")
+        app.swipeUp(velocity: .slow)
+        attach(app, name: "notifications-bottom")
     }
 
     private func attach(_ app: XCUIApplication, name: String) {

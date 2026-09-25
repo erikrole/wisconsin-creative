@@ -1,17 +1,18 @@
 import { after } from "next/server";
 import { db } from "@/lib/db";
 import { sendEmail, buildNotificationEmail } from "@/lib/email";
-import { DEFAULT_APNS_INTERRUPTION_LEVEL, sendPush } from "@/lib/push/apns";
+import { sendPush } from "@/lib/push/apns";
 import { sendWebPushToUsers } from "@/lib/push/web";
 import { withNotificationHref } from "@/lib/notification-destination";
 import { ACTIVE_ASSIGNMENT_STATUSES } from "@/lib/shift-constants";
-import { loadUserPrefs, normalizePrefs, shouldDeliverEmail, shouldDeliverPush, shouldDeliverCategory, type NotificationCategory } from "@/lib/services/notification-prefs";
+import { isInQuietHours, loadUserPrefs, normalizePrefs, pushSuppressionReason, resolvePushPresentation, shouldDeliverEmail, shouldDeliverCategory, type NotificationCategory } from "@/lib/services/notification-prefs";
+import { latencyBucket, recordDeliveries, type DeliveryRecord } from "@/lib/services/notification-deliveries";
+import { analyticsTag } from "@/lib/services/product-event-log";
+import { catalogEntry } from "@/lib/notification-catalog";
 import { loadCheckoutPolicies } from "@/lib/services/checkout-policies";
 import { shiftWorkerLabel } from "@/lib/shift-display";
-import { formatAppDateTime } from "@/lib/app-time";
+import { formatAppDateTime, formatAppTime } from "@/lib/app-time";
 import { studentCallTimeAppliesToEvent } from "@/lib/shift-call-windows";
-import { primaryChange, type ScheduleWorkerChange } from "@/lib/services/schedule-notification-diff";
-import { scheduleChangeCopy } from "@/lib/services/schedule-notification-copy";
 import {
   categoryForScheduleNotificationType,
   scheduleNotificationPayload,
@@ -54,51 +55,74 @@ export function deferPush(task: Promise<void>): void {
   }
 }
 
-/**
- * Preference category -> the native client's registered action set.
- *
- * These are grouped by what the reader can usefully *do*, not by what the
- * notification is about: everything gear-custody-shaped offers the same two
- * actions, everything schedule-shaped offers one. `licenseExpiry` is absent on
- * purpose — there is no action a phone can take on an expiring license, and a
- * menu with only "View" in it is worse than a plain tap.
- */
-const APNS_ACTION_CATEGORY: Partial<Record<NotificationCategory, string>> = {
-  checkoutDue: "GT_BOOKING",
-  checkoutOverdue: "GT_BOOKING",
-  reservation: "GT_BOOKING",
-  gearPrep: "GT_BOOKING",
-  schedule: "GT_SCHEDULE",
-  trade: "GT_SCHEDULE",
+export type PushMessage = {
+  title: string;
+  /** The booking, event, or item the alert is about, shown under the title. */
+  subtitle?: string | null;
+  /**
+   * The push body. With a subtitle this should be the short next step; the
+   * inbox row keeps its own self-contained body for clients without subtitles.
+   */
+  body?: string | null;
+  payload?: Record<string, unknown>;
+  category?: NotificationCategory;
+  /** The inbox row this push announces, so the device can clear or mark it. */
+  notificationId?: string;
+  /**
+   * A later push with the same key replaces this one on the device instead of
+   * stacking, e.g. one alert per checkout as reminders escalate. Defaults to
+   * the inbox row id, so unrelated alerts never replace each other.
+   */
+  collapseId?: string;
+  /** Overrides the category's action set, e.g. no Approve on a decided review. */
+  apnsCategory?: string;
 };
 
-const APNS_INTERRUPTION_LEVEL: Partial<Record<NotificationCategory, "passive" | "active" | "time-sensitive">> = {
-  checkoutDue: "active",
-  checkoutOverdue: "time-sensitive",
-  reservation: "active",
-  gearPrep: "passive",
-  licenseExpiry: "passive",
-  schedule: "passive",
-  trade: "active",
-};
+/** One Notification Center stack per checkout or event; otherwise per category. */
+function pushThreadId(payload: Record<string, unknown> | undefined, category: NotificationCategory | undefined): string {
+  const bookingId = typeof payload?.bookingId === "string" ? payload.bookingId : null;
+  if (bookingId) return `booking-${bookingId}`;
+  const eventId = typeof payload?.eventId === "string" ? payload.eventId : null;
+  if (eventId) return `event-${eventId}`;
+  return category ?? "general";
+}
 
-export async function sendPushToUser(
-  userId: string,
-  opts: { title: string; body?: string | null; payload?: Record<string, unknown>; category?: NotificationCategory }
-): Promise<void> {
+export async function sendPushToUser(userId: string, opts: PushMessage): Promise<void> {
   // Never throws: callers fire-and-forget with `void`, and an unhandled
   // rejection is fatal in modern Node — push is best-effort by design.
+  // Every outcome for an inbox row lands in the delivery ledger.
+  const ledger: DeliveryRecord[] = [];
+  const record = (entry: Omit<DeliveryRecord, "notificationId" | "category">) => {
+    if (opts.notificationId) {
+      ledger.push({ notificationId: opts.notificationId, category: opts.category ?? null, ...entry });
+    }
+  };
   try {
     const prefs = await loadUserPrefs(userId);
-    if (!shouldDeliverPush(prefs)) return;
-    if (opts.category && !shouldDeliverCategory(prefs, opts.category)) return;
+    const now = new Date();
+    const presentation = resolvePushPresentation(prefs, opts.category, now);
+    if (!presentation) {
+      record({ channel: "apns", outcome: "suppressed", reason: pushSuppressionReason(prefs, opts.category, now) });
+      return;
+    }
+    const silentReason = presentation.sound
+      ? null
+      : isInQuietHours(prefs.quietHours, now) ? "quiet_hours" : "level_silent";
 
     // Keep native APNs tokens and browser subscriptions on their own delivery
     // paths. The web sender is best-effort and has its own failure boundary, so
     // missing VAPID configuration never suppresses iOS delivery.
     const payloadType = typeof opts.payload?.type === "string" ? opts.payload.type : undefined;
-    const payload = withNotificationHref(opts.payload, payloadType);
-    const [tokens] = await Promise.all([
+    const payload = withNotificationHref(
+      {
+        ...opts.payload,
+        ...(opts.notificationId ? { notificationId: opts.notificationId } : {}),
+        // Lets the device tag its open/action telemetry without the title.
+        ...(opts.category ? { category: analyticsTag(opts.category) } : {}),
+      },
+      payloadType,
+    );
+    const [tokens, webDeliveries] = await Promise.all([
       db.deviceToken.findMany({
         where: {
           userId,
@@ -108,22 +132,59 @@ export async function sendPushToUser(
         },
         select: { token: true },
       }),
-      sendWebPushToUsers([userId], { ...opts, payload }),
+      // Browser notifications have no subtitle line; lead the body with it.
+      sendWebPushToUsers([userId], {
+        title: opts.title,
+        body: opts.subtitle ? [opts.subtitle, opts.body].filter(Boolean).join(" · ") : opts.body,
+        payload,
+        silent: !presentation.sound,
+        // Same replace-in-place key as iOS; re-alert only when it's urgent.
+        tag: opts.collapseId ?? opts.notificationId,
+        renotify: opts.category === "checkoutOverdue",
+      }),
     ]);
-    if (tokens.length === 0) return;
+    const web = webDeliveries.get(userId);
+    if (web && web.devices > 0) {
+      record(web.delivered > 0
+        ? { channel: "web", outcome: silentReason ? "sent_silent" : "sent", reason: silentReason }
+        : { channel: "web", outcome: web.revoked > 0 ? "bad_token" : "error", reason: web.revoked > 0 ? "expired" : null });
+    }
+    if (tokens.length === 0) {
+      if (!web || web.devices === 0) record({ channel: "apns", outcome: "no_device" });
+      return;
+    }
 
-    const { revoked } = await sendPush(
+    // Producers write the inbox row before pushing, so this count includes it.
+    const unreadCount = await db.notification.count({ where: { userId, readAt: null } });
+    const entry = opts.category ? catalogEntry(opts.category) : null;
+
+    const dispatchStartedAt = Date.now();
+    const { revoked, ok: accepted } = await sendPush(
       tokens.map((t) => t.token),
       {
         title: opts.title,
+        subtitle: opts.subtitle ?? undefined,
         body: opts.body ?? "",
         payload,
-        category: opts.category ? APNS_ACTION_CATEGORY[opts.category] : undefined,
-        interruptionLevel: opts.category
-          ? APNS_INTERRUPTION_LEVEL[opts.category] ?? DEFAULT_APNS_INTERRUPTION_LEVEL
-          : DEFAULT_APNS_INTERRUPTION_LEVEL,
+        // Selects the native long-press action set (Mark as Read everywhere,
+        // plus snooze, acknowledge, or Approve/Decline where they apply).
+        category: opts.apnsCategory ?? entry?.apnsCategory,
+        interruptionLevel: presentation.interruptionLevel,
+        sound: presentation.sound,
+        threadId: pushThreadId(opts.payload, opts.category),
+        badge: unreadCount,
+        relevanceScore: entry?.relevance,
+        collapseId: opts.collapseId ?? opts.notificationId,
       }
     );
+    const latency = latencyBucket(Date.now() - dispatchStartedAt);
+    if (accepted > 0) {
+      record({ channel: "apns", outcome: silentReason ? "sent_silent" : "sent", reason: silentReason, latencyBucket: latency });
+    } else if (revoked.length === tokens.length) {
+      record({ channel: "apns", outcome: "bad_token", latencyBucket: latency });
+    } else {
+      record({ channel: "apns", outcome: "error", latencyBucket: latency });
+    }
 
     if (revoked.length > 0) {
       await db.deviceToken.updateMany({
@@ -133,6 +194,9 @@ export async function sendPushToUser(
     }
   } catch (err) {
     console.error(`[NOTIFY] Push to user ${userId} failed:`, err);
+    record({ channel: "apns", outcome: "error", reason: "exception" });
+  } finally {
+    await recordDeliveries(ledger);
   }
 }
 
@@ -235,8 +299,28 @@ function requesterEscalationBody(args: {
   return `"${args.checkoutTitle}" was due ${formatRelative(args.dueAt, args.now)}. Please return the gear.`;
 }
 
+/** Push body under a "Checkout name" subtitle: the next step only. */
+function requesterEscalationPushBody(type: string, gracePeriodHours: number, dueAt: Date): string {
+  if (type === "checkout_due_2h") return `Return it by ${formatAppTime(dueAt)}.`;
+  if (type === "checkout_due_now") {
+    const graceMinutes = Math.round(gracePeriodHours * 60);
+    return graceMinutes > 0 ? `Return it within ${graceMinutes} minutes.` : "Return it now.";
+  }
+  return "Return it as soon as you can.";
+}
+
+function operationalEscalationTiming(rule: EscalationRule): string {
+  return rule.type === "checkout_overdue_24h" ? "1 day" : "4 hours";
+}
+
+function operationalEscalationPushBody(checkout: EscalationCheckout): string {
+  return checkout.custodyScope === "SHARED"
+    ? "This shared checkout isn't back. Follow up to get it returned."
+    : `${checkout.requester.name} hasn't returned it. Follow up with them.`;
+}
+
 function operationalEscalationBody(checkout: EscalationCheckout, rule: EscalationRule): string {
-  const timing = rule.type === "checkout_overdue_24h" ? "1 day" : "4 hours";
+  const timing = operationalEscalationTiming(rule);
   return checkout.custodyScope === "SHARED"
     ? `Shared checkout "${checkout.title}" is ${timing} overdue.`
     : `${checkout.requester.name}'s checkout "${checkout.title}" is ${timing} overdue.`;
@@ -266,6 +350,8 @@ async function persistCheckoutEscalation(args: {
   recipientKind: CheckoutEscalationRecipientKind;
   title: string;
   body: string;
+  /** Shorter push body; the subtitle carries the checkout name. */
+  pushBody: string;
   now: Date;
   existingKeys: Set<string>;
 }): Promise<boolean> {
@@ -279,8 +365,9 @@ async function persistCheckoutEscalation(args: {
   });
   if (args.existingKeys.has(dedupeKey)) return false;
 
+  let notificationId: string;
   try {
-    await db.notification.create({
+    const row = await db.notification.create({
       data: {
         userId: args.recipient.id,
         bookingId: args.checkout.id,
@@ -302,7 +389,9 @@ async function persistCheckoutEscalation(args: {
         sentAt: args.now,
         dedupeKey,
       },
+      select: { id: true },
     });
+    notificationId = row.id;
     args.existingKeys.add(dedupeKey);
   } catch (error) {
     if (isUniqueConflict(error)) return false;
@@ -314,15 +403,23 @@ async function persistCheckoutEscalation(args: {
   if (channels.push) {
     deferPush(sendPushToUser(args.recipient.id, {
       title: args.title,
-      body: args.body,
+      subtitle: args.checkout.title,
+      body: args.pushBody,
       payload: { bookingId: args.checkout.id, href: `/checkouts/${args.checkout.id}` },
       category,
+      notificationId,
+      // Each stage replaces the last, so a checkout never stacks "due soon"
+      // under "overdue". Staff follow-ups replace each other separately.
+      collapseId: args.recipientKind === "requester"
+        ? `checkout-${args.checkout.id}`
+        : `checkout-${args.checkout.id}-followup`,
     }));
   }
   if (channels.email && args.recipient.email) {
     await sendEmailToUser(args.recipient.id, {
       to: args.recipient.email,
-      subject: args.title,
+      // Email has no subtitle line, so the subject names the checkout.
+      subject: `${args.title}: ${args.checkout.title}`,
       html: buildNotificationEmail({
         title: args.title,
         body: args.body,
@@ -364,6 +461,7 @@ async function deliverCheckoutEscalation(args: {
       recipientKind: "requester",
       title: args.rule.title,
       body,
+      pushBody: requesterEscalationPushBody(args.rule.type, args.gracePeriodHours, args.checkout.endsAt),
       now: args.now,
       existingKeys,
     })) created += 1;
@@ -398,7 +496,9 @@ async function deliverCheckoutEscalation(args: {
   let operationalCount = counts.operational;
   for (const { user, kind } of operationalRecipients.values()) {
     if (operationalCount >= args.config.maxOperationalNotificationsPerDueDate) break;
-    const title = `Overdue: ${args.checkout.title}`;
+    // The checkout name is the subtitle; repeating it in the title read
+    // "Overdue: Kit A" over "Kit A is 4 hours overdue".
+    const title = `Checkout ${operationalEscalationTiming(args.rule)} overdue`;
     const body = operationalEscalationBody(args.checkout, args.rule);
     if (await persistCheckoutEscalation({
       checkout: args.checkout,
@@ -407,6 +507,7 @@ async function deliverCheckoutEscalation(args: {
       recipientKind: kind,
       title,
       body,
+      pushBody: operationalEscalationPushBody(args.checkout),
       now: args.now,
       existingKeys,
     })) {
@@ -647,14 +748,11 @@ export async function createShiftGearUpNotification(
   const existing = await db.notification.findUnique({ where: { dedupeKey } });
   if (existing) return;
 
-  const eventTitle = event.opponent
-    ? `${event.isHome === false ? "at" : "vs"} ${event.opponent}`
-    : event.summary;
-
   const shiftTime = formatAppDateTime(assignment.shift.startsAt);
 
   const title = "Gear up for your shift";
-  const body = `You're assigned to ${assignment.shift.area} for ${eventTitle} at ${shiftTime}. Reserve your gear now.`;
+  const body = `You're on ${assignment.shift.area} at ${event.summary}, ${shiftTime}. Reserve your gear now.`;
+  const pushBody = `${assignment.shift.area}, ${shiftTime}. Reserve your gear now.`;
   const pushPayload = scheduleNotificationPayload({
     assignmentId: assignment.id,
     shiftId: assignment.shiftId,
@@ -662,7 +760,7 @@ export async function createShiftGearUpNotification(
   });
 
   try {
-    await db.notification.create({
+    const row = await db.notification.create({
       data: {
         userId: assignment.userId,
         type: "shift_gear_up",
@@ -684,9 +782,11 @@ export async function createShiftGearUpNotification(
 
     deferPush(sendPushToUser(assignment.userId, {
       title,
-      body,
+      subtitle: event.summary,
+      body: pushBody,
       payload: pushPayload,
       category: categoryForScheduleNotificationType("shift_gear_up") ?? undefined,
+      notificationId: row.id,
     }));
 
     // Also send email notification
@@ -729,7 +829,6 @@ function shiftScheduleNotificationCopy(args: {
   callEndsAt: Date | null;
   callNote: string | null;
 }) {
-  const role = shiftWorkerLabel(args.workerType);
   const hasCallWindow = args.workerType === "ST" && args.callStartsAt && args.callEndsAt;
   const callWindow = hasCallWindow
     ? args.callStartsAt!.getTime() === args.callEndsAt!.getTime()
@@ -739,54 +838,66 @@ function shiftScheduleNotificationCopy(args: {
   const note = hasCallWindow && args.callNote ? ` ${args.callNote}` : "";
   const timing = callWindow ? ` Call time: ${callWindow}.` : "";
 
+  // The recipient's own role ("Student") adds nothing; name the area only.
+  const shift = args.area;
+
+  // `body` is the self-contained inbox sentence; `pushBody` sits under the
+  // event-name subtitle, so it leaves the event out.
   switch (args.event) {
     case "requested":
-      // A request holds no slot. Saying anything warmer than "waiting" is how
+      // A request holds no shift. Saying anything warmer than "waiting" is how
       // someone treats a pending claim as a shift they have.
       return {
         type: "shift_request_pending",
         title: "Shift request sent",
-        body: `Your request for the ${args.area} ${role} slot for ${args.eventTitle} is waiting for Admin approval. You're not on the schedule until it's approved.${timing}${note}`,
+        body: `Your request for the ${shift} shift at ${args.eventTitle} is waiting for Admin approval. You're not on the schedule until it's approved.${timing}${note}`,
+        pushBody: `You're not on the ${shift} shift until an Admin approves.`,
       };
     case "approved":
       return {
         type: "shift_request_approved",
         title: "Shift request approved",
-        body: `You're approved for the ${args.area} ${role} slot for ${args.eventTitle}.${timing}${note}`,
+        body: `You're on the schedule for the ${shift} shift at ${args.eventTitle}.${timing}${note}`,
+        pushBody: `You're on the ${shift} shift.${timing}${note}`,
       };
     case "declined":
       return {
         type: "shift_request_declined",
         title: "Shift request declined",
-        body: `Your request for the ${args.area} ${role} slot for ${args.eventTitle} was declined.`,
+        body: `Your request for the ${shift} shift at ${args.eventTitle} was declined.`,
+        pushBody: `You won't be on the ${shift} shift.`,
       };
     case "removed":
       return {
         type: "shift_assignment_removed",
-        title: "Shift assignment removed",
-        body: `You're no longer assigned to the ${args.area} ${role} slot for ${args.eventTitle}.`,
+        title: "Removed from a shift",
+        body: `You're no longer on the ${shift} shift at ${args.eventTitle}.`,
+        pushBody: `You're no longer on the ${shift} shift.`,
       };
     case "shift_time_changed":
       return {
         type: "shift_time_changed",
-        title: "Shift time updated",
+        title: "Call time changed",
         body: callWindow
-          ? `Your ${args.area} ${role} slot for ${args.eventTitle} has an updated call time: ${callWindow}.${note}`
-          : `The event time changed for your ${args.area} ${role} slot for ${args.eventTitle}.${note}`,
+          ? `Your call time for the ${shift} shift at ${args.eventTitle} is now ${callWindow}.${note}`
+          : `The event time changed for your ${shift} shift at ${args.eventTitle}.${note}`,
+        pushBody: callWindow ? `${shift}: now ${callWindow}.${note}` : `The event time changed for your ${shift} shift.`,
       };
     case "personal_call_time_changed":
       return {
         type: "shift_personal_call_time_changed",
         title: "Your call time changed",
         body: callWindow
-          ? `Your call time for the ${args.area} ${role} slot for ${args.eventTitle} is now ${callWindow}.${note}`
-          : `Your schedule for the ${args.area} ${role} slot for ${args.eventTitle} was updated.`,
+          ? `Your call time for the ${shift} shift at ${args.eventTitle} is now ${callWindow}.${note}`
+          : `Your ${shift} shift at ${args.eventTitle} was updated.`,
+        pushBody: callWindow ? `${shift}: now ${callWindow}.${note}` : `Your ${shift} shift was updated.`,
       };
     default:
       return {
         type: "shift_assigned",
         title: "Shift assigned",
-        body: `You're assigned to the ${args.area} ${role} slot for ${args.eventTitle}.${timing}${note}`,
+        body: `You're on the ${shift} shift at ${args.eventTitle}.${timing}${note}`,
+        pushBody: `You're on the ${shift} shift.${timing}${note}`,
       };
   }
 }
@@ -888,9 +999,14 @@ export async function createShiftScheduleNotificationFromSnapshot(
   })) return;
 
   const calendarEvent = assignment.calendarEvent;
-  const eventTitle = calendarEvent.opponent
-    ? `${calendarEvent.isHome === false ? "at" : "vs"} ${calendarEvent.opponent}`
-    : calendarEvent.summary;
+  if (event === "assigned" || event === "approved") {
+    await enqueueShiftReminders([{
+      assignmentId,
+      callStartsAt: assignment.callStartsAt ?? assignment.shiftStartsAt,
+    }]);
+  }
+  // The full event name, never a bare "vs Iowa" that loses the sport.
+  const eventTitle = calendarEvent.summary;
   const hasStudentCallTime = assignment.workerType === "ST"
     && !calendarEvent.allDay
     && studentCallTimeAppliesToEvent(calendarEvent);
@@ -917,7 +1033,7 @@ export async function createShiftScheduleNotificationFromSnapshot(
   if (existing) return;
 
   try {
-    await db.notification.create({
+    const row = await db.notification.create({
       data: {
         userId: assignment.userId,
         type: copy.type,
@@ -944,9 +1060,11 @@ export async function createShiftScheduleNotificationFromSnapshot(
 
     deferPush(sendPushToUser(assignment.userId, {
       title: copy.title,
-      body: copy.body,
+      subtitle: calendarEvent.summary,
+      body: copy.pushBody,
       payload: pushPayload,
       category,
+      notificationId: row.id,
     }));
 
     if (assignment.userEmail) {
@@ -1012,7 +1130,8 @@ export async function notifyPickupRequestReviewers(assignmentId: string): Promis
 
   const eventSummary = assignment.shift.shiftGroup.event.summary;
   const title = "Shift request needs review";
-  const body = `${assignment.user.name} requested the ${assignment.shift.area} slot for ${eventSummary}.`;
+  const body = `${assignment.user.name} requested the ${assignment.shift.area} shift at ${eventSummary}.`;
+  const pushBody = `${assignment.user.name} wants the ${assignment.shift.area} shift.`;
   const payload = scheduleNotificationPayload({
     assignmentId: assignment.id,
     shiftId: assignment.shiftId,
@@ -1022,7 +1141,8 @@ export async function notifyPickupRequestReviewers(assignmentId: string): Promis
   const now = new Date();
 
   try {
-    await db.notification.createMany({
+    // Only reviewers whose row is new get a push, so a retry stays silent.
+    const created = await db.notification.createManyAndReturn({
       data: reviewers.map((reviewer) => ({
         userId: reviewer.id,
         type: "shift_request_review",
@@ -1034,10 +1154,18 @@ export async function notifyPickupRequestReviewers(assignmentId: string): Promis
         dedupeKey: `shift_request_review_${assignment.id}_${reviewer.id}`,
       })),
       skipDuplicates: true,
+      select: { id: true, userId: true },
     });
 
-    for (const reviewer of reviewers) {
-      deferPush(sendPushToUser(reviewer.id, { title, body, payload, category }));
+    for (const row of created) {
+      deferPush(sendPushToUser(row.userId, {
+        title,
+        subtitle: eventSummary,
+        body: pushBody,
+        payload,
+        category,
+        notificationId: row.id,
+      }));
     }
   } catch (err) {
     console.error(`[NOTIFY] Failed to notify reviewers for shift request ${assignmentId}:`, err);
@@ -1074,6 +1202,7 @@ export async function createPublishedShiftGroupNotifications(shiftGroupId: strin
               user: { active: true },
             },
             select: {
+              id: true,
               userId: true,
               callStartsAt: true,
               user: { select: { email: true } },
@@ -1085,6 +1214,10 @@ export async function createPublishedShiftGroupNotifications(shiftGroupId: strin
   });
 
   if (!group?.publishedAt) return;
+  await enqueueShiftReminders(group.shifts.flatMap((shift) => shift.assignments.map((assignment) => ({
+    assignmentId: assignment.id,
+    callStartsAt: assignment.callStartsAt ?? shift.callStartsAt ?? shift.startsAt,
+  }))));
   const assignmentsByUser = new Map<string, { count: number; email: string | null; studentCallStartsAt: Date | null }>();
   for (const shift of group.shifts) for (const assignment of shift.assignments) {
     const current = assignmentsByUser.get(assignment.userId);
@@ -1108,12 +1241,14 @@ export async function createPublishedShiftGroupNotifications(shiftGroupId: strin
     [...assignmentsByUser.entries()].map(async ([userId, assignment]) => {
       const shiftLabel = assignment.count === 1 ? "shift" : "shifts";
       const callCopy = assignment.studentCallStartsAt
-        ? ` Student call time: ${formatShiftNotifyTime(assignment.studentCallStartsAt)}.`
+        ? ` Call time: ${formatShiftNotifyTime(assignment.studentCallStartsAt)}.`
         : "";
-      const body = `You're scheduled for ${assignment.count} ${shiftLabel} on ${group.event.summary}.${callCopy} Review your gear details.`;
+      const body = `You're on ${assignment.count} ${shiftLabel} at ${group.event.summary}.${callCopy}`;
+      const pushBody = `You're on ${assignment.count} ${shiftLabel}.${callCopy}`;
       const dedupeKey = `shift_group_publish:${shiftGroupId}:v${group.publishedVersion}:${userId}`;
+      let notificationId: string;
       try {
-        await db.notification.create({
+        const row = await db.notification.create({
           data: {
             userId,
             type: "shift_schedule_published",
@@ -1124,13 +1259,22 @@ export async function createPublishedShiftGroupNotifications(shiftGroupId: strin
             sentAt: new Date(),
             dedupeKey,
           },
+          select: { id: true },
         });
+        notificationId = row.id;
       } catch (error) {
         if (error && typeof error === "object" && "code" in error && error.code === "P2002") return;
         throw error;
       }
 
-      deferPush(sendPushToUser(userId, { title, body, payload, category: "schedule" }));
+      deferPush(sendPushToUser(userId, {
+        title,
+        subtitle: group.event.summary,
+        body: pushBody,
+        payload,
+        category: "schedule",
+        notificationId,
+      }));
       if (assignment.email) {
         await sendEmailToUser(userId, {
           to: assignment.email,
@@ -1212,10 +1356,10 @@ export async function createBulkScheduleAssignmentNotifications(batchId: string)
     byUser.set(assignment.userId, current);
   }
 
-  const body = "Click to review your upcoming shifts";
+  const body = "Tap to see them.";
   await Promise.allSettled([...byUser.entries()].map(async ([userId, assignment]) => {
     const count = assignment.shiftIds.size;
-    const title = `You were assigned ${count} ${count === 1 ? "shift" : "shifts"}`;
+    const title = `You have ${count} new ${count === 1 ? "shift" : "shifts"}`;
     const payload = scheduleMyShiftsNotificationPayload({
       rangeStartsAt: batch.rangeStartsAt,
       rangeEndsAt: batch.rangeEndsAt,
@@ -1227,8 +1371,9 @@ export async function createBulkScheduleAssignmentNotifications(batchId: string)
       },
     });
     const dedupeKey = `schedule_bulk_assignment:${batch.id}:${userId}`;
+    let notificationId: string;
     try {
-      await db.notification.create({
+      const row = await db.notification.create({
         data: {
           userId,
           type: "shift_schedule_bulk_assigned",
@@ -1239,13 +1384,15 @@ export async function createBulkScheduleAssignmentNotifications(batchId: string)
           sentAt: new Date(),
           dedupeKey,
         },
+        select: { id: true },
       });
+      notificationId = row.id;
     } catch (error) {
       if (error && typeof error === "object" && "code" in error && error.code === "P2002") return;
       throw error;
     }
 
-    deferPush(sendPushToUser(userId, { title, body, payload, category: "schedule" }));
+    deferPush(sendPushToUser(userId, { title, body, payload, category: "schedule", notificationId }));
     if (assignment.email) {
       await sendEmailToUser(userId, {
         to: assignment.email,
@@ -1295,7 +1442,7 @@ export async function notifyPublishedShiftGroupWorkers(
                 userId: { in: uniqueUserIds },
                 status: { in: ["DIRECT_ASSIGNED", "APPROVED"] },
               },
-              select: { userId: true, callStartsAt: true },
+              select: { id: true, userId: true, callStartsAt: true },
             },
           },
         },
@@ -1307,6 +1454,12 @@ export async function notifyPublishedShiftGroupWorkers(
     }),
   ]);
   if (!group?.publishedAt) return;
+  // A changed schedule re-keys each affected worker's reminder to the new
+  // call time; the run for the old time finds itself superseded.
+  await enqueueShiftReminders(group.shifts.flatMap((shift) => shift.assignments.map((assignment) => ({
+    assignmentId: assignment.id,
+    callStartsAt: assignment.callStartsAt ?? shift.callStartsAt ?? shift.startsAt,
+  }))));
 
   const assignmentsByUser = new Map<string, { count: number; studentCallStartsAt: Date | null }>();
   for (const shift of group.shifts) for (const assignment of shift.assignments) {
@@ -1328,12 +1481,20 @@ export async function notifyPublishedShiftGroupWorkers(
   await Promise.allSettled(users.map(async (user) => {
     const assignment = assignmentsByUser.get(user.id);
     const count = assignment?.count ?? 0;
+    const shiftCount = `${count} ${count === 1 ? "shift" : "shifts"}`;
+    const callCopy = assignment?.studentCallStartsAt
+      ? ` Call time: ${formatShiftNotifyTime(assignment.studentCallStartsAt)}.`
+      : "";
     const body = count === 0
-      ? `You are no longer scheduled for ${group.event.summary}.`
-      : `Your schedule changed for ${group.event.summary}. You now have ${count} ${count === 1 ? "shift" : "shifts"}.${assignment?.studentCallStartsAt ? ` Student call time: ${formatShiftNotifyTime(assignment.studentCallStartsAt)}.` : ""} Review your gear details.`;
+      ? `You're no longer on the schedule for ${group.event.summary}.`
+      : `Your schedule for ${group.event.summary} changed. You now have ${shiftCount}.${callCopy}`;
+    const pushBody = count === 0
+      ? "You're no longer on the schedule."
+      : `You now have ${shiftCount}.${callCopy}`;
     const dedupeKey = `shift_group_update:${shiftGroupId}:v${group.publishedVersion}:${user.id}`;
+    let notificationId: string;
     try {
-      await db.notification.create({
+      const row = await db.notification.create({
         data: {
           userId: user.id,
           type: "shift_schedule_updated",
@@ -1344,13 +1505,22 @@ export async function notifyPublishedShiftGroupWorkers(
           sentAt: new Date(),
           dedupeKey,
         },
+        select: { id: true },
       });
+      notificationId = row.id;
     } catch (error) {
       if (error && typeof error === "object" && "code" in error && error.code === "P2002") return;
       throw error;
     }
 
-    deferPush(sendPushToUser(user.id, { title, body, payload, category: "schedule" }));
+    deferPush(sendPushToUser(user.id, {
+      title,
+      subtitle: group.event.summary,
+      body: pushBody,
+      payload,
+      category: "schedule",
+      notificationId,
+    }));
     if (user.email) {
       await sendEmailToUser(user.id, {
         to: user.email,
@@ -1401,14 +1571,16 @@ export async function notifyPublishedScheduleFollowers(shiftGroupId: string): Pr
   });
   if (!group?.publishedAt || group.event.follows.length === 0) return;
 
-  const title = "Published schedule updated";
-  const body = `${group.event.summary} has an updated published crew schedule.`;
+  const title = "Crew schedule updated";
+  const body = `The crew schedule for ${group.event.summary} changed.`;
+  const pushBody = "Tap to see who's working.";
   const payload = { eventId: group.event.id };
 
   await Promise.allSettled(group.event.follows.map(async ({ user }) => {
     const dedupeKey = `published_schedule:${group.event.id}:v${group.publishedVersion}:${user.id}`;
+    let notificationId: string;
     try {
-      await db.notification.create({
+      const row = await db.notification.create({
         data: {
           userId: user.id,
           type: "published_schedule_updated",
@@ -1419,13 +1591,22 @@ export async function notifyPublishedScheduleFollowers(shiftGroupId: string): Pr
           sentAt: new Date(),
           dedupeKey,
         },
+        select: { id: true },
       });
+      notificationId = row.id;
     } catch (error) {
       if (error && typeof error === "object" && "code" in error && error.code === "P2002") return;
       throw error;
     }
 
-    deferPush(sendPushToUser(user.id, { title, body, payload, category: "schedule" }));
+    deferPush(sendPushToUser(user.id, {
+      title,
+      subtitle: group.event.summary,
+      body: pushBody,
+      payload,
+      category: "schedule",
+      notificationId,
+    }));
     if (user.email) {
       await sendEmailToUser(user.id, {
         to: user.email,
@@ -1445,6 +1626,9 @@ type ReservationLifecycleEvent = "booked" | "updated" | "pickup_ready" | "cancel
 /**
  * Sends an in-app notification to the requester for reservation lifecycle events.
  * For "cancelled", skips the notification if the actor is the requester (self-cancel).
+ * For "booked" by the requester, the inbox row is the receipt; no push.
+ * "updated" can happen many times, so callers pass the booking's `updatedAt`
+ * as `version` to give each update its own row.
  */
 export async function createReservationLifecycleNotification(args: {
   bookingId: string;
@@ -1452,45 +1636,49 @@ export async function createReservationLifecycleNotification(args: {
   requesterUserId: string;
   actorUserId: string;
   event: ReservationLifecycleEvent;
+  version?: Date;
 }): Promise<void> {
-  const { bookingId, bookingTitle, requesterUserId, actorUserId, event } = args;
+  const { bookingId, bookingTitle, requesterUserId, actorUserId, event, version } = args;
 
   // Don't notify users when they cancel their own reservation
   if (event === "cancelled" && requesterUserId === actorUserId) return;
 
-  const dedupeKey = `${bookingId}:reservation_${event}`;
+  const dedupeKey = version
+    ? `${bookingId}:reservation_${event}:${version.toISOString()}`
+    : `${bookingId}:reservation_${event}`;
 
-  const existing = await db.notification.findUnique({ where: { dedupeKey } });
-  if (existing) return;
-
-  const configs: Record<ReservationLifecycleEvent, { type: string; title: string; body: string }> = {
+  const configs: Record<ReservationLifecycleEvent, { type: string; title: string; body: string; pushBody: string }> = {
     booked: {
       type: "reservation_booked",
       title: "Reservation confirmed",
-      body: `Your reservation "${bookingTitle}" has been created.`,
+      body: `Your reservation "${bookingTitle}" is confirmed.`,
+      pushBody: "Staff made this reservation for you.",
     },
     updated: {
       type: "reservation_updated",
       title: "Gear added to your reservation",
-      body: `Your new gear was added to the existing "${bookingTitle}" reservation.`,
+      body: `More gear was added to your "${bookingTitle}" reservation.`,
+      pushBody: "Tap to see the updated gear list.",
     },
     pickup_ready: {
       type: "reservation_pickup_ready",
-      title: "Gear ready for pickup",
-      body: `Your reservation "${bookingTitle}" is ready. Pick up your gear at the kiosk.`,
+      title: "Ready for pickup",
+      body: `Your "${bookingTitle}" gear is ready. Pick it up at the kiosk.`,
+      pushBody: "Pick it up at the kiosk.",
     },
     cancelled: {
       type: "reservation_cancelled",
       title: "Reservation cancelled",
-      body: `Your reservation "${bookingTitle}" was cancelled.`,
+      body: `Your reservation "${bookingTitle}" was cancelled. The gear is no longer held.`,
+      pushBody: "Your gear is no longer held.",
     },
   };
 
-  const { type, title, body } = configs[event];
+  const { type, title, body, pushBody } = configs[event];
 
   try {
-    await db.notification.create({
-      data: {
+    const [row] = await db.notification.createManyAndReturn({
+      data: [{
         userId: requesterUserId,
         bookingId,
         type,
@@ -1500,10 +1688,22 @@ export async function createReservationLifecycleNotification(args: {
         channel: "IN_APP",
         sentAt: new Date(),
         dedupeKey,
-      },
+      }],
+      skipDuplicates: true,
+      select: { id: true },
     });
+    if (!row) return;
+    if (event === "booked" && requesterUserId === actorUserId) return;
 
-    deferPush(sendPushToUser(requesterUserId, { title, body, payload: { bookingId, href: `/reservations/${bookingId}` }, category: "reservation" }));
+    deferPush(sendPushToUser(requesterUserId, {
+      title,
+      subtitle: bookingTitle,
+      body: pushBody,
+      payload: { bookingId, href: `/reservations/${bookingId}` },
+      category: "reservation",
+      notificationId: row.id,
+      collapseId: `reservation-${bookingId}`,
+    }));
   } catch (err) {
     console.error(`[NOTIFY] Failed to create reservation_${event} notification for booking ${bookingId}:`, err);
   }
@@ -1559,14 +1759,24 @@ export async function notifyItemReport(args: {
     dedupeKey: `${args.bookingId}:item_report:${args.assetId}:${s.id}`,
   }));
 
+  // A repeat report of the same asset on the same booking dedupes to the
+  // existing rows; only supervisors with a new row are emailed. If the insert
+  // itself fails, email everyone so the report is not lost.
+  let recipients = supervisors;
   try {
-    await db.notification.createMany({ data: notifData, skipDuplicates: true });
+    const created = await db.notification.createManyAndReturn({
+      data: notifData,
+      skipDuplicates: true,
+      select: { userId: true },
+    });
+    const createdIds = new Set(created.map((row) => row.userId));
+    recipients = supervisors.filter((s) => createdIds.has(s.id));
   } catch (err) {
     console.error(`[NOTIFY] Failed to batch-create item report notifications:`, err);
   }
 
   // Send emails concurrently (fire-and-forget, failures don't block)
-  const emailPromises = supervisors
+  const emailPromises = recipients
     .filter((s) => s.email)
     .map((s) =>
       sendEmailToUser(s.id, {
@@ -1578,7 +1788,7 @@ export async function notifyItemReport(args: {
           bookingTitle: args.bookingTitle,
           dueAt: now.toISOString(),
         }),
-      }).catch((err) =>
+      }, "itemReports").catch((err) =>
         console.error(`[NOTIFY] Failed to send item report email to ${s.email}:`, err)
       )
     );
@@ -1599,87 +1809,157 @@ function formatRelative(dueAt: Date, now: Date): string {
   return `${days} day${days > 1 ? "s" : ""} ago`;
 }
 
-/**
- * Deliver one message per worker for a flushed batch of schedule changes.
- *
- * Callers hand over a diff that has already been reduced to net effect, so a
- * worker whose assignment churned and landed back where it started is simply
- * absent from it. Everyone present gets exactly one row, one push, and one
- * email, keyed to the flush so a retry cannot double-send.
- */
-export async function notifyScheduleChanges(args: {
-  shiftGroupId: string;
-  eventId: string;
-  eventTitle: string;
-  flushVersion: number;
-  byUser: Map<string, ScheduleWorkerChange[]>;
-}): Promise<{ notified: string[] }> {
-  const userIds = [...args.byUser.keys()].sort();
-  if (userIds.length === 0) return { notified: [] };
+// ── Shift reminders ─────────────────────────────────────────────────────────
 
-  const users = await db.user.findMany({
-    where: { id: { in: userIds }, active: true },
-    select: { id: true, email: true },
+/** How long before the effective call time a worker is reminded. */
+export const SHIFT_REMINDER_LEAD_MS = 2 * 60 * 60 * 1000;
+
+type ShiftReminderAssignment = {
+  id: string;
+  userId: string;
+  status: string;
+  callStartsAt: Date | null;
+  user: { active: boolean };
+  shift: {
+    id: string;
+    area: string;
+    workerType: string;
+    startsAt: Date;
+    callStartsAt: Date | null;
+    shiftGroup: {
+      publishedAt: Date | null;
+      event: { id: string; summary: string; startsAt: Date; allDay: boolean; status: string };
+    };
+  };
+};
+
+async function loadShiftReminderAssignment(assignmentId: string): Promise<ShiftReminderAssignment | null> {
+  return db.shiftAssignment.findUnique({
+    where: { id: assignmentId },
+    select: {
+      id: true,
+      userId: true,
+      status: true,
+      callStartsAt: true,
+      user: { select: { active: true } },
+      shift: {
+        select: {
+          id: true,
+          area: true,
+          workerType: true,
+          startsAt: true,
+          callStartsAt: true,
+          shiftGroup: {
+            select: {
+              publishedAt: true,
+              event: { select: { id: true, summary: true, startsAt: true, allDay: true, status: true } },
+            },
+          },
+        },
+      },
+    },
+  }) as Promise<ShiftReminderAssignment | null>;
+}
+
+/** When the worker actually needs to be there: their call time, else the shift start. */
+export function effectiveShiftCallStart(assignment: {
+  callStartsAt: Date | null;
+  shift: { callStartsAt: Date | null; startsAt: Date };
+}): Date {
+  return assignment.callStartsAt ?? assignment.shift.callStartsAt ?? assignment.shift.startsAt;
+}
+
+type ShiftReminderState =
+  | { status: "scheduled"; remindAt: string }
+  | { status: "superseded" | "inactive" | "passed" };
+
+/**
+ * Whether the reminder for this exact call time is still wanted, and when.
+ * A run keyed to an older call time is superseded: a newer run owns it.
+ */
+export async function getShiftReminderTiming(args: {
+  assignmentId: string;
+  expectedCallStartsAt: Date;
+  now?: Date;
+}): Promise<ShiftReminderState> {
+  const assignment = await loadShiftReminderAssignment(args.assignmentId);
+  if (!assignment || !assignment.user.active) return { status: "inactive" };
+  if (!(ACTIVE_ASSIGNMENT_STATUSES as string[]).includes(assignment.status)) {
+    return { status: "inactive" };
+  }
+  const group = assignment.shift.shiftGroup;
+  if (!group.publishedAt || group.event.allDay || group.event.status === "CANCELLED") return { status: "inactive" };
+  const callStart = effectiveShiftCallStart(assignment);
+  if (callStart.getTime() !== args.expectedCallStartsAt.getTime()) return { status: "superseded" };
+  const now = args.now ?? new Date();
+  if (callStart.getTime() <= now.getTime()) return { status: "passed" };
+  return { status: "scheduled", remindAt: new Date(callStart.getTime() - SHIFT_REMINDER_LEAD_MS).toISOString() };
+}
+
+/** Sends the reminder if the shift still matches; idempotent per call time. */
+export async function sendShiftReminder(args: {
+  assignmentId: string;
+  expectedCallStartsAt: Date;
+  now?: Date;
+}): Promise<"sent" | "duplicate" | ShiftReminderState["status"]> {
+  const timing = await getShiftReminderTiming(args);
+  if (timing.status !== "scheduled") return timing.status;
+  const assignment = (await loadShiftReminderAssignment(args.assignmentId))!;
+  const event = assignment.shift.shiftGroup.event;
+  const callStart = effectiveShiftCallStart(assignment);
+  const isStudent = assignment.shift.workerType === "ST";
+  const time = formatAppTime(callStart);
+
+  const title = "Shift in 2 hours";
+  const pushBody = isStudent
+    ? `You're on ${assignment.shift.area}. Call time ${time}.`
+    : `You're on ${assignment.shift.area}. Starts ${time}.`;
+  const body = isStudent
+    ? `You're on the ${assignment.shift.area} shift at ${event.summary}. Call time ${time}.`
+    : `You're on the ${assignment.shift.area} shift at ${event.summary}. Starts ${time}.`;
+  const payload = scheduleNotificationPayload({
+    assignmentId: assignment.id,
+    shiftId: assignment.shift.id,
+    eventId: event.id,
   });
 
-  const notified: string[] = [];
+  const [row] = await db.notification.createManyAndReturn({
+    data: [{
+      userId: assignment.userId,
+      type: "shift_reminder",
+      title,
+      body,
+      payload: JSON.parse(JSON.stringify(payload)),
+      channel: "IN_APP",
+      sentAt: args.now ?? new Date(),
+      dedupeKey: `shift_reminder:${assignment.id}:${callStart.toISOString()}`,
+    }],
+    skipDuplicates: true,
+    select: { id: true },
+  });
+  if (!row) return "duplicate";
 
-  await Promise.allSettled(users.map(async (user) => {
-    const changes = args.byUser.get(user.id) ?? [];
-    const lead = primaryChange(changes);
-    if (!lead) return;
+  await sendPushToUser(assignment.userId, {
+    title,
+    subtitle: event.summary,
+    body: pushBody,
+    payload,
+    category: "shiftReminder",
+    notificationId: row.id,
+  });
+  return "sent";
+}
 
-    const copy = scheduleChangeCopy({
-      eventTitle: args.eventTitle,
-      change: lead,
-      alsoCount: changes.length - 1,
-    });
-    const category = categoryForScheduleNotificationType(copy.type) ?? "schedule";
-    const payload = scheduleNotificationPayload({
-      eventId: args.eventId,
-      shiftId: lead.kind === "removed" ? lead.before.shiftId : lead.after.shiftId,
-    });
-    const dedupeKey = `schedule_flush:${args.shiftGroupId}:v${args.flushVersion}:${user.id}`;
-
-    try {
-      await db.notification.create({
-        data: {
-          userId: user.id,
-          type: copy.type,
-          title: copy.title,
-          body: copy.body,
-          payload,
-          channel: "IN_APP",
-          sentAt: new Date(),
-          dedupeKey,
-        },
-      });
-    } catch (error) {
-      // A duplicate means an earlier attempt already told this person.
-      if (error && typeof error === "object" && "code" in error && error.code === "P2002") return;
-      throw error;
-    }
-
-    notified.push(user.id);
-    deferPush(sendPushToUser(user.id, {
-      title: copy.title,
-      body: copy.body,
-      payload,
-      category,
-    }));
-
-    if (user.email) {
-      await sendEmailToUser(user.id, {
-        to: user.email,
-        subject: `${copy.title} - schedule update`,
-        html: buildNotificationEmail({
-          title: copy.title,
-          body: copy.body,
-          bookingTitle: args.eventTitle,
-        }),
-      }, category);
-    }
-  }));
-
-  return { notified };
+/**
+ * Starts reminder runs; loaded lazily because the workflow module imports this
+ * one. Best-effort and never throws.
+ */
+async function enqueueShiftReminders(rows: Array<{ assignmentId: string; callStartsAt: Date }>): Promise<void> {
+  if (rows.length === 0) return;
+  try {
+    const { enqueueShiftReminder } = await import("@/lib/shift-reminder-workflow");
+    await Promise.allSettled(rows.map((row) => enqueueShiftReminder(row)));
+  } catch (error) {
+    console.error("[Schedule] failed to enqueue shift reminders", error);
+  }
 }

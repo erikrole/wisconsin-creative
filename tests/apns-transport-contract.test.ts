@@ -62,6 +62,29 @@ describe("APNs transport contract", () => {
     expect(apns).toContain("invalidateJwt()");
   });
 
+  it("omits the sound for silent deliveries and takes presentation from prefs", () => {
+    const apns = source("src/lib/push/apns.ts");
+    const notifications = source("src/lib/services/notifications.ts");
+    expect(apns).toContain('...(opts.sound === false ? {} : { sound: "default" })');
+    expect(notifications).toContain("const presentation = resolvePushPresentation(prefs, opts.category, now);");
+    expect(notifications).toContain("interruptionLevel: presentation.interruptionLevel,");
+    expect(notifications).toContain("sound: presentation.sound,");
+    // One Notification Center stack per category, and the icon badge tracks
+    // the unread inbox (the iOS app re-syncs it as rows are read).
+    expect(apns).toContain('...(opts.threadId ? { "thread-id": opts.threadId } : {})');
+    expect(apns).toContain("...(opts.badge !== undefined ? { badge: opts.badge } : {})");
+    expect(notifications).toContain("threadId: pushThreadId(opts.payload, opts.category),");
+    expect(notifications).toContain("if (bookingId) return `booking-${bookingId}`;");
+    expect(notifications).toContain("if (eventId) return `event-${eventId}`;");
+    // A later stage replaces the earlier alert; unrelated alerts never collapse.
+    expect(apns).toContain('...(opts.collapseId ? { "apns-collapse-id": opts.collapseId.slice(0, 64) } : {})');
+    expect(notifications).toContain("collapseId: opts.collapseId ?? opts.notificationId,");
+    expect(notifications).toContain("? `checkout-${args.checkout.id}`");
+    expect(apns).toContain('...(opts.relevanceScore !== undefined ? { "relevance-score": opts.relevanceScore } : {})');
+    expect(notifications).toContain("db.notification.count({ where: { userId, readAt: null } })");
+    expect(source("ios/Wisconsin/Core/AppState.swift")).toContain("setBadgeCount(count)");
+  });
+
   it("sendPushToUser never throws into fire-and-forget call sites", () => {
     const notifications = source("src/lib/services/notifications.ts");
     const fnStart = notifications.indexOf("export async function sendPushToUser");

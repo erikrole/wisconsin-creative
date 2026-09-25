@@ -33,6 +33,12 @@ type Prefs = {
   };
 };
 
+type PrefsPatch = {
+  pausedUntil?: string | null;
+  channels?: Partial<Prefs["channels"]>;
+  categories?: Partial<Prefs["categories"]>;
+};
+
 const DEFAULT_CATEGORIES: Prefs["categories"] = {
   checkoutDue: true,
   checkoutOverdue: true,
@@ -79,16 +85,17 @@ export default function NotificationsSettingsPage() {
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
 
-  async function save(next: Prefs, { silent = false } = {}) {
+  // Sends only the changed fields; the server merges them over what's stored.
+  async function save(next: Prefs, patch: PrefsPatch, { silent = false } = {}) {
     if (savingRef.current) return false;
     savingRef.current = true;
     setLocal(next);
     setSaving(true);
     try {
       const res = await fetch("/api/me/notification-preferences", {
-        method: "PUT",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(next),
+        body: JSON.stringify(patch),
       });
       if (handleAuthRedirect(res, "/settings/notifications")) return false;
       if (!res.ok) {
@@ -114,19 +121,20 @@ export default function NotificationsSettingsPage() {
 
   function setChannel(channel: "email" | "push", value: boolean) {
     if (!prefs) return;
-    save({ ...prefs, channels: { ...prefs.channels, [channel]: value } });
+    const channels = { ...prefs.channels, [channel]: value };
+    save({ ...prefs, channels }, { channels: { [channel]: value } });
   }
 
   function setCategory(key: keyof Prefs["categories"], value: boolean) {
     if (!prefs) return;
     const categories = { ...(prefs.categories ?? DEFAULT_CATEGORIES), [key]: value };
-    save({ ...prefs, categories });
+    save({ ...prefs, categories }, { categories: { [key]: value } });
   }
 
   async function pauseFor(ms: number) {
     if (!prefs) return;
     const until = new Date(Date.now() + ms).toISOString();
-    const saved = await save({ ...prefs, pausedUntil: until }, { silent: true });
+    const saved = await save({ ...prefs, pausedUntil: until }, { pausedUntil: until }, { silent: true });
     if (saved) {
       toast.success(`Paused — quiet until ${new Date(until).toLocaleString(undefined, { hour: "numeric", minute: "2-digit" })}`);
     }
@@ -134,7 +142,7 @@ export default function NotificationsSettingsPage() {
 
   async function resumeNow() {
     if (!prefs) return;
-    const saved = await save({ ...prefs, pausedUntil: null }, { silent: true });
+    const saved = await save({ ...prefs, pausedUntil: null }, { pausedUntil: null }, { silent: true });
     if (saved) toast.success("Notifications resumed");
   }
 

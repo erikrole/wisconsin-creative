@@ -84,7 +84,9 @@ describe("student shift claim surfaces", () => {
     expect(reviewerFanout).not.toContain('role: { in: ["ADMIN", "STAFF"] }');
     expect(reviewerFanout).toContain('type: "shift_request_review"');
     expect(reviewerFanout).toContain("skipDuplicates: true");
-    expect(reviewerFanout).toContain("sendPushToUser(reviewer.id");
+    // Push follows the rows actually inserted, so a retry never re-pushes.
+    expect(reviewerFanout).toContain("createManyAndReturn");
+    expect(reviewerFanout).toContain("sendPushToUser(row.userId");
     expect(claimReviewNotifications).toContain('visibleActiveUserWhere({ role: "ADMIN" })');
     expect(claimReviewNotifications).not.toContain('role: { in: ["ADMIN", "STAFF"] }');
   });

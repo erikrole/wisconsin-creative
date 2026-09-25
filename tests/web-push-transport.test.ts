@@ -97,6 +97,27 @@ describe("browser push transport", () => {
     );
   });
 
+  it("marks silent deliveries so the service worker skips sound and vibration", async () => {
+    configureWebPush();
+    mockFindMany.mockResolvedValue([subscription]);
+
+    await sendWebPushToUser("student-1", { title: "Schedule updated", silent: true });
+
+    const [, body, options] = mockSendNotification.mock.calls[0]!;
+    expect(JSON.parse(body as string)).toMatchObject({ title: "Schedule updated", silent: true });
+    expect(options).toMatchObject({ urgency: "normal" });
+  });
+
+  it("tags a push so a later one for the same item replaces it", async () => {
+    configureWebPush();
+    mockFindMany.mockResolvedValue([subscription]);
+
+    await sendWebPushToUser("student-1", { title: "Checkout overdue", tag: "checkout-b1", renotify: true });
+
+    const [, body] = mockSendNotification.mock.calls[0]!;
+    expect(JSON.parse(body as string)).toMatchObject({ tag: "checkout-b1", renotify: true });
+  });
+
   it("falls back to the inbox and retires expired browser subscriptions", async () => {
     configureWebPush();
     mockFindMany.mockResolvedValue([subscription]);

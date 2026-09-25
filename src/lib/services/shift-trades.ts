@@ -11,6 +11,7 @@ import { evaluateAvailabilityPreferences } from "@/lib/student-availability";
 import { availabilityContextFromBlocks } from "@/lib/schedule-availability-context";
 import { shiftWorkerTypeForProfile } from "@/lib/shift-display";
 import { withSerializationRetry } from "@/lib/serialization";
+import type { NotificationCategory } from "@/lib/notification-catalog";
 import { assertNoWorkingCopy } from "@/lib/schedule-working-copy-guard";
 import { visibleActiveUserWhere } from "@/lib/user-visibility";
 import { enqueuePendingClaimReview } from "@/lib/claim-review-workflow";
@@ -135,29 +136,55 @@ const availabilityBlockSelect = {
 
 /* ── In-app notification helper ─────────────────────────────────────── */
 
-async function notify(
+type NotificationWriter = Pick<Prisma.TransactionClient, "notification">;
+
+/**
+ * Writes one inbox row and reports whether it is new. `skipDuplicates` turns a
+ * repeated dedupe key into a no-op instead of a unique violation, which inside
+ * a transaction would abort the whole trade mutation. Returns the new row's
+ * id, or null for a duplicate; callers only push or email for a new row, so a
+ * retry never re-sends.
+ */
+async function writeTradeNotification(
+  client: NotificationWriter,
   userId: string,
   type: string,
   title: string,
   body: string,
   dedupeKey: string,
   payload?: Prisma.InputJsonValue,
-) {
+): Promise<string | null> {
+  const [row] = await client.notification.createManyAndReturn({
+    data: [{
+      userId,
+      type,
+      title,
+      body,
+      payload: payload ?? {},
+      channel: "IN_APP",
+      sentAt: new Date(),
+      dedupeKey,
+    }],
+    skipDuplicates: true,
+    select: { id: true },
+  });
+  return row?.id ?? null;
+}
+
+/** Post-commit variant: a failed inbox write must not fail a committed trade. */
+async function notifyAfterCommit(
+  userId: string,
+  type: string,
+  title: string,
+  body: string,
+  dedupeKey: string,
+  payload?: Prisma.InputJsonValue,
+): Promise<string | null> {
   try {
-    await db.notification.create({
-      data: {
-        userId,
-        type,
-        title,
-        body,
-        payload: payload ?? {},
-        channel: "IN_APP",
-        sentAt: new Date(),
-        dedupeKey,
-      },
-    });
-  } catch {
-    // Silently swallow duplicate/constraint errors — notifications are best-effort
+    return await writeTradeNotification(db, userId, type, title, body, dedupeKey, payload);
+  } catch (err) {
+    console.error(`[TRADES] Failed to write ${type} notification:`, err);
+    return null;
   }
 }
 
@@ -168,15 +195,24 @@ export type TradeApprovalActor = { id: string; role: Role } | null;
 type TradePushJob = {
   userId: string;
   title: string;
+  /** The event name, shown under the title; `body` then leaves it out. */
+  subtitle?: string;
   body: string;
+  notificationId?: string;
   payload: Record<string, unknown>;
+  /** Defaults to `trade`; admin reviews use `reviewQueue`. */
+  category?: NotificationCategory;
 };
 
 /** A claim waiting on Admin. Fanned out to reviewers after the claim commits. */
 type TradeReviewJob = {
   tradeId: string;
+  /** The claim this review is for; a re-claimed trade needs a fresh review. */
+  claimCycle: string;
   title: string;
   body: string;
+  subtitle: string;
+  pushBody: string;
   payload: Record<string, unknown>;
 };
 
@@ -190,9 +226,11 @@ async function dispatchTradeSideEffects({
   await Promise.allSettled(pushJobs.map((job) =>
     sendPushToUser(job.userId, {
       title: job.title,
+      subtitle: job.subtitle,
       body: job.body,
       payload: job.payload,
-      category: "trade",
+      category: job.category ?? "trade",
+      notificationId: job.notificationId,
     }),
   ));
   await sendShiftTradeEmails(emailJobs);
@@ -216,15 +254,25 @@ async function notifyTradeReviewers(jobs: TradeReviewJob[]) {
   const pushJobs: TradePushJob[] = [];
   for (const job of jobs) {
     for (const reviewer of reviewers) {
-      await notify(
+      const created = await notifyAfterCommit(
         reviewer.id,
         "trade_review_required",
         job.title,
         job.body,
-        `trade_review_required_${job.tradeId}_${reviewer.id}`,
+        `trade_review_required_${job.tradeId}_${job.claimCycle}_${reviewer.id}`,
         job.payload as Prisma.InputJsonValue,
       );
-      pushJobs.push({ userId: reviewer.id, title: job.title, body: job.body, payload: job.payload });
+      if (created) {
+        pushJobs.push({
+          userId: reviewer.id,
+          title: job.title,
+          subtitle: job.subtitle,
+          body: job.pushBody,
+          payload: job.payload,
+          category: "reviewQueue",
+          notificationId: created,
+        });
+      }
     }
   }
 
@@ -330,22 +378,25 @@ export async function postTrade(
       // someone shows up for work they no longer have.
       const eventSummary = assignment.shift.shiftGroup?.event?.summary ?? "an event";
       const title = "Your shift is on the Trade Board";
-      const body = `Staff posted your ${assignment.shift.area} shift for ${eventSummary} to the Trade Board. You're still scheduled until an admin approves a claim.`;
+      const body = `Staff posted your ${assignment.shift.area} shift at ${eventSummary} to the Trade Board. You're still on the schedule until an Admin approves a claim.`;
+      const pushBody = `Staff posted your ${assignment.shift.area} shift. You're still on it until an Admin approves a claim.`;
       const payload = scheduleNotificationPayload({
         tradeId: trade.id,
         assignmentId: assignment.id,
         shiftId: assignment.shiftId,
         eventId: assignment.shift.shiftGroup.event.id,
       });
-      await notify(assignment.userId, "trade_posted", title, body, `trade_posted_for_${trade.id}`, payload);
-      pushJobs.push({ userId: assignment.userId, title, body, payload });
-      emailJobs.push({
-        userId: assignment.userId,
-        title,
-        body,
-        eventSummary,
-        area: assignment.shift.area,
-      });
+      const notificationId = await writeTradeNotification(tx, assignment.userId, "trade_posted", title, body, `trade_posted_for_${trade.id}`, payload);
+      if (notificationId) {
+        pushJobs.push({ userId: assignment.userId, title, subtitle: eventSummary, body: pushBody, payload, notificationId });
+        emailJobs.push({
+          userId: assignment.userId,
+          title,
+          body,
+          eventSummary,
+          area: assignment.shift.area,
+        });
+      }
     }
 
     return trade;
@@ -469,6 +520,9 @@ export async function claimTrade(tradeId: string, userId: string) {
     });
 
     const claimerName = claimed.claimedBy?.name ?? "Someone";
+    // Withdraw and decline return the post to OPEN, so one trade can be claimed
+    // more than once; each claim gets its own rows and review.
+    const claimCycle = claimed.claimedAt?.toISOString() ?? "unknown";
     const payload = scheduleNotificationPayload({
       tradeId,
       assignmentId: claimed.shiftAssignment.id,
@@ -480,41 +534,66 @@ export async function claimTrade(tradeId: string, userId: string) {
     // Saying only "claimed" is how a person stops showing up for a shift they
     // still hold.
     const posterTitle = "Your trade was claimed";
-    const posterBody = `${claimerName} claimed your ${shift.area} shift for ${eventSummary}. You're still scheduled until an admin approves the trade.`;
-    await notify(
+    const posterBody = `${claimerName} claimed your ${shift.area} shift at ${eventSummary}. You're still on the schedule until an Admin approves the trade.`;
+    const posterPushBody = `${claimerName} wants your ${shift.area} shift. You're still on it until an Admin approves.`;
+    const posterNotificationId = await writeTradeNotification(
+      tx,
       trade.postedByUserId,
       "trade_claimed",
       posterTitle,
       posterBody,
-      `trade_claimed_${tradeId}`,
+      `trade_claimed_${tradeId}_${claimCycle}`,
       payload,
     );
-    pushJobs.push({ userId: trade.postedByUserId, title: posterTitle, body: posterBody, payload });
-    emailJobs.push({
-      userId: trade.postedByUserId,
-      title: posterTitle,
-      body: posterBody,
-      eventSummary,
-      area: shift.area,
-    });
+    if (posterNotificationId) {
+      pushJobs.push({
+        userId: trade.postedByUserId,
+        title: posterTitle,
+        subtitle: eventSummary,
+        body: posterPushBody,
+        payload,
+        notificationId: posterNotificationId,
+      });
+      emailJobs.push({
+        userId: trade.postedByUserId,
+        title: posterTitle,
+        body: posterBody,
+        eventSummary,
+        area: shift.area,
+      });
+    }
 
     // Claimer: say plainly that they are not on the schedule yet.
     const claimerTitle = "Claim sent for approval";
-    const claimerBody = `Your claim on the ${shift.area} shift for ${eventSummary} is waiting for Admin approval. You're not on the schedule until it's approved.`;
-    await notify(
+    const claimerBody = `Your claim on the ${shift.area} shift at ${eventSummary} is waiting for Admin approval. You're not on the schedule until it's approved.`;
+    const claimerPushBody = `You're not on the ${shift.area} shift until an Admin approves.`;
+    const claimerNotificationId = await writeTradeNotification(
+      tx,
       userId,
       "trade_claim_pending",
       claimerTitle,
       claimerBody,
-      `trade_claim_pending_${tradeId}`,
+      `trade_claim_pending_${tradeId}_${claimCycle}`,
       payload,
     );
-    pushJobs.push({ userId, title: claimerTitle, body: claimerBody, payload });
+    if (claimerNotificationId) {
+      pushJobs.push({
+        userId,
+        title: claimerTitle,
+        subtitle: eventSummary,
+        body: claimerPushBody,
+        payload,
+        notificationId: claimerNotificationId,
+      });
+    }
 
     reviewJobs.push({
       tradeId,
+      claimCycle,
       title: "Trade claim needs review",
-      body: `${claimerName} claimed ${claimed.postedBy?.name ?? "a teammate"}'s ${shift.area} shift for ${eventSummary}.`,
+      body: `${claimerName} claimed ${claimed.postedBy?.name ?? "a teammate"}'s ${shift.area} shift at ${eventSummary}.`,
+      subtitle: eventSummary,
+      pushBody: `${claimerName} wants ${claimed.postedBy?.name ?? "a teammate"}'s ${shift.area} shift.`,
       payload,
     });
 
@@ -625,7 +704,7 @@ export async function withdrawTradeClaim(
 
   const title = "Trade claim withdrawn";
   const body = `${result.claimerName} withdrew their claim for your ${result.area} shift at ${result.eventSummary}. The post is back on the Trade Board.`;
-  await notify(
+  const created = await notifyAfterCommit(
     result.posterUserId,
     "trade_claim_withdrawn",
     title,
@@ -633,8 +712,16 @@ export async function withdrawTradeClaim(
     `trade_claim_withdrawn_${tradeId}_${result.claimCycle}`,
     result.payload,
   );
+  if (!created) return result.trade;
   await dispatchTradeSideEffects({
-    pushJobs: [{ userId: result.posterUserId, title, body, payload: result.payload }],
+    pushJobs: [{
+      userId: result.posterUserId,
+      title,
+      subtitle: result.eventSummary,
+      body: `${result.claimerName} backed out. Your ${result.area} shift is back on the Trade Board.`,
+      payload: result.payload,
+      notificationId: created,
+    }],
     emailJobs: [{
       userId: result.posterUserId,
       title,
@@ -720,7 +807,8 @@ export async function approveTrade(
     const eventSummary = trade.shiftAssignment.shift.shiftGroup?.event?.summary ?? "your shift";
 
     const title = "Trade approved";
-    const body = `Your trade for ${area} at ${eventSummary} was approved. You're on the schedule.`;
+    const body = `Your trade for the ${area} shift at ${eventSummary} was approved. You're on the schedule.`;
+    const pushBody = `You're on the ${area} shift now.`;
     const payload = scheduleNotificationPayload({
       tradeId,
       assignmentId: trade.shiftAssignment.id,
@@ -729,7 +817,8 @@ export async function approveTrade(
     });
 
     // Notify claimer: swap is confirmed
-    await notify(
+    const claimerNotificationId = await writeTradeNotification(
+      tx,
       trade.claimedByUserId,
       "trade_approved",
       title,
@@ -737,25 +826,30 @@ export async function approveTrade(
       `trade_approved_${tradeId}`,
       payload,
     );
-    pushJobs.push({
-      userId: trade.claimedByUserId,
-      title,
-      body,
-      payload,
-    });
-    emailJobs.push({
-      userId: trade.claimedByUserId,
-      title,
-      body,
-      eventSummary,
-      area,
-    });
+    if (claimerNotificationId) {
+      pushJobs.push({
+        userId: trade.claimedByUserId,
+        title,
+        subtitle: eventSummary,
+        body: pushBody,
+        payload,
+        notificationId: claimerNotificationId,
+      });
+      emailJobs.push({
+        userId: trade.claimedByUserId,
+        title,
+        body,
+        eventSummary,
+        area,
+      });
+    }
 
     // The outgoing worker needs a separate confirmation: the claimer is now
     // on the schedule, but the poster is no longer responsible for the slot.
-    const posterTitle = "Your trade was approved — you're off the shift";
-    const posterBody = `Your trade for ${area} at ${eventSummary} was approved. You're no longer on the schedule.`;
-    await notify(
+    const posterTitle = "You're off the shift";
+    const posterBody = `Your trade for the ${area} shift at ${eventSummary} was approved. You're no longer on the schedule.`;
+    const posterNotificationId = await writeTradeNotification(
+      tx,
       trade.postedByUserId,
       "trade_approved_poster",
       posterTitle,
@@ -763,19 +857,23 @@ export async function approveTrade(
       `trade_approved_poster_${tradeId}`,
       payload,
     );
-    pushJobs.push({
-      userId: trade.postedByUserId,
-      title: posterTitle,
-      body: posterBody,
-      payload,
-    });
-    emailJobs.push({
-      userId: trade.postedByUserId,
-      title: posterTitle,
-      body: posterBody,
-      eventSummary,
-      area,
-    });
+    if (posterNotificationId) {
+      pushJobs.push({
+        userId: trade.postedByUserId,
+        title: posterTitle,
+        subtitle: eventSummary,
+        body: `Your trade for the ${area} shift was approved.`,
+        payload,
+        notificationId: posterNotificationId,
+      });
+      emailJobs.push({
+        userId: trade.postedByUserId,
+        title: posterTitle,
+        body: posterBody,
+        eventSummary,
+        area,
+      });
+    }
 
     return updated;
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }), {
@@ -848,7 +946,7 @@ export async function declineTrade(tradeId: string, actor: TradeApprovalActor = 
       const area = trade.shiftAssignment.shift.area;
       const eventSummary = trade.shiftAssignment.shift.shiftGroup?.event?.summary ?? "the event";
       const title = "Trade claim declined";
-      const body = `Your claim for ${area} at ${eventSummary} was declined. The shift is back on the trade board.`;
+      const body = `Your claim on the ${area} shift at ${eventSummary} was declined. The shift is back on the Trade Board.`;
       const payload = scheduleNotificationPayload({
         tradeId,
         assignmentId: trade.shiftAssignment.id,
@@ -859,7 +957,8 @@ export async function declineTrade(tradeId: string, actor: TradeApprovalActor = 
       // Keyed on the claim being declined, not the wall clock: a retried
       // dispatch must not tell the same student twice, while a later claim on
       // the same post carries a new `claimedAt` and so still gets its own notice.
-      await notify(
+      const notificationId = await writeTradeNotification(
+        tx,
         trade.claimedByUserId,
         "trade_declined",
         title,
@@ -867,19 +966,23 @@ export async function declineTrade(tradeId: string, actor: TradeApprovalActor = 
         `trade_declined_${tradeId}_${trade.claimedAt?.toISOString() ?? "unknown"}`,
         payload,
       );
-      pushJobs.push({
-        userId: trade.claimedByUserId,
-        title,
-        body,
-        payload,
-      });
-      emailJobs.push({
-        userId: trade.claimedByUserId,
-        title,
-        body,
-        eventSummary,
-        area,
-      });
+      if (notificationId) {
+        pushJobs.push({
+          userId: trade.claimedByUserId,
+          title,
+          subtitle: eventSummary,
+          body: `The ${area} shift is back on the Trade Board.`,
+          payload,
+          notificationId,
+        });
+        emailJobs.push({
+          userId: trade.claimedByUserId,
+          title,
+          body,
+          eventSummary,
+          area,
+        });
+      }
     }
 
     return updated;
@@ -935,31 +1038,42 @@ export async function cancelTrade(tradeId: string, actor: TradeActor) {
       const shift = updated.shiftAssignment.shift;
       const eventSummary = shift.shiftGroup?.event?.summary ?? "an event";
       const title = "Removed from the Trade Board";
-      const body = `Staff removed your ${shift.area} shift for ${eventSummary} from the Trade Board. You're still scheduled for it.`;
+      const body = `Staff removed your ${shift.area} shift at ${eventSummary} from the Trade Board. You're still on the schedule for it.`;
       const payload = scheduleNotificationPayload({
         tradeId,
         assignmentId: updated.shiftAssignment.id,
         shiftId: shift.id,
         eventId: shift.shiftGroup.event.id,
       });
-      await notify(trade.postedByUserId, "trade_cancelled", title, body, `trade_cancelled_by_staff_${tradeId}`, payload);
-      pushJobs.push({ userId: trade.postedByUserId, title, body, payload });
-      emailJobs.push({
-        userId: trade.postedByUserId,
-        title,
-        body,
-        eventSummary,
-        area: shift.area,
-      });
+      const notificationId = await writeTradeNotification(tx, trade.postedByUserId, "trade_cancelled", title, body, `trade_cancelled_by_staff_${tradeId}`, payload);
+      if (notificationId) {
+        pushJobs.push({
+          userId: trade.postedByUserId,
+          title,
+          subtitle: eventSummary,
+          body: `You're still on the ${shift.area} shift.`,
+          payload,
+          notificationId,
+        });
+        emailJobs.push({
+          userId: trade.postedByUserId,
+          title,
+          body,
+          eventSummary,
+          area: shift.area,
+        });
+      }
     }
 
     if (trade.claimedByUserId) {
       const shift = updated.shiftAssignment.shift;
       const eventSummary = shift.shiftGroup?.event?.summary ?? "the event";
-      const title = "Your trade claim was withdrawn";
+      // Distinct from "Trade claim withdrawn", which is the claimer backing out.
+      const title = "Trade post removed";
       const body = isPoster
-        ? `The trade post for ${shift.area} at ${eventSummary} was cancelled by the poster. Your claim is no longer active.`
-        : `Staff removed the trade post for ${shift.area} at ${eventSummary}. Your claim is no longer active.`;
+        ? `The poster removed the ${shift.area} shift at ${eventSummary} from the Trade Board. Your claim is no longer active.`
+        : `Staff removed the ${shift.area} shift at ${eventSummary} from the Trade Board. Your claim is no longer active.`;
+      const pushBody = `Your claim on the ${shift.area} shift is cancelled.`;
       const payload = scheduleNotificationPayload({
         tradeId,
         assignmentId: updated.shiftAssignment.id,
@@ -967,7 +1081,8 @@ export async function cancelTrade(tradeId: string, actor: TradeActor) {
         eventId: shift.shiftGroup.event.id,
       });
       const claimCycle = trade.claimedAt?.toISOString() ?? "unknown";
-      await notify(
+      const notificationId = await writeTradeNotification(
+        tx,
         trade.claimedByUserId,
         "trade_claim_cancelled",
         title,
@@ -975,14 +1090,23 @@ export async function cancelTrade(tradeId: string, actor: TradeActor) {
         `trade_claim_cancelled_${tradeId}_${claimCycle}`,
         payload,
       );
-      pushJobs.push({ userId: trade.claimedByUserId, title, body, payload });
-      emailJobs.push({
-        userId: trade.claimedByUserId,
-        title,
-        body,
-        eventSummary,
-        area: shift.area,
-      });
+      if (notificationId) {
+        pushJobs.push({
+          userId: trade.claimedByUserId,
+          title,
+          subtitle: eventSummary,
+          body: pushBody,
+          payload,
+          notificationId,
+        });
+        emailJobs.push({
+          userId: trade.claimedByUserId,
+          title,
+          body,
+          eventSummary,
+          area: shift.area,
+        });
+      }
     }
 
     return updated;
@@ -1279,7 +1403,7 @@ export async function expireOpenTrades(): Promise<{ expired: number }> {
       userId: t.postedByUserId,
       type: "trade_expired",
       title: "Trade expired",
-      body: `Your trade for ${area} at ${eventSummary} expired — the shift has passed.`,
+      body: `Your trade post for the ${area} shift at ${eventSummary} expired because the shift has started.`,
       payload,
       channel: "IN_APP" as const,
       sentAt: now,
@@ -1290,7 +1414,7 @@ export async function expireOpenTrades(): Promise<{ expired: number }> {
         userId: t.claimedByUserId,
         type: "trade_claim_expired",
         title: "Trade claim expired",
-        body: `Your claim on the ${area} shift at ${eventSummary} expired without an Admin decision — the shift has passed and you were never added to it.`,
+        body: `Your claim on the ${area} shift at ${eventSummary} expired before an Admin decided. You weren't added to the shift.`,
         payload,
         channel: "IN_APP" as const,
         sentAt: now,

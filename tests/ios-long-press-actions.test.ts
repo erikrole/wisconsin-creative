@@ -14,17 +14,18 @@ describe("iOS notification long-press actions", () => {
   const delegate = source("ios/Wisconsin/App/AppDelegate.swift");
   const apns = source("src/lib/push/apns.ts");
   const notifications = source("src/lib/services/notifications.ts");
+  const catalog = source("src/lib/notification-catalog.ts");
   const blasts = source("src/lib/services/blasts.ts");
 
   it("sends an APNs category the client registers under the same name", () => {
     expect(apns).toContain('...(opts.category ? { category: opts.category } : {})');
-    expect(notifications).toContain("const APNS_ACTION_CATEGORY");
+    expect(notifications).toContain("category: opts.apnsCategory ?? entry?.apnsCategory,");
     expect(blasts).toContain('category: "GT_BLAST"');
 
     // Every identifier the server can send must exist on the client, or the
     // notification renders with no actions at all.
     const serverCategories = [
-      ...notifications.matchAll(/"(GT_[A-Z_]+)"/g),
+      ...catalog.matchAll(/"(GT_[A-Z_]+)"/g),
       ...blasts.matchAll(/"(GT_[A-Z_]+)"/g),
     ].map((m) => m[1]);
     expect(serverCategories.length).toBeGreaterThan(0);
@@ -52,17 +53,29 @@ describe("iOS notification long-press actions", () => {
     );
   });
 
-  it("offers exactly one server write, and only the idempotent one", () => {
+  it("limits server writes to what the alert is literally about", () => {
     // "Got it" is the acknowledgement -- the same call the in-app banner makes.
     expect(actions).toContain('case acknowledgeBlast = "GT_ACK_BLAST"');
     expect(delegate).toContain("APIClient.shared.acknowledgeBlast(id: blastId)");
-    // No other API call reachable from a notification action.
+    // The only API calls reachable from a notification action: acknowledge,
+    // mark read, and the Admin decision endpoints the app itself uses.
     const handler = delegate.slice(
       delegate.indexOf("switch GearTrackerNotificationAction(rawValue:"),
       delegate.indexOf("private func routeNotificationDestination("),
     );
-    const apiCalls = [...handler.matchAll(/APIClient\.shared\.(\w+)/g)].map((m) => m[1]);
-    expect(apiCalls).toEqual(["acknowledgeBlast"]);
+    const apiCalls = new Set([...handler.matchAll(/APIClient\.shared\.(\w+)/g)].map((m) => m[1]));
+    expect([...apiCalls].sort()).toEqual([
+      "acknowledgeBlast",
+      "approveShift",
+      "approveShiftTrade",
+      "declineShift",
+      "declineShiftTrade",
+      "markNotificationRead",
+    ]);
+    // Decisions are offered only on review alerts, and a failure is reported.
+    expect(actions).toContain("return [GearTrackerNotificationAction.approve.action, GearTrackerNotificationAction.decline.action]");
+    expect(actions).toContain("options: Self.reviewOptions.union(.destructive)");
+    expect(delegate).toContain('NotificationActionFeedback.reportFailure(approve ? "Couldn\'t approve" : "Couldn\'t decline")');
   });
 
   it("keeps snooze entirely on the device", () => {

@@ -28,6 +28,9 @@ describe("PWA service-worker contract", () => {
 
   it("turns browser push payloads into safe same-origin notification clicks", () => {
     expect(serviceWorkerSource).toContain('self.addEventListener("push"');
+    // Silent categories and quiet hours arrive without sound or vibration.
+    expect(serviceWorkerSource).toContain("silent: data.silent === true,");
+    expect(serviceWorkerSource).toContain("? { tag: data.tag, renotify: data.renotify === true }");
     expect(serviceWorkerSource).toContain("self.registration.showNotification");
     expect(serviceWorkerSource).toContain('self.addEventListener("notificationclick"');
     expect(serviceWorkerSource).toContain('self.clients.openWindow(targetUrl)');

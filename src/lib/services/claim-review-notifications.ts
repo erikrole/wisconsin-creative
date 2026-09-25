@@ -13,6 +13,8 @@ type ClaimContext = {
   eventSummary: string;
   shiftId: string | null;
   assignmentId: string | null;
+  /** Set for trade claims, so a lock-screen Approve targets the trade, not the assignment. */
+  tradeId?: string;
   claimantName: string;
 };
 
@@ -42,6 +44,7 @@ async function loadTradeContext(tradeId: string): Promise<ClaimContext | null> {
     eventSummary: trade.shiftAssignment.shift.shiftGroup.event.summary,
     shiftId: trade.shiftAssignment.shiftId,
     assignmentId: trade.shiftAssignment.id,
+    tradeId,
     claimantName: trade.claimedBy?.name ?? "Someone",
   };
 }
@@ -82,6 +85,10 @@ async function notifyReviewers(args: {
   type: string;
   title: string;
   body: string;
+  /** Push body under the event-name subtitle. */
+  pushBody: string;
+  /** Override for alerts with nothing left to decide. */
+  apnsCategory?: "GT_ALERT";
 }) {
   const reviewers = await db.user.findMany({
     where: visibleActiveUserWhere({ role: "ADMIN" }),
@@ -93,11 +100,13 @@ async function notifyReviewers(args: {
     eventId: args.context.eventId,
     shiftId: args.context.shiftId,
     assignmentId: args.context.assignmentId,
+    tradeId: args.context.tradeId,
   });
   const now = new Date();
 
   try {
-    await db.notification.createMany({
+    // Only reviewers whose row is new get a push, so a retried step stays silent.
+    const created = await db.notification.createManyAndReturn({
       data: reviewers.map((reviewer) => ({
         userId: reviewer.id,
         type: args.type,
@@ -109,15 +118,19 @@ async function notifyReviewers(args: {
         dedupeKey: `${args.type}_${args.claimId}_${reviewer.id}`,
       })),
       skipDuplicates: true,
+      select: { id: true, userId: true },
     });
 
-    await Promise.allSettled(reviewers.map((reviewer) =>
-      sendPushToUser(reviewer.id, {
+    await Promise.allSettled(created.map((row) =>
+      sendPushToUser(row.userId, {
         title: args.title,
-        body: args.body,
+        subtitle: args.context.eventSummary,
+        body: args.pushBody,
+        notificationId: row.id,
+        apnsCategory: args.apnsCategory,
         payload,
         // Derived, not hardcoded, so this stays honest if the mapping changes.
-        category: categoryForScheduleNotificationType(args.type) ?? "schedule",
+        category: categoryForScheduleNotificationType(args.type) ?? "reviewQueue",
       }),
     ));
   } catch (err) {
@@ -139,8 +152,9 @@ export async function escalatePendingClaim(kind: PendingClaimKind, claimId: stri
     claimId,
     context,
     type: "claim_review_escalated",
-    title: `${kind === "trade" ? "Trade" : "Shift"} claim still needs review`,
-    body: `${context.claimantName}'s ${what} for the ${context.area} slot at ${context.eventSummary} is still waiting. It will be approved automatically if nobody reviews it.`,
+    title: kind === "trade" ? "Trade claim still needs review" : "Shift request still needs review",
+    body: `${context.claimantName}'s ${what} for the ${context.area} shift at ${context.eventSummary} is still waiting. It will be approved automatically if nobody reviews it.`,
+    pushBody: `${context.claimantName} wants the ${context.area} shift. It's approved automatically if no one reviews it.`,
   });
 }
 
@@ -162,8 +176,9 @@ export async function reportPendingClaimAutoApproval(
       claimId,
       context,
       type: "claim_review_blocked",
-      title: "Claim could not be approved automatically",
-      body: `${context.claimantName}'s ${what} for the ${context.area} slot at ${context.eventSummary} could not be approved: ${blockedReason} It still needs a decision.`,
+      title: "Couldn't approve automatically",
+      body: `${context.claimantName}'s ${what} for the ${context.area} shift at ${context.eventSummary} couldn't be approved: ${blockedReason} It still needs a decision.`,
+      pushBody: `${context.claimantName} wants the ${context.area} shift. ${blockedReason} Review it in the app.`,
     });
     return;
   }
@@ -172,7 +187,10 @@ export async function reportPendingClaimAutoApproval(
     claimId,
     context,
     type: "claim_review_auto_approved",
-    title: "Claim approved automatically",
-    body: `${context.claimantName}'s ${what} for the ${context.area} slot at ${context.eventSummary} was approved automatically because it reached its review deadline.`,
+    title: "Approved automatically",
+    body: `${context.claimantName}'s ${what} for the ${context.area} shift at ${context.eventSummary} was approved automatically at its review deadline.`,
+    pushBody: `${context.claimantName} is on the ${context.area} shift. No one reviewed it before the deadline.`,
+    // Already decided: offer Mark as Read, not Approve/Decline.
+    apnsCategory: "GT_ALERT",
   });
 }

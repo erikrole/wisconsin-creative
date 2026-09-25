@@ -166,10 +166,8 @@ describe("schedule timeline", () => {
     expect(listView).toContain("transitionAnchorRef");
     expect(listView).toContain("const observer = new ResizeObserver(apply);");
     expect(listView).toContain("prependSnapshotRef");
-    // The wider window keeps the old rows, but view and sport changes do not.
+    // The wider window keeps the old rows (schedule-timeline-position.test.ts).
     expect(hook).toContain("shouldKeepPreviousScheduleData(previousScope, scheduleScope)");
-    expect(timelinePosition).toContain('previous.includeArchived === false');
-    expect(timelinePosition).toContain('next.includeArchived === true');
   });
 
   it("does not delete the archive row by treating archived as a filter", () => {

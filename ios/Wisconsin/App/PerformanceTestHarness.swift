@@ -152,6 +152,7 @@ struct NotificationSettingsHarnessView: View {
         .onAppear {
             session.currentUser = ScheduleFixtures.staffUser
             prefsVM.prefs = NotificationFixtureAPI.pausedPreferences
+            prefsVM.catalog = NotificationFixtureAPI.staffCatalog
             appState.pushRegistrationState = .failed
             seeded = true
         }
@@ -173,8 +174,58 @@ enum NotificationFixtureAPI {
                 licenseExpiry: true,
                 schedule: true,
                 trade: true,
-                gearPrep: true
+                gearPrep: false
+            ),
+            push: [
+                "checkoutDue": .standard,
+                "checkoutOverdue": .standard,
+                "reservation": .standard,
+                "gearPrep": .off,
+                "schedule": .standard,
+                "trade": .standard,
+                "timeOff": .standard,
+                "licenseExpiry": .silent,
+                "itemReports": .standard,
+            ],
+            quietHours: NotificationQuietHours(
+                enabled: true,
+                start: "22:00",
+                end: "07:00",
+                days: [0, 1, 2, 3, 4],
+                allowUrgent: true
             )
+        )
+    }
+
+    /// Mirrors the server catalog for a Staff account (`catalogForRole("STAFF")`).
+    static let staffCatalog: [NotificationCategoryEntry] = [
+        entry("checkoutDue", "Checkout due reminders", "gear", .standard),
+        entry("checkoutOverdue", "Checkout overdue alerts", "gear", .standard, urgent: true),
+        entry("reservation", "Reservation updates", "gear", .standard),
+        entry("gearPrep", "Gear prep nudges", "gear", .silent),
+        entry("schedule", "Schedule updates", "schedule", .silent),
+        entry("trade", "Trade updates", "schedule", .standard),
+        entry("timeOff", "Time-off decisions", "schedule", .standard),
+        entry("licenseExpiry", "License expiry reminders", "account", .silent),
+        entry("itemReports", "Damaged and lost item reports", "admin", .standard, push: false),
+    ]
+
+    private static func entry(
+        _ id: String,
+        _ label: String,
+        _ group: String,
+        _ defaultLevel: NotificationPushLevel,
+        push: Bool = true,
+        urgent: Bool = false
+    ) -> NotificationCategoryEntry {
+        NotificationCategoryEntry(
+            id: id,
+            label: label,
+            description: label,
+            group: group,
+            defaultLevel: defaultLevel,
+            push: push,
+            urgent: urgent
         )
     }
 }

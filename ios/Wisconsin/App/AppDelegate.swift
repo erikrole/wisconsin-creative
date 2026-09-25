@@ -1,6 +1,31 @@
 import UIKit
 import UserNotifications
 
+/// Delivered alerts mirror unread inbox rows. Each push carries its row's
+/// `notificationId`, so reading the row in the app clears its alert.
+enum DeliveredNotifications {
+    /// Removes delivered alerts for these inbox rows; `nil` clears them all.
+    static func clear(inboxRowIDs ids: Set<String>?) async {
+        let center = UNUserNotificationCenter.current()
+        guard let ids else {
+            center.removeAllDeliveredNotifications()
+            return
+        }
+        let delivered = await center.deliveredNotifications()
+        let identifiers = delivered
+            .filter { ($0.request.content.userInfo["notificationId"] as? String).map(ids.contains) ?? false }
+            .map(\.request.identifier)
+        guard !identifiers.isEmpty else { return }
+        center.removeDeliveredNotifications(withIdentifiers: identifiers)
+    }
+}
+
+enum PushAuthorization {
+    /// `.providesAppNotificationSettings` adds a link to our own preferences
+    /// on the app's page in iOS Settings.
+    static let options: UNAuthorizationOptions = [.alert, .badge, .sound, .providesAppNotificationSettings]
+}
+
 enum PushTokenStorage {
     static let currentTokenKey = "WisconsinCurrentAPNsToken"
     private static let registrationAllowedKey = "WisconsinAPNsRegistrationAllowed"
@@ -140,8 +165,9 @@ extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
         }
         // A foreground banner is enough feedback while the person is already
         // using the app; avoid repeating the full sound interruption on every
-        // inbox, booking, or schedule update.
-        completionHandler([.banner, .badge])
+        // inbox, booking, or schedule update. `.list` keeps it in Notification
+        // Center afterwards, where reading it in the app clears it.
+        completionHandler([.banner, .list, .badge])
     }
 
     // User tapped notification (foreground or background)
@@ -164,6 +190,19 @@ extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
             completionHandler()
             return
         }
+
+        // Which action, which category, and how long after delivery. Tags only.
+        let telemetryAction: String = switch GearTrackerNotificationAction(rawValue: response.actionIdentifier) {
+        case .snooze: "snooze"
+        case .acknowledgeBlast: "acknowledge"
+        case .markRead: "mark_read"
+        case .approve: "approve"
+        case .decline: "decline"
+        case .none: "tap"
+        }
+        let telemetryCategory = userInfo["category"] as? String
+        let deliveredAt = response.notification.date
+        Task { await NotificationTelemetry.recordAction(telemetryAction, category: telemetryCategory, deliveredAt: deliveredAt) }
 
         switch GearTrackerNotificationAction(rawValue: response.actionIdentifier) {
         case .snooze:
@@ -193,14 +232,76 @@ extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
             }
             return
 
-        case .view, .none:
-            // `.view` and the default tap mean the same thing: open the thing
-            // the notification is about.
+        case .markRead:
+            let notificationId = userInfo["notificationId"] as? String
+            Task { @MainActor in
+                defer { completionHandler() }
+                guard PushTokenStorage.registrationAllowed,
+                      authSessionBoundary.owns(notificationBoundary),
+                      let notificationId else { return }
+                do {
+                    try await APIClient.shared.markNotificationRead(id: notificationId)
+                    await sharedAppState?.refreshUnread()
+                } catch {
+                    await NotificationActionFeedback.reportFailure("Couldn't mark it as read")
+                }
+            }
+            return
+
+        case .approve, .decline:
+            let approve = response.actionIdentifier == GearTrackerNotificationAction.approve.rawValue
+            let target = ReviewDecisionTarget(userInfo: userInfo)
+            let notificationId = userInfo["notificationId"] as? String
+            Task { @MainActor in
+                defer { completionHandler() }
+                guard PushTokenStorage.registrationAllowed,
+                      authSessionBoundary.owns(notificationBoundary) else { return }
+                guard let target else {
+                    await NotificationActionFeedback.reportFailure(approve ? "Couldn't approve" : "Couldn't decline")
+                    return
+                }
+                do {
+                    // The same endpoints the app uses; the server rechecks the
+                    // Admin role and that the request is still pending.
+                    switch (target, approve) {
+                    case (.trade(let id), true): try await APIClient.shared.approveShiftTrade(id: id)
+                    case (.trade(let id), false): try await APIClient.shared.declineShiftTrade(id: id)
+                    case (.shiftRequest(let id), true): try await APIClient.shared.approveShift(assignmentId: id)
+                    case (.shiftRequest(let id), false): try await APIClient.shared.declineShift(assignmentId: id)
+                    }
+                    if let notificationId {
+                        try? await APIClient.shared.markNotificationRead(id: notificationId)
+                    }
+                    await sharedAppState?.refreshUnread()
+                } catch {
+                    await NotificationActionFeedback.reportFailure(approve ? "Couldn't approve" : "Couldn't decline")
+                }
+            }
+            return
+
+        case .none:
+            // The default tap opens the thing the notification is about.
             break
         }
 
         routeNotificationDestination(userInfo: userInfo, notificationBoundary: notificationBoundary)
         completionHandler()
+    }
+
+    /// "Notification Settings" on the app's page in iOS Settings (and the
+    /// same link in a notification's options menu) opens our own
+    /// preferences. Offered because authorization requests
+    /// `.providesAppNotificationSettings`.
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        openSettingsFor notification: UNNotification?
+    ) {
+        guard PushTokenStorage.registrationAllowed else { return }
+        let notificationBoundary = authSessionBoundary.capture()
+        Task { @MainActor in
+            guard authSessionBoundary.owns(notificationBoundary) else { return }
+            sharedAppState?.apply(.notificationSettings)
+        }
     }
 
     /// One routing path for a tapped notification and for every `.foreground`

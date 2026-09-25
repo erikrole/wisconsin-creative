@@ -1445,6 +1445,7 @@ model Notification {
   bookingId String?             @map("booking_id")
   createdAt DateTime            @default(now()) @map("created_at")
   user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries NotificationDelivery[]
 
   @@index([userId, readAt])
   @@index([userId, createdAt])
@@ -1452,6 +1453,75 @@ model Notification {
   @@index([sentAt])
   @@index([bookingId])
   @@map("notifications")
+}
+
+/// One row per outbound delivery attempt for an inbox notification: whether a
+/// push or browser push went out, and if not, why. Answers "why didn't I get
+/// it?" and shows which categories people mute. Tied to the inbox row (and
+/// deleted with it) rather than to a user, so erasure needs no extra step.
+/// Pruned after 180 days by the morning-refresh cron.
+model NotificationDelivery {
+  id             String       @id @default(cuid())
+  notificationId String       @map("notification_id")
+  /// Preference category, or null for uncategorized alerts.
+  category       String?
+  /// apns | web | email
+  channel        String
+  /// sent | sent_silent | suppressed | no_device | bad_token | error
+  outcome        String
+  /// Why: paused, push_off, category_off, quiet_hours, level_silent, expired, ...
+  reason         String?
+  /// under_1s | 1_5s | over_5s, for dispatches that reached a provider.
+  latencyBucket  String?      @map("latency_bucket")
+  occurredAt     DateTime     @default(now()) @map("occurred_at")
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@index([occurredAt])
+  @@index([category, occurredAt])
+  @@index([outcome, occurredAt])
+  @@index([notificationId])
+  @@map("notification_deliveries")
+}
+
+/// A crash, hang, or resource exception reported by Apple's MetricKit on an
+/// iOS install. No user identity: app and OS version, the diagnostic's own
+/// metadata, and a size-capped call stack. Pruned after 90 days.
+model AppDiagnostic {
+  id          String   @id @default(cuid())
+  platform    String
+  /// crash | hang | cpu_exception | disk_write_exception | app_launch
+  kind        String
+  appVersion  String?  @map("app_version")
+  osVersion   String?  @map("os_version")
+  /// Exception type, signal, or termination reason, when MetricKit gives one.
+  signature   String?
+  metadata    Json?
+  callStack   Json?    @map("call_stack")
+  receivedAt  DateTime @default(now()) @map("received_at")
+
+  @@index([receivedAt])
+  @@index([kind, receivedAt])
+  @@map("app_diagnostics")
+}
+
+/// One run of a background job (a workflow step or a cron sub-job): how late
+/// it ran against its schedule and whether it succeeded. Silent job failures
+/// are the likeliest cause of missing notifications. Pruned after 90 days.
+model JobRun {
+  id             String   @id @default(cuid())
+  /// e.g. checkout_escalation, claim_review, schedule_release, shift_reminder, morning_refresh
+  job            String
+  /// succeeded | failed | skipped
+  outcome        String
+  /// on_time | under_5m | 5_60m | over_1h, against the time it was due
+  latenessBucket String?  @map("lateness_bucket")
+  /// Short machine-readable detail, e.g. the stage or the failed sub-job.
+  detail         String?
+  occurredAt     DateTime @default(now()) @map("occurred_at")
+
+  @@index([occurredAt])
+  @@index([job, occurredAt])
+  @@map("job_runs")
 }
 
 model EscalationRule {

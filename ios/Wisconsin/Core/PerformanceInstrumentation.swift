@@ -206,9 +206,10 @@ enum AppPerformanceSignposts {
 }
 
 /// Receives Apple's daily MetricKit reports and keeps a small, protected,
-/// on-device diagnostic ring. Nothing is uploaded or added to normal logs.
-/// Developers can retrieve the app container when a device exhibits a launch,
-/// hang, CPU, memory, or disk regression that a local trace cannot reproduce.
+/// on-device diagnostic ring. Diagnostic payloads (crashes, hangs, CPU and
+/// disk exceptions) are also uploaded to `/api/diagnostics` with no user
+/// identity; daily usage metrics stay on the device. Developers can still
+/// retrieve the container for a regression a local trace cannot reproduce.
 final class AppMetricMonitor: NSObject, MXMetricManagerSubscriber, @unchecked Sendable {
     static let shared = AppMetricMonitor()
 
@@ -237,7 +238,13 @@ final class AppMetricMonitor: NSObject, MXMetricManagerSubscriber, @unchecked Se
     }
 
     func didReceive(_ payloads: [MXDiagnosticPayload]) {
-        persist(payloads.map { $0.jsonRepresentation() }, prefix: "diagnostics")
+        let reports = payloads.map { $0.jsonRepresentation() }
+        persist(reports, prefix: "diagnostics")
+        Task {
+            for report in reports {
+                await APIClient.shared.uploadDiagnosticPayload(report)
+            }
+        }
     }
 
     private func persist(_ reports: [Data], prefix: String) {

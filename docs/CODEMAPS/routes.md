@@ -238,6 +238,7 @@
 - `/api/departments` -> `src/app/api/departments/route.ts`
 - `/api/devices` -> `src/app/api/devices/route.ts`
 - `/api/devices/test` -> `src/app/api/devices/test/route.ts`
+- `/api/diagnostics` -> `src/app/api/diagnostics/route.ts`
 - `/api/drafts/[id]` -> `src/app/api/drafts/[id]/route.ts`
 - `/api/drafts` -> `src/app/api/drafts/route.ts`
 - `/api/form-options` -> `src/app/api/form-options/route.ts`

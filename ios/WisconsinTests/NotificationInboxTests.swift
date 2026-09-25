@@ -117,6 +117,21 @@ final class NotificationInboxTests: XCTestCase {
         XCTAssertEqual(NotificationSnooze.reminderIdentifier(for: "gt-snooze-gt-snooze-original"), "gt-snooze-original")
     }
 
+    func testReadingClearsTheMatchingNotificationCenterAlert() async {
+        let api = InboxStub()
+        api.rows = [row("one"), row("two")]
+        var cleared: [Set<String>?] = []
+        let vm = NotificationsViewModel(api: api, refreshUnread: {}, clearDelivered: { cleared.append($0) })
+        await vm.load()
+
+        await vm.markRead(id: "one")
+        XCTAssertEqual(cleared, [["one"]])
+
+        await vm.markAllRead()
+        XCTAssertEqual(cleared.count, 2)
+        XCTAssertNil(cleared[1], "Mark All Read clears every delivered alert")
+    }
+
     func testInboxRecoveryCapture() async throws {
         let api = InboxStub()
         api.rows = [row("one"), row("two")]
@@ -140,5 +155,66 @@ final class NotificationInboxTests: XCTestCase {
         attachment.lifetime = .keepAlways
         add(attachment)
         window.isHidden = true
+    }
+}
+
+final class NotificationPreferenceLevelTests: XCTestCase {
+    private func json(_ patch: NotificationPreferencesPatch) throws -> [String: Any] {
+        let data = try JSONEncoder().encode(patch)
+        return try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+    }
+
+    func testPatchSendsOnlyTheChangedField() throws {
+        let body = try json(.init(push: ["schedule": .silent]))
+        XCTAssertEqual(Set(body.keys), ["push"])
+        XCTAssertEqual((body["push"] as? [String: String])?["schedule"], "silent")
+    }
+
+    func testResumeSendsAnExplicitNullPause() throws {
+        let body = try json(.init(pausedUntil: .some(nil)))
+        XCTAssertTrue(body.keys.contains("pausedUntil"))
+        XCTAssertTrue(body["pausedUntil"] is NSNull)
+    }
+
+    func testDecodesLevelsAndToleratesUnknownOnes() throws {
+        let data = Data(#"{"pausedUntil":null,"channels":{"email":true,"push":true},"push":{"trade":"silent","future":"loud"},"quietHours":{"enabled":true,"start":"22:00","end":"07:00","days":[0,6],"allowUrgent":false}}"#.utf8)
+        let prefs = try JSONDecoder().decode(NotificationPreferences.self, from: data)
+        XCTAssertEqual(prefs.push?["trade"], .silent)
+        XCTAssertEqual(prefs.push?["future"], .standard)
+        XCTAssertEqual(prefs.quietHours?.days, [0, 6])
+        XCTAssertEqual(prefs.quietHours?.allowUrgent, false)
+    }
+
+    @MainActor
+    func testQuietHoursTimesRoundTripInCentralTime() {
+        for time in ["00:00", "07:30", "22:00", "23:59"] {
+            let date = NotificationPrefsViewModel.quietHoursDate(time)
+            XCTAssertEqual(NotificationPrefsViewModel.quietHoursTime(date), time)
+        }
+    }
+
+    @MainActor
+    func testTomorrowMorningIsSevenAmTheNextDay() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "America/Chicago"))
+        let now = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 9, day: 23, hour: 23, minute: 15)))
+        let morning = NotificationPrefsViewModel.tomorrowMorning(from: now, calendar: calendar)
+        let parts = calendar.dateComponents([.day, .hour, .minute], from: morning)
+        XCTAssertEqual(parts.day, 24)
+        XCTAssertEqual(parts.hour, 7)
+        XCTAssertEqual(parts.minute, 0)
+    }
+}
+
+final class NotificationQuickActionTests: XCTestCase {
+    func testReviewDecisionPrefersTheTradeOverItsAssignment() {
+        XCTAssertEqual(ReviewDecisionTarget(userInfo: ["tradeId": "t1", "assignmentId": "a1"]), .trade("t1"))
+        XCTAssertEqual(ReviewDecisionTarget(userInfo: ["assignmentId": "a1"]), .shiftRequest("a1"))
+        XCTAssertNil(ReviewDecisionTarget(userInfo: ["eventId": "e1"]))
+    }
+
+    func testEveryCategoryButBlastsOffersMarkAsReadOrADecision() {
+        XCTAssertEqual(GearTrackerNotificationAction.decline.action.options.contains(.destructive), true)
+        XCTAssertEqual(GearTrackerNotificationAction.approve.action.options.contains(.authenticationRequired), false)
     }
 }

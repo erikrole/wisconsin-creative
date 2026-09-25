@@ -1,0 +1,57 @@
+{
+  "title": "Notification Settings Shortcuts",
+  "eyebrow": "iOS \u00b7 Wisconsin Creative \u00b7 Notifications Slice 3b",
+  "lede": "People now reach notification settings from where they think of them: the inbox, the app's page in iOS Settings, and shared /settings/notifications links.",
+  "stats": [],
+  "sections": [
+    {
+      "heading": "Side by side",
+      "note": "Same hosted-view test, stub inbox, forced refresh failure, xxxLarge text, iPhone 18 Pro Max. Before is clean HEAD; after adds this work only.",
+      "pairs": [
+        {
+          "title": "Inbox toolbar",
+          "sub": "The one visible change.",
+          "before": "raw/before-inbox.png",
+          "beforeCap": "Only Mark All Read. Changing what reaches you meant backing out to Profile \u2192 Settings \u2192 Notifications.",
+          "after": "raw/after-inbox.png",
+          "afterCap": "A gear opens Profile \u2192 Notifications directly, closing the inbox on the way.",
+          "beforeEvidence": "raw/before-inbox-evidence.json",
+          "afterEvidence": "raw/after-inbox-evidence.json"
+        }
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "h": "A link from iOS Settings",
+      "was": "The app's page in iOS Settings only offered system alert styles.",
+      "now": "It also shows 'Notification Settings', which opens our own preferences. Existing users get the link at next launch, with no new prompt."
+    },
+    {
+      "h": "Links open the native screen",
+      "was": "A /settings/notifications link fell back to the inbox.",
+      "now": "Universal links, wisconsin:// links, and notification hrefs all open Profile \u2192 Notifications. Other /settings pages still open nothing natively."
+    },
+    {
+      "h": "Inbox dates match the web",
+      "was": "Rows grouped by when they were created.",
+      "now": "Rows group and label by when they were sent, falling back to created, like the web inbox."
+    },
+    {
+      "h": "Removed an action iOS never registered",
+      "was": "A GT_VIEW action identifier existed with no category using it.",
+      "now": "Gone; a plain tap already opens the destination."
+    }
+  ],
+  "verification": [
+    "npm run ios:xcode:verify on the iPhone 18 Pro Max (isolated worktree of HEAD plus this work): drift, simulator build, full XCTest suite including new route tests, generic device build \u2014 passed",
+    "NotificationInboxTests.testInboxRecoveryCapture \u2014 passed on both before and after trees",
+    "iOS notification, deep-link, long-press, and settings source contracts \u2014 58 passed",
+    "npm run verify:docs \u2014 current"
+  ],
+  "notes": [
+    "The iOS Settings link and openSettingsFor callback can only be exercised on a device or simulator with notifications allowed; this simulator's install has not granted permission, so that path is source- and build-verified only.",
+    "Built in an isolated worktree because a concurrent Schedule refactor in the main checkout still does not compile.",
+    "'in 0s' on both sides is the stub rows being dated at render time, not a change."
+  ]
+}

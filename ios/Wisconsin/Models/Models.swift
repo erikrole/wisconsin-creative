@@ -156,6 +156,10 @@ struct NotificationPreferences: Codable, Equatable {
     var channels: Channels
     var badges: Bool? = nil
     var categories: Categories? = nil
+    /// Per-category push level, keyed by catalog id. Absent from servers that
+    /// predate levels; those fall back to the boolean `categories`.
+    var push: [String: NotificationPushLevel]? = nil
+    var quietHours: NotificationQuietHours? = nil
 
     struct Channels: Codable, Equatable {
         var email: Bool
@@ -173,7 +177,7 @@ struct NotificationPreferences: Codable, Equatable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case pausedUntil, channels, badges, categories
+        case pausedUntil, channels, badges, categories, push, quietHours
     }
 
     func encode(to encoder: Encoder) throws {
@@ -182,6 +186,70 @@ struct NotificationPreferences: Codable, Equatable {
         try container.encode(channels, forKey: .channels)
         try container.encodeIfPresent(badges, forKey: .badges)
         try container.encodeIfPresent(categories, forKey: .categories)
+    }
+}
+
+/// How a category's push arrives. `off` also stops that category's email.
+enum NotificationPushLevel: String, Codable, CaseIterable, Identifiable {
+    case off, silent, standard
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .off: "Off"
+        case .silent: "Silent"
+        case .standard: "Standard"
+        }
+    }
+
+    /// An unknown level from a newer server reads as the loudest known one
+    /// rather than failing the whole preferences decode.
+    init(from decoder: Decoder) throws {
+        let raw = try decoder.singleValueContainer().decode(String.self)
+        self = NotificationPushLevel(rawValue: raw) ?? .standard
+    }
+}
+
+/// Recurring quiet hours. Times are "HH:mm" in the app timezone (Central),
+/// and `days` are the days a window starts on, 0 = Sunday.
+struct NotificationQuietHours: Codable, Equatable {
+    var enabled: Bool
+    var start: String
+    var end: String
+    var days: [Int]
+    var allowUrgent: Bool
+}
+
+/// One row of the server's role-filtered category catalog.
+struct NotificationCategoryEntry: Codable, Equatable, Identifiable {
+    let id: String
+    let label: String
+    let description: String
+    let group: String
+    let defaultLevel: NotificationPushLevel
+    /// False for email-only categories, which are simply on or off.
+    let push: Bool
+    let urgent: Bool
+}
+
+/// A partial update for `PATCH /api/me/notification-preferences`. Only the
+/// fields that are set are sent; the server keeps everything else.
+struct NotificationPreferencesPatch: Encodable, Equatable {
+    /// `.some(nil)` clears a pause; `nil` leaves it untouched.
+    var pausedUntil: String?? = nil
+    var channels: [String: Bool]? = nil
+    var push: [String: NotificationPushLevel]? = nil
+    var quietHours: NotificationQuietHours? = nil
+
+    enum CodingKeys: String, CodingKey { case pausedUntil, channels, push, quietHours }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        if let pausedUntil { try container.encode(pausedUntil, forKey: .pausedUntil) }
+        try container.encodeIfPresent(channels, forKey: .channels)
+        try container.encodeIfPresent(push, forKey: .push)
+        try container.encodeIfPresent(quietHours, forKey: .quietHours)
     }
 }
 

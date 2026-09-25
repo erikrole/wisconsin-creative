@@ -59,7 +59,10 @@
 | `LiveActivityToken` | 10 | 3 |
 | `LiveActivityStartToken` | 8 | 2 |
 | `LiveActivityStart` | 9 | 4 |
-| `Notification` | 13 | 6 |
+| `Notification` | 14 | 6 |
+| `NotificationDelivery` | 9 | 5 |
+| `AppDiagnostic` | 9 | 3 |
+| `JobRun` | 6 | 3 |
 | `EscalationRule` | 10 | 1 |
 | `Blast` | 22 | 5 |
 | `BlastRecipient` | 12 | 4 |

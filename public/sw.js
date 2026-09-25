@@ -58,6 +58,11 @@ self.addEventListener("push", (event) => {
       body,
       icon: "/icon-192.png",
       badge: "/icon-192.png",
+      silent: data.silent === true,
+      // A tag replaces the earlier notification for the same checkout or row.
+      ...(typeof data.tag === "string" && data.tag
+        ? { tag: data.tag, renotify: data.renotify === true }
+        : {}),
       data: { url: safeNotificationUrl(data.url) },
     })
   );

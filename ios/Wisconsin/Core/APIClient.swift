@@ -1315,11 +1315,32 @@ final class APIClient {
         _ = response.data.accepted
     }
 
-    func recordProductEvent(eventName: String, surface: String) async {
+    /// Uploads one MetricKit diagnostic payload (crashes, hangs, resource
+    /// exceptions). Carries no user identity; best-effort.
+    func uploadDiagnosticPayload(_ json: Data) async {
+        guard let payload = try? JSONSerialization.jsonObject(with: json) as? [String: Any],
+              let body = try? JSONSerialization.data(withJSONObject: ["platform": "ios", "payload": payload]),
+              body.count <= 2_000_000 else { return }
+        struct Stored: Decodable { let stored: Int }
+        var req = request(path: "/api/diagnostics", method: "POST")
+        req.httpBody = body
+        let _: DataWrapper<Stored>? = try? await perform(req, broadcastsSessionExpiry: false)
+    }
+
+    /// `properties` keys are limited server-side to source, mode, and reason;
+    /// values are lowercase snake case, at most 32 characters.
+    func recordProductEvent(
+        eventName: String,
+        surface: String,
+        outcome: String? = nil,
+        properties: [String: String]? = nil
+    ) async {
         struct Body: Encodable {
             let eventName: String
             let platform: String
             let surface: String
+            let outcome: String?
+            let properties: [String: String]?
             let appVersion: String?
             let appBuild: String?
             let osVersion: String?
@@ -1338,6 +1359,8 @@ final class APIClient {
             eventName: eventName,
             platform: "ios",
             surface: surface,
+            outcome: outcome,
+            properties: properties,
             appVersion: identity.appVersion,
             appBuild: identity.appBuild,
             osVersion: identity.osVersion,
@@ -1743,6 +1766,24 @@ final class APIClient {
         let req = request(path: "/api/me/notification-preferences")
         let resp: DataWrapper<NotificationPreferences> = try await perform(req)
         return resp.data
+    }
+
+    /// Preferences plus the categories this account's role receives. The
+    /// catalog is absent from servers that predate per-category levels.
+    struct NotificationPreferencesPayload: Decodable {
+        let data: NotificationPreferences
+        let catalog: [NotificationCategoryEntry]?
+    }
+
+    func notificationPreferencesWithCatalog() async throws -> NotificationPreferencesPayload {
+        let req = request(path: "/api/me/notification-preferences")
+        return try await perform(req)
+    }
+
+    func patchNotificationPreferences(_ patch: NotificationPreferencesPatch) async throws -> NotificationPreferencesPayload {
+        var req = request(path: "/api/me/notification-preferences", method: "PATCH")
+        req.httpBody = try JSONEncoder().encode(patch)
+        return try await perform(req)
     }
 
     func updateNotificationPreferences(_ prefs: NotificationPreferences) async throws {
