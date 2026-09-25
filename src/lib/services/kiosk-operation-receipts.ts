@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { type Prisma, type PrismaClient } from "@prisma/client";
-import { HttpError } from "@/lib/http";
+import { HttpError, httpErrorCode } from "@/lib/http";
 
 export type KioskOperationContext = {
   id: string;
@@ -117,7 +117,7 @@ export async function rejectKioskOperation(db: PrismaClient, context: KioskOpera
       const replay = await readKioskOperationReceipt(tx, context);
       if (replay) return replay;
       await claimKioskOperationReceiptTx(tx, context);
-      const response = { success: false, operationRejected: true, error: error.message };
+      const response = { success: false, operationRejected: true, error: error.message, ...httpErrorCode(error) };
       await finishKioskOperationReceiptTx(tx, context, response);
       return response;
     }, { isolationLevel: "Serializable" });
