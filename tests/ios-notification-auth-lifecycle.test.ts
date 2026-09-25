@@ -57,6 +57,9 @@ const mocks = vi.hoisted(() => {
     shouldDeliverPush: vi.fn(),
     shouldDeliverEmail: vi.fn(),
     shouldDeliverCategory: vi.fn(),
+    resolvePushPresentation: vi.fn(),
+    isInQuietHours: vi.fn(),
+    pushSuppressionReason: vi.fn(),
     sendPush: vi.fn(),
     startLiveActivity: vi.fn(),
     updateLiveActivity: vi.fn(),
@@ -76,6 +79,9 @@ vi.mock("@/lib/services/notification-prefs", () => ({
   shouldDeliverPush: mocks.shouldDeliverPush,
   shouldDeliverEmail: mocks.shouldDeliverEmail,
   shouldDeliverCategory: mocks.shouldDeliverCategory,
+  resolvePushPresentation: mocks.resolvePushPresentation,
+  isInQuietHours: mocks.isInQuietHours,
+  pushSuppressionReason: mocks.pushSuppressionReason,
 }));
 vi.mock("@/lib/email", () => ({
   sendEmail: vi.fn(),
@@ -134,10 +140,11 @@ beforeEach(() => {
   mocks.tx.user.update.mockResolvedValue({ id: "user-1", active: false });
   mocks.createAuditEntryTx.mockResolvedValue(undefined);
 
-  mocks.loadUserPrefs.mockResolvedValue(null);
+  mocks.loadUserPrefs.mockResolvedValue({ quietHours: { enabled: false } });
   mocks.shouldDeliverPush.mockReturnValue(true);
   mocks.shouldDeliverEmail.mockReturnValue(true);
   mocks.shouldDeliverCategory.mockReturnValue(true);
+  mocks.resolvePushPresentation.mockReturnValue({ interruptionLevel: "passive", sound: false });
   mocks.db.deviceToken.findMany.mockResolvedValue([]);
   mocks.sendPush.mockResolvedValue({ revoked: [] });
   mocks.revokeCompanionUser.mockResolvedValue(undefined);
@@ -234,7 +241,8 @@ describe("iOS notification authorization lifecycle", () => {
 
     expect(mocks.tx.user.update).toHaveBeenCalledWith({
       where: { id: "user-1" },
-      data: { active: false },
+      // Deactivation also revokes the calendar feed token.
+      data: { active: false, icsToken: null },
     });
   });
 

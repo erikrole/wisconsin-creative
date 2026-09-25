@@ -34,7 +34,7 @@ private final class ScheduleWorkingCopyUndoCoordinator: NSObject {
                 inverseMenuTitle: "Redo (label)"
             )
         }
-        manager.setActionName("Undo (label)")
+        manager.setActionName(label)
         hasUndoAction = true
         hasRedoAction = false
     }
@@ -55,7 +55,8 @@ private final class ScheduleWorkingCopyUndoCoordinator: NSObject {
                 inverseMenuTitle: "Undo (label)"
             )
         }
-        manager.setActionName(inverseMenuTitle)
+        // The system menu adds "Undo"/"Redo" in front of the action name.
+        manager.setActionName(label)
         if inverseMenuTitle.hasPrefix("Redo") {
             hasUndoAction = false
             hasRedoAction = true
@@ -317,9 +318,14 @@ struct EventDetailView: View {
     @State private var replaceTarget: EventShift?
     @State private var postTradeTarget: TradePostCandidate?
     @State private var editTimesTarget: EventShift?
+    /// Slots with a mutation in flight. A second tap on the same slot is
+    /// ignored instead of sending a stale-version request that would fail
+    /// after the first one succeeded.
+    @State private var slotsInFlight: Set<String> = []
     @State private var confirmation: EventConfirmation?
     @State private var showAllCallTimes = false
     @State private var showAddShift = false
+    @State private var showTradeBoard = false
     @State private var isCreatingGroup = false
     @State private var isDiscarding = false
     @State private var isPublishing = false
@@ -437,6 +443,17 @@ struct EventDetailView: View {
             .sheet(item: $replaceTarget) { shift in
                 replacePersonSheet(for: shift)
             }
+            // Pending claims are reviewed on the Trade Board; the crew reloads
+            // on the way back so a decision shows up here at once.
+            .sheet(isPresented: $showTradeBoard, onDismiss: {
+                Task { await vm.load(forceRefresh: true) }
+            }) {
+                TradeBoardSheet(
+                    myShifts: myShifts,
+                    currentUserId: session.currentUser?.id ?? "",
+                    currentUserRole: session.currentUser?.role ?? ""
+                )
+            }
             .sheet(isPresented: $showAddShift) {
                 if let group = vm.shiftGroup {
                     AddShiftSheet(
@@ -445,9 +462,11 @@ struct EventDetailView: View {
                         eventTitle: scheduleEventDisplayTitle(event),
                         defaultStart: vm.workingEditor?.defaultWindow?.startsAt ?? event.startsAt,
                         defaultEnd: vm.workingEditor?.defaultWindow?.endsAt ?? event.endsAt,
+                        isAllDay: event.displayAllDay,
                         onAdded: { editor in
                             acceptWorkingScheduleEditor(editor)
-                        }
+                        },
+                        refreshWorkingVersion: refreshWorkingVersion
                     )
                 }
             }
@@ -628,7 +647,8 @@ struct EventDetailView: View {
             sportCode: event.sportCode,
             onAssigned: { editor in
                 acceptWorkingScheduleEditor(editor)
-            }
+            },
+            refreshWorkingVersion: refreshWorkingVersion
         )
     }
 
@@ -649,7 +669,8 @@ struct EventDetailView: View {
             replacingUserName: currentWorkerName,
             onAssigned: { editor in
                 acceptWorkingScheduleEditor(editor)
-            }
+            },
+            refreshWorkingVersion: refreshWorkingVersion
         )
     }
 
@@ -688,8 +709,8 @@ struct EventDetailView: View {
             return nil
         case .delete(let shift):
             return shift.assignments.isEmpty
-                ? "This cannot be undone."
-                : "This shift has someone assigned. They'll be removed too."
+                ? "Removes this slot from the pending crew. You can undo it."
+                : "Remove the assigned person before deleting this shift."
         case .revertWorkingSchedule:
             return "The pending crew edits for this event will be removed. Workers will keep seeing the current schedule."
         case .publishNow:
@@ -703,9 +724,38 @@ struct EventDetailView: View {
         title: String,
         error: Error
     ) {
+        // Another session changed this crew. Refresh so the next attempt runs
+        // against the current version, and say that instead of the raw text.
+        if case APIError.conflict = error {
+            actionErrorTitle = "Crew updated"
+            actionError = "Someone else changed this crew. It's been refreshed — check it and try again."
+            Haptics.warning()
+            Task { await vm.load(forceRefresh: true) }
+            return
+        }
         actionErrorTitle = title
         actionError = error.localizedDescription
         Haptics.error()
+    }
+
+    /// Reloads the crew and returns the current draft version, for sheets
+    /// that hit a version conflict mid-edit.
+    private func refreshWorkingVersion() async -> Int? {
+        await vm.load(forceRefresh: true)
+        return vm.workingEditor?.workingVersion
+    }
+
+    private func presentActionMessage(title: String, message: String) {
+        actionErrorTitle = title
+        actionError = message
+        Haptics.warning()
+    }
+
+    /// Runs one slot mutation at a time per slot.
+    private func withSlotGuard(_ key: String, _ operation: () async -> Void) async {
+        guard slotsInFlight.insert(key).inserted else { return }
+        defer { slotsInFlight.remove(key) }
+        await operation()
     }
 
     private func removeTradeFromBoard(_ assignment: ShiftAssignmentRecord) async {
@@ -733,6 +783,10 @@ struct EventDetailView: View {
     }
 
     private func unassign(_ assignment: ShiftAssignmentRecord) async {
+        await withSlotGuard("unassign-\(assignment.id)") { await performUnassign(assignment) }
+    }
+
+    private func performUnassign(_ assignment: ShiftAssignmentRecord) async {
         do {
             guard let groupId = vm.shiftGroup?.id,
                   let shift = vm.shift(containingAssignmentId: assignment.id) else {
@@ -751,6 +805,8 @@ struct EventDetailView: View {
     }
 
     private func approveRequest(_ assignment: ShiftAssignmentRecord) async {
+        guard slotsInFlight.insert("review-\(assignment.id)").inserted else { return }
+        defer { slotsInFlight.remove("review-\(assignment.id)") }
         do {
             try await APIClient.shared.approveShift(assignmentId: assignment.id)
             Haptics.success()
@@ -761,6 +817,8 @@ struct EventDetailView: View {
     }
 
     private func declineRequest(_ assignment: ShiftAssignmentRecord) async {
+        guard slotsInFlight.insert("review-\(assignment.id)").inserted else { return }
+        defer { slotsInFlight.remove("review-\(assignment.id)") }
         do {
             try await APIClient.shared.declineShift(assignmentId: assignment.id)
             Haptics.success()
@@ -772,6 +830,8 @@ struct EventDetailView: View {
 
     private func deleteShift(_ shift: EventShift) async {
         guard let groupId = vm.shiftGroup?.id else { return }
+        guard slotsInFlight.insert("slot-\(shift.id)").inserted else { return }
+        defer { slotsInFlight.remove("slot-\(shift.id)") }
         do {
             let editor = try await APIClient.shared.removeWorkingScheduleSlot(
                 shiftGroupId: groupId,
@@ -824,6 +884,8 @@ struct EventDetailView: View {
 
     private func duplicateShift(_ shift: EventShift) async {
         guard let groupId = vm.shiftGroup?.id else { return }
+        guard slotsInFlight.insert("slot-\(shift.id)").inserted else { return }
+        defer { slotsInFlight.remove("slot-\(shift.id)") }
         do {
             let editor = try await APIClient.shared.addWorkingScheduleSlot(
                 shiftGroupId: groupId,
@@ -966,10 +1028,9 @@ struct EventDetailView: View {
                     )
                 }
             }
-            // The same blue the Schedule list row uses to mark your own shift,
-            // and the same one `ShiftRow` already uses on the roster row. The
-            // detail screen was the only surface not making that agreement.
-            .brandCard(fill: Color.statusBackground(.blue))
+            // The same surface the Schedule list row uses to mark your own
+            // shift, so a tinted row opens onto a card that matches it.
+            .brandCard(fill: Color.myShiftSurface)
         }
     }
 
@@ -1463,8 +1524,8 @@ struct EventDetailView: View {
     }
 
     private var eventHeader: some View {
-        HStack(alignment: .top, spacing: 14) {
-            StatusRail(color: eventRailColor)
+        HStack(alignment: .top, spacing: 12) {
+            VenueDot(color: eventRailColor, topPadding: 6)
 
             VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 6) {
@@ -1814,14 +1875,21 @@ struct EventDetailView: View {
                         ? { assignment in Task { await declineRequest(assignment) } }
                         : nil,
                     onDuplicate: { shift in Task { await duplicateShift(shift) } },
-                    onEditTimes: { shift in editTimesTarget = shift },
+                    // All-day events carry no call time; the server rejects one.
+                    onEditTimes: event.displayAllDay ? nil : { shift in editTimesTarget = shift },
                     onDelete: { shift in
+                        // The server keeps an assigned slot; say so up front
+                        // rather than promising the person is removed too.
                         if shift.assignments.isEmpty {
                             Task { await deleteShift(shift) }
                         } else {
-                            confirmation = .delete(shift)
+                            presentActionMessage(
+                                title: "Remove the assignment first",
+                                message: "This shift has someone on it. Remove them, then delete the empty shift."
+                            )
                         }
                     },
+                    onReviewClaims: canManageShifts ? { showTradeBoard = true } : nil,
                     hidesShiftTimes: event.displayAllDay,
                     callWindowIsHoisted: callWindowIsHoisted,
                     studentCallTimeAllowed: studentCallTimeAllowed
@@ -1852,6 +1920,8 @@ struct AreaBlock: View {
     var onDuplicate: ((EventShift) -> Void)? = nil
     var onEditTimes: ((EventShift) -> Void)? = nil
     var onDelete: ((EventShift) -> Void)? = nil
+    /// Opens the Trade Board, where pending student claims are reviewed.
+    var onReviewClaims: (() -> Void)? = nil
     var hidesShiftTimes = false
     /// Set when the Crew header already states the call window for the whole
     /// event, which is the normal case. The rows then drop their call column
@@ -1894,7 +1964,8 @@ struct AreaBlock: View {
                         onDecline: onDecline,
                         onDuplicate: onDuplicate,
                         onEditTimes: onEditTimes,
-                        onDelete: onDelete
+                        onDelete: onDelete,
+                        onReviewClaims: onReviewClaims
                     )
                     if idx < shifts.count - 1 {
                         // Flush with the row's own content inset. The old 44pt
@@ -1970,6 +2041,8 @@ struct ShiftRow: View {
     var onDuplicate: ((EventShift) -> Void)? = nil
     var onEditTimes: ((EventShift) -> Void)? = nil
     var onDelete: ((EventShift) -> Void)? = nil
+    /// Opens the Trade Board, where pending student claims are reviewed.
+    var onReviewClaims: (() -> Void)? = nil
 
     private var isStudentSlot: Bool { shift.workerType == "ST" }
 
@@ -2460,8 +2533,47 @@ struct ShiftRow: View {
         return isStudent && isStudentSlot ? "Claim shift" : "Open"
     }
 
+    /// "Riley wants this slot" / "Riley and 2 others want this slot".
+    private var pendingClaimsSummary: String? {
+        guard let first = shift.pendingClaimNames.first else { return nil }
+        let others = shift.pendingClaimNames.count - 1
+        switch others {
+        case 0: return "\(first) wants this slot"
+        case 1: return "\(first) and 1 other want this slot"
+        default: return "\(first) and \(others) others want this slot"
+        }
+    }
+
     @ViewBuilder
     private var openSlotView: some View {
+        // Pending claims are the first thing to settle on an open slot, so
+        // they replace the Assign affordance and send staff to the Trade
+        // Board, where claims are reviewed.
+        if canManageShifts, let onReviewClaims, !shift.pendingClaimNames.isEmpty {
+            Button(action: onReviewClaims) {
+                HStack(spacing: 4) {
+                    Text(shift.pendingClaimNames.count == 1 ? "1 waiting" : "\(shift.pendingClaimNames.count) waiting")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.statusText(.orange))
+                        .lineLimit(1)
+                    Image(systemName: "chevron.right")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Color.statusBackground(.orange), in: Capsule())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(pendingClaimsSummary ?? "Pending claims")
+            .accessibilityHint("Opens the Trade Board to review")
+        } else {
+            openSlotAffordance
+        }
+    }
+
+    @ViewBuilder
+    private var openSlotAffordance: some View {
         // The row is the button now (see `body`), so this is the affordance, not
         // the target: accent text plus a chevron, the same shape every other
         // tappable row in the app uses. As a tinted pill it out-shouted the
@@ -2505,6 +2617,11 @@ struct EditShiftTimesSheet: View {
     @State private var showDiscardConfirm = false
     @Environment(\.dismiss) private var dismiss
 
+    private static func roundedToQuarterHour(_ date: Date) -> Date {
+        let interval = 15.0 * 60.0
+        return Date(timeIntervalSince1970: (date.timeIntervalSince1970 / interval).rounded() * interval)
+    }
+
     init(
         shift: EventShift,
         eventTitle: String,
@@ -2517,8 +2634,10 @@ struct EditShiftTimesSheet: View {
         self.eventTitle = eventTitle
         self.scope = scope
         self.onSave = onSave
-        _startsAt = State(initialValue: defaultStart ?? shift.effectiveStartsAt)
-        _endsAt = State(initialValue: defaultEnd ?? shift.effectiveEndsAt)
+        // The pickers step in quarter hours, so start on one: otherwise 7:53
+        // displays as :45 but saves as 7:53 when only the hour changes.
+        _startsAt = State(initialValue: Self.roundedToQuarterHour(defaultStart ?? shift.effectiveStartsAt))
+        _endsAt = State(initialValue: Self.roundedToQuarterHour(defaultEnd ?? shift.effectiveEndsAt))
     }
 
     private var hasChanges: Bool {
@@ -2606,10 +2725,6 @@ struct EditShiftTimesSheet: View {
 
     private var contextCard: some View {
         HStack(spacing: 12) {
-            RoundedRectangle(cornerRadius: 2, style: .continuous)
-                .fill(Color.statusText(.blue))
-                .frame(width: 4, height: 58)
-
             VStack(alignment: .leading, spacing: 4) {
                 Text(eventTitle)
                     .font(.headline)

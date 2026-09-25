@@ -40,4 +40,12 @@ enum Haptics {
         UISelectionFeedbackGenerator().selectionChanged()
     }
 
+    /// A deliberate threshold crossed during a gesture, such as pulling past
+    /// the top of Schedule into earlier weeks. Heavier than `selection()` so
+    /// it reads as a boundary rather than a tick.
+    @MainActor static func threshold() {
+        guard HapticsPreference.isEnabled else { return }
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+    }
+
 }

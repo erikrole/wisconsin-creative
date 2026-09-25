@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { source } from "./_helpers/source";
+import { scheduleSurfaceSource, source } from "./_helpers/source";
 
 describe("iOS system quality contracts", () => {
   it("parses guide Markdown once per article and gives blocks stable source identities", () => {
@@ -127,7 +127,7 @@ describe("iOS system quality contracts", () => {
       "ios/Wisconsin/Views/CreateBooking/CreateBookingEquipmentRows.swift",
     );
     const search = source("ios/Wisconsin/Views/Search/SearchResultRow.swift");
-    const schedule = source("ios/Wisconsin/Views/ScheduleView.swift");
+    const schedule = scheduleSurfaceSource();
     const itemDetail = source("ios/Wisconsin/Views/ItemDetailView.swift");
     const bookingDetail = source("ios/Wisconsin/Views/BookingDetailView.swift");
     const scanHero = source("ios/Wisconsin/Views/Search/ScanResultHeroCard.swift");

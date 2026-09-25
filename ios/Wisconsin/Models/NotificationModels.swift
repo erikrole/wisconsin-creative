@@ -8,8 +8,12 @@ struct AppNotification: Codable, Identifiable {
     let readAt: Date?
     let createdAt: Date
     let payload: NotificationPayload?
+    /// When delivery happened; older rows only have `createdAt`.
+    var sentAt: Date? = nil
 
     var isUnread: Bool { readAt == nil }
+    /// The time a person experienced the notification, matching the web inbox.
+    var displayDate: Date { sentAt ?? createdAt }
 }
 
 struct NotificationPayload: Codable {

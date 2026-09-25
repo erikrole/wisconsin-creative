@@ -1,7 +1,7 @@
 import { readdirSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { source } from "./_helpers/source";
+import { scheduleSurfaceSource, source } from "./_helpers/source";
 
 function swiftFiles(dir = path.join(process.cwd(), "ios/Wisconsin")): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -31,7 +31,8 @@ describe("iOS production domain cutover", () => {
     expect(environment).toContain("static let origin = baseURL.absoluteString");
     expect(environment).toContain("static var activeAPIBaseURL: URL");
     expect(environment).toContain("static var activeAPIOrigin: String");
-    expect(environment).toContain('return URL(string: "webcal://\\(canonicalHost)\\(normalizedPath)")');
+    // The feed is served by the host that issued the token.
+    expect(environment).toContain('return URL(string: "webcal://\\(activeAPIHost)\\(normalizedPath)")');
   });
 
   it("routes only explicit review identities to the isolated review host", () => {
@@ -69,7 +70,7 @@ describe("iOS production domain cutover", () => {
     expect(source("ios/Wisconsin/Views/LicensesView.swift")).toContain(
       'private static let webManagementURL = AppEnvironment.url(path: "/licenses")',
     );
-    expect(source("ios/Wisconsin/Views/ScheduleView.swift")).toContain(
+    expect(scheduleSurfaceSource()).toContain(
       'AppEnvironment.webcalURL(path: "/api/shifts/ics/\\(activeToken)")',
     );
   });

@@ -90,7 +90,7 @@ struct PushPrePromptView: View {
         let sessionBoundary = authSessionBoundary.capture()
         isRequesting = true
         let granted = (try? await UNUserNotificationCenter.current()
-            .requestAuthorization(options: [.alert, .badge, .sound])) ?? false
+            .requestAuthorization(options: PushAuthorization.options)) ?? false
         if granted,
            session.currentUser?.id == userId,
            authSessionBoundary.owns(sessionBoundary),

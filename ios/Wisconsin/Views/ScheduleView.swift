@@ -2,13 +2,6 @@ import SwiftUI
 import TipKit
 import UIKit
 
-// MARK: - View Mode
-
-enum ScheduleViewMode: String, CaseIterable, Hashable {
-    case list = "List"
-    case calendar = "Calendar"
-}
-
 struct ScheduleEventRoute: Hashable {
     let id: String
 }
@@ -31,27 +24,53 @@ extension MyShift {
 /// Considered fresh while younger than this; older triggers a background refresh.
 private let scheduleStaleAfter: TimeInterval = 5 * 60 // 5 minutes
 
+/// How many weeks one edge load adds. The first load covers two weeks before
+/// today (the first pull into the past reveals them without waiting) through
+/// `initialWeeksAhead` weeks out.
+private let scheduleWeeksPerEarlierLoad = 4
+private let scheduleWeeksPerLaterLoad = 8
+private let scheduleInitialWeeksAhead = 8
+private let scheduleInitialWeeksBack = 2
+/// Future weeks load before the reader gets this close to the end, so fast
+/// scrolling does not outrun the data.
+private let schedulePrefetchWeeksAhead = 4
+/// Outer bounds for scrolling, so an empty stretch cannot page forever.
+private let scheduleMaxWeeksBack = 104
+private let scheduleMaxWeeksAhead = 104
+
 @MainActor
 @Observable
 final class ScheduleViewModel {
-    var events: [ScheduleEvent] = [] {
+    /// Every raw event loaded so far, keyed by id. Windows overlap at their
+    /// edges, so merging by id keeps an event that spans two loads single.
+    @ObservationIgnored private var rawEventsById: [String: ScheduleEvent] = [:]
+    @ObservationIgnored private var shiftsById: [String: MyShift] = [:]
+
+    private(set) var events: [ScheduleEvent] = [] {
         didSet { rebuildEventIndexes() }
     }
-    var myShifts: [MyShift] = []
+    private(set) var myShifts: [MyShift] = []
     var isLoading = false
     var error: String?
     var refreshError: String?
-    /// When true, the load also pulls events whose end time is in the past —
-    /// matches the "Past" toggle the web schedule's list view exposes.
-    var includePast = false {
-        didSet {
-            guard includePast != oldValue else { return }
-            rebuildEventIndexes()
-        }
-    }
-    private var hasLoaded = false
+    private(set) var hasLoaded = false
     private var loadTask: Task<Void, Never>?
     private var loadRequests = LatestRequestGeneration()
+    /// Bumped by every full reload and teardown, so an edge load that started
+    /// before one cannot merge stale weeks into the replacement.
+    @ObservationIgnored private var windowGeneration = 0
+
+    /// The loaded window, in whole weeks: `[loadedStart, loadedEnd)`. The list
+    /// scrolls through exactly this range and grows it at either edge.
+    private(set) var loadedStart: Date
+    private(set) var loadedEnd: Date
+    private(set) var isLoadingEarlier = false
+    private(set) var isLoadingLater = false
+    private(set) var reachedEarliest = false
+    private(set) var reachedLatest = false
+
+    /// Whose Schedule this is, for the on-disk snapshot. Nil skips caching.
+    @ObservationIgnored var cacheOwnerId: String?
 
     var shiftsByEventId: [String: MyShift] = [:]
     /// Every personal assignment on an event, earliest first. `shiftsByEventId`
@@ -60,15 +79,44 @@ final class ScheduleViewModel {
     var extraShiftAreasByEventId: [String: [String]] = [:]
     var lastLoadedAt: Date?
 
+    private static var calendar: Calendar { .current }
+
+    static func weekStart(of date: Date) -> Date {
+        calendar.dateInterval(of: .weekOfYear, for: date)?.start ?? calendar.startOfDay(for: date)
+    }
+
+    private static func adding(weeks: Int, to date: Date) -> Date {
+        calendar.date(byAdding: .weekOfYear, value: weeks, to: date) ?? date
+    }
+
+    private var earliestAllowed: Date {
+        Self.adding(weeks: -scheduleMaxWeeksBack, to: Self.weekStart(of: .now))
+    }
+
+    private var latestAllowed: Date {
+        Self.adding(weeks: scheduleMaxWeeksAhead, to: Self.weekStart(of: .now))
+    }
+
+    init() {
+        let thisWeek = Self.weekStart(of: .now)
+        loadedStart = Self.adding(weeks: -scheduleInitialWeeksBack, to: thisWeek)
+        loadedEnd = Self.adding(weeks: scheduleInitialWeeksAhead, to: thisWeek)
+    }
+
     var isStale: Bool {
         guard let t = lastLoadedAt else { return true }
         return Date.now.timeIntervalSince(t) > scheduleStaleAfter
     }
 
-    /// Lower bound for expanding multi-day events: when "Past" is off we don't
-    /// want a long-running event to spawn day groups before today.
-    private var spanLowerBound: Date {
-        includePast ? .distantPast : Calendar.current.startOfDay(for: .now)
+    /// Every week start in the loaded window, oldest first.
+    var loadedWeeks: [Date] {
+        var weeks: [Date] = []
+        var cursor = loadedStart
+        while cursor < loadedEnd, weeks.count < scheduleMaxWeeksBack + scheduleMaxWeeksAhead + 8 {
+            weeks.append(cursor)
+            cursor = Self.adding(weeks: 1, to: cursor)
+        }
+        return weeks
     }
 
     private(set) var groupedEvents: [(date: Date, events: [ScheduleEvent])] = []
@@ -76,42 +124,65 @@ final class ScheduleViewModel {
 
     private func rebuildEventIndexes() {
         var byDay: [Date: [ScheduleEvent]] = [:]
-        var allByDay: [Date: [ScheduleEvent]] = [:]
-        let lowerBound = spanLowerBound
         for event in events {
             // A multi-day event appears under each calendar day it covers, so
             // it stays visible while it's still in progress.
-            for day in event.spannedDays {
-                allByDay[day, default: []].append(event)
-                if day >= lowerBound {
-                    byDay[day, default: []].append(event)
-                }
+            for day in event.spannedDays where day >= loadedStart && day < loadedEnd {
+                byDay[day, default: []].append(event)
             }
         }
-        groupedEvents = byDay
+        eventsByDay = byDay.mapValues { $0.sorted { $0.startsAt < $1.startsAt } }
+        groupedEvents = eventsByDay
             .sorted { $0.key < $1.key }
-            .map { (date: $0.key, events: $0.value.sorted { $0.startsAt < $1.startsAt }) }
-        // Calendar mode's day list reads from this index, so it needs the same
-        // chronological order the list groups get. Without it the day rendered
-        // in whatever order the API returned, which the leading time column
-        // made obvious: 11:00 AM, 4:00 PM, 7:30 PM, then 5:50 PM.
-        eventsByDay = allByDay.mapValues { $0.sorted { $0.startsAt < $1.startsAt } }
+            .map { (date: $0.key, events: $0.value) }
     }
 
+    /// Shows the last saved window while the first network load runs. Does
+    /// nothing once real data has loaded.
+    func restoreCachedWindow() {
+        guard !hasLoaded, events.isEmpty, let owner = cacheOwnerId,
+              let snapshot = ScheduleWindowCache.load(userId: owner) else { return }
+        rawEventsById = Dictionary(snapshot.events.map { ($0.id, $0) }, uniquingKeysWith: { _, new in new })
+        shiftsById = Dictionary(snapshot.shifts.map { ($0.id, $0) }, uniquingKeysWith: { _, new in new })
+        publish()
+    }
+
+    private func saveCachedWindow() {
+        guard let owner = cacheOwnerId else { return }
+        ScheduleWindowCache.save(.init(
+            userId: owner,
+            savedAt: .now,
+            events: Array(rawEventsById.values),
+            shifts: Array(shiftsById.values)
+        ))
+    }
+
+    /// What a reload refetches: the loaded window, capped to a few weeks
+    /// back and half a year ahead of today. After scrolling a year out, a
+    /// foreground refresh stays one short read instead of paging the whole
+    /// window; weeks outside it keep what they last loaded.
+    private var reloadWindow: DateInterval {
+        let thisWeek = Self.weekStart(of: .now)
+        let start = max(loadedStart, Self.adding(weeks: -4, to: thisWeek))
+        let end = min(loadedEnd, Self.adding(weeks: 26, to: thisWeek))
+        return DateInterval(start: start, end: max(end, start))
+    }
+
+    /// Reloads the loaded window around today (see `reloadWindow`).
     func load(forceRefresh: Bool = false) async {
         if forceRefresh {
-            // A filter change must replace the in-flight query. Waiting for an
-            // older request would let its query shape win and drop this reload.
+            // A refresh must replace the in-flight query rather than wait on it.
             loadTask?.cancel()
         } else if isLoading {
             return
         }
         // Allow first load, explicit refresh, or staleness-driven refresh.
         guard !hasLoaded || forceRefresh || isStale else { return }
-        let requestedIncludePast = includePast
+        let window = reloadWindow
+        windowGeneration += 1
         let requestToken = loadRequests.begin()
         let task = Task { @MainActor in
-            await performLoad(includePast: requestedIncludePast, requestToken: requestToken)
+            await performLoad(window: window, requestToken: requestToken)
         }
         loadTask = task
         await withTaskCancellationHandler {
@@ -130,10 +201,13 @@ final class ScheduleViewModel {
         loadTask?.cancel()
         loadTask = nil
         loadRequests.invalidate()
+        windowGeneration += 1
         isLoading = false
+        isLoadingEarlier = false
+        isLoadingLater = false
     }
 
-    private func performLoad(includePast requestedIncludePast: Bool, requestToken: UUID) async {
+    private func performLoad(window: DateInterval, requestToken: UUID) async {
         guard loadRequests.owns(requestToken), !Task.isCancelled else { return }
         isLoading = true
         if events.isEmpty { error = nil }
@@ -145,25 +219,16 @@ final class ScheduleViewModel {
             }
         }
         do {
-            // The API is paginated, but Schedule owns a complete read window
-            // so list filters and calendar navigation do not silently stop at
-            // the first 60 events. SwiftUI still materializes rows lazily.
-            async let eventsTask = APIClient.shared.allCalendarEvents(includePast: requestedIncludePast)
-            async let shiftsTask = APIClient.shared.allMyShifts()
-            let (fetchedEvents, fetchedShifts) = try await (eventsTask, shiftsTask)
+            let (fetchedEvents, fetchedShifts) = try await fetch(window)
             guard loadRequests.owns(requestToken), !Task.isCancelled else { return }
-            events = collapsedCombinedScheduleEvents(fetchedEvents)
-            myShifts = fetchedShifts
-            let grouped = orderedPersonalShiftsByEvent(fetchedShifts)
-            allShiftsByEventId = grouped
-            shiftsByEventId = grouped.compactMapValues(\.first)
-            extraShiftAreasByEventId = grouped.reduce(into: [:]) { result, pair in
-                let extras = extraPersonalAreas(from: pair.value)
-                if !extras.isEmpty { result[pair.key] = extras }
-            }
+            // Replaces only what its own window covers. Weeks an edge load or
+            // a deep link added while this was in flight survive it.
+            replace(window, with: (fetchedEvents, fetchedShifts))
+            publish()
             hasLoaded = true
             lastLoadedAt = .now
             error = nil
+            saveCachedWindow()
             GearStore.shared.seedScheduleEvents(fetchedEvents)
         } catch APIError.unauthorized {
             // SessionStore listens for the global notification and routes the
@@ -180,6 +245,155 @@ final class ScheduleViewModel {
                 self.refreshError = error.localizedDescription
             }
         }
+    }
+
+    /// Adds the weeks before the loaded window. Returns true when weeks were
+    /// added, so the list can hold its scroll position over the insertion.
+    @discardableResult
+    func loadEarlier() async -> Bool {
+        guard hasLoaded, !isLoadingEarlier, !reachedEarliest else { return false }
+        let newStart = max(Self.adding(weeks: -scheduleWeeksPerEarlierLoad, to: loadedStart), earliestAllowed)
+        guard newStart < loadedStart else {
+            reachedEarliest = true
+            return false
+        }
+        isLoadingEarlier = true
+        defer { isLoadingEarlier = false }
+        let generation = windowGeneration
+        do {
+            let window = DateInterval(start: newStart, end: loadedStart)
+            let result = try await fetch(window)
+            guard windowGeneration == generation, !Task.isCancelled else { return false }
+            replace(window, with: result)
+            // Bounds only grow: a concurrent jump may already reach further.
+            loadedStart = min(loadedStart, newStart)
+            reachedEarliest = newStart <= earliestAllowed
+            publish()
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    /// Adds the weeks after the loaded window.
+    func loadLater() async {
+        guard hasLoaded, !isLoadingLater, !reachedLatest else { return }
+        let newEnd = min(Self.adding(weeks: scheduleWeeksPerLaterLoad, to: loadedEnd), latestAllowed)
+        guard newEnd > loadedEnd else {
+            reachedLatest = true
+            return
+        }
+        isLoadingLater = true
+        defer { isLoadingLater = false }
+        let generation = windowGeneration
+        do {
+            let window = DateInterval(start: loadedEnd, end: newEnd)
+            let result = try await fetch(window)
+            guard windowGeneration == generation, !Task.isCancelled else { return }
+            replace(window, with: result)
+            loadedEnd = max(loadedEnd, newEnd)
+            reachedLatest = newEnd >= latestAllowed
+            publish()
+        } catch {
+            return
+        }
+    }
+
+    /// Starts the next future load once a visible day is within a few weeks of
+    /// the loaded end.
+    func prefetchLater(near day: Date) {
+        guard hasLoaded, !isLoadingLater, !reachedLatest,
+              day >= Self.adding(weeks: -schedulePrefetchWeeksAhead, to: loadedEnd) else { return }
+        Task { await loadLater() }
+    }
+
+    /// Grows the window to cover a day picked in the month grid, so a jump
+    /// never lands on a date the list has not loaded. Returns false when the
+    /// day is outside the scrollable bounds or the load failed.
+    @discardableResult
+    func ensureLoaded(_ day: Date) async -> Bool {
+        let target = Self.calendar.startOfDay(for: day)
+        guard target >= earliestAllowed, target < latestAllowed else { return false }
+        if target < loadedStart {
+            let newStart = Self.weekStart(of: target)
+            let generation = windowGeneration
+            let window = DateInterval(start: newStart, end: loadedStart)
+            guard let result = try? await fetch(window),
+                  windowGeneration == generation else { return false }
+            replace(window, with: result)
+            loadedStart = min(loadedStart, newStart)
+            reachedEarliest = newStart <= earliestAllowed
+            publish()
+        } else if target >= loadedEnd {
+            let newEnd = Self.adding(weeks: 1, to: Self.weekStart(of: target))
+            let generation = windowGeneration
+            let window = DateInterval(start: loadedEnd, end: newEnd)
+            guard let result = try? await fetch(window),
+                  windowGeneration == generation else { return false }
+            replace(window, with: result)
+            loadedEnd = max(loadedEnd, newEnd)
+            reachedLatest = newEnd >= latestAllowed
+            publish()
+        }
+        return true
+    }
+
+    /// Finds an event for a push or deep link. One outside the loaded weeks is
+    /// read by id, then its weeks are loaded so the detail screen and the list
+    /// both have it.
+    func event(forLink id: String) async -> ScheduleEvent? {
+        // Wait out an in-flight first load, so it cannot land afterwards and
+        // replace the event this link just resolved.
+        if let loadTask { await loadTask.value }
+        if let loaded = events.first(where: { $0.id == id || ($0.combinedEvents ?? []).contains { $0.id == id } }) {
+            return loaded
+        }
+        guard let fetched = try? await APIClient.shared.scheduleEvent(id: id) else { return nil }
+        await ensureLoaded(fetched.startsAt)
+        if let loaded = events.first(where: { $0.id == fetched.id }) { return loaded }
+        // Beyond the scrollable range (or its weeks failed to load): still
+        // open it, from the fetched payload.
+        linkedEvents[fetched.id] = fetched
+        return fetched
+    }
+
+    /// Events opened from a link that the loaded weeks do not hold.
+    private(set) var linkedEvents: [String: ScheduleEvent] = [:]
+
+    private func fetch(_ window: DateInterval) async throws -> ([ScheduleEvent], [MyShift]) {
+        async let eventsTask = APIClient.shared.allCalendarEvents(window: window)
+        async let shiftsTask = APIClient.shared.allMyShifts(window: window)
+        return try await (eventsTask, shiftsTask)
+    }
+
+    /// Swaps in a fresh read of one window: anything that overlaps it is
+    /// dropped first, so an event deleted or moved away disappears, and
+    /// everything outside it is left alone.
+    private func replace(_ window: DateInterval, with result: ([ScheduleEvent], [MyShift])) {
+        func overlaps(_ start: Date, _ end: Date) -> Bool {
+            start < window.end && end > window.start
+        }
+        rawEventsById = rawEventsById.filter { !overlaps($0.value.startsAt, $0.value.endsAt) }
+        shiftsById = shiftsById.filter { !overlaps($0.value.event.startsAt, $0.value.event.endsAt) }
+        for event in result.0 { rawEventsById[event.id] = event }
+        for shift in result.1 { shiftsById[shift.id] = shift }
+        GearStore.shared.seedScheduleEvents(result.0)
+        saveCachedWindow()
+    }
+
+    private func publish() {
+        let shifts = Array(shiftsById.values)
+        myShifts = shifts.sorted { $0.startsAt < $1.startsAt }
+        let grouped = orderedPersonalShiftsByEvent(shifts)
+        allShiftsByEventId = grouped
+        shiftsByEventId = grouped.compactMapValues(\.first)
+        extraShiftAreasByEventId = grouped.reduce(into: [:]) { result, pair in
+            let extras = extraPersonalAreas(from: pair.value)
+            if !extras.isEmpty { result[pair.key] = extras }
+        }
+        // Assigned last: its didSet rebuilds the day index, which reads the
+        // current window bounds.
+        events = collapsedCombinedScheduleEvents(Array(rawEventsById.values))
     }
 }
 
@@ -240,709 +454,29 @@ struct ScheduleView: View {
     }
 }
 
-private struct PublishedScheduleRoute: Hashable {
-    let id: String
-}
-
-private struct CollaboratorPublishedScheduleView: View {
-    private let pageSize = 50
-
-    @State private var events: [PublishedScheduleEvent] = []
-    @State private var total = 0
-    @State private var isLoading = false
-    @State private var isLoadingMore = false
-    @State private var error: String?
-    @State private var refreshError: String?
-    @State private var pendingFollowId: String?
-    @State private var routedEvents: [String: PublishedScheduleEvent] = [:]
-    @State private var isRoutingEvent = false
-    @State private var lastLoadedAt: Date?
-    @State private var navigationPath = NavigationPath()
-    @State private var toast: Toast?
-    @Environment(SessionStore.self) private var session
-    @Environment(AppState.self) private var appState
-    @Environment(\.scenePhase) private var scenePhase
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    private var canFollow: Bool {
-        (session.currentUser?.capabilities ?? []).contains("SCHEDULE_FOLLOW")
-    }
-
-    private var groupedEvents: [(date: Date, events: [PublishedScheduleEvent])] {
-        Dictionary(grouping: events) { publishedScheduleDay(for: $0.event) }
-            .sorted { $0.key < $1.key }
-            .map { date, events in
-                (date: date, events: events.sorted { $0.event.startsAt < $1.event.startsAt })
-            }
-    }
-
-    var body: some View {
-        NavigationStack(path: $navigationPath) {
-            Group {
-                if isLoading && events.isEmpty {
-                    publishedScheduleSkeleton
-                } else if events.isEmpty, let error {
-                    ContentUnavailableView {
-                        Label("Couldn't load schedule", systemImage: "wifi.exclamationmark")
-                    } description: {
-                        Text(error)
-                    } actions: {
-                        Button("Retry") { Task { await load(forceRefresh: true) } }
-                            .buttonStyle(.borderedProminent)
-                            .tint(Color.statusText(.purple))
-                    }
-                } else if events.isEmpty {
-                    ContentUnavailableView(
-                        "No upcoming events",
-                        systemImage: "calendar",
-                        description: Text("Events will appear here when crew assignments are ready.")
-                    )
-                } else {
-                    publishedEventList
-                }
-            }
-            .background(Color(.systemGroupedBackground))
-            .overlay(alignment: .top) {
-                if !events.isEmpty, let refreshError {
-                    publishedScheduleRefreshBanner(message: refreshError)
-                }
-            }
-            .toast($toast)
-            .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: refreshError)
-            .navigationTitle("Schedule")
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationDestination(for: PublishedScheduleRoute.self) { route in
-                if let event = events.first(where: { $0.id == route.id }) ?? routedEvents[route.id] {
-                    PublishedEventDetailView(
-                        event: event,
-                        canFollow: canFollow,
-                        isUpdatingFollow: pendingFollowId == event.id,
-                        onToggleFollow: { Task { await setFollowing(event) } }
-                    )
-                } else {
-                    ContentUnavailableView(
-                        "Event unavailable",
-                        systemImage: "calendar.badge.exclamationmark",
-                        description: Text("Return to Schedule and refresh to try again.")
-                    )
-                }
-            }
-            .task {
-                await load()
-                await routePendingEventIfNeeded()
-            }
-            .onChange(of: scenePhase) { _, phase in
-                if phase == .active {
-                    Task { await load() }
-                }
-            }
-            .onChange(of: appState.tabResetToken) { _, _ in
-                guard appState.resetTab == 4 else { return }
-                navigationPath = NavigationPath()
-            }
-            .onChange(of: appState.pendingPushEventId) { _, _ in
-                Task { await routePendingEventIfNeeded() }
-            }
-        }
-    }
-
-    private var publishedScheduleSkeleton: some View {
-        List {
-            ForEach(0..<5, id: \.self) { _ in
-                PublishedEventRowSkeleton()
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
-            }
-        }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
-    }
-
-    private var publishedEventList: some View {
-        List {
-            ForEach(groupedEvents, id: \.date) { group in
-                Section {
-                    ForEach(group.events) { item in
-                        NavigationLink(value: PublishedScheduleRoute(id: item.id)) {
-                            PublishedEventRow(event: item)
-                        }
-                        .buttonStyle(ScalePressStyle())
-                        .contextMenu {
-                            if canFollow, pendingFollowId == nil {
-                                Button {
-                                    Task { await setFollowing(item) }
-                                } label: {
-                                    Label(
-                                        item.isFollowing ? "Mute Event Updates" : "Follow Event",
-                                        systemImage: item.isFollowing ? "bell.slash" : "bell"
-                                    )
-                                }
-                            }
-                        }
-                        .listRowSeparator(.hidden)
-                        .listRowBackground(Color.clear)
-                        .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
-                    }
-                } header: {
-                    ScheduleDateHeader(date: group.date, eventCount: group.events.count)
-                        .listRowInsets(EdgeInsets())
-                }
-                .listSectionSeparator(.hidden)
-            }
-
-            if events.count < total {
-                HStack {
-                    Spacer()
-                    ProgressView("Loading more events")
-                        .font(.caption)
-                        .task { await loadMore() }
-                    Spacer()
-                }
-                .listRowSeparator(.hidden)
-                .listRowBackground(Color.clear)
-            }
-        }
-        .listStyle(.plain)
-        .listSectionSpacing(.compact)
-        .scrollContentBackground(.hidden)
-        .contentMargins(.bottom, 96, for: .scrollContent)
-        .refreshable { await load(forceRefresh: true) }
-    }
-
-    private func publishedScheduleRefreshBanner(message: String) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: "wifi.exclamationmark")
-                .accessibilityHidden(true)
-            Text(message)
-                .font(.footnote)
-                .lineLimit(2)
-            Spacer(minLength: 8)
-            Button("Retry") { Task { await load(forceRefresh: true) } }
-                .font(.footnote.weight(.semibold))
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous))
-        .padding(.horizontal, 12)
-        .padding(.top, 4)
-        .shadow(color: Color.primary.opacity(0.08), radius: 8, y: 2)
-        .accessibilityElement(children: .combine)
-    }
-
-    private func load(forceRefresh: Bool = false) async {
-        guard !isLoading, !isLoadingMore else { return }
-        let isStale = lastLoadedAt.map { Date.now.timeIntervalSince($0) > scheduleStaleAfter } ?? true
-        guard forceRefresh || events.isEmpty || isStale else { return }
-        isLoading = true
-        if events.isEmpty { error = nil }
-        refreshError = nil
-        defer { isLoading = false }
-        do {
-            let response = try await APIClient.shared.publishedSchedule(limit: pageSize)
-            events = response.data
-            total = response.total
-            lastLoadedAt = .now
-            error = nil
-        } catch APIError.unauthorized {
-            return
-        } catch {
-            if events.isEmpty {
-                self.error = error.localizedDescription
-            } else {
-                refreshError = error.localizedDescription
-            }
-        }
-    }
-
-    private func loadMore() async {
-        guard !isLoading, !isLoadingMore, events.count < total else { return }
-        isLoadingMore = true
-        defer { isLoadingMore = false }
-        do {
-            let response = try await APIClient.shared.publishedSchedule(limit: pageSize, offset: events.count)
-            let existingIds = Set(events.map(\.id))
-            events.append(contentsOf: response.data.filter { !existingIds.contains($0.id) })
-            total = response.total
-        } catch APIError.unauthorized {
-            return
-        } catch {
-            refreshError = error.localizedDescription
-        }
-    }
-
-    private func setFollowing(_ event: PublishedScheduleEvent) async {
-        guard pendingFollowId == nil else { return }
-        pendingFollowId = event.id
-        defer { pendingFollowId = nil }
-        do {
-            let requestedState = !event.isFollowing
-            let serverState = try await APIClient.shared.setPublishedScheduleFollow(
-                eventId: event.id,
-                following: requestedState
-            )
-            if let index = events.firstIndex(where: { $0.id == event.id }) {
-                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) {
-                    events[index].isFollowing = serverState
-                }
-            }
-            if routedEvents[event.id] != nil {
-                routedEvents[event.id]?.isFollowing = serverState
-            }
-            toast = Toast(
-                message: serverState ? "Following \(event.event.summary)" : "Muted updates for \(event.event.summary)",
-                icon: serverState ? "bell.fill" : "bell.slash.fill",
-                role: .success
-            )
-        } catch {
-            toast = Toast(
-                message: "Couldn't update notifications for \(event.event.summary). Try again.",
-                icon: "exclamationmark.triangle.fill",
-                role: .error
-            )
-        }
-    }
-
-    private func routePendingEventIfNeeded() async {
-        guard !isRoutingEvent, let eventId = appState.pendingPushEventId else { return }
-        isRoutingEvent = true
-        defer { isRoutingEvent = false }
-
-        if events.contains(where: { $0.id == eventId }) {
-            appState.pendingPushEventId = nil
-            navigationPath.append(PublishedScheduleRoute(id: eventId))
-            return
-        }
-
-        do {
-            routedEvents[eventId] = try await APIClient.shared.publishedScheduleEvent(eventId: eventId)
-            appState.pendingPushEventId = nil
-            navigationPath.append(PublishedScheduleRoute(id: eventId))
-        } catch APIError.unauthorized {
-            return
-        } catch {
-            appState.pendingPushEventId = nil
-            toast = Toast(
-                message: "This event is no longer available.",
-                icon: "calendar.badge.exclamationmark",
-                role: .error
-            )
-        }
-    }
-}
-
-private struct PublishedEventRow: View {
-    let event: PublishedScheduleEvent
-
-    var body: some View {
-        HStack(spacing: 12) {
-            StatusRail(color: publishedEventRailColor(event.event))
-
-            VStack(alignment: .leading, spacing: 5) {
-                Text(event.event.summary)
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(.primary)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Text("\(publishedEventType(event.event)) · \(publishedEventTime(event.event))")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-
-                if let venue = event.event.venue?.name {
-                    Label(venue, systemImage: "mappin.and.ellipse")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-
-                HStack(spacing: 8) {
-                    PublishedCrewAvatarStack(crew: event.crew)
-                    Text(event.crew.isEmpty ? "No scheduled crew" : publishedCrewCount(event.crew.count))
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            if event.isFollowing {
-                Image(systemName: "bell.fill")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.statusText(.purple))
-                    .frame(width: 30, height: 30)
-                    .background(Color.statusBackground(.purple), in: Circle())
-                    .accessibilityHidden(true)
-            }
-
-            Image(systemName: "chevron.right")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(.tertiary)
-                .accessibilityHidden(true)
-        }
-        .padding(.vertical, 12)
-        .padding(.horizontal, 14)
-        .background(Color.cardSurface, in: RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous)
-                .strokeBorder(Color.hairline, lineWidth: 0.5)
-        )
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(accessibilityLabel)
-    }
-
-    private var accessibilityLabel: String {
-        var parts = [event.event.summary, publishedEventType(event.event), publishedEventTime(event.event)]
-        if let venue = event.event.venue?.name { parts.append(venue) }
-        parts.append(event.crew.isEmpty ? "No scheduled crew" : publishedCrewCount(event.crew.count))
-        if event.isFollowing { parts.append("Following event updates") }
-        return parts.joined(separator: ", ")
-    }
-}
-
-private struct PublishedCrewAvatarStack: View {
-    let crew: [PublishedCrewMember]
-
-    var body: some View {
-        HStack(spacing: -7) {
-            ForEach(Array(crew.prefix(3))) { member in
-                PublishedCrewAvatar(person: member.person, size: 24)
-                    .overlay(Circle().strokeBorder(Color.cardSurface, lineWidth: 2))
-            }
-        }
-        .accessibilityHidden(true)
-    }
-}
-
-private struct PublishedCrewAvatar: View {
-    let person: PublishedCrewPerson
-    let size: CGFloat
-
-    var body: some View {
-        UserAvatarView(
-            name: person.name,
-            avatarUrl: person.avatarUrl,
-            size: size,
-            fallbackBackground: Color.cardSurfaceRaised,
-            fallbackForeground: .secondary,
-            showsBorder: false
-        )
-    }
-}
-
-private struct PublishedEventDetailView: View {
-    let event: PublishedScheduleEvent
-    let canFollow: Bool
-    let isUpdatingFollow: Bool
-    let onToggleFollow: () -> Void
-
-    private var crewByArea: [(area: String, crew: [PublishedCrewMember])] {
-        Dictionary(grouping: event.crew, by: \.area)
-            .sorted { publishedAreaOrder($0.key) < publishedAreaOrder($1.key) }
-            .map { (area: $0.key, crew: $0.value.sorted { ($0.callStartsAt ?? $0.startsAt) < ($1.callStartsAt ?? $1.startsAt) }) }
-    }
-
-    var body: some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                eventHero
-                if canFollow {
-                    followCard
-                }
-                crewCard
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-        }
-        .background(Color(.systemGroupedBackground))
-        .navigationTitle("Event")
-        .navigationBarTitleDisplayMode(.inline)
-    }
-
-    private var eventHero: some View {
-        HStack(alignment: .top, spacing: 14) {
-            StatusRail(color: publishedEventRailColor(event.event))
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text(event.event.summary)
-                    .font(.title2.weight(.bold))
-                    .fixedSize(horizontal: false, vertical: true)
-
-                if let subtitle = event.event.subtitle, !subtitle.isEmpty {
-                    Text(subtitle)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-
-                Label(publishedEventDate(event.event), systemImage: "calendar")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
-
-                Label(publishedEventTime(event.event), systemImage: "clock")
-                    .font(.subheadline.monospacedDigit())
-                    .foregroundStyle(.secondary)
-
-                if let venue = event.event.venue?.name {
-                    Label(venue, systemImage: "mappin.and.ellipse")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-
-                Text(publishedEventContext(event.event))
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(publishedEventRailColor(event.event))
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .padding(16)
-        .background(Color.cardSurface, in: RoundedRectangle(cornerRadius: Brand.Radius.lg, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: Brand.Radius.lg, style: .continuous)
-                .strokeBorder(Color.hairline, lineWidth: 0.5)
-        )
-        .accessibilityElement(children: .combine)
-    }
-
-    private var followCard: some View {
-        HStack(spacing: 12) {
-            Image(systemName: event.isFollowing ? "bell.fill" : "bell")
-                .font(.body.weight(.semibold))
-                .foregroundStyle(Color.statusText(.purple))
-                .frame(width: 40, height: 40)
-                .background(Color.statusBackground(.purple), in: Circle())
-                .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(event.isFollowing ? "Following event updates" : "Event updates are off")
-                    .font(.subheadline.weight(.semibold))
-                Text(event.isFollowing ? "Crew changes will appear in Notifications." : "Follow this event to receive crew changes.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            Button(event.isFollowing ? "Mute" : "Follow") {
-                onToggleFollow()
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(Color.statusText(.purple))
-            .disabled(isUpdatingFollow)
-        }
-        .padding(14)
-        .background(Color.cardSurface, in: RoundedRectangle(cornerRadius: Brand.Radius.lg, style: .continuous))
-    }
-
-    private var crewCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .firstTextBaseline) {
-                Text("Crew")
-                    .font(.title3.weight(.bold))
-                Spacer()
-                Text("\(event.crew.count)")
-                    .font(.subheadline.monospacedDigit())
-                    .foregroundStyle(.secondary)
-            }
-
-            if crewByArea.isEmpty {
-                ContentUnavailableView(
-                    "No scheduled crew",
-                    systemImage: "person.2",
-                    description: Text("This event has no crew assignments yet.")
-                )
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-            } else {
-                ForEach(crewByArea, id: \.area) { group in
-                    VStack(alignment: .leading, spacing: 0) {
-                        CrewAreaHeading(area: group.area)
-                            .padding(.bottom, 6)
-
-                        ForEach(group.crew) { member in
-                            if member.id != group.crew.first?.id { Divider().padding(.leading, 50) }
-                            PublishedCrewRow(member: member)
-                        }
-                    }
-                }
-            }
-        }
-        .padding(16)
-        .background(Color.cardSurface, in: RoundedRectangle(cornerRadius: Brand.Radius.lg, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: Brand.Radius.lg, style: .continuous)
-                .strokeBorder(Color.hairline, lineWidth: 0.5)
-        )
-    }
-}
-
-private struct PublishedCrewRow: View {
-    let member: PublishedCrewMember
-
-    var body: some View {
-        HStack(spacing: 12) {
-            PublishedCrewAvatar(person: member.person, size: 38)
-                .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(member.person.name)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
-
-                Text(publishedCrewRole(member.role))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                if publishedCrewRole(member.role) == "Student", let callWindow = publishedCallWindow(member) {
-                    Text("Call \(callWindow)")
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .padding(.vertical, 9)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(publishedCrewAccessibilityLabel(member))
-    }
-}
-
-private struct PublishedEventRowSkeleton: View {
-    var body: some View {
-        HStack(spacing: 12) {
-            RoundedRectangle(cornerRadius: 2)
-                .fill(Color.cardSurfaceRaised)
-                .frame(width: 4, height: 76)
-            VStack(alignment: .leading, spacing: 8) {
-                RoundedRectangle(cornerRadius: 5).fill(Color.cardSurfaceRaised).frame(width: 210, height: 18)
-                RoundedRectangle(cornerRadius: 5).fill(Color.cardSurfaceRaised).frame(width: 160, height: 13)
-                RoundedRectangle(cornerRadius: 5).fill(Color.cardSurfaceRaised).frame(width: 120, height: 13)
-            }
-            Spacer()
-        }
-        .padding(14)
-        .background(Color.cardSurface, in: RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous))
-        .redacted(reason: .placeholder)
-    }
-}
-
-private func publishedScheduleDay(for event: PublishedEventSummary) -> Date {
-    if event.allDay {
-        var utc = Calendar(identifier: .gregorian)
-        utc.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
-        let components = utc.dateComponents([.year, .month, .day], from: event.startsAt)
-        return Calendar.current.date(from: components) ?? Calendar.current.startOfDay(for: event.startsAt)
-    }
-    return Calendar.current.startOfDay(for: event.startsAt)
-}
-
-private func publishedEventType(_ event: PublishedEventSummary) -> String {
-    guard let opponent = event.opponent?.trimmingCharacters(in: .whitespacesAndNewlines), !opponent.isEmpty else {
-        return "Non-game"
-    }
-    switch event.site?.uppercased() {
-    case "HOME": return "Home"
-    case "AWAY": return "Away"
-    case "NEUTRAL": return "Neutral"
-    default: break
-    }
-    switch event.isHome {
-    case true: return "Home"
-    case false: return "Away"
-    case nil: return "Neutral"
-    }
-}
-
-private func publishedEventContext(_ event: PublishedEventSummary) -> String {
-    let sport = event.sportCode.map(scheduleSportLabel)
-    return [sport, publishedEventType(event)].compactMap { $0 }.joined(separator: " · ")
-}
-
-private func publishedEventTime(_ event: PublishedEventSummary) -> String {
-    guard !event.allDay else { return "All day" }
-    let start = event.startsAt.formatted(date: .omitted, time: .shortened)
-    let end = event.endsAt.formatted(date: .omitted, time: .shortened)
-    return "\(start) – \(end)"
-}
-
-private func publishedEventDate(_ event: PublishedEventSummary) -> String {
-    let date = publishedScheduleDay(for: event)
-    let calendar = Calendar.current
-    if calendar.isDateInToday(date) { return "Today, \(date.formatted(.dateTime.month(.abbreviated).day()))" }
-    if calendar.isDateInTomorrow(date) { return "Tomorrow, \(date.formatted(.dateTime.month(.abbreviated).day()))" }
-    let year = calendar.component(.year, from: date)
-    let currentYear = calendar.component(.year, from: .now)
-    return year == currentYear
-        ? date.formatted(.dateTime.weekday(.wide).month(.abbreviated).day())
-        : date.formatted(.dateTime.weekday(.wide).month(.abbreviated).day().year())
-}
-
-private func publishedEventRailColor(_ event: PublishedEventSummary) -> Color {
-    venueRailColor(isHome: event.isHome)
-}
-
-private func publishedCrewCount(_ count: Int) -> String {
-    count == 1 ? "1 crew member" : "\(count) crew members"
-}
-
-private func publishedCrewRole(_ role: String) -> String {
-    // Staff/Student wording comes from the shared crew vocabulary so published
-    // crew reads the same as every other crew surface.
-    let shared = crewWorkerTypeLabel(role)
-    guard shared == role else { return shared }
-    return role.replacingOccurrences(of: "_", with: " ").capitalized
-}
-
-/// Nil for an all-day event: the server sends no call window because there is
-/// no call time to state, and the row drops the line rather than inventing one.
-private func publishedCallWindow(_ member: PublishedCrewMember) -> String? {
-    guard let callStartsAt = member.callStartsAt, let callEndsAt = member.callEndsAt else { return nil }
-    let start = callStartsAt.formatted(date: .omitted, time: .shortened)
-    let end = callEndsAt.formatted(date: .omitted, time: .shortened)
-    return "\(start) – \(end)"
-}
-
-private func publishedCrewAccessibilityLabel(_ member: PublishedCrewMember) -> String {
-    let role = publishedCrewRole(member.role)
-    guard role == "Student" else {
-        return "\(member.person.name), Staff, \(member.area.shiftAreaLabel)"
-    }
-    guard let callWindow = publishedCallWindow(member) else {
-        return "\(member.person.name), Student, \(member.area.shiftAreaLabel)"
-    }
-    return "\(member.person.name), Student, \(member.area.shiftAreaLabel), call \(callWindow)"
-}
-
-private func publishedAreaOrder(_ area: String) -> Int {
-    switch area {
-    case "VIDEO": 0
-    case "PHOTO": 1
-    case "GRAPHICS": 2
-    case "SOCIAL": 3
-    case "COMMS": 4
-    default: 5
-    }
-}
-
 /// Isolated from `InternalScheduleView.body` so iOS 27 overflow content type-checks
 /// in a small ToolbarContent unit instead of the Schedule root's giant tree.
 private struct ScheduleRootToolbar: ToolbarContent {
-    let activeFilterCount: Int
+    @Binding var myShiftsOnly: Bool
+    @Binding var sportFilter: String?
+    let availableSportCodes: [String]
     let canManageAvailability: Bool
     let openTradeCount: Int
     let scheduleOpenWorkTip: ScheduleOpenWorkTip
     let shiftCalendarTip: ShiftCalendarTip
-    @Binding var showFilters: Bool
     @Binding var showTradeBoard: Bool
     @Binding var showAvailability: Bool
     @Binding var showCalendarSetup: Bool
 
+    private static let allSports = "__all_sports__"
+
+    private var showsSportMenu: Bool { availableSportCodes.count > 1 }
+
     var body: some ToolbarContent {
         if #available(iOS 27.0, *) {
-            ToolbarItem(placement: .topBarTrailing) {
-                filtersButton
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                myShiftsButton
+                if showsSportMenu { sportMenu }
             }
             .visibilityPriority(.high)
 
@@ -950,6 +484,7 @@ private struct ScheduleRootToolbar: ToolbarContent {
 
             ToolbarItem(placement: .topBarTrailing) {
                 tradeBoardButton
+                    .badge(openTradeCount)
             }
             .visibilityPriority(.high)
 
@@ -957,34 +492,73 @@ private struct ScheduleRootToolbar: ToolbarContent {
                 overflowActions
             }
         } else {
-            ToolbarItem(placement: .topBarTrailing) {
-                filtersButton
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                myShiftsButton
+                if showsSportMenu { sportMenu }
             }
 
             ToolbarSpacer(.fixed, placement: .topBarTrailing)
 
-            ToolbarItemGroup(placement: .topBarTrailing) {
+            ToolbarItem(placement: .topBarTrailing) {
                 tradeBoardButton
+                    .badge(openTradeCount)
+            }
+
+            ToolbarItem(placement: .topBarTrailing) {
                 moreControl
             }
         }
     }
 
-    private var filtersButton: some View {
+    /// One tap between everything and your own work, which is the question
+    /// most people open Schedule to answer.
+    private var myShiftsButton: some View {
         Button {
-            showFilters = true
+            myShiftsOnly.toggle()
+            Haptics.selection()
         } label: {
             Label(
-                "Filters",
-                systemImage: activeFilterCount > 0
-                    ? "line.3.horizontal.decrease.circle.fill"
-                    : "line.3.horizontal.decrease.circle"
+                "My Shifts",
+                systemImage: myShiftsOnly
+                    ? "person.crop.circle.fill.badge.checkmark"
+                    : "person.crop.circle.badge.checkmark"
             )
         }
-        .listControlTint(isActive: activeFilterCount > 0)
-        .accessibilityLabel(activeFilterCount > 0
-            ? "Filters, \(activeFilterCount) active"
-            : "Filters")
+        .listControlTint(isActive: myShiftsOnly)
+        .accessibilityLabel("My Shifts")
+        .accessibilityValue(myShiftsOnly ? "On" : "Off")
+        .accessibilityAddTraits(myShiftsOnly ? .isSelected : [])
+    }
+
+    private var sportSelection: Binding<String> {
+        Binding {
+            sportFilter ?? Self.allSports
+        } set: { newValue in
+            sportFilter = newValue == Self.allSports ? nil : newValue
+        }
+    }
+
+    private var sportMenu: some View {
+        Menu {
+            Picker("Sport", selection: sportSelection) {
+                Text("All Sports").tag(Self.allSports)
+                ForEach(availableSportCodes, id: \.self) { code in
+                    Text(scheduleSportLabel(code)).tag(code)
+                }
+            }
+        } label: {
+            Label(
+                "Sport",
+                systemImage: sportFilter == nil ? "sportscourt" : "sportscourt.fill"
+            )
+        }
+        .listControlTint(isActive: sportFilter != nil)
+        .accessibilityLabel(sportMenuAccessibilityLabel)
+    }
+
+    private var sportMenuAccessibilityLabel: String {
+        guard let sportFilter else { return "Sport, all sports" }
+        return "Sport, " + scheduleSportLabel(sportFilter)
     }
 
     private var tradeBoardButton: some View {
@@ -992,12 +566,8 @@ private struct ScheduleRootToolbar: ToolbarContent {
             scheduleOpenWorkTip.invalidate(reason: .actionPerformed)
             showTradeBoard = true
         } label: {
-            // No count badge: the iOS 26 toolbar clips item content
-            // to its glass capsule, which sliced the old overlay
-            // into an orange half-disc with the number cut off. The
-            // filled variant carries "there is open work" instead,
-            // the way Items' star does, and the exact number stays
-            // in the accessibility label and on the board itself.
+            // The count rides on the toolbar item's native badge. A hand-drawn
+            // overlay was clipped by the glass capsule into a half-disc.
             Label(
                 "Trade Board",
                 systemImage: openTradeCount > 0
@@ -1024,8 +594,7 @@ private struct ScheduleRootToolbar: ToolbarContent {
     private var moreControl: some View {
         if canManageAvailability {
             Menu {
-                availabilityButton
-                calendarButton
+                overflowActions
             } label: {
                 Label("More", systemImage: "ellipsis")
                     .popoverTip(shiftCalendarTip, arrowEdge: .top)
@@ -1069,12 +638,24 @@ private struct InternalScheduleView: View {
     /// or staffer actually works, without hiding open shifts the way a
     /// my-shifts-only default would.
     @State private var sportFilter: String?
-    @State private var viewMode: ScheduleViewMode = .list
-    @State private var calendarSelectedDate: Date = .now
     @State private var showTradeBoard = false
     @State private var shiftToPost: TradePostCandidate?
     @State private var showAvailability = false
-    @State private var showFilters = false
+    @State private var scrollTracker = ScheduleScrollTracker()
+    @State private var jumpRequest: ScheduleJumpRequest?
+    @State private var isMonthExpanded = false
+    @State private var didInitialJump = false
+    /// How many two-week steps of the past are revealed above today. Zero
+    /// keeps today as the top of the list, so a status-bar tap or a hard
+    /// flick upward stops on today instead of running into last month.
+    @State private var pastRevealSteps = 0
+    @State private var pullDistance: CGFloat = 0
+    @State private var isPullArmed = false
+    @State private var isDraggingList = false
+    /// How many reveals are still inserting rows and scrolling to them. A
+    /// count, not a flag, so one finishing cannot clear another still waiting
+    /// on the network; while above zero the idle collapse stands down.
+    @State private var revealSettlingCount = 0
     @State private var showCalendarSetup = false
     @State private var toast: Toast?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -1090,16 +671,6 @@ private struct InternalScheduleView: View {
         guard appState.pendingScheduleMyShifts else { return }
         appState.pendingScheduleMyShifts = false
         myShiftsOnly = true
-        viewMode = .list
-    }
-
-    private var canSeePastEvents: Bool {
-        let role = session.currentUser?.role ?? ""
-        return role == "STAFF" || role == "ADMIN"
-    }
-
-    private var showsCrewCoverage: Bool {
-        canSeePastEvents
     }
 
     private var canManageAvailability: Bool {
@@ -1116,55 +687,232 @@ private struct InternalScheduleView: View {
         }
     }
 
-    /// Distinct sport codes present in the loaded events, ordered by display
-    /// name — drives the sport filter chips (only shown when 2+ sports appear).
+    /// Every current sport plus any other code in the loaded events, ordered
+    /// by display name. A fixed list, because the loaded weeks are only a
+    /// window: a sport whose games are all months out still belongs in the menu.
     private var availableSportCodes: [String] {
-        let codes = Set(vm.events.compactMap { $0.sportCode })
+        let codes = Set(scheduleCurrentSportCodes).union(vm.events.compactMap { $0.sportCode })
         return codes.sorted { scheduleSportLabel($0) < scheduleSportLabel($1) }
     }
 
     private var activeFilterCount: Int {
         var count = 0
         if myShiftsOnly { count += 1 }
-        if canSeePastEvents && vm.includePast { count += 1 }
         if homeAwayFilter != .all { count += 1 }
         if sportFilter != nil { count += 1 }
         return count
     }
 
-    private var activeFilterSummary: String {
-        var parts: [String] = []
-        if myShiftsOnly { parts.append("My shifts") }
-        if homeAwayFilter != .all { parts.append(homeAwayFilter.rawValue) }
-        if let sportFilter { parts.append(scheduleSportLabel(sportFilter)) }
-        if canSeePastEvents && vm.includePast { parts.append("Past") }
-        return parts.isEmpty ? "All upcoming events" : parts.joined(separator: " · ")
+    /// Venue marks for the week strip and month grid, from the same filtered
+    /// groups the list draws, so a dot always has a row to jump to.
+    private func dayMarks(for groups: [(date: Date, events: [ScheduleEvent])]) -> [Date: ScheduleDayMarks] {
+        var marks: [Date: ScheduleDayMarks] = [:]
+        for group in groups {
+            let dots = group.events.prefix(3).map { event in
+                DotInfo(
+                    color: venueRailColor(for: event),
+                    isShift: vm.shiftsByEventId[event.id] != nil,
+                    venue: event.venue
+                )
+            }
+            marks[group.date] = ScheduleDayMarks(
+                dots: Array(dots),
+                eventCount: group.events.count,
+                hasShift: group.events.contains { vm.shiftsByEventId[$0.id] != nil },
+                venueCounts: Dictionary(grouping: group.events, by: \.venue).mapValues(\.count)
+            )
+        }
+        return marks
+    }
+
+    /// The list in loaded-window order: each day with events, and one
+    /// placeholder for a week with none, so scrolling always moves through
+    /// real weeks instead of skipping or dead-ending.
+    private func listSections(for groups: [(date: Date, events: [ScheduleEvent])]) -> [ScheduleListSection] {
+        let lowerBound = visibleLowerBound
+        let lowerWeek = ScheduleViewModel.weekStart(of: lowerBound)
+        let visibleGroups = groups.filter { $0.date >= lowerBound }
+        let byWeek = Dictionary(grouping: visibleGroups) { ScheduleViewModel.weekStart(of: $0.date) }
+        var sections: [ScheduleListSection] = []
+        for week in vm.loadedWeeks where week >= lowerWeek {
+            if let days = byWeek[week] {
+                sections += days.map { .day(date: $0.date, events: $0.events) }
+            } else if case let .emptyWeeks(start, count)? = sections.last {
+                // A run of empty weeks is one row, not a stack of identical
+                // "nothing this week" cards.
+                sections[sections.count - 1] = .emptyWeeks(start: start, count: count + 1)
+            } else {
+                sections.append(.emptyWeeks(start: week, count: 1))
+            }
+        }
+        return sections
+    }
+
+    /// The section a day resolves to: that day, the next day with events in
+    /// its week, or its week's placeholder.
+    private func section(for day: Date, in sections: [ScheduleListSection]) -> ScheduleListSection? {
+        let target = Calendar.current.startOfDay(for: day)
+        return sections.first { $0.lastDay >= target } ?? sections.last
+    }
+
+    /// Where Today lands, for the strip's Today button.
+    private func todayAnchor(in sections: [ScheduleListSection]) -> Date? {
+        section(for: .now, in: sections)?.id.date
+    }
+
+    /// Scrolls the master list to a day, loading its weeks first when the
+    /// month grid picks a date outside the loaded window.
+    private func jump(to day: Date, animated: Bool = true) {
+        let target = Calendar.current.startOfDay(for: day)
+        let today = Calendar.current.startOfDay(for: .now)
+        if target < today {
+            // A past day picked in the strip or month grid is itself the
+            // intentional step, so reveal enough of the past to hold it.
+            let days = Calendar.current.dateComponents([.day], from: target, to: today).day ?? 0
+            let steps = max(1, Int((Double(days) / 14).rounded(.up)))
+            if steps > pastRevealSteps {
+                pastRevealSteps = steps
+                revealSettlingCount += 1
+                Task {
+                    try? await Task.sleep(for: .milliseconds(700))
+                    revealSettlingCount -= 1
+                }
+            }
+        } else if target == today {
+            pastRevealSteps = 0
+        }
+        guard target >= vm.loadedStart, target < vm.loadedEnd else {
+            Task {
+                if await vm.ensureLoaded(target) { jump(to: target, animated: animated) }
+            }
+            return
+        }
+        guard let section = section(for: target, in: listSections(for: displayedGroups)) else { return }
+        jumpRequest = ScheduleJumpRequest(anchor: section.firstAnchor, animated: animated)
+    }
+
+    private static let pullThreshold: CGFloat = 96
+
+    /// The first day the list shows. Today, until the reader deliberately
+    /// pulls past the top; each pull adds two weeks.
+    private var visibleLowerBound: Date {
+        let today = Calendar.current.startOfDay(for: .now)
+        guard pastRevealSteps > 0 else { return today }
+        let back = Calendar.current.date(byAdding: .day, value: -14 * pastRevealSteps, to: today) ?? today
+        return ScheduleViewModel.weekStart(of: back)
+    }
+
+    private var canRevealMorePast: Bool {
+        visibleLowerBound > ScheduleViewModel.weekStart(
+            of: Calendar.current.date(byAdding: .weekOfYear, value: -104, to: .now) ?? .now
+        )
+    }
+
+    /// Tracks the overscroll at the top of the list. Crossing the threshold
+    /// arms the reveal with one firm haptic; easing back below disarms it.
+    private func handlePull(_ distance: CGFloat) {
+        pullDistance = max(0, distance)
+        guard isDraggingList, canRevealMorePast else { return }
+        if !isPullArmed, distance >= Self.pullThreshold {
+            isPullArmed = true
+            Haptics.threshold()
+        } else if isPullArmed, distance < Self.pullThreshold * 0.6 {
+            isPullArmed = false
+            Haptics.selection()
+        }
+    }
+
+    private func handleScrollPhase(_ phase: ScrollPhase, sections: [ScheduleListSection]) {
+        let wasDragging = isDraggingList
+        isDraggingList = phase == .interacting
+        if wasDragging, !isDraggingList, isPullArmed {
+            isPullArmed = false
+            revealPast(keeping: sections.first?.firstAnchor)
+        }
+        if phase == .idle { collapsePastIfOutOfView() }
+    }
+
+    /// Reveals two more weeks of the past above the current top. Inserting
+    /// rows above the viewport pushes the content down, so the list is put
+    /// back on the row that was first, then eased up into the newest past day.
+    private func revealPast(keeping anchor: ScheduleRowAnchor?) {
+        revealSettlingCount += 1
+        pastRevealSteps += 1
+        let lowerBound = visibleLowerBound
+        Task {
+            await vm.ensureLoaded(lowerBound)
+            if let anchor {
+                jumpRequest = ScheduleJumpRequest(anchor: anchor, animated: false)
+            }
+            try? await Task.sleep(for: .milliseconds(60))
+            let sections = listSections(for: displayedGroups)
+            if let anchor,
+               let index = sections.firstIndex(where: { $0.firstAnchor == anchor }),
+               index > 0 {
+                jumpRequest = ScheduleJumpRequest(anchor: sections[index - 1].firstAnchor)
+            }
+            try? await Task.sleep(for: .milliseconds(500))
+            revealSettlingCount -= 1
+            // Keep the next pull instant.
+            await vm.loadEarlier()
+        }
+    }
+
+    /// Once the reader is back on today or later and the list comes to rest,
+    /// the past folds away again, holding the list on the row at the top. The
+    /// next status-bar tap or hard flick upward then stops on today.
+    private func collapsePastIfOutOfView() {
+        guard pastRevealSteps > 0, revealSettlingCount == 0 else { return }
+        let today = Calendar.current.startOfDay(for: .now)
+        guard !scrollTracker.hasVisibleRow(before: today),
+              let anchor = scrollTracker.topAnchor?.base as? ScheduleRowAnchor else { return }
+        pastRevealSteps = 0
+        jumpRequest = ScheduleJumpRequest(anchor: anchor, animated: false)
+    }
+
+    private var pullHint: some View {
+        let progress = min(pullDistance / Self.pullThreshold, 1)
+        return Label(
+            isPullArmed ? "Release for earlier weeks" : "Pull for earlier weeks",
+            systemImage: isPullArmed ? "arrow.up.circle.fill" : "arrow.down.circle"
+        )
+        .font(.footnote.weight(.semibold))
+        .foregroundStyle(isPullArmed ? Color.brandPrimary : Color.secondary)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(.regularMaterial, in: Capsule())
+        .opacity(canRevealMorePast && pullDistance > 12 ? progress : 0)
+        .offset(y: min(pullDistance, Self.pullThreshold) / 2 - 8)
+        .animation(.snappy(duration: 0.15), value: isPullArmed)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 
     var body: some View {
         let groups = displayedGroups
-        let matchingEventCount = Set(groups.flatMap { $0.events.map(\.id) }).count
         NavigationStack(path: $navigationPath) {
             Group {
-                if vm.isLoading && vm.events.isEmpty {
+                // A cached window renders at once; the skeleton only shows on
+                // a first launch with nothing saved.
+                if !vm.hasLoaded && vm.events.isEmpty && vm.error == nil {
                     VStack(spacing: 8) {
                         ProgressView("Loading schedule")
                             .padding(.top, 12)
                         List {
-                            ForEach(0..<6, id: \.self) { _ in
-                                EventRowSkeleton()
-                                    .listRowSeparator(.hidden)
-                                    .listRowBackground(Color.clear)
-                                    .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
+                            Section {
+                                ForEach(0..<6, id: \.self) { _ in
+                                    EventRowSkeleton()
+                                        .listRowBackground(Color.cardSurface)
+                                }
                             }
                         }
-                        .listStyle(.plain)
+                        .listStyle(.insetGrouped)
                         .scrollContentBackground(.hidden)
                         .background(Color(.systemGroupedBackground))
                         .allowsHitTesting(false)
                         .accessibilityHidden(true)
                     }
-                } else if vm.events.isEmpty, let err = vm.error {
+                } else if !vm.hasLoaded, vm.events.isEmpty, let err = vm.error {
                     // Only blank the screen when we have nothing to show.
                     ContentUnavailableView {
                         Label("Couldn't load schedule", systemImage: "exclamationmark.triangle")
@@ -1174,33 +922,10 @@ private struct InternalScheduleView: View {
                         Button("Retry") { Task { await vm.load(forceRefresh: true) } }
                             .buttonStyle(.borderedProminent)
                     }
-                } else if vm.events.isEmpty {
-                    ContentUnavailableView(
-                        "No upcoming events",
-                        systemImage: "calendar",
-                        description: Text("Check back later for new events.")
-                    )
                 } else {
                     VStack(spacing: 0) {
-                        scheduleControlStrip
-
-                        switch viewMode {
-                        case .list:
-                            eventList(groups: groups)
-                        case .calendar:
-                            ScheduleCalendarView(
-                                selectedDate: $calendarSelectedDate,
-                                eventsByDay: vm.eventsByDay,
-                                myShiftsOnly: myShiftsOnly,
-                                homeAwayFilter: homeAwayFilter,
-                                sportFilter: sportFilter,
-                                shiftsByEventId: vm.shiftsByEventId,
-                                extraShiftAreasByEventId: vm.extraShiftAreasByEventId,
-                                showsCrewCoverage: showsCrewCoverage,
-                                onSelectEvent: { navigationPath.append(ScheduleEventRoute(id: $0.id)) },
-                                onClearFilters: clearFiltersAction
-                            )
-                        }
+                        scheduleHeader(groups: groups)
+                        eventList(groups: groups)
                     }
                     .background(Color(.systemGroupedBackground))
                 }
@@ -1236,12 +961,13 @@ private struct InternalScheduleView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ScheduleRootToolbar(
-                    activeFilterCount: activeFilterCount,
+                    myShiftsOnly: $myShiftsOnly,
+                    sportFilter: $sportFilter,
+                    availableSportCodes: availableSportCodes,
                     canManageAvailability: canManageAvailability,
                     openTradeCount: appState.openTradeCount,
                     scheduleOpenWorkTip: scheduleOpenWorkTip,
                     shiftCalendarTip: shiftCalendarTip,
-                    showFilters: $showFilters,
                     showTradeBoard: $showTradeBoard,
                     showAvailability: $showAvailability,
                     showCalendarSetup: $showCalendarSetup
@@ -1249,23 +975,20 @@ private struct InternalScheduleView: View {
             }
             .nativeScrollBarMinimization()
             .task {
-                if !canSeePastEvents {
-                    vm.includePast = false
-                }
                 consumePendingMyShifts()
+                vm.cacheOwnerId = session.currentUser?.id
+                vm.restoreCachedWindow()
+                // A push that launched the app set its id before this view
+                // existed, so the change handler never saw it. Read it here too.
+                if let eventId = appState.pendingPushEventId {
+                    routePendingPush(eventId)
+                }
                 await vm.load()
             }
             .onDisappear { vm.cancelLoad() }
-            .refreshable { await vm.load(forceRefresh: true) }
             .onChange(of: session.currentUser?.id) { _, userId in
                 if userId == nil {
                     vm.cancelLoad()
-                }
-            }
-            .onChange(of: canSeePastEvents) { _, canSee in
-                if !canSee, vm.includePast {
-                    vm.includePast = false
-                    Task { await vm.load(forceRefresh: true) }
                 }
             }
             .onChange(of: appState.pendingScheduleMyShifts) { _, _ in
@@ -1277,16 +1000,11 @@ private struct InternalScheduleView: View {
                 myShiftsOnly = false
                 homeAwayFilter = .all
                 sportFilter = nil
-                viewMode = .list
-                calendarSelectedDate = .now
-                showFilters = false
+                isMonthExpanded = false
                 showTradeBoard = false
                 showAvailability = false
                 showCalendarSetup = false
-                if vm.includePast {
-                    vm.includePast = false
-                    Task { await vm.load(forceRefresh: true) }
-                }
+                jump(to: .now)
             }
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active {
@@ -1295,21 +1013,10 @@ private struct InternalScheduleView: View {
             }
             .onChange(of: appState.pendingPushEventId) { _, eventId in
                 guard let eventId else { return }
-                appState.pendingPushEventId = nil
-                if let event = vm.events.first(where: { $0.id == eventId }) {
-                    navigationPath.append(ScheduleEventRoute(id: event.id))
-                } else {
-                    // Events not loaded yet — force a load then open once ready.
-                    Task {
-                        await vm.load(forceRefresh: true)
-                        if let event = vm.events.first(where: { $0.id == eventId }) {
-                            navigationPath.append(ScheduleEventRoute(id: event.id))
-                        }
-                    }
-                }
+                routePendingPush(eventId)
             }
             .navigationDestination(for: ScheduleEventRoute.self) { route in
-                if let event = vm.events.first(where: { $0.id == route.id }) {
+                if let event = vm.events.first(where: { $0.id == route.id }) ?? vm.linkedEvents[route.id] {
                     EventDetailView(
                         event: event,
                         myShifts: vm.allShiftsByEventId[event.id] ?? []
@@ -1324,22 +1031,6 @@ private struct InternalScheduleView: View {
             }
             .navigationDestination(isPresented: $showAvailability) {
                 AvailabilityView(userId: session.currentUser?.id ?? "")
-            }
-            .sheet(isPresented: $showFilters) {
-                ScheduleFilterSheet(
-                    myShiftsOnly: $myShiftsOnly,
-                    homeAwayFilter: $homeAwayFilter,
-                    sportFilter: $sportFilter,
-                    includePast: vm.includePast,
-                    canSeePastEvents: canSeePastEvents,
-                    availableSportCodes: availableSportCodes,
-                    activeFilterCount: activeFilterCount,
-                    matchingEventCount: matchingEventCount,
-                    onTogglePast: togglePastEvents,
-                    onClear: clearScheduleFilters
-                )
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
             }
             .sheet(isPresented: $showCalendarSetup) {
                 ScheduleCalendarSubscriptionSheet()
@@ -1368,14 +1059,15 @@ private struct InternalScheduleView: View {
         }
     }
 
-    /// The clear action, or nil when there is nothing to clear.
-    ///
-    /// Spelled as a property rather than a ternary at the call site: inferring
-    /// `cond ? clearScheduleFilters : nil` into an optional closure is what tips
-    /// this file past what the Swift type-checker will solve.
-    private var clearFiltersAction: (() -> Void)? {
-        guard activeFilterCount > 0 else { return nil }
-        return clearScheduleFilters
+    /// Opens a pushed event. Loaded events open at once; anything else,
+    /// including a game months out, is read by id and its weeks loaded first.
+    private func routePendingPush(_ eventId: String) {
+        appState.pendingPushEventId = nil
+        Task {
+            if let event = await vm.event(forLink: eventId) {
+                navigationPath.append(ScheduleEventRoute(id: event.id))
+            }
+        }
     }
 
     /// Your own future, still-active shift on this event, if you have one. A
@@ -1384,125 +1076,257 @@ private struct InternalScheduleView: View {
     private func postableCandidate(forEvent eventId: String) -> TradePostCandidate? {
         guard let shift = vm.shiftsByEventId[eventId],
               shift.statusValue == .active,
-              shift.startsAt > Date() else { return nil }
+              (shift.callStartsAt ?? shift.startsAt) > Date() else { return nil }
         return TradePostCandidate(shift: shift)
     }
 
-    private func togglePastEvents() {
-        vm.includePast.toggle()
-        Task { await vm.load(forceRefresh: true) }
-    }
-
     private func clearScheduleFilters() {
-        let shouldReload = vm.includePast
         myShiftsOnly = false
         homeAwayFilter = .all
         sportFilter = nil
-        if shouldReload {
-            vm.includePast = false
-            Task { await vm.load(forceRefresh: true) }
-        }
     }
 
-    private var scheduleControlStrip: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            // The segmented control is self-explanatory (List / Calendar), so it
-            // carries no "View" label, matching Apple's own switchers. Filters
-            // moved to the toolbar with the other list controls, which leaves
-            // the switcher the full width instead of a shared row.
-            Picker("Schedule view", selection: $viewMode) {
-                ForEach(ScheduleViewMode.allCases, id: \.self) { mode in
-                    Text(mode.rawValue).tag(mode)
+    /// The week jump bar and the event type chips. Both sit above the one
+    /// master list; neither replaces it.
+    private func scheduleHeader(groups: [(date: Date, events: [ScheduleEvent])]) -> some View {
+        VStack(spacing: 2) {
+            ScheduleWeekStrip(
+                marksByDay: dayMarks(for: groups),
+                weeks: vm.loadedWeeks,
+                tracker: scrollTracker,
+                todayAnchor: todayAnchor(in: listSections(for: groups)),
+                isExpanded: $isMonthExpanded,
+                onJump: { jump(to: $0) },
+                onToday: { jump(to: .now) },
+                // Loading earlier data never inserts list rows by itself; the
+                // list only shows the past a deliberate pull has revealed.
+                onReachStart: { Task { await vm.loadEarlier() } },
+                onReachEnd: { Task { await vm.loadLater() } },
+                onShowMonth: { month in
+                    Task {
+                        let cal = Calendar.current
+                        let lastDay = cal.date(byAdding: DateComponents(month: 1, day: -1), to: month) ?? month
+                        await vm.ensureLoaded(lastDay)
+                        await vm.ensureLoaded(month)
+                    }
                 }
-            }
-            .pickerStyle(.segmented)
-            .accessibilityLabel("Schedule view")
-
-            // The summary only earns a row once something is actually filtered.
-            // In the default state it restated "everything" and cost a full row.
-            // It carries Clear so undoing a filter does not require reopening
-            // the sheet that set it.
-            if activeFilterCount > 0 {
-                ActiveControlBar(summary: activeFilterSummary, clear: clearScheduleFilters)
-            }
+            )
+            ScheduleQuickFilterBar(
+                homeAwayFilter: $homeAwayFilter,
+                sportLabel: sportFilter.map(scheduleSportLabel),
+                onClearSport: { sportFilter = nil }
+            )
         }
-        .padding(.horizontal, Brand.Space.md)
-        .padding(.top, Brand.Space.sm)
-        .padding(.bottom, Brand.Space.xs)
+        .padding(.top, 2)
+        .padding(.bottom, 4)
         .background(Color(.systemGroupedBackground))
     }
 
     @ViewBuilder
     private func eventList(groups: [(date: Date, events: [ScheduleEvent])]) -> some View {
-        if groups.isEmpty {
+        // The full-screen empty state waits until the whole scrollable future
+        // has been searched. Before that the list stays mounted, showing
+        // "No matching events" runs, and its end row keeps loading weeks
+        // until something matches (a filtered sport may play months out).
+        if activeFilterCount > 0, vm.reachedLatest,
+           !listSections(for: groups).contains(where: \.isDay) {
             ContentUnavailableView {
                 Label(filteredEmptyTitle, systemImage: "calendar")
             } description: {
                 Text(filteredEmptyDescription)
             } actions: {
-                if activeFilterCount > 0 {
-                    Button("Clear Filters") { clearScheduleFilters() }
-                        .buttonStyle(.borderedProminent)
-                }
+                Button("Clear Filters") { clearScheduleFilters() }
+                    .buttonStyle(.borderedProminent)
             }
         } else {
-            List {
-                ForEach(groups, id: \.date) { group in
-                    Section {
-                        ForEach(group.events) { event in
-                            // A Button (not NavigationLink) so the row keeps its own
-                            // in-card chevron instead of also getting List's system
-                            // disclosure indicator outside the card. Matches the
-                            // calendar-mode day list below.
-                            Button {
-                                navigationPath.append(ScheduleEventRoute(id: event.id))
-                            } label: {
-                                EventRow(
-                                    event: event,
-                                    myShift: vm.shiftsByEventId[event.id],
-                                    extraAreas: vm.extraShiftAreasByEventId[event.id] ?? [],
-                                    contextDay: group.date,
-                                    showsCrewCoverage: showsCrewCoverage
-                                )
-                            }
-                            .buttonStyle(ScalePressStyle())
-                            .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
-                            .listRowSeparator(.hidden)
-                            .listRowBackground(Color.clear)
-                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                // Posting a shift is the one thing people do from
-                                // this list about their own work, and it was three
-                                // taps away through the Trade Board's picker.
-                                if let candidate = postableCandidate(forEvent: event.id) {
-                                    Button {
-                                        shiftToPost = candidate
-                                        Haptics.selection()
-                                    } label: {
-                                        Label("Post trade", systemImage: "arrow.left.arrow.right")
-                                    }
-                                    .tint(Color.brandPrimary)
-                                }
-                            }
-                        }
-                    } header: {
-                        ScheduleDateHeader(date: group.date, eventCount: group.events.count)
-                            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+            let sections = listSections(for: groups)
+            ScrollViewReader { proxy in
+                List {
+                    ForEach(sections) { section in
+                        listSection(section)
                     }
-                    .listSectionSeparator(.hidden)
+
+                    if vm.reachedLatest {
+                        Text(endOfScheduleText)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 20)
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                    } else {
+                        edgeLoadingRow("Loading later weeks")
+                            .onAppear { Task { await vm.loadLater() } }
+                            // A new identity per window end, so the row
+                            // appears again (and loads again) when it is
+                            // still on screen after a load, as it is when a
+                            // filter leaves the weeks empty.
+                            .id(vm.loadedEnd)
+                    }
+                }
+                // Plain so day headers stay pinned while their rows scroll;
+                // each row draws its own slice of the rounded day group.
+                .listStyle(.plain)
+                .listSectionSpacing(6)
+                .scrollContentBackground(.hidden)
+                .contentMargins(.top, 4, for: .scrollContent)
+                .contentMargins(.bottom, 24, for: .scrollContent)
+                .background(Color(.systemGroupedBackground))
+                .onScrollGeometryChange(for: Bool.self) { geometry in
+                    geometry.contentOffset.y + geometry.containerSize.height
+                        >= geometry.contentSize.height - 8
+                } action: { _, atBottom in
+                    scrollTracker.setAtBottom(atBottom)
+                }
+                // The past sits behind a deliberate pull at the top: overscroll
+                // past the threshold, feel the haptic, release.
+                .onScrollGeometryChange(for: CGFloat.self) { geometry in
+                    -(geometry.contentOffset.y + geometry.contentInsets.top)
+                } action: { _, distance in
+                    handlePull(distance)
+                }
+                .onScrollPhaseChange { _, phase in
+                    handleScrollPhase(phase, sections: sections)
+                }
+                .overlay(alignment: .top) { pullHint }
+                .onChange(of: jumpRequest) { _, request in
+                    guard let request else { return }
+                    // The target is a section's first row; its header is
+                    // pinned above it.
+                    if request.animated && !reduceMotion {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            proxy.scrollTo(request.anchor, anchor: .top)
+                        }
+                    } else {
+                        proxy.scrollTo(request.anchor, anchor: .top)
+                    }
+                }
+                .onAppear {
+                    // The window opens a week before today, so the first
+                    // render lands on today rather than the top of the window.
+                    guard !didInitialJump else { return }
+                    Task { @MainActor in
+                        jump(to: .now, animated: false)
+                        didInitialJump = true
+                    }
                 }
             }
-            .listStyle(.plain)
-            .listSectionSpacing(8)
-            .scrollContentBackground(.hidden)
-            .contentMargins(.top, 0, for: .scrollContent)
-            .contentMargins(.bottom, 96, for: .scrollContent)
-            .background(Color(.systemGroupedBackground))
+        }
+    }
+
+    private var endOfScheduleText: String {
+        "Schedule shown through " + vm.loadedEnd.formatted(.dateTime.month(.abbreviated).day().year())
+    }
+
+    @ViewBuilder
+    private func listSection(_ section: ScheduleListSection) -> some View {
+        switch section {
+        case let .day(date, events):
+            Section {
+                ForEach(Array(events.enumerated()), id: \.element.id) { index, event in
+                    let anchor = ScheduleRowAnchor(day: date, eventId: event.id)
+                    eventRow(
+                        event,
+                        on: date,
+                        position: EventRowGroupPosition(index: index, count: events.count)
+                    )
+                    .id(anchor)
+                    .onAppear {
+                        scrollTracker.rowAppeared(on: date, anchor: anchor, index: index)
+                        vm.prefetchLater(near: date)
+                    }
+                    .onDisappear { scrollTracker.rowDisappeared(on: date, anchor: anchor) }
+                }
+            } header: {
+                ScheduleDateHeader(date: date, eventCount: events.count)
+                    .listRowInsets(EdgeInsets())
+            }
+            .listSectionSeparator(.hidden)
+        case let .emptyWeeks(start, count):
+            Section {
+                Text(emptyWeeksText(count: count))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .listRowInsets(EdgeInsets(top: 12, leading: 32, bottom: 12, trailing: 32))
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(EventRowBackground(isMine: false))
+                    .id(section.firstAnchor)
+                    .onAppear {
+                        scrollTracker.rowAppeared(on: trackedDay(forWeek: start), anchor: section.firstAnchor)
+                        vm.prefetchLater(near: section.lastDay)
+                    }
+                    .onDisappear {
+                        scrollTracker.rowDisappeared(on: trackedDay(forWeek: start), anchor: section.firstAnchor)
+                    }
+            } header: {
+                ScheduleWeekHeader(weekStart: start, weekCount: count)
+                    .listRowInsets(EdgeInsets())
+            }
+            .listSectionSeparator(.hidden)
+        }
+    }
+
+    private func emptyWeeksText(count: Int) -> String {
+        if activeFilterCount > 0 {
+            return count == 1 ? "No matching events this week" : "No matching events"
+        }
+        return count == 1 ? "No events this week" : "Nothing scheduled"
+    }
+
+    /// An empty stretch reports its start day to the strip, except when it
+    /// begins in the current week, whose placeholder stands for today onward.
+    private func trackedDay(forWeek start: Date) -> Date {
+        let today = Calendar.current.startOfDay(for: .now)
+        return ScheduleViewModel.weekStart(of: today) == start ? today : start
+    }
+
+    private func edgeLoadingRow(_ label: String) -> some View {
+        ProgressView()
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .accessibilityLabel(label)
+    }
+
+    /// A Button, not a NavigationLink, so the row carries no disclosure
+    /// chevron; the whole grouped cell is the tap target.
+    private func eventRow(_ event: ScheduleEvent, on day: Date, position: EventRowGroupPosition) -> some View {
+        let myShift = vm.shiftsByEventId[event.id]
+        return Button {
+            navigationPath.append(ScheduleEventRoute(id: event.id))
+        } label: {
+            EventRow(
+                event: event,
+                myShift: myShift,
+                extraAreas: vm.extraShiftAreasByEventId[event.id] ?? [],
+                contextDay: day
+            )
+        }
+        .foregroundStyle(.primary)
+        .listRowInsets(EdgeInsets(top: 11, leading: 32, bottom: 11, trailing: 32))
+        .listRowSeparator(.hidden)
+        .listRowBackground(EventRowBackground(isMine: myShift != nil, position: position))
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            // Posting a shift is the one thing people do from this list about
+            // their own work, and it was three taps away through the Trade
+            // Board's picker.
+            if let candidate = postableCandidate(forEvent: event.id) {
+                Button {
+                    shiftToPost = candidate
+                    Haptics.selection()
+                } label: {
+                    Label("Post trade", systemImage: "arrow.left.arrow.right")
+                }
+                .tint(Color.brandPrimary)
+            }
         }
     }
 
     private var filteredEmptyTitle: String {
         if myShiftsOnly && activeFilterCount == 1 {
-            return "No shifts assigned to you"
+            return "No upcoming shifts"
         }
         return "No matching events"
     }
@@ -1515,1303 +1339,81 @@ private struct InternalScheduleView: View {
     }
 }
 
-// MARK: - Filter Sheet
+/// One tap on the week strip. A fresh id each time, so tapping the same day
+/// twice still scrolls back to it after the list has moved.
+private struct ScheduleJumpRequest: Equatable {
+    let id = UUID()
+    let anchor: ScheduleRowAnchor
+    var animated = true
+}
 
-private struct ScheduleFilterSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    @Binding var myShiftsOnly: Bool
-    @Binding var homeAwayFilter: HomeAwayFilter
-    @Binding var sportFilter: String?
-    let includePast: Bool
-    let canSeePastEvents: Bool
-    let availableSportCodes: [String]
-    let activeFilterCount: Int
-    let matchingEventCount: Int
-    let onTogglePast: () -> Void
-    let onClear: () -> Void
+/// One entry in the master list: a day with events, or a run of weeks with
+/// none.
+private enum ScheduleListSection: Identifiable {
+    case day(date: Date, events: [ScheduleEvent])
+    case emptyWeeks(start: Date, count: Int)
 
-    private static let allSports = "__all_sports__"
+    enum ID: Hashable {
+        case day(Date)
+        case week(Date)
 
-    private var sportSelection: Binding<String> {
-        Binding {
-            sportFilter ?? Self.allSports
-        } set: { newValue in
-            sportFilter = newValue == Self.allSports ? nil : newValue
-        }
-    }
-
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 16) {
-                    resultCard
-                    scopeCard
-                    eventTypeCard
-                    if availableSportCodes.count > 1 {
-                        sportCard
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-            }
-            .background(Color(.systemGroupedBackground))
-            .navigationTitle("Filter Schedule")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    // Shown only when there is something to clear. As a
-                    // permanently-present disabled control it read as a broken
-                    // button crowding the sheet's top-left corner.
-                    if activeFilterCount > 0 {
-                        Button("Clear") { onClear() }
-                    }
-                }
-            }
-            .safeAreaInset(edge: .bottom) {
-                Button {
-                    dismiss()
-                } label: {
-                    Text(showResultsTitle)
-                        .fontWeight(.semibold)
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(Color.statusText(.purple))
-                .controlSize(.large)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(.bar)
+        var date: Date {
+            switch self {
+            case let .day(date), let .week(date): return date
             }
         }
     }
 
-    private var resultCard: some View {
-        HStack(spacing: 12) {
-            Image(systemName: activeFilterCount == 0 ? "calendar" : "line.3.horizontal.decrease.circle.fill")
-                .font(.title3)
-                .foregroundStyle(Color.statusText(.purple))
-                .frame(width: 40, height: 40)
-                .background(Color.statusBackground(.purple), in: Circle())
-                .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(matchingEventCount == 1 ? "1 matching event" : "\(matchingEventCount) matching events")
-                    .font(.headline)
-                Text(activeFilterSummaryLine)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
+    var id: ID {
+        switch self {
+        case let .day(date, _): return .day(date)
+        case let .emptyWeeks(start, _): return .week(start)
         }
-        .padding(16)
-        .background(Color.cardSurface, in: RoundedRectangle(cornerRadius: Brand.Radius.lg, style: .continuous))
-        .accessibilityElement(children: .combine)
     }
 
-    private var scopeCard: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Scope")
-                .font(.headline)
-                .padding(.bottom, 6)
-
-            Toggle(isOn: $myShiftsOnly) {
-                Label("Only my shifts", systemImage: myShiftsOnly ? "person.fill" : "person")
-                    .foregroundStyle(.primary)
-            }
-            .tint(Color.statusText(.purple))
-            .frame(minHeight: 44)
-
-            if canSeePastEvents {
-                Divider()
-                Toggle(isOn: Binding(get: { includePast }, set: { _ in onTogglePast() })) {
-                    Label("Include past events", systemImage: includePast ? "clock.arrow.circlepath" : "clock")
-                        .foregroundStyle(.primary)
-                }
-                .tint(Color.statusText(.purple))
-                .frame(minHeight: 44)
-            }
+    /// The last day this section stands for: the day itself, or the end of
+    /// the empty run.
+    var lastDay: Date {
+        switch self {
+        case let .day(date, _):
+            return date
+        case let .emptyWeeks(start, count):
+            return Calendar.current.date(byAdding: .day, value: 7 * count - 1, to: start) ?? start
         }
-        .padding(16)
-        .background(Color.cardSurface, in: RoundedRectangle(cornerRadius: Brand.Radius.lg, style: .continuous))
     }
 
-    private var eventTypeCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Event Type")
-                .font(.headline)
-
-            // "All" is the reset, so it spans the row and the four real venue
-            // types sit in a balanced 2x2 below. A single 5-item adaptive grid
-            // left a ragged half-empty last row.
-            eventTypeButton(.all)
-
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
-                ForEach(HomeAwayFilter.allCases.filter { $0 != .all }, id: \.self) { filter in
-                    eventTypeButton(filter)
-                }
-            }
-        }
-        .padding(16)
-        .background(Color.cardSurface, in: RoundedRectangle(cornerRadius: Brand.Radius.lg, style: .continuous))
+    var isDay: Bool {
+        if case .day = self { return true }
+        return false
     }
 
-    /// One shape, drawn once. The previous version stacked `.bordered`'s own
-    /// capsule under a second `.background` at a different corner radius, which
-    /// is what made the borders read as misaligned. Unselected keeps a defined
-    /// surface and hairline so it reads tappable instead of disabled.
-    private func eventTypeButton(_ filter: HomeAwayFilter) -> some View {
-        let isOn = homeAwayFilter == filter
-        let shape = RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous)
-        return Button {
-            homeAwayFilter = filter
-            Haptics.selection()
-        } label: {
-            Text(filter.rawValue)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(isOn ? Color.statusText(.purple) : Color.primary)
-                .frame(maxWidth: .infinity, minHeight: 44)
-                .background(shape.fill(isOn ? Color.statusBackground(.purple) : Color(.secondarySystemBackground)))
-                .overlay(shape.strokeBorder(
-                    isOn ? Color.statusText(.purple).opacity(0.35) : Color.primary.opacity(0.12),
-                    lineWidth: 1
-                ))
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(isOn ? .isSelected : [])
-    }
-
-    private var sportCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Sport")
-                .font(.headline)
-
-            Picker("Sport", selection: sportSelection) {
-                Text("All Sports").tag(Self.allSports)
-                ForEach(availableSportCodes, id: \.self) { code in
-                    Text(scheduleSportLabel(code)).tag(code)
-                }
-            }
-            .pickerStyle(.menu)
-            .tint(Color.statusText(.purple))
-            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-        }
-        .padding(16)
-        .background(Color.cardSurface, in: RoundedRectangle(cornerRadius: Brand.Radius.lg, style: .continuous))
-    }
-
-    private var showResultsTitle: String {
-        matchingEventCount == 1 ? "Show 1 Event" : "Show \(matchingEventCount) Events"
-    }
-
-    private var activeFilterSummaryLine: String {
-        switch activeFilterCount {
-        case 0:  return "All upcoming events"
-        case 1:  return "1 active filter"
-        default: return "\(activeFilterCount) active filters"
+    var firstAnchor: ScheduleRowAnchor {
+        switch self {
+        case let .day(date, events):
+            return ScheduleRowAnchor(day: date, eventId: events.first?.id ?? "")
+        case let .emptyWeeks(start, _):
+            return ScheduleRowAnchor(day: start, eventId: "")
         }
     }
 }
 
-// MARK: - Calendar Subscription
-
-private struct ScheduleCalendarSubscriptionSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    @AppStorage("scheduleCalendarLastOpenedAt") private var lastOpenedAt = 0.0
-    @State private var token: String?
-    @State private var isLoading = true
-    @State private var isOpening = false
-    @State private var isResetting = false
-    @State private var error: String?
-    @State private var resetComplete = false
-    @State private var showResetConfirmation = false
-
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 16) {
-                    statusCard
-                    explanationCard
-                    if token != nil {
-                        securityCard
-                    }
-                    if let error {
-                        calendarErrorCard(message: error)
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-            }
-            .background(Color(.systemGroupedBackground))
-            .navigationTitle("Shift Calendar")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") { dismiss() }
-                        .disabled(isOpening || isResetting)
-                }
-            }
-            .safeAreaInset(edge: .bottom) {
-                Button {
-                    Task { await openCalendar() }
-                } label: {
-                    HStack(spacing: 8) {
-                        if isOpening {
-                            ProgressView().tint(.white)
-                        } else {
-                            Image(systemName: token == nil ? "calendar.badge.plus" : "arrow.up.forward.app")
-                        }
-                        Text(token == nil ? "Set Up in Apple Calendar" : "Open Apple Calendar")
-                            .fontWeight(.semibold)
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(Color.statusText(.purple))
-                .controlSize(.large)
-                .disabled(isLoading || isOpening || isResetting || error != nil)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(.bar)
-            }
-            .task { await loadStatus() }
-            .confirmationDialog(
-                "Reset private calendar link?",
-                isPresented: $showResetConfirmation,
-                titleVisibility: .visible
-            ) {
-                Button("Reset Link", role: .destructive) {
-                    Task { await resetLink() }
-                }
-                Button("Keep Current Link", role: .cancel) {}
-            } message: {
-                Text("Existing calendar subscriptions will stop updating. You'll need to subscribe again with the new link.")
-            }
-            .interactiveDismissDisabled(isOpening || isResetting)
-        }
-        .presentationDetents([.large])
-        .presentationDragIndicator(.visible)
-    }
-
-    private var statusCard: some View {
-        HStack(alignment: .top, spacing: 14) {
-            Image(systemName: token == nil ? "calendar.badge.plus" : "calendar.badge.checkmark")
-                .font(.title2)
-                .foregroundStyle(Color.statusText(token == nil ? .purple : .green))
-                .frame(width: 46, height: 46)
-                .background(Color.statusBackground(token == nil ? .purple : .green), in: Circle())
-                .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: 5) {
-                if isLoading {
-                    Text("Checking your calendar feed")
-                        .font(.headline)
-                    ProgressView()
-                        .controlSize(.small)
-                } else {
-                    Text(token == nil ? "Ready to set up" : "Private feed ready")
-                        .font(.headline)
-                    Text(statusDetail)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                    if resetComplete {
-                        Text("Link reset. Subscribe again to keep receiving updates.")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Color.statusText(.purple))
-                    }
-                }
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(16)
-        .background(Color.cardSurface, in: RoundedRectangle(cornerRadius: Brand.Radius.lg, style: .continuous))
-        .accessibilityElement(children: .combine)
-    }
-
-    private var explanationCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Label("How it works", systemImage: "arrow.triangle.2.circlepath")
-                .font(.headline)
-                .foregroundStyle(.primary)
-
-            calendarExplanationRow("Wisconsin Creative updates the feed when your assignment or call time changes.")
-            calendarExplanationRow("Apple Calendar controls when subscribed calendars refresh.")
-            calendarExplanationRow("Editing a calendar event does not change your official Schedule assignment.")
-        }
-        .padding(16)
-        .background(Color.cardSurface, in: RoundedRectangle(cornerRadius: Brand.Radius.lg, style: .continuous))
-    }
-
-    private var securityCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Private Feed Link")
-                .font(.headline)
-            Text("Treat this link like a password. Reset it if it was shared or if an old calendar should stop receiving updates.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Button("Reset Private Link", role: .destructive) {
-                showResetConfirmation = true
-            }
-            .disabled(isResetting || isOpening)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(Color.cardSurface, in: RoundedRectangle(cornerRadius: Brand.Radius.lg, style: .continuous))
-    }
-
-    private func calendarExplanationRow(_ text: String) -> some View {
-        HStack(alignment: .top, spacing: 9) {
-            Image(systemName: "checkmark.circle.fill")
-                .foregroundStyle(Color.statusText(.purple))
-                .accessibilityHidden(true)
-            Text(text)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        }
-        .accessibilityElement(children: .combine)
-    }
-
-    private func calendarErrorCard(message: String) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundStyle(Color.statusText(.red))
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Couldn't update calendar")
-                    .font(.subheadline.weight(.semibold))
-                Text(message)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
-            Button("Retry") { Task { await loadStatus() } }
-                .font(.caption.weight(.semibold))
-                .disabled(isLoading || isOpening || isResetting)
-        }
-        .padding(14)
-        .background(Color.statusBackground(.red), in: RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous))
-    }
-
-    private var statusDetail: String {
-        guard lastOpenedAt > 0 else {
-            return token == nil ? "Create a private feed and hand it to Apple Calendar." : "Open Apple Calendar to subscribe with this feed."
-        }
-        let date = Date(timeIntervalSince1970: lastOpenedAt)
-        return "Apple Calendar last opened \(date.formatted(.relative(presentation: .named)))."
-    }
-
-    private func loadStatus() async {
-        guard !isOpening, !isResetting else { return }
-        isLoading = true
-        error = nil
-        defer { isLoading = false }
-        do {
-            token = try await APIClient.shared.icsToken()
-        } catch {
-            self.error = error.localizedDescription
-        }
-    }
-
-    private func openCalendar() async {
-        guard !isOpening, !isResetting else { return }
-        isOpening = true
-        error = nil
-        defer { isOpening = false }
-        do {
-            let activeToken: String
-            if let token {
-                activeToken = token
-            } else {
-                activeToken = try await APIClient.shared.generateICSToken()
-                token = activeToken
-            }
-            guard let url = AppEnvironment.webcalURL(path: "/api/shifts/ics/\(activeToken)") else {
-                error = "The calendar link couldn't be created."
-                return
-            }
-            guard await UIApplication.shared.open(url) else {
-                error = "Apple Calendar couldn't open. Try again from this screen."
-                return
-            }
-            lastOpenedAt = Date.now.timeIntervalSince1970
-            resetComplete = false
-            Haptics.success()
-        } catch {
-            self.error = error.localizedDescription
-            Haptics.warning()
-        }
-    }
-
-    private func resetLink() async {
-        guard !isResetting, !isOpening else { return }
-        isResetting = true
-        error = nil
-        defer { isResetting = false }
-        do {
-            token = try await APIClient.shared.generateICSToken()
-            lastOpenedAt = 0
-            resetComplete = true
-            Haptics.success()
-        } catch {
-            self.error = error.localizedDescription
-            Haptics.warning()
-        }
-    }
-}
-
-// MARK: - Calendar View
-
-struct ScheduleCalendarView: View {
-    @Binding var selectedDate: Date
-    let eventsByDay: [Date: [ScheduleEvent]]
-    let myShiftsOnly: Bool
-    let homeAwayFilter: HomeAwayFilter
-    var sportFilter: String?
-    let shiftsByEventId: [String: MyShift]
-    var extraShiftAreasByEventId: [String: [String]] = [:]
-    let showsCrewCoverage: Bool
-    let onSelectEvent: (ScheduleEvent) -> Void
-    /// Supplied by the Schedule screen, which owns the filter state the day
-    /// list can be emptied by. nil when there is nothing to clear.
-    var onClearFilters: (() -> Void)?
-
-    @State private var displayedMonth: Date = {
-        let c = Calendar.current
-        return c.date(from: c.dateComponents([.year, .month], from: .now)) ?? .now
-    }()
-
-    private let calendar = Calendar.current
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 0), count: 7)
-    @Environment(\.layoutDirection) private var layoutDirection
-
-    private var weekdayLabels: [String] {
-        let symbols = calendar.veryShortWeekdaySymbols
-        let first = max(0, calendar.firstWeekday - 1)
-        return (0..<7).map { symbols[(first + $0) % symbols.count] }
-    }
-
-    private var weekdayFullNames: [String] {
-        let symbols = calendar.weekdaySymbols
-        let first = max(0, calendar.firstWeekday - 1)
-        return (0..<7).map { symbols[(first + $0) % symbols.count] }
-    }
-
-    private var selectedDayEvents: [ScheduleEvent] {
-        filteredEvents(on: selectedDate)
-    }
-
-    private func filteredEvents(on date: Date) -> [ScheduleEvent] {
-        let day = calendar.startOfDay(for: date)
-        var all = eventsByDay[day] ?? []
-        if myShiftsOnly { all = all.filter { shiftsByEventId[$0.id] != nil } }
-        all = all.filter { scheduleEventMatches($0, filter: homeAwayFilter) }
-        if let sportFilter { all = all.filter { $0.sportCode == sportFilter } }
-        return all
-    }
-
-    var body: some View {
-        VStack(spacing: 0) {
-            monthHeader
-                .padding(.horizontal)
-                .padding(.vertical, 2)
-
-            HStack(spacing: 0) {
-                // Use a single weekday letter but disambiguated by position via accessibility.
-                ForEach(Array(weekdayLabels.enumerated()), id: \.offset) { idx, label in
-                    Text(label)
-                        .font(.caption2.weight(.medium))
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity)
-                        .accessibilityLabel(weekdayFullNames[idx])
-                }
-            }
-            .padding(.horizontal, 4)
-            .padding(.bottom, 2)
-
-            LazyVGrid(columns: columns, spacing: 1) {
-                ForEach(Array(daysInMonth().enumerated()), id: \.offset) { _, day in
-                    if let day {
-                        let visibleEvents = filteredEvents(on: day)
-                        let dots = dotInfo(for: day)
-                        Button {
-                            withAnimation(.easeInOut(duration: 0.15)) {
-                                selectedDate = day
-                                // Also follow selection across months.
-                                displayedMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: day)) ?? displayedMonth
-                            }
-                        } label: {
-                            DayCell(
-                                date: day,
-                                isToday: calendar.isDateInToday(day),
-                                isSelected: calendar.isDate(day, inSameDayAs: selectedDate),
-                                dots: dots,
-                                eventCount: visibleEvents.count
-                            )
-                        }
-                        .buttonStyle(.plain)
-                    } else {
-                        Color.clear.frame(minWidth: 44, minHeight: 44)
-                    }
-                }
-            }
-            .padding(.horizontal, 4)
-            .padding(.bottom, 4)
-            .gesture(
-                DragGesture(minimumDistance: 24)
-                    .onEnded { value in
-                        let dx = value.translation.width
-                        guard abs(dx) > 50 else { return }
-                        let movingTowardNext = layoutDirection == .rightToLeft ? dx > 0 : dx < 0
-                        changeMonth(by: movingTowardNext ? 1 : -1)
-                    }
-            )
-
-            dotLegend
-                .padding(.horizontal, 16)
-                .padding(.bottom, 4)
-
-            Divider()
-
-            dayEventList
-        }
-    }
-
-    private var dotLegend: some View {
-        // Grey is the third venue colour, not an absence of one: every neutral
-        // game and every non-game day draws one. Naming only home and away left
-        // the most common dot on a practice-heavy month unexplained.
-        HStack(spacing: 12) {
-            LegendAssignmentMark(label: "My shift")
-            LegendDot(color: Color.statusText(.green), systemImage: "house.fill", label: "Home")
-            LegendDot(color: Color.statusText(.orange), systemImage: "arrow.up.right", label: "Away")
-            LegendDot(color: Color.statusText(.gray), systemImage: "circle.grid.2x2.fill", label: "Other")
-        }
-        .frame(maxWidth: .infinity, alignment: .center)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Legend: my shift, home, away, other")
-    }
-
-    private func changeMonth(by delta: Int) {
-        withAnimation(.easeInOut(duration: 0.2)) {
-            let next = calendar.date(byAdding: .month, value: delta, to: displayedMonth) ?? displayedMonth
-            displayedMonth = next
-            // Move selection along — keep the same day-of-month if valid, else clamp to first.
-            let dayComponent = calendar.component(.day, from: selectedDate)
-            let yearMonth = calendar.dateComponents([.year, .month], from: next)
-            var components = yearMonth
-            components.day = dayComponent
-            if let candidate = calendar.date(from: components),
-               calendar.component(.month, from: candidate) == yearMonth.month {
-                selectedDate = candidate
-            } else if let firstOfMonth = calendar.date(from: yearMonth) {
-                selectedDate = firstOfMonth
-            }
-        }
-    }
-
-    private func goToToday() {
-        let today = Date()
-        withAnimation(.easeInOut(duration: 0.25)) {
-            selectedDate = today
-            displayedMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: today)) ?? today
-        }
-    }
-
-    // MARK: Month header
-
-    private var monthHeader: some View {
-        HStack {
-            Button { changeMonth(by: -1) } label: {
-                Image(systemName: "chevron.backward")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 36, height: 36)
-                    .contentShape(Circle())
-            }
-            .buttonStyle(ScalePressStyle())
-            .accessibilityLabel("Previous month")
-
-            Spacer()
-
-            VStack(spacing: 2) {
-                Text(displayedMonth.formatted(.dateTime.month(.wide).year()))
-                    .font(.headline)
-                if !calendar.isDate(displayedMonth, equalTo: Date(), toGranularity: .month) {
-                    Button("Today") { goToToday() }
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(Color.brandPrimary)
-                        .buttonStyle(.plain)
-                }
-            }
-
-            Spacer()
-
-            Button { changeMonth(by: 1) } label: {
-                Image(systemName: "chevron.forward")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 36, height: 36)
-                    .contentShape(Circle())
-            }
-            .buttonStyle(ScalePressStyle())
-            .accessibilityLabel("Next month")
-        }
-    }
-
-    // MARK: Day event list
-
-    @ViewBuilder
-    private var dayEventList: some View {
-        let events = selectedDayEvents
-        if events.isEmpty {
-            // "No events" is two different facts. A day that is genuinely clear
-            // and a day whose events the filters removed looked identical here,
-            // and only list mode offered a way out of the second one.
-            let hiddenCount = hiddenEventCount(on: selectedDate)
-            VStack(spacing: 8) {
-                Spacer()
-                Text(emptyDayMessage(hiddenCount: hiddenCount))
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                if hiddenCount > 0, let onClearFilters {
-                    Button("Clear Filters") { onClearFilters() }
-                        .font(.subheadline.weight(.medium))
-                        .buttonStyle(.bordered)
-                }
-                Spacer()
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, 24)
-        } else {
-            List {
-                ForEach(events) { event in
-                    Button { onSelectEvent(event) } label: {
-                        EventRow(
-                            event: event,
-                            myShift: shiftsByEventId[event.id],
-                            extraAreas: extraShiftAreasByEventId[event.id] ?? [],
-                            contextDay: calendar.startOfDay(for: selectedDate),
-                            showsCrewCoverage: showsCrewCoverage
-                        )
-                    }
-                    .buttonStyle(ScalePressStyle())
-                    .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
-                }
-            }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .contentMargins(.bottom, 96, for: .scrollContent)
-            .background(Color(.systemGroupedBackground))
-        }
-    }
-
-    // MARK: Helpers
-
-    /// Events on this day that the active filters removed.
-    private func hiddenEventCount(on date: Date) -> Int {
-        let day = calendar.startOfDay(for: date)
-        let all = eventsByDay[day]?.count ?? 0
-        return max(all - filteredEvents(on: date).count, 0)
-    }
-
-    private func emptyDayMessage(hiddenCount: Int) -> String {
-        let dayLabel = selectedDate.formatted(.dateTime.month(.abbreviated).day())
-        guard hiddenCount > 0 else { return "No events on " + dayLabel }
-        let noun = hiddenCount == 1 ? "1 event" : "\(hiddenCount) events"
-        return "Filters hide " + noun + " on " + dayLabel
-    }
-
-    private func daysInMonth() -> [Date?] {
-        guard let range = calendar.range(of: .day, in: .month, for: displayedMonth),
-              let firstDay = calendar.date(from: calendar.dateComponents([.year, .month], from: displayedMonth))
-        else { return [] }
-        let weekday = calendar.component(.weekday, from: firstDay)
-        let offset = (weekday - calendar.firstWeekday + 7) % 7
-        let empties: [Date?] = Array(repeating: nil, count: offset)
-        let days: [Date?] = range.compactMap { calendar.date(byAdding: .day, value: $0 - 1, to: firstDay) }
-        return empties + days
-    }
-
-    // Venue and personal-work signals stay independent: each event keeps its
-    // home/away/neutral dot while the day cell adds one blue assignment mark.
-    private func dotInfo(for date: Date) -> [DotInfo] {
-        let visible = filteredEvents(on: date)
-        return visible.prefix(3).map { event in
-            let isShift = shiftsByEventId[event.id] != nil
-            return DotInfo(color: venueRailColor(for: event), isShift: isShift, venue: event.venue)
-        }
-    }
-}
-
-struct DotInfo {
-    let color: Color
-    let isShift: Bool
-    let venue: ScheduleVenue
-
-    var systemImage: String {
-        switch venue {
-        case .home: return "house.fill"
-        case .away: return "arrow.up.right"
-        case .neutral: return "circle.grid.2x2.fill"
-        case .nonGame: return "minus"
-        }
-    }
-
-    var label: String {
-        switch venue {
-        case .home: return "home"
-        case .away: return "away"
-        case .neutral: return "neutral"
-        case .nonGame: return "non-game"
-        }
-    }
-}
-
-private struct LegendDot: View {
-    let color: Color
-    let systemImage: String
-    let label: String
-
-    var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: systemImage)
-                .font(.system(size: 8, weight: .semibold))
-                .foregroundStyle(color)
-                .frame(width: 10, height: 10)
-                .accessibilityHidden(true)
-            Text(label)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        }
-    }
-}
-
-private struct LegendAssignmentMark: View {
-    let label: String
-
-    var body: some View {
-        HStack(spacing: 4) {
-            Capsule()
-                .fill(Color.statusText(.blue))
-                .frame(width: 10, height: 2)
-                .accessibilityHidden(true)
-            Text(label)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        }
-    }
-}
-
-// MARK: - Day Cell
-
-private struct DayCell: View {
-    let date: Date
-    let isToday: Bool
-    let isSelected: Bool
-    let dots: [DotInfo]
-    let eventCount: Int
-
-    var body: some View {
-        VStack(spacing: 2) {
-            ZStack {
-                if isSelected {
-                    Circle()
-                        .fill(isToday ? Color.brandPrimary : Color.brandPrimary.opacity(0.18))
-                        .frame(width: 28, height: 28)
-                } else if isToday {
-                    Circle()
-                        .strokeBorder(Color.brandPrimary, lineWidth: 1.5)
-                        .frame(width: 28, height: 28)
-                }
-                Text(date.formatted(.dateTime.day()))
-                    .font(.subheadline)
-                    .fontWeight(isToday ? .semibold : .regular)
-                    .foregroundStyle(
-                        isSelected && isToday ? .white :
-                        isSelected ? Color.brandPrimary :
-                        isToday ? Color.brandPrimary : .primary
-                    )
-            }
-            .frame(width: 28, height: 28)
-
-            // Venue symbols retain classification even when color is not
-            // available; the blue assignment mark remains separate.
-            HStack(spacing: 2) {
-                ForEach(dots.indices, id: \.self) { i in
-                    Image(systemName: dots[i].systemImage)
-                        .font(.system(size: 8, weight: .semibold))
-                        .foregroundStyle(dots[i].color)
-                        .frame(width: 9, height: 9)
-                        .accessibilityHidden(true)
-                }
-            }
-            .frame(height: 9)
-
-            Capsule()
-                .fill(dots.contains(where: \.isShift) ? Color.statusText(.blue) : Color.clear)
-                .frame(width: 9, height: 2)
-                .accessibilityHidden(true)
-        }
-        // Keep the day numeral compact while giving the entire calendar cell a
-        // full system-sized interaction target. The seven flexible columns
-        // retain their month-grid geometry; only the tappable envelope grows.
-        .frame(minWidth: 44, minHeight: 44)
-        .contentShape(Rectangle())
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(accessibilityLabel)
-        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
-    }
-
-    private var accessibilityLabel: String {
-        var parts: [String] = []
-        parts.append(date.formatted(.dateTime.weekday(.wide).month(.wide).day()))
-        if isToday { parts.append("today") }
-        let hasMyShift = dots.contains(where: \.isShift)
-        if eventCount == 0 {
-            parts.append("no events")
-        } else if eventCount == 1 {
-            parts.append(hasMyShift ? "1 event including my shift" : "1 event")
-        } else {
-            parts.append(hasMyShift ? "\(eventCount) events including my shift" : "\(eventCount) events")
-        }
-        let venueCounts = Dictionary(grouping: dots, by: \.venue).mapValues(\.count)
-        let venueParts: [String] = [
-            (venueCounts[.home] ?? 0) > 0 ? "\(venueCounts[.home]!) home" : nil,
-            (venueCounts[.away] ?? 0) > 0 ? "\(venueCounts[.away]!) away" : nil,
-            (venueCounts[.neutral] ?? 0) > 0 ? "\(venueCounts[.neutral]!) neutral" : nil,
-            (venueCounts[.nonGame] ?? 0) > 0 ? "\(venueCounts[.nonGame]!) non-game" : nil
-        ].compactMap { $0 }
-        if !venueParts.isEmpty {
-            parts.append(venueParts.joined(separator: ", "))
-        }
-        return parts.joined(separator: ", ")
-    }
-}
-
-// MARK: - Date Header
-
-private struct ScheduleDateHeader: View {
-    let date: Date
-    let eventCount: Int
-
-    private var cal: Calendar { .current }
-    private var isToday: Bool { cal.isDateInToday(date) }
-    private var isTomorrow: Bool { cal.isDateInTomorrow(date) }
-
-    private var primaryLabel: String {
-        if isToday { return "Today" }
-        if isTomorrow { return "Tomorrow" }
-        return date.formatted(.dateTime.weekday(.wide))
-    }
-
-    /// "Today"/"Tomorrow" already spend the primary slot, so those two carry the
-    /// weekday here; a named weekday elsewhere would only repeat itself.
-    private var dateLabel: String {
-        let calendar = Calendar.current
-        let year = calendar.component(.year, from: date)
-        let currentYear = calendar.component(.year, from: .now)
-        guard year == currentYear else {
-            return date.formatted(.dateTime.month(.abbreviated).day().year())
-        }
-        return (isToday || isTomorrow)
-            ? date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
-            : date.formatted(.dateTime.month(.abbreviated).day())
-    }
-
-    var body: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                dayLabel.fixedSize()
-                Text("·").font(.subheadline).foregroundStyle(.tertiary)
-                Text(dateLabel).font(.subheadline).foregroundStyle(.secondary).fixedSize()
-                Spacer(minLength: 8)
-                countLabel.fixedSize()
-            }
-
-            VStack(alignment: .leading, spacing: 2) {
-                dayLabel
-                Text(dateLabel).font(.subheadline).foregroundStyle(.secondary)
-                countLabel
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .padding(.horizontal, 16)
-        .padding(.top, Brand.Space.sm)
-        .padding(.bottom, 5)
-        .background(Color(.systemGroupedBackground))
-        .accessibilityElement(children: .ignore)
-        .accessibilityAddTraits(.isHeader)
-        .accessibilityLabel(headerAccessibilityLabel)
-    }
-
-    private var dayLabel: some View {
-        Text(primaryLabel)
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(isToday ? Color.brandPrimary : .primary)
-    }
-
-    private var countLabel: some View {
-        Text(eventCount == 1 ? "1 event" : "\(eventCount) events")
-            .font(.caption.monospacedDigit())
-            .foregroundStyle(.secondary)
-    }
-
-    private var headerAccessibilityLabel: String {
-        var parts: [String] = []
-        if isToday {
-            parts.append("Today")
-        } else if isTomorrow {
-            parts.append("Tomorrow")
-        } else {
-            parts.append(date.formatted(.dateTime.month(.wide).year()))
-        }
-        parts.append(date.formatted(.dateTime.weekday(.wide).day()))
-        if eventCount > 1 {
-            parts.append("\(eventCount) events")
-        } else if eventCount == 1 {
-            parts.append("1 event")
-        }
-        return parts.joined(separator: ", ")
-    }
-}
-
-// MARK: - Event Row
-
-struct EventRow: View {
-    let event: ScheduleEvent
-    let myShift: MyShift?
-    var extraAreas: [String] = []
-    /// The day this row is rendered under. For a multi-day event it drives the
-    /// "Day n/m" marker and the segment-aware time line.
-    var contextDay: Date? = nil
-    var showsCrewCoverage = true
-
-    /// The time column grows with Dynamic Type. Held at a fixed 62pt, the
-    /// gutter clipped its own value at accessibility sizes -- `11:00 AM` read
-    /// as `11:…`, which removes the one thing the column exists to show.
-    /// Same treatment as `CrewTypeLabel`'s name column.
-    @ScaledMetric(relativeTo: .subheadline) private var gutterScale: CGFloat = 1
-
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-
-    private var usesStackedLayout: Bool { dynamicTypeSize >= .xxLarge }
-
-    /// When this row represents one day of a multi-day event, its 1-based
-    /// position and the total span length.
-    private var segment: (index: Int, total: Int)? {
-        guard event.isMultiDay, let day = contextDay, let idx = event.dayIndex(for: day) else { return nil }
-        return (idx, event.dayCount)
-    }
-
-    private var eventDisplayTitle: String {
-        scheduleEventDisplayTitle(event)
-    }
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            // Time leads the row so a day of work reads down a single column
-            // instead of being re-found inside each card.
-            if !usesStackedLayout {
-                timeGutter
-            }
-
-            StatusRail(color: barColor)
-                .frame(maxHeight: .infinity)
-
-            VStack(alignment: .leading, spacing: 5) {
-                if usesStackedLayout {
-                    Text(stackedTimeText)
-                        .font(.subheadline.weight(.semibold).monospacedDigit())
-                        .foregroundStyle(timeState == .live ? Color.brandPrimary : Color.primary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                Text(eventDisplayTitle)
-                    .font(.body.weight(.semibold))
-                    .fixedSize(horizontal: false, vertical: true)
-
-                if event.combinedMemberCount > 1 {
-                    Text("\(event.combinedMemberCount) events · shared crew")
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.secondary)
-                }
-
-                // Keep a compact metadata row when it fits. A long venue gets
-                // its own line rather than shrinking around the crew ratio.
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 8) {
-                        metaLine.fixedSize(horizontal: true, vertical: false)
-                        Spacer(minLength: 0)
-                        rowCoverage
-                    }
-                    VStack(alignment: .leading, spacing: 4) {
-                        metaLine
-                        rowCoverage
-                    }
-                }
-
-                if let myShift {
-                    personalWorkLine(myShift)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            Image(systemName: "chevron.right")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(.tertiary)
-                .accessibilityHidden(true)
-                .padding(.top, 2)
-        }
-        .padding(.vertical, 11)
-        .padding(.horizontal, 12)
-        .background(Color.cardSurface)
-        .clipShape(RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: Brand.Radius.md, style: .continuous)
-                .strokeBorder(Color.hairline, lineWidth: 0.5)
-        )
-        // A finished event still belongs on the day, but it should stop
-        // competing with the work that has not happened yet.
-        .opacity(timeState == .past ? 0.55 : 1)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(rowAccessibilityLabel)
-    }
-
-    // MARK: Temporal state
-
-    /// Drives the "NOW" badge and the dimming that lets the eye skip work that
-    /// is already done. Defined on `ScheduleEvent` so Event detail answers the
-    /// same question the same way.
-    private var timeState: ScheduleEventTimeState { event.timeState }
-
-    /// Every card is the same surface.
-    ///
-    /// Two washes used to live here. "My shift" took a blue one *and* a blue
-    /// border *and* the blue personal-work line -- three signals for one fact,
-    /// on what is often half the rows. Live briefly took a red one, which put
-    /// a green venue rail against a pink card on every live home game.
-    ///
-    /// Both are now carried by the things that already say more: the blue line
-    /// names the call time and the area, and the time gutter turns red and says
-    /// "Now" in the column the eye is already scanning.
-
-    // MARK: Time gutter
-
-    /// The two lines of the leading time column. Multi-day segments report the
-    /// edge that actually falls on this day rather than the whole span.
-    private var gutterLines: (primary: String, secondary: String?) {
-        let start = event.startsAt.formatted(.dateTime.hour().minute())
-        let end = event.endsAt.formatted(.dateTime.hour().minute())
-        if let seg = segment {
-            // "Day 2/3" belongs next to the time, not out in the meta line
-            // where it competed with the venue for the same few points.
-            let span = "Day \(seg.index)/\(seg.total)"
-            if event.displayAllDay { return ("All day", span) }
-            if seg.index == 1 { return (start, span) }
-            if seg.index == seg.total { return (end, span) }
-            return ("All day", span)
-        }
-        if event.displayAllDay { return ("All day", nil) }
-        return (start, end)
-    }
-
-    private var timeGutter: some View {
-        let lines = gutterLines
-        return VStack(alignment: .trailing, spacing: 2) {
-            Text(lines.primary)
-                .font(.subheadline.weight(.semibold).monospacedDigit())
-                .foregroundStyle(timeState == .live ? Color.brandPrimary : Color.primary)
-
-            if timeState == .live {
-                Text("Now")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.brandPrimary)
-            } else if let secondary = lines.secondary {
-                Text(secondary)
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .lineLimit(1)
-        .minimumScaleFactor(0.7)
-        .frame(width: 62 * gutterScale, alignment: .trailing)
-        .accessibilityHidden(true)
-    }
-
-    private var stackedTimeText: String {
-        let lines = gutterLines
-        let separator = segment == nil ? " – " : " · "
-        let time = lines.primary + (lines.secondary.map { separator + $0 } ?? "")
-        return timeState == .live ? time + " · Now" : time
-    }
-
-    @ViewBuilder
-    private var rowCoverage: some View {
-        if showsCrewCoverage, let cov = event.coverage, cov.total > 0 {
-            coverageChip(cov)
-        }
-    }
-
-    private var metaLine: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 4) {
-            if let eventTypeLabel {
-                Text(eventTypeLabel)
-                    .fixedSize(horizontal: true, vertical: false)
-                if venueName != nil { metaDot }
-            }
-            if let venueName {
-                Image(systemName: "mappin.and.ellipse")
-                    .font(.caption2)
-                    .imageScale(.small)
-                    .accessibilityHidden(true)
-                Text(venueName)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .font(.subheadline)
-        .foregroundStyle(.secondary)
-    }
-
-    private var metaDot: some View {
-        Text("·").foregroundStyle(.tertiary)
-    }
-
-    /// Home is already carried by the green status rail, so only the exceptions
-    /// spend a word on the meta line. VoiceOver still gets the full label below.
-    ///
-    /// Neutral and non-game share the grey rail, and the title already says
-    /// which one it is by naming an opponent or not — so when there is a venue
-    /// to print, the word loses to the venue rather than truncating it.
-    private var eventTypeLabel: String? {
-        switch event.venue {
-        case .home: return nil
-        case .away: return "Away"
-        case .neutral, .nonGame:
-            guard venueName == nil else { return nil }
-            return event.venue == .nonGame ? "Non-game" : "Neutral"
-        }
-    }
-
-    private var accessibilityTypeLabel: String {
-        switch event.venue {
-        case .home: return "Home"
-        case .away: return "Away"
-        case .neutral: return "Neutral"
-        case .nonGame: return "Non-game"
-        }
-    }
-
-    /// Shared with Event detail via `scheduleEventVenueName` — the row and the
-    /// detail header must name the same venue the same way.
-    private var venueName: String? {
-        scheduleEventVenueName(event)
-    }
-
-    private func personalWorkLine(_ shift: MyShift) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 5) {
-            Image(systemName: "person.fill.checkmark")
-                .font(.caption2.weight(.semibold))
-                .accessibilityHidden(true)
-            Text(personalWorkText(shift))
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .font(.footnote.weight(.semibold))
-        .foregroundStyle(Color.statusText(.blue))
-    }
-
-    private func personalWorkText(_ shift: MyShift) -> String {
-        var parts: [String] = []
-        if !event.displayAllDay, shift.workerType == "ST", let callStartsAt = shift.callStartsAt {
-            parts.append("Call \(callStartsAt.formatted(date: .omitted, time: .shortened))")
-        } else if shift.workerType == "FT" {
-            parts.append("Assigned")
-        }
-        parts.append(shift.area.shiftAreaLabel)
-        for area in extraAreas {
-            parts.append(area.shiftAreaLabel)
-        }
-        parts.append(shift.gear.gearLabel)
-        return parts.joined(separator: " · ")
-    }
-
-    private var rowAccessibilityLabel: String {
-        var parts: [String] = []
-        switch timeState {
-        case .live: parts.append("In progress")
-        case .past: parts.append("Ended")
-        case .upcoming: break
-        }
-        if myShift != nil { parts.append(extraAreas.isEmpty ? "My shift" : "My shifts") }
-        parts.append(eventDisplayTitle)
-        if event.combinedMemberCount > 1 {
-            parts.append("\(event.combinedMemberCount) events, shared crew")
-        }
-        if showsCrewCoverage, let cov = event.coverage, cov.total > 0 {
-            parts.append("Crew \(cov.filled) of \(cov.total)")
-        }
-        parts.append(accessibilityTypeLabel)
-        if event.displayAllDay {
-            parts.append("All day")
-        } else if let shift = myShift {
-            let eventTime = event.startsAt.formatted(.dateTime.hour().minute())
-            let eventEndTime = event.endsAt.formatted(.dateTime.hour().minute())
-            if shift.workerType == "ST",
-               let callStartsAt = shift.callStartsAt,
-               let callEndsAt = shift.callEndsAt {
-                let callTime = callStartsAt.formatted(.dateTime.hour().minute())
-                let endTime = callEndsAt.formatted(.dateTime.hour().minute())
-                if calendarSame(callStartsAt, event.startsAt) {
-                    parts.append("Event \(eventTime) to \(endTime)")
-                } else {
-                    parts.append("Call \(callTime), event \(eventTime), end \(endTime)")
-                }
-            } else {
-                parts.append("Event \(eventTime) to \(eventEndTime)")
-            }
-            parts.append(([shift.area] + extraAreas).map(\.shiftAreaLabel).joined(separator: ", "))
-            parts.append(shift.gear.gearLabel)
-        } else {
-            parts.append(eventTimeLabel)
-        }
-        if let segment {
-            parts.append("Day \(segment.index) of \(segment.total)")
-        }
-        if let venueName {
-            parts.append(venueName)
-        }
-        return parts.joined(separator: ", ")
-    }
-
-    /// Shared with Event detail's hero via `CoverageChip` — the list and the
-    /// detail screen must report the same staffing the same way.
-    @ViewBuilder
-    private func coverageChip(_ cov: ShiftCoverage) -> some View {
-        CoverageChip(coverage: cov, emphasis: .dense)
-            .accessibilityHidden(true) // surfaced via the combined row label
-    }
-
-    /// The left rail always encodes the venue (home/away/neutral); "my shift"
-    /// is signalled by the card's accent stroke instead, so the two don't fight.
-    private var barColor: Color {
-        venueRailColor(for: event)
-    }
-
-    private var eventTimeLabel: String {
-        if event.displayAllDay { return "All day" }
-        let start = event.startsAt.formatted(.dateTime.hour().minute())
-        let end = event.endsAt.formatted(.dateTime.hour().minute())
-        return "\(start) – \(end)"
-    }
-}
-
-private func calendarSame(_ a: Date, _ b: Date) -> Bool {
-    abs(a.timeIntervalSince(b)) < 60
+/// A row's scroll identity. Multi-day events repeat under each day they
+/// cover, so the event id alone is not unique in the list. An empty week's
+/// placeholder uses its week start and an empty event id.
+private struct ScheduleRowAnchor: Hashable {
+    let day: Date
+    let eventId: String
 }
 
 // MARK: - Sport labels (mirrors src/lib/sports.ts)
 
-private func scheduleSportLabel(_ code: String) -> String {
+/// The current sport codes, without the legacy ones kept only for labelling.
+private let scheduleCurrentSportCodes = [
+    "MBB", "MXC", "FB", "MGOLF", "MHKY", "MROW", "MSOC", "MSWIM", "MTEN", "MTRACK", "WRES",
+    "WBB", "WXC", "WGOLF", "WHKY", "LROW", "WROW", "WSOC", "SB", "WSWIM", "WTEN", "WTRACK", "VB",
+]
+
+func scheduleSportLabel(_ code: String) -> String {
     let labels: [String: String] = [
         "MBB": "Men's Basketball", "MXC": "Men's Cross Country", "FB": "Football",
         "MGOLF": "Men's Golf", "MHKY": "Men's Hockey", "MROW": "Men's Rowing",

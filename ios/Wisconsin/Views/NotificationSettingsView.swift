@@ -13,6 +13,8 @@ struct NotificationSettingsView: View {
     @State private var isSendingTestPush = false
     @State private var testPushMessage: String?
     @State private var testPushSucceeded = false
+    @State private var showingCustomPause = false
+    @State private var customPauseUntil = Date().addingTimeInterval(3 * 60 * 60)
 
     var body: some View {
         List {
@@ -53,6 +55,10 @@ struct NotificationSettingsView: View {
             }
 
             if prefsVM.prefs != nil {
+                pauseSection
+            }
+
+            if prefsVM.supportsLevels, prefsVM.prefs?.quietHours != nil {
                 quietHoursSection
             }
 
@@ -106,52 +112,57 @@ struct NotificationSettingsView: View {
                     Text("Push alerts go to devices signed in to this account. The test checks this device only.")
                 }
 
-                Section {
-                    categoryToggle(
-                        title: "Checkout due reminders",
-                        description: "Notified before gear is due back.",
-                        category: .checkoutDue
-                    )
+                if prefsVM.supportsLevels {
+                    categoryLevelSections
+                } else {
+                    // Servers that predate per-category levels.
+                    Section {
+                        categoryToggle(
+                            title: "Checkout due reminders",
+                            description: "Notified before gear is due back.",
+                            category: .checkoutDue
+                        )
 
-                    categoryToggle(
-                        title: "Checkout overdue alerts",
-                        description: "Notified when gear is past due.",
-                        category: .checkoutOverdue
-                    )
+                        categoryToggle(
+                            title: "Checkout overdue alerts",
+                            description: "Notified when gear is past due.",
+                            category: .checkoutOverdue
+                        )
 
-                    categoryToggle(
-                        title: "Reservation updates",
-                        description: "Confirmation, pickup-ready, and cancellation notices.",
-                        category: .reservation
-                    )
+                        categoryToggle(
+                            title: "Reservation updates",
+                            description: "Confirmation, pickup-ready, and cancellation notices.",
+                            category: .reservation
+                        )
 
-                    categoryToggle(
-                        title: "License expiry reminders",
-                        description: "Notified when one of your licenses is approaching expiry.",
-                        category: .licenseExpiry
-                    )
+                        categoryToggle(
+                            title: "License expiry reminders",
+                            description: "Notified when one of your licenses is approaching expiry.",
+                            category: .licenseExpiry
+                        )
 
-                    categoryToggle(
-                        title: "Schedule updates",
-                        description: "Published shift assignments, removals, and call-time changes.",
-                        category: .schedule
-                    )
+                        categoryToggle(
+                            title: "Schedule updates",
+                            description: "Published shift assignments, removals, and call-time changes.",
+                            category: .schedule
+                        )
 
-                    categoryToggle(
-                        title: "Trade updates",
-                        description: "Claimed, approved, declined, completed, and expired shift trades.",
-                        category: .trade
-                    )
+                        categoryToggle(
+                            title: "Trade updates",
+                            description: "Claimed, approved, declined, completed, and expired shift trades.",
+                            category: .trade
+                        )
 
-                    categoryToggle(
-                        title: "Gear prep nudges",
-                        description: "Staff-triggered reminders to reserve or prepare gear.",
-                        category: .gearPrep
-                    )
-                } header: {
-                    Text("Notification Types")
-                } footer: {
-                    Text("Choose which push alerts can reach you.")
+                        categoryToggle(
+                            title: "Gear prep nudges",
+                            description: "Staff-triggered reminders to reserve or prepare gear.",
+                            category: .gearPrep
+                        )
+                    } header: {
+                        Text("Notification Types")
+                    } footer: {
+                        Text("Choose which push alerts can reach you.")
+                    }
                 }
             }
         }
@@ -185,7 +196,7 @@ struct NotificationSettingsView: View {
     }
 
     @ViewBuilder
-    private var quietHoursSection: some View {
+    private var pauseSection: some View {
         Section {
             if let pauseDate = prefsVM.pausedUntilDate {
                 HStack(spacing: 12) {
@@ -209,14 +220,217 @@ struct NotificationSettingsView: View {
                 .disabled(prefsVM.saving)
             } else {
                 pauseButton(title: "Pause 1 hour", seconds: 60 * 60)
+                Button {
+                    Task { await prefsVM.pause(until: NotificationPrefsViewModel.tomorrowMorning()) }
+                } label: {
+                    Text("Pause until tomorrow morning")
+                }
+                .disabled(prefsVM.saving)
                 pauseButton(title: "Pause 1 day", seconds: 24 * 60 * 60)
                 pauseButton(title: "Pause 1 week", seconds: 7 * 24 * 60 * 60)
+                Button {
+                    customPauseUntil = Date().addingTimeInterval(3 * 60 * 60)
+                    showingCustomPause = true
+                } label: {
+                    Text("Pause until…")
+                }
+                .disabled(prefsVM.saving)
             }
         } header: {
             Text("Pause alerts")
         } footer: {
             Text("Pausing mutes push and email alerts until the selected time. In-app notifications remain available.")
         }
+        .sheet(isPresented: $showingCustomPause) {
+            customPauseSheet
+        }
+    }
+
+    private var customPauseSheet: some View {
+        NavigationStack {
+            Form {
+                DatePicker(
+                    "Pause until",
+                    selection: $customPauseUntil,
+                    in: Date().addingTimeInterval(5 * 60)...Date().addingTimeInterval(30 * 24 * 60 * 60),
+                    displayedComponents: [.date, .hourAndMinute]
+                )
+                .datePickerStyle(.graphical)
+            }
+            .navigationTitle("Pause alerts")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { showingCustomPause = false }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Pause") {
+                        showingCustomPause = false
+                        Task { await prefsVM.pause(until: customPauseUntil) }
+                    }
+                }
+            }
+        }
+        .presentationDetents([.large])
+    }
+
+    // MARK: Quiet hours
+
+    @ViewBuilder
+    private var quietHoursSection: some View {
+        if let quiet = prefsVM.prefs?.quietHours {
+            Section {
+                Toggle(isOn: Binding(
+                    get: { quiet.enabled },
+                    set: { value in prefsVM.updateQuietHours { $0.enabled = value } }
+                )) {
+                    Text("Quiet hours")
+                        .font(.subheadline.weight(.medium))
+                }
+                .tint(Color.statusText(.green))
+                .disabled(prefsVM.loading)
+                .accessibilityHint("Alerts arrive silently during a set time each week.")
+
+                if quiet.enabled {
+                    quietTimePicker("From", time: quiet.start) { value in
+                        prefsVM.updateQuietHours({ $0.start = value }, debounce: true)
+                    }
+                    quietTimePicker("Until", time: quiet.end) { value in
+                        prefsVM.updateQuietHours({ $0.end = value }, debounce: true)
+                    }
+                    quietDaysRow(quiet.days)
+
+                    Toggle(isOn: Binding(
+                        get: { quiet.allowUrgent },
+                        set: { value in prefsVM.updateQuietHours { $0.allowUrgent = value } }
+                    )) {
+                        Text("Let urgent alerts through")
+                            .font(.subheadline.weight(.medium))
+                    }
+                    .tint(Color.statusText(.green))
+                    .accessibilityHint("Overdue gear alerts still sound during quiet hours.")
+                }
+            } header: {
+                Text("Quiet hours")
+            } footer: {
+                Text(quietHoursFooter(quiet))
+            }
+        }
+    }
+
+    private func quietHoursFooter(_ quiet: NotificationQuietHours) -> String {
+        guard quiet.enabled else {
+            return "Silence alerts on a schedule, like overnight. They still arrive in Notification Center."
+        }
+        let overnight = quiet.end <= quiet.start
+        let window = overnight ? " A window that ends before it starts runs overnight." : ""
+        return "Alerts during quiet hours arrive silently in Notification Center. Times are Central Time.\(window)"
+    }
+
+    private func quietTimePicker(_ title: String, time: String, onChange: @escaping (String) -> Void) -> some View {
+        DatePicker(
+            title,
+            selection: Binding(
+                get: { NotificationPrefsViewModel.quietHoursDate(time) },
+                set: { onChange(NotificationPrefsViewModel.quietHoursTime($0)) }
+            ),
+            displayedComponents: .hourAndMinute
+        )
+        .font(.subheadline.weight(.medium))
+        .environment(\.timeZone, NotificationPrefsViewModel.appTimeZone)
+    }
+
+    private static let weekdays: [(index: Int, short: String, name: String)] = [
+        (0, "S", "Sunday"), (1, "M", "Monday"), (2, "T", "Tuesday"), (3, "W", "Wednesday"),
+        (4, "T", "Thursday"), (5, "F", "Friday"), (6, "S", "Saturday"),
+    ]
+
+    private func quietDaysRow(_ days: [Int]) -> some View {
+        HStack(spacing: 0) {
+            ForEach(Self.weekdays, id: \.index) { day in
+                let selected = days.contains(day.index)
+                Button {
+                    prefsVM.updateQuietHours { quiet in
+                        if selected {
+                            quiet.days.removeAll { $0 == day.index }
+                        } else {
+                            quiet.days = (quiet.days + [day.index]).sorted()
+                        }
+                    }
+                } label: {
+                    Text(day.short)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(selected ? Color.statusText(.blue) : Color.secondary)
+                        .frame(width: 40, height: 40)
+                        .background {
+                            Circle().fill(selected ? Color.statusBackground(.blue) : Color(.tertiarySystemFill))
+                        }
+                }
+                .buttonStyle(.plain)
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .accessibilityLabel(day.name)
+                .accessibilityAddTraits(selected ? .isSelected : [])
+            }
+        }
+        .padding(.vertical, 2)
+    }
+
+    // MARK: Category levels
+
+    @ViewBuilder
+    private var categoryLevelSections: some View {
+        let groups = prefsVM.categoryGroups
+        ForEach(Array(groups.enumerated()), id: \.element.id) { index, group in
+            Section {
+                ForEach(group.entries) { entry in
+                    levelRow(entry)
+                }
+            } header: {
+                Text(group.title)
+            } footer: {
+                if index == groups.count - 1 {
+                    Text("Silent alerts go to Notification Center without sound. Off also stops email for that type. In-app notifications always show in your inbox.")
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func levelRow(_ entry: NotificationCategoryEntry) -> some View {
+        if entry.push {
+            Picker(selection: Binding(
+                get: { prefsVM.level(for: entry) },
+                set: { level in Task { await prefsVM.setLevel(level, for: entry) } }
+            )) {
+                ForEach(NotificationPushLevel.allCases) { level in
+                    Text(level.label).tag(level)
+                }
+            } label: {
+                Text(entry.label)
+                    .font(.subheadline.weight(.medium))
+            }
+            .pickerStyle(.menu)
+            .disabled(prefsVM.saving)
+            .accessibilityHint(levelHint(entry))
+        } else {
+            // Email-only: a level would be meaningless, so it is on or off.
+            Toggle(isOn: Binding(
+                get: { prefsVM.level(for: entry) != .off },
+                set: { on in Task { await prefsVM.setLevel(on ? .standard : .off, for: entry) } }
+            )) {
+                Text(entry.label)
+                    .font(.subheadline.weight(.medium))
+            }
+            .tint(Color.statusText(.green))
+            .disabled(prefsVM.saving)
+            .accessibilityHint(levelHint(entry))
+        }
+    }
+
+    private func levelHint(_ entry: NotificationCategoryEntry) -> String {
+        prefsVM.isPaused
+            ? "\(entry.description) Alerts are currently paused; this choice applies when alerts resume."
+            : entry.description
     }
 
     private func pauseButton(title: String, seconds: TimeInterval) -> some View {

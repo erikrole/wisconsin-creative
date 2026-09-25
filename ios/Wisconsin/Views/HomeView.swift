@@ -218,9 +218,11 @@ struct HomeView: View {
     private func routePendingSettings() {
         guard appState.pendingSettingsRoute else { return }
         appState.pendingSettingsRoute = false
+        let destination = appState.pendingSettingsDestination
+        appState.pendingSettingsDestination = .settings
         navigationPath = NavigationPath()
         rememberSceneDestination("profileSettings")
-        navigationPath.append(ProfileRoute(initialDestination: .settings))
+        navigationPath.append(ProfileRoute(initialDestination: destination))
     }
 
     private func consumePendingHomeRoutes() {

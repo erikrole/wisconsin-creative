@@ -25,15 +25,19 @@ final class NotificationsViewModel {
     private let sessionBoundary = authSessionBoundary.capture()
     private let api: any NotificationInboxAPI
     private let refreshUnread: () async -> Void
+    /// Clears Notification Center alerts for rows read here; `nil` means all.
+    private let clearDelivered: (Set<String>?) async -> Void
     private let pageSize = 20
     private var lastMarkedUnreadIDs: [String] = []
     private var undoTask: Task<Void, Never>?
     private var loadRequests = LatestRequestGeneration()
 
     init(api: any NotificationInboxAPI = APIClient.shared,
-         refreshUnread: @escaping () async -> Void = { await sharedAppState?.refreshUnread() }) {
+         refreshUnread: @escaping () async -> Void = { await sharedAppState?.refreshUnread() },
+         clearDelivered: @escaping (Set<String>?) async -> Void = { await DeliveredNotifications.clear(inboxRowIDs: $0) }) {
         self.api = api
         self.refreshUnread = refreshUnread
+        self.clearDelivered = clearDelivered
     }
 
     var canUndoMarkAll: Bool { !lastMarkedUnreadIDs.isEmpty }
@@ -51,6 +55,7 @@ final class NotificationsViewModel {
                 isLoading = false
             }
         }
+        let startedAt = Date()
         do {
             let resp = try await api.notifications(unreadOnly: false, limit: pageSize, offset: 0)
             guard loadRequests.owns(requestToken), authSessionBoundary.owns(sessionBoundary), !Task.isCancelled else { return }
@@ -58,9 +63,11 @@ final class NotificationsViewModel {
             total = resp.total
             nextOffset = resp.data.count
             unreadCount = resp.unreadCount
+            recordLoad(startedAt: startedAt, succeeded: true)
         } catch {
             guard loadRequests.owns(requestToken), authSessionBoundary.owns(sessionBoundary), !Task.isCancelled else { return }
             self.error = error.localizedDescription
+            recordLoad(startedAt: startedAt, succeeded: false)
         }
     }
 
@@ -92,6 +99,12 @@ final class NotificationsViewModel {
         }
     }
 
+    /// Load timing for the live inbox only; test stubs and fixtures stay quiet.
+    private func recordLoad(startedAt: Date, succeeded: Bool) {
+        guard api is APIClient else { return }
+        Task { await NotificationTelemetry.recordSurfaceLoad("notifications", startedAt: startedAt, succeeded: succeeded) }
+    }
+
     var hasMore: Bool { nextOffset < total }
     var paginationOffset: Int { nextOffset }
 
@@ -106,6 +119,7 @@ final class NotificationsViewModel {
             guard authSessionBoundary.owns(sessionBoundary) else { return }
             notifications = notifications.map { $0.id == id ? $0.asRead : $0 }
             unreadCount = max(0, unreadCount - 1)
+            await clearDelivered([id])
             await refreshUnread()
         } catch {
             await reconcileReadFailure()
@@ -124,6 +138,7 @@ final class NotificationsViewModel {
             notifications = notifications.map { $0.asRead }
             unreadCount = 0
             scheduleUndoExpiry()
+            await clearDelivered(nil)
             await refreshUnread()
         } catch {
             await reconcileReadFailure()
@@ -177,7 +192,7 @@ final class NotificationsViewModel {
 private extension AppNotification {
     var asRead: AppNotification {
         AppNotification(id: id, type: type, title: title, body: body,
-                        readAt: readAt ?? Date(), createdAt: createdAt, payload: payload)
+                        readAt: readAt ?? Date(), createdAt: createdAt, payload: payload, sentAt: sentAt)
     }
 }
 
@@ -250,6 +265,16 @@ struct NotificationsSheet: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close") { dismiss() }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        onRoute?(.notificationSettings)
+                        dismiss()
+                    } label: {
+                        Label("Notification Settings", systemImage: "gearshape")
+                    }
+                    .labelStyle(.iconOnly)
+                    .accessibilityHint("Choose which alerts reach you and how.")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     if vm.unreadCount > 0 {
@@ -402,11 +427,11 @@ struct NotificationsSheet: View {
         var older: [AppNotification] = []
 
         for n in vm.notifications {
-            if cal.isDateInToday(n.createdAt) {
+            if cal.isDateInToday(n.displayDate) {
                 today.append(n)
-            } else if cal.isDateInYesterday(n.createdAt) {
+            } else if cal.isDateInYesterday(n.displayDate) {
                 yesterday.append(n)
-            } else if let daysAgo = cal.dateComponents([.day], from: n.createdAt, to: now).day, daysAgo < 7 {
+            } else if let daysAgo = cal.dateComponents([.day], from: n.displayDate, to: now).day, daysAgo < 7 {
                 thisWeek.append(n)
             } else {
                 older.append(n)
@@ -454,7 +479,7 @@ private struct NotificationRow: View {
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                Text(notification.createdAt.relativeLabel)
+                Text(notification.displayDate.relativeLabel)
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
@@ -480,7 +505,7 @@ private struct NotificationRow: View {
     private var accessibilityLabel: String {
         var parts = [notification.title]
         if let body = notification.body { parts.append(body) }
-        parts.append(notification.createdAt.relativeLabel)
+        parts.append(notification.displayDate.relativeLabel)
         if notification.isUnread { parts.append("Unread") }
         return parts.joined(separator: ", ")
     }

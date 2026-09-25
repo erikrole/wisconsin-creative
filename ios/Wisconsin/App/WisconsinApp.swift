@@ -96,6 +96,8 @@ struct WisconsinApp: App {
             CheckoutReturnLiveActivityManager.shared.cancelObserverWork()
             AppDelegate.clearRemoteNotificationsForSignedOutUser()
             SearchRecentsStorage.clear()
+            ScheduleWindowCache.clear()
+            ShiftCalendarTokenStore.removeAll()
             // A Home Screen widget renders without unlocking the app, so the
             // previous account's shift and gear cannot outlive their session.
             GearWidgetPublisher.clear()
@@ -187,6 +189,12 @@ struct WisconsinApp: App {
         }
         switch settings.authorizationStatus {
         case .authorized, .provisional, .ephemeral:
+            // Re-requesting decided permission never prompts; it adds the iOS
+            // Settings link for people who allowed notifications before the
+            // app offered one.
+            if settings.providesAppNotificationSettings == false {
+                _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: PushAuthorization.options)
+            }
             appState.requestRemoteNotificationRegistration()
         default:
             appState.pushRegistrationState = .unknown
@@ -380,6 +388,7 @@ struct RootView: View {
             await profileCompletion.load(for: user)
             guard session.currentUser?.shellIdentity == user.shellIdentity else { return }
             await APIClient.shared.recordProductEvent(eventName: "app_opened", surface: "home")
+            await NotificationTelemetry.recordPushStatusIfDue(registration: appState.pushRegistrationState)
         }
         .task(id: "badge-rewards-\(session.currentUser?.shellIdentity ?? "signed-out")") {
             earnedBadgeQueue.removeAll()

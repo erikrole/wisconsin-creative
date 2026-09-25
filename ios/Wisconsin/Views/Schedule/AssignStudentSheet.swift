@@ -15,6 +15,11 @@ struct AssignStudentSheet: View {
     let replacementWorkerType: String?
     let replacingUserName: String?
     let onAssigned: (WorkingScheduleEditor) -> Void
+    /// Reloads the crew after another session changed it and returns the new
+    /// draft version, so a conflicted assignment retries once instead of
+    /// failing the same way on every Retry.
+    var refreshWorkingVersion: (() async -> Int?)?
+    @State private var workingVersionOverride: Int?
 
     init(
         shiftId: String,
@@ -28,7 +33,8 @@ struct AssignStudentSheet: View {
         sportCode: String?,
         replacementWorkerType: String? = nil,
         replacingUserName: String? = nil,
-        onAssigned: @escaping (WorkingScheduleEditor) -> Void
+        onAssigned: @escaping (WorkingScheduleEditor) -> Void,
+        refreshWorkingVersion: (() async -> Int?)? = nil
     ) {
         self.shiftId = shiftId
         self.workingCopyShiftGroupId = workingCopyShiftGroupId
@@ -42,6 +48,7 @@ struct AssignStudentSheet: View {
         self.replacementWorkerType = replacementWorkerType
         self.replacingUserName = replacingUserName
         self.onAssigned = onAssigned
+        self.refreshWorkingVersion = refreshWorkingVersion
     }
 
     @Environment(\.dismiss) private var dismiss
@@ -232,9 +239,6 @@ struct AssignStudentSheet: View {
 
     private var assignmentContextCard: some View {
         HStack(spacing: 12) {
-            RoundedRectangle(cornerRadius: 2, style: .continuous)
-                .fill(Color.statusText(.purple))
-                .frame(width: 4, height: 58)
             VStack(alignment: .leading, spacing: 4) {
                 Text(eventTitle)
                     .font(.headline)
@@ -400,31 +404,51 @@ struct AssignStudentSheet: View {
             Haptics.warning()
             return
         }
-        do {
-            let editor: WorkingScheduleEditor
-            if let replacementWorkerType {
-                editor = try await APIClient.shared.convertAndReplaceWorkingScheduleSlot(
-                    shiftGroupId: workingCopyShiftGroupId,
-                    expectedVersion: expectedWorkingVersion,
-                    slotKey: shiftId,
-                    workerType: replacementWorkerType,
-                    userId: user.id
-                )
-            } else {
-                editor = try await APIClient.shared.assignWorkingScheduleSlot(
-                    shiftGroupId: workingCopyShiftGroupId,
-                    expectedVersion: expectedWorkingVersion,
-                    slotKey: shiftId,
-                    userId: user.id
-                )
+        var version = workingVersionOverride ?? expectedWorkingVersion
+        var canRetryConflict = refreshWorkingVersion != nil
+        while true {
+            do {
+                let editor: WorkingScheduleEditor
+                if let replacementWorkerType {
+                    editor = try await APIClient.shared.convertAndReplaceWorkingScheduleSlot(
+                        shiftGroupId: workingCopyShiftGroupId,
+                        expectedVersion: version,
+                        slotKey: shiftId,
+                        workerType: replacementWorkerType,
+                        userId: user.id
+                    )
+                } else {
+                    editor = try await APIClient.shared.assignWorkingScheduleSlot(
+                        shiftGroupId: workingCopyShiftGroupId,
+                        expectedVersion: version,
+                        slotKey: shiftId,
+                        userId: user.id
+                    )
+                }
+                Haptics.success()
+                onAssigned(editor)
+                dismiss()
+                return
+            } catch APIError.conflict(let message) {
+                // Someone else edited the crew. Pick up the new version and
+                // try this same person once more; a second conflict is real.
+                if canRetryConflict, let refreshWorkingVersion,
+                   let refreshed = await refreshWorkingVersion() {
+                    canRetryConflict = false
+                    version = refreshed
+                    workingVersionOverride = refreshed
+                    continue
+                }
+                retryUser = user
+                assignError = message
+                Haptics.warning()
+                return
+            } catch {
+                retryUser = user
+                assignError = error.localizedDescription
+                Haptics.warning()
+                return
             }
-            Haptics.success()
-            onAssigned(editor)
-            dismiss()
-        } catch {
-            retryUser = user
-            assignError = error.localizedDescription
-            Haptics.warning()
         }
     }
 }

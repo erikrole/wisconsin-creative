@@ -103,6 +103,11 @@ Schedule/PostTradeSheet.swift          | post-trade                  | audit
 Schedule/TradeBoardSheet.swift         | trade-board                 | audit
 Schedule/AddShiftSheet.swift           | add-shift                   | audit
 Schedule/AssignStudentSheet.swift      | assign-student              | audit
+Schedule/ScheduleEventRow.swift        |                             | exempt-shared
+Schedule/ScheduleQuickFilterBar.swift  |                             | exempt-shared
+Schedule/ScheduleWeekStrip.swift       |                             | exempt-shared
+Schedule/PublishedScheduleView.swift   |                             | exempt-shared
+Schedule/ScheduleCalendarSubscriptionSheet.swift |                   | exempt-shared
 Search/GlobalSearchSheet.swift         | global-search               | audit
 Search/QRScannerSheet.swift            | scan                        | audit
 Kiosk/KioskActivationView.swift        | kiosk-activation            | audit

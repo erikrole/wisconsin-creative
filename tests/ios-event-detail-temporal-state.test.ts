@@ -3,7 +3,7 @@ import { source } from "./_helpers/source";
 
 describe("iOS Event detail temporal state", () => {
   const models = source("ios/Wisconsin/Models/ScheduleModels.swift");
-  const scheduleView = source("ios/Wisconsin/Views/ScheduleView.swift");
+  const scheduleView = source("ios/Wisconsin/Views/Schedule/ScheduleEventRow.swift");
   const eventDetail = source("ios/Wisconsin/Views/EventDetailSheet.swift");
 
   it("keeps one definition of where an event sits relative to now", () => {
@@ -30,12 +30,14 @@ describe("iOS Event detail temporal state", () => {
   });
 
   it("keeps the list row's finished and live treatments", () => {
-    expect(scheduleView).toContain("timeState == .past ? 0.55 : 1");
-    // Live reads entirely in the time gutter now -- red time plus the word --
-    // rather than a filled badge inside a heavier red border. No row wash: a
-    // tinted card put green venue rails against pink on every live home game.
+    // Finished rows dim their text rather than fading the whole cell, so the
+    // grouped surface stays even down the section.
+    expect(scheduleView).toContain("private var isPast: Bool { timeState == .past }");
+    expect(scheduleView).toContain(".foregroundStyle(isPast ? Color.secondary : Color.primary)");
+    // Live reads entirely in the time column -- the word in brand red -- with
+    // no row wash.
     expect(scheduleView).toContain('Text("Now")');
-    expect(scheduleView).toContain("timeState == .live ? Color.brandPrimary : Color.primary");
+    expect(scheduleView).toContain("if timeState == .live {");
     expect(scheduleView).not.toContain("Color.statusBackground(.red) : Color.cardSurface");
   });
 

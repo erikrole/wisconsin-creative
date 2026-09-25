@@ -7,7 +7,13 @@ struct AddShiftSheet: View {
     let eventTitle: String
     let defaultStart: Date
     let defaultEnd: Date
+    /// All-day events carry no call time, so the custom window is not offered.
+    var isAllDay = false
     let onAdded: (WorkingScheduleEditor) -> Void
+    /// Reloads the crew after another session changed it and returns the new
+    /// draft version, so a conflicted add retries once.
+    var refreshWorkingVersion: (() async -> Int?)?
+    @State private var workingVersionOverride: Int?
 
     @Environment(\.dismiss) private var dismiss
     @State private var area: ShiftAreaOption = .video
@@ -24,14 +30,18 @@ struct AddShiftSheet: View {
         eventTitle: String,
         defaultStart: Date,
         defaultEnd: Date,
-        onAdded: @escaping (WorkingScheduleEditor) -> Void
+        isAllDay: Bool = false,
+        onAdded: @escaping (WorkingScheduleEditor) -> Void,
+        refreshWorkingVersion: (() async -> Int?)? = nil
     ) {
         self.shiftGroupId = shiftGroupId
         self.expectedWorkingVersion = expectedWorkingVersion
         self.eventTitle = eventTitle
         self.defaultStart = defaultStart
         self.defaultEnd = defaultEnd
+        self.isAllDay = isAllDay
         self.onAdded = onAdded
+        self.refreshWorkingVersion = refreshWorkingVersion
         _startsAt = State(initialValue: defaultStart)
         _endsAt = State(initialValue: defaultEnd)
     }
@@ -47,7 +57,7 @@ struct AddShiftSheet: View {
                     contextCard
                     slotCard
                     if workerType == .student {
-                        scheduleCard
+                        if !isAllDay { scheduleCard }
                     } else {
                         staffScheduleCard
                     }
@@ -101,10 +111,6 @@ struct AddShiftSheet: View {
 
     private var contextCard: some View {
         HStack(spacing: 12) {
-            RoundedRectangle(cornerRadius: 2, style: .continuous)
-                .fill(Color.statusText(.purple))
-                .frame(width: 4, height: 54)
-
             VStack(alignment: .leading, spacing: 4) {
                 Text(eventTitle)
                     .font(.headline)
@@ -246,18 +252,33 @@ struct AddShiftSheet: View {
         isSubmitting = true
         error = nil
         defer { isSubmitting = false }
+        var version = workingVersionOverride ?? expectedWorkingVersion
+        var canRetryConflict = refreshWorkingVersion != nil
         do {
-            let editor = try await APIClient.shared.addWorkingScheduleSlot(
-                shiftGroupId: shiftGroupId,
-                expectedVersion: expectedWorkingVersion,
-                area: area.rawValue,
-                workerType: workerType.rawValue,
-                callStartsAt: workerType == .student && customizeTimes ? startsAt : nil,
-                callEndsAt: workerType == .student && customizeTimes ? endsAt : nil
-            )
-            Haptics.success()
-            onAdded(editor)
-            dismiss()
+            while true {
+                do {
+                    let editor = try await APIClient.shared.addWorkingScheduleSlot(
+                        shiftGroupId: shiftGroupId,
+                        expectedVersion: version,
+                        area: area.rawValue,
+                        workerType: workerType.rawValue,
+                        callStartsAt: workerType == .student && customizeTimes ? startsAt : nil,
+                        callEndsAt: workerType == .student && customizeTimes ? endsAt : nil
+                    )
+                    Haptics.success()
+                    onAdded(editor)
+                    dismiss()
+                    return
+                } catch APIError.conflict {
+                    // Another session edited the crew: retry once against
+                    // the new version, then surface a second conflict.
+                    guard canRetryConflict, let refreshWorkingVersion,
+                          let refreshed = await refreshWorkingVersion() else { throw APIError.conflict("Someone else changed this crew. Close this sheet and try again.") }
+                    canRetryConflict = false
+                    version = refreshed
+                    workingVersionOverride = refreshed
+                }
+            }
         } catch {
             self.error = error.localizedDescription
             Haptics.warning()

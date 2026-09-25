@@ -37,7 +37,7 @@ describe("iOS Home shifts deep link", () => {
     // Read on appear as well as on change, because the tab switch and the flag
     // can arrive in either order.
     expect(schedule).toContain(".onChange(of: appState.pendingScheduleMyShifts)");
-    expect(schedule).toContain("consumePendingMyShifts()\n                await vm.load()");
+    expect(schedule).toContain("consumePendingMyShifts()\n                vm.cacheOwnerId = session.currentUser?.id");
   });
 
   it("lands on the list, where the filter is legible", () => {
@@ -47,8 +47,9 @@ describe("iOS Home shifts deep link", () => {
       schedule.indexOf("private var canSeePastEvents"),
     );
 
-    // Calendar mode shows dots rather than rows, so a filtered result set is
-    // much harder to read there.
-    expect(helper).toContain("viewMode = .list");
+    // Schedule is one master list now, so turning the filter on is the whole
+    // landing; there is no mode to switch back to.
+    expect(helper).toContain("myShiftsOnly = true");
+    expect(schedule).not.toContain("viewMode");
   });
 });

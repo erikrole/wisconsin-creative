@@ -75,14 +75,98 @@ final class ScheduleScreenshotUITests: XCTestCase {
         app.swipeUp(velocity: .slow)
         attach(app, name: "schedule-bottom")
 
-        // Calendar mode shares EventRow with the list, so a row change lands
-        // here too. Capture it rather than assuming it survived.
-        let calendar = app.buttons["Calendar"]
-        if calendar.waitForExistence(timeout: 5) {
-            calendar.tap()
-            _ = app.staticTexts["Volleyball vs Nebraska"].waitForExistence(timeout: 10)
+        // Scrolled away from today, the week strip offers Today, which jumps
+        // the one master list back rather than switching modes.
+        let today = app.buttons["Today"]
+        if today.waitForExistence(timeout: 5) {
+            today.tap()
+            XCTAssertTrue(app.staticTexts["Volleyball vs Nebraska"].waitForExistence(timeout: 5),
+                          "Today did not scroll the list back")
+            Thread.sleep(forTimeInterval: 1) // let the scroll animation settle
+            attach(app, name: "schedule-jumped-today")
+        }
+
+        // A week-strip day jumps to that day's section in the same list.
+        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: .now) ?? .now
+        let tomorrowLabel = tomorrow.formatted(.dateTime.weekday(.wide).month(.wide).day())
+        let tomorrowCell = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", tomorrowLabel)).firstMatch
+        if tomorrowCell.waitForExistence(timeout: 5) {
+            tomorrowCell.tap()
+            XCTAssertTrue(app.staticTexts["Football vs Ohio State"].waitForExistence(timeout: 5),
+                          "Tapping tomorrow did not scroll to its section")
+            Thread.sleep(forTimeInterval: 1) // let the scroll animation settle
+            attach(app, name: "schedule-jumped-tomorrow")
+        }
+
+        // The month title expands the week jump bar into a month grid above
+        // the same list. Capture it rather than assuming it survived.
+        let monthToggle = app.buttons["schedule-month-toggle"]
+        if monthToggle.waitForExistence(timeout: 5) {
+            monthToggle.tap()
             attach(app, name: "schedule-calendar")
         }
+    }
+
+    /// The list starts at today and loads future weeks as it scrolls. The
+    /// past sits behind a deliberate pull at the top: a hard flick stops on
+    /// today, and a held pull past the threshold reveals two weeks at a time.
+    /// The fixture filters by the requested window, so these events only
+    /// exist once their weeks load.
+    func testScheduleLoadsWeeksWhileScrolling() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "schedule"
+        app.launchArguments += ["-WisconsinThemeChoice", "light"]
+        app.launch()
+
+        XCTAssertTrue(app.staticTexts["Volleyball vs Nebraska"].waitForExistence(timeout: 20),
+                      "Fixture events never loaded")
+
+        // Flicking down from today does not run into the past.
+        app.swipeDown(velocity: .fast)
+        Thread.sleep(forTimeInterval: 1)
+        XCTAssertFalse(app.staticTexts["Wrestling vs Iowa"].exists, "A flick revealed past events")
+        attach(app, name: "schedule-flick-stops-at-today")
+
+        // A held pull past the threshold reveals the most recent past weeks.
+        let window = app.windows.firstMatch
+        func pullDown() {
+            let start = window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.42))
+            let end = window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.85))
+            start.press(forDuration: 0.1, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.4)
+        }
+        pullDown()
+        XCTAssertTrue(app.staticTexts["Wrestling vs Iowa"].waitForExistence(timeout: 5),
+                      "A deliberate pull did not reveal earlier weeks")
+        Thread.sleep(forTimeInterval: 1)
+        attach(app, name: "schedule-earlier-weeks")
+
+        let later = app.staticTexts["Men's Basketball vs Marquette"]
+        for _ in 0..<30 where !later.exists {
+            app.swipeUp(velocity: .fast)
+        }
+        XCTAssertTrue(later.waitForExistence(timeout: 5), "Scrolling down did not load later weeks")
+        Thread.sleep(forTimeInterval: 1)
+        attach(app, name: "schedule-later-weeks")
+
+        // Back in the future and at rest, the past folds away: flicking all
+        // the way up stops on today again.
+        for _ in 0..<12 {
+            app.swipeDown(velocity: .fast)
+        }
+        Thread.sleep(forTimeInterval: 1)
+        XCTAssertFalse(app.staticTexts["Wrestling vs Iowa"].exists, "The past stayed open after leaving it")
+        attach(app, name: "schedule-back-to-today")
+    }
+
+    func testScheduleDarkCapture() throws {
+        let app = XCUIApplication()
+        app.launchEnvironment["GT_PERFORMANCE_SCENARIO"] = "schedule"
+        app.launchArguments += ["-WisconsinThemeChoice", "dark"]
+        app.launch()
+
+        XCTAssertTrue(app.staticTexts["Volleyball vs Nebraska"].waitForExistence(timeout: 20),
+                      "Fixture events never loaded")
+        attach(app, name: "schedule-dark")
     }
 
     func testScheduleAccessibilityCaptures() throws {
@@ -433,12 +517,18 @@ final class NotificationSettingsScreenshotUITests: XCTestCase {
 
         XCTAssertTrue(app.navigationBars["Notifications"].waitForExistence(timeout: 20),
                       "Notifications never rendered")
-        XCTAssertTrue(app.staticTexts["Push alerts"].waitForExistence(timeout: 15),
+        // The fixture's account pause renders near the top on every layout;
+        // lower rows (Push alerts) are lazily built only once scrolled to.
+        XCTAssertTrue(app.staticTexts["Alerts paused"].waitForExistence(timeout: 15),
                       "Notification preference fixture never rendered")
 
         attach(app, name: "notifications-top")
         app.swipeUp(velocity: .slow)
         attach(app, name: "notifications-scrolled")
+        app.swipeUp(velocity: .slow)
+        attach(app, name: "notifications-scrolled-2")
+        app.swipeUp(velocity: .slow)
+        attach(app, name: "notifications-bottom")
     }
 
     private func attach(_ app: XCUIApplication, name: String) {
@@ -584,7 +674,7 @@ final class TradeBoardReviewScreenshotUITests: XCTestCase {
                       "Trade Board never rendered")
         // Wait on fixture rows, not the section chrome: the queue header renders
         // before the trades arrive.
-        XCTAssertTrue(app.staticTexts["Staff Review"].waitForExistence(timeout: 15),
+        XCTAssertTrue(app.staticTexts["Admin Review"].waitForExistence(timeout: 15),
                       "Review queue never appeared")
         XCTAssertTrue(app.staticTexts["football vs Minnesota"].waitForExistence(timeout: 15),
                       "Fixture claims never loaded")
@@ -599,7 +689,7 @@ final class TradeBoardReviewScreenshotUITests: XCTestCase {
 
         XCTAssertTrue(app.navigationBars["Trade Board"].waitForExistence(timeout: 20),
                       "Trade Board never rendered")
-        XCTAssertTrue(app.staticTexts["Waiting on Staff"].waitForExistence(timeout: 15),
+        XCTAssertTrue(app.staticTexts["Waiting on Admin"].waitForExistence(timeout: 15),
                       "Waiting section never appeared")
 
         attach(app, name: "trade-board-student-waiting")

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { source } from "./_helpers/source";
+import { scheduleSurfaceSource, source } from "./_helpers/source";
 
 describe("iOS collaborator Published Schedule redesign", () => {
-  const schedule = source("ios/Wisconsin/Views/ScheduleView.swift");
+  const schedule = scheduleSurfaceSource();
   const apiClient = source("ios/Wisconsin/Core/APIClient.swift");
   const service = source("src/lib/services/collaborator-schedule.ts");
 
@@ -20,7 +20,7 @@ describe("iOS collaborator Published Schedule redesign", () => {
     expect(schedule).toContain("private struct PublishedEventRow: View");
     expect(schedule).toContain("Dictionary(grouping: events)");
     expect(schedule).toContain("ScheduleDateHeader(date: group.date");
-    expect(schedule).toContain("StatusRail(color: publishedEventRailColor(event.event))");
+    expect(schedule).toContain("VenueDot(color: publishedEventRailColor(event.event))");
     expect(schedule).toContain("PublishedCrewAvatarStack(crew: event.crew)");
     expect(schedule).toContain("PublishedEventRowSkeleton()");
     expect(schedule).toContain("if !events.isEmpty, let refreshError");

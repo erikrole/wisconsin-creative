@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { source } from "./_helpers/source";
+import { scheduleSurfaceSource, source } from "./_helpers/source";
 
 function sliceBetween(sourceText: string, start: string, end: string) {
   const startIndex = sourceText.indexOf(start);
@@ -10,111 +10,91 @@ function sliceBetween(sourceText: string, start: string, end: string) {
 }
 
 describe("iOS Schedule UI cleanup", () => {
-  it("keeps dense filters behind one native filter sheet", () => {
+  it("keeps filters visible as toolbar toggles and chips, not a sheet", () => {
     const scheduleView = source("ios/Wisconsin/Views/ScheduleView.swift");
-    const controlStrip = sliceBetween(
+    const filterBar = source("ios/Wisconsin/Views/Schedule/ScheduleQuickFilterBar.swift");
+    const toolbar = sliceBetween(
       scheduleView,
-      "private var scheduleControlStrip: some View",
-      "@ViewBuilder\n    private func eventList",
-    );
-    const filterSheet = sliceBetween(
-      scheduleView,
-      "private struct ScheduleFilterSheet",
-      "// MARK: - Calendar Subscription",
+      "private struct ScheduleRootToolbar: ToolbarContent",
+      "private struct InternalScheduleView: View",
     );
 
-    expect(scheduleView).toContain("@State private var showFilters = false");
+    // One master list: no List/Calendar mode switch and no filter sheet.
+    expect(scheduleView).not.toContain("enum ScheduleViewMode");
+    expect(scheduleView).not.toContain('Picker("Schedule view"');
+    expect(scheduleView).not.toContain("ScheduleFilterSheet");
+    expect(scheduleView).not.toContain("showFilters");
     expect(scheduleView).toContain("@State private var myShiftsOnly = false");
-    expect(scheduleView).toContain(".sheet(isPresented: $showFilters)");
-    expect(scheduleView).toContain("private struct ScheduleFilterSheet");
-    expect(scheduleView).toContain("Toggle(isOn: $myShiftsOnly)");
-    expect(scheduleView).toContain("Label(\"Include past events\"");
-    expect(scheduleView).toContain("Text(\"Event Type\")");
-    expect(scheduleView).toContain("ForEach(HomeAwayFilter.allCases");
-    expect(scheduleView).toContain("Picker(\"Sport\", selection: sportSelection)");
-    expect(scheduleView).toContain("activeFilterSummary");
-    expect(scheduleView).not.toContain("FilterChip(");
-    // Filters is a list control, so it lives in the navigation toolbar with
-    // the same tint contract Items and Users use, not in a hand-rolled capsule
-    // sharing a content row with the view switcher.
-    expect(controlStrip).toContain("Picker(\"Schedule view\", selection: $viewMode)");
-    expect(controlStrip).toContain(".pickerStyle(.segmented)");
-    expect(controlStrip).toContain("ActiveControlBar(summary: activeFilterSummary, clear: clearScheduleFilters)");
-    expect(controlStrip).toContain(".padding(.bottom, Brand.Space.xs)");
-    expect(controlStrip).not.toContain("Capsule()");
-    expect(controlStrip).not.toContain(".buttonStyle(.plain)");
-    expect(controlStrip).not.toContain(".buttonStyle(.bordered)");
-    expect(scheduleView).toContain(".listControlTint(isActive: activeFilterCount > 0)");
-    expect(scheduleView).toContain("ToolbarSpacer(.fixed, placement: .topBarTrailing)");
-    expect(filterSheet).toContain("ToolbarItem(placement: .cancellationAction)");
-    expect(filterSheet).toContain("Button(\"Clear\") { onClear() }");
-    expect(filterSheet).toContain("Text(showResultsTitle)");
-    expect(filterSheet).toContain(".safeAreaInset(edge: .bottom)");
-    expect(scheduleView).toContain('case .home: return "Home"');
-    expect(scheduleView).toContain('case .away: return "Away"');
-    expect(scheduleView).toContain('case .neutral: return "Neutral"');
-    expect(scheduleView).toContain('case .nonGame: return "Non-game"');
+    // My Shifts and Sport are toolbar list controls with the shared tint.
+    expect(toolbar).toContain('"My Shifts"');
+    expect(toolbar).toContain(".listControlTint(isActive: myShiftsOnly)");
+    expect(toolbar).toContain('Picker("Sport", selection: sportSelection)');
+    expect(toolbar).toContain(".listControlTint(isActive: sportFilter != nil)");
+    expect(toolbar).not.toContain("Include Past Events");
+    expect(toolbar).not.toContain("canSeePastEvents");
+    expect(toolbar).toContain(".badge(openTradeCount)");
+    expect(toolbar).toContain("ToolbarSpacer(.fixed, placement: .topBarTrailing)");
+    // Event type is a row of chips; toolbar-set filters show as removable chips.
+    expect(filterBar).toContain("ForEach(HomeAwayFilter.allCases");
+    expect(filterBar).toContain("RemovableFilterChip(title: sportLabel");
+    expect(filterBar).not.toContain("Past events");
+    expect(filterBar).toContain(".accessibilityAddTraits(isOn ? .isSelected : [])");
+    expect(scheduleView).toContain('case .home: return event.venue == .home');
+    expect(scheduleView).toContain('case .nonGame: return event.venue == .nonGame');
   });
 
-  it("gives personal work priority without stealing the venue rail", () => {
+  it("gives personal work priority without stealing the venue dot", () => {
     const scheduleView = source("ios/Wisconsin/Views/ScheduleView.swift");
-    const eventRow = sliceBetween(
-      scheduleView,
-      "struct EventRow: View",
-      "private func calendarSame",
-    );
+    const rowFile = source("ios/Wisconsin/Views/Schedule/ScheduleEventRow.swift");
+    const eventRow = sliceBetween(rowFile, "struct EventRow: View", "private func calendarSame");
 
-    expect(scheduleView.match(/contentMargins\(\.bottom, 96, for: \.scrollContent\)/g)?.length).toBeGreaterThanOrEqual(2);
-    // The venue accent stays the shared inner rail, like every other list in
-    // the app. Drawing it as the card's leading edge instead escaped the
-    // rounded corner and put green against the live row's tint.
-    expect(eventRow).toContain("StatusRail(color: barColor)");
-    expect(eventRow).not.toContain(".background(alignment: .leading)");
-    expect(eventRow).toContain("Text(eventTypeLabel)");
-    // Venue shares the meta line with the home/away word now that the time has
-    // moved to the gutter, so it is an inline icon + text rather than a Label.
-    expect(eventRow).toContain("Image(systemName: \"mappin.and.ellipse\")");
-    expect(eventRow).toContain("Text(venueName)");
-    expect(eventRow).toContain("personalWorkLine(myShift)");
+    expect(scheduleView).toContain("contentMargins(.bottom, 24, for: .scrollContent)");
+    // Rows draw slices of a rounded day group rather than bordered cards; the
+    // list stays plain so day headers pin while their rows scroll.
+    expect(scheduleView).toContain(".listStyle(.plain)");
+    expect(rowFile).toContain("enum EventRowGroupPosition");
+    expect(rowFile).toContain("UnevenRoundedRectangle(");
+    expect(eventRow).not.toContain("StatusRail(");
+    expect(eventRow).not.toContain(".strokeBorder(Color.hairline");
+    expect(eventRow).toContain("VenueDot(color: venueRailColor(for: event))");
+    expect(eventRow).toContain("if let eventTypeLabel { parts.append(eventTypeLabel) }");
+    expect(eventRow).toContain("if let venueName { parts.append(venueName) }");
+    // Your own work is a tinted row, not a line of text: no "You · area ·
+    // gear" line and no edge bar. A Student call time takes the second time
+    // line; area and gear stay in the VoiceOver label.
+    expect(eventRow).not.toContain("personalWorkLine");
+    expect(eventRow).not.toContain('["You"]');
+    expect(eventRow).toContain('return "Call " + callStartsAt.formatted(date: .omitted, time: .shortened)');
     expect(eventRow).toContain("parts.append(shift.gear.gearLabel)");
-    // One border and one surface for every row. My shift is carried by the blue
-    // personal-work line alone, which names the call time and area rather than
-    // washing the card; live is carried by the red time and "Now".
-    expect(eventRow).toContain(".strokeBorder(Color.hairline, lineWidth: 0.5)");
-    expect(eventRow).toContain(".background(Color.cardSurface)");
-    expect(eventRow).not.toContain("Color.statusBackground(.blue).opacity(0.34)");
-    expect(eventRow).not.toContain("private var rowStrokeWidth");
-    expect(eventRow).not.toContain("private var rowBackground");
-    expect(eventRow).toContain(".foregroundStyle(Color.statusText(.blue))");
-    expect(eventRow).toContain("if showsCrewCoverage, let cov = event.coverage");
+    expect(rowFile).toContain("(isMine ? Color.myShiftSurface : Color.cardSurface)");
+    expect(rowFile).not.toContain(".frame(width: 3)");
+    expect(scheduleView).toContain(".listRowBackground(EventRowBackground(isMine: myShift != nil, position: position))");
+    expect(rowFile).toContain("struct EventRowBackground: View");
+    // Coverage shows for every role, not only staff.
+    expect(eventRow).toContain("if let cov = event.coverage, cov.total > 0 {");
+    expect(scheduleView).not.toContain("showsCrewCoverage");
   });
 
-  it("keeps calendar and agenda semantics aligned", () => {
+  it("keeps the week strip and list on one venue vocabulary", () => {
     const scheduleView = source("ios/Wisconsin/Views/ScheduleView.swift");
+    const strip = source("ios/Wisconsin/Views/Schedule/ScheduleWeekStrip.swift");
 
-    expect(scheduleView.match(/EventRow\(/g)?.length).toBeGreaterThanOrEqual(2);
-    expect(scheduleView).toContain("showsCrewCoverage: showsCrewCoverage");
-    expect(scheduleView).toContain("coverageChip(cov)");
-    // Both day indexes sort chronologically. Calendar mode reads `eventsByDay`,
-    // which was rendering in API insertion order while the list groups sorted --
-    // a day could read 11:00 AM, 4:00 PM, 7:30 PM, 5:50 PM.
-    expect(scheduleView).toContain("eventsByDay = allByDay.mapValues { $0.sorted { $0.startsAt < $1.startsAt } }");
-    expect(scheduleView).toContain("dots.contains(where: \\.isShift)");
-    // Calendar dots and agenda rails must speak the same venue vocabulary.
-    // They used to assert it by each spelling out green/orange/grey inline,
-    // which is what let the two drift onto different greys; both now read the
-    // shared `venueRailColor`, so alignment is structural rather than asserted.
-    expect(scheduleView).toContain("DotInfo(color: venueRailColor(for: event)");
-    expect(scheduleView).toMatch(
-      /private var barColor: Color \{\s*venueRailColor\(for: event\)/,
-    );
-    // Month arrows are deliberately unfilled (no raised circle) and compact so
-    // the header reads lighter above a dense grid. Asserting their exact frame
-    // would be a false positive -- the toolbar buttons share that string.
-    expect(scheduleView).toContain('.accessibilityLabel("Previous month")');
-    expect(scheduleView).toContain('.accessibilityLabel("Next month")');
-    expect(scheduleView).toContain(".listRowBackground(Color.clear)");
-    expect(scheduleView).toContain("LegendAssignmentMark(label: \"My shift\")");
+    // Both day indexes sort chronologically.
+    expect(scheduleView).toContain("eventsByDay = byDay.mapValues { $0.sorted { $0.startsAt < $1.startsAt } }");
+    // The shift mark covers every event that day, not only the drawn dots.
+    expect(strip).toContain(".fill(hasShift ? Color.statusText(.blue) : Color.clear)");
+    // Strip dots and row dots both read the shared `venueRailColor`, so
+    // alignment is structural rather than asserted.
+    expect(scheduleView).toContain("color: venueRailColor(for: event)");
+    expect(strip).toContain('.accessibilityLabel(label)');
+    expect(strip).toContain('label: "Previous month"');
+    expect(strip).toContain('label: "Next month"');
+    expect(strip).toContain('LegendAssignmentMark(label: "My shift")');
+    // The strip jumps the list; it never filters it to one day.
+    expect(scheduleView).toContain("proxy.scrollTo(request.anchor");
+    expect(scheduleView).toContain("let anchor = ScheduleRowAnchor(day: date, eventId: event.id)");
+    expect(scheduleView).toContain(".id(anchor)");
+    expect(strip).toContain(".scrollTargetBehavior(.paging)");
   });
 
   it("routes Event detail full-screen with adaptive actions and retry", () => {
@@ -186,14 +166,13 @@ describe("iOS Schedule UI cleanup", () => {
 
     expect(scheduleView).toContain("NavigationStack(path: $navigationPath)");
     // The list row pushes by appending to the path rather than using a
-    // NavigationLink: inside a List, NavigationLink also renders a system
-    // disclosure indicator outside the card, on top of EventRow's own chevron.
+    // NavigationLink, which would add a system disclosure chevron.
     expect(scheduleView).toContain("navigationPath.append(ScheduleEventRoute(id: event.id))");
     expect(scheduleView).toContain(".navigationDestination(for: ScheduleEventRoute.self)");
     expect(scheduleView).not.toContain(".sheet(item: $selectedEvent)");
     expect(homeView).toContain("EventDetailView(event: work.asScheduleEvent");
     expect(homeView).not.toContain("EventDetailSheet(");
-    expect(scheduleView).toContain("year == currentYear");
+    expect(scheduleSurfaceSource()).toContain("year == currentYear");
     expect(scheduleView).not.toContain("Updated \\(loadedAt.formatted");
   });
 });
