@@ -9,7 +9,6 @@ describe("iOS kiosk checkout details polish", () => {
     // Linking happens by tapping an event in the list, not by flipping a
     // toggle that hid the entire calendar behind a switch.
     expect(checkout).not.toContain('Toggle("Link to event"');
-    expect(checkout).toContain("private func toggle(_ event: KioskCheckoutEvent)");
     expect(checkout).toContain("isLinkedToEvent ? selectedEvent != nil : !trimmedCustomPurpose.isEmpty");
     expect(checkout).toContain("let eventId = isLinkedToEvent ? selectedEvent?.id : nil");
     expect(checkout).toContain("let purpose = !isLinkedToEvent && !trimmedCustomPurpose.isEmpty ? trimmedCustomPurpose : nil");
@@ -20,99 +19,39 @@ describe("iOS kiosk checkout details polish", () => {
     expect(checkout).not.toContain("person.crop.circle.badge.checkmark");
   });
 
-  it("puts booking name in context and return time in its own window before scanning", () => {
+  it("asks what it's for and when it's back before scanning (redesign D2)", () => {
     const checkout = source("ios/Wisconsin/Kiosk/KioskCheckoutView.swift");
+    const details = source("ios/Wisconsin/Kiosk/KioskCheckoutDetailsStep.swift");
 
     expect(checkout).toContain("private var checkoutLayout: some View");
-    expect(checkout).toContain("activeScanZone");
-    expect(checkout).toContain("KioskCheckoutContextSummary(");
-    expect(checkout).toContain("KioskAdaptiveSplit { _ in");
-    expect(checkout).toContain("KioskSideRail(isCompact: isCompact)");
-    expect(checkout).toContain("checkoutContextSetupZone");
-    expect(checkout).toContain("KioskCheckoutSetupPanel(");
-    expect(checkout).toContain("private struct KioskCheckoutSetupPanel");
-    // The person and step moved into the flow header; the separate hero card
-    // pushed the return window under the pinned CTA.
-    expect(checkout).not.toContain("KioskCheckoutSetupHero");
-    expect(checkout).toContain("title: user.name,");
-    expect(checkout).toContain("private struct KioskCheckoutWindow");
-    expect(checkout).toContain("static let maxWidth: CGFloat = 1048");
-    // Columns split the bounded width evenly. The old fixed 376/648 pair
-    // sized the return column for a month calendar that no longer exists.
-    expect(checkout).not.toContain("contextColumnWidth");
-    expect(checkout).not.toContain("returnColumnWidth");
-    expect(checkout).not.toContain("returnDateWidth");
-    expect(checkout).toContain("ViewThatFits(in: .vertical)");
-    expect(checkout).toContain("ViewThatFits(in: .horizontal)");
-    expect(checkout).toContain("HStack(alignment: .top, spacing: KioskSpacing.lg) {");
-    expect(checkout).toContain("KioskCheckoutContextWindow(");
-    expect(checkout).toContain("KioskCheckoutReturnWindow(dueBackAt: $dueBackAt");
-    // Setup headings ask the question the step answers.
-    expect(checkout).toContain(`title: "What's this for?"`);
-    expect(checkout).toContain(`KioskCheckoutWindow(title: "When's it back?")`);
-    expect(checkout).toContain("KioskCheckoutEventRow(");
-    // The requester's own published shifts lead; the rest of the calendar
-    // follows in the same column. No "All Events" popover menu.
-    expect(checkout).toContain("private struct KioskCheckoutEventPicker");
-    expect(checkout).toContain('group("Your shifts", events: myShifts)');
-    expect(checkout).toContain('group("All events", events: otherEvents)');
-    expect(checkout).not.toContain('"All Events"');
-    expect(checkout).toContain('"Booking name"');
-    expect(checkout).toContain("KioskNativeTextField(");
-    expect(checkout).toContain('"Return time"');
-    expect(checkout).toContain(".contentShape(Rectangle())");
-    expect(checkout).toContain(".buttonStyle(.plain)");
-    expect(checkout).toContain(".frame(maxWidth: .infinity, maxHeight: .infinity)");
-    expect(checkout).not.toContain('KioskCheckoutWindow(title: "Details")');
-    expect(checkout).not.toContain("KioskCheckoutDetailsWindow");
-    expect(checkout).not.toContain('"Ad hoc checkout"');
-    expect(checkout).not.toContain('"No event linked"');
-    expect(checkout).not.toContain("setupStep(");
-    expect(checkout).not.toContain("returnColumnMinWidth");
-    expect(checkout).toContain("VStack(alignment: .leading, spacing: KioskSpacing.lg) {");
-    expect(checkout).not.toContain("KioskCheckoutPurposeSection");
-    expect(checkout).not.toContain("KioskCheckoutEventChoiceButton(");
-    expect(checkout).not.toContain(".buttonStyle(KioskPressStyle())");
+    expect(checkout).toContain("KioskCheckoutDetailsStep(");
+    expect(checkout).toContain('title: "New checkout"');
+    expect(checkout).toContain("step \\(step) of 2");
+    expect(details).toContain('Text("What\'s this for?")');
+    expect(details).toContain('Text("When\'s it back?")');
+    expect(details).toContain('KioskSectionHeader(title: "Your shifts")');
+    expect(details).toContain('KioskSectionHeader(title: "Something else")');
+    expect(details).toContain("KioskNativeTextField(");
+    // Selection is a white outline on list rows.
+    expect(details).toContain("stroke: isSelected ? KioskStroke.selected : KioskStroke.standard");
+    // Kits are not on the details screen.
+    expect(details).not.toMatch(/kit/i);
   });
 
-  it("surfaces return date and time as deliberate, separate native pickers", () => {
+  it("offers day and time choices with a Back by summary (redesign D2, D3)", () => {
     const checkout = source("ios/Wisconsin/Kiosk/KioskCheckoutView.swift");
+    const details = source("ios/Wisconsin/Kiosk/KioskCheckoutDetailsStep.swift");
 
-    expect(checkout).toContain("private struct KioskCheckoutReturnDatePicker");
-    // No one-tap presets. An easy default is the one people press to get past
-    // the screen, and a due date nobody chose is a due date nobody honours --
-    // both fields are always visible and always require a deliberate choice.
-    expect(checkout).not.toContain("KioskReturnPreset");
-    expect(checkout).not.toContain("KioskChoiceChip(");
-
-    // Custom reveals two separate native compact pickers -- one for the date,
-    // one for the time. The time bridge exposes UIDatePicker's real 15-minute
-    // interval instead of making staff scroll minute by minute.
-    // The previous inline UICalendarView (300pt) and wheel
-    // (180pt) were both `.clipped()` inside a card too short to hold them and
-    // visibly overlapped on device.
-    expect(checkout).toContain("displayedComponents: .date");
-    expect(checkout).toContain("KioskQuarterHourTimePicker(");
-    expect(checkout).toContain(".datePickerStyle(.compact)");
-    expect(checkout).not.toContain("KioskUICalendarPicker");
-    expect(checkout).not.toContain("KioskUIDatePicker");
-    expect(checkout).not.toContain("UICalendarView()");
-    expect(checkout).not.toContain(".datePickerStyle(.graphical)");
-    expect(checkout).not.toContain(".datePickerStyle(.wheel)");
-
-    // Linked-event defaults land 90 minutes after the schedule end so tear-down
-    // time is not identical to the time people glance past and ignore.
+    // The 2026-09 removal of one-tap presets is reversed by the approved
+    // redesign: day and time chips, with the linked event's suggestion marked.
+    expect(details).toContain('note: minutes == 0 ? "90 min after" : nil');
+    expect(details).toContain('Text("BACK BY")');
+    expect(details).toContain('Button("Other date")');
+    expect(details).toContain("struct KioskOtherDateSheet");
+    expect(details).toContain('KioskPrimaryPill(title: "Continue to scan"');
     expect(checkout).toContain("static let linkedEventReturnBuffer: TimeInterval = 90 * 60");
-    expect(checkout).toContain("dueBackDate(afterEventEndsAt:");
     expect(checkout).toContain("return KioskQuarterHour.roundedUp(proposed)");
-    expect(checkout).toContain('"90 minutes after the linked event ends"');
-    expect(checkout).not.toContain('"Matches the linked event\'s end time"');
-
-    // Checkout is a stepped flow: details, then scanning. The details step is a
-    // screen, not a sheet floating over a scan screen you cannot use yet.
     expect(checkout).toContain("@State private var checkoutContextReady = false");
-    expect(checkout).toContain(`title: "Continue to Scan"`);
-    expect(checkout).toContain("Step 1 of 2 · Checkout details");
     expect(checkout).not.toContain("showDetailsSheet");
   });
 

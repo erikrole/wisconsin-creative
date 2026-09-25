@@ -50,6 +50,13 @@ struct KioskShellView: View {
         }
     }
 
+    /// Checkout details carries the keyboard tip inline under its field
+    /// (redesign I6), so the centered popup stays off that screen.
+    private var showsInlineKeyboardTip: Bool {
+        if case .checkout = store.screen { return true }
+        return false
+    }
+
     /// Scan screens (checkout, pickup, return) state scanner readiness in their
     /// own work surface. The global pill there said it a second time and sat on
     /// top of the right rail's title, so it only appears where it is the sole
@@ -129,7 +136,7 @@ struct KioskShellView: View {
             // One keyboard popup for the whole kiosk. Every text field already
             // reports focus through `scanner.setEditing`, so the shell can own
             // this instead of each field mounting its own copy.
-            KioskKeyboardHint(isFieldFocused: store.scanner.isEditing)
+            KioskKeyboardHint(isFieldFocused: store.scanner.isEditing && !showsInlineKeyboardTip)
 
             // Not during standby: see `KioskStore.isStandbyVisible`.
             if store.isActive, !store.isResuming, showsScannerStatusPill, !store.isStandbyVisible {

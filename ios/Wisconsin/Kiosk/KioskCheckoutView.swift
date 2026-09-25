@@ -1,11 +1,11 @@
 import SwiftUI
 import UIKit
 
-private enum KioskCheckoutFocusedField: Hashable {
+enum KioskCheckoutFocusedField: Hashable {
     case customPurpose
 }
 
-private enum KioskCheckoutDefaults {
+enum KioskCheckoutDefaults {
     /// Buffer after a linked event ends before gear is due back. Event end is
     /// when the game/session finishes, not when people are done packing up —
     /// 90 minutes gives tear-down and travel back to the gear room without
@@ -25,15 +25,6 @@ private enum KioskCheckoutDefaults {
         guard proposed > now.addingTimeInterval(60) else { return nil }
         return KioskQuarterHour.roundedUp(proposed)
     }
-}
-
-private enum KioskCheckoutSetupLayout {
-    /// Keep the setup bounded on the managed M2 iPad Air fleet so the two
-    /// setup columns remain a stable task instead of sprawling edge to edge.
-    /// The columns themselves split this width evenly -- the old fixed
-    /// 376/648 pair cramped the booking-name field beside a return column
-    /// sized for a month calendar that no longer exists.
-    static let maxWidth: CGFloat = 1048
 }
 
 struct KioskCheckoutView: View {
@@ -321,178 +312,201 @@ struct KioskCheckoutView: View {
     @ViewBuilder
     private var checkoutLayout: some View {
         if checkoutContextReady {
-            KioskAdaptiveSplit { _ in
-                activeScanZone
-            } secondary: { isCompact in
-                itemsList(isCompact: isCompact)
+            KioskTaskScaffold(header: taskHeader(step: 2)) {
+                scanMain
+            } panel: {
+                takingOutPanel
             }
         } else {
-            checkoutContextSetupZone
-        }
-    }
-
-    /// Setup stays focused before scan mode: a pinned flow header, one centered
-    /// details panel, and a pinned Start Scanning CTA.
-    private var checkoutContextSetupZone: some View {
-        VStack(spacing: 0) {
-            // The person and step live in the header. A separate hero card
-            // restating them cost ~140pt, which pushed "When's it back?" under
-            // the pinned CTA and the kit picker off the screen entirely.
-            KioskFlowHeader(
-                title: user.name,
-                subtitle: ["Step 1 of 2 · Checkout details", store.info?.locationName]
-                    .compactMap { $0 }
-                    .joined(separator: " · "),
-                backAccessibilityLabel: "Back to roster",
-                onBack: {
-                    if scannedItems.isEmpty && !hasPendingCompletion {
-                        store.screen = .operatorHub(user)
-                    } else {
-                        showBackConfirm = true
-                    }
-                },
-                onCamera: nil
-            )
-
-            Group {
-                if focusedCheckoutField == nil {
-                    ViewThatFits(in: .vertical) {
-                        checkoutSetupPanel
-
-                        ScrollView {
-                            checkoutSetupPanel
-                        }
-                        .scrollBounceBehavior(.basedOnSize)
-                    }
-                } else {
-                    ScrollView {
-                        checkoutSetupPanel
-                    }
-                    .scrollBounceBehavior(.basedOnSize)
-                    .scrollDismissesKeyboard(.interactively)
-                }
-            }
-            .frame(maxHeight: .infinity, alignment: .top)
-
-            VStack(spacing: KioskSpacing.xs) {
-                if let blockingRequirement {
-                    Label(blockingRequirement, systemImage: "exclamationmark.circle.fill")
-                        .font(KioskType.chip)
-                        .foregroundStyle(KioskStatus.attention)
-                        .multilineTextAlignment(.leading)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .accessibilityHidden(true)
-                }
-
-                KioskCompletionButton(
-                    title: "Continue to Scan",
-                    isEnabled: hasCheckoutContext && hasValidReturnTime,
-                    isBusy: false,
-                    accessibilityLabel: startScanningAccessibilityLabel,
-                    action: startScanning
+            VStack(spacing: 0) {
+                taskHeader(step: 1)
+                KioskCheckoutDetailsStep(
+                    events: eventOptions,
+                    isLoadingEvents: isLoadingEvents,
+                    isLinkedToEvent: $isLinkedToEvent,
+                    selectedEventId: $selectedEventId,
+                    customPurpose: $customPurpose,
+                    dueBackAt: $dueBackAt,
+                    focusedField: $focusedCheckoutField,
+                    canContinue: hasCheckoutContext && hasValidReturnTime,
+                    blockingRequirement: blockingRequirement,
+                    onContinue: startScanning
                 )
             }
-            .frame(maxWidth: KioskCheckoutSetupLayout.maxWidth)
-            .frame(maxWidth: .infinity)
-            .padding(.top, KioskSpacing.md)
         }
-        .kioskScreenPadding()
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private var checkoutSetupPanel: some View {
-            KioskCheckoutSetupPanel(
-            user: user,
-            locationName: store.info?.locationName,
-            events: eventOptions,
-            isLoadingEvents: isLoadingEvents,
-            eventLoadError: eventLoadError,
-            kits: kitOptions,
-            isLoadingKits: isLoadingKits,
-            kitLoadError: kitLoadError,
-            isLinkedToEvent: $isLinkedToEvent,
-            selectedEventId: $selectedEventId,
-            selectedKitId: $selectedKitId,
-            customPurpose: $customPurpose,
-            dueBackAt: $dueBackAt,
-            selectedEvent: selectedEvent,
-            focusedField: $focusedCheckoutField,
-            onRetryKits: { Task { await loadCheckoutKits() } }
+    private func taskHeader(step: Int) -> KioskTaskHeader {
+        KioskTaskHeader(
+            title: "New checkout",
+            subtitle: "\(homeShortNames(for: [user])[user.id] ?? user.name) · step \(step) of 2",
+            avatarURL: user.avatarUrl,
+            avatarInitials: user.initials,
+            backAccessibilityLabel: scannedItems.isEmpty ? "Back" : "Back, will ask before discarding \(scannedItems.count) scans",
+            onBack: {
+                if step == 2 && scannedItems.isEmpty && !hasPendingCompletion {
+                    checkoutContextReady = false
+                } else if scannedItems.isEmpty && !hasPendingCompletion {
+                    store.screen = .operatorHub(user)
+                } else {
+                    showBackConfirm = true
+                }
+            }
         )
-        // Natural height. Offered all the space outside a ScrollView, the
-        // native time picker stretched to fill the return window.
-        .fixedSize(horizontal: false, vertical: true)
-        .frame(maxWidth: KioskCheckoutSetupLayout.maxWidth)
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, KioskSpacing.lg)
     }
 
-    private var activeScanZone: some View {
-        KioskScanZoneColumn {
-            KioskFlowHeader(
-                title: "Scan Items",
-                backAccessibilityLabel: scannedItems.isEmpty
-                    ? "Back to roster"
-                    : "Back to roster, will prompt to discard \(scannedItems.count) items",
-                onBack: {
-                    if scannedItems.isEmpty && !hasPendingCompletion {
-                        store.screen = .operatorHub(user)
-                    } else {
-                        showBackConfirm = true
+    // MARK: - Scan step (D4–D6, I3, I5)
+
+    @ViewBuilder
+    private var scanMain: some View {
+        KioskContextCard(
+            title: hasCheckoutContext ? checkoutContextTitle : "Details needed",
+            detail: KioskDueCopy.due(dueBackAt) + (selectedKitDetail.map { " · \($0.name) kit" } ?? ""),
+            onEdit: { requestEditContext() }
+        )
+
+        scanStage
+            .animation(KioskMotion.confirm(reduceMotion), value: lastAccepted)
+
+        KioskPrimaryPill(
+            title: hasPendingCompletion ? "Try again now" : "Check out",
+            detail: scannedItems.isEmpty ? nil : "\(scannedItems.count) item\(scannedItems.count == 1 ? "" : "s")",
+            isEnabled: hasPendingCompletion || (!scannedItems.isEmpty && pendingScanIdentities.isEmpty && (!hasCheckoutContext || !hasValidReturnTime || (hasVerifiedAvailability && !isCheckingAvailability && availabilityError == nil && !availabilityResult.hasBlockingIssue))),
+            isBusy: isCompleting,
+            action: {
+                if hasPendingCompletion || (hasCheckoutContext && hasValidReturnTime) { completeCheckout() }
+                else { requestEditContext() }
+            }
+        )
+        .accessibilityLabel(completeAccessibilityLabel)
+    }
+
+    @ViewBuilder
+    private var scanStage: some View {
+        if hasPendingCompletion {
+            KioskNoticeStage(
+                section: .comingBack,
+                overline: "Not confirmed yet",
+                title: "We couldn't reach the server",
+                message: "Your checkout is saved on this iPad and hasn't gone through yet. Keep the gear here and try again. Nothing is checked out twice, however many times you try."
+            )
+        } else if let lastAccepted {
+            KioskConfirmationStage(
+                section: .takingOut,
+                title: "\(lastAccepted.title) added",
+                detail: [lastAccepted.subtitle, "\(scannedItems.count) item\(scannedItems.count == 1 ? "" : "s")"].compactMap { $0 }.joined(separator: " · "),
+                hint: "Keep scanning, or check out.",
+                onUndo: undoLastScan
+            )
+        } else if let lastResult, lastResult.tone == .error {
+            KioskNoticeStage(
+                section: .problem,
+                overline: "Not added",
+                title: KioskAvailabilityCopy.withoutRejectionSuffix(lastResult.message),
+                message: "Put it back on the shelf, or scan something else. Your list didn't change.",
+                showsAlertGlyph: true
+            )
+        } else if availabilityResult.hasBlockingIssue || availabilityError != nil {
+            KioskNoticeStage(
+                section: .problem,
+                overline: "Before you check out",
+                title: availabilityError == nil ? KioskAvailabilityCopy.blockingTitle(for: availabilityResult) : "Couldn't check your items",
+                message: availabilityError ?? "Remove the item marked in your list, or change when it's back.",
+                showsAlertGlyph: true
+            ) {
+                if availabilityError != nil {
+                    Button("Try again") {
+                        let cart = store.cart(for: userId)
+                        Task { await refreshAvailability(for: cart) }
                     }
-                },
+                    .kioskButtonRole(.secondary)
+                }
+            }
+        } else {
+            KioskScanPrompt(
+                title: scannedItems.isEmpty ? "Scan what you're taking" : "Scan the next item",
+                detail: "Each item appears in your list as you scan.",
+                status: scannerStatusLine,
                 onCamera: { showCamera = true }
             )
+        }
+    }
 
-            KioskCheckoutContextSummary(
-                title: hasCheckoutContext ? checkoutContextTitle : "Details needed",
-                detail: hasCheckoutContext ? checkoutContextDetail : "Keep scanning, then review before checkout.",
-                dueBackAt: dueBackAt,
-                onEdit: { requestEditContext() }
+    /// A sleeping scanner is normal: say how to wake it, never an error.
+    private var scannerStatusLine: String? {
+        if !store.scanner.hardwareConnected { return "Scanner is asleep. Press its trigger to wake it." }
+        // The hidden field's real first-responder state, not merely that it
+        // is mounted.
+        if !scannerHasFocus { return "Getting the scanner ready…" }
+        return nil
+    }
+
+    private func undoLastScan() {
+        guard let last = scannedItems.last,
+              let group = groupedScannedItems.first(where: { $0.contains(last) }) else { return }
+        if group.items.count > 1 {
+            var cart = store.cart(for: userId)
+            cart.removeAll { $0.id == last.id }
+            store.setCart(cart, for: userId)
+            Task { await refreshAvailability(for: cart) }
+        } else {
+            removeGroup(group)
+        }
+        lastAccepted = nil
+    }
+
+    private var takingOutPanel: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            KioskSectionHeader(
+                title: "Taking out",
+                detail: selectedKitDetail.map { "\($0.name) kit" } ?? "new checkout",
+                count: "\(scannedItems.count)",
+                section: .takingOut
             )
-
-            KioskCheckoutAvailabilityBanner(
-                result: availabilityResult,
-                isChecking: isCheckingAvailability,
-                errorMessage: availabilityError,
-                onRetry: {
-                    let cart = store.cart(for: userId)
-                    Task { await refreshAvailability(for: cart) }
+            if scannedItems.isEmpty && remainingKitItems.isEmpty {
+                Text("Scanned items show up here.")
+                    .font(.system(size: 15))
+                    .foregroundStyle(KioskText.tertiary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 16)
+                    .kioskCard()
+            } else {
+                ScrollView {
+                    VStack(spacing: 0) {
+                        ForEach(Array(groupedScannedItems.enumerated()), id: \.element.id) { index, group in
+                            if index > 0 { Rectangle().fill(KioskStroke.divider).frame(height: 1) }
+                            if let issue = availabilityIssue(for: group) {
+                                KioskCartGroupRow(
+                                    group: group,
+                                    availabilityIssue: issue,
+                                    onRemove: { removeGroup(group) },
+                                    onChangeReturnTime: issue.canChangeReturnTime ? { editReturnTime() } : nil,
+                                    onScanAnother: issue.isBlocking ? { prepareForNextScan(after: group) } : nil
+                                )
+                            } else if group.isBulkGroup {
+                                KioskBatteryRow(
+                                    title: group.subtitle.components(separatedBy: " · ").first ?? group.subtitle,
+                                    scanned: group.count,
+                                    total: group.count,
+                                    units: group.unitNumbers.map { .init(id: "\(group.id)-\($0)", label: "#\($0)", isScanned: true) }
+                                )
+                            } else {
+                                KioskItemRow(tag: group.first.itemListPrimaryTitle, name: group.first.itemListSecondaryTitle, isDone: true) {
+                                    KioskRowRemoveButton(accessibilityLabel: "Remove \(group.primaryTitle)") { removeGroup(group) }
+                                }
+                            }
+                        }
+                        ForEach(remainingKitItems) { item in
+                            Rectangle().fill(KioskStroke.divider).frame(height: 1)
+                            KioskItemRow(tag: item.title, name: item.subtitle == item.title ? nil : item.subtitle, isDone: false)
+                        }
+                    }
+                    .kioskCard()
+                    .clipShape(RoundedRectangle(cornerRadius: KioskRadius.xl))
                 }
-            )
-
-            Spacer()
-
-            KioskScanStage(
-                isHardwareConnected: store.scanner.hardwareConnected,
-                isReady: scannerHasFocus,
-                lastScanAt: lastScanAt,
-                feedbackTint: lastResult.map { _ in scannerBorderColor },
-                accepted: lastAccepted,
-                onCamera: { showCamera = true },
-                onHelp: { showScannerHelp = true },
-                isCompact: lastResult != nil || availabilityResult.hasBlockingIssue || availabilityError != nil
-            )
-
-            // Feedback banner
-            if let result = lastResult {
-                KioskFeedbackBanner(tone: result.tone, message: result.message)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .animation(reduceMotion ? nil : .spring(response: 0.3), value: lastResult)
+                .scrollIndicators(.hidden)
             }
-
-            Spacer()
-
-            KioskCompletionButton(
-                title: hasPendingCompletion ? "Check Previous Handoff" : completeButtonTitle,
-                isEnabled: hasPendingCompletion || (!scannedItems.isEmpty && pendingScanIdentities.isEmpty && (!hasCheckoutContext || !hasValidReturnTime || (hasVerifiedAvailability && !isCheckingAvailability && availabilityError == nil && !availabilityResult.hasBlockingIssue))),
-                isBusy: isCompleting,
-                accessibilityLabel: completeAccessibilityLabel,
-                action: {
-                    if hasPendingCompletion || (hasCheckoutContext && hasValidReturnTime) { completeCheckout() }
-                    else { requestEditContext() }
-                }
-            )
         }
     }
 
@@ -521,124 +535,6 @@ struct KioskCheckoutView: View {
         let count = scannedItems.count
         guard count > 0 else { return "Complete Checkout" }
         return "Checkout \(count) Item\(count == 1 ? "" : "s")"
-    }
-
-    // MARK: - Items List
-
-    private func itemsList(isCompact: Bool) -> some View {
-        KioskSideRail(isCompact: isCompact) {
-            KioskCheckoutSideSummary(
-                user: user,
-                locationName: store.info?.locationName,
-                contextTitle: hasCheckoutContext ? checkoutContextTitle : nil,
-                contextDetail: checkoutContextDetail
-            )
-
-            Divider().background(KioskStroke.divider)
-
-            HStack {
-                Text("Scanned Items")
-                    .font(.headline)
-                    .foregroundStyle(KioskText.primary)
-                Spacer()
-                Text("\(scannedItems.count)")
-                    .font(.title3.bold())
-                    // A count is not an action and not a problem. Brand red
-                    // here made a running tally look like a warning.
-                    .foregroundStyle(scannedItems.isEmpty ? .secondary : KioskText.primary)
-                    .contentTransition(.numericText())
-                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: scannedItems.count)
-                    .monospacedDigit()
-            }
-            .padding(20)
-
-            Divider().background(KioskStroke.divider)
-
-            if scannedItems.isEmpty && remainingKitItems.isEmpty {
-                Spacer()
-                VStack(spacing: 10) {
-                    Image(systemName: "photo.on.rectangle.angled")
-                        .font(.title3)
-                        .foregroundStyle(KioskText.muted)
-                        .accessibilityHidden(true)
-                    Text("No items scanned yet")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(KioskText.secondary)
-                }
-                .frame(maxWidth: .infinity, alignment: .center)
-                Spacer()
-            } else {
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        LazyVStack(spacing: 0) {
-                            if !remainingKitItems.isEmpty {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text("Still to scan")
-                                        .font(KioskType.chip)
-                                        .foregroundStyle(KioskText.muted)
-                                        .textCase(.uppercase)
-                                        .tracking(1.1)
-                                    Text(selectedKitDetail.map { "\($0.name) is the plan. Scan each item — the cart is what actually checks out." } ?? "Scan each remaining kit item.")
-                                        .font(KioskType.chip)
-                                        .foregroundStyle(KioskText.secondary)
-                                    ForEach(remainingKitItems) { item in
-                                        HStack(alignment: .firstTextBaseline, spacing: 10) {
-                                            Image(systemName: "circle")
-                                                .font(KioskType.meta)
-                                                .foregroundStyle(KioskText.muted)
-                                                .accessibilityHidden(true)
-                                            VStack(alignment: .leading, spacing: 2) {
-                                                Text(item.title)
-                                                    .font(.subheadline.weight(.semibold))
-                                                    .foregroundStyle(KioskText.primary)
-                                                if !item.subtitle.isEmpty, item.subtitle != item.title {
-                                                    Text(item.subtitle)
-                                                        .font(KioskType.meta)
-                                                        .foregroundStyle(KioskText.secondary)
-                                                }
-                                            }
-                                            Spacer(minLength: 0)
-                                        }
-                                        .padding(.vertical, 8)
-                                    }
-                                }
-                                .padding(.horizontal, 20)
-                                .padding(.top, 16)
-                                .padding(.bottom, 8)
-                                Divider().background(KioskStroke.hairline)
-                            }
-                            ForEach(Array(groupedScannedItems.enumerated()), id: \.element.id) { index, group in
-                                let issue = availabilityIssue(for: group)
-                                KioskCartGroupRow(
-                                    group: group,
-                                    availabilityIssue: issue,
-                                    onRemove: { removeGroup(group) },
-                                    onChangeReturnTime: issue?.canChangeReturnTime == true
-                                        ? { editReturnTime() }
-                                        : nil,
-                                    onScanAnother: issue?.isBlocking == true
-                                        ? { prepareForNextScan(after: group) }
-                                        : nil
-                                )
-                                .id(group.id)
-                                .background(group.contains(scannedItems.last) ? KioskSurface.sunken : Color.clear)
-                                Divider().background(KioskStroke.hairline)
-                            }
-                        }
-                    }
-                    .onChange(of: scannedItems.last?.id) { _, newId in
-                        guard let newId else { return }
-                        if reduceMotion {
-                            proxy.scrollTo(newId, anchor: .bottom)
-                        } else {
-                            withAnimation(.easeOut(duration: 0.25)) {
-                                proxy.scrollTo(newId, anchor: .bottom)
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 
     // MARK: - Logic
@@ -1379,6 +1275,12 @@ private enum KioskAvailabilityCopy {
         return "\(trimmed)\(needsPeriod ? "." : "") Scan rejected; it was not added."
     }
 
+    /// The scan stage's "NOT ADDED" overline already says it; the headline
+    /// keeps only the reason.
+    static func withoutRejectionSuffix(_ message: String) -> String {
+        message.replacingOccurrences(of: " Scan rejected; it was not added.", with: "")
+    }
+
     static func conflictState(for conflict: KioskCheckoutAvailabilityResult.SerializedConflict) -> KioskAvailabilityState {
         let kind = conflict.conflictingBookingKind?.uppercased()
         let status = conflict.conflictingBookingStatus?.uppercased()
@@ -1579,753 +1481,7 @@ private struct KioskCartAvailabilityIssue: Equatable {
     }
 }
 
-private struct KioskCheckoutSetupPanel: View {
-    let user: KioskUser
-    let locationName: String?
-    let events: [KioskCheckoutEvent]
-    let isLoadingEvents: Bool
-    let eventLoadError: String?
-    let kits: [KioskKitOption]
-    let isLoadingKits: Bool
-    let kitLoadError: String?
-    @Binding var isLinkedToEvent: Bool
-    @Binding var selectedEventId: String?
-    @Binding var selectedKitId: String?
-    @Binding var customPurpose: String
-    @Binding var dueBackAt: Date
-    let selectedEvent: KioskCheckoutEvent?
-    let focusedField: Binding<KioskCheckoutFocusedField?>
-    let onRetryKits: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: KioskSpacing.lg) {
-            // Details left, event linking right. Everything the checkout record
-            // needs -- name and due-back -- stays on one side and is never
-            // pushed below the fold by a long event list.
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .top, spacing: KioskSpacing.lg) {
-                    detailsColumn.frame(maxWidth: .infinity, alignment: .top)
-                    eventColumn.frame(maxWidth: .infinity, alignment: .top)
-                }
-
-                VStack(alignment: .leading, spacing: KioskSpacing.lg) {
-                    detailsColumn
-                    eventColumn
-                }
-            }
-        }
-        .accessibilityElement(children: .contain)
-    }
-
-    private var detailsColumn: some View {
-        VStack(alignment: .leading, spacing: KioskSpacing.lg) {
-            contextWindow
-            returnWindow
-        }
-    }
-
-    /// A pickup with no kits has nothing to choose, so the window is left out
-    /// rather than spending a card on "No kits at this pickup yet."
-    private var showsKitPicker: Bool {
-        isLoadingKits || kitLoadError != nil || !kits.isEmpty
-    }
-
-    private var eventColumn: some View {
-        VStack(alignment: .leading, spacing: KioskSpacing.lg) {
-            KioskCheckoutEventPicker(
-                events: events,
-                isLoading: isLoadingEvents,
-                errorMessage: eventLoadError,
-                selectedEventId: $selectedEventId,
-                isLinkedToEvent: $isLinkedToEvent,
-                listMaxHeight: showsKitPicker ? 250 : 320
-            )
-            if showsKitPicker {
-                KioskCheckoutKitPicker(
-                    kits: kits,
-                    isLoading: isLoadingKits,
-                    errorMessage: kitLoadError,
-                    selectedKitId: $selectedKitId,
-                    onRetry: onRetryKits
-                )
-            }
-        }
-    }
-
-    private var contextWindow: some View {
-        KioskCheckoutContextWindow(
-            events: events,
-            isLoading: isLoadingEvents,
-            errorMessage: eventLoadError,
-            isLinkedToEvent: $isLinkedToEvent,
-            selectedEventId: $selectedEventId,
-            selectedEvent: selectedEvent,
-            customPurpose: $customPurpose,
-            focusedField: focusedField
-        )
-    }
-
-    private var returnWindow: some View {
-        KioskCheckoutReturnWindow(dueBackAt: $dueBackAt, eventEnd: selectedEvent?.endsAt)
-    }
-}
-
-private struct KioskCheckoutKitPicker: View {
-    let kits: [KioskKitOption]
-    let isLoading: Bool
-    let errorMessage: String?
-    @Binding var selectedKitId: String?
-    let onRetry: () -> Void
-
-    var body: some View {
-        KioskCheckoutWindow(title: "Gameday kit") {
-            if isLoading {
-                KioskCheckoutEventLoadingRow()
-            } else if !kits.isEmpty {
-                // One row that opens a menu. A full list of every kit at the
-                // pickup outgrew the column and pushed itself off screen.
-                Menu {
-                    Picker("Gameday kit", selection: $selectedKitId) {
-                        Text("None — scan without a kit").tag(String?.none)
-                        ForEach(kits) { kit in
-                            Text("\(kitTitle(kit)) · \(kitSubtitle(kit))").tag(Optional(kit.id))
-                        }
-                    }
-                    .pickerStyle(.inline)
-                } label: {
-                    HStack(spacing: 12) {
-                        Image(systemName: selectedKit == nil ? "shippingbox" : "shippingbox.fill")
-                            .foregroundStyle(selectedKit == nil ? KioskText.muted : KioskText.primary)
-                            .accessibilityHidden(true)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(selectedKit.map(kitTitle) ?? "No kit")
-                                .font(.subheadline.weight(.bold))
-                                .foregroundStyle(KioskText.primary)
-                            Text(selectedKit.map(kitSubtitle) ?? "\(kits.count) kit\(kits.count == 1 ? "" : "s") at this pickup")
-                                .font(KioskType.chip)
-                                .foregroundStyle(KioskText.secondary)
-                        }
-                        Spacer(minLength: 0)
-                        Image(systemName: "chevron.up.chevron.down")
-                            .font(KioskType.chip)
-                            .foregroundStyle(KioskText.muted)
-                            .accessibilityHidden(true)
-                    }
-                    .padding(.horizontal, 14)
-                    .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
-                    .background(KioskSurface.sunken, in: RoundedRectangle(cornerRadius: KioskRadius.md))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: KioskRadius.md)
-                            .stroke(selectedKit == nil ? KioskStroke.hairline : KioskStroke.selected, lineWidth: 1)
-                    )
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Gameday kit, \(selectedKit.map(kitTitle) ?? "none")")
-            }
-
-            if let errorMessage {
-                HStack {
-                    Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
-                        .font(KioskType.chip)
-                        .foregroundStyle(KioskStatus.attention)
-                    Spacer()
-                    Button("Retry", action: onRetry)
-                        .font(KioskType.chip.weight(.semibold))
-                }
-            }
-
-            Text("A kit is the scan list. What you scan is what checks out.")
-                .font(KioskType.chip)
-                .foregroundStyle(KioskText.secondary)
-        }
-    }
-
-    private var selectedKit: KioskKitOption? {
-        kits.first { $0.id == selectedKitId }
-    }
-
-    private func kitTitle(_ kit: KioskKitOption) -> String {
-        kioskFootballGamedayKitLabel(kit.gamedayRole) ?? kit.name
-    }
-
-    private func kitSubtitle(_ kit: KioskKitOption) -> String {
-        var parts: [String] = []
-        let job = kioskFootballGamedayKitLabel(kit.gamedayRole)
-        if let job, kit.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() != job.lowercased() {
-            parts.append(kit.name)
-        } else if job == nil, let sport = kit.sportCode, !sport.isEmpty {
-            parts.append(sport)
-        }
-        parts.append(kit.contents > 0 ? "\(kit.contents) items" : "empty")
-        return parts.joined(separator: " · ")
-    }
-
-}
-
-/// Right column of checkout setup: the requester's own published shifts first,
-/// then everything else on the calendar. Tapping a row links the booking to
-/// that event; tapping the linked row again unlinks it.
-///
-/// This replaces a "Link to event" toggle that hid the entire event list behind
-/// a switch, plus an overflow menu that buried the rest of the calendar in
-/// a popover. Linking is the common case for crewed work, so the events are
-/// simply on screen.
-private struct KioskCheckoutEventPicker: View {
-    let events: [KioskCheckoutEvent]
-    let isLoading: Bool
-    let errorMessage: String?
-    @Binding var selectedEventId: String?
-    @Binding var isLinkedToEvent: Bool
-    var listMaxHeight: CGFloat = 320
-
-    private var myShifts: [KioskCheckoutEvent] { events.filter(\.isMyShift) }
-    private var otherEvents: [KioskCheckoutEvent] { events.filter { !$0.isMyShift } }
-
-    var body: some View {
-        KioskCheckoutWindow(title: "Link an event") {
-            if isLoading {
-                KioskCheckoutEventLoadingRow()
-            } else if events.isEmpty {
-                KioskCheckoutEmptyEventRow()
-            } else {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: KioskSpacing.md) {
-                        if !myShifts.isEmpty {
-                            group("Your shifts", events: myShifts)
-                        }
-                        if !otherEvents.isEmpty {
-                            group("All events", events: otherEvents)
-                        }
-                    }
-                }
-                .frame(maxHeight: listMaxHeight)
-                .scrollIndicators(.visible)
-            }
-
-            if let errorMessage {
-                Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
-                    .font(KioskType.chip)
-                    .foregroundStyle(KioskStatus.attention)
-            }
-        }
-    }
-
-    private func group(_ title: String, events: [KioskCheckoutEvent]) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title.uppercased())
-                .font(KioskType.overline)
-                .tracking(1.2)
-                .foregroundStyle(KioskText.muted)
-
-            VStack(spacing: 0) {
-                ForEach(events) { event in
-                    KioskCheckoutEventRow(
-                        event: event,
-                        isSelected: selectedEventId == event.id,
-                        subtitle: KioskCheckoutEventFormat.subtitle(event)
-                    ) {
-                        toggle(event)
-                    }
-
-                    if event.id != events.last?.id {
-                        Divider().background(KioskStroke.divider)
-                    }
-                }
-            }
-            .background(KioskSurface.sunken, in: RoundedRectangle(cornerRadius: KioskRadius.md))
-            .overlay(
-                RoundedRectangle(cornerRadius: KioskRadius.md)
-                    .stroke(KioskStroke.hairline, lineWidth: 1)
-            )
-        }
-    }
-
-    /// Tapping the already-linked event unlinks it, so a mis-tap does not
-    /// strand the booking against the wrong event with no way back.
-    private func toggle(_ event: KioskCheckoutEvent) {
-        if selectedEventId == event.id {
-            selectedEventId = nil
-            isLinkedToEvent = false
-        } else {
-            selectedEventId = event.id
-            isLinkedToEvent = true
-        }
-        Haptics.selection()
-    }
-}
-
-private struct KioskCheckoutWindow<Content: View, Trailing: View>: View {
-    let title: String
-    let badgeTitle: String?
-    let badgeColor: Color
-    private let trailing: Trailing
-    private let content: Content
-
-    init(
-        title: String,
-        badgeTitle: String? = nil,
-        badgeColor: Color = KioskText.muted,
-        @ViewBuilder trailing: () -> Trailing,
-        @ViewBuilder content: () -> Content
-    ) {
-        self.title = title
-        self.badgeTitle = badgeTitle
-        self.badgeColor = badgeColor
-        self.trailing = trailing()
-        self.content = content()
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .center, spacing: 10) {
-                Text(title)
-                    .font(.title3.weight(.bold))
-                    .foregroundStyle(KioskText.primary)
-
-                if let badgeTitle {
-                    KioskCheckoutModeBadge(title: badgeTitle, color: badgeColor)
-                }
-
-                Spacer(minLength: 12)
-                trailing
-            }
-
-            content
-        }
-        .padding(20)
-        .kioskCard(KioskSurface.card, radius: KioskRadius.lg, stroke: KioskStroke.standard)
-        .accessibilityElement(children: .contain)
-    }
-}
-
-private extension KioskCheckoutWindow where Trailing == EmptyView {
-    init(
-        title: String,
-        badgeTitle: String? = nil,
-        badgeColor: Color = KioskText.muted,
-        @ViewBuilder content: () -> Content
-    ) {
-        self.init(
-            title: title,
-            badgeTitle: badgeTitle,
-            badgeColor: badgeColor,
-            trailing: { EmptyView() },
-            content: content
-        )
-    }
-}
-
-private struct KioskCheckoutModeBadge: View {
-    let title: String
-    let color: Color
-
-    var body: some View {
-        Text(title)
-            .font(KioskType.chipStrong)
-            .foregroundStyle(color)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(color.opacity(0.16), in: Capsule())
-    }
-}
-
-private struct KioskCheckoutContextWindow: View {
-    let events: [KioskCheckoutEvent]
-    let isLoading: Bool
-    let errorMessage: String?
-    @Binding var isLinkedToEvent: Bool
-    @Binding var selectedEventId: String?
-    let selectedEvent: KioskCheckoutEvent?
-    @Binding var customPurpose: String
-    let focusedField: Binding<KioskCheckoutFocusedField?>
-
-    private var isFieldFocused: Bool { focusedField.wrappedValue == .customPurpose }
-
-    private var trimmedPurpose: String {
-        customPurpose.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    var body: some View {
-        KioskCheckoutWindow(title: "What's this for?") {
-            VStack(alignment: .leading, spacing: 12) {
-                // Linking an event *answers* this question, so the linked event
-                // replaces the field rather than sitting under it. While an
-                // event is linked the booking title comes from the event and
-                // `completeCheckout` sends `customPurpose: nil` — so the field
-                // shown here previously accepted typing that was discarded on
-                // completion, and `onChange(of: isLinkedToEvent)` wiped it
-                // anyway. An input that cannot affect the record it appears to
-                // edit is worse than no input.
-                if isLinkedToEvent, let selectedEvent {
-                    linkedEventAnswer(selectedEvent)
-                } else {
-                    bookingNameControl
-                }
-            }
-        }
-    }
-
-    private func linkedEventAnswer(_ event: KioskCheckoutEvent) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            fieldLabel("Booking name", requirement: .suppliedByEvent)
-
-            HStack(spacing: 12) {
-                Image(systemName: "calendar.badge.checkmark")
-                    .font(.title3)
-                    .foregroundStyle(KioskStatus.scheduled)
-                    .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(event.title)
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundStyle(KioskText.primary)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.75)
-                    Text(KioskCheckoutEventFormat.subtitle(event))
-                        .font(KioskType.chip)
-                        .foregroundStyle(KioskText.tertiary)
-                        .lineLimit(1)
-                }
-                Spacer(minLength: 8)
-                Button("Unlink") {
-                    selectedEventId = nil
-                    isLinkedToEvent = false
-                }
-                .kioskButtonRole(.quiet)
-                .accessibilityLabel("Unlink \(event.title) and name this checkout instead")
-            }
-            .padding(14)
-            .frame(minHeight: 72)
-            .background(KioskStatus.scheduled.opacity(0.12), in: RoundedRectangle(cornerRadius: KioskRadius.md))
-            .overlay(
-                RoundedRectangle(cornerRadius: KioskRadius.md)
-                    .stroke(KioskStatus.scheduled.opacity(0.45), lineWidth: 1)
-            )
-            .accessibilityElement(children: .contain)
-
-            statusLine(
-                icon: "checkmark.circle.fill",
-                text: "This checkout will be titled after the event.",
-                tone: KioskStatus.scheduled
-            )
-        }
-    }
-
-    private var bookingNameControl: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            fieldLabel("Booking name", requirement: .required)
-
-            KioskNativeTextField(
-                placeholder: "Event, practice, shoot, or purpose",
-                text: $customPurpose,
-                isFocused: Binding(
-                    get: { focusedField.wrappedValue == .customPurpose },
-                    set: { focusedField.wrappedValue = $0 ? .customPurpose : nil }
-                ),
-                // The booking name is read back across a counter, not held at
-                // reading distance. 15pt was the UIKit default this bridge
-                // shipped with; it made the one thing a student types the
-                // smallest text in the window.
-                fontSize: 20,
-                fontWeight: .semibold
-            )
-            .padding(.horizontal, 16)
-            .frame(height: 72)
-            .background(KioskSurface.sunken, in: RoundedRectangle(cornerRadius: KioskRadius.md))
-            .overlay(
-                RoundedRectangle(cornerRadius: KioskRadius.md)
-                    .stroke(fieldStroke, lineWidth: isFieldFocused || !trimmedPurpose.isEmpty ? 2 : 1)
-            )
-
-            // The field used to state its requirement once, as a red asterisk,
-            // and then say nothing ever again — so "why is Continue still
-            // grey?" had no answer on screen.
-            if trimmedPurpose.isEmpty {
-                statusLine(
-                    icon: "info.circle.fill",
-                    text: "Name it so staff can find this checkout later — or link an event.",
-                    tone: KioskText.tertiary
-                )
-            } else {
-                statusLine(icon: "checkmark.circle.fill", text: "Looks good.", tone: KioskStatus.ok)
-            }
-        }
-    }
-
-    /// Focused is brand red (you are editing it), filled is the OK tone (this
-    /// requirement is met), empty is a plain hairline. The field previously
-    /// went red as soon as it had *any* content, spending the brand accent on
-    /// a resting state.
-    private var fieldStroke: Color {
-        if isFieldFocused { return KioskText.primary }
-        if !trimmedPurpose.isEmpty { return KioskStatus.ok.opacity(0.6) }
-        return KioskStroke.standard
-    }
-
-    private enum FieldRequirement {
-        case required
-        case suppliedByEvent
-    }
-
-    @ViewBuilder
-    private func fieldLabel(_ text: String, requirement: FieldRequirement) -> some View {
-        HStack(spacing: 6) {
-            Text(text.uppercased())
-                .font(KioskType.overline)
-                .tracking(1.2)
-                .foregroundStyle(KioskText.muted)
-            switch requirement {
-            case .required:
-                Text("REQUIRED")
-                    .font(KioskType.micro)
-                    .foregroundStyle(KioskText.primary)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(KioskSurface.control, in: Capsule())
-            case .suppliedByEvent:
-                Text("FROM EVENT")
-                    .font(KioskType.micro)
-                    .foregroundStyle(KioskStatus.scheduled)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(KioskStatus.scheduled.opacity(0.16), in: Capsule())
-            }
-        }
-        .accessibilityElement(children: .combine)
-    }
-
-    private func statusLine(icon: String, text: String, tone: Color) -> some View {
-        Label {
-            Text(text)
-                .font(KioskType.chip)
-                .foregroundStyle(tone)
-                .fixedSize(horizontal: false, vertical: true)
-        } icon: {
-            Image(systemName: icon)
-                .font(KioskType.meta)
-                .foregroundStyle(tone)
-        }
-        .accessibilityElement(children: .combine)
-    }
-}
-
-private struct KioskCheckoutEventRow: View {
-    let event: KioskCheckoutEvent
-    let isSelected: Bool
-    let subtitle: String
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 12) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 5)
-                        .stroke(isSelected ? KioskText.primary : KioskStroke.standard, lineWidth: isSelected ? 2 : 1)
-                        .frame(width: 20, height: 20)
-                    if isSelected {
-                        Image(systemName: "checkmark")
-                            .font(KioskType.chipStrong)
-                            .foregroundStyle(KioskText.primary)
-                            .accessibilityHidden(true)
-                    }
-                }
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(event.title)
-                        .font(.subheadline.weight(.bold))
-                        .foregroundStyle(KioskText.primary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.78)
-                    Text(subtitle)
-                        .font(KioskType.chip)
-                        .foregroundStyle(KioskText.secondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.82)
-                }
-
-                Spacer(minLength: 0)
-
-                Image(systemName: "chevron.right")
-                    .font(KioskType.chip)
-                    .foregroundStyle(KioskText.muted)
-                    .accessibilityHidden(true)
-            }
-            .padding(.horizontal, 14)
-            .frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)
-            .background(isSelected ? KioskSurface.cardSelected : Color.clear)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("\(event.title), \(subtitle)\(isSelected ? ", selected" : "")")
-    }
-}
-
-private struct KioskCheckoutEventLoadingRow: View {
-    var body: some View {
-        HStack(spacing: 10) {
-            ProgressView()
-                .tint(KioskText.primary)
-            Text("Loading upcoming events")
-                .font(KioskType.chip)
-                .foregroundStyle(KioskText.secondary)
-            Spacer()
-        }
-        .padding(.horizontal, 14)
-        .frame(height: 56)
-        .background(KioskSurface.sunken, in: RoundedRectangle(cornerRadius: KioskRadius.md))
-    }
-}
-
-private struct KioskCheckoutEmptyEventRow: View {
-    var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "calendar")
-                .foregroundStyle(KioskText.muted)
-                .accessibilityHidden(true)
-            Text("No events in the next 7 days")
-                .font(KioskType.chip)
-                .foregroundStyle(KioskText.secondary)
-            Spacer()
-        }
-        .padding(.horizontal, 14)
-        .frame(height: 56)
-        .background(KioskSurface.sunken, in: RoundedRectangle(cornerRadius: KioskRadius.md))
-    }
-}
-
-private struct KioskCheckoutReturnWindow: View {
-    @Binding var dueBackAt: Date
-    var eventEnd: Date?
-
-    var body: some View {
-        KioskCheckoutWindow(title: "When's it back?") {
-            KioskCheckoutReturnDatePicker(dueBackAt: $dueBackAt, eventEnd: eventEnd)
-        }
-    }
-}
-
-/// Return date and time, stated outright.
-///
-/// This screen has been through two wrong answers. First a 300pt
-/// `UICalendarView` beside a 180pt wheel, both `.clipped()` inside a card too
-/// short to hold them -- they visibly overlapped on device. Then one-tap
-/// presets ("2 hours", "Tonight"), which were quick but wrong for a custody
-/// record: an easy default is the one people press to get past the screen, and
-/// a due date nobody chose is a due date nobody honours.
-///
-/// So both fields are always visible, always native, and always require a
-/// deliberate choice. Each opens its own system popover, so neither can
-/// overlap the other. Time uses the native compact picker in 15-minute steps:
-/// less scrolling and no false minute-level precision in a custody record.
-private struct KioskCheckoutReturnDatePicker: View {
-    @Binding var dueBackAt: Date
-    var eventEnd: Date?
-
-    private var minimumDueBack: Date {
-        KioskQuarterHour.roundedUp(Date().addingTimeInterval(5 * 60))
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top, spacing: KioskSpacing.md) {
-                field("Return date") {
-                    DatePicker(
-                        "Return date",
-                        selection: clampedDueBack,
-                        in: minimumDueBack...,
-                        displayedComponents: .date
-                    )
-                }
-                field("Return time") {
-                    KioskQuarterHourTimePicker(
-                        selection: clampedDueBack,
-                        minimumDate: minimumDueBack
-                    )
-                }
-                Spacer(minLength: 0)
-            }
-
-            // The committed answer, restated in full so it is legible from
-            // across the counter and unambiguous about which day it lands on.
-            //
-            // It now sits in its own band rather than floating as loose text
-            // under two system controls. The two `.compact` pickers are small
-            // grey chips by construction; with the answer set in the same
-            // visual weight as everything around it, the window stated the due
-            // date three times and emphasised it zero times.
-            VStack(alignment: .leading, spacing: 4) {
-                // No "DUE BACK" overline: the card is titled "When's it back?",
-                // so the band repeating the label spent vertical space this
-                // step does not have — and this is a step that must fit on one
-                // screen, because its CTA is pinned to the bottom of it.
-                Text(dueBackAt.kioskDueStamp())
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundStyle(KioskText.primary)
-                    .contentTransition(.numericText())
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-
-                if let eventEnd {
-                    if let defaultDueBack = KioskCheckoutDefaults.dueBackDate(afterEventEndsAt: eventEnd),
-                       abs(defaultDueBack.timeIntervalSince(dueBackAt)) < 60 {
-                        Label(
-                            "90 minutes after the linked event ends",
-                            systemImage: "calendar.badge.checkmark"
-                        )
-                        .font(KioskType.chip)
-                        .foregroundStyle(KioskStatus.scheduled)
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .background(KioskSurface.sunken, in: RoundedRectangle(cornerRadius: KioskRadius.md))
-            .overlay(
-                RoundedRectangle(cornerRadius: KioskRadius.md)
-                    .stroke(KioskStroke.hairline, lineWidth: 1)
-            )
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("Due back \(dueBackAt.formatted(date: .complete, time: .shortened))")
-        }
-    }
-
-    private func field<Picker: View>(
-        _ label: String,
-        @ViewBuilder picker: () -> Picker
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                Text(label.uppercased())
-                    .font(KioskType.overline)
-                    .tracking(1.2)
-                    .foregroundStyle(KioskText.muted)
-                // A bare red asterisk is a convention from dense web forms and
-                // means nothing at counter distance. The word does.
-                Text("REQUIRED")
-                    .font(KioskType.micro)
-                    .foregroundStyle(KioskText.primary)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(KioskSurface.control, in: Capsule())
-            }
-            picker()
-                .datePickerStyle(.compact)
-                .labelsHidden()
-                .tint(KioskText.primary)
-                .controlSize(.large)
-        }
-    }
-
-    private var clampedDueBack: Binding<Date> {
-        Binding(
-            get: { max(dueBackAt, minimumDueBack) },
-            set: { dueBackAt = KioskQuarterHour.clamped($0, minimum: minimumDueBack) }
-        )
-    }
-}
-
-private enum KioskCheckoutEventFormat {
+enum KioskCheckoutEventFormat {
     static func subtitle(_ event: KioskCheckoutEvent) -> String {
         var parts = [eventDateFormatter.string(from: event.startsAt)]
         if let locationName = event.locationName, !locationName.isEmpty {
@@ -2341,52 +1497,6 @@ private enum KioskCheckoutEventFormat {
         formatter.dateFormat = "EEE h:mm a"
         return formatter
     }()
-}
-
-private struct KioskCheckoutSideSummary: View {
-    let user: KioskUser
-    let locationName: String?
-    let contextTitle: String?
-    let contextDetail: String?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 12) {
-                KioskAvatar(url: user.avatarUrl, initials: user.initials, size: 40)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(user.name)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(KioskText.primary)
-                        .lineLimit(1)
-                    Text(locationName ?? "Kiosk location")
-                        .font(KioskType.meta)
-                        .foregroundStyle(KioskText.muted)
-                        .lineLimit(1)
-                }
-            }
-
-            if let contextTitle, !contextTitle.isEmpty {
-                HStack(alignment: .top, spacing: 10) {
-                    Image(systemName: "calendar.badge.clock")
-                        .foregroundStyle(KioskText.primary)
-                        .accessibilityHidden(true)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(contextTitle)
-                            .font(KioskType.chip)
-                            .foregroundStyle(KioskText.primary)
-                            .lineLimit(2)
-                        if let contextDetail, !contextDetail.isEmpty {
-                            Text(contextDetail)
-                                .font(KioskType.meta)
-                                .foregroundStyle(KioskText.muted)
-                                .lineLimit(2)
-                        }
-                    }
-                }
-            }
-        }
-        .padding(20)
-    }
 }
 
 private struct KioskScannerTroubleshootingSheet: View {
@@ -2430,165 +1540,6 @@ private struct KioskScannerTroubleshootingSheet: View {
     private var lastScanText: String {
         guard let lastScanAt else { return "No scanner input received in this checkout yet" }
         return "Last scanner input: \(lastScanAt.formatted(date: .omitted, time: .shortened))"
-    }
-}
-
-private struct KioskCheckoutContextSummary: View {
-    let title: String
-    let detail: String?
-    let dueBackAt: Date
-    var showsEdit: Bool = true
-    let onEdit: () -> Void
-
-    var body: some View {
-        HStack(spacing: 14) {
-            Image(systemName: "calendar.badge.clock")
-                .font(.headline)
-                .foregroundStyle(KioskText.primary)
-                .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(KioskText.primary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.82)
-                if let detail, !detail.isEmpty {
-                    Text(detail)
-                        .font(KioskType.meta)
-                        .foregroundStyle(KioskText.muted)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.82)
-                }
-                Text("Due back \(dueBackAt.formatted(date: .abbreviated, time: .shortened))")
-                    .font(KioskType.meta)
-                    .foregroundStyle(KioskText.secondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.82)
-            }
-
-            Spacer()
-
-            if showsEdit {
-                Button("Edit", action: onEdit)
-                    .font(KioskType.chip)
-                    .foregroundStyle(KioskText.secondary)
-                    .buttonStyle(.plain)
-                    .frame(minWidth: 44, minHeight: 44)
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .kioskCard(KioskSurface.card, radius: KioskRadius.lg, stroke: KioskStroke.standard)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(title), due back \(dueBackAt.formatted(date: .abbreviated, time: .shortened))")
-    }
-}
-
-private struct KioskCheckoutAvailabilityBanner: View {
-    let result: KioskCheckoutAvailabilityResult
-    let isChecking: Bool
-    let errorMessage: String?
-    /// The only way back from a dropped availability check. Without it,
-    /// Complete stayed disabled until someone removed an item to re-trigger it.
-    var onRetry: (() -> Void)?
-
-    var body: some View {
-        if isChecking || result.hasBlockingIssue || result.hasWarning || errorMessage != nil {
-            HStack(spacing: 10) {
-                Image(systemName: iconName)
-                    .foregroundStyle(color)
-                    .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(KioskType.chip)
-                        .foregroundStyle(KioskText.primary)
-                    Text(detail)
-                        .font(KioskType.meta)
-                        .foregroundStyle(KioskText.muted)
-                        .lineLimit(2)
-                }
-                Spacer()
-                if errorMessage != nil, !isChecking, let onRetry {
-                    Button("Retry", action: onRetry)
-                        .font(KioskType.chip)
-                        .kioskButtonRole(.secondary)
-                        .controlSize(.regular)
-                        .accessibilityLabel("Retry the availability check")
-                }
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .kioskCard(KioskSurface.card, radius: KioskRadius.md, stroke: KioskStroke.hairline)
-        }
-    }
-
-    private var color: Color {
-        if errorMessage != nil { return Color.statusText(.orange) }
-        if result.hasBlockingIssue { return Color.statusText(.red) }
-        if result.hasWarning { return Color.statusText(.orange) }
-        return Color.statusText(.blue)
-    }
-
-    private var iconName: String {
-        if isChecking { return "arrow.triangle.2.circlepath" }
-        if errorMessage != nil { return "wifi.exclamationmark" }
-        if result.hasBlockingIssue { return "exclamationmark.triangle.fill" }
-        if result.hasWarning { return "clock.badge.exclamationmark" }
-        return "checkmark.shield.fill"
-    }
-
-    private var title: String {
-        if isChecking { return "Checking availability" }
-        if errorMessage != nil { return "Availability unavailable" }
-        if result.hasBlockingIssue { return KioskAvailabilityCopy.blockingTitle(for: result) }
-        if hasLostReport { return "Lost report" }
-        if hasConditionReport { return "Condition check" }
-        if hasTransferRisk { return "Transfer timing" }
-        if result.hasWarning && hasCriticalWarning { return "Very tight turnaround" }
-        if result.hasWarning { return "Tight turnaround" }
-        return "Conflict check clear"
-    }
-
-    private var hasLostReport: Bool {
-        result.turnaroundRisks.contains { $0.code == "RECENT_CHECKIN_REPORT" && $0.reportType == "LOST" }
-    }
-
-    private var hasConditionReport: Bool {
-        result.turnaroundRisks.contains { $0.code == "RECENT_CHECKIN_REPORT" }
-    }
-
-    private var hasTransferRisk: Bool {
-        result.turnaroundRisks.contains { $0.code == "LOCATION_TRANSFER" }
-    }
-
-    private var hasCriticalWarning: Bool {
-        result.turnaroundRisks.contains { $0.severity.caseInsensitiveCompare("critical") == .orderedSame }
-            || result.bulkTurnaroundRisks.contains { $0.severity.caseInsensitiveCompare("critical") == .orderedSame }
-    }
-
-    private var detail: String {
-        if let errorMessage { return errorMessage }
-        if result.hasBlockingIssue {
-            let count = result.conflicts.count + result.shortages.count + result.unavailableAssets.count
-            return "\(count) issue\(count == 1 ? "" : "s") must be resolved before checkout."
-        }
-        if let risk = result.turnaroundRisks.first(where: { $0.code == "RECENT_CHECKIN_REPORT" && $0.reportType == "LOST" }) {
-            return KioskAvailabilityCopy.riskMessage(risk)
-        }
-        if let risk = result.turnaroundRisks.first(where: { $0.code == "RECENT_CHECKIN_REPORT" }) {
-            return KioskAvailabilityCopy.riskMessage(risk)
-        }
-        if let risk = result.turnaroundRisks.first(where: { $0.code == "LOCATION_TRANSFER" }) {
-            return KioskAvailabilityCopy.riskMessage(risk)
-        }
-        if let risk = result.turnaroundRisks.first {
-            return KioskAvailabilityCopy.riskMessage(risk)
-        }
-        if let risk = result.bulkTurnaroundRisks.first {
-            return KioskAvailabilityCopy.bulkRiskMessage(risk)
-        }
-        return "Scanning can continue."
     }
 }
 

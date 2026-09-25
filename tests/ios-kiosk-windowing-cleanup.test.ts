@@ -50,8 +50,8 @@ describe("iOS kiosk windowing cleanup", () => {
     expect(chrome).toContain("proxy.size.width < KioskLayout.compactBreakpoint");
     expect(chrome).toContain("primary(true)");
     expect(chrome).toContain("secondary(true)");
-    expect(checkout).toContain("KioskAdaptiveSplit { _ in");
-    expect(checkout).toContain("KioskSideRail(isCompact: isCompact)");
+    // Checkout moved to the redesign's fixed-canvas task scaffold (1180×820pt).
+    expect(checkout).toContain("KioskTaskScaffold(header: taskHeader(step: 2))");
     expect(pickup).toContain("KioskAdaptiveSplit { _ in");
     expect(pickup).toContain("KioskSideRail(isCompact: isCompact)");
     expect(returned).toContain("KioskAdaptiveSplit { _ in");

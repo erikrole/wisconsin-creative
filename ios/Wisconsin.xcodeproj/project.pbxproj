@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		01166B5C08621BBC2D8218F6 /* HIDScannerField.swift in Sources */ = {isa = PBXBuildFile; fileRef = C22B3A50B4815BC1451C26DD /* HIDScannerField.swift */; };
+		015371E187F17F4CE2241673 /* KioskCheckoutDetailsStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14951B258A7FE7AD4B9F5059 /* KioskCheckoutDetailsStep.swift */; };
 		01C0E89D9110CBB8DA80D650 /* SearchResultRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD7494E64F4395E73A7AA6C1 /* SearchResultRow.swift */; };
 		021A7B27623C3C8544FE58BB /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B04517A8131BAA862DB3FF5E /* ProfileView.swift */; };
 		0342D7B9F506A8995685BC69 /* ItemListText.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC04AA628BB1DEA764D7EEAC /* ItemListText.swift */; };
@@ -250,6 +251,7 @@
 		0CF2E588B9A1DA4F76309E88 /* NotificationActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationActions.swift; sourceTree = "<group>"; };
 		0D900B3FE267BAB0F0904D07 /* Toast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Toast.swift; sourceTree = "<group>"; };
 		0E5A80EBE9AE9D0094E70FBB /* KioskShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskShellView.swift; sourceTree = "<group>"; };
+		14951B258A7FE7AD4B9F5059 /* KioskCheckoutDetailsStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskCheckoutDetailsStep.swift; sourceTree = "<group>"; };
 		14DA88A1DF6F8D23066A07BC /* GuidesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuidesView.swift; sourceTree = "<group>"; };
 		1770023701735D8701DCAA5B /* OverdueReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverdueReportView.swift; sourceTree = "<group>"; };
 		1B440FC4AD4F07C1163F8856 /* CheckoutReturnLiveActivityWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckoutReturnLiveActivityWidget.swift; sourceTree = "<group>"; };
@@ -628,6 +630,7 @@
 				BA5C2531E017BDBDE5EFDDFE /* KioskAPIClient.swift */,
 				06C085E7CDEC3CCE6DFDD630 /* KioskBarcodeCameraView.swift */,
 				966B6B986CA5E9C123B8EC01 /* KioskCheckoutDetailSheet.swift */,
+				14951B258A7FE7AD4B9F5059 /* KioskCheckoutDetailsStep.swift */,
 				3700D2B2FAE801DC2FF0F1ED /* KioskCheckoutView.swift */,
 				E15CD71193CFD39E493FF9B9 /* KioskChrome.swift */,
 				348C1E3385689A947929A115 /* KioskComponents.swift */,
@@ -1062,6 +1065,7 @@
 				4B2A968B07EADEF18DEAD46D /* KioskActivationView.swift in Sources */,
 				9920100D23D0FF37F2528340 /* KioskBarcodeCameraView.swift in Sources */,
 				18103A77A1D847F0F42FFDCF /* KioskCheckoutDetailSheet.swift in Sources */,
+				015371E187F17F4CE2241673 /* KioskCheckoutDetailsStep.swift in Sources */,
 				3626807CF358067A4EF9AF15 /* KioskCheckoutView.swift in Sources */,
 				610271C66D62E1DD52D043D1 /* KioskChrome.swift in Sources */,
 				F2A0A3013F3F22792FA32C84 /* KioskComponents.swift in Sources */,
