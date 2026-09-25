@@ -172,14 +172,27 @@ export const POST = withKiosk<{ id: string }>(async (req, { params }) => {
   });
 });
 
-/** Remove only a staged reservation scan. Custody already handed over on a
- * derived checkout is immutable here; replacing a unit never returns it. */
+const unstageBulkBody = z.object({
+  actorId: z.string().min(1),
+  bulkSkuId: z.string().min(1),
+  unitNumber: z.number().int().positive(),
+});
+const unstageSerializedBody = z.object({
+  actorId: z.string().min(1),
+  assetId: z.string().min(1),
+});
+
+/** Remove only a staged pickup scan (Undo). Custody already handed over on a
+ * derived checkout is immutable here; replacing a unit never returns it.
+ * Numbered units: `{ actorId, bulkSkuId, unitNumber }` on a due reservation.
+ * Serialized items: `{ actorId, assetId }` on a due reservation or a
+ * PENDING_PICKUP checkout; the item stays on the plan, only the scan clears. */
 export const DELETE = withKiosk<{ id: string }>(async (req, { params, kiosk }) => {
-  const body = z.object({
-    actorId: z.string().min(1),
-    bulkSkuId: z.string().min(1),
-    unitNumber: z.number().int().positive(),
-  }).parse(await req.json());
+  const raw: unknown = await req.json();
+  if (raw && typeof raw === "object" && "assetId" in raw) {
+    return ok(await unstageSerializedScan(unstageSerializedBody.parse(raw), params.id, kiosk.kioskId));
+  }
+  const body = unstageBulkBody.parse(raw);
   await db.$transaction(async (tx) => {
     const [booking, actor] = await Promise.all([
       tx.booking.findUnique({ where: { id: params.id }, include: { bulkItems: { include: { bulkSku: true } }, derivedCheckouts: { include: { bulkItems: { include: { unitAllocations: { include: { bulkSkuUnit: true } } } } } } } }),
@@ -202,3 +215,54 @@ export const DELETE = withKiosk<{ id: string }>(async (req, { params, kiosk }) =
   }, { isolationLevel: "Serializable" });
   return ok({ success: true, message: "Staged unit cleared. Scan the replacement unit." });
 });
+
+async function unstageSerializedScan(
+  body: z.infer<typeof unstageSerializedBody>,
+  bookingId: string,
+  kioskId: string,
+) {
+  return db.$transaction(async (tx) => {
+    const [booking, actor, item] = await Promise.all([
+      tx.booking.findUnique({
+        where: { id: bookingId },
+        select: { id: true, kind: true, status: true, custodyScope: true, requesterUserId: true },
+      }),
+      tx.user.findFirst({ where: { id: body.actorId, ...kioskRosterUserWhere() }, select: kioskPickupPlanActorSelect }),
+      tx.bookingSerializedItem.findUnique({
+        where: { bookingId_assetId: { bookingId, assetId: body.assetId } },
+        select: { allocationStatus: true, asset: { select: { assetTag: true, name: true } } },
+      }),
+    ]);
+    // Same actor rule as the numbered-unit undo above.
+    if (!actor) throw new HttpError(404, "Person not found");
+    const pickupOpen = booking && (
+      (booking.kind === "RESERVATION" && booking.status === "BOOKED") ||
+      (booking.kind === "CHECKOUT" && booking.status === "PENDING_PICKUP")
+    );
+    if (!booking || !pickupOpen) throw new HttpError(409, "Refresh the pickup before undoing a scan");
+    assertKioskPickupPlanActor(booking, actor);
+    if (!item) throw new HttpError(404, "That item is not on this pickup");
+    if (item.allocationStatus === "picked_up") {
+      throw new HttpError(409, "That item was already picked up. Return or transfer it from its checkout.");
+    }
+    const cleared = await tx.scanEvent.updateMany({
+      where: { bookingId, assetId: body.assetId, phase: "CHECKOUT", success: true },
+      data: { success: false },
+    });
+    const label = item.asset.name || item.asset.assetTag;
+    if (cleared.count === 0) {
+      return { success: true, alreadyCleared: true, message: `${label} wasn't scanned yet.` };
+    }
+    await tx.booking.update({ where: { id: bookingId }, data: { updatedAt: new Date() } });
+    await createAuditEntryTx(tx, {
+      actorId: actor.id,
+      actorRole: actor.role,
+      entityType: "booking",
+      entityId: bookingId,
+      action: "kiosk_pickup_scan_removed",
+      before: { assetId: body.assetId, tagName: item.asset.assetTag, scanCount: cleared.count },
+      after: { kioskDeviceId: kioskId, custodyChanged: false },
+    });
+    return { success: true, message: `${label} scan undone.` };
+  }, { isolationLevel: "Serializable" });
+}
