@@ -10,6 +10,8 @@ import { locationEvidencePayload } from "@/lib/services/kiosk-location";
 import { checkinScanBody } from "@/lib/schemas/kiosk";
 import { badges, earnedBadgesSince } from "@/lib/badges";
 import { endCheckoutReturnLiveActivities } from "@/lib/services/live-activities";
+import { undoKioskCheckinScan } from "@/lib/services/kiosk-checkin-undo";
+import { z } from "zod";
 
 /**
  * Scan an item for kiosk check-in (return).
@@ -196,3 +198,27 @@ async function alreadyReturnedToBooking(bookingId: string, scanValue: string) {
   if (item?.allocationStatus !== "returned") return null;
   return { id: asset.id, name: asset.name || asset.assetTag, tagName: asset.assetTag };
 }
+
+const undoCheckinScanBody = z.union([
+  z.object({ actorId: z.string().min(1), assetId: z.string().min(1) }).strict(),
+  z.object({ actorId: z.string().min(1), bulkSkuId: z.string().min(1), unitNumber: z.number().int().positive() }).strict(),
+]);
+
+/**
+ * Undo one return scan while the return is still open (frame G1 Undo).
+ * Body: `{ actorId, assetId }` or `{ actorId, bulkSkuId, unitNumber }`.
+ * Anyone on the roster may undo, the same rule as Return. A scan that
+ * finished the return (auto-complete) cannot be undone.
+ */
+export const DELETE = withKiosk<{ id: string }>(async (req, { kiosk, params }) => {
+  const body = undoCheckinScanBody.parse(await req.json());
+  const target = "assetId" in body
+    ? { assetId: body.assetId }
+    : { bulkSkuId: body.bulkSkuId, unitNumber: body.unitNumber };
+  return ok(await undoKioskCheckinScan({
+    bookingId: params.id,
+    actorId: body.actorId,
+    target,
+    kiosk: { kioskId: kiosk.kioskId, locationId: kiosk.locationId },
+  }));
+});

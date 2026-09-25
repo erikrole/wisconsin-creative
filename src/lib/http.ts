@@ -15,6 +15,17 @@ export class HttpError extends Error {
   }
 }
 
+/** A machine-readable `code` carried in `HttpError.data` is also surfaced at
+ * the top level so clients can branch without parsing message text. */
+export function httpErrorCode(error: HttpError): { code?: string } {
+  const data = error.data;
+  if (data && typeof data === "object" && !Array.isArray(data)) {
+    const code = (data as { code?: unknown }).code;
+    if (typeof code === "string") return { code };
+  }
+  return {};
+}
+
 export function ok<T>(data: T, status = 200) {
   // Default authed JSON to no-store so a logged-out user can't replay
   // sensitive responses from the browser cache via Back. Routes that
@@ -35,7 +46,11 @@ export function cachedOk<T>(data: T) {
 export function fail(error: unknown) {
   if (error instanceof HttpError) {
     return NextResponse.json(
-      { error: error.message, ...(error.data ? { data: error.data } : {}) },
+      {
+        error: error.message,
+        ...httpErrorCode(error),
+        ...(error.data ? { data: error.data } : {}),
+      },
       { status: error.status }
     );
   }

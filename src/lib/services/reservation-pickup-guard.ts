@@ -61,6 +61,7 @@ export function leftoverReservationPickupConflict(row: LeftoverReservationPickup
     409,
     `Finish pickup for ${label} first instead of starting a new checkout.`,
     {
+      code: "leftover_pickup",
       errorCode: "leftover_reservation_pickup",
       reservationId: row.id,
       refNumber: row.refNumber,

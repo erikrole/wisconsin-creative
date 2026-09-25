@@ -269,6 +269,7 @@ export const NOTIFICATION_TYPE_CATEGORY: Record<string, NotificationCategory | n
   checkout_overdue_4h: "checkoutOverdue",
   checkout_overdue_24h: "checkoutOverdue",
   overdue_nudge: "checkoutOverdue",
+  kiosk_checkout_handover: "checkoutDue",
   reservation_booked: "reservation",
   reservation_updated: "reservation",
   reservation_pickup_ready: "reservation",

@@ -2,6 +2,7 @@ import {
   BookingCustodyScope,
   BookingKind,
   BookingStatus,
+  CheckinReportType,
   BulkMovementKind,
   BulkUnitStatus,
   Prisma,
@@ -54,8 +55,14 @@ export async function maybeAutoComplete(
   }
 ): Promise<Date | null> {
   const [remainingActive, currentBulkItems] = await Promise.all([
+    // A LOST report accounts for its item (web check-in semantics), so it no
+    // longer holds the return open.
     tx.bookingSerializedItem.count({
-      where: { bookingId, allocationStatus: "active" }
+      where: {
+        bookingId,
+        allocationStatus: "active",
+        asset: { checkinReports: { none: { bookingId, type: CheckinReportType.LOST } } },
+      }
     }),
     tx.bookingBulkItem.findMany({
       where: { bookingId }

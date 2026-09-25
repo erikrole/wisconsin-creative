@@ -77,6 +77,14 @@ export const activeCheckoutRemoveItemBody = z.object({
 }, {
   message: "Provide either assetId or bulkSkuId plus unitNumber",
 });
+export const activeCheckoutSwapItemBody = z.object({
+  actorId: cuidish,
+  remove: z.union([
+    z.object({ assetId: cuidish }).strict(),
+    z.object({ bulkSkuId: cuidish, unitNumber: bulkUnitNumber }).strict(),
+  ]),
+  scanValue: z.string().trim().min(1, "Scan value required"),
+});
 export const checkinCompleteBody = z.object({
   actorId: cuidish,
 });

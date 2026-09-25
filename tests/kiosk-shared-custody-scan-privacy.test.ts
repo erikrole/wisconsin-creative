@@ -8,7 +8,10 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/db", () => ({
-  db: { assetAllocation: { findFirst: mocks.allocationFindFirst } },
+  db: {
+    assetAllocation: { findFirst: mocks.allocationFindFirst, findMany: vi.fn().mockResolvedValue([]) },
+    bookingBulkUnitAllocation: { findFirst: vi.fn().mockResolvedValue(null) },
+  },
 }));
 
 vi.mock("@/lib/api", () => ({

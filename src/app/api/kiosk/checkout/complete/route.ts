@@ -1,5 +1,5 @@
 import { rejectKioskOperation, kioskOperationContext, readKioskOperationReplay, unreadableKioskOperation, claimKioskOperationReceiptTx, finishKioskOperationReceiptTx } from "@/lib/services/kiosk-operation-receipts";
-import { BookingCustodyScope, BookingKind, BookingStatus, BulkMovementKind, BulkUnitStatus, CalendarEventStatus, Prisma } from "@prisma/client";
+import { BookingKind, BulkMovementKind, BulkUnitStatus, CalendarEventStatus, Prisma } from "@prisma/client";
 import { after } from "next/server";
 import { db } from "@/lib/db";
 import { withKiosk } from "@/lib/api";
@@ -23,6 +23,7 @@ import { loadKitEquipmentPlan } from "@/lib/services/kits";
 import { isSerializationConflict } from "@/lib/serialization";
 import { isBookingAllocationConstraintError } from "@/lib/prisma-errors";
 import { requireKioskActor } from "@/lib/services/kiosk-actor";
+import { checkoutLimitConflict, countPersonalActiveCheckouts } from "@/lib/services/kiosk-checkout-allowance";
 
 const MAX_SERIALIZABLE_ATTEMPTS = 2;
 
@@ -98,18 +99,10 @@ export const POST = withKiosk(async (req, { kiosk }) => {
         });
         const policies = normalizeCheckoutPolicies(policyRow?.value);
         if (policies.maxItemsPerUser !== null) {
-          const activeCheckoutCount = await tx.booking.count({
-            where: {
-              kind: BookingKind.CHECKOUT,
-              requesterUserId: actorId,
-              // Shared travel-case custody is not this person's (D-061) and
-              // must not count against their personal checkout limit.
-              custodyScope: BookingCustodyScope.PERSON,
-              status: { in: [BookingStatus.OPEN, BookingStatus.PENDING_PICKUP] },
-            },
-          });
+          // Shared helper: the hub's `checkoutAllowance` reads the same count.
+          const activeCheckoutCount = await countPersonalActiveCheckouts(tx, actorId);
           if (activeCheckoutCount >= policies.maxItemsPerUser) {
-            throw new HttpError(409, "This user already has the maximum number of active checkouts");
+            throw checkoutLimitConflict();
           }
         }
 
