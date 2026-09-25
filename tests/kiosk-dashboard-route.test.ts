@@ -14,6 +14,7 @@ vi.mock("@/lib/db", () => ({
     booking: { count: vi.fn(), findMany: vi.fn() },
     bookingSerializedItem: { findMany: vi.fn() },
     bookingBulkUnitAllocation: { findMany: vi.fn() },
+    notification: { findMany: vi.fn().mockResolvedValue([]) },
   },
 }));
 

@@ -16,6 +16,7 @@ import {
   type HomeCheckoutRow,
   type HomePickupRow,
 } from "@/lib/services/kiosk-dashboard-home";
+import { kioskNudgedTodaySet } from "@/lib/services/kiosk-nudge";
 
 function settledValue<T>(
   result: PromiseSettledResult<T>,
@@ -530,6 +531,17 @@ export const GET = withKiosk(async () => {
     partialFailures,
   );
   const pickups = projectPickups(pickupRows, displayBookingTitle);
+  // One batched read, only when something personal is overdue.
+  const overduePersonalIds = checkouts
+    .filter((c) => c.custodyScope === "PERSON" && c.endsAt < now)
+    .map((c) => c.id);
+  let nudgedToday = new Set<string>();
+  try {
+    nudgedToday = await kioskNudgedTodaySet(overduePersonalIds, now);
+  } catch (error) {
+    console.error("[kiosk/dashboard] nudges failed", error);
+    partialFailures.push("nudges");
+  }
   // Older fixtures and rows without link columns read as unlinked.
   const homeCheckouts: HomeCheckoutRow[] = checkouts.map((c) => ({
     id: c.id,
@@ -726,6 +738,7 @@ export const GET = withKiosk(async () => {
         isOverdue: c.endsAt < now,
         eventId: linkedEventId(c),
         isDueToday: isInWindow(c.endsAt, todayWindow),
+        nudgedToday: nudgedToday.has(c.id),
       };
     }),
     partialFailures,
