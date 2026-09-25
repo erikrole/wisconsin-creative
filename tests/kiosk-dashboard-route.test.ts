@@ -28,6 +28,13 @@ const mockDb = db as unknown as {
   bookingBulkUnitAllocation: { findMany: ReturnType<typeof vi.fn> };
 };
 
+/** The OPEN-checkout list query gets `rows`; the pickups query gets `pickups`. */
+function mockOpenCheckouts(rows: unknown[], pickups: unknown[] = []) {
+  mockDb.booking.findMany.mockImplementation(async (args: { where?: { status?: unknown } }) =>
+    args?.where?.status === "OPEN" ? rows : pickups,
+  );
+}
+
 function request() {
   return new Request("https://app.example.com/api/kiosk/dashboard");
 }
@@ -83,7 +90,7 @@ describe("kiosk dashboard route", () => {
         },
       },
     ]);
-    mockDb.booking.findMany.mockResolvedValue([
+    mockOpenCheckouts([
       {
         id: "booking-1",
         title: "Camera Kit",
@@ -151,7 +158,7 @@ describe("kiosk dashboard route", () => {
         },
       },
     ]);
-    mockDb.booking.findMany.mockResolvedValue([
+    mockOpenCheckouts([
       {
         id: "booking-1",
         title: "Kiosk Checkout",
@@ -211,7 +218,7 @@ describe("kiosk dashboard route", () => {
         requester: { name: "Bucky Badger" },
       },
     }]);
-    mockDb.booking.findMany.mockResolvedValue([{
+    mockOpenCheckouts([{
       id: "booking-1",
       title: "Women's Soccer vs Ucla",
       endsAt: new Date("2026-06-17T12:00:00.000Z"),
@@ -233,7 +240,7 @@ describe("kiosk dashboard route", () => {
     mockDb.$queryRaw.mockResolvedValue([{ items_out: 8n, checkouts: 1n, overdue: 0n }]);
     mockDb.calendarEvent.findMany.mockResolvedValue([]);
     mockDb.bookingBulkUnitAllocation.findMany.mockResolvedValue([]);
-    mockDb.booking.findMany.mockResolvedValue([
+    mockOpenCheckouts([
       {
         id: "booking-1",
         title: "Chris Hall checkout",
@@ -278,7 +285,7 @@ describe("kiosk dashboard route", () => {
   it("returns safe fallback sections when one dashboard query fails", async () => {
     mockDb.$queryRaw.mockRejectedValue(new Error("stats failed"));
     mockDb.calendarEvent.findMany.mockResolvedValue([]);
-    mockDb.booking.findMany.mockResolvedValue([]);
+    mockOpenCheckouts([]);
 
     const res = await GET(request(), { params: Promise.resolve({}) });
     const body = await res.json();
@@ -295,7 +302,7 @@ describe("kiosk dashboard route", () => {
     vi.setSystemTime(new Date("2026-06-23T23:38:00.000Z")); // 6:38 PM Central during CDT
     mockDb.$queryRaw.mockResolvedValue([{ items_out: 0n, checkouts: 0n, overdue: 0n }]);
     mockDb.calendarEvent.findMany.mockResolvedValue([]);
-    mockDb.booking.findMany.mockResolvedValue([]);
+    mockOpenCheckouts([]);
 
     const res = await GET(request(), { params: Promise.resolve({}) });
     const body = await res.json();
@@ -305,5 +312,71 @@ describe("kiosk dashboard route", () => {
       nightHours: false,
       reason: "idle_window",
     }));
+  });
+
+  it("adds home fields: pickups, event links, due today, people tiles, and next up", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-25T18:00:00.000Z")); // 1:00 PM Central
+    mockDb.$queryRaw.mockResolvedValue([{ items_out: 1n, checkouts: 1n, overdue: 0n }]);
+    mockDb.calendarEvent.findMany.mockResolvedValue([]);
+    mockOpenCheckouts(
+      [{
+        id: "co-1",
+        title: "Soccer",
+        endsAt: new Date("2026-09-25T23:00:00.000Z"),
+        custodyScope: "PERSON",
+        eventId: null,
+        shiftAssignmentId: null,
+        events: [{ eventId: "event-9" }],
+        requester: { id: "user-1", name: "Bucky Badger", avatarUrl: null },
+        serializedItems: [],
+        bulkItems: [],
+        _count: { serializedItems: 1 },
+      }],
+      [{
+        id: "rv-1",
+        kind: "RESERVATION",
+        title: "Volleyball",
+        startsAt: new Date("2026-09-25T20:00:00.000Z"),
+        custodyScope: "PERSON",
+        eventId: null,
+        events: [],
+        requester: { id: "user-2", name: "Erik Role", avatarUrl: null },
+        _count: { serializedItems: 2 },
+        bulkItems: [],
+      }],
+    );
+
+    const res = await GET(request(), { params: Promise.resolve({}) });
+    const body = await res.json();
+
+    expect(body.partialFailures).toEqual([]);
+    expect(body.checkouts[0]).toMatchObject({ eventId: "event-9", isDueToday: true, isOverdue: false });
+    expect(body.pickups).toEqual([expect.objectContaining({
+      bookingId: "rv-1", itemCount: 2, readyAt: "2026-09-25T20:00:00.000Z",
+      requester: expect.objectContaining({ id: "user-2", name: "Erik Role" }),
+    })]);
+    expect(body.today.map((t: { userId: string; reasons: string[] }) => [t.userId, t.reasons])).toEqual([
+      ["user-2", ["pickup"]],
+      ["user-1", ["return_due"]],
+    ]);
+    expect(body.nextUp).toEqual({ title: "Volleyball", at: "2026-09-25T20:00:00.000Z", kind: "pickup" });
+    const pickupQuery = mockDb.booking.findMany.mock.calls
+      .map((call) => call[0])
+      .find((args) => Array.isArray(args.where?.OR));
+    expect(pickupQuery.where.startsAt).toEqual({ lt: new Date("2026-09-26T05:00:00.000Z") });
+  });
+
+  it("reports a failed pickups read as a partial failure", async () => {
+    mockDb.$queryRaw.mockResolvedValue([{ items_out: 0n, checkouts: 0n, overdue: 0n }]);
+    mockDb.calendarEvent.findMany.mockResolvedValue([]);
+    mockDb.booking.findMany.mockImplementation(async (args: { where?: { status?: unknown } }) => {
+      if (args.where?.status === "OPEN") return [];
+      throw new Error("pickups failed");
+    });
+
+    const body = await (await GET(request(), { params: Promise.resolve({}) })).json();
+    expect(body.pickups).toEqual([]);
+    expect(body.partialFailures).toEqual(["pickups"]);
   });
 });

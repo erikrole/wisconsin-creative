@@ -6,6 +6,16 @@ import { env } from "@/lib/env";
 import { displayBookingTitle } from "@/lib/booking-display-title";
 import { normalizeTeamAbbreviations } from "@/lib/title-normalization";
 import { BookingKind, BookingStatus, ShiftAssignmentStatus } from "@prisma/client";
+import {
+  crewWithoutGear,
+  isInWindow,
+  linkedEventId,
+  projectNextUp,
+  projectPickups,
+  projectTodayTiles,
+  type HomeCheckoutRow,
+  type HomePickupRow,
+} from "@/lib/services/kiosk-dashboard-home";
 
 function settledValue<T>(
   result: PromiseSettledResult<T>,
@@ -133,6 +143,8 @@ export const GET = withKiosk(async () => {
   const nearPast = new Date(now.getTime() - 2 * 60 * 60 * 1000);
   const nearFuture = new Date(now.getTime() + 90 * 60 * 1000);
   const eventsWindow = dayWindowInTimeZone(now, 2, env.appTimezone);
+  // The local calendar day (APP_TIMEZONE, America/Chicago by default).
+  const todayWindow = dayWindowInTimeZone(now, 1, env.appTimezone);
   const localNow = localDateTimeParts(now, env.appTimezone);
   const nightHours = localNow.hour >= 22 || localNow.hour < 6;
 
@@ -143,6 +155,7 @@ export const GET = withKiosk(async () => {
     activeBulkUnitsResult,
     checkoutsResult,
     operationalWindowsResult,
+    pickupsResult,
   ] = await Promise.allSettled([
     // Stats: every active checkout is operationally visible from every kiosk.
     db.$queryRaw<
@@ -217,6 +230,8 @@ export const GET = withKiosk(async () => {
                     },
                   },
                   select: {
+                    id: true,
+                    callStartsAt: true,
                     user: { select: { id: true, name: true, avatarUrl: true } },
                   },
                 },
@@ -316,6 +331,9 @@ export const GET = withKiosk(async () => {
         title: true,
         endsAt: true,
         custodyScope: true,
+        eventId: true,
+        shiftAssignmentId: true,
+        events: { orderBy: { ordinal: "asc" }, select: { eventId: true } },
         requester: {
           select: { id: true, name: true, avatarUrl: true },
         },
@@ -374,6 +392,33 @@ export const GET = withKiosk(async () => {
         },
       }),
     ]),
+
+    // Pickups ready now or later today: due reservations (including partial
+    // leftovers) and compatibility PENDING_PICKUP checkouts.
+    db.booking.findMany({
+      where: {
+        OR: [
+          { kind: BookingKind.CHECKOUT, status: BookingStatus.PENDING_PICKUP },
+          { kind: BookingKind.RESERVATION, status: BookingStatus.BOOKED },
+        ],
+        startsAt: { lt: todayWindow.end },
+        endsAt: { gt: now },
+      },
+      orderBy: { startsAt: "asc" },
+      take: 50,
+      select: {
+        id: true,
+        kind: true,
+        title: true,
+        startsAt: true,
+        custodyScope: true,
+        eventId: true,
+        events: { orderBy: { ordinal: "asc" }, take: 1, select: { eventId: true } },
+        requester: { select: { id: true, name: true, avatarUrl: true } },
+        _count: { select: { serializedItems: { where: { allocationStatus: "active" } } } },
+        bulkItems: { select: { plannedQuantity: true, checkedOutQuantity: true } },
+      },
+    }),
   ]);
 
   const partialFailures: string[] = [];
@@ -400,6 +445,8 @@ export const GET = withKiosk(async () => {
           startsAt: Date;
           endsAt: Date;
           assignments: Array<{
+            id: string;
+            callStartsAt: Date | null;
             user: { id: string; name: string; avatarUrl: string | null };
           }>;
         }>;
@@ -416,6 +463,9 @@ export const GET = withKiosk(async () => {
       title: string;
       endsAt: Date;
       custodyScope: "PERSON" | "SHARED";
+      eventId: string | null;
+      shiftAssignmentId: string | null;
+      events: Array<{ eventId: string }>;
       requester: { id: string; name: string; avatarUrl: string | null };
       serializedItems: Array<{ asset: { assetTag: string; name: string | null } }>;
       bulkItems: Array<{
@@ -473,6 +523,24 @@ export const GET = withKiosk(async () => {
     partialFailures,
   );
 
+  const pickupRows = settledValue(
+    pickupsResult,
+    [] as HomePickupRow[],
+    "pickups",
+    partialFailures,
+  );
+  const pickups = projectPickups(pickupRows, displayBookingTitle);
+  // Older fixtures and rows without link columns read as unlinked.
+  const homeCheckouts: HomeCheckoutRow[] = checkouts.map((c) => ({
+    id: c.id,
+    endsAt: c.endsAt,
+    custodyScope: c.custodyScope,
+    eventId: c.eventId ?? null,
+    shiftAssignmentId: c.shiftAssignmentId ?? null,
+    events: c.events ?? [],
+    requester: c.requester,
+  }));
+
   const stats = {
     itemsOut: Number(statsRows[0]?.items_out ?? 0),
     checkouts: Number(statsRows[0]?.checkouts ?? 0),
@@ -484,6 +552,65 @@ export const GET = withKiosk(async () => {
     nearbyEventCount === 0 &&
     nearbyBookingWindowCount === 0;
   const sleepMode = nightHours || noActiveWork;
+
+  const eventPayloads = events.map((e) => {
+    const seenUserIds = new Set<string>();
+    const shifts = e.shiftGroup?.shifts ?? [];
+    const allDay = e.allDay || isAllDaySpan(e.startsAt, e.endsAt, env.appTimezone);
+    const callStartsAt = shifts.reduce<Date | null>((earliest, shift) => {
+      const value = shift.callStartsAt ?? shift.startsAt;
+      if (!earliest || value < earliest) return value;
+      return earliest;
+    }, null);
+    const callEndsAt = shifts.reduce<Date | null>((latest, shift) => {
+      const value = shift.callEndsAt ?? shift.endsAt;
+      if (!latest || value > latest) return value;
+      return latest;
+    }, null);
+    const assignedUsers: Array<{
+      id: string;
+      name: string;
+      initials: string;
+      avatarUrl: string | null;
+      area: string | null;
+      callStartsAt: Date | null;
+      callEndsAt: Date | null;
+    }> = [];
+    for (const shift of shifts) {
+      for (const assignment of shift.assignments) {
+        if (seenUserIds.has(assignment.user.id)) continue;
+        seenUserIds.add(assignment.user.id);
+        assignedUsers.push({
+          id: assignment.user.id,
+          name: assignment.user.name,
+          initials: getInitials(assignment.user.name),
+          avatarUrl: assignment.user.avatarUrl,
+          area: shift.area,
+          callStartsAt: allDay ? null : (shift.callStartsAt ?? shift.startsAt),
+          callEndsAt: allDay ? null : (shift.callEndsAt ?? shift.endsAt),
+        });
+      }
+    }
+    return {
+      id: e.id,
+      title: normalizeTeamAbbreviations(e.summary),
+      sportCode: e.sportCode,
+      startsAt: e.startsAt,
+      endsAt: e.endsAt,
+      allDay,
+      callStartsAt: allDay ? null : callStartsAt,
+      callEndsAt: allDay ? null : callEndsAt,
+      shiftCount: e.shiftGroup?._count.shifts ?? 0,
+      assignedUsers,
+      assignedUserCount: assignedUsers.length,
+      crewWithoutGear: crewWithoutGear(e, homeCheckouts).map((user) => ({
+        id: user.id,
+        name: user.name,
+        initials: getInitials(user.name),
+        avatarUrl: user.avatarUrl,
+      })),
+    };
+  });
 
   return ok({
     stats,
@@ -498,58 +625,18 @@ export const GET = withKiosk(async () => {
       nearbyEventCount,
       nearbyBookingWindowCount,
     },
-    events: events.map((e) => {
-      const seenUserIds = new Set<string>();
-      const shifts = e.shiftGroup?.shifts ?? [];
-      const allDay = e.allDay || isAllDaySpan(e.startsAt, e.endsAt, env.appTimezone);
-      const callStartsAt = shifts.reduce<Date | null>((earliest, shift) => {
-        const value = shift.callStartsAt ?? shift.startsAt;
-        if (!earliest || value < earliest) return value;
-        return earliest;
-      }, null);
-      const callEndsAt = shifts.reduce<Date | null>((latest, shift) => {
-        const value = shift.callEndsAt ?? shift.endsAt;
-        if (!latest || value > latest) return value;
-        return latest;
-      }, null);
-      const assignedUsers: Array<{
-        id: string;
-        name: string;
-        initials: string;
-        avatarUrl: string | null;
-        area: string | null;
-        callStartsAt: Date | null;
-        callEndsAt: Date | null;
-      }> = [];
-      for (const shift of shifts) {
-        for (const assignment of shift.assignments) {
-          if (seenUserIds.has(assignment.user.id)) continue;
-          seenUserIds.add(assignment.user.id);
-          assignedUsers.push({
-            id: assignment.user.id,
-            name: assignment.user.name,
-            initials: getInitials(assignment.user.name),
-            avatarUrl: assignment.user.avatarUrl,
-            area: shift.area,
-            callStartsAt: allDay ? null : (shift.callStartsAt ?? shift.startsAt),
-            callEndsAt: allDay ? null : (shift.callEndsAt ?? shift.endsAt),
-          });
-        }
-      }
-      return {
-        id: e.id,
-        title: normalizeTeamAbbreviations(e.summary),
-        sportCode: e.sportCode,
-        startsAt: e.startsAt,
-        endsAt: e.endsAt,
-        allDay,
-        callStartsAt: allDay ? null : callStartsAt,
-        callEndsAt: allDay ? null : callEndsAt,
-        shiftCount: e.shiftGroup?._count.shifts ?? 0,
-        assignedUsers,
-        assignedUserCount: assignedUsers.length,
-      };
-    }),
+    events: eventPayloads,
+    pickups: pickups.map((pickup) => ({
+      ...pickup,
+      requester: pickup.requester
+        ? { ...pickup.requester, initials: getInitials(pickup.requester.name) }
+        : null,
+    })),
+    today: projectTodayTiles({ now, today: todayWindow, checkouts: homeCheckouts, pickups, events }).map((tile) => ({
+      ...tile,
+      initials: getInitials(tile.name),
+    })),
+    nextUp: projectNextUp({ now, events: eventPayloads, pickups }),
     activeItems: [
       ...activeItems.map((entry) => ({
         id: entry.asset.id,
@@ -637,6 +724,8 @@ export const GET = withKiosk(async () => {
         itemCount: c._count.serializedItems + bulkItemCount,
         endsAt: c.endsAt,
         isOverdue: c.endsAt < now,
+        eventId: linkedEventId(c),
+        isDueToday: isInWindow(c.endsAt, todayWindow),
       };
     }),
     partialFailures,
