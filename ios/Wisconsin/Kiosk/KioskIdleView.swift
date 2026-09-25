@@ -34,34 +34,25 @@ struct KioskIdleView: View {
             let rosterWidth = KioskLayout.rosterWidth(for: proxy.size.width)
 
             ZStack {
-                Group {
-                    if compact {
-                        ScrollView {
-                            VStack(spacing: 24) {
-                                leftPanel
-                                // The page itself scrolls in the compact
-                                // fallback, so there is no "one screen" for the
-                                // roster to fit into and no box to measure.
-                                rosterPanel(fitsToScreen: false)
-                            }
-                            .padding(28)
-                        }
-                        .scrollIndicators(.hidden)
-                    } else {
-                        HStack(spacing: 0) {
-                            leftPanel
-                                .frame(maxWidth: .infinity)
-                                .padding(32)
-
-                            Divider()
-                                .background(KioskSurface.placeholder)
-
-                            rosterPanel(fitsToScreen: true)
-                                .frame(width: rosterWidth)
-                                .padding(32)
-                        }
+                KioskHomeView(
+                    locationName: store.info?.locationName,
+                    checkouts: unavailableSections.contains("checkouts") ? [] : (dashboard?.checkouts ?? []),
+                    users: users,
+                    isLoaded: dashboard != nil,
+                    offlineSince: hasConnectionIssue ? (lastLoadedAt ?? loadFailedAt) : nil,
+                    lastLoadedAt: lastLoadedAt,
+                    nextUp: nil,
+                    onOpenCheckout: { openCheckout($0) },
+                    onSelectUser: { user in
+                        identityRequests.invalidate()
+                        store.deferSleepMode(for: sleepWakeDuration)
+                        store.screen = .operatorHub(user)
+                    },
+                    onRevealStatus: {
+                        store.resetInactivity()
+                        store.systemStatusRevealRequests += 1
                     }
-                }
+                )
 
                 if shouldShowSleepMode {
                     KioskSleepModeView(
