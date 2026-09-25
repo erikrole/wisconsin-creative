@@ -111,8 +111,57 @@ describe("pending claim review steps", () => {
     await expect(autoApprovePendingClaimStep("trade", "trade-1")).resolves.toMatchObject({
       status: "approved",
     });
-    expect(mocks.approveTrade).toHaveBeenCalledWith("trade-1");
+    expect(mocks.approveTrade).toHaveBeenCalledWith("trade-1", null, {});
     expect(mocks.report).toHaveBeenCalledWith("trade", "trade-1", null);
+  });
+
+  it("stands down when the trade now carries a newer claim than the one it was started for", async () => {
+    // Claim A was withdrawn, claim B landed. A's timer must not approve B early.
+    mocks.tradeFindUnique.mockResolvedValue({
+      status: "CLAIMED",
+      claimedAt: new Date("2026-09-01T15:00:00.000Z"),
+    });
+
+    await expect(escalatePendingClaimStep("trade", "trade-1", "2026-09-01T12:00:00.000Z"))
+      .resolves.toMatchObject({ status: "superseded" });
+    await expect(autoApprovePendingClaimStep("trade", "trade-1", "2026-09-01T12:00:00.000Z"))
+      .resolves.toMatchObject({ status: "superseded" });
+    expect(mocks.escalate).not.toHaveBeenCalled();
+    expect(mocks.approveTrade).not.toHaveBeenCalled();
+  });
+
+  it("approves its own claim and pins the approval to it", async () => {
+    mocks.tradeFindUnique.mockResolvedValue({
+      status: "CLAIMED",
+      claimedAt: new Date("2026-09-01T12:00:00.000Z"),
+    });
+
+    await expect(autoApprovePendingClaimStep("trade", "trade-1", "2026-09-01T12:00:00.000Z"))
+      .resolves.toMatchObject({ status: "approved" });
+    expect(mocks.approveTrade).toHaveBeenCalledWith("trade-1", null, {
+      expectedClaimedAt: "2026-09-01T12:00:00.000Z",
+    });
+  });
+
+  it("keeps the status-only check for runs enqueued before claimedAt was passed", async () => {
+    mocks.tradeFindUnique.mockResolvedValue({
+      status: "CLAIMED",
+      claimedAt: new Date("2026-09-01T15:00:00.000Z"),
+    });
+
+    await expect(autoApprovePendingClaimStep("trade", "trade-1"))
+      .resolves.toMatchObject({ status: "approved" });
+  });
+
+  it("reports superseded when the claim was replaced between the check and the approval", async () => {
+    mocks.tradeFindUnique
+      .mockResolvedValueOnce({ status: "CLAIMED", claimedAt: new Date("2026-09-01T12:00:00.000Z") })
+      .mockResolvedValueOnce({ status: "CLAIMED", claimedAt: new Date("2026-09-01T15:00:00.000Z") });
+    mocks.approveTrade.mockRejectedValue(new HttpError(409, "This trade was claimed again after the review timer started"));
+
+    await expect(autoApprovePendingClaimStep("trade", "trade-1", "2026-09-01T12:00:00.000Z"))
+      .resolves.toMatchObject({ status: "superseded" });
+    expect(mocks.report).not.toHaveBeenCalled();
   });
 
   it("approves a pickup request left unreviewed at the deadline", async () => {
@@ -154,7 +203,7 @@ describe("pending claim review steps", () => {
     mocks.tradeFindUnique
       .mockResolvedValueOnce({ status: "CLAIMED" })
       .mockResolvedValueOnce({ status: "COMPLETED" });
-    mocks.approveTrade.mockRejectedValue(new HttpError(400, "Only claimed trades can be approved"));
+    mocks.approveTrade.mockRejectedValue(new HttpError(409, "Only claimed trades can be approved"));
 
     await expect(autoApprovePendingClaimStep("trade", "trade-1")).resolves.toMatchObject({
       status: "superseded",

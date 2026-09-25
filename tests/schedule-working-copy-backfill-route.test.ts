@@ -77,6 +77,7 @@ describe("past-event Schedule backfill route", () => {
       command,
       { id: "admin-1", role: "ADMIN" },
       null,
+      undefined,
     );
     expect(mocks.publish).toHaveBeenCalledWith(
       "group-1",
@@ -113,6 +114,7 @@ describe("past-event Schedule backfill route", () => {
       3,
       { id: "admin-1", role: "ADMIN" },
       null,
+      undefined,
     );
     expect(mocks.publish).toHaveBeenCalledWith(
       "group-1",
@@ -138,6 +140,7 @@ describe("past-event Schedule backfill route", () => {
       command,
       { id: "admin-1", role: "ADMIN" },
       expect.objectContaining({ runId: "run-1" }),
+      undefined,
     );
     expect(mocks.publish).not.toHaveBeenCalled();
     expect(mocks.onShiftsWorked).not.toHaveBeenCalled();

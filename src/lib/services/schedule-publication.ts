@@ -6,6 +6,7 @@ import { HttpError } from "@/lib/http";
 import { scheduleAssigneeWorkerType } from "@/lib/schedule-assignee";
 import {
   reconcileWorkingAssignmentSources,
+  workingScheduleDraftMatches,
   workingSchedulePayloadSchema,
   type WorkingSchedulePayload,
 } from "@/lib/schedule-working-copy";
@@ -227,6 +228,7 @@ async function findGroupForPublication(shiftGroupId: string, tx: Prisma.Transact
           basePublishedVersion: true,
           payload: true,
           createdAt: true,
+          autoReleaseRunId: true,
         },
       },
       shifts: {
@@ -568,6 +570,17 @@ export async function publishShiftGroup(
     clearNotificationPending?: boolean;
     manualPublish?: boolean;
     requireWorkingCopy?: boolean;
+    /**
+     * An automatic release passes the run that owns the draft's timer. A draft
+     * recreated after publish or discard restarts at version 1, so the version
+     * alone cannot tell an old run's draft from a new one.
+     */
+    expectedAutoReleaseRunId?: string;
+    /**
+     * The draft identity an editor client last read (`draftId`). Undefined
+     * skips the check for legacy clients; null means no draft was expected.
+     */
+    expectedDraftId?: string | null;
   } = {},
 ) {
   const advanceNotificationMark = options.advanceNotificationMark ?? true;
@@ -576,8 +589,17 @@ export async function publishShiftGroup(
   const requireWorkingCopy = options.requireWorkingCopy ?? false;
   return withSerializationRetry(() => db.$transaction(async (tx) => {
     let group = await findGroupForPublication(shiftGroupId, tx);
+    if (!workingScheduleDraftMatches(group.workingCopy, options.expectedDraftId)) {
+      throw new HttpError(409, "This working schedule changed. Refresh and review the latest version before publishing.");
+    }
     if (requireWorkingCopy && !group.workingCopy) {
       throw new HttpError(409, "There are no pending schedule changes to publish.");
+    }
+    if (
+      options.expectedAutoReleaseRunId !== undefined
+      && group.workingCopy?.autoReleaseRunId !== options.expectedAutoReleaseRunId
+    ) {
+      throw new HttpError(409, "This automatic release was superseded by a newer schedule draft.");
     }
     const before = getSchedulePublicationState(group);
     const workingVersion = group.workingCopy?.version ?? null;

@@ -67,6 +67,8 @@ type EditorData = {
   publishedAt: string | null;
   publishedVersion: number;
   basePublishedVersion: number;
+  /** Which draft this is; versions restart at 1 when a draft is recreated. */
+  draftId?: string | null;
   workingVersion: number;
   hasWorkingCopy: boolean;
   allDay: boolean;
@@ -576,7 +578,9 @@ export function WorkingCrewEditor({
       const response = await fetch(`/api/shift-groups/${shiftGroupId}/working-copy`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ expectedVersion: data.workingVersion, command }),
+        // The draft id pins the edit to the draft on screen: a version number
+        // alone can match a newer draft that restarted at the same version.
+        body: JSON.stringify({ expectedVersion: data.workingVersion, expectedDraftId: data.draftId ?? null, command }),
       });
       if (handleAuthRedirect(response)) return false;
       if (!response.ok) {
@@ -663,7 +667,7 @@ export function WorkingCrewEditor({
     setActingKey("discard");
     try {
       const response = await fetch(
-        `/api/shift-groups/${shiftGroupId}/working-copy?expectedVersion=${data.workingVersion}`,
+        `/api/shift-groups/${shiftGroupId}/working-copy?expectedVersion=${data.workingVersion}&expectedDraftId=${encodeURIComponent(data.draftId ?? "")}`,
         { method: "DELETE" },
       );
       if (handleAuthRedirect(response)) return;
@@ -692,7 +696,7 @@ export function WorkingCrewEditor({
       const response = await fetch(`/api/shift-groups/${shiftGroupId}/working-copy`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ expectedVersion: sourceData.workingVersion }),
+        body: JSON.stringify({ expectedVersion: sourceData.workingVersion, expectedDraftId: sourceData.draftId ?? null }),
       });
       if (handleAuthRedirect(response)) return;
       if (!response.ok) {
@@ -719,7 +723,7 @@ export function WorkingCrewEditor({
       const response = await fetch(`/api/shift-groups/${shiftGroupId}/publish`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ expectedVersion: data.workingVersion }),
+        body: JSON.stringify({ expectedVersion: data.workingVersion, expectedDraftId: data.draftId ?? null }),
       });
       if (handleAuthRedirect(response)) return;
       if (!response.ok) {

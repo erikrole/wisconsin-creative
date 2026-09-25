@@ -996,6 +996,53 @@ describe("publishShiftGroup drift detection", () => {
     });
   });
 
+  it("refuses an automatic release whose run no longer owns the draft", async () => {
+    // A draft recreated after publish or discard restarts at version 1, so the
+    // version matched; the run id is what tells the old timer apart.
+    const group = groupWithDraft([]);
+    mockTx.shiftGroup.findUnique.mockResolvedValue({
+      ...group,
+      workingCopy: { ...group.workingCopy, autoReleaseRunId: "run-new" },
+    });
+
+    await expect(publishShiftGroup("group-1", "staff-1", 7, "STAFF", { expectedAutoReleaseRunId: "run-old" }))
+      .rejects.toMatchObject({ status: 409, message: expect.stringContaining("superseded") });
+    expect(mockTx.shift.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it("refuses a publish aimed at a different draft that reused the version", async () => {
+    // A stale editor holding the replaced draft's id must not publish its
+    // successor just because both drafts are at the same version.
+    mockTx.shiftGroup.findUnique.mockResolvedValue(groupWithDraft([]));
+
+    await expect(publishShiftGroup("group-1", "staff-1", 7, "STAFF", {
+      requireWorkingCopy: true,
+      expectedDraftId: "2026-08-01T00:00:00.000Z",
+    })).rejects.toMatchObject({
+      status: 409,
+      message: "This working schedule changed. Refresh and review the latest version before publishing.",
+    });
+    await expect(publishShiftGroup("group-1", "staff-1", 7, "STAFF", { expectedDraftId: null }))
+      .rejects.toMatchObject({ status: 409 });
+    expect(mockTx.shiftGroup.update).not.toHaveBeenCalled();
+    expect(mockTx.shiftGroupWorkingCopy.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it("publishes when the draft id matches and keeps legacy callers version-only", async () => {
+    for (const expectedDraftId of [draftStartedAt.toISOString(), undefined]) {
+      const group = groupWithDraft([]);
+      mockTx.shiftGroup.findUnique.mockReset();
+      mockTx.shiftGroup.findUnique
+        .mockResolvedValueOnce(group)
+        .mockResolvedValue({ ...group, workingCopy: null });
+
+      mockTx.shiftGroupWorkingCopy.deleteMany.mockResolvedValue({ count: 1 });
+
+      await publishShiftGroup("group-1", "staff-1", 7, undefined, { expectedDraftId });
+    }
+    expect(mockTx.shiftGroupWorkingCopy.deleteMany).toHaveBeenCalledTimes(2);
+  });
+
   it("lets a drift-free draft remove an empty pre-draft slot", async () => {
     const group = groupWithDraft([liveShift("shift-old", new Date("2026-08-04T10:00:00.000Z"), false)]);
     mockTx.shiftGroup.findUnique

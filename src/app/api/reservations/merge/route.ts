@@ -34,6 +34,7 @@ export const POST = withAuth(async (req, { user }) => {
       requesterUserId: reservation.requesterUserId,
       actorUserId: user.id,
       event: "updated",
+      version: reservation.updatedAt,
     });
   }
 

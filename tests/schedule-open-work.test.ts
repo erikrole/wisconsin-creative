@@ -142,6 +142,32 @@ describe("schedule open work", () => {
     expect(result.openShifts[0]).toMatchObject({ canAct: false, action: "none", reason: expect.stringContaining("Staff are updating this crew") });
     expect(JSON.stringify(result)).not.toContain('"workingCopy"');
   });
+  it("reports a capped list instead of silently dropping shifts past the limit", async () => {
+    mockDb.user.findUnique.mockResolvedValue(activeStudent());
+    mockDb.shift.findMany.mockResolvedValue([
+      baseShift({ id: "shift-1" }),
+      baseShift({ id: "shift-2" }),
+      baseShift({ id: "shift-3" }),
+    ]);
+    mockDb.shiftAssignment.findMany.mockResolvedValue([]);
+
+    const capped = await getScheduleOpenWork({ userId: "admin-1", role: "ADMIN", now, limit: 2 });
+
+    expect(mockDb.shift.findMany).toHaveBeenCalledWith(expect.objectContaining({ take: 3 }));
+    const requestQuery = mockDb.shiftAssignment.findMany.mock.calls
+      .map(([query]) => query)
+      .find((query) => query.where?.status === "REQUESTED");
+    expect(requestQuery).toEqual(expect.objectContaining({ take: 3 }));
+    expect(capped.openShifts.map((item) => item.id)).toEqual(["shift-1", "shift-2"]);
+    expect(capped.openShiftsTruncated).toBe(true);
+    expect(capped.pickupRequestsTruncated).toBe(false);
+
+    mockDb.shift.findMany.mockResolvedValue([baseShift({ id: "shift-1" }), baseShift({ id: "shift-2" })]);
+    const full = await getScheduleOpenWork({ userId: "admin-1", role: "ADMIN", now, limit: 2 });
+    expect(full.openShifts).toHaveLength(2);
+    expect(full.openShiftsTruncated).toBe(false);
+  });
+
   it("returns published open Student shifts with candidate eligibility", async () => {
     mockDb.user.findUnique.mockResolvedValue(activeStudent());
     mockDb.shiftAssignment.findMany.mockResolvedValue([]);

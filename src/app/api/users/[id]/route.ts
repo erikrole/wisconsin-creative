@@ -198,7 +198,8 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
   if (!canReadUserProfile(user, target)) throw new HttpError(404, "User not found");
 
   const targetIsCollaborator = target.role === "COLLABORATOR";
-  const isSelfOrAdmin = user.id === id || user.role === "ADMIN";
+  const isSelf = user.id === id;
+  const isSelfOrAdmin = isSelf || user.role === "ADMIN";
   if (targetIsCollaborator && !isSelfOrAdmin) {
     return ok({
       data: {
@@ -257,7 +258,9 @@ export const GET = withAuth<{ id: string }>(async (_req, { user, params }) => {
       createdAt: target.createdAt?.toISOString() ?? null,
       sportAssignments: target.sportAssignments,
       areaAssignments: target.areaAssignments,
-      icsToken: isSelfOrAdmin ? (target.icsToken ?? null) : undefined,
+      // The feed credential itself is never returned here (it is stored as a
+      // hash); its owner only learns whether one exists.
+      hasIcsToken: isSelf ? Boolean(target.icsToken) : undefined,
       title: target.title ?? null,
       athleticsEmail: target.athleticsEmail ?? null,
       startDate: target.startDate?.toISOString() ?? null,

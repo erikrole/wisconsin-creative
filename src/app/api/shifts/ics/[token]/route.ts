@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { withHandler } from "@/lib/api";
 import { db } from "@/lib/db";
@@ -6,6 +7,7 @@ import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { cleanSourceSummary, normalizeOpponentName } from "@/lib/schedule-event-identity";
 import { AREA_LABELS } from "@/types/areas";
 import { studentCallTimeAppliesToEvent } from "@/lib/shift-call-windows";
+import { icsTokenLookupValues } from "@/lib/ics-token";
 
 export const dynamic = "force-dynamic";
 
@@ -87,7 +89,9 @@ export const GET = withHandler<{ token: string }>(async (req, { params }) => {
 
   const ip = getClientIp(req);
   const ipLimit = await checkRateLimit(`shifts:ics:ip:${ip}`, IP_LIMIT);
-  const tokenLimit = await checkRateLimit(`shifts:ics:token:${token}`, TOKEN_LIMIT);
+  // Keyed on a digest so the raw feed credential never lands in the limiter store.
+  const tokenKey = createHash("sha256").update(token).digest("hex").slice(0, 32);
+  const tokenLimit = await checkRateLimit(`shifts:ics:token:${tokenKey}`, TOKEN_LIMIT);
   if (!ipLimit.allowed || !tokenLimit.allowed) {
     const resetAt = Math.max(ipLimit.resetAt, tokenLimit.resetAt);
     const retryAfterSec = Math.max(1, Math.ceil((resetAt - Date.now()) / 1000));
@@ -97,7 +101,8 @@ export const GET = withHandler<{ token: string }>(async (req, { params }) => {
     });
   }
 
-  const user = await db.user.findFirst({ where: { icsToken: token, active: true } });
+  // Hashed tokens match by digest; tokens minted before hashing still match raw.
+  const user = await db.user.findFirst({ where: { icsToken: { in: icsTokenLookupValues(token) }, active: true } });
   if (!user || user.role === "COLLABORATOR") {
     return new NextResponse("Not found", { status: 404 });
   }
@@ -117,7 +122,10 @@ export const GET = withHandler<{ token: string }>(async (req, { params }) => {
         // Cancelled/archived events must drop out of the VEVENT list — that
         // is how calendar apps remove them from subscribers' calendars.
         // Safe for the 1-month history window: events archive at 4 months.
-        shiftGroup: { event: { status: "CONFIRMED", archivedAt: null } },
+        // Published crews only, like notifications, Open Work, and gear prep:
+        // a subscribed calendar is outside the app and must not show work
+        // the person was never told about.
+        shiftGroup: { publishedAt: { not: null }, event: { status: "CONFIRMED", archivedAt: null } },
       },
     },
     include: {
@@ -145,16 +153,22 @@ export const GET = withHandler<{ token: string }>(async (req, { params }) => {
           },
         },
       },
+      // Recent trades of any status: the newest one's timestamp feeds the
+      // revision even after it is cancelled or declined, so SEQUENCE never
+      // steps backwards when the 🔁 prefix comes off. The prefix itself reads
+      // only an open or claimed trade.
       trades: {
-        where: { status: { in: ["OPEN", "CLAIMED"] } },
         select: { id: true, status: true, updatedAt: true },
         orderBy: { updatedAt: "desc" },
-        take: 1,
+        take: 3,
       },
     },
-    orderBy: { shift: { startsAt: "asc" } },
+    // Newest first before the cap, so a heavy schedule loses its oldest
+    // history rather than its furthest-out work; re-sorted below.
+    orderBy: { shift: { startsAt: "desc" } },
     take: ICS_ASSIGNMENT_LIMIT,
   });
+  assignments.reverse();
 
   const lines: string[] = [
     "BEGIN:VCALENDAR",
@@ -170,7 +184,8 @@ export const GET = withHandler<{ token: string }>(async (req, { params }) => {
     const shift = a.shift;
     const event = shift.shiftGroup.event;
     const location = event.location?.name;
-    const activeTrade = a.trades[0];
+    const activeTrade = a.trades.find((trade) => trade.status === "OPEN" || trade.status === "CLAIMED");
+    const latestTrade = a.trades[0];
     const studentCallTimeVisible = user.role !== "STUDENT" || studentCallTimeAppliesToEvent(event);
     const startsAt = shift.workerType === "ST" && studentCallTimeVisible
       ? a.callStartsAt ?? shift.callStartsAt ?? shift.startsAt
@@ -187,7 +202,7 @@ export const GET = withHandler<{ token: string }>(async (req, { params }) => {
       a.updatedAt,
       shift.updatedAt,
       event.updatedAt,
-      ...(activeTrade ? [activeTrade.updatedAt] : []),
+      ...(latestTrade ? [latestTrade.updatedAt] : []),
     ]);
     const dtstamp = icsDate(lastModified);
     // The date-only representation fixes an existing component without a DB

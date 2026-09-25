@@ -67,9 +67,9 @@ const ROUTE_CONTROLS: Record<(typeof PUBLIC_HANDLER_ROUTES)[number], RegExp[]> =
   "src/app/api/shifts/ics/[token]/route.ts": [
     /\bTOKEN_RE\.test\s*\(\s*token\s*\)/,
     /\bcheckRateLimit\s*\(\s*`shifts:ics:ip:\$\{ip\}`/,
-    /\bcheckRateLimit\s*\(\s*`shifts:ics:token:\$\{token\}`/,
+    /\bcheckRateLimit\s*\(\s*`shifts:ics:token:\$\{tokenKey\}`/,
     /\bgetClientIp\s*\(/,
-    /\bwhere:\s*\{\s*icsToken:\s*token,\s*active:\s*true\s*\}/,
+    /\bwhere:\s*\{\s*icsToken:\s*\{\s*in:\s*icsTokenLookupValues\(token\)\s*\},\s*active:\s*true\s*\}/,
     /Cache-Control/,
     /no-cache, no-store/,
   ],
