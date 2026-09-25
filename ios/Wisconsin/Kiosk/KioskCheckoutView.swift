@@ -463,6 +463,9 @@ struct KioskCheckoutView: View {
                 count: "\(scannedItems.count)",
                 section: .takingOut
             )
+            if !kitOptions.isEmpty {
+                KioskCheckoutKitPicker(kits: kitOptions, selectedKitId: $selectedKitId)
+            }
             if scannedItems.isEmpty && remainingKitItems.isEmpty {
                 Text("Scanned items show up here.")
                     .font(.system(size: 15))
@@ -1757,5 +1760,46 @@ enum KioskReceiptCopy {
         let tags = items.map(\.itemListPrimaryTitle)
         let head = tags.prefix(4).joined(separator: ", ")
         return tags.count > 4 ? "\(head) +\(tags.count - 4) more" : head
+    }
+}
+
+/// Kits start on the scan screen (Erik, 2026-09-25). A kit is the scan list:
+/// it turns "Taking out" into its checklist, and only what's scanned goes out.
+/// The kit list comes from the pickup's kits, with the football crew's
+/// suggestion preselected by the server.
+private struct KioskCheckoutKitPicker: View {
+    let kits: [KioskKitOption]
+    @Binding var selectedKitId: String?
+
+    private var selected: KioskKitOption? { kits.first { $0.id == selectedKitId } }
+
+    var body: some View {
+        Menu {
+            Button("No kit") { selectedKitId = nil }
+            ForEach(kits) { kit in
+                Button("\(kioskFootballGamedayKitLabel(kit.gamedayRole) ?? kit.name) · \(kit.contents) items") {
+                    selectedKitId = kit.id
+                }
+            }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "shippingbox")
+                    .foregroundStyle(KioskText.secondary)
+                Text(selected.map { "Kit: \(kioskFootballGamedayKitLabel($0.gamedayRole) ?? $0.name)" } ?? "Use a kit")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(KioskText.primary)
+                Spacer(minLength: 0)
+                Text("A kit is the scan list")
+                    .font(KioskType.meta)
+                    .foregroundStyle(KioskText.tertiary)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(KioskText.muted)
+            }
+            .padding(.horizontal, 14)
+            .frame(minHeight: 48)
+            .kioskCard(KioskSurface.cardRaised, radius: KioskRadius.lg, stroke: KioskStroke.standard)
+        }
+        .accessibilityLabel(selected.map { "Kit, \($0.name). Change kit" } ?? "Use a kit")
     }
 }

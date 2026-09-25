@@ -418,21 +418,17 @@ describe("iOS API contracts — kiosk checkout context", () => {
     expect(client).toContain("endsAt: isoString(from: endsAt)");
     expect(models).toContain("struct KioskCheckoutEvent");
     expect(models).toContain("struct KioskCheckoutAvailabilityResult");
-    expect(checkoutView).toContain("KioskCheckoutSetupPanel");
-    expect(checkoutView).toContain("KioskCheckoutContextWindow");
-    expect(checkoutView).toContain("KioskCheckoutReturnWindow");
-    expect(checkoutView).toContain("KioskCheckoutAvailabilityBanner");
-    expect(checkoutView).toContain("KioskCheckoutContextSummary");
-    expect(checkoutView).toContain("KioskScanStage");
+    expect(checkoutView).toContain("KioskCheckoutDetailsStep(");
+    expect(checkoutView).toContain("KioskContextCard(");
+    expect(checkoutView).toContain("KioskAvailabilityCopy.blockingTitle(for: availabilityResult)");
+    expect(checkoutView).toContain("KioskScanPrompt(");
     expect(checkoutView).toContain("KioskCartGroupRow");
     expect(checkoutView).toContain("dueBackAt");
     expect(checkoutView).toContain("availabilityResult.hasBlockingIssue");
     expect(checkoutView).toContain("let preflight = await refreshAvailability(for: cart, endsAt: endsAt)");
     expect(checkoutView).toContain("scanAvailabilityFeedback(for: cartItem, result: preflight)");
     expect(checkoutView).toContain("Remove it or change the return time before checkout.");
-    expect(checkoutView).toContain("Start Scanning");
-    expect(checkoutView).toContain("Step 1 of 2 · Checkout details");
-    expect(checkoutView).toContain("Scan Items");
+    expect(checkoutView).toContain('title: "New checkout"');
     expect(checkoutView).toContain("checkoutContextReady");
     expect(checkoutView).toContain("hasCheckoutContext");
     expect(schema).toContain("kitId: cuidish.optional()");
@@ -444,7 +440,7 @@ describe("iOS API contracts — kiosk checkout context", () => {
     expect(models).toContain("struct KioskKitOption");
     expect(models).toContain("struct KioskKitDetail");
     expect(checkoutView).toContain("KioskCheckoutKitPicker");
-    expect(checkoutView).toContain("Still to scan");
+    expect(checkoutView).toContain("remainingKitItems");
     expect(checkoutView).toContain("kitId: selectedKitId");
   });
 

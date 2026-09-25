@@ -46,7 +46,8 @@ describe("kiosk kit calling", () => {
     expect(client).toContain("func kioskKits(");
     expect(client).toContain("requester_user_id");
     expect(client).toContain("suggestedKitId");
-    expect(checkout).toContain("KioskCheckoutKitPicker");
+    // Kits start on the scan screen (redesign E, Erik 2026-09-25).
+    expect(checkout).toContain("KioskCheckoutKitPicker(kits: kitOptions, selectedKitId: $selectedKitId)");
     expect(checkout).toContain("A kit is the scan list");
     expect(checkout).not.toContain("store.setCart(kitMembers");
   });

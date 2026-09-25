@@ -319,10 +319,10 @@ mirroring the web, whose interactive accent is neutral `--accent` (`#191919` /
 
 ## Kiosk flow colors (iOS)
 
-The kiosk runs always-dark. Shared tokens live in `ios/Wisconsin/Kiosk/KioskDesign.swift`
-(surfaces, strokes, radii, text) and `KioskColors.swift` (`Color.kioskRed` = `#C5050C`,
-the brand accent -- deliberately deeper than the app's dark-mode `brandPrimary`).
-Status meaning still comes from `Color.statusText(_:)`.
+The kiosk runs always-dark. All kiosk tokens live in `ios/Wisconsin/Kiosk/KioskDesign.swift`
+(surfaces, strokes, radii, text, and `KioskSection` flow colors: green taking out, amber
+coming back, blue picking up, violet shared, red problems only). Since the 2026-09-25
+redesign the kiosk spends no brand red; the primary action is a solid white pill.
 
 | Usage | Color | Rationale |
 |-------|-------|-----------|
