@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "aaf408d11551d7752adfae612d964fc3abafed2d",
+  "sourcePatchSha256": "e1b53ffd1a987673b36c0ef3d37f32824855f60655872d3da31b7e277d4da541",
+  "settings": {
+    "device": "iPhone 18 Pro Max simulator (7BD40061-5741-4B92-B19C-3950F3C99DC3)",
+    "viewport": [
+      440,
+      956
+    ],
+    "fixture": "NotificationInboxTests.testInboxRecoveryCapture (InboxStub, two unread rows, forced refresh failure)",
+    "role": "n/a (stub API)",
+    "route": "NotificationsSheet",
+    "appearance": "dark",
+    "textSize": "xxxLarge",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "live simulator clock; stub rows dated at render",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "imageSha256": "84c2f70c899da3c74f08faf79b09ad1e3bacc5dfe85d81c6a457935d0df47d5d",
+  "dimensions": [
+    1320,
+    2868
+  ]
+}

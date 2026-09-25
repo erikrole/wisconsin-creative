@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "aaf408d11551d7752adfae612d964fc3abafed2d",
+  "sourcePatchSha256": null,
+  "settings": {
+    "device": "iPhone 18 Pro Max simulator 7BD40061-5741-4B92-B19C-3950F3C99DC3",
+    "viewport": [
+      440,
+      956
+    ],
+    "fixture": "GT_PERFORMANCE_SCENARIO=schedule (ScheduleFixtureAPI, times relative to launch)",
+    "role": "staff (ScheduleFixtures.staffUser)",
+    "route": "Schedule tab",
+    "appearance": "light",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "launch-relative fixture on 2026-09-23 evening",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "imageSha256": "96e0e214eebaa1d1aff49385955d7a53e96672189a99597096f9132729d1c77f",
+  "dimensions": [
+    1320,
+    2868
+  ]
+}
