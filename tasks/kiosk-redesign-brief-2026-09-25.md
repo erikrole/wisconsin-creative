@@ -45,11 +45,17 @@ The design canvas **Kiosk Redesign**: https://claude.ai/artifact/85Mem1ezt3oxdw5
 - **Standby:** dim grey clock on black, drifts a few px every 30 s, dims the screen overnight.
 - **Staff:** no separate mode; staff actions appear inline on bookings when a staff member identifies.
 
-## Open decisions (build around them; ask Erik, do not invent the rule)
+## Decisions answered by Erik (2026-09-25)
 
-1. Where kits start: scan screen for football crew only (recommended), the hub, or web only.
-2. Direct peer transfers with the new holder accepting (H3–H4). Today only staff can move gear between people.
-3. Who can nudge an overdue booking: anyone once per booking per day (drawn), or staff only.
+1. **Kits start on the scan screen, for football crew only.**
+2. **Peer transfers are immediate.** Any holder can transfer a checkout to anyone on the roster with no accept step. H3 (accept) is dropped, and H2's "The new holder taps their name to accept" copy goes with it. This loosens today's staff-only transfer rule, so it ships as its own server slice with tests and an AREA_KIOSK rule change.
+3. **Anyone can nudge an overdue booking from home, once per booking per day.** This needs a kiosk nudge route with a per-booking, per-local-day dedupe.
+4. **A missing item is accounted for, matching web's LOST report.** The report closes the item so the return can finish. G5's "stays on your record until it turns up" copy changes to match.
+
+Defaults taken without asking (reversible):
+
+- H5 keeps "Nothing changes until you save". The client stages changes and applies them in order on Save using the existing per-operation endpoint, and reports any change that fails.
+- Canvas data with no source (class d): B1's "Where: Shelf B2" is dropped. The same-model suggestion lists in D6 and F3 are dropped until a same-product availability query exists. Kit role labels come from the kit's own name.
 
 ## Constraints
 
