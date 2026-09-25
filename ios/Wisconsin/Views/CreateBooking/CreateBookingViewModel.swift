@@ -82,13 +82,39 @@ struct ReservationAvailabilityCaption: Equatable {
     ) -> Bool {
         let status = status?.uppercased()
         let kind = kind?.uppercased()
-        if status == "OPEN" { return true }
-        if kind == "CHECKOUT" && status != "BOOKED" && status != "PENDING_PICKUP" {
+        if status == "OPEN" || status == "PENDING_PICKUP" { return true }
+        if kind == "CHECKOUT" && status != "BOOKED" {
+            return true
+        }
+        // List rows for an in-progress reservation omit the start. That hold
+        // still runs through its return, same as a checkout.
+        if kind == "RESERVATION" && status == "BOOKED" && startsAt == nil {
             return true
         }
         if status == nil && kind == nil, let startsAt, let endsAt {
             return startsAt <= now && endsAt > now
         }
+        return false
+    }
+}
+
+/// Gear that is out, staged, or already reserved can still be added when the
+/// current hold ends at least 60 minutes before this pickup. Maintenance,
+/// retired, and unknown states stay blocked, and a known overlap always wins.
+func canReserveSerializedAssetForWindow(
+    computedStatus: AssetComputedStatus,
+    holderEndsAt: Date?,
+    requestedStartsAt: Date,
+    hasConflict: Bool
+) -> Bool {
+    if hasConflict { return false }
+    switch computedStatus {
+    case .available:
+        return true
+    case .checkedOut, .pendingPickup, .reserved:
+        guard let holderEndsAt else { return false }
+        return holderEndsAt.addingTimeInterval(ReservationAvailabilityThresholds.serializedTurnaroundBuffer) <= requestedStartsAt
+    case .maintenance, .retired, .unknown:
         return false
     }
 }
@@ -322,7 +348,22 @@ final class CreateBookingViewModel {
     }
 
     var selectedConflictedAssetIds: Set<String> {
-        selectedAssetIds.intersection(conflictedAssetIds)
+        var ids = selectedAssetIds.intersection(conflictedAssetIds)
+        for asset in selectedAssets where !canReserveAssetForWindow(asset) {
+            ids.insert(asset.id)
+        }
+        return ids
+    }
+
+    /// Current checkout, pending pickup, and in-progress reservation holds are
+    /// selectable once they clear the same 60-minute turnaround the server uses.
+    func canReserveAssetForWindow(_ asset: Asset) -> Bool {
+        canReserveSerializedAssetForWindow(
+            computedStatus: asset.computedStatus,
+            holderEndsAt: asset.activeBooking?.endsAt,
+            requestedStartsAt: startsAt,
+            hasConflict: conflictedAssetIds.contains(asset.id)
+        )
     }
 
     var selectedConflictCount: Int {
@@ -357,6 +398,25 @@ final class CreateBookingViewModel {
             startsAt: commitment.startsAt,
             endsAt: commitment.endsAt
         )
+    }
+
+    func availabilityCaption(for asset: Asset) -> ReservationAvailabilityCaption? {
+        if let caption = availabilityCaption(for: asset.id) {
+            return caption
+        }
+        guard let booking = asset.activeBooking else { return nil }
+        switch asset.computedStatus {
+        case .checkedOut, .pendingPickup, .reserved:
+            return ReservationAvailabilityCaption.make(
+                requesterName: booking.requesterName,
+                kind: booking.kind,
+                status: booking.status,
+                startsAt: booking.startsAt,
+                endsAt: booking.endsAt
+            )
+        case .available, .maintenance, .retired, .unknown:
+            return nil
+        }
     }
 
     var selectedTimingAdvisoryCount: Int {
@@ -1379,7 +1439,10 @@ final class CreateBookingViewModel {
         do {
             let resp = try await APIClient.shared.assets(
                 search: capturedSearch.isEmpty ? nil : capturedSearch,
-                statuses: [.available],
+                // Checked-out, staged, and in-progress gear stays searchable.
+                // A later pickup can still take it once the hold clears the
+                // turnaround buffer; maintenance and retired stay excluded.
+                statuses: [.available, .checkedOut, .pendingPickup, .reserved],
                 locationId: nil,
                 // Browse leads with what actually gets reserved; searches
                 // stay alphabetical so results scan predictably.
@@ -1407,7 +1470,7 @@ final class CreateBookingViewModel {
     /// Adds an asset from a picker result (idempotent). Removal goes through
     /// `toggleAsset`/`removeSelectedAsset` so tap-to-add never un-picks.
     func addAsset(_ asset: Asset) {
-        guard isAtPickupLocation(asset), !conflictedAssetIds.contains(asset.id) else { return }
+        guard isAtPickupLocation(asset), canReserveAssetForWindow(asset) else { return }
         submissionConflict = nil
         selectedAssetIds.insert(asset.id)
         recordAssetSelection(asset.id)
@@ -1422,7 +1485,7 @@ final class CreateBookingViewModel {
             selectedAssetOrder.removeAll { $0 == asset.id }
             selectedAssetSnapshots.removeValue(forKey: asset.id)
         } else {
-            guard !conflictedAssetIds.contains(asset.id) else { return }
+            guard canReserveAssetForWindow(asset) else { return }
             selectedAssetIds.insert(asset.id)
             recordAssetSelection(asset.id)
             selectedAssetSnapshots[asset.id] = asset
@@ -1472,17 +1535,17 @@ final class CreateBookingViewModel {
         do {
             let detail = try await APIClient.shared.asset(id: id)
             let asset = detail.asAsset
-            guard asset.computedStatus == .available else {
-                return ("\(asset.displayName) is \(asset.computedStatus.label.lowercased()).", false)
-            }
             guard isAtPickupLocation(asset) else {
                 return ("\(asset.displayName) is at \(asset.location.name). Change the pickup location to add it.", false)
             }
-            if conflictedAssetIds.contains(asset.id) {
-                return (conflictMessage(for: asset.id) ?? "\(asset.displayName) conflicts with another booking. Remove it or change the dates.", false)
-            }
             if selectedAssetIds.contains(asset.id) {
                 return ("\(asset.displayName) is already in this reservation.", true)
+            }
+            guard canReserveAssetForWindow(asset) else {
+                if let text = availabilityCaption(for: asset)?.text {
+                    return (text, false)
+                }
+                return ("\(asset.displayName) is \(asset.computedStatus.label.lowercased()).", false)
             }
             submissionConflict = nil
             selectedAssetIds.insert(asset.id)
