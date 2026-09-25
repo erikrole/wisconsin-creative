@@ -185,7 +185,9 @@ struct KioskActivationView: View {
                 Label("Keyboard", systemImage: "keyboard")
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(KioskActivationActionButtonStyle(tint: Color.kioskRed.opacity(0.82)))
+            // Secondary, like Paste: brand red belongs to the confirm key, the
+            // one action that activates the iPad.
+            .buttonStyle(KioskActivationActionButtonStyle(tint: KioskSurface.cardSelected))
             .disabled(isLoading)
         }
     }

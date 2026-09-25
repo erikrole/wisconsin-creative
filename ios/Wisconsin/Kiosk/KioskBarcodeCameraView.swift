@@ -48,8 +48,10 @@ struct KioskBarcodeCameraView: View {
                 ProgressView().tint(.white).scaleEffect(1.4)
             case .authorized:
                 if DataScannerViewController.isSupported && DataScannerViewController.isAvailable {
+                    // A neutral "read it" tick. Success is the server's call, and
+                    // the flow screen plays that verdict when it lands.
                     KioskDataScannerRepresentable(onScan: { value in
-                        Haptics.success()
+                        Haptics.selection()
                         onScan(value)
                     })
                     .ignoresSafeArea()
@@ -225,11 +227,24 @@ private struct KioskDataScannerRepresentable: UIViewControllerRepresentable {
             isHighlightingEnabled: true
         )
         vc.delegate = context.coordinator
-        try? vc.startScanning()
+        // Next run loop: SwiftUI has attached the controller by then.
+        DispatchQueue.main.async {
+            guard !vc.isScanning else { return }
+            try? vc.startScanning()
+        }
         return vc
     }
 
-    func updateUIViewController(_ vc: DataScannerViewController, context: Context) {}
+    /// Scanning starts once the controller is in a window. Starting it in
+    /// `makeUIViewController`, before that, could fail silently (`try?`) and
+    /// leave a live preview that never recognizes anything.
+    func updateUIViewController(_ vc: DataScannerViewController, context: Context) {
+        guard !vc.isScanning else { return }
+        DispatchQueue.main.async {
+            guard vc.view.window != nil, !vc.isScanning else { return }
+            try? vc.startScanning()
+        }
+    }
 
     func makeCoordinator() -> Coordinator { Coordinator(onScan: onScan) }
 

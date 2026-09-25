@@ -153,7 +153,10 @@ struct KioskEventDetailSheet: View {
                                 .font(KioskType.overline)
                                 .tracking(1.4)
                                 .foregroundStyle(KioskText.tertiary)
-                            KioskEventShiftBadge(count: event.shiftCount)
+                            // "0 shifts" beside "No assigned workers" said nothing twice.
+                            if event.shiftCount > 0 {
+                                KioskEventShiftBadge(count: event.shiftCount)
+                            }
                         }
                         Text(event.title)
                             .font(.title.weight(.heavy))
@@ -172,7 +175,9 @@ struct KioskEventDetailSheet: View {
 
                 VStack(spacing: 10) {
                     KioskEventTimeRow(label: "Event", value: eventTimeLabel)
-                    if !event.displayAllDay {
+                    // Only rows with an answer: "Call · Not set" was a field
+                    // label a student cannot act on.
+                    if !event.displayAllDay, let callTimeLabel {
                         KioskEventTimeRow(label: "Call", value: callTimeLabel)
                     }
                 }
@@ -249,9 +254,8 @@ struct KioskEventDetailSheet: View {
         return formatRange(start: event.startsAt, end: event.endsAt)
     }
 
-    private var callTimeLabel: String {
-        guard capabilities.eventCallTimes else { return "Pending API" }
-        guard let callStartsAt = event.callStartsAt else { return "Not set" }
+    private var callTimeLabel: String? {
+        guard capabilities.eventCallTimes, let callStartsAt = event.callStartsAt else { return nil }
         return formatRange(start: callStartsAt, end: event.callEndsAt)
     }
 
