@@ -44,6 +44,18 @@ struct KioskReturnView: View {
         }
     }
 
+    /// Names the owner when someone else is returning their gear, so the
+    /// returner can see whose checkout this scan closes.
+    private var returningForOwner: KioskUser? {
+        guard let intent = store.pendingIntent, intent.targetBooking?.id == bookingId,
+              let owner = intent.custodyOwner, owner.id != userId else { return nil }
+        return owner
+    }
+    private var returnSubtitle: String? {
+        guard let owner = returningForOwner else { return detail?.title }
+        return [detail?.title, "Returning for \(owner.name)"].compactMap { $0 }.joined(separator: " · ")
+    }
+
     private var totalItems: Int { detail?.items.count ?? 0 }
     private var returnedCount: Int { returnedIds.count }
     private var hasReturned: Bool { returnedCount > 0 }
@@ -105,7 +117,7 @@ struct KioskReturnView: View {
         KioskScanZoneColumn {
             KioskFlowHeader(
                 title: "Return",
-                subtitle: detail?.title,
+                subtitle: returnSubtitle,
                 onBack: { backToPerson() },
                 onCamera: { showCamera = true }
             )

@@ -262,6 +262,35 @@ describe("kiosk check-in scan route", () => {
     });
   });
 
+  it("records the person who scanned a return on someone else's personal checkout", async () => {
+    mocks.userFindFirst.mockResolvedValue({ id: "user-2" });
+    mocks.earnedBadgesSince.mockResolvedValue([{ id: "badge-1" }]);
+    mocks.bookingFindUnique.mockResolvedValue({
+      id: "booking-1",
+      status: "OPEN",
+      kind: "CHECKOUT",
+      custodyScope: "PERSON",
+      requesterUserId: "user-1",
+      locationId: "loc-1",
+    });
+    mocks.findAssetByScanValue.mockResolvedValue({ id: "asset-1", assetTag: "FX3 1", name: "FX3 Camera" });
+    mocks.kioskCheckinAsset.mockResolvedValue({ ok: true });
+
+    const res = await scanKioskCheckin(
+      new Request("http://test", { method: "POST", body: JSON.stringify({ scanValue: "FX3-1", actorId: "user-2" }) }),
+      routeCtx("booking-1"),
+    );
+    const json = await res.json();
+
+    expect(json).toMatchObject({ success: true });
+    expect(json).not.toHaveProperty("earnedBadges");
+    expect(mocks.userFindFirst).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ id: "user-2", active: true }),
+    }));
+    expect(mocks.kioskCheckinAsset).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ actorUserId: "user-2" }));
+    expect(mocks.scanEventCreate).toHaveBeenCalledWith({ data: expect.objectContaining({ actorUserId: "user-2" }) });
+  });
+
   it("reports when a serialized item was already returned", async () => {
     mocks.bookingFindUnique.mockResolvedValue({
       id: "booking-1",
@@ -596,6 +625,47 @@ describe("kiosk check-in complete route", () => {
         kioskDeviceId: "kiosk-1",
         kioskName: "Video Office Kiosk",
       }),
+    }));
+  });
+
+  it("lets someone other than the owner finish a personal return and audits both people", async () => {
+    mocks.userFindFirst.mockResolvedValue({ id: "user-2", role: "STUDENT" });
+    mocks.earnedBadgesSince.mockResolvedValue([{ id: "badge-1" }]);
+    mocks.bookingFindUnique.mockResolvedValue({
+      id: "booking-1",
+      kind: "CHECKOUT",
+      status: "OPEN",
+      refNumber: "CO-1002",
+      locationId: "loc-1",
+      requesterUserId: "user-1",
+      custodyScope: "PERSON",
+      endsAt: new Date("2026-05-06T12:00:00.000Z"),
+      serializedItems: [],
+      bulkItems: [{
+        bulkSkuId: "sku-1",
+        bulkSku: { name: "Sony Battery" },
+        plannedQuantity: 1,
+        checkedOutQuantity: 1,
+        checkedInQuantity: 0,
+        unitAllocations: [{ checkedOutAt: new Date("2026-05-05T12:00:00.000Z"), checkedInAt: null, bulkSkuUnit: { unitNumber: 8 } }],
+      }],
+    });
+    mocks.serializedCount.mockResolvedValue(0);
+    mocks.bulkFindMany.mockResolvedValue([{ checkedInQuantity: 0, checkedOutQuantity: 1, plannedQuantity: 1 }]);
+
+    const res = await completeKioskCheckin(
+      new Request("http://test", { method: "POST", body: JSON.stringify({ actorId: "user-2" }) }),
+      routeCtx("booking-1"),
+    );
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json).not.toHaveProperty("earnedBadges");
+    expect(mocks.earnedBadgesSince).not.toHaveBeenCalled();
+    expect(mocks.createAuditEntry).toHaveBeenCalledWith(expect.objectContaining({
+      actorId: "user-2",
+      action: "kiosk_checkin",
+      after: expect.objectContaining({ returnedForUserId: "user-1" }),
     }));
   });
 

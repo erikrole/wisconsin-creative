@@ -126,6 +126,23 @@ struct WisconsinKioskApp: App {
                 targetBooking: nil, pendingScanValues: [], createdAt: Date(), ambiguity: .none
             ))
             kioskStore.screen = .identity
+        case .identityReturnOther:
+            // Mirrors `KioskIdleView.startReturn` for a personal checkout.
+            kioskStore.setIntent(KioskFlowIntent(
+                action: .return, source: .activeCheckout, identifiedUser: nil, expectedRequester: nil,
+                selectedEvent: nil, targetBooking: KioskFixtures.otherOwnerCheckout,
+                pendingScanValues: [], createdAt: Date(), ambiguity: .none,
+                custodyOwner: KioskFixtures.otherOwner
+            ))
+            kioskStore.screen = .identity
+        case .returnForOther:
+            kioskStore.setIntent(KioskFlowIntent(
+                action: .return, source: .activeCheckout, identifiedUser: kioskUser, expectedRequester: nil,
+                selectedEvent: nil, targetBooking: KioskFixtures.otherOwnerCheckout,
+                pendingScanValues: [], createdAt: Date(), ambiguity: .none,
+                custodyOwner: KioskFixtures.otherOwner
+            ))
+            kioskStore.screen = .return(bookingId: "co-1", userId: kioskUser.id)
         case .activation:
             kioskStore.screen = .activation
         case .checkoutDetails, .checkoutDetailsLinked, .keyboardTip:
@@ -447,6 +464,11 @@ enum KioskFixtureScenario: String {
     case returnAccepted = "return-accepted"
     /// Roster-first identity confirmation.
     case identity = "identity"
+    /// Identity for returning someone else's personal checkout, started from
+    /// the idle custody drawer.
+    case identityReturnOther = "identity-return-other"
+    /// The return checklist while returning someone else's personal checkout.
+    case returnForOther = "return-for-other"
     /// The un-activated iPad: 6-digit code entry.
     case activation
     /// The scan stage with the scanner help sheet open over it.
@@ -465,6 +487,10 @@ enum KioskFixtureScenario: String {
 enum KioskFixtures {
     static let locationId = "loc-fixture"
     static let kioskId = "kiosk-fixture"
+
+    /// Owner of checkout `co-1`, for scenarios where someone else returns it.
+    static let otherOwner = KioskUser(id: "u-imani-brooks", name: "Imani Brooks", avatarUrl: nil, role: "STUDENT", affiliation: nil, affiliationBadge: nil)
+    static let otherOwnerCheckout = KioskIntentBooking(id: "co-1", title: "Volleyball vs Minnesota", startsAt: nil, endsAt: hours(9))
 
     /// The person the hub and checkout scenarios run as.
     static let primaryUser = KioskFixtureUser(
