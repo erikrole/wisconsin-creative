@@ -31,7 +31,7 @@
 | `src/lib/services/calendar-sync.ts` | 754 |
 | `src/lib/services/candidate-scoring.ts` | 437 |
 | `src/lib/services/category-mutations.ts` | 168 |
-| `src/lib/services/checkin-item-reports.ts` | 243 |
+| `src/lib/services/checkin-item-reports.ts` | 244 |
 | `src/lib/services/checkout-consolidation.ts` | 596 |
 | `src/lib/services/checkout-policies.ts` | 40 |
 | `src/lib/services/claim-review-notifications.ts` | 197 |
@@ -50,7 +50,7 @@
 | `src/lib/services/job-runs.ts` | 51 |
 | `src/lib/services/kiosk-active-checkout-items.ts` | 492 |
 | `src/lib/services/kiosk-actor.ts` | 51 |
-| `src/lib/services/kiosk-checkin-undo.ts` | 174 |
+| `src/lib/services/kiosk-checkin-undo.ts` | 176 |
 | `src/lib/services/kiosk-checkout-allowance.ts` | 86 |
 | `src/lib/services/kiosk-checkout-complete.ts` | 90 |
 | `src/lib/services/kiosk-dashboard-home.ts` | 229 |

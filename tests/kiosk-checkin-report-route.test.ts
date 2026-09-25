@@ -18,6 +18,8 @@ const mocks = vi.hoisted(() => ({
   maybeAutoComplete: vi.fn(),
   put: vi.fn(),
   enforceRateLimit: vi.fn(),
+  onCheckoutReturned: vi.fn(),
+  endLiveActivities: vi.fn(),
 }));
 
 const tx = {
@@ -42,7 +44,12 @@ vi.mock("@/lib/api", () => ({
 }));
 vi.mock("@/lib/audit", () => ({ createAuditEntry: mocks.createAuditEntry, createAuditEntryTx: mocks.createAuditEntryTx }));
 vi.mock("@/lib/services/notifications", () => ({ notifyItemReport: mocks.notifyItemReport, deferPush: mocks.deferPush }));
-vi.mock("@/lib/services/bookings-checkin", () => ({ maybeAutoComplete: mocks.maybeAutoComplete }));
+vi.mock("@/lib/services/bookings-checkin", () => ({
+  maybeAutoComplete: mocks.maybeAutoComplete,
+  wasReturnedOnTime: (endsAt: Date, completedAt: Date) => completedAt <= endsAt,
+}));
+vi.mock("@/lib/badges", () => ({ badges: { onCheckoutReturned: mocks.onCheckoutReturned } }));
+vi.mock("@/lib/services/live-activities", () => ({ endCheckoutReturnLiveActivities: mocks.endLiveActivities }));
 vi.mock("@/lib/blob", () => ({
   publicBlobAuth: () => ({ token: "t" }),
   validateImage: vi.fn(() => null),
@@ -72,7 +79,7 @@ beforeEach(() => {
   mocks.userFindUnique.mockResolvedValue({ name: "Bucky Badger" });
   mocks.bookingFindUnique.mockResolvedValue({
     id: "co-1", kind: "CHECKOUT", status: "OPEN", title: "Soccer at Iowa",
-    requesterUserId: "owner-1", custodyScope: "PERSON", locationId: "loc-1",
+    requesterUserId: "owner-1", custodyScope: "PERSON", locationId: "loc-1", endsAt: new Date(Date.now() + 3_600_000),
   });
   mocks.itemFindUnique.mockResolvedValue({ allocationStatus: "active", asset: { assetTag: "CAM-1", brand: "Sony", model: "FX3", name: "FX3 body" } });
   mocks.reportFindUnique.mockResolvedValue(null);
@@ -105,6 +112,7 @@ describe("POST /api/kiosk/checkin/[id]/report", () => {
     expect(mocks.transaction).toHaveBeenCalledWith(expect.any(Function), { isolationLevel: "Serializable" });
     expect(mocks.notifyItemReport).toHaveBeenCalledWith(expect.objectContaining({ reportType: "DAMAGED", reporterName: "Bucky Badger" }));
     expect(mocks.maybeAutoComplete).not.toHaveBeenCalled();
+    expect(mocks.endLiveActivities).not.toHaveBeenCalled();
   });
 
   it("refuses a damage report for an item that was not scanned back", async () => {
@@ -122,6 +130,9 @@ describe("POST /api/kiosk/checkin/[id]/report", () => {
     }));
     expect(mocks.assetUpdate).not.toHaveBeenCalled();
     expect(mocks.notifyItemReport).toHaveBeenCalledWith(expect.objectContaining({ reportType: "LOST" }));
+    // Same follow-through as any completed return.
+    expect(mocks.onCheckoutReturned).toHaveBeenCalledWith(expect.objectContaining({ userId: "owner-1", bookingId: "co-1", wasOnTime: true }));
+    expect(mocks.endLiveActivities).toHaveBeenCalledWith("co-1");
   });
 
   it("refuses missing for an item already scanned back", async () => {

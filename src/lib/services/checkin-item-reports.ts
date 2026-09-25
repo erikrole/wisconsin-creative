@@ -144,7 +144,7 @@ export async function submitCheckinItemReport(args: {
 
   let report;
   let heldForStaff = false;
-  let completed = false;
+  let completedAt: Date | null = null;
   try {
     if (args.kiosk) {
       const kiosk = args.kiosk;
@@ -176,17 +176,17 @@ export async function submitCheckinItemReport(args: {
           before: existingReport ? { reported: true } : { reported: false },
           after: { ...auditAfter(saved.imageUrl), source: "KIOSK", kioskDeviceId: kiosk.kioskId },
         });
-        const completedAt = type === "LOST"
+        const completedAtTx = type === "LOST"
           ? await maybeAutoComplete(tx, id, kiosk.booking.locationId, args.reporter.id, {
               auditAction: "auto_completed_by_kiosk_checkin",
               returnedFor: kiosk.booking,
             })
           : null;
-        return { saved, held, completed: completedAt !== null };
+        return { saved, held, completedAt: completedAtTx };
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
       report = outcome.saved;
       heldForStaff = outcome.held;
-      completed = outcome.completed;
+      completedAt = outcome.completedAt;
     } else {
       report = await db.checkinItemReport.upsert(upsertArgs);
     }
@@ -237,6 +237,7 @@ export async function submitCheckinItemReport(args: {
       name: bookingItem.asset.name || bookingItem.asset.assetTag,
     },
     heldForStaff,
-    completed,
+    completed: completedAt !== null,
+    completedAt,
   };
 }

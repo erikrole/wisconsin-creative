@@ -1,4 +1,4 @@
-import { BookingKind, BookingStatus } from "@prisma/client";
+import { BookingCustodyScope, BookingKind, BookingStatus } from "@prisma/client";
 import { withKiosk } from "@/lib/api";
 import { db } from "@/lib/db";
 import { HttpError, ok } from "@/lib/http";
@@ -6,6 +6,9 @@ import { enforceRateLimit } from "@/lib/rate-limit";
 import { displayBookingTitle } from "@/lib/booking-display-title";
 import { requireKioskActor } from "@/lib/services/kiosk-actor";
 import { readCheckinReportPayload, submitCheckinItemReport } from "@/lib/services/checkin-item-reports";
+import { wasReturnedOnTime } from "@/lib/services/bookings-checkin";
+import { endCheckoutReturnLiveActivities } from "@/lib/services/live-activities";
+import { badges } from "@/lib/badges";
 
 /**
  * POST /api/kiosk/checkin/[id]/report — damaged or missing at the kiosk
@@ -29,7 +32,7 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
   const [booking, reporter] = await Promise.all([
     db.booking.findUnique({
       where: { id: params.id },
-      select: { id: true, kind: true, status: true, title: true, requesterUserId: true, custodyScope: true, locationId: true },
+      select: { id: true, kind: true, status: true, title: true, requesterUserId: true, custodyScope: true, locationId: true, endsAt: true },
     }),
     db.user.findUnique({ where: { id: actor.id }, select: { name: true } }),
   ]);
@@ -52,6 +55,21 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
     reporter: { id: actor.id, role: actor.role, name: reporter?.name ?? "Someone at the kiosk" },
     kiosk: { kioskId: kiosk.kioskId, locationId: kiosk.locationId, booking },
   });
+
+  // A LOST report on the last outstanding item finished the return: same
+  // follow-through as every other completion path.
+  if (result.completedAt) {
+    if (booking.custodyScope === BookingCustodyScope.PERSON) {
+      await badges.onCheckoutReturned({
+        userId: booking.requesterUserId,
+        bookingId: booking.id,
+        completedAt: result.completedAt,
+        wasOnTime: wasReturnedOnTime(booking.endsAt, result.completedAt),
+        sourceKey: booking.id,
+      });
+    }
+    await endCheckoutReturnLiveActivities(booking.id);
+  }
 
   return ok({
     success: true,

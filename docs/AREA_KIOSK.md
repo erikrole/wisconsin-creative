@@ -4,7 +4,7 @@
 - Owner: Erik Role (Wisconsin Athletics Creative)
 - Status: Shipped — iOS canonical (web kiosk deprecated 2026-04-24)
 - Created: 2026-04-07
-- Last Updated: 2026-09-24
+- Last Updated: 2026-09-25
 - Brief: `BRIEF_KIOSK.md`
 - Decision Refs: D-030, D-032, D-040
 
@@ -21,7 +21,7 @@ The kiosk is intentionally low-friction: no per-student password, no PIN, no bio
 1. **Physical trust.** The iPad is at the gear counter or carried by staff. Guided Access pins it to the Wisconsin app.
 2. **Device authentication.** Each `KioskDevice` is created by an admin in Settings → Kiosk Devices. A 6-digit activation code provisions a `kiosk_session` cookie tied to a specific `KioskDevice` row (with `locationId`, `active`, `lastSeenAt`, and `sessionExpiresAt`). The code is **single-use and time-limited**: it expires 24h after issue (`activation_code_expires_at`) and is cleared the moment it is redeemed, so a leaked or overheard code can't be replayed later. Already-activated kiosks are unaffected — they stay signed in via the sliding 7-day session, so consuming the code never forces the fleet to re-activate. An admin can mint a fresh code for an existing device via the reset flow.
 3. **Server-side scope.** `withKiosk()` rejects all `/api/kiosk/*` calls without a valid kiosk-session cookie. Routes do not accept a regular user-session cookie. Bookings created through the kiosk are stamped with `source: "KIOSK"` for the audit trail.
-4. **Identity = Wiscard scan or name picker.** A student scans their Wiscard at the kiosk to select their profile; the global active-visible name grid remains the manual fallback. Personal pickup requires the booking requester. Any return — personal or `SHARED` — accepts any active visible person, and the scan and completion audit record who physically returned the gear without making that person its owner; a personal return by someone else also records the owner as `returnedForUserId`. There is **no password / PIN / NFC** in V1. This is a deliberate trade-off: the counter is staffed during open hours, and physical+device gates carry the security weight. Misattribution risk is mitigated by the audit log, Wiscard profile binding, and the social context of a staffed counter.
+4. **Identity = Wiscard scan or name picker.** A student scans their Wiscard at the kiosk to select their profile; the global active-visible name grid remains the manual fallback. Personal pickup requires the booking requester. Any return — personal or `SHARED` — accepts any active visible person, and the scan and completion audit record who physically returned the gear without making that person its owner; a personal return by someone else also records the owner as `returnedForUserId`. The holder of a personal checkout may hand all or part of it to anyone on the roster, immediately and with no accept step (Erik, 2026-09-25); both checkouts are audited and both people are notified. Merging into another checkout and moving `SHARED` custody stay staff-only. Anyone at the kiosk may nudge the holder of an overdue personal checkout, once per booking per local day. There is **no password / PIN / NFC** in V1. This is a deliberate trade-off: the counter is staffed during open hours, and physical+device gates carry the security weight. Misattribution risk is mitigated by the audit log, Wiscard profile binding, and the social context of a staffed counter.
 
 If at some point the kiosk needs to operate unattended or in a less-trusted physical context, a per-student PIN or NFC tap is the natural extension. Not in V1.
 
@@ -65,12 +65,17 @@ Files under `ios/Wisconsin/Kiosk/`:
   - `GET /kits`, `GET /kits/[id]` — active kits at this kiosk pickup (Camp Randall aliases included) for checkout setup
   - `GET /users` — global roster of active, visible internal users plus policy-eligible collaborators
   - `POST /identify` — resolves a scanned Wiscard value to an active, visible kiosk user regardless of saved profile location
-  - `GET /student/[userId]` — global person context with active checkouts, pending pickups, and reservations
+  - `GET /student/[userId]` — global person context with active checkouts, pending pickups, reservations, and `checkoutAllowance`
   - `POST /checkout/scan`, `POST /checkout/complete`, `GET/PATCH/POST/DELETE /checkout/[id]`
-  - `POST /checkin/[id]/scan`, `POST /checkin/[id]/complete`
-  - `POST /pickup/[id]/scan`, `POST /pickup/[id]/confirm`, `POST /pickup/[id]/substitute`
+  - `GET /checkout/[id]/extend-window` — latest allowed return time for Extend
+  - `POST /checkout/[id]/swap` — atomic same-model unit swap on an active checkout
+  - `POST /checkout/[id]/transfer` — staff transfer or owner handover
+  - `POST /checkout/[id]/nudge` — once-per-day overdue nudge, actor optional
+  - `POST /checkin/[id]/scan`, `DELETE /checkin/[id]/scan` (undo while open), `POST /checkin/[id]/complete`
+  - `POST /checkin/[id]/report` — damaged (held for staff) or missing (accounted for) during a return
+  - `POST /pickup/[id]/scan`, `DELETE /pickup/[id]/scan` (undo a staged serialized or numbered scan), `POST /pickup/[id]/confirm`, `POST /pickup/[id]/substitute`
   - `GET/POST /reservation/[id]/items` — remaining reserved-item add/remove/quantity during BOOKED pickup
-  - `POST /scan-lookup` — read-only item-by-tag lookup
+  - `POST /scan-lookup` — read-only item-by-tag lookup, with `freeUntil` and `lastReturnedAt`
 - Successful checkout, pickup, and check-in completion responses may include an additive `earnedBadges` array. Individual scans remain operational evidence but no longer award badges. The native client accumulates and deduplicates completion awards for the current flow; older clients safely ignore the field.
 - Numbered battery units scan through the same pickup/check-in endpoints with derived values like `{binQrCodeValue}-{unitNumber}`. Pickup binds the unit to the booking; check-in returns only the scanned unit.
 - Pickup and return detail payloads include numbered battery units in the same `items` checklist used by serialized assets, plus typed scan-summary metadata so the native iOS screens can show a distinct battery-unit scan step before pickup/return completion.

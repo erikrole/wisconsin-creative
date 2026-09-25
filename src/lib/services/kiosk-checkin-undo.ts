@@ -87,7 +87,9 @@ export async function undoKioskCheckinScan(args: {
           throw new HttpError(409, `${item.asset.assetTag} is already claimed again, so it stays returned.`, { code: "claimed_again" });
         }
         await tx.bookingSerializedItem.update({ where: { id: item.id }, data: { allocationStatus: "active" } });
-        await tx.assetAllocation.update({ where: { id: allocation.id }, data: { active: true } });
+        // Re-align with the checkout's current due time: an extend after the
+        // return only moved the still-active allocations.
+        await tx.assetAllocation.update({ where: { id: allocation.id }, data: { active: true, endsAt: booking.endsAt } });
         if (scan.actualLocationId) {
           await tx.asset.update({ where: { id: assetId }, data: { locationId: scan.actualLocationId } });
         }

@@ -118,7 +118,7 @@ describe("undoKioskCheckinScan", () => {
 
     expect(result).toMatchObject({ success: true, item: { id: "asset-1", tagName: "CAM-1" } });
     expect(m.serializedUpdate).toHaveBeenCalledWith({ where: { id: "bsi-1" }, data: { allocationStatus: "active" } });
-    expect(m.allocationUpdate).toHaveBeenCalledWith({ where: { id: "alloc-1" }, data: { active: true } });
+    expect(m.allocationUpdate).toHaveBeenCalledWith({ where: { id: "alloc-1" }, data: { active: true, endsAt: new Date("2026-09-25T23:00:00.000Z") } });
     expect(m.assetUpdate).toHaveBeenCalledWith({ where: { id: "asset-1" }, data: { locationId: "loc-shelf" } });
     expect(m.scanUpdate).toHaveBeenCalledWith({ where: { id: "scan-1" }, data: { success: false } });
     expect(m.scanFindFirst.mock.calls[0]![0].where.createdAt).toEqual({ gte: new Date("2026-09-25T17:40:00.000Z") });
