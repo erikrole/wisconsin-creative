@@ -97,17 +97,25 @@ export const GET = withAuth(async (req, { user }) => {
     throw new HttpError(400, "Keyset pagination cannot be combined with a non-zero offset");
   }
 
+  // `eventId` reads one event by id, whatever its date, for a client that has
+  // to open an event outside the window it has loaded (a push notification to
+  // a game months out). A combined secondary's id resolves to its canonical
+  // row, the same row the list shows. Visibility rules still apply.
+  const eventId = searchParams.get("eventId");
   const baseWhere = {
     ...buildScheduleEventWhere({
-      parsedStartDate,
-      parsedEndDate,
-      includePast,
+      parsedStartDate: eventId ? null : parsedStartDate,
+      parsedEndDate: eventId ? null : parsedEndDate,
+      includePast: eventId ? true : includePast,
       includeHidden,
       includeArchived,
       unmappedOnly,
       sportCode,
     }),
     combinedIntoId: null,
+    ...(eventId
+      ? { OR: [{ id: eventId }, { combinedEvents: { some: { id: eventId } } }] }
+      : {}),
   };
   const where = keyset
     ? { AND: [baseWhere, scheduleEventKeysetWhere(keyset)] }

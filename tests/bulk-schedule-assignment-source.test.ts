@@ -25,7 +25,7 @@ describe("bulk schedule assignment contracts", () => {
     const workflow = read("src/workflows/pending-schedule-release.ts");
 
     expect(notifications).toContain('type: "shift_schedule_bulk_assigned"');
-    expect(notifications).toContain('const body = "Click to review your upcoming shifts"');
+    expect(notifications).toContain('const body = "Tap to see them."');
     expect(notifications).toContain("scheduleMyShiftsNotificationPayload");
     expect(notifications).toContain("schedule_bulk_assignment:${batch.id}:${userId}");
     expect(policy).toContain('target: "schedule"');

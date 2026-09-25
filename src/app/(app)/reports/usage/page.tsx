@@ -23,6 +23,14 @@ type UsageReport = {
   surfaces: CountRow[];
   events: CountRow[];
   versions: Array<{ platform: string; version: string; count: number }>;
+  notifications?: {
+    deliveries: CountRow[];
+    pushReadiness: CountRow[];
+    preferenceChanges: CountRow[];
+    responses: CountRow[];
+    timeToAct: CountRow[];
+  };
+  health?: { jobs: CountRow[]; diagnostics: CountRow[] };
 };
 
 function CountList({ rows }: { rows: CountRow[] }) {
@@ -70,6 +78,35 @@ export default function UsageReportPage() {
             <CountList rows={data.versions.map((row) => ({ name: `${row.platform} ${row.version}`, count: row.count }))} />
           </ReportSectionCard>
         </div>
+        {data.notifications ? (
+          <div className="grid gap-4 lg:grid-cols-2">
+            <ReportSectionCard title="Notification delivery" description="What happened to each push: sent, sent silently, suppressed and why, or rejected.">
+              <CountList rows={data.notifications.deliveries} />
+            </ReportSectionCard>
+            <ReportSectionCard title="Push readiness" description="Daily check-ins from iOS installs: permission, then device registration.">
+              <CountList rows={data.notifications.pushReadiness} />
+            </ReportSectionCard>
+            <ReportSectionCard title="Preference changes" description="Categories people change, and to what level.">
+              <CountList rows={data.notifications.preferenceChanges} />
+            </ReportSectionCard>
+            <ReportSectionCard title="Responses" description="Taps and lock-screen actions by category.">
+              <CountList rows={data.notifications.responses} />
+            </ReportSectionCard>
+            <ReportSectionCard title="Time to respond" description="From delivery to a tap or action.">
+              <CountList rows={data.notifications.timeToAct} />
+            </ReportSectionCard>
+          </div>
+        ) : null}
+        {data.health ? (
+          <div className="grid gap-4 lg:grid-cols-2">
+            <ReportSectionCard title="Background jobs" description="Reminder, escalation, and daily maintenance runs: outcome and how late each ran.">
+              <CountList rows={data.health.jobs} />
+            </ReportSectionCard>
+            <ReportSectionCard title="App crashes and hangs" description="Apple MetricKit reports from iOS installs, grouped by kind, signature, and version.">
+              <CountList rows={data.health.diagnostics} />
+            </ReportSectionCard>
+          </div>
+        ) : null}
       </ReportDataRegion>
     </div>
   );

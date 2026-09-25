@@ -8,7 +8,7 @@ vi.mock("@/lib/db", () => ({
     licenseCode: { findMany: vi.fn() },
     licenseCodeClaim: { findMany: vi.fn() },
     user: { findMany: vi.fn() },
-    notification: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), createMany: vi.fn() },
+    notification: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), createManyAndReturn: vi.fn() },
   },
 }));
 
@@ -35,12 +35,12 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.spyOn(console, "error").mockImplementation(() => {});
   vi.mocked(db.notification.findMany).mockResolvedValue([] as never);
-  vi.mocked(db.notification.createMany).mockImplementation((async (args: { data: unknown[] }) =>
-    ({ count: args.data.length })) as never);
+  vi.mocked(db.notification.createManyAndReturn).mockImplementation((async (args: { data: Array<{ dedupeKey: string }> }) =>
+    args.data.map((row, index) => ({ id: `n${index}`, dedupeKey: row.dedupeKey }))) as never);
 });
 
 describe("processExpiryWarnings batching", () => {
-  it("uses one dedupe read and one createMany for the whole code x admin fanout", async () => {
+  it("uses one dedupe read and one createManyAndReturn for the whole code x admin fanout", async () => {
     vi.mocked(db.licenseCode.findMany).mockResolvedValue(codes(4) as never);
     vi.mocked(db.user.findMany).mockResolvedValue(admins(3) as never);
 
@@ -48,7 +48,7 @@ describe("processExpiryWarnings batching", () => {
 
     expect(result).toEqual({ warned: 12 });
     expect(vi.mocked(db.notification.findMany)).toHaveBeenCalledTimes(1);
-    expect(vi.mocked(db.notification.createMany)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(db.notification.createManyAndReturn)).toHaveBeenCalledTimes(1);
     expect(vi.mocked(db.notification.findUnique)).not.toHaveBeenCalled();
     expect(vi.mocked(db.notification.create)).not.toHaveBeenCalled();
 
@@ -66,7 +66,7 @@ describe("processExpiryWarnings batching", () => {
 
     await processExpiryWarnings();
 
-    const rows = vi.mocked(db.notification.createMany).mock.calls[0]![0]!.data as Array<Record<string, unknown>>;
+    const rows = vi.mocked(db.notification.createManyAndReturn).mock.calls[0]![0]!.data as Array<Record<string, unknown>>;
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({
       userId: "admin-0",
@@ -75,8 +75,8 @@ describe("processExpiryWarnings batching", () => {
       dedupeKey: `license-expiry-code-0-${yearMonth}-admin-0`,
       payload: { type: "license_expiry", licenseCodeId: "code-0", href: "/licenses" },
     });
-    expect(rows[0]!.title).toBe("Photo Mechanic license expiring in 3d");
-    expect(rows[0]!.body).toBe("Seat 0 (PM-0) · Renew soon to avoid disruption.");
+    expect(rows[0]!.title).toBe("Photo Mechanic license expires in 3 days");
+    expect(rows[0]!.body).toBe("Seat 0 (PM-0). Renew it soon to avoid disruption.");
   });
 
   it("writes nothing when every key already exists", async () => {
@@ -89,7 +89,7 @@ describe("processExpiryWarnings batching", () => {
     );
 
     expect(await processExpiryWarnings()).toEqual({ warned: 0 });
-    expect(vi.mocked(db.notification.createMany)).not.toHaveBeenCalled();
+    expect(vi.mocked(db.notification.createManyAndReturn)).not.toHaveBeenCalled();
     expect(vi.mocked(sendPushToUser)).not.toHaveBeenCalled();
   });
 
@@ -112,14 +112,14 @@ describe("processLicenseNags batching", () => {
     }));
   }
 
-  it("uses one dedupe read and one createMany for every overdue claim", async () => {
+  it("uses one dedupe read and one createManyAndReturn for every overdue claim", async () => {
     vi.mocked(db.licenseCodeClaim.findMany).mockResolvedValue(claims(5) as never);
 
     const result = await processLicenseNags();
 
     expect(result).toEqual({ nagged: 5 });
     expect(vi.mocked(db.notification.findMany)).toHaveBeenCalledTimes(1);
-    expect(vi.mocked(db.notification.createMany)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(db.notification.createManyAndReturn)).toHaveBeenCalledTimes(1);
     expect(vi.mocked(db.notification.findUnique)).not.toHaveBeenCalled();
     expect(vi.mocked(sendPushToUser)).toHaveBeenCalledTimes(5);
   });
@@ -129,7 +129,7 @@ describe("processLicenseNags batching", () => {
 
     await processLicenseNags();
 
-    const rows = vi.mocked(db.notification.createMany).mock.calls[0]![0]!.data as Array<Record<string, unknown>>;
+    const rows = vi.mocked(db.notification.createManyAndReturn).mock.calls[0]![0]!.data as Array<Record<string, unknown>>;
     expect(rows[0]).toMatchObject({
       userId: "student-0",
       type: "license_held_2d",
@@ -147,7 +147,7 @@ describe("processLicenseNags batching", () => {
     );
 
     expect(await processLicenseNags()).toEqual({ nagged: 1 });
-    const rows = vi.mocked(db.notification.createMany).mock.calls[0]![0]!.data as Array<Record<string, unknown>>;
+    const rows = vi.mocked(db.notification.createManyAndReturn).mock.calls[0]![0]!.data as Array<Record<string, unknown>>;
     expect(rows.map((row) => row.userId)).toEqual(["student-1"]);
   });
 });

@@ -11,6 +11,12 @@ type WebPushMessage = {
   title: string;
   body?: string | null;
   payload?: Record<string, unknown>;
+  /** Show without sound or vibration (the category is set to Silent, or quiet hours). */
+  silent?: boolean;
+  /** Replaces an earlier notification with the same tag instead of stacking. */
+  tag?: string;
+  /** Re-alert when replacing a tagged notification. */
+  renotify?: boolean;
 };
 
 type WebPushDelivery = {
@@ -110,6 +116,8 @@ export async function sendWebPushToUsers(
       title: message.title,
       body: message.body ?? "",
       url: notificationUrl(message.payload),
+      ...(message.silent ? { silent: true } : {}),
+      ...(message.tag ? { tag: message.tag, renotify: message.renotify === true } : {}),
     });
 
     await Promise.allSettled(subscriptions.map(async (subscription: StoredSubscription) => {
@@ -123,7 +131,8 @@ export async function sendWebPushToUsers(
           payload,
           {
             TTL: WEB_PUSH_TTL_SECONDS,
-            urgency: "high",
+            // A silent notice need not wake a sleeping device.
+            urgency: message.silent ? "normal" : "high",
             timeout: WEB_PUSH_TIMEOUT_MS,
           },
         );

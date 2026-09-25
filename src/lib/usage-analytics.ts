@@ -24,6 +24,13 @@ export const PRODUCT_EVENT_NAMES = [
   "trade_completed",
   "notification_opened",
   "notification_destination_reached",
+  // Notification telemetry: a lock-screen action, the daily push readiness
+  // check-in, and a preference change (recorded server-side on save).
+  "notification_action",
+  "push_status",
+  "notification_pref_changed",
+  // How long a key screen took to load; the bucket rides in `reason`.
+  "surface_loaded",
   "recoverable_error_shown",
   "retry_selected",
   "retry_succeeded",

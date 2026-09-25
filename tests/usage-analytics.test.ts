@@ -5,7 +5,13 @@ const dbMock = vi.hoisted(() => ({
   productEvent: {
     create: vi.fn(),
     groupBy: vi.fn(),
+    findMany: vi.fn(async () => []),
   },
+  notificationDelivery: {
+    groupBy: vi.fn(async () => []),
+  },
+  jobRun: { groupBy: vi.fn(async () => []) },
+  appDiagnostic: { groupBy: vi.fn(async () => []) },
   userAppInstallation: {
     upsert: vi.fn(),
   },
@@ -72,7 +78,11 @@ describe("private usage analytics", () => {
     expect(canViewUsageAnalytics(owner)).toBe(true);
     const response = await getUsageReport(request("/api/reports/usage?days=7"), { params: Promise.resolve({}) });
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ days: 7, totalEvents: 0, activeUsers: 0, platforms: [], surfaces: [], events: [], versions: [] });
+    expect(await response.json()).toEqual({
+      days: 7, totalEvents: 0, activeUsers: 0, platforms: [], surfaces: [], events: [], versions: [],
+      notifications: { deliveries: [], pushReadiness: [], preferenceChanges: [], responses: [], timeToAct: [] },
+      health: { jobs: [], diagnostics: [] },
+    });
   });
 
   it("returns populated aggregates with five reads and one consistent period", async () => {
@@ -95,6 +105,8 @@ describe("private usage analytics", () => {
       surfaces: [{ name: "schedule", count: 10 }],
       events: [{ name: "surface_viewed", count: 10 }],
       versions: [{ platform: "ios", version: "1.0", count: 6 }],
+      notifications: { deliveries: [], pushReadiness: [], preferenceChanges: [], responses: [], timeToAct: [] },
+      health: { jobs: [], diagnostics: [] },
     });
     expect(dbMock.productEvent.groupBy).toHaveBeenCalledTimes(5);
     const boundaries = dbMock.productEvent.groupBy.mock.calls.map(([args]) => args.where.occurredAt.gte.getTime());

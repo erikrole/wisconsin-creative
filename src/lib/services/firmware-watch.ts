@@ -212,8 +212,12 @@ async function notifyAdminsOfFirmwareRelease(
 
   const product = firmwareProductLabel(target);
   const releaseDate = release.releaseDate ? formatReleaseDate(release.releaseDate) : "an unknown release date";
-  const title = `Firmware update: ${product} ${release.version}`;
-  const body = `${product} firmware ${release.version} was released ${releaseDate}. Review the official source before updating field gear.`;
+  // Product and version sit in the subtitle, so the title and body don't
+  // both repeat them.
+  const title = "Firmware update available";
+  const subtitle = `${product} ${release.version}`;
+  const pushBody = "Read the release notes before updating field gear.";
+  const body = `${product} firmware ${release.version} was released ${releaseDate}. Read the release notes before updating field gear.`;
   const payload = {
     firmwareWatchTargetId: target.id,
     brand: target.brand,
@@ -227,8 +231,11 @@ async function notifyAdminsOfFirmwareRelease(
     href: `/items?search=${encodeURIComponent(`${target.brand} ${target.model}`)}`,
   };
 
-  const created = await db.notification.createMany({
+  // Only admins whose row is new get a push; one new admin must not re-push
+  // everyone who already has this release in their inbox.
+  const created = await db.notification.createManyAndReturn({
     skipDuplicates: true,
+    select: { id: true, userId: true },
     data: admins.map((admin) => ({
       userId: admin.id,
       type: "firmware_update_released",
@@ -241,17 +248,18 @@ async function notifyAdminsOfFirmwareRelease(
     })),
   });
 
-  if (created.count > 0) {
-    for (const admin of admins) {
-      deferPush(sendPushToUser(admin.id, {
-        title,
-        body,
-        payload,
-      }));
-    }
+  for (const row of created) {
+    deferPush(sendPushToUser(row.userId, {
+      title,
+      subtitle,
+      body: pushBody,
+      payload,
+      category: "systemAlerts",
+      notificationId: row.id,
+    }));
   }
 
-  return created.count;
+  return created.length;
 }
 
 function htmlToSearchableText(html: string): string {

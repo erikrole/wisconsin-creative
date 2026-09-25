@@ -11,6 +11,9 @@ import { DEFAULT_RESERVATION_RULES } from "@/lib/services/reservation-rules";
 import { getScheduleAutomationDigest } from "@/lib/services/schedule-automation";
 import { refreshCompanionProjection } from "@/lib/services/companion-projection";
 import { cleanupPendingSignatureArtifacts } from "@/lib/services/signatures";
+import { pruneNotificationDeliveries } from "@/lib/services/notification-deliveries";
+import { pruneAppDiagnostics } from "@/lib/services/app-diagnostics";
+import { pruneJobRuns, recordJobRun } from "@/lib/services/job-runs";
 import { badges, badgesEnabled } from "@/lib/badges";
 import { recentlyWorkedEventUsers } from "@/lib/badges/worked-evidence";
 
@@ -195,12 +198,14 @@ export const GET = withCron(async () => {
 
   // ── 4. Expire stale open/claimed trades and pickup no-shows ─────────
   const productEventCutoff = new Date(now.getTime() - PRODUCT_EVENT_RETENTION_DAYS * 86_400_000);
-  const [tradeResult, pendingPickupResult, firmwareWatchResult, productEventRetentionResult, signatureCleanupResult] = await Promise.allSettled([
+  const [tradeResult, pendingPickupResult, firmwareWatchResult, productEventRetentionResult, signatureCleanupResult, deliveryRetentionResult, telemetryRetentionResult] = await Promise.allSettled([
     expireOpenTrades(),
     expirePickupNoShows(now),
     pollFirmwareWatchTargets({ now }),
     Promise.resolve().then(() => db.productEvent.deleteMany({ where: { occurredAt: { lt: productEventCutoff } } })),
     cleanupPendingSignatureArtifacts(),
+    pruneNotificationDeliveries(now),
+    Promise.all([pruneAppDiagnostics(now), pruneJobRuns(now)]),
   ]);
   const maintenanceFailures: string[] = [];
   const { expired: tradesExpired } = maintenanceValue(
@@ -249,6 +254,13 @@ export const GET = withCron(async () => {
     "productEventRetention",
     maintenanceFailures,
   ).count;
+  const notificationDeliveriesDeleted = maintenanceValue(
+    deliveryRetentionResult,
+    0,
+    "notificationDeliveryRetention",
+    maintenanceFailures,
+  );
+  maintenanceValue(telemetryRetentionResult, [0, 0], "telemetryRetention", maintenanceFailures);
   const signatureCleanup = maintenanceValue(
     signatureCleanupResult,
     { abandoned: 0, attempted: 0, deleted: 0 },
@@ -274,6 +286,15 @@ export const GET = withCron(async () => {
     return null;
   });
 
+  // Scheduled for 08:00 UTC in vercel.json; lateness shows cron drift.
+  const scheduledAt = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 8));
+  await recordJobRun({
+    job: "morning_refresh",
+    outcome: maintenanceFailures.length === 0 ? "succeeded" : "failed",
+    dueAt: scheduledAt,
+    detail: maintenanceFailures.length === 0 ? null : maintenanceFailures.join(","),
+  });
+
   return NextResponse.json({
     ok: maintenanceFailures.length === 0,
     runAt: now.toISOString(),
@@ -289,6 +310,7 @@ export const GET = withCron(async () => {
     pendingPickups,
     firmwareWatch,
     productEventsDeleted,
+    notificationDeliveriesDeleted,
     signatureCleanup,
     scheduleAutomation: automationDigest,
     maintenanceFailures,

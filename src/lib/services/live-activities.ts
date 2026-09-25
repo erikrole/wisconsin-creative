@@ -529,22 +529,18 @@ export async function sweepOverdueCheckoutReturnLiveActivities(args: {
 
   const scanned = overdueCheckouts.length;
   const outcomes = await Promise.allSettled(overdueCheckouts.map(async (booking) => {
-    const tokens = booking.liveActivityTokens.map((row) => row.token);
-    if (tokens.length === 0) return { notified: 0, revoked: 0 };
+    if (booking.liveActivityTokens.length === 0) return { notified: 0, revoked: 0 };
 
+    // State only, no alert: the overdue push is the one alert. The activity's
+    // own "Overdue" alert fired at the due time, contradicting the push's
+    // "grace period has started", then duplicated it after grace.
     const result = await updateCheckoutReturnLiveActivityTokens(
-      tokens,
+      booking.liveActivityTokens.map((row) => row.token),
       {
         endsAt: booking.endsAt,
         nextNeedAt: null,
         allowsExtend: false,
         urgency: urgencyFor(booking.endsAt, now),
-      },
-      {
-        alert: {
-          title: "Overdue",
-          body: `${booking.title} is overdue for return`,
-        },
       },
     );
 

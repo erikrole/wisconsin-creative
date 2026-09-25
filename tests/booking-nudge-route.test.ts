@@ -7,7 +7,7 @@ vi.mock("@/lib/auth", () => ({
 
 vi.mock("@/lib/db", () => ({
   db: {
-    notification: { create: vi.fn() },
+    notification: { createManyAndReturn: vi.fn() },
     user: { findUnique: vi.fn() },
   },
 }));
@@ -84,7 +84,7 @@ beforeEach(() => {
   vi.mocked(requireAuth).mockResolvedValue(staffUser);
   vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, remaining: 29, resetAt: Date.now() + 60_000 });
   vi.mocked(requireBookingAction).mockResolvedValue(overdueCheckout as never);
-  vi.mocked(db.notification.create).mockResolvedValue({ id: "notification-1" } as never);
+  vi.mocked(db.notification.createManyAndReturn).mockResolvedValue([{ id: "notification-1" }] as never);
   vi.mocked(db.user.findUnique).mockResolvedValue({ name: "Student One" } as never);
   vi.mocked(sendPushToUser).mockResolvedValue(undefined);
 });
@@ -94,22 +94,27 @@ describe("POST /api/bookings/[id]/nudge", () => {
     const res = await POST(post(), { params: Promise.resolve({ id: overdueCheckout.id }) });
 
     expect(res.status).toBe(200);
-    expect(db.notification.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
+    expect(db.notification.createManyAndReturn).toHaveBeenCalledWith({
+      skipDuplicates: true,
+      select: { id: true },
+      data: [expect.objectContaining({
         userId: "student-1",
         type: "overdue_nudge",
-        title: "Overdue gear reminder",
+        title: "Please return your gear",
         body: expect.stringContaining("MBB Camera Kit"),
-        payload: { bookingId: overdueCheckout.id },
+        payload: { bookingId: overdueCheckout.id, href: `/checkouts/${overdueCheckout.id}` },
         channel: "IN_APP",
         sentAt: expect.any(Date),
-      }),
+      })],
     });
     expect(sendPushToUser).toHaveBeenCalledWith("student-1", {
-      title: "Overdue gear reminder",
-      body: expect.stringContaining("MBB Camera Kit"),
-      payload: { bookingId: overdueCheckout.id },
+      title: "Please return your gear",
+      subtitle: "MBB Camera Kit",
+      body: expect.stringContaining("overdue"),
+      payload: { bookingId: overdueCheckout.id, href: `/checkouts/${overdueCheckout.id}` },
       category: "checkoutOverdue",
+      notificationId: "notification-1",
+      collapseId: `checkout-${overdueCheckout.id}`,
     });
     expect(deferPush).toHaveBeenCalledWith(expect.any(Promise));
     expect(createAuditEntry).toHaveBeenCalledWith(expect.objectContaining({
@@ -120,8 +125,20 @@ describe("POST /api/bookings/[id]/nudge", () => {
     }));
   });
 
+  it("treats a second nudge in the same hour as a silent success", async () => {
+    vi.mocked(db.notification.createManyAndReturn).mockResolvedValue([] as never);
+
+    const res = await POST(post(), { params: Promise.resolve({ id: overdueCheckout.id }) });
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body).toMatchObject({ success: true, alreadyNudged: true });
+    expect(sendPushToUser).not.toHaveBeenCalled();
+    expect(createAuditEntry).not.toHaveBeenCalled();
+  });
+
   it("does not dispatch push when inbox persistence fails", async () => {
-    vi.mocked(db.notification.create).mockRejectedValue(new Error("database unavailable"));
+    vi.mocked(db.notification.createManyAndReturn).mockRejectedValue(new Error("database unavailable"));
 
     const res = await POST(post(), { params: Promise.resolve({ id: overdueCheckout.id }) });
 
@@ -145,6 +162,6 @@ describe("POST /api/bookings/[id]/nudge", () => {
     const res = await POST(post(), { params: Promise.resolve({ id: overdueCheckout.id }) });
 
     expect(res.status).toBe(400);
-    expect(db.notification.create).not.toHaveBeenCalled();
+    expect(db.notification.createManyAndReturn).not.toHaveBeenCalled();
   });
 });

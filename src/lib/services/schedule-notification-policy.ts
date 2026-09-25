@@ -1,4 +1,4 @@
-import type { NotificationCategory } from "@/lib/services/notification-prefs";
+import type { NotificationCategory } from "@/lib/notification-catalog";
 
 type WorkerScheduleNotificationEvent =
   | "assigned"
@@ -23,12 +23,15 @@ const ACTIVE_WORKER_SCHEDULE_EVENTS = new Set<WorkerScheduleNotificationEvent>([
 
 export function categoryForScheduleNotificationType(type: string): NotificationCategory | null {
   if (type === "shift_gear_up") return "gearPrep";
+  // Admin review pushes have their own category, so reviewers can tune them
+  // apart from their own schedule and trades.
+  if (type === "shift_request_review" || type === "trade_review_required") return "reviewQueue";
   if (type.startsWith("trade_")) return "trade";
   if (type.startsWith("shift_")) return "schedule";
   // Claim review spans both queues, so it carries neither prefix. It still has
   // to map: `sendPushToUser` skips the category gate when no category is given,
   // so an unmapped type is delivered to people who muted the category.
-  if (type.startsWith("claim_review_")) return "schedule";
+  if (type.startsWith("claim_review_")) return "reviewQueue";
   return null;
 }
 

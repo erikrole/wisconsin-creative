@@ -111,6 +111,12 @@ interface SendOpts {
   topic: string;
   pushType: "alert" | "background" | "liveactivity";
   priority?: 5 | 10;
+  /**
+   * `apns-collapse-id`: a later alert with the same id replaces the earlier
+   * one on the device instead of stacking. It also becomes the delivered
+   * request's identifier. At most 64 bytes.
+   */
+  collapseId?: string;
 }
 
 type APNsInterruptionLevel = "passive" | "active" | "time-sensitive";
@@ -145,6 +151,7 @@ function sendOne(
         "apns-topic": opts.topic,
         "apns-push-type": opts.pushType,
         ...(opts.priority ? { "apns-priority": String(opts.priority) } : {}),
+        ...(opts.collapseId ? { "apns-collapse-id": opts.collapseId.slice(0, 64) } : {}),
         "content-type": "application/json",
       });
     } catch (err) {
@@ -383,6 +390,8 @@ export async function sendPush(
   deviceTokens: string[],
   opts: {
     title: string;
+    /** Second line under the title; the booking or event the alert is about. */
+    subtitle?: string;
     body: string;
     payload?: Record<string, unknown>;
     /**
@@ -393,12 +402,25 @@ export async function sendPush(
      */
     category?: string;
     interruptionLevel?: APNsInterruptionLevel;
+    /** Omit the sound for a silent delivery. Defaults to playing the default sound. */
+    sound?: boolean;
+    /** Groups alerts in Notification Center: one stack per checkout or event. */
+    threadId?: string;
+    /** App icon badge; the recipient's unread inbox count. Omit to leave it unchanged. */
+    badge?: number;
+    /** 0–1; orders alerts within a stack and in the notification summary. */
+    relevanceScore?: number;
+    /** Replaces an earlier alert with the same id instead of stacking. */
+    collapseId?: string;
   }
 ): Promise<DispatchResult> {
   const notification = {
     aps: {
-      alert: { title: opts.title, body: opts.body },
-      sound: "default",
+      alert: { title: opts.title, ...(opts.subtitle ? { subtitle: opts.subtitle } : {}), body: opts.body },
+      ...(opts.sound === false ? {} : { sound: "default" }),
+      ...(opts.threadId ? { "thread-id": opts.threadId } : {}),
+      ...(opts.badge !== undefined ? { badge: opts.badge } : {}),
+      ...(opts.relevanceScore !== undefined ? { "relevance-score": opts.relevanceScore } : {}),
       "interruption-level": opts.interruptionLevel ?? DEFAULT_APNS_INTERRUPTION_LEVEL,
       ...(opts.category ? { category: opts.category } : {}),
     },
@@ -408,6 +430,7 @@ export async function sendPush(
   return dispatch(deviceTokens, notification, {
     topic: process.env.APNS_BUNDLE_ID!,
     pushType: "alert",
+    collapseId: opts.collapseId,
   });
 }
 

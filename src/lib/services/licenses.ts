@@ -458,14 +458,18 @@ export async function processExpiryWarnings() {
 
     const title = isExpired
       ? "Photo Mechanic license expired"
-      : `Photo Mechanic license expiring in ${daysLeft}d`;
-    const body = `${code.label ?? code.code}${code.label ? ` (${code.code})` : ""} · Renew soon to avoid disruption.`;
+      : `Photo Mechanic license expires in ${daysLeft} ${daysLeft === 1 ? "day" : "days"}`;
+    const subtitle = `${code.label ?? code.code}${code.label ? ` (${code.code})` : ""}`;
+    const pushBody = isExpired ? "Renew it to restore access." : "Renew it soon to avoid disruption.";
+    const body = `${subtitle}. ${pushBody}`;
 
     return admins.map((admin) => ({
       codeId: code.id,
       userId: admin.id,
       title,
+      subtitle,
       body,
+      pushBody,
       type: isExpired ? "license_expired" : "license_expiring_soon",
       payload: { type: "license_expiry", licenseCodeId: code.id, href: "/licenses" },
       dedupeKey: `license-expiry-${code.id}-${yearMonth}-${admin.id}`,
@@ -484,7 +488,7 @@ export async function processExpiryWarnings() {
     const pending = candidates.filter((candidate) => !existingKeys.has(candidate.dedupeKey));
     if (pending.length === 0) return { warned: 0 };
 
-    const created = await db.notification.createMany({
+    const created = await db.notification.createManyAndReturn({
       data: pending.map((candidate) => ({
         userId: candidate.userId,
         type: candidate.type,
@@ -496,16 +500,20 @@ export async function processExpiryWarnings() {
         dedupeKey: candidate.dedupeKey,
       })),
       skipDuplicates: true,
+      select: { id: true, dedupeKey: true },
     });
-    warned = created.count;
+    warned = created.length;
+    const idByKey = new Map(created.map((row) => [row.dedupeKey, row.id]));
 
     // Push is best-effort: one slow or failing device must not stall the rest.
-    await Promise.allSettled(pending.map((candidate) =>
+    await Promise.allSettled(pending.filter((candidate) => idByKey.has(candidate.dedupeKey)).map((candidate) =>
       sendPushToUser(candidate.userId, {
         title: candidate.title,
-        body: candidate.body,
+        subtitle: candidate.subtitle,
+        body: candidate.pushBody,
         payload: candidate.payload,
         category: "licenseExpiry",
+        notificationId: idByKey.get(candidate.dedupeKey),
       }).catch((err) => {
         console.error(`[LICENSE_EXPIRY] Failed for code ${candidate.codeId} admin ${candidate.userId}:`, err);
       }),
@@ -534,7 +542,7 @@ export async function processLicenseNags() {
   });
 
   const title = "Still using Photo Mechanic?";
-  const body = "You've had a license for 2+ days. Return it from the app if you're done so someone else can use it.";
+  const body = "You've had a license for more than 2 days. If you're done, return it so someone else can use it.";
 
   const candidates = overdueClaims.flatMap((claim) => claim.userId
     ? [{
@@ -557,7 +565,7 @@ export async function processLicenseNags() {
     const pending = candidates.filter((candidate) => !existingKeys.has(candidate.dedupeKey));
     if (pending.length === 0) return { nagged: 0 };
 
-    const created = await db.notification.createMany({
+    const created = await db.notification.createManyAndReturn({
       data: pending.map((candidate) => ({
         userId: candidate.userId,
         type: "license_held_2d",
@@ -569,16 +577,19 @@ export async function processLicenseNags() {
         dedupeKey: candidate.dedupeKey,
       })),
       skipDuplicates: true,
+      select: { id: true, dedupeKey: true },
     });
-    nagged = created.count;
+    nagged = created.length;
+    const idByKey = new Map(created.map((row) => [row.dedupeKey, row.id]));
 
     // Push is best-effort: one slow or failing device must not stall the rest.
-    await Promise.allSettled(pending.map((candidate) =>
+    await Promise.allSettled(pending.filter((candidate) => idByKey.has(candidate.dedupeKey)).map((candidate) =>
       sendPushToUser(candidate.userId, {
         title,
         body,
         payload: candidate.payload,
-        category: "licenseExpiry",
+        category: "licenseHeld",
+        notificationId: idByKey.get(candidate.dedupeKey),
       }).catch((err) => {
         console.error(`[LICENSE_NAGS] Failed for code ${candidate.licenseCodeId}:`, err);
       }),

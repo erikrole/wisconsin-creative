@@ -4,6 +4,7 @@ import { HttpError, ok } from "@/lib/http";
 import { requireRole } from "@/lib/rbac";
 import { enforceRateLimit, SETTINGS_MUTATION_LIMIT } from "@/lib/rate-limit";
 import { createAuditEntry } from "@/lib/audit";
+import { deferPush, sendPushToUser } from "@/lib/services/notifications";
 import { recomputeFutureAssignmentAvailabilityConflictsForUser } from "@/lib/services/availability-conflict-recompute";
 import { z } from "zod";
 import { parseDateOnly, assertBlockShape, normalizedTimes } from "../_shared";
@@ -61,26 +62,43 @@ async function notifyTimeOffReview(
   block: Awaited<ReturnType<typeof findOwnedBlock>>,
   status: "APPROVED" | "DENIED",
 ) {
-  const title = status === "APPROVED" ? "Time off approved" : "Time off denied";
+  const approved = status === "APPROVED";
+  const title = approved ? "Time off approved" : "Time off denied";
   const body = block.label
-    ? `${block.label} was ${status === "APPROVED" ? "approved" : "denied"}.`
-    : `Your time-off request was ${status === "APPROVED" ? "approved" : "denied"}.`;
+    ? `Your time-off request "${block.label}" was ${approved ? "approved" : "denied"}.`
+    : `Your time-off request was ${approved ? "approved" : "denied"}.`;
+  const pushBody = approved ? "Staff will see it when scheduling." : "Talk to staff if you still need the time.";
 
-  await db.notification.create({
-    data: {
+  const payload = {
+    availabilityBlockId: block.id,
+    href: `/users/${block.userId}?tab=availability`,
+  };
+  // Re-reviewing to a status the block already had dedupes to the existing row
+  // (and stays silent) instead of failing the save on the unique key.
+  const [row] = await db.notification.createManyAndReturn({
+    data: [{
       userId: block.userId,
       type: status === "APPROVED" ? "time_off_approved" : "time_off_denied",
       title,
       body,
-      payload: {
-        availabilityBlockId: block.id,
-        href: `/users/${block.userId}?tab=availability`,
-      },
+      payload,
       channel: "IN_APP",
       sentAt: new Date(),
       dedupeKey: `availability:${block.id}:${status.toLowerCase()}`,
-    },
+    }],
+    skipDuplicates: true,
+    select: { id: true },
   });
+  if (row) {
+    deferPush(sendPushToUser(block.userId, {
+      title,
+      subtitle: block.label ?? undefined,
+      body: pushBody,
+      payload,
+      category: "timeOff",
+      notificationId: row.id,
+    }));
+  }
 }
 
 export const PATCH = withAuth<{ id: string; blockId: string }>(async (req, { user, params }) => {

@@ -10,7 +10,7 @@ vi.mock("@/lib/db", () => ({
       findMany: vi.fn(),
     },
     notification: {
-      createMany: vi.fn(),
+      createManyAndReturn: vi.fn(),
     },
   },
 }));
@@ -36,7 +36,7 @@ const mockedDb = db as unknown as {
     findMany: ReturnType<typeof vi.fn>;
   };
   notification: {
-    createMany: ReturnType<typeof vi.fn>;
+    createManyAndReturn: ReturnType<typeof vi.fn>;
   };
 };
 
@@ -92,7 +92,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockedDb.firmwareWatchTarget.update.mockResolvedValue({});
   mockedDb.user.findMany.mockResolvedValue([]);
-  mockedDb.notification.createMany.mockResolvedValue({ count: 0 });
+  mockedDb.notification.createManyAndReturn.mockResolvedValue([]);
 });
 
 describe("firmware source parsers", () => {
@@ -137,7 +137,7 @@ describe("firmware watch polling", () => {
         lastError: null,
       }),
     });
-    expect(mockedDb.notification.createMany).not.toHaveBeenCalled();
+    expect(mockedDb.notification.createManyAndReturn).not.toHaveBeenCalled();
     expect(sendPushToUser).not.toHaveBeenCalled();
   });
 
@@ -150,19 +150,20 @@ describe("firmware watch polling", () => {
       }),
     ]);
     mockedDb.user.findMany.mockResolvedValue([{ id: "admin-1" }, { id: "admin-2" }]);
-    mockedDb.notification.createMany.mockResolvedValue({ count: 2 });
+    mockedDb.notification.createManyAndReturn.mockResolvedValue([{ userId: "admin-1" }, { userId: "admin-2" }]);
 
     const result = await pollFirmwareWatchTargets({ now, fetcher: fetcher(sonyHtml) });
 
     expect(result.changed).toBe(1);
     expect(result.notificationsCreated).toBe(2);
-    expect(mockedDb.notification.createMany).toHaveBeenCalledWith({
+    expect(mockedDb.notification.createManyAndReturn).toHaveBeenCalledWith({
       skipDuplicates: true,
+      select: { id: true, userId: true },
       data: [
         expect.objectContaining({
           userId: "admin-1",
           type: "firmware_update_released",
-          title: "Firmware update: Sony A7 III 4.04",
+          title: "Firmware update available",
           dedupeKey: "firmware_release:target-1:4.04:admin-1",
           payload: expect.objectContaining({
             sourceUrl: expect.stringContaining("sony.com"),
@@ -176,6 +177,25 @@ describe("firmware watch polling", () => {
       ],
     });
     expect(sendPushToUser).toHaveBeenCalledTimes(2);
+  });
+
+  it("pushes only admins whose inbox row is new", async () => {
+    const now = new Date("2026-06-10T08:00:00.000Z");
+    mockedDb.firmwareWatchTarget.findMany.mockResolvedValue([
+      target({
+        latestVersion: "4.03",
+        baselineEstablishedAt: new Date("2026-06-01T08:00:00.000Z"),
+      }),
+    ]);
+    mockedDb.user.findMany.mockResolvedValue([{ id: "admin-1" }, { id: "admin-2" }]);
+    // admin-1 already has this release; only the newly added admin-2 is inserted.
+    mockedDb.notification.createManyAndReturn.mockResolvedValue([{ userId: "admin-2" }]);
+
+    const result = await pollFirmwareWatchTargets({ now, fetcher: fetcher(sonyHtml) });
+
+    expect(result.notificationsCreated).toBe(1);
+    expect(sendPushToUser).toHaveBeenCalledTimes(1);
+    expect(sendPushToUser).toHaveBeenCalledWith("admin-2", expect.objectContaining({ category: "systemAlerts" }));
   });
 
   it("rejects non-official or non-HTTPS source URLs before fetching", async () => {

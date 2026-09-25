@@ -119,7 +119,7 @@ export async function updateCalendarSyncHealth(args: {
   }
 
   const title = `Calendar sync failing: ${args.sourceName}`;
-  const body = `${args.sourceName} has failed ${consecutiveFailures} consecutive daily syncs. Latest error: ${truncate(error)}`;
+  const body = `Failed ${consecutiveFailures} daily syncs in a row. Latest error: ${truncate(error)}`;
   const notifications = admins.map((admin) => ({
     userId: admin.id,
     type: "calendar_sync_failure",

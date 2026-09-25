@@ -16,6 +16,15 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
+vi.mock("@/lib/services/notification-deliveries", () => ({
+  pruneNotificationDeliveries: vi.fn(async () => 0),
+}));
+vi.mock("@/lib/services/app-diagnostics", () => ({ pruneAppDiagnostics: vi.fn(async () => 0) }));
+vi.mock("@/lib/services/job-runs", () => ({
+  pruneJobRuns: vi.fn(async () => 0),
+  recordJobRun: vi.fn(async () => undefined),
+}));
+
 vi.mock("@/lib/services/calendar-sync", () => ({
   syncCalendarSource: vi.fn(),
 }));

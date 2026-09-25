@@ -105,7 +105,8 @@ describe("schedule staff/student display source contracts", () => {
     expect(dashboardColumn).toContain("studentCallWindow && !isFullDayDefault");
     expect(notifications).toContain("const hasStudentCallTime = assignment.workerType === \"ST\"");
     expect(notifications).toContain("dueAt: callStartsAt?.toISOString()");
-    expect(notifications).toContain("Student call time:");
+    // Only the Student call time is ever named; Staff copy has none.
+    expect(notifications).toContain("` Call time: ${formatShiftNotifyTime(assignment.studentCallStartsAt)}.`");
     expect(home).toContain('queueCallTime(workerType: shift.workerType');
     expect(home).toContain('guard workerType == "ST", let callStartsAt else { return nil }');
     expect(profile).toContain('if shift.workerType == "ST"');
