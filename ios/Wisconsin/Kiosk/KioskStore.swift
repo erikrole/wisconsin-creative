@@ -114,6 +114,9 @@ final class KioskStore {
         if handoffOwner == generation { handoffOwner = nil; resetInactivity() }
     }
     var isActive: Bool = false
+    /// Incremented by screens that host their own "show device status"
+    /// control; the shell owns the reveal itself.
+    var systemStatusRevealRequests = 0
     var isKioskMode: Bool { info != nil }
     let scanner = KioskScannerCoordinator()
     var pendingIntent: KioskFlowIntent?
@@ -122,6 +125,26 @@ final class KioskStore {
     /// resets. Keyed by `userId` so a quick reset → re-tap restores the cart.
     private var checkoutCarts: [String: [KioskCartItem]] = [:]
     private var checkoutDrafts: [String: KioskCheckoutDraft] = [:]
+    /// When each person's cart or draft last changed. The keep-your-scans
+    /// promise is for someone stepping away for a moment, not for the next
+    /// day: an old cart that reopened straight into scanning could commit
+    /// custody of gear that had long since been reshelved.
+    private var checkoutTouchedAt: [String: Date] = [:]
+    static let cartRetention: TimeInterval = 20 * 60
+
+    private func isExpired(_ userId: String, now: Date = Date()) -> Bool {
+        guard let touched = checkoutTouchedAt[userId] else { return false }
+        return now.timeIntervalSince(touched) > Self.cartRetention
+    }
+
+    /// Drops every cart and draft older than `cartRetention`.
+    func pruneExpiredCheckouts(now: Date = Date()) {
+        for userId in checkoutTouchedAt.keys where isExpired(userId, now: now) {
+            checkoutCarts.removeValue(forKey: userId)
+            checkoutDrafts.removeValue(forKey: userId)
+            checkoutTouchedAt.removeValue(forKey: userId)
+        }
+    }
 
     /// True when the inactivity warning should be shown ahead of the reset.
     var inactivityWarningVisible: Bool = false
@@ -370,6 +393,14 @@ final class KioskStore {
     /// hard reset at 5:00. Any user touch (handled by KioskShellView's
     /// non-cancelling UIKit activity monitor) calls this.
     func resetInactivity() {
+        // Nothing to time out before activation, and no signed-in idle screen
+        // to fall back to: a timeout here used to strand the iPad on an idle
+        // screen with no session, reachable only by relaunching the app.
+        guard isKioskMode, screen != .activation else {
+            inactivityTask?.cancel()
+            inactivityWarningVisible = false
+            return
+        }
         if isDeviceIdle {
             isDeviceIdle = false
         }
@@ -404,6 +435,7 @@ final class KioskStore {
                 self.inactivityWarningVisible = false
             }
             self.clearIntent(reason: .timeout)
+            guard self.isKioskMode else { return }
             self.screen = .idle
         }
     }
@@ -434,14 +466,16 @@ final class KioskStore {
     // MARK: - Cart persistence (P0 #2 fix)
 
     func cart(for userId: String) -> [KioskCartItem] {
-        checkoutCarts[userId] ?? []
+        isExpired(userId) ? [] : (checkoutCarts[userId] ?? [])
     }
 
     func setCart(_ cart: [KioskCartItem], for userId: String) {
+        pruneExpiredCheckouts()
         if cart.isEmpty {
             checkoutCarts.removeValue(forKey: userId)
         } else {
             checkoutCarts[userId] = cart
+            checkoutTouchedAt[userId] = Date()
         }
     }
 
@@ -450,11 +484,13 @@ final class KioskStore {
     }
 
     func checkoutDraft(for userId: String) -> KioskCheckoutDraft? {
-        checkoutDrafts[userId]
+        isExpired(userId) ? nil : checkoutDrafts[userId]
     }
 
     func setCheckoutDraft(_ draft: KioskCheckoutDraft, for userId: String) {
+        pruneExpiredCheckouts()
         checkoutDrafts[userId] = draft
+        checkoutTouchedAt[userId] = Date()
     }
 
     func clearCheckoutDraft(for userId: String) {

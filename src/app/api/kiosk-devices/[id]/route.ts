@@ -4,11 +4,15 @@ import { HttpError, ok } from "@/lib/http";
 import { requirePermission } from "@/lib/rbac";
 import { createAuditEntry } from "@/lib/audit";
 import { enforceRateLimit, SETTINGS_MUTATION_LIMIT } from "@/lib/rate-limit";
+import { kioskDeviceUpdateBody } from "@/lib/schemas/kiosk";
+import type { Prisma } from "@prisma/client";
 
 /** Toggle active status or update a kiosk device (ADMIN only) */
 export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
   requirePermission(user.role, "kiosk_device", "edit");
   await enforceRateLimit(`kiosk-devices:write:${user.id}`, SETTINGS_MUTATION_LIMIT);
+
+  const body = kioskDeviceUpdateBody.parse(await req.json());
 
   const device = await db.kioskDevice.findUnique({
     where: { id: params.id },
@@ -17,10 +21,9 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
     throw new HttpError(404, "Kiosk device not found");
   }
 
-  const body = await req.json();
-  const updates: Record<string, unknown> = {};
+  const updates: Prisma.KioskDeviceUpdateInput = {};
 
-  if (typeof body.active === "boolean") {
+  if (body.active !== undefined) {
     updates.active = body.active;
     // If deactivating, also clear session token so it can't be used
     if (!body.active) {
@@ -29,12 +32,8 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
     }
   }
 
-  if (typeof body.name === "string" && body.name.trim()) {
-    updates.name = body.name.trim();
-  }
-
-  if (Object.keys(updates).length === 0) {
-    throw new HttpError(400, "No valid fields to update");
+  if (body.name !== undefined) {
+    updates.name = body.name;
   }
 
   const updated = await db.kioskDevice.update({
@@ -52,7 +51,11 @@ export const PATCH = withAuth<{ id: string }>(async (req, { user, params }) => {
     entityId: device.id,
     action: body.active === false ? "deactivate" : "update",
     before: { name: device.name, active: device.active },
-    after: updates,
+    after: {
+      ...(body.name !== undefined ? { name: body.name } : {}),
+      ...(body.active !== undefined ? { active: body.active } : {}),
+      ...(body.active === false ? { sessionRevoked: true } : {}),
+    },
   });
 
   return ok({

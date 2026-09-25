@@ -14,6 +14,10 @@ struct KioskIdleView: View {
     @State private var selectedCheckout: KioskCheckoutDrawerContext?
     @State private var identityScanFeedback: IdentityScanFeedback?
     @State private var isIdentifyingScan = false
+    /// Scans that land while the first one is still resolving. A student
+    /// scanning three items in a row used to start a flow holding only the
+    /// first; the rest were dropped while the scanner beeped for each.
+    @State private var trailingScans: [String] = []
     @State private var identityRequests = LatestRequestGeneration()
     @State private var dashboardRequests = LatestRequestGeneration()
     @State private var unavailableSections: Set<String> = []
@@ -221,6 +225,21 @@ struct KioskIdleView: View {
                 .buttonStyle(.plain)
                 .disabled(isLoading)
                 .accessibilityLabel("Refresh kiosk data")
+                // Device status lives with the other device controls. As a
+                // shell overlay it sat on top of this header's first word.
+                Button {
+                    store.resetInactivity()
+                    store.systemStatusRevealRequests += 1
+                } label: {
+                    Image(systemName: "info.circle")
+                        .font(.callout.weight(.semibold))
+                        .foregroundStyle(KioskText.secondary)
+                        .frame(width: 44, height: 44)
+                        .background(KioskSurface.cardRaised, in: Circle())
+                        .overlay(Circle().stroke(KioskStroke.hairline, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Show device status")
                 kioskHealthDot
             }
 
@@ -793,8 +812,12 @@ struct KioskIdleView: View {
     }
 
     private func handleIdentityScan(_ value: String) {
-        guard !isIdentifyingScan else { return }
         store.resetInactivity()
+        guard !isIdentifyingScan else {
+            if value != trailingScans.last { trailingScans.append(value) }
+            return
+        }
+        trailingScans = []
         isIdentifyingScan = true
         identityScanFeedback = .working("Resolving scan...")
         let request = identityRequests.begin()
@@ -817,14 +840,19 @@ struct KioskIdleView: View {
                         expectedRequester: result.expectedRequester,
                         selectedEvent: nil,
                         targetBooking: result.booking.map { KioskIntentBooking(id: $0.id, title: $0.title, startsAt: $0.startsAt, endsAt: $0.endsAt) },
-                        pendingScanValues: [value],
+                        pendingScanValues: KioskFlowIntent.orderedScans(value, then: trailingScans),
                         createdAt: Date(),
-                        ambiguity: .none
+                        ambiguity: .none,
+                        custodyOwner: result.custodyOwner
                     )
+                    trailingScans = []
                     store.setIntent(intent)
                     store.screen = .identity
                 } else {
+                    // The fleet iPads have no Taptic Engine; the sound is the
+                    // only cue that separates this from the scanner's own beep.
                     Haptics.warning()
+                    KioskScanFeedbackSound.playFailure()
                     identityScanFeedback = .error(result.message ?? "That scan cannot start a kiosk flow.")
                 }
             } catch {
@@ -833,6 +861,7 @@ struct KioskIdleView: View {
                     store.deactivate()
                 } else {
                     Haptics.error()
+                    KioskScanFeedbackSound.playFailure()
                     identityScanFeedback = .error((error as? APIError)?.errorDescription ?? "Could not read that scan")
                 }
             }
@@ -883,17 +912,19 @@ struct KioskIdleView: View {
             identityScanFeedback = .error("This checkout is missing its requester.")
             return
         }
-        let requester = KioskUser(id: requesterId, name: context.requesterName, avatarUrl: context.requesterAvatarUrl, role: "STUDENT", affiliation: nil, affiliationBadge: nil)
+        let owner = KioskUser(id: requesterId, name: context.requesterName, avatarUrl: context.requesterAvatarUrl, role: "STUDENT", affiliation: nil, affiliationBadge: nil)
+        // Anyone may return someone else's gear; the owner is shown, not required.
         store.setIntent(KioskFlowIntent(
             action: .return,
             source: .activeCheckout,
             identifiedUser: nil,
-            expectedRequester: requester,
+            expectedRequester: nil,
             selectedEvent: nil,
             targetBooking: KioskIntentBooking(id: context.checkoutId, title: context.title, startsAt: nil, endsAt: context.endsAt),
             pendingScanValues: [],
             createdAt: Date(),
-            ambiguity: .none
+            ambiguity: .none,
+            custodyOwner: owner
         ))
         store.screen = .identity
     }

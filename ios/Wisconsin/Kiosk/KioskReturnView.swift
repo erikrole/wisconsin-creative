@@ -23,6 +23,7 @@ struct KioskReturnView: View {
     @State private var lastScanAt: Date?
     @State private var earnedBadges: [EarnedBadgeReward] = []
     @State private var scanQueue = KioskScanQueue()
+    @State private var returningQuantityId: String?
 
     enum ScanFeedback: Equatable {
         case success(String)
@@ -42,6 +43,18 @@ struct KioskReturnView: View {
             case .alreadyReturned: .warning
             }
         }
+    }
+
+    /// Names the owner when someone else is returning their gear, so the
+    /// returner can see whose checkout this scan closes.
+    private var returningForOwner: KioskUser? {
+        guard let intent = store.pendingIntent, intent.targetBooking?.id == bookingId,
+              let owner = intent.custodyOwner, owner.id != userId else { return nil }
+        return owner
+    }
+    private var returnSubtitle: String? {
+        guard let owner = returningForOwner else { return detail?.title }
+        return [detail?.title, "Returning for \(owner.name)"].compactMap { $0 }.joined(separator: " · ")
     }
 
     private var totalItems: Int { detail?.items.count ?? 0 }
@@ -105,7 +118,7 @@ struct KioskReturnView: View {
         KioskScanZoneColumn {
             KioskFlowHeader(
                 title: "Return",
-                subtitle: detail?.title,
+                subtitle: returnSubtitle,
                 onBack: { backToPerson() },
                 onCamera: { showCamera = true }
             )
@@ -163,12 +176,12 @@ struct KioskReturnView: View {
 
                     if hasBatteryScanStep {
                         KioskBatteryScanStatus(
-                            title: "Battery Units",
+                            title: "Battery units",
                             count: returnedBatteryCount,
                             total: batteryTotal,
                             pendingCopy: "Scan each returned battery unit QR so custody closes on the exact units.",
-                            completeCopy: "All \(batteryTotal) units returned",
-                            progressCopy: "\(returnedBatteryCount) of \(batteryTotal) units returned",
+                            completeCopy: batteryTotal == 1 ? "Unit returned" : "All \(batteryTotal) units returned",
+                            progressCopy: "\(returnedBatteryCount) of \(batteryTotal) \(batteryTotal == 1 ? "unit" : "units") returned",
                             unitsHeader: "Returned units",
                             scannedUnits: returnedBatteryUnits.map { KioskScannedUnit(id: $0.id, tag: $0.tagName) }
                         )
@@ -252,13 +265,19 @@ struct KioskReturnView: View {
                     ScrollView {
                         LazyVStack(spacing: 0) {
                             ForEach(items) { item in
-                                KioskChecklistRow(
-                                    name: item.itemListSecondaryTitle ?? item.name,
-                                    tag: item.itemListPrimaryTitle,
-                                    isDone: returnedIds.contains(item.id),
-                                    isBattery: item.isNumberedBulk,
-                                    strikethroughWhenDone: true
-                                )
+                                HStack(spacing: 0) {
+                                    KioskChecklistRow(
+                                        name: item.itemListSecondaryTitle ?? item.name,
+                                        tag: item.itemListPrimaryTitle,
+                                        isDone: returnedIds.contains(item.id),
+                                        isBattery: item.isNumberedBulk,
+                                        strikethroughWhenDone: true
+                                    )
+                                    if item.returnsByQuantity == true, !returnedIds.contains(item.id) {
+                                        quantityReturnControl(for: item)
+                                            .padding(.trailing, 16)
+                                    }
+                                }
                                     .id(item.id)
                                 Divider().background(KioskStroke.hairline)
                             }
@@ -405,6 +424,66 @@ struct KioskReturnView: View {
             return "All \(total) item\(total == 1 ? "" : "s") returned. Thanks!"
         }
         return "\(result.returnedItems) of \(total) item\(total == 1 ? "" : "s") returned."
+    }
+
+    /// Counted stock has no QR per piece, so it cannot be scanned back. It
+    /// used to sit unreturned forever, keeping the checkout open and overdue.
+    /// One tap returns everything outstanding; fewer is in the menu.
+    @ViewBuilder
+    private func quantityReturnControl(for item: KioskCheckoutDetail.ReturnItem) -> some View {
+        let outstanding = item.quantity ?? 0
+        if returningQuantityId == item.id {
+            ProgressView().tint(KioskText.primary)
+        } else if outstanding > 0, let bulkSkuId = item.bulkSkuId {
+            Menu {
+                if outstanding > 1 {
+                    ForEach((1..<min(outstanding, 20)).reversed(), id: \.self) { count in
+                        Button("Return \(count) of \(outstanding)") {
+                            returnQuantity(item, bulkSkuId: bulkSkuId, quantity: count, outstanding: outstanding)
+                        }
+                    }
+                }
+            } label: {
+                Text(outstanding == 1 ? "Return" : "Return all \(outstanding)")
+                    .font(KioskType.chip)
+            } primaryAction: {
+                returnQuantity(item, bulkSkuId: bulkSkuId, quantity: outstanding, outstanding: outstanding)
+            }
+            .kioskButtonRole(.primary)
+            .controlSize(.regular)
+            .disabled(returningQuantityId != nil || isCompleting)
+            .accessibilityLabel("Return \(outstanding) \(item.bulkSkuName ?? item.name)")
+        }
+    }
+
+    private func returnQuantity(
+        _ item: KioskCheckoutDetail.ReturnItem,
+        bulkSkuId: String,
+        quantity: Int,
+        outstanding: Int
+    ) {
+        store.resetInactivity()
+        returningQuantityId = item.id
+        let flow = store.flowGeneration
+        Task {
+            defer { if store.ownsFlow(flow) { returningQuantityId = nil } }
+            do {
+                let result = try await KioskAPI.shared.kioskReturnQuantity(
+                    bookingId: bookingId,
+                    actorId: userId,
+                    bulkSkuId: bulkSkuId,
+                    quantity: quantity,
+                    expectedOutstanding: outstanding
+                )
+                guard store.ownsFlow(flow) else { return }
+                showFeedback(.success(result.message ?? "\(quantity) returned"))
+                await loadDetail()
+            } catch {
+                guard store.ownsFlow(flow) else { return }
+                showFeedback(.error((error as? APIError)?.errorDescription ?? "Could not return that quantity."))
+                await loadDetail()
+            }
+        }
     }
 
     private func loadDetail() async {

@@ -8,7 +8,7 @@ describe("iOS Xcode verification gate", () => {
     expect(script).toContain('SCHEME="${IOS_SCHEME:-Wisconsin}"');
     expect(script).toContain('if [[ "$SCHEME" == "WisconsinKiosk" ]]');
     expect(script).toContain('SIMULATOR_NAME="${IOS_SIMULATOR_NAME:-iPhone 18 Pro Max}"');
-    expect(script).toContain('SIMULATOR_NAME="${IOS_SIMULATOR_NAME:-iPad (A16)}"');
+    expect(script).toContain('SIMULATOR_NAME="${IOS_SIMULATOR_NAME:-iPad Air 11-inch (M4)}"');
     expect(script).toContain("resolve_simulator_udid");
     expect(script).toContain("[[:xdigit:]]{8}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{12}");
     expect(script).toContain("udid = substr(line, RSTART, RLENGTH)");

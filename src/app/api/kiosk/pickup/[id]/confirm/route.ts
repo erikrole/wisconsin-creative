@@ -1,4 +1,4 @@
-import { rejectKioskOperation, kioskOperationContext, readKioskOperationReceipt, claimKioskOperationReceiptTx, finishKioskOperationReceiptTx } from "@/lib/services/kiosk-operation-receipts";
+import { rejectKioskOperation, kioskOperationContext, readKioskOperationReplay, unreadableKioskOperation, claimKioskOperationReceiptTx, finishKioskOperationReceiptTx } from "@/lib/services/kiosk-operation-receipts";
 import { BookingCustodyScope, BookingKind, Prisma, type Role } from "@prisma/client";
 import { db } from "@/lib/db";
 import { withKiosk } from "@/lib/api";
@@ -8,6 +8,7 @@ import { pickupConfirmBody } from "@/lib/schemas/kiosk";
 import { badges, earnedBadgesSince } from "@/lib/badges";
 import { createBooking } from "@/lib/services/bookings";
 import { parseDerivedBulkUnitQr } from "@/lib/bulk-unit-qr";
+import { requireKioskActor } from "@/lib/services/kiosk-actor";
 
 /**
  * Confirm kiosk pickup: open checkout custody for a complete pickup, or for
@@ -16,10 +17,17 @@ import { parseDerivedBulkUnitQr } from "@/lib/bulk-unit-qr";
  */
 export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => {
   const badgeWindowStart = new Date(Date.now() - 1);
-  const body = pickupConfirmBody.parse(await req.json());
+  const raw: unknown = await req.json();
+  const parsed = pickupConfirmBody.safeParse(raw);
+  if (!parsed.success) {
+    const unreadable = unreadableKioskOperation(raw);
+    if (unreadable) return ok(unreadable);
+    throw parsed.error;
+  }
+  const body = parsed.data;
   const { actorId, partial } = body;
   const receipt = kioskOperationContext({ requestId: body.requestId, kioskId: kiosk.kioskId, actorId, operation: "pickup", sourceId: params.id, payload: body });
-  const replay = await readKioskOperationReceipt(db, receipt);
+  const replay = await readKioskOperationReplay(db, receipt);
   if (replay) return ok(replay);
   try {
   let itemCount = 0;
@@ -32,12 +40,9 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
 
   await db.$transaction(
     async (tx) => {
-      const user = await tx.user.findUnique({
-        where: { id: actorId },
-        select: { id: true, name: true, role: true, active: true, hiddenFromRoster: true },
-      });
-      if (!user) throw new HttpError(404, "User not found");
-      if (user.active === false || user.hiddenFromRoster === true) throw new HttpError(403, "This user cannot operate kiosk custody");
+      // Kiosk roster rule (active, not hidden, collaborators only when
+      // roster-eligible); anyone else is "not found" like every kiosk mutation.
+      const user = await requireKioskActor(tx, actorId);
       actorRole = user.role;
 
       const booking = await tx.booking.findUnique({
@@ -419,7 +424,7 @@ export const POST = withKiosk<{ id: string }>(async (req, { kiosk, params }) => 
     ...(earnedBadges.length > 0 ? { earnedBadges } : {}),
   });
   } catch (error) {
-    const replay = await readKioskOperationReceipt(db, receipt);
+    const replay = await readKioskOperationReplay(db, receipt);
     if (replay) return ok(replay);
     const rejected = await rejectKioskOperation(db, receipt, error);
     if (rejected) return ok(rejected);

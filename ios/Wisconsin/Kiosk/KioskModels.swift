@@ -463,6 +463,9 @@ struct KioskResolveScanResult: Decodable {
     let message: String?
     let user: KioskUser?
     let expectedRequester: KioskUser?
+    /// Personal owner of gear being returned. Display only — anyone identified
+    /// at the kiosk may return it, so it never restricts identity.
+    let custodyOwner: KioskUser?
     let item: KioskResolvedItem?
     let booking: KioskResolvedBooking?
     let candidates: [KioskScanCandidate]?
@@ -710,6 +713,9 @@ struct KioskCheckoutDetail: Decodable {
         let imageUrl: String?
         let quantity: Int?
         let reservationItemId: String?
+        /// Counted stock (cables, tape) has no per-unit QR, so it is returned
+        /// by quantity. Absent from older servers.
+        let returnsByQuantity: Bool?
 
         var isNumberedBulk: Bool { type == "numbered_bulk" }
         var isBulkQuantity: Bool { type == "bulk_quantity" }
@@ -740,6 +746,13 @@ struct KioskActiveCheckoutMutationResult: Decodable {
 /// Server-authoritative counts returned by `/api/kiosk/checkin/{id}/complete`.
 /// Use these in the success message instead of local optimistic counts so the
 /// kiosk doesn't lie when a sister kiosk checked in items mid-session.
+struct KioskQuantityReturnResult: Decodable {
+    let success: Bool
+    let completed: Bool?
+    let remaining: Int?
+    let message: String?
+}
+
 struct KioskCheckinCompleteResult: Decodable {
     let returnedItems: Int
     let totalItems: Int

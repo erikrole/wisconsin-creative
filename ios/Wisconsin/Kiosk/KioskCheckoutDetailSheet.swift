@@ -465,7 +465,14 @@ struct KioskCheckoutDetailSheet: View {
                 } else {
                     // Same badge the scan screens use, rather than a private
                     // green Label that made "Scanner ready" a third color.
-                    KioskScannerReadinessBadge(isReady: shouldListenForItemScans)
+                    // Pass hardware state too: without it the badge claimed
+                    // "Scanner ready" in green while the shell pill beside it
+                    // said "No scanner connected".
+                    KioskScannerReadinessBadge(
+                        isReady: shouldListenForItemScans,
+                        lastScanAt: store.scanner.lastScanAt,
+                        isHardwareConnected: store.scanner.hardwareConnected
+                    )
                 }
 
                 Spacer(minLength: 8)
@@ -488,7 +495,8 @@ struct KioskCheckoutDetailSheet: View {
         .overlay(
             RoundedRectangle(cornerRadius: KioskRadius.lg)
                 .stroke(
-                    shouldListenForItemScans ? KioskStatus.ok.opacity(0.5) : KioskStroke.standard,
+                    shouldListenForItemScans && store.scanner.hardwareConnected
+                        ? KioskStatus.ok.opacity(0.5) : KioskStroke.standard,
                     lineWidth: 1
                 )
         )
@@ -714,6 +722,9 @@ struct KioskCheckoutDetailSheet: View {
     }
 
     private func enqueueScan(_ value: String) {
+        // A scanner produces no touches, so scan-only work in this sheet never
+        // reached the shell's activity monitor and timed out mid-session.
+        store.resetInactivity()
         guard scanQueue.enqueue(value) else {
             showMutationMessage(tone: .warning, text: "Already waiting for that scan")
             KioskScanFeedbackSound.playFailure()

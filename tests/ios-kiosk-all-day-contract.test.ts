@@ -27,7 +27,8 @@ describe("iOS kiosk all-day event contract", () => {
     expect(eventSheet).toContain("let displayDay = event.kioskDisplayStartDay");
     expect(eventSheet).toContain("let start = event.kioskDisplayStartDay");
     expect(eventSheet).toContain("let end = event.kioskDisplayEndDay");
-    expect(eventSheet).toContain("if !event.displayAllDay {\n                        KioskEventTimeRow(label: \"Call\", value: callTimeLabel)");
+    expect(eventSheet).toContain("if !event.displayAllDay, let callTimeLabel {");
+    expect(eventSheet).toContain('KioskEventTimeRow(label: "Call", value: callTimeLabel)');
     expect(eventSheet).toContain("KioskEventWorkerRow(user: user, eventAllDay: event.displayAllDay)");
   });
 });

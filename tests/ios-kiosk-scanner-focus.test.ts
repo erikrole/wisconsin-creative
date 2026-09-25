@@ -50,7 +50,8 @@ describe("iOS kiosk scanner focus", () => {
     expect(checkout).toContain("@State private var scannerCaptureEnabled = true");
     expect(checkout).toContain("@State private var scannerHasFocus = false");
     expect(checkout).toContain("private var shouldListenForHIDScans: Bool");
-    expect(checkout).toContain("scannerCaptureEnabled && focusedCheckoutField == nil");
+    // Armed only on the scan step (step 1 has no visible cart).
+    expect(checkout).toContain("scannerCaptureEnabled && checkoutContextReady && focusedCheckoutField == nil");
     expect(checkout).toContain("focusedCheckoutField == nil");
     expect(checkout).toContain("if scannerCaptureEnabled {");
     expect(checkout).toContain("isEnabled: shouldListenForHIDScans");

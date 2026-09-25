@@ -1,5 +1,5 @@
-import { rejectKioskOperation, kioskOperationContext, readKioskOperationReceipt, claimKioskOperationReceiptTx, finishKioskOperationReceiptTx } from "@/lib/services/kiosk-operation-receipts";
-import { BookingKind, BookingStatus, BulkMovementKind, BulkUnitStatus, CalendarEventStatus, Prisma } from "@prisma/client";
+import { rejectKioskOperation, kioskOperationContext, readKioskOperationReplay, unreadableKioskOperation, claimKioskOperationReceiptTx, finishKioskOperationReceiptTx } from "@/lib/services/kiosk-operation-receipts";
+import { BookingCustodyScope, BookingKind, BookingStatus, BulkMovementKind, BulkUnitStatus, CalendarEventStatus, Prisma } from "@prisma/client";
 import { after } from "next/server";
 import { db } from "@/lib/db";
 import { withKiosk } from "@/lib/api";
@@ -22,6 +22,7 @@ import { normalizeCheckoutPolicies } from "@/lib/services/checkout-policies";
 import { loadKitEquipmentPlan } from "@/lib/services/kits";
 import { isSerializationConflict } from "@/lib/serialization";
 import { isBookingAllocationConstraintError } from "@/lib/prisma-errors";
+import { requireKioskActor } from "@/lib/services/kiosk-actor";
 
 const MAX_SERIALIZABLE_ATTEMPTS = 2;
 
@@ -45,14 +46,21 @@ async function withSerializableRetry<T>(operation: () => Promise<T>): Promise<T>
  */
 export const POST = withKiosk(async (req, { kiosk }) => {
   const badgeWindowStart = new Date(Date.now() - 1);
-  const body = checkoutCompleteBody.parse(await req.json());
+  const raw: unknown = await req.json();
+  const parsed = checkoutCompleteBody.safeParse(raw);
+  if (!parsed.success) {
+    const unreadable = unreadableKioskOperation(raw);
+    if (unreadable) return ok(unreadable);
+    throw parsed.error;
+  }
+  const body = parsed.data;
   const actorId = body.actorId;
   const locationId = kiosk.locationId;
   const { assetIds, bulkUnitItems } = normalizeCheckoutCompleteItems(body.items);
   const customPurpose = body.customPurpose?.trim();
 
   const receipt = kioskOperationContext({ requestId: body.requestId, kioskId: kiosk.kioskId, actorId, operation: "checkout", payload: { ...body, locationId } });
-  const replay = await readKioskOperationReceipt(db, receipt);
+  const replay = await readKioskOperationReplay(db, receipt);
   if (replay) return ok(replay);
 
   const now = new Date();
@@ -61,11 +69,9 @@ export const POST = withKiosk(async (req, { kiosk }) => {
   try {
     const { booking, refNumber } = await withSerializableRetry(() => db.$transaction(
       async (tx) => {
-        const transactionalUser = await tx.user.findFirst({
-          where: { id: actorId, active: true },
-          select: { id: true, role: true },
-        });
-        if (!transactionalUser) throw new HttpError(404, "User not found");
+        // Same roster rule the kiosk shows: active, not hidden, and
+        // collaborators only when roster-eligible.
+        const transactionalUser = await requireKioskActor(tx, actorId);
 
         await claimKioskOperationReceiptTx(tx, receipt);
 
@@ -96,6 +102,9 @@ export const POST = withKiosk(async (req, { kiosk }) => {
             where: {
               kind: BookingKind.CHECKOUT,
               requesterUserId: actorId,
+              // Shared travel-case custody is not this person's (D-061) and
+              // must not count against their personal checkout limit.
+              custodyScope: BookingCustodyScope.PERSON,
               status: { in: [BookingStatus.OPEN, BookingStatus.PENDING_PICKUP] },
             },
           });
@@ -378,18 +387,11 @@ export const POST = withKiosk(async (req, { kiosk }) => {
       ...(earnedBadges.length > 0 ? { earnedBadges } : {}),
     });
   } catch (error) {
-    const replay = await readKioskOperationReceipt(db, receipt);
+    const replay = await readKioskOperationReplay(db, receipt);
     if (replay) return ok(replay);
-    const rejected = await rejectKioskOperation(db, receipt, error);
-    if (rejected) return ok(rejected);
     if (isSerializationConflict(error)) {
       throw new HttpError(409, "Checkout changed while it was being created. Please retry");
     }
-
-    if (isBookingAllocationConstraintError(error)) {
-      throw new HttpError(409, "One or more items are no longer available");
-    }
-
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2002"
@@ -403,9 +405,17 @@ export const POST = withKiosk(async (req, { kiosk }) => {
           "Could not allocate a checkout reference — please retry",
         );
       }
-      // BookingSerializedItem(bookingId, assetId) → item-level conflict.
-      throw new HttpError(409, "One or more items are no longer available");
     }
-    throw error;
+    // An item held by someone else is definitive for these exact details, so
+    // seal it like any other rejection; retrying the saved bytes cannot help.
+    const itemConflict =
+      isBookingAllocationConstraintError(error) ||
+      (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002");
+    const definitive = itemConflict
+      ? new HttpError(409, "One or more items are no longer available")
+      : error;
+    const rejected = await rejectKioskOperation(db, receipt, definitive);
+    if (rejected) return ok(rejected);
+    throw definitive;
   }
 });

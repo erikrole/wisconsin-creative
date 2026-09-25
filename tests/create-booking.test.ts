@@ -18,8 +18,10 @@ type CreateBookingTx = {
   bookingEvent: Record<"createMany", MockFn>;
   scheduleEventFollow: Record<"createMany", MockFn>;
   bookingSerializedItem: Record<"createMany" | "updateMany" | "deleteMany", MockFn>;
-  bookingBulkItem: Record<"createMany" | "update" | "upsert" | "delete", MockFn>;
+  bookingBulkItem: Record<"createMany" | "update" | "upsert" | "delete" | "findMany", MockFn>;
   bulkSku: Record<"findMany", MockFn>;
+  bulkSkuUnit: Record<"findMany" | "updateMany", MockFn>;
+  bookingBulkUnitAllocation: Record<"createMany", MockFn>;
   assetAllocation: Record<"createMany" | "updateMany", MockFn>;
   bulkStockBalance: Record<"findMany" | "upsert", MockFn>;
   bulkStockMovement: Record<"createMany", MockFn>;
@@ -55,8 +57,10 @@ vi.mock("@/lib/db", () => {
     bookingEvent: { createMany: vi.fn() },
     scheduleEventFollow: { createMany: vi.fn() },
     bookingSerializedItem: { createMany: vi.fn(), updateMany: vi.fn(), deleteMany: vi.fn() },
-    bookingBulkItem: { createMany: vi.fn(), update: vi.fn(), upsert: vi.fn(), delete: vi.fn() },
+    bookingBulkItem: { createMany: vi.fn(), update: vi.fn(), upsert: vi.fn(), delete: vi.fn(), findMany: vi.fn() },
     bulkSku: { findMany: vi.fn() },
+    bulkSkuUnit: { findMany: vi.fn(), updateMany: vi.fn() },
+    bookingBulkUnitAllocation: { createMany: vi.fn() },
     assetAllocation: { createMany: vi.fn(), updateMany: vi.fn() },
     bulkStockBalance: { findMany: vi.fn(), upsert: vi.fn() },
     bulkStockMovement: { createMany: vi.fn() },
@@ -176,7 +180,11 @@ beforeEach(() => {
   mockTx.bookingBulkItem.update.mockResolvedValue({});
   mockTx.bookingBulkItem.upsert.mockResolvedValue({});
   mockTx.bookingBulkItem.delete.mockResolvedValue({});
+  mockTx.bookingBulkItem.findMany.mockResolvedValue([]);
   mockTx.bulkSku.findMany.mockResolvedValue([]);
+  mockTx.bulkSkuUnit.findMany.mockResolvedValue([]);
+  mockTx.bulkSkuUnit.updateMany.mockResolvedValue({ count: 0 });
+  mockTx.bookingBulkUnitAllocation.createMany.mockResolvedValue({});
   mockTx.bulkStockBalance.findMany.mockResolvedValue([]);
   mockTx.bulkStockBalance.upsert.mockResolvedValue({});
   mockTx.bulkStockMovement.createMany.mockResolvedValue({});
@@ -1368,6 +1376,150 @@ describe("createBooking", () => {
         action: "kiosk_pickup_appended",
       }),
     }));
+  });
+
+  describe("numbered-battery leftover pickup", () => {
+    const startsAt = new Date("2026-09-15T20:00:00Z");
+    const endsAt = new Date("2026-09-16T00:15:00Z");
+    const battery = { name: "NP-FZ100", trackByNumber: true };
+
+    function availableUnits(unitNumbers: number[]) {
+      return unitNumbers.map((unitNumber) => ({
+        id: `unit-${unitNumber}`,
+        bulkSkuId: "sku-bat",
+        unitNumber,
+        status: "AVAILABLE",
+        bulkSku: { name: battery.name },
+        allocations: [],
+      }));
+    }
+
+    beforeEach(() => {
+      mockTx.bulkSku.findMany.mockResolvedValue([{ id: "sku-bat" }]);
+      mockTx.bulkStockBalance.findMany.mockResolvedValue([
+        { bulkSkuId: "sku-bat", onHandQuantity: 10 },
+      ]);
+    });
+
+    it("binds a partial pickup (camera + 2 of 4 batteries) and then the leftover 2 onto the same checkout", async () => {
+      // First pickup: camera plus two of the four planned batteries.
+      mockTx.booking.findUnique.mockResolvedValue({
+        id: "rv-1",
+        kind: "RESERVATION",
+        status: "BOOKED",
+        locationId: "loc-1",
+        custodyScope: "PERSON",
+        serializedItems: [{ assetId: "a-cam", allocationStatus: "active" }],
+        bulkItems: [{ bulkSkuId: "sku-bat", plannedQuantity: 4, checkedOutQuantity: 0 }],
+      });
+      mockTx.booking.findFirst.mockResolvedValue(null);
+      mockTx.bookingBulkItem.findMany.mockResolvedValue([
+        { id: "bbi-1", bulkSkuId: "sku-bat", plannedQuantity: 2, bulkSku: battery },
+      ]);
+      mockTx.bulkSkuUnit.findMany.mockResolvedValue(availableUnits([1, 2]));
+      mockTx.bulkSkuUnit.updateMany.mockResolvedValue({ count: 2 });
+
+      await createBooking(baseInput({
+        sourceReservationId: "rv-1",
+        sourceReservationPickup: true,
+        serializedAssetIds: ["a-cam"],
+        bulkItems: [{ bulkSkuId: "sku-bat", quantity: 2 }],
+        bulkUnitItems: [
+          { bulkSkuId: "sku-bat", unitNumber: 1 },
+          { bulkSkuId: "sku-bat", unitNumber: 2 },
+        ],
+      }));
+      expect(mockTx.booking.create).toHaveBeenCalledTimes(1);
+
+      // Leftover pickup: the checkout already holds 2 bound units and its
+      // plan grows to 4 on append; this request binds only the remaining 2.
+      vi.clearAllMocks();
+      mockTx.booking.findUnique.mockResolvedValue({
+        id: "rv-1",
+        kind: "RESERVATION",
+        status: "BOOKED",
+        locationId: "loc-1",
+        custodyScope: "PERSON",
+        serializedItems: [],
+        bulkItems: [{ bulkSkuId: "sku-bat", plannedQuantity: 4, checkedOutQuantity: 2 }],
+      });
+      mockTx.booking.findFirst.mockResolvedValue({
+        id: "co-existing",
+        refNumber: "CO-0454",
+        startsAt,
+        endsAt,
+        sourceReservationId: "rv-1",
+      });
+      mockTx.bookingBulkItem.findMany.mockResolvedValue([
+        { id: "bbi-1", bulkSkuId: "sku-bat", plannedQuantity: 4, bulkSku: battery },
+      ]);
+      mockTx.bulkSkuUnit.findMany.mockResolvedValue(availableUnits([3, 4]));
+      mockTx.bulkSkuUnit.updateMany.mockResolvedValue({ count: 2 });
+
+      await createBooking(baseInput({
+        sourceReservationId: "rv-1",
+        sourceReservationPickup: true,
+        serializedAssetIds: [],
+        bulkItems: [{ bulkSkuId: "sku-bat", quantity: 2 }],
+        bulkUnitItems: [
+          { bulkSkuId: "sku-bat", unitNumber: 3 },
+          { bulkSkuId: "sku-bat", unitNumber: 4 },
+        ],
+      }));
+
+      expect(mockTx.booking.create).not.toHaveBeenCalled();
+      expect(mockTx.bookingBulkItem.upsert).toHaveBeenCalledWith(expect.objectContaining({
+        update: { plannedQuantity: { increment: 2 }, checkedOutQuantity: { increment: 2 } },
+      }));
+      expect(mockTx.bookingBulkUnitAllocation.createMany).toHaveBeenCalledWith({
+        data: [
+          expect.objectContaining({ bookingBulkItemId: "bbi-1", bulkSkuUnitId: "unit-3" }),
+          expect.objectContaining({ bookingBulkItemId: "bbi-1", bulkSkuUnitId: "unit-4" }),
+        ],
+      });
+      expect(mockTx.booking.update).toHaveBeenCalledWith(expect.objectContaining({
+        where: { id: "rv-1" },
+        data: expect.objectContaining({ status: "COMPLETED" }),
+      }));
+    });
+
+    it("still rejects over-staged units on an appended leftover pickup", async () => {
+      mockTx.booking.findUnique.mockResolvedValue({
+        id: "rv-1",
+        kind: "RESERVATION",
+        status: "BOOKED",
+        locationId: "loc-1",
+        custodyScope: "PERSON",
+        serializedItems: [],
+        bulkItems: [{ bulkSkuId: "sku-bat", plannedQuantity: 4, checkedOutQuantity: 2 }],
+      });
+      mockTx.booking.findFirst.mockResolvedValue({
+        id: "co-existing",
+        refNumber: "CO-0454",
+        startsAt,
+        endsAt,
+        sourceReservationId: "rv-1",
+      });
+      mockTx.bookingBulkItem.findMany.mockResolvedValue([
+        { id: "bbi-1", bulkSkuId: "sku-bat", plannedQuantity: 3, bulkSku: battery },
+      ]);
+      mockTx.bulkSkuUnit.findMany.mockResolvedValue(availableUnits([3, 4]));
+
+      await expect(createBooking(baseInput({
+        sourceReservationId: "rv-1",
+        sourceReservationPickup: true,
+        serializedAssetIds: [],
+        bulkItems: [{ bulkSkuId: "sku-bat", quantity: 1 }],
+        bulkUnitItems: [
+          { bulkSkuId: "sku-bat", unitNumber: 3 },
+          { bulkSkuId: "sku-bat", unitNumber: 4 },
+        ],
+      }))).rejects.toMatchObject({
+        status: 409,
+        message: expect.stringContaining("2 of 1 numbered units scanned"),
+      });
+      expect(mockTx.bookingBulkUnitAllocation.createMany).not.toHaveBeenCalled();
+    });
   });
 
   it("throws 404 when source reservation not found", async () => {

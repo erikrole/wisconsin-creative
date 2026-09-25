@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { checkRateLimit, enforceRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit, enforceRateLimit, isRateLimitExhausted } from "@/lib/rate-limit";
 
 // No UPSTASH_REDIS_REST_* env in the test environment, so checkRateLimit
 // exercises the in-memory fallback sliding window.
@@ -35,6 +35,21 @@ describe("rate-limit in-memory fallback", () => {
 
     vi.advanceTimersByTime(1_001);
     expect((await checkRateLimit(key, config)).allowed).toBe(true);
+  });
+
+  it("isRateLimitExhausted peeks without consuming quota", async () => {
+    const key = `test:peek:${Math.random()}`;
+    const config = { max: 2, windowMs: 60_000 };
+
+    expect(await isRateLimitExhausted(key, config)).toBe(false);
+    expect(await isRateLimitExhausted(key, config)).toBe(false);
+    await checkRateLimit(key, config);
+    expect(await isRateLimitExhausted(key, config)).toBe(false);
+    await checkRateLimit(key, config);
+    expect(await isRateLimitExhausted(key, config)).toBe(true);
+
+    vi.advanceTimersByTime(60_001);
+    expect(await isRateLimitExhausted(key, config)).toBe(false);
   });
 
   it("enforceRateLimit throws HttpError(429) once the limit is exceeded", async () => {

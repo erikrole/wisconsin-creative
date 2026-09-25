@@ -16,6 +16,11 @@ struct KioskIdentityView: View {
     private var roster: [KioskUser] {
         intent?.expectedRequester.map { [$0] } ?? users
     }
+    private var identityPrompt: String {
+        if let requester = intent?.expectedRequester { return "Confirm \(requester.name) to continue — tap their name." }
+        if let owner = intent?.custodyOwner { return "This is \(owner.name)'s gear. Anyone can return it — choose your name." }
+        return "Choose your name to continue."
+    }
     private var normalizedQuery: String {
         query.trimmingCharacters(in: .whitespacesAndNewlines)
     }
@@ -35,8 +40,7 @@ struct KioskIdentityView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(intent?.heroTitle ?? "Who are you?")
                         .font(.gothamBlack(size: 36)).foregroundStyle(KioskText.primary)
-                    Text(intent?.expectedRequester.map { "Confirm \($0.name) to continue — tap their name." }
-                         ?? "Choose your name to continue.")
+                    Text(identityPrompt)
                         .font(.title3).foregroundStyle(KioskText.secondary)
                 }
                 TextField("Search roster", text: $query)
@@ -183,6 +187,7 @@ struct KioskIdentityView: View {
                     finishIdentityRequest(requestToken)
                     message = result.message ?? "That scan didn't match anyone. Tap your name instead."
                     Haptics.warning()
+                    KioskScanFeedbackSound.playFailure()
                     return
                 }
                 choose(user)
@@ -193,6 +198,7 @@ struct KioskIdentityView: View {
                 finishIdentityRequest(requestToken)
                 message = (error as? APIError)?.errorDescription ?? "Could not read that scan."
                 Haptics.error()
+                KioskScanFeedbackSound.playFailure()
             }
         }
     }

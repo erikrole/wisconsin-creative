@@ -23,7 +23,10 @@ export const DELETE = withAuth<{ id: string; memberId: string }>(async (_req, { 
   if (!member) throw new HttpError(404, "Travel member not found");
   if (member.eventId !== id) throw new HttpError(404, "Travel member not found");
 
-  await db.eventTravelMember.delete({ where: { id: memberId } });
+  // Scoped deleteMany instead of delete: a concurrent remove leaves nothing to
+  // delete, which is the outcome the caller wanted, not a P2025 500.
+  const { count } = await db.eventTravelMember.deleteMany({ where: { id: memberId, eventId: id } });
+  if (count === 0) return ok({ data: null });
 
   await createAuditEntry({
     actorId: user.id,

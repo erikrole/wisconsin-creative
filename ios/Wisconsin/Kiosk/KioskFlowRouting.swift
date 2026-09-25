@@ -112,6 +112,16 @@ struct KioskFlowIntent: Equatable {
     var pendingScanValues: [String]
     let createdAt: Date
     var ambiguity: KioskIntentAmbiguity
+    /// Whose personal checkout a return closes. Unlike `expectedRequester`,
+    /// this never limits who may identify.
+    var custodyOwner: KioskUser? = nil
+
+    /// The scan that opened a flow followed by any that arrived while it was
+    /// being resolved, in order, each value once.
+    static func orderedScans(_ first: String, then trailing: [String]) -> [String] {
+        var seen: Set<String> = []
+        return ([first] + trailing).filter { seen.insert($0).inserted }
+    }
 
     var heroTitle: String {
         let verb = switch action {

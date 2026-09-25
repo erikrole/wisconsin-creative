@@ -162,7 +162,7 @@ struct KioskPickupView: View {
             "Leave this off the reservation?",
             isPresented: Binding(
                 get: { pendingRemove != nil },
-                set: { if !$0 { pendingRemove = nil } }
+                set: { if !$0 { pendingRemove = nil; processNextScanIfNeeded() } }
             ),
             titleVisibility: .visible,
             presenting: pendingRemove
@@ -170,7 +170,7 @@ struct KioskPickupView: View {
             Button("Remove remaining \(pending.label)", role: .destructive) {
                 Task { await removeRemainingItem(pending) }
             }
-            Button("Cancel", role: .cancel) { pendingRemove = nil }
+            Button("Cancel", role: .cancel) { pendingRemove = nil; processNextScanIfNeeded() }
         } message: { pending in
             Text("\(pending.label) stays on the shelf. It will not go out with this pickup.")
         }
@@ -249,11 +249,19 @@ struct KioskPickupView: View {
                             title: "Battery quantity",
                             count: confirmedBatteryCount,
                             total: batteryTotal,
-                            pendingCopy: "This pickup needs \(batteryTotal) batteries. Scan any available units; printed numbers do not need to match this list.",
-                            completeCopy: "All \(batteryTotal) batteries scanned",
-                            progressCopy: "\(confirmedBatteryCount) of \(batteryTotal) batteries scanned",
+                            // The one place the any-unit rule is stated. The rail
+                            // header and each battery row used to repeat it.
+                            pendingCopy: "Scan any \(batteryTotal == 1 ? "available battery" : "\(batteryTotal) available batteries") — printed numbers don't need to match the list.",
+                            completeCopy: batteryTotal == 1 ? "Battery scanned" : "All \(batteryTotal) batteries scanned",
+                            progressCopy: "\(confirmedBatteryCount) of \(batteryTotal) \(batteryTotal == 1 ? "battery" : "batteries") scanned",
                             unitsHeader: "Scanned units",
-                            scannedUnits: scannedBatteryUnits.map { KioskScannedUnit(id: $0.id, tag: $0.tagName) }
+                            scannedUnits: scannedBatteryUnits.map { KioskScannedUnit(id: $0.id, tag: $0.tagName) },
+                            // Staged reservation units hold nothing until
+                            // confirm, so one someone else took (or the wrong
+                            // one) must be clearable. Handed-over units are not.
+                            onReplace: detail?.status == "BOOKED" && !isConfirming
+                                ? { unit in replaceStagedUnit(unit.id) }
+                                : nil
                         )
                     }
 
@@ -333,12 +341,6 @@ struct KioskPickupView: View {
                         complete: allConfirmed
                     )
                 }
-                if hasNumberedBatteryChecklist {
-                    Text("Battery rows show the quantity needed, not specific unit numbers. Scan any available units; their printed numbers appear after scanning.")
-                        .font(.caption2)
-                        .foregroundStyle(KioskText.tertiary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
             }
             .padding(20)
 
@@ -377,13 +379,6 @@ struct KioskPickupView: View {
                     .padding()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-        }
-    }
-
-    private var hasNumberedBatteryChecklist: Bool {
-        checklistEntries.contains { entry in
-            if case .battery = entry { return true }
-            return false
         }
     }
 
@@ -504,7 +499,9 @@ struct KioskPickupView: View {
     // MARK: - Logic
 
     private func handleScan(_ value: String) {
-        guard pendingAdd == nil, pendingBlock == nil, pendingRemove == nil else { return }
+        // Scans that land while a dialog is open are queued, not dropped: the
+        // queue already waits for the dialog, and dropping them was silent
+        // while the scanner beeped as if each had taken.
         guard !isConfirming else {
             showFeedback(.error("Hold on — confirming pickup"))
             return
@@ -703,6 +700,35 @@ struct KioskPickupView: View {
         }
     }
 
+    private func replaceStagedUnit(_ slotId: String) {
+        guard let unit = confirmedItemOverrides[slotId],
+              let bulkSkuId = unit.bulkSkuId,
+              let unitNumber = unit.unitNumber else {
+            showFeedback(.error("Refresh this pickup before replacing a unit."))
+            return
+        }
+        store.resetInactivity()
+        let flow = store.flowGeneration
+        isConfirming = true
+        Task {
+            defer { if store.ownsFlow(flow) { isConfirming = false } }
+            do {
+                let result = try await KioskAPI.shared.kioskPickupUnstage(
+                    bookingId: bookingId,
+                    actorId: userId,
+                    bulkSkuId: bulkSkuId,
+                    unitNumber: unitNumber
+                )
+                guard store.ownsFlow(flow) else { return }
+                await loadDetail(showLoading: false)
+                showFeedback(.success(result.message ?? "\(unit.tagName) cleared. Scan the replacement."))
+            } catch {
+                guard store.ownsFlow(flow) else { return }
+                showFeedback(.error((error as? APIError)?.errorDescription ?? "Could not clear that unit."))
+            }
+        }
+    }
+
     private func canRemoveRemaining(_ item: KioskCheckoutDetail.ReturnItem) -> Bool {
         guard item.reservationItemId != nil else { return false }
         if item.isBulkQuantity { return true }
@@ -849,17 +875,12 @@ private struct KioskPickupBatteryChecklistRow: View {
                 }
 
                 Text(isComplete
-                    ? "All \(total) battery units scanned"
-                    : "\(confirmedCount) of \(total) battery units scanned")
+                    ? (total == 1 ? "Scanned" : "All \(total) scanned")
+                    : "\(confirmedCount) of \(total) scanned")
                     .font(.caption.weight(.semibold).monospacedDigit())
                     .foregroundStyle(KioskText.secondary)
 
-                if !isComplete {
-                    Text("Scan any available unit. Printed numbers do not need to match this list.")
-                        .font(.caption2)
-                        .foregroundStyle(KioskText.tertiary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+
 
                 if !scannedTags.isEmpty {
                     Text("Scanned: \(scannedTags.joined(separator: " · "))")

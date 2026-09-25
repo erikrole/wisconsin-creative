@@ -1,0 +1,242 @@
+<title>Kiosk Multi-Lens Review</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#F5F5F3; --surface:#FFFFFF; --sunken:#ECECE9; --ink:#17181B; --muted:#5F6166; --faint:#8C8E93;
+  --rule:#DADAD6; --accent:#A8161C; --accent-soft:#F6E3E3; --ok:#2D7A4C; --ok-soft:#E1F0E6; --warn:#9A5B00; --warn-soft:#F7ECD9;
+  --shadow:0 1px 2px rgba(23,24,27,.06),0 6px 20px rgba(23,24,27,.05);
+  --display:"Archivo Narrow","Arial Narrow",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0E0F11; --surface:#17181B; --sunken:#1E1F23; --ink:#ECECEE; --muted:#A2A4AA; --faint:#74767C;
+    --rule:#2A2B30; --accent:#E5575C; --accent-soft:#3A1C1E; --ok:#5CC08A; --ok-soft:#16291F; --warn:#E3A64A; --warn-soft:#2E2414;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0E0F11; --surface:#17181B; --sunken:#1E1F23; --ink:#ECECEE; --muted:#A2A4AA; --faint:#74767C;
+  --rule:#2A2B30; --accent:#E5575C; --accent-soft:#3A1C1E; --ok:#5CC08A; --ok-soft:#16291F; --warn:#E3A64A; --warn-soft:#2E2414;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--body);padding:32px 20px 64px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:48px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;letter-spacing:.005em}
+h1{font-size:clamp(34px,5vw,48px);font-weight:700;line-height:1.05}
+h2{font-size:26px;font-weight:600}
+h3{font-size:19px;font-weight:600}
+p{margin:0;max-width:68ch}
+.eyebrow{font:500 12px/1 var(--mono);text-transform:uppercase;letter-spacing:.12em;color:var(--accent)}
+.lede{color:var(--muted);font-size:17px}
+header{display:flex;flex-direction:column;gap:14px;border-bottom:1px solid var(--rule);padding-bottom:28px}
+.meta{display:flex;flex-wrap:wrap;gap:8px 20px;font:13px/1.4 var(--mono);color:var(--muted)}
+.meta b{color:var(--ink);font-weight:500}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.stat{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:4px}
+.stat .n{font:600 28px/1 var(--display);font-variant-numeric:tabular-nums}
+.stat .l{font-size:13px;color:var(--muted)}
+section{display:flex;flex-direction:column;gap:18px}
+.section-head{display:flex;flex-direction:column;gap:6px}
+.lenses{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.lens{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.lens ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:14px}
+.lens .tag{align-self:flex-start;font:500 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;padding:5px 8px;border-radius:999px}
+.sev-custody{background:var(--accent-soft);color:var(--accent)}
+.sev-block{background:var(--warn-soft);color:var(--warn)}
+.sev-design{background:var(--ok-soft);color:var(--ok)}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.controls button{font:500 13px var(--body);color:var(--ink);background:var(--surface);border:1px solid var(--rule);border-radius:999px;padding:7px 14px;cursor:pointer}
+.controls button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.controls button:focus-visible,.pair img:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.pairs{display:flex;flex-direction:column;gap:34px}
+.pair{display:flex;flex-direction:column;gap:12px;padding-top:22px;border-top:1px solid var(--rule)}
+.pair-head{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline}
+.pair-head code{font:500 12px var(--mono);color:var(--faint)}
+.pair-head .chip{font:500 11px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;padding:4px 7px;border-radius:999px}
+.chip.changed{background:var(--accent-soft);color:var(--accent)}
+.chip.same{background:var(--sunken);color:var(--muted)}
+.pair p.why{color:var(--muted);font-size:14px}
+.shots{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.shots figure{margin:0;display:flex;flex-direction:column;gap:6px;min-width:0}
+.shots figcaption{font:500 12px var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--faint)}
+.shots figure.after figcaption{color:var(--accent)}
+.shots img{width:100%;height:auto;aspect-ratio:1640/1140;border-radius:8px;border:1px solid var(--rule);background:#0B0B0D;box-shadow:var(--shadow);display:block}
+body[data-view="before"] .shots figure.after,body[data-view="after"] .shots figure.before{display:none}
+body[data-view="before"] .shots,body[data-view="after"] .shots{grid-template-columns:1fr}
+body[data-filter="changed"] .pair[data-changed="false"]{display:none}
+.verify{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.box{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.box ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:14px}
+.pass{color:var(--ok);font-weight:600}
+.open{color:var(--warn);font-weight:600}
+.note{font-size:13px;color:var(--muted)}
+@media (max-width:720px){.shots{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:no-preference){.pair img{transition:transform .15s ease}}
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">WisconsinKiosk · iPad Air 11-inch · landscape</span>
+    <h1>Kiosk multi-lens review</h1>
+    <p class="lede">Four expert audits of the gear-counter kiosk (custody domain, API and security, scanning and resilience, architecture and tests), followed by fixes and a design pass. Each screen below is the same DEBUG fixture captured from the baseline build and the candidate build, back to back on the same simulator.</p>
+    <div class="meta">
+      <span>Baseline <b>8a09d0ca</b></span>
+      <span>Candidate <b>working tree, 2026-09-24</b></span>
+      <span>Device <b>iPad Air 11-inch (M4) sim, iOS 26.5</b> (stand-in for the fleet's M2)</span>
+      <span>Canvas <b>1180×820 pt</b></span>
+    </div>
+    <div class="stats">
+      <div class="stat"><span class="n">52</span><span class="l">findings across four audits</span></div>
+      <div class="stat"><span class="n">4</span><span class="l">distinct custody-breaking issues, all fixed</span></div>
+      <div class="stat"><span class="n">4,925</span><span class="l">web tests passing</span></div>
+      <div class="stat"><span class="n">13</span><span class="l">native XCTests passing</span></div>
+    </div>
+  </header>
+
+  <section>
+    <div class="section-head">
+      <span class="eyebrow">What changed</span>
+      <h2>Fixes by severity</h2>
+    </div>
+    <div class="lenses">
+      <div class="lens">
+        <span class="tag sev-custody">Custody</span>
+        <h3>Records stay true</h3>
+        <ul>
+          <li>Only the owner, staff, or a shared-case operator can edit or remove items on a live checkout. Anyone else returns by scanning.</li>
+          <li>A failed checkout can no longer resend an old cart and wipe new scans. Scanning waits until the saved handoff settles, and Discard clears it.</li>
+          <li>Abandoned carts expire after 20 minutes instead of reopening the next day.</li>
+          <li>Counted stock (cables, tape) can finally be returned at the kiosk.</li>
+          <li>Leftover battery pickups no longer fail, and partial pickups are no longer cancelled as no-shows.</li>
+          <li>Shared travel-case holders stay private in scan messages.</li>
+        </ul>
+      </div>
+      <div class="lens">
+        <span class="tag sev-block">Operator-blocking</span>
+        <h3>The counter doesn't get stuck</h3>
+        <ul>
+          <li>An expired or unreadable saved handoff is rejected cleanly instead of blocking that person on that iPad forever.</li>
+          <li>A dropped availability check has a Retry button.</li>
+          <li>Removing an item mid-scan no longer rejects the scan.</li>
+          <li>Staged batteries can be replaced before pickup.</li>
+          <li>Inactivity no longer strands the iPad on a signed-out screen during activation.</li>
+          <li>Fast scan bursts on idle, hub and pickup are queued, not dropped, and every rejection is audible.</li>
+        </ul>
+      </div>
+      <div class="lens">
+        <span class="tag sev-design">Design</span>
+        <h3>Opinionated cleanup</h3>
+        <ul>
+          <li>Checkout details fits one screen. The person moved into the header and the gameday kit, which was below the fold, is one menu row.</li>
+          <li>The scanner pill shows only where it's the only signal, so it no longer sits on each flow's right rail.</li>
+          <li>The idle device-status button lives in the header instead of covering it.</li>
+          <li>Battery rules are stated once, with correct plurals. Hub overdue is a count.</li>
+          <li>Activation's red belongs to the confirm key. Empty event rows are hidden.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <span class="eyebrow">Before / after</span>
+      <h2>Every kiosk screen</h2>
+      <p class="note">Fixture times follow the capture clock (evening), so due times read late; both columns share that clock. In this run the simulator reports a keyboard, so the kiosk sees a connected scanner and hides the scanner pill in both columns. The last pair shows the scanner-off state.</p>
+    </div>
+    <div class="controls" role="group" aria-label="View">
+      <button type="button" id="v-both" data-view="both" aria-pressed="true">Side by side</button>
+      <button type="button" id="v-before" data-view="before" aria-pressed="false">Before only</button>
+      <button type="button" id="v-after" data-view="after" aria-pressed="false">After only</button>
+      <button type="button" id="f-changed" data-filter="toggle" aria-pressed="false">Changed screens only</button>
+    </div>
+    <div class="pairs" id="pairs"></div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <span class="eyebrow">Evidence</span>
+      <h2>Verification</h2>
+    </div>
+    <div class="verify">
+      <div class="box">
+        <h3>Passed locally</h3>
+        <ul>
+          <li><span class="pass">Pass</span> full vitest suite: 697 files, 4,925 tests</li>
+          <li><span class="pass">Pass</span> <code>tsc --noEmit</code>, eslint on every changed file</li>
+          <li><span class="pass">Pass</span> <code>npm run build:app</code></li>
+          <li><span class="pass">Pass</span> WisconsinKiosk simulator build, no new warnings</li>
+          <li><span class="pass">Pass</span> WisconsinKioskTests, 13 of 13</li>
+          <li><span class="pass">Pass</span> codemaps current</li>
+        </ul>
+      </div>
+      <div class="box">
+        <h3>Still open</h3>
+        <ul>
+          <li><span class="open">Open</span> managed-iPad session next week: HID scanner, camera, speaker, VoiceOver, Guided Access (AC-20 to AC-32)</li>
+          <li><span class="open">Open</span> kiosk app build on the two iPads. Server changes are backward compatible with the installed build.</li>
+          <li><span class="open">Deferred</span> splitting the four 1,000-line views, single-round-trip scan preflight, pruning source-grep tests, landscape-lock migration</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+const SHOTS = [
+  ["idle","Idle dashboard",true,"Device-status button moved into the header next to refresh; it had covered “GEAR ROOM IPAD”."],
+  ["operator-hub","Operator hub",true,"Overdue reads as a count beside Items out instead of the word “Overdue” set as a numeral."],
+  ["checkout-sheet","Active checkout drawer",true,"The add-items badge now reports the real scanner state; it said “Scanner ready” in green while the pill said no scanner."],
+  ["checkout-details","Checkout details",true,"Person and step moved into the header. The return window no longer clips under the button, and the gameday kit (previously off screen) is one menu row."],
+  ["checkout-details-linked","Checkout details, linked event",true,"Same layout change as above. This fixture does not actually link an event yet, so it matches the unlinked screen."],
+  ["scanning","Scan stage",false,"No visible change with a scanner connected. The pill fix shows in the disconnected pair at the end."],
+  ["availability-conflicts","Scan stage with conflicts",true,"The scan target compacts when a conflict banner shares the column."],
+  ["availability-rejected","Rejected scan",true,"Compact scan stage while the rejection shows."],
+  ["scan-accepted","Scan accepted",false,"No intended change with a scanner connected."],
+  ["scanner-help","Scanner help",false,"No intended change."],
+  ["pickup","Reservation pickup",true,"Battery rule stated once, in the left card, with correct plurals; the rail note and per-row repeat are gone."],
+  ["reservation-battery-pickup","Pickup with 10 batteries",true,"Same battery copy consolidation."],
+  ["return","Return",true,"“0 of 1 units” now reads “0 of 1 unit returned”."],
+  ["return-accepted","Return, scan accepted",false,"No intended change with a scanner connected."],
+  ["return-for-other","Returning someone else’s gear",true,"Battery unit plural fixed."],
+  ["identity","Identity",false,"No intended change; the pill stays here because it is the only scanner signal."],
+  ["identity-return-other","Identity, returning for someone",false,"No intended change."],
+  ["event-detail","Event detail sheet",true,"Empty “0 shifts” chip and “Call · Not set” row hidden; the idle header behind it gains the device-status control."],
+  ["activation","Activation",true,"Keyboard is secondary like Paste; red belongs to the confirm key."],
+  ["inactivity","Still here?",true,"Background hub shows the overdue count."],
+  ["badge","Success with badge",false,"No visible change with a scanner connected; the pill no longer appears here when one is not."],
+  ["keyboard-tip","Keyboard tip",true,"Header change from checkout details."],
+  ["sleep","Overnight standby",false,"No intended change."],
+  ["resume","Cold-launch resume",false,"No intended change."],
+  ["disconnected-conflicts","Scanner off: scan stage with conflicts",true,"Captured earlier in the session with no scanner paired, both builds on the same simulator. Before: the global pill sits on the rail header and the Checkout button runs off the bottom. After: the pill is gone from the flow and the button fits."]
+];
+const pairs = document.getElementById("pairs");
+for (const [id, name, changed, why] of SHOTS) {
+  const el = document.createElement("article");
+  el.className = "pair"; el.dataset.changed = String(changed); el.id = id;
+  el.innerHTML = `<div class="pair-head"><h3>${name}</h3><code>${id}</code><span class="chip ${changed ? "changed" : "same"}">${changed ? "Changed" : "Unchanged"}</span></div>
+    <p class="why">${why}</p>
+    <div class="shots">
+      <figure class="before"><figcaption>Before · 8a09d0ca</figcaption><img loading="lazy" src="shots/before-${id}.jpg" alt="${name}, before"></figure>
+      <figure class="after"><figcaption>After · candidate</figcaption><img loading="lazy" src="shots/after-${id}.jpg" alt="${name}, after"></figure>
+    </div>`;
+  pairs.appendChild(el);
+}
+const viewButtons = document.querySelectorAll("[data-view]");
+viewButtons.forEach(b => b.addEventListener("click", () => {
+  document.body.dataset.view = b.dataset.view;
+  viewButtons.forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+}));
+const filter = document.getElementById("f-changed");
+filter.addEventListener("click", () => {
+  const on = filter.getAttribute("aria-pressed") !== "true";
+  filter.setAttribute("aria-pressed", String(on));
+  document.body.dataset.filter = on ? "changed" : "all";
+});
+</script>

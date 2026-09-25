@@ -19,14 +19,14 @@
 | `src/lib/services/booking-ref.ts` | 26 |
 | `src/lib/services/booking-reuse.ts` | 219 |
 | `src/lib/services/booking-rules.ts` | 135 |
-| `src/lib/services/bookings-checkin.ts` | 855 |
+| `src/lib/services/bookings-checkin.ts` | 927 |
 | `src/lib/services/bookings-helpers.ts` | 282 |
-| `src/lib/services/bookings-lifecycle.ts` | 3209 |
+| `src/lib/services/bookings-lifecycle.ts` | 3348 |
 | `src/lib/services/bookings-queries.ts` | 311 |
 | `src/lib/services/bookings.ts` | 9 |
 | `src/lib/services/bulk-assignment-batches.ts` | 253 |
 | `src/lib/services/bulk-schedule-assignment.ts` | 971 |
-| `src/lib/services/bulk-unit-scans.ts` | 717 |
+| `src/lib/services/bulk-unit-scans.ts` | 718 |
 | `src/lib/services/calendar-sync-health.ts` | 165 |
 | `src/lib/services/calendar-sync.ts` | 754 |
 | `src/lib/services/candidate-scoring.ts` | 437 |
@@ -41,15 +41,17 @@
 | `src/lib/services/companion-projection.ts` | 250 |
 | `src/lib/services/consolidation-shared.ts` | 21 |
 | `src/lib/services/dashboard-counts.ts` | 119 |
+| `src/lib/services/event-travel.ts` | 32 |
 | `src/lib/services/event-worker.ts` | 125 |
 | `src/lib/services/firmware-watch.ts` | 329 |
 | `src/lib/services/game-record.ts` | 169 |
 | `src/lib/services/hidden-users-cleanup.ts` | 122 |
 | `src/lib/services/job-runs.ts` | 51 |
+| `src/lib/services/kiosk-actor.ts` | 51 |
 | `src/lib/services/kiosk-checkout-complete.ts` | 90 |
 | `src/lib/services/kiosk-item-transfer.ts` | 95 |
 | `src/lib/services/kiosk-location.ts` | 72 |
-| `src/lib/services/kiosk-operation-receipts.ts` | 90 |
+| `src/lib/services/kiosk-operation-receipts.ts` | 128 |
 | `src/lib/services/kiosk-pickup-add.ts` | 273 |
 | `src/lib/services/kiosk-pickup-substitute.ts` | 256 |
 | `src/lib/services/kiosk-scan.ts` | 44 |
@@ -62,11 +64,11 @@
 | `src/lib/services/notification-prefs.ts` | 348 |
 | `src/lib/services/notifications.ts` | 1966 |
 | `src/lib/services/onboarding-lifecycle.ts` | 540 |
-| `src/lib/services/pending-pickup-expiry.ts` | 281 |
+| `src/lib/services/pending-pickup-expiry.ts` | 370 |
 | `src/lib/services/product-event-log.ts` | 43 |
 | `src/lib/services/reports.ts` | 1932 |
 | `src/lib/services/reservation-consolidation.ts` | 240 |
-| `src/lib/services/reservation-pickup-guard.ts` | 62 |
+| `src/lib/services/reservation-pickup-guard.ts` | 70 |
 | `src/lib/services/reservation-pickup-location.ts` | 34 |
 | `src/lib/services/reservation-rules.ts` | 46 |
 | `src/lib/services/reservation-schedule.ts` | 654 |
@@ -90,7 +92,7 @@
 | `src/lib/services/signatures.ts` | 2051 |
 | `src/lib/services/software.ts` | 272 |
 | `src/lib/services/sport-auto-assign-policies.ts` | 46 |
-| `src/lib/services/sport-configs.ts` | 257 |
+| `src/lib/services/sport-configs.ts` | 263 |
 | `src/lib/services/sport-roster-preview.ts` | 108 |
 | `src/lib/services/sport-setup.ts` | 210 |
 | `src/lib/services/status.ts` | 444 |
@@ -205,7 +207,7 @@
 | `src/lib/public-showroom.ts` | 444 |
 | `src/lib/quarter-hour.ts` | 27 |
 | `src/lib/query-client.ts` | 56 |
-| `src/lib/rate-limit.ts` | 216 |
+| `src/lib/rate-limit.ts` | 238 |
 | `src/lib/rbac.ts` | 59 |
 | `src/lib/remark-callouts.ts` | 77 |
 | `src/lib/request-limits.ts` | 17 |
@@ -412,6 +414,7 @@
 - `/api/calendar-events/[id]/command-center`
 - `/api/calendar-events/[id]`
 - `/api/calendar-events/[id]/travel/[memberId]`
+- `/api/calendar-events/[id]/travel/defaults`
 - `/api/calendar-events/[id]/travel`
 - `/api/calendar-events/[id]/visibility`
 - `/api/calendar-events/[id]/workers/[workerId]`

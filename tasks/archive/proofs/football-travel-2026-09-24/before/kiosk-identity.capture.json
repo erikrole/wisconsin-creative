@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "5a29ab69a8d2122621c224ae7f4a6bcbdb3cf173",
+  "sourcePatchSha256": "482c0a7b043df7cda10bcda99fdccfd55b08886173442b301d9066e2619aec89",
+  "settings": {
+    "device": "iPad Air 11-inch (M4) simulator, iOS 26.5, WisconsinKiosk Debug",
+    "viewport": [
+      1180,
+      820
+    ],
+    "fixture": "GT_KIOSK_SCENARIO=identity-return-other; KioskFixtureURLProtocol canned payloads",
+    "role": "kiosk operator Erik Role returning Imani Brooks's checkout co-1",
+    "route": "scenario identity-return-other",
+    "appearance": "dark (app-forced)",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "live launch clock; no time-relative text in frame",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "imageSha256": "b4fec3ce8a514d9e57d00849da3192e991ed7265be1d047e1c6c5bef572506d7",
+  "dimensions": [
+    1640,
+    1140
+  ]
+}
