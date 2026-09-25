@@ -232,13 +232,13 @@ struct KioskKitOption: Decodable, Identifiable, Equatable, Hashable {
 
 func kioskFootballGamedayKitLabel(_ role: String?) -> String? {
     switch role {
-    case "SLOW1": return "Slow 1"
-    case "SLOW2": return "Slow 2"
-    case "BENCH": return "Bench"
-    case "ROAM1": return "Roam 1"
-    case "ROAM2": return "Roam 2"
-    case "ROAM3": return "Roam 3"
-    case "ROAM4": return "Roam 4"
+    case "SLOW1": return "SLOW1"
+    case "SLOW2": return "SLOW2"
+    case "BENCH": return "BENCH"
+    case "ROAM1": return "ROAM1"
+    case "ROAM2": return "ROAM2"
+    case "ROAM3": return "ROAM3"
+    case "ROAM4": return "ROAM4"
     default: return nil
     }
 }

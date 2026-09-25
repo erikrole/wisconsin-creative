@@ -3,20 +3,20 @@
 ## Document Control
 - Area: Kits Management
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-09-17
+- Last Updated: 2026-09-21
 - Status: Active
 - Version: V1
 - Brief: `BRIEF_KIT_MANAGEMENT_V1.md`
 - Decision Refs: D-020 (historical sequencing), D-062 (calling, exclusive membership, pickup aliases)
 
 ## Direction
-Enable staff to name the cameras, lenses, and batteries each gameday position uses. Anyone who can create a reservation can call that kit from web, native iOS, or kiosk checkout. Selecting the kit expands every member into the booking’s item list on reservation create, or becomes the kiosk scan plan. `Booking.kitId` remains provenance (“this plan started from Slow 1”); the reserved/checked-out gear is the expanded serialized items and item families. The booking title stays the event name.
+Enable staff to name the cameras, lenses, and batteries each gameday position uses. Anyone who can create a reservation can call that kit from web, native iOS, or kiosk checkout. Selecting the kit expands every member into the booking’s item list on reservation create, or becomes the kiosk scan plan. `Booking.kitId` remains provenance (“this plan started from SLOW1”); the reserved/checked-out gear is the expanded serialized items and item families. The booking title stays the event name.
 
 ## Core Rules
 1. Kit is a named group of serialized items (via `KitMembership`) and/or bulk SKUs (via `KitBulkMembership`).
 2. Kits are location-scoped (tied to a `Location`). Camp Randall and Camp Randall Stadium are the same pickup for membership and calling.
-3. Staff (ADMIN/STAFF) can create, rename, describe, assign an optional sport, assign a football gameday job (Slow 1, Slow 2, Bench, Roam 1–4), duplicate, add/remove members, archive kits. Duplicate copies batteries and sport, not cameras and not the football job.
-4. Anyone with `kit.view` or collaborator `RESERVATION_CREATE` can list and call active kits. Students cannot include archived kits. Calling pickers hide empty kits and sort football jobs Slow 1 → Roam 4.
+3. Staff (ADMIN/STAFF) can create, rename, describe, assign an optional sport, assign a football gameday job (SLOW1, SLOW2, BENCH, ROAM1–ROAM4), duplicate, add/remove members, archive kits. Duplicate copies batteries and sport, not cameras and not the football job.
+4. Anyone with `kit.view` or collaborator `RESERVATION_CREATE` can list and call active kits. Students cannot include archived kits. Calling pickers hide empty kits and sort football jobs SLOW1 → ROAM4.
 5. Serialized membership is exclusive within a sport: two Football kits cannot share a camera; a Basketball kit may use that same body. Kits without a sport exclusive among themselves.
 6. At a pickup, including Camp Randall aliases, only one active kit may own each football job. Photo kits stay un-roled.
 7. Archived kits are hidden by default but can be shown with filter toggle.
@@ -25,6 +25,7 @@ Enable staff to name the cameras, lenses, and batteries each gameday position us
 10. Selecting a kit on reservation create expands current members into booking lines when the client sent no equipment. An edited client list is kept as the source of truth. Empty and archived kits cannot be used. Direct kiosk checkout records `kitId` as provenance and still requires scanned items; the kit is the remaining-item checklist, not a silent cart fill.
 11. Reservation and kiosk calling can suggest the current kit for the requester’s last football job at that pickup.
 12. Kit member writes stay location-scoped: serialized items and item families must belong to the kit’s pickup group.
+13. A normal football road game travels SLOW1, SLOW2, ROAM1, BENCH, and one PHOTO kit. ROAM2, ROAM3, and the other photo kits stay home. The shared Football Travel Case holds that road group’s pooled batteries and gear that stays in the case.
 
 ## Routes
 
@@ -76,13 +77,13 @@ Enable staff to name the cameras, lenses, and batteries each gameday position us
 ### `/kits/new`
 - **Sheet:** `src/app/(app)/kits/new-kit-sheet.tsx` (opened via button on `/kits`)
 - **Type:** Modal dialog
-- **Fields:** Name (required), description (optional), location (dropdown), optional sport, optional football job (Slow 1, Slow 2, Bench, Roam 1–4) when the sport is Football
+- **Fields:** Name (required), description (optional), location (dropdown), optional sport, optional football job (SLOW1, SLOW2, BENCH, ROAM1–ROAM4) when the sport is Football
 - **Behaviors:** Submit creates kit; client/server validation appears inline; on success, the sheet shows explicit handoff actions to open the kit, return to the refreshed kits list, or create another kit.
 
 ## Data Model
 
 **Key tables:**
-- `Kit` — name, description, optional `sportCode`, optional `gamedayRole` (football jobs Slow 1, Slow 2, Bench, Roam 1–4), active (boolean), location FK, timestamps
+- `Kit` — name, description, optional `sportCode`, optional `gamedayRole` (football jobs SLOW1, SLOW2, BENCH, ROAM1–ROAM4), active (boolean), location FK, timestamps
 - `KitMembership` — kit FK, asset FK, timestamps (one-to-many to Kit). Same-sport exclusivity is enforced in `SERIALIZABLE` kit writes, not a unique index, so Basketball and Football may share a camera.
 - `KitBulkMembership` — kit FK, bulk SKU FK, quantity, timestamps (one-to-many to Kit)
 
@@ -100,9 +101,11 @@ See `AREA_ITEMS.md` 2026-04-06 entry for kit detail page hardening work:
 - [x] AC-4: Kit QR generation for direct checkout flow (D-020)
 - [x] AC-5: Selecting a kit expands members into the reservation equipment list on web and native iOS; kiosk uses the kit as a scan checklist plus `kitId` provenance; the booking title stays the event name
 - [x] AC-6: Mobile kit list responsive; detail scrollable
-- [x] AC-7: Football kits can own Slow 1, Slow 2, Bench, or Roam 1–4 at a pickup; calling surfaces hide empty kits and can suggest last week’s job
+- [x] AC-7: Football kits can own SLOW1, SLOW2, BENCH, or ROAM1–ROAM4 at a pickup; calling surfaces hide empty kits and can suggest last week’s job
 
 ## Change Log
+- 2026-09-21: **Normal road games travel SLOW1, SLOW2, ROAM1, BENCH, and one PHOTO kit.** ROAM2, ROAM3, and the other photo kits stay home. The Football Travel Case pool is 10 Sony, 4 gold mount, 2 FX6, and 2 monitor batteries, plus the 24-105. Production kit row updated. Authenticated browser proof remains open.
+- 2026-09-21: **Football job names stay all caps.** Web, native iOS, and kiosk label the jobs SLOW1, SLOW2, BENCH, and ROAM1–ROAM4, matching the kit names. Choosing a job still fills that name. Photo kits stay un-roled. Production rows now mark SLOW1, SLOW2, BENCH, and ROAM1–ROAM3 as those football jobs. The Football Travel Case keeps the 24-105 and the pooled batteries (24 Sony, 4 gold mount, 2 FX6, 2 monitor) and no longer repeats personal cameras. PHOTO1 and SLOW2 still share FB 70-200 1. Local source/test; authenticated browser, iPhone 16 Pro, and physical kiosk proof remain open.
 - 2026-09-17: **Football kits are Slow 1, Slow 2, Bench, and Roam 1–4.** Staff assign one of those jobs per pickup, including Camp Randall aliases. Duplicate copies batteries and sport, not the job. Reservation and kiosk pickers hide empty kits, label Slow 1–Roam 4, and suggest this week’s kit from the requester’s last football job. Photo kits stay un-roled. Local source/test; migrations `0149_kit_sport_code` and `0150_kit_gameday_role` are not applied to production; authenticated browser, iPhone 16 Pro, and physical kiosk proof remain open.
 - 2026-09-17: **Anyone can call a kit; exclusive per sport.** Active kits are callable from web reservation create, native iOS create, and kiosk checkout by any actor who can make a reservation. Authoring stays staff/admin. Optional `sportCode` scopes exclusive serialized membership so two Football kits cannot share a camera while Basketball may. Camp Randall and Camp Randall Stadium share kit pickup. Duplicate copies batteries and sport, not cameras. Reservation and checkout titles stay the event name. Kiosk kit pick is a scan checklist plus `kitId` provenance; scans remain the cart. Local source/test; authenticated browser, iPhone 16 Pro, and physical kiosk proof remain open.
 - 2026-09-16: **Gameday kit expansion.** Kits are named position templates. Reservation/checkout create expands current members into serialized and item-family booking lines; `kitId` stays provenance. The reservation wizard loads those items for review, kit detail can duplicate a kit and searches only the kit location, and member writes reject cross-location gear. Direct kiosk checkout still does not pick a kit; pickup uses the expanded reservation list.

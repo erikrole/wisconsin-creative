@@ -558,7 +558,7 @@ enum ReservationFixtureAPI {
     static var kits: Data {
         Data(#"""
         {"data":[
-          {"id":"kit-slow-1","name":"Slow 1","sportCode":"FB","gamedayRole":"SLOW1","_count":{"members":4,"bulkMembers":2}}
+          {"id":"kit-slow-1","name":"SLOW1","sportCode":"FB","gamedayRole":"SLOW1","_count":{"members":4,"bulkMembers":2}}
         ],"suggestedKitId":null}
         """#.utf8)
     }

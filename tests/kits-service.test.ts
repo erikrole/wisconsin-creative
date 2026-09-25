@@ -232,7 +232,7 @@ describe("football gameday jobs", () => {
       actor.role,
     )).rejects.toMatchObject({
       status: 409,
-      message: "Slow 1 already has a kit at this pickup",
+      message: "SLOW1 already has a kit at this pickup",
     });
     expect(mockTx.kit.create).not.toHaveBeenCalled();
   });
@@ -249,7 +249,7 @@ describe("football gameday jobs", () => {
       actor.role,
     )).rejects.toMatchObject({
       status: 400,
-      message: "Slow 1, Bench, and Roam kits are football jobs",
+      message: "SLOW1, BENCH, and ROAM kits are football jobs",
     });
   });
 

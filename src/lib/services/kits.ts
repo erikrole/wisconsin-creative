@@ -141,7 +141,7 @@ function resolveSportAndRole(
   const sport = exclusiveSportCode(sportCode);
   if (!role) return { sportCode: sport, gamedayRole: null as FootballGamedayKitRole | null };
   if (sport && sport !== FOOTBALL_SPORT_CODE) {
-    throw new HttpError(400, "Slow 1, Bench, and Roam kits are football jobs");
+    throw new HttpError(400, "SLOW1, BENCH, and ROAM kits are football jobs");
   }
   return { sportCode: FOOTBALL_SPORT_CODE, gamedayRole: role };
 }
@@ -431,7 +431,7 @@ export async function cloneKit(
             description: source.description,
             locationId: source.locationId,
             sportCode: source.sportCode,
-            // Copies cannot take Slow 1–Roam 4; those jobs stay unique at pickup.
+            // Copies cannot take SLOW1–ROAM4; those jobs stay unique at pickup.
             bulkMembers: {
               create: source.bulkMembers.map((member) => ({
                 bulkSkuId: member.bulkSkuId,

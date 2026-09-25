@@ -8,9 +8,9 @@
 
 ---
 
-## Current state (2026-09-17)
+## Current state (2026-09-21)
 
-Kits are named gameday templates. Staff author them. Anyone who can create a reservation can call an active kit from web, native iOS, or kiosk checkout. Serialized membership is exclusive within a sport. Football video kits can own one of Slow 1, Slow 2, Bench, or Roam 1–4 at a pickup. Camp Randall and Camp Randall Stadium are the same pickup. Checkout integration is reservation expansion plus a kiosk scan checklist; it is not a silent cart fill.
+Kits are named gameday templates. Staff author them. Anyone who can create a reservation can call an active kit from web, native iOS, or kiosk checkout. Serialized membership is exclusive within a sport. Football video kits can own one of SLOW1, SLOW2, BENCH, or ROAM1–ROAM4 at a pickup, and those names stay all caps on every calling surface. Camp Randall and Camp Randall Stadium are the same pickup. Checkout integration is reservation expansion plus a kiosk scan checklist; it is not a silent cart fill.
 
 ## Problem Statement
 
