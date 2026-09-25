@@ -100,6 +100,7 @@
 		795277BA3B90A0AB27B5C672 /* GearStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAD4EC3F211EACBB157F7DDE /* GearStore.swift */; };
 		7A57F69F8CCCA6552D3EBED3 /* ScheduleWindowCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = F27F74922887FF66BF6AA61E /* ScheduleWindowCache.swift */; };
 		7CE11553481BC17CEAE88EDC /* GearHomeScreenWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6720D70A7A90FE5BEFBFDD1F /* GearHomeScreenWidgets.swift */; };
+		7EFDB9FD68785427E5F753C3 /* KioskTaskKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59D13CBC93F3332016C1136E /* KioskTaskKit.swift */; };
 		81413B070B47866D2C7DB337 /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0189482D68508F45B086F46F /* SessionStore.swift */; };
 		843586F2B58722883BD12D08 /* KioskReturnView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 687337C19E47FE94FE56F9BF /* KioskReturnView.swift */; };
 		84BE753FF259E17D637E6482 /* AccountAvatar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 073F98039DAC37B5AC72487C /* AccountAvatar.swift */; };
@@ -293,6 +294,7 @@
 		592769886AB12F6A842CC8CF /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		5932CB2D580EFEB5EA22D828 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
 		59BEC868CE07F10941FEBB5C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		59D13CBC93F3332016C1136E /* KioskTaskKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskTaskKit.swift; sourceTree = "<group>"; };
 		5B540C9027D1885BCBEA2E4D /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		5E180A2286F2673D3B7E2179 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		5FB4AEDFE7F83CC6E155C12D /* EventDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventDetailSheet.swift; sourceTree = "<group>"; };
@@ -643,6 +645,7 @@
 				AE625FDFD675BDE49443B571 /* KioskSleepModeView.swift */,
 				FA38BB094C95612DBF9F1C24 /* KioskStore.swift */,
 				E968BAF46C8E557831F73C27 /* KioskSuccessView.swift */,
+				59D13CBC93F3332016C1136E /* KioskTaskKit.swift */,
 			);
 			path = Kiosk;
 			sourceTree = "<group>";
@@ -1076,6 +1079,7 @@
 				A4D4C64C1C5E6904BFF894E3 /* KioskSleepModeView.swift in Sources */,
 				F3AE80E47FC7B6AAA76035B6 /* KioskStore.swift in Sources */,
 				E6F51692EA10D1DF6DA5F049 /* KioskSuccessView.swift in Sources */,
+				7EFDB9FD68785427E5F753C3 /* KioskTaskKit.swift in Sources */,
 				47DD202255737DB455061266 /* LatestRequestGeneration.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
