@@ -330,7 +330,7 @@ struct KioskPickupView: View {
                     .foregroundStyle(KioskText.primary)
                 if let ref = detail?.refNumber {
                     Text(ref)
-                        .font(.caption.monospaced())
+                        .font(KioskType.code)
                         .foregroundStyle(KioskText.secondary)
                 }
                 if totalItems > 0 {
@@ -862,12 +862,12 @@ private struct KioskPickupBatteryChecklistRow: View {
             VStack(alignment: .leading, spacing: 5) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text("\(total) × \(name)")
-                        .font(.gothamBold(size: 16))
+                        .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(isComplete ? KioskText.tertiary : KioskText.primary)
                         .fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 0)
                     Text("ANY UNITS")
-                        .font(.caption2.weight(.semibold))
+                        .font(KioskType.chip)
                         .foregroundStyle(Color.statusText(.orange))
                         .padding(.horizontal, 6)
                         .padding(.vertical, 3)
@@ -877,14 +877,14 @@ private struct KioskPickupBatteryChecklistRow: View {
                 Text(isComplete
                     ? (total == 1 ? "Scanned" : "All \(total) scanned")
                     : "\(confirmedCount) of \(total) scanned")
-                    .font(.caption.weight(.semibold).monospacedDigit())
+                    .font(KioskType.chip.monospacedDigit())
                     .foregroundStyle(KioskText.secondary)
 
 
 
                 if !scannedTags.isEmpty {
                     Text("Scanned: \(scannedTags.joined(separator: " · "))")
-                        .font(.caption2.monospaced().weight(.semibold))
+                        .font(KioskType.code.weight(.semibold))
                         .foregroundStyle(Color.statusText(.green))
                         .fixedSize(horizontal: false, vertical: true)
                 }

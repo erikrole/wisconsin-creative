@@ -39,7 +39,7 @@ struct KioskIdentityView: View {
                 }
                 VStack(alignment: .leading, spacing: 8) {
                     Text(intent?.heroTitle ?? "Who are you?")
-                        .font(.gothamBlack(size: 36)).foregroundStyle(KioskText.primary)
+                        .font(.system(size: 36, weight: .heavy)).foregroundStyle(KioskText.primary)
                     Text(identityPrompt)
                         .font(.title3).foregroundStyle(KioskText.secondary)
                 }

@@ -383,7 +383,7 @@ struct KioskOperatorHubView: View {
             title: "Check Out Gear",
             subtitle: checkoutActionSubtitle,
             icon: "arrow.up.circle.fill",
-            color: Color.kioskRed,
+            color: KioskSection.takingOut.accent,
             isHero: true
         ) {
             store.setIntent(KioskFlowIntent(action: .checkout, source: .person, identifiedUser: user, expectedRequester: nil, selectedEvent: nil, targetBooking: nil, pendingScanValues: [], createdAt: Date(), ambiguity: .none))
@@ -425,7 +425,7 @@ struct KioskOperatorHubView: View {
     private func holdingStat(value: String, label: String, tone: Color) -> some View {
         VStack(alignment: .trailing, spacing: 2) {
             Text(value)
-                .font(.gothamBold(size: 22))
+                .font(.system(size: 22, weight: .bold))
                 .foregroundStyle(tone)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
@@ -436,7 +436,7 @@ struct KioskOperatorHubView: View {
         }
     }
 
-    /// The identity moment: big avatar, time-aware greeting, Gotham name.
+    /// The identity moment: big avatar, time-aware greeting, large name.
     /// The hub previously showed identity only in a small top-bar cluster,
     /// leaving the 13" canvas anonymous and barren.
     private var identityHero: some View {
@@ -444,11 +444,11 @@ struct KioskOperatorHubView: View {
             KioskAvatar(url: user.avatarUrl, initials: user.initials, size: 72)
             VStack(alignment: .leading, spacing: 3) {
                 Text(greetingOverline)
-                    .font(.caption.weight(.bold))
+                    .font(KioskType.chipStrong)
                     .tracking(1.2)
                     .foregroundStyle(KioskText.muted)
                 Text(user.name)
-                    .font(.gothamBold(size: 34))
+                    .font(.system(size: 34, weight: .bold))
                     .foregroundStyle(KioskText.primary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
@@ -776,12 +776,12 @@ private struct ActionButton: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
                     Text(subtitle)
-                        .font(isHero ? .subheadline : .caption)
+                        .font(isHero ? KioskType.rowDetail : KioskType.meta)
                         .foregroundStyle(KioskText.secondary)
                         .lineLimit(1)
                     if let dueText {
                         Text(dueText)
-                            .font(.caption2.weight(.bold))
+                            .font(KioskType.chipStrong)
                             .foregroundStyle(dueIsOverdue ? Color.statusText(.red) : KioskText.tertiary)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 3)
@@ -794,7 +794,7 @@ private struct ActionButton: View {
                 }
                 Spacer()
                 Image(systemName: "chevron.right")
-                    .font(.caption)
+                    .font(KioskType.meta)
                     .foregroundStyle(KioskText.secondary)
                     .accessibilityHidden(true)
             }
@@ -912,7 +912,7 @@ private struct ShiftCard: View {
                         .font(.title3.weight(.heavy).monospacedDigit())
                         .foregroundStyle(KioskText.primary)
                     Text(event.startsAt.formatted(.dateTime.weekday(.abbreviated)).uppercased())
-                        .font(.caption2.weight(.bold))
+                        .font(KioskType.chipStrong)
                         .tracking(0.8)
                         .foregroundStyle(accent)
                 }
@@ -994,7 +994,7 @@ private struct ReservationCard: View {
                         .font(.title2.weight(.heavy).monospacedDigit())
                         .foregroundStyle(KioskText.primary)
                     Text(startsAt.formatted(.dateTime.weekday(.abbreviated)).uppercased())
-                        .font(.caption2.weight(.bold))
+                        .font(KioskType.chipStrong)
                         .tracking(0.8)
                         .foregroundStyle(Color.statusText(.purple))
                 }
@@ -1008,12 +1008,12 @@ private struct ReservationCard: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.85)
                     Text(startsAt.formatted(date: .omitted, time: .shortened))
-                        .font(.caption)
+                        .font(KioskType.meta)
                         .foregroundStyle(KioskText.tertiary)
                 }
                 Spacer()
                 Image(systemName: "chevron.right")
-                    .font(.caption)
+                    .font(KioskType.meta)
                     .foregroundStyle(KioskText.secondary)
                     .accessibilityHidden(true)
             }

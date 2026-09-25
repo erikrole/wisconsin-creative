@@ -23,9 +23,9 @@ struct KioskSuccessView: View {
 
     private var accent: Color {
         switch info.kind {
-        case .checkout: return Color.kioskRed
-        case .returned: return KioskStatus.ok
-        case .pickup:   return KioskStatus.attention
+        case .checkout: return KioskSection.takingOut.accent
+        case .returned: return KioskSection.comingBack.accent
+        case .pickup:   return KioskSection.pickingUp.accent
         }
     }
 
@@ -85,15 +85,11 @@ struct KioskSuccessView: View {
             } label: {
                 Text("Done")
                     .font(KioskType.sectionTitle)
-                    .foregroundStyle(KioskText.primary)
+                    .foregroundStyle(KioskText.onPrimary)
                     .padding(.horizontal, 44)
                     .frame(minHeight: 56)
                     .background(
-                        LinearGradient(
-                            colors: [Color.kioskRed, Color.kioskRed.opacity(0.85)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        ),
+                        KioskText.primary,
                         in: Capsule()
                     )
             }
@@ -316,7 +312,7 @@ private struct KioskBadgeCelebration: View {
 
                 if additionalCount > 0 {
                     Text("+\(additionalCount)")
-                        .font(.gothamBold(size: 18))
+                        .font(.system(size: 18, weight: .bold))
                         .foregroundStyle(.white)
                         .frame(width: 44, height: 44)
                         .background(color, in: Circle())
@@ -347,7 +343,7 @@ private struct KioskBadgeCelebration: View {
                     .tracking(2.2)
                     .foregroundStyle(color)
                 Text(reward.name)
-                    .font(.gothamBlack(size: 40))
+                    .font(.system(size: 40, weight: .heavy))
                     .foregroundStyle(KioskText.primary)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)

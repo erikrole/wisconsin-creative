@@ -20,7 +20,7 @@ struct KioskSleepModeView: View {
                     Color.black.ignoresSafeArea()
                     VStack(alignment: .leading, spacing: 8) {
                         Text(context.date.kioskClockParts().time)
-                            .font(.gothamBlack(size: 72))
+                            .font(.system(size: 72, weight: .heavy))
                             .foregroundStyle(Color.white.opacity(0.42))
                             .lineLimit(1)
                             .minimumScaleFactor(0.6)

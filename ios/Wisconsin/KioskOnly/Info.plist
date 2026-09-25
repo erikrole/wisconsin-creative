@@ -25,11 +25,6 @@
 	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>Wisconsin Creative uses the camera to scan gear barcodes and QR codes.</string>
-	<key>UIAppFonts</key>
-	<array>
-		<string>Gotham-Black.ttf</string>
-		<string>Gotham-Bold.ttf</string>
-	</array>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>

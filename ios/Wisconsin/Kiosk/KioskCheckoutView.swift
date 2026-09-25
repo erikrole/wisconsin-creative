@@ -574,17 +574,17 @@ struct KioskCheckoutView: View {
                             if !remainingKitItems.isEmpty {
                                 VStack(alignment: .leading, spacing: 8) {
                                     Text("Still to scan")
-                                        .font(.caption.weight(.semibold))
+                                        .font(KioskType.chip)
                                         .foregroundStyle(KioskText.muted)
                                         .textCase(.uppercase)
                                         .tracking(1.1)
                                     Text(selectedKitDetail.map { "\($0.name) is the plan. Scan each item — the cart is what actually checks out." } ?? "Scan each remaining kit item.")
-                                        .font(.caption.weight(.medium))
+                                        .font(KioskType.chip)
                                         .foregroundStyle(KioskText.secondary)
                                     ForEach(remainingKitItems) { item in
                                         HStack(alignment: .firstTextBaseline, spacing: 10) {
                                             Image(systemName: "circle")
-                                                .font(.caption)
+                                                .font(KioskType.meta)
                                                 .foregroundStyle(KioskText.muted)
                                                 .accessibilityHidden(true)
                                             VStack(alignment: .leading, spacing: 2) {
@@ -593,7 +593,7 @@ struct KioskCheckoutView: View {
                                                     .foregroundStyle(KioskText.primary)
                                                 if !item.subtitle.isEmpty, item.subtitle != item.title {
                                                     Text(item.subtitle)
-                                                        .font(.caption)
+                                                        .font(KioskType.meta)
                                                         .foregroundStyle(KioskText.secondary)
                                                 }
                                             }
@@ -1695,19 +1695,19 @@ private struct KioskCheckoutKitPicker: View {
                 } label: {
                     HStack(spacing: 12) {
                         Image(systemName: selectedKit == nil ? "shippingbox" : "shippingbox.fill")
-                            .foregroundStyle(selectedKit == nil ? KioskText.muted : Color.kioskRedGlyph)
+                            .foregroundStyle(selectedKit == nil ? KioskText.muted : KioskText.primary)
                             .accessibilityHidden(true)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(selectedKit.map(kitTitle) ?? "No kit")
                                 .font(.subheadline.weight(.bold))
                                 .foregroundStyle(KioskText.primary)
                             Text(selectedKit.map(kitSubtitle) ?? "\(kits.count) kit\(kits.count == 1 ? "" : "s") at this pickup")
-                                .font(.caption.weight(.medium))
+                                .font(KioskType.chip)
                                 .foregroundStyle(KioskText.secondary)
                         }
                         Spacer(minLength: 0)
                         Image(systemName: "chevron.up.chevron.down")
-                            .font(.caption.weight(.semibold))
+                            .font(KioskType.chip)
                             .foregroundStyle(KioskText.muted)
                             .accessibilityHidden(true)
                     }
@@ -1716,7 +1716,7 @@ private struct KioskCheckoutKitPicker: View {
                     .background(KioskSurface.sunken, in: RoundedRectangle(cornerRadius: KioskRadius.md))
                     .overlay(
                         RoundedRectangle(cornerRadius: KioskRadius.md)
-                            .stroke(selectedKit == nil ? KioskStroke.hairline : Color.kioskRed.opacity(0.5), lineWidth: 1)
+                            .stroke(selectedKit == nil ? KioskStroke.hairline : KioskStroke.selected, lineWidth: 1)
                     )
                     .contentShape(Rectangle())
                 }
@@ -1736,7 +1736,7 @@ private struct KioskCheckoutKitPicker: View {
             }
 
             Text("A kit is the scan list. What you scan is what checks out.")
-                .font(.caption.weight(.medium))
+                .font(KioskType.chip)
                 .foregroundStyle(KioskText.secondary)
         }
     }
@@ -1922,7 +1922,7 @@ private struct KioskCheckoutModeBadge: View {
 
     var body: some View {
         Text(title)
-            .font(.caption2.weight(.bold))
+            .font(KioskType.chipStrong)
             .foregroundStyle(color)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
@@ -1977,7 +1977,7 @@ private struct KioskCheckoutContextWindow: View {
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(event.title)
-                        .font(.gothamBold(size: 20))
+                        .font(.system(size: 20, weight: .bold))
                         .foregroundStyle(KioskText.primary)
                         .lineLimit(2)
                         .minimumScaleFactor(0.75)
@@ -1991,9 +1991,7 @@ private struct KioskCheckoutContextWindow: View {
                     selectedEventId = nil
                     isLinkedToEvent = false
                 }
-                .font(KioskType.chip)
-                .buttonStyle(.glass)
-                .controlSize(.regular)
+                .kioskButtonRole(.quiet)
                 .accessibilityLabel("Unlink \(event.title) and name this checkout instead")
             }
             .padding(14)
@@ -2059,7 +2057,7 @@ private struct KioskCheckoutContextWindow: View {
     /// went red as soon as it had *any* content, spending the brand accent on
     /// a resting state.
     private var fieldStroke: Color {
-        if isFieldFocused { return Color.kioskRed }
+        if isFieldFocused { return KioskText.primary }
         if !trimmedPurpose.isEmpty { return KioskStatus.ok.opacity(0.6) }
         return KioskStroke.standard
     }
@@ -2080,10 +2078,10 @@ private struct KioskCheckoutContextWindow: View {
             case .required:
                 Text("REQUIRED")
                     .font(KioskType.micro)
-                    .foregroundStyle(Color.kioskRedGlyph)
+                    .foregroundStyle(KioskText.primary)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(Color.kioskRedGlyph.opacity(0.16), in: Capsule())
+                    .background(KioskSurface.control, in: Capsule())
             case .suppliedByEvent:
                 Text("FROM EVENT")
                     .font(KioskType.micro)
@@ -2104,7 +2102,7 @@ private struct KioskCheckoutContextWindow: View {
                 .fixedSize(horizontal: false, vertical: true)
         } icon: {
             Image(systemName: icon)
-                .font(.caption)
+                .font(KioskType.meta)
                 .foregroundStyle(tone)
         }
         .accessibilityElement(children: .combine)
@@ -2122,12 +2120,12 @@ private struct KioskCheckoutEventRow: View {
             HStack(spacing: 12) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 5)
-                        .stroke(isSelected ? Color.kioskRed : KioskStroke.standard, lineWidth: isSelected ? 2 : 1)
+                        .stroke(isSelected ? KioskText.primary : KioskStroke.standard, lineWidth: isSelected ? 2 : 1)
                         .frame(width: 20, height: 20)
                     if isSelected {
                         Image(systemName: "checkmark")
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(Color.kioskRed)
+                            .font(KioskType.chipStrong)
+                            .foregroundStyle(KioskText.primary)
                             .accessibilityHidden(true)
                     }
                 }
@@ -2139,7 +2137,7 @@ private struct KioskCheckoutEventRow: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.78)
                     Text(subtitle)
-                        .font(.caption.weight(.medium))
+                        .font(KioskType.chip)
                         .foregroundStyle(KioskText.secondary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.82)
@@ -2148,13 +2146,13 @@ private struct KioskCheckoutEventRow: View {
                 Spacer(minLength: 0)
 
                 Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
+                    .font(KioskType.chip)
                     .foregroundStyle(KioskText.muted)
                     .accessibilityHidden(true)
             }
             .padding(.horizontal, 14)
             .frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)
-            .background(isSelected ? Color.kioskRed.opacity(0.12) : Color.clear)
+            .background(isSelected ? KioskSurface.cardSelected : Color.clear)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -2166,9 +2164,9 @@ private struct KioskCheckoutEventLoadingRow: View {
     var body: some View {
         HStack(spacing: 10) {
             ProgressView()
-                .tint(Color.kioskRed)
+                .tint(KioskText.primary)
             Text("Loading upcoming events")
-                .font(.caption.weight(.semibold))
+                .font(KioskType.chip)
                 .foregroundStyle(KioskText.secondary)
             Spacer()
         }
@@ -2185,7 +2183,7 @@ private struct KioskCheckoutEmptyEventRow: View {
                 .foregroundStyle(KioskText.muted)
                 .accessibilityHidden(true)
             Text("No events in the next 7 days")
-                .font(.caption.weight(.semibold))
+                .font(KioskType.chip)
                 .foregroundStyle(KioskText.secondary)
             Spacer()
         }
@@ -2261,7 +2259,7 @@ private struct KioskCheckoutReturnDatePicker: View {
                 // step does not have — and this is a step that must fit on one
                 // screen, because its CTA is pinned to the bottom of it.
                 Text(dueBackAt.kioskDueStamp())
-                    .font(.gothamBold(size: 22))
+                    .font(.system(size: 22, weight: .bold))
                     .foregroundStyle(KioskText.primary)
                     .contentTransition(.numericText())
                     .lineLimit(1)
@@ -2306,15 +2304,15 @@ private struct KioskCheckoutReturnDatePicker: View {
                 // means nothing at counter distance. The word does.
                 Text("REQUIRED")
                     .font(KioskType.micro)
-                    .foregroundStyle(Color.kioskRedGlyph)
+                    .foregroundStyle(KioskText.primary)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(Color.kioskRedGlyph.opacity(0.16), in: Capsule())
+                    .background(KioskSurface.control, in: Capsule())
             }
             picker()
                 .datePickerStyle(.compact)
                 .labelsHidden()
-                .tint(Color.kioskRed)
+                .tint(KioskText.primary)
                 .controlSize(.large)
         }
     }
@@ -2361,7 +2359,7 @@ private struct KioskCheckoutSideSummary: View {
                         .foregroundStyle(KioskText.primary)
                         .lineLimit(1)
                     Text(locationName ?? "Kiosk location")
-                        .font(.caption)
+                        .font(KioskType.meta)
                         .foregroundStyle(KioskText.muted)
                         .lineLimit(1)
                 }
@@ -2370,16 +2368,16 @@ private struct KioskCheckoutSideSummary: View {
             if let contextTitle, !contextTitle.isEmpty {
                 HStack(alignment: .top, spacing: 10) {
                     Image(systemName: "calendar.badge.clock")
-                        .foregroundStyle(Color.kioskRed)
+                        .foregroundStyle(KioskText.primary)
                         .accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(contextTitle)
-                            .font(.caption.weight(.semibold))
+                            .font(KioskType.chip)
                             .foregroundStyle(KioskText.primary)
                             .lineLimit(2)
                         if let contextDetail, !contextDetail.isEmpty {
                             Text(contextDetail)
-                                .font(.caption2)
+                                .font(KioskType.meta)
                                 .foregroundStyle(KioskText.muted)
                                 .lineLimit(2)
                         }
@@ -2446,7 +2444,7 @@ private struct KioskCheckoutContextSummary: View {
         HStack(spacing: 14) {
             Image(systemName: "calendar.badge.clock")
                 .font(.headline)
-                .foregroundStyle(Color.kioskRed)
+                .foregroundStyle(KioskText.primary)
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 2) {
@@ -2457,13 +2455,13 @@ private struct KioskCheckoutContextSummary: View {
                     .minimumScaleFactor(0.82)
                 if let detail, !detail.isEmpty {
                     Text(detail)
-                        .font(.caption)
+                        .font(KioskType.meta)
                         .foregroundStyle(KioskText.muted)
                         .lineLimit(1)
                         .minimumScaleFactor(0.82)
                 }
                 Text("Due back \(dueBackAt.formatted(date: .abbreviated, time: .shortened))")
-                    .font(.caption)
+                    .font(KioskType.meta)
                     .foregroundStyle(KioskText.secondary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.82)
@@ -2473,7 +2471,7 @@ private struct KioskCheckoutContextSummary: View {
 
             if showsEdit {
                 Button("Edit", action: onEdit)
-                    .font(.caption.weight(.semibold))
+                    .font(KioskType.chip)
                     .foregroundStyle(KioskText.secondary)
                     .buttonStyle(.plain)
                     .frame(minWidth: 44, minHeight: 44)
@@ -2503,10 +2501,10 @@ private struct KioskCheckoutAvailabilityBanner: View {
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .font(.caption.weight(.semibold))
+                        .font(KioskType.chip)
                         .foregroundStyle(KioskText.primary)
                     Text(detail)
-                        .font(.caption2)
+                        .font(KioskType.meta)
                         .foregroundStyle(KioskText.muted)
                         .lineLimit(2)
                 }
@@ -2609,21 +2607,21 @@ private struct KioskCartGroupRow: View {
                 VStack(alignment: .leading, spacing: 5) {
                     HStack(spacing: 6) {
                         Text(group.primaryTitle)
-                            .font(.gothamBold(size: 16))
+                            .font(.system(size: 16, weight: .bold))
                             .foregroundStyle(KioskText.primary)
                             .lineLimit(1)
                             .minimumScaleFactor(0.82)
                         if group.count > 1 {
                             Text("x\(group.count)")
-                                .font(.caption.weight(.bold))
-                                .foregroundStyle(Color.kioskRed)
+                                .font(KioskType.chipStrong)
+                                .foregroundStyle(KioskText.primary)
                                 .padding(.horizontal, 7)
                                 .padding(.vertical, 3)
-                                .background(Color.kioskRed.opacity(0.16), in: Capsule())
+                                .background(KioskSurface.control, in: Capsule())
                         }
                         if let availabilityIssue {
                             Text(availabilityIssue.message)
-                                .font(.caption2.weight(.bold))
+                                .font(KioskType.chipStrong)
                                 .foregroundStyle(availabilityIssue.color)
                                 .padding(.horizontal, 7)
                                 .padding(.vertical, 3)
@@ -2632,7 +2630,7 @@ private struct KioskCartGroupRow: View {
                     }
 
                     Text(group.subtitle)
-                        .font(.caption.weight(.medium))
+                        .font(KioskType.chip)
                         .foregroundStyle(KioskText.secondary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.82)

@@ -133,7 +133,7 @@ struct KioskBarcodeCameraView: View {
                     }
                 }
                 .kioskButtonRole(.primary)
-                .tint(Color.kioskRed)
+                .tint(KioskText.primary)
                 Button("Close") { onCancel() }
                     .kioskButtonRole(.secondary)
             }
@@ -158,7 +158,7 @@ struct KioskBarcodeCameraView: View {
                 .foregroundStyle(.white)
                 .padding(.horizontal, 28)
                 .padding(.vertical, 12)
-                .background(Color.kioskRed, in: Capsule())
+                .background(KioskSurface.control, in: Capsule())
         }
     }
 
@@ -198,7 +198,7 @@ struct KioskBarcodeCameraView: View {
             .foregroundStyle(.white)
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
-            .background(Color.kioskRed, in: Capsule())
+            .background(KioskSurface.control, in: Capsule())
         }
         .padding(12)
         .background(KioskScrim.field, in: RoundedRectangle(cornerRadius: KioskRadius.lg))

@@ -352,34 +352,6 @@ extension Color {
     }
 }
 
-extension Font {
-    static func gothamBlack(size: CGFloat, relativeTo textStyle: Font.TextStyle? = nil) -> Font {
-        let style = textStyle ?? scalableTextStyle(for: size)
-        if UIFont(name: "Gotham-Black", size: size) != nil {
-            return Font.custom("Gotham-Black", size: size, relativeTo: style)
-        }
-        return Font.system(style).weight(.heavy)
-    }
-
-    static func gothamBold(size: CGFloat, relativeTo textStyle: Font.TextStyle? = nil) -> Font {
-        let style = textStyle ?? scalableTextStyle(for: size)
-        if UIFont(name: "Gotham-Bold", size: size) != nil {
-            return Font.custom("Gotham-Bold", size: size, relativeTo: style)
-        }
-        return Font.system(style).weight(.bold)
-    }
-
-    private static func scalableTextStyle(for size: CGFloat) -> Font.TextStyle {
-        switch size {
-        case 30...: return .largeTitle
-        case 24...: return .title2
-        case 20...: return .title3
-        case 17...: return .headline
-        default: return .body
-        }
-    }
-}
-
 /// Whether a capture scenario wants a sheet already open when its screen
 /// appears. Two kiosk surfaces are reachable only by tapping a control, and
 /// synthetic taps are the one thing that does not work reliably on a kiosk

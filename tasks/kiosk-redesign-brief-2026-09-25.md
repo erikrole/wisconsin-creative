@@ -120,7 +120,7 @@ Existing contracts the redesign changes on purpose (update tests and AREA_KIOSK 
 ## Ledger
 
 - [x] Phase 0: frame map above (2026-09-25).
-- [ ] 1a Tokens: SF Pro type scale with a 14 pt floor, section colors, white primary pill, applied through `KioskType` / `KioskStatus` / `kioskButtonRole` so every screen shifts at once (before/after review across all fixtures)
+- [x] 1a Tokens: SF Pro type scale with a 14 pt floor, section colors, white primary pill, applied through `KioskType` / `KioskStatus` / `kioskButtonRole` so every screen shifts at once (before/after review across all fixtures)
 - [ ] 1b Shared components (task scaffold, list rows, battery row, confirmation stage with Undo, sheets), added without rewiring screens yet
 - [ ] Home (A) and standby/setup (J1–J2)
 - [ ] Hubs (C)

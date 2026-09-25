@@ -328,15 +328,13 @@ struct KioskCheckoutDetailSheet: View {
                     onReturn()
                 }
                 .font(.headline.weight(.semibold))
-                .buttonStyle(.glassProminent)
-                .tint(Color.kioskRed)
+                .kioskButtonRole(.primary)
                 .controlSize(.large)
                 .disabled(isMutating || !scanQueue.isEmpty)
             }
             Button("Done") { dismiss() }
                 .font(.headline.weight(.semibold))
-                .foregroundStyle(KioskText.primary)
-                .buttonStyle(.glass)
+                .kioskButtonRole(.secondary)
                 .controlSize(.large)
                 .disabled(isMutating || !scanQueue.isEmpty)
         }
@@ -409,7 +407,7 @@ struct KioskCheckoutDetailSheet: View {
                     minimumDate: minimumEditEndsAt
                 )
             }
-            .tint(Color.kioskRed)
+            .tint(KioskText.primary)
             .frame(height: 46)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 10)
@@ -436,7 +434,7 @@ struct KioskCheckoutDetailSheet: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 16) {
                 KioskScanTarget(
-                    tint: activeMutation == .addingItem ? KioskStatus.active : Color.kioskRedGlyph,
+                    tint: activeMutation == .addingItem ? KioskStatus.active : KioskText.primary,
                     width: 96,
                     height: 64
                 )
@@ -568,11 +566,11 @@ struct KioskCheckoutDetailSheet: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.itemListPrimaryTitle)
-                    .font(.gothamBold(size: 16))
+                    .font(.system(size: 16, weight: .bold))
                     .foregroundStyle(KioskText.primary)
                     .lineLimit(1)
                 Text(item.itemListSecondaryTitle ?? item.bulkSkuName ?? item.name)
-                    .font(.caption.weight(.medium))
+                    .font(KioskType.chip)
                     .foregroundStyle(KioskText.secondary)
                     .lineLimit(1)
             }
@@ -597,7 +595,7 @@ struct KioskCheckoutDetailSheet: View {
             }
             if item.returned {
                 Text("Returned")
-                    .font(.caption2.weight(.bold))
+                    .font(KioskType.chipStrong)
                     .foregroundStyle(Color.statusText(.green))
             }
         }

@@ -136,7 +136,7 @@ struct KioskActivationView: View {
                     .fill(KioskSurface.sunken)
                     .overlay {
                         RoundedRectangle(cornerRadius: KioskRadius.md)
-                            .stroke(i < code.count ? Color.kioskRed : KioskStroke.strong, lineWidth: 2)
+                            .stroke(i == code.count ? KioskStroke.selected : KioskStroke.standard, lineWidth: 1)
                     }
                     .frame(maxWidth: .infinity)
                     .frame(height: 70)
@@ -148,11 +148,11 @@ struct KioskActivationView: View {
                                 .transition(.opacity)
                         }
                     }
-                    // Red underline marks the slot the next digit lands in.
+                    // White underline marks the slot the next digit lands in.
                     .overlay(alignment: .bottom) {
                         if i == code.count, !isLoading {
                             Capsule()
-                                .fill(Color.kioskRed)
+                                .fill(KioskText.primary)
                                 .frame(width: 22, height: 3)
                                 .padding(.bottom, 8)
                         }
@@ -383,7 +383,7 @@ private struct KioskNumPadButton: View {
         Button(action: action) {
             Text(key)
                 .font(KioskType.screenTitle)
-                .foregroundStyle(KioskText.primary)
+                .foregroundStyle(key == "✓" ? KioskText.onPrimary : KioskText.primary)
                 .frame(maxWidth: .infinity)
                 .frame(height: 64)
                 .kioskCard(background, radius: KioskRadius.md, stroke: KioskStroke.hairline)
@@ -396,7 +396,7 @@ private struct KioskNumPadButton: View {
 
     private var background: Color {
         switch key {
-        case "✓": return Color.kioskRed
+        case "✓": return KioskText.primary
         case "⌫": return KioskSurface.cardSelected
         default:  return KioskSurface.cardRaised
         }

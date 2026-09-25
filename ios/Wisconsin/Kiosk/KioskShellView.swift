@@ -313,11 +313,11 @@ private struct InactivityWarningOverlay: View {
             VStack(spacing: 20) {
                 ZStack {
                     Circle()
-                        .fill(Color.kioskRed.opacity(0.14))
+                        .fill(KioskSurface.control)
                         .frame(width: 64, height: 64)
                     Image(systemName: "clock.fill")
                         .font(.system(size: 28))
-                        .foregroundStyle(Color.kioskRed)
+                        .foregroundStyle(KioskText.primary)
                 }
                 .accessibilityHidden(true)
                 Text("Still here?")
@@ -336,14 +336,10 @@ private struct InactivityWarningOverlay: View {
                     } label: {
                         Text("Keep going")
                             .font(.headline)
-                            .foregroundStyle(KioskText.primary)
+                            .foregroundStyle(KioskText.onPrimary)
                             .frame(maxWidth: .infinity, minHeight: 56)
                             .background(
-                                LinearGradient(
-                                    colors: [Color.kioskRed, Color.kioskRed.opacity(0.85)],
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                ),
+                                KioskText.primary,
                                 in: RoundedRectangle(cornerRadius: KioskRadius.lg)
                             )
                     }
@@ -390,7 +386,7 @@ private struct InactivityCountdown: View {
                         .fill(KioskStroke.divider)
                     GeometryReader { geo in
                         Capsule()
-                            .fill(Color.kioskRed)
+                            .fill(KioskText.primary)
                             .frame(width: geo.size.width * CGFloat(remaining) / 30)
                             .animation(.linear(duration: 1), value: remaining)
                     }

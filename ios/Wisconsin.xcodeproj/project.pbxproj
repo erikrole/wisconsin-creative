@@ -58,7 +58,6 @@
 		390F43409B451AAB78D2D0C9 /* WisconsinApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BDE438C8F05EAA14B299BB /* WisconsinApp.swift */; };
 		3A34548DD720E71C6B54BB31 /* ItemsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F12684601FE641B454D0219B /* ItemsView.swift */; };
 		3C5D633C4299CA79C40FCFBA /* Gotham-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F79BD5C4616572A064F43254 /* Gotham-Bold.ttf */; };
-		3EA409C06E497D3FCA3ECF8B /* KioskColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF17654612E5CA2EBF575539 /* KioskColors.swift */; };
 		3F0879ADAE07E40D10144C86 /* ScheduleCalendarSubscriptionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 796958C4A59FDC2C36ED1E38 /* ScheduleCalendarSubscriptionSheet.swift */; };
 		411CF014B25A6515F8E6869E /* CreateBookingEquipmentRows.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4C885700380306D486A94C9 /* CreateBookingEquipmentRows.swift */; };
 		41891E6B69644BB1DB025CB9 /* Brand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A9DAB950F60885A23620BEC /* Brand.swift */; };
@@ -390,7 +389,6 @@
 		DB5E4D4F3F432CE124DE63A8 /* KioskPickupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskPickupView.swift; sourceTree = "<group>"; };
 		DDD21416289B346FEE851FB9 /* ProfileCompletionModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileCompletionModelsTests.swift; sourceTree = "<group>"; };
 		DE250FADCDB66EDCBD5DF234 /* AvailabilityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvailabilityView.swift; sourceTree = "<group>"; };
-		DF17654612E5CA2EBF575539 /* KioskColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskColors.swift; sourceTree = "<group>"; };
 		E11254A1E4647B8B02F4890A /* CheckoutReturnActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckoutReturnActivityAttributes.swift; sourceTree = "<group>"; };
 		E15CD71193CFD39E493FF9B9 /* KioskChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskChrome.swift; sourceTree = "<group>"; };
 		E376E0961E9404F4D93C4B4E /* GearWidgetPublisher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GearWidgetPublisher.swift; sourceTree = "<group>"; };
@@ -628,7 +626,6 @@
 				966B6B986CA5E9C123B8EC01 /* KioskCheckoutDetailSheet.swift */,
 				3700D2B2FAE801DC2FF0F1ED /* KioskCheckoutView.swift */,
 				E15CD71193CFD39E493FF9B9 /* KioskChrome.swift */,
-				DF17654612E5CA2EBF575539 /* KioskColors.swift */,
 				348C1E3385689A947929A115 /* KioskComponents.swift */,
 				E37E6A8082FFD84EC009BC21 /* KioskDateFormatting.swift */,
 				07116906C1A1FF6F5D10BFA1 /* KioskDesign.swift */,
@@ -1061,7 +1058,6 @@
 				18103A77A1D847F0F42FFDCF /* KioskCheckoutDetailSheet.swift in Sources */,
 				3626807CF358067A4EF9AF15 /* KioskCheckoutView.swift in Sources */,
 				610271C66D62E1DD52D043D1 /* KioskChrome.swift in Sources */,
-				3EA409C06E497D3FCA3ECF8B /* KioskColors.swift in Sources */,
 				F2A0A3013F3F22792FA32C84 /* KioskComponents.swift in Sources */,
 				D0BEAE453503EBBEDD922745 /* KioskDateFormatting.swift in Sources */,
 				92FB41EABAD386A10484F5D8 /* KioskDesign.swift in Sources */,

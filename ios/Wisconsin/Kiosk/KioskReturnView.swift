@@ -244,7 +244,7 @@ struct KioskReturnView: View {
                     .foregroundStyle(KioskText.primary)
                 if let ref = detail?.refNumber {
                     Text(ref)
-                        .font(.caption.monospaced())
+                        .font(KioskType.code)
                         .foregroundStyle(KioskText.secondary)
                 }
                 if totalItems > 0 {
