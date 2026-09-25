@@ -41,6 +41,7 @@
 | `src/lib/services/companion-projection.ts` | 250 |
 | `src/lib/services/consolidation-shared.ts` | 21 |
 | `src/lib/services/dashboard-counts.ts` | 119 |
+| `src/lib/services/event-travel.ts` | 32 |
 | `src/lib/services/event-worker.ts` | 125 |
 | `src/lib/services/firmware-watch.ts` | 329 |
 | `src/lib/services/game-record.ts` | 169 |
@@ -90,7 +91,7 @@
 | `src/lib/services/signatures.ts` | 2051 |
 | `src/lib/services/software.ts` | 272 |
 | `src/lib/services/sport-auto-assign-policies.ts` | 46 |
-| `src/lib/services/sport-configs.ts` | 257 |
+| `src/lib/services/sport-configs.ts` | 263 |
 | `src/lib/services/sport-roster-preview.ts` | 108 |
 | `src/lib/services/sport-setup.ts` | 210 |
 | `src/lib/services/status.ts` | 444 |
@@ -412,6 +413,7 @@
 - `/api/calendar-events/[id]/command-center`
 - `/api/calendar-events/[id]`
 - `/api/calendar-events/[id]/travel/[memberId]`
+- `/api/calendar-events/[id]/travel/defaults`
 - `/api/calendar-events/[id]/travel`
 - `/api/calendar-events/[id]/visibility`
 - `/api/calendar-events/[id]/workers/[workerId]`

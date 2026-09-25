@@ -260,6 +260,8 @@ export function EventTravelCard({
   const [localMembers, setLocalMembers] = useState<TravelMember[] | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
   const removingRef = useRef(new Set<string>());
+  const [addingDefaults, setAddingDefaults] = useState(false);
+  const addingDefaultsRef = useRef(false);
 
   const {
     data: fetchedMembers,
@@ -282,6 +284,39 @@ export function EventTravelCard({
 
   function handleAdded(member: TravelMember) {
     setLocalMembers((prev) => [...(prev ?? fetchedMembers ?? []), member]);
+  }
+
+  async function handleAddDefaults() {
+    if (addingDefaultsRef.current) return;
+    addingDefaultsRef.current = true;
+    setAddingDefaults(true);
+    try {
+      const res = await fetch(`/api/calendar-events/${eventId}/travel/defaults`, { method: "POST" });
+      if (handleAuthRedirect(res)) return;
+      if (!res.ok) {
+        toast.error(await parseErrorMessage(res, "Failed to add default travelers"));
+        return;
+      }
+      const json = await parseJsonSafely<{ data?: TravelMember[]; added?: number; defaultCount?: number }>(res);
+      if (!json?.data) {
+        toast.error("Default travelers may have been added, but the response was incomplete. Refresh to check.");
+        return;
+      }
+      setLocalMembers(json.data);
+      const added = json.added ?? 0;
+      if (json.defaultCount === 0) {
+        toast.info("No default travelers are set for this sport. Mark them with the plane in Add.");
+      } else if (added === 0) {
+        toast.info("Every default traveler is already on this trip.");
+      } else {
+        toast.success(`Added ${added} default traveler${added === 1 ? "" : "s"}.`);
+      }
+    } catch (err) {
+      toast.error(err instanceof TypeError ? "You’re offline. Check your connection." : "Failed to add default travelers");
+    } finally {
+      addingDefaultsRef.current = false;
+      setAddingDefaults(false);
+    }
   }
 
   async function handleRemove(memberId: string) {
@@ -317,26 +352,38 @@ export function EventTravelCard({
           </p>
         </div>
         {isStaff && (
-          <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="default" className="h-10" disabled={loading}>
-                <Plus className="size-3.5 mr-1.5" />
-                Add
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-72 p-2" align="end">
-              <p className="text-xs font-medium text-muted-foreground px-1 pb-2">
-                Sport roster - marked users are default travelers
-              </p>
-              <RosterPicker
-                sportCode={sportCode}
-                eventId={eventId}
-                currentMemberIds={memberIds}
-                onAdded={handleAdded}
-                onClose={() => setPickerOpen(false)}
-              />
-            </PopoverContent>
-          </Popover>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="default"
+              className="h-10"
+              disabled={loading || addingDefaults}
+              onClick={handleAddDefaults}
+            >
+              <Plane className="size-3.5 mr-1.5" />
+              {addingDefaults ? "Adding…" : "Add defaults"}
+            </Button>
+            <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="default" className="h-10" disabled={loading}>
+                  <Plus className="size-3.5 mr-1.5" />
+                  Add
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-72 p-2" align="end">
+                <p className="text-xs font-medium text-muted-foreground px-1 pb-2">
+                  Sport roster - marked users are default travelers
+                </p>
+                <RosterPicker
+                  sportCode={sportCode}
+                  eventId={eventId}
+                  currentMemberIds={memberIds}
+                  onAdded={handleAdded}
+                  onClose={() => setPickerOpen(false)}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
         )}
       </CardHeader>
 
@@ -358,7 +405,7 @@ export function EventTravelCard({
             inline
             icon="users"
             title="No travelers added"
-            description={isStaff ? "Add sport-roster travelers for this away event." : "Travelers will appear here once staff adds them."}
+            description={isStaff ? "Add defaults brings in the sport's regular travelers. Use Add for anyone else." : "Travelers will appear here once staff adds them."}
           />
         ) : (
           <div className="flex flex-col gap-1.5">

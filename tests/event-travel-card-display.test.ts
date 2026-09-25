@@ -38,4 +38,15 @@ describe("event travel card display", () => {
     expect(source).toContain("Retry roster");
     expect(source).toContain("All sport roster members are already on the travel roster.");
   });
+
+  it("lets staff add the sport's default travelers in one step", () => {
+    const source = readFileSync("src/app/(app)/events/[id]/_components/EventTravelCard.tsx", "utf8");
+
+    expect(source).toContain("`/api/calendar-events/${eventId}/travel/defaults`");
+    expect(source).toContain("addingDefaultsRef.current");
+    expect(source).toContain("setLocalMembers(json.data)");
+    expect(source).toContain('"Add defaults"');
+    expect(source).toContain("No default travelers are set for this sport.");
+    expect(source.indexOf("onClick={handleAddDefaults}")).toBeGreaterThan(source.indexOf("{isStaff && ("));
+  });
 });
