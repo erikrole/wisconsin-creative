@@ -18,31 +18,22 @@ struct KioskSleepModeView: View {
             Button(action: onWake) {
                 ZStack {
                     Color.black.ignoresSafeArea()
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(context.date.kioskClockParts().time)
-                            .font(.system(size: 72, weight: .heavy))
-                            .foregroundStyle(Color.white.opacity(0.42))
+                    VStack(spacing: 14) {
+                        let parts = context.date.kioskClockParts()
+                        (Text(parts.time)
+                            .font(KioskType.standbyClock)
+                            .foregroundStyle(Self.clockTone)
+                        + Text(" \(parts.meridiem)")
+                            .font(KioskType.standbyMeridiem)
+                            .foregroundStyle(Self.dimTone))
                             .lineLimit(1)
-                            .minimumScaleFactor(0.6)
-                        HStack(spacing: 8) {
-                            Image(systemName: "moon.zzz.fill")
-                                .font(KioskType.chip)
-                                .accessibilityHidden(true)
-                            Text(context.date, format: .dateTime.weekday(.wide).month(.abbreviated).day())
-                                .font(KioskType.chip)
-                        }
-                        .foregroundStyle(Color.white.opacity(0.42))
-                        Text(deviceName)
-                            .font(KioskType.chip)
-                            .foregroundStyle(Color.white.opacity(0.64))
-                        HStack(spacing: 6) {
-                            Image(systemName: "hand.tap.fill")
-                                .font(KioskType.micro)
-                            Text("Tap anywhere to wake")
-                                .font(KioskType.micro)
-                        }
-                        .foregroundStyle(Color.white.opacity(0.5))
-                        .padding(.top, 6)
+                        Text(context.date, format: .dateTime.weekday(.wide).month(.wide).day())
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundStyle(Self.dimTone)
+                        Text("Tap or scan to wake")
+                            .font(KioskType.body)
+                            .foregroundStyle(Self.faintTone)
+                            .padding(.top, 28)
                     }
                     .offset(reduceMotion ? .zero : pixelShiftOffset(for: context.date))
                 }
@@ -51,18 +42,20 @@ struct KioskSleepModeView: View {
             }
             .buttonStyle(.plain)
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel("Kiosk sleep mode")
+            .accessibilityLabel("Kiosk standby, \(deviceName)")
             .accessibilityHint("Wake the kiosk")
         }
     }
 
+    // Canvas J2: dim grey on black so nothing burns in overnight.
+    private static let clockTone = Color(red: 0x4A / 255, green: 0x4A / 255, blue: 0x53 / 255)
+    private static let dimTone = Color(red: 0x34 / 255, green: 0x34 / 255, blue: 0x3B / 255)
+    private static let faintTone = Color(red: 0x2E / 255, green: 0x2E / 255, blue: 0x35 / 255)
+
+    /// Drifts a few points every 30 s so no pixel holds one value all night.
     private func pixelShiftOffset(for date: Date) -> CGSize {
         let components = Calendar.current.dateComponents([.minute, .second], from: date)
-        let minute = components.minute ?? 0
-        let second = components.second ?? 0
-        let slot = (minute * 2) + (second >= 30 ? 1 : 0)
-        let x = CGFloat((slot % 9) - 4) * 38
-        let y = CGFloat(((slot / 9) % 7) - 3) * 28
-        return CGSize(width: x, height: y)
+        let slot = ((components.minute ?? 0) * 2) + ((components.second ?? 0) >= 30 ? 1 : 0)
+        return CGSize(width: CGFloat((slot % 5) - 2) * 3, height: CGFloat(((slot / 5) % 5) - 2) * 3)
     }
 }

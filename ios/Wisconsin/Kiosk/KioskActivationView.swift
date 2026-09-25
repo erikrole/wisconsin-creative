@@ -57,62 +57,50 @@ struct KioskActivationView: View {
             }
             .scrollIndicators(.hidden)
         } else {
-            HStack(spacing: 42) {
+            HStack(spacing: 56) {
                 heroPanel
                     .frame(maxWidth: .infinity, alignment: .leading)
                 activationCard
-                    .frame(width: KioskLayout.activationCardWidth)
+                    .frame(width: 440)
             }
+            .padding(.horizontal, 28)
+            .frame(maxHeight: .infinity)
         }
     }
 
     private var heroPanel: some View {
         VStack(alignment: .leading, spacing: 18) {
-            KioskSectionIcon(systemImage: "barcode.viewfinder", size: 72)
-            VStack(alignment: .leading, spacing: 8) {
-                Text("WISCONSIN ATHLETICS")
-                    .font(KioskType.overline)
-                    .tracking(1.6)
-                    .foregroundStyle(KioskText.muted)
-                Text("Gear Room Kiosk")
-                    .font(.kioskHeroTitle())
-                    .foregroundStyle(KioskText.primary)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.75)
-            }
-            Text("Activate this iPad")
-                .font(KioskType.screenTitle)
+            Text("Set up this iPad")
+                .font(.system(size: 48, weight: .heavy))
                 .foregroundStyle(KioskText.primary)
-            Text("Enter the 6-digit kiosk code.")
-                .font(KioskType.body)
+                .accessibilityAddTraits(.isHeader)
+            Text("Enter the 6-digit code from Settings → Kiosk Devices on the web. Codes work once and expire after 24 hours.")
+                .font(.system(size: 18))
                 .foregroundStyle(KioskText.secondary)
-                .lineSpacing(3)
+                .lineSpacing(5)
+                .frame(maxWidth: 420, alignment: .leading)
                 .fixedSize(horizontal: false, vertical: true)
+            pasteAndFocusControls
+                .padding(.top, 8)
         }
-        .accessibilityElement(children: .combine)
     }
 
     private var activationCard: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 18) {
             codeEntryField
             codeSlots
-            pasteAndFocusControls
 
             if let error {
                 Text(error)
                     .foregroundStyle(KioskStatus.problem)
                     .font(KioskType.rowTitle)
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal, 12)
                     .accessibilityAddTraits(.updatesFrequently)
             }
 
             KioskNumPad(code: $code, onComplete: activate)
                 .disabled(isLoading)
         }
-        .padding(24)
-        .kioskCard(KioskSurface.cardRaised, radius: KioskRadius.hero, stroke: KioskStroke.strong)
-        .shadow(color: .black.opacity(0.35), radius: 24, y: 16)
     }
 
     private var codeEntryField: some View {
@@ -129,21 +117,21 @@ struct KioskActivationView: View {
     }
 
     private var codeSlots: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             let digits = Array(code)
             ForEach(0..<6, id: \.self) { i in
-                RoundedRectangle(cornerRadius: KioskRadius.md)
-                    .fill(KioskSurface.sunken)
+                RoundedRectangle(cornerRadius: KioskRadius.lg)
+                    .fill(KioskSurface.card)
                     .overlay {
-                        RoundedRectangle(cornerRadius: KioskRadius.md)
+                        RoundedRectangle(cornerRadius: KioskRadius.lg)
                             .stroke(i == code.count ? KioskStroke.selected : KioskStroke.standard, lineWidth: 1)
                     }
                     .frame(maxWidth: .infinity)
-                    .frame(height: 70)
+                    .frame(height: 76)
                     .overlay {
                         if i < digits.count {
-                            Text(String(digits[i]))
-                                .font(.system(size: 30, weight: .bold, design: .monospaced))
+                            Text("•")
+                                .font(.system(size: 34, weight: .bold))
                                 .foregroundStyle(KioskText.primary)
                                 .transition(.opacity)
                         }
@@ -168,26 +156,17 @@ struct KioskActivationView: View {
     }
 
     private var pasteAndFocusControls: some View {
-        HStack(spacing: 12) {
-            Button {
-                pasteFromClipboard()
-            } label: {
-                Label("Paste Code", systemImage: "doc.on.clipboard")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(KioskActivationActionButtonStyle(tint: KioskSurface.cardSelected))
-            .disabled(isLoading)
-
-            Button {
+        HStack(spacing: 10) {
+            Button("Paste code") { pasteFromClipboard() }
+                .frame(minHeight: 48)
+                .kioskButtonRole(.quiet)
+                .disabled(isLoading)
+            Button("Use keyboard") {
                 wasKeyboardChosen = true
                 focusCodeField()
-            } label: {
-                Label("Keyboard", systemImage: "keyboard")
-                    .frame(maxWidth: .infinity)
             }
-            // Secondary, like Paste: brand red belongs to the confirm key, the
-            // one action that activates the iPad.
-            .buttonStyle(KioskActivationActionButtonStyle(tint: KioskSurface.cardSelected))
+            .frame(minHeight: 48)
+            .kioskButtonRole(.quiet)
             .disabled(isLoading)
         }
     }
@@ -298,24 +277,6 @@ struct KioskActivationView: View {
     }
 }
 
-private struct KioskActivationActionButtonStyle: ButtonStyle {
-    let tint: Color
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(KioskType.rowTitle)
-            .foregroundStyle(KioskText.primary)
-            .padding(.vertical, 13)
-            .padding(.horizontal, 14)
-            .background(tint, in: RoundedRectangle(cornerRadius: KioskRadius.lg))
-            .overlay(
-                RoundedRectangle(cornerRadius: KioskRadius.lg)
-                    .stroke(KioskStroke.standard, lineWidth: 1)
-            )
-            .opacity(configuration.isPressed ? 0.78 : 1)
-    }
-}
-
 // MARK: - Numpad
 
 private struct KioskNumPad: View {
@@ -330,9 +291,9 @@ private struct KioskNumPad: View {
     ]
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 10) {
             ForEach(layout, id: \.self) { row in
-                HStack(spacing: 12) {
+                HStack(spacing: 10) {
                     ForEach(row, id: \.self) { key in
                         KioskNumPadButton(
                             key: key,
@@ -381,12 +342,12 @@ private struct KioskNumPadButton: View {
 
     var body: some View {
         Button(action: action) {
-            Text(key)
-                .font(KioskType.screenTitle)
+            Text(key == "✓" ? "Go" : key)
+                .font(.system(size: 28, weight: .semibold))
                 .foregroundStyle(key == "✓" ? KioskText.onPrimary : KioskText.primary)
                 .frame(maxWidth: .infinity)
-                .frame(height: 64)
-                .kioskCard(background, radius: KioskRadius.md, stroke: KioskStroke.hairline)
+                .frame(height: 76)
+                .kioskCard(background, radius: KioskRadius.xl, stroke: key == "✓" ? KioskText.primary : KioskStroke.standard)
         }
         .buttonStyle(KioskPressStyle())
         .disabled(!isEnabled)
@@ -397,8 +358,8 @@ private struct KioskNumPadButton: View {
     private var background: Color {
         switch key {
         case "✓": return KioskText.primary
-        case "⌫": return KioskSurface.cardSelected
-        default:  return KioskSurface.cardRaised
+        case "⌫": return KioskSurface.card
+        default:  return KioskSurface.control
         }
     }
 
