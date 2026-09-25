@@ -6,7 +6,7 @@ Commands run from the selected isolated snapshot or repository root. Inspect the
 
 Use a per-command `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` when needed; do not change global xcode-select or require sudo to repair a local command environment. Discover the available Xcode/simulator tools. A missing MCP does not prohibit supported `xcrun`/`xcodebuild` use.
 
-List devices and select the actual iPhone 16 Pro UDID per `AGENTS.md`. Use that same UDID explicitly for launch, screenshots, and UI tests; do not use the ambiguous `booted` target. A kiosk/iPad request needs the corresponding form-factor proof. If the required runtime is unavailable, report that gate without silently changing device models.
+List devices and select the actual iPhone 18 Pro Max UDID per `AGENTS.md`. Use that same UDID explicitly for launch, screenshots, and UI tests; do not use the ambiguous `booted` target. A kiosk/iPad request needs the corresponding form-factor proof. If the required runtime is unavailable, report that gate without silently changing device models.
 
 ## Existing fixture path
 

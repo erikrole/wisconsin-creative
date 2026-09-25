@@ -7,6 +7,7 @@
 |---|---:|
 | `src/lib/services/accountability.ts` | 655 |
 | `src/lib/services/app-activity-report.ts` | 137 |
+| `src/lib/services/app-diagnostics.ts` | 91 |
 | `src/lib/services/auto-assign.ts` | 92 |
 | `src/lib/services/auto-fill-preview.ts` | 322 |
 | `src/lib/services/availability-conflict-recompute.ts` | 130 |
@@ -32,7 +33,7 @@
 | `src/lib/services/category-mutations.ts` | 168 |
 | `src/lib/services/checkout-consolidation.ts` | 596 |
 | `src/lib/services/checkout-policies.ts` | 40 |
-| `src/lib/services/claim-review-notifications.ts` | 179 |
+| `src/lib/services/claim-review-notifications.ts` | 197 |
 | `src/lib/services/collaborator-policies.ts` | 400 |
 | `src/lib/services/collaborator-schedule.ts` | 228 |
 | `src/lib/services/combined-schedule-events.ts` | 298 |
@@ -41,9 +42,10 @@
 | `src/lib/services/consolidation-shared.ts` | 21 |
 | `src/lib/services/dashboard-counts.ts` | 119 |
 | `src/lib/services/event-worker.ts` | 125 |
-| `src/lib/services/firmware-watch.ts` | 321 |
+| `src/lib/services/firmware-watch.ts` | 329 |
 | `src/lib/services/game-record.ts` | 169 |
 | `src/lib/services/hidden-users-cleanup.ts` | 122 |
+| `src/lib/services/job-runs.ts` | 51 |
 | `src/lib/services/kiosk-checkout-complete.ts` | 90 |
 | `src/lib/services/kiosk-item-transfer.ts` | 95 |
 | `src/lib/services/kiosk-location.ts` | 72 |
@@ -52,14 +54,16 @@
 | `src/lib/services/kiosk-pickup-substitute.ts` | 256 |
 | `src/lib/services/kiosk-scan.ts` | 44 |
 | `src/lib/services/kits.ts` | 824 |
-| `src/lib/services/licenses.ts` | 592 |
-| `src/lib/services/live-activities.ts` | 633 |
+| `src/lib/services/licenses.ts` | 603 |
+| `src/lib/services/live-activities.ts` | 629 |
 | `src/lib/services/manual-event-time.ts` | 304 |
 | `src/lib/services/non-game-schedule-defaults.ts` | 49 |
-| `src/lib/services/notification-prefs.ts` | 103 |
-| `src/lib/services/notifications.ts` | 1686 |
+| `src/lib/services/notification-deliveries.ts` | 59 |
+| `src/lib/services/notification-prefs.ts` | 348 |
+| `src/lib/services/notifications.ts` | 1966 |
 | `src/lib/services/onboarding-lifecycle.ts` | 540 |
 | `src/lib/services/pending-pickup-expiry.ts` | 281 |
+| `src/lib/services/product-event-log.ts` | 43 |
 | `src/lib/services/reports.ts` | 1932 |
 | `src/lib/services/reservation-consolidation.ts` | 240 |
 | `src/lib/services/reservation-pickup-guard.ts` | 62 |
@@ -72,20 +76,17 @@
 | `src/lib/services/schedule-change-history.ts` | 538 |
 | `src/lib/services/schedule-exports.ts` | 522 |
 | `src/lib/services/schedule-health.ts` | 383 |
-| `src/lib/services/schedule-notification-copy.ts` | 127 |
-| `src/lib/services/schedule-notification-diff.ts` | 236 |
-| `src/lib/services/schedule-notification-flush.ts` | 164 |
-| `src/lib/services/schedule-notification-policy.ts` | 92 |
-| `src/lib/services/schedule-open-work.ts` | 578 |
-| `src/lib/services/schedule-publication.ts` | 1095 |
+| `src/lib/services/schedule-notification-policy.ts` | 95 |
+| `src/lib/services/schedule-open-work.ts` | 589 |
+| `src/lib/services/schedule-publication.ts` | 1117 |
 | `src/lib/services/schedule-template-review.ts` | 554 |
-| `src/lib/services/schedule-working-copy.ts` | 1169 |
+| `src/lib/services/schedule-working-copy.ts` | 1190 |
 | `src/lib/services/scoreboard.ts` | 282 |
 | `src/lib/services/shift-assignment-conflicts.ts` | 43 |
 | `src/lib/services/shift-assignments.ts` | 727 |
 | `src/lib/services/shift-generation.ts` | 629 |
 | `src/lib/services/shift-trade-emails.ts` | 56 |
-| `src/lib/services/shift-trades.ts` | 1321 |
+| `src/lib/services/shift-trades.ts` | 1560 |
 | `src/lib/services/signatures.ts` | 2051 |
 | `src/lib/services/software.ts` | 272 |
 | `src/lib/services/sport-auto-assign-policies.ts` | 46 |
@@ -94,8 +95,8 @@
 | `src/lib/services/sport-setup.ts` | 210 |
 | `src/lib/services/status.ts` | 444 |
 | `src/lib/services/team-scoreboard.ts` | 598 |
-| `src/lib/services/usage-analytics-report.ts` | 32 |
-| `src/lib/services/user-deactivation.ts` | 569 |
+| `src/lib/services/usage-analytics-report.ts` | 114 |
+| `src/lib/services/user-deactivation.ts` | 571 |
 
 ## Key Library Files
 
@@ -139,7 +140,7 @@
 | `src/lib/checkout-escalation-policy.ts` | 117 |
 | `src/lib/checkout-notification-workflow.ts` | 24 |
 | `src/lib/claim-review-deadlines.ts` | 52 |
-| `src/lib/claim-review-workflow.ts` | 41 |
+| `src/lib/claim-review-workflow.ts` | 48 |
 | `src/lib/clipboard.ts` | 19 |
 | `src/lib/collaborator-access.ts` | 164 |
 | `src/lib/collaborator-gear.ts` | 151 |
@@ -172,6 +173,7 @@
 | `src/lib/guide-search-result.ts` | 49 |
 | `src/lib/guides.ts` | 344 |
 | `src/lib/http.ts` | 115 |
+| `src/lib/ics-token.ts` | 26 |
 | `src/lib/image-search-modal.ts` | 59 |
 | `src/lib/image-search.ts` | 240 |
 | `src/lib/item-asset-tag-sort.ts` | 244 |
@@ -184,6 +186,7 @@
 | `src/lib/local-traces.ts` | 28 |
 | `src/lib/media-embed.ts` | 68 |
 | `src/lib/nav-sections.ts` | 316 |
+| `src/lib/notification-catalog.ts` | 321 |
 | `src/lib/notification-count-sync.ts` | 9 |
 | `src/lib/notification-destination.ts` | 85 |
 | `src/lib/observability.ts` | 19 |
@@ -229,7 +232,6 @@
 | `src/lib/schedule-event-keyset.ts` | 66 |
 | `src/lib/schedule-event-where.ts` | 46 |
 | `src/lib/schedule-health-types.ts` | 83 |
-| `src/lib/schedule-notification-debounce.ts` | 48 |
 | `src/lib/schedule-publication-types.ts` | 62 |
 | `src/lib/schedule-queues.ts` | 185 |
 | `src/lib/schedule-recent-activity.ts` | 134 |
@@ -240,7 +242,7 @@
 | `src/lib/schedule-timeline-window.ts` | 88 |
 | `src/lib/schedule-window.ts` | 152 |
 | `src/lib/schedule-working-copy-guard.ts` | 24 |
-| `src/lib/schedule-working-copy.ts` | 499 |
+| `src/lib/schedule-working-copy.ts` | 532 |
 | `src/lib/scoreboard-digest.ts` | 172 |
 | `src/lib/scoreboard-display.ts` | 27 |
 | `src/lib/scoreboard-explorer.ts` | 152 |
@@ -252,7 +254,7 @@
 | `src/lib/shift-claim-eligibility.ts` | 48 |
 | `src/lib/shift-constants.ts` | 13 |
 | `src/lib/shift-display.ts` | 71 |
-| `src/lib/shift-notification-workflow.ts` | 18 |
+| `src/lib/shift-reminder-workflow.ts` | 26 |
 | `src/lib/software-vault-access.ts` | 20 |
 | `src/lib/software-vault-crypto.ts` | 61 |
 | `src/lib/software-vault-validation.ts` | 39 |
@@ -266,7 +268,7 @@
 | `src/lib/time.ts` | 28 |
 | `src/lib/title-normalization.ts` | 101 |
 | `src/lib/url-sync.ts` | 16 |
-| `src/lib/usage-analytics.ts` | 64 |
+| `src/lib/usage-analytics.ts` | 71 |
 | `src/lib/user-directory-query.ts` | 107 |
 | `src/lib/user-list-cache.ts` | 73 |
 | `src/lib/user-visibility.ts` | 86 |
@@ -485,6 +487,10 @@
 
 - `/api/devices`
 - `/api/devices/test`
+
+### `/api/diagnostics`
+
+- `/api/diagnostics`
 
 ### `/api/drafts`
 

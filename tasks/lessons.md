@@ -45,6 +45,7 @@
 - **Terminal states are immutable**: Whitelist allowed transitions instead of applying a broad status update to every row.
 
 ## Data integrity and concurrency
+- **Timers must match the run, not a counter that can restart**: A delayed workflow (claim auto-approval, schedule auto-release) must stand down unless the row still carries the identity it was started for (`claimedAt`, `autoReleaseRunId`). A version or status check alone fired a stale timer against a newer claim or draft, because drafts restart at version 1 after publish and a re-claimed trade is CLAIMED again. Found in the 2026-09-23 Schedule stress pass.
 
 - **Derived status stays derived**: Asset availability and status come from allocations and active custody records, not a second writable status field.
 - **Availability includes operational turnaround**: Apply return, inspection, transfer, and pickup buffers consistently in the picker, scan flow, and server check.
@@ -58,6 +59,8 @@
 - **Scanner input is a transport boundary**: Trim, normalize legacy prefixes/wrappers/control bytes, tolerate suffix differences, and deduplicate rapid repeats.
 
 ## API and client contracts
+- **Windowed client caches replace only the window they read**: A reload that swaps the whole store drops weeks an edge load or deep link added while it was in flight. Drop entries that overlap the fetched window, then insert, and let loaded bounds only grow (`min`/`max`). Found in native Schedule week-window loading, 2026-09-23.
+- **Decision endpoints should not make the client decode a row**: iOS approve/decline decoded a `ShiftTrade` the server returned without relations, so a committed approval read as "Unexpected response". Either return the full include shape everywhere or have the client check only the status for actions it reloads after. Fixed both ways, 2026-09-23.
 
 - **Use the shared route wrappers**: `withAuth` for authenticated routes and `withHandler` for public routes.
 - **Audit mutations once**: The service that owns the transaction should own the lifecycle audit entry. Do not duplicate the same event in the route.
@@ -72,6 +75,7 @@
 - **Duplicate same-sport kits without cameras**: Exclusive serialized membership means a Football copy cannot keep the source cameras. Copy batteries, sport, and metadata, then assign the next bodies.
 
 ## UI reliability
+- **Pending deep-link state must be read on appear, not only on change**: A push that launches the app sets its target before the tab's view exists, so an `onChange` handler never fires. Read the pending value in `.task` too (native Schedule push routing, 2026-09-23).
 
 - **Error boundary scope follows the document owner**: Route-segment `error.tsx` files render inside the existing document and must not add `<html>` or `<body>`; only `global-error.tsx` owns those tags. A local auth-env failure verified that nested tags create secondary hydration errors.
 - **Keep development credentials isolated**: `npm run dev` can inherit stale provider-generated `.env.local` values. Repair only through a gitignored `.env.development.local` override and keep production/build validation fail-closed.
