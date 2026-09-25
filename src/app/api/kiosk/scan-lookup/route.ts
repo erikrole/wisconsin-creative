@@ -1,3 +1,4 @@
+import { BookingCustodyScope } from "@prisma/client";
 import { db } from "@/lib/db";
 import { withKiosk } from "@/lib/api";
 import { HttpError, ok } from "@/lib/http";
@@ -62,6 +63,7 @@ export const POST = withKiosk(async (req, { kiosk }) => {
       booking: {
         select: {
           title: true,
+          custodyScope: true,
           requester: { select: { name: true } },
         },
       },
@@ -69,7 +71,11 @@ export const POST = withKiosk(async (req, { kiosk }) => {
   });
 
   if (activeAllocation) {
-    holder = activeAllocation.booking.requester.name;
+    // Shared (custodian-neutral) custody never discloses the requester's
+    // name, matching numbered-unit lookups and availability conflicts.
+    holder = activeAllocation.booking.custodyScope === BookingCustodyScope.SHARED
+      ? undefined
+      : activeAllocation.booking.requester?.name ?? undefined;
     dueAt = activeAllocation.endsAt.toISOString();
     bookingTitle = displayBookingTitle(activeAllocation.booking.title);
   }

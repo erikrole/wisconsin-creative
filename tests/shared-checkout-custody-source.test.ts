@@ -57,7 +57,7 @@ describe("shared checkout custody contracts", () => {
 
     expect(scanRoute).toContain("actorUserId: operationalActorId");
     expect(scanRoute).toContain("BookingCustodyScope.SHARED");
-    expect(completeRoute).toContain("booking.custodyScope === BookingCustodyScope.PERSON");
+    expect(completeRoute).toContain("result.custodyScope === BookingCustodyScope.PERSON");
     expect(client).toContain("Body(actorId: actorId, scanValue: scanValue)");
     expect(returnView).toContain("actorId: userId");
   });

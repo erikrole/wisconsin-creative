@@ -61,10 +61,13 @@ describe("iOS kiosk reservation pickup contract", () => {
     );
     expect(numberedBind).not.toContain("await tx.bookingBulkItem.update({");
 
-    // The bind must cover exactly plannedQuantity per numbered SKU — the
-    // ledger was decremented by planned, so under- or over-binding desyncs
-    // custody from stock from the first minute.
-    expect(lifecycle).toContain("if (bound !== item.plannedQuantity)");
+    // The bind must cover exactly this request's quantity per numbered SKU —
+    // the ledger was decremented by that quantity, so under- or over-binding
+    // desyncs custody from stock from the first minute. It is compared per
+    // request, not against an appended checkout's accumulated plan (behavior
+    // covered in tests/create-booking.test.ts).
+    expect(lifecycle).toContain("const expected = requestedQuantityBySku.get(item.bulkSkuId) ?? 0;");
+    expect(lifecycle).toContain("if (bound !== expected)");
 
     // Duplicate staged scans cannot satisfy planned quantity or double-bind.
     expect(confirmRoute).toContain("stagedUnitNumbers");

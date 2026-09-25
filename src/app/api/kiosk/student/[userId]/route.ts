@@ -38,11 +38,16 @@ export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) 
 
   const now = new Date();
 
+  // This hub lists the person's own custody and pickups. SHARED travel-case
+  // bookings keep a requester only as compatibility metadata (D-061), so they
+  // are excluded here; shared returns surface on the kiosk dashboard and shared
+  // pickups resolve by scanning any planned item (resolve-scan).
   const [checkouts, pendingPickups, dueReservations, reservations] = await Promise.all([
     // Active checkouts (OPEN)
     db.booking.findMany({
       where: {
         requesterUserId: params.userId,
+        custodyScope: "PERSON",
         kind: "CHECKOUT",
         status: "OPEN",
       },
@@ -74,6 +79,7 @@ export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) 
     db.booking.findMany({
       where: {
         requesterUserId: params.userId,
+        custodyScope: "PERSON",
         kind: "CHECKOUT",
         status: "PENDING_PICKUP",
       },
@@ -104,6 +110,7 @@ export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) 
     db.booking.findMany({
       where: {
         requesterUserId: params.userId,
+        custodyScope: "PERSON",
         kind: "RESERVATION",
         status: "BOOKED",
         startsAt: { lte: now },
@@ -137,6 +144,7 @@ export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) 
     db.booking.findMany({
       where: {
         requesterUserId: params.userId,
+        custodyScope: "PERSON",
         kind: "RESERVATION",
         status: "BOOKED",
         startsAt: {

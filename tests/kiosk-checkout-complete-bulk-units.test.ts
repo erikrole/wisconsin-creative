@@ -486,6 +486,8 @@ describe("kiosk checkout complete bulk units", () => {
       where: {
         kind: "CHECKOUT",
         requesterUserId: "user-1",
+        // Shared travel-case custody does not count against a personal cap.
+        custodyScope: "PERSON",
         status: { in: ["OPEN", "PENDING_PICKUP"] },
       },
     });
@@ -502,10 +504,19 @@ describe("kiosk checkout complete bulk units", () => {
 
     await expect(runCompleteKioskCheckout(completeRequest([
       { assetId: "asset-1" },
-    ]))).rejects.toThrow("User not found");
+    ]))).rejects.toThrow("Person not found");
 
+    // The in-transaction actor check uses the kiosk roster rule (active, not
+    // hidden, collaborators only when roster-eligible), not just `active`.
     expect(mocks.transactionUserFindFirst).toHaveBeenCalledWith({
-      where: { id: "user-1", active: true },
+      where: expect.objectContaining({
+        id: "user-1",
+        active: true,
+        hiddenFromRoster: false,
+        OR: expect.arrayContaining([
+          expect.objectContaining({ role: "COLLABORATOR" }),
+        ]),
+      }),
       select: { id: true, role: true },
     });
     expect(mocks.userFindFirst).not.toHaveBeenCalled();

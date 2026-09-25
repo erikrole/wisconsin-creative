@@ -622,6 +622,7 @@ export async function scanKioskCheckinBulkUnit(
 
   const completedAt = await maybeAutoComplete(tx, booking.id, booking.locationId, args.actorUserId, {
     auditAction: "auto_completed_by_kiosk_checkin",
+    returnedFor: booking,
   });
 
   return {
