@@ -221,6 +221,7 @@ struct KioskOperatorHubView: View {
                         ) {
                             Button("Pick up") { startPickup(id: reservation.id, title: reservation.title, startsAt: reservation.startsAt) }
                                 .kioskButtonRole(.primary)
+                                .accessibilityHint("Start pickup now")
                         }
                     }
                 }
