@@ -2,6 +2,99 @@ import XCTest
 @testable import Wisconsin
 
 final class BookingModelsTests: XCTestCase {
+    func testCheckedOutGearCanBeReservedAfterTheTurnaroundBuffer() {
+        let dueBack = Date(timeIntervalSince1970: 1_800_000_000)
+        let pickup = dueBack.addingTimeInterval(60 * 60)
+
+        XCTAssertTrue(canReserveSerializedAssetForWindow(
+            computedStatus: .checkedOut,
+            holderEndsAt: dueBack,
+            requestedStartsAt: pickup,
+            hasConflict: false
+        ))
+        XCTAssertFalse(canReserveSerializedAssetForWindow(
+            computedStatus: .checkedOut,
+            holderEndsAt: dueBack.addingTimeInterval(60),
+            requestedStartsAt: pickup,
+            hasConflict: false
+        ))
+        XCTAssertFalse(canReserveSerializedAssetForWindow(
+            computedStatus: .pendingPickup,
+            holderEndsAt: nil,
+            requestedStartsAt: pickup,
+            hasConflict: false
+        ))
+        XCTAssertTrue(canReserveSerializedAssetForWindow(
+            computedStatus: .reserved,
+            holderEndsAt: dueBack,
+            requestedStartsAt: pickup,
+            hasConflict: false
+        ))
+    }
+
+    func testReservationWindowStillBlocksMaintenanceAndKnownOverlaps() {
+        let pickup = Date(timeIntervalSince1970: 1_800_003_600)
+
+        XCTAssertTrue(canReserveSerializedAssetForWindow(
+            computedStatus: .available,
+            holderEndsAt: nil,
+            requestedStartsAt: pickup,
+            hasConflict: false
+        ))
+        XCTAssertFalse(canReserveSerializedAssetForWindow(
+            computedStatus: .available,
+            holderEndsAt: nil,
+            requestedStartsAt: pickup,
+            hasConflict: true
+        ))
+        XCTAssertFalse(canReserveSerializedAssetForWindow(
+            computedStatus: .maintenance,
+            holderEndsAt: nil,
+            requestedStartsAt: pickup,
+            hasConflict: false
+        ))
+        XCTAssertFalse(canReserveSerializedAssetForWindow(
+            computedStatus: .retired,
+            holderEndsAt: pickup,
+            requestedStartsAt: pickup.addingTimeInterval(86_400),
+            hasConflict: false
+        ))
+    }
+
+    func testCurrentHoldCopyUsesTheReturnWhenTheListOmitsAStart() {
+        let endsAt = Date(timeIntervalSince1970: 1_800_000_000)
+        let pending = ReservationAvailabilityCaption.make(
+            requesterName: "Ryan",
+            kind: "CHECKOUT",
+            status: "PENDING_PICKUP",
+            startsAt: nil,
+            endsAt: endsAt,
+            now: endsAt.addingTimeInterval(-3_600)
+        )
+        let reserved = ReservationAvailabilityCaption.make(
+            requesterName: "Ryan",
+            kind: "RESERVATION",
+            status: "BOOKED",
+            startsAt: nil,
+            endsAt: endsAt,
+            now: endsAt.addingTimeInterval(-3_600)
+        )
+        let later = ReservationAvailabilityCaption.make(
+            requesterName: "Ryan",
+            kind: "RESERVATION",
+            status: "BOOKED",
+            startsAt: endsAt.addingTimeInterval(86_400),
+            endsAt: endsAt.addingTimeInterval(90_000),
+            now: endsAt
+        )
+
+        XCTAssertEqual(pending?.kind, .held)
+        XCTAssertTrue(pending?.text.hasPrefix("Ryan has this item until") == true)
+        XCTAssertEqual(reserved?.kind, .held)
+        XCTAssertEqual(later?.kind, .reserved)
+        XCTAssertTrue(later?.text.hasPrefix("Ryan has reserved for") == true)
+    }
+
     func testBookingDecodesCanonicalActionsAndEveryLinkedEvent() throws {
         let booking = try decodeBooking(extraFields: """
           "events": [

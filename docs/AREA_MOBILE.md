@@ -3,7 +3,7 @@
 ## Document Control
 - Area: Mobile Operations
 - Owner: Wisconsin Athletics Creative Product
-- Last Updated: 2026-09-19
+- Last Updated: 2026-09-25
 - Status: Active
 - Version: V1
 
@@ -22,7 +22,7 @@ Cheqroom mobile patterns show useful primitives but too much menu depth and too 
 4. Overdue is always visually red and sorted to the top.
 5. Event sync supports booking context and prefill, but V1 mobile does not require an Upcoming Events dashboard section.
 6. Tap targets stay at 44px or larger.
-7. Native reservation equipment rows consume the server's top-level availability result before selection. Known serialized conflicts are disabled and block review; reserved-for copy is purple and currently-out copy is red. Next-use, close-turnaround, transfer, and condition notices remain actionable advisories and are not labeled as conflicts on Review. A failed refresh preserves the last known result and blocks review until availability can be checked again.
+7. Native reservation equipment rows consume the server's top-level availability result before selection. Search includes gear that is checked out, awaiting pickup, or on an active reservation, and that gear stays addable when pickup is at least 60 minutes after the current hold ends. Known serialized conflicts are disabled and block review; reserved-for copy is purple and currently-out copy is red. Next-use, close-turnaround, transfer, and condition notices remain actionable advisories and are not labeled as conflicts on Review. A failed refresh preserves the last known result and blocks review until availability can be checked again.
 8. Native Schedule reads events and personal shifts in week windows through total-aware API pages (`startDate`/`endDate` on `/api/calendar-events` and `/api/my-shifts`). It opens on today, prefetches future weeks ahead of the reader, and reveals past weeks two at a time behind a deliberate pull at the top. Every role can scroll into the past; the server has never limited past events by role, and the staff-only Past toggle is retired (2026-09-23). Native Event detail shows an approval-aware pending state for the signed-in student's own open-slot request, while claim review queues and approve/decline actions render only for Admins. Student Trade Board/Open Work payloads contain claim opportunities from the viewer's primary area only, except Photo and Graphics share one claim pool.
 9. Native Booking Detail keeps Extend available for an eligible `OPEN` checkout even when the gear is needed later. It names the next-needed boundary, while the server blocks any selected due time that would truly overlap that booking.
 
@@ -145,6 +145,7 @@ Navigation shell versioned roadmap: `tasks/sidebar-roadmap.md` (revised 2026-03-
 
 ## Change Log
 
+- 2026-09-25: **Native reservation search includes gear that is out now (local).** A checked-out camera or lens stays in Gear search and can be reserved once the pickup is at least 60 minutes after it is due back. Overlapping holds stay blocked and name who has the item. Source contracts updated; authenticated device proof remains open.
 - 2026-09-23: **Schedule follow-ups: pending claims, draft identity, hashed feed token (local).**
   - Event detail marks an open slot with its waiting student claims ("2 waiting"); tapping opens the Trade Board, and the crew refreshes on return.
   - Every draft edit, publish and discard names the draft it was made against (`expectedDraftId`), so a stale screen can no longer land an edit on a newer draft that restarted at the same version. Web does the same.
