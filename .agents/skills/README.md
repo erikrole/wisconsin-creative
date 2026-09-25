@@ -16,6 +16,7 @@ Use repository-local skills directly. Start with the user's task; choose one pri
 | A substantial plan or next-slice decision | `gt-plan` |
 | Repository-wide priorities | `improve` |
 | Scoped documentation reconciliation | `area-doc-sync` |
+| Writing tests, or auditing low-value tests | `gt-test-audit` |
 | Post-integration debris | `gt-clean-after-merge` |
 | The requested commit, push, PR, deployment, or release | `gt-ship` |
 
