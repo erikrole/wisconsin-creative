@@ -21,7 +21,7 @@
 | `src/lib/services/booking-rules.ts` | 135 |
 | `src/lib/services/bookings-checkin.ts` | 855 |
 | `src/lib/services/bookings-helpers.ts` | 282 |
-| `src/lib/services/bookings-lifecycle.ts` | 3198 |
+| `src/lib/services/bookings-lifecycle.ts` | 3209 |
 | `src/lib/services/bookings-queries.ts` | 311 |
 | `src/lib/services/bookings.ts` | 9 |
 | `src/lib/services/bulk-assignment-batches.ts` | 253 |
@@ -69,7 +69,7 @@
 | `src/lib/services/reservation-pickup-guard.ts` | 62 |
 | `src/lib/services/reservation-pickup-location.ts` | 34 |
 | `src/lib/services/reservation-rules.ts` | 46 |
-| `src/lib/services/reservation-schedule.ts` | 639 |
+| `src/lib/services/reservation-schedule.ts` | 654 |
 | `src/lib/services/scans.ts` | 168 |
 | `src/lib/services/schedule-automation.ts` | 336 |
 | `src/lib/services/schedule-call-time-sync.ts` | 470 |
