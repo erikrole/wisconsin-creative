@@ -7,6 +7,7 @@ import { findAssetByScanValue } from "@/lib/services/kiosk-scan";
 import { findBulkUnitByScanValue } from "@/lib/services/bulk-unit-scans";
 import { scanLookupBody } from "@/lib/schemas/kiosk";
 import { displayBookingTitle } from "@/lib/booking-display-title";
+import { checkUpcomingSerializedCommitments } from "@/lib/services/availability";
 
 /** Look up an item by QR code or asset tag */
 export const POST = withKiosk(async (req, { kiosk }) => {
@@ -25,6 +26,13 @@ export const POST = withKiosk(async (req, { kiosk }) => {
   if (!asset) {
     const unit = await findBulkUnitByScanValue(scanValue);
     if (unit) {
+      // Numbered units are reserved by count, not by unit, so no unit has a
+      // "free until"; last back is when its latest custody episode closed.
+      const lastUnitReturn = await db.bookingBulkUnitAllocation.findFirst({
+        where: { bulkSkuUnitId: unit.id, checkedInAt: { not: null } },
+        orderBy: { checkedInAt: "desc" },
+        select: { checkedInAt: true },
+      });
       const status = unit.status === "CHECKED_OUT"
         ? unit.dueAt && new Date(unit.dueAt) < new Date()
           ? "Overdue"
@@ -41,6 +49,8 @@ export const POST = withKiosk(async (req, { kiosk }) => {
           holder: unit.holder,
           dueAt: unit.dueAt,
           bookingTitle: unit.bookingTitle ? displayBookingTitle(unit.bookingTitle) : unit.bookingTitle,
+          freeUntil: null,
+          lastReturnedAt: lastUnitReturn?.checkedInAt ?? null,
         },
       });
     }
@@ -53,22 +63,35 @@ export const POST = withKiosk(async (req, { kiosk }) => {
   let dueAt: string | undefined;
   let bookingTitle: string | undefined;
 
-  const activeAllocation = await db.assetAllocation.findFirst({
-    where: {
-      assetId: asset.id,
-      active: true,
-    },
-    select: {
-      endsAt: true,
-      booking: {
-        select: {
-          title: true,
-          custodyScope: true,
-          requester: { select: { name: true } },
+  const now = new Date();
+  const [activeAllocation, upcoming, lastReturn] = await Promise.all([
+    db.assetAllocation.findFirst({
+      where: {
+        assetId: asset.id,
+        active: true,
+      },
+      select: {
+        endsAt: true,
+        booking: {
+          select: {
+            title: true,
+            custodyScope: true,
+            requester: { select: { name: true } },
+          },
         },
       },
-    },
-  });
+    }),
+    // "Free until": the next reservation or checkout claiming this asset,
+    // by the same rule availability uses for upcoming commitments.
+    checkUpcomingSerializedCommitments(db, { serializedAssetIds: [asset.id], endsAt: now }),
+    // "Last back": when its latest checkout allocation closed (return or
+    // removal from a checkout), via the indexed asset allocation history.
+    db.assetAllocation.findFirst({
+      where: { assetId: asset.id, active: false, kind: "CHECKOUT" },
+      orderBy: { updatedAt: "desc" },
+      select: { updatedAt: true },
+    }),
+  ]);
 
   if (activeAllocation) {
     // Shared (custodian-neutral) custody never discloses the requester's
@@ -99,6 +122,8 @@ export const POST = withKiosk(async (req, { kiosk }) => {
       holder,
       dueAt,
       bookingTitle,
+      freeUntil: upcoming[0]?.startsAt ?? null,
+      lastReturnedAt: lastReturn?.updatedAt ?? null,
     },
   });
 });
