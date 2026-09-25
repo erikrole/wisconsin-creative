@@ -39,18 +39,36 @@ describe("badge service feature flag", () => {
     process.env.BADGES_ENABLED = originalFlag;
   });
 
-  it("returns before evaluator work when BADGES_ENABLED is not true", async () => {
-    process.env.BADGES_ENABLED = "false";
-
-    await badges.onCheckoutOpened({
+  it.each([
+    ["onCheckoutOpened", () => badges.onCheckoutOpened({
       userId: "user-1",
       bookingId: "booking-1",
       source: "kiosk_checkout",
       sourceKey: "booking-1",
-    });
+    })],
+    ["onCheckoutReturned", () => badges.onCheckoutReturned({
+      userId: "user-1",
+      bookingId: "booking-1",
+      completedAt: new Date("2026-05-09T18:00:00.000Z"),
+      wasOnTime: true,
+      sourceKey: "booking-1",
+    })],
+    ["onAppOpened", () => badges.onAppOpened({
+      userId: "user-1",
+      occurredAt: new Date("2026-08-10T07:30:00.000Z"),
+    })],
+    ["onTradeCompleted", () => badges.onTradeCompleted({
+      userId: "user-1",
+      tradeId: "trade-1",
+      sourceKey: "trade-1",
+    })],
+  ] as const)("%s returns before evaluator work when BADGES_ENABLED is not true", async (handler, call) => {
+    process.env.BADGES_ENABLED = "false";
+
+    await call();
 
     expect(badgesEnabled()).toBe(false);
-    expect(evaluator.onCheckoutOpened).not.toHaveBeenCalled();
+    expect(evaluator[handler]).not.toHaveBeenCalled();
     expect(captureBadgeError).not.toHaveBeenCalled();
   });
 

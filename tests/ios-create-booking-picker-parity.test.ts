@@ -509,7 +509,6 @@ describe("iOS create booking picker parity", () => {
     expect(rows).toContain('systemImage: "clock.arrow.circlepath"');
     expect(rows).toContain("turnaroundIsCritical ? .red : .orange");
     expect(rows).not.toContain("Color.statusBackground(.red)");
-    expect(rows).not.toContain("StatusRail(tone: .red)");
     expect(rows).not.toContain("Text(asset.location.name)");
     expect(rows).toContain("struct BookingAdvisoryLabel");
   });

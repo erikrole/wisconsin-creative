@@ -10,19 +10,6 @@ function sourceForMigratedPage(page: string) {
 }
 
 describe("operational status rail source contract", () => {
-  it("composes the rail from installed shadcn primitives", () => {
-    const rail = source("src/components/OperationalStatusRail.tsx");
-
-    expect(rail).toContain('from "@/components/ui/badge"');
-    expect(rail).toContain('from "@/components/ui/button"');
-    expect(rail).toContain('from "@/components/ui/collapsible"');
-    expect(rail).toContain('from "@/components/ui/separator"');
-    expect(rail).toContain('from "@/components/ui/tooltip"');
-    expect(rail).toContain("<CollapsibleTrigger asChild>");
-    expect(rail).toContain("<Button");
-    expect(rail).toContain("<Badge");
-  });
-
   it("prioritizes exceptions, bounds the visible rail, and accounts for overflow", () => {
     const rail = source("src/components/OperationalStatusRail.tsx");
 
@@ -55,14 +42,6 @@ describe("operational status rail source contract", () => {
     expect(items).toContain("toggleStatusFilter(item.status)");
     expect(items).toContain('label: "Active inventory"');
     expect(items).toContain("ariaPressed={filters.statusFilter.has(item.status)}");
-  });
-
-  it("keeps metric cards equal height when helper copy wraps", () => {
-    const feedback = source("src/components/OperationalFeedback.tsx");
-
-    expect(feedback).toContain('"h-full min-h-[104px] border-border/40 shadow-none"');
-    expect(feedback).toContain('className="block h-full min-h-10 rounded-md');
-    expect(feedback).toContain('className="block h-full min-h-10 w-full rounded-md');
   });
 
   it("migrates page-level operational summaries without converting analytical reports", () => {

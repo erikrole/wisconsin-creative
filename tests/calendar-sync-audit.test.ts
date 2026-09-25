@@ -156,4 +156,31 @@ describe("syncCalendarSource audit coverage", () => {
       })],
     });
   });
+
+  it("records a failed write chunk without losing the rest of the sync, and samples diagnostics", async () => {
+    const eventBlock = (n: number) => [
+      "BEGIN:VEVENT",
+      `UID:event-${n}`,
+      `SUMMARY:Event ${n}`,
+      `DTSTART:202608${String(n).padStart(2, "0")}T190000Z`,
+      `DTEND:202608${String(n).padStart(2, "0")}T220000Z`,
+      "END:VEVENT",
+    ];
+    const bad = ["BEGIN:VEVENT", "UID:bad-1", "SUMMARY:Broken", "DTSTART:garbage", "DTEND:garbage", "END:VEVENT"];
+    const feed = ["BEGIN:VCALENDAR", "VERSION:2.0", ...bad, ...Array.from({ length: 7 }, (_, i) => eventBlock(i + 1)).flat(), "END:VCALENDAR"].join("\r\n");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ...fetchedFeed(), text: async () => feed }));
+    txMock.calendarEvent.createManyAndReturn.mockRejectedValue(new Error("x".repeat(400)));
+
+    const result = await syncCalendarSource("source-1");
+
+    expect(result.added).toBe(0);
+    expect(result.skipped).toBe(8);
+    expect(result.errors.map((e) => e.operation)).toEqual(["validate", "create"]);
+    expect(result.errors[0]).toMatchObject({ uid: "bad-1" });
+    expect(result.errors[1]!.reason).toHaveLength(301);
+    expect(result.errors[1]!.reason.endsWith("\u2026")).toBe(true);
+    expect(result.diagnostics?.parsedEventCount).toBe(8);
+    expect(result.diagnostics?.firstEvents).toHaveLength(5);
+    expect(result.diagnostics?.firstEvents[0]?.uid).toBe("event-1");
+  });
 });

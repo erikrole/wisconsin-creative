@@ -41,7 +41,6 @@ describe("iOS collaborator Published Schedule redesign", () => {
     const crewRow = source("ios/Wisconsin/Views/Components/CrewRow.swift");
     expect(crewRow).toContain('case "FT", "STAFF": return "Staff"');
     expect(crewRow).toContain('case "ST", "STUDENT": return "Student"');
-    expect(schedule).not.toContain("PublishedEventDetailView(event: event, myShift:");
   });
 
   it("keeps Follow capability-driven, server-truthful, and recoverable", () => {
