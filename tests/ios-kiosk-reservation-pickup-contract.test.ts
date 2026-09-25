@@ -26,7 +26,7 @@ describe("iOS kiosk reservation pickup contract", () => {
 
     expect(models).toContain("struct KioskPendingPickup: Decodable, Identifiable");
     expect(operatorHub).toContain("startPickup(id: pickup.id, title: pickup.title, startsAt: pickup.startsAt)");
-    expect(operatorHub).toContain("startPickup(id: res.id, title: res.title, startsAt: res.startsAt)");
+    expect(operatorHub).toContain("startPickup(id: reservation.id, title: reservation.title, startsAt: reservation.startsAt)");
     expect(operatorHub).toContain("source: .reservation");
     expect(operatorHub).toContain('accessibilityHint("Start pickup now")');
     expect(apiClient).toContain("func kioskCheckoutDetail(id: String)");
