@@ -120,11 +120,12 @@ Existing contracts the redesign changes on purpose (update tests and AREA_KIOSK 
 ## Ledger
 
 - [x] Phase 0: frame map above (2026-09-25).
+- [x] Server slices S1–S9 (merged `7200a7d0`): allowance, dashboard home data, nudge, peer transfer, damaged/missing report, extend window, lookup extras, atomic swap, pickup/return undo. Swift clients for these are not wired yet.
 - [x] 1a Tokens: SF Pro type scale with a 14 pt floor, section colors, white primary pill, applied through `KioskType` / `KioskStatus` / `kioskButtonRole` so every screen shifts at once (before/after review across all fixtures)
-- [ ] 1b Shared components (task scaffold, list rows, battery row, confirmation stage with Undo, sheets), added without rewiring screens yet
-- [ ] Home (A) and standby/setup (J1–J2)
-- [ ] Hubs (C)
-- [ ] New checkout (D, I1, I5, I6)
+- [x] 1b Shared components (task scaffold, list rows, battery row, confirmation stage with Undo, sheets), added without rewiring screens yet
+- [x] Home (A1, A2, A4), standby and setup (J1–J2). Pending: wiring the new dashboard data (pickups section, Today pickup and shift tiles, A3 game day, A5 Nudge) and A6.
+- [~] Hubs: C1 and C2 are done. Pending: C3 limit card and C4 unfinished card (server `checkoutAllowance` has landed), and C5 staff actions.
+- [~] New checkout: D2, D4–D8, I5 and I6 are done, and the kit entry is on the scan screen. Pending: D3 fidelity check, I1 as a card rather than a system dialog, and the kit checklist polish (E).
 - [ ] Pickup (F)
 - [ ] Return (G, I2)
 - [ ] Changes (H)
