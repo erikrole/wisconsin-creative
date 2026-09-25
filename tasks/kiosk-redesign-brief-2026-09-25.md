@@ -58,10 +58,64 @@ The design canvas **Kiosk Redesign**: https://claude.ai/artifact/85Mem1ezt3oxdw5
 - Follow `AGENTS.md`: `gt-ios-slice` workflow; new Swift files via `xcodegen generate` with the regenerated `project.pbxproj`; `WisconsinKiosk` build and tests on the iPad Air 11-inch (M4) iOS 26.5 simulator; affected source-contract tests; a `gt-ui-review` before/after for every visible slice using `scripts/kiosk-capture-scenarios.sh` and new `GT_KIOSK_SCENARIO` fixtures per frame.
 - Physical proof happens in the managed-iPad session next week; simulator captures prove presentation only.
 
+## Phase 0 frame map (2026-09-25)
+
+Class: **a** = UI on existing endpoints · **b** = new server work that changes no rule · **c** = rule change, waits for Erik · **d** = the canvas shows data that exists nowhere today (drop, or back it with b).
+
+Corrections to the "already backed" list: the **checkout limit** is only a plain 409 at `checkout/complete` (message text, no code; `checkout_policies.maxItemsPerUser`, default `null` = no limit) and `student/[userId]` exposes nothing, so C3 needs server work. **Extend** PATCH validates but never returns a latest allowed time. **Staged battery replace** is pickup-only; H4 swaps on an *active* checkout, which is two separate transactions today. **Reservation edits** save on every tap, while H5 says "Nothing changes until you save".
+
+| Frame | Today | Endpoint(s) | Class | What changes / gap |
+| --- | --- | --- | --- | --- |
+| A1 nothing out | `KioskIdleView` | `dashboard`, `users` | a | Rebuild: SF Pro clock with seconds, "Everything is in" card, no stat tiles, no health dot when healthy. "Next up" needs the next event/pickup (b, small: dashboard `nextUp`). |
+| A2 typical afternoon | `KioskIdleView` checkout list | `dashboard` | a+b | Sectioned cards (overdue / due today / ready for pickup / out, due later). Due-today is derivable client-side; **pickups ready is missing from the dashboard** (b). Today tiles: overdue + due-today derivable; pickup + shift-call-within-2h need server (b). Everyone grid 4 cols ≤24 else 5 cols no photos. |
+| A3 game day | — | `dashboard.events` | b + d | Group by event, pickups first. Needs checkouts linked to events and pickups in payload (b). "Crew without gear" needs shift-assignment × booking join (b; `ShiftAssignment.bookings` exists). Kit role labels beyond Slow 1–2, Bench, Roam 1–4 (Sideline, High, Photo) do not exist (d). |
+| A4 offline | idle `connectionTone` dot | client only | a | Band shows only real problems: "Offline for N min · Showing what was true at …". Sleeping scanner is not an error. |
+| A5 nudge | — | web `bookings/[id]/nudge` (staff only, once per booking per UTC hour) | **c** | The frame puts Nudge on home with nobody identified, so "anyone" is baked in. Staff-only moves it into C5. Kiosk route + per-day limit after the decision. |
+| A6 who's returning | `KioskIdentityView` (return-other) | `checkin/*` actor rule (anyone may return) | a | New sheet layout: booking card left, owner first then "Someone else" grid. |
+| B1 free gear | idle scan → `pendingIntent` → identity | `resolve-scan` (`pending_identity/available`), `scan-lookup` | a + d | "Where: Shelf B2" has no field (Asset has only `locationId`, `notes`) (d). "Free until" (next reservation) and "Last back" are computable but not returned (b). |
+| B2 reserved gear | identity (expected requester) | `resolve-scan` (`booked_reservation`) | a | Single "Continue as Erik" card; copy "Put it back on the shelf". |
+| C1 hub, nothing out | `KioskOperatorHubView` | `student/[userId]`, `events?userId` | a | Header 56 pt name, green "Check out gear" hero, OUT WITH YOU / READY TO PICK UP / YOUR SHIFTS with "Check out for this". |
+| C2 hub, gear + pickup | hub + `KioskCheckoutDetailSheet` | `student`, `checkout/[id]` | a | Inline Return / Extend / Add items / Transfer buttons per booking; Pick up / Change what's reserved. Transfer button for students depends on decision 2 (hide until then). |
+| C3 at the limit | — | `checkout/complete` 409 | b | Add `openCheckoutCount` + `checkoutLimit` (or `canCheckout` + reason) to `student/[userId]`, and an error code on the 409. Same card covers the leftover-pickup block. |
+| C4 unfinished checkout | pending handoff in `KioskAPIClient` (`hasPendingCheckout`) | receipts replay/reject | a | Card on the hub with Check it now / Discard; checkout hero disabled "Finish the one above first". |
+| C5 staff on a booking | detail sheet (edit allowed for staff) | `checkout/[id]` PATCH, `checkout/[id]/transfer` (staff) | a + b | Change due back and Transfer whole checkout: a. "Mark returned without scanning": kiosk has nothing; web `checkouts/[id]/admin-override` needs `checkout.admin_override` (b if the same permission applies; ask). "Report lost or damaged": see G. |
+| D1 tap your name | idle | — | a | Same as A2. |
+| D2 details | `KioskCheckoutView` step 1 | `events?userId` | a | Shifts list with white-outline selection, "Something else" field, day chips + time chips + "90 min after" + Back by summary. **Reverses** the 2026-09 removal of time presets (brief wins; changelog must say so). Kit row removed from details. |
+| D3 other date | native pickers | — | a | Month grid + time chips sheet. |
+| D4–D5 scan, items | `KioskCheckoutView` step 2 | `checkout/scan`, `availability` | a | Task scaffold: context card + Edit, scan stage left, TAKING OUT list right, white primary pill. Undo = remove from local cart. |
+| D6 blocked scan | `What now?` / rejection | `availability` | a + d | "NOT ADDED … Your list didn't change." "Available now, same model" suggestions don't exist (d, or b: same-product availability query). |
+| D7–D8 receipt | `KioskSuccessView` | completion payloads | a | Receipt card with ref, items, due; badge card; "Home in 6s". "You'll get a reminder tomorrow evening" copy must match real reminder timing. |
+| E1–E3 kits | checkout details kit menu | `kits`, `kits/[id]`, `checkout/complete kitId` | **c** (entry point) + a | Checklist behaviour exists (a). Entry point is decision 1. E3 "asks first" is a. Roles like Slow 3, Roam 5, Sideline 2 are not in `FootballGamedayKitRole` (d). |
+| F1 pickup | `KioskPickupView` | `pickup/[id]/scan`, `confirm` | a | Task scaffold, blue section color, battery row "#12" filled/outlined, Undo. Undo for serialized staged scans: DELETE handles numbered units only (b for serialized unstage). |
+| F2 off-plan | Add/Discard dialog | `pickup/[id]/scan intent:add` | a | Inline card "Put it back / Add MIC-12". |
+| F3 substitute | swap dialog | `pickup/[id]/substitute` | a + d | Same-model suggestion list (d). |
+| F4 shared case | pickup SHARED | same | a | Violet section; "Pick up for the team". |
+| F5 receipt | success | confirm `remainingItemNames` | a | Leftover line. |
+| G1–G2 return | `KioskReturnView` | `checkin/[id]/scan`, `quantity`, `complete` | a + b | Amber section, "Something damaged or missing?" link, "N back · M still out". **Undo of a return scan has no endpoint** (b: un-return a scan made in this session). |
+| G3–G5 damaged / missing | — | web `checkouts/[id]/checkin-report` (user session; Blob photo) | b | Kiosk route wrapping the same `CheckinItemReport {DAMAGED, LOST}` service. Damaged: returned + asset to MAINTENANCE ("held for staff"). **Conflict:** web LOST counts the item as accounted for; G5 says it "stays on your record until it turns up". Needs Erik's confirmation of which. Camera capture on iPad is device-only proof. |
+| G6 receipt | success | — | a | Returned + marked missing cards. |
+| H1 extend | detail sheet date edit | `checkout/[id]` PATCH | a + b | "Can go until 10:00 PM" needs the latest allowed time (b: return the earliest conflicting start, or a `maxEndsAt` preview). |
+| H2–H3 transfer + accept | — | `checkout/[id]/transfer` (staff, immediate) | **c** | No pending/accept model. Peer transfer is decision 2. |
+| H4 swap a unit | — | `checkout/[id]` POST + DELETE (two transactions) | b | Atomic `POST checkout/[id]/swap`; "Something's wrong with it" routes through G4's report. |
+| H5 change reservation | pickup remaining-item edits | `reservation/[id]/items` (immediate per op) | a or b | Either change the copy to "saved as you go" (a) or add a batch save (b). Ask. Swap = remove + add. |
+| I1 discard scans | cancel confirm | client | a | Sheet with red Discard. |
+| I2 return with gear out | — | client | a | Asks first. |
+| I3 scanner asleep | scanner pill | client | a | Inline scan-stage copy; not an error. |
+| I4 still here? | `InactivityWarningOverlay` | client | a | Countdown ring, "your 3 scans wait 20 minutes". |
+| I5 not confirmed | pending handoff | receipts | a | Card in scan stage with auto-retry countdown. |
+| I6 keyboard tip | `KioskKeyboardHint` (shell popup) | client | a | Inline under the focused field, never centered. |
+| J1 setup | `KioskActivationView` | `activate` | a | White Go key, Paste code / Use keyboard. |
+| J2 standby | `KioskSleepModeView` | `dashboard.standby` | a | 132 pt dim clock on black, "Tap or scan to wake · Next: …". |
+| J3 phone messages | — | web notifications | c / b | Notification copy, not kiosk UI. Due/overdue copy is web work; nudge/transfer messages wait on decisions 2–3. |
+| J4 sound + motion | `KioskFeedbackSound` + ad-hoc animation | client | a | Accept / reject / undo / done / badge / attention / warning sounds; 150 ms fades under Reduce Motion. |
+
+Existing contracts the redesign changes on purpose (update tests and AREA_KIOSK in the same slice): AC-26 puts Back top-left, but the canvas puts time and Back top-right (`tests/ios-kiosk-back-button.test.ts`). `KioskStatus` uses blue for checked out and purple for reserved; the canvas uses green = taking out, amber = coming back, blue = picking up, violet = shared. `KioskButtonRole.primary` is brand-red glass; the canvas primary is a solid white pill (`tests/ios-kiosk-liquid-glass.test.ts`). Gotham appears in about 126 call sites across 10 files.
+
 ## Ledger
 
-- [ ] Phase 0: map every frame to its current view and `/api/kiosk/*` endpoint; list gaps. Already backed: counted-stock return, pickup off-plan add and substitute, pending handoff, checkout limit, extend (PATCH), staged battery replace. Likely new server work: nudge, peer transfer with accept, damaged/missing reports with photo, possibly plain swap. Rule-changing server work waits for the open decisions.
-- [ ] Tokens and shared components (type scale, colors, task-screen scaffold, list rows, battery row, confirmation stage with Undo, sheets)
+- [x] Phase 0: frame map above (2026-09-25).
+- [ ] 1a Tokens: SF Pro type scale with a 14 pt floor, section colors, white primary pill, applied through `KioskType` / `KioskStatus` / `kioskButtonRole` so every screen shifts at once (before/after review across all fixtures)
+- [ ] 1b Shared components (task scaffold, list rows, battery row, confirmation stage with Undo, sheets), added without rewiring screens yet
 - [ ] Home (A) and standby/setup (J1–J2)
 - [ ] Hubs (C)
 - [ ] New checkout (D, I1, I5, I6)
