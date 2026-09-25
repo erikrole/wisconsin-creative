@@ -91,6 +91,10 @@ const baseConfig: NextConfig = {
     return [
       { source: "/guides", destination: "/resources", permanent: true },
       { source: "/guides/:path*", destination: "/resources/:path*", permanent: true },
+      // QR Studio is a static, client-only tool in public/qrcode. Linking to the
+      // file path keeps it outside the nonce-CSP middleware, whose matcher skips
+      // dotted paths; the page carries its own stricter CSP.
+      { source: "/qrcode", destination: "/qrcode/index.html", permanent: false },
     ];
   },
 };
