@@ -43,7 +43,8 @@ struct KioskShellView: View {
     private var showsSystemStatusButton: Bool {
         switch store.screen {
         case .success:
-            return !showSystemStatus
+            // The redesigned receipt puts the person's portrait here.
+            return false
         // Idle hosts the control in its own header.
         case .idle, .activation, .operatorHub, .identity, .checkout, .pickup, .return:
             return false

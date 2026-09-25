@@ -833,10 +833,42 @@ struct KioskSuccessInfo: Equatable {
     let kind: KioskSuccessKind
     let message: String
     let earnedBadges: [EarnedBadgeReward]
+    /// The redesign's receipt card (D7, F5, G6). Optional so any caller that
+    /// only has a sentence still gets a correct, simpler receipt.
+    let receipt: KioskReceipt?
 
-    init(kind: KioskSuccessKind, message: String, earnedBadges: [EarnedBadgeReward] = []) {
+    init(kind: KioskSuccessKind, message: String, earnedBadges: [EarnedBadgeReward] = [], receipt: KioskReceipt? = nil) {
         self.kind = kind
         self.message = message
         self.earnedBadges = earnedBadges
+        self.receipt = receipt
     }
+}
+
+/// "All set, Harper." then a card per record written.
+struct KioskReceipt: Equatable {
+    struct Card: Equatable {
+        let overline: String
+        let refNumber: String?
+        let title: String
+        let detail: String?
+        let footnote: String?
+        let isProblem: Bool
+
+        init(overline: String, refNumber: String? = nil, title: String, detail: String? = nil, footnote: String? = nil, isProblem: Bool = false) {
+            self.overline = overline
+            self.refNumber = refNumber
+            self.title = title
+            self.detail = detail
+            self.footnote = footnote
+            self.isProblem = isProblem
+        }
+    }
+
+    let firstName: String
+    let avatarURL: String?
+    let initials: String
+    let cards: [Card]
+    /// What happens next, in one or two sentences.
+    let nextStep: String?
 }

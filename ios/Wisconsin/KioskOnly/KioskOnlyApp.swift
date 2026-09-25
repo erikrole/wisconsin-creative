@@ -106,7 +106,19 @@ struct WisconsinKioskApp: App {
             kioskStore.screen = .success(KioskSuccessInfo(
                 kind: .checkout,
                 message: "Checked out 4 items for Volleyball vs Minnesota from Camp Randall.",
-                earnedBadges: [KioskFixtures.badge]
+                earnedBadges: [KioskFixtures.badge],
+                receipt: KioskReceipt(
+                    firstName: "Erik",
+                    avatarURL: nil,
+                    initials: "ER",
+                    cards: [KioskReceipt.Card(
+                        overline: "Checked out",
+                        refNumber: "CO-1053",
+                        title: "4 items · Volleyball vs Minnesota",
+                        detail: "CAM-014, AUD-007, SUP-031, BAT-004 · due today at 8:30 PM"
+                    )],
+                    nextStep: "Bring it back and scan it in, or anyone can return it for you."
+                )
             ))
         case .inactivity:
             kioskStore.screen = .operatorHub(kioskUser)

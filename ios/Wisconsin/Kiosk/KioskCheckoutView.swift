@@ -983,10 +983,23 @@ struct KioskCheckoutView: View {
                 store.clearCheckoutDraft(for: userId)
                 store.clearIntent(reason: .success)
                 scannerCaptureEnabled = false
+                let count = completion.itemCount ?? cart.count
                 store.screen = .success(KioskSuccessInfo(
                     kind: .checkout,
-                    message: completion.itemCount.map { "\($0) item\($0 == 1 ? "" : "s") checked out. Your handoff is recorded." } ?? "Your checkout is recorded.",
-                    earnedBadges: earnedBadges
+                    message: "\(count) item\(count == 1 ? "" : "s") checked out. Your handoff is recorded.",
+                    earnedBadges: earnedBadges,
+                    receipt: KioskReceipt(
+                        firstName: String(user.name.split(separator: " ").first ?? Substring(user.name)),
+                        avatarURL: user.avatarUrl,
+                        initials: user.initials,
+                        cards: [KioskReceipt.Card(
+                            overline: "Checked out",
+                            refNumber: completion.refNumber,
+                            title: "\(count) item\(count == 1 ? "" : "s") · \(checkoutContextTitle)",
+                            detail: KioskReceiptCopy.tags(cart) + " · d" + KioskDueCopy.due(endsAt).dropFirst()
+                        )],
+                        nextStep: "Bring it back and scan it in, or anyone can return it for you."
+                    )
                 ))
             } catch {
                 hasPendingCompletion = KioskAPI.shared.hasPendingCheckout(actorId: userId)
@@ -1735,5 +1748,14 @@ private struct KioskCheckoutThumbnail: View {
                     .font(.title3)
                     .foregroundStyle(KioskText.secondary)
             }
+    }
+}
+
+enum KioskReceiptCopy {
+    /// "CAM-040, LENS-22, AUD-031" (first four, then "+2 more").
+    static func tags(_ items: [KioskCartItem]) -> String {
+        let tags = items.map(\.itemListPrimaryTitle)
+        let head = tags.prefix(4).joined(separator: ", ")
+        return tags.count > 4 ? "\(head) +\(tags.count - 4) more" : head
     }
 }

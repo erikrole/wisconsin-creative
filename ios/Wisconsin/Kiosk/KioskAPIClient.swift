@@ -275,6 +275,7 @@ struct KioskAPI {
 
     struct KioskCheckoutCompletion: Decodable {
         let bookingId: String
+        let refNumber: String?
         let itemCount: Int?
         let earnedBadges: [EarnedBadgeReward]?
     }
