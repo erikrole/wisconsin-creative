@@ -10,7 +10,7 @@ import { endCheckoutReturnLiveActivities } from "@/lib/services/live-activities"
 const schema = z.object({
   actorId: z.string().min(1), requestId: z.string().max(64), expectedUpdatedAt: z.string().datetime({ offset: true }),
   targetBookingId: z.string().min(1).optional(), targetUserId: z.string().min(1).optional(),
-  assetIds: z.array(z.string().min(1)).max(100), bulkUnitIds: z.array(z.string().min(1)).max(100), reason: z.string().trim().min(3).max(500),
+  assetIds: z.array(z.string().min(1)).max(100), bulkUnitIds: z.array(z.string().min(1)).max(100), reason: z.string().trim().min(3).max(500).optional(),
 }).refine((body) => Boolean(body.targetBookingId) !== Boolean(body.targetUserId), { message: "Choose one receiving checkout or person" });
 export const POST = withKiosk<{ id: string }>(async (req, { params, kiosk }) => {
   const body = schema.parse(await req.json());

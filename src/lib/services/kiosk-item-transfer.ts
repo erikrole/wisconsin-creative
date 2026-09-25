@@ -6,26 +6,45 @@ import { createAuditEntryTx } from "@/lib/audit";
 import { nextBookingRef } from "@/lib/services/booking-ref";
 import { kioskRosterUserWhere } from "@/lib/user-visibility";
 import { withSerializationRetry } from "@/lib/serialization";
+import { formatAppDateTime } from "@/lib/app-time";
+import { displayBookingTitle } from "@/lib/booking-display-title";
+import { deferPush, sendPushToUser } from "@/lib/services/notifications";
+import { canManageAnyCheckout } from "@/lib/services/kiosk-actor";
 import { claimKioskOperationReceiptTx, finishKioskOperationReceiptTx, type KioskOperationContext } from "./kiosk-operation-receipts";
 
 export async function transferKioskItems(args: {
   sourceId: string; actorId: string; expectedUpdatedAt: Date;
   targetBookingId?: string; targetUserId?: string; assetIds: string[];
-  bulkUnitIds: string[]; reason: string; kioskId: string;
+  bulkUnitIds: string[]; reason?: string; kioskId: string;
   receipt?: KioskOperationContext;
 }) {
-  return withSerializationRetry(() => db.$transaction(async (tx) => {
+  const { response, handover } = await withSerializationRetry(() => db.$transaction(async (tx) => {
     const actor = await tx.user.findFirst({ where: { id: args.actorId, ...kioskRosterUserWhere() }, select: { id: true, role: true } });
     if (!actor) throw new HttpError(403, "Choose an active operator");
-    requirePermission(actor.role, "checkout", "manage_custody");
-    await claimKioskOperationReceiptTx(tx, args.receipt);
     const source = await tx.booking.findUnique({ where: { id: args.sourceId }, include: {
+      requester: { select: { id: true, name: true } },
       events: true, accountabilityExclusion: true,
       serializedItems: { include: { asset: { select: { assetTag: true } } } },
       bulkItems: { include: { unitAllocations: true } },
       scanSessions: { where: { phase: "CHECKIN", status: "OPEN" } },
     } });
     if (!source || source.kind !== "CHECKOUT" || source.status !== "OPEN") throw new HttpError(409, "Refresh the open checkout before transferring gear");
+    // Peer transfer (Erik, 2026-09-25): the holder of a personal checkout may
+    // hand all or part of it to anyone on the roster, immediately. Merging into
+    // another checkout and moving SHARED custody stay staff-only.
+    const isOwner = source.custodyScope === "PERSON" && source.requesterUserId === actor.id;
+    const isStaff = canManageAnyCheckout(actor.role);
+    if (isStaff) {
+      requirePermission(actor.role, "checkout", "manage_custody");
+    } else if (!isOwner || args.targetBookingId) {
+      throw new HttpError(403, "Only the person who checked this out, or staff, can hand it to someone else.", { code: "transfer_not_allowed" });
+    }
+    const reason = args.reason ?? (isOwner ? OWNER_TRANSFER_REASON : null);
+    if (!reason) throw new HttpError(400, "Add a reason for this transfer");
+    if (args.targetUserId && source.custodyScope === "PERSON" && args.targetUserId === source.requesterUserId) {
+      throw new HttpError(400, "This gear is already on their record. Choose someone else.");
+    }
+    await claimKioskOperationReceiptTx(tx, args.receipt);
     if (source.updatedAt.getTime() !== args.expectedUpdatedAt.getTime()) throw staleBookingError();
     if (source.scanSessions.length || (source.accountabilityExclusion && !source.accountabilityExclusion.restoredAt)) throw new HttpError(409, "Finish the return or resolve the accountability exclusion before transferring gear");
     if (new Set(args.assetIds).size !== args.assetIds.length || new Set(args.bulkUnitIds).size !== args.bulkUnitIds.length) throw new HttpError(400, "Select each item only once");
@@ -81,7 +100,7 @@ export async function transferKioskItems(args: {
     const updatedAt = new Date(Math.max(Date.now(), source.updatedAt.getTime() + 1, receiving.updatedAt.getTime() + 1));
     await tx.booking.update({ where: { id: source.id }, data: { updatedAt, ...(sourceClosed ? { status: "CANCELLED" } : {}) } });
     await tx.booking.update({ where: { id: receiving.id }, data: { updatedAt } });
-    const evidence = { sourceBookingId: source.id, targetBookingId: receiving.id, assetIds: args.assetIds, bulkUnitIds: args.bulkUnitIds, reason: args.reason, kioskId: args.kioskId, originalEvidenceBookingId: source.id, sourceClosed };
+    const evidence = { sourceBookingId: source.id, targetBookingId: receiving.id, assetIds: args.assetIds, bulkUnitIds: args.bulkUnitIds, reason, kioskId: args.kioskId, originalEvidenceBookingId: source.id, sourceClosed };
     const auditEntries: Array<[string, string]> = [
       [source.id, "kiosk_items_transferred_out"],
       [receiving.id, "kiosk_items_transferred_in"],
@@ -89,6 +108,84 @@ export async function transferKioskItems(args: {
     for (const [entityId, action] of auditEntries) await createAuditEntryTx(tx, { actorId: actor.id, actorRole: actor.role, entityType: "booking", entityId, action, before: { sourceSnapshot: source.updatedAt.toISOString(), custodyScope: source.custodyScope, requesterId: source.custodyScope === "PERSON" ? source.requesterUserId : null }, after: evidence });
     const response = { success: true, targetBookingId: receiving.id, sourceClosed, itemCount: serialized.length + units.length, message: `${serialized.length + units.length} items transferred to ${target?.name ?? receiving.title}`, endsAt: receiving.endsAt };
     await finishKioskOperationReceiptTx(tx, args.receipt, response);
-    return response;
+    const handover = isOwner && !isStaff && target ? {
+      sourceId: source.id,
+      receivingId: receiving.id,
+      stamp: updatedAt.getTime(),
+      title: displayBookingTitle(source.title),
+      endsAt: receiving.endsAt,
+      owner: source.requester,
+      target,
+      itemCount: serialized.length + units.length,
+      sourceClosed,
+    } : null;
+    return { response, handover };
   }, { isolationLevel: "Serializable" }));
+  if (handover) await notifyKioskHandover(handover);
+  return response;
+}
+
+export const OWNER_TRANSFER_REASON = "Handed over at the kiosk";
+
+export function kioskHandoverCopy(args: {
+  title: string; endsAt: Date; ownerName: string; targetName: string; itemCount: number; sourceClosed: boolean;
+}) {
+  return {
+    toNewHolder: {
+      title: `${args.ownerName} handed you ${args.title}`,
+      body: `It's on your record now. It's due ${formatAppDateTime(args.endsAt)}.`,
+    },
+    toOldHolder: {
+      title: `You handed ${args.title} to ${args.targetName}`,
+      body: args.sourceClosed
+        ? "It's off your record now."
+        : `${args.itemCount} ${args.itemCount === 1 ? "item is" : "items are"} off your record now. The rest is still with you.`,
+    },
+  };
+}
+
+/** Owner-to-peer handovers tell both people. Delivery never fails the transfer. */
+async function notifyKioskHandover(h: {
+  sourceId: string; receivingId: string; stamp: number; title: string; endsAt: Date;
+  owner: { id: string; name: string }; target: { id: string; name: string };
+  itemCount: number; sourceClosed: boolean;
+}) {
+  const copy = kioskHandoverCopy({
+    title: h.title, endsAt: h.endsAt, ownerName: h.owner.name, targetName: h.target.name,
+    itemCount: h.itemCount, sourceClosed: h.sourceClosed,
+  });
+  const messages = [
+    { userId: h.target.id, bookingId: h.receivingId, key: "in", ...copy.toNewHolder },
+    { userId: h.owner.id, bookingId: h.sourceId, key: "out", ...copy.toOldHolder },
+  ];
+  try {
+    const rows = await db.notification.createManyAndReturn({
+      data: messages.map((m) => ({
+        userId: m.userId,
+        bookingId: m.bookingId,
+        type: "kiosk_checkout_handover",
+        title: m.title,
+        body: m.body,
+        payload: { bookingId: m.bookingId, href: `/checkouts/${m.bookingId}` },
+        channel: "IN_APP" as const,
+        sentAt: new Date(),
+        dedupeKey: `kiosk-handover-${h.sourceId}-${h.receivingId}-${h.stamp}-${m.key}`,
+      })),
+      skipDuplicates: true,
+      select: { id: true, userId: true },
+    });
+    for (const row of rows) {
+      const message = messages.find((m) => m.userId === row.userId);
+      if (!message) continue;
+      deferPush(sendPushToUser(message.userId, {
+        title: message.title,
+        body: message.body,
+        payload: { bookingId: message.bookingId, href: `/checkouts/${message.bookingId}` },
+        category: "checkoutDue",
+        notificationId: row.id,
+      }));
+    }
+  } catch (error) {
+    console.error("[kiosk/transfer] handover notification failed", error);
+  }
 }
