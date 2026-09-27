@@ -11,6 +11,10 @@ import SwiftUI
 struct KioskHomeView: View {
     let locationName: String?
     let checkouts: [KioskActiveCheckout]
+    var pickups: [KioskDashboard.HomePickup] = []
+    var serverToday: [KioskDashboard.TodayTile] = []
+    /// Checkouts nudged on this iPad since the last refresh.
+    var nudgedIds: Set<String> = []
     let users: [KioskUser]
     let isLoaded: Bool
     /// When the last refresh succeeded, if refreshes are failing now.
@@ -18,6 +22,7 @@ struct KioskHomeView: View {
     let lastLoadedAt: Date?
     let nextUp: String?
     let onOpenCheckout: (KioskActiveCheckout) -> Void
+    var onNudge: ((KioskActiveCheckout) -> Void)?
     let onSelectUser: (KioskUser) -> Void
     let onRevealStatus: () -> Void
 
@@ -129,7 +134,7 @@ struct KioskHomeView: View {
         let sections = sections
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                if isLoaded && sections.isEmpty {
+                if isLoaded && sections.isEmpty && pickups.isEmpty {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Everything is in.")
                             .font(.system(size: 17, weight: .bold))
@@ -149,13 +154,19 @@ struct KioskHomeView: View {
                         KioskSectionHeader(title: section.title, count: "\(section.rows.count)")
                         VStack(spacing: 0) {
                             ForEach(section.rows) { checkout in
-                                HomeCustodyRow(checkout: checkout) { onOpenCheckout(checkout) }
+                                HomeCustodyRow(
+                                    checkout: checkout,
+                                    isNudged: checkout.nudgedToday == true || nudgedIds.contains(checkout.id),
+                                    onNudge: section.id == "overdue" && checkout.custodyScope != "SHARED" ? onNudge.map { nudge in { nudge(checkout) } } : nil
+                                ) { onOpenCheckout(checkout) }
                             }
                         }
                         .padding(.vertical, 6)
                         .kioskCard()
                     }
+                    if section.id == "today", !pickups.isEmpty { pickupSection }
                 }
+                if !pickups.isEmpty && !sections.contains(where: { $0.id == "today" }) { pickupSection }
             }
             .padding(.leading, KioskSpacing.xl)
             .padding(.trailing, KioskSpacing.lg)
@@ -163,6 +174,23 @@ struct KioskHomeView: View {
             .padding(.bottom, KioskSpacing.screenBottom)
         }
         .scrollIndicators(.hidden)
+    }
+
+    private var pickupSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            KioskSectionHeader(title: "Ready for pickup", count: "\(pickups.count)")
+            VStack(spacing: 0) {
+                ForEach(pickups) { pickup in
+                    HomePickupRow(pickup: pickup) {
+                        if let id = pickup.requester?.id, let user = users.first(where: { $0.id == id }) {
+                            onSelectUser(user)
+                        }
+                    }
+                }
+            }
+            .padding(.vertical, 6)
+            .kioskCard()
+        }
     }
 
     // MARK: People panel
@@ -184,8 +212,31 @@ struct KioskHomeView: View {
         return result.sorted { ($0.2 == .problem ? 0 : 1) < ($1.2 == .problem ? 0 : 1) }
     }
 
+    private var serverTodayPeople: [(user: KioskUser, reason: String, section: KioskSection)] {
+        let byId = Dictionary(users.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        return serverToday.compactMap { tile in
+            guard let user = byId[tile.userId] else { return nil }
+            var parts: [String] = []
+            var section: KioskSection = .comingBack
+            for reason in tile.reasons {
+                switch reason {
+                case "overdue": parts.append("Overdue"); section = .problem
+                case "pickup":
+                    parts.append(tile.pickupAt.map { "Pickup at \($0.formatted(.dateTime.hour().minute()))" } ?? "Pickup ready")
+                    if section != .problem { section = .pickingUp }
+                case "return_due": parts.append(parts.isEmpty ? "Returning today" : "returning today")
+                case "shift_soon":
+                    parts.append(tile.callAt.map { "Call at \($0.formatted(.dateTime.hour().minute())) · no gear yet" } ?? "Shift soon · no gear yet")
+                    if parts.count == 1 { section = .takingOut }
+                default: break
+                }
+            }
+            return (user, parts.joined(separator: " · "), section)
+        }
+    }
+
     private var peoplePanel: some View {
-        let today = Array(todayPeople.prefix(6))
+        let today = Array((serverToday.isEmpty ? todayPeople : serverTodayPeople).prefix(6))
         let labels = homeShortNames(for: users)
         let showsPhotos = users.count <= 24
         return VStack(alignment: .leading, spacing: 16) {
@@ -257,6 +308,8 @@ private func homePersonName(_ full: String) -> String {
 
 private struct HomeCustodyRow: View {
     let checkout: KioskActiveCheckout
+    var isNudged: Bool = false
+    var onNudge: (() -> Void)?
     let action: () -> Void
 
     private var isOverdue: Bool { checkout.isOverdue || checkout.endsAt < Date() }
@@ -305,6 +358,22 @@ private struct HomeCustodyRow: View {
                     .font(KioskType.chipStrong)
                     .foregroundStyle(trailing.1)
                     .lineLimit(1)
+                if let onNudge {
+                    Button(action: onNudge) {
+                        Text(isNudged ? "Nudged" : "Nudge")
+                            .font(KioskType.chipStrong)
+                            .foregroundStyle(isNudged ? KioskText.muted : KioskSection.problem.text)
+                            .padding(.horizontal, 14)
+                            .frame(minHeight: 34)
+                            .background(isNudged ? Color.clear : Color(red: 0x2A / 255, green: 0x14 / 255, blue: 0x16 / 255), in: Capsule())
+                            .overlay(Capsule().stroke(isNudged ? KioskStroke.standard : KioskSection.problem.stageStroke, lineWidth: 1))
+                            .frame(minHeight: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isNudged)
+                    .accessibilityLabel(isNudged ? "Already nudged today" : "Nudge \(holder) to bring back \(checkout.title)")
+                }
                 Image(systemName: "chevron.right")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(KioskText.muted)
@@ -379,5 +448,50 @@ private struct HomePersonTile: View {
         }
         .buttonStyle(KioskPressStyle())
         .accessibilityLabel(user.name)
+    }
+}
+
+private struct HomePickupRow: View {
+    let pickup: KioskDashboard.HomePickup
+    let action: () -> Void
+
+    private var holder: String {
+        pickup.custodyScope == "SHARED" ? "Shared" : homePersonName(pickup.requester?.name ?? "")
+    }
+
+    private var readyText: String {
+        pickup.readyAt <= Date() ? "ready now" : "from \(pickup.readyAt.formatted(.dateTime.hour().minute()))"
+    }
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Circle()
+                    .fill(pickup.custodyScope == "SHARED" ? KioskSection.shared.accent : KioskSection.pickingUp.accent)
+                    .frame(width: 8, height: 8)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(pickup.title)
+                        .font(KioskType.rowTitle)
+                        .foregroundStyle(KioskText.primary)
+                        .lineLimit(1)
+                    Text("\(holder) · \(pickup.itemCount) item\(pickup.itemCount == 1 ? "" : "s")")
+                        .font(KioskType.meta)
+                        .foregroundStyle(KioskText.secondary)
+                }
+                Spacer(minLength: 8)
+                Text(readyText)
+                    .font(KioskType.chipStrong)
+                    .foregroundStyle(KioskSection.pickingUp.text)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(KioskText.muted)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(KioskPressStyle())
+        .padding(.horizontal, 6)
+        .accessibilityLabel("\(pickup.title), \(holder), \(readyText)")
     }
 }

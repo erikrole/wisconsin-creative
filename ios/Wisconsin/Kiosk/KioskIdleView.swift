@@ -21,6 +21,7 @@ struct KioskIdleView: View {
     @State private var identityRequests = LatestRequestGeneration()
     @State private var dashboardRequests = LatestRequestGeneration()
     @State private var unavailableSections: Set<String> = []
+    @State private var nudgedIds: Set<String> = []
 
     /// The idle screen is a monitoring surface, not a live custody mutation
     /// flow. Five minutes lets Neon scale down between unattended checks while
@@ -37,12 +38,16 @@ struct KioskIdleView: View {
                 KioskHomeView(
                     locationName: store.info?.locationName,
                     checkouts: unavailableSections.contains("checkouts") ? [] : (dashboard?.checkouts ?? []),
+                    pickups: dashboard?.pickups ?? [],
+                    serverToday: dashboard?.today ?? [],
+                    nudgedIds: nudgedIds,
                     users: users,
                     isLoaded: dashboard != nil,
                     offlineSince: hasConnectionIssue ? (lastLoadedAt ?? loadFailedAt) : nil,
                     lastLoadedAt: lastLoadedAt,
-                    nextUp: nil,
+                    nextUp: dashboard?.nextUp.map { "\($0.title), \(KioskDueCopy.relative($0.at))" },
                     onOpenCheckout: { openCheckout($0) },
+                    onNudge: { nudge($0) },
                     onSelectUser: { user in
                         identityRequests.invalidate()
                         store.deferSleepMode(for: sleepWakeDuration)
@@ -641,6 +646,21 @@ struct KioskIdleView: View {
             endsAt: checkout.endsAt,
             isOverdue: checkout.isOverdue
         ))
+    }
+
+    /// Anyone may nudge an overdue checkout once a day; the server keeps
+    /// the daily limit, so a repeat just shows as already nudged.
+    private func nudge(_ checkout: KioskActiveCheckout) {
+        store.resetInactivity()
+        nudgedIds.insert(checkout.id)
+        Task {
+            do {
+                _ = try await KioskAPI.shared.kioskNudge(checkoutId: checkout.id, actorId: nil)
+            } catch {
+                nudgedIds.remove(checkout.id)
+                KioskScanFeedbackSound.playFailure()
+            }
+        }
     }
 
     private func openCheckout(_ checkout: KioskActiveCheckout) {

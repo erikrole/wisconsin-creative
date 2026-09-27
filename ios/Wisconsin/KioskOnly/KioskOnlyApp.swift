@@ -752,7 +752,15 @@ enum KioskFixtures {
          "standby":{"sleepMode":\(forcesSleep),"reason":"\(forcesSleep ? "night_hours" : "active_window")",
                     "nightHours":\(forcesSleep),
                     "nearbyEventCount":\(forcesSleep ? 0 : 2),"nearbyBookingWindowCount":\(forcesSleep ? 0 : 1)},
-         "events":\(dashboardEvents),"activeItems":\(activeItems),"checkouts":\(checkouts)}
+         "events":\(dashboardEvents),"activeItems":\(activeItems),"checkouts":\(checkouts),
+         "pickups":[{"bookingId":"res-1","title":"Wrestling Duals Kit",
+                     "requester":{"id":"u-erik-role","name":"Erik Role","avatarUrl":null,"initials":"ER"},
+                     "itemCount":4,"readyAt":"\(iso(hours(2)))","custodyScope":"PERSON","eventId":null}],
+         "today":[{"userId":"u-3","name":"Dashiell Okonkwo","avatarUrl":null,"initials":"DO","reasons":["overdue"]},
+                  {"userId":"u-erik-role","name":"Erik Role","avatarUrl":null,"initials":"ER","reasons":["pickup","return_due"],"pickupAt":"\(iso(hours(2)))"},
+                  {"userId":"u-16","name":"Priya Ramachandran","avatarUrl":null,"initials":"PR","reasons":["return_due"]},
+                  {"userId":"u-9","name":"Imani Brooks","avatarUrl":null,"initials":"IB","reasons":["return_due"]}],
+         "nextUp":null}
         """
     }
 

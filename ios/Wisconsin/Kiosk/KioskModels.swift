@@ -50,6 +50,10 @@ struct KioskDashboard: Decodable {
     var activeItems: [ActiveItem]
     var checkouts: [KioskActiveCheckout]
     let partialFailures: [String]
+    /// Redesign home (additive; older servers omit them).
+    let pickups: [HomePickup]
+    let today: [TodayTile]
+    let nextUp: NextUp?
 
     enum CodingKeys: String, CodingKey {
         case stats
@@ -59,6 +63,9 @@ struct KioskDashboard: Decodable {
         case activeItems
         case checkouts
         case partialFailures
+        case pickups
+        case today
+        case nextUp
     }
 
     init(from decoder: Decoder) throws {
@@ -70,6 +77,46 @@ struct KioskDashboard: Decodable {
         events = try container.decodeIfPresent(LossyDecodableArray<KioskEvent>.self, forKey: .events)?.elements ?? []
         activeItems = try container.decodeIfPresent(LossyDecodableArray<ActiveItem>.self, forKey: .activeItems)?.elements ?? []
         checkouts = try container.decodeIfPresent(LossyDecodableArray<KioskActiveCheckout>.self, forKey: .checkouts)?.elements ?? []
+        pickups = try container.decodeIfPresent(LossyDecodableArray<HomePickup>.self, forKey: .pickups)?.elements ?? []
+        today = try container.decodeIfPresent(LossyDecodableArray<TodayTile>.self, forKey: .today)?.elements ?? []
+        nextUp = try? container.decodeIfPresent(NextUp.self, forKey: .nextUp)
+    }
+
+    struct Person: Decodable, Equatable {
+        let id: String
+        let name: String
+        let avatarUrl: String?
+        let initials: String?
+    }
+
+    /// A reservation or pending pickup ready now or later today.
+    struct HomePickup: Decodable, Identifiable, Equatable {
+        let bookingId: String
+        let title: String
+        let requester: Person?
+        let itemCount: Int
+        let readyAt: Date
+        let custodyScope: String
+        let eventId: String?
+        var id: String { bookingId }
+    }
+
+    /// Someone with something happening today.
+    struct TodayTile: Decodable, Identifiable, Equatable {
+        let userId: String
+        let name: String
+        let avatarUrl: String?
+        let initials: String?
+        let reasons: [String]
+        let pickupAt: Date?
+        let callAt: Date?
+        var id: String { userId }
+    }
+
+    struct NextUp: Decodable, Equatable {
+        let title: String
+        let at: Date
+        let kind: String
     }
 
     struct Stats: Decodable {
@@ -387,6 +434,9 @@ struct KioskActiveCheckout: Decodable, Identifiable {
     let itemCount: Int
     let endsAt: Date
     let isOverdue: Bool
+    /// Additive: set once someone nudged this booking today.
+    var nudgedToday: Bool?
+    let eventId: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -400,6 +450,8 @@ struct KioskActiveCheckout: Decodable, Identifiable {
         case itemCount
         case endsAt
         case isOverdue
+        case nudgedToday
+        case eventId
     }
 
     struct CheckoutItem: Decodable {
@@ -419,6 +471,8 @@ struct KioskActiveCheckout: Decodable, Identifiable {
         itemCount = try container.decodeIfPresent(Int.self, forKey: .itemCount) ?? items.count
         endsAt = try container.decode(Date.self, forKey: .endsAt)
         isOverdue = try container.decodeIfPresent(Bool.self, forKey: .isOverdue) ?? (endsAt < Date())
+        nudgedToday = try container.decodeIfPresent(Bool.self, forKey: .nudgedToday)
+        eventId = try container.decodeIfPresent(String.self, forKey: .eventId)
     }
 
     private static func initials(for name: String) -> String {

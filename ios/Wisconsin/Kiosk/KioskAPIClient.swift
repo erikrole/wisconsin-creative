@@ -141,6 +141,19 @@ struct KioskAPI {
         let _: Response = try await perform(req)
     }
 
+    // MARK: - Nudge
+
+    /// Anyone at the kiosk may nudge an overdue checkout once per day. A
+    /// repeat is not an error: the server answers `alreadyNudged`.
+    func kioskNudge(checkoutId: String, actorId: String?) async throws -> Bool {
+        struct Body: Encodable { let actorId: String? }
+        struct Response: Decodable { let success: Bool; let alreadyNudged: Bool? }
+        var req = request(path: "/api/kiosk/checkout/\(checkoutId)/nudge", method: "POST")
+        req.httpBody = try JSONEncoder().encode(Body(actorId: actorId))
+        let response: Response = try await perform(req)
+        return response.alreadyNudged ?? false
+    }
+
     // MARK: - Dashboard
 
     func kioskDashboard() async throws -> KioskDashboard {
