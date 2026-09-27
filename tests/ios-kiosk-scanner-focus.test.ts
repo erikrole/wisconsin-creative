@@ -78,9 +78,11 @@ describe("iOS kiosk scanner focus", () => {
     for (const flow of [pickup, kioskReturn]) {
       expect(flow).toContain("@State private var scannerHasFocus = false");
       expect(flow).toContain("onFocusChange: { scannerHasFocus = $0 }");
-      expect(flow).toContain("KioskScannerReadinessBadge(");
-      expect(flow).toContain("isReady: scannerHasFocus");
     }
+    expect(pickup).toContain("KioskScannerReadinessBadge(");
+    expect(pickup).toContain("isReady: scannerHasFocus");
+    // Return states readiness in its scan prompt from the real focus state.
+    expect(kioskReturn).toContain("if !scannerHasFocus {");
     expect(components).toContain("struct KioskScannerReadinessBadge: View");
     expect(components).toContain('guard isReady else { return "Scanner reconnecting" }');
     expect(components).toContain('guard let lastScanAt else { return "Scanner ready" }');

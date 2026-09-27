@@ -371,6 +371,26 @@ struct KioskAPI {
         return try await perform(req)
     }
 
+    /// Undo a return scan made in this session, before the return finishes.
+    /// The server refuses once the return is finished or the unit was
+    /// claimed again, and answers with a sentence to show.
+    func kioskUndoCheckinScan(bookingId: String, actorId: String, item: KioskCheckoutDetail.ReturnItem) async throws -> KioskActiveCheckoutMutationResult {
+        struct Body: Encodable {
+            let actorId: String
+            let assetId: String?
+            let bulkSkuId: String?
+            let unitNumber: Int?
+        }
+        var req = request(path: "/api/kiosk/checkin/\(bookingId)/scan", method: "DELETE")
+        req.httpBody = try JSONEncoder().encode(Body(
+            actorId: actorId,
+            assetId: item.isNumberedBulk ? nil : item.id,
+            bulkSkuId: item.isNumberedBulk ? item.bulkSkuId : nil,
+            unitNumber: item.isNumberedBulk ? item.unitNumber : nil
+        ))
+        return try await perform(req)
+    }
+
     func kioskRemoveActiveCheckoutItem(id: String, actorId: String, item: KioskCheckoutDetail.ReturnItem) async throws -> KioskActiveCheckoutMutationResult {
         struct Body: Encodable {
             let actorId: String

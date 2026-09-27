@@ -330,8 +330,13 @@ enum KioskDueCopy {
 
     /// "Due tomorrow at 11:00 PM".
     static func due(_ date: Date) -> String {
+        "Due " + midSentence(date)
+    }
+
+    /// "tomorrow at 11:00 PM", for use after other words.
+    static func midSentence(_ date: Date) -> String {
         let text = relative(date)
-        return "Due " + text.prefix(1).lowercased() + text.dropFirst()
+        return text.prefix(1).lowercased() + text.dropFirst()
     }
 }
 

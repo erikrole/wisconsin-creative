@@ -740,3 +740,14 @@ struct KioskSheetScreen<Context: View, Choice: View>: View {
 enum KioskSheetBackdrop {
     static let color = Color(red: 6 / 255, green: 6 / 255, blue: 7 / 255)
 }
+
+enum KioskBatteryCopy {
+    /// "V-Mount Battery #4" / "V-Mount Battery" -> "V-Mount batteries".
+    static func familyTitle(_ name: String) -> String {
+        let base = name.replacingOccurrences(of: #"\s*#\d+$"#, with: "", options: .regularExpression)
+        if base.lowercased().hasSuffix("battery") {
+            return String(base.dropLast("battery".count)) + "batteries"
+        }
+        return base
+    }
+}

@@ -36,9 +36,11 @@ describe("iOS kiosk numbered-battery rendering", () => {
     const kioskReturn = source("ios/Wisconsin/Kiosk/KioskReturnView.swift");
 
     expect(components).toContain("KioskUnitChips(units: scannedUnits)");
-    for (const flow of [pickup, kioskReturn]) {
-      expect(flow).toContain("KioskBatteryScanStatus(");
-      expect(flow).toContain("scannedUnits:");
-    }
+    expect(pickup).toContain("KioskBatteryScanStatus(");
+    expect(pickup).toContain("scannedUnits:");
+    // Return moved to the redesign's battery row: each unit's number, filled
+    // once scanned back and outlined while still out.
+    expect(kioskReturn).toContain("KioskBatteryRow(");
+    expect(kioskReturn).toContain("isScanned: returnedIds.contains($0.id)");
   });
 });
