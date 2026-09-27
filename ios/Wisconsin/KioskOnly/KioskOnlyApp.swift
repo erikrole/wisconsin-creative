@@ -64,7 +64,7 @@ struct WisconsinKioskApp: App {
         switch scenario {
         case .idle:
             kioskStore.screen = .idle
-        case .operatorHub, .checkoutSheet:
+        case .operatorHub, .checkoutSheet, .hubAtLimit:
             kioskStore.screen = .operatorHub(kioskUser)
         case .resume:
             // The splash is a store state, not a screen, so it is the one
@@ -414,6 +414,8 @@ enum KioskFixtureScenario: String {
     case idle
     /// One person's hub: what they hold, and the actions on it.
     case operatorHub = "operator-hub"
+    /// Redesign C3: the hub when the person is at the checkout limit.
+    case hubAtLimit = "hub-at-limit"
     /// The custody drawer for a live checkout, opened over the hub.
     case checkoutSheet = "checkout-sheet"
     /// Step 1 of checkout with the booking-name field focused, for capturing
@@ -803,7 +805,10 @@ enum KioskFixtures {
          ],
          "reservations":[
            {"id":"rs-1","title":"Senior Day Portraits","startsAt":"\(iso(hours(52)))"}
-         ]}
+         ],
+         "checkoutAllowance":\(KioskFixtureScenario.active == .hubAtLimit
+            ? #"{"openCheckoutCount":3,"limit":3,"canCheckout":false,"blockedReason":"limit"}"#
+            : #"{"openCheckoutCount":2,"limit":null,"canCheckout":true,"blockedReason":null}"#)}
         """
     }
 

@@ -21,6 +21,8 @@ struct KioskOperatorHubView: View {
     @State private var shifts: [KioskCheckoutEvent] = []
     @State private var isLoadingShifts = true
     @State private var shiftsFailed = false
+    @State private var hasUnfinishedCheckout = false
+    @State private var showDiscardUnfinished = false
 
     private enum ScanRouteFeedback: Equatable {
         case warning(String)
@@ -88,6 +90,7 @@ struct KioskOperatorHubView: View {
             }
         }
         .task {
+            hasUnfinishedCheckout = KioskAPI.shared.hasPendingCheckout(actorId: user.id)
             store.scanner.claim(.operatorHub) { routeScan($0) }
             async let shiftLoad: Void = loadShifts()
             await loadContext()
@@ -123,6 +126,25 @@ struct KioskOperatorHubView: View {
                 // safety-net refresh does not keep Neon awake overnight.
                 guard !store.isDeviceIdle else { continue }
                 await loadContext()
+            }
+        }
+        .overlay {
+            if showDiscardUnfinished {
+                KioskConfirmationCard(
+                    title: "Discard the unfinished checkout?",
+                    message: "Only if the gear is back on the shelf. Anything that did go through is already on your hub.",
+                    cancelTitle: "Keep it",
+                    confirmTitle: "Discard",
+                    confirmRole: .destructive,
+                    onCancel: { showDiscardUnfinished = false },
+                    onConfirm: {
+                        KioskAPI.shared.discardPendingCheckout(actorId: user.id)
+                        store.clearCart(for: user.id)
+                        store.clearCheckoutDraft(for: user.id)
+                        hasUnfinishedCheckout = false
+                        showDiscardUnfinished = false
+                    }
+                )
             }
         }
         .sheet(item: $selectedCheckout) { checkout in
@@ -171,7 +193,14 @@ struct KioskOperatorHubView: View {
     private var bookingsColumn: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                checkoutHero
+                if hasUnfinishedCheckout {
+                    unfinishedCheckoutCard
+                }
+                if let blocked = checkoutBlockedMessage {
+                    blockedHero(blocked)
+                } else {
+                    checkoutHero
+                }
 
                 KioskSectionHeader(title: "Out with you")
                 if let checkouts = context?.checkouts, !checkouts.isEmpty {
@@ -236,6 +265,69 @@ struct KioskOperatorHubView: View {
             .padding(.top, 4)
         }
         .scrollIndicators(.hidden)
+    }
+
+    /// C3: the checkout limit or an unfinished leftover pickup, said up front.
+    private var checkoutBlockedMessage: String? {
+        if hasUnfinishedCheckout { return "Finish the one above first." }
+        guard let allowance = context?.checkoutAllowance, !allowance.canCheckout else { return nil }
+        if allowance.blockedReason == "leftover_pickup" {
+            return "Finish picking up \(allowance.leftoverPickupTitle ?? "your reservation") first."
+        }
+        let count = allowance.openCheckoutCount
+        return "You have \(count) checkout\(count == 1 ? "" : "s") open, which is the most at once. Return one to start another."
+    }
+
+    private func blockedHero(_ message: String) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 14) {
+                Image(systemName: "plus")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(KioskText.tertiary)
+                    .frame(width: 48, height: 48)
+                    .background(KioskStroke.pending.opacity(0.6), in: Circle())
+                Text("Check out gear")
+                    .font(.system(size: 24, weight: .heavy))
+                    .foregroundStyle(KioskText.tertiary)
+            }
+            Text(message)
+                .font(KioskType.body)
+                .foregroundStyle(KioskText.primary)
+                .lineSpacing(4)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 22)
+        .kioskCard(KioskSurface.card, radius: KioskRadius.hero, stroke: KioskStroke.standard)
+        .accessibilityElement(children: .combine)
+    }
+
+    /// C4: a checkout saved on this iPad that never confirmed.
+    private var unfinishedCheckoutCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("UNFINISHED CHECKOUT")
+                .font(KioskType.overline)
+                .tracking(KioskType.overlineTracking)
+                .foregroundStyle(KioskSection.comingBack.text)
+            Text("A checkout never confirmed")
+                .font(.system(size: 22, weight: .heavy))
+                .foregroundStyle(KioskText.primary)
+            Text("Check it now to finish it. If the gear is already back on the shelf, discard it.")
+                .font(KioskType.body)
+                .foregroundStyle(KioskText.secondary)
+            HStack(spacing: 8) {
+                Button("Check it now") {
+                    store.setIntent(KioskFlowIntent(action: .checkout, source: .person, identifiedUser: user, expectedRequester: nil, selectedEvent: nil, targetBooking: nil, pendingScanValues: [], createdAt: Date(), ambiguity: .none))
+                    store.screen = .checkout(user: user)
+                }
+                .kioskButtonRole(.primary)
+                Button("Discard") { showDiscardUnfinished = true }
+                    .kioskButtonRole(.secondary)
+            }
+        }
+        .padding(20)
+        .kioskCard(KioskSection.comingBack.stageFill, radius: 18, stroke: KioskSection.comingBack.stageStroke)
     }
 
     private func emptyCard(_ text: String) -> some View {

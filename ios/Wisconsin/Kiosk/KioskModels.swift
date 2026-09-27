@@ -553,11 +553,23 @@ struct KioskStudentContext: Decodable {
     let checkouts: [KioskStudentCheckout]
     let pendingPickups: [KioskPendingPickup]
     let reservations: [KioskReservation]
+    /// Whether this person can start a checkout now (additive).
+    let checkoutAllowance: CheckoutAllowance?
+
+    struct CheckoutAllowance: Decodable, Equatable {
+        let openCheckoutCount: Int
+        let limit: Int?
+        let canCheckout: Bool
+        let blockedReason: String?
+        let leftoverPickupTitle: String?
+        let leftoverPickupId: String?
+    }
 
     enum CodingKeys: String, CodingKey {
         case checkouts
         case pendingPickups
         case reservations
+        case checkoutAllowance
     }
 
     init(from decoder: Decoder) throws {
@@ -565,6 +577,7 @@ struct KioskStudentContext: Decodable {
         checkouts = try container.decodeIfPresent(LossyDecodableArray<KioskStudentCheckout>.self, forKey: .checkouts)?.elements ?? []
         pendingPickups = try container.decodeIfPresent(LossyDecodableArray<KioskPendingPickup>.self, forKey: .pendingPickups)?.elements ?? []
         reservations = try container.decodeIfPresent(LossyDecodableArray<KioskReservation>.self, forKey: .reservations)?.elements ?? []
+        checkoutAllowance = try? container.decodeIfPresent(CheckoutAllowance.self, forKey: .checkoutAllowance)
     }
 }
 
