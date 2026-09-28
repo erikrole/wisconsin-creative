@@ -141,8 +141,8 @@ struct KioskSuccessView: View {
             }
             if let footnote = card.footnote {
                 Text(footnote)
-                    .font(KioskType.meta)
-                    .foregroundStyle(KioskText.tertiary)
+                    .font(card.footnoteSection == nil ? KioskType.meta : KioskType.meta.weight(.semibold))
+                    .foregroundStyle(card.footnoteSection?.text ?? KioskText.tertiary)
                     .padding(.top, 2)
             }
         }

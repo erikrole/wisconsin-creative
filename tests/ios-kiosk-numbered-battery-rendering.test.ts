@@ -36,8 +36,11 @@ describe("iOS kiosk numbered-battery rendering", () => {
     const kioskReturn = source("ios/Wisconsin/Kiosk/KioskReturnView.swift");
 
     expect(components).toContain("KioskUnitChips(units: scannedUnits)");
-    expect(pickup).toContain("KioskBatteryScanStatus(");
-    expect(pickup).toContain("scannedUnits:");
+    // Pickup uses the redesign's battery row too: numbers fill in as units
+    // scan, and a reservation shows no numbers until the first one does.
+    expect(pickup).toContain("KioskBatteryRow(");
+    expect(pickup).toContain("units: batteryUnits(group)");
+    expect(pickup).toContain('"Numbers are saved as you scan them."');
     // Return moved to the redesign's battery row: each unit's number, filled
     // once scanned back and outlined while still out.
     expect(kioskReturn).toContain("KioskBatteryRow(");

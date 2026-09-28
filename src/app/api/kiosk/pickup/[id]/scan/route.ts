@@ -8,6 +8,7 @@ import { HttpError, ok } from "@/lib/http";
 import { findAssetByScanValue } from "@/lib/services/kiosk-scan";
 import { addAndStageReservationPickupSerialized, assertKioskPickupPlanActor, kioskPickupPlanActorSelect, preflightReservationPickupSerializedAdd } from "@/lib/services/kiosk-pickup-add";
 import { pickupScanBody } from "@/lib/schemas/kiosk";
+import { previewPickupSubstitution } from "@/lib/services/kiosk-pickup-substitute";
 import { scanKioskPickupBulkUnit, stageKioskReservationPickupBulkUnit } from "@/lib/services/bulk-unit-scans";
 import { kioskRosterUserWhere } from "@/lib/user-visibility";
 
@@ -115,11 +116,15 @@ export const POST = withKiosk<{ id: string }>(async (req, { params }) => {
       if (!preview.ok) {
         return ok({ success: false, error: preview.error, errorCode: preview.errorCode });
       }
+      // A like-for-like scan can take a remaining reserved item's place
+      // (F3). The kiosk swaps through /substitute with `reserved.id`.
+      const substitution = await previewPickupSubstitution(params.id, asset);
       return ok({
         success: false,
         error: `${preview.item.tagName} is not on this reservation.`,
         errorCode: "add_available",
         item: preview.item,
+        ...(substitution ? { substitution } : {}),
       });
     }
     return ok({

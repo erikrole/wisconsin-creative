@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "1417e3c0ba5603db289dfac94d2130c6bc787809",
+  "sourcePatchSha256": null,
+  "settings": {
+    "device": "iPad Air 11-inch (M4) simulator, iOS 26.5 (created device B9CBEB3B)",
+    "viewport": [
+      1180,
+      820
+    ],
+    "fixture": "GT_KIOSK_SCENARIO=pickup",
+    "role": "STUDENT (Erik Role fixture)",
+    "route": "KioskScreen.pickup (pickup)",
+    "appearance": "dark",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "live capture clock, status bar 9:41",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "imageSha256": "c4da9e84cb601e8a3d31208e9e77fdc96d168ad0dab8ceb7ea518443f8aff88a",
+  "dimensions": [
+    1640,
+    1140
+  ]
+}

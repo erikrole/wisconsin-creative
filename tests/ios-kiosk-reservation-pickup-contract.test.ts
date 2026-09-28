@@ -98,6 +98,14 @@ describe("iOS kiosk reservation pickup contract", () => {
     expect(pickupView).toContain("private var allConfirmed: Bool");
     expect(pickupView).toContain("private var canConfirmPartial: Bool");
     expect(pickupView).toContain("partial: isPartial");
+    // Finishing with reserved items unscanned asks first (F1), and every
+    // scan confirmation offers Undo through the pickup scan DELETE.
+    expect(pickupView).toContain('confirmTitle: "Pick up \\(confirmedCount)"');
+    expect(pickupView).toContain("KioskAPI.shared.kioskPickupUndoScan(");
+    const apiClient = source("ios/Wisconsin/Kiosk/KioskAPIClient.swift");
+    expect(apiClient).toContain("func kioskPickupUndoScan(");
+    // F5 receipt names what stays reserved from the server's list.
+    expect(pickupView).toContain("remainingItemNames: confirmation.remainingItemNames ?? []");
   });
 
   it("prompts Add or Discard before an off-plan pickup scan mutates the reservation", () => {
@@ -115,11 +123,16 @@ describe("iOS kiosk reservation pickup contract", () => {
     expect(add).toContain("assertKioskPickupPlanActor");
     expect(apiClient).toContain("formatOptions = [.withInternetDateTime, .withFractionalSeconds]");
     expect(apiClient).toContain("encodeIfPresent(quantity");
-    expect(pickupView).toContain('"Add this item?"');
-    expect(pickupView).toContain('"Can\'t add this item"');
+    // Inline card (redesign F2/F3), not a dialog.
+    expect(pickupView).toContain('overline: "Not on your reservation"');
+    expect(pickupView).toContain('secondaryTitle: "Put it back"');
+    expect(pickupView).toContain('overline: "Swap in a replacement"');
+    expect(pickupView).toContain("kioskPickupSubstitute(");
+    expect(scanRoute).toContain("previewPickupSubstitution(params.id, asset)");
+    expect(pickupView).toContain('overline: "Can\'t add this item"');
     expect(pickupView).toContain("presentBlockedAdd");
     expect(pickupView).toContain("blockedAddErrorCodes");
-    expect(pickupView).toContain('Button("Discard", role: .cancel)');
+    expect(pickupView).not.toContain(".confirmationDialog(");
     expect(pickupView).toContain("KioskScanFeedbackSound.playFailure()");
     expect(pickupView).toContain("presentAddOrDiscard");
     expect(pickupView).toContain("removeRemainingItem");

@@ -485,6 +485,28 @@ struct KioskAPI {
         return try await perform(req)
     }
 
+    /// Undo a pickup scan made in this session, before the pickup is
+    /// confirmed (redesign F1). Serialized items send `assetId`; numbered
+    /// units send `bulkSkuId` + `unitNumber` (reservations only). The item
+    /// stays on the plan; only the staged scan clears.
+    func kioskPickupUndoScan(
+        bookingId: String,
+        actorId: String,
+        assetId: String?,
+        bulkSkuId: String?,
+        unitNumber: Int?
+    ) async throws -> KioskActiveCheckoutMutationResult {
+        struct Body: Encodable {
+            let actorId: String
+            let assetId: String?
+            let bulkSkuId: String?
+            let unitNumber: Int?
+        }
+        var req = request(path: "/api/kiosk/pickup/\(bookingId)/scan", method: "DELETE")
+        req.httpBody = try JSONEncoder().encode(Body(actorId: actorId, assetId: assetId, bulkSkuId: bulkSkuId, unitNumber: unitNumber))
+        return try await perform(req)
+    }
+
     func kioskPickupSubstitute(
         bookingId: String,
         actorId: String,

@@ -1,6 +1,9 @@
 import SwiftUI
 import UIKit
 
+/// Pickup (redesign row F): scan what's reserved, with the picking-up list on
+/// the right. Blue for a personal pickup (F1–F3), violet for a shared case
+/// picked up for the team (F4). The receipt (F5) names what stays reserved.
 struct KioskPickupView: View {
     @Environment(KioskStore.self) private var store
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -10,12 +13,16 @@ struct KioskPickupView: View {
     @State private var detail: KioskCheckoutDetail?
     @State private var confirmedIds: Set<String> = []
     @State private var lastResult: ScanFeedback?
-    /// The item the last successful scan confirmed, held while its receipt is
-    /// on screen. Cleared on the same timer as the feedback banner.
+    /// The item the last successful scan confirmed, held while its
+    /// confirmation is on screen. Cleared on the same timer as the feedback.
     @State private var lastAccepted: KioskAcceptedScan?
+    /// What Undo on the current confirmation clears. Nil when the scan can't
+    /// be undone here (an item just added to the plan, or a handed-over unit).
+    @State private var lastUndo: PickupUndoTarget?
     @State private var feedbackDismissTask: Task<Void, Never>?
     @State private var isLoading = true
     @State private var isConfirming = false
+    @State private var isUndoing = false
     @State private var error: String?
     @State private var showCamera = false
     @State private var lastConfirmedId: String?
@@ -27,14 +34,21 @@ struct KioskPickupView: View {
     @State private var pendingAdd: PendingOffPlanAdd?
     @State private var pendingBlock: PendingBlockedAdd?
     @State private var pendingRemove: PendingRemove?
+    @State private var showFinishConfirm = false
 
-    private struct PendingOffPlanAdd: Identifiable {
+    struct PendingOffPlanAdd: Identifiable, Equatable {
         let scanValue: String
         let item: KioskScanResult.ScannedItem
+        /// Set when the scan can take a remaining reserved item's place (F3).
+        var replaces: KioskPickupSubstitution.NamedItem?
         var id: String { item.id }
+
+        static func == (lhs: Self, rhs: Self) -> Bool {
+            lhs.scanValue == rhs.scanValue && lhs.item.id == rhs.item.id && lhs.replaces?.id == rhs.replaces?.id
+        }
     }
 
-    private struct PendingBlockedAdd: Identifiable {
+    private struct PendingBlockedAdd: Identifiable, Equatable {
         let message: String
         var id: String { message }
     }
@@ -45,6 +59,13 @@ struct KioskPickupView: View {
         let label: String
 
         var id: String { item.id }
+    }
+
+    struct PickupUndoTarget: Equatable {
+        let slotId: String
+        let assetId: String?
+        let bulkSkuId: String?
+        let unitNumber: Int?
     }
 
     enum ScanFeedback: Equatable {
@@ -76,28 +97,62 @@ struct KioskPickupView: View {
     private var totalItems: Int { detail?.items.count ?? 0 }
     private var confirmedCount: Int { confirmedIds.count }
     private var allConfirmed: Bool { confirmedCount >= totalItems && totalItems > 0 }
+    private var isReservation: Bool { detail?.status == "BOOKED" }
     /// BOOKED is the reservation pickup state. A legacy PENDING_PICKUP
     /// checkout remains all-or-nothing; reservation custody can be opened for
     /// the scanned subset while the source reservation stays available.
     private var canConfirmPartial: Bool {
-        detail?.status == "BOOKED" && confirmedCount > 0 && !allConfirmed
+        isReservation && confirmedCount > 0 && !allConfirmed
     }
-    private var canConfirm: Bool { scanQueue.isEmpty && (allConfirmed || canConfirmPartial) }
-    private var batteryTotal: Int { detail?.scanSummary?.numberedBulkTotal ?? detail?.numberedBulkItems.count ?? 0 }
-    private var confirmedBatteryCount: Int {
-        detail?.numberedBulkItems.filter { confirmedIds.contains($0.id) }.count ?? 0
-    }
-    private var hasBatteryScanStep: Bool { batteryTotal > 0 }
-    private var remainingBatteryCount: Int { max(0, batteryTotal - confirmedBatteryCount) }
-    private var scannedBatteryUnits: [KioskScanResult.ScannedItem] {
-        detail?.numberedBulkItems.compactMap { confirmedItemOverrides[$0.id] } ?? []
+    private var hasOpenCard: Bool { pendingAdd != nil || pendingBlock != nil }
+    private var canConfirm: Bool { scanQueue.isEmpty && !hasOpenCard && (allConfirmed || canConfirmPartial) }
+
+    private var isShared: Bool { detail?.custodyScope == "SHARED" }
+    private var section: KioskSection { isShared ? .shared : .pickingUp }
+    private var picker: KioskUser? { store.pendingIntent?.identifiedUser }
+
+    private var headerSubtitle: String {
+        let name = picker.map { homeShortNames(for: [$0])[$0.id] ?? $0.name }
+        return [name, detail?.title, isShared ? "for the team" : nil].compactMap { $0 }.joined(separator: " · ")
     }
 
     var body: some View {
-        KioskAdaptiveSplit { _ in
-            scanZone
-        } secondary: { isCompact in
-            checklistPanel(isCompact: isCompact)
+        KioskTaskScaffold(header: KioskTaskHeader(
+            title: "Pickup",
+            subtitle: headerSubtitle,
+            avatarURL: picker?.avatarUrl,
+            avatarInitials: picker?.initials,
+            onBack: { backToPerson() }
+        )) {
+            scanMain
+        } panel: {
+            pickingUpPanel
+        }
+        .overlay {
+            if showFinishConfirm {
+                let leftovers = leftoverLabels
+                KioskConfirmationCard(
+                    title: "\(KioskPickupCopy.list(leftovers)) \(leftovers.count == 1 && !leftovers[0].contains("×") ? "isn't" : "aren't") scanned",
+                    message: "\(leftovers.count == 1 ? "It stays" : "They stay") reserved for a later pickup. Pick up the other \(confirmedCount)?",
+                    cancelTitle: "Keep scanning",
+                    confirmTitle: "Pick up \(confirmedCount)",
+                    onCancel: { showFinishConfirm = false },
+                    onConfirm: {
+                        showFinishConfirm = false
+                        confirmPickup()
+                    }
+                )
+            } else if let pending = pendingRemove {
+                KioskConfirmationCard(
+                    title: "Leave \(pending.label) off the reservation?",
+                    message: "\(pending.label) stays on the shelf. It will not go out with this pickup.",
+                    cancelTitle: "Cancel",
+                    confirmTitle: "Remove remaining \(pending.label)",
+                    confirmRole: .destructive,
+                    onCancel: { pendingRemove = nil; processNextScanIfNeeded() },
+                    onConfirm: { Task { await removeRemainingItem(pending) } }
+                )
+            }
         }
         .overlay(alignment: .bottom) {
             HIDScannerField(
@@ -111,69 +166,11 @@ struct KioskPickupView: View {
             store.scanner.claim(.pickup) { handleScan($0) }
             await loadDetail()
             replayPendingIntentScan()
+            #if DEBUG
+            applyFixtureMoment()
+            #endif
         }
         .onDisappear { scanQueue.reset(); store.scanner.release(.pickup) }
-        .confirmationDialog(
-            "Add this item?",
-            isPresented: Binding(
-                get: { pendingAdd != nil },
-                set: {
-                    if !$0 {
-                        pendingAdd = nil
-                        if !isConfirming { processNextScanIfNeeded() }
-                    }
-                }
-            ),
-            titleVisibility: .visible,
-            presenting: pendingAdd
-        ) { pending in
-            Button("Add \(pending.item.itemListPrimaryTitle)") {
-                Task { await addScannedItem(pending) }
-            }
-            Button("Discard", role: .cancel) {
-                pendingAdd = nil
-                processNextScanIfNeeded()
-            }
-        } message: { pending in
-            Text("\(pending.item.itemListPrimaryTitle) is not on this reservation. Add it to this pickup, or discard this scan?")
-        }
-        .confirmationDialog(
-            "Can't add this item",
-            isPresented: Binding(
-                get: { pendingBlock != nil },
-                set: {
-                    if !$0 {
-                        pendingBlock = nil
-                        if !isConfirming { processNextScanIfNeeded() }
-                    }
-                }
-            ),
-            titleVisibility: .visible,
-            presenting: pendingBlock
-        ) { _ in
-            Button("OK", role: .cancel) {
-                pendingBlock = nil
-                processNextScanIfNeeded()
-            }
-        } message: { blocked in
-            Text(blocked.message)
-        }
-        .confirmationDialog(
-            "Leave this off the reservation?",
-            isPresented: Binding(
-                get: { pendingRemove != nil },
-                set: { if !$0 { pendingRemove = nil; processNextScanIfNeeded() } }
-            ),
-            titleVisibility: .visible,
-            presenting: pendingRemove
-        ) { pending in
-            Button("Remove remaining \(pending.label)", role: .destructive) {
-                Task { await removeRemainingItem(pending) }
-            }
-            Button("Cancel", role: .cancel) { pendingRemove = nil; processNextScanIfNeeded() }
-        } message: { pending in
-            Text("\(pending.label) stays on the shelf. It will not go out with this pickup.")
-        }
         .sheet(isPresented: $showCamera) {
             KioskBarcodeCameraView(
                 feedbackMessage: lastResult?.message,
@@ -184,208 +181,186 @@ struct KioskPickupView: View {
         }
     }
 
-    // MARK: - Scan Zone
+    // MARK: - Scan area (F1–F4)
 
-    private var scanZone: some View {
-        KioskScanZoneColumn {
-            KioskFlowHeader(
-                title: "Pickup",
-                subtitle: detail?.title,
-                onBack: { backToPerson() },
-                onCamera: { showCamera = true }
-            )
-
-            Spacer()
-
-            if isLoading {
-                ProgressView().tint(KioskText.primary)
-            } else {
-                VStack(spacing: 24) {
-                    if let lastAccepted {
-                        KioskScanAcceptedView(accepted: lastAccepted, reduceMotion: reduceMotion)
-                            .frame(minHeight: 288)
-                    } else {
-                        KioskProgressRing(
-                            count: confirmedCount,
-                            total: totalItems,
-                            isComplete: allConfirmed,
-                            reduceMotion: reduceMotion,
-                            accessibilityText: "\(confirmedCount) of \(totalItems) items confirmed"
-                        )
-                        VStack(spacing: 6) {
-                            Text(allConfirmed
-                                ? "All items confirmed"
-                                : canConfirmPartial
-                                    ? "Ready to pick up selected items"
-                                    : "Scan each item to confirm pickup")
-                                .font(KioskType.actionTitle)
-                                .foregroundStyle(allConfirmed ? KioskStatus.ok : KioskText.primary)
-                                .multilineTextAlignment(.center)
-                            if !allConfirmed {
-                                Text(canConfirmPartial
-                                    ? "Keep scanning to add more, or pick up the confirmed items now."
-                                    : "Use the hand scanner, or tap Camera to scan with the iPad.")
-                                    .font(KioskType.rowDetail)
-                                    .foregroundStyle(KioskText.tertiary)
-                                    .multilineTextAlignment(.center)
-                            }
-                        }
-                    }
-
-                    KioskScannerReadinessBadge(
-                        isReady: scannerHasFocus,
-                        lastScanAt: lastScanAt,
-                        isHardwareConnected: store.scanner.hardwareConnected
-                    )
-
-                    if !scanQueue.isEmpty {
-                        Label("Saving \(scanQueue.count) scan\(scanQueue.count == 1 ? "" : "s")…", systemImage: "arrow.triangle.2.circlepath")
-                            .font(KioskType.chip)
-                            .foregroundStyle(KioskStatus.active)
-                    }
-
-                    if hasBatteryScanStep {
-                        KioskBatteryScanStatus(
-                            title: "Battery quantity",
-                            count: confirmedBatteryCount,
-                            total: batteryTotal,
-                            // The one place the any-unit rule is stated. The rail
-                            // header and each battery row used to repeat it.
-                            pendingCopy: "Scan any \(batteryTotal == 1 ? "available battery" : "\(batteryTotal) available batteries") — printed numbers don't need to match the list.",
-                            completeCopy: batteryTotal == 1 ? "Battery scanned" : "All \(batteryTotal) batteries scanned",
-                            progressCopy: "\(confirmedBatteryCount) of \(batteryTotal) \(batteryTotal == 1 ? "battery" : "batteries") scanned",
-                            unitsHeader: "Scanned units",
-                            scannedUnits: scannedBatteryUnits.map { KioskScannedUnit(id: $0.id, tag: $0.tagName) },
-                            // Staged reservation units hold nothing until
-                            // confirm, so one someone else took (or the wrong
-                            // one) must be clearable. Handed-over units are not.
-                            onReplace: detail?.status == "BOOKED" && !isConfirming
-                                ? { unit in replaceStagedUnit(unit.id) }
-                                : nil
-                        )
-                    }
-
-                    if let result = lastResult {
-                        KioskFeedbackBanner(tone: result.tone, message: result.message)
-                            .transition(.move(edge: .bottom).combined(with: .opacity))
-                            .animation(reduceMotion ? nil : .spring(response: 0.3), value: lastResult)
-                    }
-                }
+    @ViewBuilder
+    private var scanMain: some View {
+        if isLoading && detail == nil {
+            ProgressView().tint(KioskText.primary).frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if let error, detail == nil {
+            KioskErrorState(title: error) { Task { await loadDetail() } }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            if let detail {
+                KioskContextCard(title: detail.title, detail: contextLine(detail))
             }
-
-            Spacer()
-
-            confirmButton
+            stage
+                .animation(KioskMotion.confirm(reduceMotion), value: lastAccepted)
+            bottomAction
         }
     }
 
-    private var confirmButton: some View {
-        KioskCompletionButton(
-            title: confirmButtonTitle,
-            icon: allConfirmed || canConfirmPartial ? "checkmark.circle.fill" : "barcode.viewfinder",
-            isEnabled: canConfirm,
-            isBusy: isConfirming,
-            busyTitle: "Confirming...",
-            accessibilityLabel: confirmAccessibilityLabel,
-            action: confirmPickup
-        )
+    private func contextLine(_ detail: KioskCheckoutDetail) -> String {
+        if isShared { return "Shared: no personal due time. It comes back with the team." }
+        let due = KioskDueCopy.due(detail.endsAt)
+        return isReservation ? "\(due) · from your reservation" : due
+    }
+
+    @ViewBuilder
+    private var stage: some View {
+        if let pending = pendingAdd {
+            offPlanCard(pending)
+        } else if let blocked = pendingBlock {
+            KioskNoticeStage(
+                section: .problem,
+                overline: "Can't add this item",
+                title: blocked.message,
+                message: "Put it back on the shelf and scan the next item.",
+                showsAlertGlyph: true
+            )
+        } else if let lastAccepted {
+            KioskConfirmationStage(
+                section: section,
+                title: isShared ? "\(lastAccepted.title) picked up for the team" : "\(lastAccepted.title) picked up",
+                detail: lastAccepted.subtitle,
+                hint: isShared ? "It isn't on your record; the log shows you handed it over." : "Scan the next item.",
+                onUndo: isUndoing || lastUndo == nil ? nil : { undoLastScan() }
+            )
+        } else if let lastResult, lastResult.tone != .success {
+            KioskNoticeStage(
+                section: lastResult.tone == .error ? .problem : section,
+                overline: lastResult.tone == .error ? "Not picked up" : "Already scanned",
+                title: lastResult.message,
+                message: "Scan the next item.",
+                showsAlertGlyph: lastResult.tone == .error
+            )
+        } else {
+            KioskScanPrompt(
+                title: allConfirmed ? "Everything is scanned" : "Scan what you're picking up",
+                detail: allConfirmed ? "Pick it up below." : "Each item checks off in the list as you scan.",
+                status: scannerStatusLine,
+                section: section,
+                onCamera: { showCamera = true }
+            )
+        }
+    }
+
+    /// F2 (not on the reservation) and F3 (a like-for-like replacement for a
+    /// remaining reserved item), inline instead of a dialog.
+    @ViewBuilder
+    private func offPlanCard(_ pending: PendingOffPlanAdd) -> some View {
+        let tag = pending.item.itemListPrimaryTitle
+        if let reserved = pending.replaces {
+            KioskNoticeStage(
+                section: section,
+                overline: "Swap in a replacement",
+                title: "\(tag) can take \(reserved.tagName)'s place",
+                message: "Both are \(reserved.name). \(tag) goes out instead, and \(reserved.tagName) comes off your reservation."
+            ) {
+                Spacer(minLength: 0)
+                Button("Add \(tag) as an extra instead") {
+                    Task { await addScannedItem(pending) }
+                }
+                .kioskButtonRole(.quiet)
+                .disabled(isConfirming)
+            }
+        } else {
+            KioskNoticeStage(
+                section: section,
+                overline: "Not on your reservation",
+                title: "\(tag) isn't on this reservation",
+                message: "It's free, so it can go out with the rest. Or put it back."
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var bottomAction: some View {
+        if let pending = pendingAdd {
+            KioskPillPair(
+                secondaryTitle: "Put it back",
+                primaryTitle: pending.replaces.map { "Swap for \($0.tagName)" } ?? "Add \(pending.item.itemListPrimaryTitle)",
+                onSecondary: { discardOffPlan() },
+                onPrimary: {
+                    if pending.replaces != nil { Task { await substituteScannedItem(pending) } }
+                    else { Task { await addScannedItem(pending) } }
+                }
+            )
+            .disabled(isConfirming)
+        } else if pendingBlock != nil {
+            KioskPrimaryPill(title: "Put it back") {
+                pendingBlock = nil
+                processNextScanIfNeeded()
+            }
+        } else {
+            KioskPrimaryPill(
+                title: isShared ? "Pick up for the team" : "Pick up",
+                detail: confirmedCount > 0 ? "\(confirmedCount) of \(totalItems)" : nil,
+                isEnabled: canConfirm,
+                isBusy: isConfirming
+            ) {
+                if allConfirmed { confirmPickup() } else if canConfirmPartial { showFinishConfirm = true }
+            }
+            .accessibilityLabel(confirmAccessibilityLabel)
+        }
+    }
+
+    private var scannerStatusLine: String? {
+        if !store.scanner.hardwareConnected { return "Scanner is asleep. Press its trigger to wake it." }
+        if !scannerHasFocus { return "Getting the scanner ready…" }
+        return nil
     }
 
     private var confirmAccessibilityLabel: String {
         if isConfirming { return "Confirming pickup" }
-        if allConfirmed { return "Confirm Pickup, \(totalItems) item\(totalItems == 1 ? "" : "s")" }
+        if allConfirmed { return "Pick up \(totalItems) item\(totalItems == 1 ? "" : "s")" }
         if canConfirmPartial {
-            return "Pick up \(confirmedCount) confirmed item\(confirmedCount == 1 ? "" : "s") now, or continue scanning"
-        }
-        if remainingBatteryCount > 0 {
-            return "Scan \(remainingBatteryCount) more battery unit\(remainingBatteryCount == 1 ? "" : "s") before confirming"
-        }
-        let remaining = totalItems - confirmedCount
-        return "Scan \(remaining) more item\(remaining == 1 ? "" : "s") before confirming"
-    }
-
-    /// Every outstanding item, not just the battery units.
-    ///
-    /// This used to return early on `remainingBatteryCount`, so a booking of
-    /// three cameras and one battery with nothing scanned read "Scan 1 Battery
-    /// Unit" — the button named a fraction of the work and silently omitted the
-    /// three serialized assets also still needed. The battery card above
-    /// already reports the unit sub-total; the CTA's job is the whole number.
-    private var confirmButtonTitle: String {
-        if allConfirmed { return "Confirm Pickup" }
-        if canConfirmPartial {
-            return "Pick Up \(confirmedCount) Item\(confirmedCount == 1 ? "" : "s")"
+            return "Pick up \(confirmedCount) scanned item\(confirmedCount == 1 ? "" : "s"), or keep scanning"
         }
         let remaining = max(0, totalItems - confirmedCount)
-        return "Scan \(remaining) More Item\(remaining == 1 ? "" : "s")"
+        return "Scan \(remaining) more item\(remaining == 1 ? "" : "s") before picking up"
     }
 
-    // MARK: - Checklist Panel
+    // MARK: - List (picking up)
 
-    private func checklistPanel(isCompact: Bool) -> some View {
-        KioskSideRail(isCompact: isCompact) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(detail?.title ?? "Pickup")
-                    .font(KioskType.sectionTitle)
-                    .foregroundStyle(KioskText.primary)
-                if let ref = detail?.refNumber {
-                    Text(ref)
-                        .font(KioskType.code)
-                        .foregroundStyle(KioskText.secondary)
-                }
-                if totalItems > 0 {
-                    ChecklistProgressSummary(
-                        done: confirmedCount,
-                        total: totalItems,
-                        verb: "confirmed",
-                        complete: allConfirmed
-                    )
-                }
-            }
-            .padding(20)
-
-            Divider().background(KioskStroke.divider)
-
+    private var pickingUpPanel: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            KioskSectionHeader(
+                title: isShared ? "For the team" : "Picking up",
+                detail: detail.map { isShared ? "\($0.title) · shared" : $0.title },
+                count: "\(confirmedCount) of \(totalItems)",
+                section: section
+            )
             if detail?.items != nil {
                 ScrollViewReader { proxy in
                     ScrollView {
-                        LazyVStack(spacing: 0) {
-                            ForEach(checklistEntries) { entry in
+                        VStack(spacing: 0) {
+                            ForEach(Array(checklistEntries.enumerated()), id: \.element.id) { index, entry in
+                                if index > 0 { Rectangle().fill(KioskStroke.divider).frame(height: 1) }
                                 checklistEntryView(entry)
-                                Divider().background(KioskStroke.hairline)
+                                    .id(entry.id)
                             }
                         }
+                        .kioskCard(isShared ? section.stageFill : KioskSurface.card, stroke: isShared ? section.stageStroke : KioskStroke.hairline)
+                        .clipShape(RoundedRectangle(cornerRadius: KioskRadius.xl))
                     }
+                    .scrollIndicators(.hidden)
                     .onChange(of: lastConfirmedId) { _, newId in
                         guard let newId else { return }
                         let targetId = checklistScrollTarget(for: newId)
-                        if reduceMotion {
+                        withAnimation(reduceMotion ? nil : .easeOut(duration: 0.25)) {
                             proxy.scrollTo(targetId, anchor: .center)
-                        } else {
-                            withAnimation(.easeOut(duration: 0.25)) {
-                                proxy.scrollTo(targetId, anchor: .center)
-                            }
                         }
                     }
                 }
-            } else if isLoading {
-                Spacer()
-                ProgressView().tint(KioskText.primary).frame(maxWidth: .infinity)
-                Spacer()
-            } else if let error {
-                // Detail-load error (not confirm error — confirm errors flow
-                // through showFeedback so they appear next to the progress ring).
-                KioskErrorState(title: error) { Task { await loadDetail() } }
-                    .padding()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
     }
 
     /// Pickup detail payloads use one placeholder row per requested
     /// numbered unit. Those placeholders are slot IDs for the scan/confirm
-    /// contract, not a list of required physical unit numbers, so the pickup
-    /// rail presents them as one quantity group.
+    /// contract, not a list of required physical unit numbers, so the list
+    /// presents them as one battery row whose numbers fill in as they scan.
     private var checklistEntries: [KioskPickupChecklistEntry] {
         guard let items = detail?.items else { return [] }
 
@@ -442,65 +417,81 @@ struct KioskPickupView: View {
     private func checklistEntryView(_ entry: KioskPickupChecklistEntry) -> some View {
         switch entry {
         case .item(let item):
-            HStack(spacing: 0) {
-                KioskChecklistRow(
-                    name: confirmedItemOverrides[item.id]?.itemListSecondaryTitle
-                        ?? item.itemListSecondaryTitle
-                        ?? item.name,
-                    tag: confirmedItemOverrides[item.id]?.itemListPrimaryTitle
-                        ?? item.itemListPrimaryTitle,
-                    isDone: confirmedIds.contains(item.id)
-                )
-                if canRemoveRemaining(item) {
-                    Button {
-                        pendingRemove = PendingRemove(
-                            item: item,
-                            keepQuantity: nil,
-                            label: item.itemListPrimaryTitle
-                        )
-                    } label: {
-                        Image(systemName: "trash.fill")
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(Color.statusText(.red))
-                            .frame(width: 44, height: 44)
+            KioskItemRow(
+                tag: confirmedItemOverrides[item.id]?.itemListPrimaryTitle ?? item.itemListPrimaryTitle,
+                name: confirmedItemOverrides[item.id]?.itemListSecondaryTitle ?? item.itemListSecondaryTitle,
+                isDone: confirmedIds.contains(item.id),
+                section: section
+            ) {
+                if canRemoveRemaining(item), !isConfirming {
+                    KioskRowRemoveButton(accessibilityLabel: "Remove \(item.itemListPrimaryTitle)") {
+                        pendingRemove = PendingRemove(item: item, keepQuantity: nil, label: item.itemListPrimaryTitle)
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Remove \(item.itemListPrimaryTitle)")
-                    .padding(.trailing, 12)
                 }
             }
-                .id(entry.id)
         case .battery(let group):
-            HStack(spacing: 0) {
-                KioskPickupBatteryChecklistRow(
-                    name: group.name,
+            let scanned = group.items.filter { confirmedIds.contains($0.id) }.count
+            HStack(alignment: .top, spacing: 0) {
+                KioskBatteryRow(
+                    title: KioskBatteryCopy.familyTitle(group.name),
+                    scanned: scanned,
                     total: group.items.count,
-                    confirmedCount: group.items.filter { confirmedIds.contains($0.id) }.count,
-                    scannedTags: group.items.compactMap { confirmedItemOverrides[$0.id]?.itemListPrimaryTitle }
+                    units: batteryUnits(group),
+                    // Nothing scanned against a reservation yet: there are no
+                    // numbers to show, only the count.
+                    note: scanned == 0 && isReservation ? "Numbers are saved as you scan them." : nil,
+                    section: section
                 )
-                if let pending = remainingBatteryRemove(group) {
-                    Button {
+                if let pending = remainingBatteryRemove(group), !isConfirming {
+                    KioskRowRemoveButton(accessibilityLabel: "Remove remaining \(group.name)") {
                         pendingRemove = pending
-                    } label: {
-                        Image(systemName: "trash.fill")
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(Color.statusText(.red))
-                            .frame(width: 44, height: 44)
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Remove remaining \(group.name)")
-                    .padding(.trailing, 12)
+                    .padding(.top, 8)
+                    .padding(.trailing, 14)
                 }
             }
-                .id(entry.id)
         }
     }
 
-    // MARK: - Logic
+    /// Each unit's number, filled once scanned and outlined while still to
+    /// scan. A reservation's unscanned slots have no number yet — any unit
+    /// works — so they show as empty outlines; a PENDING_PICKUP checkout's
+    /// units are already assigned and show theirs.
+    private func batteryUnits(_ group: KioskPickupBatteryChecklistGroup) -> [KioskBatteryRow.Unit] {
+        let scannedCount = group.items.filter { confirmedIds.contains($0.id) }.count
+        if scannedCount == 0 && isReservation { return [] }
+        return group.items.map { slot in
+            if confirmedIds.contains(slot.id) {
+                let unit = confirmedItemOverrides[slot.id]
+                return .init(id: slot.id, label: (unit?.unitNumber ?? slot.unitNumber).map { "#\($0)" } ?? unit?.tagName ?? "", isScanned: true)
+            }
+            let label = isReservation ? "" : slot.unitNumber.map { "#\($0)" } ?? ""
+            return .init(id: slot.id, label: label, isScanned: false)
+        }
+    }
+
+    /// What stays reserved if the pickup finishes now: "MIC-09", "1 × Sony Battery".
+    private var leftoverLabels: [String] {
+        var labels: [String] = []
+        for entry in checklistEntries {
+            switch entry {
+            case .item(let item) where !confirmedIds.contains(item.id):
+                labels.append(item.itemListPrimaryTitle)
+            case .battery(let group):
+                let left = group.items.filter { !confirmedIds.contains($0.id) }.count
+                if left > 0 { labels.append("\(left) × \(group.name)") }
+            default:
+                continue
+            }
+        }
+        return labels
+    }
+
+    // MARK: - Scanning
 
     private func handleScan(_ value: String) {
-        // Scans that land while a dialog is open are queued, not dropped: the
-        // queue already waits for the dialog, and dropping them was silent
+        // Scans that land while a card is open are queued, not dropped: the
+        // queue already waits for the card, and dropping them was silent
         // while the scanner beeped as if each had taken.
         guard !isConfirming else {
             showFeedback(.error("Hold on — confirming pickup"))
@@ -532,51 +523,93 @@ struct KioskPickupView: View {
                 if result.success, let item = result.item {
                     if result.addedToPlan == true {
                         await loadDetail(showLoading: false)
-                        lastConfirmedId = item.id
-                        lastAccepted = KioskAcceptedScan(
-                            title: item.itemListPrimaryTitle,
-                            subtitle: item.itemListSecondaryTitle,
-                            progress: "\(confirmedIds.count) of \(totalItems) confirmed"
-                        )
+                        acceptScan(item, undo: nil)
                         showFeedback(.success("Added \(item.tagName) to this pickup"))
                     } else if confirmedIds.contains(item.id) {
-                        showFeedback(.alreadyConfirmed("\(item.tagName) already confirmed"))
+                        showFeedback(.alreadyConfirmed("\(item.tagName) already scanned"))
                     } else {
                         confirmedIds.insert(item.id)
                         confirmedItemOverrides[item.id] = item
-                        lastConfirmedId = item.id
-                        lastAccepted = KioskAcceptedScan(
-                            title: item.itemListPrimaryTitle,
-                            subtitle: item.itemListSecondaryTitle,
-                            progress: "\(confirmedIds.count) of \(totalItems) confirmed"
-                        )
+                        acceptScan(item, undo: undoTarget(for: item))
                         showFeedback(.success(result.locationMessage ?? item.name))
                     }
                 } else if result.errorCode == "add_available", let item = result.item {
-                    presentAddOrDiscard(scanValue: entry.value, item: item)
-                } else if let substitution = result.substitution {
-                    presentAddOrDiscard(
-                        scanValue: entry.value,
-                        item: KioskScanResult.ScannedItem(
-                            id: substitution.scanned.id,
-                            name: substitution.scanned.name,
-                            tagName: substitution.scanned.tagName,
-                            type: nil,
-                            imageUrl: nil,
-                            bulkSkuId: nil,
-                            unitNumber: nil
-                        )
-                    )
+                    presentAddOrDiscard(scanValue: entry.value, item: item, replaces: result.substitution?.reserved)
                 } else if Self.blockedAddErrorCodes.contains(result.errorCode ?? "") {
                     presentBlockedAdd(result.error ?? "This item cannot be added to this pickup.")
                 } else {
                     let isInBooking = items.contains { $0.tagName.lowercased() == entry.value.lowercased() || $0.id == entry.value }
-                    showFeedback(.error(result.error ?? (isInBooking ? "Already confirmed" : "Not in this pickup")))
+                    showFeedback(.error(result.error ?? (isInBooking ? "Already scanned" : "Not in this pickup")))
                 }
             } catch {
                 guard store.ownsFlow(flow) else { return }
                 let message = (error as? APIError)?.errorDescription ?? "Scan failed"
                 showFeedback(.error(message))
+            }
+        }
+    }
+
+    private func acceptScan(_ item: KioskScanResult.ScannedItem, undo: PickupUndoTarget?) {
+        lastConfirmedId = item.id
+        lastUndo = undo
+        lastAccepted = KioskAcceptedScan(
+            title: acceptedTitle(item),
+            subtitle: acceptedDetail(item),
+            progress: "\(confirmedIds.count) of \(totalItems)"
+        )
+    }
+
+    /// "CAM-022", or for a numbered unit "Sony Battery #12".
+    private func acceptedTitle(_ item: KioskScanResult.ScannedItem) -> String {
+        guard let number = item.unitNumber else { return item.itemListPrimaryTitle }
+        let slot = detail?.items.first { $0.id == item.id }
+        let base = (slot?.bulkSkuName ?? item.name)
+            .replacingOccurrences(of: #"\s*#\d+$"#, with: "", options: .regularExpression)
+        return "\(base) #\(number)"
+    }
+
+    private func acceptedDetail(_ item: KioskScanResult.ScannedItem) -> String {
+        let progress = "\(confirmedIds.count) of \(totalItems)"
+        if item.unitNumber != nil { return "Any battery works; its number is saved as you scan · \(progress)" }
+        return [item.itemListSecondaryTitle, progress].compactMap { $0 }.joined(separator: " · ")
+    }
+
+    /// Serialized scans can always be undone before confirm. Numbered units
+    /// only on a reservation; a PENDING_PICKUP checkout's units are assigned.
+    private func undoTarget(for item: KioskScanResult.ScannedItem) -> PickupUndoTarget? {
+        if let bulkSkuId = item.bulkSkuId, let unitNumber = item.unitNumber {
+            guard isReservation else { return nil }
+            return PickupUndoTarget(slotId: item.id, assetId: nil, bulkSkuId: bulkSkuId, unitNumber: unitNumber)
+        }
+        return PickupUndoTarget(slotId: item.id, assetId: item.id, bulkSkuId: nil, unitNumber: nil)
+    }
+
+    private func undoLastScan() {
+        guard let target = lastUndo else { return }
+        store.resetInactivity()
+        isUndoing = true
+        let flow = store.flowGeneration
+        Task {
+            defer { if store.ownsFlow(flow) { isUndoing = false } }
+            do {
+                let result = try await KioskAPI.shared.kioskPickupUndoScan(
+                    bookingId: bookingId,
+                    actorId: userId,
+                    assetId: target.assetId,
+                    bulkSkuId: target.bulkSkuId,
+                    unitNumber: target.unitNumber
+                )
+                guard store.ownsFlow(flow) else { return }
+                if result.success {
+                    lastUndo = nil
+                    withAnimation { lastAccepted = nil }
+                    await loadDetail(showLoading: false)
+                } else {
+                    showFeedback(.error(result.error ?? result.message ?? "That scan can't be undone now."))
+                }
+            } catch {
+                guard store.ownsFlow(flow) else { return }
+                showFeedback(.error((error as? APIError)?.errorDescription ?? "That scan can't be undone now."))
             }
         }
     }
@@ -608,51 +641,24 @@ struct KioskPickupView: View {
         }
     }
 
-    private func confirmPickup() {
-        guard canConfirm, !isConfirming else { return }
-        let isPartial = canConfirmPartial
-        guard let flow = store.beginHandoff() else { return }
-        isConfirming = true
-        Task {
-            defer { store.endHandoff(flow); isConfirming = false }
-            do {
-                let confirmation = try await KioskAPI.shared.kioskPickupConfirm(
-                    bookingId: bookingId,
-                    actorId: userId,
-                    partial: isPartial
-                )
-                guard store.ownsFlow(flow) else { return }
-                earnedBadges.appendUnique(contentsOf: confirmation.earnedBadges ?? [])
-                Haptics.success()
-                let count = confirmation.itemCount
-                let summary = count.map { "\($0) item\($0 == 1 ? "" : "s") checked out." } ?? "Your pickup is recorded."
-                store.screen = .success(KioskSuccessInfo(
-                    kind: .pickup,
-                    message: (confirmation.partial ?? isPartial)
-                        ? "\(summary) The remaining items are reserved for a later pickup."
-                        : summary,
-                    earnedBadges: earnedBadges
-                ))
-                store.clearIntent(reason: .success)
-            } catch {
-                let message = (error as? APIError)?.errorDescription
-                    ?? "Could not confirm pickup. Please try again."
-                showFeedback(.error(message))
-            }
-            isConfirming = false
-        }
-    }
+    // MARK: - Off-plan scans (F2, F3)
 
-    private func presentAddOrDiscard(scanValue: String, item: KioskScanResult.ScannedItem) {
+    private func presentAddOrDiscard(scanValue: String, item: KioskScanResult.ScannedItem, replaces: KioskPickupSubstitution.NamedItem? = nil) {
         lastAccepted = nil
         lastResult = nil
-        pendingAdd = PendingOffPlanAdd(scanValue: scanValue, item: item)
+        pendingAdd = PendingOffPlanAdd(scanValue: scanValue, item: item, replaces: replaces)
         Haptics.warning()
         KioskScanFeedbackSound.playFailure()
         UIAccessibility.post(
             notification: .announcement,
-            argument: "\(item.itemListPrimaryTitle) is not on this reservation. Add it, or discard?"
+            argument: replaces.map { "\(item.itemListPrimaryTitle) can take \($0.tagName)'s place. Swap, or put it back?" }
+                ?? "\(item.itemListPrimaryTitle) is not on this reservation. Add it, or put it back?"
         )
+    }
+
+    private func discardOffPlan() {
+        pendingAdd = nil
+        processNextScanIfNeeded()
     }
 
     private func presentBlockedAdd(_ message: String) {
@@ -684,12 +690,9 @@ struct KioskPickupView: View {
             earnedBadges.appendUnique(contentsOf: result.earnedBadges ?? [])
             if result.success, let item = result.item {
                 await loadDetail(showLoading: false)
-                lastConfirmedId = item.id
-                lastAccepted = KioskAcceptedScan(
-                    title: item.itemListPrimaryTitle,
-                    subtitle: item.itemListSecondaryTitle,
-                    progress: "\(confirmedIds.count) of \(totalItems) confirmed"
-                )
+                // Added items join the plan; Undo would only clear the scan
+                // and leave it reserved, so the row's Remove is the way back.
+                acceptScan(item, undo: nil)
                 showFeedback(.success("Added \(item.tagName) to this pickup"))
             } else {
                 presentBlockedAdd(result.error ?? "This item cannot be added to this pickup.")
@@ -700,34 +703,37 @@ struct KioskPickupView: View {
         }
     }
 
-    private func replaceStagedUnit(_ slotId: String) {
-        guard let unit = confirmedItemOverrides[slotId],
-              let bulkSkuId = unit.bulkSkuId,
-              let unitNumber = unit.unitNumber else {
-            showFeedback(.error("Refresh this pickup before replacing a unit."))
-            return
-        }
-        store.resetInactivity()
+    private func substituteScannedItem(_ pending: PendingOffPlanAdd) async {
+        guard !isConfirming, let reserved = pending.replaces else { return }
         let flow = store.flowGeneration
         isConfirming = true
-        Task {
-            defer { if store.ownsFlow(flow) { isConfirming = false } }
-            do {
-                let result = try await KioskAPI.shared.kioskPickupUnstage(
-                    bookingId: bookingId,
-                    actorId: userId,
-                    bulkSkuId: bulkSkuId,
-                    unitNumber: unitNumber
-                )
-                guard store.ownsFlow(flow) else { return }
+        defer {
+            isConfirming = false
+            pendingAdd = nil
+            processNextScanIfNeeded()
+        }
+        do {
+            let result = try await KioskAPI.shared.kioskPickupSubstitute(
+                bookingId: bookingId,
+                actorId: userId,
+                scanValue: pending.scanValue,
+                reservedAssetId: reserved.id
+            )
+            guard store.ownsFlow(flow) else { return }
+            if result.success, let item = result.item {
                 await loadDetail(showLoading: false)
-                showFeedback(.success(result.message ?? "\(unit.tagName) cleared. Scan the replacement."))
-            } catch {
-                guard store.ownsFlow(flow) else { return }
-                showFeedback(.error((error as? APIError)?.errorDescription ?? "Could not clear that unit."))
+                acceptScan(item, undo: nil)
+                showFeedback(.success("\(item.tagName) swapped in for \(reserved.tagName)"))
+            } else {
+                presentBlockedAdd(result.error ?? "That swap can't be made now.")
             }
+        } catch {
+            let message = (error as? APIError)?.errorDescription ?? "Could not swap that item. Please try again."
+            presentBlockedAdd(message)
         }
     }
+
+    // MARK: - Remove what stays on the shelf
 
     private func canRemoveRemaining(_ item: KioskCheckoutDetail.ReturnItem) -> Bool {
         guard item.reservationItemId != nil else { return false }
@@ -747,12 +753,8 @@ struct KioskPickupView: View {
     }
 
     private func removeRemainingItem(_ pending: PendingRemove) async {
-        guard let reservationItemId = pending.item.reservationItemId else {
-            pendingRemove = nil
-            showFeedback(.error("Refresh this pickup before removing an item."))
-            return
-        }
-        guard let expectedUpdatedAt = detail?.updatedAt else {
+        guard let reservationItemId = pending.item.reservationItemId,
+              let expectedUpdatedAt = detail?.updatedAt else {
             pendingRemove = nil
             showFeedback(.error("Refresh this pickup before removing an item."))
             return
@@ -762,6 +764,7 @@ struct KioskPickupView: View {
         defer {
             isConfirming = false
             pendingRemove = nil
+            processNextScanIfNeeded()
         }
         do {
             _ = try await KioskAPI.shared.kioskUpdateReservationItem(
@@ -780,6 +783,67 @@ struct KioskPickupView: View {
             showFeedback(.error(message))
         }
     }
+
+    // MARK: - Confirm (F5)
+
+    private func confirmPickup() {
+        guard canConfirm, !isConfirming else { return }
+        let isPartial = canConfirmPartial
+        guard let flow = store.beginHandoff() else { return }
+        isConfirming = true
+        let scannedTags = confirmedScanTags
+        Task {
+            defer { store.endHandoff(flow); isConfirming = false }
+            do {
+                let confirmation = try await KioskAPI.shared.kioskPickupConfirm(
+                    bookingId: bookingId,
+                    actorId: userId,
+                    partial: isPartial
+                )
+                guard store.ownsFlow(flow) else { return }
+                earnedBadges.appendUnique(contentsOf: confirmation.earnedBadges ?? [])
+                Haptics.success()
+                let count = confirmation.itemCount ?? confirmedCount
+                let partial = confirmation.partial ?? isPartial
+                let summary = "\(count) item\(count == 1 ? "" : "s") checked out."
+                store.screen = .success(KioskSuccessInfo(
+                    kind: .pickup,
+                    message: partial ? "\(summary) The remaining items are reserved for a later pickup." : summary,
+                    earnedBadges: earnedBadges,
+                    receipt: picker.flatMap { user in
+                        detail.map { detail in
+                            KioskPickupCopy.receipt(
+                                user: user,
+                                title: detail.title,
+                                count: count,
+                                total: partial ? totalItems : nil,
+                                tags: scannedTags,
+                                endsAt: isShared ? nil : detail.endsAt,
+                                isShared: isShared,
+                                remainingItemNames: confirmation.remainingItemNames ?? []
+                            )
+                        }
+                    }
+                ))
+                store.clearIntent(reason: .success)
+            } catch {
+                let message = (error as? APIError)?.errorDescription
+                    ?? "Could not confirm pickup. Please try again."
+                showFeedback(.error(message))
+            }
+            isConfirming = false
+        }
+    }
+
+    /// "CAM-022, LENS-41, Sony Battery #12", in list order.
+    private var confirmedScanTags: [String] {
+        (detail?.items ?? []).filter { confirmedIds.contains($0.id) }.map { item in
+            if let unit = confirmedItemOverrides[item.id] { return acceptedTitle(unit) }
+            return item.itemListPrimaryTitle
+        }
+    }
+
+    // MARK: - Loading
 
     private func loadDetail(showLoading: Bool = true) async {
         if showLoading { isLoading = true }
@@ -821,6 +885,91 @@ struct KioskPickupView: View {
         if let user = store.pendingIntent?.identifiedUser { store.screen = .operatorHub(user) }
         else { store.screen = .idle }
     }
+
+    #if DEBUG
+    /// Capture hook: confirmations and off-plan cards only exist in the
+    /// seconds after a real scan, which no fixture payload can produce.
+    private func applyFixtureMoment() {
+        switch KioskFixtureScenario.active {
+        case .pickupAccepted, .pickupShared:
+            let slot = KioskFixtureScenario.active == .pickupShared
+                ? detail?.items.first { $0.tagName == "LENS-50" }
+                : detail?.items.first { $0.isNumberedBulk && confirmedIds.contains($0.id) }
+            guard let slot, let unit = confirmedItemOverrides[slot.id] else { return }
+            lastConfirmedId = slot.id
+            acceptScan(unit, undo: undoTarget(for: unit))
+        case .pickupOffPlan:
+            pendingAdd = PendingOffPlanAdd(
+                scanValue: "MIC-12",
+                item: KioskScanResult.ScannedItem(id: "mic-12", name: "Rode NTG5", tagName: "MIC-12", type: nil, imageUrl: nil, bulkSkuId: nil, unitNumber: nil)
+            )
+        case .pickupSubstitute:
+            pendingAdd = PendingOffPlanAdd(
+                scanValue: "MIC-11",
+                item: KioskScanResult.ScannedItem(id: "mic-11", name: "Rode NTG5", tagName: "MIC-11", type: nil, imageUrl: nil, bulkSkuId: nil, unitNumber: nil),
+                replaces: KioskPickupSubstitution.NamedItem(id: "mic-09", name: "Rode NTG5", tagName: "MIC-09")
+            )
+        case .pickupFinishConfirm:
+            showFinishConfirm = true
+        default:
+            break
+        }
+    }
+    #endif
+}
+
+/// Copy shared by the pickup screen and its receipt.
+enum KioskPickupCopy {
+    /// "MIC-09", "MIC-09 and 1 × Sony Battery", "A, B, and C".
+    static func list(_ items: [String]) -> String {
+        switch items.count {
+        case 0: return ""
+        case 1: return items[0]
+        case 2: return "\(items[0]) and \(items[1])"
+        default: return items.dropLast().joined(separator: ", ") + ", and " + (items.last ?? "")
+        }
+    }
+
+    /// F5: "All set, Erik." then what went out, and — on a partial pickup —
+    /// the leftover line naming what stays reserved (`remainingItemNames`).
+    static func receipt(
+        user: KioskUser,
+        title: String,
+        count: Int,
+        total: Int?,
+        tags: [String],
+        endsAt: Date?,
+        isShared: Bool,
+        remainingItemNames: [String]
+    ) -> KioskReceipt {
+        let heading = total.map { "\(count) of \($0) · \(title)" } ?? "\(count) item\(count == 1 ? "" : "s") · \(title)"
+        let detail = [tags.isEmpty ? nil : tags.joined(separator: ", "), endsAt.map { "due " + KioskDueCopy.midSentence($0) }]
+            .compactMap { $0 }.joined(separator: " · ")
+        let leftover = remainingItemNames.isEmpty
+            ? nil
+            : "\(list(remainingItemNames)) \(remainingItemNames.count == 1 && !remainingItemNames[0].contains("×") ? "stays" : "stay") reserved for a later pickup."
+        let nextStep: String
+        if isShared {
+            nextStep = "It comes back with the team. Anyone can return it."
+        } else if leftover != nil {
+            nextStep = "You'll get a reminder before it's due. The rest of your reservation is still waiting here."
+        } else {
+            nextStep = "You'll get a reminder before it's due."
+        }
+        return KioskReceipt(
+            firstName: String(user.name.split(separator: " ").first ?? Substring(user.name)),
+            avatarURL: user.avatarUrl,
+            initials: user.initials,
+            cards: [KioskReceipt.Card(
+                overline: isShared ? "Picked up for the team" : "Picked up",
+                title: heading,
+                detail: detail.isEmpty ? nil : detail,
+                footnote: leftover,
+                footnoteSection: leftover == nil ? nil : .comingBack
+            )],
+            nextStep: nextStep
+        )
+    }
 }
 
 private struct KioskPickupBatteryChecklistGroup {
@@ -838,70 +987,5 @@ private enum KioskPickupChecklistEntry: Identifiable {
         case .item(let item): return item.id
         case .battery(let group): return group.id
         }
-    }
-}
-
-private struct KioskPickupBatteryChecklistRow: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    let name: String
-    let total: Int
-    let confirmedCount: Int
-    let scannedTags: [String]
-
-    private var isComplete: Bool { total > 0 && confirmedCount >= total }
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: isComplete ? "checkmark.circle.fill" : "battery.100percent")
-                .foregroundStyle(isComplete ? Color.statusText(.green) : Color.statusText(.orange))
-                .font(.title3)
-                .frame(width: 28)
-                .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: 5) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text("\(total) × \(name)")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(isComplete ? KioskText.tertiary : KioskText.primary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Spacer(minLength: 0)
-                    Text("ANY UNITS")
-                        .font(KioskType.chip)
-                        .foregroundStyle(Color.statusText(.orange))
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
-                        .background(Color.statusText(.orange).opacity(0.12), in: Capsule())
-                }
-
-                Text(isComplete
-                    ? (total == 1 ? "Scanned" : "All \(total) scanned")
-                    : "\(confirmedCount) of \(total) scanned")
-                    .font(KioskType.chip.monospacedDigit())
-                    .foregroundStyle(KioskText.secondary)
-
-
-
-                if !scannedTags.isEmpty {
-                    Text("Scanned: \(scannedTags.joined(separator: " · "))")
-                        .font(KioskType.code.weight(.semibold))
-                        .foregroundStyle(Color.statusText(.green))
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 16)
-        .animation(reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 1), value: confirmedCount)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(accessibilityText)
-    }
-
-    private var accessibilityText: String {
-        let progress = isComplete
-            ? "all \(total) battery units scanned"
-            : "\(confirmedCount) of \(total) battery units scanned"
-        let scanned = scannedTags.isEmpty ? "" : ", scanned \(scannedTags.joined(separator: ", "))"
-        return "\(total) \(name), \(progress). Scan any available units; printed numbers do not need to match this list\(scanned)."
     }
 }

@@ -129,6 +129,30 @@ struct WisconsinKioskApp: App {
             kioskStore.screen = .pickup(bookingId: "co-1", userId: kioskUser.id)
         case .reservationBatteryPickup:
             kioskStore.screen = .pickup(bookingId: "rs-1", userId: kioskUser.id)
+        case .pickupAccepted, .pickupOffPlan, .pickupSubstitute, .pickupShared, .pickupFinishConfirm:
+            let bookingId = scenario == .pickupShared ? "rs-shared" : "rs-duals"
+            kioskStore.setIntent(KioskFlowIntent(
+                action: .pickup, source: .reservation, identifiedUser: kioskUser, expectedRequester: nil,
+                selectedEvent: nil,
+                targetBooking: KioskIntentBooking(id: bookingId, title: scenario == .pickupShared ? "Football Travel Case" : "Wrestling Duals Kit", startsAt: nil, endsAt: KioskFixtures.hours(30)),
+                pendingScanValues: [], createdAt: Date(), ambiguity: .none
+            ))
+            kioskStore.screen = .pickup(bookingId: bookingId, userId: kioskUser.id)
+        case .pickupReceipt:
+            kioskStore.screen = .success(KioskSuccessInfo(
+                kind: .pickup,
+                message: "3 items checked out. The remaining items are reserved for a later pickup.",
+                receipt: KioskPickupCopy.receipt(
+                    user: kioskUser,
+                    title: "Wrestling Duals Kit",
+                    count: 3,
+                    total: 5,
+                    tags: ["CAM-022", "LENS-41", "Sony Battery #12"],
+                    endsAt: KioskFixtures.hours(30),
+                    isShared: false,
+                    remainingItemNames: ["MIC-09", "1 × Sony Battery"]
+                )
+            ))
         case .returnFlow, .returnAccepted:
             kioskStore.screen = .return(bookingId: "co-1", userId: kioskUser.id)
         case .identity:
@@ -444,6 +468,18 @@ enum KioskFixtureScenario: String {
     case pickup = "pickup"
     /// Reservation pickup checklist with a quantity of numbered batteries.
     case reservationBatteryPickup = "reservation-battery-pickup"
+    /// Redesign F1: a reservation pickup right after a battery scan lands.
+    case pickupAccepted = "pickup-accepted"
+    /// Redesign F2: an off-plan scan, asking Put it back / Add.
+    case pickupOffPlan = "pickup-off-plan"
+    /// Redesign F3: a like-for-like scan offered as a swap for a reserved item.
+    case pickupSubstitute = "pickup-substitute"
+    /// Redesign F4: a shared travel case picked up for the team.
+    case pickupShared = "pickup-shared"
+    /// Finishing a pickup with reserved items unscanned asks first.
+    case pickupFinishConfirm = "pickup-finish-confirm"
+    /// Redesign F5: the pickup receipt with its leftover line.
+    case pickupReceipt = "pickup-receipt"
     /// Return checklist.
     case returnFlow = "return"
     /// The return checklist in the moment right after a scan lands.
@@ -818,6 +854,8 @@ enum KioskFixtures {
         if KioskFixtureScenario.active == .reservationBatteryPickup {
             return reservationBatteryPickupDetailJSON(id: id)
         }
+        if id == "rs-duals" { return pickupDualsDetailJSON(id: id) }
+        if id == "rs-shared" { return pickupSharedDetailJSON(id: id) }
 
         return """
         {"id":"\(id)","title":"Volleyball vs Minnesota","refNumber":"CO-1043","status":"OPEN",
@@ -834,6 +872,61 @@ enum KioskFixtures {
             "type":"numbered_bulk","bulkSkuId":"sku-bat","bulkSkuName":"V-Mount Battery",
             "unitNumber":4,"imageUrl":null}
          ]}
+        """
+    }
+
+    /// Redesign F1–F3: CAM-022, LENS-41 and battery #12 already scanned;
+    /// MIC-09 and one battery still to scan.
+    static func pickupDualsDetailJSON(id: String) -> String {
+        """
+        {"id":"\(id)","title":"Wrestling Duals Kit","refNumber":"RS-2210","status":"BOOKED",
+         "requesterId":"\(primaryUser.id)","custodyScope":"PERSONAL","endsAt":"\(iso(hours(30)))",
+         "updatedAt":"\(iso(hours(-1)))",
+         "scanSummary":{"serializedTotal":3,"numberedBulkTotal":2,"numberedBulkCompleted":1},
+         "items":[
+           {"id":"cam-022","tagName":"CAM-022","name":"Sony A7S III","returned":true,"type":"serialized",
+            "bulkSkuId":null,"bulkSkuName":null,"unitNumber":null,"imageUrl":null,"reservationItemId":"si-1"},
+           {"id":"lens-41","tagName":"LENS-41","name":"Sigma 24–70mm","returned":true,"type":"serialized",
+            "bulkSkuId":null,"bulkSkuName":null,"unitNumber":null,"imageUrl":null,"reservationItemId":"si-2"},
+           {"id":"mic-09","tagName":"MIC-09","name":"Rode NTG5","returned":false,"type":"serialized",
+            "bulkSkuId":null,"bulkSkuName":null,"unitNumber":null,"imageUrl":null,"reservationItemId":"si-3"},
+           {"id":"bulk-sony:slot:1","tagName":"Sony Battery #12","name":"Sony Battery #12","returned":true,
+            "type":"numbered_bulk","bulkSkuId":"sku-sony","bulkSkuName":"Sony Battery","unitNumber":12,
+            "imageUrl":null,"reservationItemId":"bi-1"},
+           {"id":"bulk-sony:slot:2","tagName":"#2","name":"Sony Battery 2","returned":false,
+            "type":"numbered_bulk","bulkSkuId":"sku-sony","bulkSkuName":"Sony Battery","unitNumber":null,
+            "imageUrl":null,"reservationItemId":"bi-1"}
+         ]}
+        """
+    }
+
+    /// Redesign F4: a shared travel case, three of seven scanned.
+    static func pickupSharedDetailJSON(id: String) -> String {
+        func serialized(_ id: String, _ tag: String, _ name: String, _ returned: Bool) -> String {
+            """
+            {"id":"\(id)","tagName":"\(tag)","name":"\(name)","returned":\(returned),"type":"serialized",
+             "bulkSkuId":null,"bulkSkuName":null,"unitNumber":null,"imageUrl":null,"reservationItemId":"si-\(id)"}
+            """
+        }
+        let batteries = (1...2).map { index in
+            """
+            {"id":"bulk-vmount:slot:\(index)","tagName":"#\(index)","name":"V-Mount Battery \(index)","returned":false,
+             "type":"numbered_bulk","bulkSkuId":"sku-vmount","bulkSkuName":"V-Mount Battery","unitNumber":null,
+             "imageUrl":null,"reservationItemId":"bi-vmount"}
+            """
+        }
+        let items = [
+            serialized("case-fb", "CASE-FB", "Pelican 1650 travel case", true),
+            serialized("drone-2", "DRONE-2", "DJI Inspire 3", true),
+            serialized("lens-50", "LENS-50", "Canon CN7 17–120", true),
+            serialized("ssd-11", "SSD-11", "4 × 2TB SSD pack", false),
+        ] + batteries + [serialized("cart-1", "CART-1", "Magliner cart", false)]
+        return """
+        {"id":"\(id)","title":"Football Travel Case","refNumber":"RS-2215","status":"BOOKED",
+         "requesterId":"\(primaryUser.id)","custodyScope":"SHARED","endsAt":"\(iso(hours(54)))",
+         "updatedAt":"\(iso(hours(-1)))",
+         "scanSummary":{"serializedTotal":5,"numberedBulkTotal":2,"numberedBulkCompleted":0},
+         "items":[\(items.joined(separator: ","))]}
         """
     }
 

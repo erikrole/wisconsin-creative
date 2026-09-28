@@ -921,14 +921,18 @@ struct KioskReceipt: Equatable {
         let detail: String?
         let footnote: String?
         let isProblem: Bool
+        /// Colors the footnote when it is something to act on later, like a
+        /// pickup's leftover line (F5). Nil keeps it quiet.
+        let footnoteSection: KioskSection?
 
-        init(overline: String, refNumber: String? = nil, title: String, detail: String? = nil, footnote: String? = nil, isProblem: Bool = false) {
+        init(overline: String, refNumber: String? = nil, title: String, detail: String? = nil, footnote: String? = nil, isProblem: Bool = false, footnoteSection: KioskSection? = nil) {
             self.overline = overline
             self.refNumber = refNumber
             self.title = title
             self.detail = detail
             self.footnote = footnote
             self.isProblem = isProblem
+            self.footnoteSection = footnoteSection
         }
     }
 
