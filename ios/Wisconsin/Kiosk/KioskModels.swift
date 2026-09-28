@@ -214,6 +214,16 @@ struct KioskEvent: Decodable, Identifiable {
     let shiftCount: Int
     let assignedUsers: [AssignedUser]
     let assignedUserCount: Int
+    /// Assigned crew with no personal checkout linked to this event
+    /// (additive; older servers omit it).
+    let crewWithoutGear: [CrewMember]
+
+    struct CrewMember: Decodable, Identifiable, Equatable {
+        let id: String
+        let name: String
+        let initials: String?
+        let avatarUrl: String?
+    }
 
     struct AssignedUser: Decodable, Identifiable {
         let id: String
@@ -237,6 +247,7 @@ struct KioskEvent: Decodable, Identifiable {
         case shiftCount
         case assignedUsers
         case assignedUserCount
+        case crewWithoutGear
     }
 
     init(from decoder: Decoder) throws {
@@ -252,6 +263,7 @@ struct KioskEvent: Decodable, Identifiable {
         shiftCount = try container.decodeIfPresent(Int.self, forKey: .shiftCount) ?? 0
         assignedUsers = try container.decodeIfPresent(LossyDecodableArray<AssignedUser>.self, forKey: .assignedUsers)?.elements ?? []
         assignedUserCount = try container.decodeIfPresent(Int.self, forKey: .assignedUserCount) ?? assignedUsers.count
+        crewWithoutGear = try container.decodeIfPresent(LossyDecodableArray<CrewMember>.self, forKey: .crewWithoutGear)?.elements ?? []
     }
 
     var displayAllDay: Bool {
@@ -523,6 +535,25 @@ struct KioskResolveScanResult: Decodable {
     let item: KioskResolvedItem?
     let booking: KioskResolvedBooking?
     let candidates: [KioskScanCandidate]?
+}
+
+/// `POST /api/kiosk/scan-lookup` (redesign B1): what an item is and when it
+/// is next claimed. `freeUntil` is always null for numbered units, which are
+/// reserved by count rather than by unit.
+struct KioskScanLookup: Decodable, Equatable {
+    let item: Item
+
+    struct Item: Decodable, Equatable {
+        let tagName: String
+        let productName: String
+        let type: String?
+        let status: String
+        let holder: String?
+        let dueAt: Date?
+        let bookingTitle: String?
+        let freeUntil: Date?
+        let lastReturnedAt: Date?
+    }
 }
 
 struct KioskScanCandidate: Decodable, Identifiable {

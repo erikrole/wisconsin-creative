@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sourceRevision": "7c3c1fba78c24bc430751a4b6223d5d7d378cd01",
+  "sourcePatchSha256": "8ce5c94310db22b5b307bbca9c362e410514e02e54e7aa5e55720ccfcbc085b6",
+  "settings": {
+    "device": "iPad Air 11-inch (M4) simulator, iOS 26.5",
+    "viewport": [
+      1180,
+      820
+    ],
+    "fixture": "GT_KIOSK_SCENARIO=identity-scan-free",
+    "role": "kiosk",
+    "route": "identity-scan-free",
+    "appearance": "dark",
+    "textSize": "default",
+    "locale": "en-US",
+    "timezone": "America/Chicago",
+    "clock": "live clock, captured 2026-09-28 morning",
+    "scroll": [
+      0,
+      0
+    ]
+  },
+  "imageSha256": "c39aac239c5286a70e5a95a7df5799b729c300003ad3d8cba18bf4f871f03021",
+  "dimensions": [
+    1640,
+    1140
+  ]
+}

@@ -2,6 +2,11 @@ import SwiftUI
 
 // MARK: - Home (redesign frames A1–A4, D1)
 //
+// Game day (A3): a today event with linked pickups or checkouts, or crew
+// without gear, gets its own card at the top -- pickups first, then what's
+// out, then a "Crew without gear" line. Anything not linked to an event falls
+// through to the ordinary sections below it.
+//
 // Clock band on top; sectioned custody cards on the left (overdue, due back
 // today, out and due later); Today tiles and the Everyone grid on the right.
 // Status stays hidden while healthy -- only a real problem (offline) shows in
@@ -12,6 +17,7 @@ struct KioskHomeView: View {
     let locationName: String?
     let checkouts: [KioskActiveCheckout]
     var pickups: [KioskDashboard.HomePickup] = []
+    var events: [KioskEvent] = []
     var serverToday: [KioskDashboard.TodayTile] = []
     /// Checkouts nudged on this iPad since the last refresh.
     var nudgedIds: Set<String> = []
@@ -115,10 +121,45 @@ struct KioskHomeView: View {
         let rows: [KioskActiveCheckout]
     }
 
+    private struct EventGroup: Identifiable {
+        let event: KioskEvent
+        let pickups: [KioskDashboard.HomePickup]
+        let checkouts: [KioskActiveCheckout]
+        /// "Wes H. (call 9:00)"; call time comes from the event's assignments.
+        let crew: [String]
+        var id: String { event.id }
+    }
+
+    /// Today's events that have something to show, in start order.
+    private var eventGroups: [EventGroup] {
+        let now = Date()
+        return events
+            .filter { Calendar.current.isDateInToday($0.startsAt) }
+            .sorted { $0.startsAt < $1.startsAt }
+            .compactMap { event in
+                let linkedPickups = pickups.filter { $0.eventId == event.id }.sorted { $0.readyAt < $1.readyAt }
+                let linkedCheckouts = checkouts
+                    .filter { $0.eventId == event.id && !($0.isOverdue || $0.endsAt < now) }
+                    .sorted { $0.endsAt < $1.endsAt }
+                let calls = Dictionary(event.assignedUsers.map { ($0.id, $0.callStartsAt) }, uniquingKeysWith: { first, _ in first })
+                let crew = event.crewWithoutGear.map { member -> String in
+                    let name = homePersonName(member.name)
+                    guard let call = calls[member.id] ?? nil else { return name }
+                    return "\(name) (call \(call.formatted(.dateTime.hour().minute())))"
+                }
+                guard !linkedPickups.isEmpty || !linkedCheckouts.isEmpty || !crew.isEmpty else { return nil }
+                return EventGroup(event: event, pickups: linkedPickups, checkouts: linkedCheckouts, crew: crew)
+            }
+    }
+
     private var sections: [CustodySection] {
+        sections(excluding: [])
+    }
+
+    private func sections(excluding grouped: Set<String>) -> [CustodySection] {
         let now = Date()
         let calendar = Calendar.current
-        let sorted = checkouts.sorted { $0.endsAt < $1.endsAt }
+        let sorted = checkouts.filter { !grouped.contains($0.id) }.sorted { $0.endsAt < $1.endsAt }
         let overdue = sorted.filter { $0.isOverdue || $0.endsAt < now }
         let today = sorted.filter { !$0.isOverdue && $0.endsAt >= now && calendar.isDateInToday($0.endsAt) }
         let later = sorted.filter { !$0.isOverdue && $0.endsAt >= now && !calendar.isDateInToday($0.endsAt) }
@@ -131,10 +172,14 @@ struct KioskHomeView: View {
 
     @ViewBuilder
     private var custodyPanel: some View {
-        let sections = sections
+        let groups = eventGroups
+        let sections = sections(excluding: Set(groups.flatMap { $0.checkouts.map(\.id) }))
+        let groupedPickupIds = Set(groups.flatMap { $0.pickups.map(\.id) })
+        let pickups = pickups.filter { !groupedPickupIds.contains($0.id) }
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                if isLoaded && sections.isEmpty && pickups.isEmpty {
+                ForEach(groups) { group in eventCard(group) }
+                if isLoaded && groups.isEmpty && sections.isEmpty && pickups.isEmpty {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Everything is in.")
                             .font(.system(size: 17, weight: .bold))
@@ -164,9 +209,9 @@ struct KioskHomeView: View {
                         .padding(.vertical, 6)
                         .kioskCard()
                     }
-                    if section.id == "today", !pickups.isEmpty { pickupSection }
+                    if section.id == "today", !pickups.isEmpty { pickupSection(pickups) }
                 }
-                if !pickups.isEmpty && !sections.contains(where: { $0.id == "today" }) { pickupSection }
+                if !pickups.isEmpty && !sections.contains(where: { $0.id == "today" }) { pickupSection(pickups) }
             }
             .padding(.leading, KioskSpacing.xl)
             .padding(.trailing, KioskSpacing.lg)
@@ -176,16 +221,52 @@ struct KioskHomeView: View {
         .scrollIndicators(.hidden)
     }
 
-    private var pickupSection: some View {
+    private func eventCard(_ group: EventGroup) -> some View {
+        let time = group.event.displayAllDay ? "All day" : group.event.startsAt.formatted(.dateTime.hour().minute())
+        var counts: [String] = []
+        if !group.pickups.isEmpty { counts.append("\(group.pickups.count) pickup\(group.pickups.count == 1 ? "" : "s")") }
+        if !group.checkouts.isEmpty { counts.append("\(group.checkouts.count) out") }
+        return VStack(alignment: .leading, spacing: 6) {
+            KioskSectionHeader(title: "\(group.event.title) · \(time)", count: counts.joined(separator: " · "))
+            VStack(spacing: 0) {
+                ForEach(group.pickups) { pickup in
+                    HomePickupRow(pickup: pickup, showsHolderFirst: true) { selectPickupHolder(pickup) }
+                }
+                ForEach(group.checkouts) { checkout in
+                    HomeCustodyRow(checkout: checkout, showsHolderFirst: true) { onOpenCheckout(checkout) }
+                }
+                if !group.crew.isEmpty {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Crew without gear")
+                            .font(KioskType.chipStrong)
+                            .foregroundStyle(KioskStatus.attention)
+                        Text(group.crew.joined(separator: " · "))
+                            .font(KioskType.meta)
+                            .foregroundStyle(KioskText.secondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                    .accessibilityElement(children: .combine)
+                }
+            }
+            .padding(.vertical, 6)
+            .kioskCard()
+        }
+    }
+
+    private func selectPickupHolder(_ pickup: KioskDashboard.HomePickup) {
+        if let id = pickup.requester?.id, let user = users.first(where: { $0.id == id }) {
+            onSelectUser(user)
+        }
+    }
+
+    private func pickupSection(_ pickups: [KioskDashboard.HomePickup]) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             KioskSectionHeader(title: "Ready for pickup", count: "\(pickups.count)")
             VStack(spacing: 0) {
                 ForEach(pickups) { pickup in
-                    HomePickupRow(pickup: pickup) {
-                        if let id = pickup.requester?.id, let user = users.first(where: { $0.id == id }) {
-                            onSelectUser(user)
-                        }
-                    }
+                    HomePickupRow(pickup: pickup) { selectPickupHolder(pickup) }
                 }
             }
             .padding(.vertical, 6)
@@ -308,6 +389,9 @@ private func homePersonName(_ full: String) -> String {
 
 private struct HomeCustodyRow: View {
     let checkout: KioskActiveCheckout
+    /// Inside an event card the event is the heading, so the row leads with
+    /// the person: "Imani B. · 3 items".
+    var showsHolderFirst: Bool = false
     var isNudged: Bool = false
     var onNudge: (() -> Void)?
     let action: () -> Void
@@ -344,20 +428,22 @@ private struct HomeCustodyRow: View {
             HStack(spacing: 12) {
                 Circle().fill(dotColor).frame(width: 8, height: 8)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(checkout.title)
+                    Text(showsHolderFirst ? "\(holder) · \(checkout.itemCount) item\(checkout.itemCount == 1 ? "" : "s")" : checkout.title)
                         .font(KioskType.rowTitle)
                         .foregroundStyle(KioskText.primary)
                         .lineLimit(1)
-                    Text("\(holder) · \(checkout.itemCount) item\(checkout.itemCount == 1 ? "" : "s")")
+                    Text(showsHolderFirst ? (isToday ? "Due \(trailing.0)" : "Due back \(trailing.0)") : "\(holder) · \(checkout.itemCount) item\(checkout.itemCount == 1 ? "" : "s")")
                         .font(KioskType.meta)
                         .foregroundStyle(KioskText.secondary)
                         .lineLimit(1)
                 }
                 Spacer(minLength: 8)
-                Text(trailing.0)
-                    .font(KioskType.chipStrong)
-                    .foregroundStyle(trailing.1)
-                    .lineLimit(1)
+                if !showsHolderFirst {
+                    Text(trailing.0)
+                        .font(KioskType.chipStrong)
+                        .foregroundStyle(trailing.1)
+                        .lineLimit(1)
+                }
                 if let onNudge {
                     Button(action: onNudge) {
                         Text(isNudged ? "Nudged" : "Nudge")
@@ -453,6 +539,7 @@ private struct HomePersonTile: View {
 
 private struct HomePickupRow: View {
     let pickup: KioskDashboard.HomePickup
+    var showsHolderFirst: Bool = false
     let action: () -> Void
 
     private var holder: String {
@@ -470,18 +557,22 @@ private struct HomePickupRow: View {
                     .fill(pickup.custodyScope == "SHARED" ? KioskSection.shared.accent : KioskSection.pickingUp.accent)
                     .frame(width: 8, height: 8)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(pickup.title)
+                    Text(showsHolderFirst ? "\(pickup.title) · \(holder)" : pickup.title)
                         .font(KioskType.rowTitle)
                         .foregroundStyle(KioskText.primary)
                         .lineLimit(1)
-                    Text("\(holder) · \(pickup.itemCount) item\(pickup.itemCount == 1 ? "" : "s")")
+                    Text(showsHolderFirst
+                         ? (pickup.custodyScope == "SHARED" ? "Shared · pickup \(readyText)" : "Pickup \(readyText)")
+                         : "\(holder) · \(pickup.itemCount) item\(pickup.itemCount == 1 ? "" : "s")")
                         .font(KioskType.meta)
                         .foregroundStyle(KioskText.secondary)
                 }
                 Spacer(minLength: 8)
-                Text(readyText)
-                    .font(KioskType.chipStrong)
-                    .foregroundStyle(KioskSection.pickingUp.text)
+                if !showsHolderFirst {
+                    Text(readyText)
+                        .font(KioskType.chipStrong)
+                        .foregroundStyle(KioskSection.pickingUp.text)
+                }
                 Image(systemName: "chevron.right")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(KioskText.muted)

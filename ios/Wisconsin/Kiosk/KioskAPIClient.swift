@@ -182,6 +182,13 @@ struct KioskAPI {
         return try await perform(req)
     }
 
+    func kioskScanLookup(scanValue: String) async throws -> KioskScanLookup {
+        struct Body: Encodable { let scanValue: String }
+        var req = request(path: "/api/kiosk/scan-lookup", method: "POST")
+        req.httpBody = try JSONEncoder().encode(Body(scanValue: scanValue))
+        return try await perform(req)
+    }
+
     // MARK: - Student
 
     func kioskStudentContext(userId: String) async throws -> KioskStudentContext {

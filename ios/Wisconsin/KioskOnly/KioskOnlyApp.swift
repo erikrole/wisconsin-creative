@@ -62,7 +62,7 @@ struct WisconsinKioskApp: App {
             affiliationBadge: user.affiliationBadge
         )
         switch scenario {
-        case .idle:
+        case .idle, .homeGameDay:
             kioskStore.screen = .idle
         case .operatorHub, .checkoutSheet, .hubAtLimit,
              .changesExtend, .changesTransfer, .changesSwap, .changesReservation, .changesStaff:
@@ -183,6 +183,25 @@ struct WisconsinKioskApp: App {
                 action: .checkout, source: .event, identifiedUser: nil, expectedRequester: nil,
                 selectedEvent: KioskIntentEvent(id: "ev-1", title: "Volleyball vs Minnesota", endsAt: KioskFixtures.hours(9)),
                 targetBooking: nil, pendingScanValues: [], createdAt: Date(), ambiguity: .none
+            ))
+            kioskStore.screen = .identity
+        case .identityScanFree:
+            // Mirrors `KioskIdleView.handleIdentityScan` for free gear (B1).
+            kioskStore.setIntent(KioskFlowIntent(
+                action: .checkout, source: .scan, identifiedUser: nil, expectedRequester: nil,
+                selectedEvent: nil, targetBooking: nil,
+                pendingScanValues: ["FX6-1"], createdAt: Date(), ambiguity: .none,
+                scannedItem: KioskResolvedItem(id: "a-fx6", name: "Sony FX6", tagName: "FX6-1", type: "serialized", bulkSkuId: nil, unitNumber: nil)
+            ))
+            kioskStore.screen = .identity
+        case .identityScanReserved:
+            // Mirrors `KioskIdleView.handleIdentityScan` for reserved gear (B2).
+            kioskStore.setIntent(KioskFlowIntent(
+                action: .pickup, source: .scan, identifiedUser: nil, expectedRequester: kioskUser,
+                selectedEvent: nil,
+                targetBooking: KioskIntentBooking(id: "rs-duals", title: "Wrestling Duals Kit", startsAt: KioskFixtures.hours(2), endsAt: KioskFixtures.at(2, 23)),
+                pendingScanValues: ["CAM-022"], createdAt: Date(), ambiguity: .none,
+                scannedItem: KioskResolvedItem(id: "a-cam022", name: "Sony A7S III", tagName: "CAM-022", type: "serialized", bulkSkuId: nil, unitNumber: nil)
             ))
             kioskStore.screen = .identity
         case .identityReturnOther:
@@ -520,6 +539,12 @@ enum KioskFixtureScenario: String {
     /// Identity for returning someone else's personal checkout, started from
     /// the idle custody drawer.
     case identityReturnOther = "identity-return-other"
+    /// Redesign A3: home on game day, grouped by event with crew without gear.
+    case homeGameDay = "home-game-day"
+    /// Redesign B1: free gear scanned on home, asking who's taking it.
+    case identityScanFree = "identity-scan-free"
+    /// Redesign B2: reserved gear scanned on home, "Continue as" the holder.
+    case identityScanReserved = "identity-scan-reserved"
     /// The return checklist while returning someone else's personal checkout.
     case returnForOther = "return-for-other"
     /// The un-activated iPad: 6-digit code entry.
@@ -816,6 +841,7 @@ enum KioskFixtures {
         // Standby is suppressed while anything is actually out — that check is
         // real logic, not a fixture detail — so the sleep scenario has to hand
         // back a genuinely quiet gear room.
+        if KioskFixtureScenario.active == .homeGameDay { return gameDayDashboardJSON() }
         if forcesSleep {
             return """
             {"stats":{"itemsOut":0,"checkouts":0,"overdue":0},
@@ -840,6 +866,67 @@ enum KioskFixtures {
                   {"userId":"u-16","name":"Priya Ramachandran","avatarUrl":null,"initials":"PR","reasons":["return_due"]},
                   {"userId":"u-9","name":"Imani Brooks","avatarUrl":null,"initials":"IB","reasons":["return_due"]}],
          "nextUp":null}
+        """
+    }
+
+    /// Redesign A3: two events today. Football has pickups, gear out, a
+    /// shared travel case, and two crew without gear; volleyball has gear out.
+    static func gameDayDashboardJSON() -> String {
+        let football = iso(at(0, 11)), volleyball = iso(at(0, 19)), due = iso(at(0, 23, 30))
+        func person(_ id: String, _ name: String, _ initials: String) -> String {
+            #"{"id":"\#(id)","name":"\#(name)","avatarUrl":null,"initials":"\#(initials)"}"#
+        }
+        func checkout(_ id: String, _ title: String, _ name: String, _ userId: String, _ initials: String, _ count: Int, _ endsAt: String, _ eventId: String?, overdue: Bool = false) -> String {
+            let items = (0..<count).map { #"{"name":"Item \#($0 + 1)"}"# }.joined(separator: ",")
+            let event = eventId.map { "\"\($0)\"" } ?? "null"
+            return #"{"id":"\#(id)","title":"\#(title)","requesterName":"\#(name)","requesterId":"\#(userId)","requesterAvatarUrl":null,"requesterInitials":"\#(initials)","items":[\#(items)],"itemCount":\#(count),"endsAt":"\#(endsAt)","isOverdue":\#(overdue),"eventId":\#(event)}"#
+        }
+        let checkouts = [
+            checkout("co-fb1", "Football Slow 1 Kit", "Erik Role", primaryUser.id, "ER", 5, due, "ev-fb"),
+            checkout("co-fb2", "Football Slow 2 Kit", "Silas Bergstrom", "u-19", "SB", 5, due, "ev-fb"),
+            checkout("co-fb3", "Football Bench Kit", "Tessa Nguyen", "u-20", "TN", 4, due, "ev-fb"),
+            checkout("co-1", "Volleyball vs Minnesota", "Imani Brooks", "u-9", "IB", 3, due, "ev-vb"),
+            checkout("co-3", "Volleyball vs Minnesota", "Priya Ramachandran", "u-16", "PR", 4, due, "ev-vb"),
+            checkout("co-2", "Hockey B-Roll", "Dashiell Okonkwo", "u-3", "DO", 2, iso(at(-2, 17)), nil, overdue: true),
+            checkout("co-4", "Softball Road Kit", "Morgan Lee", "u-18", "ML", 1, iso(at(1, 9)), nil),
+        ].joined(separator: ",")
+        let noor = person("u-14", "Noor Abdi", "NA"), oscar = person("u-15", "Oscar Delacroix", "OD")
+        let events = """
+        [{"id":"ev-fb","title":"Football vs Iowa","startsAt":"\(football)","endsAt":"\(iso(at(0, 15)))","allDay":false,
+          "shiftCount":2,"assignedUserCount":3,
+          "assignedUsers":[{"id":"u-14","name":"Noor Abdi","initials":"NA","avatarUrl":null,"area":"VIDEO","callStartsAt":"\(iso(at(0, 9)))","callEndsAt":null},
+                           {"id":"u-15","name":"Oscar Delacroix","initials":"OD","avatarUrl":null,"area":"PHOTO","callStartsAt":"\(iso(at(0, 10)))","callEndsAt":null},
+                           {"id":"u-19","name":"Silas Bergstrom","initials":"SB","avatarUrl":null,"area":"VIDEO","callStartsAt":"\(iso(at(0, 9)))","callEndsAt":null}],
+          "crewWithoutGear":[\(noor),\(oscar)]},
+         {"id":"ev-vb","title":"Volleyball vs Minnesota","startsAt":"\(volleyball)","endsAt":"\(iso(at(0, 21)))","allDay":false,
+          "shiftCount":1,"assignedUserCount":0,"assignedUsers":[],"crewWithoutGear":[]}]
+        """
+        let jonah = person("u-10", "Jonah Petrov", "JP"), kaia = person("u-11", "Kaia Thornton", "KT")
+        let ready = iso(at(0, 8))
+        return """
+        {"stats":{"itemsOut":24,"checkouts":7,"overdue":1},
+         "capabilities":{"eventWorkerDetails":true,"eventCallTimes":true},
+         "standby":{"sleepMode":false,"reason":"active_window","nightHours":false,"nearbyEventCount":2,"nearbyBookingWindowCount":3},
+         "events":\(events),"activeItems":[],"checkouts":[\(checkouts)],
+         "pickups":[{"bookingId":"res-fb1","title":"Football Roam 4 Kit","requester":\(jonah),
+                     "itemCount":4,"readyAt":"\(ready)","custodyScope":"PERSON","eventId":"ev-fb"},
+                    {"bookingId":"res-fb2","title":"Football Roam 3 Kit","requester":\(kaia),
+                     "itemCount":4,"readyAt":"\(ready)","custodyScope":"PERSON","eventId":"ev-fb"},
+                    {"bookingId":"res-fb3","title":"Football Travel Case","requester":null,
+                     "itemCount":12,"readyAt":"\(ready)","custodyScope":"SHARED","eventId":"ev-fb"}],
+         "today":[{"userId":"u-3","name":"Dashiell Okonkwo","avatarUrl":null,"initials":"DO","reasons":["overdue"]},
+                  {"userId":"u-10","name":"Jonah Petrov","avatarUrl":null,"initials":"JP","reasons":["pickup"]},
+                  {"userId":"u-11","name":"Kaia Thornton","avatarUrl":null,"initials":"KT","reasons":["pickup"]},
+                  {"userId":"u-9","name":"Imani Brooks","avatarUrl":null,"initials":"IB","reasons":["return_due"]}],
+         "nextUp":null}
+        """
+    }
+
+    static func scanLookupJSON() -> String {
+        """
+        {"item":{"tagName":"FX6-1","productName":"Sony FX6","type":"Cinema Camera","status":"Available",
+                 "holder":null,"dueAt":null,"bookingTitle":null,
+                 "freeUntil":"\(iso(at(2, 15)))","lastReturnedAt":"\(iso(hours(-1)))"}}
         """
     }
 
@@ -1129,6 +1216,9 @@ final class KioskFixtureURLProtocol: URLProtocol {
         case "/api/kiosk/kits":
             return (200, KioskFixtures.kitsJSON())
         default:
+            if path == "/api/kiosk/scan-lookup" {
+                return (200, KioskFixtures.scanLookupJSON())
+            }
             if path.hasPrefix("/api/kiosk/kits/") {
                 return (200, KioskFixtures.kitDetailJSON())
             }

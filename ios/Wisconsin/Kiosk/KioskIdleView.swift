@@ -39,6 +39,7 @@ struct KioskIdleView: View {
                     locationName: store.info?.locationName,
                     checkouts: unavailableSections.contains("checkouts") ? [] : (dashboard?.checkouts ?? []),
                     pickups: dashboard?.pickups ?? [],
+                    events: dashboard?.events ?? [],
                     serverToday: dashboard?.today ?? [],
                     nudgedIds: nudgedIds,
                     users: users,
@@ -854,7 +855,8 @@ struct KioskIdleView: View {
                         pendingScanValues: KioskFlowIntent.orderedScans(value, then: trailingScans),
                         createdAt: Date(),
                         ambiguity: .none,
-                        custodyOwner: result.custodyOwner
+                        custodyOwner: result.custodyOwner,
+                        scannedItem: result.item
                     )
                     trailingScans = []
                     store.setIntent(intent)
