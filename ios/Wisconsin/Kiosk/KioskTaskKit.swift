@@ -423,21 +423,41 @@ struct KioskContextCard: View {
 struct KioskScanPrompt: View {
     let title: String
     let detail: String
+    /// Scanner state said inline (I3): "Scanner is asleep. Press its trigger
+    /// to wake it." A sleeping scanner is normal, so this is a quiet grey pill
+    /// in place of the scan target, never an error color.
     var status: String?
     var section: KioskSection = .takingOut
     var onCamera: (() -> Void)?
 
     var body: some View {
-        VStack(spacing: 22) {
-            KioskScanTarget(tint: section.accent, width: 176, height: 112)
-            VStack(spacing: 8) {
-                Text(title)
-                    .font(.system(size: 30, weight: .bold))
-                    .foregroundStyle(KioskText.primary)
-                    .multilineTextAlignment(.center)
-                Text(status ?? detail)
+        VStack(spacing: 14) {
+            if status != KioskScannerCopy.asleep {
+                KioskScanTarget(tint: section.accent, width: 176, height: 112)
+                    .padding(.bottom, 8)
+            }
+            Text(title)
+                .font(.system(size: 30, weight: .bold))
+                .foregroundStyle(KioskText.primary)
+                .multilineTextAlignment(.center)
+            if let status {
+                HStack(spacing: 10) {
+                    Circle()
+                        .fill(KioskText.muted)
+                        .frame(width: 8, height: 8)
+                        .accessibilityHidden(true)
+                    Text(status)
+                        .font(.system(size: 15))
+                        .foregroundStyle(KioskText.secondary)
+                }
+                .padding(.horizontal, 16)
+                .frame(minHeight: 44)
+                .background(KioskScanPromptStyle.statusFill, in: Capsule())
+                .accessibilityElement(children: .combine)
+            } else {
+                Text(detail)
                     .font(KioskType.body)
-                    .foregroundStyle(status == nil ? KioskText.tertiary : KioskStatus.attention)
+                    .foregroundStyle(KioskText.tertiary)
                     .multilineTextAlignment(.center)
             }
             if let onCamera {
@@ -449,6 +469,15 @@ struct KioskScanPrompt: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .kioskCard(radius: KioskRadius.hero)
     }
+}
+
+enum KioskScannerCopy {
+    /// I3. Normal, not an error: said inline on the scan stage.
+    static let asleep = "Scanner is asleep. Press its trigger to wake it."
+}
+
+private enum KioskScanPromptStyle {
+    static let statusFill = Color(red: 0x1A / 255, green: 0x1A / 255, blue: 0x1F / 255)
 }
 
 /// The confirmation a scan becomes: a section-colored check, what happened,

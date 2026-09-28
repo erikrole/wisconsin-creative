@@ -313,7 +313,7 @@ struct KioskScanStage: View {
             RoundedRectangle(cornerRadius: KioskRadius.hero)
                 .stroke(tint.opacity(0.45), lineWidth: 1)
         )
-        .animation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.85), value: accepted)
+        .animation(reduceMotion ? KioskMotion.fadeUnderReduceMotion : .spring(response: 0.3, dampingFraction: 0.85), value: accepted)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accepted.map { "Added \($0.title). \($0.progress)." } ?? "\(headline). \(detail)")
     }
@@ -642,13 +642,13 @@ struct KioskProgressRing: View {
                     style: StrokeStyle(lineWidth: 10, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
-                .animation(reduceMotion ? nil : .spring(response: 0.4), value: count)
+                .animation(reduceMotion ? KioskMotion.fadeUnderReduceMotion : .spring(response: 0.4), value: count)
             VStack(spacing: 2) {
                 Text("\(count)")
                     .font(.system(size: 52, weight: .bold, design: .rounded))
                     .foregroundStyle(KioskText.primary)
                     .contentTransition(.numericText())
-                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: count)
+                    .animation(reduceMotion ? KioskMotion.fadeUnderReduceMotion : .easeInOut(duration: 0.25), value: count)
                     .monospacedDigit()
                 Text("of \(total)")
                     .font(.subheadline)
@@ -744,7 +744,7 @@ struct KioskChecklistRow: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 16)
-        .animation(reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 1), value: isDone)
+        .animation(reduceMotion ? KioskMotion.fadeUnderReduceMotion : .spring(response: 0.25, dampingFraction: 1), value: isDone)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(tag), \(name), \(isDone ? "done" : "pending")")
     }
@@ -776,7 +776,7 @@ struct ChecklistProgressSummary: View {
                     Capsule()
                         .fill(complete ? Color.statusText(.green) : inProgressColor)
                         .frame(width: total > 0 ? geo.size.width * CGFloat(done) / CGFloat(total) : 0)
-                        .animation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 1), value: done)
+                        .animation(reduceMotion ? KioskMotion.fadeUnderReduceMotion : .spring(response: 0.4, dampingFraction: 1), value: done)
                 }
             }
             .frame(height: 4)
@@ -1145,10 +1145,10 @@ struct KioskKeyboardHint: View {
                 // Grace so a normally-appearing keyboard never flashes the tip.
                 try? await Task.sleep(nanoseconds: 750_000_000)
                 guard !Task.isCancelled else { return }
-                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { showTip = true }
+                withAnimation(reduceMotion ? KioskMotion.fadeUnderReduceMotion : .easeInOut(duration: 0.2)) { showTip = true }
                 UIAccessibility.post(notification: .announcement, argument: Self.message)
             } else if showTip {
-                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { showTip = false }
+                withAnimation(reduceMotion ? KioskMotion.fadeUnderReduceMotion : .easeInOut(duration: 0.2)) { showTip = false }
             }
         }
     }

@@ -507,7 +507,7 @@ struct KioskCheckoutView: View {
 
     /// A sleeping scanner is normal: say how to wake it, never an error.
     private var scannerStatusLine: String? {
-        if !store.scanner.hardwareConnected { return "Scanner is asleep. Press its trigger to wake it." }
+        if !store.scanner.hardwareConnected { return KioskScannerCopy.asleep }
         // The hidden field's real first-responder state, not merely that it
         // is mounted.
         if !scannerHasFocus { return "Getting the scanner ready…" }
@@ -515,6 +515,7 @@ struct KioskCheckoutView: View {
     }
 
     private func undoLastScan() {
+        KioskFeedbackSound.play(.undo)
         guard let last = scannedItems.last,
               let group = groupedScannedItems.first(where: { $0.contains(last) }) else { return }
         if group.items.count > 1 {
@@ -976,6 +977,7 @@ struct KioskCheckoutView: View {
                 store.setCart(updated, for: userId)
                 applyAvailabilityResult(preflight)
                 earnedBadges.appendUnique(contentsOf: result.earnedBadges ?? [])
+                KioskFeedbackSound.play(.accept)
                 lastAccepted = KioskAcceptedScan(
                     title: cartItem.itemListPrimaryTitle,
                     subtitle: cartItem.itemListSecondaryTitle,
@@ -1199,6 +1201,9 @@ struct KioskCheckoutView: View {
                 ))
             } catch {
                 hasPendingCompletion = KioskAPI.shared.hasPendingCheckout(actorId: userId)
+                // I5: saving offline stays silent until it settles; a
+                // checkout left unconfirmed needs attention.
+                if hasPendingCompletion { KioskFeedbackSound.play(.attention) }
                 let message = (error as? APIError)?.errorDescription
                     ?? "Checkout failed. Please try again."
                 showFeedback(.error(message))

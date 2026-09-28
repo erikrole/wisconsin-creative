@@ -192,6 +192,8 @@ struct KioskSuccessView: View {
 
     private func runCountdown() async {
         Haptics.success()
+        // J4: the done chime; with a badge, the chime plus a sparkle.
+        KioskFeedbackSound.play(info.earnedBadges.isEmpty ? .done : .badge)
         UIAccessibility.post(notification: .announcement, argument: accessibilitySummary)
         for i in stride(from: countdown - 1, through: 0, by: -1) {
             try? await Task.sleep(nanoseconds: 1_000_000_000)
@@ -396,7 +398,7 @@ struct KioskSuccessView: View {
             content
                 .opacity(visible ? 1 : 0)
                 .offset(y: visible || reduceMotion ? 0 : 12)
-                .animation(reduceMotion ? nil : .easeOut(duration: 0.35).delay(delay), value: visible)
+                .animation(reduceMotion ? KioskMotion.fadeUnderReduceMotion : .easeOut(duration: 0.35).delay(delay), value: visible)
         }
     }
 
@@ -411,7 +413,7 @@ struct KioskSuccessView: View {
                 Text("Returning home in")
                 Text("\(countdown)s")
                     .contentTransition(.numericText(countsDown: true))
-                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: countdown)
+                    .animation(reduceMotion ? KioskMotion.fadeUnderReduceMotion : .easeInOut(duration: 0.2), value: countdown)
             }
             .font(KioskType.rowDetail)
             .foregroundStyle(KioskText.secondary)

@@ -235,7 +235,7 @@ struct KioskReturnView: View {
                 isEnabled: hasReturned && scanQueue.isEmpty,
                 isBusy: isCompleting
             ) {
-                if allReturned { completeReturn() } else { showFinishConfirm = true }
+                if allReturned { completeReturn() } else { showFinishConfirm = true; KioskFeedbackSound.play(.attention) }
             }
             .accessibilityLabel(completeAccessibilityLabel)
         }
@@ -278,7 +278,7 @@ struct KioskReturnView: View {
     }
 
     private var scannerStatusLine: String? {
-        if !store.scanner.hardwareConnected { return "Scanner is asleep. Press its trigger to wake it." }
+        if !store.scanner.hardwareConnected { return KioskScannerCopy.asleep }
         if !scannerHasFocus { return "Getting the scanner ready…" }
         return nil
     }
@@ -292,6 +292,7 @@ struct KioskReturnView: View {
 
     private func undoLastReturn() {
         guard let id = lastReturnedId, let item = detail?.items.first(where: { $0.id == id }) else { return }
+        KioskFeedbackSound.play(.undo)
         store.resetInactivity()
         isUndoing = true
         let flow = store.flowGeneration
@@ -405,6 +406,7 @@ struct KioskReturnView: View {
                     } else {
                         returnedIds.insert(item.id)
                         lastReturnedId = item.id
+                        KioskFeedbackSound.play(.accept)
                         lastAccepted = KioskAcceptedScan(
                             title: item.itemListPrimaryTitle,
                             subtitle: item.itemListSecondaryTitle,

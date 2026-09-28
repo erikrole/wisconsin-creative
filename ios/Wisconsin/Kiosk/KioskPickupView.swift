@@ -299,14 +299,14 @@ struct KioskPickupView: View {
                 isEnabled: canConfirm,
                 isBusy: isConfirming
             ) {
-                if allConfirmed { confirmPickup() } else if canConfirmPartial { showFinishConfirm = true }
+                if allConfirmed { confirmPickup() } else if canConfirmPartial { showFinishConfirm = true; KioskFeedbackSound.play(.attention) }
             }
             .accessibilityLabel(confirmAccessibilityLabel)
         }
     }
 
     private var scannerStatusLine: String? {
-        if !store.scanner.hardwareConnected { return "Scanner is asleep. Press its trigger to wake it." }
+        if !store.scanner.hardwareConnected { return KioskScannerCopy.asleep }
         if !scannerHasFocus { return "Getting the scanner ready…" }
         return nil
     }
@@ -348,7 +348,7 @@ struct KioskPickupView: View {
                     .onChange(of: lastConfirmedId) { _, newId in
                         guard let newId else { return }
                         let targetId = checklistScrollTarget(for: newId)
-                        withAnimation(reduceMotion ? nil : .easeOut(duration: 0.25)) {
+                        withAnimation(reduceMotion ? KioskMotion.fadeUnderReduceMotion : .easeOut(duration: 0.25)) {
                             proxy.scrollTo(targetId, anchor: .center)
                         }
                     }
@@ -552,6 +552,7 @@ struct KioskPickupView: View {
     private func acceptScan(_ item: KioskScanResult.ScannedItem, undo: PickupUndoTarget?) {
         lastConfirmedId = item.id
         lastUndo = undo
+        KioskFeedbackSound.play(.accept)
         lastAccepted = KioskAcceptedScan(
             title: acceptedTitle(item),
             subtitle: acceptedDetail(item),
@@ -586,6 +587,7 @@ struct KioskPickupView: View {
 
     private func undoLastScan() {
         guard let target = lastUndo else { return }
+        KioskFeedbackSound.play(.undo)
         store.resetInactivity()
         isUndoing = true
         let flow = store.flowGeneration

@@ -82,7 +82,7 @@ struct KioskBarcodeCameraView: View {
         if let message = feedbackMessage, let tone = feedbackTone {
             KioskFeedbackBanner(tone: tone, message: message)
                 .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
-                .animation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 1), value: feedbackMessage)
+                .animation(reduceMotion ? KioskMotion.fadeUnderReduceMotion : .spring(response: 0.3, dampingFraction: 1), value: feedbackMessage)
         }
     }
 

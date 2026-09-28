@@ -49,3 +49,55 @@ describe("iOS Kiosk checkout kits and interruptions (D3, E1–E3, I1)", () => {
     }
   });
 });
+
+describe("iOS Kiosk interruptions and sound (I3, I4, J4)", () => {
+  const kit = source("ios/Wisconsin/Kiosk/KioskTaskKit.swift");
+  const shell = source("ios/Wisconsin/Kiosk/KioskShellView.swift");
+  const store = source("ios/Wisconsin/Kiosk/KioskStore.swift");
+  const app = source("ios/Wisconsin/KioskOnly/KioskOnlyApp.swift");
+
+  it("I3 says a sleeping scanner inline on every scan stage, in grey, not as an error", () => {
+    expect(kit).toContain('static let asleep = "Scanner is asleep. Press its trigger to wake it."');
+    for (const file of ["KioskCheckoutView", "KioskPickupView", "KioskReturnView"]) {
+      expect(source(`ios/Wisconsin/Kiosk/${file}.swift`)).toContain("return KioskScannerCopy.asleep");
+    }
+    const prompt = kit.slice(kit.indexOf("struct KioskScanPrompt"), kit.indexOf("enum KioskScannerCopy"));
+    expect(prompt).not.toContain("KioskStatus.attention");
+  });
+
+  it("I4 counts down on a ring and says how long scans wait, from the store's own retention", () => {
+    expect(store).toContain("static let cartRetention: TimeInterval = 20 * 60");
+    expect(store).toContain("static var inactivityWarningSeconds: Int");
+    expect(shell).toContain("let minutes = Int(KioskStore.cartRetention / 60)");
+    expect(shell).toContain("tap your name to pick up where you left off.");
+    expect(shell).toContain("private struct InactivityCountdownRing: View");
+    expect(shell).toContain('Text("I\'m done for now")');
+    expect(shell).toContain('Text("I\'m here")');
+    expect(shell).toContain("KioskFeedbackSound.play(.warning)");
+  });
+
+  it("J4 plays each moment's sound and turns movement into 150 ms fades under Reduce Motion", () => {
+    for (const cue of ["accept", "reject", "undo", "done", "badge", "attention", "warning"]) {
+      expect(app).toContain(`case ${cue}`);
+    }
+    for (const file of ["KioskCheckoutView", "KioskPickupView", "KioskReturnView"]) {
+      const view = source(`ios/Wisconsin/Kiosk/${file}.swift`);
+      expect(view).toContain("KioskFeedbackSound.play(.accept)");
+      expect(view).toContain("KioskFeedbackSound.play(.undo)");
+      expect(view).toContain("KioskFeedbackSound.play(.attention)");
+    }
+    expect(source("ios/Wisconsin/Kiosk/KioskSuccessView.swift")).toContain(
+      "KioskFeedbackSound.play(info.earnedBadges.isEmpty ? .done : .badge)",
+    );
+    expect(kit).toContain("static let fadeUnderReduceMotion = Animation.easeInOut(duration: 0.15)");
+    for (const file of ["KioskSuccessView", "KioskPickupView", "KioskIdleView"]) {
+      expect(source(`ios/Wisconsin/Kiosk/${file}.swift`)).not.toContain("reduceMotion ? nil :");
+    }
+  });
+
+  it("captures I3 and I4 from DEBUG fixtures", () => {
+    for (const scenario of ["scanner-asleep", "inactivity-checkout"]) {
+      expect(app).toContain(`= "${scenario}"`);
+    }
+  });
+});

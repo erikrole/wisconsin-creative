@@ -76,20 +76,31 @@ struct KioskShellView: View {
     /// The warning used to say "Tap to keep your scans" everywhere it appeared,
     /// including on the operator hub, where nothing has been scanned — so the
     /// one sentence explaining the stake named something that did not exist.
+    /// Who the "Still here?" card is asking, when the screen knows.
+    private var inactivityFirstName: String? {
+        switch store.screen {
+        case .checkout(let user), .operatorHub(let user):
+            return user.name.split(separator: " ").first.map(String.init)
+        default:
+            return nil
+        }
+    }
+
     private var inactivityStake: String {
+        let minutes = Int(KioskStore.cartRetention / 60)
         switch store.screen {
         case .checkout(let user):
             let count = store.cart(for: user.id).count
             if count > 0 {
-                return "Your \(count) scanned item\(count == 1 ? "" : "s") will be kept for a moment, but this screen will close."
+                return "Nothing is checked out yet. If you step away, your \(count == 1 ? "scan waits" : "\(count) scans wait") \(minutes) minutes; tap your name to pick up where you left off."
             }
-            return "This checkout will close without saving."
+            return "Nothing is checked out yet. If you step away, this checkout closes."
         case .pickup, .return:
-            return "This screen will close. Scans already recorded on this booking will be kept."
+            return "Scans already recorded on this booking are kept. If you step away, this screen closes."
         case .operatorHub, .identity:
-            return "You'll be signed out of this kiosk session."
+            return "If you step away, you'll be signed out of this kiosk."
         default:
-            return "This screen will close."
+            return "If you step away, this screen closes."
         }
     }
 
@@ -127,6 +138,7 @@ struct KioskShellView: View {
 
             if store.inactivityWarningVisible {
                 InactivityWarningOverlay(
+                    firstName: inactivityFirstName,
                     atRisk: inactivityStake,
                     onStay: { store.dismissInactivityWarning() },
                     onFinish: { store.finishSessionNow() }
@@ -176,7 +188,7 @@ struct KioskShellView: View {
         .onDisappear { UIApplication.shared.isIdleTimerDisabled = false }
         .background(KioskActivityMonitor { store.resetInactivity() })
         .onChange(of: store.systemStatusRevealRequests) { _, _ in revealSystemStatus() }
-        .animation(.easeInOut(duration: 0.2), value: store.inactivityWarningVisible)
+        .animation(KioskMotion.screen(reduceMotion), value: store.inactivityWarningVisible)
         .animation(
             reduceMotion ? .easeInOut(duration: 0.15) : .easeOut(duration: 0.28),
             value: screenKey
@@ -309,7 +321,11 @@ private struct KioskResumeSplash: View {
     }
 }
 
+/// Canvas I4 "Still here?": a countdown ring that drains over the warning
+/// window, who it's asking, what waits for them, and two answers. Two gentle
+/// pings play once when it appears; the ring is their visible twin.
 private struct InactivityWarningOverlay: View {
+    let firstName: String?
     let atRisk: String
     let onStay: () -> Void
     let onFinish: () -> Void
@@ -318,89 +334,72 @@ private struct InactivityWarningOverlay: View {
     var body: some View {
         ZStack {
             KioskScrim.modal.ignoresSafeArea()
-            VStack(spacing: 20) {
-                ZStack {
-                    Circle()
-                        .fill(KioskSurface.control)
-                        .frame(width: 64, height: 64)
-                    Image(systemName: "clock.fill")
-                        .font(.system(size: 28))
-                        .foregroundStyle(KioskText.primary)
-                }
-                .accessibilityHidden(true)
-                Text("Still here?")
-                    .font(.title2.bold())
+            VStack(spacing: 18) {
+                InactivityCountdownRing(total: KioskStore.inactivityWarningSeconds, reduceMotion: reduceMotion)
+                Text(firstName.map { "Still here, \($0)?" } ?? "Still here?")
+                    .font(.system(size: 30, weight: .heavy))
                     .foregroundStyle(KioskText.primary)
+                    .multilineTextAlignment(.center)
+                    .accessibilityAddTraits(.isHeader)
                 Text(atRisk)
-                    .font(.subheadline)
+                    .font(KioskType.body)
                     .foregroundStyle(KioskText.secondary)
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal, 30)
-                InactivityCountdown(reduceMotion: reduceMotion)
-                    .padding(.horizontal, 30)
-                VStack(spacing: 10) {
-                    Button {
-                        onStay()
-                    } label: {
-                        Text("Keep going")
-                            .font(.headline)
-                            .foregroundStyle(KioskText.onPrimary)
-                            .frame(maxWidth: .infinity, minHeight: 56)
-                            .background(
-                                KioskText.primary,
-                                in: RoundedRectangle(cornerRadius: KioskRadius.lg)
-                            )
-                    }
-                    .buttonStyle(.plain)
-
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 10) {
                     // The counter has a queue. Someone who is finished should
-                    // not have to wait out thirty seconds or walk away from a
-                    // screen still holding their name for the next person.
-                    Button("I'm done", action: onFinish)
-                        .font(KioskType.chip)
-                        .kioskButtonRole(.secondary)
-                        .controlSize(.large)
-                        .accessibilityLabel("I'm done — return to the home screen now")
+                    // not have to wait out the countdown with their name up.
+                    Button(action: onFinish) {
+                        Text("I'm done for now")
+                            .font(.system(size: 17, weight: .semibold))
+                            .frame(maxWidth: .infinity, minHeight: 60)
+                    }
+                    .kioskButtonRole(.secondary)
+                    .accessibilityLabel("I'm done for now. Return to the home screen")
+                    Button(action: onStay) {
+                        Text("I'm here")
+                            .font(.system(size: 17, weight: .heavy))
+                            .frame(maxWidth: .infinity, minHeight: 60)
+                    }
+                    .kioskButtonRole(.primary)
                 }
-                .padding(.horizontal, 30)
             }
-            .padding(40)
-            .frame(maxWidth: 460)
+            .padding(32)
+            .frame(width: 520)
             .kioskCard(KioskSurface.modal, radius: KioskRadius.modal, stroke: KioskStroke.strong)
-            .shadow(radius: 30)
+            .accessibilityElement(children: .contain)
+            .accessibilityAddTraits(.isModal)
         }
+        .onAppear { KioskFeedbackSound.play(.warning) }
     }
 }
 
-/// The 30 seconds the warning stays up before the kiosk resets, made visible:
-/// a draining brand-red capsule, or a plain numeric countdown under Reduce
-/// Motion. Purely decorative — the copy above already states the timeout, so
-/// this is hidden from accessibility.
-private struct InactivityCountdown: View {
+/// The seconds left before the kiosk resets, as a ring that drains smoothly
+/// with the number in the middle. No flashing; under Reduce Motion the ring
+/// steps once a second without animating.
+private struct InactivityCountdownRing: View {
+    let total: Int
     let reduceMotion: Bool
     @State private var appeared = Date()
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
-            let remaining = max(0, 30 - Int(context.date.timeIntervalSince(appeared).rounded()))
-            if reduceMotion {
-                Text("\(remaining)s")
-                    .font(.subheadline.weight(.semibold).monospacedDigit())
-                    .foregroundStyle(KioskText.secondary)
+            let remaining = max(0, total - Int(context.date.timeIntervalSince(appeared).rounded()))
+            ZStack {
+                Circle()
+                    .stroke(KioskStroke.standard, lineWidth: 6)
+                Circle()
+                    .trim(from: 0, to: CGFloat(remaining) / CGFloat(max(total, 1)))
+                    .stroke(KioskText.primary, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                    .animation(reduceMotion ? nil : .linear(duration: 1), value: remaining)
+                Text("\(remaining)")
+                    .font(.system(size: 26, weight: .bold).monospacedDigit())
+                    .foregroundStyle(KioskText.primary)
                     .contentTransition(.numericText())
-            } else {
-                ZStack(alignment: .leading) {
-                    Capsule()
-                        .fill(KioskStroke.divider)
-                    GeometryReader { geo in
-                        Capsule()
-                            .fill(KioskText.primary)
-                            .frame(width: geo.size.width * CGFloat(remaining) / 30)
-                            .animation(.linear(duration: 1), value: remaining)
-                    }
-                }
-                .frame(height: 4)
             }
+            .frame(width: 96, height: 96)
         }
         .accessibilityHidden(true)
     }

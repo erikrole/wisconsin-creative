@@ -1007,7 +1007,7 @@ private struct StatTile: View {
                     .font(.system(size: 44, weight: .bold, design: .rounded))
                     .foregroundStyle(accent)
                     .contentTransition(.numericText())
-                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.4), value: value)
+                    .animation(reduceMotion ? KioskMotion.fadeUnderReduceMotion : .easeInOut(duration: 0.4), value: value)
                     .monospacedDigit()
                 Text(label.uppercased())
                     .font(KioskType.chip)

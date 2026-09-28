@@ -41,7 +41,7 @@ struct KioskActivationView: View {
                 }
             }
         }
-        .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: isLoading)
+        .animation(reduceMotion ? KioskMotion.fadeUnderReduceMotion : .easeInOut(duration: 0.2), value: isLoading)
     }
 
     @ViewBuilder
@@ -152,7 +152,7 @@ struct KioskActivationView: View {
             ? "Activation code, 6 digits required"
             : "Activation code, \(code.count) of 6 digits entered"
         )
-        .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: code)
+        .animation(reduceMotion ? KioskMotion.fadeUnderReduceMotion : .easeInOut(duration: 0.15), value: code)
     }
 
     private var pasteAndFocusControls: some View {
