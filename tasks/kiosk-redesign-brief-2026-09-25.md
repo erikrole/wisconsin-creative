@@ -127,7 +127,7 @@ Existing contracts the redesign changes on purpose (update tests and AREA_KIOSK 
 - [~] Hubs: C1 and C2 are done. Pending: C3 limit card and C4 unfinished card (server `checkoutAllowance` has landed), and C5 staff actions.
 - [~] New checkout: D2, D4–D8, I5 and I6 are done, and the kit entry is on the scan screen. Pending: D3 fidelity check, I1 as a card rather than a system dialog, and the kit checklist polish (E).
 - [x] Pickup (F1–F5): task scaffold, blue/violet sections, battery chips, Undo via pickup scan DELETE, inline off-plan and swap cards (scan route now offers a like-for-like `substitution`), finish-with-leftovers check, receipt leftover line. Review: `tasks/kiosk-redesign-review-pickup-2026-09-28/`. Pending: live-server and hardware proof.
-- [ ] Return (G, I2)
+- [x] Return (G1–G6, I2): G1–G2 and I2 rebuilt in `1417e3c0` (task scaffold, amber section, Undo via checkin scan DELETE, still-out check). G3–G6: one "Something damaged or missing?" link opens its own page; damaged = describe + photo (multipart `checkin/[id]/report`, held for staff); missing = accounted for per decision 4 (a last missing item finishes the return server-side); receipt shows Returned / Held for staff / Marked missing cards. Only serialized items can be reported (the service keys on `bookingSerializedItem`), so batteries and counted stock are left out of the chooser. Review: `tasks/kiosk-redesign-review-return-reports-2026-09-28/`. Pending: live-server proof, and on-device camera and photo upload.
 - [ ] Changes (H)
 - [ ] Interruptions (I3, I4) and sound/motion (J4)
 - [ ] Kits (E) once the entry point is decided

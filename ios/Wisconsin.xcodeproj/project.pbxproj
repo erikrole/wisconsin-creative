@@ -96,6 +96,7 @@
 		6F494116C14B986CBC4F1C86 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B798A9A6A730D69BA6E9597B /* SettingsView.swift */; };
 		713FB9080DFAA1073EE5FA8C /* EventDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FB4AEDFE7F83CC6E155C12D /* EventDetailSheet.swift */; };
 		71675D3559403AAD9354C225 /* BrowseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58ABE954706326D6137979FB /* BrowseView.swift */; };
+		743F290B3CC3C134AA27607E /* KioskReturnReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D91ED4DEB3FC6F670DC60EDB /* KioskReturnReportView.swift */; };
 		7507BE07B0E40EAA31B9DBE9 /* DateFormats.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39565FFA7236A61DAD12D9BB /* DateFormats.swift */; };
 		783075F2A904D279CA0653C5 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 592769886AB12F6A842CC8CF /* Assets.xcassets */; };
 		78C02C1D3AEE264D6EA1925B /* NotificationSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2159F738CA242773EA9D438 /* NotificationSettingsView.swift */; };
@@ -392,6 +393,7 @@
 		D5FEA50A163963BC17612FB6 /* ReservationDraftStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReservationDraftStore.swift; sourceTree = "<group>"; };
 		D670C3FF7EA66807225FD6FD /* SemanticTones.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SemanticTones.swift; sourceTree = "<group>"; };
 		D7348A946664F1C8E265C2A3 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		D91ED4DEB3FC6F670DC60EDB /* KioskReturnReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskReturnReportView.swift; sourceTree = "<group>"; };
 		DB5E4D4F3F432CE124DE63A8 /* KioskPickupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskPickupView.swift; sourceTree = "<group>"; };
 		DDD21416289B346FEE851FB9 /* ProfileCompletionModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileCompletionModelsTests.swift; sourceTree = "<group>"; };
 		DE250FADCDB66EDCBD5DF234 /* AvailabilityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvailabilityView.swift; sourceTree = "<group>"; };
@@ -646,6 +648,7 @@
 				046675A42DFADB1133461EDD /* KioskNativeTextField.swift */,
 				E725DC3AA9C81B02F5CF4435 /* KioskOperatorHubView.swift */,
 				DB5E4D4F3F432CE124DE63A8 /* KioskPickupView.swift */,
+				D91ED4DEB3FC6F670DC60EDB /* KioskReturnReportView.swift */,
 				687337C19E47FE94FE56F9BF /* KioskReturnView.swift */,
 				0E5A80EBE9AE9D0094E70FBB /* KioskShellView.swift */,
 				AE625FDFD675BDE49443B571 /* KioskSleepModeView.swift */,
@@ -1082,6 +1085,7 @@
 				CB5A9F4D1449DDAFF063E6A6 /* KioskOnlyApp.swift in Sources */,
 				A7EE4C02BE39D3048D19E666 /* KioskOperatorHubView.swift in Sources */,
 				03D13CE00A34B9C6DD2AB6EF /* KioskPickupView.swift in Sources */,
+				743F290B3CC3C134AA27607E /* KioskReturnReportView.swift in Sources */,
 				843586F2B58722883BD12D08 /* KioskReturnView.swift in Sources */,
 				9CF45F32E90F4C03DDE548AB /* KioskShellView.swift in Sources */,
 				A4D4C64C1C5E6904BFF894E3 /* KioskSleepModeView.swift in Sources */,

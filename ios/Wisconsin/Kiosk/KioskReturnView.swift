@@ -24,6 +24,12 @@ struct KioskReturnView: View {
     @State private var earnedBadges: [EarnedBadgeReward] = []
     @State private var scanQueue = KioskScanQueue()
     @State private var returningQuantityId: String?
+    /// G3–G5: the damaged-or-missing page, over the return.
+    @State private var reportStep: KioskReturnReportStep?
+    /// Reported damaged: returned, held for staff.
+    @State private var damagedIds: Set<String> = []
+    /// Marked missing: accounted for, so the return can finish without them.
+    @State private var missingIds: Set<String> = []
 
     enum ScanFeedback: Equatable {
         case success(String)
@@ -60,7 +66,13 @@ struct KioskReturnView: View {
     private var totalItems: Int { detail?.items.count ?? 0 }
     private var returnedCount: Int { returnedIds.count }
     private var hasReturned: Bool { returnedCount > 0 }
-    private var allReturned: Bool { returnedCount == totalItems && totalItems > 0 }
+    /// Returned plus marked missing (decision 4: missing is accounted for).
+    private var accountedCount: Int { returnedCount + missingIds.subtracting(returnedIds).count }
+    private var allReturned: Bool { accountedCount == totalItems && totalItems > 0 }
+    /// Items the report page can name: serialized gear, not counted stock.
+    private var reportableItems: [KioskCheckoutDetail.ReturnItem] {
+        (detail?.items ?? []).filter { !$0.isBulkDisplay && $0.returnsByQuantity != true }
+    }
     private var batteryTotal: Int { detail?.scanSummary?.numberedBulkTotal ?? detail?.numberedBulkItems.count ?? 0 }
     private var returnedBatteryCount: Int {
         detail?.numberedBulkItems.filter { returnedIds.contains($0.id) }.count ?? 0
@@ -87,6 +99,27 @@ struct KioskReturnView: View {
     }
 
     var body: some View {
+        ZStack {
+            if reportStep != nil {
+                KioskReturnReportView(
+                    bookingId: bookingId,
+                    actorId: userId,
+                    checkoutTitle: detail?.title,
+                    ownerSubtitle: headerSubtitle,
+                    avatarURL: returner?.avatarUrl,
+                    avatarInitials: returner?.initials,
+                    items: reportableItems,
+                    returnedIds: returnedIds,
+                    step: $reportStep,
+                    onReported: handleReport
+                )
+            } else {
+                returnScreen
+            }
+        }
+    }
+
+    private var returnScreen: some View {
         KioskTaskScaffold(header: KioskTaskHeader(
             title: "Return",
             subtitle: headerSubtitle,
@@ -100,7 +133,7 @@ struct KioskReturnView: View {
         }
         .overlay {
             if showFinishConfirm {
-                let stillOut = (detail?.items ?? []).filter { !returnedIds.contains($0.id) }
+                let stillOut = (detail?.items ?? []).filter { !returnedIds.contains($0.id) && !missingIds.contains($0.id) }
                 KioskConfirmationCard(
                     title: stillOut.count == 1 ? "\(stillOut[0].itemListPrimaryTitle) is still out" : "\(stillOut.count) items are still out",
                     message: "\(stillOut.count == 1 ? "It stays" : "They stay") on \(returningForOwner.map { "\($0.name.split(separator: " ").first ?? "")'s" } ?? "the") checkout, due \(KioskDueCopy.midSentence(detail?.endsAt ?? Date())). Finish returning the other \(returnedCount)?",
@@ -129,6 +162,19 @@ struct KioskReturnView: View {
             #if DEBUG
             // Capture hook: the confirmation only exists in the seconds after a
             // real scan, which no fixture payload can produce.
+            switch KioskFixtureScenario.active {
+            case .returnReport:
+                if let first = reportableItems.first { returnedIds.insert(first.id) }
+                reportStep = .choose(selectedId: reportableItems.dropFirst().first?.id)
+            case .returnDamaged:
+                if let first = reportableItems.first {
+                    returnedIds.insert(first.id)
+                    reportStep = .damaged(itemId: first.id)
+                }
+            case .returnMissing:
+                if let second = reportableItems.dropFirst().first { reportStep = .missing(itemId: second.id) }
+            default: break
+            }
             if KioskFixtureScenario.active == .returnAccepted, let first = detail?.items.first {
                 returnedIds.insert(first.id)
                 lastReturnedId = first.id
@@ -169,6 +215,20 @@ struct KioskReturnView: View {
                     .foregroundStyle(KioskText.tertiary)
                     .frame(maxWidth: .infinity)
             }
+            if !reportableItems.isEmpty {
+                Button {
+                    store.resetInactivity()
+                    reportStep = .choose(selectedId: nil)
+                } label: {
+                    Text("Something damaged or missing?")
+                        .font(KioskType.buttonLabel)
+                        .foregroundStyle(KioskText.secondary)
+                        .underline()
+                        .frame(minHeight: 44)
+                }
+                .buttonStyle(.plain)
+                .disabled(isCompleting)
+            }
             KioskPrimaryPill(
                 title: "Finish return",
                 detail: hasReturned ? progressDetail : nil,
@@ -182,8 +242,11 @@ struct KioskReturnView: View {
     }
 
     private var progressDetail: String {
-        let out = max(0, totalItems - returnedCount)
-        return out == 0 ? "all \(returnedCount) back" : "\(returnedCount) back · \(out) still out"
+        let out = max(0, totalItems - accountedCount)
+        let missing = missingIds.subtracting(returnedIds).count
+        return [out == 0 && missing == 0 ? "all \(returnedCount) back" : "\(returnedCount) back",
+                missing > 0 ? "\(missing) missing" : nil,
+                out > 0 ? "\(out) still out" : nil].compactMap { $0 }.joined(separator: " · ")
     }
 
     @ViewBuilder
@@ -277,6 +340,10 @@ struct KioskReturnView: View {
                             ) {
                                 if item.returnsByQuantity == true, !returnedIds.contains(item.id) {
                                     quantityReturnControl(for: item)
+                                } else if damagedIds.contains(item.id) {
+                                    reportTag("Held for staff", section: .comingBack)
+                                } else if missingIds.contains(item.id) {
+                                    reportTag("Missing", section: .problem)
                                 }
                             }
                         }
@@ -394,12 +461,9 @@ struct KioskReturnView: View {
                 guard store.ownsFlow(flow) else { return }
                 earnedBadges.appendUnique(contentsOf: result.earnedBadges ?? [])
                 Haptics.success()
+                let person = returner ?? returningForOwner
                 store.clearIntent(reason: .success)
-                store.screen = .success(KioskSuccessInfo(
-                    kind: .returned,
-                    message: successMessage(for: result),
-                    earnedBadges: earnedBadges
-                ))
+                showReceipt(message: successMessage(for: result), person: person)
             } catch {
                 let message = (error as? APIError)?.errorDescription
                     ?? "Return failed. Please try again."
@@ -407,6 +471,53 @@ struct KioskReturnView: View {
             }
             isCompleting = false
         }
+    }
+
+    @ViewBuilder
+    private func reportTag(_ text: String, section: KioskSection) -> some View {
+        Text(text)
+            .font(KioskType.meta.weight(.semibold))
+            .foregroundStyle(section.text)
+    }
+
+    /// A report came back. Damaged: still returned, held for staff. Missing:
+    /// accounted for; if it was the last item out, the server already
+    /// finished the return, so go straight to the receipt.
+    private func handleReport(_ result: KioskCheckinReportResult, _ item: KioskCheckoutDetail.ReturnItem) {
+        if result.type == "DAMAGED" {
+            damagedIds.insert(item.id)
+        } else {
+            missingIds.insert(item.id)
+        }
+        reportStep = nil
+        if result.completed {
+            let person = returner ?? returningForOwner
+            store.clearIntent(reason: .success)
+            showReceipt(message: "Return finished. Staff have been told about \(item.itemListPrimaryTitle).", person: person)
+        }
+    }
+
+    /// G6: Returned, then held-for-staff and marked-missing cards.
+    private func showReceipt(message: String, person: KioskUser?) {
+        let items = detail?.items ?? []
+        let returnedItems = items.filter { returnedIds.contains($0.id) }
+        store.screen = .success(KioskSuccessInfo(
+            kind: .returned,
+            message: message,
+            earnedBadges: earnedBadges,
+            receipt: person.map { user in
+                KioskReturnReportCopy.receipt(
+                    user: user,
+                    title: detail?.title ?? "Return",
+                    refNumber: detail?.refNumber,
+                    returnedCount: returnedItems.count,
+                    totalItems: totalItems,
+                    returnedTags: returnedItems.map(\.itemListPrimaryTitle),
+                    damaged: items.filter { damagedIds.contains($0.id) }.map { ($0.itemListPrimaryTitle, $0.itemListSecondaryTitle) },
+                    missing: items.filter { missingIds.contains($0.id) && !returnedIds.contains($0.id) }.map { ($0.itemListPrimaryTitle, $0.itemListSecondaryTitle) }
+                )
+            }
+        ))
     }
 
     /// Use the SERVER-authoritative counts in the success message — local

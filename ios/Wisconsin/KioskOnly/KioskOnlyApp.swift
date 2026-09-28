@@ -155,6 +155,28 @@ struct WisconsinKioskApp: App {
             ))
         case .returnFlow, .returnAccepted:
             kioskStore.screen = .return(bookingId: "co-1", userId: kioskUser.id)
+        case .returnReport, .returnDamaged, .returnMissing:
+            kioskStore.setIntent(KioskFlowIntent(
+                action: .return, source: .activeCheckout, identifiedUser: kioskUser, expectedRequester: nil,
+                selectedEvent: nil, targetBooking: KioskFixtures.otherOwnerCheckout,
+                pendingScanValues: [], createdAt: Date(), ambiguity: .none
+            ))
+            kioskStore.screen = .return(bookingId: "co-1", userId: kioskUser.id)
+        case .returnReceipt:
+            kioskStore.screen = .success(KioskSuccessInfo(
+                kind: .returned,
+                message: "4 of 5 items returned.",
+                receipt: KioskReturnReportCopy.receipt(
+                    user: kioskUser,
+                    title: "Volleyball vs Minnesota",
+                    refNumber: "CO-1043",
+                    returnedCount: 4,
+                    totalItems: 5,
+                    returnedTags: ["CAM-014", "LENS-22", "V-Mount #7", "V-Mount #9"],
+                    damaged: [("LENS-22", "Sony 24-70mm GM")],
+                    missing: [("AUD-007", "Sennheiser MKE 600")]
+                )
+            ))
         case .identity:
             kioskStore.setIntent(KioskFlowIntent(
                 action: .checkout, source: .event, identifiedUser: nil, expectedRequester: nil,
@@ -484,6 +506,14 @@ enum KioskFixtureScenario: String {
     case returnFlow = "return"
     /// The return checklist in the moment right after a scan lands.
     case returnAccepted = "return-accepted"
+    /// Redesign G3: the damaged-or-missing chooser with an item picked.
+    case returnReport = "return-report"
+    /// Redesign G4: damaged, describe it and take a photo.
+    case returnDamaged = "return-damaged"
+    /// Redesign G5: missing, mark it and tell staff.
+    case returnMissing = "return-missing"
+    /// Redesign G6: the return receipt with held-for-staff and missing cards.
+    case returnReceipt = "return-receipt"
     /// Roster-first identity confirmation.
     case identity = "identity"
     /// Identity for returning someone else's personal checkout, started from

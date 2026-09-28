@@ -453,6 +453,50 @@ struct KioskAPI {
         return try await perform(req)
     }
 
+    /// Damaged or missing (G4, G5). Multipart like the web route: `actorId`,
+    /// `assetId`, `type` (DAMAGED | LOST), optional `description`, optional
+    /// JPEG `file`. Not retried automatically: the server rejects a repeat
+    /// report for the same item within a few seconds.
+    func kioskCheckinReport(
+        bookingId: String,
+        actorId: String,
+        assetId: String,
+        type: String,
+        description: String?,
+        photoJPEG: Data?
+    ) async throws -> KioskCheckinReportResult {
+        let boundary = "KioskReport-\(UUID().uuidString)"
+        var req = request(path: "/api/kiosk/checkin/\(bookingId)/report", method: "POST")
+        req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        req.httpBody = Self.multipartBody(
+            boundary: boundary,
+            fields: [("actorId", actorId), ("assetId", assetId), ("type", type)]
+                + (description.map { [("description", $0)] } ?? []),
+            file: photoJPEG.map { (name: "file", filename: "damage.jpg", contentType: "image/jpeg", data: $0) }
+        )
+        return try await perform(req)
+    }
+
+    static func multipartBody(
+        boundary: String,
+        fields: [(String, String)],
+        file: (name: String, filename: String, contentType: String, data: Data)?
+    ) -> Data {
+        var body = Data()
+        func append(_ string: String) { body.append(Data(string.utf8)) }
+        for (name, value) in fields {
+            append("--\(boundary)\r\nContent-Disposition: form-data; name=\"\(name)\"\r\n\r\n\(value)\r\n")
+        }
+        if let file {
+            append("--\(boundary)\r\nContent-Disposition: form-data; name=\"\(file.name)\"; filename=\"\(file.filename)\"\r\n")
+            append("Content-Type: \(file.contentType)\r\n\r\n")
+            body.append(file.data)
+            append("\r\n")
+        }
+        append("--\(boundary)--\r\n")
+        return body
+    }
+
     // MARK: - Pickup
 
     func kioskPickupScan(

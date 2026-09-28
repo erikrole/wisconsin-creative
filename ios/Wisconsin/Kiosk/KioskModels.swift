@@ -827,6 +827,26 @@ struct KioskCheckinCompleteResult: Decodable {
     let earnedBadges: [EarnedBadgeReward]?
 }
 
+/// Response from `POST /api/kiosk/checkin/{id}/report` (G4, G5).
+/// `heldForStaff`: a damaged item was moved to maintenance. `completed`: a
+/// missing report accounted for the last item out, which finished the return.
+struct KioskCheckinReportResult: Decodable {
+    struct Item: Decodable {
+        let id: String
+        let assetTag: String
+        let name: String
+    }
+    let success: Bool
+    let reportId: String
+    let type: String
+    let description: String?
+    let imageUrl: String?
+    let item: Item
+    let checkoutTitle: String
+    let heldForStaff: Bool
+    let completed: Bool
+}
+
 /// Server response for a reservation pickup. `partial` is optional so a
 /// newer kiosk can still read a response from an older server during rollout.
 struct KioskPickupConfirmResult: Decodable {

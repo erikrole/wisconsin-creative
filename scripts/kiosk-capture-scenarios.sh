@@ -26,6 +26,7 @@ ALL_SCENARIOS=(
   keyboard-tip scanning scan-accepted scanner-help availability-conflicts
   availability-rejected pickup reservation-battery-pickup pickup-accepted pickup-off-plan
   pickup-substitute pickup-shared pickup-finish-confirm pickup-receipt return return-accepted
+  return-report return-damaged return-missing return-receipt
   return-for-other badge
 )
 if [[ $# -gt 0 ]]; then SCENARIOS=("$@"); else SCENARIOS=("${ALL_SCENARIOS[@]}"); fi
