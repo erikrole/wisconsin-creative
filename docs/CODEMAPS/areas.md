@@ -73,7 +73,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/settings/kiosk-devices`
 - APIs: `/api/kiosk-devices/[id]/regenerate-code`, `/api/kiosk-devices/[id]`, `/api/kiosk-devices`, `/api/kiosk/activate`, `/api/kiosk/checkin/[id]/complete`, `/api/kiosk/checkin/[id]/quantity`, `/api/kiosk/checkin/[id]/report`, `/api/kiosk/checkin/[id]/scan`, `/api/kiosk/checkout/[id]/extend-window`, `/api/kiosk/checkout/[id]/nudge`
 - Services: `src/lib/services/kiosk-active-checkout-items.ts`, `src/lib/services/kiosk-actor.ts`, `src/lib/services/kiosk-checkin-undo.ts`, `src/lib/services/kiosk-checkout-allowance.ts`, `src/lib/services/kiosk-checkout-complete.ts`, `src/lib/services/kiosk-dashboard-home.ts`, `src/lib/services/kiosk-extend-window.ts`, `src/lib/services/kiosk-item-transfer.ts`
-- Tests: `tests/bulk-unit-kiosk-scans.test.ts`, `tests/ios-kiosk-actionable-availability.test.ts`, `tests/ios-kiosk-all-day-contract.test.ts`, `tests/ios-kiosk-availability-status.test.ts`, `tests/ios-kiosk-back-button.test.ts`, `tests/ios-kiosk-checkout-details-polish.test.ts`, `tests/ios-kiosk-idle-cancellation.test.ts`, `tests/ios-kiosk-idle-checkout-list.test.ts`
+- Tests: `tests/bulk-unit-kiosk-scans.test.ts`, `tests/ios-kiosk-actionable-availability.test.ts`, `tests/ios-kiosk-all-day-contract.test.ts`, `tests/ios-kiosk-availability-status.test.ts`, `tests/ios-kiosk-back-button.test.ts`, `tests/ios-kiosk-changes.test.ts`, `tests/ios-kiosk-checkout-details-polish.test.ts`, `tests/ios-kiosk-checkout-kits-interruptions.test.ts`
 
 ## kits
 
@@ -81,7 +81,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/kits/[id]`, `/kits`
 - APIs: `/api/kiosk/kits/[id]`, `/api/kiosk/kits`, `/api/kits/[id]/bulk-members`, `/api/kits/[id]/clone`, `/api/kits/[id]/members/[membershipId]`, `/api/kits/[id]/members`, `/api/kits/[id]`, `/api/kits`
 - Services: `src/lib/services/kits.ts`
-- Tests: `tests/football-gameday-kits.test.ts`, `tests/kits-gameday-authoring-source.test.ts`, `tests/kits-list.test.ts`, `tests/kits-location-load-state.test.ts`, `tests/kits-service.test.ts`
+- Tests: `tests/football-gameday-kits.test.ts`, `tests/ios-kiosk-checkout-kits-interruptions.test.ts`, `tests/kits-gameday-authoring-source.test.ts`, `tests/kits-list.test.ts`, `tests/kits-location-load-state.test.ts`, `tests/kits-service.test.ts`
 
 ## licenses
 
@@ -121,7 +121,7 @@ This map is heuristic. It links `docs/AREA_*.md` files to likely routes, APIs, s
 - Pages: `/reports/audit`, `/reports/badges`, `/reports/bulk-losses`, `/reports/checkouts`, `/reports/overdue`, `/reports`, `/reports/scans`, `/reports/usage`
 - APIs: `/api/audit/export`, `/api/audit/last`, `/api/audit`, `/api/bookings/[id]/audit-logs`, `/api/cron/audit-archive`, `/api/location-mappings/audit`, `/api/reports/audit`, `/api/reports/badges`, `/api/reports/bulk-losses`, `/api/reports/checkouts`
 - Services: `src/lib/services/checkin-item-reports.ts`, `src/lib/services/reports.ts`
-- Tests: `tests/audit-archive-cron.test.ts`, `tests/audit-export-route.test.ts`, `tests/audit-helper.test.ts`, `tests/audit-last-route.test.ts`, `tests/booking-audit-history-recovery.test.ts`, `tests/calendar-sync-audit.test.ts`, `tests/ios-audit-inventory.test.ts`, `tests/ios-reports-resilience.test.ts`
+- Tests: `tests/audit-archive-cron.test.ts`, `tests/audit-export-route.test.ts`, `tests/audit-helper.test.ts`, `tests/audit-last-route.test.ts`, `tests/booking-audit-history-recovery.test.ts`, `tests/calendar-sync-audit.test.ts`, `tests/ios-audit-inventory.test.ts`, `tests/ios-kiosk-return-reports.test.ts`
 
 ## reservations
 
