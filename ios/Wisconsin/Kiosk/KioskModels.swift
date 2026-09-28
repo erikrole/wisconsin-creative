@@ -808,6 +808,71 @@ struct KioskActiveCheckoutMutationResult: Decodable {
     let error: String?
 }
 
+/// `GET /api/kiosk/checkout/[id]/extend-window` (H1).
+struct KioskExtendWindow: Decodable {
+    let currentEndsAt: Date
+    /// Latest time the extend PATCH accepts; nil = nothing claims the gear
+    /// within a year. At or before `currentEndsAt` = it can't be extended.
+    let maxEndsAt: Date?
+    let limitingItem: LimitingItem?
+
+    struct LimitingItem: Decodable {
+        let assetTag: String
+        let name: String
+        /// Omitted for shared holders and counted stock.
+        let holderName: String?
+        let startsAt: Date
+    }
+
+    var canExtend: Bool {
+        guard let maxEndsAt else { return true }
+        return maxEndsAt > currentEndsAt
+    }
+}
+
+/// `POST /api/kiosk/checkout/[id]/transfer` (H2, C5).
+struct KioskTransferResult: Decodable {
+    let success: Bool
+    let targetBookingId: String
+    let sourceClosed: Bool
+    let itemCount: Int
+    let message: String?
+    let endsAt: Date?
+}
+
+/// `POST /api/kiosk/checkout/[id]/swap` (H4).
+struct KioskSwapResult: Decodable {
+    struct Side: Decodable {
+        let tagName: String
+        let name: String?
+    }
+    let success: Bool
+    let message: String?
+    let error: String?
+    let removed: Side?
+    let added: Side?
+}
+
+/// `GET /api/kiosk/reservation/[id]/items` (H5). `id` is the reservation
+/// item id the POST takes as `itemId`; `quantity` is what is still to pick up.
+struct KioskReservationManifest: Decodable {
+    let id: String
+    let title: String
+    let updatedAt: Date
+    let items: [Item]
+
+    struct Item: Decodable, Identifiable, Equatable {
+        let id: String
+        let assetId: String?
+        let bulkSkuId: String?
+        let name: String
+        let quantity: Int
+        let pickedQuantity: Int
+
+        var isBulk: Bool { bulkSkuId != nil }
+    }
+}
+
 // MARK: - Checkin / Return result
 
 /// Server-authoritative counts returned by `/api/kiosk/checkin/{id}/complete`.

@@ -742,6 +742,9 @@ enum KioskSheetBackdrop {
 }
 
 enum KioskBatteryCopy {
+    /// Under a reserved battery count (H5, F1).
+    static let reservedHint = "Numbers are assigned when you scan them at pickup."
+
     /// "V-Mount Battery #4" / "V-Mount Battery" -> "V-Mount batteries".
     static func familyTitle(_ name: String) -> String {
         let base = name.replacingOccurrences(of: #"\s*#\d+$"#, with: "", options: .regularExpression)

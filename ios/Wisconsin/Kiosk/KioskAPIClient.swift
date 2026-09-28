@@ -361,6 +361,101 @@ struct KioskAPI {
         return try await perform(req)
     }
 
+    /// H1: how late this checkout can go before its gear is claimed. The
+    /// PATCH above still validates the chosen time.
+    func kioskExtendWindow(checkoutId: String) async throws -> KioskExtendWindow {
+        let req = request(path: "/api/kiosk/checkout/\(checkoutId)/extend-window")
+        return try await perform(req)
+    }
+
+    /// H2 and C5: move items to someone on the roster, immediately (decision
+    /// 2, no accept step). `requestId` makes a retry replay the first answer
+    /// instead of moving the gear twice. A staff actor must send a reason.
+    func kioskTransferCheckout(
+        id: String,
+        actorId: String,
+        requestId: String,
+        expectedUpdatedAt: Date,
+        targetUserId: String,
+        assetIds: [String],
+        bulkUnitIds: [String],
+        reason: String?
+    ) async throws -> KioskTransferResult {
+        struct Body: Encodable {
+            let actorId: String
+            let requestId: String
+            let expectedUpdatedAt: String
+            let targetUserId: String
+            let assetIds: [String]
+            let bulkUnitIds: [String]
+            let reason: String?
+        }
+        var req = request(path: "/api/kiosk/checkout/\(id)/transfer", method: "POST")
+        req.httpBody = try JSONEncoder().encode(Body(
+            actorId: actorId,
+            requestId: requestId,
+            expectedUpdatedAt: isoString(from: expectedUpdatedAt),
+            targetUserId: targetUserId,
+            assetIds: assetIds,
+            bulkUnitIds: bulkUnitIds,
+            reason: reason
+        ))
+        let envelope: KioskCompletionEnvelope<KioskTransferResult> = try await perform(req)
+        if envelope.operationRejected == true {
+            throw APIError.serverError(envelope.error ?? "That transfer didn't go through. Nothing moved.")
+        }
+        guard let result = envelope.result else {
+            throw APIError.serverError("Could not read the transfer receipt. Check the hub before trying again.")
+        }
+        return result
+    }
+
+    /// H4 plain swap: one unit off, a like-for-like unit on, in one
+    /// transaction. A refusal comes back as `success: false` with a sentence.
+    func kioskSwapActiveCheckoutItem(
+        id: String,
+        actorId: String,
+        item: KioskCheckoutDetail.ReturnItem,
+        scanValue: String
+    ) async throws -> KioskSwapResult {
+        struct Remove: Encodable {
+            let assetId: String?
+            let bulkSkuId: String?
+            let unitNumber: Int?
+            func encode(to encoder: Encoder) throws {
+                var c = encoder.container(keyedBy: CodingKeys.self)
+                try c.encodeIfPresent(assetId, forKey: .assetId)
+                try c.encodeIfPresent(bulkSkuId, forKey: .bulkSkuId)
+                try c.encodeIfPresent(unitNumber, forKey: .unitNumber)
+            }
+            enum CodingKeys: String, CodingKey { case assetId, bulkSkuId, unitNumber }
+        }
+        struct Body: Encodable {
+            let actorId: String
+            let remove: Remove
+            let scanValue: String
+        }
+        var req = request(path: "/api/kiosk/checkout/\(id)/swap", method: "POST")
+        req.httpBody = try JSONEncoder().encode(Body(
+            actorId: actorId,
+            remove: item.isNumberedBulk
+                ? Remove(assetId: nil, bulkSkuId: item.bulkSkuId, unitNumber: item.unitNumber)
+                : Remove(assetId: item.id, bulkSkuId: nil, unitNumber: nil),
+            scanValue: scanValue
+        ))
+        return try await perform(req)
+    }
+
+    /// H5: what is still reserved, with the reservation-item ids the per-op
+    /// POST below takes for remove and quantity.
+    func kioskReservationManifest(id: String, actorId: String) async throws -> KioskReservationManifest {
+        let req = request(
+            path: "/api/kiosk/reservation/\(id)/items",
+            query: [URLQueryItem(name: "actorId", value: actorId)]
+        )
+        return try await perform(req)
+    }
+
     func kioskAddActiveCheckoutItem(id: String, actorId: String, scanValue: String) async throws -> KioskActiveCheckoutMutationResult {
         struct Body: Encodable {
             let actorId: String
@@ -577,7 +672,8 @@ struct KioskAPI {
         expectedUpdatedAt: Date,
         action: String,
         itemId: String? = nil,
-        quantity: Int? = nil
+        quantity: Int? = nil,
+        scanValue: String? = nil
     ) async throws -> KioskReservationMutationResult {
         struct Body: Encodable {
             let actorId: String
@@ -585,9 +681,10 @@ struct KioskAPI {
             let action: String
             let itemId: String?
             let quantity: Int?
+            let scanValue: String?
 
             enum CodingKeys: String, CodingKey {
-                case actorId, expectedUpdatedAt, action, itemId, quantity
+                case actorId, expectedUpdatedAt, action, itemId, quantity, scanValue
             }
 
             func encode(to encoder: Encoder) throws {
@@ -597,6 +694,7 @@ struct KioskAPI {
                 try container.encode(action, forKey: .action)
                 try container.encodeIfPresent(itemId, forKey: .itemId)
                 try container.encodeIfPresent(quantity, forKey: .quantity)
+                try container.encodeIfPresent(scanValue, forKey: .scanValue)
             }
         }
         var req = request(path: "/api/kiosk/reservation/\(id)/items", method: "POST")
@@ -605,7 +703,8 @@ struct KioskAPI {
             expectedUpdatedAt: isoString(from: expectedUpdatedAt),
             action: action,
             itemId: itemId,
-            quantity: quantity
+            quantity: quantity,
+            scanValue: scanValue
         ))
         return try await perform(req)
     }

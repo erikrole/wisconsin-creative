@@ -23,6 +23,17 @@ struct KioskOperatorHubView: View {
     @State private var shiftsFailed = false
     @State private var hasUnfinishedCheckout = false
     @State private var showDiscardUnfinished = false
+    /// Changes (row H), each a screen over the hub.
+    @State private var extendTarget: KioskCheckoutDrawerContext?
+    @State private var transferTarget: KioskCheckoutDrawerContext?
+    @State private var reservationTarget: KioskIntentBooking?
+    @State private var staffFlowTarget: KioskCheckoutDrawerContext?
+    @State private var changeNotice: String?
+
+    private var isPresentingChange: Bool {
+        selectedCheckout != nil || extendTarget != nil || transferTarget != nil
+            || reservationTarget != nil || staffFlowTarget != nil
+    }
 
     private enum ScanRouteFeedback: Equatable {
         case warning(String)
@@ -66,6 +77,12 @@ struct KioskOperatorHubView: View {
                 }
             )
 
+            if let changeNotice {
+                KioskFeedbackBanner(tone: .success, message: changeNotice)
+                    .padding(.horizontal, KioskSpacing.lg)
+                    .padding(.top, KioskSpacing.sm)
+            }
+
             if let scanFeedback {
                 KioskFeedbackBanner(tone: scanFeedback.tone, message: scanFeedback.message)
                     .padding(.horizontal, KioskSpacing.lg)
@@ -85,7 +102,7 @@ struct KioskOperatorHubView: View {
             }
         }
         .overlay(alignment: .bottom) {
-            if selectedCheckout == nil {
+            if !isPresentingChange {
                 HIDScannerField(onScan: { store.scanner.receive($0) }).frame(width: 1, height: 1).opacity(0)
             }
         }
@@ -99,8 +116,26 @@ struct KioskOperatorHubView: View {
             // Capture hook: opens the custody drawer without a tap, so the
             // before/after pair for this sheet is scripted rather than
             // hand-driven. No effect outside a fixture scenario.
-            if KioskFixtureScenario.active == .checkoutSheet, let first = context?.checkouts.first {
+            if KioskFixtureScenario.active == .checkoutSheet || KioskFixtureScenario.active == .changesSwap,
+               let first = context?.checkouts.first {
                 selectedCheckout = drawerContext(for: first)
+            }
+            if KioskFixtureScenario.active == .changesExtend, let first = context?.checkouts.first {
+                extendTarget = drawerContext(for: first)
+            }
+            if KioskFixtureScenario.active == .changesTransfer, let first = context?.checkouts.first {
+                transferTarget = drawerContext(for: first)
+            }
+            if KioskFixtureScenario.active == .changesReservation, let first = context?.pendingPickups.first {
+                reservationTarget = KioskIntentBooking(id: first.id, title: first.title, startsAt: first.startsAt, endsAt: nil)
+            }
+            if KioskFixtureScenario.active == .changesStaff, let overdue = context?.checkouts.last {
+                // Production reaches this from a booking's sheet on home.
+                staffFlowTarget = KioskCheckoutDrawerContext(
+                    checkoutId: overdue.id, title: overdue.title, requesterId: "u-3",
+                    requesterName: "Dashiell Okonkwo", requesterAvatarUrl: nil,
+                    custodyScope: "PERSON", endsAt: overdue.endsAt, isOverdue: overdue.isOverdue
+                )
             }
             #endif
         }
@@ -163,6 +198,60 @@ struct KioskOperatorHubView: View {
             .presentationSizing(.page)
             .presentationDragIndicator(.visible)
         }
+        .fullScreenCover(item: $extendTarget) { checkout in
+            KioskExtendScreen(
+                checkoutId: checkout.checkoutId,
+                title: checkout.title,
+                detailLine: extendDetailLine(checkout),
+                actorId: user.id,
+                onCancel: { extendTarget = nil },
+                onExtended: { finishChange("Extended. \(checkout.title) has more time.") { extendTarget = nil } }
+            )
+        }
+        .fullScreenCover(item: $transferTarget) { checkout in
+            KioskTransferScreen(
+                checkoutId: checkout.checkoutId,
+                title: checkout.title,
+                holderId: user.id,
+                holderName: user.name,
+                actor: user,
+                onCancel: { transferTarget = nil },
+                onTransferred: { result, target in
+                    finishChange("\(result.itemCount) item\(result.itemCount == 1 ? "" : "s") moved to \(target.shortName). They're on \(target.shortName)'s record now.") {
+                        transferTarget = nil
+                    }
+                }
+            )
+        }
+        .fullScreenCover(item: $reservationTarget) { booking in
+            KioskReservationEditView(reservationId: booking.id, title: booking.title, user: user) { saved in
+                reservationTarget = nil
+                if saved { finishChange("Reservation saved.") {} }
+            }
+        }
+        .fullScreenCover(item: $staffFlowTarget) { checkout in
+            KioskStaffActionsFlow(context: checkout) { _ in
+                staffFlowTarget = nil
+                Task { await loadContext() }
+            }
+        }
+    }
+
+    private func finishChange(_ message: String, dismiss: () -> Void) {
+        dismiss()
+        changeNotice = message
+        Task {
+            await loadContext()
+            try? await Task.sleep(nanoseconds: 4_000_000_000)
+            if changeNotice == message { changeNotice = nil }
+        }
+    }
+
+    private func extendDetailLine(_ checkout: KioskCheckoutDrawerContext) -> String {
+        let match = context?.checkouts.first { $0.id == checkout.checkoutId }
+        let count = match?.items.count ?? 0
+        return [match?.refNumber, count > 0 ? "\(count) item\(count == 1 ? "" : "s")" : nil]
+            .compactMap { $0 }.joined(separator: " · ")
     }
 
     // MARK: - Hub (redesign C1–C4)
@@ -214,9 +303,13 @@ struct KioskOperatorHubView: View {
                         ) {
                             Button("Return") { startReturn(drawerContext(for: checkout)) }
                                 .kioskButtonRole(.primary)
-                            Button("Extend") { selectedCheckout = drawerContext(for: checkout) }
+                            Button("Extend") { extendTarget = drawerContext(for: checkout) }
                                 .kioskButtonRole(.secondary)
                             Button("Add items") { selectedCheckout = drawerContext(for: checkout) }
+                                .kioskButtonRole(.secondary)
+                            // Decision 2: the holder hands it over directly,
+                            // no accept step. Hub checkouts are personal.
+                            Button("Transfer") { transferTarget = drawerContext(for: checkout) }
                                 .kioskButtonRole(.secondary)
                         }
                     }
@@ -239,6 +332,10 @@ struct KioskOperatorHubView: View {
                         ) {
                             Button("Pick up") { startPickup(id: pickup.id, title: pickup.title, startsAt: pickup.startsAt) }
                                 .kioskButtonRole(.primary)
+                            Button("Change what's reserved") {
+                                reservationTarget = KioskIntentBooking(id: pickup.id, title: pickup.title, startsAt: pickup.startsAt, endsAt: nil)
+                            }
+                            .kioskButtonRole(.secondary)
                         }
                     }
                     ForEach(reservations) { reservation in
@@ -251,6 +348,10 @@ struct KioskOperatorHubView: View {
                             Button("Pick up") { startPickup(id: reservation.id, title: reservation.title, startsAt: reservation.startsAt) }
                                 .kioskButtonRole(.primary)
                                 .accessibilityHint("Start pickup now")
+                            Button("Change what's reserved") {
+                                reservationTarget = KioskIntentBooking(id: reservation.id, title: reservation.title, startsAt: reservation.startsAt, endsAt: nil)
+                            }
+                            .kioskButtonRole(.secondary)
                         }
                     }
                 }

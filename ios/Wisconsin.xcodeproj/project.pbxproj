@@ -50,6 +50,7 @@
 		2CED1D2B5A4282EB13E29796 /* ScheduleModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D50B2D1EA31765C957FED322 /* ScheduleModels.swift */; };
 		2DF5EDC0EA7BAAF2547F1035 /* LinkStickerWizard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41D51AC00210AD1B6DE0E466 /* LinkStickerWizard.swift */; };
 		2E557BDFACDF537A54930972 /* BadgeEarnedCelebration.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDF1537A041998300D3A8FA8 /* BadgeEarnedCelebration.swift */; };
+		2F57AAE5BC711AFCB6825C38 /* KioskChangesViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8720CD7A10389DB790C6C2D /* KioskChangesViews.swift */; };
 		30A2174F020A46E7B8538492 /* CreateBookingPickers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AFF5F65A92CEAED518EF6E6 /* CreateBookingPickers.swift */; };
 		31591DD0437B097C2510AB84 /* UserAvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2BBAACBEA87B1EE9FEBC287 /* UserAvatarView.swift */; };
 		31BA906AD0D633053D4804B7 /* AccountSecuritySettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 552E4A9FC0A2CB73C36F51C6 /* AccountSecuritySettingsView.swift */; };
@@ -393,6 +394,7 @@
 		D5FEA50A163963BC17612FB6 /* ReservationDraftStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReservationDraftStore.swift; sourceTree = "<group>"; };
 		D670C3FF7EA66807225FD6FD /* SemanticTones.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SemanticTones.swift; sourceTree = "<group>"; };
 		D7348A946664F1C8E265C2A3 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		D8720CD7A10389DB790C6C2D /* KioskChangesViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskChangesViews.swift; sourceTree = "<group>"; };
 		D91ED4DEB3FC6F670DC60EDB /* KioskReturnReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskReturnReportView.swift; sourceTree = "<group>"; };
 		DB5E4D4F3F432CE124DE63A8 /* KioskPickupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KioskPickupView.swift; sourceTree = "<group>"; };
 		DDD21416289B346FEE851FB9 /* ProfileCompletionModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileCompletionModelsTests.swift; sourceTree = "<group>"; };
@@ -631,6 +633,7 @@
 				783E3F89AF08A64D8BE2685D /* KioskActivationView.swift */,
 				BA5C2531E017BDBDE5EFDDFE /* KioskAPIClient.swift */,
 				06C085E7CDEC3CCE6DFDD630 /* KioskBarcodeCameraView.swift */,
+				D8720CD7A10389DB790C6C2D /* KioskChangesViews.swift */,
 				966B6B986CA5E9C123B8EC01 /* KioskCheckoutDetailSheet.swift */,
 				14951B258A7FE7AD4B9F5059 /* KioskCheckoutDetailsStep.swift */,
 				3700D2B2FAE801DC2FF0F1ED /* KioskCheckoutView.swift */,
@@ -1067,6 +1070,7 @@
 				654893DACB94A0EDA73141DF /* KioskAPIClient.swift in Sources */,
 				4B2A968B07EADEF18DEAD46D /* KioskActivationView.swift in Sources */,
 				9920100D23D0FF37F2528340 /* KioskBarcodeCameraView.swift in Sources */,
+				2F57AAE5BC711AFCB6825C38 /* KioskChangesViews.swift in Sources */,
 				18103A77A1D847F0F42FFDCF /* KioskCheckoutDetailSheet.swift in Sources */,
 				015371E187F17F4CE2241673 /* KioskCheckoutDetailsStep.swift in Sources */,
 				3626807CF358067A4EF9AF15 /* KioskCheckoutView.swift in Sources */,

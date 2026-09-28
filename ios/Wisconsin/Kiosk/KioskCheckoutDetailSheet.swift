@@ -56,6 +56,10 @@ struct KioskCheckoutDetailSheet: View {
     @State private var showCamera = false
     @State private var scanQueue = KioskScanQueue()
     @State private var presentationGeneration = UUID()
+    /// H4: the unit being swapped for a like-for-like one.
+    @State private var swapItem: KioskCheckoutDetail.ReturnItem?
+    /// C5: staff actions, reached from the read-only sheet on home.
+    @State private var showStaffFlow = false
 
     private enum ActiveMutation: Equatable {
         case savingDetails
@@ -81,6 +85,7 @@ struct KioskCheckoutDetailSheet: View {
             && pendingRemoval == nil
             && pendingBlock == nil
             && !showCamera
+            && swapItem == nil
     }
 
     private var actorId: String? {
@@ -159,13 +164,50 @@ struct KioskCheckoutDetailSheet: View {
             KioskKeyboardHint(isFieldFocused: titleFocused)
         }
         .overlay(alignment: .bottom) {
-            if !allowsEditing, let onScan {
+            if !allowsEditing, !showStaffFlow, let onScan {
                 HIDScannerField(onScan: onScan).frame(width: 1, height: 1).opacity(0)
             }
         }
         .task {
             await load()
             armScannerCapture()
+            #if DEBUG
+            if KioskFixtureScenario.active == .changesSwap,
+               let first = detail?.items.first(where: { isRemovable($0) && $0.isNumberedBulk }) ?? detail?.items.first(where: isRemovable) {
+                swapItem = first
+            }
+            #endif
+        }
+        .fullScreenCover(item: $swapItem) { item in
+            KioskSwapScreen(
+                checkoutId: context.checkoutId,
+                item: item,
+                contextLine: "On \(context.requesterName)'s checkout · \(currentTitle) · due \(KioskDueCopy.midSentence(currentEndsAt))",
+                actorId: actorId ?? "",
+                onReportProblem: item.isNumberedBulk ? nil : onReturn.map { startReturn in
+                    {
+                        swapItem = nil
+                        dismiss()
+                        startReturn()
+                    }
+                },
+                onCancel: { swapItem = nil },
+                onSwapped: { message in
+                    swapItem = nil
+                    showMutationMessage(tone: .success, text: message)
+                    Task { await load() }
+                    onChanged()
+                }
+            )
+        }
+        .fullScreenCover(isPresented: $showStaffFlow) {
+            KioskStaffActionsFlow(context: context) { changed in
+                showStaffFlow = false
+                if changed {
+                    Task { await load() }
+                    onChanged()
+                }
+            }
         }
         .onDisappear {
             presentationGeneration = UUID()
@@ -331,6 +373,13 @@ struct KioskCheckoutDetailSheet: View {
                 .kioskButtonRole(.primary)
                 .controlSize(.large)
                 .disabled(isMutating || !scanQueue.isEmpty)
+            }
+            if !allowsEditing, detail?.status == "OPEN" {
+                // C5: no separate staff mode. Staff tap their name inside.
+                Button("Staff actions") { showStaffFlow = true }
+                    .font(.headline.weight(.semibold))
+                    .kioskButtonRole(.secondary)
+                    .controlSize(.large)
             }
             Button("Done") { dismiss() }
                 .font(.headline.weight(.semibold))
@@ -576,6 +625,11 @@ struct KioskCheckoutDetailSheet: View {
             }
             Spacer()
             if canEditActiveCheckout && isRemovable(item) {
+                Button("Swap") { swapItem = item }
+                    .font(KioskType.chip)
+                    .kioskButtonRole(.quiet)
+                    .disabled(isMutating)
+                    .accessibilityLabel("Swap \(item.itemListPrimaryTitle)")
                 // Icon-only: six of these stacked as full "Remove" pills made
                 // the item list read as a row of destructive buttons rather
                 // than a custody manifest. The confirmation dialog still names

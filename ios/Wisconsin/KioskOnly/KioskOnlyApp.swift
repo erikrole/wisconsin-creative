@@ -64,7 +64,8 @@ struct WisconsinKioskApp: App {
         switch scenario {
         case .idle:
             kioskStore.screen = .idle
-        case .operatorHub, .checkoutSheet, .hubAtLimit:
+        case .operatorHub, .checkoutSheet, .hubAtLimit,
+             .changesExtend, .changesTransfer, .changesSwap, .changesReservation, .changesStaff:
             kioskStore.screen = .operatorHub(kioskUser)
         case .resume:
             // The splash is a store state, not a screen, so it is the one
@@ -529,6 +530,16 @@ enum KioskFixtureScenario: String {
     case eventDetail = "event-detail"
     /// The cold-launch splash shown while a stored session is revalidated.
     case resume = "resume"
+    /// Redesign H1: extend, limited by the next reservation on CAM-014.
+    case changesExtend = "changes-extend"
+    /// Redesign H2: transfer to someone on the roster, immediately.
+    case changesTransfer = "changes-transfer"
+    /// Redesign H4: swap a battery, replacement scanned.
+    case changesSwap = "changes-swap"
+    /// Redesign H5: change a reservation with staged edits.
+    case changesReservation = "changes-reservation"
+    /// Redesign C5: staff actions on someone's overdue booking.
+    case changesStaff = "changes-staff"
 
     static var active: KioskFixtureScenario? {
         ProcessInfo.processInfo.environment["GT_KIOSK_SCENARIO"]
@@ -887,9 +898,11 @@ enum KioskFixtures {
         if id == "rs-duals" { return pickupDualsDetailJSON(id: id) }
         if id == "rs-shared" { return pickupSharedDetailJSON(id: id) }
 
+        if id == "co-4" { return overdueCheckoutDetailJSON(id: id) }
+
         return """
         {"id":"\(id)","title":"Volleyball vs Minnesota","refNumber":"CO-1043","status":"OPEN",
-         "requesterId":"\(primaryUser.id)","endsAt":"\(iso(hours(6)))",
+         "requesterId":"\(primaryUser.id)","endsAt":"\(iso(hours(6)))","updatedAt":"\(iso(hours(-2)))",
          "scanSummary":{"serializedTotal":3,"numberedBulkTotal":1,"numberedBulkCompleted":0},
          "items":[
            {"id":"it-1","tagName":"CAM-014","name":"Sony FX3","returned":false,"type":"serialized",
@@ -902,6 +915,43 @@ enum KioskFixtures {
             "type":"numbered_bulk","bulkSkuId":"sku-bat","bulkSkuName":"V-Mount Battery",
             "unitNumber":4,"imageUrl":null}
          ]}
+        """
+    }
+
+    /// Redesign C5: someone's overdue checkout, seen by staff.
+    static func overdueCheckoutDetailJSON(id: String) -> String {
+        """
+        {"id":"\(id)","title":"Football Practice Cutups","refNumber":"CO-1039","status":"OPEN",
+         "requesterId":"u-3","custodyScope":"PERSON","endsAt":"\(iso(at(-1, 15, 30)))",
+         "updatedAt":"\(iso(at(-2, 9)))",
+         "items":[
+           {"id":"cam-021","tagName":"CAM-021","name":"Canon R5","returned":false,"type":"serialized",
+            "bulkSkuId":null,"bulkSkuName":null,"unitNumber":null,"imageUrl":null},
+           {"id":"bat-004","tagName":"#4","name":"V-Mount Battery #4","returned":false,
+            "type":"numbered_bulk","bulkSkuId":"sku-bat","bulkSkuName":"V-Mount Battery",
+            "unitNumber":4,"imageUrl":null}
+         ]}
+        """
+    }
+
+    /// Redesign H1: CAM-014 is reserved by Maya F. four hours after this
+    /// checkout is due, so the extension stops there.
+    static func extendWindowJSON() -> String {
+        """
+        {"currentEndsAt":"\(iso(hours(6)))","maxEndsAt":"\(iso(hours(10)))",
+         "limitingItem":{"assetTag":"CAM-014","name":"Sony FX3","holderName":"Maya F.",
+                         "startsAt":"\(iso(hours(10)))"}}
+        """
+    }
+
+    /// Redesign H5: what is still reserved on the Wrestling Duals pickup.
+    static func reservationManifestJSON(id: String) -> String {
+        """
+        {"id":"\(id)","title":"Wrestling Duals Kit","updatedAt":"\(iso(hours(-1)))","items":[
+          {"id":"si-1","assetId":"cam-022","name":"Sony A7S III","quantity":1,"pickedQuantity":0},
+          {"id":"si-2","assetId":"lens-41","name":"Sigma 24–70mm","quantity":1,"pickedQuantity":0},
+          {"id":"bi-1","bulkSkuId":"sku-sony","name":"Sony battery","quantity":2,"pickedQuantity":0}
+        ]}
         """
     }
 
@@ -1084,6 +1134,14 @@ final class KioskFixtureURLProtocol: URLProtocol {
             }
             if path.hasPrefix("/api/kiosk/student/") {
                 return (200, KioskFixtures.studentContextJSON())
+            }
+            if path.hasSuffix("/extend-window") {
+                return (200, KioskFixtures.extendWindowJSON())
+            }
+            if path.hasPrefix("/api/kiosk/reservation/"), path.hasSuffix("/items") {
+                let id = path.replacingOccurrences(of: "/api/kiosk/reservation/", with: "")
+                    .replacingOccurrences(of: "/items", with: "")
+                return (200, KioskFixtures.reservationManifestJSON(id: id))
             }
             if path.hasPrefix("/api/kiosk/checkout/") {
                 let id = path.replacingOccurrences(of: "/api/kiosk/checkout/", with: "")
