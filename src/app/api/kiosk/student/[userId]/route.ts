@@ -196,8 +196,11 @@ export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) 
       isOverdue: c.endsAt < now,
     })),
     pendingPickups: [
+      // `kind` tells the hub which pickups are still reservations (their
+      // items can be changed) and which are already checkouts (they can't).
       ...pendingPickups.map((p) => ({
         id: p.id,
+        kind: "checkout" as const,
         title: displayBookingTitle(p.title),
         refNumber: p.refNumber,
         startsAt: p.startsAt,
@@ -213,6 +216,7 @@ export const GET = withKiosk<{ userId: string }>(async (req, { kiosk, params }) 
       })),
       ...dueReservations.map((p) => ({
         id: p.id,
+        kind: "reservation" as const,
         title: displayBookingTitle(p.title),
         refNumber: p.refNumber,
         startsAt: p.startsAt,

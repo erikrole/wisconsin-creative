@@ -661,8 +661,14 @@ struct KioskPendingPickup: Decodable, Identifiable {
     let title: String
     let refNumber: String?
     let startsAt: Date
+    /// "reservation" or "checkout" (a legacy PENDING_PICKUP). Older servers
+    /// omit it; then the hub keeps offering "Change what's reserved".
+    let kind: String?
     let serializedItems: [SerializedItem]
     let bulkItems: [BulkItem]
+
+    /// Only a real reservation's items can be changed at the kiosk.
+    var canChangeReservedItems: Bool { kind != "checkout" }
 
     struct SerializedItem: Decodable, Identifiable {
         let id: String
@@ -704,6 +710,7 @@ struct KioskPendingPickup: Decodable, Identifiable {
         case title
         case refNumber
         case startsAt
+        case kind
         case serializedItems
         case bulkItems
     }
@@ -714,6 +721,7 @@ struct KioskPendingPickup: Decodable, Identifiable {
         title = try container.decodeIfPresent(String.self, forKey: .title) ?? "Pickup"
         refNumber = try container.decodeIfPresent(String.self, forKey: .refNumber)
         startsAt = try container.decode(Date.self, forKey: .startsAt)
+        kind = try? container.decodeIfPresent(String.self, forKey: .kind)
         serializedItems = try container.decodeIfPresent(LossyDecodableArray<SerializedItem>.self, forKey: .serializedItems)?.elements ?? []
         bulkItems = try container.decodeIfPresent(LossyDecodableArray<BulkItem>.self, forKey: .bulkItems)?.elements ?? []
     }

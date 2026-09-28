@@ -126,7 +126,7 @@ struct KioskOperatorHubView: View {
             if KioskFixtureScenario.active == .changesTransfer, let first = context?.checkouts.first {
                 transferTarget = drawerContext(for: first)
             }
-            if KioskFixtureScenario.active == .changesReservation, let first = context?.pendingPickups.first {
+            if KioskFixtureScenario.active == .changesReservation, let first = context?.pendingPickups.first(where: \.canChangeReservedItems) {
                 reservationTarget = KioskIntentBooking(id: first.id, title: first.title, startsAt: first.startsAt, endsAt: nil)
             }
             if KioskFixtureScenario.active == .changesStaff, let overdue = context?.checkouts.last {
@@ -332,10 +332,12 @@ struct KioskOperatorHubView: View {
                         ) {
                             Button("Pick up") { startPickup(id: pickup.id, title: pickup.title, startsAt: pickup.startsAt) }
                                 .kioskButtonRole(.primary)
-                            Button("Change what's reserved") {
-                                reservationTarget = KioskIntentBooking(id: pickup.id, title: pickup.title, startsAt: pickup.startsAt, endsAt: nil)
+                            if pickup.canChangeReservedItems {
+                                Button("Change what's reserved") {
+                                    reservationTarget = KioskIntentBooking(id: pickup.id, title: pickup.title, startsAt: pickup.startsAt, endsAt: nil)
+                                }
+                                .kioskButtonRole(.secondary)
                             }
-                            .kioskButtonRole(.secondary)
                         }
                     }
                     ForEach(reservations) { reservation in

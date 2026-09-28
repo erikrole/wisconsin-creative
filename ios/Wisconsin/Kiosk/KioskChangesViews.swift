@@ -869,7 +869,7 @@ struct KioskReservationEditView: View {
             }
             #endif
         } catch APIError.notFound {
-            loadError = "This pickup can't be changed here. Its items are already on a checkout."
+            loadError = "This reservation is no longer available."
         } catch {
             loadError = (error as? APIError)?.errorDescription ?? "Couldn't load this reservation."
         }

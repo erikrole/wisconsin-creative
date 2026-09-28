@@ -1072,7 +1072,11 @@ enum KioskFixtures {
             "endsAt":"\(iso(at(-1, 15, 30)))","isOverdue":true}
          ],
          "pendingPickups":[
-           {"id":"pk-1","title":"Wrestling Duals Kit","refNumber":"RS-2201",
+           {"id":"pk-2","title":"Hockey Road Trip","refNumber":"CO-1044","kind":"checkout",
+            "startsAt":"\(iso(hours(3)))",
+            "serializedItems":[{"id":"si-3","tagName":"CAM-017","name":"Sony FX6"}],
+            "bulkItems":[]},
+           {"id":"pk-1","title":"Wrestling Duals Kit","refNumber":"RS-2201","kind":"reservation",
             "startsAt":"\(iso(hours(2)))",
             "serializedItems":[{"id":"si-1","tagName":"CAM-009","name":"Sony A7S III"},
                                {"id":"si-2","tagName":"LNS-004","name":"Sigma 24-70mm"}],
