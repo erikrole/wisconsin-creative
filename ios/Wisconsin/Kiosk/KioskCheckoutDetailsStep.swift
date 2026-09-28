@@ -18,7 +18,7 @@ struct KioskCheckoutDetailsStep: View {
     let blockingRequirement: String?
     let onContinue: () -> Void
 
-    @State private var showOtherDate = false
+    @State private var showOtherDate = KioskCaptureSeed.otherDate
 
     private var shifts: [KioskCheckoutEvent] { events.filter(\.isMyShift) }
     private var otherEvents: [KioskCheckoutEvent] { events.filter { !$0.isMyShift } }
@@ -377,6 +377,9 @@ struct KioskKeyboardTip: View {
 
 // MARK: - Other date (D3)
 
+/// Canvas D3: a month grid on the left (past days dimmed, today ringed, the
+/// chosen day solid white) and time chips on the right. Replaces the native
+/// graphical picker, which ignored the kiosk's type scale and selection style.
 struct KioskOtherDateSheet: View {
     let initial: Date
     let onCancel: () -> Void
@@ -384,54 +387,207 @@ struct KioskOtherDateSheet: View {
 
     @State private var day: Date
     @State private var hour: Int
+    @State private var monthStart: Date
 
     init(initial: Date, onCancel: @escaping () -> Void, onUse: @escaping (Date) -> Void) {
         self.initial = initial
         self.onCancel = onCancel
         self.onUse = onUse
-        _day = State(initialValue: initial)
-        _hour = State(initialValue: Calendar.current.component(.hour, from: initial))
+        let calendar = Calendar.current
+        _day = State(initialValue: calendar.startOfDay(for: initial))
+        let initialHour = calendar.component(.hour, from: initial)
+        _hour = State(initialValue: Self.hours.contains(initialHour) ? initialHour : 12)
+        _monthStart = State(initialValue: Self.startOfMonth(initial))
     }
 
-    private let hours = [9, 11, 12, 13, 15, 17, 19, 21]
+    static let hours = [9, 11, 12, 13, 15, 17, 19, 21]
 
     private var chosen: Date {
         Calendar.current.date(bySettingHour: hour, minute: 0, second: 0, of: day) ?? day
     }
 
     var body: some View {
-        KioskSheetScreen(onDismiss: onCancel, contextWidth: 520) {
-            DatePicker("Return date", selection: $day, in: Calendar.current.startOfDay(for: Date())..., displayedComponents: .date)
-                .datePickerStyle(.graphical)
-                .labelsHidden()
-                .tint(KioskText.primary)
+        KioskSheetScreen(onDismiss: onCancel, contextWidth: 400) {
+            KioskMonthGrid(monthStart: $monthStart, selectedDay: $day)
         } choice: {
             Text("Pick a date")
                 .font(KioskType.heroAction)
                 .foregroundStyle(KioskText.primary)
             Text("For anything past the next few days.")
-                .font(KioskType.body)
+                .font(.system(size: 15))
+                .foregroundStyle(KioskText.secondary)
+            Text("TIME")
+                .font(KioskType.overline)
+                .tracking(KioskType.overlineTracking)
                 .foregroundStyle(KioskText.tertiary)
-            KioskSectionHeader(title: "Time")
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 2), spacing: 8) {
-                ForEach(hours, id: \.self) { value in
+                .padding(.horizontal, 2)
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
+                ForEach(Self.hours, id: \.self) { value in
                     let date = Calendar.current.date(bySettingHour: value, minute: 0, second: 0, of: day) ?? day
-                    KioskChoiceChip(title: date.formatted(.dateTime.hour().minute()), isSelected: hour == value) {
-                        hour = value
-                    }
+                    KioskTimeChip(
+                        title: date.formatted(.dateTime.hour().minute()),
+                        isSelected: hour == value,
+                        isEnabled: date > Date()
+                    ) { hour = value }
                 }
             }
-            Spacer(minLength: 8)
             VStack(alignment: .leading, spacing: 2) {
                 Text("BACK BY")
                     .font(KioskType.overline)
                     .tracking(KioskType.overlineTracking)
                     .foregroundStyle(KioskText.tertiary)
-                Text(KioskDueCopy.relative(chosen))
-                    .font(.system(size: 22, weight: .heavy))
+                Text(chosen.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()) + " at " + chosen.formatted(.dateTime.hour().minute()))
+                    .font(.system(size: 24, weight: .heavy))
                     .foregroundStyle(KioskText.primary)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 16)
+            .kioskCard(Color(red: 0x0E / 255, green: 0x0E / 255, blue: 0x10 / 255))
+            Spacer(minLength: 8)
             KioskPrimaryPill(title: "Use this date", isEnabled: chosen > Date(), height: 64) { onUse(chosen) }
         }
+    }
+
+    static func startOfMonth(_ date: Date) -> Date {
+        let calendar = Calendar.current
+        return calendar.date(from: calendar.dateComponents([.year, .month], from: date)) ?? date
+    }
+}
+
+/// A 52pt-tall time chip with the canvas's 14pt corners; solid white when chosen.
+private struct KioskTimeChip: View {
+    let title: String
+    let isSelected: Bool
+    let isEnabled: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(isSelected ? KioskText.onPrimary : (isEnabled ? KioskText.primary : KioskText.muted))
+                .frame(maxWidth: .infinity, minHeight: 52)
+                .background(isSelected ? KioskText.primary : KioskSurface.cardRaised, in: RoundedRectangle(cornerRadius: KioskRadius.lg))
+                .overlay(RoundedRectangle(cornerRadius: KioskRadius.lg).stroke(isSelected ? KioskStroke.selected : KioskStroke.standard, lineWidth: 1))
+                .contentShape(RoundedRectangle(cornerRadius: KioskRadius.lg))
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+    }
+}
+
+/// Six weeks from the Sunday on or before the first of `monthStart`. Days
+/// before today are dimmed and can't be chosen; today carries a thin ring; the
+/// first of the next month is labelled with its month so a grid that runs
+/// into October reads correctly.
+struct KioskMonthGrid: View {
+    @Binding var monthStart: Date
+    @Binding var selectedDay: Date
+
+    private var calendar: Calendar { Calendar.current }
+    private var today: Date { calendar.startOfDay(for: Date()) }
+
+    private var days: [Date?] {
+        let weekday = calendar.component(.weekday, from: monthStart) - calendar.firstWeekday
+        let leading = (weekday + 7) % 7
+        let count = calendar.range(of: .day, in: .month, for: monthStart)?.count ?? 30
+        var cells: [Date?] = Array(repeating: nil, count: leading)
+        for offset in 0..<count {
+            cells.append(calendar.date(byAdding: .day, value: offset, to: monthStart))
+        }
+        // Finish the last week with the next month's first days.
+        var next = calendar.date(byAdding: .month, value: 1, to: monthStart) ?? monthStart
+        while cells.count % 7 != 0 {
+            cells.append(next)
+            next = calendar.date(byAdding: .day, value: 1, to: next) ?? next
+        }
+        return cells
+    }
+
+    private var title: String {
+        monthStart.formatted(.dateTime.month(.wide).year())
+    }
+
+    private var canGoBack: Bool { monthStart > KioskOtherDateSheet.startOfMonth(today) }
+
+    var body: some View {
+        VStack(spacing: 16) {
+            HStack {
+                monthButton("chevron.left", label: "Previous month", enabled: canGoBack) { step(-1) }
+                Spacer()
+                Text(title)
+                    .font(.system(size: 22, weight: .heavy))
+                    .foregroundStyle(KioskText.primary)
+                Spacer()
+                monthButton("chevron.right", label: "Next month", enabled: true) { step(1) }
+            }
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 7), spacing: 6) {
+                ForEach(Array(weekdaySymbols.enumerated()), id: \.offset) { _, symbol in
+                    Text(symbol)
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(KioskText.tertiary)
+                }
+                ForEach(Array(days.enumerated()), id: \.offset) { _, date in
+                    if let date { dayCell(date) } else { Color.clear.frame(height: 52) }
+                }
+            }
+        }
+    }
+
+    private var weekdaySymbols: [String] {
+        let symbols = calendar.veryShortStandaloneWeekdaySymbols
+        let first = calendar.firstWeekday - 1
+        return Array(symbols[first...] + symbols[..<first])
+    }
+
+    private func dayCell(_ date: Date) -> some View {
+        let isPast = date < today
+        let isSelected = calendar.isDate(date, inSameDayAs: selectedDay)
+        let isToday = calendar.isDate(date, inSameDayAs: today)
+        let isNextMonth = !calendar.isDate(date, equalTo: monthStart, toGranularity: .month)
+        return Button {
+            selectedDay = date
+        } label: {
+            VStack(spacing: 0) {
+                if isNextMonth && calendar.component(.day, from: date) == 1 {
+                    Text(date.formatted(.dateTime.month(.abbreviated)).uppercased())
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(isSelected ? KioskText.onPrimaryDetail : KioskText.tertiary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+                Text("\(calendar.component(.day, from: date))")
+                    .font(.system(size: 17, weight: .bold).monospacedDigit())
+            }
+            .foregroundStyle(isSelected ? KioskText.onPrimary : (isPast ? KioskText.onPrimaryDetail : KioskText.primary))
+            .frame(maxWidth: .infinity, minHeight: 52)
+            .background(isSelected ? KioskText.primary : Color.clear, in: Capsule())
+            .overlay(Capsule().stroke(isToday && !isSelected ? KioskText.muted : Color.clear, lineWidth: 1))
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .disabled(isPast)
+        .accessibilityLabel(date.formatted(.dateTime.weekday(.wide).month(.wide).day()))
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+    }
+
+    private func monthButton(_ symbol: String, label: String, enabled: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(enabled ? KioskText.primary : KioskText.muted)
+                .frame(width: 44, height: 44)
+                .background(KioskSurface.control, in: Circle())
+                .overlay(Circle().stroke(KioskStroke.strong, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
+        .accessibilityLabel(label)
+    }
+
+    private func step(_ months: Int) {
+        monthStart = calendar.date(byAdding: .month, value: months, to: monthStart) ?? monthStart
     }
 }

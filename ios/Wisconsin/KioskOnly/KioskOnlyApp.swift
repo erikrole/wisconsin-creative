@@ -76,8 +76,10 @@ struct WisconsinKioskApp: App {
             // The sheet binds to a dashboard event, so `KioskIdleView` seeds it
             // once its own load finishes; nothing to set here but the screen.
             kioskStore.screen = .idle
-        case .scanning, .scanAccepted, .scannerHelp:
-            kioskStore.setCart(KioskFixtures.cart, for: kioskUser.id)
+        case .scanning, .scanAccepted, .scannerHelp, .checkoutDiscard, .scannerAsleep, .inactivityCheckout,
+             .kitPick, .kitSession, .kitFinishConfirm:
+            let isKit = [.kitPick, .kitSession, .kitFinishConfirm].contains(scenario)
+            kioskStore.setCart(isKit ? KioskFixtures.kitCart : KioskFixtures.cart, for: kioskUser.id)
             kioskStore.setIntent(KioskFlowIntent(
                 action: .checkout, source: .person, identifiedUser: kioskUser,
                 expectedRequester: nil,
@@ -85,6 +87,7 @@ struct WisconsinKioskApp: App {
                 targetBooking: nil, pendingScanValues: [], createdAt: Date(), ambiguity: .none
             ))
             kioskStore.screen = .checkout(user: kioskUser)
+            if scenario == .inactivityCheckout { kioskStore.inactivityWarningVisible = true }
         case .availabilityConflicts:
             kioskStore.setCart(KioskFixtures.availabilityConflictCart, for: kioskUser.id)
             kioskStore.setIntent(KioskFlowIntent(
@@ -223,7 +226,7 @@ struct WisconsinKioskApp: App {
             kioskStore.screen = .return(bookingId: "co-1", userId: kioskUser.id)
         case .activation:
             kioskStore.screen = .activation
-        case .checkoutDetails, .checkoutDetailsLinked, .keyboardTip:
+        case .checkoutDetails, .checkoutDetailsLinked, .keyboardTip, .checkoutOtherDate:
             kioskStore.setIntent(KioskFlowIntent(
                 action: .checkout,
                 source: .person,
@@ -318,62 +321,103 @@ enum Haptics {
 
 }
 
-/// A short local failure cue for the shared kiosk scanner surfaces. The sound
-/// is generated as PCM so the kiosk target needs no bundled media asset or
-/// project-file registration; visual, haptic, and VoiceOver feedback remain
-/// authoritative if audio is unavailable or muted.
+/// The kiosk's sounds, from canvas frame J4. The fleet's iPads have no
+/// haptics, so sound is how people know a scan landed, and every sound has a
+/// visible twin (the check, the red card, the amber card, the countdown ring)
+/// so a muted iPad still works. Tones are generated as PCM so the target needs
+/// no bundled media; they mix with other audio and stay quieter than the
+/// scanner's own beep.
 @MainActor
-enum KioskScanFeedbackSound {
-    private static var player: AVAudioPlayer?
+enum KioskFeedbackSound {
+    enum Cue: CaseIterable {
+        /// Short rising two-note chime, 180 ms. Twin: the section-colored check.
+        case accept
+        /// Low falling two-note tone, 180 ms. Twin: the red card and its shake.
+        case reject
+        /// Soft single click. Twin: the row leaving the list.
+        case undo
+        /// Three-note rising chime, 400 ms. Twin: the receipt.
+        case done
+        /// The done chime plus a bright sparkle. Twin: the badge card.
+        case badge
+        /// Neutral single tone. Twin: the amber "before you…" card.
+        case attention
+        /// Two gentle pings. Twin: the "Still here?" countdown ring.
+        case warning
 
-    static func playFailure() {
+        /// (frequency Hz, seconds) notes; a frequency of 0 is a rest.
+        fileprivate var notes: [(Double, Double)] {
+            switch self {
+            case .accept: return [(880, 0.07), (1320, 0.11)]
+            case .reject: return [(620, 0.094), (360, 0.086)]
+            case .undo: return [(1400, 0.03)]
+            case .done: return [(660, 0.12), (880, 0.12), (1100, 0.16)]
+            case .badge: return [(660, 0.12), (880, 0.12), (1100, 0.14), (1760, 0.06), (2200, 0.06), (2640, 0.1)]
+            case .attention: return [(520, 0.16)]
+            case .warning: return [(740, 0.09), (0, 0.12), (740, 0.09)]
+            }
+        }
+
+        fileprivate var volume: Float {
+            switch self {
+            case .undo: return 0.5
+            case .warning, .attention: return 0.6
+            default: return 0.72
+            }
+        }
+    }
+
+    private static var player: AVAudioPlayer?
+    private static var cache: [Cue: Data] = [:]
+
+    static func play(_ cue: Cue) {
         do {
             let session = AVAudioSession.sharedInstance()
             try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
             try session.setActive(true)
 
-            let next = try AVAudioPlayer(data: failureWave)
-            next.volume = 0.72
+            let data = cache[cue] ?? wave(for: cue)
+            cache[cue] = data
+            let next = try AVAudioPlayer(data: data)
+            next.volume = cue.volume
             next.prepareToPlay()
             player = next
             player?.play()
         } catch {
-            // Audio is additive feedback; a session/audio-route failure must
-            // never block the visual, haptic, or spoken rejection signal.
+            // Audio is additive; its visible twin always carries the meaning.
         }
     }
 
-    private static let failureWave: Data = {
+    private static func wave(for cue: Cue) -> Data {
         let sampleRate: UInt32 = 44_100
         let channels: UInt16 = 1
         let bitsPerSample: UInt16 = 16
-        let duration = 0.18
-        let sampleCount = Int(Double(sampleRate) * duration)
         let bytesPerSample = bitsPerSample / 8
         let byteRate = sampleRate * UInt32(channels) * UInt32(bytesPerSample)
         let blockAlign = channels * bytesPerSample
 
-        var pcm = Data(capacity: sampleCount * Int(bytesPerSample))
-        for index in 0..<sampleCount {
-            let progress = Double(index) / Double(sampleCount)
-            let frequency = progress < 0.52 ? 620.0 : 360.0
-            let phase = 2.0 * Double.pi * frequency * Double(index) / Double(sampleRate)
-            let attack = min(1.0, Double(index) / 600.0)
-            let release = max(0.0, 1.0 - progress)
-            let amplitude = 0.24 * attack * release
-            var sample = Int16(sin(phase) * amplitude * Double(Int16.max))
-            withUnsafeBytes(of: &sample) { pcm.append(contentsOf: $0) }
+        var pcm = Data()
+        for (frequency, seconds) in cue.notes {
+            let count = Int(Double(sampleRate) * seconds)
+            for index in 0..<count {
+                var sample: Int16 = 0
+                if frequency > 0 {
+                    let progress = Double(index) / Double(count)
+                    let phase = 2.0 * Double.pi * frequency * Double(index) / Double(sampleRate)
+                    let attack = min(1.0, Double(index) / 400.0)
+                    let release = cue == .undo ? pow(1.0 - progress, 3) : max(0.0, 1.0 - progress * 0.85)
+                    sample = Int16(sin(phase) * 0.24 * attack * release * Double(Int16.max))
+                }
+                withUnsafeBytes(of: &sample) { pcm.append(contentsOf: $0) }
+            }
         }
 
         var wave = Data()
-        func appendASCII(_ value: String) {
-            wave.append(contentsOf: value.utf8)
-        }
+        func appendASCII(_ value: String) { wave.append(contentsOf: value.utf8) }
         func appendLittleEndian<T: FixedWidthInteger>(_ value: T) {
             var littleEndian = value.littleEndian
             withUnsafeBytes(of: &littleEndian) { wave.append(contentsOf: $0) }
         }
-
         appendASCII("RIFF")
         appendLittleEndian(UInt32(36 + pcm.count))
         appendASCII("WAVE")
@@ -389,7 +433,14 @@ enum KioskScanFeedbackSound {
         appendLittleEndian(UInt32(pcm.count))
         wave.append(pcm)
         return wave
-    }()
+    }
+}
+
+/// The rejection cue under its original name, so every existing rejection
+/// site keeps playing it. New code calls `KioskFeedbackSound.play(.reject)`.
+@MainActor
+enum KioskScanFeedbackSound {
+    static func playFailure() { KioskFeedbackSound.play(.reject) }
 }
 
 enum StatusTone: String, CaseIterable {
@@ -444,6 +495,38 @@ enum KioskCaptureSeed {
     static var scannerHelp: Bool {
         #if DEBUG
         return KioskFixtureScenario.active == .scannerHelp
+        #else
+        return false
+        #endif
+    }
+
+    static var otherDate: Bool {
+        #if DEBUG
+        return KioskFixtureScenario.active == .checkoutOtherDate
+        #else
+        return false
+        #endif
+    }
+
+    static var kitPick: Bool {
+        #if DEBUG
+        return KioskFixtureScenario.active == .kitPick
+        #else
+        return false
+        #endif
+    }
+
+    static var kitFinishConfirm: Bool {
+        #if DEBUG
+        return KioskFixtureScenario.active == .kitFinishConfirm
+        #else
+        return false
+        #endif
+    }
+
+    static var discardConfirm: Bool {
+        #if DEBUG
+        return KioskFixtureScenario.active == .checkoutDiscard
         #else
         return false
         #endif
@@ -565,6 +648,20 @@ enum KioskFixtureScenario: String {
     case changesReservation = "changes-reservation"
     /// Redesign C5: staff actions on someone's overdue booking.
     case changesStaff = "changes-staff"
+    /// Redesign D3: the month grid and time chips opened from details.
+    case checkoutOtherDate = "checkout-other-date"
+    /// Redesign I1: Back with scans asks in a card with a red Discard.
+    case checkoutDiscard = "checkout-discard"
+    /// Redesign E1: choose a kit (football crew).
+    case kitPick = "kit-pick"
+    /// Redesign E2: the kit is the "Taking out" checklist, one item extra.
+    case kitSession = "kit-session"
+    /// Redesign E3: Check out with kit items unscanned asks first.
+    case kitFinishConfirm = "kit-finish-confirm"
+    /// Redesign I3: the scanner is asleep, said inline on the scan stage.
+    case scannerAsleep = "scanner-asleep"
+    /// Redesign I4: "Still here?" over a checkout with scans waiting.
+    case inactivityCheckout = "inactivity-checkout"
 
     static var active: KioskFixtureScenario? {
         ProcessInfo.processInfo.environment["GT_KIOSK_SCENARIO"]
@@ -746,6 +843,20 @@ enum KioskFixtures {
                       imageUrl: nil, bulkSkuId: nil, unitNumber: nil),
         KioskCartItem(id: "it-4", name: "V-Mount Battery #4", tagName: "BAT-004", type: "numbered_bulk",
                       imageUrl: nil, bulkSkuId: "sku-bat", unitNumber: 4),
+    ]
+
+    /// Two Slow 3 items and one battery scanned, plus a lens not in the kit.
+    static let kitCart: [KioskCartItem] = [
+        KioskCartItem(id: "a-1", name: "Sony FX9", tagName: "FX9-2", type: "serialized",
+                      imageUrl: nil, bulkSkuId: nil, unitNumber: nil),
+        KioskCartItem(id: "a-2", name: "Sony 24-105mm", tagName: "LENS-33", type: "serialized",
+                      imageUrl: nil, bulkSkuId: nil, unitNumber: nil),
+        KioskCartItem(id: "b-7", name: "V-Mount Battery #7", tagName: "BAT-007", type: "numbered_bulk",
+                      imageUrl: nil, bulkSkuId: "sku-vmount", unitNumber: 7),
+        KioskCartItem(id: "b-9", name: "V-Mount Battery #9", tagName: "BAT-009", type: "numbered_bulk",
+                      imageUrl: nil, bulkSkuId: "sku-vmount", unitNumber: 9),
+        KioskCartItem(id: "a-12", name: "Sony 70-200mm", tagName: "LENS-12", type: "serialized",
+                      imageUrl: nil, bulkSkuId: nil, unitNumber: nil),
     ]
 
     static let availabilityConflictCart: [KioskCartItem] = [
@@ -1146,22 +1257,28 @@ enum KioskFixtures {
     static func kitsJSON() -> String {
         """
         {"data":[
+          {"id":"kit-slow-3","name":"Slow 3","sportCode":"FB","gamedayRole":null,"contents":6},
           {"id":"kit-slow-1","name":"Slow 1","sportCode":"FB","gamedayRole":"SLOW1","contents":6},
+          {"id":"kit-bench","name":"Bench","sportCode":"FB","gamedayRole":"BENCH","contents":4},
+          {"id":"kit-roam-1","name":"Roam 1","sportCode":"FB","gamedayRole":"ROAM1","contents":5},
           {"id":"kit-high-2","name":"High 2","sportCode":"FB","contents":5}
-        ],"suggestedKitId":"kit-slow-1"}
+        ],"suggestedKitId":\([.kitPick, .kitSession, .kitFinishConfirm].contains(KioskFixtureScenario.active) ? "\"kit-slow-3\"" : "null")}
         """
     }
 
     static func kitDetailJSON() -> String {
         """
         {"data":{
-          "id":"kit-slow-1","name":"Slow 1","sportCode":"FB",
+          "id":"kit-slow-3","name":"Slow 3","sportCode":"FB",
           "members":[
-            {"id":"a-1","assetTag":"FX6-1","name":"Sony FX6"},
-            {"id":"a-2","assetTag":"LENS-70","name":"70-200"}
+            {"id":"a-1","assetTag":"FX9-2","name":"Sony FX9"},
+            {"id":"a-2","assetTag":"LENS-33","name":"Sony 24-105mm"},
+            {"id":"a-3","assetTag":"TRI-06","name":"Sachtler FSB 8"},
+            {"id":"a-4","assetTag":"AUD-020","name":"Sennheiser G4 kit"},
+            {"id":"a-5","assetTag":"MON-04","name":"SmallHD 703"}
           ],
           "bulkMembers":[
-            {"bulkSkuId":"sku-1","name":"Sony Battery","quantity":4}
+            {"bulkSkuId":"sku-vmount","name":"V-Mount Battery","quantity":2}
           ]
         }}
         """

@@ -36,7 +36,7 @@ struct KioskCheckoutView: View {
     @State private var feedbackDismissTask: Task<Void, Never>?
     @State private var isCompleting = false
     @State private var hasPendingCompletion = false
-    @State private var showBackConfirm = false
+    @State private var showBackConfirm = KioskCaptureSeed.discardConfirm
     @State private var showCamera = false
     @State private var eventOptions: [KioskCheckoutEvent] = []
     @State private var isLoadingEvents = false
@@ -50,6 +50,7 @@ struct KioskCheckoutView: View {
     @State private var selectedKitId: String?
     @State private var selectedKitDetail: KioskKitDetail?
     @State private var didApplySuggestedKit = false
+    @State private var suggestedKitId: String?
     /// A new checkout starts on its details step. Checkout is a two-step flow —
     /// say what this is for and when it comes back, then scan — and the details
     /// were previously a sheet floating over a scan screen you could not
@@ -63,7 +64,10 @@ struct KioskCheckoutView: View {
     // way in: the sheet is local state opened by a tap, and taps are exactly
     // what is unreliable on a kiosk simulator. Always false in release.
     @State private var showScannerHelp = KioskCaptureSeed.scannerHelp
-    @State private var showEditContextConfirm = false
+    /// E3: Check out was tapped with kit items still unscanned. The stage
+    /// asks first; a scan while it's up answers it by joining the list.
+    @State private var isConfirmingKitGaps = KioskCaptureSeed.kitFinishConfirm
+    @State private var showKitPicker = KioskCaptureSeed.kitPick
     @State private var lastScanAt: Date?
     @State private var pendingScanIdentities: Set<String> = []
     @State private var queuedScanValues: [String] = []
@@ -124,7 +128,7 @@ struct KioskCheckoutView: View {
         // Armed only on the scan step. Step 1 has no cart on screen, so a scan
         // there landed items nobody could see, checked against a due time
         // nobody had chosen yet.
-        scannerCaptureEnabled && checkoutContextReady && focusedCheckoutField == nil && !showCamera && !showScannerHelp && !showEditContextConfirm
+        scannerCaptureEnabled && checkoutContextReady && focusedCheckoutField == nil && !showCamera && !showScannerHelp && !showBackConfirm && !showKitPicker
     }
 
     var body: some View {
@@ -142,43 +146,41 @@ struct KioskCheckoutView: View {
                 .opacity(0)
             }
         }
-        .confirmationDialog(
-            scannedItems.isEmpty
-                ? "Discard the unfinished checkout?"
-                : "Discard \(scannedItems.count) scanned item\(scannedItems.count == 1 ? "" : "s")?",
-            isPresented: $showBackConfirm,
-            titleVisibility: .visible
-        ) {
-            Button("Discard", role: .destructive) {
-                store.clearCart(for: userId)
-                store.clearCheckoutDraft(for: userId)
-                KioskAPI.shared.discardPendingCheckout(actorId: userId)
-                hasPendingCompletion = false
-                Haptics.warning()
-                store.screen = .operatorHub(user)
+        .overlay {
+            if showBackConfirm {
+                KioskConfirmationCard(
+                    title: discardTitle,
+                    message: discardMessage,
+                    cancelTitle: "Keep scanning",
+                    confirmTitle: "Discard",
+                    confirmRole: .destructive,
+                    onCancel: { showBackConfirm = false },
+                    onConfirm: discardCheckout
+                )
+                .transition(.opacity)
             }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text(hasPendingCompletion
-                 ? "A checkout that didn't confirm is saved on this iPad. Discard it only if the gear is back on the shelf — anything that did go through is on your hub."
-                 : "Going back will clear your scans.")
         }
-        .confirmationDialog(
-            "Edit checkout details?",
-            isPresented: $showEditContextConfirm,
-            titleVisibility: .visible
-        ) {
-            Button("Edit Details") {
-                checkoutContextReady = false
-                DispatchQueue.main.async {
-                    focusedCheckoutField = .customPurpose
-                }
-                Haptics.warning()
+        .overlay {
+            if showKitPicker {
+                KioskKitPickSheet(
+                    kits: kitOptions,
+                    suggestedKitId: suggestedKitId,
+                    selectedKitId: selectedKitId,
+                    eventTitle: isLinkedToEvent ? selectedEvent?.title : nil,
+                    contextLine: isLinkedToEvent ? KioskDueCopy.due(dueBackAt) : (trimmedCustomPurpose.nonBlankText.map { "\($0) · \(KioskDueCopy.due(dueBackAt).lowercased())" } ?? KioskDueCopy.due(dueBackAt)),
+                    locationName: store.info?.locationName,
+                    onChoose: { kitId in
+                        selectedKitId = kitId
+                        isConfirmingKitGaps = false
+                        showKitPicker = false
+                    },
+                    onCancel: { showKitPicker = false }
+                )
+                .transition(.opacity)
             }
-            Button("Keep Scanning", role: .cancel) { armScannerCaptureAfterRestore() }
-        } message: {
-            Text("Your scanned items will stay in the cart.")
         }
+        .animation(KioskMotion.sheet(reduceMotion), value: showBackConfirm)
+        .animation(KioskMotion.sheet(reduceMotion), value: showKitPicker)
         .sheet(isPresented: $showCamera) {
             KioskBarcodeCameraView(
                 feedbackMessage: lastResult?.message,
@@ -216,7 +218,18 @@ struct KioskCheckoutView: View {
             #if DEBUG
             // Capture hook: the scan stage is only reachable after the details
             // step is satisfied, which no fixture can express through the API.
-            if KioskFixtureScenario.active == .scanning { checkoutContextReady = true }
+            switch KioskFixtureScenario.active {
+            case .scanning, .checkoutDiscard, .inactivityCheckout, .kitPick, .kitFinishConfirm:
+                checkoutContextReady = true
+            case .scannerAsleep:
+                checkoutContextReady = true
+                store.scanner.hardwareConnected = false
+            case .kitSession:
+                checkoutContextReady = true
+                lastAccepted = KioskAcceptedScan(title: "V-Mount #9", subtitle: "V-Mount Battery", progress: "")
+            default:
+                break
+            }
             if KioskFixtureScenario.active == .availabilityConflicts {
                 isLinkedToEvent = false
                 selectedEventId = nil
@@ -287,9 +300,6 @@ struct KioskCheckoutView: View {
         }
         .onChange(of: focusedCheckoutField) { _, field in
             store.scanner.setEditing(field != nil)
-        }
-        .onChange(of: showEditContextConfirm) { _, visible in
-            if !visible && checkoutContextReady { armScannerCaptureAfterRestore() }
         }
         .onChange(of: checkoutContextReady) { _, isReady in
             if !isReady {
@@ -368,17 +378,61 @@ struct KioskCheckoutView: View {
         scanStage
             .animation(KioskMotion.confirm(reduceMotion), value: lastAccepted)
 
-        KioskPrimaryPill(
-            title: hasPendingCompletion ? "Try again now" : "Check out",
-            detail: scannedItems.isEmpty ? nil : "\(scannedItems.count) item\(scannedItems.count == 1 ? "" : "s")",
-            isEnabled: hasPendingCompletion || (!scannedItems.isEmpty && pendingScanIdentities.isEmpty && (!hasCheckoutContext || !hasValidReturnTime || (hasVerifiedAvailability && !isCheckingAvailability && availabilityError == nil && !availabilityResult.hasBlockingIssue))),
-            isBusy: isCompleting,
-            action: {
-                if hasPendingCompletion || (hasCheckoutContext && hasValidReturnTime) { completeCheckout() }
-                else { requestEditContext() }
+        if showsKitGapConfirm {
+            HStack(spacing: 12) {
+                Button {
+                    isConfirmingKitGaps = false
+                } label: {
+                    Text("Keep scanning")
+                        .font(.system(size: 20, weight: .bold))
+                        .frame(maxWidth: .infinity, minHeight: 84)
+                }
+                .kioskButtonRole(.secondary)
+                Button {
+                    isConfirmingKitGaps = false
+                    completeCheckout()
+                } label: {
+                    Text("Check out without them")
+                        .font(.system(size: 20, weight: .heavy))
+                        .frame(maxWidth: .infinity, minHeight: 84)
+                }
+                .kioskButtonRole(.primary)
             }
-        )
-        .accessibilityLabel(completeAccessibilityLabel)
+        } else {
+            KioskPrimaryPill(
+                title: hasPendingCompletion ? "Try again now" : "Check out",
+                detail: scannedItems.isEmpty ? nil : "\(scannedItems.count) item\(scannedItems.count == 1 ? "" : "s")",
+                isEnabled: hasPendingCompletion || (!scannedItems.isEmpty && pendingScanIdentities.isEmpty && (!hasCheckoutContext || !hasValidReturnTime || (hasVerifiedAvailability && !isCheckingAvailability && availabilityError == nil && !availabilityResult.hasBlockingIssue))),
+                isBusy: isCompleting,
+                action: {
+                    if hasPendingCompletion { completeCheckout() }
+                    else if hasCheckoutContext && hasValidReturnTime {
+                        // E3: planned kit items left unscanned ask first.
+                        if !remainingKitItems.isEmpty {
+                            isConfirmingKitGaps = true
+                            KioskFeedbackSound.play(.attention)
+                        } else {
+                            completeCheckout()
+                        }
+                    }
+                    else { requestEditContext() }
+                }
+            )
+            .accessibilityLabel(completeAccessibilityLabel)
+        }
+    }
+
+    private var showsKitGapConfirm: Bool {
+        isConfirmingKitGaps && !hasPendingCompletion && !remainingKitItems.isEmpty && !scannedItems.isEmpty
+    }
+
+    /// "TRI-06, AUD-020 and 2 × Sony batteries".
+    private var remainingKitNames: [String] {
+        remainingKitItems.map { $0.missingCount > 1 || $0.isBulk ? "\($0.missingCount) × \($0.title)" : $0.title }
+    }
+
+    private var remainingKitUnitCount: Int {
+        remainingKitItems.reduce(0) { $0 + $1.missingCount }
     }
 
     @ViewBuilder
@@ -390,11 +444,20 @@ struct KioskCheckoutView: View {
                 title: "We couldn't reach the server",
                 message: "Your checkout is saved on this iPad and hasn't gone through yet. Keep the gear here and try again. Nothing is checked out twice, however many times you try."
             )
+        } else if showsKitGapConfirm, let kit = selectedKitDetail {
+            let missing = remainingKitUnitCount
+            let goingOut = scannedItems.count
+            KioskNoticeStage(
+                section: .comingBack,
+                overline: "Before you check out",
+                title: "\(missing) item\(missing == 1 ? "" : "s") in \(kit.name) \(missing == 1 ? "wasn't" : "weren't") scanned",
+                message: "\(KioskListCopy.joined(remainingKitNames)) \(missing == 1 ? "stays" : "stay") on the shelf and won't be on your checkout. \(goingOut == 1 ? "The other item goes" : "The other \(goingOut) go") out now."
+            ) { EmptyView() }
         } else if let lastAccepted {
             KioskConfirmationStage(
                 section: .takingOut,
                 title: "\(lastAccepted.title) added",
-                detail: [lastAccepted.subtitle, "\(scannedItems.count) item\(scannedItems.count == 1 ? "" : "s")"].compactMap { $0 }.joined(separator: " · "),
+                detail: acceptedDetail(lastAccepted),
                 hint: "Keep scanning, or check out.",
                 onUndo: undoLastScan
             )
@@ -432,6 +495,16 @@ struct KioskCheckoutView: View {
         }
     }
 
+    /// "Slow 3 kit · still to scan: TRI-06, AUD-020, MON-04" while a kit is
+    /// the list; otherwise what was scanned and the running count.
+    private func acceptedDetail(_ accepted: KioskAcceptedScan) -> String {
+        if let kit = selectedKitDetail {
+            let left = remainingKitItems.map(\.title)
+            return "\(kit.name) kit · " + (left.isEmpty ? "everything in the kit is scanned" : "still to scan: " + left.joined(separator: ", "))
+        }
+        return [accepted.subtitle, "\(scannedItems.count) item\(scannedItems.count == 1 ? "" : "s")"].compactMap { $0 }.joined(separator: " · ")
+    }
+
     /// A sleeping scanner is normal: say how to wake it, never an error.
     private var scannerStatusLine: String? {
         if !store.scanner.hardwareConnected { return "Scanner is asleep. Press its trigger to wake it." }
@@ -460,13 +533,15 @@ struct KioskCheckoutView: View {
             KioskSectionHeader(
                 title: "Taking out",
                 detail: selectedKitDetail.map { "\($0.name) kit" } ?? "new checkout",
-                count: "\(scannedItems.count)",
+                count: kitProgress?.label ?? "\(scannedItems.count)",
                 section: .takingOut
             )
-            if !kitOptions.isEmpty {
-                KioskCheckoutKitPicker(kits: kitOptions, selectedKitId: $selectedKitId)
+            if showsKitEntry {
+                KioskKitEntryButton(kitName: selectedKitDetail?.name ?? kitOptions.first { $0.id == selectedKitId }?.name) {
+                    showKitPicker = true
+                }
             }
-            if scannedItems.isEmpty && remainingKitItems.isEmpty {
+            if scannedItems.isEmpty && selectedKitDetail == nil {
                 Text("Scanned items show up here.")
                     .font(.system(size: 15))
                     .foregroundStyle(KioskText.tertiary)
@@ -477,32 +552,13 @@ struct KioskCheckoutView: View {
             } else {
                 ScrollView {
                     VStack(spacing: 0) {
-                        ForEach(Array(groupedScannedItems.enumerated()), id: \.element.id) { index, group in
-                            if index > 0 { Rectangle().fill(KioskStroke.divider).frame(height: 1) }
-                            if let issue = availabilityIssue(for: group) {
-                                KioskCartGroupRow(
-                                    group: group,
-                                    availabilityIssue: issue,
-                                    onRemove: { removeGroup(group) },
-                                    onChangeReturnTime: issue.canChangeReturnTime ? { editReturnTime() } : nil,
-                                    onScanAnother: issue.isBlocking ? { prepareForNextScan(after: group) } : nil
-                                )
-                            } else if group.isBulkGroup {
-                                KioskBatteryRow(
-                                    title: group.subtitle.components(separatedBy: " · ").first ?? group.subtitle,
-                                    scanned: group.count,
-                                    total: group.count,
-                                    units: group.unitNumbers.map { .init(id: "\(group.id)-\($0)", label: "#\($0)", isScanned: true) }
-                                )
-                            } else {
-                                KioskItemRow(tag: group.first.itemListPrimaryTitle, name: group.first.itemListSecondaryTitle, isDone: true) {
-                                    KioskRowRemoveButton(accessibilityLabel: "Remove \(group.primaryTitle)") { removeGroup(group) }
-                                }
+                        if let kit = selectedKitDetail {
+                            kitChecklist(kit)
+                        } else {
+                            ForEach(Array(groupedScannedItems.enumerated()), id: \.element.id) { index, group in
+                                if index > 0 { Rectangle().fill(KioskStroke.divider).frame(height: 1) }
+                                scannedGroupRow(group)
                             }
-                        }
-                        ForEach(remainingKitItems) { item in
-                            Rectangle().fill(KioskStroke.divider).frame(height: 1)
-                            KioskItemRow(tag: item.title, name: item.subtitle == item.title ? nil : item.subtitle, isDone: false)
                         }
                     }
                     .kioskCard()
@@ -511,6 +567,117 @@ struct KioskCheckoutView: View {
                 .scrollIndicators(.hidden)
             }
         }
+    }
+
+    @ViewBuilder
+    private func scannedGroupRow(_ group: KioskCartDisplayGroup, trailingNote: String? = nil) -> some View {
+        if let issue = availabilityIssue(for: group) {
+            KioskCartGroupRow(
+                group: group,
+                availabilityIssue: issue,
+                onRemove: { removeGroup(group) },
+                onChangeReturnTime: issue.canChangeReturnTime ? { editReturnTime() } : nil,
+                onScanAnother: issue.isBlocking ? { prepareForNextScan(after: group) } : nil
+            )
+        } else if group.isBulkGroup {
+            KioskBatteryRow(
+                title: group.subtitle.components(separatedBy: " · ").first ?? group.subtitle,
+                scanned: group.count,
+                total: group.count,
+                units: group.unitNumbers.map { .init(id: "\(group.id)-\($0)", label: "#\($0)", isScanned: true) },
+                note: trailingNote
+            )
+        } else if let trailingNote {
+            KioskItemRow(tag: group.first.itemListPrimaryTitle, name: group.first.itemListSecondaryTitle, isDone: true) {
+                Text(trailingNote)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(KioskText.tertiary)
+            }
+        } else {
+            KioskItemRow(tag: group.first.itemListPrimaryTitle, name: group.first.itemListSecondaryTitle, isDone: true) {
+                KioskRowRemoveButton(accessibilityLabel: "Remove \(group.primaryTitle)") { removeGroup(group) }
+            }
+        }
+    }
+
+    /// E2: the kit is the list. Its items in the kit's own order, checked as
+    /// they're scanned and outlined until then; anything scanned that isn't
+    /// in the kit follows under a dashed line, marked "Not in kit".
+    @ViewBuilder
+    private func kitChecklist(_ kit: KioskKitDetail) -> some View {
+        let groups = groupedScannedItems
+        let memberIds = Set(kit.members.map(\.id))
+        let bulkIds = Set(kit.bulkMembers.map(\.bulkSkuId))
+        ForEach(Array(kit.members.enumerated()), id: \.element.id) { index, member in
+            if index > 0 { Rectangle().fill(KioskStroke.divider).frame(height: 1) }
+            if let group = groups.first(where: { !$0.isBulkGroup && $0.first.id == member.id }) {
+                scannedGroupRow(group)
+            } else {
+                KioskItemRow(tag: member.assetTag.nonBlankText ?? member.name, name: member.assetTag.nonBlankText == nil ? nil : member.name, isDone: false)
+            }
+        }
+        ForEach(kit.bulkMembers) { bulk in
+            if !kit.members.isEmpty || bulk.id != kit.bulkMembers.first?.id {
+                Rectangle().fill(KioskStroke.divider).frame(height: 1)
+            }
+            let scannedUnits = scannedItems.filter { $0.bulkSkuId == bulk.bulkSkuId }.compactMap(\.unitNumber).sorted()
+            let placeholders = max(0, bulk.quantity - scannedUnits.count)
+            KioskBatteryRow(
+                title: KioskBatteryCopy.familyTitle(bulk.name),
+                scanned: scannedUnits.count,
+                total: bulk.quantity,
+                units: scannedUnits.map { .init(id: "\(bulk.id)-\($0)", label: "#\($0)", isScanned: true) }
+                    + (0..<placeholders).map { .init(id: "\(bulk.id)-open-\($0)", label: "", isScanned: false) }
+            )
+        }
+        let extras = groups.filter { group in
+            group.isBulkGroup ? !bulkIds.contains(group.first.bulkSkuId ?? "") : !memberIds.contains(group.first.id)
+        }
+        ForEach(Array(extras.enumerated()), id: \.element.id) { index, group in
+            if index == 0 {
+                Line().stroke(KioskStroke.standard, style: StrokeStyle(lineWidth: 1, dash: [4, 3])).frame(height: 1)
+            } else {
+                Rectangle().fill(KioskStroke.divider).frame(height: 1)
+            }
+            scannedGroupRow(group, trailingNote: "Not in kit")
+        }
+    }
+
+    private struct Line: Shape {
+        func path(in rect: CGRect) -> Path {
+            var path = Path()
+            path.move(to: CGPoint(x: rect.minX, y: rect.midY))
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
+            return path
+        }
+    }
+
+    /// "4 of 7 + 1 extra" while a kit is the list.
+    private var kitProgress: (label: String, scanned: Int, total: Int, extras: Int)? {
+        guard let kit = selectedKitDetail else { return nil }
+        let memberIds = Set(kit.members.map(\.id))
+        let bulkIds = Set(kit.bulkMembers.map(\.bulkSkuId))
+        let scannedMembers = scannedItems.filter { $0.bulkSkuId == nil && memberIds.contains($0.id) }.count
+        let scannedBulk = kit.bulkMembers.reduce(0) { sum, bulk in
+            sum + min(bulk.quantity, scannedItems.filter { $0.bulkSkuId == bulk.bulkSkuId }.count)
+        }
+        let total = kit.members.count + kit.bulkMembers.reduce(0) { $0 + $1.quantity }
+        let extras = scannedItems.filter { item in
+            if let sku = item.bulkSkuId { return !bulkIds.contains(sku) }
+            return !memberIds.contains(item.id)
+        }.count
+        let scanned = scannedMembers + scannedBulk
+        return ("\(scanned) of \(total)" + (extras > 0 ? " + \(extras) extra" : ""), scanned, total, extras)
+    }
+
+    /// Football crew only (decision 1). The kiosk has no crew field, so the
+    /// signal is a server kit suggestion (a past gameday kit) or a football
+    /// shift on this person's event list.
+    private var showsKitEntry: Bool {
+        guard !kitOptions.isEmpty else { return false }
+        if selectedKitId != nil || suggestedKitId != nil { return true }
+        if selectedEvent?.sportCode == KioskKitCopy.footballSportCode { return true }
+        return eventOptions.contains { $0.isMyShift && $0.sportCode == KioskKitCopy.footballSportCode }
     }
 
     private var completeAccessibilityLabel: String {
@@ -635,6 +802,7 @@ struct KioskCheckoutView: View {
         do {
             let response = try await KioskAPI.shared.kioskKits(requesterId: user.id)
             kitOptions = response.kits
+            suggestedKitId = response.suggestedKitId
             if !didApplySuggestedKit,
                selectedKitId == nil,
                let suggestedKitId = response.suggestedKitId,
@@ -674,7 +842,9 @@ struct KioskCheckoutView: View {
             rows.append(KioskKitRemainingItem(
                 id: member.id,
                 title: member.assetTag.nonBlankText ?? member.name,
-                subtitle: member.name
+                subtitle: member.name,
+                missingCount: 1,
+                isBulk: false
             ))
         }
         for bulk in kit.bulkMembers {
@@ -684,7 +854,9 @@ struct KioskCheckoutView: View {
                 rows.append(KioskKitRemainingItem(
                     id: bulk.bulkSkuId,
                     title: bulk.name,
-                    subtitle: missing == bulk.quantity ? "Scan \(missing)" : "Scan \(missing) more"
+                    subtitle: missing == bulk.quantity ? "Scan \(missing)" : "Scan \(missing) more",
+                    missingCount: missing,
+                    isBulk: true
                 ))
             }
         }
@@ -709,6 +881,8 @@ struct KioskCheckoutView: View {
 
         store.resetInactivity()
         lastScanAt = Date()
+        // A scan answers E3's question: the item joins the list.
+        isConfirmingKitGaps = false
 
         let normalizedScan = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !normalizedScan.isEmpty else {
@@ -931,15 +1105,34 @@ struct KioskCheckoutView: View {
     }
 
     private func requestEditContext() {
+        // Scans stay in the list while the details change, so there is
+        // nothing to confirm: Edit goes straight back to step 1.
         scannerCaptureEnabled = false
-        if scannedItems.isEmpty {
-            checkoutContextReady = false
-            DispatchQueue.main.async {
-                focusedCheckoutField = .customPurpose
-            }
-        } else {
-            showEditContextConfirm = true
+        isConfirmingKitGaps = false
+        checkoutContextReady = false
+    }
+
+    private var discardTitle: String {
+        if scannedItems.isEmpty { return "Discard the unfinished checkout?" }
+        return "Discard \(scannedItems.count == 1 ? "this scan" : "these \(scannedItems.count) scans")?"
+    }
+
+    private var discardMessage: String {
+        if hasPendingCompletion {
+            return "A checkout that didn't confirm is saved on this iPad. Discard it only if the gear is back on the shelf. Anything that did go through is on your hub."
         }
+        var tags = scannedItems.map(\.itemListPrimaryTitle)
+        if tags.count > 4 { tags = Array(tags.prefix(3)) + ["\(tags.count - 3) more"] }
+        return "Nothing has been checked out yet. Put \(KioskListCopy.joined(tags)) back on the shelf."
+    }
+
+    private func discardCheckout() {
+        store.clearCart(for: userId)
+        store.clearCheckoutDraft(for: userId)
+        KioskAPI.shared.discardPendingCheckout(actorId: userId)
+        hasPendingCompletion = false
+        showBackConfirm = false
+        store.screen = .operatorHub(user)
     }
 
     /// The scan flow already confirms each item as it's added, so checkout
@@ -1479,6 +1672,8 @@ private struct KioskKitRemainingItem: Identifiable {
     let id: String
     let title: String
     let subtitle: String
+    let missingCount: Int
+    let isBulk: Bool
 }
 
 private struct KioskCartAvailabilityIssue: Equatable {
@@ -1763,43 +1958,191 @@ enum KioskReceiptCopy {
     }
 }
 
-/// Kits start on the scan screen (Erik, 2026-09-25). A kit is the scan list:
-/// it turns "Taking out" into its checklist, and only what's scanned goes out.
-/// The kit list comes from the pickup's kits, with the football crew's
-/// suggestion preselected by the server.
-private struct KioskCheckoutKitPicker: View {
-    let kits: [KioskKitOption]
-    @Binding var selectedKitId: String?
+enum KioskListCopy {
+    /// "CAM-040", "CAM-040 and LENS-22", "CAM-040, LENS-22 and AUD-031".
+    static func joined(_ items: [String]) -> String {
+        switch items.count {
+        case 0: return ""
+        case 1: return items[0]
+        default: return items.dropLast().joined(separator: ", ") + " and " + items[items.count - 1]
+        }
+    }
+}
 
-    private var selected: KioskKitOption? { kits.first { $0.id == selectedKitId } }
+enum KioskKitCopy {
+    static let footballSportCode = "FB"
+    static let checklistNote = "A kit is a checklist. Only what you scan goes out."
+}
+
+/// Kits start on the scan screen (Erik, 2026-09-25), for football crew only.
+/// The row under "Taking out" opens E1.
+private struct KioskKitEntryButton: View {
+    let kitName: String?
+    let action: () -> Void
 
     var body: some View {
-        Menu {
-            Button("No kit") { selectedKitId = nil }
-            ForEach(kits) { kit in
-                Button("\(kioskFootballGamedayKitLabel(kit.gamedayRole) ?? kit.name) · \(kit.contents) items") {
-                    selectedKitId = kit.id
-                }
-            }
-        } label: {
+        Button(action: action) {
             HStack(spacing: 10) {
                 Image(systemName: "shippingbox")
-                    .foregroundStyle(KioskText.secondary)
-                Text(selected.map { "Kit: \(kioskFootballGamedayKitLabel($0.gamedayRole) ?? $0.name)" } ?? "Use a kit")
+                    .foregroundStyle(KioskSection.takingOut.accent)
+                Text(kitName.map { "Kit: \($0)" } ?? "Use a kit")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(KioskText.primary)
                 Spacer(minLength: 0)
-                Text("A kit is the scan list")
+                Text(kitName == nil ? "A kit is a checklist" : "Change")
                     .font(KioskType.meta)
                     .foregroundStyle(KioskText.tertiary)
-                Image(systemName: "chevron.up.chevron.down")
+                Image(systemName: "chevron.right")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(KioskText.muted)
             }
             .padding(.horizontal, 14)
             .frame(minHeight: 48)
             .kioskCard(KioskSurface.cardRaised, radius: KioskRadius.lg, stroke: KioskStroke.standard)
+            .contentShape(Rectangle())
         }
-        .accessibilityLabel(selected.map { "Kit, \($0.name). Change kit" } ?? "Use a kit")
+        .buttonStyle(.plain)
+        .accessibilityLabel(kitName.map { "Kit, \($0). Change kit" } ?? "Use a kit")
+    }
+}
+
+/// E1 "Choose a kit": the shift on the left with the highlighted kit's
+/// contents, the kits on the right. Tapping a kit uses it. Role labels are
+/// the kit's own name. Availability ("Out with…") has no source yet.
+struct KioskKitPickSheet: View {
+    let kits: [KioskKitOption]
+    let suggestedKitId: String?
+    let selectedKitId: String?
+    let eventTitle: String?
+    let contextLine: String
+    let locationName: String?
+    let onChoose: (String?) -> Void
+    let onCancel: () -> Void
+
+    @State private var preview: KioskKitDetail?
+
+    private var previewId: String? { selectedKitId ?? suggestedKitId ?? kits.first?.id }
+
+    var body: some View {
+        KioskSheetScreen(onDismiss: onCancel) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(eventTitle == nil ? "FOR THIS CHECKOUT" : "FOR YOUR SHIFT")
+                    .font(KioskType.overline)
+                    .tracking(KioskType.overlineTracking)
+                    .foregroundStyle(KioskText.tertiary)
+                Text(eventTitle ?? "New checkout")
+                    .font(.system(size: 28, weight: .heavy))
+                    .foregroundStyle(KioskText.primary)
+                    .lineLimit(2)
+                Text(contextLine)
+                    .font(KioskType.body)
+                    .foregroundStyle(KioskText.secondary)
+            }
+            if let preview {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("IN \(preview.name.uppercased())")
+                        .font(KioskType.overline)
+                        .tracking(KioskType.overlineTracking)
+                        .foregroundStyle(KioskSection.takingOut.text)
+                    VStack(spacing: 0) {
+                        let rows = preview.members.map { ($0.id, $0.assetTag.nonBlankText ?? $0.name, $0.name) }
+                            + preview.bulkMembers.map { ($0.id, KioskBatteryCopy.familyTitle($0.name), "\($0.quantity), any units") }
+                        ForEach(Array(rows.enumerated()), id: \.element.0) { index, row in
+                            if index > 0 { Rectangle().fill(KioskStroke.divider).frame(height: 1) }
+                            HStack(spacing: 12) {
+                                Text(row.1)
+                                    .font(.system(size: 15, weight: .bold))
+                                    .foregroundStyle(KioskText.primary)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.8)
+                                    .frame(width: 150, alignment: .leading)
+                                Text(row.2)
+                                    .font(KioskType.meta)
+                                    .foregroundStyle(KioskText.secondary)
+                                    .lineLimit(1)
+                                Spacer(minLength: 0)
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 10)
+                        }
+                    }
+                    .kioskCard(kioskSunkenCard, radius: KioskRadius.xl)
+                }
+            }
+            Text(KioskKitCopy.checklistNote)
+                .font(KioskType.meta)
+                .foregroundStyle(KioskText.tertiary)
+        } choice: {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Text("Choose a kit")
+                    .font(KioskType.heroAction)
+                    .foregroundStyle(KioskText.primary)
+                if let locationName {
+                    Text(locationName)
+                        .font(KioskType.meta)
+                        .foregroundStyle(KioskText.tertiary)
+                }
+            }
+            ScrollView {
+                VStack(spacing: 8) {
+                    ForEach(kits) { kit in
+                        kitRow(kit)
+                    }
+                    if selectedKitId != nil {
+                        Button("Don't use a kit") { onChoose(nil) }
+                            .kioskButtonRole(.quiet)
+                            .padding(.top, 6)
+                    }
+                }
+            }
+            .scrollIndicators(.hidden)
+        }
+        .task(id: previewId) { await loadPreview() }
+    }
+
+    private var kioskSunkenCard: Color { Color(red: 0x0E / 255, green: 0x0E / 255, blue: 0x10 / 255) }
+
+    private func kitRow(_ kit: KioskKitOption) -> some View {
+        let isSelected = kit.id == (selectedKitId ?? suggestedKitId)
+        return Button { onChoose(kit.id) } label: {
+            HStack(spacing: 14) {
+                Image(systemName: "shippingbox")
+                    .font(.system(size: 22, weight: .regular))
+                    .foregroundStyle(KioskSection.takingOut.accent)
+                    .frame(width: 28)
+                VStack(alignment: .leading, spacing: 1) {
+                    HStack(spacing: 10) {
+                        Text(kit.name)
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundStyle(KioskText.primary)
+                        if kit.id == suggestedKitId {
+                            Text("SUGGESTED")
+                                .font(KioskType.overline)
+                                .tracking(1.1)
+                                .foregroundStyle(KioskSection.takingOut.text)
+                        }
+                    }
+                    Text("\(kit.contents) item\(kit.contents == 1 ? "" : "s")")
+                        .font(KioskType.meta)
+                        .foregroundStyle(KioskText.tertiary)
+                }
+                Spacer(minLength: 8)
+            }
+            .padding(.horizontal, 16)
+            .frame(maxWidth: .infinity, minHeight: 64)
+            .background(isSelected ? KioskSurface.cardSelected : KioskSurface.cardRaised, in: RoundedRectangle(cornerRadius: KioskRadius.lg))
+            .overlay(RoundedRectangle(cornerRadius: KioskRadius.lg).stroke(isSelected ? KioskStroke.selected : KioskStroke.standard, lineWidth: 1))
+            .contentShape(RoundedRectangle(cornerRadius: KioskRadius.lg))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(kit.name), \(kit.contents) items\(kit.id == suggestedKitId ? ", suggested" : "")")
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+    }
+
+    @MainActor
+    private func loadPreview() async {
+        guard let previewId else { preview = nil; return }
+        if preview?.id == previewId { return }
+        preview = try? await KioskAPI.shared.kioskKitDetail(id: previewId)
     }
 }

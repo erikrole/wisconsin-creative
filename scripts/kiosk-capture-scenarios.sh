@@ -29,6 +29,8 @@ ALL_SCENARIOS=(
   return-report return-damaged return-missing return-receipt
   return-for-other badge home-game-day identity-scan-free identity-scan-reserved
   changes-extend changes-transfer changes-swap changes-reservation changes-staff
+  checkout-other-date checkout-discard kit-pick kit-session kit-finish-confirm
+  scanner-asleep inactivity-checkout
 )
 if [[ $# -gt 0 ]]; then SCENARIOS=("$@"); else SCENARIOS=("${ALL_SCENARIOS[@]}"); fi
 

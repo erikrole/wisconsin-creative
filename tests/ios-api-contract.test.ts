@@ -439,7 +439,7 @@ describe("iOS API contracts — kiosk checkout context", () => {
     expect(client).toContain("kitId: kitId");
     expect(models).toContain("struct KioskKitOption");
     expect(models).toContain("struct KioskKitDetail");
-    expect(checkoutView).toContain("KioskCheckoutKitPicker");
+    expect(checkoutView).toContain("KioskKitPickSheet(");
     expect(checkoutView).toContain("remainingKitItems");
     expect(checkoutView).toContain("kitId: selectedKitId");
   });
