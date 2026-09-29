@@ -17,6 +17,6 @@
     "branchPrefix": "wc-preview-",
     "cleanupGraceDays": 7,
     "provisioningVersion": 1,
-    "attestationPublicKey": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAp7uYZTI5/XEwZvwAmpcw/ns1DSnqZ6KUWQAjsc9ujHE=\n-----END PUBLIC KEY-----\n"
+    "attestationPublicKey": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAjN9a1z3GQKf1CGQaudPb17gM1hTL9wQPddoblvN+Un8=\n-----END PUBLIC KEY-----\n"
   }
 }
